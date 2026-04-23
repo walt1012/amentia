@@ -124,7 +124,7 @@ private struct TimelineCard: View {
   }
 }
 
-private struct SettingsView: View {
+struct SettingsView: View {
   var body: some View {
     Form {
       Section("Model") {
