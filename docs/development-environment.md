@@ -51,21 +51,43 @@ swift run
 The runtime now resolves the local model stack in this order:
 
 1. `CAVELL_LLAMACPP_PATH`
-2. repo-local `third_party/llama.cpp/llama-cli`
-3. repo-local `tools/llama.cpp/llama-cli`
+2. an executable-relative `third_party/llama.cpp/llama-cli`
+3. an executable-relative `tools/llama.cpp/llama-cli`
+4. repo-local `third_party/llama.cpp/llama-cli`
+5. repo-local `tools/llama.cpp/llama-cli`
 
 The default model pack path resolves in this order:
 
+1. `CAVELL_MODEL_PACK_MANIFEST`
+2. an executable-relative `models/builtin/lfm2.5-350m/model-pack.json`
+3. an executable-relative `model-packs/lfm2.5-350m/model-pack.json`
+4. repo-local `models/builtin/lfm2.5-350m/model-pack.json`
+5. repo-local `model-packs/lfm2.5-350m/model-pack.json`
+
+The resolved model file path then checks:
+
 1. `CAVELL_LFM_MODEL_PATH`
-2. repo-local `models/LFM2.5-350M.gguf`
-3. repo-local `model-packs/LFM2.5-350M.gguf`
+2. a sibling of the resolved manifest using the manifest `file_name`
+3. repo-local `models/LFM2.5-350M.gguf`
+4. repo-local `model-packs/LFM2.5-350M.gguf`
 
 If either path is missing, Cavell falls back to the built-in heuristic summarizer while still reporting model health in the inspector. One local setup example is:
 
 ```bash
 export CAVELL_LLAMACPP_PATH=/absolute/path/to/llama-cli
+export CAVELL_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
 export CAVELL_LFM_MODEL_PATH=/absolute/path/to/LFM2.5-350M.gguf
 ```
+
+## Plugin Discovery
+
+The runtime resolves bundled plugins in this order:
+
+1. `CAVELL_PLUGIN_DIR`
+2. an executable-relative `plugins/`
+3. repo-local `plugins/`
+
+Milestone 1 expects the official `mem` plugin scaffold to be discoverable from that root.
 
 ## GitHub Actions Notes
 

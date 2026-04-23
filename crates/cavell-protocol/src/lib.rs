@@ -7,6 +7,7 @@ pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const MODEL_HEALTH: &str = "model/health";
+  pub const PLUGIN_LIST: &str = "plugin/list";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
   pub const WORKSPACE_CURRENT: &str = "workspace/current";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
@@ -97,10 +98,39 @@ pub struct ModelHealthResult {
   pub backend: String,
   pub status: String,
   pub detail: String,
+  pub source: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub binary_path: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub model_path: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub manifest_path: Option<String>,
+  #[serde(default)]
+  pub metrics: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginSummary {
+  pub id: String,
+  pub name: String,
+  pub version: String,
+  pub display_name: String,
+  pub description: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub author_name: Option<String>,
+  pub enabled: bool,
+  pub default_enabled: bool,
+  pub capabilities: Vec<String>,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginListResult {
+  pub plugins: Vec<PluginSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

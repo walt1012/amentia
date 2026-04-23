@@ -13,6 +13,7 @@ final class AppViewModel: ObservableObject {
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
   @Published var modelHealth: ModelHealthSummary?
+  @Published var plugins: [PluginSummary]
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -52,6 +53,7 @@ final class AppViewModel: ObservableObject {
     self.draftMessage = ""
     self.workspace = nil
     self.modelHealth = nil
+    self.plugins = []
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
@@ -75,6 +77,7 @@ final class AppViewModel: ObservableObject {
         let session = try await runtimeBridge.launchAndInitialize()
         let runtimeModel = try? await runtimeBridge.modelHealth()
         let currentWorkspace = try? await runtimeBridge.currentWorkspace()
+        let runtimePlugins = try? await runtimeBridge.listPlugins()
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
@@ -85,14 +88,37 @@ final class AppViewModel: ObservableObject {
             backend: runtimeModel.backend,
             status: runtimeModel.status,
             detail: runtimeModel.detail,
+            source: runtimeModel.source,
             binaryPath: runtimeModel.binaryPath,
-            modelPath: runtimeModel.modelPath
+            modelPath: runtimeModel.modelPath,
+            manifestPath: runtimeModel.manifestPath,
+            metrics: runtimeModel.metrics
           )
           runtimeDetail =
             "\(session.serverName) \(session.serverVersion) | \(runtimeModel.displayName)"
         } else {
           modelHealth = nil
           runtimeDetail = "\(session.serverName) \(session.serverVersion)"
+        }
+
+        plugins = (runtimePlugins ?? []).map { plugin in
+          PluginSummary(
+            id: plugin.id,
+            name: plugin.name,
+            version: plugin.version,
+            displayName: plugin.displayName,
+            description: plugin.description,
+            authorName: plugin.authorName,
+            enabled: plugin.enabled,
+            defaultEnabled: plugin.defaultEnabled,
+            capabilities: plugin.capabilities,
+            permissions: plugin.permissions,
+            manifestPath: plugin.manifestPath,
+            provenance: plugin.provenance
+          )
+        }
+        if !plugins.isEmpty {
+          runtimeDetail += " | \(plugins.count) plugin(s)"
         }
 
         if let currentWorkspace {
@@ -143,7 +169,20 @@ final class AppViewModel: ObservableObject {
                 "modelId": runtimeModel.packID,
                 "modelBackend": runtimeModel.backend,
                 "modelStatus": runtimeModel.status,
+                "modelSource": runtimeModel.source,
               ]
+            )
+          )
+        }
+        if !plugins.isEmpty {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID(),
+              kind: .system,
+              title: "Plugins Ready",
+              body: "Discovered \(plugins.count) plugin(s): \(plugins.map(\.displayName).joined(separator: ", ")).",
+              attributes: [:]
             )
           )
         }
@@ -450,6 +489,30 @@ final class AppViewModel: ObservableObject {
     return modelHealth.detail
   }
 
+  func modelSourceSummary() -> String {
+    guard let modelHealth else {
+      return "Source: unavailable"
+    }
+
+    let source = "Source: \(modelHealth.source)"
+    if let manifestPath = modelHealth.manifestPath {
+      return "\(source)\nManifest: \(manifestPath)"
+    }
+
+    return source
+  }
+
+  func modelMetricsSummary() -> String {
+    guard let modelHealth else {
+      return "Metrics: unavailable"
+    }
+
+    let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
+    let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
+    let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
+    return "Context: \(contextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
+  }
+
   func modelArtifactPathSummary() -> String {
     guard let modelHealth else {
       return "No local model paths available yet."
@@ -457,7 +520,38 @@ final class AppViewModel: ObservableObject {
 
     let modelPath = modelHealth.modelPath ?? "model path unavailable"
     let binaryPath = modelHealth.binaryPath ?? "binary path unavailable"
-    return "Model: \(modelPath)\nBinary: \(binaryPath)"
+    let manifestPath = modelHealth.manifestPath ?? "manifest path unavailable"
+    return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
+  }
+
+  func pluginCountSummary() -> String {
+    if plugins.isEmpty {
+      return "No bundled plugins discovered yet."
+    }
+
+    return "\(plugins.count) plugin(s) discovered"
+  }
+
+  func pluginDetailSummary() -> String {
+    guard !plugins.isEmpty else {
+      return "Cavell discovers plugin manifests from the bundled plugins directory."
+    }
+
+    return plugins
+      .map { plugin in
+        let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
+        return "\(plugin.displayName) \(plugin.version) | \(plugin.provenance) | capabilities: \(capabilities)"
+      }
+      .joined(separator: "\n")
+  }
+
+  func memPluginSummary() -> String {
+    guard let memPlugin = plugins.first(where: { $0.name == "mem" }) else {
+      return "The bundled mem plugin has not been discovered yet."
+    }
+
+    let authorName = memPlugin.authorName ?? "Unknown Author"
+    return "\(memPlugin.description)\nAuthor: \(authorName)\nManifest: \(memPlugin.manifestPath)"
   }
 
   func composerPlaceholder() -> String {

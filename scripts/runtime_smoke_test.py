@@ -94,6 +94,17 @@ def main() -> int:
     assert model_health["result"]["displayName"] == "LFM2.5-350M"
     assert model_health["result"]["backend"] in {"heuristic", "llama.cpp"}
     assert model_health["result"]["status"] in {"fallback", "ready"}
+    assert model_health["result"]["source"] in {"bundle-manifest", "environment", "path-scan"}
+    assert model_health["result"]["metrics"]["contextSize"] == "4096"
+
+    plugin_list, _ = send_request(
+      process,
+      {
+        "id": 25,
+        "method": "plugin/list",
+      },
+    )
+    assert any(plugin["name"] == "mem" for plugin in plugin_list["result"]["plugins"])
 
     workspace, _ = send_request(
       process,

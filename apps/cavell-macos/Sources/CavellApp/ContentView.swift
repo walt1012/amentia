@@ -162,7 +162,30 @@ struct ContentView: View {
             .font(.caption)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
+          Text(viewModel.modelSourceSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+          Text(viewModel.modelMetricsSummary())
+            .font(.caption2)
+            .foregroundColor(.secondary)
           Text(viewModel.modelArtifactPathSummary())
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      GroupBox("Plugins") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.pluginCountSummary())
+            .font(.headline)
+          Text(viewModel.pluginDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+          Text(viewModel.memPluginSummary())
             .font(.caption2)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
@@ -214,13 +237,14 @@ struct ContentView: View {
           Text("SQLite-backed thread persistence and workspace restoration")
           Text("Workspace-aware prompt loop with cancel control")
           Text("Local model health and summarizer runtime wiring")
+          Text("Plugin discovery with the bundled mem plugin shell")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .font(.subheadline)
       }
 
       GroupBox("Next Integration") {
-        Text("Add token events, richer planner prompts, and a bundled llama.cpp model pack.")
+        Text("Refine token events, richer planner prompts, and packaged local model artifacts.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }

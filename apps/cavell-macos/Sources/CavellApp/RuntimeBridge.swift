@@ -31,8 +31,26 @@ final class RuntimeBridge {
     let backend: String
     let status: String
     let detail: String
+    let source: String
     let binaryPath: String?
     let modelPath: String?
+    let manifestPath: String?
+    let metrics: [String: String]
+  }
+
+  struct RuntimePlugin {
+    let id: String
+    let name: String
+    let version: String
+    let displayName: String
+    let description: String
+    let authorName: String?
+    let enabled: Bool
+    let defaultEnabled: Bool
+    let capabilities: [String]
+    let permissions: [String]
+    let manifestPath: String
+    let provenance: String
   }
 
   struct RuntimeTurnResult {
@@ -190,8 +208,11 @@ final class RuntimeBridge {
       backend: result.backend,
       status: result.status,
       detail: result.detail,
+      source: result.source,
       binaryPath: result.binaryPath,
-      modelPath: result.modelPath
+      modelPath: result.modelPath,
+      manifestPath: result.manifestPath,
+      metrics: result.metrics
     )
   }
 
@@ -214,6 +235,38 @@ final class RuntimeBridge {
       displayName: result.workspace.displayName,
       threadCount: result.threadCount
     )
+  }
+
+  func listPlugins() async throws -> [RuntimePlugin] {
+    let response: JSONRPCResponse<PluginListResult> = try await sendRequest(
+      method: "plugin/list",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.plugins.map { plugin in
+      RuntimePlugin(
+        id: plugin.id,
+        name: plugin.name,
+        version: plugin.version,
+        displayName: plugin.displayName,
+        description: plugin.description,
+        authorName: plugin.authorName,
+        enabled: plugin.enabled,
+        defaultEnabled: plugin.defaultEnabled,
+        capabilities: plugin.capabilities,
+        permissions: plugin.permissions,
+        manifestPath: plugin.manifestPath,
+        provenance: plugin.provenance
+      )
+    }
   }
 
   func currentWorkspace() async throws -> RuntimeWorkspace? {

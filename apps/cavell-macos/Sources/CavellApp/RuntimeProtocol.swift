@@ -62,8 +62,30 @@ struct ModelHealthResult: Codable {
   let backend: String
   let status: String
   let detail: String
+  let source: String
   let binaryPath: String?
   let modelPath: String?
+  let manifestPath: String?
+  let metrics: [String: String]
+}
+
+struct PluginListResult: Codable {
+  let plugins: [RuntimePluginPayload]
+}
+
+struct RuntimePluginPayload: Codable {
+  let id: String
+  let name: String
+  let version: String
+  let displayName: String
+  let description: String
+  let authorName: String?
+  let enabled: Bool
+  let defaultEnabled: Bool
+  let capabilities: [String]
+  let permissions: [String]
+  let manifestPath: String
+  let provenance: String
 }
 
 struct ThreadListResult: Codable {

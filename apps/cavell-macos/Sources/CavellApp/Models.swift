@@ -17,8 +17,26 @@ struct ModelHealthSummary: Hashable {
   let backend: String
   let status: String
   let detail: String
+  let source: String
   let binaryPath: String?
   let modelPath: String?
+  let manifestPath: String?
+  let metrics: [String: String]
+}
+
+struct PluginSummary: Identifiable, Hashable {
+  let id: String
+  let name: String
+  let version: String
+  let displayName: String
+  let description: String
+  let authorName: String?
+  let enabled: Bool
+  let defaultEnabled: Bool
+  let capabilities: [String]
+  let permissions: [String]
+  let manifestPath: String
+  let provenance: String
 }
 
 struct TimelineEntry: Identifiable, Hashable {

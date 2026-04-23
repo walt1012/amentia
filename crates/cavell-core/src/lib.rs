@@ -5,14 +5,15 @@ use std::time::Instant;
 
 use anyhow::Result;
 use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, ModelRole};
+use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEntry};
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
-  ModelHealthResult, ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams,
-  ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary,
+  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
+  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
+  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
+  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -61,6 +62,7 @@ pub struct RuntimeContext {
   store: Option<FileThreadStore>,
   threads: Vec<StoredThread>,
   workspace: Option<WorkspaceSummary>,
+  plugins: Vec<PluginCatalogEntry>,
   pending_approvals: HashMap<String, PendingApproval>,
   active_turns: HashMap<String, ActiveTurn>,
   next_thread_number: usize,
@@ -73,6 +75,7 @@ impl RuntimeContext {
     let persisted_threads = store.load_threads()?;
     let persisted_workspace = store.load_workspace()?;
     let persisted_pending_approvals = store.load_pending_approvals()?;
+    let plugins = load_plugin_catalog()?;
     let next_thread_number = persisted_threads.len() + 1;
     let next_approval_number = store.next_approval_sequence()?;
 
@@ -90,6 +93,7 @@ impl RuntimeContext {
         })
         .collect(),
       workspace: persisted_workspace,
+      plugins,
       pending_approvals: persisted_pending_approvals
         .into_iter()
         .map(|approval| {
@@ -121,6 +125,7 @@ impl RuntimeContext {
       store: None,
       threads: vec![],
       workspace: None,
+      plugins: load_plugin_catalog().unwrap_or_default(),
       pending_approvals: HashMap::new(),
       active_turns: HashMap::new(),
       next_thread_number: 1,
@@ -206,6 +211,17 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       request.id,
       &to_protocol_model_health(context.model_runtime.health()),
     ),
+    methods::PLUGIN_LIST => JsonRpcResponse::success(
+      request.id,
+      &PluginListResult {
+        plugins: context
+          .plugins
+          .iter()
+          .cloned()
+          .map(to_protocol_plugin)
+          .collect(),
+      },
+    ),
     methods::WORKSPACE_CURRENT => JsonRpcResponse::success(
       request.id,
       &WorkspaceCurrentResult {
@@ -260,8 +276,28 @@ fn to_protocol_model_health(health: ModelHealth) -> ModelHealthResult {
     backend: health.backend,
     status: health.status,
     detail: health.detail,
+    source: health.source,
     binary_path: health.binary_path,
     model_path: health.model_path,
+    manifest_path: health.manifest_path,
+    metrics: health.metrics,
+  }
+}
+
+fn to_protocol_plugin(plugin: PluginCatalogEntry) -> ProtocolPluginSummary {
+  ProtocolPluginSummary {
+    id: plugin.id,
+    name: plugin.name,
+    version: plugin.version,
+    display_name: plugin.display_name,
+    description: plugin.description,
+    author_name: plugin.author_name,
+    enabled: plugin.enabled,
+    default_enabled: plugin.default_enabled,
+    capabilities: plugin.capabilities,
+    permissions: plugin.permissions,
+    manifest_path: plugin.manifest_path,
+    provenance: plugin.provenance,
   }
 }
 
@@ -295,10 +331,18 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
       capabilities: ServerCapabilities {
         supports_threads: true,
         supports_tools: true,
-        supports_plugins: false,
+        supports_plugins: !context.plugins.is_empty(),
       },
     },
   )
+}
+
+fn load_plugin_catalog() -> Result<Vec<PluginCatalogEntry>> {
+  let Some(plugin_root) = default_plugin_root() else {
+    return Ok(vec![]);
+  };
+
+  discover_plugins(&plugin_root)
 }
 
 fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
