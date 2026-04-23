@@ -7,12 +7,12 @@ use anyhow::Result;
 use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, ModelRole};
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
-  InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ModelHealthResult,
-  JsonRpcNotification,
-  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
-  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
-  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
+  ModelHealthResult, ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams,
+  ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -232,11 +232,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
 }
 
 pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpcNotification>> {
-  let active_turn_ids = context
-    .active_turns
-    .keys()
-    .cloned()
-    .collect::<Vec<_>>();
+  let active_turn_ids = context.active_turns.keys().cloned().collect::<Vec<_>>();
   let mut notifications = vec![];
   let mut did_update = false;
 
@@ -1650,8 +1646,8 @@ fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<Approv
 mod tests {
   use super::*;
   use serde_json::{json, Value};
-  use std::thread;
   use std::env;
+  use std::thread;
   use std::time::{SystemTime, UNIX_EPOCH};
 
   fn request(method: &str, params: Option<Value>) -> JsonRpcRequest {
@@ -1943,7 +1939,10 @@ mod tests {
     fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
 
     assert_eq!(notifications.len(), 1);
-    assert_eq!(notifications[0].method, methods::THREAD_UPDATED_NOTIFICATION);
+    assert_eq!(
+      notifications[0].method,
+      methods::THREAD_UPDATED_NOTIFICATION
+    );
   }
 
   #[test]
