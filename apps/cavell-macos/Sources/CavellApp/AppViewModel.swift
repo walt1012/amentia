@@ -168,7 +168,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
-        if let runtimeModel {
+        if let runtimeModel = modelHealth {
           appendEntry(
             to: selectedThread?.id,
             TimelineEntry(
