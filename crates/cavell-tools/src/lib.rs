@@ -175,7 +175,12 @@ pub fn run_shell(
   let output = build_shell_command(trimmed_command)
     .current_dir(&workspace_root)
     .output()
-    .with_context(|| format!("failed to run shell command in {}", workspace_root.display()))?;
+    .with_context(|| {
+      format!(
+        "failed to run shell command in {}",
+        workspace_root.display()
+      )
+    })?;
 
   let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
   let stderr = String::from_utf8_lossy(&output.stderr).into_owned();

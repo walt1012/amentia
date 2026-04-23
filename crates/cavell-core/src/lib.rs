@@ -12,8 +12,8 @@ use cavell_protocol::{
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
-  list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry,
-  ReadFileResult, SearchMatch, ShellCommandResult,
+  list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry, ReadFileResult,
+  SearchMatch, ShellCommandResult,
 };
 
 #[derive(Debug, Clone)]
@@ -734,11 +734,7 @@ fn handle_approval_respond(
           items.push(TimelineItem {
             kind: "toolResult".to_string(),
             title: "write_file result".to_string(),
-            content: format!(
-              "Wrote {} bytes to {}.",
-              content.len(),
-              relative_path
-            ),
+            content: format!("Wrote {} bytes to {}.", content.len(), relative_path),
             attributes: None,
           });
           items.push(TimelineItem {
