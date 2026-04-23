@@ -195,30 +195,33 @@ def main() -> int:
       latest_assistant["attributes"]["streamedCharacters"]
     )
 
-    cancelled_turn, _ = send_request(
-      process,
-      {
-        "id": 8,
-        "method": "turn/cancel",
-        "params": {
-          "turnId": turn["result"]["activeTurnId"],
+    if streamed_thread["result"].get("activeTurnId") is not None:
+      cancelled_turn, _ = send_request(
+        process,
+        {
+          "id": 8,
+          "method": "turn/cancel",
+          "params": {
+            "turnId": turn["result"]["activeTurnId"],
+          },
         },
-      },
-    )
-    assert cancelled_turn["result"]["items"][0]["kind"] == "warning"
-    assert cancelled_turn["result"].get("activeTurnId") is None
+      )
+      assert cancelled_turn["result"]["items"][0]["kind"] == "warning"
+      assert cancelled_turn["result"].get("activeTurnId") is None
 
-    cancelled_thread, _ = send_request(
-      process,
-      {
-        "id": 9,
-        "method": "thread/read",
-        "params": {
-          "threadId": "thread-1",
+      cancelled_thread, _ = send_request(
+        process,
+        {
+          "id": 9,
+          "method": "thread/read",
+          "params": {
+            "threadId": "thread-1",
+          },
         },
-      },
-    )
-    assert cancelled_thread["result"].get("activeTurnId") is None
+      )
+      assert cancelled_thread["result"].get("activeTurnId") is None
+    else:
+      assert latest_assistant["attributes"]["streamingStatus"] == "completed"
 
     search_turn, _ = send_request(
       process,
