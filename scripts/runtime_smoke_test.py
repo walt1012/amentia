@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,11 +26,17 @@ def send_request(process: subprocess.Popen[str], payload: dict) -> dict:
 
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
+  state_dir = repo_root / ".tmp-runtime-state"
+  if state_dir.exists():
+    shutil.rmtree(state_dir)
   command = ["cargo", "run", "-p", "cavell-runtime-bin"]
+  env = os.environ.copy()
+  env["CAVELL_DATA_DIR"] = str(state_dir)
 
   process = subprocess.Popen(
     command,
     cwd=repo_root,
+    env=env,
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
@@ -80,6 +88,34 @@ def main() -> int:
       },
     )
     assert len(thread_list["result"]["threads"]) == 1
+
+    thread_read = send_request(
+      process,
+      {
+        "id": 5,
+        "method": "thread/read",
+        "params": {
+          "threadId": "thread-1",
+        },
+      },
+    )
+    assert thread_read["result"]["thread"]["id"] == "thread-1"
+    assert thread_read["result"]["items"][0]["kind"] == "system"
+
+    turn = send_request(
+      process,
+      {
+        "id": 6,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": "Hello from CI",
+        },
+      },
+    )
+    assert turn["result"]["items"][0]["kind"] == "userMessage"
+    assert turn["result"]["items"][1]["kind"] == "plan"
+    assert turn["result"]["items"][2]["kind"] == "assistantMessage"
     return 0
   finally:
     process.terminate()

@@ -5,7 +5,7 @@ use cavell_core::{handle_request, RuntimeContext};
 use cavell_protocol::{JsonRpcRequest, JsonRpcResponse};
 
 fn main() -> Result<()> {
-  let mut context = RuntimeContext::new();
+  let mut context = RuntimeContext::new()?;
   let stdin = io::stdin();
   let mut stdout = io::stdout();
 

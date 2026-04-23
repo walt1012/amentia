@@ -11,6 +11,7 @@ struct TimelineEntry: Identifiable, Hashable {
     case userMessage
     case assistantMessage
     case system
+    case plan
   }
 
   let id: UUID

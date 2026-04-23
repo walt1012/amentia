@@ -4,8 +4,10 @@ use serde_json::Value;
 pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
+  pub const THREAD_READ: &str = "thread/read";
   pub const THREAD_START: &str = "thread/start";
   pub const THREAD_LIST: &str = "thread/list";
+  pub const TURN_START: &str = "turn/start";
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,6 +106,42 @@ pub struct ThreadStartParams {
 #[serde(rename_all = "camelCase")]
 pub struct ThreadStartResult {
   pub thread: ThreadSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadReadParams {
+  pub thread_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnStartParams {
+  pub thread_id: String,
+  pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimelineItem {
+  pub kind: String,
+  pub title: String,
+  pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadReadResult {
+  pub thread: ThreadSummary,
+  pub items: Vec<TimelineItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnStartResult {
+  pub turn_id: String,
+  pub thread_id: String,
+  pub items: Vec<TimelineItem>,
 }
 
 impl JsonRpcResponse {

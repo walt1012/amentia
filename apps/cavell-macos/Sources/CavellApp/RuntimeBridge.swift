@@ -19,6 +19,25 @@ final class RuntimeBridge {
     let status: String
   }
 
+  struct RuntimeTurnResult {
+    let turnID: String
+    let threadID: String
+    let items: [RuntimeTimelineItemResult]
+  }
+
+  struct RuntimeThreadState {
+    let id: String
+    let title: String
+    let status: String
+    let items: [RuntimeTimelineItemResult]
+  }
+
+  struct RuntimeTimelineItemResult {
+    let kind: String
+    let title: String
+    let content: String
+  }
+
   enum RuntimeError: LocalizedError {
     case runtimePathMissing
     case runtimePipeUnavailable
@@ -121,6 +140,53 @@ final class RuntimeBridge {
     )
   }
 
+  func startTurn(threadID: String, message: String) async throws -> RuntimeTurnResult {
+    let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
+      method: "turn/start",
+      params: TurnStartParams(threadId: threadID, message: message)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeTurnResult(
+      turnID: result.turnId,
+      threadID: result.threadId,
+      items: result.items.map {
+        RuntimeTimelineItemResult(kind: $0.kind, title: $0.title, content: $0.content)
+      }
+    )
+  }
+
+  func readThread(threadID: String) async throws -> RuntimeThreadState {
+    let response: JSONRPCResponse<ThreadReadResult> = try await sendRequest(
+      method: "thread/read",
+      params: ThreadReadParams(threadId: threadID)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeThreadState(
+      id: result.thread.id,
+      title: result.thread.title,
+      status: result.thread.status,
+      items: result.items.map {
+        RuntimeTimelineItemResult(kind: $0.kind, title: $0.title, content: $0.content)
+      }
+    )
+  }
+
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
     let process = Process()
@@ -130,6 +196,7 @@ final class RuntimeBridge {
 
     process.executableURL = executableURL
     process.arguments = []
+    process.environment = runtimeEnvironment()
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -157,6 +224,22 @@ final class RuntimeBridge {
     }
 
     throw RuntimeError.runtimePathMissing
+  }
+
+  private func runtimeEnvironment() -> [String: String] {
+    var environment = ProcessInfo.processInfo.environment
+    environment["CAVELL_DATA_DIR"] = appSupportStorageDirectory().path
+    return environment
+  }
+
+  private func appSupportStorageDirectory() -> URL {
+    let baseDirectory =
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+
+    return baseDirectory
+      .appendingPathComponent("Cavell", isDirectory: true)
+      .appendingPathComponent("storage", isDirectory: true)
   }
 
   private func sendRequest<Params: Encodable, ResultType: Decodable>(

@@ -61,6 +61,32 @@ struct ThreadStartResult: Codable {
   let thread: RuntimeThreadPayload
 }
 
+struct ThreadReadParams: Codable {
+  let threadId: String
+}
+
+struct ThreadReadResult: Codable {
+  let thread: RuntimeThreadPayload
+  let items: [RuntimeTimelineItem]
+}
+
+struct TurnStartParams: Codable {
+  let threadId: String
+  let message: String
+}
+
+struct RuntimeTimelineItem: Codable {
+  let kind: String
+  let title: String
+  let content: String
+}
+
+struct TurnStartResult: Codable {
+  let turnId: String
+  let threadId: String
+  let items: [RuntimeTimelineItem]
+}
+
 struct OptionalRequestParams: Encodable {
   static let none = OptionalRequestParams()
 }
