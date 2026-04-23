@@ -12,6 +12,7 @@ final class AppViewModel: ObservableObject {
   @Published var runtimeDetail: String
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
+  @Published var modelHealth: ModelHealthSummary?
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -51,6 +52,7 @@ final class AppViewModel: ObservableObject {
     self.runtimeDetail = "Runtime not launched"
     self.draftMessage = ""
     self.workspace = nil
+    self.modelHealth = nil
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
@@ -67,10 +69,26 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let session = try await runtimeBridge.launchAndInitialize()
+        let runtimeModel = try? await runtimeBridge.modelHealth()
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
-        runtimeDetail = "\(session.serverName) \(session.serverVersion)"
+        if let runtimeModel {
+          modelHealth = ModelHealthSummary(
+            packID: runtimeModel.packID,
+            displayName: runtimeModel.displayName,
+            backend: runtimeModel.backend,
+            status: runtimeModel.status,
+            detail: runtimeModel.detail,
+            binaryPath: runtimeModel.binaryPath,
+            modelPath: runtimeModel.modelPath
+          )
+          runtimeDetail =
+            "\(session.serverName) \(session.serverVersion) | \(runtimeModel.displayName)"
+        } else {
+          modelHealth = nil
+          runtimeDetail = "\(session.serverName) \(session.serverVersion)"
+        }
 
         if threadList.isEmpty {
           let firstThread = try await runtimeBridge.startThread(title: "Workspace Thread")
@@ -100,9 +118,27 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
+        if let runtimeModel {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID(),
+              kind: .system,
+              title: "Local Model Ready",
+              body:
+                "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
+              attributes: [
+                "modelId": runtimeModel.packID,
+                "modelBackend": runtimeModel.backend,
+                "modelStatus": runtimeModel.status,
+              ]
+            )
+          )
+        }
       } catch {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
+        modelHealth = nil
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -380,6 +416,36 @@ final class AppViewModel: ObservableObject {
 
   func workspacePath() -> String {
     workspace?.rootPath ?? "Open a local workspace to enable Milestone 1 tools."
+  }
+
+  func modelDisplayName() -> String {
+    modelHealth?.displayName ?? "Local Model Not Loaded"
+  }
+
+  func modelStatusSummary() -> String {
+    guard let modelHealth else {
+      return "Launch the runtime to inspect local model health."
+    }
+
+    return "\(modelHealth.backend) | \(modelHealth.status)"
+  }
+
+  func modelDetailSummary() -> String {
+    guard let modelHealth else {
+      return "Cavell will use the built-in local model path after the runtime connects."
+    }
+
+    return modelHealth.detail
+  }
+
+  func modelArtifactPathSummary() -> String {
+    guard let modelHealth else {
+      return "No local model paths available yet."
+    }
+
+    let modelPath = modelHealth.modelPath ?? "model path unavailable"
+    let binaryPath = modelHealth.binaryPath ?? "binary path unavailable"
+    return "Model: \(modelPath)\nBinary: \(binaryPath)"
   }
 
   func composerPlaceholder() -> String {

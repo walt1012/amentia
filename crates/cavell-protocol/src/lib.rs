@@ -6,6 +6,7 @@ pub mod methods {
   pub const APPROVAL_RESPOND: &str = "approval/respond";
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
+  pub const MODEL_HEALTH: &str = "model/health";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
   pub const TURN_CANCEL: &str = "turn/cancel";
   pub const THREAD_READ: &str = "thread/read";
@@ -84,6 +85,20 @@ pub struct InitializeResult {
 #[serde(rename_all = "camelCase")]
 pub struct HealthPingResult {
   pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelHealthResult {
+  pub pack_id: String,
+  pub display_name: String,
+  pub backend: String,
+  pub status: String,
+  pub detail: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub binary_path: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub model_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -11,6 +11,16 @@ struct WorkspaceSummary: Hashable {
   let displayName: String
 }
 
+struct ModelHealthSummary: Hashable {
+  let packID: String
+  let displayName: String
+  let backend: String
+  let status: String
+  let detail: String
+  let binaryPath: String?
+  let modelPath: String?
+}
+
 struct TimelineEntry: Identifiable, Hashable {
   enum Kind: String {
     case userMessage

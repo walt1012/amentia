@@ -75,6 +75,17 @@ def main() -> int:
     )
     assert health["result"]["status"] == "ok"
 
+    model_health = send_request(
+      process,
+      {
+        "id": 21,
+        "method": "model/health",
+      },
+    )
+    assert model_health["result"]["displayName"] == "LFM2.5-350M"
+    assert model_health["result"]["backend"] in {"heuristic", "llama.cpp"}
+    assert model_health["result"]["status"] in {"fallback", "ready"}
+
     workspace = send_request(
       process,
       {

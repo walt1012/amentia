@@ -25,6 +25,16 @@ final class RuntimeBridge {
     let threadCount: Int
   }
 
+  struct RuntimeModelHealth {
+    let packID: String
+    let displayName: String
+    let backend: String
+    let status: String
+    let detail: String
+    let binaryPath: String?
+    let modelPath: String?
+  }
+
   struct RuntimeTurnResult {
     let turnID: String
     let threadID: String
@@ -152,6 +162,31 @@ final class RuntimeBridge {
     return result.threads.map {
       RuntimeThreadSummary(id: $0.id, title: $0.title, status: $0.status)
     }
+  }
+
+  func modelHealth() async throws -> RuntimeModelHealth {
+    let response: JSONRPCResponse<ModelHealthResult> = try await sendRequest(
+      method: "model/health",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeModelHealth(
+      packID: result.packId,
+      displayName: result.displayName,
+      backend: result.backend,
+      status: result.status,
+      detail: result.detail,
+      binaryPath: result.binaryPath,
+      modelPath: result.modelPath
+    )
   }
 
   func openWorkspace(path: String) async throws -> RuntimeWorkspace {

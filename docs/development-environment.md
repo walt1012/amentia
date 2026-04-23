@@ -46,6 +46,27 @@ cd apps/cavell-macos
 swift run
 ```
 
+## Local Model Runtime
+
+The runtime now resolves the local model stack in this order:
+
+1. `CAVELL_LLAMACPP_PATH`
+2. repo-local `third_party/llama.cpp/llama-cli`
+3. repo-local `tools/llama.cpp/llama-cli`
+
+The default model pack path resolves in this order:
+
+1. `CAVELL_LFM_MODEL_PATH`
+2. repo-local `models/LFM2.5-350M.gguf`
+3. repo-local `model-packs/LFM2.5-350M.gguf`
+
+If either path is missing, Cavell falls back to the built-in heuristic summarizer while still reporting model health in the inspector. One local setup example is:
+
+```bash
+export CAVELL_LLAMACPP_PATH=/absolute/path/to/llama-cli
+export CAVELL_LFM_MODEL_PATH=/absolute/path/to/LFM2.5-350M.gguf
+```
+
 ## GitHub Actions Notes
 
 The workflow uses:

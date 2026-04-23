@@ -4,12 +4,14 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::Result;
+use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, ModelRole};
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
-  InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ServerCapabilities,
-  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
-  ThreadStartResult, ThreadSummary, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ModelHealthResult,
+  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
+  ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem, TurnCancelParams,
+  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
@@ -54,6 +56,7 @@ struct ActiveTurn {
 pub struct RuntimeContext {
   server_name: String,
   server_version: String,
+  model_runtime: LocalModelRuntime,
   store: Option<FileThreadStore>,
   threads: Vec<StoredThread>,
   workspace: Option<WorkspaceSummary>,
@@ -73,6 +76,7 @@ impl RuntimeContext {
     Ok(Self {
       server_name: "cavell-runtime".to_string(),
       server_version: env!("CARGO_PKG_VERSION").to_string(),
+      model_runtime: LocalModelRuntime::new_default(),
       store: Some(store),
       threads: persisted_threads
         .into_iter()
@@ -94,6 +98,7 @@ impl RuntimeContext {
     Self {
       server_name: "cavell-runtime".to_string(),
       server_version: env!("CARGO_PKG_VERSION").to_string(),
+      model_runtime: LocalModelRuntime::new_default(),
       store: None,
       threads: vec![],
       workspace: None,
@@ -150,6 +155,10 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
         status: "ok".to_string(),
       },
     ),
+    methods::MODEL_HEALTH => JsonRpcResponse::success(
+      request.id,
+      &to_protocol_model_health(context.model_runtime.health()),
+    ),
     methods::WORKSPACE_OPEN => handle_workspace_open(context, request),
     methods::TURN_CANCEL => handle_turn_cancel(context, request),
     methods::THREAD_READ => handle_thread_read(context, request),
@@ -166,6 +175,18 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     ),
     methods::TURN_START => handle_turn_start(context, request),
     _ => JsonRpcResponse::error(request.id, -32601, "Method not found"),
+  }
+}
+
+fn to_protocol_model_health(health: ModelHealth) -> ModelHealthResult {
+  ModelHealthResult {
+    pack_id: health.pack_id,
+    display_name: health.display_name,
+    backend: health.backend,
+    status: health.status,
+    detail: health.detail,
+    binary_path: health.binary_path,
+    model_path: health.model_path,
   }
 }
 
@@ -359,6 +380,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
   };
 
   let workspace = context.workspace.clone();
+  let model_runtime = context.model_runtime.clone();
   let (thread_id, turn_id, items, active_turn_id, pending_active_turn) = {
     let Some(thread) = context
       .threads
@@ -544,9 +566,19 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               content: format_file_result(&result),
               attributes: None,
             });
-            let summary = summarize_file_result(&thread_title, &workspace.display_name, &result);
-            pending_active_turn =
-              maybe_start_streaming_assistant_turn(&thread_id, &turn_id, &mut items, summary);
+            let (summary, summary_attributes) = summarize_file_result(
+              &model_runtime,
+              &thread_title,
+              &workspace.display_name,
+              &result,
+            );
+            pending_active_turn = maybe_start_streaming_assistant_turn(
+              &thread_id,
+              &turn_id,
+              &mut items,
+              summary,
+              summary_attributes,
+            );
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -591,14 +623,20 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               content: format_search_result(&search_query, &matches),
               attributes: None,
             });
-            let summary = summarize_search_result(
+            let (summary, summary_attributes) = summarize_search_result(
+              &model_runtime,
               &thread_title,
               &workspace.display_name,
               &search_query,
               &matches,
             );
-            pending_active_turn =
-              maybe_start_streaming_assistant_turn(&thread_id, &turn_id, &mut items, summary);
+            pending_active_turn = maybe_start_streaming_assistant_turn(
+              &thread_id,
+              &turn_id,
+              &mut items,
+              summary,
+              summary_attributes,
+            );
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -643,10 +681,19 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               content: format_directory_result(&entries),
               attributes: None,
             });
-            let summary =
-              summarize_directory_result(&thread_title, &workspace.display_name, &entries);
-            pending_active_turn =
-              maybe_start_streaming_assistant_turn(&thread_id, &turn_id, &mut items, summary);
+            let (summary, summary_attributes) = summarize_directory_result(
+              &model_runtime,
+              &thread_title,
+              &workspace.display_name,
+              &entries,
+            );
+            pending_active_turn = maybe_start_streaming_assistant_turn(
+              &thread_id,
+              &turn_id,
+              &mut items,
+              summary,
+              summary_attributes,
+            );
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -776,6 +823,7 @@ fn handle_approval_respond(
       )
     }
   };
+  let model_runtime = context.model_runtime.clone();
 
   let Some(thread) = context
     .threads
@@ -852,6 +900,8 @@ fn handle_approval_respond(
 
       match run_shell(Path::new(&workspace.root_path), &command, 4096) {
         Ok(result) => {
+          let (summary, summary_attributes) =
+            summarize_shell_result(&model_runtime, &workspace.display_name, &result);
           items.push(TimelineItem {
             kind: "toolResult".to_string(),
             title: "run_shell result".to_string(),
@@ -861,8 +911,8 @@ fn handle_approval_respond(
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
             title: "Assistant".to_string(),
-            content: summarize_shell_result(&workspace.display_name, &result),
-            attributes: None,
+            content: summary,
+            attributes: Some(summary_attributes),
           });
         }
         Err(error) => {
@@ -876,6 +926,7 @@ fn handle_approval_respond(
       }
     }
   } else {
+    let (summary, summary_attributes) = summarize_denied_approval(&model_runtime, &approval);
     items.push(TimelineItem {
       kind: "approvalResolved".to_string(),
       title: "Approval Denied".to_string(),
@@ -888,8 +939,8 @@ fn handle_approval_respond(
     items.push(TimelineItem {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
-      content: summarize_denied_approval(&approval),
-      attributes: None,
+      content: summary,
+      attributes: Some(summary_attributes),
     });
   }
 
@@ -1096,6 +1147,7 @@ fn maybe_start_streaming_assistant_turn(
   turn_id: &str,
   items: &mut Vec<TimelineItem>,
   full_content: String,
+  mut attributes: HashMap<String, String>,
 ) -> Option<ActiveTurn> {
   let initial_chars = 48.min(full_content.chars().count());
   let total_chars = full_content.chars().count();
@@ -1106,15 +1158,17 @@ fn maybe_start_streaming_assistant_turn(
   } else {
     "in_progress"
   };
+  attributes.insert("turnId".to_string(), turn_id.to_string());
+  attributes.insert(
+    "streamingStatus".to_string(),
+    streaming_status.to_string(),
+  );
 
   items.push(TimelineItem {
     kind: "assistantMessage".to_string(),
     title: "Assistant".to_string(),
     content: initial_content,
-    attributes: Some(HashMap::from([
-      ("turnId".to_string(), turn_id.to_string()),
-      ("streamingStatus".to_string(), streaming_status.to_string()),
-    ])),
+    attributes: Some(attributes),
   });
 
   if is_complete {
@@ -1230,20 +1284,27 @@ fn format_file_result(result: &ReadFileResult) -> String {
 }
 
 fn summarize_file_result(
+  model_runtime: &LocalModelRuntime,
   thread_title: &str,
   workspace_name: &str,
   result: &ReadFileResult,
-) -> String {
+) -> (String, HashMap<String, String>) {
   let preview = result
     .content
     .lines()
     .find(|line| !line.trim().is_empty())
     .unwrap_or("The file is empty.");
 
-  format!(
+  let fallback = format!(
     "Cavell inspected {} for {} in {}. First useful line: {}",
     result.relative_path, thread_title, workspace_name, preview
-  )
+  );
+  let prompt = format!(
+    "You are Cavell, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\nFile: {}\nPreview:\n{}",
+    result.relative_path, result.content
+  );
+
+  generate_local_summary(model_runtime, prompt, fallback)
 }
 
 fn format_directory_result(entries: &[DirectoryEntry]) -> String {
@@ -1276,14 +1337,21 @@ fn format_search_result(query: &str, matches: &[SearchMatch]) -> String {
 }
 
 fn summarize_directory_result(
+  model_runtime: &LocalModelRuntime,
   thread_title: &str,
   workspace_name: &str,
   entries: &[DirectoryEntry],
-) -> String {
+) -> (String, HashMap<String, String>) {
   if entries.is_empty() {
-    return format!(
-      "Cavell inspected {} for {} and found an empty root directory.",
-      workspace_name, thread_title
+    return generate_local_summary(
+      model_runtime,
+      format!(
+        "You are Cavell, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}"
+      ),
+      format!(
+        "Cavell inspected {} for {} and found an empty root directory.",
+        workspace_name, thread_title
+      ),
     );
   }
 
@@ -1294,25 +1362,38 @@ fn summarize_directory_result(
     .collect::<Vec<_>>()
     .join(", ");
 
-  format!(
+  let fallback = format!(
     "Cavell inspected {} for {} and found {} root entries, including {}.",
     workspace_name,
     thread_title,
     entries.len(),
     preview
-  )
+  );
+  let prompt = format!(
+    "You are Cavell, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\nEntries:\n{}",
+    format_directory_result(entries)
+  );
+
+  generate_local_summary(model_runtime, prompt, fallback)
 }
 
 fn summarize_search_result(
+  model_runtime: &LocalModelRuntime,
   thread_title: &str,
   workspace_name: &str,
   query: &str,
   matches: &[SearchMatch],
-) -> String {
+) -> (String, HashMap<String, String>) {
   if matches.is_empty() {
-    return format!(
-      "Cavell searched {} for {} and found no matches for \"{}\".",
-      workspace_name, thread_title, query
+    return generate_local_summary(
+      model_runtime,
+      format!(
+        "You are Cavell, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\nQuery: {query}"
+      ),
+      format!(
+        "Cavell searched {} for {} and found no matches for \"{}\".",
+        workspace_name, thread_title, query
+      ),
     );
   }
 
@@ -1323,14 +1404,20 @@ fn summarize_search_result(
     .collect::<Vec<_>>()
     .join(", ");
 
-  format!(
+  let fallback = format!(
     "Cavell searched {} for {} and found {} matches for \"{}\", including {}.",
     workspace_name,
     thread_title,
     matches.len(),
     query,
     preview
-  )
+  );
+  let prompt = format!(
+    "You are Cavell, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\nQuery: {query}\nMatches:\n{}",
+    format_search_result(query, matches)
+  );
+
+  generate_local_summary(model_runtime, prompt, fallback)
 }
 
 fn format_shell_result(result: &ShellCommandResult) -> String {
@@ -1356,8 +1443,12 @@ fn format_shell_result(result: &ShellCommandResult) -> String {
   )
 }
 
-fn summarize_shell_result(workspace_name: &str, result: &ShellCommandResult) -> String {
-  if result.exit_code == 0 {
+fn summarize_shell_result(
+  model_runtime: &LocalModelRuntime,
+  workspace_name: &str,
+  result: &ShellCommandResult,
+) -> (String, HashMap<String, String>) {
+  let fallback = if result.exit_code == 0 {
     format!(
       "Cavell ran `{}` in {} and it finished successfully.",
       result.command, workspace_name
@@ -1367,21 +1458,60 @@ fn summarize_shell_result(workspace_name: &str, result: &ShellCommandResult) -> 
       "Cavell ran `{}` in {} and it exited with code {}.",
       result.command, workspace_name, result.exit_code
     )
-  }
+  };
+  let prompt = format!(
+    "You are Cavell, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\nCommand: {}\nExit Code: {}\nstdout:\n{}\n\nstderr:\n{}",
+    result.command, result.exit_code, result.stdout, result.stderr
+  );
+
+  generate_local_summary(model_runtime, prompt, fallback)
 }
 
-fn summarize_denied_approval(approval: &PendingApproval) -> String {
-  if approval.action == "run_shell" {
+fn summarize_denied_approval(
+  model_runtime: &LocalModelRuntime,
+  approval: &PendingApproval,
+) -> (String, HashMap<String, String>) {
+  let fallback = if approval.action == "run_shell" {
     let command = approval.command.clone().unwrap_or_default();
-    return format!(
+    format!(
       "Cavell skipped the shell command `{}` because the approval was denied.",
       command
-    );
-  }
+    )
+  } else {
+    format!(
+      "Cavell skipped writing {} because the approval was denied.",
+      approval.relative_path
+    )
+  };
+  let prompt = format!(
+    "You are Cavell, a concise local coding agent. Summarize a denied approval in one sentence.\nAction: {}\nTarget: {}\nCommand: {}",
+    approval.action,
+    approval.relative_path,
+    approval.command.clone().unwrap_or_default()
+  );
 
-  format!(
-    "Cavell skipped writing {} because the approval was denied.",
-    approval.relative_path
+  generate_local_summary(model_runtime, prompt, fallback)
+}
+
+fn generate_local_summary(
+  model_runtime: &LocalModelRuntime,
+  prompt: String,
+  fallback: String,
+) -> (String, HashMap<String, String>) {
+  let result = model_runtime.generate(GenerateRequest {
+    role: ModelRole::Summarizer,
+    prompt,
+    fallback,
+    max_tokens: 160,
+  });
+
+  (
+    result.text,
+    HashMap::from([
+      ("modelId".to_string(), result.model_id),
+      ("modelBackend".to_string(), result.backend),
+      ("modelStatus".to_string(), result.status),
+    ]),
   )
 }
 
@@ -1458,6 +1588,18 @@ mod tests {
     assert!(response.error.is_none());
     let result = response.result.expect("health result");
     assert_eq!(result["status"], "ok");
+  }
+
+  #[test]
+  fn model_health_returns_local_model_status() {
+    let mut context = RuntimeContext::new_in_memory();
+    let response = handle_request(&mut context, request(methods::MODEL_HEALTH, None));
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("model health result");
+    assert_eq!(result["displayName"], "LFM2.5-350M");
+    assert!(result["backend"].is_string());
+    assert!(result["status"].is_string());
   }
 
   #[test]

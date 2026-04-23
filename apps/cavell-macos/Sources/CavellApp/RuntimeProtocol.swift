@@ -43,6 +43,16 @@ struct InitializeResult: Codable {
   let capabilities: ServerCapabilities
 }
 
+struct ModelHealthResult: Codable {
+  let packId: String
+  let displayName: String
+  let backend: String
+  let status: String
+  let detail: String
+  let binaryPath: String?
+  let modelPath: String?
+}
+
 struct ThreadListResult: Codable {
   let threads: [RuntimeThreadPayload]
 }

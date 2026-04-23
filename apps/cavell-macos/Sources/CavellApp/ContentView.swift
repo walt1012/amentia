@@ -151,6 +151,25 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      GroupBox("Local Model") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.modelDisplayName())
+            .font(.headline)
+          Text(viewModel.modelStatusSummary())
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+          Text(viewModel.modelDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+          Text(viewModel.modelArtifactPathSummary())
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       GroupBox("Thread") {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.selectedThreadTitle())
@@ -192,15 +211,16 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
           Text("Read, search, shell, diff preview, and approval-gated write tools")
-          Text("Tool, diff, approval, and inspector detail cards")
+          Text("SQLite-backed thread persistence and workspace restoration")
           Text("Workspace-aware prompt loop with cancel control")
+          Text("Local model health and summarizer runtime wiring")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .font(.subheadline)
       }
 
       GroupBox("Next Integration") {
-        Text("Add event notifications, SQLite persistence, and model-backed planning.")
+        Text("Add token events, richer planner prompts, and a bundled llama.cpp model pack.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
