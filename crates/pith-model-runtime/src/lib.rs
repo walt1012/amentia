@@ -356,9 +356,7 @@ fn resolve_model_path(
 }
 
 fn resolve_manifest() -> Option<ManifestResolution> {
-  let env_manifest = env::var("PITH_MODEL_PACK_MANIFEST")
-    .ok()
-    .map(PathBuf::from);
+  let env_manifest = env::var("PITH_MODEL_PACK_MANIFEST").ok().map(PathBuf::from);
   let mut candidates = vec![];
 
   if let Some(env_manifest) = env_manifest {
