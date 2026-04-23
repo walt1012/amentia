@@ -1110,13 +1110,12 @@ fn handle_approval_respond(
             workspace_display_name: workspace.display_name.clone(),
             command: command.clone(),
           });
-          let (summary, summary_attributes) =
-            summarize_shell_result(
-              &model_runtime,
-              &memory_notes,
-              &workspace.display_name,
-              &result,
-            );
+          let (summary, summary_attributes) = summarize_shell_result(
+            &model_runtime,
+            &memory_notes,
+            &workspace.display_name,
+            &result,
+          );
           items.push(TimelineItem {
             kind: "toolResult".to_string(),
             title: "run_shell result".to_string(),
@@ -1741,8 +1740,7 @@ fn summarize_search_result(
   query: &str,
   matches: &[SearchMatch],
 ) -> (String, HashMap<String, String>) {
-  let relevant_memory_notes =
-    retrieve_memory_context(memory_notes, Some(workspace_name), query);
+  let relevant_memory_notes = retrieve_memory_context(memory_notes, Some(workspace_name), query);
   if matches.is_empty() {
     return generate_local_summary(
       model_runtime,
@@ -1846,8 +1844,7 @@ fn summarize_denied_approval(
     .command
     .clone()
     .unwrap_or_else(|| format!("{} {}", approval.action, approval.relative_path));
-  let relevant_memory_notes =
-    retrieve_memory_context(memory_notes, Some(workspace_name), &query);
+  let relevant_memory_notes = retrieve_memory_context(memory_notes, Some(workspace_name), &query);
   let fallback = if approval.action == "run_shell" {
     let command = approval.command.clone().unwrap_or_default();
     format!(
@@ -1921,11 +1918,11 @@ fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
   format!("Relevant memory notes:\n{note_lines}")
 }
 
-fn merge_memory_attributes(
-  attributes: &mut HashMap<String, String>,
-  memory_notes: &[MemoryNote],
-) {
-  attributes.insert("memoryNoteCount".to_string(), memory_notes.len().to_string());
+fn merge_memory_attributes(attributes: &mut HashMap<String, String>, memory_notes: &[MemoryNote]) {
+  attributes.insert(
+    "memoryNoteCount".to_string(),
+    memory_notes.len().to_string(),
+  );
   if memory_notes.is_empty() {
     return;
   }
@@ -2227,7 +2224,10 @@ mod tests {
     assert_eq!(items[4]["kind"], "assistantMessage");
     assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
     assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
-    assert_eq!(items[4]["attributes"]["memoryNoteTitles"], "Opened workspace read-file");
+    assert_eq!(
+      items[4]["attributes"]["memoryNoteTitles"],
+      "Opened workspace read-file"
+    );
     assert!(matches!(
       items[4]["attributes"]["streamingStatus"].as_str(),
       Some("in_progress") | Some("completed")
@@ -2609,9 +2609,7 @@ mod tests {
         })),
       ),
     );
-    let approval_id = write_turn
-      .result
-      .expect("write turn result")["pendingApprovals"][0]["id"]
+    let approval_id = write_turn.result.expect("write turn result")["pendingApprovals"][0]["id"]
       .as_str()
       .expect("approval id")
       .to_string();
