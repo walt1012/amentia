@@ -493,6 +493,24 @@ fn model_metrics(
     metrics.insert("maxOutputTokens".to_string(), "160".to_string());
   }
 
+  let suggested_file_name = manifest
+    .map(|item| item.file_name.as_str())
+    .unwrap_or("LFM2.5-350M.gguf");
+  let suggested_manifest_path = suggested_manifest_install_path();
+  let suggested_model_path = suggested_model_install_path(suggested_file_name);
+  let suggested_binary_path = suggested_binary_install_path();
+  metrics.insert(
+    "suggestedManifestPath".to_string(),
+    suggested_manifest_path.display().to_string(),
+  );
+  metrics.insert(
+    "suggestedModelPath".to_string(),
+    suggested_model_path.display().to_string(),
+  );
+  metrics.insert(
+    "suggestedBinaryPath".to_string(),
+    suggested_binary_path.display().to_string(),
+  );
   let readiness = model_readiness(binary_path, model_path, manifest_path, is_runtime_ready);
   metrics.insert("readiness".to_string(), readiness.to_string());
   metrics.insert(
@@ -807,6 +825,9 @@ mod tests {
     assert_eq!(health.metrics["readiness"], "unconfigured");
     assert_eq!(health.metrics["packReady"], "false");
     assert!(health.metrics["installHint"].contains("model-pack.json"));
+    assert!(health.metrics.contains_key("suggestedManifestPath"));
+    assert!(health.metrics.contains_key("suggestedModelPath"));
+    assert!(health.metrics.contains_key("suggestedBinaryPath"));
   }
 
   #[test]

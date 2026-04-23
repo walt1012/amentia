@@ -640,6 +640,17 @@ final class AppViewModel: ObservableObject {
     return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
   }
 
+  func modelSuggestedPathSummary() -> String {
+    guard let modelHealth else {
+      return "Suggested install layout unavailable."
+    }
+
+    let manifestPath = modelHealth.metrics["suggestedManifestPath"] ?? "manifest path unavailable"
+    let modelPath = modelHealth.metrics["suggestedModelPath"] ?? "model path unavailable"
+    let binaryPath = modelHealth.metrics["suggestedBinaryPath"] ?? "binary path unavailable"
+    return "Suggested Manifest: \(manifestPath)\nSuggested Model: \(modelPath)\nSuggested Binary: \(binaryPath)"
+  }
+
   func modelArtifactPathSummary() -> String {
     guard let modelHealth else {
       return "No local model paths available yet."

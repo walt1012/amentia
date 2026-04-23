@@ -106,6 +106,9 @@ def main() -> int:
     }
     assert model_health["result"]["metrics"]["packReady"] in {"true", "false"}
     assert model_health["result"]["metrics"]["installHint"]
+    assert model_health["result"]["metrics"]["suggestedManifestPath"]
+    assert model_health["result"]["metrics"]["suggestedModelPath"]
+    assert model_health["result"]["metrics"]["suggestedBinaryPath"]
 
     memory_status, _ = send_request(
       process,
