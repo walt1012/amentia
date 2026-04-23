@@ -196,6 +196,33 @@ pub fn run_shell(
   })
 }
 
+pub fn generate_diff(
+  workspace_root: &Path,
+  relative_path: &str,
+  next_content: &str,
+) -> Result<String> {
+  let workspace_root = canonical_workspace_root(workspace_root)?;
+  let sanitized_relative_path = sanitize_relative_path(relative_path)?;
+  let target = workspace_root.join(&sanitized_relative_path);
+
+  if target.is_dir() {
+    bail!("workspace path points to a directory");
+  }
+
+  let previous_content = if target.is_file() {
+    fs::read_to_string(&target)
+      .with_context(|| format!("failed to read file {}", target.display()))?
+  } else {
+    String::new()
+  };
+
+  Ok(build_unified_diff(
+    &sanitized_relative_path,
+    &previous_content,
+    next_content,
+  ))
+}
+
 fn visit_directory(
   workspace_root: &Path,
   current_dir: &Path,
@@ -364,4 +391,54 @@ fn truncate_output(output: &str, max_output_bytes: usize) -> String {
   }
 
   collected
+}
+
+fn build_unified_diff(relative_path: &str, previous_content: &str, next_content: &str) -> String {
+  let previous_lines = collect_diff_lines(previous_content);
+  let next_lines = collect_diff_lines(next_content);
+
+  let max_line_count = previous_lines.len().max(next_lines.len());
+  let mut diff_lines = vec![
+    format!("--- a/{relative_path}"),
+    format!("+++ b/{relative_path}"),
+    "@@".to_string(),
+  ];
+
+  if previous_lines == next_lines {
+    diff_lines.push("  [no content changes]".to_string());
+    return diff_lines.join("\n");
+  }
+
+  for index in 0..max_line_count {
+    match (previous_lines.get(index), next_lines.get(index)) {
+      (Some(previous_line), Some(next_line)) if previous_line == next_line => {
+        diff_lines.push(format!(" {}", previous_line));
+      }
+      (Some(previous_line), Some(next_line)) => {
+        diff_lines.push(format!("-{}", previous_line));
+        diff_lines.push(format!("+{}", next_line));
+      }
+      (Some(previous_line), None) => {
+        diff_lines.push(format!("-{}", previous_line));
+      }
+      (None, Some(next_line)) => {
+        diff_lines.push(format!("+{}", next_line));
+      }
+      (None, None) => {}
+    }
+  }
+
+  diff_lines.join("\n")
+}
+
+fn collect_diff_lines(content: &str) -> Vec<String> {
+  if content.is_empty() {
+    return vec![];
+  }
+
+  let mut lines = content.lines().map(ToString::to_string).collect::<Vec<_>>();
+  if content.ends_with('\n') {
+    lines.push(String::new());
+  }
+  lines
 }

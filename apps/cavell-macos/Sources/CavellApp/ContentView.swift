@@ -154,8 +154,8 @@ struct ContentView: View {
       GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
-          Text("Read, search, shell, and approval-gated write tools")
-          Text("Tool and approval timeline cards")
+          Text("Read, search, shell, diff preview, and approval-gated write tools")
+          Text("Tool, diff, and approval timeline cards")
           Text("Workspace-aware prompt loop")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -163,7 +163,7 @@ struct ContentView: View {
       }
 
       GroupBox("Next Integration") {
-        Text("Add streaming events, diff review, SQLite persistence, and model-backed planning.")
+        Text("Add streaming events, patch review actions, SQLite persistence, and model-backed planning.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
@@ -186,7 +186,7 @@ private struct TimelineCard: View {
       Text(entry.title)
         .font(.headline)
       Text(entry.body)
-        .font(.body)
+        .font(bodyFont)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
@@ -217,12 +217,23 @@ private struct TimelineCard: View {
       return Color.accentColor.opacity(0.12)
     case .tool:
       return Color.green.opacity(0.12)
+    case .diff:
+      return Color.blue.opacity(0.1)
     case .approval:
       return Color.yellow.opacity(0.16)
     case .warning:
       return Color.orange.opacity(0.16)
     default:
       return Color(NSColor.controlBackgroundColor)
+    }
+  }
+
+  private var bodyFont: Font {
+    switch entry.kind {
+    case .diff:
+      return .system(.body, design: .monospaced)
+    default:
+      return .body
     }
   }
 }

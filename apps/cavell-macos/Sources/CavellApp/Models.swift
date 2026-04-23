@@ -18,6 +18,7 @@ struct TimelineEntry: Identifiable, Hashable {
     case system
     case plan
     case tool
+    case diff
     case approval
     case warning
   }

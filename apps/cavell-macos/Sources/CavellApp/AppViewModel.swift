@@ -309,7 +309,7 @@ final class AppViewModel: ObservableObject {
       return "Open a workspace to start local agent work"
     }
 
-    return "Ask Cavell to inspect files, search content, run shell commands, or write files"
+    return "Ask Cavell to inspect files, review diffs, run shell commands, or write files"
   }
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {
@@ -445,6 +445,8 @@ final class AppViewModel: ObservableObject {
       return .assistantMessage
     case "plan":
       return .plan
+    case "diffArtifact":
+      return .diff
     case "toolStart", "toolResult":
       return .tool
     case "approvalRequested", "approvalResolved":

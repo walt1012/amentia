@@ -12,8 +12,8 @@ use cavell_protocol::{
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
-  list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry, ReadFileResult,
-  SearchMatch, ShellCommandResult,
+  generate_diff, list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry,
+  ReadFileResult, SearchMatch, ShellCommandResult,
 };
 
 #[derive(Debug, Clone)]
@@ -381,6 +381,37 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         ),
         attributes: None,
       });
+      items.push(TimelineItem {
+        kind: "toolStart".to_string(),
+        title: "generate_diff".to_string(),
+        content: write_intent.relative_path.clone(),
+        attributes: None,
+      });
+      match generate_diff(
+        workspace_root,
+        &write_intent.relative_path,
+        &write_intent.content,
+      ) {
+        Ok(diff) => {
+          items.push(TimelineItem {
+            kind: "diffArtifact".to_string(),
+            title: "Diff Preview".to_string(),
+            content: diff,
+            attributes: Some(HashMap::from([
+              ("action".to_string(), "write_file".to_string()),
+              ("relativePath".to_string(), write_intent.relative_path.clone()),
+            ])),
+          });
+        }
+        Err(error) => {
+          items.push(TimelineItem {
+            kind: "warning".to_string(),
+            title: "generate_diff failed".to_string(),
+            content: error.to_string(),
+            attributes: None,
+          });
+        }
+      }
       items.push(TimelineItem {
         kind: "approvalRequested".to_string(),
         title: "Approval Requested".to_string(),
@@ -803,10 +834,7 @@ fn handle_approval_respond(
     items.push(TimelineItem {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
-      content: format!(
-        "Cavell skipped writing {} because the approval was denied.",
-        approval.relative_path
-      ),
+      content: summarize_denied_approval(&approval),
       attributes: None,
     });
   }
@@ -1080,6 +1108,21 @@ fn summarize_shell_result(workspace_name: &str, result: &ShellCommandResult) -> 
       result.command, workspace_name, result.exit_code
     )
   }
+}
+
+fn summarize_denied_approval(approval: &PendingApproval) -> String {
+  if approval.action == "run_shell" {
+    let command = approval.command.clone().unwrap_or_default();
+    return format!(
+      "Cavell skipped the shell command `{}` because the approval was denied.",
+      command
+    );
+  }
+
+  format!(
+    "Cavell skipped writing {} because the approval was denied.",
+    approval.relative_path
+  )
 }
 
 fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<ApprovalRequest> {
@@ -1437,6 +1480,14 @@ mod tests {
 
     assert!(turn_response.error.is_none());
     let turn_result = turn_response.result.expect("turn result");
+    let turn_items = turn_result["items"].as_array().expect("turn items");
+    assert_eq!(turn_items[2]["title"], "generate_diff");
+    assert_eq!(turn_items[3]["kind"], "diffArtifact");
+    assert!(turn_items[3]["content"]
+      .as_str()
+      .unwrap()
+      .contains("+++ b/docs/output.txt"));
+    assert_eq!(turn_items[4]["kind"], "approvalRequested");
     let approval_id = turn_result["pendingApprovals"][0]["id"]
       .as_str()
       .expect("approval id")

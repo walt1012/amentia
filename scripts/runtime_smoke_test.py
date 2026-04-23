@@ -163,7 +163,10 @@ def main() -> int:
         },
       },
     )
-    assert write_turn["result"]["items"][2]["kind"] == "approvalRequested"
+    assert write_turn["result"]["items"][2]["title"] == "generate_diff"
+    assert write_turn["result"]["items"][3]["kind"] == "diffArtifact"
+    assert "+++ b/docs/output.txt" in write_turn["result"]["items"][3]["content"]
+    assert write_turn["result"]["items"][4]["kind"] == "approvalRequested"
     approval_id = write_turn["result"]["pendingApprovals"][0]["id"]
 
     approval = send_request(
