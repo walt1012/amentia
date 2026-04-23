@@ -28,8 +28,11 @@ jobs:
       - name: Cargo test
         run: cargo test --workspace
 
+      - name: Runtime smoke test
+        run: python scripts/runtime_smoke_test.py
+
   swift:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
