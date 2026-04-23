@@ -13,7 +13,7 @@ use cavell_protocol::{
   TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
   WorkspaceSummary,
 };
-use cavell_storage::{FileThreadStore, StoredThreadRecord};
+use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry,
   ReadFileResult, SearchMatch, ShellCommandResult,
@@ -71,7 +71,9 @@ impl RuntimeContext {
     let store = FileThreadStore::new_default()?;
     let persisted_threads = store.load_threads()?;
     let persisted_workspace = store.load_workspace()?;
+    let persisted_pending_approvals = store.load_pending_approvals()?;
     let next_thread_number = persisted_threads.len() + 1;
+    let next_approval_number = store.next_approval_sequence()?;
 
     Ok(Self {
       server_name: "cavell-runtime".to_string(),
@@ -87,10 +89,26 @@ impl RuntimeContext {
         })
         .collect(),
       workspace: persisted_workspace,
-      pending_approvals: HashMap::new(),
+      pending_approvals: persisted_pending_approvals
+        .into_iter()
+        .map(|approval| {
+          (
+            approval.id.clone(),
+            PendingApproval {
+              id: approval.id,
+              thread_id: approval.thread_id,
+              action: approval.action,
+              title: approval.title,
+              relative_path: approval.relative_path,
+              content: approval.content,
+              command: approval.command,
+            },
+          )
+        })
+        .collect(),
       active_turns: HashMap::new(),
       next_thread_number,
-      next_approval_number: 1,
+      next_approval_number,
     })
   }
 
@@ -127,6 +145,26 @@ impl RuntimeContext {
     store.save_threads(&threads)
   }
 
+  fn persist_pending_approvals(&self) -> Result<()> {
+    let Some(store) = &self.store else {
+      return Ok(());
+    };
+
+    let approvals = self
+      .pending_approvals
+      .values()
+      .cloned()
+      .map(stored_approval_record)
+      .collect::<Vec<_>>();
+
+    store.save_pending_approvals(&approvals)
+  }
+
+  fn persist_runtime_state(&self) -> Result<()> {
+    self.persist_threads()?;
+    self.persist_pending_approvals()
+  }
+
   fn persist_workspace(&self) -> Result<()> {
     let Some(store) = &self.store else {
       return Ok(());
@@ -136,6 +174,14 @@ impl RuntimeContext {
     };
 
     store.save_workspace(workspace)
+  }
+
+  fn persist_resolved_approval(&self, approval: &PendingApproval, decision: &str) -> Result<()> {
+    let Some(store) = &self.store else {
+      return Ok(());
+    };
+
+    store.resolve_approval(&stored_approval_record(approval.clone()), decision)
   }
 }
 
@@ -355,7 +401,7 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
     items: items.clone(),
   });
 
-  if let Err(error) = context.persist_threads() {
+  if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
 
@@ -762,7 +808,11 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       .insert(active_turn.id.clone(), active_turn);
   }
 
-  if let Err(error) = context.persist_threads() {
+  if let Err(error) = context.persist_resolved_approval(&approval, &decision) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
 
@@ -1510,6 +1560,18 @@ fn generate_local_summary(
       ("modelStatus".to_string(), result.status),
     ]),
   )
+}
+
+fn stored_approval_record(approval: PendingApproval) -> StoredApprovalRecord {
+  StoredApprovalRecord {
+    id: approval.id,
+    thread_id: approval.thread_id,
+    action: approval.action,
+    title: approval.title,
+    relative_path: approval.relative_path,
+    content: approval.content,
+    command: approval.command,
+  }
 }
 
 fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<ApprovalRequest> {

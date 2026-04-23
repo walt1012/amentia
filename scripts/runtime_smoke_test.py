@@ -10,6 +10,18 @@ import sys
 from pathlib import Path
 
 
+def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
+  return subprocess.Popen(
+    ["cargo", "run", "-p", "cavell-runtime-bin"],
+    cwd=repo_root,
+    env=env,
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+  )
+
+
 def send_request(process: subprocess.Popen[str], payload: dict) -> dict:
   assert process.stdin is not None
   assert process.stdout is not None
@@ -36,19 +48,9 @@ def main() -> int:
   (workspace_dir / "README.md").write_text("# Cavell\nMilestone 1 smoke test\n", encoding="utf-8")
   (workspace_dir / "apps").mkdir()
   (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
-  command = ["cargo", "run", "-p", "cavell-runtime-bin"]
   env = os.environ.copy()
   env["CAVELL_DATA_DIR"] = str(state_dir)
-
-  process = subprocess.Popen(
-    command,
-    cwd=repo_root,
-    env=env,
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True,
-  )
+  process = start_runtime(repo_root, env)
 
   try:
     initialize = send_request(
@@ -205,6 +207,41 @@ def main() -> int:
     assert "+++ b/docs/output.txt" in write_turn["result"]["items"][3]["content"]
     assert write_turn["result"]["items"][4]["kind"] == "approvalRequested"
     approval_id = write_turn["result"]["pendingApprovals"][0]["id"]
+
+    process.terminate()
+    process.wait(timeout=5)
+    process = start_runtime(repo_root, env)
+
+    restarted_initialize = send_request(
+      process,
+      {
+        "id": 22,
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "runtime-smoke-test",
+            "version": "0.1.0",
+          }
+        },
+      },
+    )
+    assert restarted_initialize["result"]["serverInfo"]["name"] == "cavell-runtime"
+
+    restarted_thread = send_request(
+      process,
+      {
+        "id": 23,
+        "method": "thread/read",
+        "params": {
+          "threadId": "thread-1",
+        },
+      },
+    )
+    assert restarted_thread["result"]["pendingApprovals"][0]["id"] == approval_id
+    assert any(
+      item["kind"] == "approvalRequested"
+      for item in restarted_thread["result"]["items"]
+    )
 
     approval = send_request(
       process,

@@ -8,7 +8,7 @@ use cavell_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoragePaths {
@@ -34,6 +34,17 @@ pub struct StoredThreadRecord {
   pub summary: ThreadSummary,
   pub turn_count: usize,
   pub items: Vec<TimelineItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredApprovalRecord {
+  pub id: String,
+  pub thread_id: String,
+  pub action: String,
+  pub title: String,
+  pub relative_path: String,
+  pub content: Option<String>,
+  pub command: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -147,6 +158,127 @@ impl FileThreadStore {
     Ok(workspace)
   }
 
+  pub fn load_pending_approvals(&self) -> Result<Vec<StoredApprovalRecord>> {
+    let connection = self.open_connection()?;
+    let mut statement = connection.prepare(
+      "SELECT id, thread_id, action, title, relative_path, content, command
+       FROM approvals
+       WHERE decision IS NULL
+       ORDER BY requested_at ASC, id ASC",
+    )?;
+
+    let rows = statement.query_map([], |row| {
+      Ok(StoredApprovalRecord {
+        id: row.get(0)?,
+        thread_id: row.get(1)?,
+        action: row.get(2)?,
+        title: row.get(3)?,
+        relative_path: row.get(4)?,
+        content: row.get(5)?,
+        command: row.get(6)?,
+      })
+    })?;
+
+    rows
+      .collect::<std::result::Result<Vec<_>, _>>()
+      .context("failed to load pending approval records")
+  }
+
+  pub fn save_pending_approvals(&self, approvals: &[StoredApprovalRecord]) -> Result<()> {
+    let mut connection = self.open_connection()?;
+    let transaction = connection.transaction()?;
+    transaction.execute("DELETE FROM approvals WHERE decision IS NULL", [])?;
+
+    for approval in approvals {
+      transaction.execute(
+        "INSERT INTO approvals (
+          id,
+          thread_id,
+          action,
+          title,
+          relative_path,
+          content,
+          command,
+          requested_at,
+          decision,
+          resolved_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL)",
+        params![
+          &approval.id,
+          &approval.thread_id,
+          &approval.action,
+          &approval.title,
+          &approval.relative_path,
+          &approval.content,
+          &approval.command,
+          current_timestamp()?,
+        ],
+      )?;
+    }
+
+    transaction.commit()?;
+    Ok(())
+  }
+
+  pub fn resolve_approval(&self, approval: &StoredApprovalRecord, decision: &str) -> Result<()> {
+    let connection = self.open_connection()?;
+    connection.execute(
+      "INSERT INTO approvals (
+        id,
+        thread_id,
+        action,
+        title,
+        relative_path,
+        content,
+        command,
+        requested_at,
+        decision,
+        resolved_at
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+      ON CONFLICT(id) DO UPDATE SET
+        thread_id = excluded.thread_id,
+        action = excluded.action,
+        title = excluded.title,
+        relative_path = excluded.relative_path,
+        content = excluded.content,
+        command = excluded.command,
+        decision = excluded.decision,
+        resolved_at = excluded.resolved_at",
+      params![
+        &approval.id,
+        &approval.thread_id,
+        &approval.action,
+        &approval.title,
+        &approval.relative_path,
+        &approval.content,
+        &approval.command,
+        current_timestamp()?,
+        decision,
+        current_timestamp()?,
+      ],
+    )?;
+
+    Ok(())
+  }
+
+  pub fn next_approval_sequence(&self) -> Result<usize> {
+    let connection = self.open_connection()?;
+    let mut statement = connection.prepare("SELECT id FROM approvals ORDER BY id ASC")?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+
+    let max_sequence = rows
+      .collect::<std::result::Result<Vec<_>, _>>()?
+      .into_iter()
+      .filter_map(|id| {
+        id.strip_prefix("approval-")
+          .and_then(|suffix| suffix.parse::<usize>().ok())
+      })
+      .max()
+      .unwrap_or(0);
+
+    Ok(max_sequence + 1)
+  }
+
   pub fn save_workspace(&self, workspace: &WorkspaceSummary) -> Result<()> {
     let connection = self.open_connection()?;
     connection.execute(
@@ -202,7 +334,19 @@ impl FileThreadStore {
         items_json TEXT NOT NULL,
         updated_at INTEGER NOT NULL
       );
-      PRAGMA user_version = 1;
+      CREATE TABLE IF NOT EXISTS approvals (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        title TEXT NOT NULL,
+        relative_path TEXT NOT NULL,
+        content TEXT,
+        command TEXT,
+        requested_at INTEGER NOT NULL,
+        decision TEXT,
+        resolved_at INTEGER
+      );
+      PRAGMA user_version = 2;
       COMMIT;
       ",
     )?;
@@ -362,6 +506,45 @@ mod tests {
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].turn_count, 3);
     assert_eq!(threads[0].summary.id, "thread-1");
+  }
+
+  #[test]
+  fn sqlite_store_round_trips_pending_approvals_and_resolution_audit() {
+    let root = create_temp_directory("approval-roundtrip");
+    let store = FileThreadStore::new(root.join("cavell.db"), root.join("threads.json"));
+    let approval = StoredApprovalRecord {
+      id: "approval-4".to_string(),
+      thread_id: "thread-2".to_string(),
+      action: "write_file".to_string(),
+      title: "Write docs/output.txt".to_string(),
+      relative_path: "docs/output.txt".to_string(),
+      content: Some("hello".to_string()),
+      command: None,
+    };
+
+    store
+      .save_pending_approvals(&[approval.clone()])
+      .expect("save pending approvals");
+    let pending = store
+      .load_pending_approvals()
+      .expect("load pending approvals");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].id, "approval-4");
+
+    store
+      .resolve_approval(&approval, "approved")
+      .expect("resolve approval");
+    let reloaded_pending = store
+      .load_pending_approvals()
+      .expect("reload pending approvals");
+    let next_sequence = store
+      .next_approval_sequence()
+      .expect("next approval sequence");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert!(reloaded_pending.is_empty());
+    assert_eq!(next_sequence, 5);
   }
 
   #[test]
