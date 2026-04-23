@@ -1,10 +1,14 @@
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
-use cavell_protocol::{ThreadSummary, TimelineItem};
+use cavell_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+
+const SCHEMA_VERSION: i64 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoragePaths {
@@ -34,47 +38,249 @@ pub struct StoredThreadRecord {
 
 #[derive(Debug, Clone)]
 pub struct FileThreadStore {
-  path: PathBuf,
+  database_path: PathBuf,
+  legacy_runtime_state_path: PathBuf,
 }
 
 impl FileThreadStore {
   pub fn new_default() -> Result<Self> {
     Ok(Self {
-      path: default_runtime_state_path()?,
+      database_path: default_database_path()?,
+      legacy_runtime_state_path: default_runtime_state_path()?,
     })
   }
 
-  pub fn load_threads(&self) -> Result<Vec<StoredThreadRecord>> {
-    if !self.path.exists() {
-      return Ok(vec![]);
+  pub fn new(database_path: PathBuf, legacy_runtime_state_path: PathBuf) -> Self {
+    Self {
+      database_path,
+      legacy_runtime_state_path,
     }
+  }
 
-    let content = fs::read_to_string(&self.path)
-      .with_context(|| format!("failed to read runtime state from {}", self.path.display()))?;
+  pub fn load_threads(&self) -> Result<Vec<StoredThreadRecord>> {
+    let connection = self.open_connection()?;
+    self.import_legacy_threads_if_needed(&connection)?;
 
-    let threads = serde_json::from_str::<Vec<StoredThreadRecord>>(&content)
-      .with_context(|| format!("failed to parse runtime state from {}", self.path.display()))?;
+    let mut statement = connection.prepare(
+      "SELECT id, title, status, turn_count, items_json
+       FROM threads
+       ORDER BY updated_at DESC, id ASC",
+    )?;
 
-    Ok(threads)
+    let rows = statement.query_map([], |row| {
+      let items_json: String = row.get(4)?;
+      let items = serde_json::from_str::<Vec<TimelineItem>>(&items_json).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(
+          items_json.len(),
+          rusqlite::types::Type::Text,
+          Box::new(error),
+        )
+      })?;
+
+      Ok(StoredThreadRecord {
+        summary: ThreadSummary {
+          id: row.get(0)?,
+          title: row.get(1)?,
+          status: row.get(2)?,
+        },
+        turn_count: row.get::<_, i64>(3)? as usize,
+        items,
+      })
+    })?;
+
+    rows
+      .collect::<std::result::Result<Vec<_>, _>>()
+      .context("failed to load persisted thread records")
   }
 
   pub fn save_threads(&self, threads: &[StoredThreadRecord]) -> Result<()> {
-    if let Some(parent) = self.path.parent() {
+    let mut connection = self.open_connection()?;
+    let transaction = connection.transaction()?;
+
+    transaction.execute("DELETE FROM threads", [])?;
+
+    for thread in threads {
+      let items_json =
+        serde_json::to_string(&thread.items).context("failed to serialize timeline items")?;
+
+      transaction.execute(
+        "INSERT INTO threads (
+          id,
+          title,
+          status,
+          turn_count,
+          items_json,
+          updated_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+          &thread.summary.id,
+          &thread.summary.title,
+          &thread.summary.status,
+          thread.turn_count as i64,
+          items_json,
+          current_timestamp()?,
+        ],
+      )?;
+    }
+
+    transaction.commit()?;
+    Ok(())
+  }
+
+  pub fn load_workspace(&self) -> Result<Option<WorkspaceSummary>> {
+    let connection = self.open_connection()?;
+    let workspace = connection
+      .query_row(
+        "SELECT root_path, display_name
+         FROM workspace_state
+         WHERE id = 1",
+        [],
+        |row| {
+          Ok(WorkspaceSummary {
+            root_path: row.get(0)?,
+            display_name: row.get(1)?,
+          })
+        },
+      )
+      .optional()?;
+
+    Ok(workspace)
+  }
+
+  pub fn save_workspace(&self, workspace: &WorkspaceSummary) -> Result<()> {
+    let connection = self.open_connection()?;
+    connection.execute(
+      "INSERT INTO workspace_state (id, root_path, display_name, updated_at)
+       VALUES (1, ?1, ?2, ?3)
+       ON CONFLICT(id) DO UPDATE SET
+         root_path = excluded.root_path,
+         display_name = excluded.display_name,
+         updated_at = excluded.updated_at",
+      params![
+        &workspace.root_path,
+        &workspace.display_name,
+        current_timestamp()?,
+      ],
+    )?;
+
+    Ok(())
+  }
+
+  fn open_connection(&self) -> Result<Connection> {
+    if let Some(parent) = self.database_path.parent() {
       fs::create_dir_all(parent).with_context(|| {
         format!(
-          "failed to create runtime state directory {}",
+          "failed to create storage directory {}",
           parent.display()
         )
       })?;
     }
 
-    let content =
-      serde_json::to_string_pretty(threads).context("failed to serialize runtime thread state")?;
-    fs::write(&self.path, content)
-      .with_context(|| format!("failed to write runtime state to {}", self.path.display()))?;
+    let connection = Connection::open(&self.database_path)
+      .with_context(|| format!("failed to open database {}", self.database_path.display()))?;
+    self.ensure_schema(&connection)?;
+    Ok(connection)
+  }
+
+  fn ensure_schema(&self, connection: &Connection) -> Result<()> {
+    let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
+
+    if version >= SCHEMA_VERSION {
+      return Ok(());
+    }
+
+    connection.execute_batch(
+      "
+      BEGIN;
+      CREATE TABLE IF NOT EXISTS workspace_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        root_path TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS threads (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        turn_count INTEGER NOT NULL,
+        items_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      PRAGMA user_version = 1;
+      COMMIT;
+      ",
+    )?;
 
     Ok(())
   }
+
+  fn import_legacy_threads_if_needed(&self, connection: &Connection) -> Result<()> {
+    let existing_count: i64 =
+      connection.query_row("SELECT COUNT(*) FROM threads", [], |row| row.get(0))?;
+    if existing_count > 0 || !self.legacy_runtime_state_path.exists() {
+      return Ok(());
+    }
+
+    let legacy_content = fs::read_to_string(&self.legacy_runtime_state_path).with_context(|| {
+      format!(
+        "failed to read legacy runtime state from {}",
+        self.legacy_runtime_state_path.display()
+      )
+    })?;
+    let legacy_threads = serde_json::from_str::<Vec<StoredThreadRecord>>(&legacy_content)
+      .with_context(|| {
+        format!(
+          "failed to parse legacy runtime state from {}",
+          self.legacy_runtime_state_path.display()
+        )
+      })?;
+
+    for thread in legacy_threads {
+      let items_json =
+        serde_json::to_string(&thread.items).context("failed to serialize migrated items")?;
+      connection.execute(
+        "INSERT INTO threads (
+          id,
+          title,
+          status,
+          turn_count,
+          items_json,
+          updated_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+          thread.summary.id,
+          thread.summary.title,
+          thread.summary.status,
+          thread.turn_count as i64,
+          items_json,
+          current_timestamp()?,
+        ],
+      )?;
+    }
+
+    Ok(())
+  }
+}
+
+fn default_database_path() -> Result<PathBuf> {
+  if let Ok(custom_dir) = env::var("CAVELL_DATA_DIR") {
+    return Ok(PathBuf::from(custom_dir).join("cavell.db"));
+  }
+
+  if let Ok(home_dir) = env::var("HOME") {
+    return Ok(PathBuf::from(home_dir).join(".cavell").join("cavell.db"));
+  }
+
+  if let Ok(home_dir) = env::var("USERPROFILE") {
+    return Ok(PathBuf::from(home_dir).join(".cavell").join("cavell.db"));
+  }
+
+  Ok(
+    env::current_dir()
+      .context("failed to read current directory for database path")?
+      .join(".cavell")
+      .join("cavell.db"),
+  )
 }
 
 fn default_runtime_state_path() -> Result<PathBuf> {
@@ -96,4 +302,97 @@ fn default_runtime_state_path() -> Result<PathBuf> {
       .join(".cavell")
       .join("threads.json"),
   )
+}
+
+fn current_timestamp() -> Result<i64> {
+  Ok(
+    SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .context("system time is earlier than the unix epoch")?
+      .as_secs() as i64,
+  )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::time::{SystemTime, UNIX_EPOCH};
+
+  fn create_temp_directory(label: &str) -> PathBuf {
+    let unique = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("system time")
+      .as_nanos();
+    let path = env::temp_dir().join(format!("cavell-storage-{label}-{unique}"));
+    fs::create_dir_all(&path).expect("create temp directory");
+    path
+  }
+
+  #[test]
+  fn sqlite_store_round_trips_threads_and_workspace() {
+    let root = create_temp_directory("sqlite-roundtrip");
+    let store = FileThreadStore::new(root.join("cavell.db"), root.join("threads.json"));
+
+    store
+      .save_workspace(&WorkspaceSummary {
+        root_path: "/tmp/cavell".to_string(),
+        display_name: "cavell".to_string(),
+      })
+      .expect("save workspace");
+    store
+      .save_threads(&[StoredThreadRecord {
+        summary: ThreadSummary {
+          id: "thread-1".to_string(),
+          title: "Thread".to_string(),
+          status: "ready".to_string(),
+        },
+        turn_count: 3,
+        items: vec![TimelineItem {
+          kind: "system".to_string(),
+          title: "Thread Ready".to_string(),
+          content: "Ready".to_string(),
+          attributes: None,
+        }],
+      }])
+      .expect("save threads");
+
+    let workspace = store.load_workspace().expect("load workspace");
+    let threads = store.load_threads().expect("load threads");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert_eq!(workspace.expect("workspace").display_name, "cavell");
+    assert_eq!(threads.len(), 1);
+    assert_eq!(threads[0].turn_count, 3);
+    assert_eq!(threads[0].summary.id, "thread-1");
+  }
+
+  #[test]
+  fn sqlite_store_imports_legacy_json_threads() {
+    let root = create_temp_directory("legacy-import");
+    let database_path = root.join("cavell.db");
+    let legacy_path = root.join("threads.json");
+    fs::write(
+      &legacy_path,
+      serde_json::to_string(&vec![StoredThreadRecord {
+        summary: ThreadSummary {
+          id: "thread-legacy".to_string(),
+          title: "Legacy".to_string(),
+          status: "ready".to_string(),
+        },
+        turn_count: 1,
+        items: vec![],
+      }])
+      .expect("serialize legacy threads"),
+    )
+    .expect("write legacy threads");
+
+    let store = FileThreadStore::new(database_path, legacy_path);
+    let threads = store.load_threads().expect("load migrated threads");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert_eq!(threads.len(), 1);
+    assert_eq!(threads[0].summary.id, "thread-legacy");
+  }
 }

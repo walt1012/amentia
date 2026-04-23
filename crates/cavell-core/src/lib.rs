@@ -67,6 +67,7 @@ impl RuntimeContext {
   pub fn new() -> Result<Self> {
     let store = FileThreadStore::new_default()?;
     let persisted_threads = store.load_threads()?;
+    let persisted_workspace = store.load_workspace()?;
     let next_thread_number = persisted_threads.len() + 1;
 
     Ok(Self {
@@ -81,7 +82,7 @@ impl RuntimeContext {
           items: thread.items,
         })
         .collect(),
-      workspace: None,
+      workspace: persisted_workspace,
       pending_approvals: HashMap::new(),
       active_turns: HashMap::new(),
       next_thread_number,
@@ -119,6 +120,17 @@ impl RuntimeContext {
       .collect::<Vec<_>>();
 
     store.save_threads(&threads)
+  }
+
+  fn persist_workspace(&self) -> Result<()> {
+    let Some(store) = &self.store else {
+      return Ok(());
+    };
+    let Some(workspace) = &self.workspace else {
+      return Ok(());
+    };
+
+    store.save_workspace(workspace)
   }
 }
 
@@ -235,6 +247,10 @@ fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) 
       .unwrap_or_else(|| resolved_path.display().to_string()),
   };
   context.workspace = Some(workspace.clone());
+
+  if let Err(error) = context.persist_workspace() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
 
   JsonRpcResponse::success(
     request.id,

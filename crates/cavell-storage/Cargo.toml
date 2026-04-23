@@ -7,5 +7,6 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 cavell-protocol = { path = "../cavell-protocol" }
+rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
