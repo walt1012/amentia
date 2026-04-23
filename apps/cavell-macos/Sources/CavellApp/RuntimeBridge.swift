@@ -1,0 +1,200 @@
+import Foundation
+
+final class RuntimeBridge {
+  enum ConnectionState: String {
+    case disconnected
+    case launching
+    case ready
+    case failed
+  }
+
+  struct SessionInfo {
+    let serverName: String
+    let serverVersion: String
+  }
+
+  struct RuntimeThreadSummary {
+    let id: String
+    let title: String
+    let status: String
+  }
+
+  enum RuntimeError: LocalizedError {
+    case runtimePathMissing
+    case runtimePipeUnavailable
+    case invalidResponse
+    case rpc(String)
+
+    var errorDescription: String? {
+      switch self {
+      case .runtimePathMissing:
+        return "The runtime binary could not be found. Set CAVELL_RUNTIME_PATH to the built runtime executable."
+      case .runtimePipeUnavailable:
+        return "The runtime process pipes are not available."
+      case .invalidResponse:
+        return "The runtime returned an invalid response."
+      case .rpc(let message):
+        return message
+      }
+    }
+  }
+
+  private(set) var connectionState: ConnectionState = .disconnected
+
+  private var process: Process?
+  private var inputHandle: FileHandle?
+  private var outputHandle: FileHandle?
+  private var nextRequestID: Int = 1
+
+  func launchAndInitialize() async throws -> SessionInfo {
+    if process == nil {
+      try launchProcess()
+    }
+
+    connectionState = .launching
+
+    let initializeParams = InitializeParams(
+      clientInfo: ClientInfo(
+        name: "cavell-macos",
+        version: "0.1.0"
+      )
+    )
+
+    let response: JSONRPCResponse<InitializeResult> = try await sendRequest(
+      method: "initialize",
+      params: initializeParams
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    connectionState = .ready
+
+    return SessionInfo(
+      serverName: result.serverInfo.name,
+      serverVersion: result.serverInfo.version
+    )
+  }
+
+  func listThreads() async throws -> [RuntimeThreadSummary] {
+    let response: JSONRPCResponse<ThreadListResult> = try await sendRequest(
+      method: "thread/list",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.threads.map {
+      RuntimeThreadSummary(id: $0.id, title: $0.title, status: $0.status)
+    }
+  }
+
+  private func launchProcess() throws {
+    let executableURL = try resolveRuntimeURL()
+    let process = Process()
+    let stdinPipe = Pipe()
+    let stdoutPipe = Pipe()
+
+    process.executableURL = executableURL
+    process.arguments = []
+    process.standardInput = stdinPipe
+    process.standardOutput = stdoutPipe
+    process.standardError = Pipe()
+
+    try process.run()
+
+    self.process = process
+    inputHandle = stdinPipe.fileHandleForWriting
+    outputHandle = stdoutPipe.fileHandleForReading
+  }
+
+  private func resolveRuntimeURL() throws -> URL {
+    let environment = ProcessInfo.processInfo.environment
+
+    if let customPath = environment["CAVELL_RUNTIME_PATH"], !customPath.isEmpty {
+      return URL(fileURLWithPath: customPath)
+    }
+
+    if let bundledURL = Bundle.main.executableURL?
+      .deletingLastPathComponent()
+      .appendingPathComponent("cavell-runtime-bin"),
+      FileManager.default.fileExists(atPath: bundledURL.path)
+    {
+      return bundledURL
+    }
+
+    throw RuntimeError.runtimePathMissing
+  }
+
+  private func sendRequest<Params: Encodable, ResultType: Decodable>(
+    method: String,
+    params: Params
+  ) async throws -> JSONRPCResponse<ResultType> {
+    guard let inputHandle, let outputHandle else {
+      throw RuntimeError.runtimePipeUnavailable
+    }
+
+    let request = JSONRPCRequest(
+      id: nextRequestID,
+      method: method,
+      params: params
+    )
+    nextRequestID += 1
+
+    let encoder = JSONEncoder()
+    let data = try encoder.encode(request) + Data([0x0A])
+    try inputHandle.write(contentsOf: data)
+
+    let line = try await Self.readLineAsync(from: outputHandle)
+
+    let decoder = JSONDecoder()
+    return try decoder.decode(JSONRPCResponse<ResultType>.self, from: Data(line.utf8))
+  }
+
+  private static func readLineAsync(from handle: FileHandle) async throws -> String {
+    try await withCheckedThrowingContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        do {
+          continuation.resume(returning: try readLine(from: handle))
+        } catch {
+          continuation.resume(throwing: error)
+        }
+      }
+    }
+  }
+
+  private static func readLine(from handle: FileHandle) throws -> String {
+    var data = Data()
+
+    while true {
+      let chunk = try handle.read(upToCount: 1) ?? Data()
+
+      if chunk.isEmpty {
+        break
+      }
+
+      if chunk == Data([0x0A]) {
+        break
+      }
+
+      data.append(chunk)
+    }
+
+    guard !data.isEmpty else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return String(decoding: data, as: UTF8.self)
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "mem",
+  "version": "0.1.0",
+  "displayName": "Mem",
+  "description": "Official Cavell memory plugin for workspace facts, thread summaries, and prompt retrieval.",
+  "author": {
+    "name": "Cavell Contributors"
+  },
+  "capabilities": [
+    "prompt_pack",
+    "tool"
+  ],
+  "permissions": [
+    "file.read",
+    "file.write"
+  ],
+  "defaultEnabled": true
+}
