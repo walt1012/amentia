@@ -1,0 +1,14 @@
+included:
+  - apps/cavell-macos/Sources
+
+disabled_rules:
+  - todo
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - sorted_imports
+
+line_length:
+  warning: 120
+  error: 140
