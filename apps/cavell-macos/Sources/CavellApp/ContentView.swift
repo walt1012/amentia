@@ -27,7 +27,7 @@ struct ContentView: View {
   }
 
   private var sidebar: some View {
-    List(selection: $viewModel.selectedThreadID) {
+    List(selection: Binding(get: { viewModel.selectedThreadID }, set: { viewModel.selectThread(id: $0) })) {
       Section("Threads") {
         ForEach(viewModel.threads) { thread in
           VStack(alignment: .leading, spacing: 4) {
@@ -99,6 +99,17 @@ struct ContentView: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Inspector")
         .font(.title3.weight(.semibold))
+
+      GroupBox("Thread") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.selectedThreadTitle())
+            .font(.headline)
+          Text(viewModel.selectedThreadPreview())
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
 
       GroupBox("Milestone 0") {
         VStack(alignment: .leading, spacing: 8) {
