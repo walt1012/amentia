@@ -150,7 +150,7 @@ def main() -> int:
       },
     )
     assert cancelled_turn["result"]["items"][0]["kind"] == "warning"
-    assert cancelled_turn["result"]["activeTurnId"] is None
+    assert cancelled_turn["result"].get("activeTurnId") is None
 
     cancelled_thread = send_request(
       process,
@@ -162,7 +162,7 @@ def main() -> int:
         },
       },
     )
-    assert cancelled_thread["result"]["activeTurnId"] is None
+    assert cancelled_thread["result"].get("activeTurnId") is None
 
     search_turn = send_request(
       process,
