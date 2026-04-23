@@ -10,8 +10,8 @@ use cavell_protocol::{
   InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ModelHealthResult,
   ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
   ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem, TurnCancelParams,
-  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -204,6 +204,12 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::MODEL_HEALTH => JsonRpcResponse::success(
       request.id,
       &to_protocol_model_health(context.model_runtime.health()),
+    ),
+    methods::WORKSPACE_CURRENT => JsonRpcResponse::success(
+      request.id,
+      &WorkspaceCurrentResult {
+        workspace: context.workspace.clone(),
+      },
     ),
     methods::WORKSPACE_OPEN => handle_workspace_open(context, request),
     methods::TURN_CANCEL => handle_turn_cancel(context, request),

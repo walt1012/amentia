@@ -70,6 +70,7 @@ final class AppViewModel: ObservableObject {
       do {
         let session = try await runtimeBridge.launchAndInitialize()
         let runtimeModel = try? await runtimeBridge.modelHealth()
+        let currentWorkspace = try? await runtimeBridge.currentWorkspace()
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
@@ -88,6 +89,13 @@ final class AppViewModel: ObservableObject {
         } else {
           modelHealth = nil
           runtimeDetail = "\(session.serverName) \(session.serverVersion)"
+        }
+
+        if let currentWorkspace {
+          workspace = WorkspaceSummary(
+            rootPath: currentWorkspace.rootPath,
+            displayName: currentWorkspace.displayName
+          )
         }
 
         if threadList.isEmpty {

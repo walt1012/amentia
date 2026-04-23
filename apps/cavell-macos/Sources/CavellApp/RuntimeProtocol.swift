@@ -71,6 +71,10 @@ struct WorkspaceOpenResult: Codable {
   let threadCount: Int
 }
 
+struct WorkspaceCurrentResult: Codable {
+  let workspace: RuntimeWorkspacePayload?
+}
+
 struct RuntimeThreadPayload: Codable {
   let id: String
   let title: String

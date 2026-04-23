@@ -243,6 +243,16 @@ def main() -> int:
       for item in restarted_thread["result"]["items"]
     )
 
+    restarted_workspace = send_request(
+      process,
+      {
+        "id": 24,
+        "method": "workspace/current",
+      },
+    )
+    assert restarted_workspace["result"]["workspace"]["displayName"] == workspace_dir.name
+    assert restarted_workspace["result"]["workspace"]["rootPath"] == str(workspace_dir)
+
     approval = send_request(
       process,
       {

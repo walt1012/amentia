@@ -7,6 +7,7 @@ pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const MODEL_HEALTH: &str = "model/health";
+  pub const WORKSPACE_CURRENT: &str = "workspace/current";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
   pub const TURN_CANCEL: &str = "turn/cancel";
   pub const THREAD_READ: &str = "thread/read";
@@ -127,6 +128,13 @@ pub struct WorkspaceOpenParams {
 pub struct WorkspaceOpenResult {
   pub workspace: WorkspaceSummary,
   pub thread_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceCurrentResult {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workspace: Option<WorkspaceSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

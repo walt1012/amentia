@@ -210,6 +210,31 @@ final class RuntimeBridge {
     )
   }
 
+  func currentWorkspace() async throws -> RuntimeWorkspace? {
+    let response: JSONRPCResponse<WorkspaceCurrentResult> = try await sendRequest(
+      method: "workspace/current",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    guard let workspace = result.workspace else {
+      return nil
+    }
+
+    return RuntimeWorkspace(
+      rootPath: workspace.rootPath,
+      displayName: workspace.displayName,
+      threadCount: 0
+    )
+  }
+
   func startThread(title: String) async throws -> ThreadSummary {
     let response: JSONRPCResponse<ThreadStartResult> = try await sendRequest(
       method: "thread/start",
