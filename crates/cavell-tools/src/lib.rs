@@ -34,8 +34,12 @@ pub fn list_directory(
   limit: usize,
 ) -> Result<Vec<DirectoryEntry>> {
   let target = resolve_workspace_path(workspace_root, relative_path.unwrap_or("."), true)?;
-  let workspace_root = fs::canonicalize(workspace_root)
-    .with_context(|| format!("failed to resolve workspace root {}", workspace_root.display()))?;
+  let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
+    format!(
+      "failed to resolve workspace root {}",
+      workspace_root.display()
+    )
+  })?;
 
   let mut entries = fs::read_dir(&target)
     .with_context(|| format!("failed to read directory {}", target.display()))?
@@ -45,7 +49,11 @@ pub fn list_directory(
       let metadata = entry
         .metadata()
         .with_context(|| format!("failed to read metadata for {}", path.display()))?;
-      let entry_type = if metadata.is_dir() { "directory" } else { "file" };
+      let entry_type = if metadata.is_dir() {
+        "directory"
+      } else {
+        "file"
+      };
       let relative_path = relative_path_string(&workspace_root, &path)?;
 
       Ok(DirectoryEntry {
@@ -70,8 +78,12 @@ pub fn read_file(
   max_bytes: usize,
 ) -> Result<ReadFileResult> {
   let target = resolve_workspace_path(workspace_root, relative_path, false)?;
-  let workspace_root = fs::canonicalize(workspace_root)
-    .with_context(|| format!("failed to resolve workspace root {}", workspace_root.display()))?;
+  let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
+    format!(
+      "failed to resolve workspace root {}",
+      workspace_root.display()
+    )
+  })?;
   let bytes =
     fs::read(&target).with_context(|| format!("failed to read file {}", target.display()))?;
   let is_truncated = bytes.len() > max_bytes;
@@ -93,8 +105,12 @@ fn resolve_workspace_path(
   relative_path: &str,
   allow_directory: bool,
 ) -> Result<PathBuf> {
-  let workspace_root = fs::canonicalize(workspace_root)
-    .with_context(|| format!("failed to resolve workspace root {}", workspace_root.display()))?;
+  let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
+    format!(
+      "failed to resolve workspace root {}",
+      workspace_root.display()
+    )
+  })?;
   let candidate = workspace_root.join(relative_path);
   let resolved = fs::canonicalize(&candidate)
     .with_context(|| format!("failed to resolve workspace path {}", candidate.display()))?;

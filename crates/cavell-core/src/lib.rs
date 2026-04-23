@@ -150,10 +150,7 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
   )
 }
 
-fn handle_workspace_open(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> JsonRpcResponse {
+fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<WorkspaceOpenParams>(value) {
       Ok(params) => params,
@@ -733,8 +730,11 @@ mod tests {
   fn turn_start_reads_a_requested_workspace_file() {
     let mut context = RuntimeContext::new_in_memory();
     let workspace = create_temp_workspace("read-file");
-    fs::write(workspace.join("README.md"), "# Milestone 1\nWorkspace tool test\n")
-      .expect("write readme");
+    fs::write(
+      workspace.join("README.md"),
+      "# Milestone 1\nWorkspace tool test\n",
+    )
+    .expect("write readme");
 
     let _ = handle_request(
       &mut context,
@@ -774,6 +774,9 @@ mod tests {
 
     assert_eq!(items[2]["kind"], "toolStart");
     assert_eq!(items[3]["kind"], "toolResult");
-    assert!(items[3]["content"].as_str().unwrap().contains("Milestone 1"));
+    assert!(items[3]["content"]
+      .as_str()
+      .unwrap()
+      .contains("Milestone 1"));
   }
 }
