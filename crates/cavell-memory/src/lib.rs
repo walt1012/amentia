@@ -69,11 +69,7 @@ impl MemoryManager {
     }
   }
 
-  pub fn record_event(
-    &mut self,
-    notes: &mut Vec<MemoryNote>,
-    event: MemoryEvent,
-  ) -> MemoryNote {
+  pub fn record_event(&mut self, notes: &mut Vec<MemoryNote>, event: MemoryEvent) -> MemoryNote {
     let (title, body, scope, source, tags) = memory_note_parts(event);
     let note = MemoryNote {
       id: format!("memory-{}", self.next_note_number),
@@ -102,10 +98,7 @@ fn memory_note_parts(event: MemoryEvent) -> (String, String, String, String, Vec
       "workspace".to_string(),
       vec!["workspace".to_string(), "session".to_string()],
     ),
-    MemoryEvent::FileWritten {
-      workspace_display_name,
-      relative_path,
-    } => (
+    MemoryEvent::FileWritten { workspace_display_name, relative_path } => (
       format!("Wrote {relative_path}"),
       format!(
         "Cavell approved and wrote {relative_path} in {workspace_display_name}."
@@ -114,10 +107,7 @@ fn memory_note_parts(event: MemoryEvent) -> (String, String, String, String, Vec
       "approval".to_string(),
       vec!["write".to_string(), "approval".to_string()],
     ),
-    MemoryEvent::ShellCommandRan {
-      workspace_display_name,
-      command,
-    } => (
+    MemoryEvent::ShellCommandRan { workspace_display_name, command } => (
       "Ran shell command".to_string(),
       format!(
         "Cavell approved and ran `{command}` in {workspace_display_name}."
