@@ -5,7 +5,7 @@ use cavell_core::{handle_request, RuntimeContext};
 use cavell_protocol::{JsonRpcRequest, JsonRpcResponse};
 
 fn main() -> Result<()> {
-  let context = RuntimeContext::new();
+  let mut context = RuntimeContext::new();
   let stdin = io::stdin();
   let mut stdout = io::stdout();
 
@@ -18,7 +18,7 @@ fn main() -> Result<()> {
     }
 
     let response = match serde_json::from_str::<JsonRpcRequest>(trimmed) {
-      Ok(request) => handle_request(&context, request),
+      Ok(request) => handle_request(&mut context, request),
       Err(error) => JsonRpcResponse::error(serde_json::Value::Null, -32700, error.to_string()),
     };
 

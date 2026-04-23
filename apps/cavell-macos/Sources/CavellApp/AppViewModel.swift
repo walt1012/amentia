@@ -16,7 +16,7 @@ final class AppViewModel: ObservableObject {
     self.runtimeDetail = "Runtime not launched"
     self.threads = [
       ThreadSummary(
-        id: UUID(),
+        id: "local-welcome",
         title: "Welcome to Cavell",
         preview: "Milestone 0 shell ready for runtime integration."
       ),
@@ -51,21 +51,10 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = "\(session.serverName) \(session.serverVersion)"
 
         if threadList.isEmpty {
-          threads = [
-            ThreadSummary(
-              id: UUID(),
-              title: "New Thread",
-              preview: "Runtime connected and ready for the first real conversation."
-            ),
-          ]
+          let firstThread = try await runtimeBridge.startThread(title: "First Thread")
+          threads = [firstThread]
         } else {
-          threads = threadList.map {
-            ThreadSummary(
-              id: UUID(uuidString: $0.id) ?? UUID(),
-              title: $0.title,
-              preview: $0.status
-            )
-          }
+          threads = threadList.map { ThreadSummary(id: $0.id, title: $0.title, preview: $0.status) }
         }
 
         selectedThreadID = threads.first?.id
@@ -86,6 +75,39 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .system,
             title: "Runtime Launch Failed",
+            body: error.localizedDescription
+          ),
+          at: 0
+        )
+      }
+    }
+  }
+
+  func createThread() {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    Task {
+      do {
+        let thread = try await runtimeBridge.startThread(title: "Thread \(threads.count + 1)")
+        threads.insert(thread, at: 0)
+        selectedThreadID = thread.id
+        timeline.insert(
+          TimelineEntry(
+            id: UUID(),
+            kind: .system,
+            title: "Thread Created",
+            body: "Created \(thread.title) in the local runtime."
+          ),
+          at: 0
+        )
+      } catch {
+        timeline.insert(
+          TimelineEntry(
+            id: UUID(),
+            kind: .system,
+            title: "Thread Creation Failed",
             body: error.localizedDescription
           ),
           at: 0

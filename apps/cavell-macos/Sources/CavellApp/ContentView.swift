@@ -11,6 +11,13 @@ struct ContentView: View {
       inspector
     }
     .toolbar {
+      ToolbarItem {
+        Button("New Thread") {
+          viewModel.createThread()
+        }
+        .disabled(viewModel.runtimeState != .ready)
+      }
+
       ToolbarItem(placement: .primaryAction) {
         Button("Launch Runtime") {
           viewModel.launchRuntime()

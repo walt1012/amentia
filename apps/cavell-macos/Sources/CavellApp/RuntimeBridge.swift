@@ -100,17 +100,39 @@ final class RuntimeBridge {
     }
   }
 
+  func startThread(title: String) async throws -> ThreadSummary {
+    let response: JSONRPCResponse<ThreadStartResult> = try await sendRequest(
+      method: "thread/start",
+      params: ThreadStartParams(title: title)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return ThreadSummary(
+      id: result.thread.id,
+      title: result.thread.title,
+      preview: result.thread.status
+    )
+  }
+
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
     let process = Process()
     let stdinPipe = Pipe()
     let stdoutPipe = Pipe()
+    let stderrPipe = Pipe()
 
     process.executableURL = executableURL
     process.arguments = []
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
-    process.standardError = Pipe()
+    process.standardError = stderrPipe
 
     try process.run()
 
