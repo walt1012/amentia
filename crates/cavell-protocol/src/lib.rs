@@ -116,8 +116,9 @@ pub struct TurnStartParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TurnMessage {
-  pub role: String,
+pub struct TimelineItem {
+  pub kind: String,
+  pub title: String,
   pub content: String,
 }
 
@@ -126,7 +127,7 @@ pub struct TurnMessage {
 pub struct TurnStartResult {
   pub turn_id: String,
   pub thread_id: String,
-  pub messages: Vec<TurnMessage>,
+  pub items: Vec<TimelineItem>,
 }
 
 impl JsonRpcResponse {

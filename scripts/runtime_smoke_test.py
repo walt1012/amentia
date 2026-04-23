@@ -92,8 +92,9 @@ def main() -> int:
         },
       },
     )
-    assert turn["result"]["messages"][0]["role"] == "user"
-    assert turn["result"]["messages"][1]["role"] == "assistant"
+    assert turn["result"]["items"][0]["kind"] == "userMessage"
+    assert turn["result"]["items"][1]["kind"] == "plan"
+    assert turn["result"]["items"][2]["kind"] == "assistantMessage"
     return 0
   finally:
     process.terminate()

@@ -144,7 +144,7 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
-        appendMessagesToTimeline(threadID: result.threadID, messages: result.messages)
+        appendItemsToTimeline(threadID: result.threadID, items: result.items)
         refreshThreadPreview(threadID: result.threadID, preview: "\(result.turnID) ready")
       } catch {
         appendEntry(
@@ -185,16 +185,16 @@ final class AppViewModel: ObservableObject {
     return thread.preview
   }
 
-  private func appendMessagesToTimeline(
+  private func appendItemsToTimeline(
     threadID: String,
-    messages: [RuntimeBridge.RuntimeTurnMessageResult]
+    items: [RuntimeBridge.RuntimeTimelineItemResult]
   ) {
-    let newEntries = messages.map { message in
+    let newEntries = items.map { item in
       TimelineEntry(
         id: UUID(),
-        kind: message.role == "user" ? .userMessage : .assistantMessage,
-        title: message.role == "user" ? "User" : "Assistant",
-        body: message.content
+        kind: timelineKind(for: item.kind),
+        title: item.title,
+        body: item.content
       )
     }
 
@@ -249,5 +249,18 @@ final class AppViewModel: ObservableObject {
 
   private func threadTitle(for threadID: String) -> String {
     threads.first(where: { $0.id == threadID })?.title ?? "Thread"
+  }
+
+  private func timelineKind(for rawKind: String) -> TimelineEntry.Kind {
+    switch rawKind {
+    case "userMessage":
+      return .userMessage
+    case "assistantMessage":
+      return .assistantMessage
+    case "plan":
+      return .plan
+    default:
+      return .system
+    }
   }
 }

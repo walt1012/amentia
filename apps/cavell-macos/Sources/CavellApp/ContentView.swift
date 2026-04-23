@@ -148,8 +148,17 @@ private struct TimelineCard: View {
     }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color(NSColor.controlBackgroundColor))
+    .background(backgroundColor)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+
+  private var backgroundColor: Color {
+    switch entry.kind {
+    case .plan:
+      return Color.accentColor.opacity(0.12)
+    default:
+      return Color(NSColor.controlBackgroundColor)
+    }
   }
 }
 

@@ -66,15 +66,16 @@ struct TurnStartParams: Codable {
   let message: String
 }
 
-struct RuntimeTurnMessage: Codable {
-  let role: String
+struct RuntimeTimelineItem: Codable {
+  let kind: String
+  let title: String
   let content: String
 }
 
 struct TurnStartResult: Codable {
   let turnId: String
   let threadId: String
-  let messages: [RuntimeTurnMessage]
+  let items: [RuntimeTimelineItem]
 }
 
 struct OptionalRequestParams: Encodable {

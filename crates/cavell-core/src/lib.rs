@@ -1,7 +1,7 @@
 use cavell_protocol::{
   methods, HealthPingResult, InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse,
   ServerCapabilities, ServerInfo, ThreadListResult, ThreadStartParams, ThreadStartResult,
-  ThreadSummary, TurnMessage, TurnStartParams, TurnStartResult,
+  ThreadSummary, TimelineItem, TurnStartParams, TurnStartResult,
 };
 
 #[derive(Debug, Clone)]
@@ -159,19 +159,30 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     "Cavell received your message in {} and is ready for the next runtime step: {}",
     thread.summary.title, params.message
   );
+  let plan_message = format!(
+    "Prepare the next local agent step for {} and keep thread state ready for future tool execution.",
+    thread.summary.title
+  );
 
   JsonRpcResponse::success(
     request.id,
     &TurnStartResult {
       turn_id: format!("{}-turn-{}", thread.summary.id, thread.turn_count),
       thread_id: thread.summary.id.clone(),
-      messages: vec![
-        TurnMessage {
-          role: "user".to_string(),
+      items: vec![
+        TimelineItem {
+          kind: "userMessage".to_string(),
+          title: "User".to_string(),
           content: params.message,
         },
-        TurnMessage {
-          role: "assistant".to_string(),
+        TimelineItem {
+          kind: "plan".to_string(),
+          title: "Plan".to_string(),
+          content: plan_message,
+        },
+        TimelineItem {
+          kind: "assistantMessage".to_string(),
+          title: "Assistant".to_string(),
           content: assistant_message,
         },
       ],
@@ -284,10 +295,11 @@ mod tests {
 
     assert!(turn_response.error.is_none());
     let result = turn_response.result.expect("turn result");
-    let messages = result["messages"].as_array().expect("messages");
+    let items = result["items"].as_array().expect("items");
 
-    assert_eq!(messages.len(), 2);
-    assert_eq!(messages[0]["role"], "user");
-    assert_eq!(messages[1]["role"], "assistant");
+    assert_eq!(items.len(), 3);
+    assert_eq!(items[0]["kind"], "userMessage");
+    assert_eq!(items[1]["kind"], "plan");
+    assert_eq!(items[2]["kind"], "assistantMessage");
   }
 }

@@ -22,11 +22,12 @@ final class RuntimeBridge {
   struct RuntimeTurnResult {
     let turnID: String
     let threadID: String
-    let messages: [RuntimeTurnMessageResult]
+    let items: [RuntimeTimelineItemResult]
   }
 
-  struct RuntimeTurnMessageResult {
-    let role: String
+  struct RuntimeTimelineItemResult {
+    let kind: String
+    let title: String
     let content: String
   }
 
@@ -149,8 +150,8 @@ final class RuntimeBridge {
     return RuntimeTurnResult(
       turnID: result.turnId,
       threadID: result.threadId,
-      messages: result.messages.map {
-        RuntimeTurnMessageResult(role: $0.role, content: $0.content)
+      items: result.items.map {
+        RuntimeTimelineItemResult(kind: $0.kind, title: $0.title, content: $0.content)
       }
     )
   }
