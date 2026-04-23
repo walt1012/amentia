@@ -72,6 +72,18 @@ impl MemoryManager {
 
   pub fn record_event(&mut self, notes: &mut Vec<MemoryNote>, event: MemoryEvent) -> MemoryNote {
     let (title, body, scope, source, tags) = memory_note_parts(event);
+    self.create_note(notes, title, body, scope, source, tags)
+  }
+
+  pub fn create_note(
+    &mut self,
+    notes: &mut Vec<MemoryNote>,
+    title: String,
+    body: String,
+    scope: String,
+    source: String,
+    tags: Vec<String>,
+  ) -> MemoryNote {
     let note = MemoryNote {
       id: format!("memory-{}", self.next_note_number),
       title,
@@ -82,7 +94,30 @@ impl MemoryManager {
       tags,
     };
     self.next_note_number += 1;
-    notes.insert(0, note.clone());
+    insert_or_replace_note(notes, note.clone());
+    note
+  }
+
+  pub fn upsert_note(
+    &mut self,
+    notes: &mut Vec<MemoryNote>,
+    id: String,
+    title: String,
+    body: String,
+    scope: String,
+    source: String,
+    tags: Vec<String>,
+  ) -> MemoryNote {
+    let note = MemoryNote {
+      id,
+      title,
+      body,
+      scope,
+      source,
+      created_at: current_timestamp(),
+      tags,
+    };
+    insert_or_replace_note(notes, note.clone());
     note
   }
 }
@@ -172,6 +207,11 @@ fn current_timestamp() -> i64 {
     .as_secs() as i64
 }
 
+fn insert_or_replace_note(notes: &mut Vec<MemoryNote>, note: MemoryNote) {
+  notes.retain(|existing| existing.id != note.id);
+  notes.insert(0, note);
+}
+
 fn memory_note_score(
   note: &MemoryNote,
   workspace_scope: Option<&str>,
@@ -250,6 +290,48 @@ mod tests {
     assert_eq!(note.id, "memory-1");
     assert_eq!(notes.len(), 1);
     assert_eq!(notes[0].title, "Opened workspace cavell");
+  }
+
+  #[test]
+  fn manager_can_create_and_update_manual_notes() {
+    let mut manager = MemoryManager::new(4);
+    let mut notes = vec![];
+    let created = manager.create_note(
+      &mut notes,
+      "Workspace preference".to_string(),
+      "Prefer concise patch plans.".to_string(),
+      "cavell".to_string(),
+      "user".to_string(),
+      vec!["workspace".to_string(), "user".to_string()],
+    );
+
+    assert_eq!(created.id, "memory-4");
+    assert_eq!(notes.len(), 1);
+
+    let updated = manager.upsert_note(
+      &mut notes,
+      "memory-thread-summary-thread-1".to_string(),
+      "Thread summary: Thread 1".to_string(),
+      "The thread reviewed README.md.".to_string(),
+      "cavell".to_string(),
+      "thread".to_string(),
+      vec!["thread".to_string(), "summary".to_string()],
+    );
+
+    let refreshed = manager.upsert_note(
+      &mut notes,
+      updated.id.clone(),
+      updated.title.clone(),
+      "The thread reviewed README.md and wrote docs/output.txt.".to_string(),
+      "cavell".to_string(),
+      "thread".to_string(),
+      vec!["thread".to_string(), "summary".to_string()],
+    );
+
+    assert_eq!(notes.len(), 2);
+    assert_eq!(notes[0].id, "memory-thread-summary-thread-1");
+    assert!(notes[0].body.contains("wrote docs/output.txt"));
+    assert_eq!(refreshed.id, "memory-thread-summary-thread-1");
   }
 
   #[test]

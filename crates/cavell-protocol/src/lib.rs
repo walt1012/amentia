@@ -6,6 +6,7 @@ pub mod methods {
   pub const APPROVAL_RESPOND: &str = "approval/respond";
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
+  pub const MEMORY_CREATE: &str = "memory/create";
   pub const MEMORY_LIST: &str = "memory/list";
   pub const MEMORY_STATUS: &str = "memory/status";
   pub const MODEL_HEALTH: &str = "model/health";
@@ -137,6 +138,19 @@ pub struct MemoryStatusResult {
 #[serde(rename_all = "camelCase")]
 pub struct MemoryListResult {
   pub notes: Vec<MemoryNoteSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryCreateParams {
+  pub title: String,
+  pub body: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryCreateResult {
+  pub note: MemoryNoteSummary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -80,6 +80,15 @@ struct MemoryListResult: Codable {
   let notes: [RuntimeMemoryNotePayload]
 }
 
+struct MemoryCreateParams: Codable {
+  let title: String
+  let body: String
+}
+
+struct MemoryCreateResult: Codable {
+  let note: RuntimeMemoryNotePayload
+}
+
 struct RuntimeMemoryNotePayload: Codable {
   let id: String
   let title: String

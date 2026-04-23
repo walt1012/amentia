@@ -8,7 +8,7 @@ The product goal is to combine:
 - a local model runtime
 - structured task execution
 - explicit approvals and diffs
-- a plugin-first architecture
+- a plugin-capable architecture with built-in memory
 
 The repository is intentionally English-only.
 
@@ -36,17 +36,19 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestone 0 is in progress.
+Milestone 1 is in progress.
 
 Implemented foundation:
 
 - monorepo scaffolding
-- Rust workspace skeleton
-- runtime protocol types
-- local runtime binary scaffold
-- macOS app source layout
-- built-in memory module scaffold
-- CI skeleton
+- Rust workspace skeleton and local runtime binary
+- runtime protocol types and `stdio` JSON-RPC bridge
+- macOS app shell with thread, timeline, and inspector views
+- workspace-aware read, search, shell, diff preview, and approval-gated write tools
+- SQLite-backed persistence for workspace, threads, approvals, and memory notes
+- built-in memory retrieval, user workspace notes, and thread summary notes
+- local model health inspection for the `LFM2.5-350M` runtime path
+- CI checks
 
 ## Planned Runtime Shape
 

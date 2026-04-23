@@ -15,6 +15,8 @@ final class AppViewModel: ObservableObject {
   @Published var modelHealth: ModelHealthSummary?
   @Published var memoryStatus: MemoryStatusSummary?
   @Published var memoryNotes: [MemoryNoteSummary]
+  @Published var memoryNoteTitle: String
+  @Published var memoryNoteBody: String
   @Published var plugins: [PluginSummary]
 
   private let runtimeBridge: RuntimeBridge
@@ -57,6 +59,8 @@ final class AppViewModel: ObservableObject {
     self.modelHealth = nil
     self.memoryStatus = nil
     self.memoryNotes = []
+    self.memoryNoteTitle = ""
+    self.memoryNoteBody = ""
     self.plugins = []
     self.threads = initialThreads
     self.timeline = initialTimeline
@@ -419,6 +423,53 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func saveWorkspaceMemoryNote() {
+    let title = memoryNoteTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    let body = memoryNoteBody.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard runtimeState == .ready,
+          workspace != nil,
+          !title.isEmpty,
+          !body.isEmpty
+    else {
+      return
+    }
+
+    Task {
+      do {
+        let note = try await runtimeBridge.createMemoryNote(title: title, body: body)
+        memoryNoteTitle = ""
+        memoryNoteBody = ""
+        await refreshMemoryState()
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID(),
+            kind: .system,
+            title: "Memory Note Saved",
+            body: "Saved built-in workspace note \(note.title).",
+            attributes: [
+              "memoryNoteId": note.id,
+              "memoryScope": note.scope,
+              "memorySource": note.source,
+            ]
+          )
+        )
+      } catch {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID(),
+            kind: .warning,
+            title: "Memory Note Failed",
+            body: error.localizedDescription,
+            attributes: [:]
+          )
+        )
+      }
+    }
+  }
+
   func cancelActiveTurn() {
     guard runtimeState == .ready,
           let activeTurnID,
@@ -635,6 +686,13 @@ final class AppViewModel: ObservableObject {
     }
 
     return "\(latestNote.body)\nSource: \(latestNote.source)"
+  }
+
+  func canSaveWorkspaceMemoryNote() -> Bool {
+    runtimeState == .ready
+      && workspace != nil
+      && !memoryNoteTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !memoryNoteBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
   func composerPlaceholder() -> String {

@@ -145,6 +145,29 @@ def main() -> int:
     )
     assert memory_status_after_workspace["result"]["noteCount"] == 1
 
+    created_memory_note, _ = send_request(
+      process,
+      {
+        "id": 34,
+        "method": "memory/create",
+        "params": {
+          "title": "Workspace preference",
+          "body": "Prefer concise Milestone 1 execution summaries.",
+        },
+      },
+    )
+    assert created_memory_note["result"]["note"]["title"] == "Workspace preference"
+    assert created_memory_note["result"]["note"]["source"] == "user"
+
+    memory_status_after_manual_note, _ = send_request(
+      process,
+      {
+        "id": 35,
+        "method": "memory/status",
+      },
+    )
+    assert memory_status_after_manual_note["result"]["noteCount"] == 2
+
     started, _ = send_request(
       process,
       {
@@ -193,8 +216,9 @@ def main() -> int:
     assert turn["result"]["items"][0]["kind"] == "userMessage"
     assert turn["result"]["items"][1]["kind"] == "plan"
     assert turn["result"]["items"][1]["attributes"]["responseRole"] == "planner"
-    assert int(turn["result"]["items"][1]["attributes"]["memoryNoteCount"]) >= 1
+    assert int(turn["result"]["items"][1]["attributes"]["memoryNoteCount"]) >= 2
     assert "Opened workspace" in turn["result"]["items"][1]["attributes"]["memoryNoteTitles"]
+    assert "Workspace preference" in turn["result"]["items"][1]["attributes"]["memoryNoteTitles"]
     assert turn["result"]["items"][2]["kind"] == "toolStart"
     assert turn["result"]["items"][3]["kind"] == "toolResult"
     assert turn["result"]["items"][4]["kind"] == "assistantMessage"
@@ -363,6 +387,10 @@ def main() -> int:
       },
     )
     assert any("Wrote docs/output.txt" == note["title"] for note in memory_list_after_write["result"]["notes"])
+    assert any(
+      "Thread summary: Smoke Test Thread" == note["title"]
+      for note in memory_list_after_write["result"]["notes"]
+    )
 
     post_write_turn, _ = send_request(
       process,

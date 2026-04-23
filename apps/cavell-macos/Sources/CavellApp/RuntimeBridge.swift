@@ -280,6 +280,31 @@ final class RuntimeBridge {
     }
   }
 
+  func createMemoryNote(title: String, body: String) async throws -> RuntimeMemoryNote {
+    let response: JSONRPCResponse<MemoryCreateResult> = try await sendRequest(
+      method: "memory/create",
+      params: MemoryCreateParams(title: title, body: body)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeMemoryNote(
+      id: result.note.id,
+      title: result.note.title,
+      body: result.note.body,
+      scope: result.note.scope,
+      source: result.note.source,
+      createdAt: result.note.createdAt,
+      tags: result.note.tags
+    )
+  }
+
   func openWorkspace(path: String) async throws -> RuntimeWorkspace {
     let response: JSONRPCResponse<WorkspaceOpenResult> = try await sendRequest(
       method: "workspace/open",

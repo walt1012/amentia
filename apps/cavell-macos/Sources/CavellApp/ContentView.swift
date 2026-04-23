@@ -189,6 +189,25 @@ struct ContentView: View {
             .font(.caption2)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
+
+          Divider()
+
+          TextField("Workspace note title", text: $viewModel.memoryNoteTitle)
+            .textFieldStyle(.roundedBorder)
+
+          TextEditor(text: $viewModel.memoryNoteBody)
+            .font(.caption)
+            .frame(minHeight: 72)
+            .overlay(
+              RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+            )
+
+          Button("Save Workspace Note") {
+            viewModel.saveWorkspaceMemoryNote()
+          }
+          .buttonStyle(.borderedProminent)
+          .disabled(!viewModel.canSaveWorkspaceMemoryNote())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
@@ -257,7 +276,7 @@ struct ContentView: View {
           Text("Workspace open flow")
           Text("Read, search, shell, diff preview, and approval-gated write tools")
           Text("SQLite-backed thread persistence and workspace restoration")
-          Text("Built-in workspace memory with local note persistence and retrieval")
+          Text("Built-in workspace memory with user notes, thread summaries, and retrieval")
           Text("Workspace-aware prompt loop with cancel control")
           Text("Local model health and summarizer runtime wiring")
           Text("Optional plugin discovery kept separate from core memory")

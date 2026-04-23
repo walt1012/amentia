@@ -10,7 +10,8 @@ use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEnt
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
-  MemoryListResult, MemoryNoteSummary, MemoryStatusResult, ModelHealthResult, PluginListResult,
+  MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary,
+  MemoryStatusResult, ModelHealthResult, PluginListResult,
   PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
   ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
   ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
@@ -216,6 +217,37 @@ impl RuntimeContext {
     self.persist_memory_note(&note)?;
     Ok(note)
   }
+
+  fn create_memory_note(
+    &mut self,
+    title: String,
+    body: String,
+    scope: String,
+    source: String,
+    tags: Vec<String>,
+  ) -> Result<MemoryNote> {
+    let note = self
+      .memory_manager
+      .create_note(&mut self.memory_notes, title, body, scope, source, tags);
+    self.persist_memory_note(&note)?;
+    Ok(note)
+  }
+
+  fn upsert_memory_note(
+    &mut self,
+    id: String,
+    title: String,
+    body: String,
+    scope: String,
+    source: String,
+    tags: Vec<String>,
+  ) -> Result<MemoryNote> {
+    let note = self
+      .memory_manager
+      .upsert_note(&mut self.memory_notes, id, title, body, scope, source, tags);
+    self.persist_memory_note(&note)?;
+    Ok(note)
+  }
 }
 
 impl Default for RuntimeContext {
@@ -234,6 +266,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
         status: "ok".to_string(),
       },
     ),
+    methods::MEMORY_CREATE => handle_memory_create(context, request),
     methods::MEMORY_LIST => JsonRpcResponse::success(
       request.id,
       &MemoryListResult {
@@ -296,7 +329,7 @@ pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpc
   let mut did_update = false;
 
   for turn_id in active_turn_ids {
-    if let Some(params) = advance_active_turn(context, &turn_id) {
+    if let Some(params) = advance_active_turn(context, &turn_id)? {
       did_update = true;
       notifications.push(JsonRpcNotification {
         method: methods::THREAD_UPDATED_NOTIFICATION.to_string(),
@@ -409,6 +442,62 @@ fn load_plugin_catalog() -> Result<Vec<PluginCatalogEntry>> {
   discover_plugins(&plugin_root)
 }
 
+fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<MemoryCreateParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid memory/create params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing memory/create params");
+    }
+  };
+
+  let Some(workspace) = context.workspace.clone() else {
+    return JsonRpcResponse::error(
+      request.id,
+      -32040,
+      "Open a workspace before creating memory notes",
+    );
+  };
+
+  let title = params.title.trim();
+  let body = params.body.trim();
+  if title.is_empty() || body.is_empty() {
+    return JsonRpcResponse::error(
+      request.id,
+      -32602,
+      "memory/create title and body must be non-empty",
+    );
+  }
+
+  match context.create_memory_note(
+    title.to_string(),
+    body.to_string(),
+    workspace.display_name,
+    "user".to_string(),
+    vec![
+      "workspace".to_string(),
+      "user".to_string(),
+      "manual".to_string(),
+    ],
+  ) {
+    Ok(note) => JsonRpcResponse::success(
+      request.id,
+      &MemoryCreateResult {
+        note: to_protocol_memory_note(note),
+      },
+    ),
+    Err(error) => JsonRpcResponse::error(request.id, -32041, error.to_string()),
+  }
+}
+
 fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<WorkspaceOpenParams>(value) {
@@ -489,7 +578,18 @@ fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     }
   };
 
-  refresh_active_turn_for_thread(context, &params.thread_id);
+  let did_refresh = match refresh_active_turn_for_thread(context, &params.thread_id) {
+    Ok(did_refresh) => did_refresh,
+    Err(error) => {
+      return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    }
+  };
+
+  if did_refresh {
+    if let Err(error) = context.persist_runtime_state() {
+      return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    }
+  }
 
   let Some(thread) = context
     .threads
@@ -966,6 +1066,12 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
 
+  if active_turn_id.is_none() {
+    if let Err(error) = refresh_thread_summary_note(context, &thread_id) {
+      return JsonRpcResponse::error(request.id, -32012, error.to_string());
+    }
+  }
+
   let pending_approvals = approvals_for_thread(context, &thread_id);
 
   JsonRpcResponse::success(
@@ -1183,6 +1289,10 @@ fn handle_approval_respond(
     }
   }
 
+  if let Err(error) = refresh_thread_summary_note(context, &approval.thread_id) {
+    return JsonRpcResponse::error(request.id, -32012, error.to_string());
+  }
+
   let pending_approvals = approvals_for_thread(context, &approval.thread_id);
 
   JsonRpcResponse::success(
@@ -1269,6 +1379,10 @@ fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
 
   if let Err(error) = context.persist_threads() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  if let Err(error) = refresh_thread_summary_note(context, &cancelled_thread_id) {
+    return JsonRpcResponse::error(request.id, -32012, error.to_string());
   }
 
   JsonRpcResponse::success(
@@ -1382,6 +1496,97 @@ fn infer_search_query(message: &str) -> Option<String> {
   None
 }
 
+fn refresh_thread_summary_note(context: &mut RuntimeContext, thread_id: &str) -> Result<()> {
+  let Some(thread) = context
+    .threads
+    .iter()
+    .find(|thread| thread.summary.id == thread_id)
+    .cloned()
+  else {
+    return Ok(());
+  };
+
+  let pending_approvals = approvals_for_thread(context, thread_id);
+  let workspace_snapshot = context.workspace.clone();
+  let scope = context
+    .workspace
+    .as_ref()
+    .map(|workspace| workspace.display_name.clone())
+    .unwrap_or_else(|| "global".to_string());
+
+  context.upsert_memory_note(
+    format!("memory-thread-summary-{thread_id}"),
+    format!("Thread summary: {}", thread.summary.title),
+    build_thread_summary_body(&thread, workspace_snapshot.as_ref(), &pending_approvals),
+    scope,
+    "thread".to_string(),
+    vec![
+      "thread".to_string(),
+      "summary".to_string(),
+      thread_id.to_string(),
+    ],
+  )?;
+
+  Ok(())
+}
+
+fn build_thread_summary_body(
+  thread: &StoredThread,
+  workspace: Option<&WorkspaceSummary>,
+  pending_approvals: &[ApprovalRequest],
+) -> String {
+  let workspace_line = workspace
+    .map(|workspace| format!("Workspace: {}.", workspace.display_name))
+    .unwrap_or_else(|| "Workspace: unavailable.".to_string());
+  let latest_user = thread
+    .items
+    .iter()
+    .rev()
+    .find(|item| item.kind == "userMessage")
+    .map(|item| truncate_memory_line(&item.content, 180))
+    .unwrap_or_else(|| "No user request captured yet.".to_string());
+  let latest_assistant = thread
+    .items
+    .iter()
+    .rev()
+    .find(|item| item.kind == "assistantMessage")
+    .map(|item| truncate_memory_line(&item.content, 180))
+    .unwrap_or_else(|| "No assistant update captured yet.".to_string());
+  let recent_activity = thread
+    .items
+    .iter()
+    .rev()
+    .filter(|item| item.kind != "system")
+    .take(4)
+    .map(|item| item.title.clone())
+    .collect::<Vec<_>>();
+  let activity_line = if recent_activity.is_empty() {
+    "Recent activity: none yet.".to_string()
+  } else {
+    format!("Recent activity: {}.", recent_activity.join(", "))
+  };
+
+  format!(
+    "{workspace_line}\nStatus: {}.\nLast user request: {}.\nLatest assistant update: {}.\nPending approvals: {}.\n{}",
+    thread.summary.status,
+    latest_user,
+    latest_assistant,
+    pending_approvals.len(),
+    activity_line
+  )
+}
+
+fn truncate_memory_line(content: &str, limit: usize) -> String {
+  let normalized = content.split_whitespace().collect::<Vec<_>>().join(" ");
+  let character_count = normalized.chars().count();
+  if character_count <= limit {
+    return normalized;
+  }
+
+  let truncated = normalized.chars().take(limit.saturating_sub(3)).collect::<String>();
+  format!("{truncated}...")
+}
+
 fn maybe_start_streaming_assistant_turn(
   thread_id: &str,
   turn_id: &str,
@@ -1425,28 +1630,35 @@ fn maybe_start_streaming_assistant_turn(
   })
 }
 
-fn refresh_active_turn_for_thread(context: &mut RuntimeContext, thread_id: &str) {
+fn refresh_active_turn_for_thread(context: &mut RuntimeContext, thread_id: &str) -> Result<bool> {
   let active_turn_ids = context
     .active_turns
     .values()
     .filter(|turn| turn.thread_id == thread_id)
     .map(|turn| turn.id.clone())
     .collect::<Vec<_>>();
+  let mut did_update = false;
 
   for turn_id in active_turn_ids {
-    let _ = advance_active_turn(context, &turn_id);
+    if advance_active_turn(context, &turn_id)?.is_some() {
+      did_update = true;
+    }
   }
+
+  Ok(did_update)
 }
 
 fn advance_active_turn(
   context: &mut RuntimeContext,
   turn_id: &str,
-) -> Option<ThreadUpdatedNotificationParams> {
-  let snapshot = context.active_turns.get(turn_id).cloned()?;
+) -> Result<Option<ThreadUpdatedNotificationParams>> {
+  let Some(snapshot) = context.active_turns.get(turn_id).cloned() else {
+    return Ok(None);
+  };
   let target_chars = compute_streamed_char_count(&snapshot).min(snapshot.total_chars);
 
   if target_chars <= snapshot.emitted_chars {
-    return None;
+    return Ok(None);
   }
 
   let thread_id = snapshot.thread_id.clone();
@@ -1459,10 +1671,13 @@ fn advance_active_turn(
   };
 
   let thread_snapshot = {
-    let thread = context
+    let Some(thread) = context
       .threads
       .iter_mut()
-      .find(|thread| thread.summary.id == snapshot.thread_id)?;
+      .find(|thread| thread.summary.id == snapshot.thread_id)
+    else {
+      return Ok(None);
+    };
 
     update_streaming_item(
       thread,
@@ -1487,16 +1702,17 @@ fn advance_active_turn(
 
   if is_complete {
     context.active_turns.remove(turn_id);
+    refresh_thread_summary_note(context, &thread_id)?;
   } else if let Some(active_turn) = context.active_turns.get_mut(turn_id) {
     active_turn.emitted_chars = target_chars;
   }
 
-  Some(ThreadUpdatedNotificationParams {
+  Ok(Some(ThreadUpdatedNotificationParams {
     thread: thread_snapshot.0,
     items: thread_snapshot.1,
     pending_approvals: approvals_for_thread(context, &thread_id),
     active_turn_id: active_turn_id_for_thread(context, &thread_id),
-  })
+  }))
 }
 
 fn compute_streamed_char_count(turn: &ActiveTurn) -> usize {
@@ -2081,6 +2297,42 @@ mod tests {
   }
 
   #[test]
+  fn memory_create_adds_manual_workspace_note() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("memory-create");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+
+    let create_response = handle_request(
+      &mut context,
+      request(
+        methods::MEMORY_CREATE,
+        Some(json!({
+          "title": "Repository preference",
+          "body": "Prefer small, reviewable patches.",
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(create_response.error.is_none());
+    let result = create_response.result.expect("memory create result");
+    assert_eq!(result["note"]["title"], "Repository preference");
+    assert_eq!(result["note"]["source"], "user");
+    assert_eq!(context.memory_notes.len(), 2);
+    assert_eq!(context.memory_notes[0].title, "Repository preference");
+  }
+
+  #[test]
   fn thread_start_persists_thread_for_future_lists() {
     let mut context = RuntimeContext::new_in_memory();
 
@@ -2573,6 +2825,69 @@ mod tests {
 
     assert_eq!(items[1]["title"], "run_shell");
     assert!(items[2]["content"].as_str().unwrap().contains("marker.txt"));
+  }
+
+  #[test]
+  fn thread_summary_memory_note_is_updated_after_approval_resolution() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("thread-summary");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Summary Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Write docs/output.txt: Summary content"
+        })),
+      ),
+    );
+    let approval_id = turn_response.result.expect("turn result")["pendingApprovals"][0]["id"]
+      .as_str()
+      .expect("approval id")
+      .to_string();
+
+    let approval_response = handle_request(
+      &mut context,
+      request(
+        methods::APPROVAL_RESPOND,
+        Some(json!({
+          "approvalId": approval_id,
+          "decision": "approved"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(approval_response.error.is_none());
+    let summary_note = context
+      .memory_notes
+      .iter()
+      .find(|note| note.id == "memory-thread-summary-thread-1")
+      .expect("thread summary note");
+    assert_eq!(summary_note.source, "thread");
+    assert_eq!(summary_note.title, "Thread summary: Summary Thread");
+    assert!(summary_note.body.contains("docs/output.txt"));
   }
 
   #[test]
