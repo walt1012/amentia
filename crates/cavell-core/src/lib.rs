@@ -399,7 +399,10 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             content: diff,
             attributes: Some(HashMap::from([
               ("action".to_string(), "write_file".to_string()),
-              ("relativePath".to_string(), write_intent.relative_path.clone()),
+              (
+                "relativePath".to_string(),
+                write_intent.relative_path.clone(),
+              ),
             ])),
           });
         }
