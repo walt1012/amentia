@@ -503,23 +503,14 @@ fn model_metrics(
     "binaryPresent".to_string(),
     binary_path.is_some().to_string(),
   );
-  metrics.insert(
-    "modelPresent".to_string(),
-    model_path.is_some().to_string(),
-  );
+  metrics.insert("modelPresent".to_string(), model_path.is_some().to_string());
   metrics.insert(
     "manifestPresent".to_string(),
     manifest_path.is_some().to_string(),
   );
   metrics.insert(
     "installHint".to_string(),
-    install_hint(
-      manifest,
-      readiness,
-      binary_path,
-      model_path,
-      manifest_path,
-    ),
+    install_hint(manifest, readiness, binary_path, model_path, manifest_path),
   );
 
   metrics
