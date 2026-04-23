@@ -8,7 +8,65 @@ use cavell_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
+
+#[derive(Debug, Clone, Copy)]
+struct SchemaMigration {
+  version: i64,
+  name: &'static str,
+  sql: &'static str,
+}
+
+const SCHEMA_MIGRATIONS: [SchemaMigration; 3] = [
+  SchemaMigration {
+    version: 1,
+    name: "initial_workspace_and_threads",
+    sql: "
+      CREATE TABLE IF NOT EXISTS workspace_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        root_path TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS threads (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        turn_count INTEGER NOT NULL,
+        items_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    ",
+  },
+  SchemaMigration {
+    version: 2,
+    name: "approval_audit",
+    sql: "
+      CREATE TABLE IF NOT EXISTS approvals (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        title TEXT NOT NULL,
+        relative_path TEXT NOT NULL,
+        content TEXT,
+        command TEXT,
+        requested_at INTEGER NOT NULL,
+        decision TEXT,
+        resolved_at INTEGER
+      );
+    ",
+  },
+  SchemaMigration {
+    version: 3,
+    name: "runtime_indexes",
+    sql: "
+      CREATE INDEX IF NOT EXISTS idx_threads_updated_at
+      ON threads(updated_at DESC, id ASC);
+      CREATE INDEX IF NOT EXISTS idx_approvals_requested_at
+      ON approvals(decision, requested_at ASC, id ASC);
+    ",
+  },
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoragePaths {
@@ -314,42 +372,25 @@ impl FileThreadStore {
     let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
 
     if version >= SCHEMA_VERSION {
+      ensure_schema_migration_table(connection)?;
       return Ok(());
     }
 
-    connection.execute_batch(
-      "
-      BEGIN;
-      CREATE TABLE IF NOT EXISTS workspace_state (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        root_path TEXT NOT NULL,
-        display_name TEXT NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS threads (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        status TEXT NOT NULL,
-        turn_count INTEGER NOT NULL,
-        items_json TEXT NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS approvals (
-        id TEXT PRIMARY KEY,
-        thread_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        title TEXT NOT NULL,
-        relative_path TEXT NOT NULL,
-        content TEXT,
-        command TEXT,
-        requested_at INTEGER NOT NULL,
-        decision TEXT,
-        resolved_at INTEGER
-      );
-      PRAGMA user_version = 2;
-      COMMIT;
-      ",
-    )?;
+    let transaction = connection.unchecked_transaction()?;
+    ensure_schema_migration_table(&transaction)?;
+
+    for migration in SCHEMA_MIGRATIONS {
+      if migration.version <= version {
+        backfill_schema_migration(&transaction, migration)?;
+        continue;
+      }
+
+      transaction.execute_batch(migration.sql)?;
+      record_schema_migration(&transaction, migration)?;
+    }
+
+    transaction.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+    transaction.commit()?;
 
     Ok(())
   }
@@ -401,6 +442,40 @@ impl FileThreadStore {
 
     Ok(())
   }
+}
+
+fn ensure_schema_migration_table(connection: &Connection) -> Result<()> {
+  connection.execute_batch(
+    "
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      applied_at INTEGER NOT NULL
+    );
+    ",
+  )?;
+
+  Ok(())
+}
+
+fn backfill_schema_migration(connection: &Connection, migration: SchemaMigration) -> Result<()> {
+  connection.execute(
+    "INSERT OR IGNORE INTO schema_migrations (version, name, applied_at)
+     VALUES (?1, ?2, ?3)",
+    params![migration.version, migration.name, current_timestamp()?],
+  )?;
+
+  Ok(())
+}
+
+fn record_schema_migration(connection: &Connection, migration: SchemaMigration) -> Result<()> {
+  connection.execute(
+    "INSERT INTO schema_migrations (version, name, applied_at)
+     VALUES (?1, ?2, ?3)",
+    params![migration.version, migration.name, current_timestamp()?],
+  )?;
+
+  Ok(())
 }
 
 fn default_database_path() -> Result<PathBuf> {
@@ -574,5 +649,70 @@ mod tests {
 
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].summary.id, "thread-legacy");
+  }
+
+  #[test]
+  fn sqlite_store_migrates_existing_version_one_database() {
+    let root = create_temp_directory("migrate-v1");
+    let database_path = root.join("cavell.db");
+    let connection = Connection::open(&database_path).expect("open seed database");
+    connection
+      .execute_batch(
+        "
+        CREATE TABLE workspace_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          root_path TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE threads (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL,
+          turn_count INTEGER NOT NULL,
+          items_json TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        INSERT INTO threads (id, title, status, turn_count, items_json, updated_at)
+        VALUES ('thread-old', 'Old Thread', 'ready', 1, '[]', 1);
+        PRAGMA user_version = 1;
+        ",
+      )
+      .expect("seed version one schema");
+    drop(connection);
+
+    let store = FileThreadStore::new(database_path.clone(), root.join("threads.json"));
+    let threads = store.load_threads().expect("load migrated threads");
+    let pending_approvals = store
+      .load_pending_approvals()
+      .expect("load migrated approvals");
+    let connection = Connection::open(&database_path).expect("reopen migrated database");
+    let migration_versions: Vec<i64> = connection
+      .prepare("SELECT version FROM schema_migrations ORDER BY version ASC")
+      .expect("prepare schema migrations query")
+      .query_map([], |row| row.get(0))
+      .expect("query schema migrations")
+      .collect::<std::result::Result<Vec<_>, _>>()
+      .expect("collect schema migrations");
+    let approval_indexes: Vec<String> = connection
+      .prepare(
+        "SELECT name
+         FROM sqlite_master
+         WHERE type = 'index' AND tbl_name = 'approvals'
+         ORDER BY name ASC",
+      )
+      .expect("prepare approvals index query")
+      .query_map([], |row| row.get(0))
+      .expect("query approvals indexes")
+      .collect::<std::result::Result<Vec<_>, _>>()
+      .expect("collect approvals indexes");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert_eq!(threads.len(), 1);
+    assert_eq!(threads[0].summary.id, "thread-old");
+    assert!(pending_approvals.is_empty());
+    assert_eq!(migration_versions, vec![1, 2, 3]);
+    assert!(approval_indexes.contains(&"idx_approvals_requested_at".to_string()));
   }
 }
