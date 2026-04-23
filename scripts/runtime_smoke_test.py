@@ -80,6 +80,20 @@ def main() -> int:
       },
     )
     assert len(thread_list["result"]["threads"]) == 1
+
+    turn = send_request(
+      process,
+      {
+        "id": 5,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": "Hello from CI",
+        },
+      },
+    )
+    assert turn["result"]["messages"][0]["role"] == "user"
+    assert turn["result"]["messages"][1]["role"] == "assistant"
     return 0
   finally:
     process.terminate()

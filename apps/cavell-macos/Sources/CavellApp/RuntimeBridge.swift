@@ -19,6 +19,17 @@ final class RuntimeBridge {
     let status: String
   }
 
+  struct RuntimeTurnResult {
+    let turnID: String
+    let threadID: String
+    let messages: [RuntimeTurnMessageResult]
+  }
+
+  struct RuntimeTurnMessageResult {
+    let role: String
+    let content: String
+  }
+
   enum RuntimeError: LocalizedError {
     case runtimePathMissing
     case runtimePipeUnavailable
@@ -118,6 +129,29 @@ final class RuntimeBridge {
       id: result.thread.id,
       title: result.thread.title,
       preview: result.thread.status
+    )
+  }
+
+  func startTurn(threadID: String, message: String) async throws -> RuntimeTurnResult {
+    let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
+      method: "turn/start",
+      params: TurnStartParams(threadId: threadID, message: message)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeTurnResult(
+      turnID: result.turnId,
+      threadID: result.threadId,
+      messages: result.messages.map {
+        RuntimeTurnMessageResult(role: $0.role, content: $0.content)
+      }
     )
   }
 

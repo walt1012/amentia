@@ -7,6 +7,7 @@ final class AppViewModel: ObservableObject {
   @Published var timeline: [TimelineEntry]
   @Published var runtimeState: RuntimeBridge.ConnectionState
   @Published var runtimeDetail: String
+  @Published var draftMessage: String
 
   private let runtimeBridge: RuntimeBridge
 
@@ -22,6 +23,7 @@ final class AppViewModel: ObservableObject {
     self.runtimeBridge = runtimeBridge
     self.runtimeState = runtimeBridge.connectionState
     self.runtimeDetail = "Runtime not launched"
+    self.draftMessage = ""
     self.threads = initialThreads
     self.timeline = [
       TimelineEntry(
@@ -116,5 +118,54 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
+  }
+
+  func sendDraftMessage() {
+    let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard runtimeState == .ready, !message.isEmpty, let threadID = selectedThreadID else {
+      return
+    }
+
+    draftMessage = ""
+
+    Task {
+      do {
+        let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
+        appendMessagesToTimeline(result.messages)
+        refreshThreadPreview(threadID: threadID, preview: "\(result.turnID) ready")
+      } catch {
+        timeline.insert(
+          TimelineEntry(
+            id: UUID(),
+            kind: .system,
+            title: "Turn Failed",
+            body: error.localizedDescription
+          ),
+          at: 0
+        )
+      }
+    }
+  }
+
+  private func appendMessagesToTimeline(_ messages: [RuntimeBridge.RuntimeTurnMessageResult]) {
+    let newEntries = messages.map { message in
+      TimelineEntry(
+        id: UUID(),
+        kind: message.role == "user" ? .userMessage : .assistantMessage,
+        title: message.role == "user" ? "User" : "Assistant",
+        body: message.content
+      )
+    }
+
+    timeline.insert(contentsOf: newEntries.reversed(), at: 0)
+  }
+
+  private func refreshThreadPreview(threadID: String, preview: String) {
+    guard let index = threads.firstIndex(where: { $0.id == threadID }) else {
+      return
+    }
+
+    threads[index].preview = preview
   }
 }

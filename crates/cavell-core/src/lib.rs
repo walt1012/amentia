@@ -1,14 +1,20 @@
 use cavell_protocol::{
   methods, HealthPingResult, InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse,
   ServerCapabilities, ServerInfo, ThreadListResult, ThreadStartParams, ThreadStartResult,
-  ThreadSummary,
+  ThreadSummary, TurnMessage, TurnStartParams, TurnStartResult,
 };
+
+#[derive(Debug, Clone)]
+struct StoredThread {
+  summary: ThreadSummary,
+  turn_count: usize,
+}
 
 #[derive(Debug, Clone)]
 pub struct RuntimeContext {
   server_name: String,
   server_version: String,
-  threads: Vec<ThreadSummary>,
+  threads: Vec<StoredThread>,
   next_thread_number: usize,
 }
 
@@ -42,9 +48,14 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::THREAD_LIST => JsonRpcResponse::success(
       request.id,
       &ThreadListResult {
-        threads: context.threads.clone(),
+        threads: context
+          .threads
+          .iter()
+          .map(|thread| thread.summary.clone())
+          .collect(),
       },
     ),
+    methods::TURN_START => handle_turn_start(context, request),
     _ => JsonRpcResponse::error(request.id, -32601, "Method not found"),
   }
 }
@@ -108,9 +119,64 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
     status: "ready".to_string(),
   };
   context.next_thread_number += 1;
-  context.threads.push(thread.clone());
+  context.threads.push(StoredThread {
+    summary: thread.clone(),
+    turn_count: 0,
+  });
 
   JsonRpcResponse::success(request.id, &ThreadStartResult { thread })
+}
+
+fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<TurnStartParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid turn/start params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing turn/start params");
+    }
+  };
+
+  let Some(thread) = context
+    .threads
+    .iter_mut()
+    .find(|thread| thread.summary.id == params.thread_id)
+  else {
+    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+  };
+
+  thread.turn_count += 1;
+  thread.summary.status = format!("{} turn(s)", thread.turn_count);
+
+  let assistant_message = format!(
+    "Cavell received your message in {} and is ready for the next runtime step: {}",
+    thread.summary.title, params.message
+  );
+
+  JsonRpcResponse::success(
+    request.id,
+    &TurnStartResult {
+      turn_id: format!("{}-turn-{}", thread.summary.id, thread.turn_count),
+      thread_id: thread.summary.id.clone(),
+      messages: vec![
+        TurnMessage {
+          role: "user".to_string(),
+          content: params.message,
+        },
+        TurnMessage {
+          role: "assistant".to_string(),
+          content: assistant_message,
+        },
+      ],
+    },
+  )
 }
 
 #[cfg(test)]
@@ -189,5 +255,39 @@ mod tests {
 
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0]["title"], "First Thread");
+  }
+
+  #[test]
+  fn turn_start_returns_user_and_assistant_messages() {
+    let mut context = RuntimeContext::new();
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Chat Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Hello runtime"
+        })),
+      ),
+    );
+
+    assert!(turn_response.error.is_none());
+    let result = turn_response.result.expect("turn result");
+    let messages = result["messages"].as_array().expect("messages");
+
+    assert_eq!(messages.len(), 2);
+    assert_eq!(messages[0]["role"], "user");
+    assert_eq!(messages[1]["role"], "assistant");
   }
 }

@@ -73,6 +73,24 @@ struct ContentView: View {
         }
         .padding(20)
       }
+
+      Divider()
+
+      HStack(alignment: .bottom, spacing: 12) {
+        TextField("Ask Cavell to do the next runtime step", text: $viewModel.draftMessage)
+          .textFieldStyle(.roundedBorder)
+
+        Button("Send") {
+          viewModel.sendDraftMessage()
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(
+          viewModel.runtimeState != .ready
+            || viewModel.selectedThreadID == nil
+            || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        )
+      }
+      .padding(20)
     }
     .frame(minWidth: 520)
   }
