@@ -180,6 +180,17 @@ struct ContentView: View {
             .font(.caption2)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
+          HStack(spacing: 8) {
+            Button("Reveal Model Folder") {
+              viewModel.revealSuggestedModelDirectory()
+            }
+            .buttonStyle(.bordered)
+
+            Button("Reveal Binary Folder") {
+              viewModel.revealSuggestedBinaryDirectory()
+            }
+            .buttonStyle(.bordered)
+          }
           Text(viewModel.modelArtifactPathSummary())
             .font(.caption2)
             .foregroundColor(.secondary)

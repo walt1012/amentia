@@ -662,6 +662,20 @@ final class AppViewModel: ObservableObject {
     return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
   }
 
+  func revealSuggestedModelDirectory() {
+    revealSuggestedPath(
+      metricKey: "suggestedModelPath",
+      successDetail: "Opened the suggested local model folder."
+    )
+  }
+
+  func revealSuggestedBinaryDirectory() {
+    revealSuggestedPath(
+      metricKey: "suggestedBinaryPath",
+      successDetail: "Opened the suggested llama.cpp binary folder."
+    )
+  }
+
   func pluginCountSummary() -> String {
     if plugins.isEmpty {
       return "No bundled plugins discovered yet."
@@ -919,6 +933,37 @@ final class AppViewModel: ObservableObject {
 
     self.activeTurnID = activeTurnID
     activeTurnThreadID = threadID
+  }
+
+  private func revealSuggestedPath(metricKey: String, successDetail: String) {
+    guard let value = modelHealth?.metrics[metricKey], !value.isEmpty else {
+      runtimeDetail = "Local model guidance is unavailable until the runtime reports model health."
+      return
+    }
+
+    let targetURL = URL(fileURLWithPath: value)
+    let directoryURL: URL
+    var isDirectory = ObjCBool(false)
+    if FileManager.default.fileExists(atPath: targetURL.path, isDirectory: &isDirectory) {
+      directoryURL = isDirectory.boolValue ? targetURL : targetURL.deletingLastPathComponent()
+    } else {
+      directoryURL = targetURL.deletingLastPathComponent()
+      do {
+        try FileManager.default.createDirectory(
+          at: directoryURL,
+          withIntermediateDirectories: true
+        )
+      } catch {
+        runtimeDetail = "Failed to prepare \(directoryURL.path): \(error.localizedDescription)"
+        return
+      }
+    }
+
+    if NSWorkspace.shared.open(directoryURL) {
+      runtimeDetail = successDetail
+    } else {
+      runtimeDetail = "Failed to open \(directoryURL.path)"
+    }
   }
 
   private func refreshMemoryState() async {
