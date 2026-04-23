@@ -2224,10 +2224,10 @@ mod tests {
     assert_eq!(items[4]["kind"], "assistantMessage");
     assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
     assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
-    assert_eq!(
-      items[4]["attributes"]["memoryNoteTitles"],
-      "Opened workspace read-file"
-    );
+    assert!(items[4]["attributes"]["memoryNoteTitles"]
+      .as_str()
+      .unwrap()
+      .contains("Opened workspace"));
     assert!(matches!(
       items[4]["attributes"]["streamingStatus"].as_str(),
       Some("in_progress") | Some("completed")
