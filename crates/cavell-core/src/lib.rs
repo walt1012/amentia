@@ -12,8 +12,7 @@ use cavell_protocol::{
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
-  list_directory, read_file, search_files, write_file, DirectoryEntry, ReadFileResult,
-  SearchMatch,
+  list_directory, read_file, search_files, write_file, DirectoryEntry, ReadFileResult, SearchMatch,
 };
 
 #[derive(Debug, Clone)]
@@ -600,7 +599,10 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
   )
 }
 
-fn handle_approval_respond(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+fn handle_approval_respond(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<ApprovalRespondParams>(value) {
       Ok(params) => params,
@@ -656,7 +658,10 @@ fn handle_approval_respond(context: &mut RuntimeContext, request: JsonRpcRequest
     items.push(TimelineItem {
       kind: "approvalResolved".to_string(),
       title: "Approval Granted".to_string(),
-      content: format!("Approved {} for {}.", approval.action, approval.relative_path),
+      content: format!(
+        "Approved {} for {}.",
+        approval.action, approval.relative_path
+      ),
       attributes: Some(HashMap::from([
         ("approvalId".to_string(), approval.id.clone()),
         ("decision".to_string(), "approved".to_string()),
@@ -678,7 +683,11 @@ fn handle_approval_respond(context: &mut RuntimeContext, request: JsonRpcRequest
         items.push(TimelineItem {
           kind: "toolResult".to_string(),
           title: "write_file result".to_string(),
-          content: format!("Wrote {} bytes to {}.", approval.content.len(), relative_path),
+          content: format!(
+            "Wrote {} bytes to {}.",
+            approval.content.len(),
+            relative_path
+          ),
           attributes: None,
         });
         items.push(TimelineItem {

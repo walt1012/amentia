@@ -228,7 +228,10 @@ fn resolve_workspace_path(
   allow_directory: bool,
 ) -> Result<PathBuf> {
   let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
-    format!("failed to resolve workspace root {}", workspace_root.display())
+    format!(
+      "failed to resolve workspace root {}",
+      workspace_root.display()
+    )
   })?;
   let candidate = workspace_root.join(relative_path);
   let resolved = fs::canonicalize(&candidate)
@@ -261,8 +264,12 @@ fn relative_path_string(workspace_root: &Path, target: &Path) -> Result<String> 
 }
 
 fn canonical_workspace_root(workspace_root: &Path) -> Result<PathBuf> {
-  fs::canonicalize(workspace_root)
-    .with_context(|| format!("failed to resolve workspace root {}", workspace_root.display()))
+  fs::canonicalize(workspace_root).with_context(|| {
+    format!(
+      "failed to resolve workspace root {}",
+      workspace_root.display()
+    )
+  })
 }
 
 fn sanitize_relative_path(relative_path: &str) -> Result<String> {
