@@ -107,17 +107,32 @@ pub fn read_file(
   })
 }
 
+pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> Result<String> {
+  let workspace_root = canonical_workspace_root(workspace_root)?;
+  let sanitized_relative_path = sanitize_relative_path(relative_path)?;
+  let target = workspace_root.join(&sanitized_relative_path);
+
+  if let Some(parent) = target.parent() {
+    fs::create_dir_all(parent)
+      .with_context(|| format!("failed to create directory {}", parent.display()))?;
+  }
+
+  if target.is_dir() {
+    bail!("workspace path points to a directory");
+  }
+
+  fs::write(&target, content)
+    .with_context(|| format!("failed to write file {}", target.display()))?;
+
+  Ok(sanitized_relative_path)
+}
+
 pub fn search_files(
   workspace_root: &Path,
   query: &str,
   max_results: usize,
 ) -> Result<Vec<SearchMatch>> {
-  let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
-    format!(
-      "failed to resolve workspace root {}",
-      workspace_root.display()
-    )
-  })?;
+  let workspace_root = canonical_workspace_root(workspace_root)?;
   let normalized_query = query.trim().to_lowercase();
 
   if normalized_query.is_empty() {
@@ -213,10 +228,7 @@ fn resolve_workspace_path(
   allow_directory: bool,
 ) -> Result<PathBuf> {
   let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
-    format!(
-      "failed to resolve workspace root {}",
-      workspace_root.display()
-    )
+    format!("failed to resolve workspace root {}", workspace_root.display())
   })?;
   let candidate = workspace_root.join(relative_path);
   let resolved = fs::canonicalize(&candidate)
@@ -246,4 +258,31 @@ fn relative_path_string(workspace_root: &Path, target: &Path) -> Result<String> 
   }
 
   Ok(relative.to_string_lossy().replace('\\', "/"))
+}
+
+fn canonical_workspace_root(workspace_root: &Path) -> Result<PathBuf> {
+  fs::canonicalize(workspace_root)
+    .with_context(|| format!("failed to resolve workspace root {}", workspace_root.display()))
+}
+
+fn sanitize_relative_path(relative_path: &str) -> Result<String> {
+  let path = Path::new(relative_path);
+  if path.is_absolute() {
+    bail!("workspace path must be relative");
+  }
+
+  let mut sanitized = PathBuf::new();
+  for component in path.components() {
+    match component {
+      std::path::Component::CurDir => {}
+      std::path::Component::Normal(segment) => sanitized.push(segment),
+      _ => bail!("workspace path must stay inside the selected workspace"),
+    }
+  }
+
+  if sanitized.as_os_str().is_empty() {
+    bail!("workspace path must not be empty");
+  }
+
+  Ok(sanitized.to_string_lossy().replace('\\', "/"))
 }

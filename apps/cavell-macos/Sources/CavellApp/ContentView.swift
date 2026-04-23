@@ -80,7 +80,22 @@ struct ContentView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
           ForEach(viewModel.timeline) { entry in
-            TimelineCard(entry: entry)
+            TimelineCard(
+              entry: entry,
+              showsApprovalActions: viewModel.isPendingApproval(entry),
+              onApprove: {
+                guard let approvalID = viewModel.approvalID(for: entry) else {
+                  return
+                }
+                viewModel.respondToApproval(approvalID: approvalID, decision: "approved")
+              },
+              onDeny: {
+                guard let approvalID = viewModel.approvalID(for: entry) else {
+                  return
+                }
+                viewModel.respondToApproval(approvalID: approvalID, decision: "denied")
+              }
+            )
           }
         }
         .padding(20)
@@ -139,8 +154,8 @@ struct ContentView: View {
       GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
-          Text("Read and search filesystem tools")
-          Text("Tool timeline cards")
+          Text("Read, search, and approval-gated write tools")
+          Text("Tool and approval timeline cards")
           Text("Workspace-aware prompt loop")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -162,6 +177,9 @@ struct ContentView: View {
 
 private struct TimelineCard: View {
   let entry: TimelineEntry
+  let showsApprovalActions: Bool
+  let onApprove: () -> Void
+  let onDeny: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -171,6 +189,21 @@ private struct TimelineCard: View {
         .font(.body)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
+
+      if showsApprovalActions {
+        HStack(spacing: 12) {
+          Button("Approve") {
+            onApprove()
+          }
+          .buttonStyle(.borderedProminent)
+
+          Button("Deny") {
+            onDeny()
+          }
+          .buttonStyle(.bordered)
+        }
+        .padding(.top, 4)
+      }
     }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,6 +217,8 @@ private struct TimelineCard: View {
       return Color.accentColor.opacity(0.12)
     case .tool:
       return Color.green.opacity(0.12)
+    case .approval:
+      return Color.yellow.opacity(0.16)
     case .warning:
       return Color.orange.opacity(0.16)
     default:

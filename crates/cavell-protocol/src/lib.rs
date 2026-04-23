@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub mod methods {
+  pub const APPROVAL_RESPOND: &str = "approval/respond";
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
@@ -148,6 +150,25 @@ pub struct TimelineItem {
   pub kind: String,
   pub title: String,
   pub content: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub attributes: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApprovalRequest {
+  pub id: String,
+  pub thread_id: String,
+  pub action: String,
+  pub title: String,
+  pub relative_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApprovalRespondParams {
+  pub approval_id: String,
+  pub decision: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +176,7 @@ pub struct TimelineItem {
 pub struct ThreadReadResult {
   pub thread: ThreadSummary,
   pub items: Vec<TimelineItem>,
+  pub pending_approvals: Vec<ApprovalRequest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +185,16 @@ pub struct TurnStartResult {
   pub turn_id: String,
   pub thread_id: String,
   pub items: Vec<TimelineItem>,
+  pub pending_approvals: Vec<ApprovalRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApprovalRespondResult {
+  pub approval_id: String,
+  pub thread_id: String,
+  pub items: Vec<TimelineItem>,
+  pub pending_approvals: Vec<ApprovalRequest>,
 }
 
 impl JsonRpcResponse {

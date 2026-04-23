@@ -13,6 +13,7 @@ final class AppViewModel: ObservableObject {
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
+  private var threadPendingApprovalIDs: [String: Set<String>]
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
@@ -20,13 +21,15 @@ final class AppViewModel: ObservableObject {
         id: UUID(),
         kind: .system,
         title: "Milestone 1 Start",
-        body: "Launch the runtime, open a workspace, and ask Cavell to inspect local files."
+        body: "Launch the runtime, open a workspace, and ask Cavell to inspect local files.",
+        attributes: [:]
       ),
       TimelineEntry(
         id: UUID(),
         kind: .assistantMessage,
         title: "Next Step",
-        body: "The first local agent loop uses workspace-aware read, list, and search tools before approvals and writes land."
+        body: "The first local agent loop uses workspace-aware read, search, and approval-gated write tools.",
+        attributes: [:]
       ),
     ]
 
@@ -46,6 +49,7 @@ final class AppViewModel: ObservableObject {
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.threadTimelines = ["local-welcome": initialTimeline]
+    self.threadPendingApprovalIDs = [:]
     self.selectedThreadID = initialThreads.first?.id
   }
 
@@ -85,7 +89,8 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .system,
             title: "Runtime Connected",
-            body: "Connected to \(session.serverName) \(session.serverVersion) over stdio."
+            body: "Connected to \(session.serverName) \(session.serverVersion) over stdio.",
+            attributes: [:]
           )
         )
       } catch {
@@ -97,7 +102,8 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .warning,
             title: "Runtime Launch Failed",
-            body: error.localizedDescription
+            body: error.localizedDescription,
+            attributes: [:]
           )
         )
       }
@@ -133,7 +139,8 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .system,
             title: "Workspace Opened",
-            body: "Opened \(openedWorkspace.displayName) at \(openedWorkspace.rootPath)."
+            body: "Opened \(openedWorkspace.displayName) at \(openedWorkspace.rootPath).",
+            attributes: [:]
           )
         )
       } catch {
@@ -143,7 +150,8 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .warning,
             title: "Workspace Open Failed",
-            body: error.localizedDescription
+            body: error.localizedDescription,
+            attributes: [:]
           )
         )
       }
@@ -160,6 +168,7 @@ final class AppViewModel: ObservableObject {
         let thread = try await runtimeBridge.startThread(title: "Thread \(threads.count + 1)")
         threads.insert(thread, at: 0)
         threadTimelines[thread.id] = defaultTimeline(for: thread.title)
+        threadPendingApprovalIDs[thread.id] = Set<String>()
         selectThread(id: thread.id)
         await loadThreadHistory(threadID: thread.id)
         appendEntry(
@@ -168,7 +177,8 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .system,
             title: "Thread Created",
-            body: "Created \(thread.title) in the local runtime."
+            body: "Created \(thread.title) in the local runtime.",
+            attributes: [:]
           )
         )
       } catch {
@@ -178,7 +188,8 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .warning,
             title: "Thread Creation Failed",
-            body: error.localizedDescription
+            body: error.localizedDescription,
+            attributes: [:]
           )
         )
       }
@@ -202,6 +213,7 @@ final class AppViewModel: ObservableObject {
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
         refreshThreadPreview(threadID: result.threadID, preview: "\(result.turnID) ready")
       } catch {
         appendEntry(
@@ -210,7 +222,37 @@ final class AppViewModel: ObservableObject {
             id: UUID(),
             kind: .warning,
             title: "Turn Failed",
-            body: error.localizedDescription
+            body: error.localizedDescription,
+            attributes: [:]
+          )
+        )
+      }
+    }
+  }
+
+  func respondToApproval(approvalID: String, decision: String) {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    Task {
+      do {
+        let result = try await runtimeBridge.respondToApproval(
+          approvalID: approvalID,
+          decision: decision
+        )
+        appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
+        await loadThreadHistory(threadID: result.threadID)
+      } catch {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID(),
+            kind: .warning,
+            title: "Approval Response Failed",
+            body: error.localizedDescription,
+            attributes: [:]
           )
         )
       }
@@ -266,7 +308,22 @@ final class AppViewModel: ObservableObject {
       return "Open a workspace to start local agent work"
     }
 
-    return "Ask Cavell to inspect or search files in the current workspace"
+    return "Ask Cavell to inspect, search, or write files in the current workspace"
+  }
+
+  func isPendingApproval(_ entry: TimelineEntry) -> Bool {
+    guard entry.kind == .approval,
+          let selectedThreadID,
+          let approvalID = entry.attributes["approvalId"]
+    else {
+      return false
+    }
+
+    return threadPendingApprovalIDs[selectedThreadID, default: Set<String>()].contains(approvalID)
+  }
+
+  func approvalID(for entry: TimelineEntry) -> String? {
+    entry.attributes["approvalId"]
   }
 
   private func appendItemsToTimeline(
@@ -278,13 +335,21 @@ final class AppViewModel: ObservableObject {
         id: UUID(),
         kind: timelineKind(for: item.kind),
         title: item.title,
-        body: item.content
+        body: item.content,
+        attributes: item.attributes
       )
     }
 
     for entry in newEntries.reversed() {
       appendEntry(to: threadID, entry)
     }
+  }
+
+  private func updatePendingApprovals(
+    threadID: String,
+    approvals: [RuntimeBridge.RuntimeApproval]
+  ) {
+    threadPendingApprovalIDs[threadID] = Set(approvals.map(\.id))
   }
 
   private func refreshThreadPreview(threadID: String, preview: String) {
@@ -316,7 +381,9 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    timeline = threadTimelines[selectedThreadID] ?? defaultTimeline(for: threadTitle(for: selectedThreadID))
+    timeline =
+      threadTimelines[selectedThreadID]
+      ?? defaultTimeline(for: threadTitle(for: selectedThreadID))
     threadTimelines[selectedThreadID] = timeline
   }
 
@@ -326,7 +393,8 @@ final class AppViewModel: ObservableObject {
         id: UUID(),
         kind: .system,
         title: "Thread Ready",
-        body: "\(title) is ready for local runtime messages."
+        body: "\(title) is ready for local runtime messages.",
+        attributes: [:]
       ),
     ]
   }
@@ -343,10 +411,12 @@ final class AppViewModel: ObservableObject {
           id: UUID(),
           kind: timelineKind(for: item.kind),
           title: item.title,
-          body: item.content
+          body: item.content,
+          attributes: item.attributes
         )
       }
       threadTimelines[threadID] = entries
+      updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
       refreshThreadPreview(threadID: threadID, preview: result.status)
 
       if selectedThreadID == threadID {
@@ -359,7 +429,8 @@ final class AppViewModel: ObservableObject {
           id: UUID(),
           kind: .warning,
           title: "Thread Load Failed",
-          body: error.localizedDescription
+          body: error.localizedDescription,
+          attributes: [:]
         )
       )
     }
@@ -375,6 +446,8 @@ final class AppViewModel: ObservableObject {
       return .plan
     case "toolStart", "toolResult":
       return .tool
+    case "approvalRequested", "approvalResolved":
+      return .approval
     case "warning":
       return .warning
     default:

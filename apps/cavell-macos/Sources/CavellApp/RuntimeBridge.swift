@@ -29,6 +29,7 @@ final class RuntimeBridge {
     let turnID: String
     let threadID: String
     let items: [RuntimeTimelineItemResult]
+    let pendingApprovals: [RuntimeApproval]
   }
 
   struct RuntimeThreadState {
@@ -36,12 +37,29 @@ final class RuntimeBridge {
     let title: String
     let status: String
     let items: [RuntimeTimelineItemResult]
+    let pendingApprovals: [RuntimeApproval]
   }
 
   struct RuntimeTimelineItemResult {
     let kind: String
     let title: String
     let content: String
+    let attributes: [String: String]
+  }
+
+  struct RuntimeApproval {
+    let id: String
+    let threadID: String
+    let action: String
+    let title: String
+    let relativePath: String
+  }
+
+  struct RuntimeApprovalResponse {
+    let approvalID: String
+    let threadID: String
+    let items: [RuntimeTimelineItemResult]
+    let pendingApprovals: [RuntimeApproval]
   }
 
   enum RuntimeError: LocalizedError {
@@ -53,7 +71,9 @@ final class RuntimeBridge {
     var errorDescription: String? {
       switch self {
       case .runtimePathMissing:
-        return "The runtime binary could not be found. Set CAVELL_RUNTIME_PATH to the built runtime executable."
+        return
+          "The runtime binary could not be found. " +
+          "Set CAVELL_RUNTIME_PATH to the built runtime executable."
       case .runtimePipeUnavailable:
         return "The runtime process pipes are not available."
       case .invalidResponse:
@@ -185,8 +205,14 @@ final class RuntimeBridge {
       turnID: result.turnId,
       threadID: result.threadId,
       items: result.items.map {
-        RuntimeTimelineItemResult(kind: $0.kind, title: $0.title, content: $0.content)
-      }
+        RuntimeTimelineItemResult(
+          kind: $0.kind,
+          title: $0.title,
+          content: $0.content,
+          attributes: $0.attributes ?? [:]
+        )
+      },
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
     )
   }
 
@@ -209,8 +235,43 @@ final class RuntimeBridge {
       title: result.thread.title,
       status: result.thread.status,
       items: result.items.map {
-        RuntimeTimelineItemResult(kind: $0.kind, title: $0.title, content: $0.content)
-      }
+        RuntimeTimelineItemResult(
+          kind: $0.kind,
+          title: $0.title,
+          content: $0.content,
+          attributes: $0.attributes ?? [:]
+        )
+      },
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
+    )
+  }
+
+  func respondToApproval(approvalID: String, decision: String) async throws -> RuntimeApprovalResponse {
+    let response: JSONRPCResponse<ApprovalRespondResult> = try await sendRequest(
+      method: "approval/respond",
+      params: ApprovalRespondParams(approvalId: approvalID, decision: decision)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeApprovalResponse(
+      approvalID: result.approvalId,
+      threadID: result.threadId,
+      items: result.items.map {
+        RuntimeTimelineItemResult(
+          kind: $0.kind,
+          title: $0.title,
+          content: $0.content,
+          attributes: $0.attributes ?? [:]
+        )
+      },
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
     )
   }
 
@@ -292,6 +353,16 @@ final class RuntimeBridge {
 
     let decoder = JSONDecoder()
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: Data(line.utf8))
+  }
+
+  private func runtimeApproval(from payload: RuntimeApprovalPayload) -> RuntimeApproval {
+    RuntimeApproval(
+      id: payload.id,
+      threadID: payload.threadId,
+      action: payload.action,
+      title: payload.title,
+      relativePath: payload.relativePath
+    )
   }
 
   private static func readLineAsync(from handle: FileHandle) async throws -> String {

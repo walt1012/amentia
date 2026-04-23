@@ -1,16 +1,19 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use cavell_protocol::{
-  methods, HealthPingResult, InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse,
-  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem, TurnStartParams,
-  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
+  InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ServerCapabilities,
+  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
+  ThreadStartResult, ThreadSummary, TimelineItem, TurnStartParams, TurnStartResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
-  list_directory, read_file, search_files, DirectoryEntry, ReadFileResult, SearchMatch,
+  list_directory, read_file, search_files, write_file, DirectoryEntry, ReadFileResult,
+  SearchMatch,
 };
 
 #[derive(Debug, Clone)]
@@ -21,13 +24,31 @@ struct StoredThread {
 }
 
 #[derive(Debug, Clone)]
+struct PendingApproval {
+  id: String,
+  thread_id: String,
+  action: String,
+  title: String,
+  relative_path: String,
+  content: String,
+}
+
+#[derive(Debug, Clone)]
+struct WriteIntent {
+  relative_path: String,
+  content: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct RuntimeContext {
   server_name: String,
   server_version: String,
   store: Option<FileThreadStore>,
   threads: Vec<StoredThread>,
   workspace: Option<WorkspaceSummary>,
+  pending_approvals: HashMap<String, PendingApproval>,
   next_thread_number: usize,
+  next_approval_number: usize,
 }
 
 impl RuntimeContext {
@@ -49,7 +70,9 @@ impl RuntimeContext {
         })
         .collect(),
       workspace: None,
+      pending_approvals: HashMap::new(),
       next_thread_number,
+      next_approval_number: 1,
     })
   }
 
@@ -60,7 +83,9 @@ impl RuntimeContext {
       store: None,
       threads: vec![],
       workspace: None,
+      pending_approvals: HashMap::new(),
       next_thread_number: 1,
+      next_approval_number: 1,
     }
   }
 
@@ -91,6 +116,7 @@ impl Default for RuntimeContext {
 
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   match request.method.as_str() {
+    methods::APPROVAL_RESPOND => handle_approval_respond(context, request),
     methods::INITIALIZE => handle_initialize(context, request),
     methods::HEALTH_PING => JsonRpcResponse::success(
       request.id,
@@ -234,6 +260,7 @@ fn handle_thread_read(context: &RuntimeContext, request: JsonRpcRequest) -> Json
     &ThreadReadResult {
       thread: thread.summary.clone(),
       items: thread.items.clone(),
+      pending_approvals: approvals_for_thread(context, &thread.summary.id),
     },
   )
 }
@@ -265,6 +292,7 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
     kind: "system".to_string(),
     title: "Thread Ready".to_string(),
     content: format!("{} is ready for local runtime messages.", thread.title),
+    attributes: None,
   }];
   context.threads.push(StoredThread {
     summary: thread.clone(),
@@ -320,12 +348,60 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     kind: "userMessage".to_string(),
     title: "User".to_string(),
     content: message.clone(),
+    attributes: None,
   }];
 
   if let Some(workspace) = workspace {
     let workspace_root = Path::new(&workspace.root_path);
 
-    if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
+    if let Some(write_intent) = infer_write_intent(&message) {
+      let approval_id = format!("approval-{}", context.next_approval_number);
+      context.next_approval_number += 1;
+
+      let approval = PendingApproval {
+        id: approval_id.clone(),
+        thread_id: thread_id.clone(),
+        action: "write_file".to_string(),
+        title: format!("Write {}", write_intent.relative_path),
+        relative_path: write_intent.relative_path.clone(),
+        content: write_intent.content.clone(),
+      };
+      context
+        .pending_approvals
+        .insert(approval_id.clone(), approval.clone());
+
+      items.push(TimelineItem {
+        kind: "plan".to_string(),
+        title: "Plan".to_string(),
+        content: format!(
+          "Request approval before writing {} in {}.",
+          write_intent.relative_path, workspace.display_name
+        ),
+        attributes: None,
+      });
+      items.push(TimelineItem {
+        kind: "approvalRequested".to_string(),
+        title: "Approval Requested".to_string(),
+        content: format!(
+          "Cavell wants to write {} in {}.",
+          write_intent.relative_path, workspace.display_name
+        ),
+        attributes: Some(HashMap::from([
+          ("approvalId".to_string(), approval.id.clone()),
+          ("action".to_string(), approval.action.clone()),
+          ("relativePath".to_string(), approval.relative_path.clone()),
+        ])),
+      });
+      items.push(TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: format!(
+          "Cavell prepared a write for {} and is waiting for your approval.",
+          write_intent.relative_path
+        ),
+        attributes: None,
+      });
+    } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
       items.push(TimelineItem {
         kind: "plan".to_string(),
         title: "Plan".to_string(),
@@ -333,11 +409,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           "Inspect {} in {} with the built-in read_file tool.",
           relative_path, workspace.display_name
         ),
+        attributes: None,
       });
       items.push(TimelineItem {
         kind: "toolStart".to_string(),
         title: "read_file".to_string(),
         content: relative_path.clone(),
+        attributes: None,
       });
 
       match read_file(workspace_root, &relative_path, 4096) {
@@ -346,11 +424,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             kind: "toolResult".to_string(),
             title: "read_file result".to_string(),
             content: format_file_result(&result),
+            attributes: None,
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
             title: "Assistant".to_string(),
             content: summarize_file_result(&thread_title, &workspace.display_name, &result),
+            attributes: None,
           });
         }
         Err(error) => {
@@ -358,6 +438,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             kind: "warning".to_string(),
             title: "read_file failed".to_string(),
             content: error.to_string(),
+            attributes: None,
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
@@ -366,6 +447,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               "Cavell could not inspect that file in {}. Try another path inside the workspace.",
               workspace.display_name
             ),
+            attributes: None,
           });
         }
       }
@@ -377,11 +459,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           "Search {} for matches to \"{}\" with the built-in search_files tool.",
           workspace.display_name, search_query
         ),
+        attributes: None,
       });
       items.push(TimelineItem {
         kind: "toolStart".to_string(),
         title: "search_files".to_string(),
         content: search_query.clone(),
+        attributes: None,
       });
 
       match search_files(workspace_root, &search_query, 12) {
@@ -390,6 +474,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             kind: "toolResult".to_string(),
             title: "search_files result".to_string(),
             content: format_search_result(&search_query, &matches),
+            attributes: None,
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
@@ -400,6 +485,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               &search_query,
               &matches,
             ),
+            attributes: None,
           });
         }
         Err(error) => {
@@ -407,6 +493,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             kind: "warning".to_string(),
             title: "search_files failed".to_string(),
             content: error.to_string(),
+            attributes: None,
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
@@ -415,6 +502,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               "Cavell could not search {} yet. Try a shorter query or re-open the workspace.",
               workspace.display_name
             ),
+            attributes: None,
           });
         }
       }
@@ -426,11 +514,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           "Inspect the root of {} with the built-in list_directory tool.",
           workspace.display_name
         ),
+        attributes: None,
       });
       items.push(TimelineItem {
         kind: "toolStart".to_string(),
         title: "list_directory".to_string(),
         content: ".".to_string(),
+        attributes: None,
       });
 
       match list_directory(workspace_root, None, 24) {
@@ -439,11 +529,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             kind: "toolResult".to_string(),
             title: "list_directory result".to_string(),
             content: format_directory_result(&entries),
+            attributes: None,
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
             title: "Assistant".to_string(),
             content: summarize_directory_result(&thread_title, &workspace.display_name, &entries),
+            attributes: None,
           });
         }
         Err(error) => {
@@ -451,6 +543,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             kind: "warning".to_string(),
             title: "list_directory failed".to_string(),
             content: error.to_string(),
+            attributes: None,
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
@@ -459,6 +552,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               "Cavell could not inspect the root of {} yet. Re-open the workspace and try again.",
               workspace.display_name
             ),
+            attributes: None,
           });
         }
       }
@@ -468,11 +562,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       kind: "plan".to_string(),
       title: "Plan".to_string(),
       content: "Wait for a workspace before running filesystem tools.".to_string(),
+      attributes: None,
     });
     items.push(TimelineItem {
       kind: "warning".to_string(),
       title: "Workspace Required".to_string(),
       content: "Open a workspace before asking Cavell to inspect files.".to_string(),
+      attributes: None,
     });
     items.push(TimelineItem {
       kind: "assistantMessage".to_string(),
@@ -481,6 +577,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         "Cavell received your message in {}, but Milestone 1 tools need an opened workspace first.",
         thread_title
       ),
+      attributes: None,
     });
   }
 
@@ -490,12 +587,155 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
 
+  let pending_approvals = approvals_for_thread(context, &thread_id);
+
   JsonRpcResponse::success(
     request.id,
     &TurnStartResult {
       turn_id: format!("{thread_id}-turn-{turn_count}"),
       thread_id,
       items,
+      pending_approvals,
+    },
+  )
+}
+
+fn handle_approval_respond(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<ApprovalRespondParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid approval/respond params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing approval/respond params");
+    }
+  };
+
+  let decision = params.decision.to_lowercase();
+  if decision != "approved" && decision != "denied" {
+    return JsonRpcResponse::error(
+      request.id,
+      -32602,
+      "approval/respond decision must be approved or denied",
+    );
+  }
+
+  let Some(approval) = context.pending_approvals.get(&params.approval_id).cloned() else {
+    return JsonRpcResponse::error(request.id, -32030, "Approval request not found");
+  };
+
+  let workspace = match context.workspace.clone() {
+    Some(workspace) => workspace,
+    None => {
+      return JsonRpcResponse::error(
+        request.id,
+        -32031,
+        "Open a workspace before resolving approvals",
+      )
+    }
+  };
+
+  let Some(thread) = context
+    .threads
+    .iter_mut()
+    .find(|thread| thread.summary.id == approval.thread_id)
+  else {
+    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+  };
+
+  context.pending_approvals.remove(&params.approval_id);
+
+  let mut items = vec![];
+  if decision == "approved" {
+    items.push(TimelineItem {
+      kind: "approvalResolved".to_string(),
+      title: "Approval Granted".to_string(),
+      content: format!("Approved {} for {}.", approval.action, approval.relative_path),
+      attributes: Some(HashMap::from([
+        ("approvalId".to_string(), approval.id.clone()),
+        ("decision".to_string(), "approved".to_string()),
+      ])),
+    });
+    items.push(TimelineItem {
+      kind: "toolStart".to_string(),
+      title: "write_file".to_string(),
+      content: approval.relative_path.clone(),
+      attributes: None,
+    });
+
+    match write_file(
+      Path::new(&workspace.root_path),
+      &approval.relative_path,
+      &approval.content,
+    ) {
+      Ok(relative_path) => {
+        items.push(TimelineItem {
+          kind: "toolResult".to_string(),
+          title: "write_file result".to_string(),
+          content: format!("Wrote {} bytes to {}.", approval.content.len(), relative_path),
+          attributes: None,
+        });
+        items.push(TimelineItem {
+          kind: "assistantMessage".to_string(),
+          title: "Assistant".to_string(),
+          content: format!(
+            "Cavell wrote {} in {} after your approval.",
+            relative_path, workspace.display_name
+          ),
+          attributes: None,
+        });
+      }
+      Err(error) => {
+        items.push(TimelineItem {
+          kind: "warning".to_string(),
+          title: "write_file failed".to_string(),
+          content: error.to_string(),
+          attributes: None,
+        });
+      }
+    }
+  } else {
+    items.push(TimelineItem {
+      kind: "approvalResolved".to_string(),
+      title: "Approval Denied".to_string(),
+      content: format!("Denied {} for {}.", approval.action, approval.relative_path),
+      attributes: Some(HashMap::from([
+        ("approvalId".to_string(), approval.id.clone()),
+        ("decision".to_string(), "denied".to_string()),
+      ])),
+    });
+    items.push(TimelineItem {
+      kind: "assistantMessage".to_string(),
+      title: "Assistant".to_string(),
+      content: format!(
+        "Cavell skipped writing {} because the approval was denied.",
+        approval.relative_path
+      ),
+      attributes: None,
+    });
+  }
+
+  thread.items.extend(items.clone());
+
+  if let Err(error) = context.persist_threads() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  let pending_approvals = approvals_for_thread(context, &approval.thread_id);
+
+  JsonRpcResponse::success(
+    request.id,
+    &ApprovalRespondResult {
+      approval_id: approval.id,
+      thread_id: approval.thread_id.clone(),
+      items,
+      pending_approvals,
     },
   )
 }
@@ -521,6 +761,34 @@ fn infer_requested_file_path(message: &str, workspace_root: &Path) -> Option<Str
 
     if workspace_root.join(candidate).is_file() {
       return Some(candidate.replace('\\', "/"));
+    }
+  }
+
+  None
+}
+
+fn infer_write_intent(message: &str) -> Option<WriteIntent> {
+  let trimmed = message.trim();
+  let lowercased_message = trimmed.to_lowercase();
+
+  for prefix in ["write ", "create ", "update "] {
+    if lowercased_message.starts_with(prefix) {
+      let remainder = &trimmed[prefix.len()..];
+      let (path, content) = remainder.split_once(':')?;
+      let relative_path = path
+        .trim()
+        .trim_matches(&['"', '\'', '`'][..])
+        .replace('\\', "/");
+      let content = content.trim().to_string();
+
+      if relative_path.is_empty() || content.is_empty() {
+        return None;
+      }
+
+      return Some(WriteIntent {
+        relative_path,
+        content,
+      });
     }
   }
 
@@ -669,6 +937,23 @@ fn summarize_search_result(
     query,
     preview
   )
+}
+
+fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<ApprovalRequest> {
+  let mut approvals = context
+    .pending_approvals
+    .values()
+    .filter(|approval| approval.thread_id == thread_id)
+    .map(|approval| ApprovalRequest {
+      id: approval.id.clone(),
+      thread_id: approval.thread_id.clone(),
+      action: approval.action.clone(),
+      title: approval.title.clone(),
+      relative_path: approval.relative_path.clone(),
+    })
+    .collect::<Vec<_>>();
+  approvals.sort_by(|left, right| left.id.cmp(&right.id));
+  approvals
 }
 
 #[cfg(test)]
@@ -970,5 +1255,71 @@ mod tests {
       .as_str()
       .unwrap()
       .contains("docs/notes.txt:1"));
+  }
+
+  #[test]
+  fn approval_respond_writes_file_after_approval() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("approval-write");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Approval Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Write docs/output.txt: Approval protected content"
+        })),
+      ),
+    );
+
+    assert!(turn_response.error.is_none());
+    let turn_result = turn_response.result.expect("turn result");
+    let approval_id = turn_result["pendingApprovals"][0]["id"]
+      .as_str()
+      .expect("approval id")
+      .to_string();
+
+    let approval_response = handle_request(
+      &mut context,
+      request(
+        methods::APPROVAL_RESPOND,
+        Some(json!({
+          "approvalId": approval_id,
+          "decision": "approved"
+        })),
+      ),
+    );
+
+    let written_content =
+      fs::read_to_string(workspace.join("docs").join("output.txt")).expect("read written output");
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(approval_response.error.is_none());
+    let approval_result = approval_response.result.expect("approval result");
+    let items = approval_result["items"].as_array().expect("approval items");
+
+    assert_eq!(items[0]["kind"], "approvalResolved");
+    assert_eq!(items[1]["title"], "write_file");
+    assert_eq!(written_content, "Approval protected content");
   }
 }

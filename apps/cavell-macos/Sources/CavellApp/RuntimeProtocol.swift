@@ -82,6 +82,7 @@ struct ThreadReadParams: Codable {
 struct ThreadReadResult: Codable {
   let thread: RuntimeThreadPayload
   let items: [RuntimeTimelineItem]
+  let pendingApprovals: [RuntimeApprovalPayload]
 }
 
 struct TurnStartParams: Codable {
@@ -93,12 +94,34 @@ struct RuntimeTimelineItem: Codable {
   let kind: String
   let title: String
   let content: String
+  let attributes: [String: String]?
+}
+
+struct RuntimeApprovalPayload: Codable {
+  let id: String
+  let threadId: String
+  let action: String
+  let title: String
+  let relativePath: String
+}
+
+struct ApprovalRespondParams: Codable {
+  let approvalId: String
+  let decision: String
 }
 
 struct TurnStartResult: Codable {
   let turnId: String
   let threadId: String
   let items: [RuntimeTimelineItem]
+  let pendingApprovals: [RuntimeApprovalPayload]
+}
+
+struct ApprovalRespondResult: Codable {
+  let approvalId: String
+  let threadId: String
+  let items: [RuntimeTimelineItem]
+  let pendingApprovals: [RuntimeApprovalPayload]
 }
 
 struct OptionalRequestParams: Encodable {

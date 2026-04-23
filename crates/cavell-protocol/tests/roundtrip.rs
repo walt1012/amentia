@@ -1,7 +1,8 @@
 use cavell_protocol::{
-  InitializeParams, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  ApprovalRequest, ApprovalRespondParams, InitializeParams, ThreadReadResult, ThreadSummary,
+  TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
+use std::collections::HashMap;
 
 #[test]
 fn initialize_params_uses_camel_case_fields() {
@@ -27,13 +28,19 @@ fn turn_start_result_round_trips_timeline_items() {
         kind: "userMessage".to_string(),
         title: "User".to_string(),
         content: "Hello".to_string(),
+        attributes: None,
       },
       TimelineItem {
         kind: "assistantMessage".to_string(),
         title: "Assistant".to_string(),
         content: "Hi".to_string(),
+        attributes: Some(HashMap::from([(
+          "source".to_string(),
+          "runtime".to_string(),
+        )])),
       },
     ],
+    pending_approvals: vec![],
   };
 
   let encoded = serde_json::to_string(&result).expect("serialize turn result");
@@ -56,12 +63,21 @@ fn thread_read_result_contains_items() {
       kind: "system".to_string(),
       title: "Thread Ready".to_string(),
       content: "Thread is ready.".to_string(),
+      attributes: None,
+    }],
+    pending_approvals: vec![ApprovalRequest {
+      id: "approval-1".to_string(),
+      thread_id: "thread-1".to_string(),
+      action: "write_file".to_string(),
+      title: "Write README.md".to_string(),
+      relative_path: "README.md".to_string(),
     }],
   };
 
   let value = serde_json::to_value(result).expect("serialize thread read result");
   assert!(value.get("thread").is_some());
   assert!(value.get("items").is_some());
+  assert!(value.get("pendingApprovals").is_some());
 }
 
 #[test]
@@ -84,4 +100,16 @@ fn workspace_payloads_use_camel_case_fields() {
   assert!(result_value.get("threadCount").is_some());
   assert!(result_value["workspace"].get("rootPath").is_some());
   assert!(result_value["workspace"].get("displayName").is_some());
+}
+
+#[test]
+fn approval_respond_params_use_camel_case_fields() {
+  let params = ApprovalRespondParams {
+    approval_id: "approval-1".to_string(),
+    decision: "approved".to_string(),
+  };
+
+  let value = serde_json::to_value(params).expect("serialize approval respond params");
+  assert!(value.get("approvalId").is_some());
+  assert!(value.get("decision").is_some());
 }

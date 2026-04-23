@@ -151,6 +151,35 @@ def main() -> int:
     )
     assert search_turn["result"]["items"][2]["title"] == "search_files"
     assert "notes.txt:1" in search_turn["result"]["items"][3]["content"]
+
+    write_turn = send_request(
+      process,
+      {
+        "id": 9,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": "Write docs/output.txt: Created from approval flow",
+        },
+      },
+    )
+    assert write_turn["result"]["items"][2]["kind"] == "approvalRequested"
+    approval_id = write_turn["result"]["pendingApprovals"][0]["id"]
+
+    approval = send_request(
+      process,
+      {
+        "id": 10,
+        "method": "approval/respond",
+        "params": {
+          "approvalId": approval_id,
+          "decision": "approved",
+        },
+      },
+    )
+    assert approval["result"]["items"][0]["kind"] == "approvalResolved"
+    assert approval["result"]["items"][1]["title"] == "write_file"
+    assert (workspace_dir / "docs" / "output.txt").read_text(encoding="utf-8") == "Created from approval flow"
     return 0
   finally:
     process.terminate()

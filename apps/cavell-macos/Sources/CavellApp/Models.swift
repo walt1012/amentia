@@ -18,6 +18,7 @@ struct TimelineEntry: Identifiable, Hashable {
     case system
     case plan
     case tool
+    case approval
     case warning
   }
 
@@ -25,4 +26,5 @@ struct TimelineEntry: Identifiable, Hashable {
   let kind: Kind
   let title: String
   let body: String
+  let attributes: [String: String]
 }
