@@ -523,7 +523,7 @@ mod tests {
     };
 
     store
-      .save_pending_approvals(&[approval.clone()])
+      .save_pending_approvals(std::slice::from_ref(&approval))
       .expect("save pending approvals");
     let pending = store
       .load_pending_approvals()

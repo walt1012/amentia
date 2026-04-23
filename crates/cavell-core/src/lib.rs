@@ -808,10 +808,6 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       .insert(active_turn.id.clone(), active_turn);
   }
 
-  if let Err(error) = context.persist_resolved_approval(&approval, &decision) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-
   if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
@@ -996,7 +992,11 @@ fn handle_approval_respond(
 
   thread.items.extend(items.clone());
 
-  if let Err(error) = context.persist_threads() {
+  if let Err(error) = context.persist_resolved_approval(&approval, &decision) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
 
