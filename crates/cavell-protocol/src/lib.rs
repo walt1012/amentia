@@ -4,6 +4,7 @@ use serde_json::Value;
 pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
+  pub const WORKSPACE_OPEN: &str = "workspace/open";
   pub const THREAD_READ: &str = "thread/read";
   pub const THREAD_START: &str = "thread/start";
   pub const THREAD_LIST: &str = "thread/list";
@@ -88,6 +89,26 @@ pub struct ThreadSummary {
   pub id: String,
   pub title: String,
   pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSummary {
+  pub root_path: String,
+  pub display_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceOpenParams {
+  pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceOpenResult {
+  pub workspace: WorkspaceSummary,
+  pub thread_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

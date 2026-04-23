@@ -12,6 +12,13 @@ struct ContentView: View {
     }
     .toolbar {
       ToolbarItem {
+        Button("Open Workspace") {
+          viewModel.openWorkspace()
+        }
+        .disabled(viewModel.runtimeState != .ready)
+      }
+
+      ToolbarItem {
         Button("New Thread") {
           viewModel.createThread()
         }
@@ -49,8 +56,13 @@ struct ContentView: View {
   private var timeline: some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack {
-        Text("Timeline")
-          .font(.title2.weight(.semibold))
+        VStack(alignment: .leading, spacing: 4) {
+          Text("Timeline")
+            .font(.title2.weight(.semibold))
+          Text(viewModel.workspaceDisplayName())
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
         Spacer()
         VStack(alignment: .trailing, spacing: 2) {
           Text(viewModel.runtimeState.rawValue.capitalized)
@@ -77,7 +89,7 @@ struct ContentView: View {
       Divider()
 
       HStack(alignment: .bottom, spacing: 12) {
-        TextField("Ask Cavell to do the next runtime step", text: $viewModel.draftMessage)
+        TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
           .textFieldStyle(.roundedBorder)
 
         Button("Send") {
@@ -86,6 +98,7 @@ struct ContentView: View {
         .buttonStyle(.borderedProminent)
         .disabled(
           viewModel.runtimeState != .ready
+            || viewModel.workspace == nil
             || viewModel.selectedThreadID == nil
             || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         )
@@ -100,6 +113,18 @@ struct ContentView: View {
       Text("Inspector")
         .font(.title3.weight(.semibold))
 
+      GroupBox("Workspace") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.workspaceDisplayName())
+            .font(.headline)
+          Text(viewModel.workspacePath())
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       GroupBox("Thread") {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.selectedThreadTitle())
@@ -111,19 +136,19 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
-      GroupBox("Milestone 0") {
+      GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
-          Text("Local app shell")
-          Text("Rust runtime workspace")
-          Text("Protocol scaffold")
-          Text("Plugin-ready repository layout")
+          Text("Workspace open flow")
+          Text("Read-only filesystem tools")
+          Text("Tool timeline cards")
+          Text("Workspace-aware prompt loop")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .font(.subheadline)
       }
 
       GroupBox("Next Integration") {
-        Text("Replace the mock runtime state with live stdio messaging and render real timeline events.")
+        Text("Add streaming events, approval cards, writable tools, and model-backed planning.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
@@ -145,6 +170,7 @@ private struct TimelineCard: View {
       Text(entry.body)
         .font(.body)
         .foregroundColor(.secondary)
+        .textSelection(.enabled)
     }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -156,6 +182,10 @@ private struct TimelineCard: View {
     switch entry.kind {
     case .plan:
       return Color.accentColor.opacity(0.12)
+    case .tool:
+      return Color.green.opacity(0.12)
+    case .warning:
+      return Color.orange.opacity(0.16)
     default:
       return Color(NSColor.controlBackgroundColor)
     }
