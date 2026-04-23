@@ -4,7 +4,7 @@
 
 This document defines the product, architecture, engineering rules, and phased execution plan for `Pith`.
 
-`Pith` is intended to become a local-first macOS agent application with a premium desktop experience, a plugin-first architecture, and no dependency on external model APIs for its core intelligence path.
+`Pith` is intended to become a local-first macOS agent application with a premium desktop experience, a strong core agent loop, an extensible plugin architecture, and no dependency on external model APIs for its core intelligence path.
 
 This plan is designed to be implementation-ready. It is not just a vision statement. Each section exists to reduce future rework when code implementation begins.
 
@@ -20,7 +20,7 @@ These constraints are mandatory and should be treated as project requirements, n
 - Default built-in model: `LFM2.5-350M`
 - Development model: free and open source only
 - Repository language policy: English only for source code, comments, docs, commit messages, branch names, PR titles, CI messages, and generated project templates where practical
-- Product positioning: broader than a coding assistant, capable of growing into a plugin-powered local coworker platform
+- Product positioning: start as a small but strong local agent assistant, then grow into a plugin-powered local coworker platform
 - Built-in memory requirement: local workspace memory is a core runtime module
 
 ## 3. Product Thesis
@@ -36,7 +36,7 @@ The core thesis is:
 - plugin-powered capability expansion
 - workspace-aware agent execution
 
-The first shipping goal is not to match the full intelligence quality of hosted frontier systems. The first shipping goal is to deliver a stable, elegant, extensible local agent desktop application that can execute useful tasks end to end on Intel Macs.
+The first shipping goal is not to match the full intelligence quality of hosted frontier systems. The first shipping goal is to deliver a stable, elegant, local agent desktop application with a tight end-to-end task loop on Intel Macs, then expand that core into a broader platform.
 
 ## 4. Source Study Summary
 
@@ -111,7 +111,7 @@ Based on those references, `Pith` should adopt:
 - explicit approval UI for risky actions
 - diff and patch review
 - persistent thread history
-- plugin discovery
+- basic plugin discovery
 - built-in memory module shell
 
 ### 5.2 Explicitly Out Of Scope For Phase 1
@@ -848,9 +848,10 @@ Goal:
 
 Deliverables:
 
-- plugin discovery
-- manifest validation
 - plugin manager UI
+- plugin enable and disable flow
+- plugin installation and removal workflow
+- plugin manifest validation and repair surfaces
 - plugin capability registry
 - memory-aware plugin integration points
 - per-plugin permissions UI
@@ -915,7 +916,7 @@ Recommended implementation order:
 9. implement streaming output and cancellation
 10. implement filesystem and shell tools with approvals
 11. implement diff and patch review
-12. implement plugin discovery after the built-in memory module is stable
+12. expand plugin management after the built-in memory module is stable
 
 ## 20. Detailed Backlog For Milestone 0
 
@@ -974,7 +975,8 @@ Recommended implementation order:
 ### 21.2 Inference
 
 - integrate `llama.cpp`
-- load bundled `LFM2.5-350M` model pack
+- prepare local `LFM2.5-350M` model pack metadata and bootstrap flow
+- support release-bundled or downloaded GGUF delivery without committing weights to git
 - implement streaming token delivery
 - implement cancellation
 - expose model health and metrics
@@ -1020,7 +1022,7 @@ Recommended implementation order:
 - thread creation succeeds
 - streaming response events render
 - approval request and response loop works
-- plugin discovery succeeds
+- local model bootstrap and health checks succeed
 
 ### 22.3 UI Tests
 
