@@ -550,15 +550,15 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           .pending_approvals
           .insert(approval_id.clone(), approval.clone());
 
-        items.push(TimelineItem {
-          kind: "plan".to_string(),
-          title: "Plan".to_string(),
-          content: format!(
+        items.push(build_plan_item(
+          &context.model_runtime,
+          &message,
+          Some(workspace),
+          format!(
             "Request approval before writing {} in {}.",
             write_intent.relative_path, workspace.display_name
           ),
-          attributes: None,
-        });
+        ));
         items.push(TimelineItem {
           kind: "toolStart".to_string(),
           title: "generate_diff".to_string(),
@@ -632,15 +632,15 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           .pending_approvals
           .insert(approval_id.clone(), approval.clone());
 
-        items.push(TimelineItem {
-          kind: "plan".to_string(),
-          title: "Plan".to_string(),
-          content: format!(
+        items.push(build_plan_item(
+          &context.model_runtime,
+          &message,
+          Some(workspace),
+          format!(
             "Request approval before running a shell command in {}.",
             workspace.display_name
           ),
-          attributes: None,
-        });
+        ));
         items.push(TimelineItem {
           kind: "approvalRequested".to_string(),
           title: "Approval Requested".to_string(),
@@ -662,15 +662,15 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           attributes: None,
         });
       } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
-        items.push(TimelineItem {
-          kind: "plan".to_string(),
-          title: "Plan".to_string(),
-          content: format!(
+        items.push(build_plan_item(
+          &context.model_runtime,
+          &message,
+          Some(workspace),
+          format!(
             "Inspect {} in {} with the built-in read_file tool.",
             relative_path, workspace.display_name
           ),
-          attributes: None,
-        });
+        ));
         items.push(TimelineItem {
           kind: "toolStart".to_string(),
           title: "read_file".to_string(),
@@ -719,15 +719,15 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           }
         }
       } else if let Some(search_query) = infer_search_query(&message) {
-        items.push(TimelineItem {
-          kind: "plan".to_string(),
-          title: "Plan".to_string(),
-          content: format!(
+        items.push(build_plan_item(
+          &context.model_runtime,
+          &message,
+          Some(workspace),
+          format!(
             "Search {} for matches to \"{}\" with the built-in search_files tool.",
             workspace.display_name, search_query
           ),
-          attributes: None,
-        });
+        ));
         items.push(TimelineItem {
           kind: "toolStart".to_string(),
           title: "search_files".to_string(),
@@ -777,15 +777,15 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           }
         }
       } else {
-        items.push(TimelineItem {
-          kind: "plan".to_string(),
-          title: "Plan".to_string(),
-          content: format!(
+        items.push(build_plan_item(
+          &context.model_runtime,
+          &message,
+          Some(workspace),
+          format!(
             "Inspect the root of {} with the built-in list_directory tool.",
             workspace.display_name
           ),
-          attributes: None,
-        });
+        ));
         items.push(TimelineItem {
           kind: "toolStart".to_string(),
           title: "list_directory".to_string(),
@@ -835,12 +835,12 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         }
       }
     } else {
-      items.push(TimelineItem {
-        kind: "plan".to_string(),
-        title: "Plan".to_string(),
-        content: "Wait for a workspace before running filesystem tools.".to_string(),
-        attributes: None,
-      });
+      items.push(build_plan_item(
+        &context.model_runtime,
+        &message,
+        None,
+        "Wait for a workspace before running filesystem tools.".to_string(),
+      ));
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "Workspace Required".to_string(),
@@ -1444,6 +1444,47 @@ fn streaming_progress_label(streamed_chars: usize, total_chars: usize) -> String
   format!("{}%", percentage.min(100))
 }
 
+fn build_plan_item(
+  model_runtime: &LocalModelRuntime,
+  message: &str,
+  workspace: Option<&WorkspaceSummary>,
+  fallback: String,
+) -> TimelineItem {
+  let workspace_context = workspace
+    .map(|workspace| {
+      format!(
+        "Workspace: {} at {}.",
+        workspace.display_name, workspace.root_path
+      )
+    })
+    .unwrap_or_else(|| "Workspace: unavailable.".to_string());
+  let result = model_runtime.generate(GenerateRequest {
+    role: ModelRole::Planner,
+    prompt: format!(
+      "You are the local planner for Cavell.\n{}\nUser request: {}\nWrite one concise English sentence describing the next action Cavell should take.",
+      workspace_context, message
+    ),
+    fallback,
+    max_tokens: 80,
+  });
+  let mut attributes = HashMap::from([
+    ("responseRole".to_string(), "planner".to_string()),
+    ("modelId".to_string(), result.model_id),
+    ("modelBackend".to_string(), result.backend),
+    ("modelStatus".to_string(), result.status),
+  ]);
+  if let Some(workspace) = workspace {
+    attributes.insert("workspaceDisplayName".to_string(), workspace.display_name.clone());
+  }
+
+  TimelineItem {
+    kind: "plan".to_string(),
+    title: "Plan".to_string(),
+    content: result.text,
+    attributes: Some(attributes),
+  }
+}
+
 fn take_characters(content: &str, count: usize) -> String {
   content.chars().take(count).collect()
 }
@@ -1961,6 +2002,8 @@ mod tests {
     let result = turn_response.result.expect("turn result");
     let items = result["items"].as_array().expect("items");
 
+    assert_eq!(items[1]["kind"], "plan");
+    assert_eq!(items[1]["attributes"]["responseRole"], "planner");
     assert_eq!(items[2]["kind"], "toolStart");
     assert_eq!(items[3]["kind"], "toolResult");
     assert_eq!(items[4]["kind"], "assistantMessage");

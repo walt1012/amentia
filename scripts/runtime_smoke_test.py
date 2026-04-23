@@ -165,6 +165,7 @@ def main() -> int:
     )
     assert turn["result"]["items"][0]["kind"] == "userMessage"
     assert turn["result"]["items"][1]["kind"] == "plan"
+    assert turn["result"]["items"][1]["attributes"]["responseRole"] == "planner"
     assert turn["result"]["items"][2]["kind"] == "toolStart"
     assert turn["result"]["items"][3]["kind"] == "toolResult"
     assert turn["result"]["items"][4]["kind"] == "assistantMessage"
