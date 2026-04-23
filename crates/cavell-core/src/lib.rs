@@ -530,12 +530,8 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               attributes: None,
             });
             let summary = summarize_file_result(&thread_title, &workspace.display_name, &result);
-            pending_active_turn = maybe_start_streaming_assistant_turn(
-              &thread_id,
-              &turn_id,
-              &mut items,
-              summary,
-            );
+            pending_active_turn =
+              maybe_start_streaming_assistant_turn(&thread_id, &turn_id, &mut items, summary);
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -586,12 +582,8 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
               &search_query,
               &matches,
             );
-            pending_active_turn = maybe_start_streaming_assistant_turn(
-              &thread_id,
-              &turn_id,
-              &mut items,
-              summary,
-            );
+            pending_active_turn =
+              maybe_start_streaming_assistant_turn(&thread_id, &turn_id, &mut items, summary);
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -638,12 +630,8 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             });
             let summary =
               summarize_directory_result(&thread_title, &workspace.display_name, &entries);
-            pending_active_turn = maybe_start_streaming_assistant_turn(
-              &thread_id,
-              &turn_id,
-              &mut items,
-              summary,
-            );
+            pending_active_turn =
+              maybe_start_streaming_assistant_turn(&thread_id, &turn_id, &mut items, summary);
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -697,7 +685,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
 
     thread.items.extend(items.clone());
 
-    (thread_id, turn_id, items, active_turn_id, pending_active_turn)
+    (
+      thread_id,
+      turn_id,
+      items,
+      active_turn_id,
+      pending_active_turn,
+    )
   };
 
   if let Some(active_turn) = pending_active_turn {
@@ -939,19 +933,17 @@ fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     compute_streamed_char_count(&active_turn_snapshot)
       .min(active_turn_snapshot.full_content.chars().count()),
   );
-  update_streaming_item(
-    thread,
-    &params.turn_id,
-    &partial_content,
-    "cancelled",
-  );
+  update_streaming_item(thread, &params.turn_id, &partial_content, "cancelled");
   thread.summary.status = "Turn cancelled".to_string();
 
   let items = vec![
     TimelineItem {
       kind: "warning".to_string(),
       title: "Turn Cancelled".to_string(),
-      content: format!("Cancelled {} before the assistant response completed.", params.turn_id),
+      content: format!(
+        "Cancelled {} before the assistant response completed.",
+        params.turn_id
+      ),
       attributes: Some(HashMap::from([(
         "turnId".to_string(),
         params.turn_id.clone(),
@@ -1106,10 +1098,7 @@ fn maybe_start_streaming_assistant_turn(
     content: initial_content,
     attributes: Some(HashMap::from([
       ("turnId".to_string(), turn_id.to_string()),
-      (
-        "streamingStatus".to_string(),
-        streaming_status.to_string(),
-      ),
+      ("streamingStatus".to_string(), streaming_status.to_string()),
     ])),
   });
 
@@ -1198,10 +1187,7 @@ fn update_streaming_item(
   item.content = content.to_string();
   let mut attributes = item.attributes.clone().unwrap_or_default();
   attributes.insert("turnId".to_string(), turn_id.to_string());
-  attributes.insert(
-    "streamingStatus".to_string(),
-    streaming_status.to_string(),
-  );
+  attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
   item.attributes = Some(attributes);
 }
 
@@ -1635,10 +1621,7 @@ mod tests {
       .as_str()
       .unwrap()
       .contains("Milestone 1"));
-    assert_eq!(
-      result["activeTurnId"].as_str().unwrap(),
-      "thread-1-turn-1"
-    );
+    assert_eq!(result["activeTurnId"].as_str().unwrap(), "thread-1-turn-1");
   }
 
   #[test]
