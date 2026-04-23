@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use anyhow::Result;
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ServerCapabilities,
   ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
-  ThreadStartResult, ThreadSummary, TimelineItem, TurnStartParams, TurnStartResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  ThreadStartResult, ThreadSummary, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
@@ -41,6 +42,15 @@ struct WriteIntent {
 }
 
 #[derive(Debug, Clone)]
+struct ActiveTurn {
+  id: String,
+  thread_id: String,
+  full_content: String,
+  emitted_chars: usize,
+  started_at: Instant,
+}
+
+#[derive(Debug, Clone)]
 pub struct RuntimeContext {
   server_name: String,
   server_version: String,
@@ -48,6 +58,7 @@ pub struct RuntimeContext {
   threads: Vec<StoredThread>,
   workspace: Option<WorkspaceSummary>,
   pending_approvals: HashMap<String, PendingApproval>,
+  active_turns: HashMap<String, ActiveTurn>,
   next_thread_number: usize,
   next_approval_number: usize,
 }
@@ -72,6 +83,7 @@ impl RuntimeContext {
         .collect(),
       workspace: None,
       pending_approvals: HashMap::new(),
+      active_turns: HashMap::new(),
       next_thread_number,
       next_approval_number: 1,
     })
@@ -85,6 +97,7 @@ impl RuntimeContext {
       threads: vec![],
       workspace: None,
       pending_approvals: HashMap::new(),
+      active_turns: HashMap::new(),
       next_thread_number: 1,
       next_approval_number: 1,
     }
@@ -126,6 +139,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       },
     ),
     methods::WORKSPACE_OPEN => handle_workspace_open(context, request),
+    methods::TURN_CANCEL => handle_turn_cancel(context, request),
     methods::THREAD_READ => handle_thread_read(context, request),
     methods::THREAD_START => handle_thread_start(context, request),
     methods::THREAD_LIST => JsonRpcResponse::success(
@@ -231,7 +245,7 @@ fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) 
   )
 }
 
-fn handle_thread_read(context: &RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<ThreadReadParams>(value) {
       Ok(params) => params,
@@ -248,6 +262,8 @@ fn handle_thread_read(context: &RuntimeContext, request: JsonRpcRequest) -> Json
     }
   };
 
+  refresh_active_turn_for_thread(context, &params.thread_id);
+
   let Some(thread) = context
     .threads
     .iter()
@@ -262,6 +278,7 @@ fn handle_thread_read(context: &RuntimeContext, request: JsonRpcRequest) -> Json
       thread: thread.summary.clone(),
       items: thread.items.clone(),
       pending_approvals: approvals_for_thread(context, &thread.summary.id),
+      active_turn_id: active_turn_id_for_thread(context, &thread.summary.id),
     },
   )
 }
@@ -326,344 +343,368 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
   };
 
   let workspace = context.workspace.clone();
-  let Some(thread) = context
-    .threads
-    .iter_mut()
-    .find(|thread| thread.summary.id == params.thread_id)
-  else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
-  };
+  let (thread_id, turn_id, items, active_turn_id, pending_active_turn) = {
+    let Some(thread) = context
+      .threads
+      .iter_mut()
+      .find(|thread| thread.summary.id == params.thread_id)
+    else {
+      return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    };
 
-  thread.turn_count += 1;
-  let turn_count = thread.turn_count;
-  let thread_id = thread.summary.id.clone();
-  let thread_title = thread.summary.title.clone();
-  let message = params.message;
+    thread.turn_count += 1;
+    let turn_count = thread.turn_count;
+    let thread_id = thread.summary.id.clone();
+    let thread_title = thread.summary.title.clone();
+    let message = params.message;
+    let turn_id = format!("{thread_id}-turn-{turn_count}");
+    let mut active_turn_id = None;
+    let mut pending_active_turn = None;
 
-  thread.summary.status = match &workspace {
-    Some(workspace) => format!("{turn_count} turn(s) in {}", workspace.display_name),
-    None => format!("{turn_count} turn(s)"),
-  };
+    thread.summary.status = match &workspace {
+      Some(workspace) => format!("{turn_count} turn(s) in {}", workspace.display_name),
+      None => format!("{turn_count} turn(s)"),
+    };
 
-  let mut items = vec![TimelineItem {
-    kind: "userMessage".to_string(),
-    title: "User".to_string(),
-    content: message.clone(),
-    attributes: None,
-  }];
+    let mut items = vec![TimelineItem {
+      kind: "userMessage".to_string(),
+      title: "User".to_string(),
+      content: message.clone(),
+      attributes: None,
+    }];
 
-  if let Some(workspace) = workspace {
-    let workspace_root = Path::new(&workspace.root_path);
+    if let Some(workspace) = workspace {
+      let workspace_root = Path::new(&workspace.root_path);
 
-    if let Some(write_intent) = infer_write_intent(&message) {
-      let approval_id = format!("approval-{}", context.next_approval_number);
-      context.next_approval_number += 1;
+      if let Some(write_intent) = infer_write_intent(&message) {
+        let approval_id = format!("approval-{}", context.next_approval_number);
+        context.next_approval_number += 1;
 
-      let approval = PendingApproval {
-        id: approval_id.clone(),
-        thread_id: thread_id.clone(),
-        action: "write_file".to_string(),
-        title: format!("Write {}", write_intent.relative_path),
-        relative_path: write_intent.relative_path.clone(),
-        content: Some(write_intent.content.clone()),
-        command: None,
-      };
-      context
-        .pending_approvals
-        .insert(approval_id.clone(), approval.clone());
+        let approval = PendingApproval {
+          id: approval_id.clone(),
+          thread_id: thread_id.clone(),
+          action: "write_file".to_string(),
+          title: format!("Write {}", write_intent.relative_path),
+          relative_path: write_intent.relative_path.clone(),
+          content: Some(write_intent.content.clone()),
+          command: None,
+        };
+        context
+          .pending_approvals
+          .insert(approval_id.clone(), approval.clone());
 
-      items.push(TimelineItem {
-        kind: "plan".to_string(),
-        title: "Plan".to_string(),
-        content: format!(
-          "Request approval before writing {} in {}.",
-          write_intent.relative_path, workspace.display_name
-        ),
-        attributes: None,
-      });
-      items.push(TimelineItem {
-        kind: "toolStart".to_string(),
-        title: "generate_diff".to_string(),
-        content: write_intent.relative_path.clone(),
-        attributes: None,
-      });
-      match generate_diff(
-        workspace_root,
-        &write_intent.relative_path,
-        &write_intent.content,
-      ) {
-        Ok(diff) => {
-          items.push(TimelineItem {
-            kind: "diffArtifact".to_string(),
-            title: "Diff Preview".to_string(),
-            content: diff,
-            attributes: Some(HashMap::from([
-              ("action".to_string(), "write_file".to_string()),
-              (
-                "relativePath".to_string(),
-                write_intent.relative_path.clone(),
+        items.push(TimelineItem {
+          kind: "plan".to_string(),
+          title: "Plan".to_string(),
+          content: format!(
+            "Request approval before writing {} in {}.",
+            write_intent.relative_path, workspace.display_name
+          ),
+          attributes: None,
+        });
+        items.push(TimelineItem {
+          kind: "toolStart".to_string(),
+          title: "generate_diff".to_string(),
+          content: write_intent.relative_path.clone(),
+          attributes: None,
+        });
+        match generate_diff(
+          workspace_root,
+          &write_intent.relative_path,
+          &write_intent.content,
+        ) {
+          Ok(diff) => {
+            items.push(TimelineItem {
+              kind: "diffArtifact".to_string(),
+              title: "Diff Preview".to_string(),
+              content: diff,
+              attributes: Some(HashMap::from([
+                ("action".to_string(), "write_file".to_string()),
+                (
+                  "relativePath".to_string(),
+                  write_intent.relative_path.clone(),
+                ),
+              ])),
+            });
+          }
+          Err(error) => {
+            items.push(TimelineItem {
+              kind: "warning".to_string(),
+              title: "generate_diff failed".to_string(),
+              content: error.to_string(),
+              attributes: None,
+            });
+          }
+        }
+        items.push(TimelineItem {
+          kind: "approvalRequested".to_string(),
+          title: "Approval Requested".to_string(),
+          content: format!(
+            "Cavell wants to write {} in {}.",
+            write_intent.relative_path, workspace.display_name
+          ),
+          attributes: Some(HashMap::from([
+            ("approvalId".to_string(), approval.id.clone()),
+            ("action".to_string(), approval.action.clone()),
+            ("relativePath".to_string(), approval.relative_path.clone()),
+          ])),
+        });
+        items.push(TimelineItem {
+          kind: "assistantMessage".to_string(),
+          title: "Assistant".to_string(),
+          content: format!(
+            "Cavell prepared a write for {} and is waiting for your approval.",
+            write_intent.relative_path
+          ),
+          attributes: None,
+        });
+      } else if let Some(shell_command) = infer_shell_command(&message) {
+        let approval_id = format!("approval-{}", context.next_approval_number);
+        context.next_approval_number += 1;
+
+        let approval = PendingApproval {
+          id: approval_id.clone(),
+          thread_id: thread_id.clone(),
+          action: "run_shell".to_string(),
+          title: "Run Shell Command".to_string(),
+          relative_path: ".".to_string(),
+          content: None,
+          command: Some(shell_command.clone()),
+        };
+        context
+          .pending_approvals
+          .insert(approval_id.clone(), approval.clone());
+
+        items.push(TimelineItem {
+          kind: "plan".to_string(),
+          title: "Plan".to_string(),
+          content: format!(
+            "Request approval before running a shell command in {}.",
+            workspace.display_name
+          ),
+          attributes: None,
+        });
+        items.push(TimelineItem {
+          kind: "approvalRequested".to_string(),
+          title: "Approval Requested".to_string(),
+          content: format!(
+            "Cavell wants to run this shell command in {}:\n{}",
+            workspace.display_name, shell_command
+          ),
+          attributes: Some(HashMap::from([
+            ("approvalId".to_string(), approval.id.clone()),
+            ("action".to_string(), approval.action.clone()),
+            ("command".to_string(), shell_command),
+          ])),
+        });
+        items.push(TimelineItem {
+          kind: "assistantMessage".to_string(),
+          title: "Assistant".to_string(),
+          content: "Cavell is waiting for your approval before running the shell command."
+            .to_string(),
+          attributes: None,
+        });
+      } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
+        items.push(TimelineItem {
+          kind: "plan".to_string(),
+          title: "Plan".to_string(),
+          content: format!(
+            "Inspect {} in {} with the built-in read_file tool.",
+            relative_path, workspace.display_name
+          ),
+          attributes: None,
+        });
+        items.push(TimelineItem {
+          kind: "toolStart".to_string(),
+          title: "read_file".to_string(),
+          content: relative_path.clone(),
+          attributes: None,
+        });
+
+        match read_file(workspace_root, &relative_path, 4096) {
+          Ok(result) => {
+            items.push(TimelineItem {
+              kind: "toolResult".to_string(),
+              title: "read_file result".to_string(),
+              content: format_file_result(&result),
+              attributes: None,
+            });
+            let summary = summarize_file_result(&thread_title, &workspace.display_name, &result);
+            pending_active_turn = maybe_start_streaming_assistant_turn(
+              &thread_id,
+              &turn_id,
+              &mut items,
+              summary,
+            );
+          }
+          Err(error) => {
+            items.push(TimelineItem {
+              kind: "warning".to_string(),
+              title: "read_file failed".to_string(),
+              content: error.to_string(),
+              attributes: None,
+            });
+            items.push(TimelineItem {
+              kind: "assistantMessage".to_string(),
+              title: "Assistant".to_string(),
+              content: format!(
+                "Cavell could not inspect that file in {}. Try another path inside the workspace.",
+                workspace.display_name
               ),
-            ])),
-          });
+              attributes: None,
+            });
+          }
         }
-        Err(error) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "generate_diff failed".to_string(),
-            content: error.to_string(),
-            attributes: None,
-          });
-        }
-      }
-      items.push(TimelineItem {
-        kind: "approvalRequested".to_string(),
-        title: "Approval Requested".to_string(),
-        content: format!(
-          "Cavell wants to write {} in {}.",
-          write_intent.relative_path, workspace.display_name
-        ),
-        attributes: Some(HashMap::from([
-          ("approvalId".to_string(), approval.id.clone()),
-          ("action".to_string(), approval.action.clone()),
-          ("relativePath".to_string(), approval.relative_path.clone()),
-        ])),
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: format!(
-          "Cavell prepared a write for {} and is waiting for your approval.",
-          write_intent.relative_path
-        ),
-        attributes: None,
-      });
-    } else if let Some(shell_command) = infer_shell_command(&message) {
-      let approval_id = format!("approval-{}", context.next_approval_number);
-      context.next_approval_number += 1;
+      } else if let Some(search_query) = infer_search_query(&message) {
+        items.push(TimelineItem {
+          kind: "plan".to_string(),
+          title: "Plan".to_string(),
+          content: format!(
+            "Search {} for matches to \"{}\" with the built-in search_files tool.",
+            workspace.display_name, search_query
+          ),
+          attributes: None,
+        });
+        items.push(TimelineItem {
+          kind: "toolStart".to_string(),
+          title: "search_files".to_string(),
+          content: search_query.clone(),
+          attributes: None,
+        });
 
-      let approval = PendingApproval {
-        id: approval_id.clone(),
-        thread_id: thread_id.clone(),
-        action: "run_shell".to_string(),
-        title: "Run Shell Command".to_string(),
-        relative_path: ".".to_string(),
-        content: None,
-        command: Some(shell_command.clone()),
-      };
-      context
-        .pending_approvals
-        .insert(approval_id.clone(), approval.clone());
-
-      items.push(TimelineItem {
-        kind: "plan".to_string(),
-        title: "Plan".to_string(),
-        content: format!(
-          "Request approval before running a shell command in {}.",
-          workspace.display_name
-        ),
-        attributes: None,
-      });
-      items.push(TimelineItem {
-        kind: "approvalRequested".to_string(),
-        title: "Approval Requested".to_string(),
-        content: format!(
-          "Cavell wants to run this shell command in {}:\n{}",
-          workspace.display_name, shell_command
-        ),
-        attributes: Some(HashMap::from([
-          ("approvalId".to_string(), approval.id.clone()),
-          ("action".to_string(), approval.action.clone()),
-          ("command".to_string(), shell_command),
-        ])),
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: "Cavell is waiting for your approval before running the shell command."
-          .to_string(),
-        attributes: None,
-      });
-    } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
-      items.push(TimelineItem {
-        kind: "plan".to_string(),
-        title: "Plan".to_string(),
-        content: format!(
-          "Inspect {} in {} with the built-in read_file tool.",
-          relative_path, workspace.display_name
-        ),
-        attributes: None,
-      });
-      items.push(TimelineItem {
-        kind: "toolStart".to_string(),
-        title: "read_file".to_string(),
-        content: relative_path.clone(),
-        attributes: None,
-      });
-
-      match read_file(workspace_root, &relative_path, 4096) {
-        Ok(result) => {
-          items.push(TimelineItem {
-            kind: "toolResult".to_string(),
-            title: "read_file result".to_string(),
-            content: format_file_result(&result),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: summarize_file_result(&thread_title, &workspace.display_name, &result),
-            attributes: None,
-          });
-        }
-        Err(error) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "read_file failed".to_string(),
-            content: error.to_string(),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: format!(
-              "Cavell could not inspect that file in {}. Try another path inside the workspace.",
-              workspace.display_name
-            ),
-            attributes: None,
-          });
-        }
-      }
-    } else if let Some(search_query) = infer_search_query(&message) {
-      items.push(TimelineItem {
-        kind: "plan".to_string(),
-        title: "Plan".to_string(),
-        content: format!(
-          "Search {} for matches to \"{}\" with the built-in search_files tool.",
-          workspace.display_name, search_query
-        ),
-        attributes: None,
-      });
-      items.push(TimelineItem {
-        kind: "toolStart".to_string(),
-        title: "search_files".to_string(),
-        content: search_query.clone(),
-        attributes: None,
-      });
-
-      match search_files(workspace_root, &search_query, 12) {
-        Ok(matches) => {
-          items.push(TimelineItem {
-            kind: "toolResult".to_string(),
-            title: "search_files result".to_string(),
-            content: format_search_result(&search_query, &matches),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: summarize_search_result(
+        match search_files(workspace_root, &search_query, 12) {
+          Ok(matches) => {
+            items.push(TimelineItem {
+              kind: "toolResult".to_string(),
+              title: "search_files result".to_string(),
+              content: format_search_result(&search_query, &matches),
+              attributes: None,
+            });
+            let summary = summarize_search_result(
               &thread_title,
               &workspace.display_name,
               &search_query,
               &matches,
-            ),
-            attributes: None,
-          });
+            );
+            pending_active_turn = maybe_start_streaming_assistant_turn(
+              &thread_id,
+              &turn_id,
+              &mut items,
+              summary,
+            );
+          }
+          Err(error) => {
+            items.push(TimelineItem {
+              kind: "warning".to_string(),
+              title: "search_files failed".to_string(),
+              content: error.to_string(),
+              attributes: None,
+            });
+            items.push(TimelineItem {
+              kind: "assistantMessage".to_string(),
+              title: "Assistant".to_string(),
+              content: format!(
+                "Cavell could not search {} yet. Try a shorter query or re-open the workspace.",
+                workspace.display_name
+              ),
+              attributes: None,
+            });
+          }
         }
-        Err(error) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "search_files failed".to_string(),
-            content: error.to_string(),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: format!(
-              "Cavell could not search {} yet. Try a shorter query or re-open the workspace.",
-              workspace.display_name
-            ),
-            attributes: None,
-          });
+      } else {
+        items.push(TimelineItem {
+          kind: "plan".to_string(),
+          title: "Plan".to_string(),
+          content: format!(
+            "Inspect the root of {} with the built-in list_directory tool.",
+            workspace.display_name
+          ),
+          attributes: None,
+        });
+        items.push(TimelineItem {
+          kind: "toolStart".to_string(),
+          title: "list_directory".to_string(),
+          content: ".".to_string(),
+          attributes: None,
+        });
+
+        match list_directory(workspace_root, None, 24) {
+          Ok(entries) => {
+            items.push(TimelineItem {
+              kind: "toolResult".to_string(),
+              title: "list_directory result".to_string(),
+              content: format_directory_result(&entries),
+              attributes: None,
+            });
+            let summary =
+              summarize_directory_result(&thread_title, &workspace.display_name, &entries);
+            pending_active_turn = maybe_start_streaming_assistant_turn(
+              &thread_id,
+              &turn_id,
+              &mut items,
+              summary,
+            );
+          }
+          Err(error) => {
+            items.push(TimelineItem {
+              kind: "warning".to_string(),
+              title: "list_directory failed".to_string(),
+              content: error.to_string(),
+              attributes: None,
+            });
+            items.push(TimelineItem {
+              kind: "assistantMessage".to_string(),
+              title: "Assistant".to_string(),
+              content: format!(
+                "Cavell could not inspect the root of {} yet. Re-open the workspace and try again.",
+                workspace.display_name
+              ),
+              attributes: None,
+            });
+          }
         }
       }
     } else {
       items.push(TimelineItem {
         kind: "plan".to_string(),
         title: "Plan".to_string(),
-        content: format!(
-          "Inspect the root of {} with the built-in list_directory tool.",
-          workspace.display_name
-        ),
+        content: "Wait for a workspace before running filesystem tools.".to_string(),
         attributes: None,
       });
       items.push(TimelineItem {
-        kind: "toolStart".to_string(),
-        title: "list_directory".to_string(),
-        content: ".".to_string(),
+        kind: "warning".to_string(),
+        title: "Workspace Required".to_string(),
+        content: "Open a workspace before asking Cavell to inspect files.".to_string(),
         attributes: None,
       });
-
-      match list_directory(workspace_root, None, 24) {
-        Ok(entries) => {
-          items.push(TimelineItem {
-            kind: "toolResult".to_string(),
-            title: "list_directory result".to_string(),
-            content: format_directory_result(&entries),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: summarize_directory_result(&thread_title, &workspace.display_name, &entries),
-            attributes: None,
-          });
-        }
-        Err(error) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "list_directory failed".to_string(),
-            content: error.to_string(),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: format!(
-              "Cavell could not inspect the root of {} yet. Re-open the workspace and try again.",
-              workspace.display_name
-            ),
-            attributes: None,
-          });
-        }
-      }
+      items.push(TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: format!(
+          "Cavell received your message in {}, but Milestone 1 tools need an opened workspace first.",
+          thread_title
+        ),
+        attributes: None,
+      });
     }
-  } else {
-    items.push(TimelineItem {
-      kind: "plan".to_string(),
-      title: "Plan".to_string(),
-      content: "Wait for a workspace before running filesystem tools.".to_string(),
-      attributes: None,
-    });
-    items.push(TimelineItem {
-      kind: "warning".to_string(),
-      title: "Workspace Required".to_string(),
-      content: "Open a workspace before asking Cavell to inspect files.".to_string(),
-      attributes: None,
-    });
-    items.push(TimelineItem {
-      kind: "assistantMessage".to_string(),
-      title: "Assistant".to_string(),
-      content: format!(
-        "Cavell received your message in {}, but Milestone 1 tools need an opened workspace first.",
-        thread_title
-      ),
-      attributes: None,
-    });
-  }
 
-  thread.items.extend(items.clone());
+    active_turn_id = pending_active_turn.as_ref().map(|turn| turn.id.clone());
+    if active_turn_id.is_some() {
+      thread.summary.status = "Streaming assistant response".to_string();
+    } else if !thread.summary.status.contains("approval") {
+      thread.summary.status = "Ready".to_string();
+    }
+
+    thread.items.extend(items.clone());
+
+    (thread_id, turn_id, items, active_turn_id, pending_active_turn)
+  };
+
+  if let Some(active_turn) = pending_active_turn {
+    context
+      .active_turns
+      .insert(active_turn.id.clone(), active_turn);
+  }
 
   if let Err(error) = context.persist_threads() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
@@ -674,10 +715,11 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
   JsonRpcResponse::success(
     request.id,
     &TurnStartResult {
-      turn_id: format!("{thread_id}-turn-{turn_count}"),
+      turn_id,
       thread_id,
       items,
       pending_approvals,
+      active_turn_id,
     },
   )
 }
@@ -861,6 +903,87 @@ fn handle_approval_respond(
   )
 }
 
+fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<TurnCancelParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid turn/cancel params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing turn/cancel params");
+    }
+  };
+
+  let Some(active_turn_snapshot) = context.active_turns.get(&params.turn_id).cloned() else {
+    return JsonRpcResponse::error(request.id, -32040, "Turn is not active");
+  };
+
+  let Some(thread) = context
+    .threads
+    .iter_mut()
+    .find(|thread| thread.summary.id == active_turn_snapshot.thread_id)
+  else {
+    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+  };
+  let cancelled_thread_id = thread.summary.id.clone();
+
+  context.active_turns.remove(&params.turn_id);
+  let partial_content = take_characters(
+    &active_turn_snapshot.full_content,
+    compute_streamed_char_count(&active_turn_snapshot)
+      .min(active_turn_snapshot.full_content.chars().count()),
+  );
+  update_streaming_item(
+    thread,
+    &params.turn_id,
+    &partial_content,
+    "cancelled",
+  );
+  thread.summary.status = "Turn cancelled".to_string();
+
+  let items = vec![
+    TimelineItem {
+      kind: "warning".to_string(),
+      title: "Turn Cancelled".to_string(),
+      content: format!("Cancelled {} before the assistant response completed.", params.turn_id),
+      attributes: Some(HashMap::from([(
+        "turnId".to_string(),
+        params.turn_id.clone(),
+      )])),
+    },
+    TimelineItem {
+      kind: "assistantMessage".to_string(),
+      title: "Assistant".to_string(),
+      content: "Cavell stopped the active response at your request.".to_string(),
+      attributes: Some(HashMap::from([
+        ("turnId".to_string(), params.turn_id.clone()),
+        ("streamingStatus".to_string(), "cancelled".to_string()),
+      ])),
+    },
+  ];
+  thread.items.extend(items.clone());
+
+  if let Err(error) = context.persist_threads() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  JsonRpcResponse::success(
+    request.id,
+    &TurnCancelResult {
+      turn_id: params.turn_id,
+      thread_id: active_turn_snapshot.thread_id,
+      items,
+      active_turn_id: active_turn_id_for_thread(context, &cancelled_thread_id),
+    },
+  )
+}
+
 fn infer_requested_file_path(message: &str, workspace_root: &Path) -> Option<String> {
   let common_files = ["README.md", "Cargo.toml", "Package.swift"];
   let lowercased_message = message.to_lowercase();
@@ -959,6 +1082,139 @@ fn infer_search_query(message: &str) -> Option<String> {
   }
 
   None
+}
+
+fn maybe_start_streaming_assistant_turn(
+  thread_id: &str,
+  turn_id: &str,
+  items: &mut Vec<TimelineItem>,
+  full_content: String,
+) -> Option<ActiveTurn> {
+  let initial_chars = 48.min(full_content.chars().count());
+  let total_chars = full_content.chars().count();
+  let initial_content = take_characters(&full_content, initial_chars);
+  let is_complete = initial_chars >= total_chars;
+  let streaming_status = if is_complete {
+    "completed"
+  } else {
+    "in_progress"
+  };
+
+  items.push(TimelineItem {
+    kind: "assistantMessage".to_string(),
+    title: "Assistant".to_string(),
+    content: initial_content,
+    attributes: Some(HashMap::from([
+      ("turnId".to_string(), turn_id.to_string()),
+      (
+        "streamingStatus".to_string(),
+        streaming_status.to_string(),
+      ),
+    ])),
+  });
+
+  if is_complete {
+    return None;
+  }
+
+  Some(ActiveTurn {
+    id: turn_id.to_string(),
+    thread_id: thread_id.to_string(),
+    full_content,
+    emitted_chars: initial_chars,
+    started_at: Instant::now(),
+  })
+}
+
+fn refresh_active_turn_for_thread(context: &mut RuntimeContext, thread_id: &str) {
+  let active_turn_ids = context
+    .active_turns
+    .values()
+    .filter(|turn| turn.thread_id == thread_id)
+    .map(|turn| turn.id.clone())
+    .collect::<Vec<_>>();
+
+  for turn_id in active_turn_ids {
+    let Some(snapshot) = context.active_turns.get(&turn_id).cloned() else {
+      continue;
+    };
+    let Some(thread) = context
+      .threads
+      .iter_mut()
+      .find(|thread| thread.summary.id == snapshot.thread_id)
+    else {
+      context.active_turns.remove(&turn_id);
+      continue;
+    };
+
+    let total_chars = snapshot.full_content.chars().count();
+    let target_chars = compute_streamed_char_count(&snapshot).min(total_chars);
+    let streamed_content = take_characters(&snapshot.full_content, target_chars);
+    let is_complete = target_chars >= total_chars;
+    let streaming_status = if is_complete {
+      "completed"
+    } else {
+      "in_progress"
+    };
+
+    update_streaming_item(thread, &turn_id, &streamed_content, streaming_status);
+
+    if is_complete {
+      thread.summary.status = "Ready".to_string();
+      context.active_turns.remove(&turn_id);
+    } else if let Some(active_turn) = context.active_turns.get_mut(&turn_id) {
+      active_turn.emitted_chars = target_chars;
+      thread.summary.status = "Streaming assistant response".to_string();
+    }
+  }
+}
+
+fn compute_streamed_char_count(turn: &ActiveTurn) -> usize {
+  let elapsed_steps = (turn.started_at.elapsed().as_millis() / 180) as usize;
+  let base_chars = 48;
+  let step_chars = 72;
+
+  base_chars + elapsed_steps * step_chars
+}
+
+fn update_streaming_item(
+  thread: &mut StoredThread,
+  turn_id: &str,
+  content: &str,
+  streaming_status: &str,
+) {
+  let Some(item) = thread.items.iter_mut().rev().find(|item| {
+    item.kind == "assistantMessage"
+      && item
+        .attributes
+        .as_ref()
+        .and_then(|attributes| attributes.get("turnId"))
+        .map(|value| value == turn_id)
+        .unwrap_or(false)
+  }) else {
+    return;
+  };
+
+  item.content = content.to_string();
+  let mut attributes = item.attributes.clone().unwrap_or_default();
+  attributes.insert("turnId".to_string(), turn_id.to_string());
+  attributes.insert(
+    "streamingStatus".to_string(),
+    streaming_status.to_string(),
+  );
+  item.attributes = Some(attributes);
+}
+
+fn active_turn_id_for_thread(context: &RuntimeContext, thread_id: &str) -> Option<String> {
+  context
+    .active_turns
+    .values()
+    .find(|turn| turn.thread_id == thread_id)
+    .map(|turn| turn.id.clone())
+}
+
+fn take_characters(content: &str, count: usize) -> String {
+  content.chars().take(count).collect()
 }
 
 fn format_file_result(result: &ReadFileResult) -> String {
@@ -1379,6 +1635,72 @@ mod tests {
       .as_str()
       .unwrap()
       .contains("Milestone 1"));
+    assert_eq!(
+      result["activeTurnId"].as_str().unwrap(),
+      "thread-1-turn-1"
+    );
+  }
+
+  #[test]
+  fn turn_cancel_stops_an_active_assistant_response() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("turn-cancel");
+    fs::write(
+      workspace.join("README.md"),
+      "# Milestone 1\nStreaming turn content\n",
+    )
+    .expect("write readme");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Streaming Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Read README.md"
+        })),
+      ),
+    );
+    let turn_result = turn_response.result.expect("turn result");
+    assert_eq!(turn_result["activeTurnId"], "thread-1-turn-1");
+
+    let cancel_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_CANCEL,
+        Some(json!({
+          "turnId": "thread-1-turn-1"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(cancel_response.error.is_none());
+    let cancel_result = cancel_response.result.expect("cancel result");
+    let items = cancel_result["items"].as_array().expect("cancel items");
+
+    assert_eq!(items[0]["title"], "Turn Cancelled");
+    assert_eq!(cancel_result["activeTurnId"], serde_json::Value::Null);
   }
 
   #[test]

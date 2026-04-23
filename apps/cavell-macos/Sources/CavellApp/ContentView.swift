@@ -119,8 +119,15 @@ struct ContentView: View {
           viewModel.runtimeState != .ready
             || viewModel.workspace == nil
             || viewModel.selectedThreadID == nil
+            || viewModel.isTurnStreaming()
             || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         )
+
+        Button("Cancel") {
+          viewModel.cancelActiveTurn()
+        }
+        .buttonStyle(.bordered)
+        .disabled(!viewModel.isTurnStreaming())
       }
       .padding(20)
     }
@@ -185,15 +192,15 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
           Text("Read, search, shell, diff preview, and approval-gated write tools")
-          Text("Tool, diff, and approval timeline cards")
-          Text("Workspace-aware prompt loop")
+          Text("Tool, diff, approval, and inspector detail cards")
+          Text("Workspace-aware prompt loop with cancel control")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .font(.subheadline)
       }
 
       GroupBox("Next Integration") {
-        Text("Add streaming events, patch review actions, SQLite persistence, and model-backed planning.")
+        Text("Add event notifications, SQLite persistence, and model-backed planning.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }

@@ -7,6 +7,7 @@ final class AppViewModel: ObservableObject {
   @Published var selectedThreadID: ThreadSummary.ID?
   @Published var timeline: [TimelineEntry]
   @Published var selectedEntryID: TimelineEntry.ID?
+  @Published var activeTurnID: String?
   @Published var runtimeState: RuntimeBridge.ConnectionState
   @Published var runtimeDetail: String
   @Published var draftMessage: String
@@ -15,6 +16,8 @@ final class AppViewModel: ObservableObject {
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
   private var threadPendingApprovalIDs: [String: Set<String>]
+  private var activeTurnThreadID: String?
+  private var pollingTask: Task<Void, Never>?
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
@@ -51,6 +54,7 @@ final class AppViewModel: ObservableObject {
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
+    self.activeTurnID = nil
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.selectedThreadID = initialThreads.first?.id
@@ -205,7 +209,8 @@ final class AppViewModel: ObservableObject {
     guard runtimeState == .ready,
           !message.isEmpty,
           let threadID = selectedThreadID,
-          workspace != nil
+          workspace != nil,
+          activeTurnID == nil
     else {
       return
     }
@@ -217,7 +222,11 @@ final class AppViewModel: ObservableObject {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
         updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
-        refreshThreadPreview(threadID: result.threadID, preview: "\(result.turnID) ready")
+        updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
+        refreshThreadPreview(
+          threadID: result.threadID,
+          preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
+        )
       } catch {
         appendEntry(
           to: threadID,
@@ -275,6 +284,36 @@ final class AppViewModel: ObservableObject {
 
     Task {
       await loadThreadHistory(threadID: threadID)
+    }
+  }
+
+  func cancelActiveTurn() {
+    guard runtimeState == .ready,
+          let activeTurnID,
+          let activeTurnThreadID
+    else {
+      return
+    }
+
+    Task {
+      do {
+        let result = try await runtimeBridge.cancelTurn(turnID: activeTurnID)
+        appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
+        refreshThreadPreview(threadID: activeTurnThreadID, preview: "Cancelled response")
+        await loadThreadHistory(threadID: result.threadID)
+      } catch {
+        appendEntry(
+          to: activeTurnThreadID,
+          TimelineEntry(
+            id: UUID(),
+            kind: .warning,
+            title: "Turn Cancel Failed",
+            body: error.localizedDescription,
+            attributes: [:]
+          )
+        )
+      }
     }
   }
 
@@ -348,7 +387,15 @@ final class AppViewModel: ObservableObject {
       return "Open a workspace to start local agent work"
     }
 
+    if activeTurnID != nil {
+      return "Cavell is streaming a response. Cancel to stop the current turn."
+    }
+
     return "Ask Cavell to inspect files, review diffs, run shell commands, or write files"
+  }
+
+  func isTurnStreaming() -> Bool {
+    activeTurnID != nil
   }
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {
@@ -465,6 +512,7 @@ final class AppViewModel: ObservableObject {
       }
       threadTimelines[threadID] = entries
       updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
+      updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
       refreshThreadPreview(threadID: threadID, preview: result.status)
 
       if selectedThreadID == threadID {
@@ -512,5 +560,47 @@ final class AppViewModel: ObservableObject {
     }
 
     return timeline.first(where: { $0.id == selectedEntryID })
+  }
+
+  private func updateActiveTurn(threadID: String, activeTurnID: String?) {
+    if activeTurnID == nil {
+      if activeTurnThreadID == threadID {
+        activeTurnThreadID = nil
+      }
+      self.activeTurnID = nil
+      pollingTask?.cancel()
+      pollingTask = nil
+      return
+    }
+
+    if self.activeTurnID == activeTurnID, activeTurnThreadID == threadID {
+      return
+    }
+
+    self.activeTurnID = activeTurnID
+    activeTurnThreadID = threadID
+    startPollingActiveTurn(threadID: threadID)
+  }
+
+  private func startPollingActiveTurn(threadID: String) {
+    pollingTask?.cancel()
+    pollingTask = Task { [weak self] in
+      while !Task.isCancelled {
+        guard let self else {
+          return
+        }
+
+        try? await Task.sleep(nanoseconds: 350_000_000)
+
+        guard !Task.isCancelled,
+              self.activeTurnID != nil,
+              self.activeTurnThreadID == threadID
+        else {
+          return
+        }
+
+        await self.loadThreadHistory(threadID: threadID)
+      }
+    }
   }
 }

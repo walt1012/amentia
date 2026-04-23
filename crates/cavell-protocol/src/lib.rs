@@ -7,6 +7,7 @@ pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
+  pub const TURN_CANCEL: &str = "turn/cancel";
   pub const THREAD_READ: &str = "thread/read";
   pub const THREAD_START: &str = "thread/start";
   pub const THREAD_LIST: &str = "thread/list";
@@ -177,6 +178,8 @@ pub struct ThreadReadResult {
   pub thread: ThreadSummary,
   pub items: Vec<TimelineItem>,
   pub pending_approvals: Vec<ApprovalRequest>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub active_turn_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,6 +189,24 @@ pub struct TurnStartResult {
   pub thread_id: String,
   pub items: Vec<TimelineItem>,
   pub pending_approvals: Vec<ApprovalRequest>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub active_turn_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnCancelParams {
+  pub turn_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnCancelResult {
+  pub turn_id: String,
+  pub thread_id: String,
+  pub items: Vec<TimelineItem>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub active_turn_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

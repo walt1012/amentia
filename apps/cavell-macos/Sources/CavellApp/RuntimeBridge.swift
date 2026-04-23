@@ -30,6 +30,7 @@ final class RuntimeBridge {
     let threadID: String
     let items: [RuntimeTimelineItemResult]
     let pendingApprovals: [RuntimeApproval]
+    let activeTurnID: String?
   }
 
   struct RuntimeThreadState {
@@ -38,6 +39,7 @@ final class RuntimeBridge {
     let status: String
     let items: [RuntimeTimelineItemResult]
     let pendingApprovals: [RuntimeApproval]
+    let activeTurnID: String?
   }
 
   struct RuntimeTimelineItemResult {
@@ -60,6 +62,13 @@ final class RuntimeBridge {
     let threadID: String
     let items: [RuntimeTimelineItemResult]
     let pendingApprovals: [RuntimeApproval]
+  }
+
+  struct RuntimeTurnCancellation {
+    let turnID: String
+    let threadID: String
+    let items: [RuntimeTimelineItemResult]
+    let activeTurnID: String?
   }
 
   enum RuntimeError: LocalizedError {
@@ -212,7 +221,8 @@ final class RuntimeBridge {
           attributes: $0.attributes ?? [:]
         )
       },
-      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      activeTurnID: result.activeTurnId
     )
   }
 
@@ -242,7 +252,8 @@ final class RuntimeBridge {
           attributes: $0.attributes ?? [:]
         )
       },
-      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      activeTurnID: result.activeTurnId
     )
   }
 
@@ -272,6 +283,35 @@ final class RuntimeBridge {
         )
       },
       pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
+    )
+  }
+
+  func cancelTurn(turnID: String) async throws -> RuntimeTurnCancellation {
+    let response: JSONRPCResponse<TurnCancelResult> = try await sendRequest(
+      method: "turn/cancel",
+      params: TurnCancelParams(turnId: turnID)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeTurnCancellation(
+      turnID: result.turnId,
+      threadID: result.threadId,
+      items: result.items.map {
+        RuntimeTimelineItemResult(
+          kind: $0.kind,
+          title: $0.title,
+          content: $0.content,
+          attributes: $0.attributes ?? [:]
+        )
+      },
+      activeTurnID: result.activeTurnId
     )
   }
 

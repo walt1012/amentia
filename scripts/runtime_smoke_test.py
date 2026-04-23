@@ -137,11 +137,37 @@ def main() -> int:
     assert turn["result"]["items"][2]["kind"] == "toolStart"
     assert turn["result"]["items"][3]["kind"] == "toolResult"
     assert "Milestone 1 smoke test" in turn["result"]["items"][3]["content"]
+    assert turn["result"]["activeTurnId"] == "thread-1-turn-1"
+
+    cancelled_turn = send_request(
+      process,
+      {
+        "id": 8,
+        "method": "turn/cancel",
+        "params": {
+          "turnId": turn["result"]["activeTurnId"],
+        },
+      },
+    )
+    assert cancelled_turn["result"]["items"][0]["kind"] == "warning"
+    assert cancelled_turn["result"]["activeTurnId"] is None
+
+    cancelled_thread = send_request(
+      process,
+      {
+        "id": 9,
+        "method": "thread/read",
+        "params": {
+          "threadId": "thread-1",
+        },
+      },
+    )
+    assert cancelled_thread["result"]["activeTurnId"] is None
 
     search_turn = send_request(
       process,
       {
-        "id": 8,
+        "id": 10,
         "method": "turn/start",
         "params": {
           "threadId": "thread-1",
@@ -155,7 +181,7 @@ def main() -> int:
     write_turn = send_request(
       process,
       {
-        "id": 9,
+        "id": 11,
         "method": "turn/start",
         "params": {
           "threadId": "thread-1",
@@ -172,7 +198,7 @@ def main() -> int:
     approval = send_request(
       process,
       {
-        "id": 10,
+        "id": 12,
         "method": "approval/respond",
         "params": {
           "approvalId": approval_id,
@@ -187,7 +213,7 @@ def main() -> int:
     shell_turn = send_request(
       process,
       {
-        "id": 11,
+        "id": 13,
         "method": "turn/start",
         "params": {
           "threadId": "thread-1",
@@ -201,7 +227,7 @@ def main() -> int:
     shell_approval = send_request(
       process,
       {
-        "id": 12,
+        "id": 14,
         "method": "approval/respond",
         "params": {
           "approvalId": shell_approval_id,
