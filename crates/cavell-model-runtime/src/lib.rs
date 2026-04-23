@@ -404,6 +404,15 @@ fn read_manifest(path: &Path) -> Result<ModelPackManifest> {
 fn discovery_roots() -> Vec<PathBuf> {
   let mut roots = vec![];
 
+  if let Ok(model_pack_root) = env::var("CAVELL_MODEL_PACK_ROOT") {
+    roots.push(PathBuf::from(model_pack_root));
+  }
+
+  if let Ok(data_dir) = env::var("CAVELL_DATA_DIR") {
+    roots.push(PathBuf::from(&data_dir));
+    roots.push(PathBuf::from(&data_dir).join("models"));
+  }
+
   if let Ok(current_executable) = env::current_exe() {
     if let Some(parent) = current_executable.parent() {
       roots.push(parent.to_path_buf());
@@ -569,6 +578,7 @@ fn fallback_from_prompt(prompt: &str, role: &ModelRole) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::path::PathBuf;
 
   #[test]
   fn runtime_uses_heuristic_backend_when_paths_are_missing() {
@@ -595,5 +605,29 @@ mod tests {
     assert_eq!(response.backend, "heuristic");
     assert_eq!(response.status, "fallback");
     assert_eq!(response.model_id, "lfm2.5-350m");
+  }
+
+  #[test]
+  fn discovery_roots_include_configured_model_directories() {
+    let previous_model_pack_root = env::var("CAVELL_MODEL_PACK_ROOT").ok();
+    let previous_data_dir = env::var("CAVELL_DATA_DIR").ok();
+
+    env::set_var("CAVELL_MODEL_PACK_ROOT", "C:/tmp/cavell-pack-root");
+    env::set_var("CAVELL_DATA_DIR", "C:/tmp/cavell-data");
+
+    let roots = discovery_roots();
+
+    match previous_model_pack_root {
+      Some(value) => env::set_var("CAVELL_MODEL_PACK_ROOT", value),
+      None => env::remove_var("CAVELL_MODEL_PACK_ROOT"),
+    }
+    match previous_data_dir {
+      Some(value) => env::set_var("CAVELL_DATA_DIR", value),
+      None => env::remove_var("CAVELL_DATA_DIR"),
+    }
+
+    assert!(roots.contains(&PathBuf::from("C:/tmp/cavell-pack-root")));
+    assert!(roots.contains(&PathBuf::from("C:/tmp/cavell-data")));
+    assert!(roots.contains(&PathBuf::from("C:/tmp/cavell-data").join("models")));
   }
 }

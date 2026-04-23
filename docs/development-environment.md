@@ -59,17 +59,22 @@ The runtime now resolves the local model stack in this order:
 The default model pack path resolves in this order:
 
 1. `CAVELL_MODEL_PACK_MANIFEST`
-2. an executable-relative `models/builtin/lfm2.5-350m/model-pack.json`
-3. an executable-relative `model-packs/lfm2.5-350m/model-pack.json`
-4. repo-local `models/builtin/lfm2.5-350m/model-pack.json`
-5. repo-local `model-packs/lfm2.5-350m/model-pack.json`
+2. `CAVELL_MODEL_PACK_ROOT`
+3. `CAVELL_DATA_DIR/models/builtin/lfm2.5-350m/model-pack.json`
+4. an executable-relative `models/builtin/lfm2.5-350m/model-pack.json`
+5. an executable-relative `model-packs/lfm2.5-350m/model-pack.json`
+6. repo-local `models/builtin/lfm2.5-350m/model-pack.json`
+7. repo-local `model-packs/lfm2.5-350m/model-pack.json`
 
 The resolved model file path then checks:
 
 1. `CAVELL_LFM_MODEL_PATH`
 2. a sibling of the resolved manifest using the manifest `file_name`
-3. repo-local `models/LFM2.5-350M.gguf`
-4. repo-local `model-packs/LFM2.5-350M.gguf`
+3. `CAVELL_DATA_DIR/models/LFM2.5-350M.gguf`
+4. repo-local `models/LFM2.5-350M.gguf`
+5. repo-local `model-packs/LFM2.5-350M.gguf`
+
+The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M.gguf` file should not be committed to git history. It should live in the local data directory, a release bundle, or another local install path.
 
 If either path is missing, Cavell falls back to the built-in heuristic summarizer while still reporting model health in the inspector. One local setup example is:
 

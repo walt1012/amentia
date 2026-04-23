@@ -1,0 +1,8 @@
+{
+  "id": "lfm2.5-350m",
+  "display_name": "LFM2.5-350M",
+  "file_name": "LFM2.5-350M.gguf",
+  "context_size": 4096,
+  "max_output_tokens": 160,
+  "backend": "llama.cpp"
+}
