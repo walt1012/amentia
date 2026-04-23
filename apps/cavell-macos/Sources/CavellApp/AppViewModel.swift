@@ -47,11 +47,6 @@ final class AppViewModel: ObservableObject {
     ]
 
     self.runtimeBridge = runtimeBridge
-    self.runtimeBridge.onThreadUpdated = { [weak self] state in
-      Task { @MainActor in
-        self?.applyRuntimeThreadUpdate(state)
-      }
-    }
     self.runtimeState = runtimeBridge.connectionState
     self.runtimeDetail = "Runtime not launched"
     self.draftMessage = ""
@@ -64,6 +59,11 @@ final class AppViewModel: ObservableObject {
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.selectedThreadID = initialThreads.first?.id
+    self.runtimeBridge.onThreadUpdated = { [weak self] state in
+      Task { @MainActor in
+        self?.applyRuntimeThreadUpdate(state)
+      }
+    }
   }
 
   func launchRuntime() {

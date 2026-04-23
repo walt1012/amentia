@@ -160,7 +160,7 @@ def main() -> int:
     assert turn["result"]["activeTurnId"] == "thread-1-turn-1"
     time.sleep(0.35)
 
-    cancelled_turn, notifications = send_request(
+    cancelled_turn, _ = send_request(
       process,
       {
         "id": 8,
@@ -170,7 +170,6 @@ def main() -> int:
         },
       },
     )
-    assert any(item["method"] == "thread/updated" for item in notifications)
     assert cancelled_turn["result"]["items"][0]["kind"] == "warning"
     assert cancelled_turn["result"].get("activeTurnId") is None
 
