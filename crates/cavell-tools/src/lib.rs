@@ -28,6 +28,13 @@ pub struct ReadFileResult {
   pub is_truncated: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchMatch {
+  pub relative_path: String,
+  pub line_number: usize,
+  pub line: String,
+}
+
 pub fn list_directory(
   workspace_root: &Path,
   relative_path: Option<&str>,
@@ -98,6 +105,106 @@ pub fn read_file(
     content: String::from_utf8_lossy(preview_bytes).into_owned(),
     is_truncated,
   })
+}
+
+pub fn search_files(
+  workspace_root: &Path,
+  query: &str,
+  max_results: usize,
+) -> Result<Vec<SearchMatch>> {
+  let workspace_root = fs::canonicalize(workspace_root).with_context(|| {
+    format!(
+      "failed to resolve workspace root {}",
+      workspace_root.display()
+    )
+  })?;
+  let normalized_query = query.trim().to_lowercase();
+
+  if normalized_query.is_empty() {
+    bail!("search query must not be empty");
+  }
+
+  let mut results = vec![];
+  visit_directory(
+    &workspace_root,
+    &workspace_root,
+    &normalized_query,
+    max_results,
+    &mut results,
+  )?;
+
+  Ok(results)
+}
+
+fn visit_directory(
+  workspace_root: &Path,
+  current_dir: &Path,
+  normalized_query: &str,
+  max_results: usize,
+  results: &mut Vec<SearchMatch>,
+) -> Result<()> {
+  if results.len() >= max_results {
+    return Ok(());
+  }
+
+  let mut entries = fs::read_dir(current_dir)
+    .with_context(|| format!("failed to read directory {}", current_dir.display()))?
+    .filter_map(|entry| entry.ok())
+    .collect::<Vec<_>>();
+  entries.sort_by_key(|entry| entry.path());
+
+  for entry in entries {
+    if results.len() >= max_results {
+      break;
+    }
+
+    let path = entry.path();
+    let metadata = entry
+      .metadata()
+      .with_context(|| format!("failed to read metadata for {}", path.display()))?;
+
+    if metadata.is_dir() {
+      visit_directory(
+        workspace_root,
+        &path,
+        normalized_query,
+        max_results,
+        results,
+      )?;
+      continue;
+    }
+
+    if !metadata.is_file() || metadata.len() > 256 * 1024 {
+      continue;
+    }
+
+    let content = match fs::read(&path) {
+      Ok(content) => content,
+      Err(_) => continue,
+    };
+    if content.contains(&0) {
+      continue;
+    }
+
+    let text = String::from_utf8_lossy(&content);
+    for (index, line) in text.lines().enumerate() {
+      if !line.to_lowercase().contains(normalized_query) {
+        continue;
+      }
+
+      results.push(SearchMatch {
+        relative_path: relative_path_string(workspace_root, &path)?,
+        line_number: index + 1,
+        line: line.trim().to_string(),
+      });
+
+      if results.len() >= max_results {
+        break;
+      }
+    }
+  }
+
+  Ok(())
 }
 
 fn resolve_workspace_path(

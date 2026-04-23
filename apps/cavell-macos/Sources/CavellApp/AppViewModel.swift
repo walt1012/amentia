@@ -26,7 +26,7 @@ final class AppViewModel: ObservableObject {
         id: UUID(),
         kind: .assistantMessage,
         title: "Next Step",
-        body: "The first local agent loop will use workspace-aware read-only tools before approvals and writes land."
+        body: "The first local agent loop uses workspace-aware read, list, and search tools before approvals and writes land."
       ),
     ]
 
@@ -266,7 +266,7 @@ final class AppViewModel: ObservableObject {
       return "Open a workspace to start local agent work"
     }
 
-    return "Ask Cavell to inspect files in the current workspace"
+    return "Ask Cavell to inspect or search files in the current workspace"
   }
 
   private func appendItemsToTimeline(

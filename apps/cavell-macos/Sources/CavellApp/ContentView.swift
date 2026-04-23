@@ -139,7 +139,7 @@ struct ContentView: View {
       GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
-          Text("Read-only filesystem tools")
+          Text("Read and search filesystem tools")
           Text("Tool timeline cards")
           Text("Workspace-aware prompt loop")
         }

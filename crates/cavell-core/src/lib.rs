@@ -9,7 +9,9 @@ use cavell_protocol::{
   TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
-use cavell_tools::{list_directory, read_file, DirectoryEntry, ReadFileResult};
+use cavell_tools::{
+  list_directory, read_file, search_files, DirectoryEntry, ReadFileResult, SearchMatch,
+};
 
 #[derive(Debug, Clone)]
 struct StoredThread {
@@ -367,6 +369,55 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           });
         }
       }
+    } else if let Some(search_query) = infer_search_query(&message) {
+      items.push(TimelineItem {
+        kind: "plan".to_string(),
+        title: "Plan".to_string(),
+        content: format!(
+          "Search {} for matches to \"{}\" with the built-in search_files tool.",
+          workspace.display_name, search_query
+        ),
+      });
+      items.push(TimelineItem {
+        kind: "toolStart".to_string(),
+        title: "search_files".to_string(),
+        content: search_query.clone(),
+      });
+
+      match search_files(workspace_root, &search_query, 12) {
+        Ok(matches) => {
+          items.push(TimelineItem {
+            kind: "toolResult".to_string(),
+            title: "search_files result".to_string(),
+            content: format_search_result(&search_query, &matches),
+          });
+          items.push(TimelineItem {
+            kind: "assistantMessage".to_string(),
+            title: "Assistant".to_string(),
+            content: summarize_search_result(
+              &thread_title,
+              &workspace.display_name,
+              &search_query,
+              &matches,
+            ),
+          });
+        }
+        Err(error) => {
+          items.push(TimelineItem {
+            kind: "warning".to_string(),
+            title: "search_files failed".to_string(),
+            content: error.to_string(),
+          });
+          items.push(TimelineItem {
+            kind: "assistantMessage".to_string(),
+            title: "Assistant".to_string(),
+            content: format!(
+              "Cavell could not search {} yet. Try a shorter query or re-open the workspace.",
+              workspace.display_name
+            ),
+          });
+        }
+      }
     } else {
       items.push(TimelineItem {
         kind: "plan".to_string(),
@@ -476,6 +527,35 @@ fn infer_requested_file_path(message: &str, workspace_root: &Path) -> Option<Str
   None
 }
 
+fn infer_search_query(message: &str) -> Option<String> {
+  let trimmed = message.trim();
+  let lowercased_message = trimmed.to_lowercase();
+
+  for keyword in ["search for ", "find ", "search "] {
+    if let Some(index) = lowercased_message.find(keyword) {
+      let query = trimmed[index + keyword.len()..]
+        .trim()
+        .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
+      if !query.is_empty() {
+        return Some(query.to_string());
+      }
+    }
+  }
+
+  if lowercased_message.contains("grep ") {
+    let query = trimmed
+      .split_once("grep ")
+      .map(|(_, remainder)| remainder.trim())
+      .unwrap_or_default()
+      .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
+    if !query.is_empty() {
+      return Some(query.to_string());
+    }
+  }
+
+  None
+}
+
 fn format_file_result(result: &ReadFileResult) -> String {
   if result.is_truncated {
     format!(
@@ -516,6 +596,23 @@ fn format_directory_result(entries: &[DirectoryEntry]) -> String {
     .join("\n")
 }
 
+fn format_search_result(query: &str, matches: &[SearchMatch]) -> String {
+  if matches.is_empty() {
+    return format!("No matches found for \"{}\".", query);
+  }
+
+  matches
+    .iter()
+    .map(|entry| {
+      format!(
+        "{}:{}: {}",
+        entry.relative_path, entry.line_number, entry.line
+      )
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 fn summarize_directory_result(
   thread_title: &str,
   workspace_name: &str,
@@ -540,6 +637,36 @@ fn summarize_directory_result(
     workspace_name,
     thread_title,
     entries.len(),
+    preview
+  )
+}
+
+fn summarize_search_result(
+  thread_title: &str,
+  workspace_name: &str,
+  query: &str,
+  matches: &[SearchMatch],
+) -> String {
+  if matches.is_empty() {
+    return format!(
+      "Cavell searched {} for {} and found no matches for \"{}\".",
+      workspace_name, thread_title, query
+    );
+  }
+
+  let preview = matches
+    .iter()
+    .take(3)
+    .map(|entry| format!("{}:{}", entry.relative_path, entry.line_number))
+    .collect::<Vec<_>>()
+    .join(", ");
+
+  format!(
+    "Cavell searched {} for {} and found {} matches for \"{}\", including {}.",
+    workspace_name,
+    thread_title,
+    matches.len(),
+    query,
     preview
   )
 }
@@ -778,5 +905,70 @@ mod tests {
       .as_str()
       .unwrap()
       .contains("Milestone 1"));
+  }
+
+  #[test]
+  fn turn_start_searches_workspace_content() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("search-files");
+    fs::write(
+      workspace.join("README.md"),
+      "# Cavell\nSearch target lives here\n",
+    )
+    .expect("write readme");
+    fs::create_dir_all(workspace.join("docs")).expect("create docs directory");
+    fs::write(
+      workspace.join("docs").join("notes.txt"),
+      "Another Search target appears in docs\n",
+    )
+    .expect("write notes");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Search Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Find Search target"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(turn_response.error.is_none());
+    let result = turn_response.result.expect("turn result");
+    let items = result["items"].as_array().expect("items");
+
+    assert_eq!(items[2]["kind"], "toolStart");
+    assert_eq!(items[2]["title"], "search_files");
+    assert_eq!(items[3]["kind"], "toolResult");
+    assert!(items[3]["content"]
+      .as_str()
+      .unwrap()
+      .contains("README.md:2"));
+    assert!(items[3]["content"]
+      .as_str()
+      .unwrap()
+      .contains("docs/notes.txt:1"));
   }
 }

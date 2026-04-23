@@ -35,6 +35,7 @@ def main() -> int:
   workspace_dir.mkdir(parents=True, exist_ok=True)
   (workspace_dir / "README.md").write_text("# Cavell\nMilestone 1 smoke test\n", encoding="utf-8")
   (workspace_dir / "apps").mkdir()
+  (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
   command = ["cargo", "run", "-p", "cavell-runtime-bin"]
   env = os.environ.copy()
   env["CAVELL_DATA_DIR"] = str(state_dir)
@@ -136,6 +137,20 @@ def main() -> int:
     assert turn["result"]["items"][2]["kind"] == "toolStart"
     assert turn["result"]["items"][3]["kind"] == "toolResult"
     assert "Milestone 1 smoke test" in turn["result"]["items"][3]["content"]
+
+    search_turn = send_request(
+      process,
+      {
+        "id": 8,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": "Find Needle term",
+        },
+      },
+    )
+    assert search_turn["result"]["items"][2]["title"] == "search_files"
+    assert "notes.txt:1" in search_turn["result"]["items"][3]["content"]
     return 0
   finally:
     process.terminate()
