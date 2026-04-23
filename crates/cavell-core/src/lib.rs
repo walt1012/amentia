@@ -10,13 +10,12 @@ use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEnt
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
-  MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary,
-  MemoryStatusResult, ModelHealthResult, PluginListResult,
-  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
-  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
+  ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
+  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
+  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
+  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -226,9 +225,10 @@ impl RuntimeContext {
     source: String,
     tags: Vec<String>,
   ) -> Result<MemoryNote> {
-    let note = self
-      .memory_manager
-      .create_note(&mut self.memory_notes, title, body, scope, source, tags);
+    let note =
+      self
+        .memory_manager
+        .create_note(&mut self.memory_notes, title, body, scope, source, tags);
     self.persist_memory_note(&note)?;
     Ok(note)
   }
@@ -242,9 +242,10 @@ impl RuntimeContext {
     source: String,
     tags: Vec<String>,
   ) -> Result<MemoryNote> {
-    let note = self
-      .memory_manager
-      .upsert_note(&mut self.memory_notes, id, title, body, scope, source, tags);
+    let note =
+      self
+        .memory_manager
+        .upsert_note(&mut self.memory_notes, id, title, body, scope, source, tags);
     self.persist_memory_note(&note)?;
     Ok(note)
   }
@@ -1583,7 +1584,10 @@ fn truncate_memory_line(content: &str, limit: usize) -> String {
     return normalized;
   }
 
-  let truncated = normalized.chars().take(limit.saturating_sub(3)).collect::<String>();
+  let truncated = normalized
+    .chars()
+    .take(limit.saturating_sub(3))
+    .collect::<String>();
   format!("{truncated}...")
 }
 
