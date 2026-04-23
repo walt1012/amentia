@@ -312,8 +312,8 @@ struct ContentView: View {
         .font(.subheadline)
       }
 
-      GroupBox("Next Integration") {
-        Text("Refine token events, richer planner prompts, and packaged llama.cpp delivery.")
+      GroupBox("Milestone 2 Focus") {
+        Text("Expand plugin management, manifest workflows, and richer local model delivery.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }

@@ -36,9 +36,9 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestone 1 is in progress.
+Milestone 1 is complete on the active development branch.
 
-Implemented foundation:
+Delivered in Milestone 1:
 
 - monorepo scaffolding
 - Rust workspace skeleton and local runtime binary
@@ -47,8 +47,17 @@ Implemented foundation:
 - workspace-aware read, search, shell, diff preview, and approval-gated write tools
 - SQLite-backed persistence for workspace, threads, approvals, and memory notes
 - built-in memory retrieval, user workspace notes, and thread summary notes
-- local model health inspection for the `LFM2.5-350M` runtime path
+- local model health inspection and local pack metadata bootstrap for the `LFM2.5-350M` runtime path
 - CI checks
+
+Milestone 1 exit criteria now covered:
+
+- open a workspace
+- create or resume a thread
+- send a request through the local runtime
+- approve file writes or shell commands
+- inspect diff output
+- receive a file change end to end
 
 Model packaging note:
 

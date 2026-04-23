@@ -29,16 +29,16 @@ final class AppViewModel: ObservableObject {
       TimelineEntry(
         id: UUID(),
         kind: .system,
-        title: "Milestone 1 Start",
-        body: "Launch the runtime, open a workspace, and ask Pith to inspect local files.",
+        title: "Milestone 1 Ready",
+        body: "Open a workspace, launch the runtime, and ask Pith to inspect or change local files.",
         attributes: [:]
       ),
       TimelineEntry(
         id: UUID(),
         kind: .assistantMessage,
-        title: "Next Step",
+        title: "Local Agent Loop",
         body:
-          "The first local agent loop uses workspace-aware read, search, shell, and approval-gated write tools.",
+          "Pith now supports workspace-aware read, search, shell, diff, memory, and approval-gated write actions.",
         attributes: [:]
       ),
     ]
