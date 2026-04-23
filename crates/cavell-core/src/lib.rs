@@ -1474,7 +1474,10 @@ fn build_plan_item(
     ("modelStatus".to_string(), result.status),
   ]);
   if let Some(workspace) = workspace {
-    attributes.insert("workspaceDisplayName".to_string(), workspace.display_name.clone());
+    attributes.insert(
+      "workspaceDisplayName".to_string(),
+      workspace.display_name.clone(),
+    );
   }
 
   TimelineItem {
