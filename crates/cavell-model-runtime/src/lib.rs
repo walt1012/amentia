@@ -71,6 +71,13 @@ pub struct GenerateResponse {
 }
 
 #[derive(Debug, Clone)]
+pub struct ModelBootstrap {
+  pub manifest_path: PathBuf,
+  pub readme_path: Option<PathBuf>,
+  pub copied_files: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
 pub struct LocalModelRuntime {
   pack: ModelPackDescriptor,
   manifest: Option<ModelPackManifest>,
@@ -250,6 +257,57 @@ impl LocalModelRuntime {
       model_id: self.pack.id.clone(),
     }
   }
+
+  pub fn bootstrap_pack_metadata(&self) -> Result<ModelBootstrap> {
+    let resolution =
+      resolve_manifest().context("failed to locate a bundled model-pack.json for bootstrap")?;
+    let target_manifest_path = suggested_manifest_install_path();
+    let target_directory = target_manifest_path
+      .parent()
+      .context("suggested manifest path has no parent directory")?;
+    fs::create_dir_all(target_directory)
+      .with_context(|| format!("failed to create {}", target_directory.display()))?;
+
+    let mut copied_files = vec![];
+    if normalize_path(&resolution.manifest_path) != normalize_path(&target_manifest_path) {
+      fs::copy(&resolution.manifest_path, &target_manifest_path).with_context(|| {
+        format!(
+          "failed to copy {} to {}",
+          resolution.manifest_path.display(),
+          target_manifest_path.display()
+        )
+      })?;
+      copied_files.push(target_manifest_path.clone());
+    }
+
+    let source_readme_path = resolution
+      .manifest_path
+      .parent()
+      .map(|directory| directory.join("README.md"))
+      .filter(|path| path.is_file());
+    let target_readme_path = target_directory.join("README.md");
+    let readme_path = if let Some(source_readme_path) = source_readme_path {
+      if normalize_path(&source_readme_path) != normalize_path(&target_readme_path) {
+        fs::copy(&source_readme_path, &target_readme_path).with_context(|| {
+          format!(
+            "failed to copy {} to {}",
+            source_readme_path.display(),
+            target_readme_path.display()
+          )
+        })?;
+        copied_files.push(target_readme_path.clone());
+      }
+      Some(target_readme_path)
+    } else {
+      None
+    };
+
+    Ok(ModelBootstrap {
+      manifest_path: target_manifest_path,
+      readme_path,
+      copied_files,
+    })
+  }
 }
 
 pub fn built_in_model_pack() -> ModelPackDescriptor {
@@ -425,6 +483,10 @@ fn read_manifest(path: &Path) -> Result<ModelPackManifest> {
     fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
   serde_json::from_str(&content)
     .with_context(|| format!("failed to parse model pack manifest {}", path.display()))
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+  path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 }
 
 fn discovery_roots() -> Vec<PathBuf> {
@@ -811,7 +873,9 @@ fn fallback_from_prompt(prompt: &str, role: &ModelRole) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::io::ErrorKind;
   use std::path::PathBuf;
+  use std::time::{SystemTime, UNIX_EPOCH};
 
   #[test]
   fn runtime_uses_heuristic_backend_when_paths_are_missing() {
@@ -868,5 +932,82 @@ mod tests {
     assert!(roots.contains(&PathBuf::from("C:/tmp/cavell-pack-root")));
     assert!(roots.contains(&PathBuf::from("C:/tmp/cavell-data")));
     assert!(roots.contains(&PathBuf::from("C:/tmp/cavell-data").join("models")));
+  }
+
+  #[test]
+  fn bootstrap_pack_metadata_copies_manifest_and_readme_into_data_dir() {
+    let temp_root = unique_temp_directory("model-bootstrap");
+    let source_root = temp_root.join("source");
+    let source_pack_root = source_root.join("models").join("builtin").join("lfm2.5-350m");
+    fs::create_dir_all(&source_pack_root).expect("source pack root");
+    fs::write(
+      source_pack_root.join("model-pack.json"),
+      r#"{
+  "id": "lfm2.5-350m",
+  "display_name": "LFM2.5-350M",
+  "file_name": "LFM2.5-350M.gguf",
+  "context_size": 4096,
+  "max_output_tokens": 160,
+  "backend": "llama.cpp"
+}"#,
+    )
+    .expect("manifest");
+    fs::write(
+      source_pack_root.join("README.md"),
+      "Built-in model pack metadata",
+    )
+    .expect("readme");
+
+    let data_root = temp_root.join("data");
+    let previous_pack_root = env::var("CAVELL_MODEL_PACK_ROOT").ok();
+    let previous_data_dir = env::var("CAVELL_DATA_DIR").ok();
+    let previous_manifest = env::var("CAVELL_MODEL_PACK_MANIFEST").ok();
+
+    env::set_var("CAVELL_MODEL_PACK_ROOT", &source_root);
+    env::set_var("CAVELL_DATA_DIR", &data_root);
+    env::remove_var("CAVELL_MODEL_PACK_MANIFEST");
+
+    let runtime = LocalModelRuntime::new_default();
+    let bootstrap = runtime
+      .bootstrap_pack_metadata()
+      .expect("bootstrap metadata");
+
+    restore_env_var("CAVELL_MODEL_PACK_ROOT", previous_pack_root);
+    restore_env_var("CAVELL_DATA_DIR", previous_data_dir);
+    restore_env_var("CAVELL_MODEL_PACK_MANIFEST", previous_manifest);
+
+    assert!(bootstrap.manifest_path.is_file());
+    assert_eq!(
+      fs::read_to_string(&bootstrap.manifest_path).expect("copied manifest"),
+      fs::read_to_string(source_pack_root.join("model-pack.json")).expect("source manifest")
+    );
+    let copied_readme_path = bootstrap.readme_path.expect("copied readme");
+    assert!(copied_readme_path.is_file());
+    assert_eq!(bootstrap.copied_files.len(), 2);
+
+    remove_temp_directory(&temp_root);
+  }
+
+  fn restore_env_var(key: &str, value: Option<String>) {
+    match value {
+      Some(value) => env::set_var(key, value),
+      None => env::remove_var(key),
+    }
+  }
+
+  fn unique_temp_directory(prefix: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("system time")
+      .as_nanos();
+    env::temp_dir().join(format!("cavell-{prefix}-{nanos}"))
+  }
+
+  fn remove_temp_directory(path: &Path) {
+    if let Err(error) = fs::remove_dir_all(path) {
+      if error.kind() != ErrorKind::NotFound {
+        panic!("failed to remove {}: {error}", path.display());
+      }
+    }
   }
 }

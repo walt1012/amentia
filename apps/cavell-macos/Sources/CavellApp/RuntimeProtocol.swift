@@ -70,6 +70,12 @@ struct ModelHealthResult: Codable {
   let metrics: [String: String]
 }
 
+struct ModelBootstrapResult: Codable {
+  let manifestPath: String
+  let readmePath: String?
+  let copiedFiles: [String]
+}
+
 struct MemoryStatusResult: Codable {
   let noteCount: Int
   let latestTitle: String?

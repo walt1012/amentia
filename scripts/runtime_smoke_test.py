@@ -110,10 +110,21 @@ def main() -> int:
     assert model_health["result"]["metrics"]["suggestedModelPath"]
     assert model_health["result"]["metrics"]["suggestedBinaryPath"]
 
+    model_bootstrap, _ = send_request(
+      process,
+      {
+        "id": 23,
+        "method": "model/bootstrap",
+      },
+    )
+    assert Path(model_bootstrap["result"]["manifestPath"]).is_file()
+    if model_bootstrap["result"]["readmePath"] is not None:
+      assert Path(model_bootstrap["result"]["readmePath"]).is_file()
+
     memory_status, _ = send_request(
       process,
       {
-        "id": 22,
+        "id": 24,
         "method": "memory/status",
       },
     )

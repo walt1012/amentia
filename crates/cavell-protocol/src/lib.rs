@@ -9,6 +9,7 @@ pub mod methods {
   pub const MEMORY_CREATE: &str = "memory/create";
   pub const MEMORY_LIST: &str = "memory/list";
   pub const MEMORY_STATUS: &str = "memory/status";
+  pub const MODEL_BOOTSTRAP: &str = "model/bootstrap";
   pub const MODEL_HEALTH: &str = "model/health";
   pub const PLUGIN_LIST: &str = "plugin/list";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
@@ -111,6 +112,15 @@ pub struct ModelHealthResult {
   pub manifest_path: Option<String>,
   #[serde(default)]
   pub metrics: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelBootstrapResult {
+  pub manifest_path: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub readme_path: Option<String>,
+  pub copied_files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

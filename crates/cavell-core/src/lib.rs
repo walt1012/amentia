@@ -5,17 +5,20 @@ use std::time::Instant;
 
 use anyhow::Result;
 use cavell_memory::{retrieve_relevant_notes, MemoryEvent, MemoryManager, MemoryNote};
-use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, ModelRole};
+use cavell_model_runtime::{
+  GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
+};
 use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEntry};
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
-  ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
-  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
-  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
-  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  ModelBootstrapResult, ModelHealthResult, PluginListResult,
+  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
+  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -284,6 +287,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       request.id,
       &to_protocol_memory_status(context.memory_manager.status(&context.memory_notes)),
     ),
+    methods::MODEL_BOOTSTRAP => handle_model_bootstrap(context, request),
     methods::MODEL_HEALTH => JsonRpcResponse::success(
       request.id,
       &to_protocol_model_health(context.model_runtime.health()),
@@ -358,6 +362,18 @@ fn to_protocol_model_health(health: ModelHealth) -> ModelHealthResult {
     model_path: health.model_path,
     manifest_path: health.manifest_path,
     metrics: health.metrics,
+  }
+}
+
+fn to_protocol_model_bootstrap(result: ModelBootstrap) -> ModelBootstrapResult {
+  ModelBootstrapResult {
+    manifest_path: result.manifest_path.display().to_string(),
+    readme_path: result.readme_path.map(|path| path.display().to_string()),
+    copied_files: result
+      .copied_files
+      .into_iter()
+      .map(|path| path.display().to_string())
+      .collect(),
   }
 }
 
@@ -496,6 +512,19 @@ fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -
       },
     ),
     Err(error) => JsonRpcResponse::error(request.id, -32041, error.to_string()),
+  }
+}
+
+fn handle_model_bootstrap(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  match context.model_runtime.bootstrap_pack_metadata() {
+    Ok(result) => {
+      context.model_runtime = LocalModelRuntime::new_default();
+      JsonRpcResponse::success(request.id, &to_protocol_model_bootstrap(result))
+    }
+    Err(error) => JsonRpcResponse::error(request.id, -32042, error.to_string()),
   }
 }
 

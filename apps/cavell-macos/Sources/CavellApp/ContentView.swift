@@ -181,6 +181,11 @@ struct ContentView: View {
             .foregroundColor(.secondary)
             .textSelection(.enabled)
           HStack(spacing: 8) {
+            Button("Install Pack Metadata") {
+              viewModel.bootstrapModelPackMetadata()
+            }
+            .buttonStyle(.borderedProminent)
+
             Button("Reveal Model Folder") {
               viewModel.revealSuggestedModelDirectory()
             }

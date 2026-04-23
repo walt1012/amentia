@@ -38,6 +38,12 @@ final class RuntimeBridge {
     let metrics: [String: String]
   }
 
+  struct RuntimeModelBootstrap {
+    let manifestPath: String
+    let readmePath: String?
+    let copiedFiles: [String]
+  }
+
   struct RuntimeMemoryStatus {
     let noteCount: Int
     let latestTitle: String?
@@ -229,6 +235,27 @@ final class RuntimeBridge {
       modelPath: result.modelPath,
       manifestPath: result.manifestPath,
       metrics: result.metrics
+    )
+  }
+
+  func bootstrapModelPack() async throws -> RuntimeModelBootstrap {
+    let response: JSONRPCResponse<ModelBootstrapResult> = try await sendRequest(
+      method: "model/bootstrap",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeModelBootstrap(
+      manifestPath: result.manifestPath,
+      readmePath: result.readmePath,
+      copiedFiles: result.copiedFiles
     )
   }
 

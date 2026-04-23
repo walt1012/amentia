@@ -83,7 +83,6 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let session = try await runtimeBridge.launchAndInitialize()
-        let runtimeModel = try? await runtimeBridge.modelHealth()
         let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
         let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
         let currentWorkspace = try? await runtimeBridge.currentWorkspace()
@@ -91,25 +90,7 @@ final class AppViewModel: ObservableObject {
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
-        if let runtimeModel {
-          modelHealth = ModelHealthSummary(
-            packID: runtimeModel.packID,
-            displayName: runtimeModel.displayName,
-            backend: runtimeModel.backend,
-            status: runtimeModel.status,
-            detail: runtimeModel.detail,
-            source: runtimeModel.source,
-            binaryPath: runtimeModel.binaryPath,
-            modelPath: runtimeModel.modelPath,
-            manifestPath: runtimeModel.manifestPath,
-            metrics: runtimeModel.metrics
-          )
-          runtimeDetail =
-            "\(session.serverName) \(session.serverVersion) | \(runtimeModel.displayName)"
-        } else {
-          modelHealth = nil
-          runtimeDetail = "\(session.serverName) \(session.serverVersion)"
-        }
+        await refreshModelHealthState(serverLabel: "\(session.serverName) \(session.serverVersion)")
 
         if let runtimeMemoryStatus {
           memoryStatus = MemoryStatusSummary(
@@ -676,6 +657,26 @@ final class AppViewModel: ObservableObject {
     )
   }
 
+  func bootstrapModelPackMetadata() {
+    guard runtimeState == .ready else {
+      runtimeDetail = "Launch the runtime before preparing local model metadata."
+      return
+    }
+
+    Task {
+      do {
+        let result = try await runtimeBridge.bootstrapModelPack()
+        await refreshModelHealthState()
+        let copiedSummary = result.copiedFiles.isEmpty
+          ? "Pack metadata was already present."
+          : "Prepared \(result.copiedFiles.count) local model metadata file(s)."
+        runtimeDetail = "\(copiedSummary) Manifest: \(result.manifestPath)"
+      } catch {
+        runtimeDetail = "Model metadata bootstrap failed: \(error.localizedDescription)"
+      }
+    }
+  }
+
   func pluginCountSummary() -> String {
     if plugins.isEmpty {
       return "No bundled plugins discovered yet."
@@ -933,6 +934,32 @@ final class AppViewModel: ObservableObject {
 
     self.activeTurnID = activeTurnID
     activeTurnThreadID = threadID
+  }
+
+  private func refreshModelHealthState(serverLabel: String? = nil) async {
+    let runtimeModel = try? await runtimeBridge.modelHealth()
+    if let runtimeModel {
+      modelHealth = ModelHealthSummary(
+        packID: runtimeModel.packID,
+        displayName: runtimeModel.displayName,
+        backend: runtimeModel.backend,
+        status: runtimeModel.status,
+        detail: runtimeModel.detail,
+        source: runtimeModel.source,
+        binaryPath: runtimeModel.binaryPath,
+        modelPath: runtimeModel.modelPath,
+        manifestPath: runtimeModel.manifestPath,
+        metrics: runtimeModel.metrics
+      )
+      if let serverLabel {
+        runtimeDetail = "\(serverLabel) | \(runtimeModel.displayName)"
+      }
+    } else {
+      modelHealth = nil
+      if let serverLabel {
+        runtimeDetail = serverLabel
+      }
+    }
   }
 
   private func revealSuggestedPath(metricKey: String, successDetail: String) {
