@@ -12,3 +12,5 @@ Planned uses:
 Current scripts:
 
 - `runtime_smoke_test.py`: verifies the local runtime handshake and health endpoint once Rust tooling is available
+
+These scripts are intended to be safe for local execution and CI reuse.

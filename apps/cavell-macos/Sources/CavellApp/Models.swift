@@ -1,7 +1,7 @@
 import Foundation
 
 struct ThreadSummary: Identifiable, Hashable {
-  let id: UUID
+  let id: String
   var title: String
   var preview: String
 }

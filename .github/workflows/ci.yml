@@ -7,6 +7,9 @@ on:
       - "codex/**"
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   rust:
     runs-on: ubuntu-latest
@@ -28,8 +31,11 @@ jobs:
       - name: Cargo test
         run: cargo test --workspace
 
+      - name: Runtime smoke test
+        run: python3 scripts/runtime_smoke_test.py
+
   swift:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4

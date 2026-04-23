@@ -53,6 +53,14 @@ struct RuntimeThreadPayload: Codable {
   let status: String
 }
 
+struct ThreadStartParams: Codable {
+  let title: String
+}
+
+struct ThreadStartResult: Codable {
+  let thread: RuntimeThreadPayload
+}
+
 struct OptionalRequestParams: Encodable {
   static let none = OptionalRequestParams()
 }

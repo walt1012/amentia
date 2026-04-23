@@ -59,6 +59,27 @@ def main() -> int:
       },
     )
     assert health["result"]["status"] == "ok"
+
+    started = send_request(
+      process,
+      {
+        "id": 3,
+        "method": "thread/start",
+        "params": {
+          "title": "Smoke Test Thread",
+        },
+      },
+    )
+    assert started["result"]["thread"]["title"] == "Smoke Test Thread"
+
+    thread_list = send_request(
+      process,
+      {
+        "id": 4,
+        "method": "thread/list",
+      },
+    )
+    assert len(thread_list["result"]["threads"]) == 1
     return 0
   finally:
     process.terminate()

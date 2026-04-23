@@ -11,6 +11,13 @@ struct ContentView: View {
       inspector
     }
     .toolbar {
+      ToolbarItem {
+        Button("New Thread") {
+          viewModel.createThread()
+        }
+        .disabled(viewModel.runtimeState != .ready)
+      }
+
       ToolbarItem(placement: .primaryAction) {
         Button("Launch Runtime") {
           viewModel.launchRuntime()
@@ -117,7 +124,7 @@ private struct TimelineCard: View {
   }
 }
 
-private struct SettingsView: View {
+struct SettingsView: View {
   var body: some View {
     Form {
       Section("Model") {

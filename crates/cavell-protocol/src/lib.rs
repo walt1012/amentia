@@ -4,6 +4,7 @@ use serde_json::Value;
 pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
+  pub const THREAD_START: &str = "thread/start";
   pub const THREAD_LIST: &str = "thread/list";
 }
 
@@ -91,6 +92,18 @@ pub struct ThreadSummary {
 #[serde(rename_all = "camelCase")]
 pub struct ThreadListResult {
   pub threads: Vec<ThreadSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadStartParams {
+  pub title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadStartResult {
+  pub thread: ThreadSummary,
 }
 
 impl JsonRpcResponse {

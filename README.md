@@ -63,3 +63,4 @@ Implemented foundation:
 - Repository artifacts should remain English-only
 
 See [docs/development-plan.md](docs/development-plan.md) for the execution roadmap.
+See [docs/development-environment.md](docs/development-environment.md) for local setup and CI notes.
