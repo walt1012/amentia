@@ -1,13 +1,13 @@
 [workspace]
 members = [
-  "crates/cavell-core",
-  "crates/cavell-memory",
-  "crates/cavell-model-runtime",
-  "crates/cavell-plugin-host",
-  "crates/cavell-protocol",
-  "crates/cavell-runtime-bin",
-  "crates/cavell-storage",
-  "crates/cavell-tools",
+  "crates/pith-core",
+  "crates/pith-memory",
+  "crates/pith-model-runtime",
+  "crates/pith-plugin-host",
+  "crates/pith-protocol",
+  "crates/pith-runtime-bin",
+  "crates/pith-storage",
+  "crates/pith-tools",
 ]
 resolver = "2"
 
@@ -15,7 +15,7 @@ resolver = "2"
 edition = "2021"
 license = "Apache-2.0"
 version = "0.1.0"
-authors = ["Cavell Contributors"]
+authors = ["Pith Contributors"]
 
 [workspace.dependencies]
 anyhow = "1.0"

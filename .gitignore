@@ -12,7 +12,7 @@ xcuserdata/
 
 *.log
 
-.cavell/
+.pith/
 .tmp-runtime-state/
 
 models/**/*.gguf

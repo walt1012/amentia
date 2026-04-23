@@ -1,6 +1,6 @@
 ## Built-in Model Pack
 
-This directory tracks the `LFM2.5-350M` pack manifest for Cavell.
+This directory tracks the `LFM2.5-350M` pack manifest for Pith.
 
 What belongs in git:
 
@@ -17,7 +17,7 @@ What does not belong in git history:
 Recommended local layout:
 
 ```text
-<CAVELL_DATA_DIR>/
+<PITH_DATA_DIR>/
 `-- models/
     `-- builtin/
         `-- lfm2.5-350m/
@@ -27,8 +27,8 @@ Recommended local layout:
 
 The runtime can also resolve:
 
-- `CAVELL_MODEL_PACK_MANIFEST`
-- `CAVELL_LFM_MODEL_PATH`
+- `PITH_MODEL_PACK_MANIFEST`
+- `PITH_LFM_MODEL_PATH`
 - repo-local manifests for development
 
 The repository keeps the manifest so the product can describe the built-in pack without forcing the large GGUF file into source control.

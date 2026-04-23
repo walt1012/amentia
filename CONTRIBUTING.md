@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is currently in the foundation phase for `Cavell`.
+This repository is currently in the foundation phase for `Pith`.
 
 ## Project Rules
 
@@ -24,7 +24,7 @@ Rust:
 
 Swift:
 
-- `cd apps/cavell-macos`
+- `cd apps/pith-macos`
 - `swift build`
 
 ## Milestone 0 Intent

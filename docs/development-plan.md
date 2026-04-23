@@ -1,10 +1,10 @@
-# Cavell Development Plan
+# Pith Development Plan
 
 ## 1. Document Purpose
 
-This document defines the product, architecture, engineering rules, and phased execution plan for `Cavell`.
+This document defines the product, architecture, engineering rules, and phased execution plan for `Pith`.
 
-`Cavell` is intended to become a local-first macOS agent application with a premium desktop experience, a plugin-first architecture, and no dependency on external model APIs for its core intelligence path.
+`Pith` is intended to become a local-first macOS agent application with a premium desktop experience, a plugin-first architecture, and no dependency on external model APIs for its core intelligence path.
 
 This plan is designed to be implementation-ready. It is not just a vision statement. Each section exists to reduce future rework when code implementation begins.
 
@@ -12,7 +12,7 @@ This plan is designed to be implementation-ready. It is not just a vision statem
 
 These constraints are mandatory and should be treated as project requirements, not preferences.
 
-- Product name: `Cavell`
+- Product name: `Pith`
 - Target platform: macOS 12 and above
 - CPU target: `x86_64` only
 - Distribution target: signed and notarized `.app` bundle outside the Mac App Store
@@ -25,7 +25,7 @@ These constraints are mandatory and should be treated as project requirements, n
 
 ## 3. Product Thesis
 
-`Cavell` should feel like a serious native agent workspace rather than a generic chat app.
+`Pith` should feel like a serious native agent workspace rather than a generic chat app.
 
 The core thesis is:
 
@@ -84,9 +84,9 @@ Relevant reference areas:
 - `plugins/*/hooks`
 - `plugins/*/skills`
 
-### 4.3 Source-Informed Direction For Cavell
+### 4.3 Source-Informed Direction For Pith
 
-Based on those references, `Cavell` should adopt:
+Based on those references, `Pith` should adopt:
 
 - a native macOS shell
 - a Rust runtime process
@@ -126,7 +126,7 @@ Based on those references, `Cavell` should adopt:
 
 ### 5.3 Product Non-Goals
 
-`Cavell` should not become:
+`Pith` should not become:
 
 - a generic chatbot with a file picker
 - a terminal emulator with minimal orchestration
@@ -160,8 +160,8 @@ Based on those references, `Cavell` should adopt:
 
 Use a two-process architecture:
 
-- `Cavell.app`: native macOS UI process
-- `cavell-runtime`: local Rust runtime process
+- `Pith.app`: native macOS UI process
+- `pith-runtime`: local Rust runtime process
 
 This split keeps the desktop shell responsive, makes runtime behavior testable, and mirrors the strongest architectural lesson from Codex.
 
@@ -290,25 +290,25 @@ The Rust side should use a multi-crate workspace.
 
 ### 9.1 Proposed Crates
 
-- `crates/cavell-protocol`
-- `crates/cavell-core`
-- `crates/cavell-storage`
-- `crates/cavell-memory`
-- `crates/cavell-model-runtime`
-- `crates/cavell-tools`
-- `crates/cavell-plugin-host`
-- `crates/cavell-runtime-bin`
+- `crates/pith-protocol`
+- `crates/pith-core`
+- `crates/pith-storage`
+- `crates/pith-memory`
+- `crates/pith-model-runtime`
+- `crates/pith-tools`
+- `crates/pith-plugin-host`
+- `crates/pith-runtime-bin`
 
 ### 9.2 Responsibilities Per Crate
 
-`cavell-protocol`
+`pith-protocol`
 
 - JSON-RPC envelopes
 - request and notification types
 - shared data models
 - schema export
 
-`cavell-core`
+`pith-core`
 
 - task orchestration
 - turn execution
@@ -316,7 +316,7 @@ The Rust side should use a multi-crate workspace.
 - approval state machine
 - thread lifecycle
 
-`cavell-storage`
+`pith-storage`
 
 - SQLite access
 - thread persistence
@@ -324,7 +324,7 @@ The Rust side should use a multi-crate workspace.
 - plugin state persistence
 - artifact indexing
 
-`cavell-model-runtime`
+`pith-model-runtime`
 
 - model pack registry
 - backend abstraction
@@ -333,21 +333,21 @@ The Rust side should use a multi-crate workspace.
 - cancellation
 - metrics
 
-`cavell-tools`
+`pith-tools`
 
 - filesystem tools
 - shell tools
 - diff generation
 - future git tools
 
-`cavell-memory`
+`pith-memory`
 
 - workspace memory capture
 - thread memory summaries
 - local retrieval primitives
 - memory compaction hooks
 
-`cavell-plugin-host`
+`pith-plugin-host`
 
 - plugin discovery
 - manifest validation
@@ -355,7 +355,7 @@ The Rust side should use a multi-crate workspace.
 - permission evaluation
 - hook execution
 
-`cavell-runtime-bin`
+`pith-runtime-bin`
 
 - runtime bootstrap
 - transport wiring
@@ -468,8 +468,8 @@ Use the filesystem for:
 
 ### 11.3 Recommended Paths
 
-- app root: `~/Library/Application Support/Cavell/`
-- database: `storage/cavell.db`
+- app root: `~/Library/Application Support/Pith/`
+- database: `storage/pith.db`
 - artifacts: `artifacts/`
 - models: `models/`
 - plugins: `plugins/`
@@ -580,11 +580,11 @@ Plugins must be able to extend:
 
 ### 14.2 Bundle Layout
 
-Use a Claude-inspired directory-based layout with Cavell naming.
+Use a Claude-inspired directory-based layout with Pith naming.
 
 ```text
 plugin-name/
-|-- cavell-plugin.json
+|-- pith-plugin.json
 |-- commands/
 |-- agents/
 |-- prompts/
@@ -597,7 +597,7 @@ plugin-name/
 
 ### 14.3 Manifest Shape
 
-`cavell-plugin.json` should include:
+`pith-plugin.json` should include:
 
 - `name`
 - `version`
@@ -724,15 +724,15 @@ Recommended monorepo layout:
 ```text
 /
 |-- apps/
-|   `-- cavell-macos/
+|   `-- pith-macos/
 |-- crates/
-|   |-- cavell-core/
-|   |-- cavell-model-runtime/
-|   |-- cavell-plugin-host/
-|   |-- cavell-protocol/
-|   |-- cavell-runtime-bin/
-|   |-- cavell-storage/
-|   `-- cavell-tools/
+|   |-- pith-core/
+|   |-- pith-model-runtime/
+|   |-- pith-plugin-host/
+|   |-- pith-protocol/
+|   |-- pith-runtime-bin/
+|   |-- pith-storage/
+|   `-- pith-tools/
 |-- plugins/
 |   `-- official/
 |-- docs/
@@ -844,7 +844,7 @@ Exit criteria:
 
 Goal:
 
-- turn Cavell into an extensible local platform
+- turn Pith into an extensible local platform
 
 Deliverables:
 
@@ -898,7 +898,7 @@ Deliverables:
 
 Exit criteria:
 
-- Cavell operates as a local coworker platform rather than only a coding assistant
+- Pith operates as a local coworker platform rather than only a coding assistant
 
 ## 19. Build Order
 
@@ -1112,7 +1112,7 @@ The highest-leverage next step is to begin Milestone 0 now.
 Recommended first implementation sequence:
 
 1. create the monorepo directory structure
-2. scaffold `apps/cavell-macos`
+2. scaffold `apps/pith-macos`
 3. scaffold the Rust workspace and runtime binary
 4. define the initial protocol types
 5. make the UI and runtime exchange one real `initialize` message over `stdio`

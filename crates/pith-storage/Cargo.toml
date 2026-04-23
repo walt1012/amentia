@@ -1,0 +1,13 @@
+[package]
+name = "pith-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+pith-memory = { path = "../pith-memory" }
+pith-protocol = { path = "../pith-protocol" }
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true

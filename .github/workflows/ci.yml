@@ -47,5 +47,5 @@ jobs:
         run: swift --version
 
       - name: Build macOS app package
-        working-directory: apps/cavell-macos
+        working-directory: apps/pith-macos
         run: swift build

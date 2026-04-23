@@ -13,7 +13,7 @@ from pathlib import Path
 
 def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
   return subprocess.Popen(
-    ["cargo", "run", "-p", "cavell-runtime-bin"],
+    ["cargo", "run", "-p", "pith-runtime-bin"],
     cwd=repo_root,
     env=env,
     stdin=subprocess.PIPE,
@@ -52,11 +52,11 @@ def main() -> int:
   if workspace_dir.exists():
     shutil.rmtree(workspace_dir)
   workspace_dir.mkdir(parents=True, exist_ok=True)
-  (workspace_dir / "README.md").write_text("# Cavell\nMilestone 1 smoke test\n", encoding="utf-8")
+  (workspace_dir / "README.md").write_text("# Pith\nMilestone 1 smoke test\n", encoding="utf-8")
   (workspace_dir / "apps").mkdir()
   (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
   env = os.environ.copy()
-  env["CAVELL_DATA_DIR"] = str(state_dir)
+  env["PITH_DATA_DIR"] = str(state_dir)
   process = start_runtime(repo_root, env)
 
   try:
@@ -73,7 +73,7 @@ def main() -> int:
         },
       },
     )
-    assert initialize["result"]["serverInfo"]["name"] == "cavell-runtime"
+    assert initialize["result"]["serverInfo"]["name"] == "pith-runtime"
 
     health, _ = send_request(
       process,
@@ -351,7 +351,7 @@ def main() -> int:
         },
       },
     )
-    assert restarted_initialize["result"]["serverInfo"]["name"] == "cavell-runtime"
+    assert restarted_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
 
     restarted_thread, _ = send_request(
       process,

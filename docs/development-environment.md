@@ -1,6 +1,6 @@
 # Development Environment
 
-This document describes the local development baseline for `Cavell`.
+This document describes the local development baseline for `Pith`.
 
 ## Required Toolchains
 
@@ -21,28 +21,28 @@ Rust:
 
 macOS app:
 
-- `cd apps/cavell-macos`
+- `cd apps/pith-macos`
 - `swift build`
 
 ## Runtime Bridge Development
 
 The macOS shell looks for the runtime binary in this order:
 
-1. `CAVELL_RUNTIME_PATH`
-2. a bundled `cavell-runtime-bin` executable next to the app executable
+1. `PITH_RUNTIME_PATH`
+2. a bundled `pith-runtime-bin` executable next to the app executable
 
 For local development, the recommended path is:
 
 ```bash
-export CAVELL_RUNTIME_PATH=/absolute/path/to/cavell-runtime-bin
+export PITH_RUNTIME_PATH=/absolute/path/to/pith-runtime-bin
 ```
 
 One example flow after building the Rust runtime:
 
 ```bash
-cargo build -p cavell-runtime-bin
-export CAVELL_RUNTIME_PATH="$(pwd)/target/debug/cavell-runtime-bin"
-cd apps/cavell-macos
+cargo build -p pith-runtime-bin
+export PITH_RUNTIME_PATH="$(pwd)/target/debug/pith-runtime-bin"
+cd apps/pith-macos
 swift run
 ```
 
@@ -50,7 +50,7 @@ swift run
 
 The runtime now resolves the local model stack in this order:
 
-1. `CAVELL_LLAMACPP_PATH`
+1. `PITH_LLAMACPP_PATH`
 2. an executable-relative `third_party/llama.cpp/llama-cli`
 3. an executable-relative `tools/llama.cpp/llama-cli`
 4. repo-local `third_party/llama.cpp/llama-cli`
@@ -58,9 +58,9 @@ The runtime now resolves the local model stack in this order:
 
 The default model pack path resolves in this order:
 
-1. `CAVELL_MODEL_PACK_MANIFEST`
-2. `CAVELL_MODEL_PACK_ROOT`
-3. `CAVELL_DATA_DIR/models/builtin/lfm2.5-350m/model-pack.json`
+1. `PITH_MODEL_PACK_MANIFEST`
+2. `PITH_MODEL_PACK_ROOT`
+3. `PITH_DATA_DIR/models/builtin/lfm2.5-350m/model-pack.json`
 4. an executable-relative `models/builtin/lfm2.5-350m/model-pack.json`
 5. an executable-relative `model-packs/lfm2.5-350m/model-pack.json`
 6. repo-local `models/builtin/lfm2.5-350m/model-pack.json`
@@ -68,27 +68,27 @@ The default model pack path resolves in this order:
 
 The resolved model file path then checks:
 
-1. `CAVELL_LFM_MODEL_PATH`
+1. `PITH_LFM_MODEL_PATH`
 2. a sibling of the resolved manifest using the manifest `file_name`
-3. `CAVELL_DATA_DIR/models/LFM2.5-350M.gguf`
+3. `PITH_DATA_DIR/models/LFM2.5-350M.gguf`
 4. repo-local `models/LFM2.5-350M.gguf`
 5. repo-local `model-packs/LFM2.5-350M.gguf`
 
 The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M.gguf` file should not be committed to git history. It should live in the local data directory, a release bundle, or another local install path.
 
-If either path is missing, Cavell falls back to the built-in heuristic summarizer while still reporting model health in the inspector. One local setup example is:
+If either path is missing, Pith falls back to the built-in heuristic summarizer while still reporting model health in the inspector. One local setup example is:
 
 ```bash
-export CAVELL_LLAMACPP_PATH=/absolute/path/to/llama-cli
-export CAVELL_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
-export CAVELL_LFM_MODEL_PATH=/absolute/path/to/LFM2.5-350M.gguf
+export PITH_LLAMACPP_PATH=/absolute/path/to/llama-cli
+export PITH_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
+export PITH_LFM_MODEL_PATH=/absolute/path/to/LFM2.5-350M.gguf
 ```
 
 ## Plugin Discovery
 
 The runtime resolves bundled plugins in this order:
 
-1. `CAVELL_PLUGIN_DIR`
+1. `PITH_PLUGIN_DIR`
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 

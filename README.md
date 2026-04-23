@@ -1,6 +1,6 @@
-# Cavell
+# Pith
 
-`Cavell` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
+`Pith` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
 
 The product goal is to combine:
 
@@ -17,15 +17,15 @@ The repository is intentionally English-only.
 ```text
 /
 |-- apps/
-|   `-- cavell-macos/
+|   `-- pith-macos/
 |-- crates/
-|   |-- cavell-core/
-|   |-- cavell-model-runtime/
-|   |-- cavell-plugin-host/
-|   |-- cavell-protocol/
-|   |-- cavell-runtime-bin/
-|   |-- cavell-storage/
-|   `-- cavell-tools/
+|   |-- pith-core/
+|   |-- pith-model-runtime/
+|   |-- pith-plugin-host/
+|   |-- pith-protocol/
+|   |-- pith-runtime-bin/
+|   |-- pith-storage/
+|   `-- pith-tools/
 |-- plugins/
 |   `-- official/
 |-- docs/
