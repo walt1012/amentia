@@ -12,8 +12,8 @@ use cavell_protocol::{
   ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
   ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
   ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
-  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
-  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
