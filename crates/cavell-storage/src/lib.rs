@@ -838,9 +838,7 @@ mod tests {
 
     store.save_memory_note(&note).expect("save memory note");
     let notes = store.load_memory_notes(10).expect("load memory notes");
-    let next_sequence = store
-      .next_memory_sequence()
-      .expect("next memory sequence");
+    let next_sequence = store.next_memory_sequence().expect("next memory sequence");
 
     fs::remove_dir_all(&root).expect("cleanup temp directory");
 
