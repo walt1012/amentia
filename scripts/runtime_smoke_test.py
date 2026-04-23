@@ -167,9 +167,33 @@ def main() -> int:
     assert turn["result"]["items"][1]["kind"] == "plan"
     assert turn["result"]["items"][2]["kind"] == "toolStart"
     assert turn["result"]["items"][3]["kind"] == "toolResult"
+    assert turn["result"]["items"][4]["kind"] == "assistantMessage"
+    assert turn["result"]["items"][4]["attributes"]["responseRole"] == "summarizer"
+    assert turn["result"]["items"][4]["attributes"]["streamingStatus"] in {"in_progress", "completed"}
     assert "Milestone 1 smoke test" in turn["result"]["items"][3]["content"]
     assert turn["result"]["activeTurnId"] == "thread-1-turn-1"
     time.sleep(0.35)
+
+    streamed_thread, _ = send_request(
+      process,
+      {
+        "id": 26,
+        "method": "thread/read",
+        "params": {
+          "threadId": "thread-1",
+        },
+      },
+    )
+    assistant_items = [
+      item for item in streamed_thread["result"]["items"]
+      if item["kind"] == "assistantMessage" and item.get("attributes", {}).get("turnId") == "thread-1-turn-1"
+    ]
+    assert assistant_items
+    latest_assistant = assistant_items[-1]
+    assert latest_assistant["attributes"]["streamingStatus"] in {"in_progress", "completed"}
+    assert int(latest_assistant["attributes"]["totalCharacters"]) >= int(
+      latest_assistant["attributes"]["streamedCharacters"]
+    )
 
     cancelled_turn, _ = send_request(
       process,

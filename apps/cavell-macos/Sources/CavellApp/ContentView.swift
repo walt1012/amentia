@@ -266,8 +266,29 @@ private struct TimelineCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text(entry.title)
-        .font(.headline)
+      HStack(alignment: .center, spacing: 8) {
+        Text(entry.title)
+          .font(.headline)
+
+        Spacer()
+
+        if let streamingLabel {
+          Text(streamingLabel)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(streamingColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(streamingColor.opacity(0.12))
+            .clipShape(Capsule())
+        }
+      }
+
+      if let streamingProgressValue {
+        ProgressView(value: streamingProgressValue)
+          .progressViewStyle(.linear)
+          .tint(streamingColor)
+      }
+
       Text(entry.body)
         .font(bodyFont)
         .foregroundColor(.secondary)
@@ -326,6 +347,65 @@ private struct TimelineCard: View {
     default:
       return .body
     }
+  }
+
+  private var streamingLabel: String? {
+    guard entry.kind == .assistantMessage,
+          let streamingStatus = entry.attributes["streamingStatus"]
+    else {
+      return nil
+    }
+
+    switch streamingStatus {
+    case "in_progress":
+      return progressLabel().map { "Streaming \($0)" } ?? "Streaming"
+    case "completed":
+      return "Completed"
+    case "cancelled":
+      return "Cancelled"
+    default:
+      return nil
+    }
+  }
+
+  private var streamingProgressValue: Double? {
+    guard entry.kind == .assistantMessage,
+          entry.attributes["streamingStatus"] == "in_progress",
+          let streamedCharacters = entry.attributes["streamedCharacters"],
+          let totalCharacters = entry.attributes["totalCharacters"],
+          let streamedValue = Double(streamedCharacters),
+          let totalValue = Double(totalCharacters),
+          totalValue > 0
+    else {
+      return nil
+    }
+
+    return streamedValue / totalValue
+  }
+
+  private var streamingColor: Color {
+    switch entry.attributes["streamingStatus"] {
+    case "completed":
+      return .green
+    case "cancelled":
+      return .orange
+    default:
+      return .accentColor
+    }
+  }
+
+  private func progressLabel() -> String? {
+    guard let streamedCharacters = entry.attributes["streamedCharacters"],
+          let totalCharacters = entry.attributes["totalCharacters"],
+          let streamedValue = Double(streamedCharacters),
+          let totalValue = Double(totalCharacters),
+          totalValue > 0
+    else {
+      return nil
+    }
+
+    let percentage = Int(((streamedValue / totalValue) * 100).rounded())
+    return "\(min(percentage, 100))%"
   }
 }
 

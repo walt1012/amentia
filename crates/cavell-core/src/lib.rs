@@ -51,6 +51,7 @@ struct ActiveTurn {
   thread_id: String,
   full_content: String,
   emitted_chars: usize,
+  total_chars: usize,
   started_at: Instant,
 }
 
@@ -1122,7 +1123,14 @@ fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     compute_streamed_char_count(&active_turn_snapshot)
       .min(active_turn_snapshot.full_content.chars().count()),
   );
-  update_streaming_item(thread, &params.turn_id, &partial_content, "cancelled");
+  update_streaming_item(
+    thread,
+    &params.turn_id,
+    &partial_content,
+    "cancelled",
+    partial_content.chars().count(),
+    active_turn_snapshot.total_chars,
+  );
   thread.summary.status = "Turn cancelled".to_string();
 
   let items = vec![
@@ -1283,6 +1291,9 @@ fn maybe_start_streaming_assistant_turn(
   };
   attributes.insert("turnId".to_string(), turn_id.to_string());
   attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
+  attributes.insert("streamedCharacters".to_string(), initial_chars.to_string());
+  attributes.insert("totalCharacters".to_string(), total_chars.to_string());
+  attributes.insert("responseRole".to_string(), "summarizer".to_string());
 
   items.push(TimelineItem {
     kind: "assistantMessage".to_string(),
@@ -1300,6 +1311,7 @@ fn maybe_start_streaming_assistant_turn(
     thread_id: thread_id.to_string(),
     full_content,
     emitted_chars: initial_chars,
+    total_chars,
     started_at: Instant::now(),
   })
 }
@@ -1322,8 +1334,7 @@ fn advance_active_turn(
   turn_id: &str,
 ) -> Option<ThreadUpdatedNotificationParams> {
   let snapshot = context.active_turns.get(turn_id).cloned()?;
-  let total_chars = snapshot.full_content.chars().count();
-  let target_chars = compute_streamed_char_count(&snapshot).min(total_chars);
+  let target_chars = compute_streamed_char_count(&snapshot).min(snapshot.total_chars);
 
   if target_chars <= snapshot.emitted_chars {
     return None;
@@ -1331,7 +1342,7 @@ fn advance_active_turn(
 
   let thread_id = snapshot.thread_id.clone();
   let streamed_content = take_characters(&snapshot.full_content, target_chars);
-  let is_complete = target_chars >= total_chars;
+  let is_complete = target_chars >= snapshot.total_chars;
   let streaming_status = if is_complete {
     "completed"
   } else {
@@ -1344,12 +1355,22 @@ fn advance_active_turn(
       .iter_mut()
       .find(|thread| thread.summary.id == snapshot.thread_id)?;
 
-    update_streaming_item(thread, turn_id, &streamed_content, streaming_status);
+    update_streaming_item(
+      thread,
+      turn_id,
+      &streamed_content,
+      streaming_status,
+      target_chars,
+      snapshot.total_chars,
+    );
 
     if is_complete {
       thread.summary.status = "Ready".to_string();
     } else {
-      thread.summary.status = "Streaming assistant response".to_string();
+      thread.summary.status = format!(
+        "Streaming assistant response ({})",
+        streaming_progress_label(target_chars, snapshot.total_chars)
+      );
     }
 
     (thread.summary.clone(), thread.items.clone())
@@ -1382,6 +1403,8 @@ fn update_streaming_item(
   turn_id: &str,
   content: &str,
   streaming_status: &str,
+  streamed_chars: usize,
+  total_chars: usize,
 ) {
   let Some(item) = thread.items.iter_mut().rev().find(|item| {
     item.kind == "assistantMessage"
@@ -1399,6 +1422,8 @@ fn update_streaming_item(
   let mut attributes = item.attributes.clone().unwrap_or_default();
   attributes.insert("turnId".to_string(), turn_id.to_string());
   attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
+  attributes.insert("streamedCharacters".to_string(), streamed_chars.to_string());
+  attributes.insert("totalCharacters".to_string(), total_chars.to_string());
   item.attributes = Some(attributes);
 }
 
@@ -1408,6 +1433,15 @@ fn active_turn_id_for_thread(context: &RuntimeContext, thread_id: &str) -> Optio
     .values()
     .find(|turn| turn.thread_id == thread_id)
     .map(|turn| turn.id.clone())
+}
+
+fn streaming_progress_label(streamed_chars: usize, total_chars: usize) -> String {
+  if total_chars == 0 {
+    return "0%".to_string();
+  }
+
+  let percentage = ((streamed_chars as f64 / total_chars as f64) * 100.0).round() as usize;
+  format!("{}%", percentage.min(100))
 }
 
 fn take_characters(content: &str, count: usize) -> String {
@@ -1929,6 +1963,12 @@ mod tests {
 
     assert_eq!(items[2]["kind"], "toolStart");
     assert_eq!(items[3]["kind"], "toolResult");
+    assert_eq!(items[4]["kind"], "assistantMessage");
+    assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
+    assert!(matches!(
+      items[4]["attributes"]["streamingStatus"].as_str(),
+      Some("in_progress") | Some("completed")
+    ));
     assert!(items[3]["content"]
       .as_str()
       .unwrap()
@@ -1987,6 +2027,22 @@ mod tests {
       notifications[0].method,
       methods::THREAD_UPDATED_NOTIFICATION
     );
+    let params = notifications[0]
+      .params
+      .as_ref()
+      .expect("notification params");
+    let items = params["items"].as_array().expect("notification items");
+    let assistant_item = items
+      .iter()
+      .rev()
+      .find(|item| item["kind"] == "assistantMessage")
+      .expect("assistant message");
+    assert!(assistant_item["attributes"]["streamedCharacters"]
+      .as_str()
+      .expect("streamed chars")
+      .parse::<usize>()
+      .expect("streamed chars usize")
+      > 0);
   }
 
   #[test]
