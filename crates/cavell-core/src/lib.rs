@@ -358,7 +358,6 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     let thread_title = thread.summary.title.clone();
     let message = params.message;
     let turn_id = format!("{thread_id}-turn-{turn_count}");
-    let mut active_turn_id = None;
     let mut pending_active_turn = None;
 
     thread.summary.status = match &workspace {
@@ -676,7 +675,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       });
     }
 
-    active_turn_id = pending_active_turn.as_ref().map(|turn| turn.id.clone());
+    let active_turn_id = pending_active_turn.as_ref().map(|turn| turn.id.clone());
     if active_turn_id.is_some() {
       thread.summary.status = "Streaming assistant response".to_string();
     } else if !thread.summary.status.contains("approval") {

@@ -41,6 +41,7 @@ fn turn_start_result_round_trips_timeline_items() {
       },
     ],
     pending_approvals: vec![],
+    active_turn_id: Some("thread-1-turn-1".to_string()),
   };
 
   let encoded = serde_json::to_string(&result).expect("serialize turn result");
@@ -72,6 +73,7 @@ fn thread_read_result_contains_items() {
       title: "Write README.md".to_string(),
       relative_path: "README.md".to_string(),
     }],
+    active_turn_id: None,
   };
 
   let value = serde_json::to_value(result).expect("serialize thread read result");
