@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is currently in the foundation phase for `Cavell`.
+This repository has completed the Milestone 1 local agent baseline for `Pith`.
 
 ## Project Rules
 
@@ -24,18 +24,18 @@ Rust:
 
 Swift:
 
-- `cd apps/cavell-macos`
+- `cd apps/pith-macos`
 - `swift build`
 
-## Milestone 0 Intent
+## Milestone 1 Baseline
 
-The current repository target is a stable foundation:
+The current repository target is a stable local agent loop:
 
-- monorepo structure
-- macOS app shell
-- Rust runtime process
-- stdio protocol boundary
-- thread and turn scaffolding
-- baseline persistence
+- native macOS shell with sidebar, timeline, composer, and inspector
+- Rust runtime process over `stdio`
+- thread, turn, streaming, and cancellation flow
+- filesystem, shell, diff, and approval-gated write tools
+- SQLite-backed persistence and built-in memory
+- local model health inspection and pack metadata bootstrap
 
-Later milestones can expand execution, tools, approvals, and plugin behavior on top of this base.
+Later milestones can expand plugin management, desktop polish, and multi-agent behavior on top of this baseline.

@@ -1,5 +1,5 @@
 included:
-  - apps/cavell-macos/Sources
+  - apps/pith-macos/Sources
 
 disabled_rules:
   - todo

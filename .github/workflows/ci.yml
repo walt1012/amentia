@@ -31,6 +31,9 @@ jobs:
       - name: Cargo test
         run: cargo test --workspace
 
+      - name: Validate model pack manifest
+        run: python3 scripts/validate_model_pack.py
+
       - name: Runtime smoke test
         run: python3 scripts/runtime_smoke_test.py
 
@@ -44,5 +47,5 @@ jobs:
         run: swift --version
 
       - name: Build macOS app package
-        working-directory: apps/cavell-macos
+        working-directory: apps/pith-macos
         run: swift build

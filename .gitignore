@@ -12,10 +12,15 @@ xcuserdata/
 
 *.log
 
-.cavell/
+.pith/
 .tmp-runtime-state/
 
-models/
+models/**/*.gguf
+models/**/*.bin
+models/**/*.safetensors
+model-packs/**/*.gguf
+model-packs/**/*.bin
+model-packs/**/*.safetensors
 artifacts/
 logs/
 traces/

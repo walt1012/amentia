@@ -1,6 +1,6 @@
-# Cavell
+# Pith
 
-`Cavell` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
+`Pith` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
 
 The product goal is to combine:
 
@@ -8,7 +8,7 @@ The product goal is to combine:
 - a local model runtime
 - structured task execution
 - explicit approvals and diffs
-- a plugin-first architecture
+- a plugin-capable architecture with built-in memory
 
 The repository is intentionally English-only.
 
@@ -17,15 +17,15 @@ The repository is intentionally English-only.
 ```text
 /
 |-- apps/
-|   `-- cavell-macos/
+|   `-- pith-macos/
 |-- crates/
-|   |-- cavell-core/
-|   |-- cavell-model-runtime/
-|   |-- cavell-plugin-host/
-|   |-- cavell-protocol/
-|   |-- cavell-runtime-bin/
-|   |-- cavell-storage/
-|   `-- cavell-tools/
+|   |-- pith-core/
+|   |-- pith-model-runtime/
+|   |-- pith-plugin-host/
+|   |-- pith-protocol/
+|   |-- pith-runtime-bin/
+|   |-- pith-storage/
+|   `-- pith-tools/
 |-- plugins/
 |   `-- official/
 |-- docs/
@@ -36,17 +36,33 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestone 0 is in progress.
+Milestone 1 is complete on the active development branch.
 
-Implemented foundation:
+Delivered in Milestone 1:
 
 - monorepo scaffolding
-- Rust workspace skeleton
-- runtime protocol types
-- local runtime binary scaffold
-- macOS app source layout
-- official `mem` plugin scaffold
-- CI skeleton
+- Rust workspace skeleton and local runtime binary
+- runtime protocol types and `stdio` JSON-RPC bridge
+- macOS app shell with thread, timeline, and inspector views
+- workspace-aware read, search, shell, diff preview, and approval-gated write tools
+- SQLite-backed persistence for workspace, threads, approvals, and memory notes
+- built-in memory retrieval, user workspace notes, and thread summary notes
+- local model health inspection and local pack metadata bootstrap for the `LFM2.5-350M` runtime path
+- CI checks
+
+Milestone 1 exit criteria now covered:
+
+- open a workspace
+- create or resume a thread
+- send a request through the local runtime
+- approve file writes or shell commands
+- inspect diff output
+- receive a file change end to end
+
+Model packaging note:
+
+- the repository tracks model pack manifests and small metadata
+- the actual `LFM2.5-350M.gguf` weight file should live in a local data directory or release bundle, not git history
 
 ## Planned Runtime Shape
 
