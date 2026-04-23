@@ -28,7 +28,8 @@ final class AppViewModel: ObservableObject {
         id: UUID(),
         kind: .assistantMessage,
         title: "Next Step",
-        body: "The first local agent loop uses workspace-aware read, search, and approval-gated write tools.",
+        body:
+          "The first local agent loop uses workspace-aware read, search, shell, and approval-gated write tools.",
         attributes: [:]
       ),
     ]
@@ -308,7 +309,7 @@ final class AppViewModel: ObservableObject {
       return "Open a workspace to start local agent work"
     }
 
-    return "Ask Cavell to inspect, search, or write files in the current workspace"
+    return "Ask Cavell to inspect files, search content, run shell commands, or write files"
   }
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {

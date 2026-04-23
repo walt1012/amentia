@@ -180,6 +180,34 @@ def main() -> int:
     assert approval["result"]["items"][0]["kind"] == "approvalResolved"
     assert approval["result"]["items"][1]["title"] == "write_file"
     assert (workspace_dir / "docs" / "output.txt").read_text(encoding="utf-8") == "Created from approval flow"
+
+    shell_turn = send_request(
+      process,
+      {
+        "id": 11,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": "Run shell: ls",
+        },
+      },
+    )
+    assert shell_turn["result"]["items"][2]["kind"] == "approvalRequested"
+    shell_approval_id = shell_turn["result"]["pendingApprovals"][0]["id"]
+
+    shell_approval = send_request(
+      process,
+      {
+        "id": 12,
+        "method": "approval/respond",
+        "params": {
+          "approvalId": shell_approval_id,
+          "decision": "approved",
+        },
+      },
+    )
+    assert shell_approval["result"]["items"][1]["title"] == "run_shell"
+    assert "notes.txt" in shell_approval["result"]["items"][2]["content"]
     return 0
   finally:
     process.terminate()

@@ -154,7 +154,7 @@ struct ContentView: View {
       GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
-          Text("Read, search, and approval-gated write tools")
+          Text("Read, search, shell, and approval-gated write tools")
           Text("Tool and approval timeline cards")
           Text("Workspace-aware prompt loop")
         }
@@ -163,7 +163,7 @@ struct ContentView: View {
       }
 
       GroupBox("Next Integration") {
-        Text("Add streaming events, approval cards, writable tools, and model-backed planning.")
+        Text("Add streaming events, diff review, SQLite persistence, and model-backed planning.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }

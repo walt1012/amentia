@@ -12,7 +12,8 @@ use cavell_protocol::{
 };
 use cavell_storage::{FileThreadStore, StoredThreadRecord};
 use cavell_tools::{
-  list_directory, read_file, search_files, write_file, DirectoryEntry, ReadFileResult, SearchMatch,
+  list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry,
+  ReadFileResult, SearchMatch, ShellCommandResult,
 };
 
 #[derive(Debug, Clone)]
@@ -29,7 +30,8 @@ struct PendingApproval {
   action: String,
   title: String,
   relative_path: String,
-  content: String,
+  content: Option<String>,
+  command: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -363,7 +365,8 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         action: "write_file".to_string(),
         title: format!("Write {}", write_intent.relative_path),
         relative_path: write_intent.relative_path.clone(),
-        content: write_intent.content.clone(),
+        content: Some(write_intent.content.clone()),
+        command: None,
       };
       context
         .pending_approvals
@@ -398,6 +401,52 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           "Cavell prepared a write for {} and is waiting for your approval.",
           write_intent.relative_path
         ),
+        attributes: None,
+      });
+    } else if let Some(shell_command) = infer_shell_command(&message) {
+      let approval_id = format!("approval-{}", context.next_approval_number);
+      context.next_approval_number += 1;
+
+      let approval = PendingApproval {
+        id: approval_id.clone(),
+        thread_id: thread_id.clone(),
+        action: "run_shell".to_string(),
+        title: "Run Shell Command".to_string(),
+        relative_path: ".".to_string(),
+        content: None,
+        command: Some(shell_command.clone()),
+      };
+      context
+        .pending_approvals
+        .insert(approval_id.clone(), approval.clone());
+
+      items.push(TimelineItem {
+        kind: "plan".to_string(),
+        title: "Plan".to_string(),
+        content: format!(
+          "Request approval before running a shell command in {}.",
+          workspace.display_name
+        ),
+        attributes: None,
+      });
+      items.push(TimelineItem {
+        kind: "approvalRequested".to_string(),
+        title: "Approval Requested".to_string(),
+        content: format!(
+          "Cavell wants to run this shell command in {}:\n{}",
+          workspace.display_name, shell_command
+        ),
+        attributes: Some(HashMap::from([
+          ("approvalId".to_string(), approval.id.clone()),
+          ("action".to_string(), approval.action.clone()),
+          ("command".to_string(), shell_command),
+        ])),
+      });
+      items.push(TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: "Cavell is waiting for your approval before running the shell command."
+          .to_string(),
         attributes: None,
       });
     } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
@@ -667,46 +716,82 @@ fn handle_approval_respond(
         ("decision".to_string(), "approved".to_string()),
       ])),
     });
-    items.push(TimelineItem {
-      kind: "toolStart".to_string(),
-      title: "write_file".to_string(),
-      content: approval.relative_path.clone(),
-      attributes: None,
-    });
+    if approval.action == "write_file" {
+      let content = approval.content.clone().unwrap_or_default();
+      items.push(TimelineItem {
+        kind: "toolStart".to_string(),
+        title: "write_file".to_string(),
+        content: approval.relative_path.clone(),
+        attributes: None,
+      });
 
-    match write_file(
-      Path::new(&workspace.root_path),
-      &approval.relative_path,
-      &approval.content,
-    ) {
-      Ok(relative_path) => {
-        items.push(TimelineItem {
-          kind: "toolResult".to_string(),
-          title: "write_file result".to_string(),
-          content: format!(
-            "Wrote {} bytes to {}.",
-            approval.content.len(),
-            relative_path
-          ),
-          attributes: None,
-        });
-        items.push(TimelineItem {
-          kind: "assistantMessage".to_string(),
-          title: "Assistant".to_string(),
-          content: format!(
-            "Cavell wrote {} in {} after your approval.",
-            relative_path, workspace.display_name
-          ),
-          attributes: None,
-        });
+      match write_file(
+        Path::new(&workspace.root_path),
+        &approval.relative_path,
+        &content,
+      ) {
+        Ok(relative_path) => {
+          items.push(TimelineItem {
+            kind: "toolResult".to_string(),
+            title: "write_file result".to_string(),
+            content: format!(
+              "Wrote {} bytes to {}.",
+              content.len(),
+              relative_path
+            ),
+            attributes: None,
+          });
+          items.push(TimelineItem {
+            kind: "assistantMessage".to_string(),
+            title: "Assistant".to_string(),
+            content: format!(
+              "Cavell wrote {} in {} after your approval.",
+              relative_path, workspace.display_name
+            ),
+            attributes: None,
+          });
+        }
+        Err(error) => {
+          items.push(TimelineItem {
+            kind: "warning".to_string(),
+            title: "write_file failed".to_string(),
+            content: error.to_string(),
+            attributes: None,
+          });
+        }
       }
-      Err(error) => {
-        items.push(TimelineItem {
-          kind: "warning".to_string(),
-          title: "write_file failed".to_string(),
-          content: error.to_string(),
-          attributes: None,
-        });
+    } else if approval.action == "run_shell" {
+      let command = approval.command.clone().unwrap_or_default();
+      items.push(TimelineItem {
+        kind: "toolStart".to_string(),
+        title: "run_shell".to_string(),
+        content: command.clone(),
+        attributes: None,
+      });
+
+      match run_shell(Path::new(&workspace.root_path), &command, 4096) {
+        Ok(result) => {
+          items.push(TimelineItem {
+            kind: "toolResult".to_string(),
+            title: "run_shell result".to_string(),
+            content: format_shell_result(&result),
+            attributes: None,
+          });
+          items.push(TimelineItem {
+            kind: "assistantMessage".to_string(),
+            title: "Assistant".to_string(),
+            content: summarize_shell_result(&workspace.display_name, &result),
+            attributes: None,
+          });
+        }
+        Err(error) => {
+          items.push(TimelineItem {
+            kind: "warning".to_string(),
+            title: "run_shell failed".to_string(),
+            content: error.to_string(),
+            attributes: None,
+          });
+        }
       }
     }
   } else {
@@ -798,6 +883,22 @@ fn infer_write_intent(message: &str) -> Option<WriteIntent> {
         relative_path,
         content,
       });
+    }
+  }
+
+  None
+}
+
+fn infer_shell_command(message: &str) -> Option<String> {
+  let trimmed = message.trim();
+  let lowercased_message = trimmed.to_lowercase();
+
+  for prefix in ["run shell:", "shell:", "run command:"] {
+    if lowercased_message.starts_with(prefix) {
+      let command = trimmed[prefix.len()..].trim();
+      if !command.is_empty() {
+        return Some(command.to_string());
+      }
     }
   }
 
@@ -946,6 +1047,43 @@ fn summarize_search_result(
     query,
     preview
   )
+}
+
+fn format_shell_result(result: &ShellCommandResult) -> String {
+  let stdout = if result.stdout.trim().is_empty() {
+    "[no stdout]".to_string()
+  } else {
+    result.stdout.clone()
+  };
+  let stderr = if result.stderr.trim().is_empty() {
+    "[no stderr]".to_string()
+  } else {
+    result.stderr.clone()
+  };
+  let truncation_note = if result.was_truncated {
+    "\n\n[output truncated]"
+  } else {
+    ""
+  };
+
+  format!(
+    "Command: {}\nExit Code: {}\n\nstdout:\n{}\n\nstderr:\n{}{}",
+    result.command, result.exit_code, stdout, stderr, truncation_note
+  )
+}
+
+fn summarize_shell_result(workspace_name: &str, result: &ShellCommandResult) -> String {
+  if result.exit_code == 0 {
+    format!(
+      "Cavell ran `{}` in {} and it finished successfully.",
+      result.command, workspace_name
+    )
+  } else {
+    format!(
+      "Cavell ran `{}` in {} and it exited with code {}.",
+      result.command, workspace_name, result.exit_code
+    )
+  }
 }
 
 fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<ApprovalRequest> {
@@ -1330,5 +1468,69 @@ mod tests {
     assert_eq!(items[0]["kind"], "approvalResolved");
     assert_eq!(items[1]["title"], "write_file");
     assert_eq!(written_content, "Approval protected content");
+  }
+
+  #[test]
+  fn approval_respond_runs_shell_after_approval() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("approval-shell");
+    fs::write(workspace.join("marker.txt"), "shell target\n").expect("write shell marker");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Shell Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Run shell: ls"
+        })),
+      ),
+    );
+
+    assert!(turn_response.error.is_none());
+    let turn_result = turn_response.result.expect("turn result");
+    let approval_id = turn_result["pendingApprovals"][0]["id"]
+      .as_str()
+      .expect("approval id")
+      .to_string();
+
+    let approval_response = handle_request(
+      &mut context,
+      request(
+        methods::APPROVAL_RESPOND,
+        Some(json!({
+          "approvalId": approval_id,
+          "decision": "approved"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(approval_response.error.is_none());
+    let approval_result = approval_response.result.expect("approval result");
+    let items = approval_result["items"].as_array().expect("approval items");
+
+    assert_eq!(items[1]["title"], "run_shell");
+    assert!(items[2]["content"].as_str().unwrap().contains("marker.txt"));
   }
 }

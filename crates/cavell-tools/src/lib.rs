@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -33,6 +34,15 @@ pub struct SearchMatch {
   pub relative_path: String,
   pub line_number: usize,
   pub line: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellCommandResult {
+  pub command: String,
+  pub exit_code: i32,
+  pub stdout: String,
+  pub stderr: String,
+  pub was_truncated: bool,
 }
 
 pub fn list_directory(
@@ -149,6 +159,36 @@ pub fn search_files(
   )?;
 
   Ok(results)
+}
+
+pub fn run_shell(
+  workspace_root: &Path,
+  command: &str,
+  max_output_bytes: usize,
+) -> Result<ShellCommandResult> {
+  let workspace_root = canonical_workspace_root(workspace_root)?;
+  let trimmed_command = command.trim();
+  if trimmed_command.is_empty() {
+    bail!("shell command must not be empty");
+  }
+
+  let output = build_shell_command(trimmed_command)
+    .current_dir(&workspace_root)
+    .output()
+    .with_context(|| format!("failed to run shell command in {}", workspace_root.display()))?;
+
+  let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+  let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+  let combined_len = stdout.len() + stderr.len();
+  let was_truncated = combined_len > max_output_bytes * 2;
+
+  Ok(ShellCommandResult {
+    command: trimmed_command.to_string(),
+    exit_code: output.status.code().unwrap_or(-1),
+    stdout: truncate_output(&stdout, max_output_bytes),
+    stderr: truncate_output(&stderr, max_output_bytes),
+    was_truncated,
+  })
 }
 
 fn visit_directory(
@@ -292,4 +332,31 @@ fn sanitize_relative_path(relative_path: &str) -> Result<String> {
   }
 
   Ok(sanitized.to_string_lossy().replace('\\', "/"))
+}
+
+#[cfg(target_family = "windows")]
+fn build_shell_command(command: &str) -> Command {
+  let mut process = Command::new("powershell");
+  process.args(["-NoProfile", "-Command", command]);
+  process
+}
+
+#[cfg(not(target_family = "windows"))]
+fn build_shell_command(command: &str) -> Command {
+  let mut process = Command::new("sh");
+  process.args(["-lc", command]);
+  process
+}
+
+fn truncate_output(output: &str, max_output_bytes: usize) -> String {
+  let mut collected = String::new();
+
+  for character in output.chars() {
+    if collected.len() + character.len_utf8() > max_output_bytes {
+      break;
+    }
+    collected.push(character);
+  }
+
+  collected
 }
