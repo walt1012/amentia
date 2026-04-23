@@ -938,7 +938,10 @@ mod tests {
   fn bootstrap_pack_metadata_copies_manifest_and_readme_into_data_dir() {
     let temp_root = unique_temp_directory("model-bootstrap");
     let source_root = temp_root.join("source");
-    let source_pack_root = source_root.join("models").join("builtin").join("lfm2.5-350m");
+    let source_pack_root = source_root
+      .join("models")
+      .join("builtin")
+      .join("lfm2.5-350m");
     fs::create_dir_all(&source_pack_root).expect("source pack root");
     fs::write(
       source_pack_root.join("model-pack.json"),
