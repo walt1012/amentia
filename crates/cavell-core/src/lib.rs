@@ -2964,7 +2964,7 @@ mod tests {
       .expect("follow-up items")
       .clone();
 
-    assert_eq!(items[1]["attributes"]["memoryNoteCount"], "2");
+    assert_eq!(items[1]["attributes"]["memoryNoteCount"], "3");
     assert!(items[1]["attributes"]["memoryNoteTitles"]
       .as_str()
       .unwrap()
@@ -2973,5 +2973,6 @@ mod tests {
       .as_str()
       .unwrap()
       .contains("Wrote docs/output.txt"));
+    assert_eq!(items[4]["attributes"]["memoryNoteCount"], "3");
   }
 }
