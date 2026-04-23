@@ -61,12 +61,15 @@ impl FileThreadStore {
   pub fn save_threads(&self, threads: &[StoredThreadRecord]) -> Result<()> {
     if let Some(parent) = self.path.parent() {
       fs::create_dir_all(parent).with_context(|| {
-        format!("failed to create runtime state directory {}", parent.display())
+        format!(
+          "failed to create runtime state directory {}",
+          parent.display()
+        )
       })?;
     }
 
-    let content = serde_json::to_string_pretty(threads)
-      .context("failed to serialize runtime thread state")?;
+    let content =
+      serde_json::to_string_pretty(threads).context("failed to serialize runtime thread state")?;
     fs::write(&self.path, content)
       .with_context(|| format!("failed to write runtime state to {}", self.path.display()))?;
 
@@ -87,8 +90,10 @@ fn default_runtime_state_path() -> Result<PathBuf> {
     return Ok(PathBuf::from(home_dir).join(".cavell").join("threads.json"));
   }
 
-  Ok(env::current_dir()
-    .context("failed to read current directory for runtime state")?
-    .join(".cavell")
-    .join("threads.json"))
+  Ok(
+    env::current_dir()
+      .context("failed to read current directory for runtime state")?
+      .join(".cavell")
+      .join("threads.json"),
+  )
 }
