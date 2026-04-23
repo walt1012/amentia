@@ -2037,12 +2037,14 @@ mod tests {
       .rev()
       .find(|item| item["kind"] == "assistantMessage")
       .expect("assistant message");
-    assert!(assistant_item["attributes"]["streamedCharacters"]
-      .as_str()
-      .expect("streamed chars")
-      .parse::<usize>()
-      .expect("streamed chars usize")
-      > 0);
+    assert!(
+      assistant_item["attributes"]["streamedCharacters"]
+        .as_str()
+        .expect("streamed chars")
+        .parse::<usize>()
+        .expect("streamed chars usize")
+        > 0
+    );
   }
 
   #[test]
