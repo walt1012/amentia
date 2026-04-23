@@ -47,6 +47,20 @@ struct ThreadListResult: Codable {
   let threads: [RuntimeThreadPayload]
 }
 
+struct RuntimeWorkspacePayload: Codable {
+  let rootPath: String
+  let displayName: String
+}
+
+struct WorkspaceOpenParams: Codable {
+  let path: String
+}
+
+struct WorkspaceOpenResult: Codable {
+  let workspace: RuntimeWorkspacePayload
+  let threadCount: Int
+}
+
 struct RuntimeThreadPayload: Codable {
   let id: String
   let title: String

@@ -6,12 +6,19 @@ struct ThreadSummary: Identifiable, Hashable {
   var preview: String
 }
 
+struct WorkspaceSummary: Hashable {
+  let rootPath: String
+  let displayName: String
+}
+
 struct TimelineEntry: Identifiable, Hashable {
   enum Kind: String {
     case userMessage
     case assistantMessage
     case system
     case plan
+    case tool
+    case warning
   }
 
   let id: UUID

@@ -27,8 +27,14 @@ def send_request(process: subprocess.Popen[str], payload: dict) -> dict:
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
   state_dir = repo_root / ".tmp-runtime-state"
+  workspace_dir = repo_root / ".tmp-runtime-workspace"
   if state_dir.exists():
     shutil.rmtree(state_dir)
+  if workspace_dir.exists():
+    shutil.rmtree(workspace_dir)
+  workspace_dir.mkdir(parents=True, exist_ok=True)
+  (workspace_dir / "README.md").write_text("# Cavell\nMilestone 1 smoke test\n", encoding="utf-8")
+  (workspace_dir / "apps").mkdir()
   command = ["cargo", "run", "-p", "cavell-runtime-bin"]
   env = os.environ.copy()
   env["CAVELL_DATA_DIR"] = str(state_dir)
@@ -68,10 +74,22 @@ def main() -> int:
     )
     assert health["result"]["status"] == "ok"
 
-    started = send_request(
+    workspace = send_request(
       process,
       {
         "id": 3,
+        "method": "workspace/open",
+        "params": {
+          "path": str(workspace_dir),
+        },
+      },
+    )
+    assert workspace["result"]["workspace"]["displayName"] == workspace_dir.name
+
+    started = send_request(
+      process,
+      {
+        "id": 4,
         "method": "thread/start",
         "params": {
           "title": "Smoke Test Thread",
@@ -83,7 +101,7 @@ def main() -> int:
     thread_list = send_request(
       process,
       {
-        "id": 4,
+        "id": 5,
         "method": "thread/list",
       },
     )
@@ -92,7 +110,7 @@ def main() -> int:
     thread_read = send_request(
       process,
       {
-        "id": 5,
+        "id": 6,
         "method": "thread/read",
         "params": {
           "threadId": "thread-1",
@@ -105,21 +123,25 @@ def main() -> int:
     turn = send_request(
       process,
       {
-        "id": 6,
+        "id": 7,
         "method": "turn/start",
         "params": {
           "threadId": "thread-1",
-          "message": "Hello from CI",
+          "message": "Read README.md",
         },
       },
     )
     assert turn["result"]["items"][0]["kind"] == "userMessage"
     assert turn["result"]["items"][1]["kind"] == "plan"
-    assert turn["result"]["items"][2]["kind"] == "assistantMessage"
+    assert turn["result"]["items"][2]["kind"] == "toolStart"
+    assert turn["result"]["items"][3]["kind"] == "toolResult"
+    assert "Milestone 1 smoke test" in turn["result"]["items"][3]["content"]
     return 0
   finally:
     process.terminate()
     process.wait(timeout=5)
+    if workspace_dir.exists():
+      shutil.rmtree(workspace_dir)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,12 @@ final class RuntimeBridge {
     let status: String
   }
 
+  struct RuntimeWorkspace {
+    let rootPath: String
+    let displayName: String
+    let threadCount: Int
+  }
+
   struct RuntimeTurnResult {
     let turnID: String
     let threadID: String
@@ -117,6 +123,27 @@ final class RuntimeBridge {
     return result.threads.map {
       RuntimeThreadSummary(id: $0.id, title: $0.title, status: $0.status)
     }
+  }
+
+  func openWorkspace(path: String) async throws -> RuntimeWorkspace {
+    let response: JSONRPCResponse<WorkspaceOpenResult> = try await sendRequest(
+      method: "workspace/open",
+      params: WorkspaceOpenParams(path: path)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeWorkspace(
+      rootPath: result.workspace.rootPath,
+      displayName: result.workspace.displayName,
+      threadCount: result.threadCount
+    )
   }
 
   func startThread(title: String) async throws -> ThreadSummary {

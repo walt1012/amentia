@@ -1,5 +1,6 @@
 use cavell_protocol::{
   InitializeParams, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 
 #[test]
@@ -61,4 +62,26 @@ fn thread_read_result_contains_items() {
   let value = serde_json::to_value(result).expect("serialize thread read result");
   assert!(value.get("thread").is_some());
   assert!(value.get("items").is_some());
+}
+
+#[test]
+fn workspace_payloads_use_camel_case_fields() {
+  let params = WorkspaceOpenParams {
+    path: "/tmp/cavell".to_string(),
+  };
+  let result = WorkspaceOpenResult {
+    workspace: WorkspaceSummary {
+      root_path: "/tmp/cavell".to_string(),
+      display_name: "cavell".to_string(),
+    },
+    thread_count: 2,
+  };
+
+  let params_value = serde_json::to_value(params).expect("serialize workspace params");
+  let result_value = serde_json::to_value(result).expect("serialize workspace result");
+
+  assert!(params_value.get("path").is_some());
+  assert!(result_value.get("threadCount").is_some());
+  assert!(result_value["workspace"].get("rootPath").is_some());
+  assert!(result_value["workspace"].get("displayName").is_some());
 }

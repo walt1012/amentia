@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor
@@ -8,6 +9,7 @@ final class AppViewModel: ObservableObject {
   @Published var runtimeState: RuntimeBridge.ConnectionState
   @Published var runtimeDetail: String
   @Published var draftMessage: String
+  @Published var workspace: WorkspaceSummary?
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -17,14 +19,14 @@ final class AppViewModel: ObservableObject {
       TimelineEntry(
         id: UUID(),
         kind: .system,
-        title: "Runtime Boundary",
-        body: "The macOS shell is prepared to talk to a local Rust runtime over stdio."
+        title: "Milestone 1 Start",
+        body: "Launch the runtime, open a workspace, and ask Cavell to inspect local files."
       ),
       TimelineEntry(
         id: UUID(),
         kind: .assistantMessage,
         title: "Next Step",
-        body: "Connect the real runtime handshake and replace mock state with live protocol events."
+        body: "The first local agent loop will use workspace-aware read-only tools before approvals and writes land."
       ),
     ]
 
@@ -32,7 +34,7 @@ final class AppViewModel: ObservableObject {
       ThreadSummary(
         id: "local-welcome",
         title: "Welcome to Cavell",
-        preview: "Milestone 0 shell ready for runtime integration."
+        preview: "Open a workspace to begin the local agent loop."
       ),
     ]
 
@@ -40,6 +42,7 @@ final class AppViewModel: ObservableObject {
     self.runtimeState = runtimeBridge.connectionState
     self.runtimeDetail = "Runtime not launched"
     self.draftMessage = ""
+    self.workspace = nil
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.threadTimelines = ["local-welcome": initialTimeline]
@@ -59,7 +62,7 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = "\(session.serverName) \(session.serverVersion)"
 
         if threadList.isEmpty {
-          let firstThread = try await runtimeBridge.startThread(title: "First Thread")
+          let firstThread = try await runtimeBridge.startThread(title: "Workspace Thread")
           threads = [firstThread]
           threadTimelines = [firstThread.id: defaultTimeline(for: firstThread.title)]
         } else {
@@ -83,7 +86,7 @@ final class AppViewModel: ObservableObject {
             kind: .system,
             title: "Runtime Connected",
             body: "Connected to \(session.serverName) \(session.serverVersion) over stdio."
-          ),
+          )
         )
       } catch {
         runtimeState = .failed
@@ -92,10 +95,56 @@ final class AppViewModel: ObservableObject {
           to: selectedThreadID,
           TimelineEntry(
             id: UUID(),
-            kind: .system,
+            kind: .warning,
             title: "Runtime Launch Failed",
             body: error.localizedDescription
-          ),
+          )
+        )
+      }
+    }
+  }
+
+  func openWorkspace() {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    let panel = NSOpenPanel()
+    panel.canChooseDirectories = true
+    panel.canChooseFiles = false
+    panel.allowsMultipleSelection = false
+    panel.prompt = "Open Workspace"
+    panel.message = "Choose a local workspace for Cavell to inspect."
+
+    guard panel.runModal() == .OK, let url = panel.url else {
+      return
+    }
+
+    Task {
+      do {
+        let openedWorkspace = try await runtimeBridge.openWorkspace(path: url.path)
+        workspace = WorkspaceSummary(
+          rootPath: openedWorkspace.rootPath,
+          displayName: openedWorkspace.displayName
+        )
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID(),
+            kind: .system,
+            title: "Workspace Opened",
+            body: "Opened \(openedWorkspace.displayName) at \(openedWorkspace.rootPath)."
+          )
+        )
+      } catch {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID(),
+            kind: .warning,
+            title: "Workspace Open Failed",
+            body: error.localizedDescription
+          )
         )
       }
     }
@@ -120,17 +169,17 @@ final class AppViewModel: ObservableObject {
             kind: .system,
             title: "Thread Created",
             body: "Created \(thread.title) in the local runtime."
-          ),
+          )
         )
       } catch {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
             id: UUID(),
-            kind: .system,
+            kind: .warning,
             title: "Thread Creation Failed",
             body: error.localizedDescription
-          ),
+          )
         )
       }
     }
@@ -139,7 +188,11 @@ final class AppViewModel: ObservableObject {
   func sendDraftMessage() {
     let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
 
-    guard runtimeState == .ready, !message.isEmpty, let threadID = selectedThreadID else {
+    guard runtimeState == .ready,
+          !message.isEmpty,
+          let threadID = selectedThreadID,
+          workspace != nil
+    else {
       return
     }
 
@@ -155,10 +208,10 @@ final class AppViewModel: ObservableObject {
           to: threadID,
           TimelineEntry(
             id: UUID(),
-            kind: .system,
+            kind: .warning,
             title: "Turn Failed",
             body: error.localizedDescription
-          ),
+          )
         )
       }
     }
@@ -198,6 +251,22 @@ final class AppViewModel: ObservableObject {
     }
 
     return thread.preview
+  }
+
+  func workspaceDisplayName() -> String {
+    workspace?.displayName ?? "No Workspace"
+  }
+
+  func workspacePath() -> String {
+    workspace?.rootPath ?? "Open a local workspace to enable Milestone 1 tools."
+  }
+
+  func composerPlaceholder() -> String {
+    if workspace == nil {
+      return "Open a workspace to start local agent work"
+    }
+
+    return "Ask Cavell to inspect files in the current workspace"
   }
 
   private func appendItemsToTimeline(
@@ -288,7 +357,7 @@ final class AppViewModel: ObservableObject {
         to: threadID,
         TimelineEntry(
           id: UUID(),
-          kind: .system,
+          kind: .warning,
           title: "Thread Load Failed",
           body: error.localizedDescription
         )
@@ -304,6 +373,10 @@ final class AppViewModel: ObservableObject {
       return .assistantMessage
     case "plan":
       return .plan
+    case "toolStart", "toolResult":
+      return .tool
+    case "warning":
+      return .warning
     default:
       return .system
     }
