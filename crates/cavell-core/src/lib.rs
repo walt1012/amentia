@@ -1159,10 +1159,7 @@ fn maybe_start_streaming_assistant_turn(
     "in_progress"
   };
   attributes.insert("turnId".to_string(), turn_id.to_string());
-  attributes.insert(
-    "streamingStatus".to_string(),
-    streaming_status.to_string(),
-  );
+  attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
 
   items.push(TimelineItem {
     kind: "assistantMessage".to_string(),

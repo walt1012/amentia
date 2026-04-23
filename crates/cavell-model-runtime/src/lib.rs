@@ -75,9 +75,7 @@ impl LocalModelRuntime {
     let pack = built_in_model_pack();
 
     match (binary_path, model_path) {
-      (Some(binary_path), Some(model_path))
-        if binary_path.is_file() && model_path.is_file() =>
-      {
+      (Some(binary_path), Some(model_path)) if binary_path.is_file() && model_path.is_file() => {
         Self {
           pack,
           backend: ModelBackend::LlamaCppCli {
@@ -205,13 +203,25 @@ fn default_binary_candidates() -> Vec<PathBuf> {
 
   if let Ok(home_dir) = env::var("HOME") {
     for name in &binary_names {
-      candidates.push(PathBuf::from(&home_dir).join(".local").join("bin").join(name));
+      candidates.push(
+        PathBuf::from(&home_dir)
+          .join(".local")
+          .join("bin")
+          .join(name),
+      );
     }
   }
 
   if let Ok(user_profile) = env::var("USERPROFILE") {
     for name in &binary_names {
-      candidates.push(PathBuf::from(&user_profile).join("AppData").join("Local").join("Cavell").join("bin").join(name));
+      candidates.push(
+        PathBuf::from(&user_profile)
+          .join("AppData")
+          .join("Local")
+          .join("Cavell")
+          .join("bin")
+          .join(name),
+      );
     }
   }
 
@@ -231,13 +241,23 @@ fn default_model_candidates() -> Vec<PathBuf> {
 
   if let Ok(home_dir) = env::var("HOME") {
     for name in &file_names {
-      candidates.push(PathBuf::from(&home_dir).join(".cavell").join("models").join(name));
+      candidates.push(
+        PathBuf::from(&home_dir)
+          .join(".cavell")
+          .join("models")
+          .join(name),
+      );
     }
   }
 
   if let Ok(user_profile) = env::var("USERPROFILE") {
     for name in &file_names {
-      candidates.push(PathBuf::from(&user_profile).join(".cavell").join("models").join(name));
+      candidates.push(
+        PathBuf::from(&user_profile)
+          .join(".cavell")
+          .join("models")
+          .join(name),
+      );
     }
   }
 
