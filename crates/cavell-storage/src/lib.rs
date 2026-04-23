@@ -168,12 +168,8 @@ impl FileThreadStore {
 
   fn open_connection(&self) -> Result<Connection> {
     if let Some(parent) = self.database_path.parent() {
-      fs::create_dir_all(parent).with_context(|| {
-        format!(
-          "failed to create storage directory {}",
-          parent.display()
-        )
-      })?;
+      fs::create_dir_all(parent)
+        .with_context(|| format!("failed to create storage directory {}", parent.display()))?;
     }
 
     let connection = Connection::open(&self.database_path)
@@ -221,12 +217,13 @@ impl FileThreadStore {
       return Ok(());
     }
 
-    let legacy_content = fs::read_to_string(&self.legacy_runtime_state_path).with_context(|| {
-      format!(
-        "failed to read legacy runtime state from {}",
-        self.legacy_runtime_state_path.display()
-      )
-    })?;
+    let legacy_content =
+      fs::read_to_string(&self.legacy_runtime_state_path).with_context(|| {
+        format!(
+          "failed to read legacy runtime state from {}",
+          self.legacy_runtime_state_path.display()
+        )
+      })?;
     let legacy_threads = serde_json::from_str::<Vec<StoredThreadRecord>>(&legacy_content)
       .with_context(|| {
         format!(
