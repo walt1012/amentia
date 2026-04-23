@@ -242,12 +242,22 @@ struct ContentView: View {
         }
       }
 
+      if let memorySummary = viewModel.selectedEntryMemorySummary() {
+        GroupBox("Selected Memory Context") {
+          Text(memorySummary)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
+
       GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
           Text("Read, search, shell, diff preview, and approval-gated write tools")
           Text("SQLite-backed thread persistence and workspace restoration")
-          Text("Built-in workspace memory with local note persistence")
+          Text("Built-in workspace memory with local note persistence and retrieval")
           Text("Workspace-aware prompt loop with cancel control")
           Text("Local model health and summarizer runtime wiring")
           Text("Optional plugin discovery kept separate from core memory")

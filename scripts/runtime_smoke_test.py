@@ -193,10 +193,13 @@ def main() -> int:
     assert turn["result"]["items"][0]["kind"] == "userMessage"
     assert turn["result"]["items"][1]["kind"] == "plan"
     assert turn["result"]["items"][1]["attributes"]["responseRole"] == "planner"
+    assert int(turn["result"]["items"][1]["attributes"]["memoryNoteCount"]) >= 1
+    assert "Opened workspace" in turn["result"]["items"][1]["attributes"]["memoryNoteTitles"]
     assert turn["result"]["items"][2]["kind"] == "toolStart"
     assert turn["result"]["items"][3]["kind"] == "toolResult"
     assert turn["result"]["items"][4]["kind"] == "assistantMessage"
     assert turn["result"]["items"][4]["attributes"]["responseRole"] == "summarizer"
+    assert int(turn["result"]["items"][4]["attributes"]["memoryNoteCount"]) >= 1
     assert turn["result"]["items"][4]["attributes"]["streamingStatus"] in {"in_progress", "completed"}
     assert "Milestone 1 smoke test" in turn["result"]["items"][3]["content"]
     assert turn["result"]["activeTurnId"] == "thread-1-turn-1"
@@ -264,6 +267,7 @@ def main() -> int:
     )
     assert search_turn["result"]["items"][2]["title"] == "search_files"
     assert "notes.txt:1" in search_turn["result"]["items"][3]["content"]
+    assert int(search_turn["result"]["items"][1]["attributes"]["memoryNoteCount"]) >= 1
 
     write_turn, _ = send_request(
       process,
@@ -359,6 +363,19 @@ def main() -> int:
       },
     )
     assert any("Wrote docs/output.txt" == note["title"] for note in memory_list_after_write["result"]["notes"])
+
+    post_write_turn, _ = send_request(
+      process,
+      {
+        "id": 33,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": "Read docs/output.txt",
+        },
+      },
+    )
+    assert "Wrote docs/output.txt" in post_write_turn["result"]["items"][1]["attributes"]["memoryNoteTitles"]
 
     shell_turn, _ = send_request(
       process,

@@ -506,6 +506,19 @@ final class AppViewModel: ObservableObject {
     return entry.body
   }
 
+  func selectedEntryMemorySummary() -> String? {
+    guard let entry = selectedEntry(),
+          let noteCount = entry.attributes["memoryNoteCount"],
+          noteCount != "0"
+    else {
+      return nil
+    }
+
+    let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
+    let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
+    return "Notes: \(noteCount)\nTitles: \(memoryTitles)\nIDs: \(memoryIDs)"
+  }
+
   func workspaceDisplayName() -> String {
     workspace?.displayName ?? "No Workspace"
   }

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::Result;
-use cavell_memory::{MemoryEvent, MemoryManager, MemoryNote};
+use cavell_memory::{retrieve_relevant_notes, MemoryEvent, MemoryManager, MemoryNote};
 use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, ModelRole};
 use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEntry};
 use cavell_protocol::{
@@ -571,6 +571,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
 
   let workspace = context.workspace.clone();
   let model_runtime = context.model_runtime.clone();
+  let memory_notes = context.memory_notes.clone();
   let (thread_id, turn_id, items, active_turn_id, pending_active_turn) = {
     let Some(thread) = context
       .threads
@@ -622,6 +623,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
 
         items.push(build_plan_item(
           &context.model_runtime,
+          &memory_notes,
           &message,
           Some(&workspace),
           format!(
@@ -704,6 +706,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
 
         items.push(build_plan_item(
           &context.model_runtime,
+          &memory_notes,
           &message,
           Some(&workspace),
           format!(
@@ -734,6 +737,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
         items.push(build_plan_item(
           &context.model_runtime,
+          &memory_notes,
           &message,
           Some(&workspace),
           format!(
@@ -758,6 +762,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             });
             let (summary, summary_attributes) = summarize_file_result(
               &model_runtime,
+              &memory_notes,
               &thread_title,
               &workspace.display_name,
               &result,
@@ -791,6 +796,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       } else if let Some(search_query) = infer_search_query(&message) {
         items.push(build_plan_item(
           &context.model_runtime,
+          &memory_notes,
           &message,
           Some(&workspace),
           format!(
@@ -815,6 +821,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             });
             let (summary, summary_attributes) = summarize_search_result(
               &model_runtime,
+              &memory_notes,
               &thread_title,
               &workspace.display_name,
               &search_query,
@@ -849,6 +856,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       } else {
         items.push(build_plan_item(
           &context.model_runtime,
+          &memory_notes,
           &message,
           Some(&workspace),
           format!(
@@ -873,6 +881,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             });
             let (summary, summary_attributes) = summarize_directory_result(
               &model_runtime,
+              &memory_notes,
               &thread_title,
               &workspace.display_name,
               &entries,
@@ -907,6 +916,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     } else {
       items.push(build_plan_item(
         &context.model_runtime,
+        &memory_notes,
         &message,
         None,
         "Wait for a workspace before running filesystem tools.".to_string(),
@@ -1014,6 +1024,7 @@ fn handle_approval_respond(
     }
   };
   let model_runtime = context.model_runtime.clone();
+  let memory_notes = context.memory_notes.clone();
 
   let Some(thread) = context
     .threads
@@ -1100,7 +1111,12 @@ fn handle_approval_respond(
             command: command.clone(),
           });
           let (summary, summary_attributes) =
-            summarize_shell_result(&model_runtime, &workspace.display_name, &result);
+            summarize_shell_result(
+              &model_runtime,
+              &memory_notes,
+              &workspace.display_name,
+              &result,
+            );
           items.push(TimelineItem {
             kind: "toolResult".to_string(),
             title: "run_shell result".to_string(),
@@ -1129,7 +1145,12 @@ fn handle_approval_respond(
       title: approval.title.clone(),
       action: approval.action.clone(),
     });
-    let (summary, summary_attributes) = summarize_denied_approval(&model_runtime, &approval);
+    let (summary, summary_attributes) = summarize_denied_approval(
+      &model_runtime,
+      &memory_notes,
+      &workspace.display_name,
+      &approval,
+    );
     items.push(TimelineItem {
       kind: "approvalResolved".to_string(),
       title: "Approval Denied".to_string(),
@@ -1535,10 +1556,16 @@ fn streaming_progress_label(streamed_chars: usize, total_chars: usize) -> String
 
 fn build_plan_item(
   model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
   message: &str,
   workspace: Option<&WorkspaceSummary>,
   fallback: String,
 ) -> TimelineItem {
+  let relevant_memory_notes = retrieve_memory_context(
+    memory_notes,
+    workspace.map(|entry| entry.display_name.as_str()),
+    message,
+  );
   let workspace_context = workspace
     .map(|workspace| {
       format!(
@@ -1550,8 +1577,10 @@ fn build_plan_item(
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Planner,
     prompt: format!(
-      "You are the local planner for Cavell.\n{}\nUser request: {}\nWrite one concise English sentence describing the next action Cavell should take.",
-      workspace_context, message
+      "You are the local planner for Cavell.\n{}\n{}\nUser request: {}\nWrite one concise English sentence describing the next action Cavell should take.",
+      workspace_context,
+      format_memory_prompt(&relevant_memory_notes),
+      message
     ),
     fallback,
     max_tokens: 80,
@@ -1568,6 +1597,7 @@ fn build_plan_item(
       workspace.display_name.clone(),
     );
   }
+  merge_memory_attributes(&mut attributes, &relevant_memory_notes);
 
   TimelineItem {
     kind: "plan".to_string(),
@@ -1594,10 +1624,16 @@ fn format_file_result(result: &ReadFileResult) -> String {
 
 fn summarize_file_result(
   model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
   thread_title: &str,
   workspace_name: &str,
   result: &ReadFileResult,
 ) -> (String, HashMap<String, String>) {
+  let relevant_memory_notes = retrieve_memory_context(
+    memory_notes,
+    Some(workspace_name),
+    &format!("{thread_title} {}", result.relative_path),
+  );
   let preview = result
     .content
     .lines()
@@ -1609,11 +1645,13 @@ fn summarize_file_result(
     result.relative_path, thread_title, workspace_name, preview
   );
   let prompt = format!(
-    "You are Cavell, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\nFile: {}\nPreview:\n{}",
-    result.relative_path, result.content
+    "You are Cavell, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
+    format_memory_prompt(&relevant_memory_notes),
+    result.relative_path,
+    result.content
   );
 
-  generate_local_summary(model_runtime, prompt, fallback)
+  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
 }
 
 fn format_directory_result(entries: &[DirectoryEntry]) -> String {
@@ -1647,20 +1685,28 @@ fn format_search_result(query: &str, matches: &[SearchMatch]) -> String {
 
 fn summarize_directory_result(
   model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
   thread_title: &str,
   workspace_name: &str,
   entries: &[DirectoryEntry],
 ) -> (String, HashMap<String, String>) {
+  let relevant_memory_notes = retrieve_memory_context(
+    memory_notes,
+    Some(workspace_name),
+    &format!("{thread_title} workspace root"),
+  );
   if entries.is_empty() {
     return generate_local_summary(
       model_runtime,
       format!(
-        "You are Cavell, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}"
+        "You are Cavell, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
+        format_memory_prompt(&relevant_memory_notes)
       ),
       format!(
         "Cavell inspected {} for {} and found an empty root directory.",
         workspace_name, thread_title
       ),
+      &relevant_memory_notes,
     );
   }
 
@@ -1679,30 +1725,36 @@ fn summarize_directory_result(
     preview
   );
   let prompt = format!(
-    "You are Cavell, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\nEntries:\n{}",
+    "You are Cavell, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
+    format_memory_prompt(&relevant_memory_notes),
     format_directory_result(entries)
   );
 
-  generate_local_summary(model_runtime, prompt, fallback)
+  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
 }
 
 fn summarize_search_result(
   model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
   thread_title: &str,
   workspace_name: &str,
   query: &str,
   matches: &[SearchMatch],
 ) -> (String, HashMap<String, String>) {
+  let relevant_memory_notes =
+    retrieve_memory_context(memory_notes, Some(workspace_name), query);
   if matches.is_empty() {
     return generate_local_summary(
       model_runtime,
       format!(
-        "You are Cavell, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\nQuery: {query}"
+        "You are Cavell, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
+        format_memory_prompt(&relevant_memory_notes)
       ),
       format!(
         "Cavell searched {} for {} and found no matches for \"{}\".",
         workspace_name, thread_title, query
       ),
+      &relevant_memory_notes,
     );
   }
 
@@ -1722,11 +1774,12 @@ fn summarize_search_result(
     preview
   );
   let prompt = format!(
-    "You are Cavell, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\nQuery: {query}\nMatches:\n{}",
+    "You are Cavell, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
+    format_memory_prompt(&relevant_memory_notes),
     format_search_result(query, matches)
   );
 
-  generate_local_summary(model_runtime, prompt, fallback)
+  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
 }
 
 fn format_shell_result(result: &ShellCommandResult) -> String {
@@ -1754,9 +1807,12 @@ fn format_shell_result(result: &ShellCommandResult) -> String {
 
 fn summarize_shell_result(
   model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
   workspace_name: &str,
   result: &ShellCommandResult,
 ) -> (String, HashMap<String, String>) {
+  let relevant_memory_notes =
+    retrieve_memory_context(memory_notes, Some(workspace_name), &result.command);
   let fallback = if result.exit_code == 0 {
     format!(
       "Cavell ran `{}` in {} and it finished successfully.",
@@ -1769,17 +1825,29 @@ fn summarize_shell_result(
     )
   };
   let prompt = format!(
-    "You are Cavell, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\nCommand: {}\nExit Code: {}\nstdout:\n{}\n\nstderr:\n{}",
-    result.command, result.exit_code, result.stdout, result.stderr
+    "You are Cavell, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nCommand: {}\nExit Code: {}\nstdout:\n{}\n\nstderr:\n{}",
+    format_memory_prompt(&relevant_memory_notes),
+    result.command,
+    result.exit_code,
+    result.stdout,
+    result.stderr
   );
 
-  generate_local_summary(model_runtime, prompt, fallback)
+  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
 }
 
 fn summarize_denied_approval(
   model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
+  workspace_name: &str,
   approval: &PendingApproval,
 ) -> (String, HashMap<String, String>) {
+  let query = approval
+    .command
+    .clone()
+    .unwrap_or_else(|| format!("{} {}", approval.action, approval.relative_path));
+  let relevant_memory_notes =
+    retrieve_memory_context(memory_notes, Some(workspace_name), &query);
   let fallback = if approval.action == "run_shell" {
     let command = approval.command.clone().unwrap_or_default();
     format!(
@@ -1793,19 +1861,21 @@ fn summarize_denied_approval(
     )
   };
   let prompt = format!(
-    "You are Cavell, a concise local coding agent. Summarize a denied approval in one sentence.\nAction: {}\nTarget: {}\nCommand: {}",
+    "You are Cavell, a concise local coding agent. Summarize a denied approval in one sentence.\nWorkspace: {workspace_name}\n{}\nAction: {}\nTarget: {}\nCommand: {}",
+    format_memory_prompt(&relevant_memory_notes),
     approval.action,
     approval.relative_path,
     approval.command.clone().unwrap_or_default()
   );
 
-  generate_local_summary(model_runtime, prompt, fallback)
+  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
 }
 
 fn generate_local_summary(
   model_runtime: &LocalModelRuntime,
   prompt: String,
   fallback: String,
+  memory_notes: &[MemoryNote],
 ) -> (String, HashMap<String, String>) {
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Summarizer,
@@ -1814,14 +1884,68 @@ fn generate_local_summary(
     max_tokens: 160,
   });
 
-  (
-    result.text,
-    HashMap::from([
-      ("modelId".to_string(), result.model_id),
-      ("modelBackend".to_string(), result.backend),
-      ("modelStatus".to_string(), result.status),
-    ]),
-  )
+  let mut attributes = HashMap::from([
+    ("modelId".to_string(), result.model_id),
+    ("modelBackend".to_string(), result.backend),
+    ("modelStatus".to_string(), result.status),
+  ]);
+  merge_memory_attributes(&mut attributes, memory_notes);
+
+  (result.text, attributes)
+}
+
+fn retrieve_memory_context(
+  memory_notes: &[MemoryNote],
+  workspace_scope: Option<&str>,
+  query: &str,
+) -> Vec<MemoryNote> {
+  retrieve_relevant_notes(memory_notes, workspace_scope, query, 3)
+}
+
+fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
+  if memory_notes.is_empty() {
+    return "Memory: none.".to_string();
+  }
+
+  let note_lines = memory_notes
+    .iter()
+    .map(|note| {
+      format!(
+        "- {} | scope={} | source={} | {}",
+        note.title, note.scope, note.source, note.body
+      )
+    })
+    .collect::<Vec<_>>()
+    .join("\n");
+
+  format!("Relevant memory notes:\n{note_lines}")
+}
+
+fn merge_memory_attributes(
+  attributes: &mut HashMap<String, String>,
+  memory_notes: &[MemoryNote],
+) {
+  attributes.insert("memoryNoteCount".to_string(), memory_notes.len().to_string());
+  if memory_notes.is_empty() {
+    return;
+  }
+
+  attributes.insert(
+    "memoryNoteIds".to_string(),
+    memory_notes
+      .iter()
+      .map(|note| note.id.clone())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "memoryNoteTitles".to_string(),
+    memory_notes
+      .iter()
+      .map(|note| note.title.clone())
+      .collect::<Vec<_>>()
+      .join(" | "),
+  );
 }
 
 fn stored_approval_record(approval: PendingApproval) -> StoredApprovalRecord {
@@ -2096,10 +2220,14 @@ mod tests {
 
     assert_eq!(items[1]["kind"], "plan");
     assert_eq!(items[1]["attributes"]["responseRole"], "planner");
+    assert_eq!(items[1]["attributes"]["memoryNoteCount"], "1");
+    assert_eq!(items[1]["attributes"]["memoryNoteIds"], "memory-1");
     assert_eq!(items[2]["kind"], "toolStart");
     assert_eq!(items[3]["kind"], "toolResult");
     assert_eq!(items[4]["kind"], "assistantMessage");
     assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
+    assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
+    assert_eq!(items[4]["attributes"]["memoryNoteTitles"], "Opened workspace read-file");
     assert!(matches!(
       items[4]["attributes"]["streamingStatus"].as_str(),
       Some("in_progress") | Some("completed")
@@ -2445,5 +2573,88 @@ mod tests {
 
     assert_eq!(items[1]["title"], "run_shell");
     assert!(items[2]["content"].as_str().unwrap().contains("marker.txt"));
+  }
+
+  #[test]
+  fn follow_up_turn_retrieves_recent_memory_notes() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("memory-follow-up");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Memory Thread"
+        })),
+      ),
+    );
+
+    let write_turn = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Write docs/output.txt: Memory connected content"
+        })),
+      ),
+    );
+    let approval_id = write_turn
+      .result
+      .expect("write turn result")["pendingApprovals"][0]["id"]
+      .as_str()
+      .expect("approval id")
+      .to_string();
+
+    let approval_response = handle_request(
+      &mut context,
+      request(
+        methods::APPROVAL_RESPOND,
+        Some(json!({
+          "approvalId": approval_id,
+          "decision": "approved"
+        })),
+      ),
+    );
+    assert!(approval_response.error.is_none());
+
+    let follow_up_turn = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Read docs/output.txt"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(follow_up_turn.error.is_none());
+    let items = follow_up_turn.result.expect("follow-up turn result")["items"]
+      .as_array()
+      .expect("follow-up items")
+      .clone();
+
+    assert_eq!(items[1]["attributes"]["memoryNoteCount"], "2");
+    assert!(items[1]["attributes"]["memoryNoteTitles"]
+      .as_str()
+      .unwrap()
+      .contains("Wrote docs/output.txt"));
+    assert!(items[4]["attributes"]["memoryNoteTitles"]
+      .as_str()
+      .unwrap()
+      .contains("Wrote docs/output.txt"));
   }
 }
