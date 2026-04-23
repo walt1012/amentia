@@ -61,6 +61,15 @@ struct ThreadStartResult: Codable {
   let thread: RuntimeThreadPayload
 }
 
+struct ThreadReadParams: Codable {
+  let threadId: String
+}
+
+struct ThreadReadResult: Codable {
+  let thread: RuntimeThreadPayload
+  let items: [RuntimeTimelineItem]
+}
+
 struct TurnStartParams: Codable {
   let threadId: String
   let message: String

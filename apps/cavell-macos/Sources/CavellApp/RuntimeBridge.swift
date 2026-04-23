@@ -25,6 +25,13 @@ final class RuntimeBridge {
     let items: [RuntimeTimelineItemResult]
   }
 
+  struct RuntimeThreadState {
+    let id: String
+    let title: String
+    let status: String
+    let items: [RuntimeTimelineItemResult]
+  }
+
   struct RuntimeTimelineItemResult {
     let kind: String
     let title: String
@@ -156,6 +163,30 @@ final class RuntimeBridge {
     )
   }
 
+  func readThread(threadID: String) async throws -> RuntimeThreadState {
+    let response: JSONRPCResponse<ThreadReadResult> = try await sendRequest(
+      method: "thread/read",
+      params: ThreadReadParams(threadId: threadID)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeThreadState(
+      id: result.thread.id,
+      title: result.thread.title,
+      status: result.thread.status,
+      items: result.items.map {
+        RuntimeTimelineItemResult(kind: $0.kind, title: $0.title, content: $0.content)
+      }
+    )
+  }
+
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
     let process = Process()
@@ -165,6 +196,7 @@ final class RuntimeBridge {
 
     process.executableURL = executableURL
     process.arguments = []
+    process.environment = runtimeEnvironment()
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -192,6 +224,22 @@ final class RuntimeBridge {
     }
 
     throw RuntimeError.runtimePathMissing
+  }
+
+  private func runtimeEnvironment() -> [String: String] {
+    var environment = ProcessInfo.processInfo.environment
+    environment["CAVELL_DATA_DIR"] = appSupportStorageDirectory().path
+    return environment
+  }
+
+  private func appSupportStorageDirectory() -> URL {
+    let baseDirectory =
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+
+    return baseDirectory
+      .appendingPathComponent("Cavell", isDirectory: true)
+      .appendingPathComponent("storage", isDirectory: true)
   }
 
   private func sendRequest<Params: Encodable, ResultType: Decodable>(

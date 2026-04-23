@@ -12,6 +12,9 @@ xcuserdata/
 
 *.log
 
+.cavell/
+.tmp-runtime-state/
+
 models/
 artifacts/
 logs/

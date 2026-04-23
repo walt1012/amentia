@@ -73,6 +73,9 @@ final class AppViewModel: ObservableObject {
 
         let selectedThread = threads.first
         selectThread(id: selectedThread?.id)
+        if let selectedThreadID = selectedThread?.id {
+          await loadThreadHistory(threadID: selectedThreadID)
+        }
         appendEntry(
           to: selectedThread?.id,
           TimelineEntry(
@@ -109,6 +112,7 @@ final class AppViewModel: ObservableObject {
         threads.insert(thread, at: 0)
         threadTimelines[thread.id] = defaultTimeline(for: thread.title)
         selectThread(id: thread.id)
+        await loadThreadHistory(threadID: thread.id)
         appendEntry(
           to: thread.id,
           TimelineEntry(
@@ -163,6 +167,17 @@ final class AppViewModel: ObservableObject {
   func selectThread(id: String?) {
     selectedThreadID = id
     syncVisibleTimeline()
+
+    guard runtimeState == .ready,
+          let threadID = id,
+          !threadID.hasPrefix("local-")
+    else {
+      return
+    }
+
+    Task {
+      await loadThreadHistory(threadID: threadID)
+    }
   }
 
   func selectedThreadTitle() -> String {
@@ -249,6 +264,36 @@ final class AppViewModel: ObservableObject {
 
   private func threadTitle(for threadID: String) -> String {
     threads.first(where: { $0.id == threadID })?.title ?? "Thread"
+  }
+
+  private func loadThreadHistory(threadID: String) async {
+    do {
+      let result = try await runtimeBridge.readThread(threadID: threadID)
+      let entries = result.items.map { item in
+        TimelineEntry(
+          id: UUID(),
+          kind: timelineKind(for: item.kind),
+          title: item.title,
+          body: item.content
+        )
+      }
+      threadTimelines[threadID] = entries
+      refreshThreadPreview(threadID: threadID, preview: result.status)
+
+      if selectedThreadID == threadID {
+        timeline = entries
+      }
+    } catch {
+      appendEntry(
+        to: threadID,
+        TimelineEntry(
+          id: UUID(),
+          kind: .system,
+          title: "Thread Load Failed",
+          body: error.localizedDescription
+        )
+      )
+    }
   }
 
   private func timelineKind(for rawKind: String) -> TimelineEntry.Kind {
