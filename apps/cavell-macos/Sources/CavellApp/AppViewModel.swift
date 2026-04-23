@@ -11,17 +11,18 @@ final class AppViewModel: ObservableObject {
   private let runtimeBridge: RuntimeBridge
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
-    self.runtimeBridge = runtimeBridge
-    self.runtimeState = runtimeBridge.connectionState
-    self.runtimeDetail = "Runtime not launched"
-    self.threads = [
+    let initialThreads = [
       ThreadSummary(
         id: "local-welcome",
         title: "Welcome to Cavell",
         preview: "Milestone 0 shell ready for runtime integration."
       ),
     ]
-    self.selectedThreadID = threads.first?.id
+
+    self.runtimeBridge = runtimeBridge
+    self.runtimeState = runtimeBridge.connectionState
+    self.runtimeDetail = "Runtime not launched"
+    self.threads = initialThreads
     self.timeline = [
       TimelineEntry(
         id: UUID(),
@@ -36,6 +37,7 @@ final class AppViewModel: ObservableObject {
         body: "Connect the real runtime handshake and replace mock state with live protocol events."
       ),
     ]
+    self.selectedThreadID = initialThreads.first?.id
   }
 
   func launchRuntime() {

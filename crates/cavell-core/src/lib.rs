@@ -23,6 +23,12 @@ impl RuntimeContext {
   }
 }
 
+impl Default for RuntimeContext {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   match request.method.as_str() {
     methods::INITIALIZE => handle_initialize(context, request),
