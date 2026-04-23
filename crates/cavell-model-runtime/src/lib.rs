@@ -93,7 +93,9 @@ impl LocalModelRuntime {
       manifest_resolution
         .as_ref()
         .and_then(|resolution| resolution.manifest_path.parent().map(Path::to_path_buf)),
-      manifest_resolution.as_ref().map(|resolution| &resolution.manifest),
+      manifest_resolution
+        .as_ref()
+        .map(|resolution| &resolution.manifest),
     );
 
     Self::from_resolution(manifest_resolution, binary_path, model_path)
@@ -109,7 +111,9 @@ impl LocalModelRuntime {
     model_path: Option<PathBuf>,
   ) -> Self {
     let pack = built_in_model_pack();
-    let manifest = manifest_resolution.as_ref().map(|resolution| resolution.manifest.clone());
+    let manifest = manifest_resolution
+      .as_ref()
+      .map(|resolution| resolution.manifest.clone());
     let manifest_path = manifest_resolution
       .as_ref()
       .map(|resolution| resolution.manifest_path.clone());
@@ -194,12 +198,8 @@ impl LocalModelRuntime {
         binary_path,
         model_path,
         ..
-      } => match generate_with_llama_cpp(
-        binary_path,
-        model_path,
-        &request,
-        self.manifest.as_ref(),
-      ) {
+      } => match generate_with_llama_cpp(binary_path, model_path, &request, self.manifest.as_ref())
+      {
         Ok(text) => GenerateResponse {
           text,
           backend: "llama.cpp".to_string(),

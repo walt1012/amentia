@@ -9,10 +9,10 @@ use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEnt
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
-  ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary,
-  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
-  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
+  ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
+  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
+  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
+  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
   WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};

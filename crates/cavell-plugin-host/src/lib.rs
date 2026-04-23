@@ -81,8 +81,8 @@ fn discover_plugin_manifests(directory: &Path, manifests: &mut Vec<PathBuf>) -> 
   for entry in fs::read_dir(directory)
     .with_context(|| format!("failed to read plugin directory {}", directory.display()))?
   {
-    let entry =
-      entry.with_context(|| format!("failed to inspect plugin entry in {}", directory.display()))?;
+    let entry = entry
+      .with_context(|| format!("failed to inspect plugin entry in {}", directory.display()))?;
     let path = entry.path();
 
     if path.is_dir() {
