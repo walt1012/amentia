@@ -82,7 +82,11 @@ struct ContentView: View {
           ForEach(viewModel.timeline) { entry in
             TimelineCard(
               entry: entry,
+              isSelected: viewModel.selectedEntryID == entry.id,
               showsApprovalActions: viewModel.isPendingApproval(entry),
+              onSelect: {
+                viewModel.selectTimelineEntry(id: entry.id)
+              },
               onApprove: {
                 guard let approvalID = viewModel.approvalID(for: entry) else {
                   return
@@ -151,6 +155,32 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      GroupBox("Selected Item") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.selectedEntryTitle())
+            .font(.headline)
+          Text(viewModel.selectedEntryMetadata())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+          Text(viewModel.selectedEntryBody())
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      if let diffBody = viewModel.selectedDiffBody() {
+        GroupBox("Diff Detail") {
+          Text(diffBody)
+            .font(.system(.caption, design: .monospaced))
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
+
       GroupBox("Milestone 1") {
         VStack(alignment: .leading, spacing: 8) {
           Text("Workspace open flow")
@@ -177,7 +207,9 @@ struct ContentView: View {
 
 private struct TimelineCard: View {
   let entry: TimelineEntry
+  let isSelected: Bool
   let showsApprovalActions: Bool
+  let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
 
@@ -205,9 +237,17 @@ private struct TimelineCard: View {
         .padding(.top, 4)
       }
     }
+    .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .onTapGesture {
+      onSelect()
+    }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(backgroundColor)
+    .overlay(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .strokeBorder(isSelected ? Color.accentColor.opacity(0.45) : Color.clear, lineWidth: 1.5)
+    )
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
   }
 

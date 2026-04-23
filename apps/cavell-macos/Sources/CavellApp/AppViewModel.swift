@@ -6,6 +6,7 @@ final class AppViewModel: ObservableObject {
   @Published var threads: [ThreadSummary]
   @Published var selectedThreadID: ThreadSummary.ID?
   @Published var timeline: [TimelineEntry]
+  @Published var selectedEntryID: TimelineEntry.ID?
   @Published var runtimeState: RuntimeBridge.ConnectionState
   @Published var runtimeDetail: String
   @Published var draftMessage: String
@@ -49,6 +50,7 @@ final class AppViewModel: ObservableObject {
     self.workspace = nil
     self.threads = initialThreads
     self.timeline = initialTimeline
+    self.selectedEntryID = initialTimeline.first?.id
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.selectedThreadID = initialThreads.first?.id
@@ -296,6 +298,43 @@ final class AppViewModel: ObservableObject {
     return thread.preview
   }
 
+  func selectTimelineEntry(id: TimelineEntry.ID) {
+    selectedEntryID = id
+  }
+
+  func selectedEntryTitle() -> String {
+    selectedEntry()?.title ?? "No Item Selected"
+  }
+
+  func selectedEntryBody() -> String {
+    selectedEntry()?.body ?? "Select a timeline item to inspect its details."
+  }
+
+  func selectedEntryMetadata() -> String {
+    guard let entry = selectedEntry() else {
+      return "No timeline item is selected."
+    }
+
+    if entry.attributes.isEmpty {
+      return entry.kind.rawValue
+    }
+
+    let detail = entry.attributes
+      .sorted(by: { $0.key < $1.key })
+      .map { "\($0.key): \($0.value)" }
+      .joined(separator: "\n")
+
+    return "\(entry.kind.rawValue)\n\(detail)"
+  }
+
+  func selectedDiffBody() -> String? {
+    guard let entry = selectedEntry(), entry.kind == .diff else {
+      return nil
+    }
+
+    return entry.body
+  }
+
   func workspaceDisplayName() -> String {
     workspace?.displayName ?? "No Workspace"
   }
@@ -364,6 +403,9 @@ final class AppViewModel: ObservableObject {
   private func appendEntry(to threadID: String?, _ entry: TimelineEntry) {
     guard let threadID else {
       timeline.insert(entry, at: 0)
+      if selectedEntryID == nil {
+        selectedEntryID = entry.id
+      }
       return
     }
 
@@ -373,12 +415,16 @@ final class AppViewModel: ObservableObject {
 
     if selectedThreadID == threadID {
       timeline = entries
+      if !entries.contains(where: { $0.id == selectedEntryID }) {
+        selectedEntryID = entries.first?.id
+      }
     }
   }
 
   private func syncVisibleTimeline() {
     guard let selectedThreadID else {
       timeline = []
+      selectedEntryID = nil
       return
     }
 
@@ -386,6 +432,7 @@ final class AppViewModel: ObservableObject {
       threadTimelines[selectedThreadID]
       ?? defaultTimeline(for: threadTitle(for: selectedThreadID))
     threadTimelines[selectedThreadID] = timeline
+    selectedEntryID = timeline.first?.id
   }
 
   private func defaultTimeline(for title: String) -> [TimelineEntry] {
@@ -422,6 +469,7 @@ final class AppViewModel: ObservableObject {
 
       if selectedThreadID == threadID {
         timeline = entries
+        selectedEntryID = entries.first?.id
       }
     } catch {
       appendEntry(
@@ -456,5 +504,13 @@ final class AppViewModel: ObservableObject {
     default:
       return .system
     }
+  }
+
+  private func selectedEntry() -> TimelineEntry? {
+    guard let selectedEntryID else {
+      return nil
+    }
+
+    return timeline.first(where: { $0.id == selectedEntryID })
   }
 }
