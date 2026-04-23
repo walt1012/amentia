@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use cavell_core::{collect_notifications, handle_request, RuntimeContext};
-use cavell_protocol::{JsonRpcNotification, JsonRpcRequest, JsonRpcResponse};
+use cavell_protocol::{JsonRpcRequest, JsonRpcResponse};
 
 fn main() -> Result<()> {
   let context = Arc::new(Mutex::new(RuntimeContext::new()?));
