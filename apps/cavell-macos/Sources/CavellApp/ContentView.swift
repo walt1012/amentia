@@ -169,6 +169,13 @@ struct ContentView: View {
           Text(viewModel.modelMetricsSummary())
             .font(.caption2)
             .foregroundColor(.secondary)
+          Text(viewModel.modelReadinessSummary())
+            .font(.caption2)
+            .foregroundColor(.secondary)
+          Text(viewModel.modelInstallHintSummary())
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
           Text(viewModel.modelArtifactPathSummary())
             .font(.caption2)
             .foregroundColor(.secondary)
@@ -286,7 +293,7 @@ struct ContentView: View {
       }
 
       GroupBox("Next Integration") {
-        Text("Refine token events, richer planner prompts, and packaged local model artifacts.")
+        Text("Refine token events, richer planner prompts, and packaged llama.cpp delivery.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }

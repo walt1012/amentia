@@ -96,6 +96,16 @@ def main() -> int:
     assert model_health["result"]["status"] in {"fallback", "ready"}
     assert model_health["result"]["source"] in {"bundle-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
+    assert model_health["result"]["metrics"]["readiness"] in {
+      "ready",
+      "manifest_only",
+      "model_missing",
+      "binary_missing",
+      "misconfigured",
+      "unconfigured",
+    }
+    assert model_health["result"]["metrics"]["packReady"] in {"true", "false"}
+    assert model_health["result"]["metrics"]["installHint"]
 
     memory_status, _ = send_request(
       process,

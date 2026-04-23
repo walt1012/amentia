@@ -622,6 +622,24 @@ final class AppViewModel: ObservableObject {
     return "Context: \(contextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
   }
 
+  func modelReadinessSummary() -> String {
+    guard let modelHealth else {
+      return "Readiness: unavailable"
+    }
+
+    let readiness = modelHealth.metrics["readiness"] ?? "unknown"
+    let packReady = modelHealth.metrics["packReady"] ?? "false"
+    return "Readiness: \(readiness) | Pack Ready: \(packReady)"
+  }
+
+  func modelInstallHintSummary() -> String {
+    guard let modelHealth else {
+      return "Install hint: launch the runtime to inspect local model setup."
+    }
+
+    return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
+  }
+
   func modelArtifactPathSummary() -> String {
     guard let modelHealth else {
       return "No local model paths available yet."

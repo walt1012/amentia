@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -5,7 +6,6 @@ use std::process::Command;
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelRole {
@@ -44,6 +44,14 @@ pub struct ModelPackManifest {
   pub context_size: usize,
   pub max_output_tokens: usize,
   pub backend: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub license: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub homepage: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub sha256: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub size_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -160,34 +168,52 @@ impl LocalModelRuntime {
         binary_path,
         model_path,
         manifest_path,
-      } => ModelHealth {
-        pack_id: self.pack.id.clone(),
-        display_name: self.pack.display_name.clone(),
-        backend: "heuristic".to_string(),
-        status: "fallback".to_string(),
-        detail: detail.clone(),
-        source: self.source.clone(),
-        binary_path: binary_path.as_ref().map(display_path),
-        model_path: model_path.as_ref().map(display_path),
-        manifest_path: manifest_path.as_ref().map(display_path),
-        metrics: model_metrics(self.manifest.as_ref()),
-      },
+      } => {
+        let metrics = model_metrics(
+          self.manifest.as_ref(),
+          binary_path.as_deref(),
+          model_path.as_deref(),
+          manifest_path.as_deref(),
+          false,
+        );
+        ModelHealth {
+          pack_id: self.pack.id.clone(),
+          display_name: self.pack.display_name.clone(),
+          backend: "heuristic".to_string(),
+          status: "fallback".to_string(),
+          detail: detail.clone(),
+          source: self.source.clone(),
+          binary_path: binary_path.as_ref().map(display_path),
+          model_path: model_path.as_ref().map(display_path),
+          manifest_path: manifest_path.as_ref().map(display_path),
+          metrics,
+        }
+      }
       ModelBackend::LlamaCppCli {
         binary_path,
         model_path,
         manifest_path,
-      } => ModelHealth {
-        pack_id: self.pack.id.clone(),
-        display_name: self.pack.display_name.clone(),
-        backend: "llama.cpp".to_string(),
-        status: "ready".to_string(),
-        detail: "Local llama.cpp CLI inference is configured.".to_string(),
-        source: self.source.clone(),
-        binary_path: Some(display_path(binary_path)),
-        model_path: Some(display_path(model_path)),
-        manifest_path: manifest_path.as_ref().map(display_path),
-        metrics: model_metrics(self.manifest.as_ref()),
-      },
+      } => {
+        let metrics = model_metrics(
+          self.manifest.as_ref(),
+          Some(binary_path.as_path()),
+          Some(model_path.as_path()),
+          manifest_path.as_deref(),
+          true,
+        );
+        ModelHealth {
+          pack_id: self.pack.id.clone(),
+          display_name: self.pack.display_name.clone(),
+          backend: "llama.cpp".to_string(),
+          status: "ready".to_string(),
+          detail: "Local llama.cpp CLI inference is configured.".to_string(),
+          source: self.source.clone(),
+          binary_path: Some(display_path(binary_path)),
+          model_path: Some(display_path(model_path)),
+          manifest_path: manifest_path.as_ref().map(display_path),
+          metrics,
+        }
+      }
     }
   }
 
@@ -433,7 +459,13 @@ fn discovery_roots() -> Vec<PathBuf> {
   unique_roots
 }
 
-fn model_metrics(manifest: Option<&ModelPackManifest>) -> HashMap<String, String> {
+fn model_metrics(
+  manifest: Option<&ModelPackManifest>,
+  binary_path: Option<&Path>,
+  model_path: Option<&Path>,
+  manifest_path: Option<&Path>,
+  is_runtime_ready: bool,
+) -> HashMap<String, String> {
   let mut metrics = HashMap::new();
   if let Some(manifest) = manifest {
     metrics.insert("backend".to_string(), manifest.backend.clone());
@@ -443,13 +475,205 @@ fn model_metrics(manifest: Option<&ModelPackManifest>) -> HashMap<String, String
       manifest.max_output_tokens.to_string(),
     );
     metrics.insert("fileName".to_string(), manifest.file_name.clone());
+    if let Some(license) = &manifest.license {
+      metrics.insert("license".to_string(), license.clone());
+    }
+    if let Some(homepage) = &manifest.homepage {
+      metrics.insert("homepage".to_string(), homepage.clone());
+    }
+    if let Some(sha256) = &manifest.sha256 {
+      metrics.insert("sha256".to_string(), sha256.clone());
+    }
+    if let Some(size_bytes) = manifest.size_bytes {
+      metrics.insert("sizeBytes".to_string(), size_bytes.to_string());
+    }
   } else {
     metrics.insert("backend".to_string(), "llama.cpp".to_string());
     metrics.insert("contextSize".to_string(), "4096".to_string());
     metrics.insert("maxOutputTokens".to_string(), "160".to_string());
   }
 
+  let readiness = model_readiness(binary_path, model_path, manifest_path, is_runtime_ready);
+  metrics.insert("readiness".to_string(), readiness.to_string());
+  metrics.insert(
+    "packReady".to_string(),
+    if is_runtime_ready { "true" } else { "false" }.to_string(),
+  );
+  metrics.insert(
+    "binaryPresent".to_string(),
+    binary_path.is_some().to_string(),
+  );
+  metrics.insert(
+    "modelPresent".to_string(),
+    model_path.is_some().to_string(),
+  );
+  metrics.insert(
+    "manifestPresent".to_string(),
+    manifest_path.is_some().to_string(),
+  );
+  metrics.insert(
+    "installHint".to_string(),
+    install_hint(
+      manifest,
+      readiness,
+      binary_path,
+      model_path,
+      manifest_path,
+    ),
+  );
+
   metrics
+}
+
+fn model_readiness(
+  binary_path: Option<&Path>,
+  model_path: Option<&Path>,
+  manifest_path: Option<&Path>,
+  is_runtime_ready: bool,
+) -> &'static str {
+  if is_runtime_ready {
+    return "ready";
+  }
+
+  match (binary_path, model_path, manifest_path) {
+    (Some(_), None, Some(_)) | (Some(_), None, None) => "model_missing",
+    (None, Some(_), Some(_)) | (None, Some(_), None) => "binary_missing",
+    (None, None, Some(_)) => "manifest_only",
+    (Some(_), Some(_), Some(_)) | (Some(_), Some(_), None) => "misconfigured",
+    (None, None, None) => "unconfigured",
+  }
+}
+
+fn install_hint(
+  manifest: Option<&ModelPackManifest>,
+  readiness: &str,
+  binary_path: Option<&Path>,
+  model_path: Option<&Path>,
+  manifest_path: Option<&Path>,
+) -> String {
+  let file_name = manifest
+    .map(|item| item.file_name.as_str())
+    .unwrap_or("LFM2.5-350M.gguf");
+  let suggested_manifest = suggested_manifest_install_path();
+  let suggested_model = suggested_model_install_path(file_name);
+  let suggested_binary = suggested_binary_install_path();
+
+  match readiness {
+    "ready" => format!(
+      "Local inference is ready. Keep the manifest near {} and use {} if you need to override discovery.",
+      file_name,
+      "CAVELL_LFM_MODEL_PATH"
+    ),
+    "model_missing" => format!(
+      "Place {} at {} or set CAVELL_LFM_MODEL_PATH. Current binary candidate: {}.",
+      file_name,
+      suggested_model.display(),
+      binary_path
+        .map(display_path)
+        .unwrap_or_else(|| suggested_binary.display().to_string())
+    ),
+    "binary_missing" => format!(
+      "Install llama.cpp CLI at {} or set CAVELL_LLAMACPP_PATH. Current model candidate: {}.",
+      suggested_binary.display(),
+      model_path
+        .map(display_path)
+        .unwrap_or_else(|| suggested_model.display().to_string())
+    ),
+    "manifest_only" => format!(
+      "Keep the manifest at {} and place {} beside it. Then install llama.cpp CLI at {} or set CAVELL_MODEL_PACK_MANIFEST, CAVELL_LFM_MODEL_PATH, and CAVELL_LLAMACPP_PATH.",
+      manifest_path
+        .map(display_path)
+        .unwrap_or_else(|| suggested_manifest.display().to_string()),
+      file_name,
+      suggested_binary.display()
+    ),
+    "misconfigured" => format!(
+      "Resolved candidates exist but local inference is not ready. Verify the manifest at {}, model at {}, and llama.cpp CLI at {}.",
+      manifest_path
+        .map(display_path)
+        .unwrap_or_else(|| suggested_manifest.display().to_string()),
+      model_path
+        .map(display_path)
+        .unwrap_or_else(|| suggested_model.display().to_string()),
+      binary_path
+        .map(display_path)
+        .unwrap_or_else(|| suggested_binary.display().to_string())
+    ),
+    _ => format!(
+      "Add model-pack.json at {}, place {} beside it, and install llama.cpp CLI at {}. You can also set CAVELL_MODEL_PACK_MANIFEST, CAVELL_LFM_MODEL_PATH, and CAVELL_LLAMACPP_PATH directly.",
+      suggested_manifest.display(),
+      file_name,
+      suggested_binary.display()
+    ),
+  }
+}
+
+fn suggested_manifest_install_path() -> PathBuf {
+  suggested_model_root()
+    .join("builtin")
+    .join("lfm2.5-350m")
+    .join("model-pack.json")
+}
+
+fn suggested_model_install_path(file_name: &str) -> PathBuf {
+  suggested_model_root()
+    .join("builtin")
+    .join("lfm2.5-350m")
+    .join(file_name)
+}
+
+fn suggested_binary_install_path() -> PathBuf {
+  let binary_name = if cfg!(windows) {
+    "llama-cli.exe"
+  } else {
+    "llama-cli"
+  };
+
+  if let Ok(data_dir) = env::var("CAVELL_DATA_DIR") {
+    return PathBuf::from(data_dir).join("bin").join(binary_name);
+  }
+
+  if cfg!(windows) {
+    if let Ok(user_profile) = env::var("USERPROFILE") {
+      return PathBuf::from(user_profile)
+        .join("AppData")
+        .join("Local")
+        .join("Cavell")
+        .join("bin")
+        .join(binary_name);
+    }
+  }
+
+  if let Ok(home_dir) = env::var("HOME") {
+    return PathBuf::from(home_dir)
+      .join(".cavell")
+      .join("bin")
+      .join(binary_name);
+  }
+
+  PathBuf::from("bin").join(binary_name)
+}
+
+fn suggested_model_root() -> PathBuf {
+  if let Ok(data_dir) = env::var("CAVELL_DATA_DIR") {
+    return PathBuf::from(data_dir).join("models");
+  }
+
+  if cfg!(windows) {
+    if let Ok(user_profile) = env::var("USERPROFILE") {
+      return PathBuf::from(user_profile)
+        .join("AppData")
+        .join("Local")
+        .join("Cavell")
+        .join("models");
+    }
+  }
+
+  if let Ok(home_dir) = env::var("HOME") {
+    return PathBuf::from(home_dir).join(".cavell").join("models");
+  }
+
+  PathBuf::from("models")
 }
 
 fn missing_runtime_detail(
@@ -589,6 +813,9 @@ mod tests {
     assert_eq!(health.backend, "heuristic");
     assert_eq!(health.status, "fallback");
     assert!(health.metrics.contains_key("contextSize"));
+    assert_eq!(health.metrics["readiness"], "unconfigured");
+    assert_eq!(health.metrics["packReady"], "false");
+    assert!(health.metrics["installHint"].contains("model-pack.json"));
   }
 
   #[test]
