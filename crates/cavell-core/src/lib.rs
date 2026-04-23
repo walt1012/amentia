@@ -553,7 +553,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         items.push(build_plan_item(
           &context.model_runtime,
           &message,
-          Some(workspace),
+          Some(&workspace),
           format!(
             "Request approval before writing {} in {}.",
             write_intent.relative_path, workspace.display_name
@@ -635,7 +635,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         items.push(build_plan_item(
           &context.model_runtime,
           &message,
-          Some(workspace),
+          Some(&workspace),
           format!(
             "Request approval before running a shell command in {}.",
             workspace.display_name
@@ -665,7 +665,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         items.push(build_plan_item(
           &context.model_runtime,
           &message,
-          Some(workspace),
+          Some(&workspace),
           format!(
             "Inspect {} in {} with the built-in read_file tool.",
             relative_path, workspace.display_name
@@ -722,7 +722,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         items.push(build_plan_item(
           &context.model_runtime,
           &message,
-          Some(workspace),
+          Some(&workspace),
           format!(
             "Search {} for matches to \"{}\" with the built-in search_files tool.",
             workspace.display_name, search_query
@@ -780,7 +780,7 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
         items.push(build_plan_item(
           &context.model_runtime,
           &message,
-          Some(workspace),
+          Some(&workspace),
           format!(
             "Inspect the root of {} with the built-in list_directory tool.",
             workspace.display_name
