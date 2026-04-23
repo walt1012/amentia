@@ -69,7 +69,11 @@ impl MemoryManager {
     }
   }
 
-  pub fn record_event(&mut self, notes: &mut Vec<MemoryNote>, event: MemoryEvent) -> MemoryNote {
+  pub fn record_event(
+    &mut self,
+    notes: &mut Vec<MemoryNote>,
+    event: MemoryEvent,
+  ) -> MemoryNote {
     let (title, body, scope, source, tags) = memory_note_parts(event);
     let note = MemoryNote {
       id: format!("memory-{}", self.next_note_number),
@@ -86,9 +90,7 @@ impl MemoryManager {
   }
 }
 
-fn memory_note_parts(
-  event: MemoryEvent
-) -> (String, String, String, String, Vec<String>) {
+fn memory_note_parts(event: MemoryEvent) -> (String, String, String, String, Vec<String>) {
   match event {
     MemoryEvent::WorkspaceOpened {
       display_name,

@@ -836,7 +836,9 @@ mod tests {
       tags: vec!["workspace".to_string(), "session".to_string()],
     };
 
-    store.save_memory_note(&note).expect("save memory note");
+    store
+      .save_memory_note(&note)
+      .expect("save memory note");
     let notes = store.load_memory_notes(10).expect("load memory notes");
     let next_sequence = store
       .next_memory_sequence()
