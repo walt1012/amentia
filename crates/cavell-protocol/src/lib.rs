@@ -6,6 +6,8 @@ pub mod methods {
   pub const APPROVAL_RESPOND: &str = "approval/respond";
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
+  pub const MEMORY_LIST: &str = "memory/list";
+  pub const MEMORY_STATUS: &str = "memory/status";
   pub const MODEL_HEALTH: &str = "model/health";
   pub const PLUGIN_LIST: &str = "plugin/list";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
@@ -71,6 +73,7 @@ pub struct ServerInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerCapabilities {
+  pub supports_memory: bool,
   pub supports_threads: bool,
   pub supports_tools: bool,
   pub supports_plugins: bool,
@@ -107,6 +110,33 @@ pub struct ModelHealthResult {
   pub manifest_path: Option<String>,
   #[serde(default)]
   pub metrics: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryNoteSummary {
+  pub id: String,
+  pub title: String,
+  pub body: String,
+  pub scope: String,
+  pub source: String,
+  pub created_at: i64,
+  pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryStatusResult {
+  pub note_count: usize,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub latest_title: Option<String>,
+  pub summary: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryListResult {
+  pub notes: Vec<MemoryNoteSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

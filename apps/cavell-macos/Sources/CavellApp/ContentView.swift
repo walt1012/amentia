@@ -177,16 +177,28 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      GroupBox("Memory") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.memoryCountSummary())
+            .font(.headline)
+          Text(viewModel.memoryDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+          Text(viewModel.memoryLatestSummary())
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       GroupBox("Plugins") {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.pluginCountSummary())
             .font(.headline)
           Text(viewModel.pluginDetailSummary())
             .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          Text(viewModel.memPluginSummary())
-            .font(.caption2)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
         }
@@ -235,9 +247,10 @@ struct ContentView: View {
           Text("Workspace open flow")
           Text("Read, search, shell, diff preview, and approval-gated write tools")
           Text("SQLite-backed thread persistence and workspace restoration")
+          Text("Built-in workspace memory with local note persistence")
           Text("Workspace-aware prompt loop with cancel control")
           Text("Local model health and summarizer runtime wiring")
-          Text("Plugin discovery with the bundled mem plugin shell")
+          Text("Optional plugin discovery kept separate from core memory")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .font(.subheadline)

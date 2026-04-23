@@ -38,6 +38,22 @@ final class RuntimeBridge {
     let metrics: [String: String]
   }
 
+  struct RuntimeMemoryStatus {
+    let noteCount: Int
+    let latestTitle: String?
+    let summary: String
+  }
+
+  struct RuntimeMemoryNote {
+    let id: String
+    let title: String
+    let body: String
+    let scope: String
+    let source: String
+    let createdAt: Int
+    let tags: [String]
+  }
+
   struct RuntimePlugin {
     let id: String
     let name: String
@@ -214,6 +230,54 @@ final class RuntimeBridge {
       manifestPath: result.manifestPath,
       metrics: result.metrics
     )
+  }
+
+  func memoryStatus() async throws -> RuntimeMemoryStatus {
+    let response: JSONRPCResponse<MemoryStatusResult> = try await sendRequest(
+      method: "memory/status",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeMemoryStatus(
+      noteCount: result.noteCount,
+      latestTitle: result.latestTitle,
+      summary: result.summary
+    )
+  }
+
+  func listMemoryNotes() async throws -> [RuntimeMemoryNote] {
+    let response: JSONRPCResponse<MemoryListResult> = try await sendRequest(
+      method: "memory/list",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.notes.map { note in
+      RuntimeMemoryNote(
+        id: note.id,
+        title: note.title,
+        body: note.body,
+        scope: note.scope,
+        source: note.source,
+        createdAt: note.createdAt,
+        tags: note.tags
+      )
+    }
   }
 
   func openWorkspace(path: String) async throws -> RuntimeWorkspace {

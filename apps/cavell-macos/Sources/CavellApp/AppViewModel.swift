@@ -13,6 +13,8 @@ final class AppViewModel: ObservableObject {
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
   @Published var modelHealth: ModelHealthSummary?
+  @Published var memoryStatus: MemoryStatusSummary?
+  @Published var memoryNotes: [MemoryNoteSummary]
   @Published var plugins: [PluginSummary]
 
   private let runtimeBridge: RuntimeBridge
@@ -53,6 +55,8 @@ final class AppViewModel: ObservableObject {
     self.draftMessage = ""
     self.workspace = nil
     self.modelHealth = nil
+    self.memoryStatus = nil
+    self.memoryNotes = []
     self.plugins = []
     self.threads = initialThreads
     self.timeline = initialTimeline
@@ -76,6 +80,8 @@ final class AppViewModel: ObservableObject {
       do {
         let session = try await runtimeBridge.launchAndInitialize()
         let runtimeModel = try? await runtimeBridge.modelHealth()
+        let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
+        let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
         let currentWorkspace = try? await runtimeBridge.currentWorkspace()
         let runtimePlugins = try? await runtimeBridge.listPlugins()
         let threadList = try await runtimeBridge.listThreads()
@@ -99,6 +105,27 @@ final class AppViewModel: ObservableObject {
         } else {
           modelHealth = nil
           runtimeDetail = "\(session.serverName) \(session.serverVersion)"
+        }
+
+        if let runtimeMemoryStatus {
+          memoryStatus = MemoryStatusSummary(
+            noteCount: runtimeMemoryStatus.noteCount,
+            latestTitle: runtimeMemoryStatus.latestTitle,
+            summary: runtimeMemoryStatus.summary
+          )
+        } else {
+          memoryStatus = nil
+        }
+        memoryNotes = (runtimeMemoryNotes ?? []).map { note in
+          MemoryNoteSummary(
+            id: note.id,
+            title: note.title,
+            body: note.body,
+            scope: note.scope,
+            source: note.source,
+            createdAt: note.createdAt,
+            tags: note.tags
+          )
         }
 
         plugins = (runtimePlugins ?? []).map { plugin in
@@ -174,6 +201,20 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
+        if let runtimeMemoryStatus {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID(),
+              kind: .system,
+              title: "Memory Ready",
+              body: runtimeMemoryStatus.summary,
+              attributes: [
+                "noteCount": String(runtimeMemoryStatus.noteCount)
+              ]
+            )
+          )
+        }
         if !plugins.isEmpty {
           appendEntry(
             to: selectedThread?.id,
@@ -190,6 +231,8 @@ final class AppViewModel: ObservableObject {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
         modelHealth = nil
+        memoryStatus = nil
+        memoryNotes = []
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -227,6 +270,7 @@ final class AppViewModel: ObservableObject {
           rootPath: openedWorkspace.rootPath,
           displayName: openedWorkspace.displayName
         )
+        await refreshMemoryState()
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -342,6 +386,7 @@ final class AppViewModel: ObservableObject {
         )
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
         updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
+        await refreshMemoryState()
         await loadThreadHistory(threadID: result.threadID)
       } catch {
         appendEntry(
@@ -545,13 +590,38 @@ final class AppViewModel: ObservableObject {
       .joined(separator: "\n")
   }
 
-  func memPluginSummary() -> String {
-    guard let memPlugin = plugins.first(where: { $0.name == "mem" }) else {
-      return "The bundled mem plugin has not been discovered yet."
+  func memoryCountSummary() -> String {
+    guard let memoryStatus else {
+      return "Built-in memory is not connected yet."
     }
 
-    let authorName = memPlugin.authorName ?? "Unknown Author"
-    return "\(memPlugin.description)\nAuthor: \(authorName)\nManifest: \(memPlugin.manifestPath)"
+    return "\(memoryStatus.noteCount) note(s) captured"
+  }
+
+  func memoryDetailSummary() -> String {
+    guard let memoryStatus else {
+      return "Cavell uses built-in memory instead of a memory plugin. Workspace notes are stored locally by the runtime."
+    }
+
+    if memoryNotes.isEmpty {
+      return memoryStatus.summary
+    }
+
+    return memoryNotes
+      .prefix(4)
+      .map { note in
+        let tagSummary = note.tags.isEmpty ? "untagged" : note.tags.joined(separator: ", ")
+        return "\(note.title) | \(note.scope) | \(note.source) | tags: \(tagSummary)"
+      }
+      .joined(separator: "\n")
+  }
+
+  func memoryLatestSummary() -> String {
+    guard let latestNote = memoryNotes.first else {
+      return "No memory notes have been captured yet."
+    }
+
+    return "\(latestNote.body)\nSource: \(latestNote.source)"
   }
 
   func composerPlaceholder() -> String {
@@ -749,6 +819,32 @@ final class AppViewModel: ObservableObject {
 
     self.activeTurnID = activeTurnID
     activeTurnThreadID = threadID
+  }
+
+  private func refreshMemoryState() async {
+    let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
+    let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
+
+    if let runtimeMemoryStatus {
+      memoryStatus = MemoryStatusSummary(
+        noteCount: runtimeMemoryStatus.noteCount,
+        latestTitle: runtimeMemoryStatus.latestTitle,
+        summary: runtimeMemoryStatus.summary
+      )
+    }
+    if let runtimeMemoryNotes {
+      memoryNotes = runtimeMemoryNotes.map { note in
+        MemoryNoteSummary(
+          id: note.id,
+          title: note.title,
+          body: note.body,
+          scope: note.scope,
+          source: note.source,
+          createdAt: note.createdAt,
+          tags: note.tags
+        )
+      }
+    }
   }
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {

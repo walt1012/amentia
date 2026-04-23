@@ -45,6 +45,7 @@ struct ServerInfo: Codable {
 }
 
 struct ServerCapabilities: Codable {
+  let supportsMemory: Bool
   let supportsThreads: Bool
   let supportsTools: Bool
   let supportsPlugins: Bool
@@ -67,6 +68,26 @@ struct ModelHealthResult: Codable {
   let modelPath: String?
   let manifestPath: String?
   let metrics: [String: String]
+}
+
+struct MemoryStatusResult: Codable {
+  let noteCount: Int
+  let latestTitle: String?
+  let summary: String
+}
+
+struct MemoryListResult: Codable {
+  let notes: [RuntimeMemoryNotePayload]
+}
+
+struct RuntimeMemoryNotePayload: Codable {
+  let id: String
+  let title: String
+  let body: String
+  let scope: String
+  let source: String
+  let createdAt: Int
+  let tags: [String]
 }
 
 struct PluginListResult: Codable {

@@ -45,7 +45,7 @@ Implemented foundation:
 - runtime protocol types
 - local runtime binary scaffold
 - macOS app source layout
-- official `mem` plugin scaffold
+- built-in memory module scaffold
 - CI skeleton
 
 ## Planned Runtime Shape

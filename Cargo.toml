@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/cavell-core",
+  "crates/cavell-memory",
   "crates/cavell-model-runtime",
   "crates/cavell-plugin-host",
   "crates/cavell-protocol",

@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 serde_json.workspace = true
+cavell-memory = { path = "../cavell-memory" }
 cavell-model-runtime = { path = "../cavell-model-runtime" }
 cavell-plugin-host = { path = "../cavell-plugin-host" }
 cavell-protocol = { path = "../cavell-protocol" }

@@ -4,16 +4,18 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::Result;
+use cavell_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, ModelRole};
 use cavell_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEntry};
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
-  ModelHealthResult, PluginListResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
-  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
-  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
-  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  MemoryListResult, MemoryNoteSummary, MemoryStatusResult, ModelHealthResult, PluginListResult,
+  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
+  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -60,7 +62,9 @@ pub struct RuntimeContext {
   server_name: String,
   server_version: String,
   model_runtime: LocalModelRuntime,
+  memory_manager: MemoryManager,
   store: Option<FileThreadStore>,
+  memory_notes: Vec<MemoryNote>,
   threads: Vec<StoredThread>,
   workspace: Option<WorkspaceSummary>,
   plugins: Vec<PluginCatalogEntry>,
@@ -76,15 +80,19 @@ impl RuntimeContext {
     let persisted_threads = store.load_threads()?;
     let persisted_workspace = store.load_workspace()?;
     let persisted_pending_approvals = store.load_pending_approvals()?;
+    let persisted_memory_notes = store.load_memory_notes(128)?;
     let plugins = load_plugin_catalog()?;
     let next_thread_number = persisted_threads.len() + 1;
     let next_approval_number = store.next_approval_sequence()?;
+    let next_memory_number = store.next_memory_sequence()?;
 
     Ok(Self {
       server_name: "cavell-runtime".to_string(),
       server_version: env!("CARGO_PKG_VERSION").to_string(),
       model_runtime: LocalModelRuntime::new_default(),
+      memory_manager: MemoryManager::new(next_memory_number),
       store: Some(store),
+      memory_notes: persisted_memory_notes,
       threads: persisted_threads
         .into_iter()
         .map(|thread| StoredThread {
@@ -123,7 +131,9 @@ impl RuntimeContext {
       server_name: "cavell-runtime".to_string(),
       server_version: env!("CARGO_PKG_VERSION").to_string(),
       model_runtime: LocalModelRuntime::new_default(),
+      memory_manager: MemoryManager::new(1),
       store: None,
+      memory_notes: vec![],
       threads: vec![],
       workspace: None,
       plugins: load_plugin_catalog().unwrap_or_default(),
@@ -172,6 +182,14 @@ impl RuntimeContext {
     self.persist_pending_approvals()
   }
 
+  fn persist_memory_note(&self, note: &MemoryNote) -> Result<()> {
+    let Some(store) = &self.store else {
+      return Ok(());
+    };
+
+    store.save_memory_note(note)
+  }
+
   fn persist_workspace(&self) -> Result<()> {
     let Some(store) = &self.store else {
       return Ok(());
@@ -190,6 +208,14 @@ impl RuntimeContext {
 
     store.resolve_approval(&stored_approval_record(approval.clone()), decision)
   }
+
+  fn remember(&mut self, event: MemoryEvent) -> Result<MemoryNote> {
+    let note = self
+      .memory_manager
+      .record_event(&mut self.memory_notes, event);
+    self.persist_memory_note(&note)?;
+    Ok(note)
+  }
 }
 
 impl Default for RuntimeContext {
@@ -207,6 +233,22 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       &HealthPingResult {
         status: "ok".to_string(),
       },
+    ),
+    methods::MEMORY_LIST => JsonRpcResponse::success(
+      request.id,
+      &MemoryListResult {
+        notes: context
+          .memory_notes
+          .iter()
+          .take(16)
+          .cloned()
+          .map(to_protocol_memory_note)
+          .collect(),
+      },
+    ),
+    methods::MEMORY_STATUS => JsonRpcResponse::success(
+      request.id,
+      &to_protocol_memory_status(context.memory_manager.status(&context.memory_notes)),
     ),
     methods::MODEL_HEALTH => JsonRpcResponse::success(
       request.id,
@@ -285,6 +327,26 @@ fn to_protocol_model_health(health: ModelHealth) -> ModelHealthResult {
   }
 }
 
+fn to_protocol_memory_note(note: MemoryNote) -> MemoryNoteSummary {
+  MemoryNoteSummary {
+    id: note.id,
+    title: note.title,
+    body: note.body,
+    scope: note.scope,
+    source: note.source,
+    created_at: note.created_at,
+    tags: note.tags,
+  }
+}
+
+fn to_protocol_memory_status(status: cavell_memory::MemoryStatus) -> MemoryStatusResult {
+  MemoryStatusResult {
+    note_count: status.note_count,
+    latest_title: status.latest_title,
+    summary: status.summary,
+  }
+}
+
 fn to_protocol_plugin(plugin: PluginCatalogEntry) -> ProtocolPluginSummary {
   ProtocolPluginSummary {
     id: plugin.id,
@@ -330,6 +392,7 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
       },
       protocol_version: "0.1.0".to_string(),
       capabilities: ServerCapabilities {
+        supports_memory: true,
         supports_threads: true,
         supports_tools: true,
         supports_plugins: !context.plugins.is_empty(),
@@ -391,6 +454,13 @@ fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) 
 
   if let Err(error) = context.persist_workspace() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  if let Err(error) = context.remember(MemoryEvent::WorkspaceOpened {
+    display_name: workspace.display_name.clone(),
+    root_path: workspace.root_path.clone(),
+  }) {
+    return JsonRpcResponse::error(request.id, -32011, error.to_string());
   }
 
   JsonRpcResponse::success(
@@ -956,6 +1026,7 @@ fn handle_approval_respond(
   context.pending_approvals.remove(&params.approval_id);
 
   let mut items = vec![];
+  let mut memory_event = None;
   if decision == "approved" {
     items.push(TimelineItem {
       kind: "approvalResolved".to_string(),
@@ -984,6 +1055,10 @@ fn handle_approval_respond(
         &content,
       ) {
         Ok(relative_path) => {
+          memory_event = Some(MemoryEvent::FileWritten {
+            workspace_display_name: workspace.display_name.clone(),
+            relative_path: relative_path.clone(),
+          });
           items.push(TimelineItem {
             kind: "toolResult".to_string(),
             title: "write_file result".to_string(),
@@ -1020,6 +1095,10 @@ fn handle_approval_respond(
 
       match run_shell(Path::new(&workspace.root_path), &command, 4096) {
         Ok(result) => {
+          memory_event = Some(MemoryEvent::ShellCommandRan {
+            workspace_display_name: workspace.display_name.clone(),
+            command: command.clone(),
+          });
           let (summary, summary_attributes) =
             summarize_shell_result(&model_runtime, &workspace.display_name, &result);
           items.push(TimelineItem {
@@ -1046,6 +1125,10 @@ fn handle_approval_respond(
       }
     }
   } else {
+    memory_event = Some(MemoryEvent::ApprovalDenied {
+      title: approval.title.clone(),
+      action: approval.action.clone(),
+    });
     let (summary, summary_attributes) = summarize_denied_approval(&model_runtime, &approval);
     items.push(TimelineItem {
       kind: "approvalResolved".to_string(),
@@ -1072,6 +1155,12 @@ fn handle_approval_respond(
 
   if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  if let Some(memory_event) = memory_event {
+    if let Err(error) = context.remember(memory_event) {
+      return JsonRpcResponse::error(request.id, -32012, error.to_string());
+    }
   }
 
   let pending_approvals = approvals_for_thread(context, &approval.thread_id);

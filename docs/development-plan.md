@@ -21,7 +21,7 @@ These constraints are mandatory and should be treated as project requirements, n
 - Development model: free and open source only
 - Repository language policy: English only for source code, comments, docs, commit messages, branch names, PR titles, CI messages, and generated project templates where practical
 - Product positioning: broader than a coding assistant, capable of growing into a plugin-powered local coworker platform
-- Preinstalled plugin requirement: `mem`
+- Built-in memory requirement: local workspace memory is a core runtime module
 
 ## 3. Product Thesis
 
@@ -112,7 +112,7 @@ Based on those references, `Cavell` should adopt:
 - diff and patch review
 - persistent thread history
 - plugin discovery
-- preinstalled `mem` plugin shell
+- built-in memory module shell
 
 ### 5.2 Explicitly Out Of Scope For Phase 1
 
@@ -293,6 +293,7 @@ The Rust side should use a multi-crate workspace.
 - `crates/cavell-protocol`
 - `crates/cavell-core`
 - `crates/cavell-storage`
+- `crates/cavell-memory`
 - `crates/cavell-model-runtime`
 - `crates/cavell-tools`
 - `crates/cavell-plugin-host`
@@ -338,6 +339,13 @@ The Rust side should use a multi-crate workspace.
 - shell tools
 - diff generation
 - future git tools
+
+`cavell-memory`
+
+- workspace memory capture
+- thread memory summaries
+- local retrieval primitives
+- memory compaction hooks
 
 `cavell-plugin-host`
 
@@ -640,7 +648,6 @@ At minimum:
 
 Phase 1 official plugins:
 
-- `mem`
 - `filesystem`
 - `shell`
 - `git`
@@ -651,16 +658,16 @@ Phase 2 additions:
 - `workflow-research`
 - `github`
 
-### 14.8 `mem` Plugin Scope
+### 14.8 Built-In Memory Scope
 
-Initial `mem` plugin responsibilities:
+Initial built-in memory responsibilities:
 
 - workspace facts store
 - thread summaries
 - user notes attached to workspaces
 - lightweight retrieval into prompts
 
-Phase 2 `mem` responsibilities:
+Phase 2 memory responsibilities:
 
 - cross-thread memory references
 - plugin-provided retrieval policies
@@ -845,7 +852,7 @@ Deliverables:
 - manifest validation
 - plugin manager UI
 - plugin capability registry
-- first-party `mem` plugin
+- memory-aware plugin integration points
 - per-plugin permissions UI
 - plugin-enabled commands and hooks
 
@@ -885,7 +892,7 @@ Deliverables:
 - multi-agent workflows
 - automation
 - background tasks
-- richer `mem` retrieval
+- richer memory retrieval
 - plugin-defined agents
 - MCP client support
 
@@ -908,7 +915,7 @@ Recommended implementation order:
 9. implement streaming output and cancellation
 10. implement filesystem and shell tools with approvals
 11. implement diff and patch review
-12. implement plugin discovery and the initial `mem` plugin
+12. implement plugin discovery after the built-in memory module is stable
 
 ## 20. Detailed Backlog For Milestone 0
 

@@ -24,6 +24,22 @@ struct ModelHealthSummary: Hashable {
   let metrics: [String: String]
 }
 
+struct MemoryStatusSummary: Hashable {
+  let noteCount: Int
+  let latestTitle: String?
+  let summary: String
+}
+
+struct MemoryNoteSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let body: String
+  let scope: String
+  let source: String
+  let createdAt: Int
+  let tags: [String]
+}
+
 struct PluginSummary: Identifiable, Hashable {
   let id: String
   let name: String

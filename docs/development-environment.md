@@ -87,7 +87,7 @@ The runtime resolves bundled plugins in this order:
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 
-Milestone 1 expects the official `mem` plugin scaffold to be discoverable from that root.
+Milestone 1 uses a built-in memory module in the runtime, so the plugin root can stay empty until the plugin milestone.
 
 ## GitHub Actions Notes
 

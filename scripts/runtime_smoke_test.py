@@ -97,6 +97,24 @@ def main() -> int:
     assert model_health["result"]["source"] in {"bundle-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
 
+    memory_status, _ = send_request(
+      process,
+      {
+        "id": 22,
+        "method": "memory/status",
+      },
+    )
+    assert memory_status["result"]["noteCount"] == 0
+
+    memory_list, _ = send_request(
+      process,
+      {
+        "id": 23,
+        "method": "memory/list",
+      },
+    )
+    assert memory_list["result"]["notes"] == []
+
     plugin_list, _ = send_request(
       process,
       {
@@ -104,7 +122,7 @@ def main() -> int:
         "method": "plugin/list",
       },
     )
-    assert any(plugin["name"] == "mem" for plugin in plugin_list["result"]["plugins"])
+    assert isinstance(plugin_list["result"]["plugins"], list)
 
     workspace, _ = send_request(
       process,
@@ -117,6 +135,15 @@ def main() -> int:
       },
     )
     assert workspace["result"]["workspace"]["displayName"] == workspace_dir.name
+
+    memory_status_after_workspace, _ = send_request(
+      process,
+      {
+        "id": 27,
+        "method": "memory/status",
+      },
+    )
+    assert memory_status_after_workspace["result"]["noteCount"] == 1
 
     started, _ = send_request(
       process,
@@ -262,7 +289,7 @@ def main() -> int:
     restarted_initialize, _ = send_request(
       process,
       {
-        "id": 22,
+        "id": 28,
         "method": "initialize",
         "params": {
           "clientInfo": {
@@ -277,7 +304,7 @@ def main() -> int:
     restarted_thread, _ = send_request(
       process,
       {
-        "id": 23,
+        "id": 29,
         "method": "thread/read",
         "params": {
           "threadId": "thread-1",
@@ -293,12 +320,21 @@ def main() -> int:
     restarted_workspace, _ = send_request(
       process,
       {
-        "id": 24,
+        "id": 30,
         "method": "workspace/current",
       },
     )
     assert restarted_workspace["result"]["workspace"]["displayName"] == workspace_dir.name
     assert restarted_workspace["result"]["workspace"]["rootPath"] == str(workspace_dir)
+
+    restarted_memory_status, _ = send_request(
+      process,
+      {
+        "id": 31,
+        "method": "memory/status",
+      },
+    )
+    assert restarted_memory_status["result"]["noteCount"] >= 1
 
     approval, _ = send_request(
       process,
@@ -314,6 +350,15 @@ def main() -> int:
     assert approval["result"]["items"][0]["kind"] == "approvalResolved"
     assert approval["result"]["items"][1]["title"] == "write_file"
     assert (workspace_dir / "docs" / "output.txt").read_text(encoding="utf-8") == "Created from approval flow"
+
+    memory_list_after_write, _ = send_request(
+      process,
+      {
+        "id": 32,
+        "method": "memory/list",
+      },
+    )
+    assert any("Wrote docs/output.txt" == note["title"] for note in memory_list_after_write["result"]["notes"])
 
     shell_turn, _ = send_request(
       process,

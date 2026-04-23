@@ -4,11 +4,12 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
+use cavell_memory::MemoryNote;
 use cavell_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 #[derive(Debug, Clone, Copy)]
 struct SchemaMigration {
@@ -17,7 +18,7 @@ struct SchemaMigration {
   sql: &'static str,
 }
 
-const SCHEMA_MIGRATIONS: [SchemaMigration; 3] = [
+const SCHEMA_MIGRATIONS: [SchemaMigration; 4] = [
   SchemaMigration {
     version: 1,
     name: "initial_workspace_and_threads",
@@ -64,6 +65,23 @@ const SCHEMA_MIGRATIONS: [SchemaMigration; 3] = [
       ON threads(updated_at DESC, id ASC);
       CREATE INDEX IF NOT EXISTS idx_approvals_requested_at
       ON approvals(decision, requested_at ASC, id ASC);
+    ",
+  },
+  SchemaMigration {
+    version: 4,
+    name: "memory_notes",
+    sql: "
+      CREATE TABLE IF NOT EXISTS memory_notes (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        scope TEXT NOT NULL,
+        source TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        tags_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_memory_notes_created_at
+      ON memory_notes(created_at DESC, id ASC);
     ",
   },
 ];
@@ -242,6 +260,41 @@ impl FileThreadStore {
       .context("failed to load pending approval records")
   }
 
+  pub fn load_memory_notes(&self, limit: usize) -> Result<Vec<MemoryNote>> {
+    let connection = self.open_connection()?;
+    let mut statement = connection.prepare(
+      "SELECT id, title, body, scope, source, created_at, tags_json
+       FROM memory_notes
+       ORDER BY created_at DESC, id ASC
+       LIMIT ?1",
+    )?;
+
+    let rows = statement.query_map([limit as i64], |row| {
+      let tags_json: String = row.get(6)?;
+      let tags = serde_json::from_str::<Vec<String>>(&tags_json).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(
+          tags_json.len(),
+          rusqlite::types::Type::Text,
+          Box::new(error),
+        )
+      })?;
+
+      Ok(MemoryNote {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        body: row.get(2)?,
+        scope: row.get(3)?,
+        source: row.get(4)?,
+        created_at: row.get(5)?,
+        tags,
+      })
+    })?;
+
+    rows
+      .collect::<std::result::Result<Vec<_>, _>>()
+      .context("failed to load memory notes")
+  }
+
   pub fn save_pending_approvals(&self, approvals: &[StoredApprovalRecord]) -> Result<()> {
     let mut connection = self.open_connection()?;
     let transaction = connection.transaction()?;
@@ -329,6 +382,59 @@ impl FileThreadStore {
       .into_iter()
       .filter_map(|id| {
         id.strip_prefix("approval-")
+          .and_then(|suffix| suffix.parse::<usize>().ok())
+      })
+      .max()
+      .unwrap_or(0);
+
+    Ok(max_sequence + 1)
+  }
+
+  pub fn save_memory_note(&self, note: &MemoryNote) -> Result<()> {
+    let connection = self.open_connection()?;
+    let tags_json =
+      serde_json::to_string(&note.tags).context("failed to serialize memory note tags")?;
+    connection.execute(
+      "INSERT INTO memory_notes (
+        id,
+        title,
+        body,
+        scope,
+        source,
+        created_at,
+        tags_json
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        body = excluded.body,
+        scope = excluded.scope,
+        source = excluded.source,
+        created_at = excluded.created_at,
+        tags_json = excluded.tags_json",
+      params![
+        &note.id,
+        &note.title,
+        &note.body,
+        &note.scope,
+        &note.source,
+        note.created_at,
+        tags_json,
+      ],
+    )?;
+
+    Ok(())
+  }
+
+  pub fn next_memory_sequence(&self) -> Result<usize> {
+    let connection = self.open_connection()?;
+    let mut statement = connection.prepare("SELECT id FROM memory_notes ORDER BY id ASC")?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+
+    let max_sequence = rows
+      .collect::<std::result::Result<Vec<_>, _>>()?
+      .into_iter()
+      .filter_map(|id| {
+        id.strip_prefix("memory-")
           .and_then(|suffix| suffix.parse::<usize>().ok())
       })
       .max()
@@ -712,7 +818,35 @@ mod tests {
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].summary.id, "thread-old");
     assert!(pending_approvals.is_empty());
-    assert_eq!(migration_versions, vec![1, 2, 3]);
+    assert_eq!(migration_versions, vec![1, 2, 3, 4]);
     assert!(approval_indexes.contains(&"idx_approvals_requested_at".to_string()));
+  }
+
+  #[test]
+  fn sqlite_store_round_trips_memory_notes() {
+    let root = create_temp_directory("memory-roundtrip");
+    let store = FileThreadStore::new(root.join("cavell.db"), root.join("threads.json"));
+    let note = MemoryNote {
+      id: "memory-7".to_string(),
+      title: "Opened workspace cavell".to_string(),
+      body: "Cavell opened the workspace at /tmp/cavell.".to_string(),
+      scope: "cavell".to_string(),
+      source: "workspace".to_string(),
+      created_at: 7,
+      tags: vec!["workspace".to_string(), "session".to_string()],
+    };
+
+    store.save_memory_note(&note).expect("save memory note");
+    let notes = store.load_memory_notes(10).expect("load memory notes");
+    let next_sequence = store
+      .next_memory_sequence()
+      .expect("next memory sequence");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].id, "memory-7");
+    assert_eq!(notes[0].tags, vec!["workspace", "session"]);
+    assert_eq!(next_sequence, 8);
   }
 }
