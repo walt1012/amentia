@@ -10,8 +10,8 @@ use cavell_protocol::{
   InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ModelHealthResult,
   ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
   ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem, TurnCancelParams,
-  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
