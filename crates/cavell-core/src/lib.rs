@@ -8,10 +8,11 @@ use cavell_model_runtime::{GenerateRequest, LocalModelRuntime, ModelHealth, Mode
 use cavell_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcRequest, JsonRpcResponse, ModelHealthResult,
+  JsonRpcNotification,
   ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem, TurnCancelParams,
-  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
+  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
+  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use cavell_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use cavell_tools::{
@@ -228,6 +229,32 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::TURN_START => handle_turn_start(context, request),
     _ => JsonRpcResponse::error(request.id, -32601, "Method not found"),
   }
+}
+
+pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpcNotification>> {
+  let active_turn_ids = context
+    .active_turns
+    .keys()
+    .cloned()
+    .collect::<Vec<_>>();
+  let mut notifications = vec![];
+  let mut did_update = false;
+
+  for turn_id in active_turn_ids {
+    if let Some(params) = advance_active_turn(context, &turn_id) {
+      did_update = true;
+      notifications.push(JsonRpcNotification {
+        method: methods::THREAD_UPDATED_NOTIFICATION.to_string(),
+        params: Some(serde_json::to_value(params)?),
+      });
+    }
+  }
+
+  if did_update {
+    context.persist_runtime_state()?;
+  }
+
+  Ok(notifications)
 }
 
 fn to_protocol_model_health(health: ModelHealth) -> ModelHealthResult {
@@ -1246,38 +1273,60 @@ fn refresh_active_turn_for_thread(context: &mut RuntimeContext, thread_id: &str)
     .collect::<Vec<_>>();
 
   for turn_id in active_turn_ids {
-    let Some(snapshot) = context.active_turns.get(&turn_id).cloned() else {
-      continue;
-    };
-    let Some(thread) = context
+    let _ = advance_active_turn(context, &turn_id);
+  }
+}
+
+fn advance_active_turn(
+  context: &mut RuntimeContext,
+  turn_id: &str,
+) -> Option<ThreadUpdatedNotificationParams> {
+  let snapshot = context.active_turns.get(turn_id).cloned()?;
+  let total_chars = snapshot.full_content.chars().count();
+  let target_chars = compute_streamed_char_count(&snapshot).min(total_chars);
+
+  if target_chars <= snapshot.emitted_chars {
+    return None;
+  }
+
+  let thread_id = snapshot.thread_id.clone();
+  let streamed_content = take_characters(&snapshot.full_content, target_chars);
+  let is_complete = target_chars >= total_chars;
+  let streaming_status = if is_complete {
+    "completed"
+  } else {
+    "in_progress"
+  };
+
+  let thread_snapshot = {
+    let thread = context
       .threads
       .iter_mut()
-      .find(|thread| thread.summary.id == snapshot.thread_id)
-    else {
-      context.active_turns.remove(&turn_id);
-      continue;
-    };
+      .find(|thread| thread.summary.id == snapshot.thread_id)?;
 
-    let total_chars = snapshot.full_content.chars().count();
-    let target_chars = compute_streamed_char_count(&snapshot).min(total_chars);
-    let streamed_content = take_characters(&snapshot.full_content, target_chars);
-    let is_complete = target_chars >= total_chars;
-    let streaming_status = if is_complete {
-      "completed"
-    } else {
-      "in_progress"
-    };
-
-    update_streaming_item(thread, &turn_id, &streamed_content, streaming_status);
+    update_streaming_item(thread, turn_id, &streamed_content, streaming_status);
 
     if is_complete {
       thread.summary.status = "Ready".to_string();
-      context.active_turns.remove(&turn_id);
-    } else if let Some(active_turn) = context.active_turns.get_mut(&turn_id) {
-      active_turn.emitted_chars = target_chars;
+    } else {
       thread.summary.status = "Streaming assistant response".to_string();
     }
+
+    (thread.summary.clone(), thread.items.clone())
+  };
+
+  if is_complete {
+    context.active_turns.remove(turn_id);
+  } else if let Some(active_turn) = context.active_turns.get_mut(turn_id) {
+    active_turn.emitted_chars = target_chars;
   }
+
+  Some(ThreadUpdatedNotificationParams {
+    thread: thread_snapshot.0,
+    items: thread_snapshot.1,
+    pending_approvals: approvals_for_thread(context, &thread_id),
+    active_turn_id: active_turn_id_for_thread(context, &thread_id),
+  })
 }
 
 fn compute_streamed_char_count(turn: &ActiveTurn) -> usize {
@@ -1601,6 +1650,7 @@ fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<Approv
 mod tests {
   use super::*;
   use serde_json::{json, Value};
+  use std::thread;
   use std::env;
   use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1844,6 +1894,56 @@ mod tests {
       .unwrap()
       .contains("Milestone 1"));
     assert_eq!(result["activeTurnId"].as_str().unwrap(), "thread-1-turn-1");
+  }
+
+  #[test]
+  fn collect_notifications_emits_thread_update_for_active_turn() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("thread-updated");
+    fs::write(
+      workspace.join("README.md"),
+      "# Cavell\nNotification coverage\n",
+    )
+    .expect("write readme");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Notification Thread"
+        })),
+      ),
+    );
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Read README.md"
+        })),
+      ),
+    );
+
+    assert!(turn_response.error.is_none());
+    thread::sleep(std::time::Duration::from_millis(260));
+
+    let notifications = collect_notifications(&mut context).expect("collect notifications");
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert_eq!(notifications.len(), 1);
+    assert_eq!(notifications[0].method, methods::THREAD_UPDATED_NOTIFICATION);
   }
 
   #[test]

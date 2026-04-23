@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -22,19 +23,25 @@ def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]
   )
 
 
-def send_request(process: subprocess.Popen[str], payload: dict) -> dict:
+def send_request(process: subprocess.Popen[str], payload: dict) -> tuple[dict, list[dict]]:
   assert process.stdin is not None
   assert process.stdout is not None
 
   process.stdin.write(json.dumps(payload) + "\n")
   process.stdin.flush()
 
-  line = process.stdout.readline().strip()
-  if not line:
-    raise RuntimeError("runtime produced an empty response")
+  notifications: list[dict] = []
+  while True:
+    line = process.stdout.readline().strip()
+    if not line:
+      raise RuntimeError("runtime produced an empty response")
 
-  return json.loads(line)
+    message = json.loads(line)
+    if message.get("id") == payload["id"]:
+      return message, notifications
 
+    if "method" in message:
+      notifications.append(message)
 
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
@@ -53,7 +60,7 @@ def main() -> int:
   process = start_runtime(repo_root, env)
 
   try:
-    initialize = send_request(
+    initialize, _ = send_request(
       process,
       {
         "id": 1,
@@ -68,7 +75,7 @@ def main() -> int:
     )
     assert initialize["result"]["serverInfo"]["name"] == "cavell-runtime"
 
-    health = send_request(
+    health, _ = send_request(
       process,
       {
         "id": 2,
@@ -77,7 +84,7 @@ def main() -> int:
     )
     assert health["result"]["status"] == "ok"
 
-    model_health = send_request(
+    model_health, _ = send_request(
       process,
       {
         "id": 21,
@@ -88,7 +95,7 @@ def main() -> int:
     assert model_health["result"]["backend"] in {"heuristic", "llama.cpp"}
     assert model_health["result"]["status"] in {"fallback", "ready"}
 
-    workspace = send_request(
+    workspace, _ = send_request(
       process,
       {
         "id": 3,
@@ -100,7 +107,7 @@ def main() -> int:
     )
     assert workspace["result"]["workspace"]["displayName"] == workspace_dir.name
 
-    started = send_request(
+    started, _ = send_request(
       process,
       {
         "id": 4,
@@ -112,7 +119,7 @@ def main() -> int:
     )
     assert started["result"]["thread"]["title"] == "Smoke Test Thread"
 
-    thread_list = send_request(
+    thread_list, _ = send_request(
       process,
       {
         "id": 5,
@@ -121,7 +128,7 @@ def main() -> int:
     )
     assert len(thread_list["result"]["threads"]) == 1
 
-    thread_read = send_request(
+    thread_read, _ = send_request(
       process,
       {
         "id": 6,
@@ -134,7 +141,7 @@ def main() -> int:
     assert thread_read["result"]["thread"]["id"] == "thread-1"
     assert thread_read["result"]["items"][0]["kind"] == "system"
 
-    turn = send_request(
+    turn, _ = send_request(
       process,
       {
         "id": 7,
@@ -151,8 +158,9 @@ def main() -> int:
     assert turn["result"]["items"][3]["kind"] == "toolResult"
     assert "Milestone 1 smoke test" in turn["result"]["items"][3]["content"]
     assert turn["result"]["activeTurnId"] == "thread-1-turn-1"
+    time.sleep(0.35)
 
-    cancelled_turn = send_request(
+    cancelled_turn, notifications = send_request(
       process,
       {
         "id": 8,
@@ -162,10 +170,11 @@ def main() -> int:
         },
       },
     )
+    assert any(item["method"] == "thread/updated" for item in notifications)
     assert cancelled_turn["result"]["items"][0]["kind"] == "warning"
     assert cancelled_turn["result"].get("activeTurnId") is None
 
-    cancelled_thread = send_request(
+    cancelled_thread, _ = send_request(
       process,
       {
         "id": 9,
@@ -177,7 +186,7 @@ def main() -> int:
     )
     assert cancelled_thread["result"].get("activeTurnId") is None
 
-    search_turn = send_request(
+    search_turn, _ = send_request(
       process,
       {
         "id": 10,
@@ -191,7 +200,7 @@ def main() -> int:
     assert search_turn["result"]["items"][2]["title"] == "search_files"
     assert "notes.txt:1" in search_turn["result"]["items"][3]["content"]
 
-    write_turn = send_request(
+    write_turn, _ = send_request(
       process,
       {
         "id": 11,
@@ -212,7 +221,7 @@ def main() -> int:
     process.wait(timeout=5)
     process = start_runtime(repo_root, env)
 
-    restarted_initialize = send_request(
+    restarted_initialize, _ = send_request(
       process,
       {
         "id": 22,
@@ -227,7 +236,7 @@ def main() -> int:
     )
     assert restarted_initialize["result"]["serverInfo"]["name"] == "cavell-runtime"
 
-    restarted_thread = send_request(
+    restarted_thread, _ = send_request(
       process,
       {
         "id": 23,
@@ -243,7 +252,7 @@ def main() -> int:
       for item in restarted_thread["result"]["items"]
     )
 
-    restarted_workspace = send_request(
+    restarted_workspace, _ = send_request(
       process,
       {
         "id": 24,
@@ -253,7 +262,7 @@ def main() -> int:
     assert restarted_workspace["result"]["workspace"]["displayName"] == workspace_dir.name
     assert restarted_workspace["result"]["workspace"]["rootPath"] == str(workspace_dir)
 
-    approval = send_request(
+    approval, _ = send_request(
       process,
       {
         "id": 12,
@@ -268,7 +277,7 @@ def main() -> int:
     assert approval["result"]["items"][1]["title"] == "write_file"
     assert (workspace_dir / "docs" / "output.txt").read_text(encoding="utf-8") == "Created from approval flow"
 
-    shell_turn = send_request(
+    shell_turn, _ = send_request(
       process,
       {
         "id": 13,
@@ -282,7 +291,7 @@ def main() -> int:
     assert shell_turn["result"]["items"][2]["kind"] == "approvalRequested"
     shell_approval_id = shell_turn["result"]["pendingApprovals"][0]["id"]
 
-    shell_approval = send_request(
+    shell_approval, _ = send_request(
       process,
       {
         "id": 14,

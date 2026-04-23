@@ -18,7 +18,6 @@ final class AppViewModel: ObservableObject {
   private var threadTimelines: [String: [TimelineEntry]]
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
-  private var pollingTask: Task<Void, Never>?
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
@@ -48,6 +47,11 @@ final class AppViewModel: ObservableObject {
     ]
 
     self.runtimeBridge = runtimeBridge
+    self.runtimeBridge.onThreadUpdated = { [weak self] state in
+      Task { @MainActor in
+        self?.applyRuntimeThreadUpdate(state)
+      }
+    }
     self.runtimeState = runtimeBridge.connectionState
     self.runtimeDetail = "Runtime not launched"
     self.draftMessage = ""
@@ -642,8 +646,6 @@ final class AppViewModel: ObservableObject {
         activeTurnThreadID = nil
       }
       self.activeTurnID = nil
-      pollingTask?.cancel()
-      pollingTask = nil
       return
     }
 
@@ -653,28 +655,27 @@ final class AppViewModel: ObservableObject {
 
     self.activeTurnID = activeTurnID
     activeTurnThreadID = threadID
-    startPollingActiveTurn(threadID: threadID)
   }
 
-  private func startPollingActiveTurn(threadID: String) {
-    pollingTask?.cancel()
-    pollingTask = Task { [weak self] in
-      while !Task.isCancelled {
-        guard let self else {
-          return
-        }
+  private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
+    let entries = state.items.map { item in
+      TimelineEntry(
+        id: UUID(),
+        kind: timelineKind(for: item.kind),
+        title: item.title,
+        body: item.content,
+        attributes: item.attributes
+      )
+    }
 
-        try? await Task.sleep(nanoseconds: 350_000_000)
+    threadTimelines[state.id] = entries
+    updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
+    updateActiveTurn(threadID: state.id, activeTurnID: state.activeTurnID)
+    refreshThreadPreview(threadID: state.id, preview: state.status)
 
-        guard !Task.isCancelled,
-              self.activeTurnID != nil,
-              self.activeTurnThreadID == threadID
-        else {
-          return
-        }
-
-        await self.loadThreadHistory(threadID: threadID)
-      }
+    if selectedThreadID == state.id {
+      timeline = entries
+      selectedEntryID = entries.first?.id
     }
   }
 }

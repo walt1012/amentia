@@ -7,6 +7,7 @@ pub mod methods {
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const MODEL_HEALTH: &str = "model/health";
+  pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
   pub const WORKSPACE_CURRENT: &str = "workspace/current";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
   pub const TURN_CANCEL: &str = "turn/cancel";
@@ -198,6 +199,16 @@ pub struct ApprovalRespondParams {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThreadReadResult {
+  pub thread: ThreadSummary,
+  pub items: Vec<TimelineItem>,
+  pub pending_approvals: Vec<ApprovalRequest>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub active_turn_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadUpdatedNotificationParams {
   pub thread: ThreadSummary,
   pub items: Vec<TimelineItem>,
   pub pending_approvals: Vec<ApprovalRequest>,

@@ -103,12 +103,18 @@ final class RuntimeBridge {
     }
   }
 
+  typealias ThreadUpdatedHandler = @Sendable (RuntimeThreadState) -> Void
+
   private(set) var connectionState: ConnectionState = .disconnected
+  var onThreadUpdated: ThreadUpdatedHandler?
 
   private var process: Process?
   private var inputHandle: FileHandle?
   private var outputHandle: FileHandle?
   private var nextRequestID: Int = 1
+  private let stateQueue = DispatchQueue(label: "cavell.runtime.bridge.state")
+  private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
+  private var readerTask: Task<Void, Never>?
 
   func launchAndInitialize() async throws -> SessionInfo {
     if process == nil {
@@ -273,14 +279,7 @@ final class RuntimeBridge {
     return RuntimeTurnResult(
       turnID: result.turnId,
       threadID: result.threadId,
-      items: result.items.map {
-        RuntimeTimelineItemResult(
-          kind: $0.kind,
-          title: $0.title,
-          content: $0.content,
-          attributes: $0.attributes ?? [:]
-        )
-      },
+      items: result.items.map(runtimeTimelineItem(from:)),
       pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
       activeTurnID: result.activeTurnId
     )
@@ -300,19 +299,12 @@ final class RuntimeBridge {
       throw RuntimeError.invalidResponse
     }
 
-    return RuntimeThreadState(
+    return runtimeThreadState(
       id: result.thread.id,
       title: result.thread.title,
       status: result.thread.status,
-      items: result.items.map {
-        RuntimeTimelineItemResult(
-          kind: $0.kind,
-          title: $0.title,
-          content: $0.content,
-          attributes: $0.attributes ?? [:]
-        )
-      },
-      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      items: result.items,
+      pendingApprovals: result.pendingApprovals,
       activeTurnID: result.activeTurnId
     )
   }
@@ -334,14 +326,7 @@ final class RuntimeBridge {
     return RuntimeApprovalResponse(
       approvalID: result.approvalId,
       threadID: result.threadId,
-      items: result.items.map {
-        RuntimeTimelineItemResult(
-          kind: $0.kind,
-          title: $0.title,
-          content: $0.content,
-          attributes: $0.attributes ?? [:]
-        )
-      },
+      items: result.items.map(runtimeTimelineItem(from:)),
       pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
     )
   }
@@ -363,14 +348,7 @@ final class RuntimeBridge {
     return RuntimeTurnCancellation(
       turnID: result.turnId,
       threadID: result.threadId,
-      items: result.items.map {
-        RuntimeTimelineItemResult(
-          kind: $0.kind,
-          title: $0.title,
-          content: $0.content,
-          attributes: $0.attributes ?? [:]
-        )
-      },
+      items: result.items.map(runtimeTimelineItem(from:)),
       activeTurnID: result.activeTurnId
     )
   }
@@ -394,6 +372,76 @@ final class RuntimeBridge {
     self.process = process
     inputHandle = stdinPipe.fileHandleForWriting
     outputHandle = stdoutPipe.fileHandleForReading
+    startReaderLoop(with: stdoutPipe.fileHandleForReading)
+  }
+
+  private func startReaderLoop(with handle: FileHandle) {
+    readerTask?.cancel()
+    readerTask = Task.detached(priority: .userInitiated) { [weak self] in
+      guard let self else {
+        return
+      }
+
+      while !Task.isCancelled {
+        let line: String
+        do {
+          line = try Self.readLine(from: handle)
+        } catch {
+          self.failPendingResponses(with: error)
+          return
+        }
+
+        let data = Data(line.utf8)
+        self.handleIncomingMessage(data)
+      }
+    }
+  }
+
+  private func handleIncomingMessage(_ data: Data) {
+    let decoder = JSONDecoder()
+
+    if let response = try? decoder.decode(JSONRPCAnyResponse.self, from: data),
+       let responseID = response.id
+    {
+      stateQueue.async {
+        guard let continuation = self.pendingResponses.removeValue(forKey: responseID) else {
+          return
+        }
+        continuation.resume(returning: data)
+      }
+      return
+    }
+
+    guard let envelope = try? decoder.decode(JSONRPCNotificationEnvelope.self, from: data) else {
+      return
+    }
+
+    if envelope.method == "thread/updated",
+       let notification = try? decoder.decode(
+         JSONRPCNotification<ThreadUpdatedNotificationParams>.self,
+         from: data
+       )
+    {
+      let state = runtimeThreadState(
+        id: notification.params.thread.id,
+        title: notification.params.thread.title,
+        status: notification.params.thread.status,
+        items: notification.params.items,
+        pendingApprovals: notification.params.pendingApprovals,
+        activeTurnID: notification.params.activeTurnId
+      )
+      onThreadUpdated?(state)
+    }
+  }
+
+  private func failPendingResponses(with error: Error) {
+    stateQueue.async {
+      let continuations = self.pendingResponses.values
+      self.pendingResponses.removeAll()
+      for continuation in continuations {
+        continuation.resume(throwing: error)
+      }
+    }
   }
 
   private func resolveRuntimeURL() throws -> URL {
@@ -434,25 +482,67 @@ final class RuntimeBridge {
     method: String,
     params: Params
   ) async throws -> JSONRPCResponse<ResultType> {
-    guard let inputHandle, let outputHandle else {
+    guard let inputHandle else {
       throw RuntimeError.runtimePipeUnavailable
     }
 
-    let request = JSONRPCRequest(
-      id: nextRequestID,
-      method: method,
-      params: params
-    )
-    nextRequestID += 1
+    let requestID = stateQueue.sync { () -> Int in
+      let id = nextRequestID
+      nextRequestID += 1
+      return id
+    }
 
-    let encoder = JSONEncoder()
-    let data = try encoder.encode(request) + Data([0x0A])
-    try inputHandle.write(contentsOf: data)
+    let data = try await withCheckedThrowingContinuation { continuation in
+      stateQueue.sync {
+        self.pendingResponses[requestID] = continuation
+      }
 
-    let line = try await Self.readLineAsync(from: outputHandle)
+      do {
+        let request = JSONRPCRequest(
+          id: requestID,
+          method: method,
+          params: params
+        )
+        let encoder = JSONEncoder()
+        let payload = try encoder.encode(request) + Data([0x0A])
+        try inputHandle.write(contentsOf: payload)
+      } catch {
+        stateQueue.async {
+          let pending = self.pendingResponses.removeValue(forKey: requestID)
+          pending?.resume(throwing: error)
+        }
+      }
+    }
 
     let decoder = JSONDecoder()
-    return try decoder.decode(JSONRPCResponse<ResultType>.self, from: Data(line.utf8))
+    return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
+  }
+
+  private func runtimeThreadState(
+    id: String,
+    title: String,
+    status: String,
+    items: [RuntimeTimelineItem],
+    pendingApprovals: [RuntimeApprovalPayload],
+    activeTurnID: String?
+  ) -> RuntimeThreadState {
+    RuntimeThreadState(
+      id: id,
+      title: title,
+      status: status,
+      items: items.map(runtimeTimelineItem(from:)),
+      pendingApprovals: pendingApprovals.map(runtimeApproval(from:)),
+      activeTurnID: activeTurnID
+    )
+  }
+
+  private func runtimeTimelineItem(from payload: RuntimeTimelineItem) -> RuntimeTimelineItemResult {
+    RuntimeTimelineItemResult(
+      kind: payload.kind,
+      title: payload.title,
+      content: payload.content,
+      attributes: payload.attributes ?? [:]
+    )
   }
 
   private func runtimeApproval(from payload: RuntimeApprovalPayload) -> RuntimeApproval {
@@ -463,18 +553,6 @@ final class RuntimeBridge {
       title: payload.title,
       relativePath: payload.relativePath
     )
-  }
-
-  private static func readLineAsync(from handle: FileHandle) async throws -> String {
-    try await withCheckedThrowingContinuation { continuation in
-      DispatchQueue.global(qos: .userInitiated).async {
-        do {
-          continuation.resume(returning: try readLine(from: handle))
-        } catch {
-          continuation.resume(throwing: error)
-        }
-      }
-    }
   }
 
   private static func readLine(from handle: FileHandle) throws -> String {

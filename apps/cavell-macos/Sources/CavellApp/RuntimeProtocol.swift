@@ -12,6 +12,19 @@ struct JSONRPCResponse<ResultType: Decodable>: Decodable {
   let error: JSONRPCError?
 }
 
+struct JSONRPCAnyResponse: Decodable {
+  let id: Int?
+}
+
+struct JSONRPCNotificationEnvelope: Decodable {
+  let method: String
+}
+
+struct JSONRPCNotification<Params: Decodable>: Decodable {
+  let method: String
+  let params: Params
+}
+
 struct JSONRPCError: Decodable {
   let code: Int
   let message: String
@@ -94,6 +107,13 @@ struct ThreadReadParams: Codable {
 }
 
 struct ThreadReadResult: Codable {
+  let thread: RuntimeThreadPayload
+  let items: [RuntimeTimelineItem]
+  let pendingApprovals: [RuntimeApprovalPayload]
+  let activeTurnId: String?
+}
+
+struct ThreadUpdatedNotificationParams: Codable {
   let thread: RuntimeThreadPayload
   let items: [RuntimeTimelineItem]
   let pendingApprovals: [RuntimeApprovalPayload]
