@@ -49,7 +49,8 @@ The repository is intentionally English-only.
 Milestone 1 is complete on the active development branch.
 
 Milestone 2 is now in progress with plugin discovery, enable and disable flow, capability registry,
-permission gating, command execution, and shell-completed hook execution underway.
+permission gating, per-plugin permissions and validation surfaces, command execution, and
+shell-completed hook execution underway.
 
 Delivered in Milestone 1:
 

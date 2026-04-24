@@ -263,6 +263,54 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      GroupBox("Plugin Permissions") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.pluginPermissionCountSummary())
+            .font(.headline)
+
+          Text(viewModel.pluginPermissionDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+
+          if !viewModel.pluginPermissionPreview().isEmpty {
+            ForEach(viewModel.pluginPermissionPreview()) { plugin in
+              PluginPermissionRow(
+                plugin: plugin,
+                onRevealManifest: {
+                  viewModel.revealPluginManifest(pluginID: plugin.id)
+                }
+              )
+            }
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      GroupBox("Plugin Validation") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.invalidPluginCountSummary())
+            .font(.headline)
+
+          Text(viewModel.invalidPluginDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+
+          if !viewModel.invalidPlugins().isEmpty {
+            ForEach(viewModel.invalidPlugins()) { plugin in
+              InvalidPluginRow(
+                plugin: plugin,
+                onRevealManifest: {
+                  viewModel.revealPluginManifest(pluginID: plugin.id)
+                }
+              )
+            }
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       GroupBox("Plugin Registry") {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.pluginRegistryCountSummary())
@@ -488,6 +536,44 @@ private struct PluginCapabilityRow: View {
   }
 }
 
+private struct PluginPermissionRow: View {
+  let plugin: PluginSummary
+  let onRevealManifest: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(plugin.displayName)
+            .font(.caption.weight(.semibold))
+          Text(plugin.enabled ? "Enabled" : "Disabled")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+
+        Spacer()
+
+        Button("Reveal Manifest") {
+          onRevealManifest()
+        }
+        .buttonStyle(.bordered)
+      }
+
+      if plugin.permissions.isEmpty {
+        Text("No extra runtime permissions declared.")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+      } else {
+        Text(plugin.permissions.joined(separator: ", "))
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(.vertical, 4)
+  }
+}
+
 private struct PluginCommandRow: View {
   let command: PluginCommandSummary
   let canRun: Bool
@@ -523,6 +609,39 @@ private struct PluginCommandRow: View {
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
+    }
+    .padding(.vertical, 4)
+  }
+}
+
+private struct InvalidPluginRow: View {
+  let plugin: PluginSummary
+  let onRevealManifest: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(plugin.displayName)
+            .font(.caption.weight(.semibold))
+          Text(plugin.manifestPath)
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+        }
+
+        Spacer()
+
+        Button("Reveal Manifest") {
+          onRevealManifest()
+        }
+        .buttonStyle(.bordered)
+      }
+
+      Text(plugin.validationError ?? "Plugin manifest did not pass runtime validation.")
+        .font(.caption2)
+        .foregroundColor(.orange)
+        .textSelection(.enabled)
     }
     .padding(.vertical, 4)
   }

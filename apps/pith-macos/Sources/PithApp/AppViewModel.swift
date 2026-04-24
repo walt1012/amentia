@@ -831,6 +831,87 @@ final class AppViewModel: ObservableObject {
       .joined(separator: "\n")
   }
 
+  func pluginPermissionCountSummary() -> String {
+    let readyPlugins = plugins.filter { $0.status == "ready" }
+    let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
+
+    guard !readyPlugins.isEmpty else {
+      return "Plugin permissions are not loaded yet."
+    }
+
+    if uniquePermissions.isEmpty {
+      return "\(readyPlugins.count) ready plugin(s), no declared permissions"
+    }
+
+    return "\(uniquePermissions.count) permission(s) across \(readyPlugins.count) ready plugin(s)"
+  }
+
+  func pluginPermissionDetailSummary() -> String {
+    let readyPlugins = plugins.filter { $0.status == "ready" }
+
+    guard !readyPlugins.isEmpty else {
+      return "Permission coverage appears here after the runtime loads plugin manifests."
+    }
+
+    let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
+    if uniquePermissions.isEmpty {
+      return "The current ready plugins do not declare extra runtime permissions."
+    }
+
+    return uniquePermissions
+      .sorted()
+      .map { permission in
+        let grantingPlugins = readyPlugins
+          .filter { $0.permissions.contains(permission) }
+          .map(\.displayName)
+          .sorted()
+          .joined(separator: ", ")
+        return "\(permission): \(grantingPlugins)"
+      }
+      .joined(separator: "\n")
+  }
+
+  func pluginPermissionPreview() -> [PluginSummary] {
+    plugins.filter { $0.status == "ready" }
+  }
+
+  func invalidPluginCountSummary() -> String {
+    let invalidPlugins = plugins.filter { $0.status != "ready" }
+
+    if invalidPlugins.isEmpty {
+      return "No Manifest Issues"
+    }
+
+    return "\(invalidPlugins.count) Invalid Plugin Manifest\(invalidPlugins.count == 1 ? "" : "s")"
+  }
+
+  func invalidPluginDetailSummary() -> String {
+    let invalidPlugins = plugins.filter { $0.status != "ready" }
+
+    guard !invalidPlugins.isEmpty else {
+      return "All discovered plugin manifests match the current runtime schema."
+    }
+
+    return invalidPlugins
+      .map { plugin in
+        "\(plugin.displayName): \(plugin.validationError ?? "Unknown validation error")"
+      }
+      .joined(separator: "\n")
+  }
+
+  func invalidPlugins() -> [PluginSummary] {
+    plugins.filter { $0.status != "ready" }
+  }
+
+  func revealPluginManifest(pluginID: String) {
+    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
+      runtimeDetail = "Plugin manifest path is unavailable."
+      return
+    }
+
+    revealFilePath(plugin.manifestPath, successDetail: "Revealed \(plugin.displayName) manifest.")
+  }
+
   func pluginRegistryCountSummary() -> String {
     guard let pluginCapabilityRegistrySummary else {
       return "Capability registry not loaded yet."
@@ -1186,6 +1267,29 @@ final class AppViewModel: ObservableObject {
       runtimeDetail = successDetail
     } else {
       runtimeDetail = "Failed to open \(directoryURL.path)"
+    }
+  }
+
+  private func revealFilePath(_ path: String, successDetail: String) {
+    guard !path.isEmpty else {
+      runtimeDetail = "The requested file path is unavailable."
+      return
+    }
+
+    let fileURL = URL(fileURLWithPath: path)
+    let manager = FileManager.default
+    if manager.fileExists(atPath: fileURL.path) {
+      NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+      runtimeDetail = successDetail
+      return
+    }
+
+    let parentURL = fileURL.deletingLastPathComponent()
+    if manager.fileExists(atPath: parentURL.path) {
+      NSWorkspace.shared.activateFileViewerSelecting([parentURL])
+      runtimeDetail = "Revealed the closest available folder for \(path)."
+    } else {
+      runtimeDetail = "Failed to locate \(path)"
     }
   }
 
