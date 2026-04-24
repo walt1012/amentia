@@ -485,6 +485,7 @@ fn to_protocol_plugin(plugin: PluginCatalogEntry) -> ProtocolPluginSummary {
     manifest_path: plugin.manifest_path,
     provenance: plugin.provenance,
     validation_error: plugin.validation_error,
+    validation_hint: plugin.validation_hint,
   }
 }
 
@@ -2948,6 +2949,7 @@ mod tests {
       manifest_path: "tests/test-full-access/pith-plugin.json".to_string(),
       provenance: "test".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
   }
 
@@ -3528,6 +3530,7 @@ mod tests {
         .to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
     fs::write(workspace.join("marker.txt"), "shell target\n").expect("write shell marker");
 
@@ -3831,6 +3834,7 @@ mod tests {
       manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let response = handle_request(
@@ -3909,6 +3913,7 @@ mod tests {
       manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let response = handle_request(
@@ -4013,6 +4018,7 @@ mod tests {
         .to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let response = handle_request(
@@ -4052,6 +4058,7 @@ mod tests {
         .to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let response = handle_request(&mut context, request(methods::PLUGIN_HOOK_REGISTRY, None));
@@ -4090,6 +4097,7 @@ mod tests {
         .to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
     fs::write(
       workspace.join("README.md"),
@@ -4160,6 +4168,7 @@ mod tests {
       manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let _ = handle_request(
@@ -4221,6 +4230,7 @@ mod tests {
       manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let _ = handle_request(
@@ -4285,6 +4295,7 @@ mod tests {
       manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
       provenance: "official".to_string(),
       validation_error: None,
+      validation_hint: None,
     }];
 
     let _ = handle_request(
@@ -4366,6 +4377,7 @@ mod tests {
         manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
         provenance: "official".to_string(),
         validation_error: None,
+        validation_hint: None,
       },
       PluginCatalogEntry {
         id: "shell-recorder".to_string(),
@@ -4382,6 +4394,7 @@ mod tests {
         manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
         provenance: "official".to_string(),
         validation_error: None,
+        validation_hint: None,
       },
       PluginCatalogEntry {
         id: "broken-plugin".to_string(),
@@ -4398,6 +4411,9 @@ mod tests {
         manifest_path: "plugins/official/broken/pith-plugin.json".to_string(),
         provenance: "official".to_string(),
         validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
+        validation_hint: Some(
+          "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings.".to_string(),
+        ),
       },
     ];
 

@@ -75,6 +75,7 @@ final class RuntimeBridge {
     let manifestPath: String
     let provenance: String
     let validationError: String?
+    let validationHint: String?
   }
 
   struct RuntimePluginRemoval {
@@ -435,7 +436,8 @@ final class RuntimeBridge {
         permissions: plugin.permissions,
         manifestPath: plugin.manifestPath,
         provenance: plugin.provenance,
-        validationError: plugin.validationError
+        validationError: plugin.validationError,
+        validationHint: plugin.validationHint
       )
     }
   }
@@ -468,7 +470,8 @@ final class RuntimeBridge {
       permissions: result.plugin.permissions,
       manifestPath: result.plugin.manifestPath,
       provenance: result.plugin.provenance,
-      validationError: result.plugin.validationError
+      validationError: result.plugin.validationError,
+      validationHint: result.plugin.validationHint
     )
   }
 
@@ -589,7 +592,8 @@ final class RuntimeBridge {
       permissions: result.plugin.permissions,
       manifestPath: result.plugin.manifestPath,
       provenance: result.plugin.provenance,
-      validationError: result.plugin.validationError
+      validationError: result.plugin.validationError,
+      validationHint: result.plugin.validationHint
     )
   }
 

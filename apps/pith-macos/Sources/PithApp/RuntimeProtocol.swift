@@ -192,6 +192,7 @@ struct RuntimePluginPayload: Codable {
   let manifestPath: String
   let provenance: String
   let validationError: String?
+  let validationHint: String?
 }
 
 struct PluginSetEnabledParams: Codable {

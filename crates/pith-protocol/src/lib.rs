@@ -189,6 +189,8 @@ pub struct PluginSummary {
   pub provenance: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub validation_error: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub validation_hint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

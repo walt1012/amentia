@@ -55,6 +55,7 @@ struct PluginSummary: Identifiable, Hashable {
   let manifestPath: String
   let provenance: String
   let validationError: String?
+  let validationHint: String?
 }
 
 struct PluginCapabilityRegistrySummary: Hashable {

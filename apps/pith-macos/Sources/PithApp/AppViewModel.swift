@@ -384,13 +384,15 @@ final class AppViewModel: ObservableObject {
     do {
       preview = try inspectPluginInstallCandidate(at: url)
     } catch {
+      let repairHint = pluginInstallRepairHint(for: error)
+      let body = repairHint.isEmpty ? error.localizedDescription : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
       appendEntry(
         to: selectedThreadID,
         TimelineEntry(
           id: UUID().uuidString,
           kind: .warning,
           title: "Plugin Install Preview Failed",
-          body: error.localizedDescription,
+          body: body,
           attributes: [:]
         )
       )
@@ -986,7 +988,8 @@ final class AppViewModel: ObservableObject {
       .map { plugin in
         let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
         let validation = plugin.validationError ?? "ok"
-        return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | capabilities: \(capabilities) | validation: \(validation)"
+        let hint = plugin.validationHint.map { " | repair: \($0)" } ?? ""
+        return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | capabilities: \(capabilities) | validation: \(validation)\(hint)"
       }
       .joined(separator: "\n")
   }
@@ -1054,7 +1057,8 @@ final class AppViewModel: ObservableObject {
 
     return invalidPlugins
       .map { plugin in
-        "\(plugin.displayName): \(plugin.validationError ?? "Unknown validation error")"
+        let hint = plugin.validationHint.map { " Repair hint: \($0)" } ?? ""
+        return "\(plugin.displayName): \(plugin.validationError ?? "Unknown validation error")\(hint)"
       }
       .joined(separator: "\n")
   }
@@ -1607,7 +1611,8 @@ final class AppViewModel: ObservableObject {
       permissions: plugin.permissions,
       manifestPath: plugin.manifestPath,
       provenance: plugin.provenance,
-      validationError: plugin.validationError
+      validationError: plugin.validationError,
+      validationHint: plugin.validationHint
     )
   }
 
@@ -1714,5 +1719,25 @@ final class AppViewModel: ObservableObject {
     }
 
     return values.joined(separator: ", ")
+  }
+
+  private func pluginInstallRepairHint(for error: Error) -> String {
+    let message = error.localizedDescription
+
+    if message.contains("does not contain pith-plugin.json") {
+      return "Choose a plugin folder that contains pith-plugin.json, or select the manifest file directly."
+    }
+
+    if message.contains("Select a plugin folder or a pith-plugin.json manifest") {
+      return "Point the installer at a plugin directory or the manifest file itself."
+    }
+
+    if message.contains("correct format")
+      || message.contains("is missing")
+    {
+      return "Check that pith-plugin.json is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
+    }
+
+    return ""
   }
 }

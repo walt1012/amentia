@@ -3,8 +3,8 @@ use pith_protocol::{
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
   PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
   PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
-  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -159,6 +159,42 @@ fn plugin_install_and_remove_payloads_use_camel_case_fields() {
   assert!(result_value.get("pluginId").is_some());
   assert!(result_value.get("displayName").is_some());
   assert!(result_value.get("removedPath").is_some());
+}
+
+#[test]
+fn plugin_summary_round_trips_validation_hint() {
+  let plugin = PluginSummary {
+    id: "broken-plugin".to_string(),
+    name: "broken-plugin".to_string(),
+    version: "invalid".to_string(),
+    display_name: "Broken Plugin".to_string(),
+    status: "invalid".to_string(),
+    description: "Broken sample plugin".to_string(),
+    author_name: None,
+    enabled: false,
+    default_enabled: false,
+    capabilities: vec!["memory:sync".to_string()],
+    permissions: vec![],
+    manifest_path: "plugins/local/broken-plugin/pith-plugin.json".to_string(),
+    provenance: "local".to_string(),
+    validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
+    validation_hint: Some(
+      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings.".to_string(),
+    ),
+  };
+
+  let value = serde_json::to_value(&plugin).expect("serialize plugin summary");
+  assert!(value.get("validationError").is_some());
+  assert!(value.get("validationHint").is_some());
+
+  let decoded: PluginSummary =
+    serde_json::from_value(value).expect("deserialize plugin summary");
+  assert_eq!(
+    decoded.validation_hint.as_deref(),
+    Some(
+      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings."
+    )
+  );
 }
 
 #[test]

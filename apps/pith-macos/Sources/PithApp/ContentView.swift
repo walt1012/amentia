@@ -529,6 +529,13 @@ private struct PluginRow: View {
           .foregroundColor(.orange)
           .textSelection(.enabled)
       }
+
+      if let validationHint = plugin.validationHint {
+        Text("Repair: \(validationHint)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
     }
     .padding(.vertical, 4)
   }
@@ -676,6 +683,13 @@ private struct InvalidPluginRow: View {
         .font(.caption2)
         .foregroundColor(.orange)
         .textSelection(.enabled)
+
+      if let validationHint = plugin.validationHint {
+        Text("Repair: \(validationHint)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
     }
     .padding(.vertical, 4)
   }

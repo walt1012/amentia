@@ -63,6 +63,7 @@ pub struct PluginCatalogEntry {
   pub manifest_path: String,
   pub provenance: String,
   pub validation_error: Option<String>,
+  pub validation_hint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -344,6 +345,7 @@ fn load_plugin_entry(manifest_path: PathBuf) -> PluginCatalogEntry {
         manifest_path: manifest_path.display().to_string(),
         provenance: provenance.to_string(),
         validation_error: None,
+        validation_hint: None,
       },
       Err(error) => invalid_plugin_entry(
         manifest_path,
@@ -385,7 +387,45 @@ fn invalid_plugin_entry(
     manifest_path: manifest_path.display().to_string(),
     provenance: provenance.to_string(),
     validation_error: Some(validation_error),
+    validation_hint: Some(validation_hint_for_error(&validation_error)),
   }
+}
+
+fn validation_hint_for_error(validation_error: &str) -> String {
+  if validation_error.contains("failed to parse plugin manifest") {
+    return
+      "Check that pith-plugin.json is valid JSON and uses camelCase field names such as `displayName` and `defaultEnabled`."
+        .to_string();
+  }
+
+  if validation_error.contains("must use the `<kind>:<identifier>` format") {
+    return format!(
+      "Rewrite each capability as `<kind>:<identifier>`. Supported kinds: {}.",
+      KNOWN_CAPABILITY_KINDS.join(", ")
+    );
+  }
+
+  if validation_error.contains("capability kind") && validation_error.contains("is not supported") {
+    return format!(
+      "Use one of the supported capability kinds: {}.",
+      KNOWN_CAPABILITY_KINDS.join(", ")
+    );
+  }
+
+  if validation_error.contains("must include a non-empty identifier") {
+    return "Add a non-empty identifier after the capability kind, for example `command:workspace.capture-note`."
+      .to_string();
+  }
+
+  if validation_error.contains("plugin permission") && validation_error.contains("is not supported") {
+    return format!(
+      "Use one of the supported permissions: {}.",
+      KNOWN_PERMISSIONS.join(", ")
+    );
+  }
+
+  "Review the manifest schema, then fix the reported field or value and reload the plugin catalog."
+    .to_string()
 }
 
 fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
@@ -735,6 +775,7 @@ mod tests {
         manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
         provenance: "official".to_string(),
         validation_error: None,
+        validation_hint: None,
       },
       PluginCatalogEntry {
         id: "shell-recorder".to_string(),
@@ -751,6 +792,7 @@ mod tests {
         manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
         provenance: "official".to_string(),
         validation_error: None,
+        validation_hint: None,
       },
       PluginCatalogEntry {
         id: "broken-plugin".to_string(),
@@ -767,6 +809,10 @@ mod tests {
         manifest_path: "plugins/official/broken/pith-plugin.json".to_string(),
         provenance: "official".to_string(),
         validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
+        validation_hint: Some(
+          "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings."
+            .to_string(),
+        ),
       },
     ];
 
@@ -989,5 +1035,14 @@ mod tests {
         .expect("parse official hook manifest");
     assert_eq!(hook_manifest.event, "shell.completed");
     assert!(!hook_manifest.message_template.trim().is_empty());
+  }
+
+  #[test]
+  fn validation_hint_describes_supported_capability_kinds() {
+    let hint = validation_hint_for_error("plugin capability kind `memory` is not supported");
+
+    assert!(hint.contains("supported capability kinds"));
+    assert!(hint.contains("command"));
+    assert!(hint.contains("settings"));
   }
 }
