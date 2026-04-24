@@ -17,6 +17,8 @@ private struct ModelDownloadProgress: Hashable {
 
 @MainActor
 final class AppViewModel: ObservableObject {
+  private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
+
   private struct LocalPluginAuthor: Decodable {
     let name: String
   }
@@ -209,7 +211,20 @@ final class AppViewModel: ObservableObject {
         let session = try await runtimeBridge.launchAndInitialize()
         let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
         let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
-        let currentWorkspace = try? await runtimeBridge.currentWorkspace()
+        var currentWorkspace = try? await runtimeBridge.currentWorkspace()
+        var restoredWorkspace = false
+        var workspaceRestoreError: Error?
+        if currentWorkspace == nil,
+           let lastWorkspacePath = storedLastWorkspacePath(),
+           isRestorableWorkspacePath(lastWorkspacePath)
+        {
+          do {
+            currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
+            restoredWorkspace = true
+          } catch {
+            workspaceRestoreError = error
+          }
+        }
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
@@ -258,6 +273,7 @@ final class AppViewModel: ObservableObject {
             rootPath: currentWorkspace.rootPath,
             displayName: currentWorkspace.displayName
           )
+          storeLastWorkspacePath(currentWorkspace.rootPath)
         }
 
         if threadList.isEmpty {
@@ -288,6 +304,32 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
+        if restoredWorkspace, let currentWorkspace {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .system,
+              title: "Workspace Restored",
+              body: "Restored \(currentWorkspace.displayName) at \(currentWorkspace.rootPath).",
+              attributes: [
+                "workspacePath": currentWorkspace.rootPath
+              ]
+            )
+          )
+        }
+        if let workspaceRestoreError {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .warning,
+              title: "Workspace Restore Failed",
+              body: workspaceRestoreError.localizedDescription,
+              attributes: [:]
+            )
+          )
+        }
         if let runtimeModel = modelHealth {
           appendEntry(
             to: selectedThread?.id,
@@ -424,6 +466,7 @@ final class AppViewModel: ObservableObject {
           rootPath: openedWorkspace.rootPath,
           displayName: openedWorkspace.displayName
         )
+        storeLastWorkspacePath(openedWorkspace.rootPath)
         await refreshMemoryState()
         appendEntry(
           to: selectedThreadID,
@@ -2065,6 +2108,30 @@ final class AppViewModel: ObservableObject {
     } else {
       runtimeDetail = "Failed to locate \(path)"
     }
+  }
+
+  private func storedLastWorkspacePath() -> String? {
+    guard let path = UserDefaults.standard.string(forKey: Self.lastWorkspacePathKey),
+          !path.isEmpty
+    else {
+      return nil
+    }
+
+    return path
+  }
+
+  private func storeLastWorkspacePath(_ path: String) {
+    guard !path.isEmpty else {
+      return
+    }
+
+    UserDefaults.standard.set(path, forKey: Self.lastWorkspacePathKey)
+  }
+
+  private func isRestorableWorkspacePath(_ path: String) -> Bool {
+    var isDirectory = ObjCBool(false)
+    return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+      && isDirectory.boolValue
   }
 
   private func refreshMemoryState() async {

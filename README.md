@@ -58,7 +58,8 @@ connector registry for the third-party plugin surface.
 Milestone 3 is underway with one-click default local model delivery work: the macOS app streams
 model downloads to disk, shows lightweight progress and speed status, lets users pause, continue,
 or cancel long downloads, activates the default LFM model after download, and restarts the runtime
-when needed so a fresh install reaches a real local model path with fewer manual steps.
+when needed so a fresh install reaches a real local model path with fewer manual steps. It also
+restores the last workspace and key inspector disclosure state across launches.
 
 Delivered in Milestone 1:
 

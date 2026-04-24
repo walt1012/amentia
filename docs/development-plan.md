@@ -892,7 +892,7 @@ Deliverables:
 - refined visual system
 - improved inspector
 - better diff viewer
-- state restoration
+- workspace and inspector state restoration
 - runtime crash recovery
 - workspace search
 - keyboard-first workflows

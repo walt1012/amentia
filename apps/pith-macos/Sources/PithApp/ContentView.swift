@@ -14,10 +14,10 @@ struct ContentView: View {
 
   @ObservedObject var viewModel: AppViewModel
   @State private var pluginInspectorSection: PluginInspectorSection = .catalog
-  @State private var localModelExpanded = false
-  @State private var modelManagerExpanded = false
-  @State private var memoryExpanded = false
-  @State private var pluginManagerExpanded = false
+  @AppStorage("pith.inspector.localModelExpanded") private var localModelExpanded = false
+  @AppStorage("pith.inspector.modelManagerExpanded") private var modelManagerExpanded = false
+  @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
+  @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
 
   var body: some View {
     NavigationView {
