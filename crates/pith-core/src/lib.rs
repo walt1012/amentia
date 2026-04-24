@@ -3519,9 +3519,8 @@ mod tests {
     fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
 
     assert!(response.error.is_none());
-    let items = response.result.expect("turn result")["items"]
-      .as_array()
-      .expect("items");
+    let result = response.result.expect("turn result");
+    let items = result["items"].as_array().expect("items");
     assert_eq!(items[2]["title"], "Plugin Permission Required");
     assert_eq!(items[2]["attributes"]["requiredPermission"], "file.read");
     assert_eq!(items[3]["kind"], "assistantMessage");
@@ -3663,9 +3662,8 @@ mod tests {
     fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
 
     assert!(approval_response.error.is_none());
-    let items = approval_response.result.expect("approval result")["items"]
-      .as_array()
-      .expect("approval items");
+    let approval_result = approval_response.result.expect("approval result");
+    let items = approval_result["items"].as_array().expect("approval items");
     assert_eq!(items[1]["title"], "Plugin Permission Required");
     assert_eq!(items[1]["attributes"]["requiredPermission"], "file.write");
     assert!(!written_file.exists());
