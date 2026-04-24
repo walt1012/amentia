@@ -720,8 +720,10 @@ def main() -> int:
         },
       },
     )
-    assert command_turn["result"]["items"][0]["kind"] == "userMessage"
-    assert "reusable workspace detail" in command_turn["result"]["items"][0]["content"]
+    assert command_turn["result"]["items"][0]["kind"] == "pluginCommand"
+    assert command_turn["result"]["items"][0]["attributes"]["pluginId"] == "workspace-notes"
+    assert command_turn["result"]["items"][1]["kind"] == "userMessage"
+    assert "Capture Workspace Note" in command_turn["result"]["items"][1]["content"]
     return 0
   finally:
     process.terminate()
