@@ -543,7 +543,10 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
     validate_manifest_identifier("mcp server", &server.id)?;
     if let Some(command) = server.command.as_ref() {
       if command.trim().is_empty() {
-        anyhow::bail!("plugin MCP server `{}` command must not be empty", server.id);
+        anyhow::bail!(
+          "plugin MCP server `{}` command must not be empty",
+          server.id
+        );
       }
     }
   }
@@ -1361,9 +1364,8 @@ mod tests {
       Some("Shell Completion")
     );
 
-    let notion_manifest =
-      read_manifest(&bundled_root.join("notion-connector/pith-plugin.json"))
-        .expect("parse notion connector manifest");
+    let notion_manifest = read_manifest(&bundled_root.join("notion-connector/pith-plugin.json"))
+      .expect("parse notion connector manifest");
     let notion_capabilities = manifest_capabilities(&notion_manifest);
     assert!(notion_capabilities
       .iter()
