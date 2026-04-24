@@ -887,7 +887,7 @@ Deliverables:
 
 - release-bundled or guided local model pack delivery
 - one-click default model download, activation, and runtime restart flow
-- cancellable long-running model downloads with clear status
+- pausable, resumable, and cancellable long-running model downloads with clear status
 - clear local model readiness and installation guidance
 - refined visual system
 - improved inspector

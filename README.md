@@ -56,9 +56,9 @@ execution, executable bundled plugin examples, and a Notion connector manifest t
 connector registry for the third-party plugin surface.
 
 Milestone 3 is underway with one-click default local model delivery work: the macOS app streams
-model downloads to disk, lets users cancel long downloads, activates the default LFM model after
-download, and restarts the runtime when needed so a fresh install reaches a real local model path
-with fewer manual steps.
+model downloads to disk, lets users pause, continue, or cancel long downloads, activates the
+default LFM model after download, and restarts the runtime when needed so a fresh install reaches
+a real local model path with fewer manual steps.
 
 Delivered in Milestone 1:
 

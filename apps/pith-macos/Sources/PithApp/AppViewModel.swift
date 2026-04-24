@@ -1,6 +1,10 @@
 import AppKit
 import Foundation
 
+private struct ModelDownloadPaused: Error {
+  let resumeData: Data
+}
+
 @MainActor
 final class AppViewModel: ObservableObject {
   private struct LocalPluginAuthor: Decodable {
@@ -92,6 +96,7 @@ final class AppViewModel: ObservableObject {
   @Published var modelHealth: ModelHealthSummary?
   @Published var localModels: [LocalModelSummary]
   @Published var modelDownloadID: String?
+  @Published var pausedModelDownloadID: String?
   @Published var memoryStatus: MemoryStatusSummary?
   @Published var memoryNotes: [MemoryNoteSummary]
   @Published var memoryNoteTitle: String
@@ -108,6 +113,8 @@ final class AppViewModel: ObservableObject {
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
   private var modelDownloadTask: Task<Void, Never>?
+  private var modelDownloadTransfer: ModelDownloadTransfer?
+  private var modelDownloadResumeData: Data?
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
@@ -147,6 +154,7 @@ final class AppViewModel: ObservableObject {
       activeModelPath: runtimeBridge.activeLocalModelPath()
     )
     self.modelDownloadID = nil
+    self.pausedModelDownloadID = nil
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -164,6 +172,8 @@ final class AppViewModel: ObservableObject {
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.modelDownloadTask = nil
+    self.modelDownloadTransfer = nil
+    self.modelDownloadResumeData = nil
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
       Task { @MainActor in
@@ -993,17 +1003,22 @@ final class AppViewModel: ObservableObject {
     let activeModel = localModels.first(where: { $0.active })?.displayName ?? "none"
     let downloadingModel = modelDownloadID
       .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
+    let pausedModel = pausedModelDownloadID
+      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
     let localSize = downloadedModels
       .compactMap { $0.localSizeBytes }
       .reduce(Int64(0), +)
     let downloadSummary = downloadingModel.map { " | Downloading: \($0)" } ?? ""
-    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)\(downloadSummary)"
+    let pausedSummary = pausedModel.map { " | Paused: \($0)" } ?? ""
+    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)\(downloadSummary)\(pausedSummary)"
   }
 
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {
     let status: String
     if modelDownloadID == model.id {
       status = "downloading"
+    } else if pausedModelDownloadID == model.id {
+      status = "paused"
     } else if model.active {
       status = "active"
     } else if model.downloaded {
@@ -1017,12 +1032,22 @@ final class AppViewModel: ObservableObject {
   }
 
   func defaultModelDownloadButtonTitle() -> String {
-    modelDownloadID == "lfm2.5-350m" ? "Downloading Model" : "Download Model"
+    if modelDownloadID == "lfm2.5-350m" {
+      return "Downloading Model"
+    }
+    if pausedModelDownloadID == "lfm2.5-350m" {
+      return "Continue Model"
+    }
+
+    return "Download Model"
   }
 
   func localModelDownloadButtonTitle(_ model: LocalModelSummary) -> String {
     if modelDownloadID == model.id {
       return "Downloading"
+    }
+    if pausedModelDownloadID == model.id {
+      return "Continue"
     }
 
     return model.downloaded ? "Downloaded" : "Download"
@@ -1040,6 +1065,9 @@ final class AppViewModel: ObservableObject {
     guard modelDownloadTask == nil else {
       return false
     }
+    if let pausedModelDownloadID {
+      return pausedModelDownloadID == modelID && modelDownloadResumeData != nil
+    }
     guard let model = localModels.first(where: { $0.id == modelID }),
           URL(string: model.downloadURL) != nil
     else {
@@ -1050,7 +1078,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadTask == nil else {
+    guard modelDownloadTask == nil, pausedModelDownloadID == nil else {
       return false
     }
     guard let model = localModels.first(where: { $0.id == modelID }) else {
@@ -1065,19 +1093,42 @@ final class AppViewModel: ObservableObject {
   }
 
   func canCancelModelDownload() -> Bool {
+    modelDownloadTask != nil || pausedModelDownloadID != nil
+  }
+
+  func canPauseModelDownload() -> Bool {
     modelDownloadTask != nil
   }
 
-  func cancelModelDownload() {
-    guard let modelDownloadTask else {
-      return
-    }
-
+  func pauseModelDownload() {
     let displayName = modelDownloadID
       .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
       ?? "local model"
-    runtimeDetail = "Cancelling \(displayName) download..."
-    modelDownloadTask.cancel()
+    runtimeDetail = "Pausing \(displayName) download..."
+    modelDownloadTransfer?.pause()
+  }
+
+  func cancelModelDownload() {
+    if let modelDownloadTask {
+      let displayName = modelDownloadID
+        .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
+        ?? "local model"
+      runtimeDetail = "Cancelling \(displayName) download..."
+      modelDownloadTask.cancel()
+      modelDownloadTransfer?.cancel()
+      return
+    }
+
+    guard let pausedModelDownloadID else {
+      return
+    }
+
+    let displayName = localModels.first(where: { $0.id == pausedModelDownloadID })?.displayName
+      ?? "local model"
+    clearPausedModelDownload()
+    removeIncompleteModelFile(modelID: pausedModelDownloadID)
+    runtimeDetail = "Cancelled \(displayName) download and cleared partial state."
+    refreshLocalModelCatalog()
   }
 
   func downloadRecommendedModel(modelID: String) {
@@ -1091,27 +1142,38 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    guard confirmModelDownload(
-      displayName: model.displayName,
-      downloadURL: downloadURL,
-      targetPath: model.installPath,
-      sizeSummary: formattedByteCount(model.sizeBytes)
-    ) else {
-      runtimeDetail = "Local model download was cancelled."
-      return
+    let isResuming = pausedModelDownloadID == model.id && modelDownloadResumeData != nil
+    if !isResuming {
+      guard confirmModelDownload(
+        displayName: model.displayName,
+        downloadURL: downloadURL,
+        targetPath: model.installPath,
+        sizeSummary: formattedByteCount(model.sizeBytes)
+      ) else {
+        runtimeDetail = "Local model download was cancelled."
+        return
+      }
     }
 
+    let resumeData = isResuming ? modelDownloadResumeData : nil
     modelDownloadID = model.id
+    pausedModelDownloadID = nil
+    modelDownloadResumeData = nil
     modelDownloadTask = Task {
       defer {
         modelDownloadID = nil
         modelDownloadTask = nil
+        modelDownloadTransfer = nil
         refreshLocalModelCatalog()
       }
       do {
         runtimeDetail =
-          "Downloading \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
-        try await downloadModelFile(from: downloadURL, to: URL(fileURLWithPath: model.installPath))
+          "\(isResuming ? "Continuing" : "Downloading") \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
+        try await downloadModelFile(
+          from: downloadURL,
+          resumeData: resumeData,
+          to: URL(fileURLWithPath: model.installPath)
+        )
 
         var activatedDefaultModel = false
         var manifestPath: String?
@@ -1161,9 +1223,16 @@ final class AppViewModel: ObservableObject {
           )
         }
       } catch {
-        if error is CancellationError || (error as? URLError)?.code == .cancelled {
-          runtimeDetail = "Cancelled \(model.displayName) download."
+        if let paused = error as? ModelDownloadPaused {
+          modelDownloadResumeData = paused.resumeData
+          pausedModelDownloadID = model.id
+          runtimeDetail = "Paused \(model.displayName) download. Continue to resume from the saved partial state."
+        } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
+          clearPausedModelDownload()
+          removeIncompleteModelFile(modelID: model.id)
+          runtimeDetail = "Cancelled \(model.displayName) download and cleared partial state."
         } else {
+          clearPausedModelDownload()
           runtimeDetail = "Model download failed: \(error.localizedDescription)"
         }
       }
@@ -1849,40 +1918,27 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private nonisolated func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
-    let (downloadedURL, response) = try await URLSession.shared.download(from: sourceURL)
-    if Task.isCancelled {
-      throw CancellationError()
+  private func downloadModelFile(from sourceURL: URL, resumeData: Data?, to targetURL: URL) async throws {
+    let transfer = ModelDownloadTransfer(targetURL: targetURL)
+    modelDownloadTransfer = transfer
+    try await transfer.start(from: sourceURL, resumeData: resumeData)
+  }
+
+  private func clearPausedModelDownload() {
+    pausedModelDownloadID = nil
+    modelDownloadResumeData = nil
+  }
+
+  private func removeIncompleteModelFile(modelID: String) {
+    guard let model = localModels.first(where: { $0.id == modelID }) else {
+      return
     }
 
-    if let httpResponse = response as? HTTPURLResponse,
-       !(200..<300).contains(httpResponse.statusCode)
-    {
-      throw NSError(
-        domain: "PithModelDownload",
-        code: httpResponse.statusCode,
-        userInfo: [
-          NSLocalizedDescriptionKey:
-            "Model download failed with HTTP \(httpResponse.statusCode)."
-        ]
-      )
-    }
-
+    let targetURL = URL(fileURLWithPath: model.installPath)
     let manager = FileManager.default
-    try manager.createDirectory(
-      at: targetURL.deletingLastPathComponent(),
-      withIntermediateDirectories: true
-    )
-
     if manager.fileExists(atPath: targetURL.path) {
-      try manager.removeItem(at: targetURL)
+      try? manager.removeItem(at: targetURL)
     }
-
-    if Task.isCancelled {
-      throw CancellationError()
-    }
-
-    try manager.moveItem(at: downloadedURL, to: targetURL)
   }
 
   private func revealFilePath(_ path: String, successDetail: String) {
@@ -2355,5 +2411,134 @@ final class AppViewModel: ObservableObject {
     }
 
     return ""
+  }
+}
+
+private final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
+  private let targetURL: URL
+  private var continuation: CheckedContinuation<Void, Error>?
+  private var session: URLSession?
+  private var task: URLSessionDownloadTask?
+  private var pauseRequested = false
+
+  init(targetURL: URL) {
+    self.targetURL = targetURL
+  }
+
+  func start(from sourceURL: URL, resumeData: Data?) async throws {
+    try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        self.continuation = continuation
+        let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+        self.session = session
+        let task = resumeData.map { session.downloadTask(withResumeData: $0) }
+          ?? session.downloadTask(with: sourceURL)
+        self.task = task
+        task.resume()
+      }
+    } onCancel: {
+      self.cancel()
+    }
+  }
+
+  func pause() {
+    pauseRequested = true
+    task?.cancel(byProducingResumeData: { [weak self] resumeData in
+      guard let self else {
+        return
+      }
+
+      guard let resumeData, !resumeData.isEmpty else {
+        self.complete(.failure(CancellationError()))
+        return
+      }
+
+      self.complete(.failure(ModelDownloadPaused(resumeData: resumeData)))
+    })
+  }
+
+  func cancel() {
+    pauseRequested = false
+    task?.cancel()
+  }
+
+  func urlSession(
+    _ session: URLSession,
+    downloadTask: URLSessionDownloadTask,
+    didFinishDownloadingTo location: URL
+  ) {
+    if let httpResponse = downloadTask.response as? HTTPURLResponse,
+       !(200..<300).contains(httpResponse.statusCode)
+    {
+      complete(
+        .failure(
+          NSError(
+            domain: "PithModelDownload",
+            code: httpResponse.statusCode,
+            userInfo: [
+              NSLocalizedDescriptionKey:
+                "Model download failed with HTTP \(httpResponse.statusCode)."
+            ]
+          )
+        )
+      )
+      return
+    }
+
+    do {
+      let manager = FileManager.default
+      try manager.createDirectory(
+        at: targetURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+      )
+
+      if manager.fileExists(atPath: targetURL.path) {
+        try manager.removeItem(at: targetURL)
+      }
+
+      try manager.moveItem(at: location, to: targetURL)
+      complete(.success(()))
+    } catch {
+      complete(.failure(error))
+    }
+  }
+
+  func urlSession(
+    _ session: URLSession,
+    task: URLSessionTask,
+    didCompleteWithError error: Error?
+  ) {
+    guard let error else {
+      return
+    }
+
+    if pauseRequested {
+      if let resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data,
+         !resumeData.isEmpty
+      {
+        complete(.failure(ModelDownloadPaused(resumeData: resumeData)))
+      }
+      return
+    }
+
+    complete(.failure(error))
+  }
+
+  private func complete(_ result: Result<Void, Error>) {
+    guard let continuation else {
+      return
+    }
+
+    self.continuation = nil
+    task = nil
+    session?.invalidateAndCancel()
+    session = nil
+
+    switch result {
+    case .success:
+      continuation.resume()
+    case .failure(let error):
+      continuation.resume(throwing: error)
+    }
   }
 }
