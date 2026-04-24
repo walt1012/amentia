@@ -59,9 +59,11 @@ def main() -> int:
     shutil.rmtree(workspace_dir)
   (plugin_dir / "workspace-notes").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "review-assistant").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "review-assistant" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "pith-plugin.json").write_text(
     json.dumps(
       {
@@ -150,6 +152,42 @@ def main() -> int:
           "noteSource": "plugin.shell-recorder",
           "noteTags": ["shell", "hook", "plugin"],
         },
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "review-assistant" / "pith-plugin.json").write_text(
+    json.dumps(
+      {
+        "name": "review-assistant",
+        "version": "0.1.0",
+        "displayName": "Review Assistant",
+        "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
+        "author": {
+          "name": "Pith",
+        },
+        "capabilities": [
+          "command:review.inspect-diff",
+          "prompt_pack:review.prompts",
+          "tool:diff.summaries",
+        ],
+        "permissions": [
+          "file.read",
+          "model.invoke",
+        ],
+        "defaultEnabled": True,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json").write_text(
+    json.dumps(
+      {
+        "title": "Inspect Current Diff",
+        "description": "Ask Pith to review the active workspace diff with a code review mindset.",
+        "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
       },
       indent=2,
     ),
@@ -289,6 +327,7 @@ def main() -> int:
     plugin_ids = {plugin["id"] for plugin in plugin_list["result"]["plugins"]}
     assert "workspace-notes" in plugin_ids
     assert "shell-recorder" in plugin_ids
+    assert "review-assistant" in plugin_ids
 
     workspace_notes_enable, _ = send_request(
       process,
@@ -323,12 +362,13 @@ def main() -> int:
         "method": "plugin/capabilityRegistry",
       },
     )
-    assert capability_registry["result"]["summary"]["enabledPluginCount"] >= 2
+    assert capability_registry["result"]["summary"]["enabledPluginCount"] >= 3
     capability_plugin_ids = {
       capability["pluginId"] for capability in capability_registry["result"]["capabilities"]
     }
     assert "workspace-notes" in capability_plugin_ids
     assert "shell-recorder" in capability_plugin_ids
+    assert "review-assistant" in capability_plugin_ids
     command_registry, _ = send_request(
       process,
       {
@@ -336,10 +376,11 @@ def main() -> int:
         "method": "plugin/commandRegistry",
       },
     )
-    assert len(command_registry["result"]["commands"]) == 2
+    assert len(command_registry["result"]["commands"]) == 3
     command_ids = {command["commandId"] for command in command_registry["result"]["commands"]}
     assert "workspace-notes::workspace.capture-note" in command_ids
     assert "shell-recorder::shell.summarize-session" in command_ids
+    assert "review-assistant::review.inspect-diff" in command_ids
     workspace_capture_command = next(
       command
       for command in command_registry["result"]["commands"]
@@ -743,6 +784,22 @@ def main() -> int:
       plugin["id"] == "focus-review"
       for plugin in plugin_list_after_remove["result"]["plugins"]
     )
+
+    review_command_turn, _ = send_request(
+      process,
+      {
+        "id": 48,
+        "method": "plugin/commandRun",
+        "params": {
+          "threadId": "thread-1",
+          "commandId": "review-assistant::review.inspect-diff",
+        },
+      },
+    )
+    assert review_command_turn["result"]["items"][0]["kind"] == "pluginCommand"
+    assert review_command_turn["result"]["items"][0]["attributes"]["pluginId"] == "review-assistant"
+    assert review_command_turn["result"]["items"][1]["kind"] == "userMessage"
+    assert "Inspect Current Diff" in review_command_turn["result"]["items"][1]["content"]
 
     command_turn, _ = send_request(
       process,
