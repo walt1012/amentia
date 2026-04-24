@@ -5306,7 +5306,7 @@ mod tests {
         provenance: "bundled".to_string(),
         validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
         validation_hint: Some(
-          "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings.".to_string(),
+          "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings.".to_string(),
         ),
       },
     ];

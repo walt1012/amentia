@@ -5,13 +5,15 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-const KNOWN_CAPABILITY_KINDS: [&str; 7] = [
+const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
   "command",
   "agent",
   "prompt_pack",
   "hook",
   "tool",
   "mcp_server",
+  "skill",
+  "connector",
   "settings",
 ];
 const KNOWN_PERMISSIONS: [&str; 7] = [
@@ -23,6 +25,8 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
   "model.invoke",
   "mcp.connect",
 ];
+const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
+const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "keychain"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,7 +47,58 @@ pub struct PluginManifest {
   pub capabilities: Vec<String>,
   #[serde(default)]
   pub permissions: Vec<String>,
+  #[serde(default)]
+  pub skills: Vec<PluginSkillManifest>,
+  #[serde(default)]
+  pub mcp_servers: Vec<PluginMcpServerManifest>,
+  #[serde(default)]
+  pub app_connectors: Vec<PluginAppConnectorManifest>,
+  #[serde(default)]
+  pub auth_policy: Option<PluginAuthPolicyManifest>,
   pub default_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginSkillManifest {
+  pub id: String,
+  pub description: String,
+  pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginMcpServerManifest {
+  pub id: String,
+  #[serde(default)]
+  pub command: Option<String>,
+  #[serde(default)]
+  pub args: Vec<String>,
+  #[serde(default)]
+  pub transport: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginAppConnectorManifest {
+  pub id: String,
+  pub display_name: String,
+  pub service: String,
+  #[serde(default)]
+  pub homepage: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginAuthPolicyManifest {
+  #[serde(rename = "type")]
+  pub auth_type: String,
+  #[serde(default)]
+  pub required: bool,
+  #[serde(default)]
+  pub scopes: Vec<String>,
+  #[serde(default)]
+  pub credential_store: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -369,7 +424,7 @@ fn load_plugin_entry(manifest_path: PathBuf) -> PluginCatalogEntry {
         author_name: manifest.author.map(|author| author.name),
         enabled: manifest.default_enabled,
         default_enabled: manifest.default_enabled,
-        capabilities: manifest.capabilities,
+        capabilities: manifest_capabilities(&manifest),
         permissions: manifest.permissions,
         manifest_path: manifest_path.display().to_string(),
         provenance: provenance.to_string(),
@@ -459,7 +514,7 @@ fn validation_hint_for_error(validation_error: &str) -> String {
 }
 
 fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
-  for capability in &manifest.capabilities {
+  for capability in manifest_capabilities(manifest) {
     let Some((kind, identifier)) = capability.split_once(':') else {
       anyhow::bail!(
         "plugin capability `{}` must use the `<kind>:<identifier>` format",
@@ -477,6 +532,49 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
     }
   }
 
+  for skill in &manifest.skills {
+    validate_manifest_identifier("skill", &skill.id)?;
+    if skill.path.trim().is_empty() {
+      anyhow::bail!("plugin skill `{}` must include a non-empty path", skill.id);
+    }
+  }
+
+  for server in &manifest.mcp_servers {
+    validate_manifest_identifier("mcp server", &server.id)?;
+    if let Some(command) = server.command.as_ref() {
+      if command.trim().is_empty() {
+        anyhow::bail!("plugin MCP server `{}` command must not be empty", server.id);
+      }
+    }
+  }
+
+  for connector in &manifest.app_connectors {
+    validate_manifest_identifier("connector", &connector.id)?;
+    if connector.service.trim().is_empty() {
+      anyhow::bail!(
+        "plugin connector `{}` must include a non-empty service",
+        connector.id
+      );
+    }
+  }
+
+  if let Some(auth_policy) = manifest.auth_policy.as_ref() {
+    if !KNOWN_AUTH_TYPES.contains(&auth_policy.auth_type.as_str()) {
+      anyhow::bail!(
+        "plugin auth policy type `{}` is not supported",
+        auth_policy.auth_type
+      );
+    }
+    if let Some(credential_store) = auth_policy.credential_store.as_ref() {
+      if !KNOWN_CREDENTIAL_STORES.contains(&credential_store.as_str()) {
+        anyhow::bail!(
+          "plugin credential store `{}` is not supported",
+          credential_store
+        );
+      }
+    }
+  }
+
   for permission in &manifest.permissions {
     if !KNOWN_PERMISSIONS.contains(&permission.as_str()) {
       anyhow::bail!("plugin permission `{}` is not supported", permission);
@@ -484,6 +582,37 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
   }
 
   Ok(())
+}
+
+fn validate_manifest_identifier(kind: &str, identifier: &str) -> Result<()> {
+  if identifier.trim().is_empty() {
+    anyhow::bail!("plugin {kind} identifier must not be empty");
+  }
+  if identifier.contains(':') {
+    anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain `:`");
+  }
+  Ok(())
+}
+
+fn manifest_capabilities(manifest: &PluginManifest) -> Vec<String> {
+  let mut capabilities = manifest.capabilities.clone();
+  for skill in &manifest.skills {
+    push_unique_capability(&mut capabilities, "skill", &skill.id);
+  }
+  for server in &manifest.mcp_servers {
+    push_unique_capability(&mut capabilities, "mcp_server", &server.id);
+  }
+  for connector in &manifest.app_connectors {
+    push_unique_capability(&mut capabilities, "connector", &connector.id);
+  }
+  capabilities
+}
+
+fn push_unique_capability(capabilities: &mut Vec<String>, kind: &str, identifier: &str) {
+  let capability = format!("{kind}:{identifier}");
+  if !capabilities.iter().any(|existing| existing == &capability) {
+    capabilities.push(capability);
+  }
 }
 
 pub fn build_capability_registry(
@@ -788,23 +917,60 @@ mod tests {
       }),
       capabilities: capabilities.into_iter().map(str::to_string).collect(),
       permissions: permissions.into_iter().map(str::to_string).collect(),
+      skills: vec![],
+      mcp_servers: vec![],
+      app_connectors: vec![],
+      auth_policy: None,
       default_enabled: true,
     }
   }
 
   #[test]
   fn validate_manifest_accepts_typed_capabilities_and_permissions() {
-    let manifest = manifest(
+    let mut manifest = manifest(
       vec![
         "prompt_pack:workspace.notes",
         "settings:workspace.preferences",
       ],
       vec!["file.read", "file.write"],
     );
+    manifest.skills = vec![PluginSkillManifest {
+      id: "workspace.notes".to_string(),
+      description: "Workspace note guidance.".to_string(),
+      path: "skills/workspace-notes.md".to_string(),
+    }];
+    manifest.mcp_servers = vec![PluginMcpServerManifest {
+      id: "workspace.mcp".to_string(),
+      command: Some("pith-workspace-mcp".to_string()),
+      args: vec![],
+      transport: Some("stdio".to_string()),
+    }];
+    manifest.app_connectors = vec![PluginAppConnectorManifest {
+      id: "workspace.connector".to_string(),
+      display_name: "Workspace Connector".to_string(),
+      service: "workspace".to_string(),
+      homepage: None,
+    }];
+    manifest.auth_policy = Some(PluginAuthPolicyManifest {
+      auth_type: "none".to_string(),
+      required: false,
+      scopes: vec![],
+      credential_store: Some("none".to_string()),
+    });
 
     let result = validate_manifest(&manifest);
 
     assert!(result.is_ok());
+    let capabilities = manifest_capabilities(&manifest);
+    assert!(capabilities
+      .iter()
+      .any(|capability| capability == "skill:workspace.notes"));
+    assert!(capabilities
+      .iter()
+      .any(|capability| capability == "mcp_server:workspace.mcp"));
+    assert!(capabilities
+      .iter()
+      .any(|capability| capability == "connector:workspace.connector"));
   }
 
   #[test]
@@ -874,7 +1040,7 @@ mod tests {
         provenance: "bundled".to_string(),
         validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
         validation_hint: Some(
-          "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings."
+          "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings."
             .to_string(),
         ),
       },
@@ -1127,6 +1293,7 @@ mod tests {
       bundled_root.join("workspace-notes/pith-plugin.json"),
       bundled_root.join("shell-recorder/pith-plugin.json"),
       bundled_root.join("review-assistant/pith-plugin.json"),
+      bundled_root.join("notion-connector/pith-plugin.json"),
     ];
 
     for manifest_path in manifests {
@@ -1193,6 +1360,17 @@ mod tests {
         .map(|memory| memory.note_title.as_str()),
       Some("Shell Completion")
     );
+
+    let notion_manifest =
+      read_manifest(&bundled_root.join("notion-connector/pith-plugin.json"))
+        .expect("parse notion connector manifest");
+    let notion_capabilities = manifest_capabilities(&notion_manifest);
+    assert!(notion_capabilities
+      .iter()
+      .any(|capability| capability == "connector:notion"));
+    assert!(notion_capabilities
+      .iter()
+      .any(|capability| capability == "mcp_server:notion"));
   }
 
   #[test]
@@ -1201,6 +1379,7 @@ mod tests {
 
     assert!(hint.contains("supported capability kinds"));
     assert!(hint.contains("command"));
+    assert!(hint.contains("connector"));
     assert!(hint.contains("settings"));
   }
 }

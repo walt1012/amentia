@@ -179,7 +179,7 @@ fn plugin_summary_round_trips_validation_hint() {
     provenance: "local".to_string(),
     validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
     validation_hint: Some(
-      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings.".to_string(),
+      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings.".to_string(),
     ),
   };
 
@@ -191,7 +191,7 @@ fn plugin_summary_round_trips_validation_hint() {
   assert_eq!(
     decoded.validation_hint.as_deref(),
     Some(
-      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings."
+      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings."
     )
   );
 }

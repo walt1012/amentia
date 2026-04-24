@@ -608,6 +608,10 @@ plugin-name/
 - `license`
 - `capabilities`
 - `permissions`
+- `skills`
+- `mcpServers`
+- `appConnectors`
+- `authPolicy`
 - `entrypoints`
 - `compatibility`
 - `defaultEnabled`
@@ -620,6 +624,8 @@ plugin-name/
 - `hook`
 - `tool`
 - `mcp_server`
+- `skill`
+- `connector`
 - `settings`
 
 ### 14.5 Plugin Permissions
@@ -864,7 +870,8 @@ Deliverables:
 
 Exit criteria:
 
-- at least three bundled example plugins load and execute successfully in-app
+- at least three executable bundled example plugins load and execute successfully in-app
+- at least one bundled connector template declares third-party auth, MCP, and app connector metadata
 - prompt-only plugin commands are visible but blocked until they provide an execution contract
 
 ### Milestone 3: Premium Desktop Quality
