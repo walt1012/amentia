@@ -31,6 +31,27 @@ final class AppViewModel: ObservableObject {
     let defaultEnabled: Bool
   }
 
+  private struct LocalModelCatalogItem {
+    let id: String
+    let displayName: String
+    let description: String
+    let fileName: String
+    let downloadURL: String
+    let homepage: String
+    let sizeBytes: Int64
+    let license: String
+    let tags: [String]
+    let installSegments: [String]
+
+    func installPath(storageRootPath: String) -> String {
+      installSegments.reduce(URL(fileURLWithPath: storageRootPath, isDirectory: true)) { url, segment in
+        url.appendingPathComponent(segment)
+      }
+      .appendingPathComponent(fileName)
+      .path
+    }
+  }
+
   @Published var threads: [ThreadSummary]
   @Published var selectedThreadID: ThreadSummary.ID?
   @Published var timeline: [TimelineEntry]
@@ -41,6 +62,7 @@ final class AppViewModel: ObservableObject {
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
   @Published var modelHealth: ModelHealthSummary?
+  @Published var localModels: [LocalModelSummary]
   @Published var memoryStatus: MemoryStatusSummary?
   @Published var memoryNotes: [MemoryNoteSummary]
   @Published var memoryNoteTitle: String
@@ -89,6 +111,10 @@ final class AppViewModel: ObservableObject {
     self.draftMessage = ""
     self.workspace = nil
     self.modelHealth = nil
+    self.localModels = Self.localModelSummaries(
+      storageRootPath: runtimeBridge.localModelStorageRootPath(),
+      activeModelPath: nil
+    )
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -924,6 +950,112 @@ final class AppViewModel: ObservableObject {
     return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
   }
 
+  func modelManagerSummary() -> String {
+    let downloadedModels = localModels.filter { $0.downloaded }
+    let activeModel = localModels.first(where: { $0.active })?.displayName ?? "none"
+    let localSize = downloadedModels
+      .compactMap { $0.localSizeBytes }
+      .reduce(Int64(0), +)
+    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)"
+  }
+
+  func localModelStatusSummary(_ model: LocalModelSummary) -> String {
+    let status: String
+    if model.active {
+      status = "active"
+    } else if model.downloaded {
+      status = "downloaded"
+    } else {
+      status = "available"
+    }
+
+    let localSize = model.localSizeBytes.map(formattedByteCount) ?? formattedByteCount(model.sizeBytes)
+    return "\(status) | \(localSize) | \(model.license)"
+  }
+
+  func localModelTagSummary(_ model: LocalModelSummary) -> String {
+    model.tags.joined(separator: " / ")
+  }
+
+  func localModelPathSummary(_ model: LocalModelSummary) -> String {
+    model.installPath
+  }
+
+  func canDownloadRecommendedModel(modelID: String) -> Bool {
+    guard let model = localModels.first(where: { $0.id == modelID }),
+          URL(string: model.downloadURL) != nil
+    else {
+      return false
+    }
+
+    return !model.downloaded
+  }
+
+  func downloadRecommendedModel(modelID: String) {
+    guard let model = localModels.first(where: { $0.id == modelID }) else {
+      runtimeDetail = "The selected local model is unavailable."
+      return
+    }
+
+    guard let downloadURL = URL(string: model.downloadURL) else {
+      runtimeDetail = "The selected local model has an invalid download URL."
+      return
+    }
+
+    guard confirmModelDownload(
+      displayName: model.displayName,
+      downloadURL: downloadURL,
+      targetPath: model.installPath,
+      sizeSummary: formattedByteCount(model.sizeBytes)
+    ) else {
+      runtimeDetail = "Local model download was cancelled."
+      return
+    }
+
+    Task {
+      do {
+        runtimeDetail = "Downloading \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
+        if runtimeState == .ready, modelHealth?.packID == model.id {
+          _ = try await runtimeBridge.bootstrapModelPack()
+        }
+
+        try await downloadModelFile(from: downloadURL, to: URL(fileURLWithPath: model.installPath))
+        if runtimeState == .ready, modelHealth?.packID == model.id {
+          _ = try await runtimeBridge.bootstrapModelPack()
+          await refreshModelHealthState()
+        } else {
+          refreshLocalModelCatalog()
+        }
+
+        runtimeDetail = "Downloaded \(model.displayName) to \(model.installPath)."
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .system,
+            title: "Local Model Downloaded",
+            body: "\(model.displayName) was downloaded to \(model.installPath).",
+            attributes: [
+              "modelPath": model.installPath,
+              "source": downloadURL.absoluteString,
+            ]
+          )
+        )
+      } catch {
+        runtimeDetail = "Model download failed: \(error.localizedDescription)"
+      }
+    }
+  }
+
+  func revealRecommendedModel(modelID: String) {
+    guard let model = localModels.first(where: { $0.id == modelID }) else {
+      runtimeDetail = "The selected local model is unavailable."
+      return
+    }
+
+    revealFilePath(model.installPath, successDetail: "Revealed \(model.displayName).")
+  }
+
   func revealSuggestedModelDirectory() {
     revealSuggestedPath(
       metricKey: "suggestedModelPath",
@@ -939,85 +1071,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadLocalModel() -> Bool {
-    guard runtimeState == .ready,
-          let modelHealth,
-          let downloadURL = modelHealth.metrics["downloadUrl"],
-          let targetPath = modelHealth.metrics["suggestedModelPath"]
-    else {
-      return false
-    }
-
-    return !downloadURL.isEmpty && !targetPath.isEmpty && !isLocalModelReady()
+    canDownloadRecommendedModel(modelID: "lfm2.5-350m")
   }
 
   func downloadLocalModel() {
-    guard runtimeState == .ready else {
-      runtimeDetail = "Launch the runtime before downloading the local model."
-      return
-    }
-
-    guard let modelHealth else {
-      runtimeDetail = "Local model guidance is unavailable until the runtime reports model health."
-      return
-    }
-
-    guard let downloadURLValue = modelHealth.metrics["downloadUrl"],
-          let downloadURL = URL(string: downloadURLValue),
-          !downloadURLValue.isEmpty
-    else {
-      runtimeDetail = "The local model pack does not include a download URL yet."
-      return
-    }
-
-    guard let targetPath = modelHealth.metrics["suggestedModelPath"], !targetPath.isEmpty else {
-      runtimeDetail = "The local model target path is unavailable."
-      return
-    }
-
-    let sizeSummary = formattedDownloadSize(modelHealth.metrics["sizeBytes"])
-    guard confirmModelDownload(
-      displayName: modelHealth.displayName,
-      downloadURL: downloadURL,
-      targetPath: targetPath,
-      sizeSummary: sizeSummary
-    ) else {
-      runtimeDetail = "Local model download was cancelled."
-      return
-    }
-
-    Task {
-      do {
-        runtimeDetail = "Preparing local model download..."
-        let bootstrap = try await runtimeBridge.bootstrapModelPack()
-        let targetURL = URL(fileURLWithPath: targetPath)
-        if FileManager.default.fileExists(atPath: targetURL.path) {
-          await refreshModelHealthState()
-          runtimeDetail = "Local model already exists at \(targetURL.path). Manifest: \(bootstrap.manifestPath)"
-          return
-        }
-
-        runtimeDetail = "Downloading \(modelHealth.displayName) (\(sizeSummary))..."
-        try await downloadModelFile(from: downloadURL, to: targetURL)
-        let refreshedBootstrap = try await runtimeBridge.bootstrapModelPack()
-        await refreshModelHealthState()
-        runtimeDetail = "Downloaded \(modelHealth.displayName) to \(targetURL.path). Manifest: \(refreshedBootstrap.manifestPath)"
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
-            title: "Local Model Downloaded",
-            body: "\(modelHealth.displayName) was downloaded to \(targetURL.path).",
-            attributes: [
-              "modelPath": targetURL.path,
-              "source": downloadURL.absoluteString,
-            ]
-          )
-        )
-      } catch {
-        runtimeDetail = "Model download failed: \(error.localizedDescription)"
-      }
-    }
+    downloadRecommendedModel(modelID: "lfm2.5-350m")
   }
 
   func bootstrapModelPackMetadata() {
@@ -1499,12 +1557,21 @@ final class AppViewModel: ObservableObject {
       if let serverLabel {
         runtimeDetail = "\(serverLabel) | \(runtimeModel.displayName)"
       }
+      refreshLocalModelCatalog()
     } else {
       modelHealth = nil
+      refreshLocalModelCatalog()
       if let serverLabel {
         runtimeDetail = serverLabel
       }
     }
+  }
+
+  private func refreshLocalModelCatalog() {
+    localModels = Self.localModelSummaries(
+      storageRootPath: runtimeBridge.localModelStorageRootPath(),
+      activeModelPath: modelHealth?.modelPath
+    )
   }
 
   private func revealSuggestedPath(metricKey: String, successDetail: String) {
@@ -1865,9 +1932,109 @@ final class AppViewModel: ObservableObject {
       return "size unavailable"
     }
 
+    return formattedByteCount(byteCount)
+  }
+
+  private func formattedByteCount(_ byteCount: Int64) -> String {
     let formatter = ByteCountFormatter()
     formatter.countStyle = .file
     return formatter.string(fromByteCount: byteCount)
+  }
+
+  private static func localModelSummaries(
+    storageRootPath: String,
+    activeModelPath: String?
+  ) -> [LocalModelSummary] {
+    let manager = FileManager.default
+    let normalizedActivePath = activeModelPath.map { normalizedPath($0) }
+    return localModelCatalog().map { item in
+      let installPath = item.installPath(storageRootPath: storageRootPath)
+      let normalizedInstallPath = normalizedPath(installPath)
+      let downloaded = manager.fileExists(atPath: installPath)
+      let localSizeBytes = localFileSize(at: installPath)
+      return LocalModelSummary(
+        id: item.id,
+        displayName: item.displayName,
+        description: item.description,
+        fileName: item.fileName,
+        downloadURL: item.downloadURL,
+        homepage: item.homepage,
+        sizeBytes: item.sizeBytes,
+        license: item.license,
+        tags: item.tags,
+        installPath: installPath,
+        downloaded: downloaded,
+        active: normalizedActivePath == Optional(normalizedInstallPath),
+        localSizeBytes: localSizeBytes
+      )
+    }
+  }
+
+  private static func localFileSize(at path: String) -> Int64? {
+    guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
+          let size = attributes[.size] as? NSNumber
+    else {
+      return nil
+    }
+
+    return size.int64Value
+  }
+
+  private static func normalizedPath(_ path: String) -> String {
+    URL(fileURLWithPath: path).standardizedFileURL.path
+  }
+
+  private static func localModelCatalog() -> [LocalModelCatalogItem] {
+    [
+      LocalModelCatalogItem(
+        id: "lfm2.5-350m",
+        displayName: "LFM2.5-350M Q4_K_M",
+        description: "Default tiny local model for the first Pith agent loop.",
+        fileName: "LFM2.5-350M-Q4_K_M.gguf",
+        downloadURL: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+        homepage: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",
+        sizeBytes: 229_312_224,
+        license: "lfm1.0",
+        tags: ["default", "tiny", "edge"],
+        installSegments: ["builtin", "lfm2.5-350m"]
+      ),
+      LocalModelCatalogItem(
+        id: "qwen2.5-coder-0.5b-instruct",
+        displayName: "Qwen2.5-Coder-0.5B Q4_K_M",
+        description: "Small code-oriented model for local code generation and repair experiments.",
+        fileName: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+        downloadURL: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+        homepage: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
+        sizeBytes: 491_000_000,
+        license: "apache-2.0",
+        tags: ["code", "0.5B", "qwen"],
+        installSegments: ["catalog", "qwen2.5-coder-0.5b-instruct"]
+      ),
+      LocalModelCatalogItem(
+        id: "qwen2.5-0.5b-instruct",
+        displayName: "Qwen2.5-0.5B Instruct Q4_K_M",
+        description: "Compact general chat model with strong multilingual coverage for its size.",
+        fileName: "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        downloadURL: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        homepage: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+        sizeBytes: 491_000_000,
+        license: "apache-2.0",
+        tags: ["chat", "0.5B", "multilingual"],
+        installSegments: ["catalog", "qwen2.5-0.5b-instruct"]
+      ),
+      LocalModelCatalogItem(
+        id: "smollm2-360m-instruct",
+        displayName: "SmolLM2-360M Q4_K_M",
+        description: "Very small instruction model for fast local English assistant experiments.",
+        fileName: "SmolLM2-360M-Instruct.Q4_K_M.gguf",
+        downloadURL: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct.Q4_K_M.gguf",
+        homepage: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF",
+        sizeBytes: 271_000_000,
+        license: "apache-2.0",
+        tags: ["tiny", "english", "fast"],
+        installSegments: ["catalog", "smollm2-360m-instruct"]
+      ),
+    ]
   }
 
   private func pluginInstallRepairHint(for error: Error) -> String {

@@ -13,6 +13,7 @@ struct ContentView: View {
 
   @ObservedObject var viewModel: AppViewModel
   @State private var pluginInspectorSection: PluginInspectorSection = .catalog
+  @State private var modelManagerExpanded = true
 
   var body: some View {
     NavigationView {
@@ -219,6 +220,48 @@ struct ContentView: View {
                 viewModel.revealSuggestedBinaryDirectory()
               }
               .buttonStyle(.bordered)
+            }
+            DisclosureGroup("Model Manager", isExpanded: $modelManagerExpanded) {
+              VStack(alignment: .leading, spacing: 10) {
+                Text(viewModel.modelManagerSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                ForEach(viewModel.localModels) { model in
+                  VStack(alignment: .leading, spacing: 5) {
+                    Text(model.displayName)
+                      .font(.caption)
+                      .fontWeight(.semibold)
+                    Text(model.description)
+                      .font(.caption2)
+                      .foregroundColor(.secondary)
+                    Text(viewModel.localModelStatusSummary(model))
+                      .font(.caption2)
+                      .foregroundColor(.secondary)
+                    Text(viewModel.localModelTagSummary(model))
+                      .font(.caption2)
+                      .foregroundColor(.secondary)
+                    HStack(spacing: 8) {
+                      Button(model.downloaded ? "Downloaded" : "Download") {
+                        viewModel.downloadRecommendedModel(modelID: model.id)
+                      }
+                      .buttonStyle(.bordered)
+                      .disabled(!viewModel.canDownloadRecommendedModel(modelID: model.id))
+
+                      Button("Reveal") {
+                        viewModel.revealRecommendedModel(modelID: model.id)
+                      }
+                      .buttonStyle(.bordered)
+                      .disabled(!model.downloaded)
+                    }
+                    Text(viewModel.localModelPathSummary(model))
+                      .font(.caption2)
+                      .foregroundColor(.secondary)
+                      .textSelection(.enabled)
+                  }
+                  .padding(.vertical, 4)
+                }
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text(viewModel.modelArtifactPathSummary())
               .font(.caption2)

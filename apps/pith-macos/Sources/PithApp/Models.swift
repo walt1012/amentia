@@ -24,6 +24,22 @@ struct ModelHealthSummary: Hashable {
   let metrics: [String: String]
 }
 
+struct LocalModelSummary: Identifiable, Hashable {
+  let id: String
+  let displayName: String
+  let description: String
+  let fileName: String
+  let downloadURL: String
+  let homepage: String
+  let sizeBytes: Int64
+  let license: String
+  let tags: [String]
+  let installPath: String
+  let downloaded: Bool
+  let active: Bool
+  let localSizeBytes: Int64?
+}
+
 struct MemoryStatusSummary: Hashable {
   let noteCount: Int
   let latestTitle: String?

@@ -626,6 +626,12 @@ final class RuntimeBridge {
     appSupportPluginDirectory().path
   }
 
+  func localModelStorageRootPath() -> String {
+    appSupportStorageDirectory()
+      .appendingPathComponent("models", isDirectory: true)
+      .path
+  }
+
   func runPluginCommand(threadID: String, commandID: String, input: String? = nil) async throws
     -> RuntimeTurnResult
   {
