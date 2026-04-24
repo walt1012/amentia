@@ -482,6 +482,7 @@ final class AppViewModel: ObservableObject {
     let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
 
     guard runtimeState == .ready,
+          isLocalModelReady(),
           !message.isEmpty,
           let threadID = selectedThreadID,
           activeTurnID == nil
@@ -635,6 +636,7 @@ final class AppViewModel: ObservableObject {
 
   func runPluginCommand(commandID: String) {
     guard runtimeState == .ready,
+          isLocalModelReady(),
           let threadID = selectedThreadID,
           activeTurnID == nil
     else {
@@ -1186,9 +1188,24 @@ final class AppViewModel: ObservableObject {
       && !memoryNoteBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
+  func isLocalModelReady() -> Bool {
+    guard runtimeState == .ready,
+          let modelHealth,
+          modelHealth.status == "ready"
+    else {
+      return false
+    }
+
+    return (modelHealth.metrics["readiness"] ?? "unknown") == "configured"
+  }
+
   func composerPlaceholder() -> String {
     if workspace == nil {
       return "Open a workspace to start local agent work"
+    }
+
+    if !isLocalModelReady() {
+      return "Install the local LFM2.5-350M runtime before starting agent work"
     }
 
     if activeTurnID != nil {

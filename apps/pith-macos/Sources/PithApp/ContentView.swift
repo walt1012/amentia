@@ -124,6 +124,7 @@ struct ContentView: View {
         .buttonStyle(.borderedProminent)
         .disabled(
           viewModel.runtimeState != .ready
+            || !viewModel.isLocalModelReady()
             || viewModel.selectedThreadID == nil
             || viewModel.isTurnStreaming()
             || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -362,6 +363,7 @@ struct ContentView: View {
               PluginCommandRow(
                 command: command,
                 canRun: viewModel.runtimeState == .ready
+                  && viewModel.isLocalModelReady()
                   && viewModel.selectedThreadID != nil
                   && viewModel.activeTurnID == nil,
                 onRun: {
