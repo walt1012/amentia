@@ -219,13 +219,20 @@ pub fn discover_plugins_in_roots(roots: &[PathBuf]) -> Result<Vec<PluginCatalogE
   Ok(plugins)
 }
 
-pub fn install_plugin_bundle(source_path: &Path, install_root: &Path) -> Result<PluginCatalogEntry> {
+pub fn install_plugin_bundle(
+  source_path: &Path,
+  install_root: &Path,
+) -> Result<PluginCatalogEntry> {
   let source_root = resolve_plugin_source_root(source_path)?;
   let plugin = inspect_plugin_bundle(&source_root)?;
   let manifest_name = plugin.name.clone();
 
-  fs::create_dir_all(install_root)
-    .with_context(|| format!("failed to create plugin install root {}", install_root.display()))?;
+  fs::create_dir_all(install_root).with_context(|| {
+    format!(
+      "failed to create plugin install root {}",
+      install_root.display()
+    )
+  })?;
 
   let destination_root = install_root.join(&manifest_name);
   if destination_root.exists() {
@@ -252,8 +259,12 @@ pub fn remove_local_plugin_bundle(
   manifest_path: &Path,
   install_root: &Path,
 ) -> Result<PluginRemovalRecord> {
-  let resolved_manifest_path = fs::canonicalize(manifest_path)
-    .with_context(|| format!("failed to resolve plugin manifest {}", manifest_path.display()))?;
+  let resolved_manifest_path = fs::canonicalize(manifest_path).with_context(|| {
+    format!(
+      "failed to resolve plugin manifest {}",
+      manifest_path.display()
+    )
+  })?;
   let plugin_entry = load_plugin_entry(resolved_manifest_path.clone());
   let plugin_root = resolved_manifest_path
     .parent()
@@ -582,9 +593,7 @@ fn resolve_plugin_source_root(path: &Path) -> Result<PathBuf> {
       .context("plugin manifest is missing a parent directory");
   }
 
-  anyhow::bail!(
-    "plugin source must be a plugin directory or pith-plugin.json file"
-  );
+  anyhow::bail!("plugin source must be a plugin directory or pith-plugin.json file");
 }
 
 fn copy_directory(source: &Path, destination: &Path) -> Result<()> {

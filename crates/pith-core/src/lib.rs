@@ -19,15 +19,16 @@ use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
-  ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration, PluginCapabilityRegistryResult,
-  PluginCapabilityRegistrySummary, PluginCommandRegistryResult, PluginCommandRunParams,
-  PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
-  PluginInstallResult, PluginListResult, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary,
-  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
-  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
-  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
+  PluginInstallParams, PluginInstallResult, PluginListResult, PluginRemoveParams,
+  PluginRemoveResult, PluginSetEnabledParams, PluginSetEnabledResult,
+  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
+  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -99,7 +100,10 @@ impl RuntimeContext {
     let persisted_plugin_states = store.load_plugin_states()?;
     let plugin_roots = configured_plugin_roots();
     let plugin_install_root = configured_plugin_install_root();
-    let plugins = apply_plugin_states(load_plugin_catalog(&plugin_roots)?, &persisted_plugin_states);
+    let plugins = apply_plugin_states(
+      load_plugin_catalog(&plugin_roots)?,
+      &persisted_plugin_states,
+    );
     let next_thread_number = persisted_threads.len() + 1;
     let next_approval_number = store.next_approval_sequence()?;
     let next_memory_number = store.next_memory_sequence()?;
@@ -882,10 +886,7 @@ fn handle_plugin_set_enabled(
   )
 }
 
-fn handle_plugin_install(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> JsonRpcResponse {
+fn handle_plugin_install(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<PluginInstallParams>(value) {
       Ok(params) => params,
@@ -907,11 +908,18 @@ fn handle_plugin_install(
     Ok(plugin) => plugin,
     Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
   };
-  if context.plugins.iter().any(|plugin| plugin.id == candidate_plugin.id) {
+  if context
+    .plugins
+    .iter()
+    .any(|plugin| plugin.id == candidate_plugin.id)
+  {
     return JsonRpcResponse::error(
       request.id,
       -32053,
-      format!("Plugin `{}` is already installed", candidate_plugin.display_name),
+      format!(
+        "Plugin `{}` is already installed",
+        candidate_plugin.display_name
+      ),
     );
   }
   let installed_plugin = match install_plugin_bundle(&source_path, &context.plugin_install_root) {
@@ -938,10 +946,7 @@ fn handle_plugin_install(
   )
 }
 
-fn handle_plugin_remove(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> JsonRpcResponse {
+fn handle_plugin_remove(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<PluginRemoveParams>(value) {
       Ok(params) => params,
@@ -959,11 +964,11 @@ fn handle_plugin_remove(
   };
 
   let manifest_path = PathBuf::from(&params.manifest_path);
-  let removed_plugin = match remove_local_plugin_bundle(&manifest_path, &context.plugin_install_root)
-  {
-    Ok(plugin) => plugin,
-    Err(error) => return JsonRpcResponse::error(request.id, -32054, error.to_string()),
-  };
+  let removed_plugin =
+    match remove_local_plugin_bundle(&manifest_path, &context.plugin_install_root) {
+      Ok(plugin) => plugin,
+      Err(error) => return JsonRpcResponse::error(request.id, -32054, error.to_string()),
+    };
 
   if let Err(error) = context.delete_plugin_state(&removed_plugin.plugin_id) {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
@@ -2910,7 +2915,9 @@ mod tests {
     )
     .expect("write plugin manifest");
     fs::write(
-      plugin_dir.join("commands").join(format!("{plugin_name}.run.json")),
+      plugin_dir
+        .join("commands")
+        .join(format!("{plugin_name}.run.json")),
       r#"{
   "title": "Run Temporary Plugin",
   "description": "Execute a temporary plugin command.",
@@ -3848,7 +3855,8 @@ mod tests {
   #[test]
   fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
     let mut context = RuntimeContext::new_in_memory();
-    let source_root = create_temp_plugin_bundle("plugin-install-source", "focus-review", "Focus Review");
+    let source_root =
+      create_temp_plugin_bundle("plugin-install-source", "focus-review", "Focus Review");
     let install_root = create_temp_workspace("plugin-install-root");
     context.plugin_roots = vec![install_root.clone()];
     context.plugin_install_root = install_root.clone();
@@ -3872,13 +3880,20 @@ mod tests {
     let result = response.result.expect("plugin install result");
     assert_eq!(result["plugin"]["id"], "focus-review");
     assert_eq!(result["plugin"]["provenance"], "local");
-    assert!(context.plugins.iter().any(|plugin| plugin.id == "focus-review"));
+    assert!(context
+      .plugins
+      .iter()
+      .any(|plugin| plugin.id == "focus-review"));
   }
 
   #[test]
   fn plugin_install_rejects_duplicate_plugin_ids() {
     let mut context = RuntimeContext::new_in_memory();
-    let source_root = create_temp_plugin_bundle("plugin-install-duplicate", "workspace-notes", "Workspace Notes");
+    let source_root = create_temp_plugin_bundle(
+      "plugin-install-duplicate",
+      "workspace-notes",
+      "Workspace Notes",
+    );
     context.plugins = vec![PluginCatalogEntry {
       id: "workspace-notes".to_string(),
       name: "workspace-notes".to_string(),
@@ -3918,9 +3933,13 @@ mod tests {
   fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
     let mut context = RuntimeContext::new_in_memory();
     let storage_root = create_temp_workspace("plugin-remove-storage");
-    let source_root = create_temp_plugin_bundle("plugin-remove-source", "focus-review", "Focus Review");
+    let source_root =
+      create_temp_plugin_bundle("plugin-remove-source", "focus-review", "Focus Review");
     let install_root = create_temp_workspace("plugin-remove-root");
-    let store = FileThreadStore::new(storage_root.join("pith.db"), storage_root.join("threads.json"));
+    let store = FileThreadStore::new(
+      storage_root.join("pith.db"),
+      storage_root.join("threads.json"),
+    );
     store
       .save_plugin_enabled("focus-review", true)
       .expect("save persisted plugin state");

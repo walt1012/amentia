@@ -149,7 +149,8 @@ fn plugin_install_and_remove_payloads_use_camel_case_fields() {
     removed_path: "/tmp/pith/plugins/local/focus-review".to_string(),
   };
 
-  let install_value = serde_json::to_value(install_params).expect("serialize plugin install params");
+  let install_value =
+    serde_json::to_value(install_params).expect("serialize plugin install params");
   let remove_value = serde_json::to_value(remove_params).expect("serialize plugin remove params");
   let result_value = serde_json::to_value(remove_result).expect("serialize plugin remove result");
 

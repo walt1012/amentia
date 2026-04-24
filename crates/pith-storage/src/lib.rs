@@ -536,7 +536,10 @@ impl FileThreadStore {
 
   pub fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
     let connection = self.open_connection()?;
-    connection.execute("DELETE FROM plugin_state WHERE plugin_id = ?1", params![plugin_id])?;
+    connection.execute(
+      "DELETE FROM plugin_state WHERE plugin_id = ?1",
+      params![plugin_id],
+    )?;
     Ok(())
   }
 
