@@ -117,7 +117,6 @@ struct ContentView: View {
         .buttonStyle(.borderedProminent)
         .disabled(
           viewModel.runtimeState != .ready
-            || viewModel.workspace == nil
             || viewModel.selectedThreadID == nil
             || viewModel.isTurnStreaming()
             || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -243,10 +242,42 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.pluginCountSummary())
             .font(.headline)
-          Text(viewModel.pluginDetailSummary())
+
+          if viewModel.plugins.isEmpty {
+            Text(viewModel.pluginDetailSummary())
+              .font(.caption)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+          } else {
+            ForEach(viewModel.plugins) { plugin in
+              PluginRow(
+                plugin: plugin,
+                canEdit: viewModel.runtimeState == .ready && plugin.status == "ready",
+                onSetEnabled: { enabled in
+                  viewModel.setPluginEnabled(pluginID: plugin.id, enabled: enabled)
+                }
+              )
+            }
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      GroupBox("Plugin Registry") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.pluginRegistryCountSummary())
+            .font(.headline)
+
+          Text(viewModel.pluginRegistryDetailSummary())
             .font(.caption)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
+
+          if !viewModel.pluginCapabilityPreview().isEmpty {
+            ForEach(viewModel.pluginCapabilityPreview()) { capability in
+              PluginCapabilityRow(capability: capability)
+            }
+          }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
@@ -322,6 +353,92 @@ struct ContentView: View {
     }
     .padding(20)
     .frame(minWidth: 280)
+  }
+}
+
+private struct PluginRow: View {
+  let plugin: PluginSummary
+  let canEdit: Bool
+  let onSetEnabled: (Bool) -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(plugin.displayName)
+            .font(.subheadline.weight(.semibold))
+          Text("\(plugin.version) | \(plugin.provenance) | \(plugin.status)")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+
+        Spacer()
+
+        Toggle(
+          "",
+          isOn: Binding(
+            get: { plugin.enabled },
+            set: onSetEnabled
+          )
+        )
+        .labelsHidden()
+        .disabled(!canEdit)
+      }
+
+      Text(plugin.description)
+        .font(.caption)
+        .foregroundColor(.secondary)
+
+      if !plugin.capabilities.isEmpty {
+        Text("Capabilities: \(plugin.capabilities.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if !plugin.permissions.isEmpty {
+        Text("Permissions: \(plugin.permissions.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if let validationError = plugin.validationError {
+        Text(validationError)
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(.vertical, 4)
+  }
+}
+
+private struct PluginCapabilityRow: View {
+  let capability: PluginCapabilitySummary
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("\(capability.kind):\(capability.identifier)")
+            .font(.caption.weight(.semibold))
+          Text("\(capability.pluginDisplayName) | \(capability.pluginID)")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+
+        Spacer()
+      }
+
+      if !capability.permissions.isEmpty {
+        Text("Permissions: \(capability.permissions.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(.vertical, 4)
   }
 }
 

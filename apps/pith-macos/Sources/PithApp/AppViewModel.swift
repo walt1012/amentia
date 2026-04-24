@@ -18,6 +18,8 @@ final class AppViewModel: ObservableObject {
   @Published var memoryNoteTitle: String
   @Published var memoryNoteBody: String
   @Published var plugins: [PluginSummary]
+  @Published var pluginCapabilityRegistrySummary: PluginCapabilityRegistrySummary?
+  @Published var pluginCapabilities: [PluginCapabilitySummary]
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -27,14 +29,14 @@ final class AppViewModel: ObservableObject {
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
       TimelineEntry(
-        id: UUID(),
+        id: UUID().uuidString,
         kind: .system,
         title: "Milestone 1 Ready",
         body: "Open a workspace, launch the runtime, and ask Pith to inspect or change local files.",
         attributes: [:]
       ),
       TimelineEntry(
-        id: UUID(),
+        id: UUID().uuidString,
         kind: .assistantMessage,
         title: "Local Agent Loop",
         body:
@@ -62,6 +64,8 @@ final class AppViewModel: ObservableObject {
     self.memoryNoteTitle = ""
     self.memoryNoteBody = ""
     self.plugins = []
+    self.pluginCapabilityRegistrySummary = nil
+    self.pluginCapabilities = []
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
@@ -72,6 +76,12 @@ final class AppViewModel: ObservableObject {
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
       Task { @MainActor in
         self?.applyRuntimeThreadUpdate(state)
+      }
+    }
+    self.runtimeBridge.onConnectionStateChanged = { [weak self] state, detail in
+      Task { @MainActor in
+        self?.runtimeState = state
+        self?.runtimeDetail = detail
       }
     }
   }
@@ -86,7 +96,6 @@ final class AppViewModel: ObservableObject {
         let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
         let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
         let currentWorkspace = try? await runtimeBridge.currentWorkspace()
-        let runtimePlugins = try? await runtimeBridge.listPlugins()
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
@@ -113,24 +122,12 @@ final class AppViewModel: ObservableObject {
           )
         }
 
-        plugins = (runtimePlugins ?? []).map { plugin in
-          PluginSummary(
-            id: plugin.id,
-            name: plugin.name,
-            version: plugin.version,
-            displayName: plugin.displayName,
-            description: plugin.description,
-            authorName: plugin.authorName,
-            enabled: plugin.enabled,
-            defaultEnabled: plugin.defaultEnabled,
-            capabilities: plugin.capabilities,
-            permissions: plugin.permissions,
-            manifestPath: plugin.manifestPath,
-            provenance: plugin.provenance
-          )
-        }
+        await refreshPluginState()
         if !plugins.isEmpty {
           runtimeDetail += " | \(plugins.count) plugin(s)"
+        }
+        if !pluginCapabilities.isEmpty {
+          runtimeDetail += " | \(pluginCapabilities.count) capability(s)"
         }
 
         if let currentWorkspace {
@@ -161,7 +158,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThread?.id,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .system,
             title: "Runtime Connected",
             body: "Connected to \(session.serverName) \(session.serverVersion) over stdio.",
@@ -172,7 +169,7 @@ final class AppViewModel: ObservableObject {
           appendEntry(
             to: selectedThread?.id,
             TimelineEntry(
-              id: UUID(),
+              id: UUID().uuidString,
               kind: .system,
               title: "Local Model Ready",
               body:
@@ -190,7 +187,7 @@ final class AppViewModel: ObservableObject {
           appendEntry(
             to: selectedThread?.id,
             TimelineEntry(
-              id: UUID(),
+              id: UUID().uuidString,
               kind: .system,
               title: "Memory Ready",
               body: runtimeMemoryStatus.summary,
@@ -204,11 +201,28 @@ final class AppViewModel: ObservableObject {
           appendEntry(
             to: selectedThread?.id,
             TimelineEntry(
-              id: UUID(),
+              id: UUID().uuidString,
               kind: .system,
               title: "Plugins Ready",
               body: "Discovered \(plugins.count) plugin(s): \(plugins.map(\.displayName).joined(separator: ", ")).",
               attributes: [:]
+            )
+          )
+        }
+        if let registrySummary = pluginCapabilityRegistrySummary,
+           registrySummary.totalCapabilityCount > 0 {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .system,
+              title: "Capability Registry Ready",
+              body:
+                "Registered \(registrySummary.totalCapabilityCount) capability(ies) across \(registrySummary.enabledPluginCount) enabled plugin(s).",
+              attributes: [
+                "enabledPluginCount": String(registrySummary.enabledPluginCount),
+                "totalCapabilityCount": String(registrySummary.totalCapabilityCount)
+              ]
             )
           )
         }
@@ -218,10 +232,13 @@ final class AppViewModel: ObservableObject {
         modelHealth = nil
         memoryStatus = nil
         memoryNotes = []
+        plugins = []
+        pluginCapabilityRegistrySummary = nil
+        pluginCapabilities = []
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Runtime Launch Failed",
             body: error.localizedDescription,
@@ -259,7 +276,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .system,
             title: "Workspace Opened",
             body: "Opened \(openedWorkspace.displayName) at \(openedWorkspace.rootPath).",
@@ -270,7 +287,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Workspace Open Failed",
             body: error.localizedDescription,
@@ -297,7 +314,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: thread.id,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .system,
             title: "Thread Created",
             body: "Created \(thread.title) in the local runtime.",
@@ -308,7 +325,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Thread Creation Failed",
             body: error.localizedDescription,
@@ -325,7 +342,6 @@ final class AppViewModel: ObservableObject {
     guard runtimeState == .ready,
           !message.isEmpty,
           let threadID = selectedThreadID,
-          workspace != nil,
           activeTurnID == nil
     else {
       return
@@ -347,7 +363,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: threadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Turn Failed",
             body: error.localizedDescription,
@@ -377,11 +393,50 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Approval Response Failed",
             body: error.localizedDescription,
             attributes: [:]
+          )
+        )
+      }
+    }
+  }
+
+  func setPluginEnabled(pluginID: String, enabled: Bool) {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    Task {
+      do {
+        let updatedPlugin = try await runtimeBridge.setPluginEnabled(pluginID: pluginID, enabled: enabled)
+        await refreshPluginState()
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .system,
+            title: enabled ? "Plugin Enabled" : "Plugin Disabled",
+            body: "\(updatedPlugin.displayName) is now \(enabled ? "enabled" : "disabled").",
+            attributes: [
+              "pluginId": updatedPlugin.id,
+              "pluginStatus": updatedPlugin.status,
+            ]
+          )
+        )
+      } catch {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .warning,
+            title: "Plugin Update Failed",
+            body: error.localizedDescription,
+            attributes: [
+              "pluginId": pluginID
+            ]
           )
         )
       }
@@ -425,7 +480,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .system,
             title: "Memory Note Saved",
             body: "Saved built-in workspace note \(note.title).",
@@ -440,7 +495,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Memory Note Failed",
             body: error.localizedDescription,
@@ -470,7 +525,7 @@ final class AppViewModel: ObservableObject {
         appendEntry(
           to: activeTurnThreadID,
           TimelineEntry(
-            id: UUID(),
+            id: UUID().uuidString,
             kind: .warning,
             title: "Turn Cancel Failed",
             body: error.localizedDescription,
@@ -682,7 +737,13 @@ final class AppViewModel: ObservableObject {
       return "No bundled plugins discovered yet."
     }
 
-    return "\(plugins.count) plugin(s) discovered"
+    let readyCount = plugins.filter { $0.status == "ready" }.count
+    let invalidCount = plugins.count - readyCount
+    if invalidCount == 0 {
+      return "\(readyCount) plugin(s) discovered"
+    }
+
+    return "\(readyCount) ready, \(invalidCount) invalid"
   }
 
   func pluginDetailSummary() -> String {
@@ -693,9 +754,39 @@ final class AppViewModel: ObservableObject {
     return plugins
       .map { plugin in
         let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
-        return "\(plugin.displayName) \(plugin.version) | \(plugin.provenance) | capabilities: \(capabilities)"
+        let validation = plugin.validationError ?? "ok"
+        return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | capabilities: \(capabilities) | validation: \(validation)"
       }
       .joined(separator: "\n")
+  }
+
+  func pluginRegistryCountSummary() -> String {
+    guard let pluginCapabilityRegistrySummary else {
+      return "Capability registry not loaded yet."
+    }
+
+    return
+      "\(pluginCapabilityRegistrySummary.totalCapabilityCount) capability(ies) from \(pluginCapabilityRegistrySummary.enabledPluginCount) enabled plugin(s)"
+  }
+
+  func pluginRegistryDetailSummary() -> String {
+    guard let pluginCapabilityRegistrySummary else {
+      return "Enable a ready plugin to populate the typed capability registry."
+    }
+
+    let kindSummary = pluginCapabilityRegistrySummary.capabilityCountsByKind
+      .sorted(by: { $0.key < $1.key })
+      .map { "\($0.key): \($0.value)" }
+      .joined(separator: " | ")
+    if kindSummary.isEmpty {
+      return "No capabilities are currently registered."
+    }
+
+    return kindSummary
+  }
+
+  func pluginCapabilityPreview() -> [PluginCapabilitySummary] {
+    Array(pluginCapabilities.prefix(6))
   }
 
   func memoryCountSummary() -> String {
@@ -776,7 +867,7 @@ final class AppViewModel: ObservableObject {
   ) {
     let newEntries = items.map { item in
       TimelineEntry(
-        id: UUID(),
+        id: UUID().uuidString,
         kind: timelineKind(for: item.kind),
         title: item.title,
         body: item.content,
@@ -842,7 +933,7 @@ final class AppViewModel: ObservableObject {
   private func defaultTimeline(for title: String) -> [TimelineEntry] {
     [
       TimelineEntry(
-        id: UUID(),
+        id: UUID().uuidString,
         kind: .system,
         title: "Thread Ready",
         body: "\(title) is ready for local runtime messages.",
@@ -858,15 +949,8 @@ final class AppViewModel: ObservableObject {
   private func loadThreadHistory(threadID: String) async {
     do {
       let result = try await runtimeBridge.readThread(threadID: threadID)
-      let entries = result.items.map { item in
-        TimelineEntry(
-          id: UUID(),
-          kind: timelineKind(for: item.kind),
-          title: item.title,
-          body: item.content,
-          attributes: item.attributes
-        )
-      }
+      let previousSelectionID = selectedThreadID == threadID ? selectedEntryID : nil
+      let entries = timelineEntries(from: result.items)
       threadTimelines[threadID] = entries
       updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
       updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
@@ -874,13 +958,18 @@ final class AppViewModel: ObservableObject {
 
       if selectedThreadID == threadID {
         timeline = entries
-        selectedEntryID = entries.first?.id
+        if let previousSelectionID,
+           entries.contains(where: { $0.id == previousSelectionID }) {
+          selectedEntryID = previousSelectionID
+        } else {
+          selectedEntryID = entries.first?.id
+        }
       }
     } catch {
       appendEntry(
         to: threadID,
         TimelineEntry(
-          id: UUID(),
+          id: UUID().uuidString,
           kind: .warning,
           title: "Thread Load Failed",
           body: error.localizedDescription,
@@ -1019,16 +1108,43 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
-    let entries = state.items.map { item in
-      TimelineEntry(
-        id: UUID(),
-        kind: timelineKind(for: item.kind),
-        title: item.title,
-        body: item.content,
-        attributes: item.attributes
-      )
+  private func refreshPluginState() async {
+    let runtimePlugins = try? await runtimeBridge.listPlugins()
+    let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
+
+    if let runtimePlugins {
+      plugins = runtimePlugins.map { pluginSummary(from: $0) }
     }
+    if let runtimeRegistry {
+      pluginCapabilityRegistrySummary = PluginCapabilityRegistrySummary(
+        enabledPluginCount: runtimeRegistry.summary.enabledPluginCount,
+        totalCapabilityCount: runtimeRegistry.summary.totalCapabilityCount,
+        capabilityCountsByKind: runtimeRegistry.summary.capabilityCountsByKind
+      )
+      pluginCapabilities = runtimeRegistry.capabilities.map { capability in
+        PluginCapabilitySummary(
+          id: capability.capabilityID,
+          kind: capability.kind,
+          identifier: capability.identifier,
+          pluginID: capability.pluginID,
+          pluginDisplayName: capability.pluginDisplayName,
+          permissions: capability.permissions,
+          manifestPath: capability.manifestPath
+        )
+      }
+    } else if runtimePlugins != nil {
+      pluginCapabilityRegistrySummary = PluginCapabilityRegistrySummary(
+        enabledPluginCount: plugins.filter { $0.status == "ready" && $0.enabled }.count,
+        totalCapabilityCount: 0,
+        capabilityCountsByKind: [:]
+      )
+      pluginCapabilities = []
+    }
+  }
+
+  private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
+    let previousSelectionID = selectedThreadID == state.id ? selectedEntryID : nil
+    let entries = timelineEntries(from: state.items)
 
     threadTimelines[state.id] = entries
     updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
@@ -1037,7 +1153,53 @@ final class AppViewModel: ObservableObject {
 
     if selectedThreadID == state.id {
       timeline = entries
-      selectedEntryID = entries.first?.id
+      if let previousSelectionID,
+         entries.contains(where: { $0.id == previousSelectionID }) {
+        selectedEntryID = previousSelectionID
+      } else {
+        selectedEntryID = entries.first?.id
+      }
     }
+  }
+
+  private func timelineEntries(from items: [RuntimeBridge.RuntimeTimelineItemResult]) -> [TimelineEntry] {
+    items.enumerated().map { index, item in
+      TimelineEntry(
+        id: runtimeTimelineID(for: item, index: index),
+        kind: timelineKind(for: item.kind),
+        title: item.title,
+        body: item.content,
+        attributes: item.attributes
+      )
+    }
+  }
+
+  private func runtimeTimelineID(for item: RuntimeBridge.RuntimeTimelineItemResult, index: Int) -> String {
+    if let approvalID = item.attributes["approvalId"] {
+      return "approval:\(approvalID):\(item.kind):\(item.title)"
+    }
+    if let turnID = item.attributes["turnId"] {
+      return "turn:\(turnID):\(item.kind):\(item.title)"
+    }
+    return "runtime:\(index):\(item.kind):\(item.title)"
+  }
+
+  private func pluginSummary(from plugin: RuntimeBridge.RuntimePlugin) -> PluginSummary {
+    PluginSummary(
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      displayName: plugin.displayName,
+      status: plugin.status,
+      description: plugin.description,
+      authorName: plugin.authorName,
+      enabled: plugin.enabled,
+      defaultEnabled: plugin.defaultEnabled,
+      capabilities: plugin.capabilities,
+      permissions: plugin.permissions,
+      manifestPath: plugin.manifestPath,
+      provenance: plugin.provenance,
+      validationError: plugin.validationError
+    )
   }
 }

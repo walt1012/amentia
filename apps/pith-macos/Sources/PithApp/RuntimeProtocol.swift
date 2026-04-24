@@ -109,11 +109,33 @@ struct PluginListResult: Codable {
   let plugins: [RuntimePluginPayload]
 }
 
+struct PluginCapabilityRegistryResult: Codable {
+  let capabilities: [RuntimePluginCapabilityPayload]
+  let summary: RuntimePluginCapabilityRegistrySummaryPayload
+}
+
+struct RuntimePluginCapabilityRegistrySummaryPayload: Codable {
+  let enabledPluginCount: Int
+  let totalCapabilityCount: Int
+  let capabilityCountsByKind: [String: Int]
+}
+
+struct RuntimePluginCapabilityPayload: Codable {
+  let capabilityId: String
+  let kind: String
+  let identifier: String
+  let pluginId: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let manifestPath: String
+}
+
 struct RuntimePluginPayload: Codable {
   let id: String
   let name: String
   let version: String
   let displayName: String
+  let status: String
   let description: String
   let authorName: String?
   let enabled: Bool
@@ -122,6 +144,16 @@ struct RuntimePluginPayload: Codable {
   let permissions: [String]
   let manifestPath: String
   let provenance: String
+  let validationError: String?
+}
+
+struct PluginSetEnabledParams: Codable {
+  let pluginId: String
+  let enabled: Bool
+}
+
+struct PluginSetEnabledResult: Codable {
+  let plugin: RuntimePluginPayload
 }
 
 struct ThreadListResult: Codable {

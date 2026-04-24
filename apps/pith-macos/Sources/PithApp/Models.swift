@@ -45,6 +45,7 @@ struct PluginSummary: Identifiable, Hashable {
   let name: String
   let version: String
   let displayName: String
+  let status: String
   let description: String
   let authorName: String?
   let enabled: Bool
@@ -53,6 +54,23 @@ struct PluginSummary: Identifiable, Hashable {
   let permissions: [String]
   let manifestPath: String
   let provenance: String
+  let validationError: String?
+}
+
+struct PluginCapabilityRegistrySummary: Hashable {
+  let enabledPluginCount: Int
+  let totalCapabilityCount: Int
+  let capabilityCountsByKind: [String: Int]
+}
+
+struct PluginCapabilitySummary: Identifiable, Hashable {
+  let id: String
+  let kind: String
+  let identifier: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let manifestPath: String
 }
 
 struct TimelineEntry: Identifiable, Hashable {
@@ -67,7 +85,7 @@ struct TimelineEntry: Identifiable, Hashable {
     case warning
   }
 
-  let id: UUID
+  let id: String
   let kind: Kind
   let title: String
   let body: String

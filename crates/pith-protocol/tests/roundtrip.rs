@@ -1,6 +1,8 @@
 use pith_protocol::{
-  ApprovalRequest, ApprovalRespondParams, InitializeParams, ThreadReadResult, ThreadSummary,
-  TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginSetEnabledParams,
+  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -114,4 +116,48 @@ fn approval_respond_params_use_camel_case_fields() {
   let value = serde_json::to_value(params).expect("serialize approval respond params");
   assert!(value.get("approvalId").is_some());
   assert!(value.get("decision").is_some());
+}
+
+#[test]
+fn plugin_set_enabled_params_use_camel_case_fields() {
+  let params = PluginSetEnabledParams {
+    plugin_id: "workspace-notes".to_string(),
+    enabled: true,
+  };
+
+  let value = serde_json::to_value(params).expect("serialize plugin set enabled params");
+  assert!(value.get("pluginId").is_some());
+  assert_eq!(value.get("enabled").and_then(|item| item.as_bool()), Some(true));
+}
+
+#[test]
+fn plugin_capability_registry_round_trips() {
+  let result = PluginCapabilityRegistryResult {
+    summary: PluginCapabilityRegistrySummary {
+      enabled_plugin_count: 2,
+      total_capability_count: 3,
+      capability_counts_by_kind: HashMap::from([
+        ("prompt_pack".to_string(), 1),
+        ("tool".to_string(), 2),
+      ]),
+    },
+    capabilities: vec![PluginCapabilityRegistration {
+      capability_id: "review-assistant::tool:diff.summaries".to_string(),
+      kind: "tool".to_string(),
+      identifier: "diff.summaries".to_string(),
+      plugin_id: "review-assistant".to_string(),
+      plugin_display_name: "Review Assistant".to_string(),
+      permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
+      manifest_path: "plugins/official/review-assistant/pith-plugin.json".to_string(),
+    }],
+  };
+
+  let encoded = serde_json::to_string(&result).expect("serialize capability registry");
+  let decoded: PluginCapabilityRegistryResult =
+    serde_json::from_str(&encoded).expect("deserialize capability registry");
+
+  assert_eq!(decoded.summary.enabled_plugin_count, 2);
+  assert_eq!(decoded.summary.total_capability_count, 3);
+  assert_eq!(decoded.capabilities[0].plugin_id, "review-assistant");
+  assert_eq!(decoded.capabilities[0].kind, "tool");
 }

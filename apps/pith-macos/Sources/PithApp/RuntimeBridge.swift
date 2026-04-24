@@ -65,6 +65,7 @@ final class RuntimeBridge {
     let name: String
     let version: String
     let displayName: String
+    let status: String
     let description: String
     let authorName: String?
     let enabled: Bool
@@ -73,6 +74,28 @@ final class RuntimeBridge {
     let permissions: [String]
     let manifestPath: String
     let provenance: String
+    let validationError: String?
+  }
+
+  struct RuntimePluginCapabilityRegistry {
+    let capabilities: [RuntimePluginCapability]
+    let summary: RuntimePluginCapabilityRegistrySummary
+  }
+
+  struct RuntimePluginCapabilityRegistrySummary {
+    let enabledPluginCount: Int
+    let totalCapabilityCount: Int
+    let capabilityCountsByKind: [String: Int]
+  }
+
+  struct RuntimePluginCapability {
+    let capabilityID: String
+    let kind: String
+    let identifier: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let manifestPath: String
   }
 
   struct RuntimeTurnResult {
@@ -144,9 +167,11 @@ final class RuntimeBridge {
   }
 
   typealias ThreadUpdatedHandler = @Sendable (RuntimeThreadState) -> Void
+  typealias ConnectionStateHandler = @Sendable (ConnectionState, String) -> Void
 
   private(set) var connectionState: ConnectionState = .disconnected
   var onThreadUpdated: ThreadUpdatedHandler?
+  var onConnectionStateChanged: ConnectionStateHandler?
 
   private var process: Process?
   private var inputHandle: FileHandle?
@@ -157,11 +182,12 @@ final class RuntimeBridge {
   private var readerTask: Task<Void, Never>?
 
   func launchAndInitialize() async throws -> SessionInfo {
-    if process == nil {
+    if process == nil || process?.isRunning != true {
+      resetProcessState()
       try launchProcess()
     }
 
-    connectionState = .launching
+    updateConnectionState(.launching, detail: "Launching local runtime")
 
     let initializeParams = InitializeParams(
       clientInfo: ClientInfo(
@@ -183,7 +209,7 @@ final class RuntimeBridge {
       throw RuntimeError.invalidResponse
     }
 
-    connectionState = .ready
+    updateConnectionState(.ready, detail: "\(result.serverInfo.name) \(result.serverInfo.version)")
 
     return SessionInfo(
       serverName: result.serverInfo.name,
@@ -373,6 +399,7 @@ final class RuntimeBridge {
         name: plugin.name,
         version: plugin.version,
         displayName: plugin.displayName,
+        status: plugin.status,
         description: plugin.description,
         authorName: plugin.authorName,
         enabled: plugin.enabled,
@@ -380,9 +407,76 @@ final class RuntimeBridge {
         capabilities: plugin.capabilities,
         permissions: plugin.permissions,
         manifestPath: plugin.manifestPath,
-        provenance: plugin.provenance
+        provenance: plugin.provenance,
+        validationError: plugin.validationError
       )
     }
+  }
+
+  func pluginCapabilityRegistry() async throws -> RuntimePluginCapabilityRegistry {
+    let response: JSONRPCResponse<PluginCapabilityRegistryResult> = try await sendRequest(
+      method: "plugin/capabilityRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePluginCapabilityRegistry(
+      capabilities: result.capabilities.map { capability in
+        RuntimePluginCapability(
+          capabilityID: capability.capabilityId,
+          kind: capability.kind,
+          identifier: capability.identifier,
+          pluginID: capability.pluginId,
+          pluginDisplayName: capability.pluginDisplayName,
+          permissions: capability.permissions,
+          manifestPath: capability.manifestPath
+        )
+      },
+      summary: RuntimePluginCapabilityRegistrySummary(
+        enabledPluginCount: result.summary.enabledPluginCount,
+        totalCapabilityCount: result.summary.totalCapabilityCount,
+        capabilityCountsByKind: result.summary.capabilityCountsByKind
+      )
+    )
+  }
+
+  func setPluginEnabled(pluginID: String, enabled: Bool) async throws -> RuntimePlugin {
+    let response: JSONRPCResponse<PluginSetEnabledResult> = try await sendRequest(
+      method: "plugin/setEnabled",
+      params: PluginSetEnabledParams(pluginId: pluginID, enabled: enabled)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePlugin(
+      id: result.plugin.id,
+      name: result.plugin.name,
+      version: result.plugin.version,
+      displayName: result.plugin.displayName,
+      status: result.plugin.status,
+      description: result.plugin.description,
+      authorName: result.plugin.authorName,
+      enabled: result.plugin.enabled,
+      defaultEnabled: result.plugin.defaultEnabled,
+      capabilities: result.plugin.capabilities,
+      permissions: result.plugin.permissions,
+      manifestPath: result.plugin.manifestPath,
+      provenance: result.plugin.provenance,
+      validationError: result.plugin.validationError
+    )
   }
 
   func currentWorkspace() async throws -> RuntimeWorkspace? {
@@ -535,6 +629,10 @@ final class RuntimeBridge {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
+    process.terminationHandler = { [weak self] process in
+      let detail = "Runtime exited with status \(process.terminationStatus)."
+      self?.handleProcessTermination(detail: detail)
+    }
 
     try process.run()
 
@@ -557,6 +655,7 @@ final class RuntimeBridge {
           line = try Self.readLine(from: handle)
         } catch {
           self.failPendingResponses(with: error)
+          self.handleProcessTermination(detail: "Runtime disconnected.")
           return
         }
 
@@ -611,6 +710,29 @@ final class RuntimeBridge {
         continuation.resume(throwing: error)
       }
     }
+  }
+
+  private func handleProcessTermination(detail: String) {
+    resetProcessState()
+    updateConnectionState(.failed, detail: detail)
+  }
+
+  private func resetProcessState() {
+    readerTask?.cancel()
+    readerTask = nil
+
+    if let process, process.isRunning {
+      process.terminationHandler = nil
+    }
+
+    process = nil
+    inputHandle = nil
+    outputHandle = nil
+  }
+
+  private func updateConnectionState(_ state: ConnectionState, detail: String) {
+    connectionState = state
+    onConnectionStateChanged?(state, detail)
   }
 
   private func resolveRuntimeURL() throws -> URL {

@@ -12,6 +12,16 @@ The product goal is to combine:
 
 The repository is intentionally English-only.
 
+## Product Principles
+
+- Build a native `macOS` application named `Pith` for `macOS 12+` on `x86_64` only.
+- Keep the app lightweight and intentionally small while preserving a strong local agent loop.
+- Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
+- Keep the default intelligence path fully local with no required external model API.
+- Treat `LFM2.5-350M` as the default built-in model pack baseline.
+- Design plugins as first-class product modules so `Pith` can expand beyond code assistance into a broader local agent platform.
+- Prefer free and open source dependencies, tooling, and model delivery paths.
+
 ## Repository Layout
 
 ```text

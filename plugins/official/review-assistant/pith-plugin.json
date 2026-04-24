@@ -1,0 +1,18 @@
+{
+  "name": "review-assistant",
+  "version": "0.1.0",
+  "display_name": "Review Assistant",
+  "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
+  "author": {
+    "name": "Pith"
+  },
+  "capabilities": [
+    "prompt_pack:review.prompts",
+    "tool:diff.summaries"
+  ],
+  "permissions": [
+    "file.read",
+    "model.invoke"
+  ],
+  "default_enabled": true
+}

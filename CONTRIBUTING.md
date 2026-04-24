@@ -6,6 +6,11 @@ This repository has completed the Milestone 1 local agent baseline for `Pith`.
 
 - Use English only in source files, comments, docs, commit messages, branch names, and PR titles.
 - Keep changes scoped and reviewable.
+- Preserve the `macOS 12+` and `x86_64` product target. Do not introduce Apple Silicon-only assumptions.
+- Keep `Pith` lightweight. Prefer simple, maintainable solutions over broad heavy abstractions.
+- Preserve the local-first inference path. Do not add required external model APIs to the core product loop.
+- Treat plugins as first-class product modules rather than optional afterthoughts.
+- Favor free and open source dependencies and delivery paths.
 - Prefer extending the protocol and runtime through typed data models instead of stringly typed ad hoc payloads.
 - Preserve the local-first product direction.
 

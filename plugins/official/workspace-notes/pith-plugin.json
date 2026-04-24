@@ -1,0 +1,18 @@
+{
+  "name": "workspace-notes",
+  "version": "0.1.0",
+  "display_name": "Workspace Notes",
+  "description": "Captures reusable workspace notes and preferences for local threads.",
+  "author": {
+    "name": "Pith"
+  },
+  "capabilities": [
+    "prompt_pack:workspace.notes",
+    "settings:workspace.preferences"
+  ],
+  "permissions": [
+    "file.read",
+    "file.write"
+  ],
+  "default_enabled": true
+}

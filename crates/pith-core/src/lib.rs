@@ -8,12 +8,17 @@ use pith_memory::{retrieve_relevant_notes, MemoryEvent, MemoryManager, MemoryNot
 use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
-use pith_plugin_host::{default_plugin_root, discover_plugins, PluginCatalogEntry};
+use pith_plugin_host::{
+  build_capability_registry, default_plugin_root, discover_plugins, PluginCatalogEntry,
+  PluginCapabilityRegistration as HostPluginCapabilityRegistration,
+};
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
-  ModelBootstrapResult, ModelHealthResult, PluginListResult,
+  ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginListResult,
+  PluginSetEnabledParams, PluginSetEnabledResult,
   PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
   ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
   ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
@@ -31,6 +36,7 @@ struct StoredThread {
   summary: ThreadSummary,
   turn_count: usize,
   items: Vec<TimelineItem>,
+  workspace: Option<WorkspaceSummary>,
 }
 
 #[derive(Debug, Clone)]
@@ -84,7 +90,8 @@ impl RuntimeContext {
     let persisted_workspace = store.load_workspace()?;
     let persisted_pending_approvals = store.load_pending_approvals()?;
     let persisted_memory_notes = store.load_memory_notes(128)?;
-    let plugins = load_plugin_catalog()?;
+    let persisted_plugin_states = store.load_plugin_states()?;
+    let plugins = apply_plugin_states(load_plugin_catalog()?, &persisted_plugin_states);
     let next_thread_number = persisted_threads.len() + 1;
     let next_approval_number = store.next_approval_sequence()?;
     let next_memory_number = store.next_memory_sequence()?;
@@ -102,6 +109,7 @@ impl RuntimeContext {
           summary: thread.summary,
           turn_count: thread.turn_count,
           items: thread.items,
+          workspace: thread.workspace,
         })
         .collect(),
       workspace: persisted_workspace,
@@ -159,6 +167,7 @@ impl RuntimeContext {
         summary: thread.summary.clone(),
         turn_count: thread.turn_count,
         items: thread.items.clone(),
+        workspace: thread.workspace.clone(),
       })
       .collect::<Vec<_>>();
 
@@ -252,6 +261,14 @@ impl RuntimeContext {
     self.persist_memory_note(&note)?;
     Ok(note)
   }
+
+  fn persist_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
+    let Some(store) = &self.store else {
+      return Ok(());
+    };
+
+    store.save_plugin_enabled(plugin_id, enabled)
+  }
 }
 
 impl Default for RuntimeContext {
@@ -292,6 +309,10 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       request.id,
       &to_protocol_model_health(context.model_runtime.health()),
     ),
+    methods::PLUGIN_CAPABILITY_REGISTRY => JsonRpcResponse::success(
+      request.id,
+      &build_protocol_capability_registry(&context.plugins),
+    ),
     methods::PLUGIN_LIST => JsonRpcResponse::success(
       request.id,
       &PluginListResult {
@@ -303,6 +324,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
           .collect(),
       },
     ),
+    methods::PLUGIN_SET_ENABLED => handle_plugin_set_enabled(context, request),
     methods::WORKSPACE_CURRENT => JsonRpcResponse::success(
       request.id,
       &WorkspaceCurrentResult {
@@ -403,6 +425,7 @@ fn to_protocol_plugin(plugin: PluginCatalogEntry) -> ProtocolPluginSummary {
     name: plugin.name,
     version: plugin.version,
     display_name: plugin.display_name,
+    status: plugin.status,
     description: plugin.description,
     author_name: plugin.author_name,
     enabled: plugin.enabled,
@@ -411,6 +434,49 @@ fn to_protocol_plugin(plugin: PluginCatalogEntry) -> ProtocolPluginSummary {
     permissions: plugin.permissions,
     manifest_path: plugin.manifest_path,
     provenance: plugin.provenance,
+    validation_error: plugin.validation_error,
+  }
+}
+
+fn to_protocol_capability(
+  capability: HostPluginCapabilityRegistration,
+) -> PluginCapabilityRegistration {
+  PluginCapabilityRegistration {
+    capability_id: capability.capability_id,
+    kind: capability.kind,
+    identifier: capability.identifier,
+    plugin_id: capability.plugin_id,
+    plugin_display_name: capability.plugin_display_name,
+    permissions: capability.permissions,
+    manifest_path: capability.manifest_path,
+  }
+}
+
+fn build_protocol_capability_registry(
+  plugins: &[PluginCatalogEntry],
+) -> PluginCapabilityRegistryResult {
+  let capabilities = build_capability_registry(plugins)
+    .into_iter()
+    .map(to_protocol_capability)
+    .collect::<Vec<_>>();
+  let enabled_plugin_count = plugins
+    .iter()
+    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
+    .count();
+  let mut capability_counts_by_kind = HashMap::new();
+  for capability in &capabilities {
+    *capability_counts_by_kind
+      .entry(capability.kind.clone())
+      .or_insert(0) += 1;
+  }
+
+  PluginCapabilityRegistryResult {
+    summary: PluginCapabilityRegistrySummary {
+      enabled_plugin_count,
+      total_capability_count: capabilities.len(),
+      capability_counts_by_kind,
+    },
+    capabilities,
   }
 }
 
@@ -457,6 +523,88 @@ fn load_plugin_catalog() -> Result<Vec<PluginCatalogEntry>> {
   };
 
   discover_plugins(&plugin_root)
+}
+
+fn apply_plugin_states(
+  mut plugins: Vec<PluginCatalogEntry>,
+  persisted_states: &HashMap<String, bool>,
+) -> Vec<PluginCatalogEntry> {
+  for plugin in &mut plugins {
+    if plugin.status != "ready" {
+      plugin.enabled = false;
+      continue;
+    }
+    if let Some(enabled) = persisted_states.get(&plugin.id) {
+      plugin.enabled = *enabled;
+    }
+  }
+
+  plugins
+}
+
+fn granted_permission_sources(plugins: &[PluginCatalogEntry]) -> HashMap<String, Vec<String>> {
+  let mut permissions = HashMap::new();
+
+  for plugin in plugins
+    .iter()
+    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
+  {
+    for permission in &plugin.permissions {
+      permissions
+        .entry(permission.clone())
+        .or_insert_with(Vec::new)
+        .push(plugin.display_name.clone());
+    }
+  }
+
+  for plugin_names in permissions.values_mut() {
+    plugin_names.sort();
+    plugin_names.dedup();
+  }
+
+  permissions
+}
+
+fn permission_is_granted(
+  permission_sources: &HashMap<String, Vec<String>>,
+  permission: &str,
+) -> bool {
+  permission_sources.contains_key(permission)
+}
+
+fn build_permission_denied_items(
+  permission_sources: &HashMap<String, Vec<String>>,
+  permission: &str,
+  blocked_action: &str,
+  workspace_name: &str,
+  mut attributes: HashMap<String, String>,
+) -> Vec<TimelineItem> {
+  let granted_by = permission_sources
+    .get(permission)
+    .map(|plugins| plugins.join(", "))
+    .unwrap_or_else(|| "none".to_string());
+  attributes.insert("requiredPermission".to_string(), permission.to_string());
+  attributes.insert("blockedAction".to_string(), blocked_action.to_string());
+  attributes.insert("grantedBy".to_string(), granted_by.clone());
+
+  vec![
+    TimelineItem {
+      kind: "warning".to_string(),
+      title: "Plugin Permission Required".to_string(),
+      content: format!(
+        "Pith could not {blocked_action} in {workspace_name} because no enabled plugin grants `{permission}`."
+      ),
+      attributes: Some(attributes.clone()),
+    },
+    TimelineItem {
+      kind: "assistantMessage".to_string(),
+      title: "Assistant".to_string(),
+      content: format!(
+        "Enable a plugin that grants `{permission}` before asking Pith to {blocked_action}. Currently granted by: {granted_by}."
+      ),
+      attributes: Some(attributes),
+    },
+  ]
 }
 
 fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -526,6 +674,57 @@ fn handle_model_bootstrap(
     }
     Err(error) => JsonRpcResponse::error(request.id, -32042, error.to_string()),
   }
+}
+
+fn handle_plugin_set_enabled(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<PluginSetEnabledParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid plugin/setEnabled params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/setEnabled params");
+    }
+  };
+
+  let Some(plugin_index) = context.plugins.iter().position(|plugin| plugin.id == params.plugin_id) else {
+    return JsonRpcResponse::error(request.id, -32050, "Plugin not found");
+  };
+  if context.plugins[plugin_index].status != "ready" {
+    return JsonRpcResponse::error(
+      request.id,
+      -32051,
+      context.plugins[plugin_index]
+        .validation_error
+        .clone()
+        .unwrap_or_else(|| "Plugin manifest is invalid".to_string()),
+    );
+  }
+
+  context.plugins[plugin_index].enabled = params.enabled;
+  let plugin_id = context.plugins[plugin_index].id.clone();
+  let plugin_enabled = context.plugins[plugin_index].enabled;
+  let updated_plugin = context.plugins[plugin_index].clone();
+
+  if let Err(error) = context.persist_plugin_enabled(&plugin_id, plugin_enabled) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  JsonRpcResponse::success(
+    request.id,
+    &PluginSetEnabledResult {
+      plugin: to_protocol_plugin(updated_plugin),
+    },
+  )
 }
 
 fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -673,6 +872,7 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
     summary: thread.clone(),
     turn_count: 0,
     items: items.clone(),
+    workspace: context.workspace.clone(),
   });
 
   if let Err(error) = context.persist_runtime_state() {
@@ -699,9 +899,10 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     }
   };
 
-  let workspace = context.workspace.clone();
+  let current_workspace = context.workspace.clone();
   let model_runtime = context.model_runtime.clone();
   let memory_notes = context.memory_notes.clone();
+  let permission_sources = granted_permission_sources(&context.plugins);
   let (thread_id, turn_id, items, active_turn_id, pending_active_turn) = {
     let Some(thread) = context
       .threads
@@ -715,6 +916,10 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     let turn_count = thread.turn_count;
     let thread_id = thread.summary.id.clone();
     let thread_title = thread.summary.title.clone();
+    if thread.workspace.is_none() {
+      thread.workspace = current_workspace.clone();
+    }
+    let workspace = thread.workspace.clone();
     let message = params.message;
     let turn_id = format!("{thread_id}-turn-{turn_count}");
     let mut pending_active_turn = None;
@@ -735,192 +940,243 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       let workspace_root = Path::new(&workspace.root_path);
 
       if let Some(write_intent) = infer_write_intent(&message) {
-        let approval_id = format!("approval-{}", context.next_approval_number);
-        context.next_approval_number += 1;
-
-        let approval = PendingApproval {
-          id: approval_id.clone(),
-          thread_id: thread_id.clone(),
-          action: "write_file".to_string(),
-          title: format!("Write {}", write_intent.relative_path),
-          relative_path: write_intent.relative_path.clone(),
-          content: Some(write_intent.content.clone()),
-          command: None,
-        };
-        context
-          .pending_approvals
-          .insert(approval_id.clone(), approval.clone());
-
         items.push(build_plan_item(
           &context.model_runtime,
           &memory_notes,
           &message,
           Some(&workspace),
-          format!(
-            "Request approval before writing {} in {}.",
-            write_intent.relative_path, workspace.display_name
-          ),
+          if permission_is_granted(&permission_sources, "file.write") {
+            format!(
+              "Request approval before writing {} in {}.",
+              write_intent.relative_path, workspace.display_name
+            )
+          } else {
+            format!(
+              "Check plugin permissions before writing {} in {}.",
+              write_intent.relative_path, workspace.display_name
+            )
+          },
         ));
-        items.push(TimelineItem {
-          kind: "toolStart".to_string(),
-          title: "generate_diff".to_string(),
-          content: write_intent.relative_path.clone(),
-          attributes: None,
-        });
-        match generate_diff(
-          workspace_root,
-          &write_intent.relative_path,
-          &write_intent.content,
-        ) {
-          Ok(diff) => {
-            items.push(TimelineItem {
-              kind: "diffArtifact".to_string(),
-              title: "Diff Preview".to_string(),
-              content: diff,
-              attributes: Some(HashMap::from([
-                ("action".to_string(), "write_file".to_string()),
-                (
-                  "relativePath".to_string(),
-                  write_intent.relative_path.clone(),
-                ),
-              ])),
-            });
+        if !permission_is_granted(&permission_sources, "file.write") {
+          items.extend(build_permission_denied_items(
+            &permission_sources,
+            "file.write",
+            "prepare a file write",
+            &workspace.display_name,
+            HashMap::from([("relativePath".to_string(), write_intent.relative_path.clone())]),
+          ));
+        } else {
+          let approval_id = format!("approval-{}", context.next_approval_number);
+          context.next_approval_number += 1;
+
+          let approval = PendingApproval {
+            id: approval_id.clone(),
+            thread_id: thread_id.clone(),
+            action: "write_file".to_string(),
+            title: format!("Write {}", write_intent.relative_path),
+            relative_path: write_intent.relative_path.clone(),
+            content: Some(write_intent.content.clone()),
+            command: None,
+          };
+          context
+            .pending_approvals
+            .insert(approval_id.clone(), approval.clone());
+
+          items.push(TimelineItem {
+            kind: "toolStart".to_string(),
+            title: "generate_diff".to_string(),
+            content: write_intent.relative_path.clone(),
+            attributes: None,
+          });
+          match generate_diff(
+            workspace_root,
+            &write_intent.relative_path,
+            &write_intent.content,
+          ) {
+            Ok(diff) => {
+              items.push(TimelineItem {
+                kind: "diffArtifact".to_string(),
+                title: "Diff Preview".to_string(),
+                content: diff,
+                attributes: Some(HashMap::from([
+                  ("action".to_string(), "write_file".to_string()),
+                  (
+                    "relativePath".to_string(),
+                    write_intent.relative_path.clone(),
+                  ),
+                ])),
+              });
+            }
+            Err(error) => {
+              items.push(TimelineItem {
+                kind: "warning".to_string(),
+                title: "generate_diff failed".to_string(),
+                content: error.to_string(),
+                attributes: None,
+              });
+            }
           }
-          Err(error) => {
-            items.push(TimelineItem {
-              kind: "warning".to_string(),
-              title: "generate_diff failed".to_string(),
-              content: error.to_string(),
-              attributes: None,
-            });
-          }
+          items.push(TimelineItem {
+            kind: "approvalRequested".to_string(),
+            title: "Approval Requested".to_string(),
+            content: format!(
+              "Pith wants to write {} in {}.",
+              write_intent.relative_path, workspace.display_name
+            ),
+            attributes: Some(HashMap::from([
+              ("approvalId".to_string(), approval.id.clone()),
+              ("action".to_string(), approval.action.clone()),
+              ("relativePath".to_string(), approval.relative_path.clone()),
+            ])),
+          });
+          items.push(TimelineItem {
+            kind: "assistantMessage".to_string(),
+            title: "Assistant".to_string(),
+            content: format!(
+              "Pith prepared a write for {} and is waiting for your approval.",
+              write_intent.relative_path
+            ),
+            attributes: None,
+          });
         }
-        items.push(TimelineItem {
-          kind: "approvalRequested".to_string(),
-          title: "Approval Requested".to_string(),
-          content: format!(
-            "Pith wants to write {} in {}.",
-            write_intent.relative_path, workspace.display_name
-          ),
-          attributes: Some(HashMap::from([
-            ("approvalId".to_string(), approval.id.clone()),
-            ("action".to_string(), approval.action.clone()),
-            ("relativePath".to_string(), approval.relative_path.clone()),
-          ])),
-        });
-        items.push(TimelineItem {
-          kind: "assistantMessage".to_string(),
-          title: "Assistant".to_string(),
-          content: format!(
-            "Pith prepared a write for {} and is waiting for your approval.",
-            write_intent.relative_path
-          ),
-          attributes: None,
-        });
       } else if let Some(shell_command) = infer_shell_command(&message) {
-        let approval_id = format!("approval-{}", context.next_approval_number);
-        context.next_approval_number += 1;
-
-        let approval = PendingApproval {
-          id: approval_id.clone(),
-          thread_id: thread_id.clone(),
-          action: "run_shell".to_string(),
-          title: "Run Shell Command".to_string(),
-          relative_path: ".".to_string(),
-          content: None,
-          command: Some(shell_command.clone()),
-        };
-        context
-          .pending_approvals
-          .insert(approval_id.clone(), approval.clone());
-
         items.push(build_plan_item(
           &context.model_runtime,
           &memory_notes,
           &message,
           Some(&workspace),
-          format!(
-            "Request approval before running a shell command in {}.",
-            workspace.display_name
-          ),
+          if permission_is_granted(&permission_sources, "shell.exec") {
+            format!(
+              "Request approval before running a shell command in {}.",
+              workspace.display_name
+            )
+          } else {
+            format!(
+              "Check plugin permissions before running a shell command in {}.",
+              workspace.display_name
+            )
+          },
         ));
-        items.push(TimelineItem {
-          kind: "approvalRequested".to_string(),
-          title: "Approval Requested".to_string(),
-          content: format!(
-            "Pith wants to run this shell command in {}:\n{}",
-            workspace.display_name, shell_command
-          ),
-          attributes: Some(HashMap::from([
-            ("approvalId".to_string(), approval.id.clone()),
-            ("action".to_string(), approval.action.clone()),
-            ("command".to_string(), shell_command),
-          ])),
-        });
-        items.push(TimelineItem {
-          kind: "assistantMessage".to_string(),
-          title: "Assistant".to_string(),
-          content: "Pith is waiting for your approval before running the shell command."
-            .to_string(),
-          attributes: None,
-        });
+        if !permission_is_granted(&permission_sources, "shell.exec") {
+          items.extend(build_permission_denied_items(
+            &permission_sources,
+            "shell.exec",
+            "run a shell command",
+            &workspace.display_name,
+            HashMap::from([("command".to_string(), shell_command.clone())]),
+          ));
+        } else {
+          let approval_id = format!("approval-{}", context.next_approval_number);
+          context.next_approval_number += 1;
+
+          let approval = PendingApproval {
+            id: approval_id.clone(),
+            thread_id: thread_id.clone(),
+            action: "run_shell".to_string(),
+            title: "Run Shell Command".to_string(),
+            relative_path: ".".to_string(),
+            content: None,
+            command: Some(shell_command.clone()),
+          };
+          context
+            .pending_approvals
+            .insert(approval_id.clone(), approval.clone());
+
+          items.push(TimelineItem {
+            kind: "approvalRequested".to_string(),
+            title: "Approval Requested".to_string(),
+            content: format!(
+              "Pith wants to run this shell command in {}:\n{}",
+              workspace.display_name, shell_command
+            ),
+            attributes: Some(HashMap::from([
+              ("approvalId".to_string(), approval.id.clone()),
+              ("action".to_string(), approval.action.clone()),
+              ("command".to_string(), shell_command),
+            ])),
+          });
+          items.push(TimelineItem {
+            kind: "assistantMessage".to_string(),
+            title: "Assistant".to_string(),
+            content: "Pith is waiting for your approval before running the shell command."
+              .to_string(),
+            attributes: None,
+          });
+        }
       } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
         items.push(build_plan_item(
           &context.model_runtime,
           &memory_notes,
           &message,
           Some(&workspace),
-          format!(
-            "Inspect {} in {} with the built-in read_file tool.",
-            relative_path, workspace.display_name
-          ),
+          if permission_is_granted(&permission_sources, "file.read") {
+            format!(
+              "Inspect {} in {} with the built-in read_file tool.",
+              relative_path, workspace.display_name
+            )
+          } else {
+            format!(
+              "Check plugin permissions before inspecting {} in {}.",
+              relative_path, workspace.display_name
+            )
+          },
         ));
-        items.push(TimelineItem {
-          kind: "toolStart".to_string(),
-          title: "read_file".to_string(),
-          content: relative_path.clone(),
-          attributes: None,
-        });
+        if !permission_is_granted(&permission_sources, "file.read") {
+          items.extend(build_permission_denied_items(
+            &permission_sources,
+            "file.read",
+            "inspect a file",
+            &workspace.display_name,
+            HashMap::from([("relativePath".to_string(), relative_path.clone())]),
+          ));
+        } else {
+          items.push(TimelineItem {
+            kind: "toolStart".to_string(),
+            title: "read_file".to_string(),
+            content: relative_path.clone(),
+            attributes: None,
+          });
 
-        match read_file(workspace_root, &relative_path, 4096) {
-          Ok(result) => {
-            items.push(TimelineItem {
-              kind: "toolResult".to_string(),
-              title: "read_file result".to_string(),
-              content: format_file_result(&result),
-              attributes: None,
-            });
-            let (summary, summary_attributes) = summarize_file_result(
-              &model_runtime,
-              &memory_notes,
-              &thread_title,
-              &workspace.display_name,
-              &result,
-            );
-            pending_active_turn = maybe_start_streaming_assistant_turn(
-              &thread_id,
-              &turn_id,
-              &mut items,
-              summary,
-              summary_attributes,
-            );
-          }
-          Err(error) => {
-            items.push(TimelineItem {
-              kind: "warning".to_string(),
-              title: "read_file failed".to_string(),
-              content: error.to_string(),
-              attributes: None,
-            });
-            items.push(TimelineItem {
-              kind: "assistantMessage".to_string(),
-              title: "Assistant".to_string(),
-              content: format!(
-                "Pith could not inspect that file in {}. Try another path inside the workspace.",
-                workspace.display_name
-              ),
-              attributes: None,
-            });
+          match read_file(workspace_root, &relative_path, 4096) {
+            Ok(result) => {
+              items.push(TimelineItem {
+                kind: "toolResult".to_string(),
+                title: "read_file result".to_string(),
+                content: format_file_result(&result),
+                attributes: None,
+              });
+              let (summary, summary_attributes) = summarize_file_result(
+                &model_runtime,
+                &memory_notes,
+                &thread_title,
+                &workspace.display_name,
+                &result,
+              );
+              pending_active_turn = maybe_start_streaming_assistant_turn(
+                &thread_id,
+                &turn_id,
+                &mut items,
+                summary,
+                summary_attributes,
+              );
+            }
+            Err(error) => {
+              items.push(TimelineItem {
+                kind: "warning".to_string(),
+                title: "read_file failed".to_string(),
+                content: error.to_string(),
+                attributes: None,
+              });
+              items.push(TimelineItem {
+                kind: "assistantMessage".to_string(),
+                title: "Assistant".to_string(),
+                content: format!(
+                  "Pith could not inspect that file in {}. Try another path inside the workspace.",
+                  workspace.display_name
+                ),
+                attributes: None,
+              });
+            }
           }
         }
       } else if let Some(search_query) = infer_search_query(&message) {
@@ -929,58 +1185,75 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           &memory_notes,
           &message,
           Some(&workspace),
-          format!(
-            "Search {} for matches to \"{}\" with the built-in search_files tool.",
-            workspace.display_name, search_query
-          ),
+          if permission_is_granted(&permission_sources, "file.read") {
+            format!(
+              "Search {} for matches to \"{}\" with the built-in search_files tool.",
+              workspace.display_name, search_query
+            )
+          } else {
+            format!(
+              "Check plugin permissions before searching {} for \"{}\".",
+              workspace.display_name, search_query
+            )
+          },
         ));
-        items.push(TimelineItem {
-          kind: "toolStart".to_string(),
-          title: "search_files".to_string(),
-          content: search_query.clone(),
-          attributes: None,
-        });
+        if !permission_is_granted(&permission_sources, "file.read") {
+          items.extend(build_permission_denied_items(
+            &permission_sources,
+            "file.read",
+            "search files",
+            &workspace.display_name,
+            HashMap::from([("query".to_string(), search_query.clone())]),
+          ));
+        } else {
+          items.push(TimelineItem {
+            kind: "toolStart".to_string(),
+            title: "search_files".to_string(),
+            content: search_query.clone(),
+            attributes: None,
+          });
 
-        match search_files(workspace_root, &search_query, 12) {
-          Ok(matches) => {
-            items.push(TimelineItem {
-              kind: "toolResult".to_string(),
-              title: "search_files result".to_string(),
-              content: format_search_result(&search_query, &matches),
-              attributes: None,
-            });
-            let (summary, summary_attributes) = summarize_search_result(
-              &model_runtime,
-              &memory_notes,
-              &thread_title,
-              &workspace.display_name,
-              &search_query,
-              &matches,
-            );
-            pending_active_turn = maybe_start_streaming_assistant_turn(
-              &thread_id,
-              &turn_id,
-              &mut items,
-              summary,
-              summary_attributes,
-            );
-          }
-          Err(error) => {
-            items.push(TimelineItem {
-              kind: "warning".to_string(),
-              title: "search_files failed".to_string(),
-              content: error.to_string(),
-              attributes: None,
-            });
-            items.push(TimelineItem {
-              kind: "assistantMessage".to_string(),
-              title: "Assistant".to_string(),
-              content: format!(
-                "Pith could not search {} yet. Try a shorter query or re-open the workspace.",
-                workspace.display_name
-              ),
-              attributes: None,
-            });
+          match search_files(workspace_root, &search_query, 12) {
+            Ok(matches) => {
+              items.push(TimelineItem {
+                kind: "toolResult".to_string(),
+                title: "search_files result".to_string(),
+                content: format_search_result(&search_query, &matches),
+                attributes: None,
+              });
+              let (summary, summary_attributes) = summarize_search_result(
+                &model_runtime,
+                &memory_notes,
+                &thread_title,
+                &workspace.display_name,
+                &search_query,
+                &matches,
+              );
+              pending_active_turn = maybe_start_streaming_assistant_turn(
+                &thread_id,
+                &turn_id,
+                &mut items,
+                summary,
+                summary_attributes,
+              );
+            }
+            Err(error) => {
+              items.push(TimelineItem {
+                kind: "warning".to_string(),
+                title: "search_files failed".to_string(),
+                content: error.to_string(),
+                attributes: None,
+              });
+              items.push(TimelineItem {
+                kind: "assistantMessage".to_string(),
+                title: "Assistant".to_string(),
+                content: format!(
+                  "Pith could not search {} yet. Try a shorter query or re-open the workspace.",
+                  workspace.display_name
+                ),
+                attributes: None,
+              });
+            }
           }
         }
       } else {
@@ -989,57 +1262,74 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
           &memory_notes,
           &message,
           Some(&workspace),
-          format!(
-            "Inspect the root of {} with the built-in list_directory tool.",
-            workspace.display_name
-          ),
+          if permission_is_granted(&permission_sources, "file.read") {
+            format!(
+              "Inspect the root of {} with the built-in list_directory tool.",
+              workspace.display_name
+            )
+          } else {
+            format!(
+              "Check plugin permissions before inspecting the root of {}.",
+              workspace.display_name
+            )
+          },
         ));
-        items.push(TimelineItem {
-          kind: "toolStart".to_string(),
-          title: "list_directory".to_string(),
-          content: ".".to_string(),
-          attributes: None,
-        });
+        if !permission_is_granted(&permission_sources, "file.read") {
+          items.extend(build_permission_denied_items(
+            &permission_sources,
+            "file.read",
+            "inspect the workspace",
+            &workspace.display_name,
+            HashMap::new(),
+          ));
+        } else {
+          items.push(TimelineItem {
+            kind: "toolStart".to_string(),
+            title: "list_directory".to_string(),
+            content: ".".to_string(),
+            attributes: None,
+          });
 
-        match list_directory(workspace_root, None, 24) {
-          Ok(entries) => {
-            items.push(TimelineItem {
-              kind: "toolResult".to_string(),
-              title: "list_directory result".to_string(),
-              content: format_directory_result(&entries),
-              attributes: None,
-            });
-            let (summary, summary_attributes) = summarize_directory_result(
-              &model_runtime,
-              &memory_notes,
-              &thread_title,
-              &workspace.display_name,
-              &entries,
-            );
-            pending_active_turn = maybe_start_streaming_assistant_turn(
-              &thread_id,
-              &turn_id,
-              &mut items,
-              summary,
-              summary_attributes,
-            );
-          }
-          Err(error) => {
-            items.push(TimelineItem {
-              kind: "warning".to_string(),
-              title: "list_directory failed".to_string(),
-              content: error.to_string(),
-              attributes: None,
-            });
-            items.push(TimelineItem {
-              kind: "assistantMessage".to_string(),
-              title: "Assistant".to_string(),
-              content: format!(
-                "Pith could not inspect the root of {} yet. Re-open the workspace and try again.",
-                workspace.display_name
-              ),
-              attributes: None,
-            });
+          match list_directory(workspace_root, None, 24) {
+            Ok(entries) => {
+              items.push(TimelineItem {
+                kind: "toolResult".to_string(),
+                title: "list_directory result".to_string(),
+                content: format_directory_result(&entries),
+                attributes: None,
+              });
+              let (summary, summary_attributes) = summarize_directory_result(
+                &model_runtime,
+                &memory_notes,
+                &thread_title,
+                &workspace.display_name,
+                &entries,
+              );
+              pending_active_turn = maybe_start_streaming_assistant_turn(
+                &thread_id,
+                &turn_id,
+                &mut items,
+                summary,
+                summary_attributes,
+              );
+            }
+            Err(error) => {
+              items.push(TimelineItem {
+                kind: "warning".to_string(),
+                title: "list_directory failed".to_string(),
+                content: error.to_string(),
+                attributes: None,
+              });
+              items.push(TimelineItem {
+                kind: "assistantMessage".to_string(),
+                title: "Assistant".to_string(),
+                content: format!(
+                  "Pith could not inspect the root of {} yet. Re-open the workspace and try again.",
+                  workspace.display_name
+                ),
+                attributes: None,
+              });
+            }
           }
         }
       }
@@ -1149,18 +1439,10 @@ fn handle_approval_respond(
     return JsonRpcResponse::error(request.id, -32030, "Approval request not found");
   };
 
-  let workspace = match context.workspace.clone() {
-    Some(workspace) => workspace,
-    None => {
-      return JsonRpcResponse::error(
-        request.id,
-        -32031,
-        "Open a workspace before resolving approvals",
-      )
-    }
-  };
+  let current_workspace = context.workspace.clone();
   let model_runtime = context.model_runtime.clone();
   let memory_notes = context.memory_notes.clone();
+  let permission_sources = granted_permission_sources(&context.plugins);
 
   let Some(thread) = context
     .threads
@@ -1168,6 +1450,19 @@ fn handle_approval_respond(
     .find(|thread| thread.summary.id == approval.thread_id)
   else {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+  };
+  if thread.workspace.is_none() {
+    thread.workspace = current_workspace;
+  }
+  let workspace = match thread.workspace.clone() {
+    Some(workspace) => workspace,
+    None => {
+      return JsonRpcResponse::error(
+        request.id,
+        -32031,
+        "Open a workspace for this thread before resolving approvals",
+      )
+    }
   };
 
   context.pending_approvals.remove(&params.approval_id);
@@ -1188,90 +1483,119 @@ fn handle_approval_respond(
       ])),
     });
     if approval.action == "write_file" {
-      let content = approval.content.clone().unwrap_or_default();
-      items.push(TimelineItem {
-        kind: "toolStart".to_string(),
-        title: "write_file".to_string(),
-        content: approval.relative_path.clone(),
-        attributes: None,
-      });
+      if !permission_is_granted(&permission_sources, "file.write") {
+        items.extend(build_permission_denied_items(
+          &permission_sources,
+          "file.write",
+          "complete the approved file write",
+          &workspace.display_name,
+          HashMap::from([
+            ("approvalId".to_string(), approval.id.clone()),
+            ("relativePath".to_string(), approval.relative_path.clone()),
+          ]),
+        ));
+      } else {
+        let content = approval.content.clone().unwrap_or_default();
+        items.push(TimelineItem {
+          kind: "toolStart".to_string(),
+          title: "write_file".to_string(),
+          content: approval.relative_path.clone(),
+          attributes: None,
+        });
 
-      match write_file(
-        Path::new(&workspace.root_path),
-        &approval.relative_path,
-        &content,
-      ) {
-        Ok(relative_path) => {
-          memory_event = Some(MemoryEvent::FileWritten {
-            workspace_display_name: workspace.display_name.clone(),
-            relative_path: relative_path.clone(),
-          });
-          items.push(TimelineItem {
-            kind: "toolResult".to_string(),
-            title: "write_file result".to_string(),
-            content: format!("Wrote {} bytes to {}.", content.len(), relative_path),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: format!(
-              "Pith wrote {} in {} after your approval.",
-              relative_path, workspace.display_name
-            ),
-            attributes: None,
-          });
-        }
-        Err(error) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "write_file failed".to_string(),
-            content: error.to_string(),
-            attributes: None,
-          });
+        match write_file(
+          Path::new(&workspace.root_path),
+          &approval.relative_path,
+          &content,
+        ) {
+          Ok(relative_path) => {
+            memory_event = Some(MemoryEvent::FileWritten {
+              workspace_display_name: workspace.display_name.clone(),
+              relative_path: relative_path.clone(),
+            });
+            items.push(TimelineItem {
+              kind: "toolResult".to_string(),
+              title: "write_file result".to_string(),
+              content: format!("Wrote {} bytes to {}.", content.len(), relative_path),
+              attributes: None,
+            });
+            items.push(TimelineItem {
+              kind: "assistantMessage".to_string(),
+              title: "Assistant".to_string(),
+              content: format!(
+                "Pith wrote {} in {} after your approval.",
+                relative_path, workspace.display_name
+              ),
+              attributes: None,
+            });
+          }
+          Err(error) => {
+            items.push(TimelineItem {
+              kind: "warning".to_string(),
+              title: "write_file failed".to_string(),
+              content: error.to_string(),
+              attributes: None,
+            });
+          }
         }
       }
     } else if approval.action == "run_shell" {
-      let command = approval.command.clone().unwrap_or_default();
-      items.push(TimelineItem {
-        kind: "toolStart".to_string(),
-        title: "run_shell".to_string(),
-        content: command.clone(),
-        attributes: None,
-      });
+      if !permission_is_granted(&permission_sources, "shell.exec") {
+        items.extend(build_permission_denied_items(
+          &permission_sources,
+          "shell.exec",
+          "complete the approved shell command",
+          &workspace.display_name,
+          HashMap::from([
+            ("approvalId".to_string(), approval.id.clone()),
+            (
+              "command".to_string(),
+              approval.command.clone().unwrap_or_default(),
+            ),
+          ]),
+        ));
+      } else {
+        let command = approval.command.clone().unwrap_or_default();
+        items.push(TimelineItem {
+          kind: "toolStart".to_string(),
+          title: "run_shell".to_string(),
+          content: command.clone(),
+          attributes: None,
+        });
 
-      match run_shell(Path::new(&workspace.root_path), &command, 4096) {
-        Ok(result) => {
-          memory_event = Some(MemoryEvent::ShellCommandRan {
-            workspace_display_name: workspace.display_name.clone(),
-            command: command.clone(),
-          });
-          let (summary, summary_attributes) = summarize_shell_result(
-            &model_runtime,
-            &memory_notes,
-            &workspace.display_name,
-            &result,
-          );
-          items.push(TimelineItem {
-            kind: "toolResult".to_string(),
-            title: "run_shell result".to_string(),
-            content: format_shell_result(&result),
-            attributes: None,
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: summary,
-            attributes: Some(summary_attributes),
-          });
-        }
-        Err(error) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "run_shell failed".to_string(),
-            content: error.to_string(),
-            attributes: None,
-          });
+        match run_shell(Path::new(&workspace.root_path), &command, 4096) {
+          Ok(result) => {
+            memory_event = Some(MemoryEvent::ShellCommandRan {
+              workspace_display_name: workspace.display_name.clone(),
+              command: command.clone(),
+            });
+            let (summary, summary_attributes) = summarize_shell_result(
+              &model_runtime,
+              &memory_notes,
+              &workspace.display_name,
+              &result,
+            );
+            items.push(TimelineItem {
+              kind: "toolResult".to_string(),
+              title: "run_shell result".to_string(),
+              content: format_shell_result(&result),
+              attributes: None,
+            });
+            items.push(TimelineItem {
+              kind: "assistantMessage".to_string(),
+              title: "Assistant".to_string(),
+              content: summary,
+              attributes: Some(summary_attributes),
+            });
+          }
+          Err(error) => {
+            items.push(TimelineItem {
+              kind: "warning".to_string(),
+              title: "run_shell failed".to_string(),
+              content: error.to_string(),
+              attributes: None,
+            });
+          }
         }
       }
     }
@@ -1537,8 +1861,8 @@ fn refresh_thread_summary_note(context: &mut RuntimeContext, thread_id: &str) ->
   };
 
   let pending_approvals = approvals_for_thread(context, thread_id);
-  let workspace_snapshot = context.workspace.clone();
-  let scope = context
+  let workspace_snapshot = thread.workspace.clone();
+  let scope = thread
     .workspace
     .as_ref()
     .map(|workspace| workspace.display_name.clone())
@@ -2800,6 +3124,22 @@ mod tests {
   fn approval_respond_runs_shell_after_approval() {
     let mut context = RuntimeContext::new_in_memory();
     let workspace = create_temp_workspace("approval-shell");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "shell-recorder".to_string(),
+      name: "shell-recorder".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Shell Recorder".to_string(),
+      status: "ready".to_string(),
+      description: "Shell access plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: false,
+      capabilities: vec!["hook:shell.recorder".to_string(), "tool:shell.timeline".to_string()],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
     fs::write(workspace.join("marker.txt"), "shell target\n").expect("write shell marker");
 
     let _ = handle_request(
@@ -3003,5 +3343,390 @@ mod tests {
       .unwrap()
       .contains("Wrote docs/output.txt"));
     assert_eq!(items[4]["attributes"]["memoryNoteCount"], "3");
+  }
+
+  #[test]
+  fn thread_turns_stay_bound_to_the_thread_workspace() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace_a = create_temp_workspace("workspace-a");
+    let workspace_b = create_temp_workspace("workspace-b");
+    fs::write(
+      workspace_a.join("README.md"),
+      "# Workspace A\nThread-bound content\n",
+    )
+    .expect("write workspace a readme");
+    fs::write(
+      workspace_b.join("README.md"),
+      "# Workspace B\nDifferent content\n",
+    )
+    .expect("write workspace b readme");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace_a.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Workspace Bound Thread"
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace_b.display().to_string()
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Read README.md"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace_a).expect("cleanup workspace a");
+    fs::remove_dir_all(&workspace_b).expect("cleanup workspace b");
+
+    assert!(turn_response.error.is_none());
+    let result = turn_response.result.expect("turn result");
+    let items = result["items"].as_array().expect("items");
+    assert!(items[3]["content"].as_str().unwrap().contains("Workspace A"));
+    assert!(items[3]["content"]
+      .as_str()
+      .unwrap()
+      .contains("Thread-bound content"));
+  }
+
+  #[test]
+  fn plugin_set_enabled_updates_runtime_catalog() {
+    let mut context = RuntimeContext::new_in_memory();
+    context.plugins = vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Test plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: false,
+      default_enabled: false,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_SET_ENABLED,
+        Some(json!({
+          "pluginId": "workspace-notes",
+          "enabled": true
+        })),
+      ),
+    );
+
+    assert!(response.error.is_none());
+    assert!(context.plugins[0].enabled);
+    assert_eq!(response.result.expect("plugin set result")["plugin"]["enabled"], true);
+  }
+
+  #[test]
+  fn file_reads_require_plugin_permission() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("permission-read");
+    fs::write(workspace.join("README.md"), "# Permission Gate\n").expect("write readme");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "shell-recorder".to_string(),
+      name: "shell-recorder".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Shell Recorder".to_string(),
+      status: "ready".to_string(),
+      description: "No file access".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: false,
+      default_enabled: false,
+      capabilities: vec!["hook:shell.recorder".to_string()],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Permission Thread"
+        })),
+      ),
+    );
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Read README.md"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(response.error.is_none());
+    let items = response.result.expect("turn result")["items"]
+      .as_array()
+      .expect("items");
+    assert_eq!(items[2]["title"], "Plugin Permission Required");
+    assert_eq!(items[2]["attributes"]["requiredPermission"], "file.read");
+    assert_eq!(items[3]["kind"], "assistantMessage");
+  }
+
+  #[test]
+  fn shell_requests_require_plugin_permission_before_approval() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("permission-shell");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "No shell access".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Shell Permission Thread"
+        })),
+      ),
+    );
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Run shell: ls"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("turn result");
+    let items = result["items"].as_array().expect("items");
+    assert_eq!(items[2]["title"], "Plugin Permission Required");
+    assert_eq!(items[2]["attributes"]["requiredPermission"], "shell.exec");
+    assert!(result["pendingApprovals"]
+      .as_array()
+      .expect("pending approvals")
+      .is_empty());
+  }
+
+  #[test]
+  fn approval_resolution_rechecks_plugin_permissions() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("approval-permission-recheck");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Write access plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Approval Permission Thread"
+        })),
+      ),
+    );
+
+    let turn_response = handle_request(
+      &mut context,
+      request(
+        methods::TURN_START,
+        Some(json!({
+          "threadId": "thread-1",
+          "message": "Write docs/output.txt: gated content"
+        })),
+      ),
+    );
+    let approval_id = turn_response.result.expect("turn result")["pendingApprovals"][0]["id"]
+      .as_str()
+      .expect("approval id")
+      .to_string();
+
+    context.plugins[0].enabled = false;
+
+    let approval_response = handle_request(
+      &mut context,
+      request(
+        methods::APPROVAL_RESPOND,
+        Some(json!({
+          "approvalId": approval_id,
+          "decision": "approved"
+        })),
+      ),
+    );
+
+    let written_file = workspace.join("docs").join("output.txt");
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(approval_response.error.is_none());
+    let items = approval_response.result.expect("approval result")["items"]
+      .as_array()
+      .expect("approval items");
+    assert_eq!(items[1]["title"], "Plugin Permission Required");
+    assert_eq!(items[1]["attributes"]["requiredPermission"], "file.write");
+    assert!(!written_file.exists());
+  }
+
+  #[test]
+  fn capability_registry_only_includes_ready_enabled_plugins() {
+    let plugins = vec![
+      PluginCatalogEntry {
+        id: "workspace-notes".to_string(),
+        name: "workspace-notes".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Workspace Notes".to_string(),
+        status: "ready".to_string(),
+        description: "Test plugin".to_string(),
+        author_name: Some("Pith".to_string()),
+        enabled: true,
+        default_enabled: true,
+        capabilities: vec![
+          "prompt_pack:workspace.notes".to_string(),
+          "settings:workspace.preferences".to_string(),
+        ],
+        permissions: vec!["file.read".to_string(), "file.write".to_string()],
+        manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
+        provenance: "official".to_string(),
+        validation_error: None,
+      },
+      PluginCatalogEntry {
+        id: "shell-recorder".to_string(),
+        name: "shell-recorder".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Shell Recorder".to_string(),
+        status: "ready".to_string(),
+        description: "Disabled plugin".to_string(),
+        author_name: Some("Pith".to_string()),
+        enabled: false,
+        default_enabled: false,
+        capabilities: vec!["hook:shell.recorder".to_string()],
+        permissions: vec!["shell.exec".to_string()],
+        manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
+        provenance: "official".to_string(),
+        validation_error: None,
+      },
+      PluginCatalogEntry {
+        id: "broken-plugin".to_string(),
+        name: "broken-plugin".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Broken Plugin".to_string(),
+        status: "invalid".to_string(),
+        description: "Invalid plugin".to_string(),
+        author_name: None,
+        enabled: false,
+        default_enabled: false,
+        capabilities: vec![],
+        permissions: vec![],
+        manifest_path: "plugins/official/broken/pith-plugin.json".to_string(),
+        provenance: "official".to_string(),
+        validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
+      },
+    ];
+
+    let result = build_protocol_capability_registry(&plugins);
+
+    assert_eq!(result.summary.enabled_plugin_count, 1);
+    assert_eq!(result.summary.total_capability_count, 2);
+    assert_eq!(
+      result.summary.capability_counts_by_kind.get("prompt_pack"),
+      Some(&1)
+    );
+    assert_eq!(
+      result.summary.capability_counts_by_kind.get("settings"),
+      Some(&1)
+    );
+    assert_eq!(result.capabilities.len(), 2);
+    assert_eq!(result.capabilities[0].kind, "prompt_pack");
+    assert_eq!(result.capabilities[0].plugin_id, "workspace-notes");
+    assert_eq!(result.capabilities[1].kind, "settings");
   }
 }
