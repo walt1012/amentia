@@ -52,10 +52,10 @@ Milestone 2 is now complete on the active development branch. It includes plugin
 and disable flow, installation and removal workflow, capability registry, permission gating,
 per-plugin permissions and validation surfaces, repair hints for invalid manifests, reviewed install
 and removal prompts, memory-aware plugin command execution, memory-aware shell-completed hook
-execution, smoke coverage for the executable bundled plugins, and a Notion connector manifest
-template plus connector registry for the third-party plugin surface.
+execution, executable bundled plugin examples, and a Notion connector manifest template plus
+connector registry for the third-party plugin surface.
 
-Milestone 3 is underway with CI-first verification and one-click default local model delivery work:
+Milestone 3 is underway with one-click default local model delivery work:
 the macOS app streams model downloads to disk, activates the default LFM model after download, and
 restarts the runtime when needed so a fresh install reaches a real local model path with fewer
 manual steps.
@@ -70,7 +70,6 @@ Delivered in Milestone 1:
 - SQLite-backed persistence for workspace, threads, approvals, and memory notes
 - built-in memory retrieval, user workspace notes, and thread summary notes
 - local model health inspection and local pack metadata bootstrap for the `LFM2.5-350M` runtime path
-- CI checks
 
 Milestone 1 exit criteria now covered:
 
