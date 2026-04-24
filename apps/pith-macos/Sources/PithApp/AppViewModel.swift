@@ -1539,7 +1539,7 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
+  private nonisolated func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
     let (temporaryURL, response) = try await URLSession.shared.download(from: sourceURL)
     if let httpResponse = response as? HTTPURLResponse,
        !(200...299).contains(httpResponse.statusCode)
