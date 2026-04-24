@@ -3,6 +3,34 @@ import Foundation
 
 @MainActor
 final class AppViewModel: ObservableObject {
+  private struct LocalPluginAuthor: Decodable {
+    let name: String
+  }
+
+  private struct LocalPluginManifest: Decodable {
+    let name: String
+    let version: String
+    let displayName: String
+    let description: String
+    let author: LocalPluginAuthor?
+    let capabilities: [String]
+    let permissions: [String]
+    let defaultEnabled: Bool
+  }
+
+  private struct PluginInstallPreview {
+    let sourcePath: String
+    let manifestPath: String
+    let installPath: String
+    let displayName: String
+    let version: String
+    let description: String
+    let authorName: String?
+    let capabilities: [String]
+    let permissions: [String]
+    let defaultEnabled: Bool
+  }
+
   @Published var threads: [ThreadSummary]
   @Published var selectedThreadID: ThreadSummary.ID?
   @Published var timeline: [TimelineEntry]
@@ -352,9 +380,31 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    let preview: PluginInstallPreview
+    do {
+      preview = try inspectPluginInstallCandidate(at: url)
+    } catch {
+      appendEntry(
+        to: selectedThreadID,
+        TimelineEntry(
+          id: UUID().uuidString,
+          kind: .warning,
+          title: "Plugin Install Preview Failed",
+          body: error.localizedDescription,
+          attributes: [:]
+        )
+      )
+      return
+    }
+
+    guard confirmPluginInstall(preview: preview) else {
+      runtimeDetail = "Plugin install was cancelled."
+      return
+    }
+
     Task {
       do {
-        let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: url.path)
+        let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: preview.sourcePath)
         await refreshPluginState()
         appendEntry(
           to: selectedThreadID,
@@ -362,11 +412,14 @@ final class AppViewModel: ObservableObject {
             id: UUID().uuidString,
             kind: .system,
             title: "Plugin Installed",
-            body: "\(installedPlugin.displayName) is now available in the local plugin manager.",
+            body:
+              "\(installedPlugin.displayName) is now available in the local plugin manager.\nSource: \(preview.sourcePath)\nInstalled To: \(preview.installPath)",
             attributes: [
               "pluginId": installedPlugin.id,
               "pluginStatus": installedPlugin.status,
               "pluginManifestPath": installedPlugin.manifestPath,
+              "pluginSourcePath": preview.sourcePath,
+              "pluginInstallPath": preview.installPath,
             ]
           )
         )
@@ -538,6 +591,11 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    guard confirmPluginRemoval(plugin: plugin) else {
+      runtimeDetail = "Plugin removal was cancelled."
+      return
+    }
+
     Task {
       do {
         let removedPlugin = try await runtimeBridge.removePlugin(manifestPath: plugin.manifestPath)
@@ -548,7 +606,8 @@ final class AppViewModel: ObservableObject {
             id: UUID().uuidString,
             kind: .system,
             title: "Plugin Removed",
-            body: "\(removedPlugin.displayName) was removed from the local plugin catalog.",
+            body:
+              "\(removedPlugin.displayName) was removed from the local plugin catalog.\nRemoved Path: \(removedPlugin.removedPath)",
             attributes: [
               "pluginId": removedPlugin.pluginID,
               "removedPath": removedPlugin.removedPath,
@@ -1550,5 +1609,110 @@ final class AppViewModel: ObservableObject {
       provenance: plugin.provenance,
       validationError: plugin.validationError
     )
+  }
+
+  private func inspectPluginInstallCandidate(at url: URL) throws -> PluginInstallPreview {
+    let manifestURL = try pluginManifestURL(for: url)
+    let data = try Data(contentsOf: manifestURL)
+    let manifest = try JSONDecoder().decode(LocalPluginManifest.self, from: data)
+    let installRoot = URL(
+      fileURLWithPath: runtimeBridge.localPluginInstallRootPath(),
+      isDirectory: true
+    )
+    let installURL = installRoot.appendingPathComponent(manifest.name, isDirectory: true)
+
+    return PluginInstallPreview(
+      sourcePath: url.path,
+      manifestPath: manifestURL.path,
+      installPath: installURL.path,
+      displayName: manifest.displayName,
+      version: manifest.version,
+      description: manifest.description,
+      authorName: manifest.author?.name,
+      capabilities: manifest.capabilities,
+      permissions: manifest.permissions,
+      defaultEnabled: manifest.defaultEnabled
+    )
+  }
+
+  private func pluginManifestURL(for url: URL) throws -> URL {
+    var isDirectory = ObjCBool(false)
+    if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+       isDirectory.boolValue
+    {
+      let manifestURL = url.appendingPathComponent("pith-plugin.json", isDirectory: false)
+      guard FileManager.default.fileExists(atPath: manifestURL.path) else {
+        throw NSError(
+          domain: "PithPluginInstall",
+          code: 1,
+          userInfo: [
+            NSLocalizedDescriptionKey:
+              "The selected folder does not contain pith-plugin.json."
+          ]
+        )
+      }
+      return manifestURL
+    }
+
+    guard url.lastPathComponent == "pith-plugin.json" else {
+      throw NSError(
+        domain: "PithPluginInstall",
+        code: 2,
+        userInfo: [
+          NSLocalizedDescriptionKey:
+            "Select a plugin folder or a pith-plugin.json manifest."
+        ]
+      )
+    }
+
+    return url
+  }
+
+  private func confirmPluginInstall(preview: PluginInstallPreview) -> Bool {
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = "Install Plugin?"
+    alert.informativeText = """
+      Plugin: \(preview.displayName) \(preview.version)
+      Provenance: Local import
+      Author: \(preview.authorName ?? "Unknown")
+      Source: \(preview.sourcePath)
+      Manifest: \(preview.manifestPath)
+      Install Path: \(preview.installPath)
+      Default Enabled: \(preview.defaultEnabled ? "Yes" : "No")
+      Permissions: \(summaryLine(preview.permissions, empty: "none"))
+      Capabilities: \(summaryLine(preview.capabilities, empty: "none"))
+
+      \(preview.description)
+      """
+    alert.addButton(withTitle: "Install")
+    alert.addButton(withTitle: "Cancel")
+    return alert.runModal() == .alertFirstButtonReturn
+  }
+
+  private func confirmPluginRemoval(plugin: PluginSummary) -> Bool {
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = "Remove Local Plugin?"
+    alert.informativeText = """
+      Plugin: \(plugin.displayName) \(plugin.version)
+      Provenance: \(plugin.provenance)
+      Manifest: \(plugin.manifestPath)
+      Permissions: \(summaryLine(plugin.permissions, empty: "none"))
+      Capabilities: \(summaryLine(plugin.capabilities, empty: "none"))
+
+      Removing this plugin updates the local catalog and can disable related commands, hooks, and permissions.
+      """
+    alert.addButton(withTitle: "Remove")
+    alert.addButton(withTitle: "Cancel")
+    return alert.runModal() == .alertFirstButtonReturn
+  }
+
+  private func summaryLine(_ values: [String], empty: String) -> String {
+    if values.isEmpty {
+      return empty
+    }
+
+    return values.joined(separator: ", ")
   }
 }

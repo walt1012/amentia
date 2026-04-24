@@ -614,6 +614,10 @@ final class RuntimeBridge {
     )
   }
 
+  func localPluginInstallRootPath() -> String {
+    appSupportPluginDirectory().path
+  }
+
   func runPluginCommand(threadID: String, commandID: String, input: String? = nil) async throws
     -> RuntimeTurnResult
   {
