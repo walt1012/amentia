@@ -2,6 +2,9 @@
   "title": "Capture Workspace Note",
   "description": "Review the current workspace context and prepare a concise reusable note.",
   "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate. Explain what note you would store before asking for confirmation.",
+  "execution": {
+    "kind": "builtin.workspaceReadmeNote"
+  },
   "memory": {
     "noteTitle": "Workspace Capture",
     "noteSource": "plugin.workspace-notes",

@@ -85,7 +85,15 @@ struct PluginCommandManifest {
   pub description: String,
   pub prompt: String,
   #[serde(default)]
+  pub execution: Option<PluginCommandExecutionManifest>,
+  #[serde(default)]
   pub memory: Option<PluginMemoryManifest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PluginCommandExecutionManifest {
+  pub kind: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,6 +128,7 @@ pub struct PluginCommandEntry {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub source_path: String,
+  pub execution_kind: Option<String>,
   pub memory_note_title: Option<String>,
   pub memory_note_source: Option<String>,
   pub memory_note_tags: Vec<String>,
@@ -538,6 +547,10 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         .memory
         .as_ref()
         .map(|memory| memory.note_title.clone());
+      let execution_kind = command
+        .execution
+        .as_ref()
+        .map(|execution| execution.kind.clone());
       let memory_note_source = command
         .memory
         .as_ref()
@@ -557,6 +570,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         plugin_display_name: plugin.display_name.clone(),
         permissions: plugin.permissions.clone(),
         source_path: command_path.display().to_string(),
+        execution_kind,
         memory_note_title,
         memory_note_source,
         memory_note_tags,
@@ -908,6 +922,9 @@ mod tests {
   "title": "Capture Workspace Note",
   "description": "Prepare a reusable note from the current workspace.",
   "prompt": "Read README.md and summarize the most reusable workspace detail.",
+  "execution": {
+    "kind": "builtin.workspaceReadmeNote"
+  },
   "memory": {
     "noteTitle": "Workspace Capture",
     "noteSource": "plugin.workspace-notes",
@@ -928,6 +945,10 @@ mod tests {
     assert_eq!(
       commands[0].memory_note_title.as_deref(),
       Some("Workspace Capture")
+    );
+    assert_eq!(
+      commands[0].execution_kind.as_deref(),
+      Some("builtin.workspaceReadmeNote")
     );
     assert_eq!(
       commands[0].memory_note_source.as_deref(),
@@ -1121,6 +1142,13 @@ mod tests {
     assert_eq!(workspace_command.title, "Capture Workspace Note");
     assert_eq!(
       workspace_command
+        .execution
+        .as_ref()
+        .map(|execution| execution.kind.as_str()),
+      Some("builtin.workspaceReadmeNote")
+    );
+    assert_eq!(
+      workspace_command
         .memory
         .as_ref()
         .map(|memory| memory.note_title.as_str()),
@@ -1132,12 +1160,26 @@ mod tests {
     )
     .expect("parse shell command manifest");
     assert_eq!(shell_command.title, "Summarize Shell Session");
+    assert_eq!(
+      shell_command
+        .execution
+        .as_ref()
+        .map(|execution| execution.kind.as_str()),
+      Some("builtin.shellSessionSummary")
+    );
 
     let review_command = read_command_manifest(
       &official_root.join("review-assistant/commands/review.inspect-diff.json"),
     )
     .expect("parse review command manifest");
     assert_eq!(review_command.title, "Inspect Current Diff");
+    assert_eq!(
+      review_command
+        .execution
+        .as_ref()
+        .map(|execution| execution.kind.as_str()),
+      Some("builtin.reviewDiffSummary")
+    );
 
     let hook_manifest =
       read_hook_manifest(&official_root.join("shell-recorder/hooks/shell.recorder.json"))

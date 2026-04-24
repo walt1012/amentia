@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -1089,6 +1090,20 @@ fn handle_plugin_command_run(
     command_input,
     &relevant_memory_notes,
   );
+  if let Some(result) = execute_builtin_plugin_command(
+    context,
+    &params.thread_id,
+    &command,
+    workspace.clone(),
+    command_input,
+    command_item.clone(),
+  ) {
+    return match result {
+      Ok(result) => JsonRpcResponse::success(request.id, &result),
+      Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
+    };
+  }
+
   let display_message =
     build_plugin_command_display_message(&command, workspace.as_ref(), command_input);
   let agent_message = build_plugin_command_turn_message(
@@ -1930,6 +1945,282 @@ fn build_plugin_command_turn_message(
     message.push_str(&format!("\nAdditional command input:\n{input}"));
   }
   message
+}
+
+fn execute_builtin_plugin_command(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+  command: &HostPluginCommandEntry,
+  workspace: Option<WorkspaceSummary>,
+  input: Option<&str>,
+  command_item: TimelineItem,
+) -> Option<std::result::Result<TurnStartResult, (i32, String)>> {
+  let execution_kind = command.execution_kind.as_deref()?;
+  let result_content = match execution_kind {
+    "builtin.workspaceReadmeNote" => {
+      build_workspace_readme_note_result(command, workspace.as_ref(), input)
+    }
+    "builtin.shellSessionSummary" => {
+      build_shell_session_summary_result(context, workspace.as_ref())
+    }
+    "builtin.reviewDiffSummary" => build_review_diff_summary_result(command, workspace.as_ref()),
+    _ => return None,
+  };
+
+  let result_item =
+    build_plugin_result_timeline_item(command, execution_kind, result_content.clone());
+  let assistant_item = TimelineItem {
+    kind: "assistantMessage".to_string(),
+    title: "Assistant".to_string(),
+    content: format!(
+      "{} completed through {}.\n\n{}",
+      command.title, command.plugin_display_name, result_content
+    ),
+    attributes: Some(HashMap::from([
+      ("pluginId".to_string(), command.plugin_id.clone()),
+      ("commandId".to_string(), command.command_id.clone()),
+      ("executionKind".to_string(), execution_kind.to_string()),
+    ])),
+  };
+  let items = vec![command_item, result_item, assistant_item];
+  let result = complete_plugin_command_items(context, thread_id, workspace, items);
+
+  Some(result.and_then(|mut result| {
+    match maybe_capture_plugin_command_memory(context, thread_id, command, input, &result.items) {
+      Ok(Some(memory_item)) => {
+        if let Some(thread) = context
+          .threads
+          .iter_mut()
+          .find(|thread| thread.summary.id == thread_id)
+        {
+          thread.items.push(memory_item.clone());
+        }
+        result.items.push(memory_item);
+        context
+          .persist_runtime_state()
+          .map_err(|error| (-32010, error.to_string()))?;
+        refresh_thread_summary_note(context, thread_id)
+          .map_err(|error| (-32012, error.to_string()))?;
+      }
+      Ok(None) => {}
+      Err(error) => {
+        let warning_item =
+          build_plugin_command_memory_warning_item(command, error.to_string());
+        if let Some(thread) = context
+          .threads
+          .iter_mut()
+          .find(|thread| thread.summary.id == thread_id)
+        {
+          thread.items.push(warning_item.clone());
+        }
+        result.items.push(warning_item);
+        context
+          .persist_runtime_state()
+          .map_err(|error| (-32010, error.to_string()))?;
+      }
+    }
+    Ok(result)
+  }))
+}
+
+fn complete_plugin_command_items(
+  context: &mut RuntimeContext,
+  requested_thread_id: &str,
+  workspace: Option<WorkspaceSummary>,
+  items: Vec<TimelineItem>,
+) -> std::result::Result<TurnStartResult, (i32, String)> {
+  let (thread_id, turn_id) = {
+    let Some(thread) = context
+      .threads
+      .iter_mut()
+      .find(|thread| thread.summary.id == requested_thread_id)
+    else {
+      return Err((-32004, "Thread not found".to_string()));
+    };
+
+    if thread.workspace.is_none() {
+      thread.workspace = workspace.clone();
+    }
+    thread.turn_count += 1;
+    let turn_id = format!("{}-turn-{}", thread.summary.id, thread.turn_count);
+    thread.summary.status = match &thread.workspace {
+      Some(workspace) => format!(
+        "{} plugin command(s) in {}",
+        thread.turn_count, workspace.display_name
+      ),
+      None => format!("{} plugin command(s)", thread.turn_count),
+    };
+    thread.items.extend(items.clone());
+    thread.summary.status = "Ready".to_string();
+    (thread.summary.id.clone(), turn_id)
+  };
+
+  context
+    .persist_runtime_state()
+    .map_err(|error| (-32010, error.to_string()))?;
+  refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
+
+  Ok(TurnStartResult {
+    turn_id,
+    thread_id,
+    items,
+    pending_approvals: approvals_for_thread(context, requested_thread_id),
+    active_turn_id: None,
+  })
+}
+
+fn build_plugin_result_timeline_item(
+  command: &HostPluginCommandEntry,
+  execution_kind: &str,
+  content: String,
+) -> TimelineItem {
+  TimelineItem {
+    kind: "pluginResult".to_string(),
+    title: format!("{} Result", command.title),
+    content,
+    attributes: Some(HashMap::from([
+      ("pluginId".to_string(), command.plugin_id.clone()),
+      ("commandId".to_string(), command.command_id.clone()),
+      ("executionKind".to_string(), execution_kind.to_string()),
+      ("sourcePath".to_string(), command.source_path.clone()),
+    ])),
+  }
+}
+
+fn build_workspace_readme_note_result(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+) -> String {
+  if !command.permissions.iter().any(|permission| permission == "file.read") {
+    return "This command cannot read workspace files because its plugin does not declare `file.read`."
+      .to_string();
+  }
+  let Some(workspace) = workspace else {
+    return "Open a workspace before capturing a workspace note.".to_string();
+  };
+
+  match read_file(Path::new(&workspace.root_path), "README.md", 4096) {
+    Ok(result) => {
+      let summary = compact_text_preview(&result.content, 10, 900);
+      let input_summary = input
+        .map(|value| format!("\nOperator input: {}", value.trim()))
+        .unwrap_or_default();
+      format!(
+        "Workspace note candidate from README.md in {}.{}\n\n{}",
+        workspace.display_name, input_summary, summary
+      )
+    }
+    Err(error) => format!(
+      "Could not capture a README-based note in {}: {}",
+      workspace.display_name, error
+    ),
+  }
+}
+
+fn build_shell_session_summary_result(
+  context: &RuntimeContext,
+  workspace: Option<&WorkspaceSummary>,
+) -> String {
+  let workspace_label = workspace
+    .map(|workspace| workspace.display_name.as_str())
+    .unwrap_or("the current workspace");
+  let shell_notes = context
+    .memory_notes
+    .iter()
+    .filter(|note| {
+      note.source == "plugin.shell-recorder"
+        || note.tags.iter().any(|tag| tag == "shell" || tag == "hook")
+    })
+    .rev()
+    .take(5)
+    .map(|note| {
+      format!(
+        "- {}: {}",
+        note.title,
+        compact_text_preview(&note.body, 2, 220)
+      )
+    })
+    .collect::<Vec<_>>();
+
+  if shell_notes.is_empty() {
+    return format!(
+      "No shell completion notes are recorded for {} yet. Enable Shell Recorder and approve shell commands to build this timeline.",
+      workspace_label
+    );
+  }
+
+  format!(
+    "Recent shell activity for {}:\n{}",
+    workspace_label,
+    shell_notes.join("\n")
+  )
+}
+
+fn build_review_diff_summary_result(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+) -> String {
+  if !command.permissions.iter().any(|permission| permission == "file.read") {
+    return "This command cannot inspect the workspace because its plugin does not declare `file.read`."
+      .to_string();
+  }
+  let Some(workspace) = workspace else {
+    return "Open a workspace before inspecting the current diff.".to_string();
+  };
+  let workspace_root = Path::new(&workspace.root_path);
+  let stat = git_workspace_output(workspace_root, &["diff", "--stat"]);
+  let names = git_workspace_output(workspace_root, &["diff", "--name-only"]);
+
+  match (stat, names) {
+    (Some(stat), Some(names)) if !stat.trim().is_empty() || !names.trim().is_empty() => {
+      format!(
+        "Current diff snapshot for {}.\n\nChanged files:\n{}\n\nDiff stat:\n{}\n\nReview focus:\n- Check behavioral regressions first.\n- Verify missing tests around changed paths.\n- Inspect risky file writes before approving follow-up changes.",
+        workspace.display_name,
+        compact_text_preview(&names, 20, 900),
+        compact_text_preview(&stat, 20, 1200)
+      )
+    }
+    (Some(_), Some(_)) => format!(
+      "No active git diff was detected in {}. The review command is ready once files change.",
+      workspace.display_name
+    ),
+    _ => format!(
+      "Could not read a git diff in {}. Ensure the workspace is a git repository and git is available.",
+      workspace.display_name
+    ),
+  }
+}
+
+fn git_workspace_output(workspace_root: &Path, args: &[&str]) -> Option<String> {
+  let output = Command::new("git")
+    .arg("-C")
+    .arg(workspace_root)
+    .args(args)
+    .output()
+    .ok()?;
+  if !output.status.success() {
+    return None;
+  }
+  Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn compact_text_preview(content: &str, max_lines: usize, max_chars: usize) -> String {
+  let mut preview = content
+    .lines()
+    .map(str::trim)
+    .filter(|line| !line.is_empty())
+    .take(max_lines)
+    .collect::<Vec<_>>()
+    .join("\n");
+  if preview.is_empty() {
+    preview = "No content available.".to_string();
+  }
+  if preview.chars().count() > max_chars {
+    preview = preview.chars().take(max_chars).collect::<String>();
+    preview.push_str("...");
+  }
+  preview
 }
 
 fn maybe_capture_plugin_command_memory(
@@ -4530,7 +4821,7 @@ mod tests {
   }
 
   #[test]
-  fn plugin_command_run_starts_a_turn_for_the_selected_thread() {
+  fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
     let mut context = RuntimeContext::new_in_memory();
     let workspace = create_temp_workspace("plugin-command-run");
     context.plugins = vec![PluginCatalogEntry {
@@ -4599,11 +4890,16 @@ mod tests {
     let items = result["items"].as_array().expect("items");
     assert_eq!(items[0]["kind"], "pluginCommand");
     assert_eq!(items[0]["attributes"]["pluginId"], "workspace-notes");
-    assert_eq!(items[1]["kind"], "userMessage");
+    assert_eq!(items[1]["kind"], "pluginResult");
+    assert_eq!(
+      items[1]["attributes"]["executionKind"],
+      "builtin.workspaceReadmeNote"
+    );
     assert!(items[1]["content"]
       .as_str()
       .unwrap()
-      .contains("Capture Workspace Note"));
+      .contains("Command registry path"));
+    assert_eq!(items[2]["kind"], "assistantMessage");
     let memory_item = items
       .iter()
       .find(|item| item["title"] == "Memory Note Saved")
@@ -4616,6 +4912,124 @@ mod tests {
       .memory_notes
       .iter()
       .any(|note| note.title == "Workspace Capture" && note.source == "plugin.workspace-notes"));
+  }
+
+  #[test]
+  fn official_builtin_plugin_commands_return_owned_results() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("official-plugin-results");
+    fs::write(workspace.join("README.md"), "# Official Plugin Results\n")
+      .expect("write readme");
+    context.plugins = vec![
+      PluginCatalogEntry {
+        id: "review-assistant".to_string(),
+        name: "review-assistant".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Review Assistant".to_string(),
+        status: "ready".to_string(),
+        description: "Review plugin".to_string(),
+        author_name: Some("Pith".to_string()),
+        enabled: true,
+        default_enabled: true,
+        capabilities: vec!["command:review.inspect-diff".to_string()],
+        permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
+        manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+          .join("../../plugins/official/review-assistant/pith-plugin.json")
+          .display()
+          .to_string(),
+        provenance: "official".to_string(),
+        validation_error: None,
+        validation_hint: None,
+      },
+      PluginCatalogEntry {
+        id: "shell-recorder".to_string(),
+        name: "shell-recorder".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Shell Recorder".to_string(),
+        status: "ready".to_string(),
+        description: "Shell plugin".to_string(),
+        author_name: Some("Pith".to_string()),
+        enabled: true,
+        default_enabled: false,
+        capabilities: vec![
+          "command:shell.summarize-session".to_string(),
+          "hook:shell.recorder".to_string(),
+        ],
+        permissions: vec!["shell.exec".to_string()],
+        manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+          .join("../../plugins/official/shell-recorder/pith-plugin.json")
+          .display()
+          .to_string(),
+        provenance: "official".to_string(),
+        validation_error: None,
+        validation_hint: None,
+      },
+    ];
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Official Plugin Thread"
+        })),
+      ),
+    );
+
+    let review_response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_COMMAND_RUN,
+        Some(json!({
+          "threadId": "thread-1",
+          "commandId": "review-assistant::review.inspect-diff"
+        })),
+      ),
+    );
+    let shell_response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_COMMAND_RUN,
+        Some(json!({
+          "threadId": "thread-1",
+          "commandId": "shell-recorder::shell.summarize-session"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(review_response.error.is_none());
+    assert!(shell_response.error.is_none());
+    let review_result = review_response.result.expect("review result");
+    let shell_result = shell_response.result.expect("shell result");
+    let review_items = review_result["items"]
+      .as_array()
+      .expect("review items")
+      .clone();
+    let shell_items = shell_result["items"]
+      .as_array()
+      .expect("shell items")
+      .clone();
+    assert_eq!(review_items[1]["kind"], "pluginResult");
+    assert_eq!(
+      review_items[1]["attributes"]["executionKind"],
+      "builtin.reviewDiffSummary"
+    );
+    assert_eq!(shell_items[1]["kind"], "pluginResult");
+    assert_eq!(
+      shell_items[1]["attributes"]["executionKind"],
+      "builtin.shellSessionSummary"
+    );
   }
 
   #[test]

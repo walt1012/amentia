@@ -643,6 +643,7 @@ At minimum:
 - show plugin in manager UI
 - enable plugin per user or workspace
 - activate plugin on demand
+- run command capabilities through a plugin-owned execution contract when `commands/*.json` declares `execution.kind`; prompt-only commands remain a compatibility fallback
 
 ### 14.7 First-Party Plugins
 

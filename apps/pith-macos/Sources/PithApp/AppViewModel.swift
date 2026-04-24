@@ -1603,7 +1603,7 @@ final class AppViewModel: ObservableObject {
       return .plan
     case "diffArtifact":
       return .diff
-    case "toolStart", "toolResult", "pluginCommand":
+    case "toolStart", "toolResult", "pluginCommand", "pluginResult":
       return .tool
     case "approvalRequested", "approvalResolved":
       return .approval
