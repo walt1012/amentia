@@ -1937,12 +1937,8 @@ fn maybe_capture_plugin_command_memory(
     return Ok(None);
   };
 
-  let note_body = build_plugin_command_memory_body(
-    command,
-    &workspace,
-    input,
-    &assistant_message.content,
-  );
+  let note_body =
+    build_plugin_command_memory_body(command, &workspace, input, &assistant_message.content);
   let note_source = command
     .memory_note_source
     .clone()
