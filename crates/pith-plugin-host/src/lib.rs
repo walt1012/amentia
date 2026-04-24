@@ -364,6 +364,7 @@ fn invalid_plugin_entry(
   display_name: Option<String>,
   validation_error: String,
 ) -> PluginCatalogEntry {
+  let validation_hint = validation_hint_for_error(&validation_error);
   let fallback_name = display_name.unwrap_or_else(|| {
     manifest_path
       .parent()
@@ -387,7 +388,7 @@ fn invalid_plugin_entry(
     manifest_path: manifest_path.display().to_string(),
     provenance: provenance.to_string(),
     validation_error: Some(validation_error),
-    validation_hint: Some(validation_hint_for_error(&validation_error)),
+    validation_hint: Some(validation_hint),
   }
 }
 
