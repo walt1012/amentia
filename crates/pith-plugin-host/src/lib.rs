@@ -1248,7 +1248,8 @@ mod tests {
 }"#,
     )
     .expect("write connector manifest");
-    let plugins = discover_plugins_in_roots(&[plugin_root.clone()]).expect("discover connector");
+    let plugins =
+      discover_plugins_in_roots(std::slice::from_ref(&plugin_root)).expect("discover connector");
 
     let registry = build_capability_registry(&plugins);
 
@@ -1306,7 +1307,8 @@ mod tests {
 }"#,
     )
     .expect("write connector manifest");
-    let plugins = discover_plugins_in_roots(&[plugin_root.clone()]).expect("discover connector");
+    let plugins =
+      discover_plugins_in_roots(std::slice::from_ref(&plugin_root)).expect("discover connector");
 
     let connectors = build_connector_registry(&plugins);
 
