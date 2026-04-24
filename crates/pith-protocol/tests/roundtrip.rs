@@ -187,8 +187,7 @@ fn plugin_summary_round_trips_validation_hint() {
   assert!(value.get("validationError").is_some());
   assert!(value.get("validationHint").is_some());
 
-  let decoded: PluginSummary =
-    serde_json::from_value(value).expect("deserialize plugin summary");
+  let decoded: PluginSummary = serde_json::from_value(value).expect("deserialize plugin summary");
   assert_eq!(
     decoded.validation_hint.as_deref(),
     Some(
