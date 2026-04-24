@@ -235,6 +235,8 @@ pub struct PluginCapabilityRegistration {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub manifest_path: String,
+  #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+  pub metadata: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

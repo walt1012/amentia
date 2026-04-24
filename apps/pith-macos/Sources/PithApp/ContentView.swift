@@ -603,8 +603,24 @@ private struct PluginCapabilityRow: View {
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
+
+      if !capability.metadata.isEmpty {
+        Text("Metadata: \(capability.metadataSummary)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
     }
     .padding(.vertical, 4)
+  }
+}
+
+private extension PluginCapabilitySummary {
+  var metadataSummary: String {
+    metadata
+      .sorted(by: { $0.key < $1.key })
+      .map { "\($0.key)=\($0.value)" }
+      .joined(separator: " | ")
   }
 }
 

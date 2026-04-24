@@ -103,6 +103,7 @@ final class RuntimeBridge {
     let pluginDisplayName: String
     let permissions: [String]
     let manifestPath: String
+    let metadata: [String: String]
   }
 
   struct RuntimePluginCommand {
@@ -503,7 +504,8 @@ final class RuntimeBridge {
           pluginID: capability.pluginId,
           pluginDisplayName: capability.pluginDisplayName,
           permissions: capability.permissions,
-          manifestPath: capability.manifestPath
+          manifestPath: capability.manifestPath,
+          metadata: capability.metadata ?? [:]
         )
       },
       summary: RuntimePluginCapabilityRegistrySummary(

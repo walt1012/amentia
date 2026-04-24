@@ -866,6 +866,7 @@ Deliverables:
 - per-plugin permissions UI
 - plugin-enabled commands and hooks
 - Codex-inspired plugin package metadata for skills, MCP servers, app connectors, and third-party auth policies
+- capability registry metadata for connector service, auth, credential store, and MCP launch hints
 - Notion connector design spike covering auth, permission scopes, and local execution boundaries
 
 Exit criteria:

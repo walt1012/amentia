@@ -154,6 +154,7 @@ struct RuntimePluginCapabilityPayload: Codable {
   let pluginDisplayName: String
   let permissions: [String]
   let manifestPath: String
+  let metadata: [String: String]?
 }
 
 struct RuntimePluginCommandPayload: Codable {

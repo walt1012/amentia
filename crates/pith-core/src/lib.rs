@@ -511,6 +511,7 @@ fn to_protocol_capability(
     plugin_display_name: capability.plugin_display_name,
     permissions: capability.permissions,
     manifest_path: capability.manifest_path,
+    metadata: capability.metadata,
   }
 }
 

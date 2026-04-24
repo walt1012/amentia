@@ -90,6 +90,7 @@ struct PluginCapabilitySummary: Identifiable, Hashable {
   let pluginDisplayName: String
   let permissions: [String]
   let manifestPath: String
+  let metadata: [String: String]
 }
 
 struct PluginCommandSummary: Identifiable, Hashable {

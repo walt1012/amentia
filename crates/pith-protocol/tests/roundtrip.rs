@@ -215,6 +215,7 @@ fn plugin_capability_registry_round_trips() {
       plugin_display_name: "Review Assistant".to_string(),
       permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
       manifest_path: "plugins/bundled/review-assistant/pith-plugin.json".to_string(),
+      metadata: HashMap::from([("service".to_string(), "diff".to_string())]),
     }],
   };
 
@@ -226,6 +227,7 @@ fn plugin_capability_registry_round_trips() {
   assert_eq!(decoded.summary.total_capability_count, 3);
   assert_eq!(decoded.capabilities[0].plugin_id, "review-assistant");
   assert_eq!(decoded.capabilities[0].kind, "tool");
+  assert_eq!(decoded.capabilities[0].metadata["service"], "diff");
 }
 
 #[test]

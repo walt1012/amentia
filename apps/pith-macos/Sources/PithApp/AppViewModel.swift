@@ -1831,7 +1831,8 @@ final class AppViewModel: ObservableObject {
           pluginID: capability.pluginID,
           pluginDisplayName: capability.pluginDisplayName,
           permissions: capability.permissions,
-          manifestPath: capability.manifestPath
+          manifestPath: capability.manifestPath,
+          metadata: capability.metadata
         )
       }
     } else if runtimePlugins != nil {
