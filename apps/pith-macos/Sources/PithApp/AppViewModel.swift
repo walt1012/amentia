@@ -18,6 +18,7 @@ private struct ModelDownloadProgress: Hashable {
 @MainActor
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
+  private let setupStepCount = 4
 
   private struct LocalPluginAuthor: Decodable {
     let name: String
@@ -133,23 +134,28 @@ final class AppViewModel: ObservableObject {
   private var modelDownloadTask: Task<Void, Never>?
   private var modelDownloadTransfer: ModelDownloadTransfer?
   private var modelDownloadResumeData: Data?
+  private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
       TimelineEntry(
         id: UUID().uuidString,
         kind: .system,
-        title: "Milestone 1 Ready",
-        body: "Open a workspace, launch the runtime, and ask Pith to inspect or change local files.",
-        attributes: [:]
+        title: "Start Local Setup",
+        body: "Launch the runtime, open a workspace, download the local LFM2.5-350M model, then create or select a thread.",
+        attributes: [
+          "path": "runtime -> workspace -> model -> thread"
+        ]
       ),
       TimelineEntry(
         id: UUID().uuidString,
         kind: .assistantMessage,
-        title: "Local Agent Loop",
+        title: "Local-First Agent Loop",
         body:
-          "Pith now supports workspace-aware read, search, shell, diff, memory, and approval-gated write actions.",
-        attributes: [:]
+          "Pith runs the core agent loop against local workspaces and does not use an external model API fallback.",
+        attributes: [
+          "model": "local"
+        ]
       ),
     ]
 
@@ -198,6 +204,7 @@ final class AppViewModel: ObservableObject {
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
     self.modelDownloadResumeData = nil
+    self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
       Task { @MainActor in
@@ -436,6 +443,7 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
+        announceSetupCompleteIfNeeded()
       } catch {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
@@ -494,12 +502,15 @@ final class AppViewModel: ObservableObject {
         if pausedModelDownloadID != nil {
           return "Model download is paused. Continue it from Local Model."
         }
+        if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+          return "Use the downloaded default model to complete the local setup."
+        }
         return "Install the local model to enable agent work without API fallback."
       }
       if activeTurnID != nil {
         return "Pith is streaming locally. Cancel only if the turn is no longer useful."
       }
-      if selectedThreadID == nil {
+      if !hasRuntimeThreadSelection() {
         return "Select or create a thread to start local agent work."
       }
       return "Ready for local agent work."
@@ -518,7 +529,7 @@ final class AppViewModel: ObservableObject {
       if activeTurnID != nil || modelDownloadID != nil || isWorkspaceSearching {
         return .active
       }
-      if workspace == nil || !isLocalModelReady() || selectedThreadID == nil {
+      if workspace == nil || !isLocalModelReady() || !hasRuntimeThreadSelection() {
         return .warning
       }
       return .ready
@@ -539,6 +550,29 @@ final class AppViewModel: ObservableObject {
       modelReadinessStep(),
       threadReadinessStep(),
     ]
+  }
+
+  func setupProgressSummary() -> String {
+    let readyCount = setupReadyStepCount()
+    if readyCount == setupStepCount {
+      return "Local setup complete"
+    }
+
+    return "Local setup \(readyCount)/\(setupStepCount)"
+  }
+
+  func setupProgressValue() -> Double {
+    Double(setupReadyStepCount()) / Double(setupStepCount)
+  }
+
+  func setupProgressTone() -> StatusTone {
+    if runtimeState == .failed {
+      return .danger
+    }
+    if showsRuntimeActivity() {
+      return .active
+    }
+    return setupReadyStepCount() == setupStepCount ? .ready : .warning
   }
 
   func runtimePrimaryActionTitle() -> String? {
@@ -564,7 +598,7 @@ final class AppViewModel: ObservableObject {
       if activeTurnID != nil {
         return "Cancel Turn"
       }
-      if selectedThreadID == nil {
+      if !hasRuntimeThreadSelection() {
         return "New Thread"
       }
       return nil
@@ -588,7 +622,7 @@ final class AppViewModel: ObservableObject {
       if activeTurnID != nil {
         return canCancelActiveTurn()
       }
-      if selectedThreadID == nil {
+      if !hasRuntimeThreadSelection() {
         return canCreateThread()
       }
       return false
@@ -618,7 +652,7 @@ final class AppViewModel: ObservableObject {
         cancelActiveTurn()
         return
       }
-      if selectedThreadID == nil {
+      if !hasRuntimeThreadSelection() {
         createThread()
       }
     }
@@ -643,13 +677,21 @@ final class AppViewModel: ObservableObject {
   func canSendDraftMessage() -> Bool {
     runtimeState == .ready
       && isLocalModelReady()
-      && selectedThreadID != nil
+      && hasRuntimeThreadSelection()
       && !isTurnStreaming()
       && !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
   func canCancelActiveTurn() -> Bool {
     runtimeState == .ready && isTurnStreaming()
+  }
+
+  func canUseComposer() -> Bool {
+    runtimeState == .ready
+      && workspace != nil
+      && isLocalModelReady()
+      && hasRuntimeThreadSelection()
+      && activeTurnID == nil
   }
 
   func canSearchWorkspace() -> Bool {
@@ -760,6 +802,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
+        announceSetupCompleteIfNeeded()
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -874,6 +917,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
+        announceSetupCompleteIfNeeded()
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -893,9 +937,11 @@ final class AppViewModel: ObservableObject {
     let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
 
     guard runtimeState == .ready,
+          workspace != nil,
           isLocalModelReady(),
           !message.isEmpty,
           let threadID = selectedThreadID,
+          !threadID.hasPrefix("local-"),
           activeTurnID == nil
     else {
       return
@@ -1093,6 +1139,7 @@ final class AppViewModel: ObservableObject {
 
     Task {
       await loadThreadHistory(threadID: threadID)
+      announceSetupCompleteIfNeeded()
     }
   }
 
@@ -2139,12 +2186,36 @@ final class AppViewModel: ObservableObject {
   }
 
   func composerPlaceholder() -> String {
+    switch runtimeState {
+    case .disconnected:
+      return "Launch the local runtime to start"
+    case .launching:
+      return "Runtime is starting..."
+    case .failed:
+      return "Relaunch the runtime to recover"
+    case .ready:
+      break
+    }
+
     if workspace == nil {
       return "Open a workspace to start local agent work"
     }
 
     if !isLocalModelReady() {
+      if modelDownloadID != nil {
+        return "Model download is running..."
+      }
+      if pausedModelDownloadID != nil {
+        return "Continue the paused model download"
+      }
+      if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+        return "Use the downloaded local model"
+      }
       return "Install the local LFM2.5-350M runtime before starting agent work"
+    }
+
+    if !hasRuntimeThreadSelection() {
+      return "Create or select a thread"
     }
 
     if activeTurnID != nil {
@@ -2174,10 +2245,13 @@ final class AppViewModel: ObservableObject {
         if pausedModelDownloadID != nil {
           return "Model download is paused. Continue it from Local Model."
         }
+        if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+          return "Use the downloaded local model to finish setup."
+        }
         return "Install the local LFM2.5-350M model to enable agent work."
       }
 
-      if selectedThreadID == nil {
+      if !hasRuntimeThreadSelection() {
         return "Create or select a thread to start local agent work."
       }
 
@@ -2287,8 +2361,10 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Thread Ready",
-        body: "\(title) is ready for local runtime messages.",
-        attributes: [:]
+        body: "\(title) is ready after runtime, workspace, model, and thread setup are complete.",
+        attributes: [
+          "setup": "runtime, workspace, model, thread"
+        ]
       ),
     ]
   }
@@ -2454,6 +2530,7 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = serverLabel
       }
     }
+    announceSetupCompleteIfNeeded()
   }
 
   private func refreshLocalModelCatalog() {
@@ -2461,6 +2538,55 @@ final class AppViewModel: ObservableObject {
     localModels = Self.localModelSummaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
       activeModelPath: activeModelPath
+    )
+  }
+
+  private func setupReadyStepCount() -> Int {
+    var readyCount = 0
+    if runtimeState == .ready {
+      readyCount += 1
+    }
+    if workspace != nil {
+      readyCount += 1
+    }
+    if isLocalModelReady() {
+      readyCount += 1
+    }
+    if hasRuntimeThreadSelection() {
+      readyCount += 1
+    }
+    return readyCount
+  }
+
+  private func hasRuntimeThreadSelection() -> Bool {
+    guard let selectedThreadID else {
+      return false
+    }
+
+    return !selectedThreadID.hasPrefix("local-")
+  }
+
+  private func announceSetupCompleteIfNeeded() {
+    guard setupReadyStepCount() == setupStepCount,
+          let threadID = selectedThreadID,
+          !threadID.hasPrefix("local-"),
+          !announcedSetupCompleteThreadIDs.contains(threadID)
+    else {
+      return
+    }
+
+    announcedSetupCompleteThreadIDs.insert(threadID)
+    appendEntry(
+      to: threadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: "Local Setup Complete",
+        body: "Runtime, workspace, local model, and thread are ready. Ask Pith to inspect files, review diffs, or make a small change.",
+        attributes: [
+          "setup": "complete"
+        ]
+      )
     )
   }
 
@@ -2517,7 +2643,7 @@ final class AppViewModel: ObservableObject {
     guard runtimeState == .ready else {
       return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Waiting", tone: .neutral)
     }
-    guard selectedThreadID != nil else {
+    guard hasRuntimeThreadSelection() else {
       return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Create", tone: .warning)
     }
     if activeTurnID != nil {

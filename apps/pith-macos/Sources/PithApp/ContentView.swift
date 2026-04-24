@@ -123,6 +123,12 @@ struct ContentView: View {
           }
         }
 
+        SetupProgressView(
+          summary: viewModel.setupProgressSummary(),
+          value: viewModel.setupProgressValue(),
+          tone: viewModel.setupProgressTone()
+        )
+
         HStack(spacing: 8) {
           ForEach(viewModel.runtimeReadinessSteps()) { step in
             ReadinessChip(step: step)
@@ -168,6 +174,7 @@ struct ContentView: View {
         HStack(alignment: .bottom, spacing: 12) {
           TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
             .textFieldStyle(.roundedBorder)
+            .disabled(!viewModel.canUseComposer())
             .onSubmit {
               if viewModel.canSendDraftMessage() {
                 viewModel.sendDraftMessage()
@@ -691,6 +698,29 @@ private struct ReadinessChip: View {
     .padding(.vertical, 5)
     .background(step.tone.color.opacity(0.10))
     .clipShape(Capsule())
+  }
+}
+
+private struct SetupProgressView: View {
+  let summary: String
+  let value: Double
+  let tone: StatusTone
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack {
+        Text(summary)
+          .font(.caption2.weight(.semibold))
+          .foregroundColor(tone.color)
+        Spacer()
+        Text("Runtime -> Workspace -> Model -> Thread")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+      }
+      ProgressView(value: value)
+        .progressViewStyle(.linear)
+        .tint(tone.color)
+    }
   }
 }
 

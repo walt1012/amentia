@@ -901,6 +901,8 @@ Deliverables:
 - compact daily-loop status guidance that explains the next required action without adding new surfaces
 - contextual single-action recovery from the timeline header for blocked runtime, workspace, model, thread, and turn states
 - compact runtime, workspace, model, and thread readiness cockpit in the main timeline surface
+- fresh-install setup progress and onboarding copy that avoids internal milestone language
+- composer gating that keeps input disabled until the local setup path is actually ready
 
 Exit criteria:
 
