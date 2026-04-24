@@ -3415,7 +3415,10 @@ mod tests {
     assert!(turn_response.error.is_none());
     let result = turn_response.result.expect("turn result");
     let items = result["items"].as_array().expect("items");
-    assert!(items[3]["content"].as_str().unwrap().contains("Workspace A"));
+    assert!(items[3]["content"]
+      .as_str()
+      .unwrap()
+      .contains("Workspace A"));
     assert!(items[3]["content"]
       .as_str()
       .unwrap()
