@@ -76,7 +76,7 @@ The resolved model file path then checks:
 
 The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M.gguf` file should not be committed to git history. It should live in the local data directory, a release bundle, or another local install path.
 
-If either path is missing, Pith falls back to the built-in heuristic summarizer while still reporting model health in the inspector. One local setup example is:
+If either path is missing, Pith reports the local model as unavailable and blocks agent work until a real local runtime is configured. One local setup example is:
 
 ```bash
 export PITH_LLAMACPP_PATH=/absolute/path/to/llama-cli

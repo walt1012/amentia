@@ -869,6 +869,8 @@ Goal:
 
 Deliverables:
 
+- release-bundled or guided local model pack delivery
+- clear local model readiness and installation guidance
 - refined visual system
 - improved inspector
 - better diff viewer
@@ -880,6 +882,7 @@ Deliverables:
 
 Exit criteria:
 
+- a fresh install can reach a ready local `LFM2.5-350M` runtime without hidden fallback behavior
 - the product feels stable, intentional, and distinctly native on Intel Mac hardware
 
 ### Milestone 4: Platform Expansion

@@ -87,7 +87,7 @@ pub struct LocalModelRuntime {
 
 #[derive(Debug, Clone)]
 enum ModelBackend {
-  Heuristic {
+  Unconfigured {
     detail: String,
     binary_path: Option<PathBuf>,
     model_path: Option<PathBuf>,
@@ -154,7 +154,7 @@ impl LocalModelRuntime {
         pack,
         manifest,
         source,
-        backend: ModelBackend::Heuristic {
+        backend: ModelBackend::Unconfigured {
           detail: missing_runtime_detail(
             binary_path.as_deref(),
             model_path.as_deref(),
@@ -170,7 +170,7 @@ impl LocalModelRuntime {
 
   pub fn health(&self) -> ModelHealth {
     match &self.backend {
-      ModelBackend::Heuristic {
+      ModelBackend::Unconfigured {
         detail,
         binary_path,
         model_path,
@@ -186,7 +186,7 @@ impl LocalModelRuntime {
         ModelHealth {
           pack_id: self.pack.id.clone(),
           display_name: self.pack.display_name.clone(),
-          backend: "heuristic".to_string(),
+          backend: "unconfigured".to_string(),
           status: "unavailable".to_string(),
           detail: detail.clone(),
           source: self.source.clone(),
@@ -226,8 +226,8 @@ impl LocalModelRuntime {
 
   pub fn generate(&self, request: GenerateRequest) -> GenerateResponse {
     match &self.backend {
-      ModelBackend::Heuristic { detail, .. } => {
-        self.generate_failure("heuristic", "unavailable", &request.role, detail)
+      ModelBackend::Unconfigured { detail, .. } => {
+        self.generate_failure("unconfigured", "unavailable", &request.role, detail)
       }
       ModelBackend::LlamaCppCli {
         binary_path,
@@ -760,39 +760,39 @@ fn missing_runtime_detail(
 ) -> String {
   match (binary_path, model_path, manifest_path) {
     (Some(binary_path), Some(model_path), Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because {} or {} is missing. Manifest: {}.",
+      "Local model runtime is unavailable because {} or {} is missing. Manifest: {}.",
       binary_path.display(),
       model_path.display(),
       manifest_path.display()
     ),
     (Some(binary_path), Some(model_path), None) => format!(
-      "Falling back to the built-in heuristic summarizer because {} or {} is missing.",
+      "Local model runtime is unavailable because {} or {} is missing.",
       binary_path.display(),
       model_path.display()
     ),
     (Some(binary_path), None, Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because the model file is not configured or missing. Binary candidate: {}. Manifest: {}.",
+      "Local model runtime is unavailable because the model file is not configured or missing. Binary candidate: {}. Manifest: {}.",
       binary_path.display(),
       manifest_path.display()
     ),
     (Some(binary_path), None, None) => format!(
-      "Falling back to the built-in heuristic summarizer because the model file is not configured or missing. Binary candidate: {}.",
+      "Local model runtime is unavailable because the model file is not configured or missing. Binary candidate: {}.",
       binary_path.display()
     ),
     (None, Some(model_path), Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because the llama.cpp CLI binary is not configured or missing. Model candidate: {}. Manifest: {}.",
+      "Local model runtime is unavailable because the llama.cpp CLI binary is not configured or missing. Model candidate: {}. Manifest: {}.",
       model_path.display(),
       manifest_path.display()
     ),
     (None, Some(model_path), None) => format!(
-      "Falling back to the built-in heuristic summarizer because the llama.cpp CLI binary is not configured or missing. Model candidate: {}.",
+      "Local model runtime is unavailable because the llama.cpp CLI binary is not configured or missing. Model candidate: {}.",
       model_path.display()
     ),
     (None, None, Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because no llama.cpp CLI binary or resolved LFM2.5-350M model file is configured yet. Manifest: {}.",
+      "Local model runtime is unavailable because no llama.cpp CLI binary or resolved LFM2.5-350M model file is configured yet. Manifest: {}.",
       manifest_path.display()
     ),
-    (None, None, None) => "Falling back to the built-in heuristic summarizer because no llama.cpp CLI binary or LFM2.5-350M model pack is configured yet.".to_string(),
+    (None, None, None) => "Local model runtime is unavailable because no llama.cpp CLI binary or LFM2.5-350M model pack is configured yet.".to_string(),
   }
 }
 
@@ -879,13 +879,15 @@ mod tests {
   use std::time::{SystemTime, UNIX_EPOCH};
 
   #[test]
-  fn runtime_uses_heuristic_backend_when_paths_are_missing() {
+  fn runtime_reports_unconfigured_backend_when_paths_are_missing() {
     let runtime = LocalModelRuntime::from_paths(None, None);
     let health = runtime.health();
 
     assert_eq!(health.display_name, "LFM2.5-350M");
-    assert_eq!(health.backend, "heuristic");
+    assert_eq!(health.backend, "unconfigured");
     assert_eq!(health.status, "unavailable");
+    assert!(health.detail.contains("Local model runtime is unavailable"));
+    assert!(!health.detail.contains("Falling back"));
     assert!(health.metrics.contains_key("contextSize"));
     assert_eq!(health.metrics["readiness"], "unconfigured");
     assert_eq!(health.metrics["packReady"], "false");
@@ -896,7 +898,7 @@ mod tests {
   }
 
   #[test]
-  fn heuristic_generation_returns_unavailable_error() {
+  fn unconfigured_generation_returns_unavailable_error() {
     let runtime = LocalModelRuntime::from_paths(None, None);
     let response = runtime.generate(GenerateRequest {
       role: ModelRole::Summarizer,
@@ -908,7 +910,7 @@ mod tests {
     assert!(response
       .text
       .contains("could not produce a local summarizer response"));
-    assert_eq!(response.backend, "heuristic");
+    assert_eq!(response.backend, "unconfigured");
     assert_eq!(response.status, "unavailable");
     assert_eq!(response.model_id, "lfm2.5-350m");
   }
