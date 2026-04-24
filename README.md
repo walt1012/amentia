@@ -48,6 +48,9 @@ The repository is intentionally English-only.
 
 Milestone 1 is complete on the active development branch.
 
+Milestone 2 is now in progress with plugin discovery, enable and disable flow, capability registry,
+permission gating, and command execution work underway.
+
 Delivered in Milestone 1:
 
 - monorepo scaffolding

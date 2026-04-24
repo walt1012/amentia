@@ -32,6 +32,23 @@ Swift:
 - `cd apps/pith-macos`
 - `swift build`
 
+## CI Checklist
+
+Before pushing a change that touches protocol shapes, plugin loading, permissions, defaults, or discovery logic:
+
+- update the relevant unit tests in the Rust workspace
+- update `scripts/runtime_smoke_test.py` if runtime behavior changed across the process boundary
+- verify official sample plugin manifests still deserialize and validate against the runtime schema
+- review sample data and fixtures for field casing so `camelCase` protocol types do not drift from checked-in JSON
+- prefer self-contained smoke fixtures over assumptions about the surrounding repository layout
+
+If a change affects plugin permissions or command discovery, treat these four surfaces as one compatibility set:
+
+- runtime behavior
+- unit and protocol tests
+- runtime smoke coverage
+- official plugin sample data
+
 ## Milestone 1 Baseline
 
 The current repository target is a stable local agent loop:

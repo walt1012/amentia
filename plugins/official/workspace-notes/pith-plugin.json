@@ -7,6 +7,7 @@
     "name": "Pith"
   },
   "capabilities": [
+    "command:workspace.capture-note",
     "prompt_pack:workspace.notes",
     "settings:workspace.preferences"
   ],

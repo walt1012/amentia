@@ -73,6 +73,16 @@ struct PluginCapabilitySummary: Identifiable, Hashable {
   let manifestPath: String
 }
 
+struct PluginCommandSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let description: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let sourcePath: String
+}
+
 struct TimelineEntry: Identifiable, Hashable {
   enum Kind: String {
     case userMessage

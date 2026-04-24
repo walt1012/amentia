@@ -20,6 +20,7 @@ final class AppViewModel: ObservableObject {
   @Published var plugins: [PluginSummary]
   @Published var pluginCapabilityRegistrySummary: PluginCapabilityRegistrySummary?
   @Published var pluginCapabilities: [PluginCapabilitySummary]
+  @Published var pluginCommands: [PluginCommandSummary]
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -66,6 +67,7 @@ final class AppViewModel: ObservableObject {
     self.plugins = []
     self.pluginCapabilityRegistrySummary = nil
     self.pluginCapabilities = []
+    self.pluginCommands = []
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
@@ -128,6 +130,9 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginCapabilities.isEmpty {
           runtimeDetail += " | \(pluginCapabilities.count) capability(s)"
+        }
+        if !pluginCommands.isEmpty {
+          runtimeDetail += " | \(pluginCommands.count) command(s)"
         }
 
         if let currentWorkspace {
@@ -223,6 +228,19 @@ final class AppViewModel: ObservableObject {
                 "enabledPluginCount": String(registrySummary.enabledPluginCount),
                 "totalCapabilityCount": String(registrySummary.totalCapabilityCount)
               ]
+            )
+          )
+        }
+        if !pluginCommands.isEmpty {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .system,
+              title: "Plugin Commands Ready",
+              body:
+                "Loaded \(pluginCommands.count) plugin command(s): \(pluginCommands.map(\.title).joined(separator: ", ")).",
+              attributes: [:]
             )
           )
         }
@@ -437,6 +455,39 @@ final class AppViewModel: ObservableObject {
             attributes: [
               "pluginId": pluginID
             ]
+          )
+        )
+      }
+    }
+  }
+
+  func runPluginCommand(commandID: String) {
+    guard runtimeState == .ready,
+          let threadID = selectedThreadID,
+          activeTurnID == nil
+    else {
+      return
+    }
+
+    Task {
+      do {
+        let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
+        appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
+        updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
+        refreshThreadPreview(
+          threadID: result.threadID,
+          preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
+        )
+      } catch {
+        appendEntry(
+          to: threadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .warning,
+            title: "Plugin Command Failed",
+            body: error.localizedDescription,
+            attributes: [:]
           )
         )
       }
@@ -789,6 +840,24 @@ final class AppViewModel: ObservableObject {
     Array(pluginCapabilities.prefix(6))
   }
 
+  func pluginCommandCountSummary() -> String {
+    if pluginCommands.isEmpty {
+      return "No Plugin Commands"
+    }
+
+    return "\(pluginCommands.count) Plugin Command\(pluginCommands.count == 1 ? "" : "s")"
+  }
+
+  func pluginCommandDetailSummary() -> String {
+    guard !pluginCommands.isEmpty else {
+      return "Enable ready plugins with declared command capabilities to run reusable local workflows."
+    }
+
+    return pluginCommands
+      .map { "\($0.pluginDisplayName): \($0.title)" }
+      .joined(separator: "\n")
+  }
+
   func memoryCountSummary() -> String {
     guard let memoryStatus else {
       return "Built-in memory is not connected yet."
@@ -1111,6 +1180,7 @@ final class AppViewModel: ObservableObject {
   private func refreshPluginState() async {
     let runtimePlugins = try? await runtimeBridge.listPlugins()
     let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
+    let runtimeCommands = try? await runtimeBridge.listPluginCommands()
 
     if let runtimePlugins {
       plugins = runtimePlugins.map { pluginSummary(from: $0) }
@@ -1139,6 +1209,21 @@ final class AppViewModel: ObservableObject {
         capabilityCountsByKind: [:]
       )
       pluginCapabilities = []
+    }
+    if let runtimeCommands {
+      pluginCommands = runtimeCommands.map { command in
+        PluginCommandSummary(
+          id: command.commandID,
+          title: command.title,
+          description: command.description,
+          pluginID: command.pluginID,
+          pluginDisplayName: command.pluginDisplayName,
+          permissions: command.permissions,
+          sourcePath: command.sourcePath
+        )
+      }
+    } else if runtimePlugins != nil {
+      pluginCommands = []
     }
   }
 

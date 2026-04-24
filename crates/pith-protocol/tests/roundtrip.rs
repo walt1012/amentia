@@ -1,8 +1,9 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
-  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginSetEnabledParams,
-  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginSetEnabledParams, ThreadReadResult,
+  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -163,4 +164,42 @@ fn plugin_capability_registry_round_trips() {
   assert_eq!(decoded.summary.total_capability_count, 3);
   assert_eq!(decoded.capabilities[0].plugin_id, "review-assistant");
   assert_eq!(decoded.capabilities[0].kind, "tool");
+}
+
+#[test]
+fn plugin_command_payloads_use_camel_case_fields() {
+  let params = PluginCommandRunParams {
+    thread_id: "thread-1".to_string(),
+    command_id: "workspace-notes::workspace.capture-note".to_string(),
+    input: Some("Focus on the README".to_string()),
+  };
+
+  let value = serde_json::to_value(params).expect("serialize plugin command params");
+  assert!(value.get("threadId").is_some());
+  assert!(value.get("commandId").is_some());
+  assert!(value.get("input").is_some());
+}
+
+#[test]
+fn plugin_command_registry_round_trips() {
+  let result = PluginCommandRegistryResult {
+    commands: vec![PluginCommandSummary {
+      command_id: "workspace-notes::workspace.capture-note".to_string(),
+      title: "Capture Workspace Note".to_string(),
+      description: "Prepare a reusable workspace note from the current context.".to_string(),
+      plugin_id: "workspace-notes".to_string(),
+      plugin_display_name: "Workspace Notes".to_string(),
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      source_path: "plugins/official/workspace-notes/commands/workspace.capture-note.json"
+        .to_string(),
+    }],
+  };
+
+  let encoded = serde_json::to_string(&result).expect("serialize command registry");
+  let decoded: PluginCommandRegistryResult =
+    serde_json::from_str(&encoded).expect("deserialize command registry");
+
+  assert_eq!(decoded.commands.len(), 1);
+  assert_eq!(decoded.commands[0].plugin_id, "workspace-notes");
+  assert_eq!(decoded.commands[0].title, "Capture Workspace Note");
 }

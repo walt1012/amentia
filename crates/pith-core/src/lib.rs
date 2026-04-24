@@ -9,20 +9,22 @@ use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
 use pith_plugin_host::{
-  build_capability_registry, default_plugin_root, discover_plugins,
+  build_capability_registry, build_command_registry, default_plugin_root, discover_plugins,
   PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
+  PluginCommandEntry as HostPluginCommandEntry,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
   ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
-  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginListResult,
-  PluginSetEnabledParams, PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary,
-  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
-  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
-  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginListResult, PluginSetEnabledParams,
+  PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
+  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
+  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
+  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -312,6 +314,11 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       request.id,
       &build_protocol_capability_registry(&context.plugins),
     ),
+    methods::PLUGIN_COMMAND_REGISTRY => JsonRpcResponse::success(
+      request.id,
+      &build_protocol_command_registry(&context.plugins),
+    ),
+    methods::PLUGIN_COMMAND_RUN => handle_plugin_command_run(context, request),
     methods::PLUGIN_LIST => JsonRpcResponse::success(
       request.id,
       &PluginListResult {
@@ -476,6 +483,27 @@ fn build_protocol_capability_registry(
       capability_counts_by_kind,
     },
     capabilities,
+  }
+}
+
+fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> PluginCommandSummary {
+  PluginCommandSummary {
+    command_id: command.command_id,
+    title: command.title,
+    description: command.description,
+    plugin_id: command.plugin_id,
+    plugin_display_name: command.plugin_display_name,
+    permissions: command.permissions,
+    source_path: command.source_path,
+  }
+}
+
+fn build_protocol_command_registry(plugins: &[PluginCatalogEntry]) -> PluginCommandRegistryResult {
+  PluginCommandRegistryResult {
+    commands: build_command_registry(plugins)
+      .into_iter()
+      .map(to_protocol_plugin_command)
+      .collect(),
   }
 }
 
@@ -726,6 +754,58 @@ fn handle_plugin_set_enabled(
     request.id,
     &PluginSetEnabledResult {
       plugin: to_protocol_plugin(updated_plugin),
+    },
+  )
+}
+
+fn handle_plugin_command_run(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<PluginCommandRunParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid plugin/commandRun params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/commandRun params");
+    }
+  };
+
+  let Some(command) = build_command_registry(&context.plugins)
+    .into_iter()
+    .find(|command| command.command_id == params.command_id)
+  else {
+    return JsonRpcResponse::error(request.id, -32052, "Plugin command not found");
+  };
+
+  let message = match params.input {
+    Some(input) if !input.trim().is_empty() => format!(
+      "{}\n\nAdditional command input:\n{}",
+      command.prompt,
+      input.trim()
+    ),
+    _ => command.prompt,
+  };
+
+  handle_turn_start(
+    context,
+    JsonRpcRequest {
+      id: request.id,
+      method: methods::TURN_START.to_string(),
+      params: Some(
+        serde_json::to_value(TurnStartParams {
+          thread_id: params.thread_id,
+          message,
+        })
+        .expect("serialize command turn params"),
+      ),
     },
   )
 }
@@ -3493,6 +3573,117 @@ mod tests {
       response.result.expect("plugin set result")["plugin"]["enabled"],
       true
     );
+  }
+
+  #[test]
+  fn plugin_command_registry_lists_enabled_command_plugins() {
+    let mut context = RuntimeContext::new_in_memory();
+    context.plugins = vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Command-enabled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:workspace.capture-note".to_string(),
+        "prompt_pack:workspace.notes".to_string(),
+      ],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/official/workspace-notes/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let response = handle_request(&mut context, request(methods::PLUGIN_COMMAND_REGISTRY, None));
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("command registry result");
+    let commands = result["commands"].as_array().expect("commands");
+    assert_eq!(commands.len(), 1);
+    assert_eq!(commands[0]["pluginId"], "workspace-notes");
+    assert_eq!(commands[0]["title"], "Capture Workspace Note");
+  }
+
+  #[test]
+  fn plugin_command_run_starts_a_turn_for_the_selected_thread() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("plugin-command-run");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Command-enabled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:workspace.capture-note".to_string(),
+        "prompt_pack:workspace.notes".to_string(),
+      ],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/official/workspace-notes/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+    fs::write(
+      workspace.join("README.md"),
+      "Workspace A\nCommand registry path\n",
+    )
+    .expect("write readme");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Plugin Command Thread"
+        })),
+      ),
+    );
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_COMMAND_RUN,
+        Some(json!({
+          "threadId": "thread-1",
+          "commandId": "workspace-notes::workspace.capture-note"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("command run result");
+    let items = result["items"].as_array().expect("items");
+    assert_eq!(items[0]["kind"], "userMessage");
+    assert!(items[0]["content"]
+      .as_str()
+      .unwrap()
+      .contains("reusable workspace detail"));
+    assert_eq!(result["threadId"], "thread-1");
   }
 
   #[test]

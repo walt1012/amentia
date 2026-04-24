@@ -98,6 +98,16 @@ final class RuntimeBridge {
     let manifestPath: String
   }
 
+  struct RuntimePluginCommand {
+    let commandID: String
+    let title: String
+    let description: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+  }
+
   struct RuntimeTurnResult {
     let turnID: String
     let threadID: String
@@ -447,6 +457,33 @@ final class RuntimeBridge {
     )
   }
 
+  func listPluginCommands() async throws -> [RuntimePluginCommand] {
+    let response: JSONRPCResponse<PluginCommandRegistryResult> = try await sendRequest(
+      method: "plugin/commandRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.commands.map { command in
+      RuntimePluginCommand(
+        commandID: command.commandId,
+        title: command.title,
+        description: command.description,
+        pluginID: command.pluginId,
+        pluginDisplayName: command.pluginDisplayName,
+        permissions: command.permissions,
+        sourcePath: command.sourcePath
+      )
+    }
+  }
+
   func setPluginEnabled(pluginID: String, enabled: Bool) async throws -> RuntimePlugin {
     let response: JSONRPCResponse<PluginSetEnabledResult> = try await sendRequest(
       method: "plugin/setEnabled",
@@ -476,6 +513,31 @@ final class RuntimeBridge {
       manifestPath: result.plugin.manifestPath,
       provenance: result.plugin.provenance,
       validationError: result.plugin.validationError
+    )
+  }
+
+  func runPluginCommand(threadID: String, commandID: String, input: String? = nil) async throws
+    -> RuntimeTurnResult
+  {
+    let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
+      method: "plugin/commandRun",
+      params: PluginCommandRunParams(threadId: threadID, commandId: commandID, input: input)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeTurnResult(
+      turnID: result.turnId,
+      threadID: result.threadId,
+      items: result.items.map(runtimeTimelineItem(from:)),
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      activeTurnID: result.activeTurnId
     )
   }
 

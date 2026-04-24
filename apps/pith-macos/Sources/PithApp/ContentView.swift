@@ -282,6 +282,33 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      GroupBox("Plugin Commands") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.pluginCommandCountSummary())
+            .font(.headline)
+
+          Text(viewModel.pluginCommandDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+
+          if !viewModel.pluginCommands.isEmpty {
+            ForEach(viewModel.pluginCommands) { command in
+              PluginCommandRow(
+                command: command,
+                canRun: viewModel.runtimeState == .ready
+                  && viewModel.selectedThreadID != nil
+                  && viewModel.activeTurnID == nil,
+                onRun: {
+                  viewModel.runPluginCommand(commandID: command.id)
+                }
+              )
+            }
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       GroupBox("Thread") {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.selectedThreadTitle())
@@ -433,6 +460,46 @@ private struct PluginCapabilityRow: View {
 
       if !capability.permissions.isEmpty {
         Text("Permissions: \(capability.permissions.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(.vertical, 4)
+  }
+}
+
+private struct PluginCommandRow: View {
+  let command: PluginCommandSummary
+  let canRun: Bool
+  let onRun: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(command.title)
+            .font(.caption.weight(.semibold))
+          Text("\(command.pluginDisplayName) | \(command.pluginID)")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+
+        Spacer()
+
+        Button("Run") {
+          onRun()
+        }
+        .buttonStyle(.bordered)
+        .disabled(!canRun)
+      }
+
+      Text(command.description)
+        .font(.caption2)
+        .foregroundColor(.secondary)
+
+      if !command.permissions.isEmpty {
+        Text("Permissions: \(command.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)

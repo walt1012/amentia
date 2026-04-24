@@ -12,6 +12,8 @@ pub mod methods {
   pub const MODEL_BOOTSTRAP: &str = "model/bootstrap";
   pub const MODEL_HEALTH: &str = "model/health";
   pub const PLUGIN_CAPABILITY_REGISTRY: &str = "plugin/capabilityRegistry";
+  pub const PLUGIN_COMMAND_REGISTRY: &str = "plugin/commandRegistry";
+  pub const PLUGIN_COMMAND_RUN: &str = "plugin/commandRun";
   pub const PLUGIN_LIST: &str = "plugin/list";
   pub const PLUGIN_SET_ENABLED: &str = "plugin/setEnabled";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
@@ -217,6 +219,33 @@ pub struct PluginCapabilityRegistrySummary {
 pub struct PluginCapabilityRegistryResult {
   pub capabilities: Vec<PluginCapabilityRegistration>,
   pub summary: PluginCapabilityRegistrySummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandSummary {
+  pub command_id: String,
+  pub title: String,
+  pub description: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub source_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandRegistryResult {
+  pub commands: Vec<PluginCommandSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandRunParams {
+  pub thread_id: String,
+  pub command_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub input: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

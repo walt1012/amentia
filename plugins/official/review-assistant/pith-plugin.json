@@ -7,6 +7,7 @@
     "name": "Pith"
   },
   "capabilities": [
+    "command:review.inspect-diff",
     "prompt_pack:review.prompts",
     "tool:diff.summaries"
   ],

@@ -56,6 +56,8 @@ def main() -> int:
     shutil.rmtree(workspace_dir)
   (plugin_dir / "workspace-notes").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "pith-plugin.json").write_text(
     json.dumps(
       {
@@ -67,6 +69,7 @@ def main() -> int:
           "name": "Pith",
         },
         "capabilities": [
+          "command:workspace.capture-note",
           "prompt_pack:workspace.notes",
           "settings:workspace.preferences",
         ],
@@ -75,6 +78,17 @@ def main() -> int:
           "file.write",
         ],
         "defaultEnabled": True,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "workspace-notes" / "commands" / "workspace.capture-note.json").write_text(
+    json.dumps(
+      {
+        "title": "Capture Workspace Note",
+        "description": "Read the workspace README and prepare a concise note candidate.",
+        "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
       },
       indent=2,
     ),
@@ -91,6 +105,7 @@ def main() -> int:
           "name": "Pith",
         },
         "capabilities": [
+          "command:shell.summarize-session",
           "hook:shell.recorder",
           "tool:shell.timeline",
         ],
@@ -98,6 +113,17 @@ def main() -> int:
           "shell.exec",
         ],
         "defaultEnabled": False,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "shell-recorder" / "commands" / "shell.summarize-session.json").write_text(
+    json.dumps(
+      {
+        "title": "Summarize Shell Session",
+        "description": "Ask Pith to explain recent shell work in a compact summary.",
+        "prompt": "Summarize the most relevant recent shell activity for this workspace.",
       },
       indent=2,
     ),
@@ -243,6 +269,17 @@ def main() -> int:
     }
     assert "workspace-notes" in capability_plugin_ids
     assert "shell-recorder" in capability_plugin_ids
+    command_registry, _ = send_request(
+      process,
+      {
+        "id": 39,
+        "method": "plugin/commandRegistry",
+      },
+    )
+    assert len(command_registry["result"]["commands"]) == 2
+    command_ids = {command["commandId"] for command in command_registry["result"]["commands"]}
+    assert "workspace-notes::workspace.capture-note" in command_ids
+    assert "shell-recorder::shell.summarize-session" in command_ids
 
     workspace, _ = send_request(
       process,
@@ -552,6 +589,20 @@ def main() -> int:
     )
     assert shell_approval["result"]["items"][1]["title"] == "run_shell"
     assert "notes.txt" in shell_approval["result"]["items"][2]["content"]
+
+    command_turn, _ = send_request(
+      process,
+      {
+        "id": 40,
+        "method": "plugin/commandRun",
+        "params": {
+          "threadId": "thread-1",
+          "commandId": "workspace-notes::workspace.capture-note",
+        },
+      },
+    )
+    assert command_turn["result"]["items"][0]["kind"] == "userMessage"
+    assert "reusable workspace detail" in command_turn["result"]["items"][0]["content"]
     return 0
   finally:
     process.terminate()

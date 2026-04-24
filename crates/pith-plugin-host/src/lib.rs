@@ -77,6 +77,27 @@ pub struct PluginCapabilityRegistration {
   pub manifest_path: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PluginCommandManifest {
+  pub title: String,
+  pub description: String,
+  pub prompt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandEntry {
+  pub command_id: String,
+  pub title: String,
+  pub description: String,
+  pub prompt: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub source_path: String,
+}
+
 pub fn default_plugin_root() -> Option<PathBuf> {
   if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
     return Some(PathBuf::from(path));
@@ -266,11 +287,65 @@ pub fn build_capability_registry(
   registrations
 }
 
+pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginCommandEntry> {
+  let mut commands = vec![];
+
+  for plugin in plugins
+    .iter()
+    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
+  {
+    let Some(plugin_root) = Path::new(&plugin.manifest_path).parent() else {
+      continue;
+    };
+
+    for capability in &plugin.capabilities {
+      let Some((kind, identifier)) = capability.split_once(':') else {
+        continue;
+      };
+      if kind != "command" {
+        continue;
+      }
+
+      let command_path = plugin_root.join("commands").join(format!("{identifier}.json"));
+      let Ok(command) = read_command_manifest(&command_path) else {
+        continue;
+      };
+
+      commands.push(PluginCommandEntry {
+        command_id: format!("{}::{}", plugin.id, identifier),
+        title: command.title,
+        description: command.description,
+        prompt: command.prompt,
+        plugin_id: plugin.id.clone(),
+        plugin_display_name: plugin.display_name.clone(),
+        permissions: plugin.permissions.clone(),
+        source_path: command_path.display().to_string(),
+      });
+    }
+  }
+
+  commands.sort_by(|left, right| {
+    left
+      .plugin_display_name
+      .cmp(&right.plugin_display_name)
+      .then_with(|| left.title.cmp(&right.title))
+      .then_with(|| left.command_id.cmp(&right.command_id))
+  });
+  commands
+}
+
 fn read_manifest(path: &Path) -> Result<PluginManifest> {
   let content =
     fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
   serde_json::from_str(&content)
     .with_context(|| format!("failed to parse plugin manifest {}", path.display()))
+}
+
+fn read_command_manifest(path: &Path) -> Result<PluginCommandManifest> {
+  let content =
+    fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+  serde_json::from_str(&content)
+    .with_context(|| format!("failed to parse plugin command {}", path.display()))
 }
 
 fn discovery_roots() -> Vec<PathBuf> {
@@ -299,6 +374,17 @@ fn discovery_roots() -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::time::{SystemTime, UNIX_EPOCH};
+
+  fn create_temp_plugin_root(label: &str) -> PathBuf {
+    let unique = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("system time")
+      .as_nanos();
+    let path = env::temp_dir().join(format!("pith-plugin-host-{label}-{unique}"));
+    fs::create_dir_all(&path).expect("create temp plugin root");
+    path
+  }
 
   fn manifest(capabilities: Vec<&str>, permissions: Vec<&str>) -> PluginManifest {
     PluginManifest {
@@ -405,5 +491,68 @@ mod tests {
     assert!(registry
       .iter()
       .all(|entry| entry.plugin_id == "workspace-notes"));
+  }
+
+  #[test]
+  fn build_command_registry_loads_enabled_plugin_commands() {
+    let plugin_root = create_temp_plugin_root("command-registry");
+    let plugin_dir = plugin_root.join("workspace-notes");
+    let commands_dir = plugin_dir.join("commands");
+    fs::create_dir_all(&commands_dir).expect("create commands dir");
+    fs::write(
+      plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "workspace-notes",
+  "version": "0.1.0",
+  "displayName": "Workspace Notes",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:workspace.capture-note",
+    "prompt_pack:workspace.notes"
+  ],
+  "permissions": [
+    "file.read",
+    "file.write"
+  ],
+  "defaultEnabled": true
+}"#,
+    )
+    .expect("write plugin manifest");
+    fs::write(
+      commands_dir.join("workspace.capture-note.json"),
+      r#"{
+  "title": "Capture Workspace Note",
+  "description": "Prepare a reusable note from the current workspace.",
+  "prompt": "Read README.md and summarize the most reusable workspace detail."
+}"#,
+    )
+    .expect("write command definition");
+
+    let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+    let commands = build_command_registry(&plugins);
+
+    fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+    assert_eq!(commands.len(), 1);
+    assert_eq!(commands[0].plugin_id, "workspace-notes");
+    assert_eq!(commands[0].title, "Capture Workspace Note");
+    assert!(commands[0].source_path.ends_with("workspace.capture-note.json"));
+  }
+
+  #[test]
+  fn official_plugin_manifests_match_runtime_schema() {
+    let official_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../plugins/official");
+    let manifests = [
+      official_root.join("workspace-notes/pith-plugin.json"),
+      official_root.join("shell-recorder/pith-plugin.json"),
+      official_root.join("review-assistant/pith-plugin.json"),
+    ];
+
+    for manifest_path in manifests {
+      let manifest = read_manifest(&manifest_path).expect("parse official manifest");
+      validate_manifest(&manifest).expect("validate official manifest");
+      assert!(!manifest.display_name.trim().is_empty());
+    }
   }
 }
