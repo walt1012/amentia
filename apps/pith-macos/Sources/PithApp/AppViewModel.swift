@@ -1540,17 +1540,44 @@ final class AppViewModel: ObservableObject {
   }
 
   private nonisolated func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
-    let (temporaryURL, response) = try await URLSession.shared.download(from: sourceURL)
-    if let httpResponse = response as? HTTPURLResponse,
-       !(200...299).contains(httpResponse.statusCode)
-    {
-      throw NSError(
-        domain: "PithModelDownload",
-        code: httpResponse.statusCode,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Download server returned HTTP \(httpResponse.statusCode).",
-        ]
-      )
+    let temporaryURL: URL = try await withCheckedThrowingContinuation { continuation in
+      let task = URLSession.shared.downloadTask(with: sourceURL) { temporaryURL, response, error in
+        if let error {
+          continuation.resume(throwing: error)
+          return
+        }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200...299).contains(httpResponse.statusCode)
+        {
+          continuation.resume(
+            throwing: NSError(
+              domain: "PithModelDownload",
+              code: httpResponse.statusCode,
+              userInfo: [
+                NSLocalizedDescriptionKey: "Download server returned HTTP \(httpResponse.statusCode).",
+              ]
+            )
+          )
+          return
+        }
+
+        guard let temporaryURL else {
+          continuation.resume(
+            throwing: NSError(
+              domain: "PithModelDownload",
+              code: -1,
+              userInfo: [
+                NSLocalizedDescriptionKey: "Download finished without a temporary file.",
+              ]
+            )
+          )
+          return
+        }
+
+        continuation.resume(returning: temporaryURL)
+      }
+      task.resume()
     }
 
     let manager = FileManager.default
