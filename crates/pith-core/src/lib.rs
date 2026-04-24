@@ -1914,7 +1914,10 @@ fn maybe_capture_plugin_command_memory(
   let Some(note_title) = command.memory_note_title.as_ref() else {
     return Ok(None);
   };
-  let Some(assistant_message) = items.iter().rev().find(|item| item.kind == "assistantMessage")
+  let Some(assistant_message) = items
+    .iter()
+    .rev()
+    .find(|item| item.kind == "assistantMessage")
   else {
     return Ok(None);
   };
