@@ -147,6 +147,49 @@ def main() -> int:
       },
     )
     assert isinstance(plugin_list["result"]["plugins"], list)
+    plugin_ids = {plugin["id"] for plugin in plugin_list["result"]["plugins"]}
+    assert "workspace-notes" in plugin_ids
+    assert "shell-recorder" in plugin_ids
+
+    workspace_notes_enable, _ = send_request(
+      process,
+      {
+        "id": 36,
+        "method": "plugin/setEnabled",
+        "params": {
+          "pluginId": "workspace-notes",
+          "enabled": True,
+        },
+      },
+    )
+    assert workspace_notes_enable["result"]["plugin"]["enabled"] is True
+
+    shell_recorder_enable, _ = send_request(
+      process,
+      {
+        "id": 37,
+        "method": "plugin/setEnabled",
+        "params": {
+          "pluginId": "shell-recorder",
+          "enabled": True,
+        },
+      },
+    )
+    assert shell_recorder_enable["result"]["plugin"]["enabled"] is True
+
+    capability_registry, _ = send_request(
+      process,
+      {
+        "id": 38,
+        "method": "plugin/capabilityRegistry",
+      },
+    )
+    assert capability_registry["result"]["summary"]["enabledPluginCount"] >= 2
+    capability_plugin_ids = {
+      capability["pluginId"] for capability in capability_registry["result"]["capabilities"]
+    }
+    assert "workspace-notes" in capability_plugin_ids
+    assert "shell-recorder" in capability_plugin_ids
 
     workspace, _ = send_request(
       process,
