@@ -118,6 +118,23 @@ final class RuntimeBridge {
     let memorySummary: String?
   }
 
+  struct RuntimePluginConnector {
+    let connectorID: String
+    let displayName: String
+    let service: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let enabled: Bool
+    let status: String
+    let permissions: [String]
+    let manifestPath: String
+    let homepage: String?
+    let authType: String?
+    let authRequired: Bool
+    let authScopes: [String]
+    let credentialStore: String?
+  }
+
   struct RuntimePluginHook {
     let hookID: String
     let title: String
@@ -541,6 +558,40 @@ final class RuntimeBridge {
         sourcePath: command.sourcePath,
         executionKind: command.executionKind,
         memorySummary: command.memorySummary
+      )
+    }
+  }
+
+  func listPluginConnectors() async throws -> [RuntimePluginConnector] {
+    let response: JSONRPCResponse<PluginConnectorRegistryResult> = try await sendRequest(
+      method: "plugin/connectorRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.connectors.map { connector in
+      RuntimePluginConnector(
+        connectorID: connector.connectorId,
+        displayName: connector.displayName,
+        service: connector.service,
+        pluginID: connector.pluginId,
+        pluginDisplayName: connector.pluginDisplayName,
+        enabled: connector.enabled,
+        status: connector.status,
+        permissions: connector.permissions,
+        manifestPath: connector.manifestPath,
+        homepage: connector.homepage,
+        authType: connector.authType,
+        authRequired: connector.authRequired,
+        authScopes: connector.authScopes,
+        credentialStore: connector.credentialStore
       )
     }
   }

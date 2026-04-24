@@ -867,12 +867,14 @@ Deliverables:
 - plugin-enabled commands and hooks
 - Codex-inspired plugin package metadata for skills, MCP servers, app connectors, and third-party auth policies
 - capability registry metadata for connector service, auth, credential store, and MCP launch hints
+- connector registry for disabled, needs-auth, and ready third-party app integrations
 - Notion connector design spike covering auth, permission scopes, and local execution boundaries
 
 Exit criteria:
 
 - at least three executable bundled example plugins load and execute successfully in-app
 - at least one bundled connector template declares third-party auth, MCP, and app connector metadata
+- app surfaces connector status without requiring connector plugins to be enabled first
 - prompt-only plugin commands are visible but blocked until they provide an execution contract
 
 ### Milestone 3: Premium Desktop Quality

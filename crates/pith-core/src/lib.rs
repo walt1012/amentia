@@ -10,11 +10,14 @@ use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
 use pith_plugin_host::{
-  build_capability_registry, build_command_registry, build_hook_registry,
-  configured_plugin_install_root, configured_plugin_roots, discover_plugins_in_roots,
-  inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle,
+  build_capability_registry, build_command_registry, build_connector_registry,
+  build_hook_registry, configured_plugin_install_root, configured_plugin_roots,
+  discover_plugins_in_roots, inspect_plugin_bundle, install_plugin_bundle,
+  remove_local_plugin_bundle,
   PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
-  PluginCommandEntry as HostPluginCommandEntry, PluginHookEntry as HostPluginHookEntry,
+  PluginCommandEntry as HostPluginCommandEntry,
+  PluginConnectorEntry as HostPluginConnectorEntry,
+  PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
@@ -22,9 +25,10 @@ use pith_protocol::{
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
   ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
-  PluginInstallParams, PluginInstallResult, PluginListResult, PluginRemoveParams,
-  PluginRemoveResult, PluginSetEnabledParams, PluginSetEnabledResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginConnectorRegistryResult,
+  PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
+  PluginInstallResult, PluginListResult, PluginRemoveParams, PluginRemoveResult,
+  PluginSetEnabledParams, PluginSetEnabledResult,
   PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
   ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
   ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
@@ -369,6 +373,10 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       &build_protocol_command_registry(&context.plugins),
     ),
     methods::PLUGIN_COMMAND_RUN => handle_plugin_command_run(context, request),
+    methods::PLUGIN_CONNECTOR_REGISTRY => JsonRpcResponse::success(
+      request.id,
+      &build_protocol_connector_registry(&context.plugins),
+    ),
     methods::PLUGIN_HOOK_REGISTRY => {
       JsonRpcResponse::success(request.id, &build_protocol_hook_registry(&context.plugins))
     }
@@ -566,6 +574,36 @@ fn build_protocol_command_registry(plugins: &[PluginCatalogEntry]) -> PluginComm
     commands: build_command_registry(plugins)
       .into_iter()
       .map(to_protocol_plugin_command)
+      .collect(),
+  }
+}
+
+fn to_protocol_plugin_connector(connector: HostPluginConnectorEntry) -> PluginConnectorSummary {
+  PluginConnectorSummary {
+    connector_id: connector.connector_id,
+    display_name: connector.display_name,
+    service: connector.service,
+    plugin_id: connector.plugin_id,
+    plugin_display_name: connector.plugin_display_name,
+    enabled: connector.enabled,
+    status: connector.status,
+    permissions: connector.permissions,
+    manifest_path: connector.manifest_path,
+    homepage: connector.homepage,
+    auth_type: connector.auth_type,
+    auth_required: connector.auth_required,
+    auth_scopes: connector.auth_scopes,
+    credential_store: connector.credential_store,
+  }
+}
+
+fn build_protocol_connector_registry(
+  plugins: &[PluginCatalogEntry],
+) -> PluginConnectorRegistryResult {
+  PluginConnectorRegistryResult {
+    connectors: build_connector_registry(plugins)
+      .into_iter()
+      .map(to_protocol_plugin_connector)
       .collect(),
   }
 }
@@ -4765,6 +4803,48 @@ mod tests {
     assert_eq!(hooks[0]["pluginId"], "shell-recorder");
     assert_eq!(hooks[0]["event"], "shell.completed");
     assert_eq!(hooks[0]["title"], "Record Shell Completion");
+  }
+
+  #[test]
+  fn plugin_connector_registry_lists_disabled_connector_plugins() {
+    let mut context = RuntimeContext::new_in_memory();
+    context.plugins = vec![PluginCatalogEntry {
+      id: "notion-connector".to_string(),
+      name: "notion-connector".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Connector".to_string(),
+      status: "ready".to_string(),
+      description: "Connector plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: false,
+      default_enabled: false,
+      capabilities: vec![
+        "mcp_server:notion".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/bundled/notion-connector/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }];
+
+    let response = handle_request(
+      &mut context,
+      request(methods::PLUGIN_CONNECTOR_REGISTRY, None),
+    );
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("connector registry result");
+    let connectors = result["connectors"].as_array().expect("connectors");
+    assert_eq!(connectors.len(), 1);
+    assert_eq!(connectors[0]["connectorId"], "notion-connector::notion");
+    assert_eq!(connectors[0]["status"], "disabled");
+    assert_eq!(connectors[0]["authType"], "oauth2");
+    assert_eq!(connectors[0]["credentialStore"], "keychain");
   }
 
   #[test]

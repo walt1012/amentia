@@ -1,9 +1,10 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
-  PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
-  PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginConnectorRegistryResult,
+  PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary,
+  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
   WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
@@ -242,6 +243,40 @@ fn plugin_command_payloads_use_camel_case_fields() {
   assert!(value.get("threadId").is_some());
   assert!(value.get("commandId").is_some());
   assert!(value.get("input").is_some());
+}
+
+#[test]
+fn plugin_connector_registry_round_trips() {
+  let result = PluginConnectorRegistryResult {
+    connectors: vec![PluginConnectorSummary {
+      connector_id: "notion-connector::notion".to_string(),
+      display_name: "Notion".to_string(),
+      service: "notion".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      plugin_display_name: "Notion Connector".to_string(),
+      enabled: false,
+      status: "disabled".to_string(),
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: "plugins/bundled/notion-connector/pith-plugin.json".to_string(),
+      homepage: Some("https://www.notion.so".to_string()),
+      auth_type: Some("oauth2".to_string()),
+      auth_required: true,
+      auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
+      credential_store: Some("keychain".to_string()),
+    }],
+  };
+
+  let encoded = serde_json::to_string(&result).expect("serialize connector registry");
+  let decoded: PluginConnectorRegistryResult =
+    serde_json::from_str(&encoded).expect("deserialize connector registry");
+  let value = serde_json::to_value(&decoded).expect("serialize connector registry value");
+
+  assert_eq!(decoded.connectors.len(), 1);
+  assert_eq!(decoded.connectors[0].connector_id, "notion-connector::notion");
+  assert_eq!(decoded.connectors[0].status, "disabled");
+  assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
+  assert!(value["connectors"][0].get("connectorId").is_some());
+  assert!(value["connectors"][0].get("authRequired").is_some());
 }
 
 #[test]

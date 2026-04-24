@@ -137,6 +137,25 @@ pub struct PluginCapabilityRegistration {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginConnectorEntry {
+  pub connector_id: String,
+  pub display_name: String,
+  pub service: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub enabled: bool,
+  pub status: String,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  pub homepage: Option<String>,
+  pub auth_type: Option<String>,
+  pub auth_required: bool,
+  pub auth_scopes: Vec<String>,
+  pub credential_store: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct PluginCommandManifest {
   pub title: String,
   pub description: String,
@@ -664,6 +683,70 @@ pub fn build_capability_registry(
   registrations
 }
 
+pub fn build_connector_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginConnectorEntry> {
+  let mut connectors = vec![];
+
+  for plugin in plugins.iter().filter(|plugin| plugin.status == "ready") {
+    let Ok(manifest) = read_manifest(Path::new(&plugin.manifest_path)) else {
+      continue;
+    };
+
+    let auth_type = manifest
+      .auth_policy
+      .as_ref()
+      .map(|policy| policy.auth_type.clone());
+    let auth_required = manifest
+      .auth_policy
+      .as_ref()
+      .map(|policy| policy.required)
+      .unwrap_or(false);
+    let auth_scopes = manifest
+      .auth_policy
+      .as_ref()
+      .map(|policy| policy.scopes.clone())
+      .unwrap_or_default();
+    let credential_store = manifest
+      .auth_policy
+      .as_ref()
+      .and_then(|policy| policy.credential_store.clone());
+    let status = if !plugin.enabled {
+      "disabled"
+    } else if auth_required {
+      "needsAuth"
+    } else {
+      "ready"
+    };
+
+    for connector in manifest.app_connectors {
+      connectors.push(PluginConnectorEntry {
+        connector_id: format!("{}::{}", plugin.id, connector.id),
+        display_name: connector.display_name,
+        service: connector.service,
+        plugin_id: plugin.id.clone(),
+        plugin_display_name: plugin.display_name.clone(),
+        enabled: plugin.enabled,
+        status: status.to_string(),
+        permissions: plugin.permissions.clone(),
+        manifest_path: plugin.manifest_path.clone(),
+        homepage: connector.homepage,
+        auth_type: auth_type.clone(),
+        auth_required,
+        auth_scopes: auth_scopes.clone(),
+        credential_store: credential_store.clone(),
+      });
+    }
+  }
+
+  connectors.sort_by(|left, right| {
+    left
+      .service
+      .cmp(&right.service)
+      .then_with(|| left.display_name.cmp(&right.display_name))
+      .then_with(|| left.connector_id.cmp(&right.connector_id))
+  });
+  connectors
+}
+
 fn plugin_capability_metadata(
   plugin: &PluginCatalogEntry,
 ) -> HashMap<String, HashMap<String, String>> {
@@ -1129,6 +1212,114 @@ mod tests {
     assert!(registry
       .iter()
       .all(|entry| entry.plugin_id == "workspace-notes"));
+  }
+
+  #[test]
+  fn build_capability_registry_includes_connector_metadata() {
+    let plugin_root = create_temp_plugin_root("connector-metadata");
+    let plugin_dir = plugin_root.join("notion-connector");
+    fs::create_dir_all(&plugin_dir).expect("create connector plugin dir");
+    fs::write(
+      plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "notion-connector",
+  "version": "0.1.0",
+  "displayName": "Notion Connector",
+  "description": "Connector plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "mcpServers": [{ "id": "notion", "transport": "stdio" }],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content", "insert_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+    )
+    .expect("write connector manifest");
+    let plugins = discover_plugins_in_roots(&[plugin_root.clone()]).expect("discover connector");
+
+    let registry = build_capability_registry(&plugins);
+
+    fs::remove_dir_all(&plugin_root).expect("cleanup connector plugin root");
+
+    let connector = registry
+      .iter()
+      .find(|capability| capability.capability_id == "notion-connector::connector:notion")
+      .expect("connector capability");
+    assert_eq!(connector.metadata["service"], "notion");
+    assert_eq!(connector.metadata["authType"], "oauth2");
+    assert_eq!(connector.metadata["credentialStore"], "keychain");
+    assert_eq!(connector.metadata["authScopes"], "read_content, insert_content");
+
+    let mcp_server = registry
+      .iter()
+      .find(|capability| capability.capability_id == "notion-connector::mcp_server:notion")
+      .expect("mcp server capability");
+    assert_eq!(mcp_server.metadata["transport"], "stdio");
+  }
+
+  #[test]
+  fn build_connector_registry_lists_disabled_third_party_connectors() {
+    let plugin_root = create_temp_plugin_root("connector-registry");
+    let plugin_dir = plugin_root.join("notion-connector");
+    fs::create_dir_all(&plugin_dir).expect("create connector plugin dir");
+    fs::write(
+      plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "notion-connector",
+  "version": "0.1.0",
+  "displayName": "Notion Connector",
+  "description": "Connector plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content", "insert_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": false
+}"#,
+    )
+    .expect("write connector manifest");
+    let plugins = discover_plugins_in_roots(&[plugin_root.clone()]).expect("discover connector");
+
+    let connectors = build_connector_registry(&plugins);
+
+    fs::remove_dir_all(&plugin_root).expect("cleanup connector plugin root");
+
+    assert_eq!(connectors.len(), 1);
+    assert_eq!(connectors[0].connector_id, "notion-connector::notion");
+    assert_eq!(connectors[0].status, "disabled");
+    assert!(!connectors[0].enabled);
+    assert_eq!(connectors[0].auth_type.as_deref(), Some("oauth2"));
+    assert!(connectors[0].auth_required);
+    assert_eq!(
+      connectors[0].auth_scopes,
+      vec!["read_content".to_string(), "insert_content".to_string()]
+    );
+    assert_eq!(connectors[0].credential_store.as_deref(), Some("keychain"));
   }
 
   #[test]

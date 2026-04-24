@@ -98,6 +98,7 @@ final class AppViewModel: ObservableObject {
   @Published var plugins: [PluginSummary]
   @Published var pluginCapabilityRegistrySummary: PluginCapabilityRegistrySummary?
   @Published var pluginCapabilities: [PluginCapabilitySummary]
+  @Published var pluginConnectors: [PluginConnectorSummary]
   @Published var pluginCommands: [PluginCommandSummary]
   @Published var pluginHooks: [PluginHookSummary]
 
@@ -150,6 +151,7 @@ final class AppViewModel: ObservableObject {
     self.plugins = []
     self.pluginCapabilityRegistrySummary = nil
     self.pluginCapabilities = []
+    self.pluginConnectors = []
     self.pluginCommands = []
     self.pluginHooks = []
     self.threads = initialThreads
@@ -217,6 +219,9 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginCommands.isEmpty {
           runtimeDetail += " | \(pluginCommands.count) command(s)"
+        }
+        if !pluginConnectors.isEmpty {
+          runtimeDetail += " | \(pluginConnectors.count) connector(s)"
         }
         if !pluginHooks.isEmpty {
           runtimeDetail += " | \(pluginHooks.count) hook(s)"
@@ -353,6 +358,7 @@ final class AppViewModel: ObservableObject {
         plugins = []
         pluginCapabilityRegistrySummary = nil
         pluginCapabilities = []
+        pluginConnectors = []
         pluginCommands = []
         pluginHooks = []
         appendEntry(
@@ -1352,6 +1358,28 @@ final class AppViewModel: ObservableObject {
     Array(pluginCapabilities.prefix(6))
   }
 
+  func pluginConnectorCountSummary() -> String {
+    if pluginConnectors.isEmpty {
+      return "No Connectors"
+    }
+
+    return "\(pluginConnectors.count) Connector\(pluginConnectors.count == 1 ? "" : "s")"
+  }
+
+  func pluginConnectorDetailSummary() -> String {
+    guard !pluginConnectors.isEmpty else {
+      return "Install or enable connector plugins to prepare third-party app integrations."
+    }
+
+    return pluginConnectors
+      .map { "\($0.displayName): \($0.status) via \($0.pluginDisplayName)" }
+      .joined(separator: "\n")
+  }
+
+  func pluginConnectorPreview() -> [PluginConnectorSummary] {
+    Array(pluginConnectors.prefix(6))
+  }
+
   func pluginCommandCountSummary() -> String {
     if pluginCommands.isEmpty {
       return "No Plugin Commands"
@@ -1812,6 +1840,7 @@ final class AppViewModel: ObservableObject {
     let runtimePlugins = try? await runtimeBridge.listPlugins()
     let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
     let runtimeCommands = try? await runtimeBridge.listPluginCommands()
+    let runtimeConnectors = try? await runtimeBridge.listPluginConnectors()
     let runtimeHooks = try? await runtimeBridge.listPluginHooks()
 
     if let runtimePlugins {
@@ -1859,6 +1888,28 @@ final class AppViewModel: ObservableObject {
       }
     } else if runtimePlugins != nil {
       pluginCommands = []
+    }
+    if let runtimeConnectors {
+      pluginConnectors = runtimeConnectors.map { connector in
+        PluginConnectorSummary(
+          id: connector.connectorID,
+          displayName: connector.displayName,
+          service: connector.service,
+          pluginID: connector.pluginID,
+          pluginDisplayName: connector.pluginDisplayName,
+          enabled: connector.enabled,
+          status: connector.status,
+          permissions: connector.permissions,
+          manifestPath: connector.manifestPath,
+          homepage: connector.homepage,
+          authType: connector.authType,
+          authRequired: connector.authRequired,
+          authScopes: connector.authScopes,
+          credentialStore: connector.credentialStore
+        )
+      }
+    } else if runtimePlugins != nil {
+      pluginConnectors = []
     }
     if let runtimeHooks {
       pluginHooks = runtimeHooks.map { hook in

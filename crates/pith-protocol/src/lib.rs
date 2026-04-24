@@ -14,6 +14,7 @@ pub mod methods {
   pub const PLUGIN_CAPABILITY_REGISTRY: &str = "plugin/capabilityRegistry";
   pub const PLUGIN_COMMAND_REGISTRY: &str = "plugin/commandRegistry";
   pub const PLUGIN_COMMAND_RUN: &str = "plugin/commandRun";
+  pub const PLUGIN_CONNECTOR_REGISTRY: &str = "plugin/connectorRegistry";
   pub const PLUGIN_HOOK_REGISTRY: &str = "plugin/hookRegistry";
   pub const PLUGIN_INSTALL: &str = "plugin/install";
   pub const PLUGIN_LIST: &str = "plugin/list";
@@ -252,6 +253,35 @@ pub struct PluginCapabilityRegistrySummary {
 pub struct PluginCapabilityRegistryResult {
   pub capabilities: Vec<PluginCapabilityRegistration>,
   pub summary: PluginCapabilityRegistrySummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorSummary {
+  pub connector_id: String,
+  pub display_name: String,
+  pub service: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub enabled: bool,
+  pub status: String,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub homepage: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub auth_type: Option<String>,
+  pub auth_required: bool,
+  #[serde(default)]
+  pub auth_scopes: Vec<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_store: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorRegistryResult {
+  pub connectors: Vec<PluginConnectorSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

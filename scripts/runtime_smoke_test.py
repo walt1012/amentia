@@ -60,6 +60,7 @@ def main() -> int:
   (plugin_dir / "workspace-notes").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "notion-connector").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
@@ -84,6 +85,50 @@ def main() -> int:
           "file.write",
         ],
         "defaultEnabled": True,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "notion-connector" / "pith-plugin.json").write_text(
+    json.dumps(
+      {
+        "name": "notion-connector",
+        "version": "0.1.0",
+        "displayName": "Notion Connector",
+        "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
+        "author": {
+          "name": "Pith",
+        },
+        "capabilities": [],
+        "permissions": [
+          "network.outbound",
+          "mcp.connect",
+        ],
+        "mcpServers": [
+          {
+            "id": "notion",
+            "transport": "stdio",
+          },
+        ],
+        "appConnectors": [
+          {
+            "id": "notion",
+            "displayName": "Notion",
+            "service": "notion",
+            "homepage": "https://www.notion.so",
+          },
+        ],
+        "authPolicy": {
+          "type": "oauth2",
+          "required": True,
+          "scopes": [
+            "read_content",
+            "insert_content",
+          ],
+          "credentialStore": "keychain",
+        },
+        "defaultEnabled": False,
       },
       indent=2,
     ),
@@ -344,6 +389,7 @@ def main() -> int:
     assert "workspace-notes" in plugin_ids
     assert "shell-recorder" in plugin_ids
     assert "review-assistant" in plugin_ids
+    assert "notion-connector" in plugin_ids
 
     workspace_notes_enable, _ = send_request(
       process,
@@ -407,10 +453,27 @@ def main() -> int:
       == "Stores a workspace memory note as `Workspace Capture` after execution."
     )
     assert workspace_capture_command["executionKind"] == "builtin.workspaceReadmeNote"
+    connector_registry, _ = send_request(
+      process,
+      {
+        "id": 41,
+        "method": "plugin/connectorRegistry",
+      },
+    )
+    connectors = connector_registry["result"]["connectors"]
+    notion_connector = next(
+      connector
+      for connector in connectors
+      if connector["connectorId"] == "notion-connector::notion"
+    )
+    assert notion_connector["status"] == "disabled"
+    assert notion_connector["authType"] == "oauth2"
+    assert notion_connector["credentialStore"] == "keychain"
+    assert notion_connector["authScopes"] == ["read_content", "insert_content"]
     hook_registry, _ = send_request(
       process,
       {
-        "id": 40,
+        "id": 42,
         "method": "plugin/hookRegistry",
       },
     )

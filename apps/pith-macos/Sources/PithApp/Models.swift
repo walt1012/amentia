@@ -93,6 +93,23 @@ struct PluginCapabilitySummary: Identifiable, Hashable {
   let metadata: [String: String]
 }
 
+struct PluginConnectorSummary: Identifiable, Hashable {
+  let id: String
+  let displayName: String
+  let service: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let enabled: Bool
+  let status: String
+  let permissions: [String]
+  let manifestPath: String
+  let homepage: String?
+  let authType: String?
+  let authRequired: Bool
+  let authScopes: [String]
+  let credentialStore: String?
+}
+
 struct PluginCommandSummary: Identifiable, Hashable {
   let id: String
   let title: String

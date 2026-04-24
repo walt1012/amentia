@@ -136,6 +136,10 @@ struct PluginCommandRegistryResult: Codable {
   let commands: [RuntimePluginCommandPayload]
 }
 
+struct PluginConnectorRegistryResult: Codable {
+  let connectors: [RuntimePluginConnectorPayload]
+}
+
 struct PluginHookRegistryResult: Codable {
   let hooks: [RuntimePluginHookPayload]
 }
@@ -167,6 +171,23 @@ struct RuntimePluginCommandPayload: Codable {
   let sourcePath: String
   let executionKind: String?
   let memorySummary: String?
+}
+
+struct RuntimePluginConnectorPayload: Codable {
+  let connectorId: String
+  let displayName: String
+  let service: String
+  let pluginId: String
+  let pluginDisplayName: String
+  let enabled: Bool
+  let status: String
+  let permissions: [String]
+  let manifestPath: String
+  let homepage: String?
+  let authType: String?
+  let authRequired: Bool
+  let authScopes: [String]
+  let credentialStore: String?
 }
 
 struct RuntimePluginHookPayload: Codable {
