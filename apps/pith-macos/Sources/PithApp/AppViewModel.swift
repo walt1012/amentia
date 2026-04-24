@@ -1565,7 +1565,8 @@ final class AppViewModel: ObservableObject {
           pluginID: hook.pluginID,
           pluginDisplayName: hook.pluginDisplayName,
           permissions: hook.permissions,
-          sourcePath: hook.sourcePath
+          sourcePath: hook.sourcePath,
+          memorySummary: hook.memorySummary
         )
       }
     } else if runtimePlugins != nil {

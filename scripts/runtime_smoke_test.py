@@ -145,6 +145,11 @@ def main() -> int:
         "description": "Capture a compact shell completion note in the thread timeline.",
         "event": "shell.completed",
         "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
+        "memory": {
+          "noteTitle": "Shell Completion",
+          "noteSource": "plugin.shell-recorder",
+          "noteTags": ["shell", "hook", "plugin"],
+        },
       },
       indent=2,
     ),
@@ -668,6 +673,22 @@ def main() -> int:
       item["title"] == "Record Shell Completion"
       and item["attributes"]["hookEvent"] == "shell.completed"
       for item in shell_approval["result"]["items"]
+    )
+    assert any(
+      item["title"] == "Hook Memory Note Saved"
+      and item["attributes"]["memoryNoteTitle"] == "Shell Completion"
+      for item in shell_approval["result"]["items"]
+    )
+    memory_list_after_shell, _ = send_request(
+      process,
+      {
+        "id": 47,
+        "method": "memory/list",
+      },
+    )
+    assert any(
+      note["title"] == "Shell Completion" and note["source"] == "plugin.shell-recorder"
+      for note in memory_list_after_shell["result"]["notes"]
     )
 
     plugin_install, _ = send_request(

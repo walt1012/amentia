@@ -283,6 +283,7 @@ fn plugin_hook_registry_round_trips() {
       plugin_display_name: "Shell Recorder".to_string(),
       permissions: vec!["shell.exec".to_string()],
       source_path: "plugins/official/shell-recorder/hooks/shell.recorder.json".to_string(),
+      memory_summary: Some("Stores shell completion memory after execution.".to_string()),
     }],
   };
 
@@ -293,4 +294,8 @@ fn plugin_hook_registry_round_trips() {
   assert_eq!(decoded.hooks.len(), 1);
   assert_eq!(decoded.hooks[0].plugin_id, "shell-recorder");
   assert_eq!(decoded.hooks[0].event, "shell.completed");
+  assert_eq!(
+    decoded.hooks[0].memory_summary.as_deref(),
+    Some("Stores shell completion memory after execution.")
+  );
 }

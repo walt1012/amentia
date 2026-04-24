@@ -125,6 +125,7 @@ final class RuntimeBridge {
     let pluginDisplayName: String
     let permissions: [String]
     let sourcePath: String
+    let memorySummary: String?
   }
 
   struct RuntimeTurnResult {
@@ -561,7 +562,8 @@ final class RuntimeBridge {
         pluginID: hook.pluginId,
         pluginDisplayName: hook.pluginDisplayName,
         permissions: hook.permissions,
-        sourcePath: hook.sourcePath
+        sourcePath: hook.sourcePath,
+        memorySummary: hook.memorySummary
       )
     }
   }

@@ -695,6 +695,13 @@ private struct PluginHookRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
 
+      if let memorySummary = hook.memorySummary {
+        Text(memorySummary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if !hook.permissions.isEmpty {
         Text("Permissions: \(hook.permissions.joined(separator: ", "))")
           .font(.caption2)

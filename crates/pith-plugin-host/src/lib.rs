@@ -85,12 +85,12 @@ struct PluginCommandManifest {
   pub description: String,
   pub prompt: String,
   #[serde(default)]
-  pub memory: Option<PluginCommandMemoryManifest>,
+  pub memory: Option<PluginMemoryManifest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct PluginCommandMemoryManifest {
+struct PluginMemoryManifest {
   pub note_title: String,
   #[serde(default)]
   pub note_source: Option<String>,
@@ -105,6 +105,8 @@ struct PluginHookManifest {
   pub description: String,
   pub event: String,
   pub message_template: String,
+  #[serde(default)]
+  pub memory: Option<PluginMemoryManifest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -135,6 +137,9 @@ pub struct PluginHookEntry {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub source_path: String,
+  pub memory_note_title: Option<String>,
+  pub memory_note_source: Option<String>,
+  pub memory_note_tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -592,6 +597,19 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
       let Ok(hook) = read_hook_manifest(&hook_path) else {
         continue;
       };
+      let memory_note_title = hook
+        .memory
+        .as_ref()
+        .map(|memory| memory.note_title.clone());
+      let memory_note_source = hook
+        .memory
+        .as_ref()
+        .and_then(|memory| memory.note_source.clone());
+      let memory_note_tags = hook
+        .memory
+        .as_ref()
+        .map(|memory| memory.note_tags.clone())
+        .unwrap_or_default();
 
       hooks.push(PluginHookEntry {
         hook_id: format!("{}::{}", plugin.id, identifier),
@@ -603,6 +621,9 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
         plugin_display_name: plugin.display_name.clone(),
         permissions: plugin.permissions.clone(),
         source_path: hook_path.display().to_string(),
+        memory_note_title,
+        memory_note_source,
+        memory_note_tags,
       });
     }
   }
@@ -955,7 +976,12 @@ mod tests {
   "title": "Record Shell Completion",
   "description": "Capture a compact shell completion note in the thread timeline.",
   "event": "shell.completed",
-  "messageTemplate": "Hook observed {{command}} in {{workspaceName}}."
+  "messageTemplate": "Hook observed {{command}} in {{workspaceName}}.",
+  "memory": {
+    "noteTitle": "Shell Completion",
+    "noteSource": "plugin.shell-recorder",
+    "noteTags": ["shell", "hook"]
+  }
 }"#,
     )
     .expect("write hook definition");
@@ -968,6 +994,18 @@ mod tests {
     assert_eq!(hooks.len(), 1);
     assert_eq!(hooks[0].plugin_id, "shell-recorder");
     assert_eq!(hooks[0].event, "shell.completed");
+    assert_eq!(
+      hooks[0].memory_note_title.as_deref(),
+      Some("Shell Completion")
+    );
+    assert_eq!(
+      hooks[0].memory_note_source.as_deref(),
+      Some("plugin.shell-recorder")
+    );
+    assert_eq!(
+      hooks[0].memory_note_tags,
+      vec!["shell".to_string(), "hook".to_string()]
+    );
     assert!(hooks[0].source_path.ends_with("shell.recorder.json"));
   }
 

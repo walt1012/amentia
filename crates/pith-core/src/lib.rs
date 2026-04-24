@@ -56,6 +56,16 @@ struct PendingApproval {
 }
 
 #[derive(Debug, Clone)]
+struct PluginHookMemoryCapture {
+  hook: HostPluginHookEntry,
+  content: String,
+  command: String,
+  exit_code: i32,
+  stdout_preview: String,
+  stderr_preview: String,
+}
+
+#[derive(Debug, Clone)]
 struct WriteIntent {
   relative_path: String,
   content: String,
@@ -558,6 +568,10 @@ fn build_protocol_command_registry(plugins: &[PluginCatalogEntry]) -> PluginComm
 }
 
 fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSummary {
+  let memory_summary = hook
+    .memory_note_title
+    .as_ref()
+    .map(|title| format!("Stores a workspace memory note as `{title}` when the hook runs."));
   PluginHookSummary {
     hook_id: hook.hook_id,
     title: hook.title,
@@ -567,6 +581,7 @@ fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSummary {
     plugin_display_name: hook.plugin_display_name,
     permissions: hook.permissions,
     source_path: hook.source_path,
+    memory_summary,
   }
 }
 
@@ -606,39 +621,52 @@ fn build_shell_completed_hook_items(
   workspace: &WorkspaceSummary,
   command: &str,
   result: &ShellCommandResult,
-) -> Vec<TimelineItem> {
+) -> (Vec<TimelineItem>, Vec<PluginHookMemoryCapture>) {
   let stdout_preview = shell_output_preview(&result.stdout);
   let stderr_preview = shell_output_preview(&result.stderr);
+  let mut items = vec![];
+  let mut memory_captures = vec![];
 
-  build_hook_registry(plugins)
+  for hook in build_hook_registry(plugins)
     .into_iter()
     .filter(|hook| hook.event == "shell.completed")
-    .map(|hook| {
-      let content = render_hook_message(
-        &hook.message_template,
-        &[
-          ("workspaceName", workspace.display_name.clone()),
-          ("command", command.to_string()),
-          ("exitCode", result.exit_code.to_string()),
-          ("stdoutPreview", stdout_preview.clone()),
-          ("stderrPreview", stderr_preview.clone()),
-        ],
-      );
-      TimelineItem {
-        kind: "pluginHook".to_string(),
-        title: hook.title,
-        content,
-        attributes: Some(HashMap::from([
-          ("hookId".to_string(), hook.hook_id),
-          ("hookEvent".to_string(), hook.event),
-          ("pluginId".to_string(), hook.plugin_id),
-          ("command".to_string(), command.to_string()),
-          ("exitCode".to_string(), result.exit_code.to_string()),
-          ("sourcePath".to_string(), hook.source_path),
-        ])),
-      }
-    })
-    .collect()
+  {
+    let content = render_hook_message(
+      &hook.message_template,
+      &[
+        ("workspaceName", workspace.display_name.clone()),
+        ("command", command.to_string()),
+        ("exitCode", result.exit_code.to_string()),
+        ("stdoutPreview", stdout_preview.clone()),
+        ("stderrPreview", stderr_preview.clone()),
+      ],
+    );
+    if hook.memory_note_title.is_some() {
+      memory_captures.push(PluginHookMemoryCapture {
+        hook: hook.clone(),
+        content: content.clone(),
+        command: command.to_string(),
+        exit_code: result.exit_code,
+        stdout_preview: stdout_preview.clone(),
+        stderr_preview: stderr_preview.clone(),
+      });
+    }
+    items.push(TimelineItem {
+      kind: "pluginHook".to_string(),
+      title: hook.title,
+      content,
+      attributes: Some(HashMap::from([
+        ("hookId".to_string(), hook.hook_id),
+        ("hookEvent".to_string(), hook.event),
+        ("pluginId".to_string(), hook.plugin_id),
+        ("command".to_string(), command.to_string()),
+        ("exitCode".to_string(), result.exit_code.to_string()),
+        ("sourcePath".to_string(), hook.source_path),
+      ])),
+    });
+  }
+
+  (items, memory_captures)
 }
 
 fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -2025,6 +2053,89 @@ fn build_plugin_command_memory_warning_item(
   }
 }
 
+fn capture_plugin_hook_memory(
+  context: &mut RuntimeContext,
+  workspace: &WorkspaceSummary,
+  capture: &PluginHookMemoryCapture,
+) -> Result<TimelineItem> {
+  let Some(note_title) = capture.hook.memory_note_title.as_ref() else {
+    return Ok(TimelineItem {
+      kind: "system".to_string(),
+      title: "Plugin Hook Memory Skipped".to_string(),
+      content: format!("{} did not declare a memory note title.", capture.hook.title),
+      attributes: Some(HashMap::from([(
+        "hookId".to_string(),
+        capture.hook.hook_id.clone(),
+      )])),
+    });
+  };
+  let note_source = capture
+    .hook
+    .memory_note_source
+    .clone()
+    .unwrap_or_else(|| format!("plugin.{}", capture.hook.plugin_id));
+  let note = context.create_memory_note(
+    note_title.clone(),
+    build_plugin_hook_memory_body(workspace, capture),
+    workspace.display_name.clone(),
+    note_source,
+    plugin_hook_memory_tags(&capture.hook),
+  )?;
+
+  Ok(TimelineItem {
+    kind: "system".to_string(),
+    title: "Hook Memory Note Saved".to_string(),
+    content: format!(
+      "Saved workspace memory note \"{}\" from {}.",
+      note.title, capture.hook.title
+    ),
+    attributes: Some(HashMap::from([
+      ("memoryNoteId".to_string(), note.id),
+      ("memoryNoteTitle".to_string(), note.title),
+      ("memoryScope".to_string(), note.scope),
+      ("pluginId".to_string(), capture.hook.plugin_id.clone()),
+      ("hookId".to_string(), capture.hook.hook_id.clone()),
+    ])),
+  })
+}
+
+fn build_plugin_hook_memory_body(
+  workspace: &WorkspaceSummary,
+  capture: &PluginHookMemoryCapture,
+) -> String {
+  format!(
+    "Plugin: {} ({})\nHook: {} ({})\nEvent: {}\nWorkspace: {} at {}.\nCommand: {}\nExit code: {}\nstdout: {}\nstderr: {}\n\nHook result:\n{}",
+    capture.hook.plugin_display_name,
+    capture.hook.plugin_id,
+    capture.hook.title,
+    capture.hook.hook_id,
+    capture.hook.event,
+    workspace.display_name,
+    workspace.root_path,
+    capture.command,
+    capture.exit_code,
+    capture.stdout_preview,
+    capture.stderr_preview,
+    capture.content
+  )
+}
+
+fn plugin_hook_memory_tags(hook: &HostPluginHookEntry) -> Vec<String> {
+  let mut tags = vec![
+    "plugin".to_string(),
+    "hook".to_string(),
+    hook.plugin_id.clone(),
+    hook.hook_id.clone(),
+    hook.event.clone(),
+  ];
+  for tag in &hook.memory_note_tags {
+    if !tags.iter().any(|existing| existing == tag) {
+      tags.push(tag.clone());
+    }
+  }
+  tags
+}
+
 fn handle_approval_respond(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
@@ -2088,6 +2199,7 @@ fn handle_approval_respond(
 
   let mut items = vec![];
   let mut memory_event = None;
+  let mut hook_memory_captures = vec![];
   if decision == "approved" {
     items.push(TimelineItem {
       kind: "approvalResolved".to_string(),
@@ -2206,12 +2318,14 @@ fn handle_approval_respond(
               content: summary,
               attributes: Some(summary_attributes),
             });
-            items.extend(build_shell_completed_hook_items(
+            let (hook_items, memory_captures) = build_shell_completed_hook_items(
               &context.plugins,
               &workspace,
               &command,
               &result,
-            ));
+            );
+            hook_memory_captures.extend(memory_captures);
+            items.extend(hook_items);
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -2265,6 +2379,39 @@ fn handle_approval_respond(
   if let Some(memory_event) = memory_event {
     if let Err(error) = context.remember(memory_event) {
       return JsonRpcResponse::error(request.id, -32012, error.to_string());
+    }
+  }
+
+  if !hook_memory_captures.is_empty() {
+    let mut hook_memory_items = vec![];
+    for capture in &hook_memory_captures {
+      match capture_plugin_hook_memory(context, &workspace, capture) {
+        Ok(item) => hook_memory_items.push(item),
+        Err(error) => hook_memory_items.push(TimelineItem {
+          kind: "warning".to_string(),
+          title: "Hook Memory Capture Failed".to_string(),
+          content: format!(
+            "{} could not save its workspace memory note. {}",
+            capture.hook.title, error
+          ),
+          attributes: Some(HashMap::from([
+            ("pluginId".to_string(), capture.hook.plugin_id.clone()),
+            ("hookId".to_string(), capture.hook.hook_id.clone()),
+          ])),
+        }),
+      }
+    }
+    if let Some(thread) = context
+      .threads
+      .iter_mut()
+      .find(|thread| thread.summary.id == approval.thread_id)
+    {
+      thread.items.extend(hook_memory_items.clone());
+    }
+    items.extend(hook_memory_items);
+
+    if let Err(error) = context.persist_runtime_state() {
+      return JsonRpcResponse::error(request.id, -32010, error.to_string());
     }
   }
 
@@ -3898,6 +4045,14 @@ mod tests {
       item["title"] == "Record Shell Completion"
         && item["attributes"]["hookEvent"] == "shell.completed"
     }));
+    assert!(items.iter().any(|item| {
+      item["title"] == "Hook Memory Note Saved"
+        && item["attributes"]["memoryNoteTitle"] == "Shell Completion"
+    }));
+    assert!(context
+      .memory_notes
+      .iter()
+      .any(|note| note.title == "Shell Completion" && note.source == "plugin.shell-recorder"));
   }
 
   #[test]
