@@ -5,6 +5,16 @@ private struct ModelDownloadPaused: Error {
   let resumeData: Data
 }
 
+private struct ModelDownloadProgress: Hashable {
+  let modelID: String
+  let displayName: String
+  var bytesReceived: Int64
+  var totalBytes: Int64
+  let startedAt: Date
+  var updatedAt: Date
+  let isResuming: Bool
+}
+
 @MainActor
 final class AppViewModel: ObservableObject {
   private struct LocalPluginAuthor: Decodable {
@@ -97,6 +107,7 @@ final class AppViewModel: ObservableObject {
   @Published var localModels: [LocalModelSummary]
   @Published var modelDownloadID: String?
   @Published var pausedModelDownloadID: String?
+  @Published private var modelDownloadProgress: ModelDownloadProgress?
   @Published var memoryStatus: MemoryStatusSummary?
   @Published var memoryNotes: [MemoryNoteSummary]
   @Published var memoryNoteTitle: String
@@ -155,6 +166,7 @@ final class AppViewModel: ObservableObject {
     )
     self.modelDownloadID = nil
     self.pausedModelDownloadID = nil
+    self.modelDownloadProgress = nil
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -1013,6 +1025,46 @@ final class AppViewModel: ObservableObject {
     return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)\(downloadSummary)\(pausedSummary)"
   }
 
+  func shouldShowModelDownloadProgress() -> Bool {
+    guard let modelDownloadProgress else {
+      return false
+    }
+
+    return modelDownloadID == modelDownloadProgress.modelID
+      || pausedModelDownloadID == modelDownloadProgress.modelID
+  }
+
+  func modelDownloadProgressValue() -> Double? {
+    guard let modelDownloadProgress,
+          modelDownloadProgress.totalBytes > 0
+    else {
+      return nil
+    }
+
+    let value = Double(modelDownloadProgress.bytesReceived)
+      / Double(modelDownloadProgress.totalBytes)
+    return min(max(value, 0), 1)
+  }
+
+  func modelDownloadProgressSummary() -> String {
+    guard let modelDownloadProgress else {
+      return ""
+    }
+
+    let received = formattedByteCount(modelDownloadProgress.bytesReceived)
+    let total = modelDownloadProgress.totalBytes > 0
+      ? formattedByteCount(modelDownloadProgress.totalBytes)
+      : "unknown size"
+    let isPaused = pausedModelDownloadID == modelDownloadProgress.modelID
+    let status = isPaused ? "Paused" : (modelDownloadProgress.isResuming ? "Continuing" : "Downloading")
+    let trailingStatus = isPaused ? "Ready to continue" : modelDownloadSpeedSummary(modelDownloadProgress)
+    let percent = modelDownloadProgressValue()
+      .map { " | \(Int($0 * 100))%" }
+      ?? ""
+
+    return "\(status) \(modelDownloadProgress.displayName): \(received) of \(total)\(percent) | \(trailingStatus)"
+  }
+
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {
     let status: String
     if modelDownloadID == model.id {
@@ -1127,6 +1179,7 @@ final class AppViewModel: ObservableObject {
       ?? "local model"
     clearPausedModelDownload()
     removeIncompleteModelFile(modelID: pausedModelDownloadID)
+    modelDownloadProgress = nil
     runtimeDetail = "Cancelled \(displayName) download and cleared partial state."
     refreshLocalModelCatalog()
   }
@@ -1156,9 +1209,21 @@ final class AppViewModel: ObservableObject {
     }
 
     let resumeData = isResuming ? modelDownloadResumeData : nil
+    let resumedBytes = isResuming && modelDownloadProgress?.modelID == model.id
+      ? modelDownloadProgress?.bytesReceived ?? 0
+      : 0
     modelDownloadID = model.id
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
+    modelDownloadProgress = ModelDownloadProgress(
+      modelID: model.id,
+      displayName: model.displayName,
+      bytesReceived: resumedBytes,
+      totalBytes: model.sizeBytes,
+      startedAt: Date(),
+      updatedAt: Date(),
+      isResuming: isResuming
+    )
     modelDownloadTask = Task {
       defer {
         modelDownloadID = nil
@@ -1172,6 +1237,8 @@ final class AppViewModel: ObservableObject {
         try await downloadModelFile(
           from: downloadURL,
           resumeData: resumeData,
+          modelID: model.id,
+          expectedBytes: model.sizeBytes,
           to: URL(fileURLWithPath: model.installPath)
         )
 
@@ -1189,9 +1256,11 @@ final class AppViewModel: ObservableObject {
 
         if activatedDefaultModel {
           runtimeDetail = "Downloaded and selected \(model.displayName)."
+          modelDownloadProgress = nil
           refreshLocalModelCatalog()
         } else {
           runtimeDetail = "Downloaded \(model.displayName) to \(model.installPath)."
+          modelDownloadProgress = nil
           refreshLocalModelCatalog()
         }
 
@@ -1230,9 +1299,11 @@ final class AppViewModel: ObservableObject {
         } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
           clearPausedModelDownload()
           removeIncompleteModelFile(modelID: model.id)
+          modelDownloadProgress = nil
           runtimeDetail = "Cancelled \(model.displayName) download and cleared partial state."
         } else {
           clearPausedModelDownload()
+          modelDownloadProgress = nil
           runtimeDetail = "Model download failed: \(error.localizedDescription)"
         }
       }
@@ -1918,10 +1989,42 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func downloadModelFile(from sourceURL: URL, resumeData: Data?, to targetURL: URL) async throws {
-    let transfer = ModelDownloadTransfer(targetURL: targetURL)
+  private func downloadModelFile(
+    from sourceURL: URL,
+    resumeData: Data?,
+    modelID: String,
+    expectedBytes: Int64,
+    to targetURL: URL
+  ) async throws {
+    let transfer = ModelDownloadTransfer(targetURL: targetURL) { [weak self] bytesReceived, totalBytes in
+      Task { @MainActor [weak self] in
+        self?.updateModelDownloadProgress(
+          modelID: modelID,
+          bytesReceived: bytesReceived,
+          totalBytes: totalBytes > 0 ? totalBytes : expectedBytes
+        )
+      }
+    }
     modelDownloadTransfer = transfer
     try await transfer.start(from: sourceURL, resumeData: resumeData)
+  }
+
+  private func updateModelDownloadProgress(
+    modelID: String,
+    bytesReceived: Int64,
+    totalBytes: Int64
+  ) {
+    guard modelDownloadID == modelID,
+          var progress = modelDownloadProgress
+    else {
+      return
+    }
+
+    progress.bytesReceived = max(bytesReceived, progress.bytesReceived)
+    progress.totalBytes = totalBytes > 0 ? totalBytes : progress.totalBytes
+    progress.updatedAt = Date()
+    modelDownloadProgress = progress
+    runtimeDetail = modelDownloadProgressSummary()
   }
 
   private func clearPausedModelDownload() {
@@ -2287,6 +2390,12 @@ final class AppViewModel: ObservableObject {
     return formatter.string(fromByteCount: byteCount)
   }
 
+  private func modelDownloadSpeedSummary(_ progress: ModelDownloadProgress) -> String {
+    let elapsed = max(progress.updatedAt.timeIntervalSince(progress.startedAt), 1)
+    let bytesPerSecond = Int64(Double(progress.bytesReceived) / elapsed)
+    return "\(formattedByteCount(bytesPerSecond))/s"
+  }
+
   private static func localModelSummaries(
     storageRootPath: String,
     activeModelPath: String?
@@ -2416,13 +2525,15 @@ final class AppViewModel: ObservableObject {
 
 private final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
   private let targetURL: URL
+  private let onProgress: (Int64, Int64) -> Void
   private var continuation: CheckedContinuation<Void, Error>?
   private var session: URLSession?
   private var task: URLSessionDownloadTask?
   private var pauseRequested = false
 
-  init(targetURL: URL) {
+  init(targetURL: URL, onProgress: @escaping (Int64, Int64) -> Void) {
     self.targetURL = targetURL
+    self.onProgress = onProgress
   }
 
   func start(from sourceURL: URL, resumeData: Data?) async throws {
@@ -2460,6 +2571,16 @@ private final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate 
   func cancel() {
     pauseRequested = false
     task?.cancel()
+  }
+
+  func urlSession(
+    _ session: URLSession,
+    downloadTask: URLSessionDownloadTask,
+    didWriteData _: Int64,
+    totalBytesWritten: Int64,
+    totalBytesExpectedToWrite: Int64
+  ) {
+    onProgress(totalBytesWritten, totalBytesExpectedToWrite)
   }
 
   func urlSession(

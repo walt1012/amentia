@@ -203,6 +203,21 @@ struct ContentView: View {
               .font(.caption2)
               .foregroundColor(.secondary)
               .textSelection(.enabled)
+            if viewModel.shouldShowModelDownloadProgress() {
+              VStack(alignment: .leading, spacing: 4) {
+                if let progressValue = viewModel.modelDownloadProgressValue() {
+                  ProgressView(value: progressValue)
+                    .progressViewStyle(.linear)
+                } else {
+                  ProgressView()
+                    .progressViewStyle(.linear)
+                }
+                Text(viewModel.modelDownloadProgressSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+              }
+            }
             HStack(spacing: 8) {
               Button(viewModel.defaultModelDownloadButtonTitle()) {
                 viewModel.downloadLocalModel()
