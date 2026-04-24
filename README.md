@@ -63,7 +63,9 @@ restores the last workspace and key inspector disclosure state across launches, 
 clear relaunch path when the local runtime exits unexpectedly. A lightweight workspace search now
 lets users find matching lines from the inspector without opening a separate file browser. Native
 menu shortcuts cover runtime launch, workspace opening, thread creation, plugin install, message
-send, and turn cancellation without adding more visible controls.
+send, and turn cancellation without adding more visible controls. The composer now explains
+blocking states inline so users can recover the local runtime, workspace, model, or thread setup
+without guessing why send is disabled.
 
 Delivered in Milestone 1:
 

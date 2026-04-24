@@ -896,7 +896,7 @@ Deliverables:
 - runtime crash recovery with pending request cleanup and relaunch affordance
 - lightweight workspace search from the inspector
 - keyboard-first launch, workspace, thread, composer, and cancellation workflows
-- better loading and error states
+- better loading, blocking, and error states for daily-driver flows
 
 Exit criteria:
 
@@ -1130,14 +1130,16 @@ Mitigation:
 
 ## 25. Immediate Next Actions
 
-The highest-leverage next step is to begin Milestone 0 now.
+The project is currently in Milestone 3. The highest-leverage next step is to keep tightening the
+daily-driver loop without expanding the visible surface area.
 
-Recommended first implementation sequence:
+Recommended current implementation sequence:
 
-1. create the monorepo directory structure
-2. scaffold `apps/pith-macos`
-3. scaffold the Rust workspace and runtime binary
-4. define the initial protocol types
-5. make the UI and runtime exchange one real `initialize` message over `stdio`
+1. finish inline loading, blocking, and recovery states for the composer, model manager, and runtime
+2. refine the diff viewer so review stays readable without a separate admin surface
+3. reduce inspector noise through progressive disclosure and stronger default collapsed states
+4. keep model delivery focused on one-click local downloads with pause, resume, cancel, and activation
+5. defer broad plugin expansion until the local daily-driver loop feels stable and compact
 
-Once that foundation exists, the rest of the roadmap becomes much easier to implement incrementally.
+Each step should stay small, reviewable, and remotely verified so the app continues moving toward a
+premium, local-first, small-but-strong desktop experience.

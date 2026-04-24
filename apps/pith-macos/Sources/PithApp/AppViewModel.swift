@@ -1847,6 +1847,45 @@ final class AppViewModel: ObservableObject {
     return "Ask Pith to inspect files, review diffs, run shell commands, or write files"
   }
 
+  func composerStatusSummary() -> String {
+    switch runtimeState {
+    case .disconnected:
+      return "Launch the local runtime before starting agent work."
+    case .launching:
+      return "Launching the local runtime..."
+    case .failed:
+      return "Runtime is unavailable. Relaunch it to recover the local agent loop."
+    case .ready:
+      if workspace == nil {
+        return "Open a workspace to bind threads and tools to a local project."
+      }
+
+      if !isLocalModelReady() {
+        if modelDownloadID != nil {
+          return "Model download is running. Agent work unlocks after the local model is ready."
+        }
+        if pausedModelDownloadID != nil {
+          return "Model download is paused. Continue it from Local Model."
+        }
+        return "Install the local LFM2.5-350M model to enable agent work."
+      }
+
+      if selectedThreadID == nil {
+        return "Create or select a thread to start local agent work."
+      }
+
+      if activeTurnID != nil {
+        return "Pith is streaming locally. Cancel the turn if it is no longer useful."
+      }
+
+      return "Ready for local agent work. Press Command-Return to send."
+    }
+  }
+
+  func showsComposerActivity() -> Bool {
+    runtimeState == .launching || activeTurnID != nil
+  }
+
   func isTurnStreaming() -> Bool {
     activeTurnID != nil
   }

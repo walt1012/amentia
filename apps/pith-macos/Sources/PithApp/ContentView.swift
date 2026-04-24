@@ -130,26 +130,38 @@ struct ContentView: View {
 
       Divider()
 
-      HStack(alignment: .bottom, spacing: 12) {
-        TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
-          .textFieldStyle(.roundedBorder)
-          .onSubmit {
-            if viewModel.canSendDraftMessage() {
-              viewModel.sendDraftMessage()
+      VStack(alignment: .leading, spacing: 8) {
+        HStack(alignment: .bottom, spacing: 12) {
+          TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
+            .textFieldStyle(.roundedBorder)
+            .onSubmit {
+              if viewModel.canSendDraftMessage() {
+                viewModel.sendDraftMessage()
+              }
             }
+
+          Button("Send") {
+            viewModel.sendDraftMessage()
           }
+          .buttonStyle(.borderedProminent)
+          .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Send") {
-          viewModel.sendDraftMessage()
+          Button("Cancel") {
+            viewModel.cancelActiveTurn()
+          }
+          .buttonStyle(.bordered)
+          .disabled(!viewModel.canCancelActiveTurn())
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel") {
-          viewModel.cancelActiveTurn()
+        HStack(spacing: 6) {
+          if viewModel.showsComposerActivity() {
+            ProgressView()
+              .controlSize(.small)
+          }
+          Text(viewModel.composerStatusSummary())
+            .font(.caption2)
+            .foregroundColor(viewModel.runtimeState == .failed ? .red : .secondary)
         }
-        .buttonStyle(.bordered)
-        .disabled(!viewModel.canCancelActiveTurn())
       }
       .padding(20)
     }
