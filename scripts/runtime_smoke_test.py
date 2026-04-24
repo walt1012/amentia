@@ -61,7 +61,7 @@ def main() -> int:
       {
         "name": "workspace-notes",
         "version": "0.1.0",
-        "display_name": "Workspace Notes",
+        "displayName": "Workspace Notes",
         "description": "Captures reusable workspace notes and preferences for local threads.",
         "author": {
           "name": "Pith",
@@ -74,7 +74,7 @@ def main() -> int:
           "file.read",
           "file.write",
         ],
-        "default_enabled": True,
+        "defaultEnabled": True,
       },
       indent=2,
     ),
@@ -85,7 +85,7 @@ def main() -> int:
       {
         "name": "shell-recorder",
         "version": "0.1.0",
-        "display_name": "Shell Recorder",
+        "displayName": "Shell Recorder",
         "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
         "author": {
           "name": "Pith",
@@ -97,7 +97,7 @@ def main() -> int:
         "permissions": [
           "shell.exec",
         ],
-        "default_enabled": False,
+        "defaultEnabled": False,
       },
       indent=2,
     ),

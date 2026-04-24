@@ -1,7 +1,7 @@
 {
   "name": "review-assistant",
   "version": "0.1.0",
-  "display_name": "Review Assistant",
+  "displayName": "Review Assistant",
   "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
   "author": {
     "name": "Pith"
@@ -14,5 +14,5 @@
     "file.read",
     "model.invoke"
   ],
-  "default_enabled": true
+  "defaultEnabled": true
 }

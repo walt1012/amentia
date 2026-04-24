@@ -1,7 +1,7 @@
 {
   "name": "shell-recorder",
   "version": "0.1.0",
-  "display_name": "Shell Recorder",
+  "displayName": "Shell Recorder",
   "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
   "author": {
     "name": "Pith"
@@ -13,5 +13,5 @@
   "permissions": [
     "shell.exec"
   ],
-  "default_enabled": false
+  "defaultEnabled": false
 }

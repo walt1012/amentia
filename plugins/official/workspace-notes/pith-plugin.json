@@ -1,7 +1,7 @@
 {
   "name": "workspace-notes",
   "version": "0.1.0",
-  "display_name": "Workspace Notes",
+  "displayName": "Workspace Notes",
   "description": "Captures reusable workspace notes and preferences for local threads.",
   "author": {
     "name": "Pith"
@@ -14,5 +14,5 @@
     "file.read",
     "file.write"
   ],
-  "default_enabled": true
+  "defaultEnabled": true
 }
