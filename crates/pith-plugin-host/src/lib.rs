@@ -170,9 +170,7 @@ fn load_plugin_entry(manifest_path: PathBuf) -> PluginCatalogEntry {
         error.to_string(),
       ),
     },
-    Err(error) => {
-      invalid_plugin_entry(manifest_path, provenance, None, error.to_string())
-    }
+    Err(error) => invalid_plugin_entry(manifest_path, provenance, None, error.to_string()),
   }
 }
 
@@ -220,7 +218,10 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
       anyhow::bail!("plugin capability kind `{}` is not supported", kind);
     }
     if identifier.trim().is_empty() {
-      anyhow::bail!("plugin capability `{}` must include a non-empty identifier", capability);
+      anyhow::bail!(
+        "plugin capability `{}` must include a non-empty identifier",
+        capability
+      );
     }
   }
 
@@ -317,7 +318,10 @@ mod tests {
   #[test]
   fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     let manifest = manifest(
-      vec!["prompt_pack:workspace.notes", "settings:workspace.preferences"],
+      vec![
+        "prompt_pack:workspace.notes",
+        "settings:workspace.preferences",
+      ],
       vec!["file.read", "file.write"],
     );
 
@@ -332,11 +336,9 @@ mod tests {
 
     let error = validate_manifest(&manifest).expect_err("legacy capability should fail");
 
-    assert!(
-      error
-        .to_string()
-        .contains("must use the `<kind>:<identifier>` format")
-    );
+    assert!(error
+      .to_string()
+      .contains("must use the `<kind>:<identifier>` format"));
   }
 
   #[test]
@@ -400,6 +402,8 @@ mod tests {
     assert_eq!(registry.len(), 2);
     assert_eq!(registry[0].kind, "prompt_pack");
     assert_eq!(registry[1].kind, "settings");
-    assert!(registry.iter().all(|entry| entry.plugin_id == "workspace-notes"));
+    assert!(registry
+      .iter()
+      .all(|entry| entry.plugin_id == "workspace-notes"));
   }
 }

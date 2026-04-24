@@ -1,8 +1,8 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 use pith_memory::MemoryNote;
@@ -239,8 +239,14 @@ impl FileThreadStore {
           &thread.summary.status,
           thread.turn_count as i64,
           items_json,
-          thread.workspace.as_ref().map(|workspace| workspace.root_path.clone()),
-          thread.workspace.as_ref().map(|workspace| workspace.display_name.clone()),
+          thread
+            .workspace
+            .as_ref()
+            .map(|workspace| workspace.root_path.clone()),
+          thread
+            .workspace
+            .as_ref()
+            .map(|workspace| workspace.display_name.clone()),
           current_timestamp()?,
         ],
       )?;
@@ -647,7 +653,12 @@ fn ensure_schema_migration_table(connection: &Connection) -> Result<()> {
   Ok(())
 }
 
-fn add_column_if_missing(connection: &Connection, table: &str, column: &str, sql: &str) -> Result<()> {
+fn add_column_if_missing(
+  connection: &Connection,
+  table: &str,
+  column: &str,
+  sql: &str,
+) -> Result<()> {
   if table_has_column(connection, table, column)? {
     return Ok(());
   }
@@ -796,7 +807,11 @@ mod tests {
     assert_eq!(threads[0].turn_count, 3);
     assert_eq!(threads[0].summary.id, "thread-1");
     assert_eq!(
-      threads[0].workspace.as_ref().expect("thread workspace").display_name,
+      threads[0]
+        .workspace
+        .as_ref()
+        .expect("thread workspace")
+        .display_name,
       "pith"
     );
   }

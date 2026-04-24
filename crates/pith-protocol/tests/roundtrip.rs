@@ -127,7 +127,10 @@ fn plugin_set_enabled_params_use_camel_case_fields() {
 
   let value = serde_json::to_value(params).expect("serialize plugin set enabled params");
   assert!(value.get("pluginId").is_some());
-  assert_eq!(value.get("enabled").and_then(|item| item.as_bool()), Some(true));
+  assert_eq!(
+    value.get("enabled").and_then(|item| item.as_bool()),
+    Some(true)
+  );
 }
 
 #[test]

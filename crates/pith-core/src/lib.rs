@@ -9,8 +9,8 @@ use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
 use pith_plugin_host::{
-  build_capability_registry, default_plugin_root, discover_plugins, PluginCatalogEntry,
-  PluginCapabilityRegistration as HostPluginCapabilityRegistration,
+  build_capability_registry, default_plugin_root, discover_plugins,
+  PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
@@ -696,7 +696,11 @@ fn handle_plugin_set_enabled(
     }
   };
 
-  let Some(plugin_index) = context.plugins.iter().position(|plugin| plugin.id == params.plugin_id) else {
+  let Some(plugin_index) = context
+    .plugins
+    .iter()
+    .position(|plugin| plugin.id == params.plugin_id)
+  else {
     return JsonRpcResponse::error(request.id, -32050, "Plugin not found");
   };
   if context.plugins[plugin_index].status != "ready" {
@@ -963,7 +967,10 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
             "file.write",
             "prepare a file write",
             &workspace.display_name,
-            HashMap::from([("relativePath".to_string(), write_intent.relative_path.clone())]),
+            HashMap::from([(
+              "relativePath".to_string(),
+              write_intent.relative_path.clone(),
+            )]),
           ));
         } else {
           let approval_id = format!("approval-{}", context.next_approval_number);
@@ -3134,7 +3141,10 @@ mod tests {
       author_name: Some("Pith".to_string()),
       enabled: true,
       default_enabled: false,
-      capabilities: vec!["hook:shell.recorder".to_string(), "tool:shell.timeline".to_string()],
+      capabilities: vec![
+        "hook:shell.recorder".to_string(),
+        "tool:shell.timeline".to_string(),
+      ],
       permissions: vec!["shell.exec".to_string()],
       manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
       provenance: "official".to_string(),
@@ -3406,7 +3416,12 @@ mod tests {
     assert!(turn_response.error.is_none());
     let result = turn_response.result.expect("turn result");
     let items = result["items"].as_array().expect("items");
-    assert!(items[3]["content"].as_str().unwrap().contains("Workspace A"));
+    assert!(
+      items[3]["content"]
+        .as_str()
+        .unwrap()
+        .contains("Workspace A")
+    );
     assert!(items[3]["content"]
       .as_str()
       .unwrap()
@@ -3446,7 +3461,10 @@ mod tests {
 
     assert!(response.error.is_none());
     assert!(context.plugins[0].enabled);
-    assert_eq!(response.result.expect("plugin set result")["plugin"]["enabled"], true);
+    assert_eq!(
+      response.result.expect("plugin set result")["plugin"]["enabled"],
+      true
+    );
   }
 
   #[test]
