@@ -58,6 +58,7 @@ def main() -> int:
   (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "pith-plugin.json").write_text(
     json.dumps(
       {
@@ -124,6 +125,18 @@ def main() -> int:
         "title": "Summarize Shell Session",
         "description": "Ask Pith to explain recent shell work in a compact summary.",
         "prompt": "Summarize the most relevant recent shell activity for this workspace.",
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "shell-recorder" / "hooks" / "shell.recorder.json").write_text(
+    json.dumps(
+      {
+        "title": "Record Shell Completion",
+        "description": "Capture a compact shell completion note in the thread timeline.",
+        "event": "shell.completed",
+        "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
       },
       indent=2,
     ),
@@ -280,6 +293,16 @@ def main() -> int:
     command_ids = {command["commandId"] for command in command_registry["result"]["commands"]}
     assert "workspace-notes::workspace.capture-note" in command_ids
     assert "shell-recorder::shell.summarize-session" in command_ids
+    hook_registry, _ = send_request(
+      process,
+      {
+        "id": 40,
+        "method": "plugin/hookRegistry",
+      },
+    )
+    assert len(hook_registry["result"]["hooks"]) == 1
+    assert hook_registry["result"]["hooks"][0]["hookId"] == "shell-recorder::shell.recorder"
+    assert hook_registry["result"]["hooks"][0]["event"] == "shell.completed"
 
     workspace, _ = send_request(
       process,
@@ -589,11 +612,17 @@ def main() -> int:
     )
     assert shell_approval["result"]["items"][1]["title"] == "run_shell"
     assert "notes.txt" in shell_approval["result"]["items"][2]["content"]
+    assert any(item["kind"] == "pluginHook" for item in shell_approval["result"]["items"])
+    assert any(
+      item["title"] == "Record Shell Completion"
+      and item["attributes"]["hookEvent"] == "shell.completed"
+      for item in shell_approval["result"]["items"]
+    )
 
     command_turn, _ = send_request(
       process,
       {
-        "id": 40,
+        "id": 41,
         "method": "plugin/commandRun",
         "params": {
           "threadId": "thread-1",

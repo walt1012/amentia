@@ -9,9 +9,11 @@ use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
 use pith_plugin_host::{
-  build_capability_registry, build_command_registry, default_plugin_root, discover_plugins,
+  build_capability_registry, build_command_registry, build_hook_registry, default_plugin_root,
+  discover_plugins,
   PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
   PluginCommandEntry as HostPluginCommandEntry,
+  PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
@@ -19,12 +21,13 @@ use pith_protocol::{
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
   ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginListResult, PluginSetEnabledParams,
-  PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo,
-  ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult,
-  ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
+  PluginListResult, PluginSetEnabledParams, PluginSetEnabledResult,
+  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
+  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -319,6 +322,10 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       &build_protocol_command_registry(&context.plugins),
     ),
     methods::PLUGIN_COMMAND_RUN => handle_plugin_command_run(context, request),
+    methods::PLUGIN_HOOK_REGISTRY => JsonRpcResponse::success(
+      request.id,
+      &build_protocol_hook_registry(&context.plugins),
+    ),
     methods::PLUGIN_LIST => JsonRpcResponse::success(
       request.id,
       &PluginListResult {
@@ -505,6 +512,93 @@ fn build_protocol_command_registry(plugins: &[PluginCatalogEntry]) -> PluginComm
       .map(to_protocol_plugin_command)
       .collect(),
   }
+}
+
+fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSummary {
+  PluginHookSummary {
+    hook_id: hook.hook_id,
+    title: hook.title,
+    description: hook.description,
+    event: hook.event,
+    plugin_id: hook.plugin_id,
+    plugin_display_name: hook.plugin_display_name,
+    permissions: hook.permissions,
+    source_path: hook.source_path,
+  }
+}
+
+fn build_protocol_hook_registry(plugins: &[PluginCatalogEntry]) -> PluginHookRegistryResult {
+  PluginHookRegistryResult {
+    hooks: build_hook_registry(plugins)
+      .into_iter()
+      .map(to_protocol_plugin_hook)
+      .collect(),
+  }
+}
+
+fn shell_output_preview(output: &str) -> String {
+  let preview = output
+    .lines()
+    .find(|line| !line.trim().is_empty())
+    .unwrap_or(output)
+    .trim();
+
+  if preview.is_empty() {
+    "none".to_string()
+  } else {
+    preview.chars().take(120).collect()
+  }
+}
+
+fn render_hook_message(
+  template: &str,
+  replacements: &[(&str, String)],
+) -> String {
+  let mut rendered = template.to_string();
+  for (key, value) in replacements {
+    rendered = rendered.replace(&format!("{{{{{key}}}}}"), value);
+  }
+  rendered
+}
+
+fn build_shell_completed_hook_items(
+  plugins: &[PluginCatalogEntry],
+  workspace: &WorkspaceSummary,
+  command: &str,
+  result: &ShellCommandResult,
+) -> Vec<TimelineItem> {
+  let stdout_preview = shell_output_preview(&result.stdout);
+  let stderr_preview = shell_output_preview(&result.stderr);
+
+  build_hook_registry(plugins)
+    .into_iter()
+    .filter(|hook| hook.event == "shell.completed")
+    .map(|hook| {
+      let content = render_hook_message(
+        &hook.message_template,
+        &[
+          ("workspaceName", workspace.display_name.clone()),
+          ("command", command.to_string()),
+          ("exitCode", result.exit_code.to_string()),
+          ("stdoutPreview", stdout_preview.clone()),
+          ("stderrPreview", stderr_preview.clone()),
+        ],
+      );
+      TimelineItem {
+        kind: "pluginHook".to_string(),
+        title: hook.title,
+        content,
+        attributes: Some(HashMap::from([
+          ("hookId".to_string(), hook.hook_id),
+          ("hookEvent".to_string(), hook.event),
+          ("pluginId".to_string(), hook.plugin_id),
+          ("command".to_string(), command.to_string()),
+          ("exitCode".to_string(), result.exit_code.to_string()),
+          ("sourcePath".to_string(), hook.source_path),
+        ])),
+      }
+    })
+    .collect()
 }
 
 fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -1673,6 +1767,12 @@ fn handle_approval_respond(
               content: summary,
               attributes: Some(summary_attributes),
             });
+            items.extend(build_shell_completed_hook_items(
+              &context.plugins,
+              &workspace,
+              &command,
+              &result,
+            ));
           }
           Err(error) => {
             items.push(TimelineItem {
@@ -3315,6 +3415,11 @@ mod tests {
 
     assert_eq!(items[1]["title"], "run_shell");
     assert!(items[2]["content"].as_str().unwrap().contains("marker.txt"));
+    assert!(items.iter().any(|item| item["kind"] == "pluginHook"));
+    assert!(items.iter().any(|item| {
+      item["title"] == "Record Shell Completion"
+        && item["attributes"]["hookEvent"] == "shell.completed"
+    }));
   }
 
   #[test]
@@ -3612,6 +3717,43 @@ mod tests {
     assert_eq!(commands.len(), 1);
     assert_eq!(commands[0]["pluginId"], "workspace-notes");
     assert_eq!(commands[0]["title"], "Capture Workspace Note");
+  }
+
+  #[test]
+  fn plugin_hook_registry_lists_enabled_hook_plugins() {
+    let mut context = RuntimeContext::new_in_memory();
+    context.plugins = vec![PluginCatalogEntry {
+      id: "shell-recorder".to_string(),
+      name: "shell-recorder".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Shell Recorder".to_string(),
+      status: "ready".to_string(),
+      description: "Hook-enabled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: false,
+      capabilities: vec![
+        "hook:shell.recorder".to_string(),
+        "tool:shell.timeline".to_string(),
+      ],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/official/shell-recorder/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let response = handle_request(&mut context, request(methods::PLUGIN_HOOK_REGISTRY, None));
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("hook registry result");
+    let hooks = result["hooks"].as_array().expect("hooks");
+    assert_eq!(hooks.len(), 1);
+    assert_eq!(hooks[0]["pluginId"], "shell-recorder");
+    assert_eq!(hooks[0]["event"], "shell.completed");
+    assert_eq!(hooks[0]["title"], "Record Shell Completion");
   }
 
   #[test]

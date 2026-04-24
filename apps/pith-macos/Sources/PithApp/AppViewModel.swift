@@ -21,6 +21,7 @@ final class AppViewModel: ObservableObject {
   @Published var pluginCapabilityRegistrySummary: PluginCapabilityRegistrySummary?
   @Published var pluginCapabilities: [PluginCapabilitySummary]
   @Published var pluginCommands: [PluginCommandSummary]
+  @Published var pluginHooks: [PluginHookSummary]
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -68,6 +69,7 @@ final class AppViewModel: ObservableObject {
     self.pluginCapabilityRegistrySummary = nil
     self.pluginCapabilities = []
     self.pluginCommands = []
+    self.pluginHooks = []
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
@@ -133,6 +135,9 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginCommands.isEmpty {
           runtimeDetail += " | \(pluginCommands.count) command(s)"
+        }
+        if !pluginHooks.isEmpty {
+          runtimeDetail += " | \(pluginHooks.count) hook(s)"
         }
 
         if let currentWorkspace {
@@ -244,6 +249,19 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
+        if !pluginHooks.isEmpty {
+          appendEntry(
+            to: selectedThread?.id,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .system,
+              title: "Plugin Hooks Ready",
+              body:
+                "Loaded \(pluginHooks.count) plugin hook(s): \(pluginHooks.map(\.title).joined(separator: ", ")).",
+              attributes: [:]
+            )
+          )
+        }
       } catch {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
@@ -253,6 +271,8 @@ final class AppViewModel: ObservableObject {
         plugins = []
         pluginCapabilityRegistrySummary = nil
         pluginCapabilities = []
+        pluginCommands = []
+        pluginHooks = []
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -858,6 +878,24 @@ final class AppViewModel: ObservableObject {
       .joined(separator: "\n")
   }
 
+  func pluginHookCountSummary() -> String {
+    if pluginHooks.isEmpty {
+      return "No Plugin Hooks"
+    }
+
+    return "\(pluginHooks.count) Plugin Hook\(pluginHooks.count == 1 ? "" : "s")"
+  }
+
+  func pluginHookDetailSummary() -> String {
+    guard !pluginHooks.isEmpty else {
+      return "Enable ready plugins with declared hook capabilities to extend local runtime events."
+    }
+
+    return pluginHooks
+      .map { "\($0.pluginDisplayName): \($0.title) (\($0.event))" }
+      .joined(separator: "\n")
+  }
+
   func memoryCountSummary() -> String {
     guard let memoryStatus else {
       return "Built-in memory is not connected yet."
@@ -1181,6 +1219,7 @@ final class AppViewModel: ObservableObject {
     let runtimePlugins = try? await runtimeBridge.listPlugins()
     let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
     let runtimeCommands = try? await runtimeBridge.listPluginCommands()
+    let runtimeHooks = try? await runtimeBridge.listPluginHooks()
 
     if let runtimePlugins {
       plugins = runtimePlugins.map { pluginSummary(from: $0) }
@@ -1224,6 +1263,22 @@ final class AppViewModel: ObservableObject {
       }
     } else if runtimePlugins != nil {
       pluginCommands = []
+    }
+    if let runtimeHooks {
+      pluginHooks = runtimeHooks.map { hook in
+        PluginHookSummary(
+          id: hook.hookID,
+          title: hook.title,
+          description: hook.description,
+          event: hook.event,
+          pluginID: hook.pluginID,
+          pluginDisplayName: hook.pluginDisplayName,
+          permissions: hook.permissions,
+          sourcePath: hook.sourcePath
+        )
+      }
+    } else if runtimePlugins != nil {
+      pluginHooks = []
     }
   }
 

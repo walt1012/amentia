@@ -1,9 +1,9 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginSetEnabledParams, ThreadReadResult,
-  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
+  PluginSetEnabledParams, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -202,4 +202,28 @@ fn plugin_command_registry_round_trips() {
   assert_eq!(decoded.commands.len(), 1);
   assert_eq!(decoded.commands[0].plugin_id, "workspace-notes");
   assert_eq!(decoded.commands[0].title, "Capture Workspace Note");
+}
+
+#[test]
+fn plugin_hook_registry_round_trips() {
+  let result = PluginHookRegistryResult {
+    hooks: vec![PluginHookSummary {
+      hook_id: "shell-recorder::shell.recorder".to_string(),
+      title: "Record Shell Completion".to_string(),
+      description: "Capture a compact shell completion note in the thread timeline.".to_string(),
+      event: "shell.completed".to_string(),
+      plugin_id: "shell-recorder".to_string(),
+      plugin_display_name: "Shell Recorder".to_string(),
+      permissions: vec!["shell.exec".to_string()],
+      source_path: "plugins/official/shell-recorder/hooks/shell.recorder.json".to_string(),
+    }],
+  };
+
+  let encoded = serde_json::to_string(&result).expect("serialize hook registry");
+  let decoded: PluginHookRegistryResult =
+    serde_json::from_str(&encoded).expect("deserialize hook registry");
+
+  assert_eq!(decoded.hooks.len(), 1);
+  assert_eq!(decoded.hooks[0].plugin_id, "shell-recorder");
+  assert_eq!(decoded.hooks[0].event, "shell.completed");
 }

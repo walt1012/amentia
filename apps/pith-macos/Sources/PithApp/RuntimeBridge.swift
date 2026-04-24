@@ -108,6 +108,17 @@ final class RuntimeBridge {
     let sourcePath: String
   }
 
+  struct RuntimePluginHook {
+    let hookID: String
+    let title: String
+    let description: String
+    let event: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+  }
+
   struct RuntimeTurnResult {
     let turnID: String
     let threadID: String
@@ -480,6 +491,34 @@ final class RuntimeBridge {
         pluginDisplayName: command.pluginDisplayName,
         permissions: command.permissions,
         sourcePath: command.sourcePath
+      )
+    }
+  }
+
+  func listPluginHooks() async throws -> [RuntimePluginHook] {
+    let response: JSONRPCResponse<PluginHookRegistryResult> = try await sendRequest(
+      method: "plugin/hookRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.hooks.map { hook in
+      RuntimePluginHook(
+        hookID: hook.hookId,
+        title: hook.title,
+        description: hook.description,
+        event: hook.event,
+        pluginID: hook.pluginId,
+        pluginDisplayName: hook.pluginDisplayName,
+        permissions: hook.permissions,
+        sourcePath: hook.sourcePath
       )
     }
   }

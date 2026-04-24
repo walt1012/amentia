@@ -1,0 +1,6 @@
+{
+  "title": "Record Shell Completion",
+  "description": "Capture a compact shell completion note in the thread timeline.",
+  "event": "shell.completed",
+  "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}"
+}

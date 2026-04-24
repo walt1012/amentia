@@ -309,6 +309,25 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      GroupBox("Plugin Hooks") {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(viewModel.pluginHookCountSummary())
+            .font(.headline)
+
+          Text(viewModel.pluginHookDetailSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .textSelection(.enabled)
+
+          if !viewModel.pluginHooks.isEmpty {
+            ForEach(viewModel.pluginHooks) { hook in
+              PluginHookRow(hook: hook)
+            }
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       GroupBox("Thread") {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.selectedThreadTitle())
@@ -371,7 +390,7 @@ struct ContentView: View {
       }
 
       GroupBox("Milestone 2 Focus") {
-        Text("Expand plugin management, manifest workflows, and richer local model delivery.")
+        Text("Expand plugin management, manifest workflows, plugin commands and hooks, and richer local model delivery.")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
@@ -500,6 +519,38 @@ private struct PluginCommandRow: View {
 
       if !command.permissions.isEmpty {
         Text("Permissions: \(command.permissions.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(.vertical, 4)
+  }
+}
+
+private struct PluginHookRow: View {
+  let hook: PluginHookSummary
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(hook.title)
+            .font(.caption.weight(.semibold))
+          Text("\(hook.pluginDisplayName) | \(hook.event)")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+
+        Spacer()
+      }
+
+      Text(hook.description)
+        .font(.caption2)
+        .foregroundColor(.secondary)
+
+      if !hook.permissions.isEmpty {
+        Text("Permissions: \(hook.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)

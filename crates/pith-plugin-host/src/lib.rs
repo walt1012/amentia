@@ -87,11 +87,34 @@ struct PluginCommandManifest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct PluginHookManifest {
+  pub title: String,
+  pub description: String,
+  pub event: String,
+  pub message_template: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginCommandEntry {
   pub command_id: String,
   pub title: String,
   pub description: String,
   pub prompt: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub source_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginHookEntry {
+  pub hook_id: String,
+  pub title: String,
+  pub description: String,
+  pub event: String,
+  pub message_template: String,
   pub plugin_id: String,
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
@@ -336,6 +359,55 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
   commands
 }
 
+pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntry> {
+  let mut hooks = vec![];
+
+  for plugin in plugins
+    .iter()
+    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
+  {
+    let Some(plugin_root) = Path::new(&plugin.manifest_path).parent() else {
+      continue;
+    };
+
+    for capability in &plugin.capabilities {
+      let Some((kind, identifier)) = capability.split_once(':') else {
+        continue;
+      };
+      if kind != "hook" {
+        continue;
+      }
+
+      let hook_path = plugin_root.join("hooks").join(format!("{identifier}.json"));
+      let Ok(hook) = read_hook_manifest(&hook_path) else {
+        continue;
+      };
+
+      hooks.push(PluginHookEntry {
+        hook_id: format!("{}::{}", plugin.id, identifier),
+        title: hook.title,
+        description: hook.description,
+        event: hook.event,
+        message_template: hook.message_template,
+        plugin_id: plugin.id.clone(),
+        plugin_display_name: plugin.display_name.clone(),
+        permissions: plugin.permissions.clone(),
+        source_path: hook_path.display().to_string(),
+      });
+    }
+  }
+
+  hooks.sort_by(|left, right| {
+    left
+      .event
+      .cmp(&right.event)
+      .then_with(|| left.plugin_display_name.cmp(&right.plugin_display_name))
+      .then_with(|| left.title.cmp(&right.title))
+      .then_with(|| left.hook_id.cmp(&right.hook_id))
+  });
+  hooks
+}
+
 fn read_manifest(path: &Path) -> Result<PluginManifest> {
   let content =
     fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
@@ -348,6 +420,13 @@ fn read_command_manifest(path: &Path) -> Result<PluginCommandManifest> {
     fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
   serde_json::from_str(&content)
     .with_context(|| format!("failed to parse plugin command {}", path.display()))
+}
+
+fn read_hook_manifest(path: &Path) -> Result<PluginHookManifest> {
+  let content =
+    fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+  serde_json::from_str(&content)
+    .with_context(|| format!("failed to parse plugin hook {}", path.display()))
 }
 
 fn discovery_roots() -> Vec<PathBuf> {
@@ -545,6 +624,53 @@ mod tests {
   }
 
   #[test]
+  fn build_hook_registry_loads_enabled_plugin_hooks() {
+    let plugin_root = create_temp_plugin_root("hook-registry");
+    let plugin_dir = plugin_root.join("shell-recorder");
+    let hooks_dir = plugin_dir.join("hooks");
+    fs::create_dir_all(&hooks_dir).expect("create hooks dir");
+    fs::write(
+      plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "shell-recorder",
+  "version": "0.1.0",
+  "displayName": "Shell Recorder",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "hook:shell.recorder",
+    "tool:shell.timeline"
+  ],
+  "permissions": [
+    "shell.exec"
+  ],
+  "defaultEnabled": true
+}"#,
+    )
+    .expect("write plugin manifest");
+    fs::write(
+      hooks_dir.join("shell.recorder.json"),
+      r#"{
+  "title": "Record Shell Completion",
+  "description": "Capture a compact shell completion note in the thread timeline.",
+  "event": "shell.completed",
+  "messageTemplate": "Hook observed {{command}} in {{workspaceName}}."
+}"#,
+    )
+    .expect("write hook definition");
+
+    let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+    let hooks = build_hook_registry(&plugins);
+
+    fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+    assert_eq!(hooks.len(), 1);
+    assert_eq!(hooks[0].plugin_id, "shell-recorder");
+    assert_eq!(hooks[0].event, "shell.completed");
+    assert!(hooks[0].source_path.ends_with("shell.recorder.json"));
+  }
+
+  #[test]
   fn official_plugin_manifests_match_runtime_schema() {
     let official_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../plugins/official");
     let manifests = [
@@ -558,5 +684,10 @@ mod tests {
       validate_manifest(&manifest).expect("validate official manifest");
       assert!(!manifest.display_name.trim().is_empty());
     }
+
+    let hook_manifest = read_hook_manifest(&official_root.join("shell-recorder/hooks/shell.recorder.json"))
+      .expect("parse official hook manifest");
+    assert_eq!(hook_manifest.event, "shell.completed");
+    assert!(!hook_manifest.message_template.trim().is_empty());
   }
 }

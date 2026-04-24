@@ -118,6 +118,10 @@ struct PluginCommandRegistryResult: Codable {
   let commands: [RuntimePluginCommandPayload]
 }
 
+struct PluginHookRegistryResult: Codable {
+  let hooks: [RuntimePluginHookPayload]
+}
+
 struct RuntimePluginCapabilityRegistrySummaryPayload: Codable {
   let enabledPluginCount: Int
   let totalCapabilityCount: Int
@@ -138,6 +142,17 @@ struct RuntimePluginCommandPayload: Codable {
   let commandId: String
   let title: String
   let description: String
+  let pluginId: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let sourcePath: String
+}
+
+struct RuntimePluginHookPayload: Codable {
+  let hookId: String
+  let title: String
+  let description: String
+  let event: String
   let pluginId: String
   let pluginDisplayName: String
   let permissions: [String]
