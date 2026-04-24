@@ -187,7 +187,7 @@ impl LocalModelRuntime {
           pack_id: self.pack.id.clone(),
           display_name: self.pack.display_name.clone(),
           backend: "heuristic".to_string(),
-          status: "fallback".to_string(),
+          status: "unavailable".to_string(),
           detail: detail.clone(),
           source: self.source.clone(),
           binary_path: binary_path.as_ref().map(display_path),
@@ -226,7 +226,9 @@ impl LocalModelRuntime {
 
   pub fn generate(&self, request: GenerateRequest) -> GenerateResponse {
     match &self.backend {
-      ModelBackend::Heuristic { .. } => self.generate_fallback(request, "fallback".to_string()),
+      ModelBackend::Heuristic { detail, .. } => {
+        self.generate_failure("heuristic", "unavailable", &request.role, detail)
+      }
       ModelBackend::LlamaCppCli {
         binary_path,
         model_path,
@@ -239,21 +241,27 @@ impl LocalModelRuntime {
           status: "ready".to_string(),
           model_id: self.pack.id.clone(),
         },
-        Err(_) => self.generate_fallback(request, "fallback".to_string()),
+        Err(error) => self.generate_failure(
+          "llama.cpp",
+          "error",
+          &request.role,
+          &format!("Local llama.cpp inference failed: {error}"),
+        ),
       },
     }
   }
 
-  fn generate_fallback(&self, request: GenerateRequest, status: String) -> GenerateResponse {
-    let mut text = request.fallback.trim().to_string();
-    if text.is_empty() {
-      text = fallback_from_prompt(&request.prompt, &request.role);
-    }
-
+  fn generate_failure(
+    &self,
+    backend: &str,
+    status: &str,
+    role: &ModelRole,
+    detail: &str,
+  ) -> GenerateResponse {
     GenerateResponse {
-      text,
-      backend: "heuristic".to_string(),
-      status,
+      text: generation_failure_text(role, detail),
+      backend: backend.to_string(),
+      status: status.to_string(),
       model_id: self.pack.id.clone(),
     }
   }
@@ -852,7 +860,7 @@ fn clean_model_output(output: &str) -> String {
     .to_string()
 }
 
-fn fallback_from_prompt(prompt: &str, role: &ModelRole) -> String {
+fn generation_failure_text(role: &ModelRole, detail: &str) -> String {
   let role_label = match role {
     ModelRole::Default => "default",
     ModelRole::Planner => "planner",
@@ -860,12 +868,9 @@ fn fallback_from_prompt(prompt: &str, role: &ModelRole) -> String {
     ModelRole::Summarizer => "summarizer",
   };
 
-  let preview = prompt
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .unwrap_or("No prompt content was provided.");
-
-  format!("Pith used the local {role_label} fallback path. Prompt preview: {preview}")
+  format!(
+    "Pith could not produce a local {role_label} response because {detail}"
+  )
 }
 
 #[cfg(test)]
@@ -882,7 +887,7 @@ mod tests {
 
     assert_eq!(health.display_name, "LFM2.5-350M");
     assert_eq!(health.backend, "heuristic");
-    assert_eq!(health.status, "fallback");
+    assert_eq!(health.status, "unavailable");
     assert!(health.metrics.contains_key("contextSize"));
     assert_eq!(health.metrics["readiness"], "unconfigured");
     assert_eq!(health.metrics["packReady"], "false");
@@ -893,7 +898,7 @@ mod tests {
   }
 
   #[test]
-  fn heuristic_generation_returns_fallback_text() {
+  fn heuristic_generation_returns_unavailable_error() {
     let runtime = LocalModelRuntime::from_paths(None, None);
     let response = runtime.generate(GenerateRequest {
       role: ModelRole::Summarizer,
@@ -902,9 +907,11 @@ mod tests {
       max_tokens: 96,
     });
 
-    assert_eq!(response.text, "Fallback summary");
+    assert!(response
+      .text
+      .contains("could not produce a local summarizer response"));
     assert_eq!(response.backend, "heuristic");
-    assert_eq!(response.status, "fallback");
+    assert_eq!(response.status, "unavailable");
     assert_eq!(response.model_id, "lfm2.5-350m");
   }
 

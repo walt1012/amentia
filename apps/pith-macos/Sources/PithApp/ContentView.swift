@@ -2,7 +2,17 @@ import AppKit
 import SwiftUI
 
 struct ContentView: View {
+  private enum PluginInspectorSection: String, CaseIterable, Identifiable {
+    case catalog = "Catalog"
+    case access = "Access"
+    case commands = "Commands"
+    case hooks = "Hooks"
+
+    var id: String { rawValue }
+  }
+
   @ObservedObject var viewModel: AppViewModel
+  @State private var pluginInspectorSection: PluginInspectorSection = .catalog
 
   var body: some View {
     NavigationView {
@@ -142,329 +152,289 @@ struct ContentView: View {
   }
 
   private var inspector: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("Inspector")
-        .font(.title3.weight(.semibold))
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        Text("Inspector")
+          .font(.title3.weight(.semibold))
 
-      GroupBox("Workspace") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.workspaceDisplayName())
-            .font(.headline)
-          Text(viewModel.workspacePath())
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      GroupBox("Local Model") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.modelDisplayName())
-            .font(.headline)
-          Text(viewModel.modelStatusSummary())
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-          Text(viewModel.modelDetailSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          Text(viewModel.modelSourceSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          Text(viewModel.modelMetricsSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-          Text(viewModel.modelReadinessSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-          Text(viewModel.modelInstallHintSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          Text(viewModel.modelSuggestedPathSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          HStack(spacing: 8) {
-            Button("Install Pack Metadata") {
-              viewModel.bootstrapModelPackMetadata()
-            }
-            .buttonStyle(.borderedProminent)
-
-            Button("Reveal Model Folder") {
-              viewModel.revealSuggestedModelDirectory()
-            }
-            .buttonStyle(.bordered)
-
-            Button("Reveal Binary Folder") {
-              viewModel.revealSuggestedBinaryDirectory()
-            }
-            .buttonStyle(.bordered)
+        GroupBox("Workspace") {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(viewModel.workspaceDisplayName())
+              .font(.headline)
+            Text(viewModel.workspacePath())
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
           }
-          Text(viewModel.modelArtifactPathSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
 
-      GroupBox("Memory") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.memoryCountSummary())
-            .font(.headline)
-          Text(viewModel.memoryDetailSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          Text(viewModel.memoryLatestSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-
-          Divider()
-
-          TextField("Workspace note title", text: $viewModel.memoryNoteTitle)
-            .textFieldStyle(.roundedBorder)
-
-          TextEditor(text: $viewModel.memoryNoteBody)
-            .font(.caption)
-            .frame(minHeight: 72)
-            .overlay(
-              RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-            )
-
-          Button("Save Workspace Note") {
-            viewModel.saveWorkspaceMemoryNote()
-          }
-          .buttonStyle(.borderedProminent)
-          .disabled(!viewModel.canSaveWorkspaceMemoryNote())
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      GroupBox("Plugins") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.pluginCountSummary())
-            .font(.headline)
-          Text(viewModel.localPluginCountSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-
-          if viewModel.plugins.isEmpty {
-            Text(viewModel.pluginDetailSummary())
+        GroupBox("Local Model") {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(viewModel.modelDisplayName())
+              .font(.headline)
+            Text(viewModel.modelStatusSummary())
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+            Text(viewModel.modelDetailSummary())
               .font(.caption)
               .foregroundColor(.secondary)
               .textSelection(.enabled)
-          } else {
-            ForEach(viewModel.plugins) { plugin in
-              PluginRow(
-                plugin: plugin,
-                canEdit: viewModel.runtimeState == .ready && plugin.status == "ready",
-                canRemove: viewModel.runtimeState == .ready && viewModel.isRemovablePlugin(plugin),
-                onSetEnabled: { enabled in
-                  viewModel.setPluginEnabled(pluginID: plugin.id, enabled: enabled)
-                },
-                onRemove: {
-                  viewModel.removePlugin(pluginID: plugin.id)
-                }
+            Text(viewModel.modelSourceSummary())
+              .font(.caption)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+            Text(viewModel.modelMetricsSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+            Text(viewModel.modelReadinessSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+            Text(viewModel.modelInstallHintSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+            Text(viewModel.modelSuggestedPathSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+            HStack(spacing: 8) {
+              Button("Install Pack Metadata") {
+                viewModel.bootstrapModelPackMetadata()
+              }
+              .buttonStyle(.borderedProminent)
+
+              Button("Reveal Model Folder") {
+                viewModel.revealSuggestedModelDirectory()
+              }
+              .buttonStyle(.bordered)
+
+              Button("Reveal Binary Folder") {
+                viewModel.revealSuggestedBinaryDirectory()
+              }
+              .buttonStyle(.bordered)
+            }
+            Text(viewModel.modelArtifactPathSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        GroupBox("Memory") {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(viewModel.memoryCountSummary())
+              .font(.headline)
+            Text(viewModel.memoryDetailSummary())
+              .font(.caption)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+            Text(viewModel.memoryLatestSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+
+            Divider()
+
+            TextField("Workspace note title", text: $viewModel.memoryNoteTitle)
+              .textFieldStyle(.roundedBorder)
+
+            TextEditor(text: $viewModel.memoryNoteBody)
+              .font(.caption)
+              .frame(minHeight: 72)
+              .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
               )
+
+            Button("Save Workspace Note") {
+              viewModel.saveWorkspaceMemoryNote()
             }
+            .buttonStyle(.borderedProminent)
+            .disabled(!viewModel.canSaveWorkspaceMemoryNote())
           }
+          .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
 
-      GroupBox("Plugin Permissions") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.pluginPermissionCountSummary())
-            .font(.headline)
-
-          Text(viewModel.pluginPermissionDetailSummary())
+        GroupBox("Plugin Manager") {
+          VStack(alignment: .leading, spacing: 10) {
+            Text(viewModel.pluginCountSummary())
+              .font(.headline)
+            Text(
+              "\(viewModel.pluginRegistryCountSummary()) | \(viewModel.pluginCommandCountSummary()) | \(viewModel.pluginHookCountSummary())"
+            )
             .font(.caption)
             .foregroundColor(.secondary)
-            .textSelection(.enabled)
+            Picker("Surface", selection: $pluginInspectorSection) {
+              ForEach(PluginInspectorSection.allCases) { section in
+                Text(section.rawValue)
+                  .tag(section)
+              }
+            }
+            .pickerStyle(.menu)
 
-          if !viewModel.pluginPermissionPreview().isEmpty {
-            ForEach(viewModel.pluginPermissionPreview()) { plugin in
-              PluginPermissionRow(
-                plugin: plugin,
-                onRevealManifest: {
-                  viewModel.revealPluginManifest(pluginID: plugin.id)
+            switch pluginInspectorSection {
+            case .catalog:
+              Text(viewModel.pluginDetailSummary())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+
+              if !viewModel.plugins.isEmpty {
+                Divider()
+                ForEach(viewModel.plugins) { plugin in
+                  PluginRow(
+                    plugin: plugin,
+                    canEdit: viewModel.runtimeState == .ready && plugin.status == "ready",
+                    canRemove: viewModel.runtimeState == .ready
+                      && viewModel.isRemovablePlugin(plugin),
+                    onSetEnabled: { enabled in
+                      viewModel.setPluginEnabled(pluginID: plugin.id, enabled: enabled)
+                    },
+                    onRemove: {
+                      viewModel.removePlugin(pluginID: plugin.id)
+                    }
+                  )
                 }
-              )
-            }
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
+              }
 
-      GroupBox("Plugin Validation") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.invalidPluginCountSummary())
-            .font(.headline)
-
-          Text(viewModel.invalidPluginDetailSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-
-          if !viewModel.invalidPlugins().isEmpty {
-            ForEach(viewModel.invalidPlugins()) { plugin in
-              InvalidPluginRow(
-                plugin: plugin,
-                onRevealManifest: {
-                  viewModel.revealPluginManifest(pluginID: plugin.id)
-                },
-                onRemove: {
-                  viewModel.removePlugin(pluginID: plugin.id)
+              if !viewModel.pluginCapabilityPreview().isEmpty {
+                Divider()
+                Text(viewModel.pluginRegistryDetailSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                ForEach(viewModel.pluginCapabilityPreview()) { capability in
+                  PluginCapabilityRow(capability: capability)
                 }
-              )
-            }
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
+              }
 
-      GroupBox("Plugin Registry") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.pluginRegistryCountSummary())
-            .font(.headline)
+            case .access:
+              Text(viewModel.pluginPermissionDetailSummary())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
 
-          Text(viewModel.pluginRegistryDetailSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-
-          if !viewModel.pluginCapabilityPreview().isEmpty {
-            ForEach(viewModel.pluginCapabilityPreview()) { capability in
-              PluginCapabilityRow(capability: capability)
-            }
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      GroupBox("Plugin Commands") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.pluginCommandCountSummary())
-            .font(.headline)
-
-          Text(viewModel.pluginCommandDetailSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-
-          if !viewModel.pluginCommands.isEmpty {
-            ForEach(viewModel.pluginCommands) { command in
-              PluginCommandRow(
-                command: command,
-                canRun: viewModel.runtimeState == .ready
-                  && viewModel.isLocalModelReady()
-                  && viewModel.selectedThreadID != nil
-                  && viewModel.activeTurnID == nil,
-                onRun: {
-                  viewModel.runPluginCommand(commandID: command.id)
+              if !viewModel.pluginPermissionPreview().isEmpty {
+                Divider()
+                ForEach(viewModel.pluginPermissionPreview()) { plugin in
+                  PluginPermissionRow(
+                    plugin: plugin,
+                    onRevealManifest: {
+                      viewModel.revealPluginManifest(pluginID: plugin.id)
+                    }
+                  )
                 }
-              )
+              }
+
+              if !viewModel.invalidPlugins().isEmpty {
+                Divider()
+                Text(viewModel.invalidPluginDetailSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                ForEach(viewModel.invalidPlugins()) { plugin in
+                  InvalidPluginRow(
+                    plugin: plugin,
+                    onRevealManifest: {
+                      viewModel.revealPluginManifest(pluginID: plugin.id)
+                    },
+                    onRemove: {
+                      viewModel.removePlugin(pluginID: plugin.id)
+                    }
+                  )
+                }
+              }
+
+            case .commands:
+              Text(viewModel.pluginCommandDetailSummary())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+
+              if !viewModel.pluginCommands.isEmpty {
+                Divider()
+                ForEach(viewModel.pluginCommands) { command in
+                  PluginCommandRow(
+                    command: command,
+                    canRun: viewModel.runtimeState == .ready
+                      && viewModel.isLocalModelReady()
+                      && viewModel.selectedThreadID != nil
+                      && viewModel.activeTurnID == nil,
+                    onRun: {
+                      viewModel.runPluginCommand(commandID: command.id)
+                    }
+                  )
+                }
+              }
+
+            case .hooks:
+              Text(viewModel.pluginHookDetailSummary())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+
+              if !viewModel.pluginHooks.isEmpty {
+                Divider()
+                ForEach(viewModel.pluginHooks) { hook in
+                  PluginHookRow(hook: hook)
+                }
+              }
             }
           }
+          .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
 
-      GroupBox("Plugin Hooks") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.pluginHookCountSummary())
-            .font(.headline)
+        GroupBox("Thread") {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(viewModel.selectedThreadTitle())
+              .font(.headline)
+            Text(viewModel.selectedThreadPreview())
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
 
-          Text(viewModel.pluginHookDetailSummary())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
+        GroupBox("Selected Item") {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(viewModel.selectedEntryTitle())
+              .font(.headline)
+            Text(viewModel.selectedEntryMetadata())
+              .font(.caption)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+            Text(viewModel.selectedEntryBody())
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
 
-          if !viewModel.pluginHooks.isEmpty {
-            ForEach(viewModel.pluginHooks) { hook in
-              PluginHookRow(hook: hook)
-            }
+        if let diffBody = viewModel.selectedDiffBody() {
+          GroupBox("Diff Detail") {
+            Text(diffBody)
+              .font(.system(.caption, design: .monospaced))
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+              .frame(maxWidth: .infinity, alignment: .leading)
           }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
 
-      GroupBox("Thread") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.selectedThreadTitle())
-            .font(.headline)
-          Text(viewModel.selectedThreadPreview())
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      GroupBox("Selected Item") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text(viewModel.selectedEntryTitle())
-            .font(.headline)
-          Text(viewModel.selectedEntryMetadata())
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-          Text(viewModel.selectedEntryBody())
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      if let diffBody = viewModel.selectedDiffBody() {
-        GroupBox("Diff Detail") {
-          Text(diffBody)
-            .font(.system(.caption, design: .monospaced))
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        if let memorySummary = viewModel.selectedEntryMemorySummary() {
+          GroupBox("Selected Memory Context") {
+            Text(memorySummary)
+              .font(.caption)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
         }
       }
-
-      if let memorySummary = viewModel.selectedEntryMemorySummary() {
-        GroupBox("Selected Memory Context") {
-          Text(memorySummary)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-      }
-
-      GroupBox("Milestone 1") {
-        VStack(alignment: .leading, spacing: 8) {
-          Text("Workspace open flow")
-          Text("Read, search, shell, diff preview, and approval-gated write tools")
-          Text("SQLite-backed thread persistence and workspace restoration")
-          Text("Built-in workspace memory with user notes, thread summaries, and retrieval")
-          Text("Workspace-aware prompt loop with cancel control")
-          Text("Local model health and summarizer runtime wiring")
-          Text("Optional plugin discovery kept separate from core memory")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .font(.subheadline)
-      }
-
-      GroupBox("Milestone 2 Focus") {
-        Text("Expand plugin management, manifest workflows, plugin commands and hooks, and richer local model delivery.")
-          .font(.subheadline)
-          .foregroundColor(.secondary)
-      }
-
-      Spacer()
+      .padding(20)
     }
-    .padding(20)
     .frame(minWidth: 280)
   }
 }

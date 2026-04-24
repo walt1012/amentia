@@ -1015,29 +1015,62 @@ fn handle_plugin_command_run(
     return JsonRpcResponse::error(request.id, -32052, "Plugin command not found");
   };
 
-  let message = match params.input {
-    Some(input) if !input.trim().is_empty() => format!(
-      "{}\n\nAdditional command input:\n{}",
-      command.prompt,
-      input.trim()
-    ),
-    _ => command.prompt,
+  let Some(thread) = context
+    .threads
+    .iter()
+    .find(|thread| thread.summary.id == params.thread_id)
+  else {
+    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
 
-  handle_turn_start(
+  let workspace = thread.workspace.clone().or_else(|| context.workspace.clone());
+  let command_input = params
+    .input
+    .as_deref()
+    .map(str::trim)
+    .filter(|input| !input.is_empty());
+  let memory_query = command_input
+    .map(|input| {
+      format!(
+        "{} {} {} {}",
+        command.title, command.description, command.prompt, input
+      )
+    })
+    .unwrap_or_else(|| {
+      format!(
+        "{} {} {}",
+        command.title, command.description, command.prompt
+      )
+    });
+  let relevant_memory_notes = retrieve_memory_context(
+    &context.memory_notes,
+    workspace.as_ref().map(|entry| entry.display_name.as_str()),
+    &memory_query,
+  );
+  let command_item = build_plugin_command_timeline_item(
+    &command,
+    workspace.as_ref(),
+    command_input,
+    &relevant_memory_notes,
+  );
+  let display_message = build_plugin_command_display_message(&command, workspace.as_ref(), command_input);
+  let agent_message = build_plugin_command_turn_message(
+    &command,
+    workspace.as_ref(),
+    command_input,
+    &relevant_memory_notes,
+  );
+
+  match execute_turn_request(
     context,
-    JsonRpcRequest {
-      id: request.id,
-      method: methods::TURN_START.to_string(),
-      params: Some(
-        serde_json::to_value(TurnStartParams {
-          thread_id: params.thread_id,
-          message,
-        })
-        .expect("serialize command turn params"),
-      ),
-    },
-  )
+    &params.thread_id,
+    display_message,
+    agent_message,
+    vec![command_item],
+  ) {
+    Ok(result) => JsonRpcResponse::success(request.id, &result),
+    Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
+  }
 }
 
 fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -1212,6 +1245,25 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     }
   };
 
+  match execute_turn_request(
+    context,
+    &params.thread_id,
+    params.message.clone(),
+    params.message,
+    vec![],
+  ) {
+    Ok(result) => JsonRpcResponse::success(request.id, &result),
+    Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
+  }
+}
+
+fn execute_turn_request(
+  context: &mut RuntimeContext,
+  requested_thread_id: &str,
+  display_message: String,
+  message: String,
+  initial_items: Vec<TimelineItem>,
+) -> std::result::Result<TurnStartResult, (i32, String)> {
   let current_workspace = context.workspace.clone();
   let model_runtime = context.model_runtime.clone();
   let memory_notes = context.memory_notes.clone();
@@ -1220,9 +1272,9 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     let Some(thread) = context
       .threads
       .iter_mut()
-      .find(|thread| thread.summary.id == params.thread_id)
+      .find(|thread| thread.summary.id == requested_thread_id)
     else {
-      return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+      return Err((-32004, "Thread not found".to_string()));
     };
 
     thread.turn_count += 1;
@@ -1233,7 +1285,6 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       thread.workspace = current_workspace.clone();
     }
     let workspace = thread.workspace.clone();
-    let message = params.message;
     let turn_id = format!("{thread_id}-turn-{turn_count}");
     let mut pending_active_turn = None;
 
@@ -1242,12 +1293,13 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
       None => format!("{turn_count} turn(s)"),
     };
 
-    let mut items = vec![TimelineItem {
+    let mut items = initial_items;
+    items.push(TimelineItem {
       kind: "userMessage".to_string(),
       title: "User".to_string(),
-      content: message.clone(),
+      content: display_message.clone(),
       attributes: None,
-    }];
+    });
 
     if let Some(workspace) = workspace {
       let workspace_root = Path::new(&workspace.root_path);
@@ -1699,27 +1751,114 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
   }
 
   if let Err(error) = context.persist_runtime_state() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    return Err((-32010, error.to_string()));
   }
 
   if active_turn_id.is_none() {
     if let Err(error) = refresh_thread_summary_note(context, &thread_id) {
-      return JsonRpcResponse::error(request.id, -32012, error.to_string());
+      return Err((-32012, error.to_string()));
     }
   }
 
   let pending_approvals = approvals_for_thread(context, &thread_id);
 
-  JsonRpcResponse::success(
-    request.id,
-    &TurnStartResult {
-      turn_id,
-      thread_id,
-      items,
-      pending_approvals,
-      active_turn_id,
-    },
-  )
+  Ok(TurnStartResult {
+    turn_id,
+    thread_id,
+    items,
+    pending_approvals,
+    active_turn_id,
+  })
+}
+
+fn build_plugin_command_timeline_item(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+  memory_notes: &[MemoryNote],
+) -> TimelineItem {
+  let mut attributes = HashMap::from([
+    ("commandId".to_string(), command.command_id.clone()),
+    ("pluginId".to_string(), command.plugin_id.clone()),
+    (
+      "pluginDisplayName".to_string(),
+      command.plugin_display_name.clone(),
+    ),
+    ("sourcePath".to_string(), command.source_path.clone()),
+  ]);
+  if let Some(workspace) = workspace {
+    attributes.insert(
+      "workspaceDisplayName".to_string(),
+      workspace.display_name.clone(),
+    );
+  }
+  if let Some(input) = input {
+    attributes.insert("commandInput".to_string(), input.to_string());
+  }
+  merge_memory_attributes(&mut attributes, memory_notes);
+
+  let workspace_label = workspace
+    .map(|entry| entry.display_name.clone())
+    .unwrap_or_else(|| "No Workspace".to_string());
+  let mut content = format!(
+    "Run {} from {} in {}.\n{}",
+    command.title, command.plugin_display_name, workspace_label, command.description
+  );
+  if let Some(input) = input {
+    content.push_str(&format!("\nCommand input: {input}"));
+  }
+
+  TimelineItem {
+    kind: "pluginCommand".to_string(),
+    title: command.title.clone(),
+    content,
+    attributes: Some(attributes),
+  }
+}
+
+fn build_plugin_command_display_message(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+) -> String {
+  let workspace_summary = workspace
+    .map(|entry| format!(" in {}", entry.display_name))
+    .unwrap_or_default();
+  let mut message = format!(
+    "Run plugin command \"{}\" from {}{}.\nGoal: {}",
+    command.title, command.plugin_display_name, workspace_summary, command.description
+  );
+  if let Some(input) = input {
+    message.push_str(&format!("\nCommand input: {input}"));
+  }
+  message
+}
+
+fn build_plugin_command_turn_message(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+  memory_notes: &[MemoryNote],
+) -> String {
+  let workspace_context = workspace
+    .map(|entry| format!("Workspace: {} at {}.", entry.display_name, entry.root_path))
+    .unwrap_or_else(|| "Workspace: unavailable.".to_string());
+  let mut message = format!(
+    "Execute a local plugin command for Pith.\nPlugin: {} ({})\nCommand: {} ({})\nDescription: {}\nSource: {}\n{}\n{}\nCommand instructions:\n{}\nExecution rules:\n- Treat this as a first-class plugin workflow, not a generic chat request.\n- Stay inside the current workspace and use built-in local tools plus existing approvals.\n- Keep the result concise and explain what local action Pith actually took.",
+    command.plugin_display_name,
+    command.plugin_id,
+    command.title,
+    command.command_id,
+    command.description,
+    command.source_path,
+    workspace_context,
+    format_memory_prompt(memory_notes),
+    command.prompt
+  );
+  if let Some(input) = input {
+    message.push_str(&format!("\nAdditional command input:\n{input}"));
+  }
+  message
 }
 
 fn handle_approval_respond(
@@ -4140,11 +4279,13 @@ mod tests {
     assert!(response.error.is_none());
     let result = response.result.expect("command run result");
     let items = result["items"].as_array().expect("items");
-    assert_eq!(items[0]["kind"], "userMessage");
-    assert!(items[0]["content"]
+    assert_eq!(items[0]["kind"], "pluginCommand");
+    assert_eq!(items[0]["attributes"]["pluginId"], "workspace-notes");
+    assert_eq!(items[1]["kind"], "userMessage");
+    assert!(items[1]["content"]
       .as_str()
       .unwrap()
-      .contains("reusable workspace detail"));
+      .contains("Capture Workspace Note"));
     assert_eq!(result["threadId"], "thread-1");
   }
 
