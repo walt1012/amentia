@@ -100,6 +100,7 @@ struct PluginCommandSummary: Identifiable, Hashable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let executionKind: String?
   let memorySummary: String?
 }
 

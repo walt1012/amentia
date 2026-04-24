@@ -350,9 +350,12 @@ fn discover_plugin_manifests(directory: &Path, manifests: &mut Vec<PathBuf>) -> 
 fn load_plugin_entry(manifest_path: PathBuf) -> PluginCatalogEntry {
   let provenance = if manifest_path
     .components()
-    .any(|component| component.as_os_str() == "official")
+    .any(|component| {
+      let name = component.as_os_str();
+      name == "bundled" || name == "official"
+    })
   {
-    "official"
+    "bundled"
   } else {
     "local"
   };
@@ -836,8 +839,8 @@ mod tests {
           "settings:workspace.preferences".to_string(),
         ],
         permissions: vec!["file.read".to_string(), "file.write".to_string()],
-        manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
-        provenance: "official".to_string(),
+        manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: None,
         validation_hint: None,
       },
@@ -853,8 +856,8 @@ mod tests {
         default_enabled: false,
         capabilities: vec!["hook:shell.recorder".to_string()],
         permissions: vec!["shell.exec".to_string()],
-        manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
-        provenance: "official".to_string(),
+        manifest_path: "plugins/bundled/shell-recorder/pith-plugin.json".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: None,
         validation_hint: None,
       },
@@ -870,8 +873,8 @@ mod tests {
         default_enabled: false,
         capabilities: vec![],
         permissions: vec![],
-        manifest_path: "plugins/official/broken/pith-plugin.json".to_string(),
-        provenance: "official".to_string(),
+        manifest_path: "plugins/bundled/broken/pith-plugin.json".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
         validation_hint: Some(
           "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings."
@@ -1029,26 +1032,26 @@ mod tests {
 
   #[test]
   fn discover_plugins_in_roots_merges_local_and_bundled_catalogs() {
-    let official_root = create_temp_plugin_root("discover-multi-official");
+    let bundled_root = create_temp_plugin_root("discover-multi-bundled");
     let local_root = create_temp_plugin_root("discover-multi-local");
-    let official_plugin_dir = official_root.join("official").join("workspace-notes");
+    let bundled_plugin_dir = bundled_root.join("bundled").join("workspace-notes");
     let local_plugin_dir = local_root.join("focus-review");
-    fs::create_dir_all(&official_plugin_dir).expect("create official plugin dir");
+    fs::create_dir_all(&bundled_plugin_dir).expect("create bundled plugin dir");
     fs::create_dir_all(&local_plugin_dir).expect("create local plugin dir");
     fs::write(
-      official_plugin_dir.join("pith-plugin.json"),
+      bundled_plugin_dir.join("pith-plugin.json"),
       r#"{
   "name": "workspace-notes",
   "version": "0.1.0",
   "displayName": "Workspace Notes",
-  "description": "Official plugin",
+  "description": "Bundled plugin",
   "author": { "name": "Pith" },
   "capabilities": ["prompt_pack:workspace.notes"],
   "permissions": ["file.read"],
   "defaultEnabled": true
 }"#,
     )
-    .expect("write official manifest");
+    .expect("write bundled manifest");
     fs::write(
       local_plugin_dir.join("pith-plugin.json"),
       r#"{
@@ -1064,10 +1067,10 @@ mod tests {
     )
     .expect("write local manifest");
 
-    let plugins = discover_plugins_in_roots(&[official_root.clone(), local_root.clone()])
+    let plugins = discover_plugins_in_roots(&[bundled_root.clone(), local_root.clone()])
       .expect("discover plugins across roots");
 
-    fs::remove_dir_all(&official_root).expect("cleanup official plugin root");
+    fs::remove_dir_all(&bundled_root).expect("cleanup bundled plugin root");
     fs::remove_dir_all(&local_root).expect("cleanup local plugin root");
 
     assert_eq!(plugins.len(), 2);
@@ -1121,22 +1124,22 @@ mod tests {
   }
 
   #[test]
-  fn official_plugin_manifests_match_runtime_schema() {
-    let official_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../plugins/official");
+  fn bundled_plugin_manifests_match_runtime_schema() {
+    let bundled_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../plugins/bundled");
     let manifests = [
-      official_root.join("workspace-notes/pith-plugin.json"),
-      official_root.join("shell-recorder/pith-plugin.json"),
-      official_root.join("review-assistant/pith-plugin.json"),
+      bundled_root.join("workspace-notes/pith-plugin.json"),
+      bundled_root.join("shell-recorder/pith-plugin.json"),
+      bundled_root.join("review-assistant/pith-plugin.json"),
     ];
 
     for manifest_path in manifests {
-      let manifest = read_manifest(&manifest_path).expect("parse official manifest");
-      validate_manifest(&manifest).expect("validate official manifest");
+      let manifest = read_manifest(&manifest_path).expect("parse bundled manifest");
+      validate_manifest(&manifest).expect("validate bundled manifest");
       assert!(!manifest.display_name.trim().is_empty());
     }
 
     let workspace_command = read_command_manifest(
-      &official_root.join("workspace-notes/commands/workspace.capture-note.json"),
+      &bundled_root.join("workspace-notes/commands/workspace.capture-note.json"),
     )
     .expect("parse workspace command manifest");
     assert_eq!(workspace_command.title, "Capture Workspace Note");
@@ -1156,7 +1159,7 @@ mod tests {
     );
 
     let shell_command = read_command_manifest(
-      &official_root.join("shell-recorder/commands/shell.summarize-session.json"),
+      &bundled_root.join("shell-recorder/commands/shell.summarize-session.json"),
     )
     .expect("parse shell command manifest");
     assert_eq!(shell_command.title, "Summarize Shell Session");
@@ -1169,7 +1172,7 @@ mod tests {
     );
 
     let review_command = read_command_manifest(
-      &official_root.join("review-assistant/commands/review.inspect-diff.json"),
+      &bundled_root.join("review-assistant/commands/review.inspect-diff.json"),
     )
     .expect("parse review command manifest");
     assert_eq!(review_command.title, "Inspect Current Diff");
@@ -1182,8 +1185,8 @@ mod tests {
     );
 
     let hook_manifest =
-      read_hook_manifest(&official_root.join("shell-recorder/hooks/shell.recorder.json"))
-        .expect("parse official hook manifest");
+      read_hook_manifest(&bundled_root.join("shell-recorder/hooks/shell.recorder.json"))
+        .expect("parse bundled hook manifest");
     assert_eq!(hook_manifest.event, "shell.completed");
     assert!(!hook_manifest.message_template.trim().is_empty());
     assert_eq!(

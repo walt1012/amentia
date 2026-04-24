@@ -263,6 +263,8 @@ pub struct PluginCommandSummary {
   pub permissions: Vec<String>,
   pub source_path: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub execution_kind: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub memory_summary: Option<String>,
 }
 

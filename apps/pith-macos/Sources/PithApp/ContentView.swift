@@ -13,7 +13,10 @@ struct ContentView: View {
 
   @ObservedObject var viewModel: AppViewModel
   @State private var pluginInspectorSection: PluginInspectorSection = .catalog
-  @State private var modelManagerExpanded = true
+  @State private var localModelExpanded = false
+  @State private var modelManagerExpanded = false
+  @State private var memoryExpanded = false
+  @State private var pluginManagerExpanded = false
 
   var body: some View {
     NavigationView {
@@ -170,7 +173,7 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        GroupBox("Local Model") {
+        DisclosureGroup("Local Model", isExpanded: $localModelExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.modelDisplayName())
               .font(.headline)
@@ -285,7 +288,7 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        GroupBox("Memory") {
+        DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.memoryCountSummary())
               .font(.headline)
@@ -320,7 +323,7 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        GroupBox("Plugin Manager") {
+        DisclosureGroup("Plugin Manager", isExpanded: $pluginManagerExpanded) {
           VStack(alignment: .leading, spacing: 10) {
             Text(viewModel.pluginCountSummary())
               .font(.headline)
@@ -424,7 +427,8 @@ struct ContentView: View {
                     canRun: viewModel.runtimeState == .ready
                       && viewModel.isLocalModelReady()
                       && viewModel.selectedThreadID != nil
-                      && viewModel.activeTurnID == nil,
+                      && viewModel.activeTurnID == nil
+                      && command.executionKind != nil,
                     onRun: {
                       viewModel.runPluginCommand(commandID: command.id)
                     }
@@ -670,6 +674,11 @@ private struct PluginCommandRow: View {
       Text(command.description)
         .font(.caption2)
         .foregroundColor(.secondary)
+
+      Text("Execution: \(command.executionKind ?? "missing contract")")
+        .font(.caption2)
+        .foregroundColor(command.executionKind == nil ? .orange : .secondary)
+        .textSelection(.enabled)
 
       if let memorySummary = command.memorySummary {
         Text(memorySummary)

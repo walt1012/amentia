@@ -60,7 +60,6 @@ pub struct ModelPackManifest {
 pub struct GenerateRequest {
   pub role: ModelRole,
   pub prompt: String,
-  pub fallback: String,
   pub max_tokens: usize,
 }
 
@@ -940,7 +939,7 @@ mod tests {
     assert_eq!(health.backend, "unconfigured");
     assert_eq!(health.status, "unavailable");
     assert!(health.detail.contains("Local model runtime is unavailable"));
-    assert!(!health.detail.contains("Falling back"));
+    assert!(!health.detail.to_lowercase().contains("degraded generation"));
     assert!(health.metrics.contains_key("contextSize"));
     assert_eq!(health.metrics["readiness"], "unconfigured");
     assert_eq!(health.metrics["packReady"], "false");
@@ -956,7 +955,6 @@ mod tests {
     let response = runtime.generate(GenerateRequest {
       role: ModelRole::Summarizer,
       prompt: "Summarize this test prompt.".to_string(),
-      fallback: "Fallback summary".to_string(),
       max_tokens: 96,
     });
 

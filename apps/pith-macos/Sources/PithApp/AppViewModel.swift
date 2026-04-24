@@ -1852,6 +1852,7 @@ final class AppViewModel: ObservableObject {
           pluginDisplayName: command.pluginDisplayName,
           permissions: command.permissions,
           sourcePath: command.sourcePath,
+          executionKind: command.executionKind,
           memorySummary: command.memorySummary
         )
       }

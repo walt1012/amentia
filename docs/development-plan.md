@@ -72,7 +72,7 @@ From `anthropics/claude-code`, especially the plugin directory layout:
 - Plugins should be visible product primitives, not hidden implementation details.
 - A directory-based plugin format is simple, inspectable, and shareable.
 - Commands, agents, skills, hooks, and MCP integrations should be separable capabilities within one plugin bundle.
-- A plugin system becomes much more useful when official plugins demonstrate best practices early.
+- A plugin system becomes much more useful when bundled example plugins demonstrate best practices early without implying Pith-owned integrations are the long-term ceiling.
 - The plugin manager should be part of the core user experience, not a later add-on.
 
 Relevant reference areas:
@@ -499,7 +499,7 @@ Phase 1 should use `LFM2.5-350M` as:
 
 - the mandatory built-in model
 - the orchestration baseline
-- the always-available offline fallback
+- the always-available offline baseline
 
 The architecture must also support optional future local packs for stronger coding performance without violating the requirement that the product ships with a built-in local model.
 
@@ -643,21 +643,23 @@ At minimum:
 - show plugin in manager UI
 - enable plugin per user or workspace
 - activate plugin on demand
-- run command capabilities through a plugin-owned execution contract when `commands/*.json` declares `execution.kind`; prompt-only commands remain a compatibility fallback
+- run command capabilities only through explicit plugin-owned execution contracts; prompt-only command manifests can be listed for compatibility but are not runnable until they declare an executable contract
+- prepare connector capabilities for third-party services such as Notion through manifest-declared auth, permission, and MCP or app surfaces
 
-### 14.7 First-Party Plugins
+### 14.7 Bundled Example Plugins
 
-Phase 1 official plugins:
+Phase 1 bundled examples:
 
 - `filesystem`
 - `shell`
 - `git`
 
-Phase 2 additions:
+Phase 2 connector examples:
 
 - `workflow-coder`
 - `workflow-research`
 - `github`
+- `notion`
 
 ### 14.8 Built-In Memory Scope
 
@@ -735,7 +737,7 @@ Recommended monorepo layout:
 |   |-- pith-storage/
 |   `-- pith-tools/
 |-- plugins/
-|   `-- official/
+|   `-- bundled/
 |-- docs/
 |-- scripts/
 |-- third_party/
@@ -857,10 +859,13 @@ Deliverables:
 - memory-aware plugin integration points
 - per-plugin permissions UI
 - plugin-enabled commands and hooks
+- Codex-inspired plugin package metadata for skills, MCP servers, app connectors, and third-party auth policies
+- Notion connector design spike covering auth, permission scopes, and local execution boundaries
 
 Exit criteria:
 
-- at least three official plugins load and execute successfully in-app
+- at least three bundled example plugins load and execute successfully in-app
+- prompt-only plugin commands are visible but blocked until they provide an execution contract
 
 ### Milestone 3: Premium Desktop Quality
 
@@ -883,7 +888,7 @@ Deliverables:
 
 Exit criteria:
 
-- a fresh install can reach a ready local `LFM2.5-350M` runtime without hidden fallback behavior
+- a fresh install can reach a ready local `LFM2.5-350M` runtime without hidden degraded-generation behavior
 - the product feels stable, intentional, and distinctly native on Intel Mac hardware
 
 ### Milestone 4: Platform Expansion
@@ -928,7 +933,7 @@ Recommended implementation order:
 
 - add root `README.md`
 - add `.editorconfig`
-- add `apps/`, `crates/`, and `plugins/official/`
+- add `apps/`, `crates/`, and `plugins/bundled/`
 - add GitHub Actions workflow skeleton
 - add formatter and linter configs
 - add contributor guidance
@@ -1101,7 +1106,7 @@ Mitigation:
 - typed permissions
 - approval gates
 - plugin provenance
-- official first-party plugins as examples
+- bundled example plugins as reference implementations
 
 ### Risk 5: x86-only macOS support complicates CI and release verification
 

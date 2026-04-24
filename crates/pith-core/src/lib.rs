@@ -555,6 +555,7 @@ fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> PluginCommandS
     plugin_display_name: command.plugin_display_name,
     permissions: command.permissions,
     source_path: command.source_path,
+    execution_kind: command.execution_kind,
     memory_summary,
   }
 }
@@ -1104,59 +1105,14 @@ fn handle_plugin_command_run(
     };
   }
 
-  let display_message =
-    build_plugin_command_display_message(&command, workspace.as_ref(), command_input);
-  let agent_message = build_plugin_command_turn_message(
-    &command,
-    workspace.as_ref(),
-    command_input,
-    &relevant_memory_notes,
-  );
-
-  match execute_turn_request(
-    context,
-    &params.thread_id,
-    display_message,
-    agent_message,
-    vec![command_item],
-  ) {
-    Ok(mut result) => {
-      let plugin_memory_item = match maybe_capture_plugin_command_memory(
-        context,
-        &params.thread_id,
-        &command,
-        command_input,
-        &result.items,
-      ) {
-        Ok(item) => item,
-        Err(error) => Some(build_plugin_command_memory_warning_item(
-          &command,
-          error.to_string(),
-        )),
-      };
-
-      if let Some(plugin_memory_item) = plugin_memory_item {
-        if let Some(thread) = context
-          .threads
-          .iter_mut()
-          .find(|thread| thread.summary.id == params.thread_id)
-        {
-          thread.items.push(plugin_memory_item.clone());
-        }
-        result.items.push(plugin_memory_item);
-
-        if let Err(error) = context.persist_runtime_state() {
-          return JsonRpcResponse::error(request.id, -32010, error.to_string());
-        }
-        if let Err(error) = refresh_thread_summary_note(context, &params.thread_id) {
-          return JsonRpcResponse::error(request.id, -32012, error.to_string());
-        }
-      }
-
-      JsonRpcResponse::success(request.id, &result)
-    }
-    Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
-  }
+  JsonRpcResponse::error(
+    request.id,
+    -32053,
+    format!(
+      "Plugin command `{}` requires an explicit execution contract.",
+      command.command_id
+    ),
+  )
 }
 
 fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -1881,6 +1837,9 @@ fn build_plugin_command_timeline_item(
   if let Some(input) = input {
     attributes.insert("commandInput".to_string(), input.to_string());
   }
+  if let Some(execution_kind) = command.execution_kind.as_ref() {
+    attributes.insert("executionKind".to_string(), execution_kind.clone());
+  }
   merge_memory_attributes(&mut attributes, memory_notes);
 
   let workspace_label = workspace
@@ -1900,51 +1859,6 @@ fn build_plugin_command_timeline_item(
     content,
     attributes: Some(attributes),
   }
-}
-
-fn build_plugin_command_display_message(
-  command: &HostPluginCommandEntry,
-  workspace: Option<&WorkspaceSummary>,
-  input: Option<&str>,
-) -> String {
-  let workspace_summary = workspace
-    .map(|entry| format!(" in {}", entry.display_name))
-    .unwrap_or_default();
-  let mut message = format!(
-    "Run plugin command \"{}\" from {}{}.\nGoal: {}",
-    command.title, command.plugin_display_name, workspace_summary, command.description
-  );
-  if let Some(input) = input {
-    message.push_str(&format!("\nCommand input: {input}"));
-  }
-  message
-}
-
-fn build_plugin_command_turn_message(
-  command: &HostPluginCommandEntry,
-  workspace: Option<&WorkspaceSummary>,
-  input: Option<&str>,
-  memory_notes: &[MemoryNote],
-) -> String {
-  let workspace_context = workspace
-    .map(|entry| format!("Workspace: {} at {}.", entry.display_name, entry.root_path))
-    .unwrap_or_else(|| "Workspace: unavailable.".to_string());
-  let mut message = format!(
-    "Execute a local plugin command for Pith.\nPlugin: {} ({})\nCommand: {} ({})\nDescription: {}\nSource: {}\n{}\n{}\nCommand instructions:\n{}\nExecution rules:\n- Treat this as a first-class plugin workflow, not a generic chat request.\n- Stay inside the current workspace and use built-in local tools plus existing approvals.\n- Keep the result concise and explain what local action Pith actually took.",
-    command.plugin_display_name,
-    command.plugin_id,
-    command.title,
-    command.command_id,
-    command.description,
-    command.source_path,
-    workspace_context,
-    format_memory_prompt(memory_notes),
-    command.prompt
-  );
-  if let Some(input) = input {
-    message.push_str(&format!("\nAdditional command input:\n{input}"));
-  }
-  message
 }
 
 fn execute_builtin_plugin_command(
@@ -3200,7 +3114,7 @@ fn build_plan_item(
   memory_notes: &[MemoryNote],
   message: &str,
   workspace: Option<&WorkspaceSummary>,
-  fallback: String,
+  plan_hint: String,
 ) -> TimelineItem {
   let relevant_memory_notes = retrieve_memory_context(
     memory_notes,
@@ -3218,12 +3132,12 @@ fn build_plan_item(
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Planner,
     prompt: format!(
-      "You are the local planner for Pith.\n{}\n{}\nUser request: {}\nWrite one concise English sentence describing the next action Pith should take.",
+      "You are the local planner for Pith.\n{}\n{}\nUser request: {}\nCandidate local action: {}\nWrite one concise English sentence describing the next action Pith should take.",
       workspace_context,
       format_memory_prompt(&relevant_memory_notes),
-      message
+      message,
+      plan_hint
     ),
-    fallback,
     max_tokens: 80,
   });
   let mut attributes = HashMap::from([
@@ -3281,7 +3195,7 @@ fn summarize_file_result(
     .find(|line| !line.trim().is_empty())
     .unwrap_or("The file is empty.");
 
-  let fallback = format!(
+  let observation_summary = format!(
     "Pith inspected {} for {} in {}. First useful line: {}",
     result.relative_path, thread_title, workspace_name, preview
   );
@@ -3292,7 +3206,7 @@ fn summarize_file_result(
     result.content
   );
 
-  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
+  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
 }
 
 fn format_directory_result(entries: &[DirectoryEntry]) -> String {
@@ -3358,7 +3272,7 @@ fn summarize_directory_result(
     .collect::<Vec<_>>()
     .join(", ");
 
-  let fallback = format!(
+  let observation_summary = format!(
     "Pith inspected {} for {} and found {} root entries, including {}.",
     workspace_name,
     thread_title,
@@ -3371,7 +3285,7 @@ fn summarize_directory_result(
     format_directory_result(entries)
   );
 
-  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
+  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
 }
 
 fn summarize_search_result(
@@ -3405,7 +3319,7 @@ fn summarize_search_result(
     .collect::<Vec<_>>()
     .join(", ");
 
-  let fallback = format!(
+  let observation_summary = format!(
     "Pith searched {} for {} and found {} matches for \"{}\", including {}.",
     workspace_name,
     thread_title,
@@ -3419,7 +3333,7 @@ fn summarize_search_result(
     format_search_result(query, matches)
   );
 
-  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
+  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
 }
 
 fn format_shell_result(result: &ShellCommandResult) -> String {
@@ -3453,7 +3367,7 @@ fn summarize_shell_result(
 ) -> (String, HashMap<String, String>) {
   let relevant_memory_notes =
     retrieve_memory_context(memory_notes, Some(workspace_name), &result.command);
-  let fallback = if result.exit_code == 0 {
+  let observation_summary = if result.exit_code == 0 {
     format!(
       "Pith ran `{}` in {} and it finished successfully.",
       result.command, workspace_name
@@ -3473,7 +3387,7 @@ fn summarize_shell_result(
     result.stderr
   );
 
-  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
+  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
 }
 
 fn summarize_denied_approval(
@@ -3487,7 +3401,7 @@ fn summarize_denied_approval(
     .clone()
     .unwrap_or_else(|| format!("{} {}", approval.action, approval.relative_path));
   let relevant_memory_notes = retrieve_memory_context(memory_notes, Some(workspace_name), &query);
-  let fallback = if approval.action == "run_shell" {
+  let observation_summary = if approval.action == "run_shell" {
     let command = approval.command.clone().unwrap_or_default();
     format!(
       "Pith skipped the shell command `{}` because the approval was denied.",
@@ -3507,19 +3421,18 @@ fn summarize_denied_approval(
     approval.command.clone().unwrap_or_default()
   );
 
-  generate_local_summary(model_runtime, prompt, fallback, &relevant_memory_notes)
+  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
 }
 
 fn generate_local_summary(
   model_runtime: &LocalModelRuntime,
   prompt: String,
-  fallback: String,
+  observation_summary: String,
   memory_notes: &[MemoryNote],
 ) -> (String, HashMap<String, String>) {
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Summarizer,
-    prompt,
-    fallback,
+    prompt: format!("{prompt}\nDeterministic observation:\n{observation_summary}"),
     max_tokens: 160,
   });
 
@@ -4272,10 +4185,10 @@ mod tests {
       ],
       permissions: vec!["shell.exec".to_string()],
       manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/official/shell-recorder/pith-plugin.json")
+        .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
         .display()
         .to_string(),
-      provenance: "official".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -4586,8 +4499,8 @@ mod tests {
       default_enabled: false,
       capabilities: vec!["prompt_pack:workspace.notes".to_string()],
       permissions: vec!["file.read".to_string()],
-      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
-      provenance: "official".to_string(),
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -4659,14 +4572,14 @@ mod tests {
       version: "0.1.0".to_string(),
       display_name: "Workspace Notes".to_string(),
       status: "ready".to_string(),
-      description: "Bundled plugin".to_string(),
+      description: "bundled plugin".to_string(),
       author_name: Some("Pith".to_string()),
       enabled: true,
       default_enabled: true,
       capabilities: vec!["prompt_pack:workspace.notes".to_string()],
       permissions: vec!["file.read".to_string()],
-      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
-      provenance: "official".to_string(),
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -4768,10 +4681,10 @@ mod tests {
       ],
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
       manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/official/workspace-notes/pith-plugin.json")
+        .join("../../plugins/bundled/workspace-notes/pith-plugin.json")
         .display()
         .to_string(),
-      provenance: "official".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -4787,6 +4700,10 @@ mod tests {
     assert_eq!(commands.len(), 1);
     assert_eq!(commands[0]["pluginId"], "workspace-notes");
     assert_eq!(commands[0]["title"], "Capture Workspace Note");
+    assert_eq!(
+      commands[0]["executionKind"],
+      "builtin.workspaceReadmeNote"
+    );
   }
 
   #[test]
@@ -4808,10 +4725,10 @@ mod tests {
       ],
       permissions: vec!["shell.exec".to_string()],
       manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/official/shell-recorder/pith-plugin.json")
+        .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
         .display()
         .to_string(),
-      provenance: "official".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -4847,10 +4764,10 @@ mod tests {
       ],
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
       manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/official/workspace-notes/pith-plugin.json")
+        .join("../../plugins/bundled/workspace-notes/pith-plugin.json")
         .display()
         .to_string(),
-      provenance: "official".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -4922,10 +4839,10 @@ mod tests {
   }
 
   #[test]
-  fn official_builtin_plugin_commands_return_owned_results() {
+  fn bundled_builtin_plugin_commands_return_owned_results() {
     let mut context = RuntimeContext::new_in_memory();
-    let workspace = create_temp_workspace("official-plugin-results");
-    fs::write(workspace.join("README.md"), "# Official Plugin Results\n").expect("write readme");
+    let workspace = create_temp_workspace("bundled-plugin-results");
+    fs::write(workspace.join("README.md"), "# Bundled Plugin Results\n").expect("write readme");
     context.plugins = vec![
       PluginCatalogEntry {
         id: "review-assistant".to_string(),
@@ -4940,10 +4857,10 @@ mod tests {
         capabilities: vec!["command:review.inspect-diff".to_string()],
         permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
         manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-          .join("../../plugins/official/review-assistant/pith-plugin.json")
+          .join("../../plugins/bundled/review-assistant/pith-plugin.json")
           .display()
           .to_string(),
-        provenance: "official".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: None,
         validation_hint: None,
       },
@@ -4963,10 +4880,10 @@ mod tests {
         ],
         permissions: vec!["shell.exec".to_string()],
         manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-          .join("../../plugins/official/shell-recorder/pith-plugin.json")
+          .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
           .display()
           .to_string(),
-        provenance: "official".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: None,
         validation_hint: None,
       },
@@ -4986,7 +4903,7 @@ mod tests {
       request(
         methods::THREAD_START,
         Some(json!({
-          "title": "Official Plugin Thread"
+          "title": "Bundled Plugin Thread"
         })),
       ),
     );
@@ -5039,6 +4956,69 @@ mod tests {
   }
 
   #[test]
+  fn plugin_command_run_rejects_commands_without_execution_contract() {
+    let mut context = RuntimeContext::new_in_memory();
+    let source_root =
+      create_temp_plugin_bundle("plugin-command-contract", "prompt-only", "Prompt Only");
+    let workspace = create_temp_workspace("plugin-command-contract-workspace");
+    let plugin_manifest = source_root.join("pith-plugin.json");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "prompt-only".to_string(),
+      name: "prompt-only".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Prompt Only".to_string(),
+      status: "ready".to_string(),
+      description: "Prompt-only command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:prompt-only.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }];
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::THREAD_START,
+        Some(json!({
+          "title": "Plugin Contract Thread"
+        })),
+      ),
+    );
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_COMMAND_RUN,
+        Some(json!({
+          "threadId": "thread-1",
+          "commandId": "prompt-only::prompt-only.run"
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+    fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+    let error = response.error.expect("command contract error");
+    assert_eq!(error.code, -32053);
+    assert!(error.message.contains("requires an explicit execution contract"));
+  }
+
+  #[test]
   fn file_reads_require_plugin_permission() {
     let mut context = RuntimeContext::new_in_memory();
     let workspace = create_temp_workspace("permission-read");
@@ -5055,8 +5035,8 @@ mod tests {
       default_enabled: false,
       capabilities: vec!["hook:shell.recorder".to_string()],
       permissions: vec!["shell.exec".to_string()],
-      manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
-      provenance: "official".to_string(),
+      manifest_path: "plugins/bundled/shell-recorder/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -5117,8 +5097,8 @@ mod tests {
       default_enabled: true,
       capabilities: vec!["prompt_pack:workspace.notes".to_string()],
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
-      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
-      provenance: "official".to_string(),
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -5182,8 +5162,8 @@ mod tests {
       default_enabled: true,
       capabilities: vec!["prompt_pack:workspace.notes".to_string()],
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
-      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
-      provenance: "official".to_string(),
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
       validation_error: None,
       validation_hint: None,
     }];
@@ -5264,8 +5244,8 @@ mod tests {
           "settings:workspace.preferences".to_string(),
         ],
         permissions: vec!["file.read".to_string(), "file.write".to_string()],
-        manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
-        provenance: "official".to_string(),
+        manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: None,
         validation_hint: None,
       },
@@ -5281,8 +5261,8 @@ mod tests {
         default_enabled: false,
         capabilities: vec!["hook:shell.recorder".to_string()],
         permissions: vec!["shell.exec".to_string()],
-        manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
-        provenance: "official".to_string(),
+        manifest_path: "plugins/bundled/shell-recorder/pith-plugin.json".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: None,
         validation_hint: None,
       },
@@ -5298,8 +5278,8 @@ mod tests {
         default_enabled: false,
         capabilities: vec![],
         permissions: vec![],
-        manifest_path: "plugins/official/broken/pith-plugin.json".to_string(),
-        provenance: "official".to_string(),
+        manifest_path: "plugins/bundled/broken/pith-plugin.json".to_string(),
+        provenance: "bundled".to_string(),
         validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
         validation_hint: Some(
           "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, settings.".to_string(),

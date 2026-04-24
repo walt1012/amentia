@@ -214,7 +214,7 @@ fn plugin_capability_registry_round_trips() {
       plugin_id: "review-assistant".to_string(),
       plugin_display_name: "Review Assistant".to_string(),
       permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
-      manifest_path: "plugins/official/review-assistant/pith-plugin.json".to_string(),
+      manifest_path: "plugins/bundled/review-assistant/pith-plugin.json".to_string(),
     }],
   };
 
@@ -252,8 +252,9 @@ fn plugin_command_registry_round_trips() {
       plugin_id: "workspace-notes".to_string(),
       plugin_display_name: "Workspace Notes".to_string(),
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
-      source_path: "plugins/official/workspace-notes/commands/workspace.capture-note.json"
+      source_path: "plugins/bundled/workspace-notes/commands/workspace.capture-note.json"
         .to_string(),
+      execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
       memory_summary: Some("Stores a workspace memory note after execution.".to_string()),
     }],
   };
@@ -265,6 +266,10 @@ fn plugin_command_registry_round_trips() {
   assert_eq!(decoded.commands.len(), 1);
   assert_eq!(decoded.commands[0].plugin_id, "workspace-notes");
   assert_eq!(decoded.commands[0].title, "Capture Workspace Note");
+  assert_eq!(
+    decoded.commands[0].execution_kind.as_deref(),
+    Some("builtin.workspaceReadmeNote")
+  );
   assert_eq!(
     decoded.commands[0].memory_summary.as_deref(),
     Some("Stores a workspace memory note after execution.")
@@ -282,7 +287,7 @@ fn plugin_hook_registry_round_trips() {
       plugin_id: "shell-recorder".to_string(),
       plugin_display_name: "Shell Recorder".to_string(),
       permissions: vec!["shell.exec".to_string()],
-      source_path: "plugins/official/shell-recorder/hooks/shell.recorder.json".to_string(),
+      source_path: "plugins/bundled/shell-recorder/hooks/shell.recorder.json".to_string(),
       memory_summary: Some("Stores shell completion memory after execution.".to_string()),
     }],
   };

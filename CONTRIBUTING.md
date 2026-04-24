@@ -38,7 +38,7 @@ Before pushing a change that touches protocol shapes, plugin loading, permission
 
 - update the relevant unit tests in the Rust workspace
 - update `scripts/runtime_smoke_test.py` if runtime behavior changed across the process boundary
-- verify official sample plugin manifests still deserialize and validate against the runtime schema
+- verify bundled sample plugin manifests still deserialize and validate against the runtime schema
 - review sample data and fixtures for field casing so `camelCase` protocol types do not drift from checked-in JSON
 - prefer self-contained smoke fixtures over assumptions about the surrounding repository layout
 
@@ -47,7 +47,7 @@ If a change affects plugin permissions or command discovery, treat these four su
 - runtime behavior
 - unit and protocol tests
 - runtime smoke coverage
-- official plugin sample data
+- bundled plugin sample data
 
 ## Milestone 1 Baseline
 

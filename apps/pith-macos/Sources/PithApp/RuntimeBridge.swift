@@ -113,6 +113,7 @@ final class RuntimeBridge {
     let pluginDisplayName: String
     let permissions: [String]
     let sourcePath: String
+    let executionKind: String?
     let memorySummary: String?
   }
 
@@ -536,6 +537,7 @@ final class RuntimeBridge {
         pluginDisplayName: command.pluginDisplayName,
         permissions: command.permissions,
         sourcePath: command.sourcePath,
+        executionKind: command.executionKind,
         memorySummary: command.memorySummary
       )
     }
