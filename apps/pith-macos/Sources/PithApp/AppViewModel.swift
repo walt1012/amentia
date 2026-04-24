@@ -91,6 +91,7 @@ final class AppViewModel: ObservableObject {
   @Published var workspace: WorkspaceSummary?
   @Published var modelHealth: ModelHealthSummary?
   @Published var localModels: [LocalModelSummary]
+  @Published var modelDownloadID: String?
   @Published var memoryStatus: MemoryStatusSummary?
   @Published var memoryNotes: [MemoryNoteSummary]
   @Published var memoryNoteTitle: String
@@ -144,6 +145,7 @@ final class AppViewModel: ObservableObject {
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
       activeModelPath: runtimeBridge.activeLocalModelPath()
     )
+    self.modelDownloadID = nil
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -987,15 +989,20 @@ final class AppViewModel: ObservableObject {
   func modelManagerSummary() -> String {
     let downloadedModels = localModels.filter { $0.downloaded }
     let activeModel = localModels.first(where: { $0.active })?.displayName ?? "none"
+    let downloadingModel = modelDownloadID
+      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
     let localSize = downloadedModels
       .compactMap { $0.localSizeBytes }
       .reduce(Int64(0), +)
-    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)"
+    let downloadSummary = downloadingModel.map { " | Downloading: \($0)" } ?? ""
+    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)\(downloadSummary)"
   }
 
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {
     let status: String
-    if model.active {
+    if modelDownloadID == model.id {
+      status = "downloading"
+    } else if model.active {
       status = "active"
     } else if model.downloaded {
       status = "downloaded"
@@ -1007,6 +1014,18 @@ final class AppViewModel: ObservableObject {
     return "\(status) | \(localSize) | \(model.license)"
   }
 
+  func defaultModelDownloadButtonTitle() -> String {
+    modelDownloadID == "lfm2.5-350m" ? "Downloading Model" : "Download Model"
+  }
+
+  func localModelDownloadButtonTitle(_ model: LocalModelSummary) -> String {
+    if modelDownloadID == model.id {
+      return "Downloading"
+    }
+
+    return model.downloaded ? "Downloaded" : "Download"
+  }
+
   func localModelTagSummary(_ model: LocalModelSummary) -> String {
     model.tags.joined(separator: " / ")
   }
@@ -1016,6 +1035,9 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadRecommendedModel(modelID: String) -> Bool {
+    guard modelDownloadID == nil else {
+      return false
+    }
     guard let model = localModels.first(where: { $0.id == modelID }),
           URL(string: model.downloadURL) != nil
     else {
@@ -1026,6 +1048,9 @@ final class AppViewModel: ObservableObject {
   }
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
+    guard modelDownloadID == nil else {
+      return false
+    }
     guard let model = localModels.first(where: { $0.id == modelID }) else {
       return false
     }
@@ -1058,35 +1083,64 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    modelDownloadID = model.id
     Task {
+      defer {
+        modelDownloadID = nil
+        refreshLocalModelCatalog()
+      }
       do {
-        runtimeDetail = "Downloading \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
-        if runtimeState == .ready, modelHealth?.packID == model.id {
-          _ = try await runtimeBridge.bootstrapModelPack()
+        runtimeDetail =
+          "Downloading \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
+        try await downloadModelFile(from: downloadURL, to: URL(fileURLWithPath: model.installPath))
+
+        var activatedDefaultModel = false
+        var manifestPath: String?
+        if model.id == "lfm2.5-350m" {
+          let defaultManifestPath = try writeLocalModelPackManifest(for: model)
+          runtimeBridge.configureActiveLocalModel(
+            manifestPath: defaultManifestPath,
+            modelPath: model.installPath
+          )
+          manifestPath = defaultManifestPath
+          activatedDefaultModel = true
         }
 
-        try await downloadModelFile(from: downloadURL, to: URL(fileURLWithPath: model.installPath))
-        if runtimeState == .ready, modelHealth?.packID == model.id {
-          _ = try await runtimeBridge.bootstrapModelPack()
-          await refreshModelHealthState()
+        if activatedDefaultModel {
+          runtimeDetail = "Downloaded and selected \(model.displayName)."
+          refreshLocalModelCatalog()
         } else {
+          runtimeDetail = "Downloaded \(model.displayName) to \(model.installPath)."
           refreshLocalModelCatalog()
         }
 
-        runtimeDetail = "Downloaded \(model.displayName) to \(model.installPath)."
+        var attributes = [
+          "modelPath": model.installPath,
+          "source": downloadURL.absoluteString,
+        ]
+        if let manifestPath {
+          attributes["manifestPath"] = manifestPath
+        }
+
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
             id: UUID().uuidString,
             kind: .system,
             title: "Local Model Downloaded",
-            body: "\(model.displayName) was downloaded to \(model.installPath).",
-            attributes: [
-              "modelPath": model.installPath,
-              "source": downloadURL.absoluteString,
-            ]
+            body: activatedDefaultModel
+              ? "\(model.displayName) was downloaded and selected as the active local model."
+              : "\(model.displayName) was downloaded to \(model.installPath).",
+            attributes: attributes
           )
         )
+
+        if activatedDefaultModel {
+          relaunchRuntimeIfNeeded(
+            runningDetail: "Restarting local runtime with \(model.displayName)...",
+            idleDetail: "\(model.displayName) will be used when the runtime launches."
+          )
+        }
       } catch {
         runtimeDetail = "Model download failed: \(error.localizedDescription)"
       }
@@ -1773,7 +1827,20 @@ final class AppViewModel: ObservableObject {
   }
 
   private nonisolated func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
-    let data = try Data(contentsOf: sourceURL)
+    let (downloadedURL, response) = try await URLSession.shared.download(from: sourceURL)
+    if let httpResponse = response as? HTTPURLResponse,
+       !(200..<300).contains(httpResponse.statusCode)
+    {
+      throw NSError(
+        domain: "PithModelDownload",
+        code: httpResponse.statusCode,
+        userInfo: [
+          NSLocalizedDescriptionKey:
+            "Model download failed with HTTP \(httpResponse.statusCode)."
+        ]
+      )
+    }
+
     let manager = FileManager.default
     try manager.createDirectory(
       at: targetURL.deletingLastPathComponent(),
@@ -1784,7 +1851,7 @@ final class AppViewModel: ObservableObject {
       try manager.removeItem(at: targetURL)
     }
 
-    try data.write(to: targetURL, options: .atomic)
+    try manager.moveItem(at: downloadedURL, to: targetURL)
   }
 
   private func revealFilePath(_ path: String, successDetail: String) {

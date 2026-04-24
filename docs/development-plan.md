@@ -886,6 +886,7 @@ Goal:
 Deliverables:
 
 - release-bundled or guided local model pack delivery
+- one-click default model download, activation, and runtime restart flow
 - clear local model readiness and installation guidance
 - refined visual system
 - improved inspector

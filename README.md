@@ -55,6 +55,11 @@ and removal prompts, memory-aware plugin command execution, memory-aware shell-c
 execution, smoke coverage for the executable bundled plugins, and a Notion connector manifest
 template plus connector registry for the third-party plugin surface.
 
+Milestone 3 is underway with CI-first verification and one-click default local model delivery work:
+the macOS app streams model downloads to disk, activates the default LFM model after download, and
+restarts the runtime when needed so a fresh install reaches a real local model path with fewer
+manual steps.
+
 Delivered in Milestone 1:
 
 - monorepo scaffolding

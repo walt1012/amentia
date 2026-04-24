@@ -204,7 +204,7 @@ struct ContentView: View {
               .foregroundColor(.secondary)
               .textSelection(.enabled)
             HStack(spacing: 8) {
-              Button("Download Model") {
+              Button(viewModel.defaultModelDownloadButtonTitle()) {
                 viewModel.downloadLocalModel()
               }
               .buttonStyle(.borderedProminent)
@@ -259,7 +259,7 @@ struct ContentView: View {
                       .buttonStyle(.borderedProminent)
                       .disabled(!viewModel.canActivateRecommendedModel(modelID: model.id))
 
-                      Button(model.downloaded ? "Downloaded" : "Download") {
+                      Button(viewModel.localModelDownloadButtonTitle(model)) {
                         viewModel.downloadRecommendedModel(modelID: model.id)
                       }
                       .buttonStyle(.bordered)
