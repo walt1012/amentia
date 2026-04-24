@@ -46,18 +46,70 @@ def send_request(process: subprocess.Popen[str], payload: dict) -> tuple[dict, l
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
   state_dir = repo_root / ".tmp-runtime-state"
+  plugin_dir = repo_root / ".tmp-runtime-plugins"
   workspace_dir = repo_root / ".tmp-runtime-workspace"
   if state_dir.exists():
     shutil.rmtree(state_dir)
+  if plugin_dir.exists():
+    shutil.rmtree(plugin_dir)
   if workspace_dir.exists():
     shutil.rmtree(workspace_dir)
+  (plugin_dir / "workspace-notes").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "workspace-notes" / "pith-plugin.json").write_text(
+    json.dumps(
+      {
+        "name": "workspace-notes",
+        "version": "0.1.0",
+        "display_name": "Workspace Notes",
+        "description": "Captures reusable workspace notes and preferences for local threads.",
+        "author": {
+          "name": "Pith",
+        },
+        "capabilities": [
+          "prompt_pack:workspace.notes",
+          "settings:workspace.preferences",
+        ],
+        "permissions": [
+          "file.read",
+          "file.write",
+        ],
+        "default_enabled": True,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_dir / "shell-recorder" / "pith-plugin.json").write_text(
+    json.dumps(
+      {
+        "name": "shell-recorder",
+        "version": "0.1.0",
+        "display_name": "Shell Recorder",
+        "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
+        "author": {
+          "name": "Pith",
+        },
+        "capabilities": [
+          "hook:shell.recorder",
+          "tool:shell.timeline",
+        ],
+        "permissions": [
+          "shell.exec",
+        ],
+        "default_enabled": False,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
   workspace_dir.mkdir(parents=True, exist_ok=True)
   (workspace_dir / "README.md").write_text("# Pith\nMilestone 1 smoke test\n", encoding="utf-8")
   (workspace_dir / "apps").mkdir()
   (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
   env = os.environ.copy()
   env["PITH_DATA_DIR"] = str(state_dir)
-  env["PITH_PLUGIN_DIR"] = str(repo_root / "plugins")
+  env["PITH_PLUGIN_DIR"] = str(plugin_dir)
   process = start_runtime(repo_root, env)
 
   try:
@@ -504,6 +556,8 @@ def main() -> int:
   finally:
     process.terminate()
     process.wait(timeout=5)
+    if plugin_dir.exists():
+      shutil.rmtree(plugin_dir)
     if workspace_dir.exists():
       shutil.rmtree(workspace_dir)
 
