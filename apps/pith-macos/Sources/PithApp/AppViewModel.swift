@@ -107,6 +107,7 @@ final class AppViewModel: ObservableObject {
   private var threadTimelines: [String: [TimelineEntry]]
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
+  private var modelDownloadTask: Task<Void, Never>?
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let initialTimeline = [
@@ -162,6 +163,7 @@ final class AppViewModel: ObservableObject {
     self.activeTurnID = nil
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
+    self.modelDownloadTask = nil
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
       Task { @MainActor in
@@ -1035,7 +1037,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadID == nil else {
+    guard modelDownloadTask == nil else {
       return false
     }
     guard let model = localModels.first(where: { $0.id == modelID }),
@@ -1048,7 +1050,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadID == nil else {
+    guard modelDownloadTask == nil else {
       return false
     }
     guard let model = localModels.first(where: { $0.id == modelID }) else {
@@ -1060,6 +1062,22 @@ final class AppViewModel: ObservableObject {
 
   func canResetActiveLocalModel() -> Bool {
     runtimeBridge.activeLocalModelPath() != nil
+  }
+
+  func canCancelModelDownload() -> Bool {
+    modelDownloadTask != nil
+  }
+
+  func cancelModelDownload() {
+    guard let modelDownloadTask else {
+      return
+    }
+
+    let displayName = modelDownloadID
+      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
+      ?? "local model"
+    runtimeDetail = "Cancelling \(displayName) download..."
+    modelDownloadTask.cancel()
   }
 
   func downloadRecommendedModel(modelID: String) {
@@ -1084,9 +1102,10 @@ final class AppViewModel: ObservableObject {
     }
 
     modelDownloadID = model.id
-    Task {
+    modelDownloadTask = Task {
       defer {
         modelDownloadID = nil
+        modelDownloadTask = nil
         refreshLocalModelCatalog()
       }
       do {
@@ -1142,7 +1161,11 @@ final class AppViewModel: ObservableObject {
           )
         }
       } catch {
-        runtimeDetail = "Model download failed: \(error.localizedDescription)"
+        if error is CancellationError || (error as? URLError)?.code == .cancelled {
+          runtimeDetail = "Cancelled \(model.displayName) download."
+        } else {
+          runtimeDetail = "Model download failed: \(error.localizedDescription)"
+        }
       }
     }
   }
@@ -1828,6 +1851,10 @@ final class AppViewModel: ObservableObject {
 
   private nonisolated func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
     let (downloadedURL, response) = try await URLSession.shared.download(from: sourceURL)
+    if Task.isCancelled {
+      throw CancellationError()
+    }
+
     if let httpResponse = response as? HTTPURLResponse,
        !(200..<300).contains(httpResponse.statusCode)
     {
@@ -1849,6 +1876,10 @@ final class AppViewModel: ObservableObject {
 
     if manager.fileExists(atPath: targetURL.path) {
       try manager.removeItem(at: targetURL)
+    }
+
+    if Task.isCancelled {
+      throw CancellationError()
     }
 
     try manager.moveItem(at: downloadedURL, to: targetURL)

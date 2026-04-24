@@ -210,6 +210,12 @@ struct ContentView: View {
               .buttonStyle(.borderedProminent)
               .disabled(!viewModel.canDownloadLocalModel())
 
+              Button("Cancel Download") {
+                viewModel.cancelModelDownload()
+              }
+              .buttonStyle(.bordered)
+              .disabled(!viewModel.canCancelModelDownload())
+
               Button("Install Pack Metadata") {
                 viewModel.bootstrapModelPackMetadata()
               }
