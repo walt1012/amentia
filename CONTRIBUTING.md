@@ -18,19 +18,18 @@ This repository has completed the Milestone 1 local agent baseline for `Pith`.
 
 - Default branch prefix: `codex/`
 
-## Recommended Checks
+## Verification Policy
 
-Rust:
+Use GitHub Actions as the canonical verification environment. Local Rust, Swift, and Python
+toolchains are optional and should not block development when they are missing, stale, or broken.
+Push scoped changes to a `codex/**` branch, inspect the remote CI result, and fix only the concrete
+remote failures.
 
-- `cargo fmt --all -- --check`
-- `cargo clippy --workspace --all-targets -- -D warnings`
-- `cargo test --workspace`
-- `python3 scripts/runtime_smoke_test.py`
+The remote CI suite owns:
 
-Swift:
-
-- `cd apps/pith-macos`
-- `swift build`
+- Rust formatting, clippy, tests, and runtime smoke coverage
+- model pack manifest validation
+- Intel macOS Swift package builds
 
 ## CI Checklist
 

@@ -1,28 +1,28 @@
 # Development Environment
 
-This document describes the local development baseline for `Pith`.
+This document describes the CI-first development baseline for `Pith`.
 
-## Required Toolchains
+## Required Local Tools
 
-- Xcode 15 or newer
-- Swift 5.9 or newer
-- Rust stable toolchain
-- Python 3.11 or newer
 - Git
 
-## Repository Checks
+Local Rust, Swift, and Python toolchains are optional. The repository does not require contributors
+to install local validation toolchains before pushing. GitHub Actions is the source of truth for
+formatting, linting, tests, smoke coverage, and the native macOS package build.
 
-Rust:
+## Remote Checks
 
-- `cargo fmt --all -- --check`
-- `cargo clippy --workspace --all-targets -- -D warnings`
-- `cargo test --workspace`
-- `python scripts/runtime_smoke_test.py`
+Every push to `main` or `codex/**` runs the canonical CI suite:
 
-macOS app:
+- Rust formatting with `cargo fmt --all -- --check`
+- Rust linting with `cargo clippy --workspace --all-targets -- -D warnings`
+- Rust tests with `cargo test --workspace`
+- model pack manifest validation
+- runtime smoke coverage through `scripts/runtime_smoke_test.py`
+- Swift package build on an Intel macOS runner
 
-- `cd apps/pith-macos`
-- `swift build`
+Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
+remote CI logs instead.
 
 ## Runtime Bridge Development
 
@@ -31,13 +31,13 @@ The macOS shell looks for the runtime binary in this order:
 1. `PITH_RUNTIME_PATH`
 2. a bundled `pith-runtime-bin` executable next to the app executable
 
-For local development, the recommended path is:
+For manual runtime experiments, the bridge can still be pointed at a locally built runtime:
 
 ```bash
 export PITH_RUNTIME_PATH=/absolute/path/to/pith-runtime-bin
 ```
 
-One example flow after building the Rust runtime:
+One optional manual flow after building the Rust runtime:
 
 ```bash
 cargo build -p pith-runtime-bin
