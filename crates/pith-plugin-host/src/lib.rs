@@ -393,9 +393,8 @@ fn invalid_plugin_entry(
 
 fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("failed to parse plugin manifest") {
-    return
-      "Check that pith-plugin.json is valid JSON and uses camelCase field names such as `displayName` and `defaultEnabled`."
-        .to_string();
+    return "Check that pith-plugin.json is valid JSON and uses camelCase field names such as `displayName` and `defaultEnabled`."
+      .to_string();
   }
 
   if validation_error.contains("must use the `<kind>:<identifier>` format") {
