@@ -65,12 +65,14 @@ lets users find matching lines from the inspector without opening a separate fil
 menu shortcuts cover runtime launch, workspace opening, thread creation, plugin install, message
 send, and turn cancellation without adding more visible controls. The composer now explains
 blocking states inline so users can recover the local runtime, workspace, model, or thread setup
-without guessing why send is disabled. The Local Model panel also gives a compact next action for
-runtime launch, model download, pause/resume, activation, and readiness repair while deeper model
-diagnostics stay tucked away. Diff timeline cards now stay compact, while selected diff inspection
-uses a line-level view with change counts and highlighted additions, deletions, hunks, and metadata.
-Timeline cards include lightweight kind pills, and secondary inspector sections stay behind
-disclosure controls.
+without guessing why send is disabled. The timeline header now carries the same compact status
+language for runtime recovery, model download, workspace binding, and active streaming, while
+workspace search includes empty-state guidance instead of becoming another admin panel. The Local
+Model panel also gives a compact next action for runtime launch, model download, pause/resume,
+activation, and readiness repair while deeper model diagnostics stay tucked away. Diff timeline
+cards now stay compact, while selected diff inspection uses a line-level view with change counts
+and highlighted additions, deletions, hunks, and metadata. Timeline cards include lightweight kind
+pills, and secondary inspector sections stay behind disclosure controls.
 
 Delivered in Milestone 1:
 

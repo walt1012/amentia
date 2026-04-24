@@ -168,6 +168,14 @@ enum DiffLineKind: String, Hashable {
   case context
 }
 
+enum StatusTone: String, Hashable {
+  case neutral
+  case ready
+  case active
+  case warning
+  case danger
+}
+
 struct DiffLineSummary: Identifiable, Hashable {
   let id: String
   let lineNumber: Int

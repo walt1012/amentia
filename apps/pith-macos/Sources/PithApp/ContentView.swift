@@ -92,13 +92,33 @@ struct ContentView: View {
             .foregroundColor(.secondary)
         }
         Spacer()
-        VStack(alignment: .trailing, spacing: 2) {
-          Text(viewModel.runtimeState.rawValue.capitalized)
-            .font(.caption.weight(.medium))
+        VStack(alignment: .trailing, spacing: 6) {
+          HStack(spacing: 6) {
+            if viewModel.showsRuntimeActivity() {
+              ProgressView()
+                .controlSize(.small)
+            }
+            StatusPill(
+              label: viewModel.runtimeState.rawValue.capitalized,
+              tone: viewModel.runtimeStatusTone()
+            )
+          }
+          Text(viewModel.runtimeStatusSummary())
+            .font(.caption2)
             .foregroundColor(.secondary)
+            .multilineTextAlignment(.trailing)
           Text(viewModel.runtimeDetail)
             .font(.caption2)
             .foregroundColor(.secondary)
+            .lineLimit(2)
+            .multilineTextAlignment(.trailing)
+          if viewModel.runtimeState != .ready {
+            Button(viewModel.runtimeLaunchButtonTitle()) {
+              viewModel.launchRuntime()
+            }
+            .buttonStyle(.bordered)
+            .disabled(!viewModel.canLaunchRuntime())
+          }
         }
       }
       .padding(20)
@@ -215,6 +235,9 @@ struct ContentView: View {
               ProgressView()
                 .progressViewStyle(.linear)
             }
+            if let emptyState = viewModel.workspaceSearchEmptyStateSummary() {
+              EmptyStateHint(text: emptyState)
+            }
             ForEach(viewModel.workspaceSearchResults.prefix(8)) { match in
               VStack(alignment: .leading, spacing: 2) {
                 Text("\(match.relativePath):\(match.lineNumber)")
@@ -227,6 +250,11 @@ struct ContentView: View {
                   .textSelection(.enabled)
               }
               .padding(.vertical, 2)
+            }
+            if let overflow = viewModel.workspaceSearchOverflowSummary() {
+              Text(overflow)
+                .font(.caption2)
+                .foregroundColor(.secondary)
             }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -616,6 +644,50 @@ struct ContentView: View {
       .padding(20)
     }
     .frame(minWidth: 280)
+  }
+}
+
+private struct StatusPill: View {
+  let label: String
+  let tone: StatusTone
+
+  var body: some View {
+    Text(label)
+      .font(.caption.weight(.medium))
+      .foregroundColor(color)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(color.opacity(0.12))
+      .clipShape(Capsule())
+  }
+
+  private var color: Color {
+    switch tone {
+    case .neutral:
+      return .secondary
+    case .ready:
+      return .green
+    case .active:
+      return .blue
+    case .warning:
+      return .orange
+    case .danger:
+      return .red
+    }
+  }
+}
+
+private struct EmptyStateHint: View {
+  let text: String
+
+  var body: some View {
+    Text(text)
+      .font(.caption2)
+      .foregroundColor(.secondary)
+      .padding(8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(Color.secondary.opacity(0.08))
+      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
 }
 

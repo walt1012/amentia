@@ -475,6 +475,63 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func runtimeStatusSummary() -> String {
+    switch runtimeState {
+    case .disconnected:
+      return "Launch the local runtime to restore workspace, model, plugins, and memory."
+    case .launching:
+      return "Starting the local runtime and reconnecting app state..."
+    case .failed:
+      return "Runtime stopped. Relaunch to recover the local agent loop."
+    case .ready:
+      if workspace == nil {
+        return "Runtime is ready. Open a workspace to bind tools to a project."
+      }
+      if !isLocalModelReady() {
+        if modelDownloadID != nil {
+          return "Downloading the local model. Agent work unlocks when it is ready."
+        }
+        if pausedModelDownloadID != nil {
+          return "Model download is paused. Continue it from Local Model."
+        }
+        return "Install the local model to enable agent work without API fallback."
+      }
+      if activeTurnID != nil {
+        return "Pith is streaming locally. Cancel only if the turn is no longer useful."
+      }
+      if selectedThreadID == nil {
+        return "Select or create a thread to start local agent work."
+      }
+      return "Ready for local agent work."
+    }
+  }
+
+  func runtimeStatusTone() -> StatusTone {
+    switch runtimeState {
+    case .disconnected:
+      return .warning
+    case .launching:
+      return .active
+    case .failed:
+      return .danger
+    case .ready:
+      if activeTurnID != nil || modelDownloadID != nil || isWorkspaceSearching {
+        return .active
+      }
+      if workspace == nil || !isLocalModelReady() || selectedThreadID == nil {
+        return .warning
+      }
+      return .ready
+    }
+  }
+
+  func showsRuntimeActivity() -> Bool {
+    runtimeState == .launching
+      || isWorkspaceSearching
+      || modelDownloadID != nil
+      || activeTurnID != nil
+  }
+
   func canLaunchRuntime() -> Bool {
     runtimeState != .launching
   }
@@ -543,6 +600,36 @@ final class AppViewModel: ObservableObject {
   func clearWorkspaceSearch() {
     workspaceSearchQuery = ""
     resetWorkspaceSearch()
+  }
+
+  func workspaceSearchEmptyStateSummary() -> String? {
+    if isWorkspaceSearching || !workspaceSearchResults.isEmpty {
+      return nil
+    }
+    if runtimeState != .ready {
+      return "Launch the runtime to search workspace files."
+    }
+    if workspace == nil {
+      return "Open a workspace to search local files."
+    }
+    if workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      return "Search file contents or symbols, then press Return."
+    }
+    if workspaceSearchStatus.hasPrefix("No matches found") {
+      return "No results yet. Try a shorter query, filename, or symbol name."
+    }
+    if workspaceSearchStatus.hasPrefix("Workspace search failed") {
+      return "Search failed. Check the runtime status, then try again."
+    }
+    return nil
+  }
+
+  func workspaceSearchOverflowSummary() -> String? {
+    guard workspaceSearchResults.count > 8 else {
+      return nil
+    }
+
+    return "Showing the first 8 matches. Narrow the query to focus the review."
   }
 
   func openWorkspace() {
