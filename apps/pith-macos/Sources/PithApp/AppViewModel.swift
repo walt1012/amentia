@@ -1002,13 +1002,12 @@ final class AppViewModel: ObservableObject {
         await refreshModelHealthState()
         runtimeDetail = "Downloaded \(modelHealth.displayName) to \(targetURL.path). Manifest: \(refreshedBootstrap.manifestPath)"
         appendEntry(
-          to: selectedThread?.id,
+          to: selectedThreadID,
           TimelineEntry(
             id: UUID().uuidString,
             kind: .system,
             title: "Local Model Downloaded",
             body: "\(modelHealth.displayName) was downloaded to \(targetURL.path).",
-            timestamp: Date(),
             attributes: [
               "modelPath": targetURL.path,
               "source": downloadURL.absoluteString,
