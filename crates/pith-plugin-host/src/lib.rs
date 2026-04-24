@@ -529,7 +529,10 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       let Ok(command) = read_command_manifest(&command_path) else {
         continue;
       };
-      let memory_note_title = command.memory.as_ref().map(|memory| memory.note_title.clone());
+      let memory_note_title = command
+        .memory
+        .as_ref()
+        .map(|memory| memory.note_title.clone());
       let memory_note_source = command
         .memory
         .as_ref()

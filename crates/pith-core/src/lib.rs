@@ -532,9 +532,10 @@ fn build_protocol_capability_registry(
 }
 
 fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> PluginCommandSummary {
-  let memory_summary = command.memory_note_title.as_ref().map(|title| {
-    format!("Stores a workspace memory note as `{title}` after execution.")
-  });
+  let memory_summary = command
+    .memory_note_title
+    .as_ref()
+    .map(|title| format!("Stores a workspace memory note as `{title}` after execution."));
   PluginCommandSummary {
     command_id: command.command_id,
     title: command.title,
@@ -1933,8 +1934,12 @@ fn maybe_capture_plugin_command_memory(
     return Ok(None);
   };
 
-  let note_body =
-    build_plugin_command_memory_body(command, &workspace, input, &assistant_message.content);
+  let note_body = build_plugin_command_memory_body(
+    command,
+    &workspace,
+    input,
+    &assistant_message.content,
+  );
   let note_source = command
     .memory_note_source
     .clone()
