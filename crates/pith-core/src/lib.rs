@@ -1023,7 +1023,10 @@ fn handle_plugin_command_run(
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
 
-  let workspace = thread.workspace.clone().or_else(|| context.workspace.clone());
+  let workspace = thread
+    .workspace
+    .clone()
+    .or_else(|| context.workspace.clone());
   let command_input = params
     .input
     .as_deref()
@@ -1053,7 +1056,8 @@ fn handle_plugin_command_run(
     command_input,
     &relevant_memory_notes,
   );
-  let display_message = build_plugin_command_display_message(&command, workspace.as_ref(), command_input);
+  let display_message =
+    build_plugin_command_display_message(&command, workspace.as_ref(), command_input);
   let agent_message = build_plugin_command_turn_message(
     &command,
     workspace.as_ref(),

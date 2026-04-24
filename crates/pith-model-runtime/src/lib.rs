@@ -868,9 +868,7 @@ fn generation_failure_text(role: &ModelRole, detail: &str) -> String {
     ModelRole::Summarizer => "summarizer",
   };
 
-  format!(
-    "Pith could not produce a local {role_label} response because {detail}"
-  )
+  format!("Pith could not produce a local {role_label} response because {detail}")
 }
 
 #[cfg(test)]
