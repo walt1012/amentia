@@ -142,9 +142,9 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Start Local Setup",
-        body: "Launch the runtime, open a workspace, download the local LFM2.5-350M model, then create or select a thread.",
+        body: "Launch the runtime, download the local LFM2.5-350M model, open a workspace, then create or select a thread.",
         attributes: [
-          "path": "runtime -> workspace -> model -> thread"
+          "path": "runtime -> model -> workspace -> thread"
         ]
       ),
       TimelineEntry(
@@ -357,19 +357,50 @@ final class AppViewModel: ObservableObject {
           )
         }
         if let runtimeModel = modelHealth {
+          if isLocalModelReady() {
+            appendEntry(
+              to: selectedThread?.id,
+              TimelineEntry(
+                id: UUID().uuidString,
+                kind: .system,
+                title: "Local Model Ready",
+                body:
+                  "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
+                attributes: [
+                  "modelId": runtimeModel.packID,
+                  "modelBackend": runtimeModel.backend,
+                  "modelStatus": runtimeModel.status,
+                  "modelSource": runtimeModel.source,
+                ]
+              )
+            )
+          } else {
+            appendEntry(
+              to: selectedThread?.id,
+              TimelineEntry(
+                id: UUID().uuidString,
+                kind: .warning,
+                title: "Local Model Required",
+                body: localModelRequiredTimelineSummary(),
+                attributes: [
+                  "modelId": runtimeModel.packID,
+                  "modelBackend": runtimeModel.backend,
+                  "modelStatus": runtimeModel.status,
+                  "modelSource": runtimeModel.source,
+                ]
+              )
+            )
+          }
+        } else {
           appendEntry(
             to: selectedThread?.id,
             TimelineEntry(
               id: UUID().uuidString,
-              kind: .system,
-              title: "Local Model Ready",
-              body:
-                "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
+              kind: .warning,
+              title: "Local Model Required",
+              body: localModelRequiredTimelineSummary(),
               attributes: [
-                "modelId": runtimeModel.packID,
-                "modelBackend": runtimeModel.backend,
-                "modelStatus": runtimeModel.status,
-                "modelSource": runtimeModel.source,
+                "modelStatus": "unavailable"
               ]
             )
           )
@@ -486,15 +517,12 @@ final class AppViewModel: ObservableObject {
   func runtimeStatusSummary() -> String {
     switch runtimeState {
     case .disconnected:
-      return "Launch the local runtime to restore workspace, model, plugins, and memory."
+      return "Launch the local runtime to restore model, workspace, plugins, and memory."
     case .launching:
       return "Starting the local runtime and reconnecting app state..."
     case .failed:
       return "Runtime stopped. Relaunch to recover the local agent loop."
     case .ready:
-      if workspace == nil {
-        return "Runtime is ready. Open a workspace to bind tools to a project."
-      }
       if !isLocalModelReady() {
         if modelDownloadID != nil {
           return "Downloading the local model. Agent work unlocks when it is ready."
@@ -502,10 +530,13 @@ final class AppViewModel: ObservableObject {
         if pausedModelDownloadID != nil {
           return "Model download is paused. Continue it from Local Model."
         }
-        if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+        if isDefaultModelDownloaded() {
           return "Use the downloaded default model to complete the local setup."
         }
-        return "Install the local model to enable agent work without API fallback."
+        return "Download the local LFM2.5-350M model to enable offline agent work."
+      }
+      if workspace == nil {
+        return "Model is ready. Open a workspace to bind tools to a project."
       }
       if activeTurnID != nil {
         return "Pith is streaming locally. Cancel only if the turn is no longer useful."
@@ -546,8 +577,8 @@ final class AppViewModel: ObservableObject {
   func runtimeReadinessSteps() -> [ReadinessStepSummary] {
     [
       runtimeReadinessStep(),
-      workspaceReadinessStep(),
       modelReadinessStep(),
+      workspaceReadinessStep(),
       threadReadinessStep(),
     ]
   }
@@ -580,9 +611,6 @@ final class AppViewModel: ObservableObject {
     case .disconnected, .failed, .launching:
       return runtimeLaunchButtonTitle()
     case .ready:
-      if workspace == nil {
-        return "Open Workspace"
-      }
       if !isLocalModelReady() {
         if modelDownloadID != nil {
           return nil
@@ -594,6 +622,9 @@ final class AppViewModel: ObservableObject {
           return "Install Metadata"
         }
         return nil
+      }
+      if workspace == nil {
+        return "Open Workspace"
       }
       if activeTurnID != nil {
         return "Cancel Turn"
@@ -612,12 +643,12 @@ final class AppViewModel: ObservableObject {
     case .launching:
       return false
     case .ready:
-      if workspace == nil {
-        return canOpenWorkspace()
-      }
       if !isLocalModelReady() {
         return modelDownloadID == nil
           && (canDownloadLocalModel() || canBootstrapModelPackMetadata())
+      }
+      if workspace == nil {
+        return canOpenWorkspace()
       }
       if activeTurnID != nil {
         return canCancelActiveTurn()
@@ -636,16 +667,16 @@ final class AppViewModel: ObservableObject {
     case .launching:
       return
     case .ready:
-      if workspace == nil {
-        openWorkspace()
-        return
-      }
       if !isLocalModelReady() {
         if canDownloadLocalModel() {
           downloadLocalModel()
         } else if canBootstrapModelPackMetadata() {
           bootstrapModelPackMetadata()
         }
+        return
+      }
+      if workspace == nil {
+        openWorkspace()
         return
       }
       if activeTurnID != nil {
@@ -2197,10 +2228,6 @@ final class AppViewModel: ObservableObject {
       break
     }
 
-    if workspace == nil {
-      return "Open a workspace to start local agent work"
-    }
-
     if !isLocalModelReady() {
       if modelDownloadID != nil {
         return "Model download is running..."
@@ -2208,10 +2235,14 @@ final class AppViewModel: ObservableObject {
       if pausedModelDownloadID != nil {
         return "Continue the paused model download"
       }
-      if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+      if isDefaultModelDownloaded() {
         return "Use the downloaded local model"
       }
-      return "Install the local LFM2.5-350M runtime before starting agent work"
+      return "Download the local LFM2.5-350M model"
+    }
+
+    if workspace == nil {
+      return "Open a workspace to start local agent work"
     }
 
     if !hasRuntimeThreadSelection() {
@@ -2234,10 +2265,6 @@ final class AppViewModel: ObservableObject {
     case .failed:
       return "Runtime is unavailable. Relaunch it to recover the local agent loop."
     case .ready:
-      if workspace == nil {
-        return "Open a workspace to bind threads and tools to a local project."
-      }
-
       if !isLocalModelReady() {
         if modelDownloadID != nil {
           return "Model download is running. Agent work unlocks after the local model is ready."
@@ -2245,10 +2272,14 @@ final class AppViewModel: ObservableObject {
         if pausedModelDownloadID != nil {
           return "Model download is paused. Continue it from Local Model."
         }
-        if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+        if isDefaultModelDownloaded() {
           return "Use the downloaded local model to finish setup."
         }
-        return "Install the local LFM2.5-350M model to enable agent work."
+        return "Download the local LFM2.5-350M model to enable offline agent work."
+      }
+
+      if workspace == nil {
+        return "Open a workspace to bind threads and tools to a local project."
       }
 
       if !hasRuntimeThreadSelection() {
@@ -2361,9 +2392,9 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Thread Ready",
-        body: "\(title) is ready after runtime, workspace, model, and thread setup are complete.",
+        body: "\(title) is ready after runtime, model, workspace, and thread setup are complete.",
         attributes: [
-          "setup": "runtime, workspace, model, thread"
+          "setup": "runtime, model, workspace, thread"
         ]
       ),
     ]
@@ -2546,10 +2577,10 @@ final class AppViewModel: ObservableObject {
     if runtimeState == .ready {
       readyCount += 1
     }
-    if workspace != nil {
+    if isLocalModelReady() {
       readyCount += 1
     }
-    if isLocalModelReady() {
+    if workspace != nil {
       readyCount += 1
     }
     if hasRuntimeThreadSelection() {
@@ -2564,6 +2595,28 @@ final class AppViewModel: ObservableObject {
     }
 
     return !selectedThreadID.hasPrefix("local-")
+  }
+
+  private func isDefaultModelDownloaded() -> Bool {
+    defaultLocalModel()?.downloaded == true
+  }
+
+  private func defaultLocalModel() -> LocalModelSummary? {
+    localModels.first(where: { $0.id == "lfm2.5-350m" })
+  }
+
+  private func localModelRequiredTimelineSummary() -> String {
+    if modelDownloadID != nil {
+      return "The local model is downloading. Pith will unlock agent work after the model is ready."
+    }
+    if pausedModelDownloadID != nil {
+      return "The local model download is paused. Continue the download to finish first-use setup."
+    }
+    if isDefaultModelDownloaded() {
+      return "The default model is downloaded but not active. Use the downloaded model to finish first-use setup."
+    }
+
+    return "No ready local model is installed yet. Download the LFM2.5-350M model to finish first-use setup without an external API."
   }
 
   private func announceSetupCompleteIfNeeded() {
@@ -2582,7 +2635,7 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Local Setup Complete",
-        body: "Runtime, workspace, local model, and thread are ready. Ask Pith to inspect files, review diffs, or make a small change.",
+        body: "Runtime, local model, workspace, and thread are ready. Ask Pith to inspect files, review diffs, or make a small change.",
         attributes: [
           "setup": "complete"
         ]
@@ -2632,11 +2685,11 @@ final class AppViewModel: ObservableObject {
     if isLocalModelReady() {
       return ReadinessStepSummary(id: "model", label: "Model", detail: "Ready", tone: .ready)
     }
-    if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+    if isDefaultModelDownloaded() {
       return ReadinessStepSummary(id: "model", label: "Model", detail: "Select", tone: .warning)
     }
 
-    return ReadinessStepSummary(id: "model", label: "Model", detail: "Install", tone: .warning)
+    return ReadinessStepSummary(id: "model", label: "Model", detail: "Download", tone: .warning)
   }
 
   private func threadReadinessStep() -> ReadinessStepSummary {

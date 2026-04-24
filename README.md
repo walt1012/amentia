@@ -64,11 +64,11 @@ clear relaunch path when the local runtime exits unexpectedly. A lightweight wor
 lets users find matching lines from the inspector without opening a separate file browser. Native
 menu shortcuts cover runtime launch, workspace opening, thread creation, plugin install, message
 send, and turn cancellation without adding more visible controls. The composer now explains
-blocking states inline so users can recover the local runtime, workspace, model, or thread setup
+blocking states inline so users can recover the local runtime, model, workspace, or thread setup
 without guessing why send is disabled. The timeline header now carries the same compact status
-language for runtime recovery, model download, workspace binding, and active streaming, plus a
+language for runtime recovery, first-use model download, workspace binding, and active streaming, plus a
 single contextual next-action button when the daily loop is blocked. A compact readiness strip
-keeps runtime, workspace, model, and thread state visible without opening inspector sections.
+keeps runtime, model, workspace, and thread state visible without opening inspector sections.
 The same header now shows local setup progress, and the welcome timeline starts with the actual
 fresh-install path instead of internal milestone language. Workspace search includes empty-state
 guidance instead of becoming another admin panel. The Local
@@ -76,7 +76,8 @@ Model panel also gives a compact next action for runtime launch, model download,
 activation, and readiness repair while deeper model diagnostics stay tucked away; if the default
 model is already downloaded, the primary action can select it directly. Model download start,
 continue, pause, cancel, failure, and success events are also recorded in the timeline so recovery
-does not depend on transient status text. The composer stays gated until runtime, workspace, model,
+does not depend on transient status text, and first-use runtime launch records a clear model-required
+event when no ready local model exists. The composer stays gated until runtime, model, workspace,
 and thread setup are ready. Diff timeline cards now stay compact, while selected diff
 inspection uses a line-level view with change counts and highlighted additions, deletions, hunks,
 and metadata. Timeline cards include lightweight kind pills, and secondary inspector sections stay

@@ -713,7 +713,7 @@ private struct SetupProgressView: View {
           .font(.caption2.weight(.semibold))
           .foregroundColor(tone.color)
         Spacer()
-        Text("Runtime -> Workspace -> Model -> Thread")
+        Text("Runtime -> Model -> Workspace -> Thread")
           .font(.caption2)
           .foregroundColor(.secondary)
       }
