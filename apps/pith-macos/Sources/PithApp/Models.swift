@@ -176,6 +176,13 @@ enum StatusTone: String, Hashable {
   case danger
 }
 
+struct ReadinessStepSummary: Identifiable, Hashable {
+  let id: String
+  let label: String
+  let detail: String
+  let tone: StatusTone
+}
+
 struct DiffLineSummary: Identifiable, Hashable {
   let id: String
   let lineNumber: Int

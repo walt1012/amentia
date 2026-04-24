@@ -532,6 +532,15 @@ final class AppViewModel: ObservableObject {
       || activeTurnID != nil
   }
 
+  func runtimeReadinessSteps() -> [ReadinessStepSummary] {
+    [
+      runtimeReadinessStep(),
+      workspaceReadinessStep(),
+      modelReadinessStep(),
+      threadReadinessStep(),
+    ]
+  }
+
   func runtimePrimaryActionTitle() -> String? {
     switch runtimeState {
     case .disconnected, .failed, .launching:
@@ -2453,6 +2462,69 @@ final class AppViewModel: ObservableObject {
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
       activeModelPath: activeModelPath
     )
+  }
+
+  private func runtimeReadinessStep() -> ReadinessStepSummary {
+    switch runtimeState {
+    case .ready:
+      return ReadinessStepSummary(id: "runtime", label: "Runtime", detail: "Ready", tone: .ready)
+    case .launching:
+      return ReadinessStepSummary(id: "runtime", label: "Runtime", detail: "Starting", tone: .active)
+    case .failed:
+      return ReadinessStepSummary(id: "runtime", label: "Runtime", detail: "Relaunch", tone: .danger)
+    case .disconnected:
+      return ReadinessStepSummary(id: "runtime", label: "Runtime", detail: "Launch", tone: .warning)
+    }
+  }
+
+  private func workspaceReadinessStep() -> ReadinessStepSummary {
+    guard runtimeState == .ready else {
+      return ReadinessStepSummary(id: "workspace", label: "Workspace", detail: "Waiting", tone: .neutral)
+    }
+    guard let workspace else {
+      return ReadinessStepSummary(id: "workspace", label: "Workspace", detail: "Open", tone: .warning)
+    }
+
+    return ReadinessStepSummary(
+      id: "workspace",
+      label: "Workspace",
+      detail: workspace.displayName,
+      tone: .ready
+    )
+  }
+
+  private func modelReadinessStep() -> ReadinessStepSummary {
+    guard runtimeState == .ready else {
+      return ReadinessStepSummary(id: "model", label: "Model", detail: "Waiting", tone: .neutral)
+    }
+    if modelDownloadID != nil {
+      return ReadinessStepSummary(id: "model", label: "Model", detail: "Downloading", tone: .active)
+    }
+    if pausedModelDownloadID != nil {
+      return ReadinessStepSummary(id: "model", label: "Model", detail: "Paused", tone: .warning)
+    }
+    if isLocalModelReady() {
+      return ReadinessStepSummary(id: "model", label: "Model", detail: "Ready", tone: .ready)
+    }
+    if localModels.contains(where: { $0.id == "lfm2.5-350m" && $0.downloaded }) {
+      return ReadinessStepSummary(id: "model", label: "Model", detail: "Select", tone: .warning)
+    }
+
+    return ReadinessStepSummary(id: "model", label: "Model", detail: "Install", tone: .warning)
+  }
+
+  private func threadReadinessStep() -> ReadinessStepSummary {
+    guard runtimeState == .ready else {
+      return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Waiting", tone: .neutral)
+    }
+    guard selectedThreadID != nil else {
+      return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Create", tone: .warning)
+    }
+    if activeTurnID != nil {
+      return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Streaming", tone: .active)
+    }
+
+    return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Ready", tone: .ready)
   }
 
   private func appendModelEvent(

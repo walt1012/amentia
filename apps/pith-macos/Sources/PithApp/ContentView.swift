@@ -83,42 +83,51 @@ struct ContentView: View {
 
   private var timeline: some View {
     VStack(alignment: .leading, spacing: 0) {
-      HStack {
-        VStack(alignment: .leading, spacing: 4) {
-          Text("Timeline")
-            .font(.title2.weight(.semibold))
-          Text(viewModel.workspaceDisplayName())
-            .font(.caption)
-            .foregroundColor(.secondary)
+      VStack(alignment: .leading, spacing: 10) {
+        HStack {
+          VStack(alignment: .leading, spacing: 4) {
+            Text("Timeline")
+              .font(.title2.weight(.semibold))
+            Text(viewModel.workspaceDisplayName())
+              .font(.caption)
+              .foregroundColor(.secondary)
+          }
+          Spacer()
+          VStack(alignment: .trailing, spacing: 6) {
+            HStack(spacing: 6) {
+              if viewModel.showsRuntimeActivity() {
+                ProgressView()
+                  .controlSize(.small)
+              }
+              StatusPill(
+                label: viewModel.runtimeState.rawValue.capitalized,
+                tone: viewModel.runtimeStatusTone()
+              )
+            }
+            Text(viewModel.runtimeStatusSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .multilineTextAlignment(.trailing)
+            Text(viewModel.runtimeDetail)
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .lineLimit(2)
+              .multilineTextAlignment(.trailing)
+            if let actionTitle = viewModel.runtimePrimaryActionTitle() {
+              Button(actionTitle) {
+                viewModel.runRuntimePrimaryAction()
+              }
+              .buttonStyle(.bordered)
+              .disabled(!viewModel.canRunRuntimePrimaryAction())
+            }
+          }
         }
-        Spacer()
-        VStack(alignment: .trailing, spacing: 6) {
-          HStack(spacing: 6) {
-            if viewModel.showsRuntimeActivity() {
-              ProgressView()
-                .controlSize(.small)
-            }
-            StatusPill(
-              label: viewModel.runtimeState.rawValue.capitalized,
-              tone: viewModel.runtimeStatusTone()
-            )
+
+        HStack(spacing: 8) {
+          ForEach(viewModel.runtimeReadinessSteps()) { step in
+            ReadinessChip(step: step)
           }
-          Text(viewModel.runtimeStatusSummary())
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.trailing)
-          Text(viewModel.runtimeDetail)
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .lineLimit(2)
-            .multilineTextAlignment(.trailing)
-          if let actionTitle = viewModel.runtimePrimaryActionTitle() {
-            Button(actionTitle) {
-              viewModel.runRuntimePrimaryAction()
-            }
-            .buttonStyle(.bordered)
-            .disabled(!viewModel.canRunRuntimePrimaryAction())
-          }
+          Spacer()
         }
       }
       .padding(20)
@@ -655,15 +664,39 @@ private struct StatusPill: View {
   var body: some View {
     Text(label)
       .font(.caption.weight(.medium))
-      .foregroundColor(color)
+      .foregroundColor(tone.color)
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
-      .background(color.opacity(0.12))
+      .background(tone.color.opacity(0.12))
       .clipShape(Capsule())
   }
+}
 
-  private var color: Color {
-    switch tone {
+private struct ReadinessChip: View {
+  let step: ReadinessStepSummary
+
+  var body: some View {
+    HStack(spacing: 4) {
+      Text(step.label)
+        .font(.caption2.weight(.medium))
+        .foregroundColor(.secondary)
+      Text(step.detail)
+        .font(.caption2.weight(.semibold))
+        .foregroundColor(step.tone.color)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .frame(maxWidth: 150, alignment: .leading)
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 5)
+    .background(step.tone.color.opacity(0.10))
+    .clipShape(Capsule())
+  }
+}
+
+private extension StatusTone {
+  var color: Color {
+    switch self {
     case .neutral:
       return .secondary
     case .ready:

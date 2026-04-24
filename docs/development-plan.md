@@ -900,6 +900,7 @@ Deliverables:
 - better loading, blocking, and error states for composer, runtime, workspace-search, and model-manager flows
 - compact daily-loop status guidance that explains the next required action without adding new surfaces
 - contextual single-action recovery from the timeline header for blocked runtime, workspace, model, thread, and turn states
+- compact runtime, workspace, model, and thread readiness cockpit in the main timeline surface
 
 Exit criteria:
 
@@ -919,6 +920,7 @@ Deliverables:
 - background tasks
 - richer memory retrieval
 - plugin-defined agents
+- third-party connector execution and auth flows, with Notion as the first reference connector
 - MCP client support
 
 Exit criteria:
@@ -1134,15 +1136,17 @@ Mitigation:
 ## 25. Immediate Next Actions
 
 The project is currently in Milestone 3. The highest-leverage next step is to keep tightening the
-daily-driver loop without expanding the visible surface area.
+daily-driver loop without expanding the visible surface area. Current product review says the main
+adjustment is to move daily readiness and recovery guidance into the timeline header, while keeping
+inspector sections for secondary detail instead of adding more always-visible admin controls.
 
 Recommended current implementation sequence:
 
-1. finish inline loading, blocking, and recovery states for the composer, model manager, and runtime
+1. verify the fresh-install path from launch to workspace, model download, model activation, and first thread
 2. continue reducing inspector noise through stronger defaults and fewer always-visible admin controls
-3. refine the visual system around review surfaces, empty states, and recovery prompts
+3. refine review surfaces, empty states, and recovery prompts around the main timeline
 4. keep model delivery focused on one-click local downloads with pause, resume, cancel, and activation
-5. defer broad plugin expansion until the local daily-driver loop feels stable and compact
+5. defer broad third-party plugin and connector expansion until the local daily-driver loop feels stable and compact
 
 Each step should stay small, reviewable, and remotely verified so the app continues moving toward a
 premium, local-first, small-but-strong desktop experience.
