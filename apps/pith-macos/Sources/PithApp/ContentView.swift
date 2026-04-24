@@ -234,6 +234,15 @@ struct ContentView: View {
             Text(viewModel.modelStatusSummary())
               .font(.subheadline)
               .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+              if viewModel.showsModelActivity() {
+                ProgressView()
+                  .controlSize(.small)
+              }
+              Text(viewModel.modelActionSummary())
+                .font(.caption)
+                .foregroundColor(viewModel.isModelActionBlocking() ? .orange : .secondary)
+            }
             Text(viewModel.modelDetailSummary())
               .font(.caption)
               .foregroundColor(.secondary)

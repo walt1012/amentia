@@ -1084,6 +1084,53 @@ final class AppViewModel: ObservableObject {
     return "\(modelHealth.backend) | \(modelHealth.status)"
   }
 
+  func modelActionSummary() -> String {
+    switch runtimeState {
+    case .disconnected:
+      return "Launch the runtime to inspect local model setup."
+    case .launching:
+      return "Checking local model setup..."
+    case .failed:
+      return "Relaunch the runtime before changing model setup."
+    case .ready:
+      if let modelDownloadID,
+         let model = localModels.first(where: { $0.id == modelDownloadID })
+      {
+        return "Downloading \(model.displayName). You can pause or cancel without losing control."
+      }
+
+      if let pausedModelDownloadID,
+         let model = localModels.first(where: { $0.id == pausedModelDownloadID })
+      {
+        return "\(model.displayName) is paused. Continue to resume or cancel to clear the partial file."
+      }
+
+      if isLocalModelReady() {
+        return "Local model is ready for offline agent work."
+      }
+
+      let downloadedModels = localModels.filter { $0.downloaded }
+      if downloadedModels.isEmpty {
+        return "Download the default LFM2.5-350M model to unlock local agent work."
+      }
+
+      if downloadedModels.contains(where: { $0.id == "lfm2.5-350m" }) {
+        return "Use the downloaded default model or reinstall pack metadata to repair readiness."
+      }
+
+      return "Select a downloaded model or download the default LFM2.5-350M baseline."
+    }
+  }
+
+  func showsModelActivity() -> Bool {
+    runtimeState == .launching || modelDownloadID != nil
+  }
+
+  func isModelActionBlocking() -> Bool {
+    runtimeState == .failed
+      || (runtimeState == .ready && !isLocalModelReady() && modelDownloadID == nil)
+  }
+
   func modelDetailSummary() -> String {
     guard let modelHealth else {
       return "Pith will use the built-in local model path after the runtime connects."

@@ -896,7 +896,7 @@ Deliverables:
 - runtime crash recovery with pending request cleanup and relaunch affordance
 - lightweight workspace search from the inspector
 - keyboard-first launch, workspace, thread, composer, and cancellation workflows
-- better loading, blocking, and error states for daily-driver flows
+- better loading, blocking, and error states for composer and model-manager flows
 
 Exit criteria:
 

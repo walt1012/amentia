@@ -65,7 +65,8 @@ lets users find matching lines from the inspector without opening a separate fil
 menu shortcuts cover runtime launch, workspace opening, thread creation, plugin install, message
 send, and turn cancellation without adding more visible controls. The composer now explains
 blocking states inline so users can recover the local runtime, workspace, model, or thread setup
-without guessing why send is disabled.
+without guessing why send is disabled. The Local Model panel also gives a compact next action for
+runtime launch, model download, pause/resume, activation, and readiness repair.
 
 Delivered in Milestone 1:
 
