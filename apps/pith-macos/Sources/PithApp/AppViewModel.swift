@@ -479,6 +479,30 @@ final class AppViewModel: ObservableObject {
     runtimeState != .launching
   }
 
+  func canOpenWorkspace() -> Bool {
+    runtimeState == .ready
+  }
+
+  func canCreateThread() -> Bool {
+    runtimeState == .ready
+  }
+
+  func canInstallPlugin() -> Bool {
+    runtimeState == .ready
+  }
+
+  func canSendDraftMessage() -> Bool {
+    runtimeState == .ready
+      && isLocalModelReady()
+      && selectedThreadID != nil
+      && !isTurnStreaming()
+      && !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  func canCancelActiveTurn() -> Bool {
+    runtimeState == .ready && isTurnStreaming()
+  }
+
   func canSearchWorkspace() -> Bool {
     runtimeState == .ready
       && workspace != nil

@@ -30,21 +30,21 @@ struct ContentView: View {
         Button("Open Workspace") {
           viewModel.openWorkspace()
         }
-        .disabled(viewModel.runtimeState != .ready)
+        .disabled(!viewModel.canOpenWorkspace())
       }
 
       ToolbarItem {
         Button("New Thread") {
           viewModel.createThread()
         }
-        .disabled(viewModel.runtimeState != .ready)
+        .disabled(!viewModel.canCreateThread())
       }
 
       ToolbarItem {
         Button("Install Plugin") {
           viewModel.installPlugin()
         }
-        .disabled(viewModel.runtimeState != .ready)
+        .disabled(!viewModel.canInstallPlugin())
       }
 
       ToolbarItem(placement: .primaryAction) {
@@ -133,24 +133,23 @@ struct ContentView: View {
       HStack(alignment: .bottom, spacing: 12) {
         TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
           .textFieldStyle(.roundedBorder)
+          .onSubmit {
+            if viewModel.canSendDraftMessage() {
+              viewModel.sendDraftMessage()
+            }
+          }
 
         Button("Send") {
           viewModel.sendDraftMessage()
         }
         .buttonStyle(.borderedProminent)
-        .disabled(
-          viewModel.runtimeState != .ready
-            || !viewModel.isLocalModelReady()
-            || viewModel.selectedThreadID == nil
-            || viewModel.isTurnStreaming()
-            || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        )
+        .disabled(!viewModel.canSendDraftMessage())
 
         Button("Cancel") {
           viewModel.cancelActiveTurn()
         }
         .buttonStyle(.bordered)
-        .disabled(!viewModel.isTurnStreaming())
+        .disabled(!viewModel.canCancelActiveTurn())
       }
       .padding(20)
     }
@@ -174,6 +173,11 @@ struct ContentView: View {
             TextField("Search workspace", text: $viewModel.workspaceSearchQuery)
               .textFieldStyle(.roundedBorder)
               .disabled(viewModel.runtimeState != .ready || viewModel.workspace == nil)
+              .onSubmit {
+                if viewModel.canSearchWorkspace() {
+                  viewModel.searchWorkspace()
+                }
+              }
             HStack(spacing: 8) {
               Button("Search") {
                 viewModel.searchWorkspace()

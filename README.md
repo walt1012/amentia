@@ -61,7 +61,9 @@ or cancel long downloads, activates the default LFM model after download, and re
 when needed so a fresh install reaches a real local model path with fewer manual steps. It also
 restores the last workspace and key inspector disclosure state across launches, and surfaces a
 clear relaunch path when the local runtime exits unexpectedly. A lightweight workspace search now
-lets users find matching lines from the inspector without opening a separate file browser.
+lets users find matching lines from the inspector without opening a separate file browser. Native
+menu shortcuts cover runtime launch, workspace opening, thread creation, plugin install, message
+send, and turn cancellation without adding more visible controls.
 
 Delivered in Milestone 1:
 

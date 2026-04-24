@@ -895,7 +895,7 @@ Deliverables:
 - workspace and inspector state restoration
 - runtime crash recovery with pending request cleanup and relaunch affordance
 - lightweight workspace search from the inspector
-- keyboard-first workflows
+- keyboard-first launch, workspace, thread, composer, and cancellation workflows
 - better loading and error states
 
 Exit criteria:
