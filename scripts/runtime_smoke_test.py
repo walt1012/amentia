@@ -95,6 +95,9 @@ def main() -> int:
         "title": "Capture Workspace Note",
         "description": "Read the workspace README and prepare a concise note candidate.",
         "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
+        "execution": {
+          "kind": "builtin.workspaceReadmeNote",
+        },
         "memory": {
           "noteTitle": "Workspace Capture",
           "noteSource": "plugin.workspace-notes",
@@ -135,6 +138,9 @@ def main() -> int:
         "title": "Summarize Shell Session",
         "description": "Ask Pith to explain recent shell work in a compact summary.",
         "prompt": "Summarize the most relevant recent shell activity for this workspace.",
+        "execution": {
+          "kind": "builtin.shellSessionSummary",
+        },
       },
       indent=2,
     ),
@@ -188,6 +194,9 @@ def main() -> int:
         "title": "Inspect Current Diff",
         "description": "Ask Pith to review the active workspace diff with a code review mindset.",
         "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
+        "execution": {
+          "kind": "builtin.reviewDiffSummary",
+        },
       },
       indent=2,
     ),
@@ -397,6 +406,7 @@ def main() -> int:
       workspace_capture_command["memorySummary"]
       == "Stores a workspace memory note as `Workspace Capture` after execution."
     )
+    assert workspace_capture_command["executionKind"] == "builtin.workspaceReadmeNote"
     hook_registry, _ = send_request(
       process,
       {
@@ -805,8 +815,11 @@ def main() -> int:
     )
     assert review_command_turn["result"]["items"][0]["kind"] == "pluginCommand"
     assert review_command_turn["result"]["items"][0]["attributes"]["pluginId"] == "review-assistant"
-    assert review_command_turn["result"]["items"][1]["kind"] == "userMessage"
-    assert "Inspect Current Diff" in review_command_turn["result"]["items"][1]["content"]
+    assert review_command_turn["result"]["items"][1]["kind"] == "pluginResult"
+    assert (
+      review_command_turn["result"]["items"][1]["attributes"]["executionKind"]
+      == "builtin.reviewDiffSummary"
+    )
 
     command_turn, _ = send_request(
       process,
@@ -821,8 +834,11 @@ def main() -> int:
     )
     assert command_turn["result"]["items"][0]["kind"] == "pluginCommand"
     assert command_turn["result"]["items"][0]["attributes"]["pluginId"] == "workspace-notes"
-    assert command_turn["result"]["items"][1]["kind"] == "userMessage"
-    assert "Capture Workspace Note" in command_turn["result"]["items"][1]["content"]
+    assert command_turn["result"]["items"][1]["kind"] == "pluginResult"
+    assert (
+      command_turn["result"]["items"][1]["attributes"]["executionKind"]
+      == "builtin.workspaceReadmeNote"
+    )
     memory_item = next(
       item
       for item in command_turn["result"]["items"]
