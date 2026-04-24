@@ -66,13 +66,17 @@ menu shortcuts cover runtime launch, workspace opening, thread creation, plugin 
 send, and turn cancellation without adding more visible controls. The composer now explains
 blocking states inline so users can recover the local runtime, workspace, model, or thread setup
 without guessing why send is disabled. The timeline header now carries the same compact status
-language for runtime recovery, model download, workspace binding, and active streaming, while
-workspace search includes empty-state guidance instead of becoming another admin panel. The Local
+language for runtime recovery, model download, workspace binding, and active streaming, plus a
+single contextual next-action button when the daily loop is blocked. Workspace search includes
+empty-state guidance instead of becoming another admin panel. The Local
 Model panel also gives a compact next action for runtime launch, model download, pause/resume,
-activation, and readiness repair while deeper model diagnostics stay tucked away. Diff timeline
-cards now stay compact, while selected diff inspection uses a line-level view with change counts
-and highlighted additions, deletions, hunks, and metadata. Timeline cards include lightweight kind
-pills, and secondary inspector sections stay behind disclosure controls.
+activation, and readiness repair while deeper model diagnostics stay tucked away; if the default
+model is already downloaded, the primary action can select it directly. Model download start,
+continue, pause, cancel, failure, and success events are also recorded in the timeline so recovery
+does not depend on transient status text. Diff timeline cards now stay compact, while selected diff
+inspection uses a line-level view with change counts and highlighted additions, deletions, hunks,
+and metadata. Timeline cards include lightweight kind pills, and secondary inspector sections stay
+behind disclosure controls.
 
 Delivered in Milestone 1:
 

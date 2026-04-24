@@ -889,6 +889,7 @@ Deliverables:
 - one-click default model download, activation, and runtime restart flow
 - pausable, resumable, and cancellable long-running model downloads with progress and speed status
 - clear local model readiness and installation guidance
+- timeline-backed model operation history for download, pause, resume, cancel, selection, and failure states
 - refined visual system with compact timeline taxonomy
 - improved inspector with progressive disclosure for secondary and diagnostic detail
 - better diff viewer with line-level readability
@@ -898,6 +899,7 @@ Deliverables:
 - keyboard-first launch, workspace, thread, composer, and cancellation workflows
 - better loading, blocking, and error states for composer, runtime, workspace-search, and model-manager flows
 - compact daily-loop status guidance that explains the next required action without adding new surfaces
+- contextual single-action recovery from the timeline header for blocked runtime, workspace, model, thread, and turn states
 
 Exit criteria:
 

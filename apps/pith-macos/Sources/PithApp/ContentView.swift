@@ -112,12 +112,12 @@ struct ContentView: View {
             .foregroundColor(.secondary)
             .lineLimit(2)
             .multilineTextAlignment(.trailing)
-          if viewModel.runtimeState != .ready {
-            Button(viewModel.runtimeLaunchButtonTitle()) {
-              viewModel.launchRuntime()
+          if let actionTitle = viewModel.runtimePrimaryActionTitle() {
+            Button(actionTitle) {
+              viewModel.runRuntimePrimaryAction()
             }
             .buttonStyle(.bordered)
-            .disabled(!viewModel.canLaunchRuntime())
+            .disabled(!viewModel.canRunRuntimePrimaryAction())
           }
         }
       }
@@ -314,6 +314,7 @@ struct ContentView: View {
                 viewModel.bootstrapModelPackMetadata()
               }
               .buttonStyle(.bordered)
+              .disabled(!viewModel.canBootstrapModelPackMetadata())
             }
             DisclosureGroup("Model Manager", isExpanded: $modelManagerExpanded) {
               VStack(alignment: .leading, spacing: 10) {

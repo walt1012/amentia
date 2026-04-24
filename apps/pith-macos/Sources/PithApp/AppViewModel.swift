@@ -532,6 +532,89 @@ final class AppViewModel: ObservableObject {
       || activeTurnID != nil
   }
 
+  func runtimePrimaryActionTitle() -> String? {
+    switch runtimeState {
+    case .disconnected, .failed, .launching:
+      return runtimeLaunchButtonTitle()
+    case .ready:
+      if workspace == nil {
+        return "Open Workspace"
+      }
+      if !isLocalModelReady() {
+        if modelDownloadID != nil {
+          return nil
+        }
+        if canDownloadLocalModel() {
+          return defaultModelDownloadButtonTitle()
+        }
+        if canBootstrapModelPackMetadata() {
+          return "Install Metadata"
+        }
+        return nil
+      }
+      if activeTurnID != nil {
+        return "Cancel Turn"
+      }
+      if selectedThreadID == nil {
+        return "New Thread"
+      }
+      return nil
+    }
+  }
+
+  func canRunRuntimePrimaryAction() -> Bool {
+    switch runtimeState {
+    case .disconnected, .failed:
+      return canLaunchRuntime()
+    case .launching:
+      return false
+    case .ready:
+      if workspace == nil {
+        return canOpenWorkspace()
+      }
+      if !isLocalModelReady() {
+        return modelDownloadID == nil
+          && (canDownloadLocalModel() || canBootstrapModelPackMetadata())
+      }
+      if activeTurnID != nil {
+        return canCancelActiveTurn()
+      }
+      if selectedThreadID == nil {
+        return canCreateThread()
+      }
+      return false
+    }
+  }
+
+  func runRuntimePrimaryAction() {
+    switch runtimeState {
+    case .disconnected, .failed:
+      launchRuntime()
+    case .launching:
+      return
+    case .ready:
+      if workspace == nil {
+        openWorkspace()
+        return
+      }
+      if !isLocalModelReady() {
+        if canDownloadLocalModel() {
+          downloadLocalModel()
+        } else if canBootstrapModelPackMetadata() {
+          bootstrapModelPackMetadata()
+        }
+        return
+      }
+      if activeTurnID != nil {
+        cancelActiveTurn()
+        return
+      }
+      if selectedThreadID == nil {
+        createThread()
+      }
+    }
+  }
+
   func canLaunchRuntime() -> Bool {
     runtimeState != .launching
   }
@@ -1383,6 +1466,14 @@ final class AppViewModel: ObservableObject {
     if pausedModelDownloadID == "lfm2.5-350m" {
       return "Continue Model"
     }
+    if let defaultModel = localModels.first(where: { $0.id == "lfm2.5-350m" }) {
+      if defaultModel.active {
+        return "Model Selected"
+      }
+      if defaultModel.downloaded {
+        return "Use Downloaded Model"
+      }
+    }
 
     return "Download Model"
   }
@@ -1423,7 +1514,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadTask == nil, pausedModelDownloadID == nil else {
+    guard runtimeState != .launching,
+          modelDownloadTask == nil,
+          pausedModelDownloadID == nil
+    else {
       return false
     }
     guard let model = localModels.first(where: { $0.id == modelID }) else {
@@ -1434,7 +1528,9 @@ final class AppViewModel: ObservableObject {
   }
 
   func canResetActiveLocalModel() -> Bool {
-    runtimeBridge.activeLocalModelPath() != nil
+    runtimeState != .launching
+      && modelDownloadTask == nil
+      && runtimeBridge.activeLocalModelPath() != nil
   }
 
   func canCancelModelDownload() -> Bool {
@@ -1475,6 +1571,16 @@ final class AppViewModel: ObservableObject {
     modelDownloadProgress = nil
     runtimeDetail = "Cancelled \(displayName) download and cleared partial state."
     refreshLocalModelCatalog()
+    if let model = localModels.first(where: { $0.id == pausedModelDownloadID }) {
+      appendModelEvent(
+        title: "Local Model Download Cancelled",
+        body: "\(model.displayName) download was cancelled and the partial file was cleared.",
+        model: model,
+        attributes: [
+          "result": "cancelled"
+        ]
+      )
+    }
   }
 
   func downloadRecommendedModel(modelID: String) {
@@ -1516,6 +1622,16 @@ final class AppViewModel: ObservableObject {
       startedAt: Date(),
       updatedAt: Date(),
       isResuming: isResuming
+    )
+    appendModelEvent(
+      title: isResuming ? "Local Model Download Continued" : "Local Model Download Started",
+      body:
+        "\(model.displayName) download \(isResuming ? "continued" : "started") from \(downloadURL.absoluteString).",
+      model: model,
+      attributes: [
+        "downloadUrl": downloadURL.absoluteString,
+        "size": formattedByteCount(model.sizeBytes)
+      ]
     )
     modelDownloadTask = Task {
       defer {
@@ -1589,15 +1705,40 @@ final class AppViewModel: ObservableObject {
           modelDownloadResumeData = paused.resumeData
           pausedModelDownloadID = model.id
           runtimeDetail = "Paused \(model.displayName) download. Continue to resume from the saved partial state."
+          appendModelEvent(
+            title: "Local Model Download Paused",
+            body: "\(model.displayName) download was paused and can continue from the saved partial state.",
+            model: model,
+            attributes: [
+              "result": "paused"
+            ]
+          )
         } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
           clearPausedModelDownload()
           removeIncompleteModelFile(modelID: model.id)
           modelDownloadProgress = nil
           runtimeDetail = "Cancelled \(model.displayName) download and cleared partial state."
+          appendModelEvent(
+            title: "Local Model Download Cancelled",
+            body: "\(model.displayName) download was cancelled and the partial file was cleared.",
+            model: model,
+            attributes: [
+              "result": "cancelled"
+            ]
+          )
         } else {
           clearPausedModelDownload()
           modelDownloadProgress = nil
           runtimeDetail = "Model download failed: \(error.localizedDescription)"
+          appendModelEvent(
+            title: "Local Model Download Failed",
+            body: "\(model.displayName) download failed: \(error.localizedDescription)",
+            model: model,
+            kind: .warning,
+            attributes: [
+              "result": "failed"
+            ]
+          )
         }
       }
     }
@@ -1688,10 +1829,20 @@ final class AppViewModel: ObservableObject {
 
   func canDownloadLocalModel() -> Bool {
     canDownloadRecommendedModel(modelID: "lfm2.5-350m")
+      || canActivateRecommendedModel(modelID: "lfm2.5-350m")
   }
 
   func downloadLocalModel() {
+    if canActivateRecommendedModel(modelID: "lfm2.5-350m") {
+      activateRecommendedModel(modelID: "lfm2.5-350m")
+      return
+    }
+
     downloadRecommendedModel(modelID: "lfm2.5-350m")
+  }
+
+  func canBootstrapModelPackMetadata() -> Bool {
+    runtimeState == .ready && modelDownloadTask == nil
   }
 
   func bootstrapModelPackMetadata() {
@@ -2304,12 +2455,52 @@ final class AppViewModel: ObservableObject {
     )
   }
 
+  private func appendModelEvent(
+    title: String,
+    body: String,
+    model: LocalModelSummary,
+    kind: TimelineEntry.Kind = .system,
+    attributes: [String: String] = [:]
+  ) {
+    var eventAttributes = attributes
+    eventAttributes["modelId"] = model.id
+    eventAttributes["modelPath"] = model.installPath
+    eventAttributes["modelLicense"] = model.license
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: kind,
+        title: title,
+        body: body,
+        attributes: eventAttributes
+      )
+    )
+  }
+
   private func relaunchRuntimeIfNeeded(runningDetail: String, idleDetail: String) {
-    if runtimeState == .ready || runtimeState == .launching {
+    switch runtimeState {
+    case .ready:
       runtimeDetail = runningDetail
       runtimeBridge.stopRuntime(detail: runningDetail)
       launchRuntime()
-    } else {
+    case .launching:
+      runtimeDetail = runningDetail
+      runtimeBridge.stopRuntime(detail: runningDetail)
+      Task {
+        for _ in 0..<10 {
+          if runtimeState != .launching {
+            break
+          }
+          try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        if runtimeState == .launching {
+          runtimeDetail = "Runtime is still launching. Relaunch it after model setup finishes."
+          return
+        }
+        launchRuntime()
+      }
+    case .disconnected, .failed:
       runtimeDetail = idleDetail
     }
   }
