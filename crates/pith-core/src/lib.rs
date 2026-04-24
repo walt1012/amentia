@@ -20,11 +20,11 @@ use pith_protocol::{
   ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
   PluginCommandRunParams, PluginCommandSummary, PluginListResult, PluginSetEnabledParams,
-  PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities,
-  ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
-  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
-  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo,
+  ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult,
+  ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -3601,7 +3601,10 @@ mod tests {
       validation_error: None,
     }];
 
-    let response = handle_request(&mut context, request(methods::PLUGIN_COMMAND_REGISTRY, None));
+    let response = handle_request(
+      &mut context,
+      request(methods::PLUGIN_COMMAND_REGISTRY, None),
+    );
 
     assert!(response.error.is_none());
     let result = response.result.expect("command registry result");

@@ -306,7 +306,9 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         continue;
       }
 
-      let command_path = plugin_root.join("commands").join(format!("{identifier}.json"));
+      let command_path = plugin_root
+        .join("commands")
+        .join(format!("{identifier}.json"));
       let Ok(command) = read_command_manifest(&command_path) else {
         continue;
       };
@@ -537,7 +539,9 @@ mod tests {
     assert_eq!(commands.len(), 1);
     assert_eq!(commands[0].plugin_id, "workspace-notes");
     assert_eq!(commands[0].title, "Capture Workspace Note");
-    assert!(commands[0].source_path.ends_with("workspace.capture-note.json"));
+    assert!(commands[0]
+      .source_path
+      .ends_with("workspace.capture-note.json"));
   }
 
   #[test]
