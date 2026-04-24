@@ -57,6 +57,7 @@ def main() -> int:
   (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
   env = os.environ.copy()
   env["PITH_DATA_DIR"] = str(state_dir)
+  env["PITH_PLUGIN_DIR"] = str(repo_root / "plugins")
   process = start_runtime(repo_root, env)
 
   try:
