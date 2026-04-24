@@ -66,9 +66,10 @@ menu shortcuts cover runtime launch, workspace opening, thread creation, plugin 
 send, and turn cancellation without adding more visible controls. The composer now explains
 blocking states inline so users can recover the local runtime, workspace, model, or thread setup
 without guessing why send is disabled. The Local Model panel also gives a compact next action for
-runtime launch, model download, pause/resume, activation, and readiness repair. Diff timeline cards
-now stay compact, while selected diff inspection uses a line-level view with change counts and
-highlighted additions, deletions, hunks, and metadata. Secondary inspector sections stay behind
+runtime launch, model download, pause/resume, activation, and readiness repair while deeper model
+diagnostics stay tucked away. Diff timeline cards now stay compact, while selected diff inspection
+uses a line-level view with change counts and highlighted additions, deletions, hunks, and metadata.
+Timeline cards include lightweight kind pills, and secondary inspector sections stay behind
 disclosure controls.
 
 Delivered in Milestone 1:

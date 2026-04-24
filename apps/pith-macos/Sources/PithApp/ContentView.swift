@@ -21,6 +21,8 @@ struct ContentView: View {
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
   @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = true
   @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
+  @AppStorage("pith.inspector.modelDiagnosticsExpanded") private var modelDiagnosticsExpanded = false
+  @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
   var body: some View {
     NavigationView {
@@ -246,28 +248,6 @@ struct ContentView: View {
                 .font(.caption)
                 .foregroundColor(viewModel.isModelActionBlocking() ? .orange : .secondary)
             }
-            Text(viewModel.modelDetailSummary())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.modelSourceSummary())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.modelMetricsSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-            Text(viewModel.modelReadinessSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-            Text(viewModel.modelInstallHintSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.modelSuggestedPathSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
             if viewModel.shouldShowModelDownloadProgress() {
               VStack(alignment: .leading, spacing: 4) {
                 if let progressValue = viewModel.modelDownloadProgressValue() {
@@ -304,16 +284,6 @@ struct ContentView: View {
 
               Button("Install Pack Metadata") {
                 viewModel.bootstrapModelPackMetadata()
-              }
-              .buttonStyle(.bordered)
-
-              Button("Reveal Model Folder") {
-                viewModel.revealSuggestedModelDirectory()
-              }
-              .buttonStyle(.bordered)
-
-              Button("Reveal Binary Folder") {
-                viewModel.revealSuggestedBinaryDirectory()
               }
               .buttonStyle(.bordered)
             }
@@ -373,10 +343,48 @@ struct ContentView: View {
               }
               .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Text(viewModel.modelArtifactPathSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
+            DisclosureGroup("Model Diagnostics", isExpanded: $modelDiagnosticsExpanded) {
+              VStack(alignment: .leading, spacing: 8) {
+                Text(viewModel.modelDetailSummary())
+                  .font(.caption)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                Text(viewModel.modelSourceSummary())
+                  .font(.caption)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                Text(viewModel.modelMetricsSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                Text(viewModel.modelReadinessSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                Text(viewModel.modelInstallHintSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                Text(viewModel.modelSuggestedPathSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                Text(viewModel.modelArtifactPathSummary())
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                HStack(spacing: 8) {
+                  Button("Reveal Model Folder") {
+                    viewModel.revealSuggestedModelDirectory()
+                  }
+                  .buttonStyle(.bordered)
+
+                  Button("Reveal Binary Folder") {
+                    viewModel.revealSuggestedBinaryDirectory()
+                  }
+                  .buttonStyle(.bordered)
+                }
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
+            }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -574,14 +582,17 @@ struct ContentView: View {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.selectedEntryTitle())
               .font(.headline)
-            Text(viewModel.selectedEntryMetadata())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
             Text(viewModel.selectedEntryBody())
               .font(.subheadline)
               .foregroundColor(.secondary)
               .textSelection(.enabled)
+            DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
+              Text(viewModel.selectedEntryMetadata())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -1055,6 +1066,14 @@ private struct TimelineCard: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(alignment: .center, spacing: 8) {
+        Text(kindLabel)
+          .font(.caption2.weight(.semibold))
+          .foregroundColor(kindColor)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(kindColor.opacity(0.12))
+          .clipShape(Capsule())
+
         Text(entry.title)
           .font(.headline)
 
@@ -1125,6 +1144,48 @@ private struct TimelineCard: View {
       return Color.orange.opacity(0.16)
     default:
       return Color(NSColor.controlBackgroundColor)
+    }
+  }
+
+  private var kindLabel: String {
+    switch entry.kind {
+    case .userMessage:
+      return "User"
+    case .assistantMessage:
+      return "Assistant"
+    case .system:
+      return "System"
+    case .plan:
+      return "Plan"
+    case .tool:
+      return "Tool"
+    case .diff:
+      return "Diff"
+    case .approval:
+      return "Approval"
+    case .warning:
+      return "Warning"
+    }
+  }
+
+  private var kindColor: Color {
+    switch entry.kind {
+    case .userMessage:
+      return .accentColor
+    case .assistantMessage:
+      return .blue
+    case .system:
+      return .secondary
+    case .plan:
+      return .accentColor
+    case .tool:
+      return .green
+    case .diff:
+      return .blue
+    case .approval:
+      return .orange
+    case .warning:
+      return .orange
     }
   }
 

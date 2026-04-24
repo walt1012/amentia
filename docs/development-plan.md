@@ -889,8 +889,8 @@ Deliverables:
 - one-click default model download, activation, and runtime restart flow
 - pausable, resumable, and cancellable long-running model downloads with progress and speed status
 - clear local model readiness and installation guidance
-- refined visual system
-- improved inspector with progressive disclosure for secondary detail
+- refined visual system with compact timeline taxonomy
+- improved inspector with progressive disclosure for secondary and diagnostic detail
 - better diff viewer with line-level readability
 - workspace and inspector state restoration
 - runtime crash recovery with pending request cleanup and relaunch affordance
@@ -1137,7 +1137,7 @@ Recommended current implementation sequence:
 
 1. finish inline loading, blocking, and recovery states for the composer, model manager, and runtime
 2. continue reducing inspector noise through stronger defaults and fewer always-visible admin controls
-3. refine the visual system around the timeline and review surfaces
+3. refine the visual system around review surfaces, empty states, and recovery prompts
 4. keep model delivery focused on one-click local downloads with pause, resume, cancel, and activation
 5. defer broad plugin expansion until the local daily-driver loop feels stable and compact
 
