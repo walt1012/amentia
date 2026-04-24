@@ -1,0 +1,8 @@
+{
+  "title": "Inspect Current Diff",
+  "description": "Ask Pith to review the active workspace diff with a code review mindset.",
+  "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
+  "execution": {
+    "kind": "builtin.reviewDiffSummary"
+  }
+}

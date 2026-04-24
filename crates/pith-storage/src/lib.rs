@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -9,7 +10,7 @@ use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 6;
 
 #[derive(Debug, Clone, Copy)]
 struct SchemaMigration {
@@ -18,7 +19,7 @@ struct SchemaMigration {
   sql: &'static str,
 }
 
-const SCHEMA_MIGRATIONS: [SchemaMigration; 4] = [
+const SCHEMA_MIGRATIONS: [SchemaMigration; 6] = [
   SchemaMigration {
     version: 1,
     name: "initial_workspace_and_threads",
@@ -84,6 +85,25 @@ const SCHEMA_MIGRATIONS: [SchemaMigration; 4] = [
       ON memory_notes(created_at DESC, id ASC);
     ",
   },
+  SchemaMigration {
+    version: 5,
+    name: "thread_workspace_binding",
+    sql: "
+      ALTER TABLE threads ADD COLUMN workspace_root_path TEXT;
+      ALTER TABLE threads ADD COLUMN workspace_display_name TEXT;
+    ",
+  },
+  SchemaMigration {
+    version: 6,
+    name: "plugin_state",
+    sql: "
+      CREATE TABLE IF NOT EXISTS plugin_state (
+        plugin_id TEXT PRIMARY KEY,
+        enabled INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    ",
+  },
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,6 +130,8 @@ pub struct StoredThreadRecord {
   pub summary: ThreadSummary,
   pub turn_count: usize,
   pub items: Vec<TimelineItem>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workspace: Option<WorkspaceSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,7 +171,7 @@ impl FileThreadStore {
     self.import_legacy_threads_if_needed(&connection)?;
 
     let mut statement = connection.prepare(
-      "SELECT id, title, status, turn_count, items_json
+      "SELECT id, title, status, turn_count, items_json, workspace_root_path, workspace_display_name
        FROM threads
        ORDER BY updated_at DESC, id ASC",
     )?;
@@ -172,6 +194,16 @@ impl FileThreadStore {
         },
         turn_count: row.get::<_, i64>(3)? as usize,
         items,
+        workspace: match (
+          row.get::<_, Option<String>>(5)?,
+          row.get::<_, Option<String>>(6)?,
+        ) {
+          (Some(root_path), Some(display_name)) => Some(WorkspaceSummary {
+            root_path,
+            display_name,
+          }),
+          _ => None,
+        },
       })
     })?;
 
@@ -197,14 +229,24 @@ impl FileThreadStore {
           status,
           turn_count,
           items_json,
+          workspace_root_path,
+          workspace_display_name,
           updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
           &thread.summary.id,
           &thread.summary.title,
           &thread.summary.status,
           thread.turn_count as i64,
           items_json,
+          thread
+            .workspace
+            .as_ref()
+            .map(|workspace| workspace.root_path.clone()),
+          thread
+            .workspace
+            .as_ref()
+            .map(|workspace| workspace.display_name.clone()),
           current_timestamp()?,
         ],
       )?;
@@ -293,6 +335,22 @@ impl FileThreadStore {
     rows
       .collect::<std::result::Result<Vec<_>, _>>()
       .context("failed to load memory notes")
+  }
+
+  pub fn load_plugin_states(&self) -> Result<HashMap<String, bool>> {
+    let connection = self.open_connection()?;
+    let mut statement =
+      connection.prepare("SELECT plugin_id, enabled FROM plugin_state ORDER BY plugin_id ASC")?;
+    let rows = statement.query_map([], |row| {
+      Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? != 0))
+    })?;
+
+    Ok(
+      rows
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .into_iter()
+        .collect(),
+    )
   }
 
   pub fn save_pending_approvals(&self, approvals: &[StoredApprovalRecord]) -> Result<()> {
@@ -462,6 +520,29 @@ impl FileThreadStore {
     Ok(())
   }
 
+  pub fn save_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
+    let connection = self.open_connection()?;
+    connection.execute(
+      "INSERT INTO plugin_state (plugin_id, enabled, updated_at)
+       VALUES (?1, ?2, ?3)
+       ON CONFLICT(plugin_id) DO UPDATE SET
+         enabled = excluded.enabled,
+         updated_at = excluded.updated_at",
+      params![plugin_id, if enabled { 1 } else { 0 }, current_timestamp()?],
+    )?;
+
+    Ok(())
+  }
+
+  pub fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
+    let connection = self.open_connection()?;
+    connection.execute(
+      "DELETE FROM plugin_state WHERE plugin_id = ?1",
+      params![plugin_id],
+    )?;
+    Ok(())
+  }
+
   fn open_connection(&self) -> Result<Connection> {
     if let Some(parent) = self.database_path.parent() {
       fs::create_dir_all(parent)
@@ -491,7 +572,22 @@ impl FileThreadStore {
         continue;
       }
 
-      transaction.execute_batch(migration.sql)?;
+      if migration.version == 5 {
+        add_column_if_missing(
+          &transaction,
+          "threads",
+          "workspace_root_path",
+          "ALTER TABLE threads ADD COLUMN workspace_root_path TEXT;",
+        )?;
+        add_column_if_missing(
+          &transaction,
+          "threads",
+          "workspace_display_name",
+          "ALTER TABLE threads ADD COLUMN workspace_display_name TEXT;",
+        )?;
+      } else {
+        transaction.execute_batch(migration.sql)?;
+      }
       record_schema_migration(&transaction, migration)?;
     }
 
@@ -533,8 +629,10 @@ impl FileThreadStore {
           status,
           turn_count,
           items_json,
+          workspace_root_path,
+          workspace_display_name,
           updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        ) VALUES (?1, ?2, ?3, ?4, ?5, NULL, NULL, ?6)",
         params![
           thread.summary.id,
           thread.summary.title,
@@ -562,6 +660,32 @@ fn ensure_schema_migration_table(connection: &Connection) -> Result<()> {
   )?;
 
   Ok(())
+}
+
+fn add_column_if_missing(
+  connection: &Connection,
+  table: &str,
+  column: &str,
+  sql: &str,
+) -> Result<()> {
+  if table_has_column(connection, table, column)? {
+    return Ok(());
+  }
+
+  connection.execute_batch(sql)?;
+  Ok(())
+}
+
+fn table_has_column(connection: &Connection, table: &str, column: &str) -> Result<bool> {
+  let pragma = format!("PRAGMA table_info({table})");
+  let mut statement = connection.prepare(&pragma)?;
+  let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
+  Ok(
+    rows
+      .collect::<std::result::Result<Vec<_>, _>>()?
+      .into_iter()
+      .any(|name| name == column),
+  )
 }
 
 fn backfill_schema_migration(connection: &Connection, migration: SchemaMigration) -> Result<()> {
@@ -675,6 +799,10 @@ mod tests {
           content: "Ready".to_string(),
           attributes: None,
         }],
+        workspace: Some(WorkspaceSummary {
+          root_path: "/tmp/pith".to_string(),
+          display_name: "pith".to_string(),
+        }),
       }])
       .expect("save threads");
 
@@ -687,6 +815,14 @@ mod tests {
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].turn_count, 3);
     assert_eq!(threads[0].summary.id, "thread-1");
+    assert_eq!(
+      threads[0]
+        .workspace
+        .as_ref()
+        .expect("thread workspace")
+        .display_name,
+      "pith"
+    );
   }
 
   #[test]
@@ -743,6 +879,7 @@ mod tests {
         },
         turn_count: 1,
         items: vec![],
+        workspace: None,
       }])
       .expect("serialize legacy threads"),
     )
@@ -818,7 +955,7 @@ mod tests {
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].summary.id, "thread-old");
     assert!(pending_approvals.is_empty());
-    assert_eq!(migration_versions, vec![1, 2, 3, 4]);
+    assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6]);
     assert!(approval_indexes.contains(&"idx_approvals_requested_at".to_string()));
   }
 
@@ -846,5 +983,42 @@ mod tests {
     assert_eq!(notes[0].id, "memory-7");
     assert_eq!(notes[0].tags, vec!["workspace", "session"]);
     assert_eq!(next_sequence, 8);
+  }
+
+  #[test]
+  fn sqlite_store_round_trips_plugin_states() {
+    let root = create_temp_directory("plugin-state");
+    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+
+    store
+      .save_plugin_enabled("workspace-notes", true)
+      .expect("save plugin enabled");
+    store
+      .save_plugin_enabled("shell-recorder", false)
+      .expect("save plugin disabled");
+    let plugin_states = store.load_plugin_states().expect("load plugin states");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert_eq!(plugin_states.get("workspace-notes"), Some(&true));
+    assert_eq!(plugin_states.get("shell-recorder"), Some(&false));
+  }
+
+  #[test]
+  fn sqlite_store_deletes_plugin_state() {
+    let root = create_temp_directory("plugin-state-delete");
+    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+
+    store
+      .save_plugin_enabled("workspace-notes", true)
+      .expect("save plugin enabled");
+    store
+      .delete_plugin_state("workspace-notes")
+      .expect("delete plugin state");
+    let plugin_states = store.load_plugin_states().expect("load plugin states");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert!(!plugin_states.contains_key("workspace-notes"));
   }
 }

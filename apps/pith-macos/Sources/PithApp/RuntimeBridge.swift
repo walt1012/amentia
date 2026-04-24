@@ -25,6 +25,12 @@ final class RuntimeBridge {
     let threadCount: Int
   }
 
+  struct RuntimeWorkspaceSearchMatch {
+    let relativePath: String
+    let lineNumber: Int
+    let line: String
+  }
+
   struct RuntimeModelHealth {
     let packID: String
     let displayName: String
@@ -65,6 +71,7 @@ final class RuntimeBridge {
     let name: String
     let version: String
     let displayName: String
+    let status: String
     let description: String
     let authorName: String?
     let enabled: Bool
@@ -73,6 +80,77 @@ final class RuntimeBridge {
     let permissions: [String]
     let manifestPath: String
     let provenance: String
+    let validationError: String?
+    let validationHint: String?
+  }
+
+  struct RuntimePluginRemoval {
+    let pluginID: String
+    let displayName: String
+    let removedPath: String
+  }
+
+  struct RuntimePluginCapabilityRegistry {
+    let capabilities: [RuntimePluginCapability]
+    let summary: RuntimePluginCapabilityRegistrySummary
+  }
+
+  struct RuntimePluginCapabilityRegistrySummary {
+    let enabledPluginCount: Int
+    let totalCapabilityCount: Int
+    let capabilityCountsByKind: [String: Int]
+  }
+
+  struct RuntimePluginCapability {
+    let capabilityID: String
+    let kind: String
+    let identifier: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let manifestPath: String
+    let metadata: [String: String]
+  }
+
+  struct RuntimePluginCommand {
+    let commandID: String
+    let title: String
+    let description: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let executionKind: String?
+    let memorySummary: String?
+  }
+
+  struct RuntimePluginConnector {
+    let connectorID: String
+    let displayName: String
+    let service: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let enabled: Bool
+    let status: String
+    let permissions: [String]
+    let manifestPath: String
+    let homepage: String?
+    let authType: String?
+    let authRequired: Bool
+    let authScopes: [String]
+    let credentialStore: String?
+  }
+
+  struct RuntimePluginHook {
+    let hookID: String
+    let title: String
+    let description: String
+    let event: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let memorySummary: String?
   }
 
   struct RuntimeTurnResult {
@@ -144,9 +222,11 @@ final class RuntimeBridge {
   }
 
   typealias ThreadUpdatedHandler = @Sendable (RuntimeThreadState) -> Void
+  typealias ConnectionStateHandler = @Sendable (ConnectionState, String) -> Void
 
   private(set) var connectionState: ConnectionState = .disconnected
   var onThreadUpdated: ThreadUpdatedHandler?
+  var onConnectionStateChanged: ConnectionStateHandler?
 
   private var process: Process?
   private var inputHandle: FileHandle?
@@ -155,13 +235,16 @@ final class RuntimeBridge {
   private let stateQueue = DispatchQueue(label: "pith.runtime.bridge.state")
   private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
   private var readerTask: Task<Void, Never>?
+  private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
+  private static let activeModelPathKey = "pith.activeModelPath"
 
   func launchAndInitialize() async throws -> SessionInfo {
-    if process == nil {
+    if process == nil || process?.isRunning != true {
+      resetProcessState()
       try launchProcess()
     }
 
-    connectionState = .launching
+    updateConnectionState(.launching, detail: "Launching local runtime")
 
     let initializeParams = InitializeParams(
       clientInfo: ClientInfo(
@@ -183,7 +266,7 @@ final class RuntimeBridge {
       throw RuntimeError.invalidResponse
     }
 
-    connectionState = .ready
+    updateConnectionState(.ready, detail: "\(result.serverInfo.name) \(result.serverInfo.version)")
 
     return SessionInfo(
       serverName: result.serverInfo.name,
@@ -373,6 +456,7 @@ final class RuntimeBridge {
         name: plugin.name,
         version: plugin.version,
         displayName: plugin.displayName,
+        status: plugin.status,
         description: plugin.description,
         authorName: plugin.authorName,
         enabled: plugin.enabled,
@@ -380,9 +464,274 @@ final class RuntimeBridge {
         capabilities: plugin.capabilities,
         permissions: plugin.permissions,
         manifestPath: plugin.manifestPath,
-        provenance: plugin.provenance
+        provenance: plugin.provenance,
+        validationError: plugin.validationError,
+        validationHint: plugin.validationHint
       )
     }
+  }
+
+  func installPlugin(sourcePath: String) async throws -> RuntimePlugin {
+    let response: JSONRPCResponse<PluginInstallResult> = try await sendRequest(
+      method: "plugin/install",
+      params: PluginInstallParams(sourcePath: sourcePath)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePlugin(
+      id: result.plugin.id,
+      name: result.plugin.name,
+      version: result.plugin.version,
+      displayName: result.plugin.displayName,
+      status: result.plugin.status,
+      description: result.plugin.description,
+      authorName: result.plugin.authorName,
+      enabled: result.plugin.enabled,
+      defaultEnabled: result.plugin.defaultEnabled,
+      capabilities: result.plugin.capabilities,
+      permissions: result.plugin.permissions,
+      manifestPath: result.plugin.manifestPath,
+      provenance: result.plugin.provenance,
+      validationError: result.plugin.validationError,
+      validationHint: result.plugin.validationHint
+    )
+  }
+
+  func pluginCapabilityRegistry() async throws -> RuntimePluginCapabilityRegistry {
+    let response: JSONRPCResponse<PluginCapabilityRegistryResult> = try await sendRequest(
+      method: "plugin/capabilityRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePluginCapabilityRegistry(
+      capabilities: result.capabilities.map { capability in
+        RuntimePluginCapability(
+          capabilityID: capability.capabilityId,
+          kind: capability.kind,
+          identifier: capability.identifier,
+          pluginID: capability.pluginId,
+          pluginDisplayName: capability.pluginDisplayName,
+          permissions: capability.permissions,
+          manifestPath: capability.manifestPath,
+          metadata: capability.metadata ?? [:]
+        )
+      },
+      summary: RuntimePluginCapabilityRegistrySummary(
+        enabledPluginCount: result.summary.enabledPluginCount,
+        totalCapabilityCount: result.summary.totalCapabilityCount,
+        capabilityCountsByKind: result.summary.capabilityCountsByKind
+      )
+    )
+  }
+
+  func listPluginCommands() async throws -> [RuntimePluginCommand] {
+    let response: JSONRPCResponse<PluginCommandRegistryResult> = try await sendRequest(
+      method: "plugin/commandRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.commands.map { command in
+      RuntimePluginCommand(
+        commandID: command.commandId,
+        title: command.title,
+        description: command.description,
+        pluginID: command.pluginId,
+        pluginDisplayName: command.pluginDisplayName,
+        permissions: command.permissions,
+        sourcePath: command.sourcePath,
+        executionKind: command.executionKind,
+        memorySummary: command.memorySummary
+      )
+    }
+  }
+
+  func listPluginConnectors() async throws -> [RuntimePluginConnector] {
+    let response: JSONRPCResponse<PluginConnectorRegistryResult> = try await sendRequest(
+      method: "plugin/connectorRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.connectors.map { connector in
+      RuntimePluginConnector(
+        connectorID: connector.connectorId,
+        displayName: connector.displayName,
+        service: connector.service,
+        pluginID: connector.pluginId,
+        pluginDisplayName: connector.pluginDisplayName,
+        enabled: connector.enabled,
+        status: connector.status,
+        permissions: connector.permissions,
+        manifestPath: connector.manifestPath,
+        homepage: connector.homepage,
+        authType: connector.authType,
+        authRequired: connector.authRequired,
+        authScopes: connector.authScopes,
+        credentialStore: connector.credentialStore
+      )
+    }
+  }
+
+  func listPluginHooks() async throws -> [RuntimePluginHook] {
+    let response: JSONRPCResponse<PluginHookRegistryResult> = try await sendRequest(
+      method: "plugin/hookRegistry",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.hooks.map { hook in
+      RuntimePluginHook(
+        hookID: hook.hookId,
+        title: hook.title,
+        description: hook.description,
+        event: hook.event,
+        pluginID: hook.pluginId,
+        pluginDisplayName: hook.pluginDisplayName,
+        permissions: hook.permissions,
+        sourcePath: hook.sourcePath,
+        memorySummary: hook.memorySummary
+      )
+    }
+  }
+
+  func setPluginEnabled(pluginID: String, enabled: Bool) async throws -> RuntimePlugin {
+    let response: JSONRPCResponse<PluginSetEnabledResult> = try await sendRequest(
+      method: "plugin/setEnabled",
+      params: PluginSetEnabledParams(pluginId: pluginID, enabled: enabled)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePlugin(
+      id: result.plugin.id,
+      name: result.plugin.name,
+      version: result.plugin.version,
+      displayName: result.plugin.displayName,
+      status: result.plugin.status,
+      description: result.plugin.description,
+      authorName: result.plugin.authorName,
+      enabled: result.plugin.enabled,
+      defaultEnabled: result.plugin.defaultEnabled,
+      capabilities: result.plugin.capabilities,
+      permissions: result.plugin.permissions,
+      manifestPath: result.plugin.manifestPath,
+      provenance: result.plugin.provenance,
+      validationError: result.plugin.validationError,
+      validationHint: result.plugin.validationHint
+    )
+  }
+
+  func removePlugin(manifestPath: String) async throws -> RuntimePluginRemoval {
+    let response: JSONRPCResponse<PluginRemoveResult> = try await sendRequest(
+      method: "plugin/remove",
+      params: PluginRemoveParams(manifestPath: manifestPath)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePluginRemoval(
+      pluginID: result.pluginId,
+      displayName: result.displayName,
+      removedPath: result.removedPath
+    )
+  }
+
+  func localPluginInstallRootPath() -> String {
+    appSupportPluginDirectory().path
+  }
+
+  func localModelStorageRootPath() -> String {
+    appSupportStorageDirectory()
+      .appendingPathComponent("models", isDirectory: true)
+      .path
+  }
+
+  func activeLocalModelPath() -> String? {
+    UserDefaults.standard.string(forKey: Self.activeModelPathKey)
+  }
+
+  func configureActiveLocalModel(manifestPath: String, modelPath: String) {
+    UserDefaults.standard.set(manifestPath, forKey: Self.activeModelManifestPathKey)
+    UserDefaults.standard.set(modelPath, forKey: Self.activeModelPathKey)
+  }
+
+  func clearActiveLocalModel() {
+    UserDefaults.standard.removeObject(forKey: Self.activeModelManifestPathKey)
+    UserDefaults.standard.removeObject(forKey: Self.activeModelPathKey)
+  }
+
+  func runPluginCommand(threadID: String, commandID: String, input: String? = nil) async throws
+    -> RuntimeTurnResult
+  {
+    let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
+      method: "plugin/commandRun",
+      params: PluginCommandRunParams(threadId: threadID, commandId: commandID, input: input)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeTurnResult(
+      turnID: result.turnId,
+      threadID: result.threadId,
+      items: result.items.map(runtimeTimelineItem(from:)),
+      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      activeTurnID: result.activeTurnId
+    )
   }
 
   func currentWorkspace() async throws -> RuntimeWorkspace? {
@@ -408,6 +757,29 @@ final class RuntimeBridge {
       displayName: workspace.displayName,
       threadCount: 0
     )
+  }
+
+  func searchWorkspace(query: String, maxResults: Int = 24) async throws -> [RuntimeWorkspaceSearchMatch] {
+    let response: JSONRPCResponse<WorkspaceSearchResult> = try await sendRequest(
+      method: "workspace/search",
+      params: WorkspaceSearchParams(query: query, maxResults: maxResults)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.matches.map { match in
+      RuntimeWorkspaceSearchMatch(
+        relativePath: match.relativePath,
+        lineNumber: match.lineNumber,
+        line: match.line
+      )
+    }
   }
 
   func startThread(title: String) async throws -> ThreadSummary {
@@ -522,6 +894,16 @@ final class RuntimeBridge {
     )
   }
 
+  func stopRuntime(detail: String = "Runtime stopped.") {
+    failPendingResponses(with: RuntimeError.rpc(detail))
+    if let process, process.isRunning {
+      process.terminationHandler = nil
+      process.terminate()
+    }
+    resetProcessState()
+    updateConnectionState(.disconnected, detail: detail)
+  }
+
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
     let process = Process()
@@ -535,16 +917,21 @@ final class RuntimeBridge {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
+    let processIdentifier = ObjectIdentifier(process)
+    process.terminationHandler = { [weak self] process in
+      let detail = "Runtime exited with status \(process.terminationStatus)."
+      self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
+    }
 
     try process.run()
 
     self.process = process
     inputHandle = stdinPipe.fileHandleForWriting
     outputHandle = stdoutPipe.fileHandleForReading
-    startReaderLoop(with: stdoutPipe.fileHandleForReading)
+    startReaderLoop(with: stdoutPipe.fileHandleForReading, processIdentifier: processIdentifier)
   }
 
-  private func startReaderLoop(with handle: FileHandle) {
+  private func startReaderLoop(with handle: FileHandle, processIdentifier: ObjectIdentifier) {
     readerTask?.cancel()
     readerTask = Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else {
@@ -557,6 +944,10 @@ final class RuntimeBridge {
           line = try Self.readLine(from: handle)
         } catch {
           self.failPendingResponses(with: error)
+          self.handleProcessTermination(
+            processIdentifier: processIdentifier,
+            detail: "Runtime disconnected."
+          )
           return
         }
 
@@ -613,6 +1004,34 @@ final class RuntimeBridge {
     }
   }
 
+  private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
+    guard let process, ObjectIdentifier(process) == processIdentifier else {
+      return
+    }
+
+    failPendingResponses(with: RuntimeError.rpc(detail))
+    resetProcessState()
+    updateConnectionState(.failed, detail: detail)
+  }
+
+  private func resetProcessState() {
+    readerTask?.cancel()
+    readerTask = nil
+
+    if let process, process.isRunning {
+      process.terminationHandler = nil
+    }
+
+    process = nil
+    inputHandle = nil
+    outputHandle = nil
+  }
+
+  private func updateConnectionState(_ state: ConnectionState, detail: String) {
+    connectionState = state
+    onConnectionStateChanged?(state, detail)
+  }
+
   private func resolveRuntimeURL() throws -> URL {
     let environment = ProcessInfo.processInfo.environment
 
@@ -634,6 +1053,15 @@ final class RuntimeBridge {
   private func runtimeEnvironment() -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
     environment["PITH_DATA_DIR"] = appSupportStorageDirectory().path
+    environment["PITH_LOCAL_PLUGIN_DIR"] = appSupportPluginDirectory().path
+    if let manifestPath = UserDefaults.standard.string(forKey: Self.activeModelManifestPathKey),
+       !manifestPath.isEmpty,
+       let modelPath = UserDefaults.standard.string(forKey: Self.activeModelPathKey),
+       !modelPath.isEmpty
+    {
+      environment["PITH_MODEL_PACK_MANIFEST"] = manifestPath
+      environment["PITH_LFM_MODEL_PATH"] = modelPath
+    }
     return environment
   }
 
@@ -645,6 +1073,16 @@ final class RuntimeBridge {
     return baseDirectory
       .appendingPathComponent("Pith", isDirectory: true)
       .appendingPathComponent("storage", isDirectory: true)
+  }
+
+  private func appSupportPluginDirectory() -> URL {
+    let baseDirectory =
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+
+    return baseDirectory
+      .appendingPathComponent("Pith", isDirectory: true)
+      .appendingPathComponent("plugins", isDirectory: true)
   }
 
   private func sendRequest<Params: Encodable, ResultType: Decodable>(

@@ -1,8 +1,11 @@
 {
   "id": "lfm2.5-350m",
   "display_name": "LFM2.5-350M",
-  "file_name": "LFM2.5-350M.gguf",
+  "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
   "max_output_tokens": 160,
-  "backend": "llama.cpp"
+  "backend": "llama.cpp",
+  "homepage": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",
+  "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+  "size_bytes": 229312224
 }

@@ -11,6 +11,13 @@ struct WorkspaceSummary: Hashable {
   let displayName: String
 }
 
+struct WorkspaceSearchMatchSummary: Identifiable, Hashable {
+  let id: String
+  let relativePath: String
+  let lineNumber: Int
+  let line: String
+}
+
 struct ModelHealthSummary: Hashable {
   let packID: String
   let displayName: String
@@ -22,6 +29,24 @@ struct ModelHealthSummary: Hashable {
   let modelPath: String?
   let manifestPath: String?
   let metrics: [String: String]
+}
+
+struct LocalModelSummary: Identifiable, Hashable {
+  let id: String
+  let displayName: String
+  let description: String
+  let fileName: String
+  let downloadURL: String
+  let homepage: String
+  let sizeBytes: Int64
+  let contextSize: Int
+  let maxOutputTokens: Int
+  let license: String
+  let tags: [String]
+  let installPath: String
+  let downloaded: Bool
+  let active: Bool
+  let localSizeBytes: Int64?
 }
 
 struct MemoryStatusSummary: Hashable {
@@ -45,6 +70,7 @@ struct PluginSummary: Identifiable, Hashable {
   let name: String
   let version: String
   let displayName: String
+  let status: String
   let description: String
   let authorName: String?
   let enabled: Bool
@@ -53,6 +79,66 @@ struct PluginSummary: Identifiable, Hashable {
   let permissions: [String]
   let manifestPath: String
   let provenance: String
+  let validationError: String?
+  let validationHint: String?
+}
+
+struct PluginCapabilityRegistrySummary: Hashable {
+  let enabledPluginCount: Int
+  let totalCapabilityCount: Int
+  let capabilityCountsByKind: [String: Int]
+}
+
+struct PluginCapabilitySummary: Identifiable, Hashable {
+  let id: String
+  let kind: String
+  let identifier: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let manifestPath: String
+  let metadata: [String: String]
+}
+
+struct PluginConnectorSummary: Identifiable, Hashable {
+  let id: String
+  let displayName: String
+  let service: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let enabled: Bool
+  let status: String
+  let permissions: [String]
+  let manifestPath: String
+  let homepage: String?
+  let authType: String?
+  let authRequired: Bool
+  let authScopes: [String]
+  let credentialStore: String?
+}
+
+struct PluginCommandSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let description: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let sourcePath: String
+  let executionKind: String?
+  let memorySummary: String?
+}
+
+struct PluginHookSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let description: String
+  let event: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let sourcePath: String
+  let memorySummary: String?
 }
 
 struct TimelineEntry: Identifiable, Hashable {
@@ -67,7 +153,7 @@ struct TimelineEntry: Identifiable, Hashable {
     case warning
   }
 
-  let id: UUID
+  let id: String
   let kind: Kind
   let title: String
   let body: String

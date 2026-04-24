@@ -49,6 +49,8 @@ pub struct ModelPackManifest {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub homepage: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub download_url: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub sha256: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub size_bytes: Option<u64>,
@@ -58,7 +60,6 @@ pub struct ModelPackManifest {
 pub struct GenerateRequest {
   pub role: ModelRole,
   pub prompt: String,
-  pub fallback: String,
   pub max_tokens: usize,
 }
 
@@ -87,7 +88,7 @@ pub struct LocalModelRuntime {
 
 #[derive(Debug, Clone)]
 enum ModelBackend {
-  Heuristic {
+  Unconfigured {
     detail: String,
     binary_path: Option<PathBuf>,
     model_path: Option<PathBuf>,
@@ -125,10 +126,17 @@ impl LocalModelRuntime {
     binary_path: Option<PathBuf>,
     model_path: Option<PathBuf>,
   ) -> Self {
-    let pack = built_in_model_pack();
     let manifest = manifest_resolution
       .as_ref()
       .map(|resolution| resolution.manifest.clone());
+    let pack = manifest
+      .as_ref()
+      .map(|manifest| ModelPackDescriptor {
+        id: manifest.id.clone(),
+        display_name: manifest.display_name.clone(),
+        default_role: ModelRole::Default,
+      })
+      .unwrap_or_else(built_in_model_pack);
     let manifest_path = manifest_resolution
       .as_ref()
       .map(|resolution| resolution.manifest_path.clone());
@@ -154,7 +162,7 @@ impl LocalModelRuntime {
         pack,
         manifest,
         source,
-        backend: ModelBackend::Heuristic {
+        backend: ModelBackend::Unconfigured {
           detail: missing_runtime_detail(
             binary_path.as_deref(),
             model_path.as_deref(),
@@ -170,7 +178,7 @@ impl LocalModelRuntime {
 
   pub fn health(&self) -> ModelHealth {
     match &self.backend {
-      ModelBackend::Heuristic {
+      ModelBackend::Unconfigured {
         detail,
         binary_path,
         model_path,
@@ -186,8 +194,8 @@ impl LocalModelRuntime {
         ModelHealth {
           pack_id: self.pack.id.clone(),
           display_name: self.pack.display_name.clone(),
-          backend: "heuristic".to_string(),
-          status: "fallback".to_string(),
+          backend: "unconfigured".to_string(),
+          status: "unavailable".to_string(),
           detail: detail.clone(),
           source: self.source.clone(),
           binary_path: binary_path.as_ref().map(display_path),
@@ -226,7 +234,9 @@ impl LocalModelRuntime {
 
   pub fn generate(&self, request: GenerateRequest) -> GenerateResponse {
     match &self.backend {
-      ModelBackend::Heuristic { .. } => self.generate_fallback(request, "fallback".to_string()),
+      ModelBackend::Unconfigured { detail, .. } => {
+        self.generate_failure("unconfigured", "unavailable", &request.role, detail)
+      }
       ModelBackend::LlamaCppCli {
         binary_path,
         model_path,
@@ -239,29 +249,35 @@ impl LocalModelRuntime {
           status: "ready".to_string(),
           model_id: self.pack.id.clone(),
         },
-        Err(_) => self.generate_fallback(request, "fallback".to_string()),
+        Err(error) => self.generate_failure(
+          "llama.cpp",
+          "error",
+          &request.role,
+          &format!("Local llama.cpp inference failed: {error}"),
+        ),
       },
     }
   }
 
-  fn generate_fallback(&self, request: GenerateRequest, status: String) -> GenerateResponse {
-    let mut text = request.fallback.trim().to_string();
-    if text.is_empty() {
-      text = fallback_from_prompt(&request.prompt, &request.role);
-    }
-
+  fn generate_failure(
+    &self,
+    backend: &str,
+    status: &str,
+    role: &ModelRole,
+    detail: &str,
+  ) -> GenerateResponse {
     GenerateResponse {
-      text,
-      backend: "heuristic".to_string(),
-      status,
+      text: generation_failure_text(role, detail),
+      backend: backend.to_string(),
+      status: status.to_string(),
       model_id: self.pack.id.clone(),
     }
   }
 
   pub fn bootstrap_pack_metadata(&self) -> Result<ModelBootstrap> {
-    let resolution =
-      resolve_manifest().context("failed to locate a bundled model-pack.json for bootstrap")?;
     let target_manifest_path = suggested_manifest_install_path();
+    let resolution = resolve_bootstrap_manifest(&target_manifest_path)
+      .context("failed to locate a bundled model-pack.json for bootstrap")?;
     let target_directory = target_manifest_path
       .parent()
       .context("suggested manifest path has no parent directory")?;
@@ -398,6 +414,43 @@ fn resolve_manifest() -> Option<ManifestResolution> {
   None
 }
 
+fn resolve_bootstrap_manifest(target_manifest_path: &Path) -> Option<ManifestResolution> {
+  let resolution = resolve_manifest()?;
+  if normalize_path(&resolution.manifest_path) != normalize_path(target_manifest_path) {
+    return Some(resolution);
+  }
+
+  for current_dir in discovery_roots() {
+    let candidates = [
+      current_dir
+        .join("models")
+        .join("builtin")
+        .join("lfm2.5-350m")
+        .join("model-pack.json"),
+      current_dir
+        .join("model-packs")
+        .join("lfm2.5-350m")
+        .join("model-pack.json"),
+    ];
+
+    for path in candidates {
+      if normalize_path(&path) == normalize_path(target_manifest_path) || !path.is_file() {
+        continue;
+      }
+
+      if let Ok(manifest) = read_manifest(&path) {
+        return Some(ManifestResolution {
+          manifest,
+          manifest_path: path,
+          source: "bundle-manifest".to_string(),
+        });
+      }
+    }
+  }
+
+  Some(resolution)
+}
+
 fn default_binary_candidates() -> Vec<PathBuf> {
   let mut candidates = vec![];
   let binary_names = if cfg!(windows) {
@@ -441,7 +494,11 @@ fn default_binary_candidates() -> Vec<PathBuf> {
 }
 
 fn default_model_candidates() -> Vec<PathBuf> {
-  let file_names = ["LFM2.5-350M.gguf", "lfm2.5-350m.gguf"];
+  let file_names = [
+    "LFM2.5-350M-Q4_K_M.gguf",
+    "LFM2.5-350M.gguf",
+    "lfm2.5-350m.gguf",
+  ];
   let mut candidates = vec![];
 
   for current_dir in discovery_roots() {
@@ -541,6 +598,9 @@ fn model_metrics(
     if let Some(homepage) = &manifest.homepage {
       metrics.insert("homepage".to_string(), homepage.clone());
     }
+    if let Some(download_url) = &manifest.download_url {
+      metrics.insert("downloadUrl".to_string(), download_url.clone());
+    }
     if let Some(sha256) = &manifest.sha256 {
       metrics.insert("sha256".to_string(), sha256.clone());
     }
@@ -555,7 +615,7 @@ fn model_metrics(
 
   let suggested_file_name = manifest
     .map(|item| item.file_name.as_str())
-    .unwrap_or("LFM2.5-350M.gguf");
+    .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
   let suggested_manifest_path = suggested_manifest_install_path();
   let suggested_model_path = suggested_model_install_path(suggested_file_name);
   let suggested_binary_path = suggested_binary_install_path();
@@ -622,7 +682,7 @@ fn install_hint(
 ) -> String {
   let file_name = manifest
     .map(|item| item.file_name.as_str())
-    .unwrap_or("LFM2.5-350M.gguf");
+    .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
   let suggested_manifest = suggested_manifest_install_path();
   let suggested_model = suggested_model_install_path(file_name);
   let suggested_binary = suggested_binary_install_path();
@@ -752,39 +812,39 @@ fn missing_runtime_detail(
 ) -> String {
   match (binary_path, model_path, manifest_path) {
     (Some(binary_path), Some(model_path), Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because {} or {} is missing. Manifest: {}.",
+      "Local model runtime is unavailable because {} or {} is missing. Manifest: {}.",
       binary_path.display(),
       model_path.display(),
       manifest_path.display()
     ),
     (Some(binary_path), Some(model_path), None) => format!(
-      "Falling back to the built-in heuristic summarizer because {} or {} is missing.",
+      "Local model runtime is unavailable because {} or {} is missing.",
       binary_path.display(),
       model_path.display()
     ),
     (Some(binary_path), None, Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because the model file is not configured or missing. Binary candidate: {}. Manifest: {}.",
+      "Local model runtime is unavailable because the model file is not configured or missing. Binary candidate: {}. Manifest: {}.",
       binary_path.display(),
       manifest_path.display()
     ),
     (Some(binary_path), None, None) => format!(
-      "Falling back to the built-in heuristic summarizer because the model file is not configured or missing. Binary candidate: {}.",
+      "Local model runtime is unavailable because the model file is not configured or missing. Binary candidate: {}.",
       binary_path.display()
     ),
     (None, Some(model_path), Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because the llama.cpp CLI binary is not configured or missing. Model candidate: {}. Manifest: {}.",
+      "Local model runtime is unavailable because the llama.cpp CLI binary is not configured or missing. Model candidate: {}. Manifest: {}.",
       model_path.display(),
       manifest_path.display()
     ),
     (None, Some(model_path), None) => format!(
-      "Falling back to the built-in heuristic summarizer because the llama.cpp CLI binary is not configured or missing. Model candidate: {}.",
+      "Local model runtime is unavailable because the llama.cpp CLI binary is not configured or missing. Model candidate: {}.",
       model_path.display()
     ),
     (None, None, Some(manifest_path)) => format!(
-      "Falling back to the built-in heuristic summarizer because no llama.cpp CLI binary or resolved LFM2.5-350M model file is configured yet. Manifest: {}.",
+      "Local model runtime is unavailable because no llama.cpp CLI binary or resolved LFM2.5-350M model file is configured yet. Manifest: {}.",
       manifest_path.display()
     ),
-    (None, None, None) => "Falling back to the built-in heuristic summarizer because no llama.cpp CLI binary or LFM2.5-350M model pack is configured yet.".to_string(),
+    (None, None, None) => "Local model runtime is unavailable because no llama.cpp CLI binary or LFM2.5-350M model pack is configured yet.".to_string(),
   }
 }
 
@@ -852,7 +912,7 @@ fn clean_model_output(output: &str) -> String {
     .to_string()
 }
 
-fn fallback_from_prompt(prompt: &str, role: &ModelRole) -> String {
+fn generation_failure_text(role: &ModelRole, detail: &str) -> String {
   let role_label = match role {
     ModelRole::Default => "default",
     ModelRole::Planner => "planner",
@@ -860,12 +920,7 @@ fn fallback_from_prompt(prompt: &str, role: &ModelRole) -> String {
     ModelRole::Summarizer => "summarizer",
   };
 
-  let preview = prompt
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .unwrap_or("No prompt content was provided.");
-
-  format!("Pith used the local {role_label} fallback path. Prompt preview: {preview}")
+  format!("Pith could not produce a local {role_label} response because {detail}")
 }
 
 #[cfg(test)]
@@ -876,13 +931,15 @@ mod tests {
   use std::time::{SystemTime, UNIX_EPOCH};
 
   #[test]
-  fn runtime_uses_heuristic_backend_when_paths_are_missing() {
+  fn runtime_reports_unconfigured_backend_when_paths_are_missing() {
     let runtime = LocalModelRuntime::from_paths(None, None);
     let health = runtime.health();
 
     assert_eq!(health.display_name, "LFM2.5-350M");
-    assert_eq!(health.backend, "heuristic");
-    assert_eq!(health.status, "fallback");
+    assert_eq!(health.backend, "unconfigured");
+    assert_eq!(health.status, "unavailable");
+    assert!(health.detail.contains("Local model runtime is unavailable"));
+    assert!(!health.detail.to_lowercase().contains("degraded generation"));
     assert!(health.metrics.contains_key("contextSize"));
     assert_eq!(health.metrics["readiness"], "unconfigured");
     assert_eq!(health.metrics["packReady"], "false");
@@ -893,19 +950,50 @@ mod tests {
   }
 
   #[test]
-  fn heuristic_generation_returns_fallback_text() {
+  fn unconfigured_generation_returns_unavailable_error() {
     let runtime = LocalModelRuntime::from_paths(None, None);
     let response = runtime.generate(GenerateRequest {
       role: ModelRole::Summarizer,
       prompt: "Summarize this test prompt.".to_string(),
-      fallback: "Fallback summary".to_string(),
       max_tokens: 96,
     });
 
-    assert_eq!(response.text, "Fallback summary");
-    assert_eq!(response.backend, "heuristic");
-    assert_eq!(response.status, "fallback");
+    assert!(response
+      .text
+      .contains("could not produce a local summarizer response"));
+    assert_eq!(response.backend, "unconfigured");
+    assert_eq!(response.status, "unavailable");
     assert_eq!(response.model_id, "lfm2.5-350m");
+  }
+
+  #[test]
+  fn runtime_health_uses_selected_manifest_identity() {
+    let runtime = LocalModelRuntime::from_resolution(
+      Some(ManifestResolution {
+        manifest: ModelPackManifest {
+          id: "qwen2.5-coder-0.5b-instruct".to_string(),
+          display_name: "Qwen2.5-Coder-0.5B Q4_K_M".to_string(),
+          file_name: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf".to_string(),
+          context_size: 4096,
+          max_output_tokens: 192,
+          backend: "llama.cpp".to_string(),
+          license: Some("apache-2.0".to_string()),
+          homepage: None,
+          download_url: None,
+          sha256: None,
+          size_bytes: None,
+        },
+        manifest_path: PathBuf::from("model-pack.json"),
+        source: "environment".to_string(),
+      }),
+      None,
+      None,
+    );
+    let health = runtime.health();
+
+    assert_eq!(health.pack_id, "qwen2.5-coder-0.5b-instruct");
+    assert_eq!(health.display_name, "Qwen2.5-Coder-0.5B Q4_K_M");
+    assert_eq!(health.metrics["maxOutputTokens"], "192");
   }
 
   #[test]
@@ -946,10 +1034,12 @@ mod tests {
       r#"{
   "id": "lfm2.5-350m",
   "display_name": "LFM2.5-350M",
-  "file_name": "LFM2.5-350M.gguf",
+  "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
   "max_output_tokens": 160,
-  "backend": "llama.cpp"
+  "backend": "llama.cpp",
+  "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+  "size_bytes": 229312224
 }"#,
     )
     .expect("manifest");

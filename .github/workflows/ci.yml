@@ -48,4 +48,17 @@ jobs:
 
       - name: Build macOS app package
         working-directory: apps/pith-macos
-        run: swift build
+        shell: bash
+        run: |
+          set +e
+          swift build 2>&1 | tee swift-build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "Swift build failed. Last 80 lines:"
+              tail -n 80 swift-build.log
+            } > swift-build-summary.txt
+            message="$(python3 -c 'from pathlib import Path; text = Path("swift-build-summary.txt").read_text(); text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"); print(text)')"
+            echo "::error title=Swift build failed::$message"
+          fi
+          exit "$status"

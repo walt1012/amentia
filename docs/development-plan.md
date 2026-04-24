@@ -72,7 +72,7 @@ From `anthropics/claude-code`, especially the plugin directory layout:
 - Plugins should be visible product primitives, not hidden implementation details.
 - A directory-based plugin format is simple, inspectable, and shareable.
 - Commands, agents, skills, hooks, and MCP integrations should be separable capabilities within one plugin bundle.
-- A plugin system becomes much more useful when official plugins demonstrate best practices early.
+- A plugin system becomes much more useful when bundled example plugins demonstrate best practices early without implying Pith-owned integrations are the long-term ceiling.
 - The plugin manager should be part of the core user experience, not a later add-on.
 
 Relevant reference areas:
@@ -499,7 +499,7 @@ Phase 1 should use `LFM2.5-350M` as:
 
 - the mandatory built-in model
 - the orchestration baseline
-- the always-available offline fallback
+- the always-available offline baseline
 
 The architecture must also support optional future local packs for stronger coding performance without violating the requirement that the product ships with a built-in local model.
 
@@ -608,6 +608,10 @@ plugin-name/
 - `license`
 - `capabilities`
 - `permissions`
+- `skills`
+- `mcpServers`
+- `appConnectors`
+- `authPolicy`
 - `entrypoints`
 - `compatibility`
 - `defaultEnabled`
@@ -620,6 +624,8 @@ plugin-name/
 - `hook`
 - `tool`
 - `mcp_server`
+- `skill`
+- `connector`
 - `settings`
 
 ### 14.5 Plugin Permissions
@@ -643,20 +649,23 @@ At minimum:
 - show plugin in manager UI
 - enable plugin per user or workspace
 - activate plugin on demand
+- run command capabilities only through explicit plugin-owned execution contracts; prompt-only command manifests can be listed for compatibility but are not runnable until they declare an executable contract
+- prepare connector capabilities for third-party services such as Notion through manifest-declared auth, permission, and MCP or app surfaces
 
-### 14.7 First-Party Plugins
+### 14.7 Bundled Example Plugins
 
-Phase 1 official plugins:
+Phase 1 bundled examples:
 
 - `filesystem`
 - `shell`
 - `git`
 
-Phase 2 additions:
+Phase 2 connector examples:
 
 - `workflow-coder`
 - `workflow-research`
 - `github`
+- `notion`
 
 ### 14.8 Built-In Memory Scope
 
@@ -734,7 +743,7 @@ Recommended monorepo layout:
 |   |-- pith-storage/
 |   `-- pith-tools/
 |-- plugins/
-|   `-- official/
+|   `-- bundled/
 |-- docs/
 |-- scripts/
 |-- third_party/
@@ -856,10 +865,17 @@ Deliverables:
 - memory-aware plugin integration points
 - per-plugin permissions UI
 - plugin-enabled commands and hooks
+- Codex-inspired plugin package metadata for skills, MCP servers, app connectors, and third-party auth policies
+- capability registry metadata for connector service, auth, credential store, and MCP launch hints
+- connector registry for disabled, needs-auth, and ready third-party app integrations
+- Notion connector design spike covering auth, permission scopes, and local execution boundaries
 
 Exit criteria:
 
-- at least three official plugins load and execute successfully in-app
+- at least three executable bundled example plugins load and execute successfully in-app
+- at least one bundled connector template declares third-party auth, MCP, and app connector metadata
+- app surfaces connector status without requiring connector plugins to be enabled first
+- prompt-only plugin commands are visible but blocked until they provide an execution contract
 
 ### Milestone 3: Premium Desktop Quality
 
@@ -869,17 +885,22 @@ Goal:
 
 Deliverables:
 
+- release-bundled or guided local model pack delivery
+- one-click default model download, activation, and runtime restart flow
+- pausable, resumable, and cancellable long-running model downloads with progress and speed status
+- clear local model readiness and installation guidance
 - refined visual system
 - improved inspector
 - better diff viewer
-- state restoration
-- runtime crash recovery
-- workspace search
+- workspace and inspector state restoration
+- runtime crash recovery with pending request cleanup and relaunch affordance
+- lightweight workspace search from the inspector
 - keyboard-first workflows
 - better loading and error states
 
 Exit criteria:
 
+- a fresh install can reach a ready local `LFM2.5-350M` runtime without hidden degraded-generation behavior
 - the product feels stable, intentional, and distinctly native on Intel Mac hardware
 
 ### Milestone 4: Platform Expansion
@@ -924,7 +945,7 @@ Recommended implementation order:
 
 - add root `README.md`
 - add `.editorconfig`
-- add `apps/`, `crates/`, and `plugins/official/`
+- add `apps/`, `crates/`, and `plugins/bundled/`
 - add GitHub Actions workflow skeleton
 - add formatter and linter configs
 - add contributor guidance
@@ -1097,7 +1118,7 @@ Mitigation:
 - typed permissions
 - approval gates
 - plugin provenance
-- official first-party plugins as examples
+- bundled example plugins as reference implementations
 
 ### Risk 5: x86-only macOS support complicates CI and release verification
 

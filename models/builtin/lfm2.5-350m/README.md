@@ -10,7 +10,7 @@ What belongs in git:
 
 What does not belong in git history:
 
-- `LFM2.5-350M.gguf`
+- `LFM2.5-350M-Q4_K_M.gguf`
 - converted weight shards
 - large runtime binaries
 
@@ -22,8 +22,10 @@ Recommended local layout:
     `-- builtin/
         `-- lfm2.5-350m/
             |-- model-pack.json
-            `-- LFM2.5-350M.gguf
+            `-- LFM2.5-350M-Q4_K_M.gguf
 ```
+
+Pith can download the recommended Q4_K_M GGUF from the model pack manifest into the suggested app data path. The download target stays local and is never tracked in git.
 
 The runtime can also resolve:
 

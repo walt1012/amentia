@@ -1,0 +1,47 @@
+{
+  "name": "notion-connector",
+  "version": "0.1.0",
+  "displayName": "Notion Connector",
+  "description": "Declares the Notion third-party connector surface for future MCP and OAuth-backed workspace integrations.",
+  "author": {
+    "name": "Pith"
+  },
+  "capabilities": [
+    "prompt_pack:notion.workspace"
+  ],
+  "permissions": [
+    "network.outbound",
+    "mcp.connect"
+  ],
+  "skills": [
+    {
+      "id": "notion.workspace",
+      "description": "Guidance for turning local workspace context into Notion-ready pages and notes.",
+      "path": "skills/notion-workspace.md"
+    }
+  ],
+  "mcpServers": [
+    {
+      "id": "notion",
+      "transport": "stdio"
+    }
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": [
+      "read_content",
+      "insert_content"
+    ],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": false
+}

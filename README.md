@@ -12,6 +12,16 @@ The product goal is to combine:
 
 The repository is intentionally English-only.
 
+## Product Principles
+
+- Build a native `macOS` application named `Pith` for `macOS 12+` on `x86_64` only.
+- Keep the app lightweight and intentionally small while preserving a strong local agent loop.
+- Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
+- Keep the default intelligence path fully local with no required external model API.
+- Treat `LFM2.5-350M` as the default built-in model pack baseline.
+- Design plugins as first-class product modules so `Pith` can expand beyond code assistance into a broader local agent platform.
+- Prefer free and open source dependencies, tooling, and model delivery paths.
+
 ## Repository Layout
 
 ```text
@@ -27,7 +37,7 @@ The repository is intentionally English-only.
 |   |-- pith-storage/
 |   `-- pith-tools/
 |-- plugins/
-|   `-- official/
+|   `-- bundled/
 |-- docs/
 |-- scripts/
 |-- third_party/
@@ -37,6 +47,21 @@ The repository is intentionally English-only.
 ## Current Status
 
 Milestone 1 is complete on the active development branch.
+
+Milestone 2 is now complete on the active development branch. It includes plugin discovery, enable
+and disable flow, installation and removal workflow, capability registry, permission gating,
+per-plugin permissions and validation surfaces, repair hints for invalid manifests, reviewed install
+and removal prompts, memory-aware plugin command execution, memory-aware shell-completed hook
+execution, executable bundled plugin examples, and a Notion connector manifest template plus
+connector registry for the third-party plugin surface.
+
+Milestone 3 is underway with one-click default local model delivery work: the macOS app streams
+model downloads to disk, shows lightweight progress and speed status, lets users pause, continue,
+or cancel long downloads, activates the default LFM model after download, and restarts the runtime
+when needed so a fresh install reaches a real local model path with fewer manual steps. It also
+restores the last workspace and key inspector disclosure state across launches, and surfaces a
+clear relaunch path when the local runtime exits unexpectedly. A lightweight workspace search now
+lets users find matching lines from the inspector without opening a separate file browser.
 
 Delivered in Milestone 1:
 
@@ -48,7 +73,6 @@ Delivered in Milestone 1:
 - SQLite-backed persistence for workspace, threads, approvals, and memory notes
 - built-in memory retrieval, user workspace notes, and thread summary notes
 - local model health inspection and local pack metadata bootstrap for the `LFM2.5-350M` runtime path
-- CI checks
 
 Milestone 1 exit criteria now covered:
 
@@ -62,7 +86,7 @@ Milestone 1 exit criteria now covered:
 Model packaging note:
 
 - the repository tracks model pack manifests and small metadata
-- the actual `LFM2.5-350M.gguf` weight file should live in a local data directory or release bundle, not git history
+- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file should live in a local data directory or release bundle, not git history
 
 ## Planned Runtime Shape
 
