@@ -2579,6 +2579,29 @@ mod tests {
     path
   }
 
+  fn enable_full_access_plugin(context: &mut RuntimeContext) {
+    context.plugins = vec![PluginCatalogEntry {
+      id: "test-full-access".to_string(),
+      name: "test-full-access".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Test Full Access".to_string(),
+      status: "ready".to_string(),
+      description: "Grants built-in workspace and shell permissions for tests".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:test.full_access".to_string()],
+      permissions: vec![
+        "file.read".to_string(),
+        "file.write".to_string(),
+        "shell.exec".to_string(),
+      ],
+      manifest_path: "tests/test-full-access/pith-plugin.json".to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+    }];
+  }
+
   #[test]
   fn initialize_request_returns_capabilities() {
     let mut context = RuntimeContext::new_in_memory();
@@ -2787,6 +2810,7 @@ mod tests {
   #[test]
   fn turn_start_reads_a_requested_workspace_file() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("read-file");
     fs::write(
       workspace.join("README.md"),
@@ -2857,6 +2881,7 @@ mod tests {
   #[test]
   fn collect_notifications_emits_thread_update_for_active_turn() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("thread-updated");
     fs::write(
       workspace.join("README.md"),
@@ -2928,6 +2953,7 @@ mod tests {
   #[test]
   fn turn_cancel_stops_an_active_assistant_response() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("turn-cancel");
     fs::write(
       workspace.join("README.md"),
@@ -2990,6 +3016,7 @@ mod tests {
   #[test]
   fn turn_start_searches_workspace_content() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("search-files");
     fs::write(
       workspace.join("README.md"),
@@ -3055,6 +3082,7 @@ mod tests {
   #[test]
   fn approval_respond_writes_file_after_approval() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("approval-write");
 
     let _ = handle_request(
@@ -3212,6 +3240,7 @@ mod tests {
   #[test]
   fn thread_summary_memory_note_is_updated_after_approval_resolution() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("thread-summary");
 
     let _ = handle_request(
@@ -3275,6 +3304,7 @@ mod tests {
   #[test]
   fn follow_up_turn_retrieves_recent_memory_notes() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace = create_temp_workspace("memory-follow-up");
 
     let _ = handle_request(
@@ -3357,6 +3387,7 @@ mod tests {
   #[test]
   fn thread_turns_stay_bound_to_the_thread_workspace() {
     let mut context = RuntimeContext::new_in_memory();
+    enable_full_access_plugin(&mut context);
     let workspace_a = create_temp_workspace("workspace-a");
     let workspace_b = create_temp_workspace("workspace-b");
     fs::write(
