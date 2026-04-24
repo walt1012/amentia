@@ -48,11 +48,11 @@ The repository is intentionally English-only.
 
 Milestone 1 is complete on the active development branch.
 
-Milestone 2 is now in progress with plugin discovery, enable and disable flow, installation and
-removal workflow, capability registry, permission gating, per-plugin permissions and validation
-surfaces, repair hints for invalid manifests, reviewed install and removal prompts, memory-aware
-plugin command execution, memory-aware shell-completed hook execution, and smoke coverage for all
-three official plugins underway.
+Milestone 2 is now complete on the active development branch. It includes plugin discovery, enable
+and disable flow, installation and removal workflow, capability registry, permission gating,
+per-plugin permissions and validation surfaces, repair hints for invalid manifests, reviewed install
+and removal prompts, memory-aware plugin command execution, memory-aware shell-completed hook
+execution, and smoke coverage for all three official plugins.
 
 Delivered in Milestone 1:
 

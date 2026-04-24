@@ -1114,11 +1114,43 @@ mod tests {
       assert!(!manifest.display_name.trim().is_empty());
     }
 
+    let workspace_command = read_command_manifest(
+      &official_root.join("workspace-notes/commands/workspace.capture-note.json"),
+    )
+    .expect("parse workspace command manifest");
+    assert_eq!(workspace_command.title, "Capture Workspace Note");
+    assert_eq!(
+      workspace_command
+        .memory
+        .as_ref()
+        .map(|memory| memory.note_title.as_str()),
+      Some("Workspace Capture")
+    );
+
+    let shell_command = read_command_manifest(
+      &official_root.join("shell-recorder/commands/shell.summarize-session.json"),
+    )
+    .expect("parse shell command manifest");
+    assert_eq!(shell_command.title, "Summarize Shell Session");
+
+    let review_command = read_command_manifest(
+      &official_root.join("review-assistant/commands/review.inspect-diff.json"),
+    )
+    .expect("parse review command manifest");
+    assert_eq!(review_command.title, "Inspect Current Diff");
+
     let hook_manifest =
       read_hook_manifest(&official_root.join("shell-recorder/hooks/shell.recorder.json"))
         .expect("parse official hook manifest");
     assert_eq!(hook_manifest.event, "shell.completed");
     assert!(!hook_manifest.message_template.trim().is_empty());
+    assert_eq!(
+      hook_manifest
+        .memory
+        .as_ref()
+        .map(|memory| memory.note_title.as_str()),
+      Some("Shell Completion")
+    );
   }
 
   #[test]
