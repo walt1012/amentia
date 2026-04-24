@@ -414,23 +414,26 @@ fn load_plugin_entry(manifest_path: PathBuf) -> PluginCatalogEntry {
 
   match read_manifest(&manifest_path) {
     Ok(manifest) => match validate_manifest(&manifest) {
-      Ok(()) => PluginCatalogEntry {
-        id: manifest.name.clone(),
-        name: manifest.name.clone(),
-        version: manifest.version,
-        display_name: manifest.display_name,
-        status: "ready".to_string(),
-        description: manifest.description,
-        author_name: manifest.author.map(|author| author.name),
-        enabled: manifest.default_enabled,
-        default_enabled: manifest.default_enabled,
-        capabilities: manifest_capabilities(&manifest),
-        permissions: manifest.permissions,
-        manifest_path: manifest_path.display().to_string(),
-        provenance: provenance.to_string(),
-        validation_error: None,
-        validation_hint: None,
-      },
+      Ok(()) => {
+        let capabilities = manifest_capabilities(&manifest);
+        PluginCatalogEntry {
+          id: manifest.name.clone(),
+          name: manifest.name.clone(),
+          version: manifest.version,
+          display_name: manifest.display_name,
+          status: "ready".to_string(),
+          description: manifest.description,
+          author_name: manifest.author.map(|author| author.name),
+          enabled: manifest.default_enabled,
+          default_enabled: manifest.default_enabled,
+          capabilities,
+          permissions: manifest.permissions,
+          manifest_path: manifest_path.display().to_string(),
+          provenance: provenance.to_string(),
+          validation_error: None,
+          validation_hint: None,
+        }
+      }
       Err(error) => invalid_plugin_entry(
         manifest_path,
         provenance,
