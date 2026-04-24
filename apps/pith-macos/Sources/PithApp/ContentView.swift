@@ -199,10 +199,16 @@ struct ContentView: View {
               .foregroundColor(.secondary)
               .textSelection(.enabled)
             HStack(spacing: 8) {
+              Button("Download Model") {
+                viewModel.downloadLocalModel()
+              }
+              .buttonStyle(.borderedProminent)
+              .disabled(!viewModel.canDownloadLocalModel())
+
               Button("Install Pack Metadata") {
                 viewModel.bootstrapModelPackMetadata()
               }
-              .buttonStyle(.borderedProminent)
+              .buttonStyle(.bordered)
 
               Button("Reveal Model Folder") {
                 viewModel.revealSuggestedModelDirectory()

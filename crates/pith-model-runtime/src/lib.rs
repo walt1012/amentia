@@ -49,6 +49,8 @@ pub struct ModelPackManifest {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub homepage: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub download_url: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub sha256: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub size_bytes: Option<u64>,
@@ -267,9 +269,9 @@ impl LocalModelRuntime {
   }
 
   pub fn bootstrap_pack_metadata(&self) -> Result<ModelBootstrap> {
-    let resolution =
-      resolve_manifest().context("failed to locate a bundled model-pack.json for bootstrap")?;
     let target_manifest_path = suggested_manifest_install_path();
+    let resolution = resolve_bootstrap_manifest(&target_manifest_path)
+      .context("failed to locate a bundled model-pack.json for bootstrap")?;
     let target_directory = target_manifest_path
       .parent()
       .context("suggested manifest path has no parent directory")?;
@@ -406,6 +408,43 @@ fn resolve_manifest() -> Option<ManifestResolution> {
   None
 }
 
+fn resolve_bootstrap_manifest(target_manifest_path: &Path) -> Option<ManifestResolution> {
+  let resolution = resolve_manifest()?;
+  if normalize_path(&resolution.manifest_path) != normalize_path(target_manifest_path) {
+    return Some(resolution);
+  }
+
+  for current_dir in discovery_roots() {
+    let candidates = [
+      current_dir
+        .join("models")
+        .join("builtin")
+        .join("lfm2.5-350m")
+        .join("model-pack.json"),
+      current_dir
+        .join("model-packs")
+        .join("lfm2.5-350m")
+        .join("model-pack.json"),
+    ];
+
+    for path in candidates {
+      if normalize_path(&path) == normalize_path(target_manifest_path) || !path.is_file() {
+        continue;
+      }
+
+      if let Ok(manifest) = read_manifest(&path) {
+        return Some(ManifestResolution {
+          manifest,
+          manifest_path: path,
+          source: "bundle-manifest".to_string(),
+        });
+      }
+    }
+  }
+
+  Some(resolution)
+}
+
 fn default_binary_candidates() -> Vec<PathBuf> {
   let mut candidates = vec![];
   let binary_names = if cfg!(windows) {
@@ -449,7 +488,11 @@ fn default_binary_candidates() -> Vec<PathBuf> {
 }
 
 fn default_model_candidates() -> Vec<PathBuf> {
-  let file_names = ["LFM2.5-350M.gguf", "lfm2.5-350m.gguf"];
+  let file_names = [
+    "LFM2.5-350M-Q4_K_M.gguf",
+    "LFM2.5-350M.gguf",
+    "lfm2.5-350m.gguf",
+  ];
   let mut candidates = vec![];
 
   for current_dir in discovery_roots() {
@@ -549,6 +592,9 @@ fn model_metrics(
     if let Some(homepage) = &manifest.homepage {
       metrics.insert("homepage".to_string(), homepage.clone());
     }
+    if let Some(download_url) = &manifest.download_url {
+      metrics.insert("downloadUrl".to_string(), download_url.clone());
+    }
     if let Some(sha256) = &manifest.sha256 {
       metrics.insert("sha256".to_string(), sha256.clone());
     }
@@ -563,7 +609,7 @@ fn model_metrics(
 
   let suggested_file_name = manifest
     .map(|item| item.file_name.as_str())
-    .unwrap_or("LFM2.5-350M.gguf");
+    .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
   let suggested_manifest_path = suggested_manifest_install_path();
   let suggested_model_path = suggested_model_install_path(suggested_file_name);
   let suggested_binary_path = suggested_binary_install_path();
@@ -630,7 +676,7 @@ fn install_hint(
 ) -> String {
   let file_name = manifest
     .map(|item| item.file_name.as_str())
-    .unwrap_or("LFM2.5-350M.gguf");
+    .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
   let suggested_manifest = suggested_manifest_install_path();
   let suggested_model = suggested_model_install_path(file_name);
   let suggested_binary = suggested_binary_install_path();
@@ -953,10 +999,12 @@ mod tests {
       r#"{
   "id": "lfm2.5-350m",
   "display_name": "LFM2.5-350M",
-  "file_name": "LFM2.5-350M.gguf",
+  "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
   "max_output_tokens": 160,
-  "backend": "llama.cpp"
+  "backend": "llama.cpp",
+  "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+  "size_bytes": 229312224
 }"#,
     )
     .expect("manifest");

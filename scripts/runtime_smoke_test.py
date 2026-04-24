@@ -273,6 +273,11 @@ def main() -> int:
     assert model_health["result"]["status"] in {"unavailable", "ready"}
     assert model_health["result"]["source"] in {"bundle-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
+    assert model_health["result"]["metrics"]["fileName"] == "LFM2.5-350M-Q4_K_M.gguf"
+    assert model_health["result"]["metrics"]["downloadUrl"].startswith(
+      "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
+    )
+    assert model_health["result"]["metrics"]["sizeBytes"] == "229312224"
     assert model_health["result"]["metrics"]["readiness"] in {
       "ready",
       "manifest_only",
@@ -284,7 +289,9 @@ def main() -> int:
     assert model_health["result"]["metrics"]["packReady"] in {"true", "false"}
     assert model_health["result"]["metrics"]["installHint"]
     assert model_health["result"]["metrics"]["suggestedManifestPath"]
-    assert model_health["result"]["metrics"]["suggestedModelPath"]
+    assert model_health["result"]["metrics"]["suggestedModelPath"].endswith(
+      "LFM2.5-350M-Q4_K_M.gguf"
+    )
     assert model_health["result"]["metrics"]["suggestedBinaryPath"]
 
     model_bootstrap, _ = send_request(

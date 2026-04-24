@@ -78,7 +78,7 @@ Milestone 1 exit criteria now covered:
 Model packaging note:
 
 - the repository tracks model pack manifests and small metadata
-- the actual `LFM2.5-350M.gguf` weight file should live in a local data directory or release bundle, not git history
+- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file should live in a local data directory or release bundle, not git history
 
 ## Planned Runtime Shape
 

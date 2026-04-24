@@ -70,18 +70,18 @@ The resolved model file path then checks:
 
 1. `PITH_LFM_MODEL_PATH`
 2. a sibling of the resolved manifest using the manifest `file_name`
-3. `PITH_DATA_DIR/models/LFM2.5-350M.gguf`
-4. repo-local `models/LFM2.5-350M.gguf`
-5. repo-local `model-packs/LFM2.5-350M.gguf`
+3. `PITH_DATA_DIR/models/LFM2.5-350M-Q4_K_M.gguf`
+4. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
+5. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
 
-The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M.gguf` file should not be committed to git history. It should live in the local data directory, a release bundle, or another local install path.
+The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M-Q4_K_M.gguf` file should not be committed to git history. It should live in the local data directory, a release bundle, or another local install path. The macOS app exposes the manifest `download_url` as a one-click local model download into the suggested app data path.
 
 If either path is missing, Pith reports the local model as unavailable and blocks agent work until a real local runtime is configured. One local setup example is:
 
 ```bash
 export PITH_LLAMACPP_PATH=/absolute/path/to/llama-cli
 export PITH_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
-export PITH_LFM_MODEL_PATH=/absolute/path/to/LFM2.5-350M.gguf
+export PITH_LFM_MODEL_PATH=/absolute/path/to/LFM2.5-350M-Q4_K_M.gguf
 ```
 
 ## Plugin Discovery

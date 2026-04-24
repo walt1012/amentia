@@ -938,6 +938,89 @@ final class AppViewModel: ObservableObject {
     )
   }
 
+  func canDownloadLocalModel() -> Bool {
+    guard runtimeState == .ready,
+          let modelHealth,
+          let downloadURL = modelHealth.metrics["downloadUrl"],
+          let targetPath = modelHealth.metrics["suggestedModelPath"]
+    else {
+      return false
+    }
+
+    return !downloadURL.isEmpty && !targetPath.isEmpty && !isLocalModelReady()
+  }
+
+  func downloadLocalModel() {
+    guard runtimeState == .ready else {
+      runtimeDetail = "Launch the runtime before downloading the local model."
+      return
+    }
+
+    guard let modelHealth else {
+      runtimeDetail = "Local model guidance is unavailable until the runtime reports model health."
+      return
+    }
+
+    guard let downloadURLValue = modelHealth.metrics["downloadUrl"],
+          let downloadURL = URL(string: downloadURLValue),
+          !downloadURLValue.isEmpty
+    else {
+      runtimeDetail = "The local model pack does not include a download URL yet."
+      return
+    }
+
+    guard let targetPath = modelHealth.metrics["suggestedModelPath"], !targetPath.isEmpty else {
+      runtimeDetail = "The local model target path is unavailable."
+      return
+    }
+
+    let sizeSummary = formattedDownloadSize(modelHealth.metrics["sizeBytes"])
+    guard confirmModelDownload(
+      displayName: modelHealth.displayName,
+      downloadURL: downloadURL,
+      targetPath: targetPath,
+      sizeSummary: sizeSummary
+    ) else {
+      runtimeDetail = "Local model download was cancelled."
+      return
+    }
+
+    Task {
+      do {
+        runtimeDetail = "Preparing local model download..."
+        let bootstrap = try await runtimeBridge.bootstrapModelPack()
+        let targetURL = URL(fileURLWithPath: targetPath)
+        if FileManager.default.fileExists(atPath: targetURL.path) {
+          await refreshModelHealthState()
+          runtimeDetail = "Local model already exists at \(targetURL.path). Manifest: \(bootstrap.manifestPath)"
+          return
+        }
+
+        runtimeDetail = "Downloading \(modelHealth.displayName) (\(sizeSummary))..."
+        try await downloadModelFile(from: downloadURL, to: targetURL)
+        let refreshedBootstrap = try await runtimeBridge.bootstrapModelPack()
+        await refreshModelHealthState()
+        runtimeDetail = "Downloaded \(modelHealth.displayName) to \(targetURL.path). Manifest: \(refreshedBootstrap.manifestPath)"
+        appendEntry(
+          to: selectedThread?.id,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .system,
+            title: "Local Model Downloaded",
+            body: "\(modelHealth.displayName) was downloaded to \(targetURL.path).",
+            timestamp: Date(),
+            attributes: [
+              "modelPath": targetURL.path,
+              "source": downloadURL.absoluteString,
+            ]
+          )
+        )
+      } catch {
+        runtimeDetail = "Model download failed: \(error.localizedDescription)"
+      }
+    }
+  }
+
   func bootstrapModelPackMetadata() {
     guard runtimeState == .ready else {
       runtimeDetail = "Launch the runtime before preparing local model metadata."
@@ -1456,6 +1539,33 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  private func downloadModelFile(from sourceURL: URL, to targetURL: URL) async throws {
+    let (temporaryURL, response) = try await URLSession.shared.download(from: sourceURL)
+    if let httpResponse = response as? HTTPURLResponse,
+       !(200...299).contains(httpResponse.statusCode)
+    {
+      throw NSError(
+        domain: "PithModelDownload",
+        code: httpResponse.statusCode,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Download server returned HTTP \(httpResponse.statusCode).",
+        ]
+      )
+    }
+
+    let manager = FileManager.default
+    try manager.createDirectory(
+      at: targetURL.deletingLastPathComponent(),
+      withIntermediateDirectories: true
+    )
+
+    if manager.fileExists(atPath: targetURL.path) {
+      try manager.removeItem(at: targetURL)
+    }
+
+    try manager.moveItem(at: temporaryURL, to: targetURL)
+  }
+
   private func revealFilePath(_ path: String, successDetail: String) {
     guard !path.isEmpty else {
       runtimeDetail = "The requested file path is unavailable."
@@ -1715,6 +1825,28 @@ final class AppViewModel: ObservableObject {
     return alert.runModal() == .alertFirstButtonReturn
   }
 
+  private func confirmModelDownload(
+    displayName: String,
+    downloadURL: URL,
+    targetPath: String,
+    sizeSummary: String
+  ) -> Bool {
+    let alert = NSAlert()
+    alert.alertStyle = .informational
+    alert.messageText = "Download Local Model?"
+    alert.informativeText = """
+      Model: \(displayName)
+      Size: \(sizeSummary)
+      Source: \(downloadURL.absoluteString)
+      Target: \(targetPath)
+
+      Pith will store the model locally in app data. The model file is not added to git.
+      """
+    alert.addButton(withTitle: "Download")
+    alert.addButton(withTitle: "Cancel")
+    return alert.runModal() == .alertFirstButtonReturn
+  }
+
   private func confirmPluginRemoval(plugin: PluginSummary) -> Bool {
     let alert = NSAlert()
     alert.alertStyle = .warning
@@ -1739,6 +1871,16 @@ final class AppViewModel: ObservableObject {
     }
 
     return values.joined(separator: ", ")
+  }
+
+  private func formattedDownloadSize(_ value: String?) -> String {
+    guard let value, let byteCount = Int64(value) else {
+      return "size unavailable"
+    }
+
+    let formatter = ByteCountFormatter()
+    formatter.countStyle = .file
+    return formatter.string(fromByteCount: byteCount)
   }
 
   private func pluginInstallRepairHint(for error: Error) -> String {
