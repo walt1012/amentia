@@ -3348,7 +3348,10 @@ mod tests {
         "tool:shell.timeline".to_string(),
       ],
       permissions: vec!["shell.exec".to_string()],
-      manifest_path: "plugins/official/shell-recorder/pith-plugin.json".to_string(),
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/official/shell-recorder/pith-plugin.json")
+        .display()
+        .to_string(),
       provenance: "official".to_string(),
       validation_error: None,
     }];
