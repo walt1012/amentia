@@ -685,8 +685,9 @@ mod tests {
       assert!(!manifest.display_name.trim().is_empty());
     }
 
-    let hook_manifest = read_hook_manifest(&official_root.join("shell-recorder/hooks/shell.recorder.json"))
-      .expect("parse official hook manifest");
+    let hook_manifest =
+      read_hook_manifest(&official_root.join("shell-recorder/hooks/shell.recorder.json"))
+        .expect("parse official hook manifest");
     assert_eq!(hook_manifest.event, "shell.completed");
     assert!(!hook_manifest.message_template.trim().is_empty());
   }

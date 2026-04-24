@@ -10,9 +10,8 @@ use pith_model_runtime::{
 };
 use pith_plugin_host::{
   build_capability_registry, build_command_registry, build_hook_registry, default_plugin_root,
-  discover_plugins,
-  PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
-  PluginCommandEntry as HostPluginCommandEntry,
+  discover_plugins, PluginCapabilityRegistration as HostPluginCapabilityRegistration,
+  PluginCatalogEntry, PluginCommandEntry as HostPluginCommandEntry,
   PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
@@ -26,8 +25,8 @@ use pith_protocol::{
   PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
   ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
   ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -322,10 +321,9 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       &build_protocol_command_registry(&context.plugins),
     ),
     methods::PLUGIN_COMMAND_RUN => handle_plugin_command_run(context, request),
-    methods::PLUGIN_HOOK_REGISTRY => JsonRpcResponse::success(
-      request.id,
-      &build_protocol_hook_registry(&context.plugins),
-    ),
+    methods::PLUGIN_HOOK_REGISTRY => {
+      JsonRpcResponse::success(request.id, &build_protocol_hook_registry(&context.plugins))
+    }
     methods::PLUGIN_LIST => JsonRpcResponse::success(
       request.id,
       &PluginListResult {
@@ -550,10 +548,7 @@ fn shell_output_preview(output: &str) -> String {
   }
 }
 
-fn render_hook_message(
-  template: &str,
-  replacements: &[(&str, String)],
-) -> String {
+fn render_hook_message(template: &str, replacements: &[(&str, String)]) -> String {
   let mut rendered = template.to_string();
   for (key, value) in replacements {
     rendered = rendered.replace(&format!("{{{{{key}}}}}"), value);
