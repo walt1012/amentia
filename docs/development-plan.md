@@ -893,7 +893,7 @@ Deliverables:
 - improved inspector
 - better diff viewer
 - workspace and inspector state restoration
-- runtime crash recovery
+- runtime crash recovery with pending request cleanup and relaunch affordance
 - workspace search
 - keyboard-first workflows
 - better loading and error states

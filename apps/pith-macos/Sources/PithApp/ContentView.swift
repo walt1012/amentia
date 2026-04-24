@@ -48,9 +48,10 @@ struct ContentView: View {
       }
 
       ToolbarItem(placement: .primaryAction) {
-        Button("Launch Runtime") {
+        Button(viewModel.runtimeLaunchButtonTitle()) {
           viewModel.launchRuntime()
         }
+        .disabled(!viewModel.canLaunchRuntime())
       }
     }
   }

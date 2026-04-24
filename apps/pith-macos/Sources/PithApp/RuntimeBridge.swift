@@ -980,6 +980,7 @@ final class RuntimeBridge {
       return
     }
 
+    failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.failed, detail: detail)
   }

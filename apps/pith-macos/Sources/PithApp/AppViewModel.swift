@@ -125,6 +125,7 @@ final class AppViewModel: ObservableObject {
   private var threadTimelines: [String: [TimelineEntry]]
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
+  private var lastRuntimeFailureDetail: String?
   private var modelDownloadTask: Task<Void, Never>?
   private var modelDownloadTransfer: ModelDownloadTransfer?
   private var modelDownloadResumeData: Data?
@@ -185,6 +186,7 @@ final class AppViewModel: ObservableObject {
     self.activeTurnID = nil
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
+    self.lastRuntimeFailureDetail = nil
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
     self.modelDownloadResumeData = nil
@@ -196,15 +198,23 @@ final class AppViewModel: ObservableObject {
     }
     self.runtimeBridge.onConnectionStateChanged = { [weak self] state, detail in
       Task { @MainActor in
-        self?.runtimeState = state
-        self?.runtimeDetail = detail
+        self?.handleRuntimeConnectionStateChange(state, detail: detail)
       }
     }
   }
 
   func launchRuntime() {
+    guard runtimeState != .launching else {
+      return
+    }
+
+    if runtimeState == .ready {
+      runtimeBridge.stopRuntime(detail: "Relaunching local runtime...")
+    }
+
     runtimeState = .launching
     runtimeDetail = "Launching local runtime"
+    lastRuntimeFailureDetail = nil
 
     Task {
       do {
@@ -441,6 +451,23 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
+  }
+
+  func runtimeLaunchButtonTitle() -> String {
+    switch runtimeState {
+    case .ready:
+      return "Relaunch Runtime"
+    case .failed:
+      return "Relaunch Runtime"
+    case .launching:
+      return "Launching Runtime"
+    case .disconnected:
+      return "Launch Runtime"
+    }
+  }
+
+  func canLaunchRuntime() -> Bool {
+    runtimeState != .launching
   }
 
   func openWorkspace() {
@@ -1970,6 +1997,42 @@ final class AppViewModel: ObservableObject {
       launchRuntime()
     } else {
       runtimeDetail = idleDetail
+    }
+  }
+
+  private func handleRuntimeConnectionStateChange(_ state: RuntimeBridge.ConnectionState, detail: String) {
+    let previousState = runtimeState
+    runtimeState = state
+    runtimeDetail = detail
+
+    switch state {
+    case .ready:
+      lastRuntimeFailureDetail = nil
+    case .failed:
+      activeTurnID = nil
+      activeTurnThreadID = nil
+      modelHealth = nil
+      if previousState != .failed || lastRuntimeFailureDetail != detail {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .warning,
+            title: "Runtime Disconnected",
+            body: "\(detail) Use Relaunch Runtime to recover the local session.",
+            attributes: [
+              "recovery": "relaunch-runtime"
+            ]
+          )
+        )
+      }
+      lastRuntimeFailureDetail = detail
+    case .disconnected:
+      activeTurnID = nil
+      activeTurnThreadID = nil
+      modelHealth = nil
+    case .launching:
+      break
     }
   }
 
