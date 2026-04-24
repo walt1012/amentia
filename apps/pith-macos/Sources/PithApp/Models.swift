@@ -159,3 +159,18 @@ struct TimelineEntry: Identifiable, Hashable {
   let body: String
   let attributes: [String: String]
 }
+
+enum DiffLineKind: String, Hashable {
+  case addition
+  case deletion
+  case hunk
+  case metadata
+  case context
+}
+
+struct DiffLineSummary: Identifiable, Hashable {
+  let id: String
+  let lineNumber: Int
+  let text: String
+  let kind: DiffLineKind
+}

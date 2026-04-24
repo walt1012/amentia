@@ -18,6 +18,9 @@ struct ContentView: View {
   @AppStorage("pith.inspector.modelManagerExpanded") private var modelManagerExpanded = false
   @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
   @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
+  @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
+  @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = true
+  @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
 
   var body: some View {
     NavigationView {
@@ -556,7 +559,7 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        GroupBox("Thread") {
+        DisclosureGroup("Thread", isExpanded: $threadExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.selectedThreadTitle())
               .font(.headline)
@@ -567,7 +570,7 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        GroupBox("Selected Item") {
+        DisclosureGroup("Selected Item", isExpanded: $selectedItemExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.selectedEntryTitle())
               .font(.headline)
@@ -583,18 +586,14 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        if let diffBody = viewModel.selectedDiffBody() {
+        if let diffSummary = viewModel.selectedDiffSummary() {
           GroupBox("Diff Detail") {
-            Text(diffBody)
-              .font(.system(.caption, design: .monospaced))
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-              .frame(maxWidth: .infinity, alignment: .leading)
+            DiffDetailView(summary: diffSummary, lines: viewModel.selectedDiffLines())
           }
         }
 
         if let memorySummary = viewModel.selectedEntryMemorySummary() {
-          GroupBox("Selected Memory Context") {
+          DisclosureGroup("Selected Memory Context", isExpanded: $selectedMemoryExpanded) {
             Text(memorySummary)
               .font(.caption)
               .foregroundColor(.secondary)
@@ -606,6 +605,82 @@ struct ContentView: View {
       .padding(20)
     }
     .frame(minWidth: 280)
+  }
+}
+
+private struct DiffDetailView: View {
+  let summary: String
+  let lines: [DiffLineSummary]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(summary)
+        .font(.caption.weight(.semibold))
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
+      ScrollView(.horizontal) {
+        VStack(alignment: .leading, spacing: 2) {
+          ForEach(lines) { line in
+            DiffLineRow(line: line)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+private struct DiffLineRow: View {
+  let line: DiffLineSummary
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 8) {
+      Text("\(line.lineNumber)")
+        .font(.system(.caption2, design: .monospaced))
+        .foregroundColor(.secondary)
+        .frame(width: 34, alignment: .trailing)
+
+      Text(line.text.isEmpty ? " " : line.text)
+        .font(.system(.caption, design: .monospaced))
+        .foregroundColor(foregroundColor)
+        .textSelection(.enabled)
+    }
+    .padding(.vertical, 2)
+    .padding(.horizontal, 6)
+    .background(backgroundColor)
+    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+  }
+
+  private var foregroundColor: Color {
+    switch line.kind {
+    case .addition:
+      return .green
+    case .deletion:
+      return .red
+    case .hunk:
+      return .blue
+    case .metadata:
+      return .secondary
+    case .context:
+      return .primary
+    }
+  }
+
+  private var backgroundColor: Color {
+    switch line.kind {
+    case .addition:
+      return Color.green.opacity(0.10)
+    case .deletion:
+      return Color.red.opacity(0.10)
+    case .hunk:
+      return Color.blue.opacity(0.10)
+    case .metadata:
+      return Color.secondary.opacity(0.08)
+    case .context:
+      return Color.clear
+    }
   }
 }
 
@@ -1002,7 +1077,7 @@ private struct TimelineCard: View {
           .tint(streamingColor)
       }
 
-      Text(entry.body)
+      Text(displayBody)
         .font(bodyFont)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
@@ -1056,10 +1131,25 @@ private struct TimelineCard: View {
   private var bodyFont: Font {
     switch entry.kind {
     case .diff:
-      return .system(.body, design: .monospaced)
+      return .system(.caption, design: .monospaced)
     default:
       return .body
     }
+  }
+
+  private var displayBody: String {
+    guard entry.kind == .diff else {
+      return entry.body
+    }
+
+    let lines = entry.body.components(separatedBy: .newlines)
+    let previewLimit = 10
+    let preview = lines.prefix(previewLimit).joined(separator: "\n")
+    if lines.count <= previewLimit {
+      return preview
+    }
+
+    return "\(preview)\n... \(lines.count - previewLimit) more line(s). Select this diff to inspect the full highlighted change."
   }
 
   private var streamingLabel: String? {

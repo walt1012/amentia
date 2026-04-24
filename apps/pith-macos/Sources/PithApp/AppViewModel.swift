@@ -1043,12 +1043,25 @@ final class AppViewModel: ObservableObject {
     return "\(entry.kind.rawValue)\n\(detail)"
   }
 
-  func selectedDiffBody() -> String? {
+  func selectedDiffSummary() -> String? {
     guard let entry = selectedEntry(), entry.kind == .diff else {
       return nil
     }
 
-    return entry.body
+    let lines = diffLines(from: entry.body)
+    let additions = lines.filter { $0.kind == .addition }.count
+    let deletions = lines.filter { $0.kind == .deletion }.count
+    let hunks = lines.filter { $0.kind == .hunk }.count
+    let path = entry.attributes["relativePath"] ?? diffPathSummary(from: lines)
+    return "\(path) | +\(additions) -\(deletions) | \(hunks) hunk\(hunks == 1 ? "" : "s")"
+  }
+
+  func selectedDiffLines() -> [DiffLineSummary] {
+    guard let entry = selectedEntry(), entry.kind == .diff else {
+      return []
+    }
+
+    return diffLines(from: entry.body)
   }
 
   func selectedEntryMemorySummary() -> String? {
@@ -2097,6 +2110,58 @@ final class AppViewModel: ObservableObject {
     }
 
     return timeline.first(where: { $0.id == selectedEntryID })
+  }
+
+  private func diffLines(from body: String) -> [DiffLineSummary] {
+    body
+      .components(separatedBy: .newlines)
+      .enumerated()
+      .map { index, line in
+        DiffLineSummary(
+          id: "\(index)",
+          lineNumber: index + 1,
+          text: line,
+          kind: diffLineKind(for: line)
+        )
+      }
+  }
+
+  private func diffLineKind(for line: String) -> DiffLineKind {
+    if line.hasPrefix("@@") {
+      return .hunk
+    }
+
+    if line.hasPrefix("diff --git")
+      || line.hasPrefix("index ")
+      || line.hasPrefix("+++")
+      || line.hasPrefix("---")
+    {
+      return .metadata
+    }
+
+    if line.hasPrefix("+") {
+      return .addition
+    }
+
+    if line.hasPrefix("-") {
+      return .deletion
+    }
+
+    return .context
+  }
+
+  private func diffPathSummary(from lines: [DiffLineSummary]) -> String {
+    let pathLine = lines.first { line in
+      line.text.hasPrefix("+++ b/") || line.text.hasPrefix("--- a/")
+    }
+
+    guard let pathLine else {
+      return "Diff"
+    }
+
+    return pathLine.text
+      .replacingOccurrences(of: "+++ b/", with: "")
+      .replacingOccurrences(of: "--- a/", with: "")
   }
 
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {

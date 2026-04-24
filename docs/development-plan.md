@@ -890,8 +890,8 @@ Deliverables:
 - pausable, resumable, and cancellable long-running model downloads with progress and speed status
 - clear local model readiness and installation guidance
 - refined visual system
-- improved inspector
-- better diff viewer
+- improved inspector with progressive disclosure for secondary detail
+- better diff viewer with line-level readability
 - workspace and inspector state restoration
 - runtime crash recovery with pending request cleanup and relaunch affordance
 - lightweight workspace search from the inspector
@@ -1136,8 +1136,8 @@ daily-driver loop without expanding the visible surface area.
 Recommended current implementation sequence:
 
 1. finish inline loading, blocking, and recovery states for the composer, model manager, and runtime
-2. refine the diff viewer so review stays readable without a separate admin surface
-3. reduce inspector noise through progressive disclosure and stronger default collapsed states
+2. continue reducing inspector noise through stronger defaults and fewer always-visible admin controls
+3. refine the visual system around the timeline and review surfaces
 4. keep model delivery focused on one-click local downloads with pause, resume, cancel, and activation
 5. defer broad plugin expansion until the local daily-driver loop feels stable and compact
 
