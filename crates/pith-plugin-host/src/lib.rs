@@ -84,6 +84,18 @@ struct PluginCommandManifest {
   pub title: String,
   pub description: String,
   pub prompt: String,
+  #[serde(default)]
+  pub memory: Option<PluginCommandMemoryManifest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PluginCommandMemoryManifest {
+  pub note_title: String,
+  #[serde(default)]
+  pub note_source: Option<String>,
+  #[serde(default)]
+  pub note_tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,6 +118,9 @@ pub struct PluginCommandEntry {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub source_path: String,
+  pub memory_note_title: Option<String>,
+  pub memory_note_source: Option<String>,
+  pub memory_note_tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -514,6 +529,16 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       let Ok(command) = read_command_manifest(&command_path) else {
         continue;
       };
+      let memory_note_title = command.memory.as_ref().map(|memory| memory.note_title.clone());
+      let memory_note_source = command
+        .memory
+        .as_ref()
+        .and_then(|memory| memory.note_source.clone());
+      let memory_note_tags = command
+        .memory
+        .as_ref()
+        .map(|memory| memory.note_tags.clone())
+        .unwrap_or_default();
 
       commands.push(PluginCommandEntry {
         command_id: format!("{}::{}", plugin.id, identifier),
@@ -524,6 +549,9 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         plugin_display_name: plugin.display_name.clone(),
         permissions: plugin.permissions.clone(),
         source_path: command_path.display().to_string(),
+        memory_note_title,
+        memory_note_source,
+        memory_note_tags,
       });
     }
   }
@@ -858,7 +886,12 @@ mod tests {
       r#"{
   "title": "Capture Workspace Note",
   "description": "Prepare a reusable note from the current workspace.",
-  "prompt": "Read README.md and summarize the most reusable workspace detail."
+  "prompt": "Read README.md and summarize the most reusable workspace detail.",
+  "memory": {
+    "noteTitle": "Workspace Capture",
+    "noteSource": "plugin.workspace-notes",
+    "noteTags": ["plugin", "workspace"]
+  }
 }"#,
     )
     .expect("write command definition");
@@ -871,6 +904,18 @@ mod tests {
     assert_eq!(commands.len(), 1);
     assert_eq!(commands[0].plugin_id, "workspace-notes");
     assert_eq!(commands[0].title, "Capture Workspace Note");
+    assert_eq!(
+      commands[0].memory_note_title.as_deref(),
+      Some("Workspace Capture")
+    );
+    assert_eq!(
+      commands[0].memory_note_source.as_deref(),
+      Some("plugin.workspace-notes")
+    );
+    assert_eq!(
+      commands[0].memory_note_tags,
+      vec!["plugin".to_string(), "workspace".to_string()]
+    );
     assert!(commands[0]
       .source_path
       .ends_with("workspace.capture-note.json"));

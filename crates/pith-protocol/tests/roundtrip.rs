@@ -254,6 +254,7 @@ fn plugin_command_registry_round_trips() {
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
       source_path: "plugins/official/workspace-notes/commands/workspace.capture-note.json"
         .to_string(),
+      memory_summary: Some("Stores a workspace memory note after execution.".to_string()),
     }],
   };
 
@@ -264,6 +265,10 @@ fn plugin_command_registry_round_trips() {
   assert_eq!(decoded.commands.len(), 1);
   assert_eq!(decoded.commands[0].plugin_id, "workspace-notes");
   assert_eq!(decoded.commands[0].title, "Capture Workspace Note");
+  assert_eq!(
+    decoded.commands[0].memory_summary.as_deref(),
+    Some("Stores a workspace memory note after execution.")
+  );
 }
 
 #[test]

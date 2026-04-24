@@ -653,6 +653,7 @@ final class AppViewModel: ObservableObject {
           threadID: result.threadID,
           preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
         )
+        await refreshMemoryState()
       } catch {
         appendEntry(
           to: threadID,
@@ -1547,7 +1548,8 @@ final class AppViewModel: ObservableObject {
           pluginID: command.pluginID,
           pluginDisplayName: command.pluginDisplayName,
           permissions: command.permissions,
-          sourcePath: command.sourcePath
+          sourcePath: command.sourcePath,
+          memorySummary: command.memorySummary
         )
       }
     } else if runtimePlugins != nil {

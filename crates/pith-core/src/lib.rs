@@ -532,6 +532,9 @@ fn build_protocol_capability_registry(
 }
 
 fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> PluginCommandSummary {
+  let memory_summary = command.memory_note_title.as_ref().map(|title| {
+    format!("Stores a workspace memory note as `{title}` after execution.")
+  });
   PluginCommandSummary {
     command_id: command.command_id,
     title: command.title,
@@ -540,6 +543,7 @@ fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> PluginCommandS
     plugin_display_name: command.plugin_display_name,
     permissions: command.permissions,
     source_path: command.source_path,
+    memory_summary,
   }
 }
 
@@ -1072,7 +1076,41 @@ fn handle_plugin_command_run(
     agent_message,
     vec![command_item],
   ) {
-    Ok(result) => JsonRpcResponse::success(request.id, &result),
+    Ok(mut result) => {
+      let plugin_memory_item = match maybe_capture_plugin_command_memory(
+        context,
+        &params.thread_id,
+        &command,
+        command_input,
+        &result.items,
+      ) {
+        Ok(item) => item,
+        Err(error) => Some(build_plugin_command_memory_warning_item(
+          &command,
+          error.to_string(),
+        )),
+      };
+
+      if let Some(plugin_memory_item) = plugin_memory_item {
+        if let Some(thread) = context
+          .threads
+          .iter_mut()
+          .find(|thread| thread.summary.id == params.thread_id)
+        {
+          thread.items.push(plugin_memory_item.clone());
+        }
+        result.items.push(plugin_memory_item);
+
+        if let Err(error) = context.persist_runtime_state() {
+          return JsonRpcResponse::error(request.id, -32010, error.to_string());
+        }
+        if let Err(error) = refresh_thread_summary_note(context, &params.thread_id) {
+          return JsonRpcResponse::error(request.id, -32012, error.to_string());
+        }
+      }
+
+      JsonRpcResponse::success(request.id, &result)
+    }
     Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
   }
 }
@@ -1863,6 +1901,124 @@ fn build_plugin_command_turn_message(
     message.push_str(&format!("\nAdditional command input:\n{input}"));
   }
   message
+}
+
+fn maybe_capture_plugin_command_memory(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+  command: &HostPluginCommandEntry,
+  input: Option<&str>,
+  items: &[TimelineItem],
+) -> Result<Option<TimelineItem>> {
+  let Some(note_title) = command.memory_note_title.as_ref() else {
+    return Ok(None);
+  };
+  let Some(assistant_message) = items.iter().rev().find(|item| item.kind == "assistantMessage")
+  else {
+    return Ok(None);
+  };
+  let Some(thread) = context
+    .threads
+    .iter()
+    .find(|thread| thread.summary.id == thread_id)
+  else {
+    return Ok(None);
+  };
+  let Some(workspace) = thread
+    .workspace
+    .as_ref()
+    .or(context.workspace.as_ref())
+    .cloned()
+  else {
+    return Ok(None);
+  };
+
+  let note_body =
+    build_plugin_command_memory_body(command, &workspace, input, &assistant_message.content);
+  let note_source = command
+    .memory_note_source
+    .clone()
+    .unwrap_or_else(|| format!("plugin.{}", command.plugin_id));
+  let note_tags = plugin_command_memory_tags(command);
+  let note = context.create_memory_note(
+    note_title.clone(),
+    note_body,
+    workspace.display_name.clone(),
+    note_source,
+    note_tags,
+  )?;
+
+  Ok(Some(TimelineItem {
+    kind: "system".to_string(),
+    title: "Memory Note Saved".to_string(),
+    content: format!(
+      "Saved workspace memory note \"{}\" from {}.",
+      note.title, command.title
+    ),
+    attributes: Some(HashMap::from([
+      ("memoryNoteId".to_string(), note.id),
+      ("memoryNoteTitle".to_string(), note.title),
+      ("memoryScope".to_string(), note.scope),
+      ("pluginId".to_string(), command.plugin_id.clone()),
+      ("commandId".to_string(), command.command_id.clone()),
+    ])),
+  }))
+}
+
+fn build_plugin_command_memory_body(
+  command: &HostPluginCommandEntry,
+  workspace: &WorkspaceSummary,
+  input: Option<&str>,
+  assistant_content: &str,
+) -> String {
+  let mut body = format!(
+    "Plugin: {} ({})\nCommand: {} ({})\nWorkspace: {} at {}.",
+    command.plugin_display_name,
+    command.plugin_id,
+    command.title,
+    command.command_id,
+    workspace.display_name,
+    workspace.root_path
+  );
+  if let Some(input) = input {
+    body.push_str(&format!("\nCommand input: {input}"));
+  }
+  body.push_str("\n\nCommand result:\n");
+  body.push_str(assistant_content.trim());
+  body
+}
+
+fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Vec<String> {
+  let mut tags = vec![
+    "plugin".to_string(),
+    "command".to_string(),
+    command.plugin_id.clone(),
+    command.command_id.clone(),
+  ];
+  for tag in &command.memory_note_tags {
+    if !tags.iter().any(|existing| existing == tag) {
+      tags.push(tag.clone());
+    }
+  }
+  tags
+}
+
+fn build_plugin_command_memory_warning_item(
+  command: &HostPluginCommandEntry,
+  error_message: String,
+) -> TimelineItem {
+  TimelineItem {
+    kind: "warning".to_string(),
+    title: "Plugin Memory Capture Failed".to_string(),
+    content: format!(
+      "{} could not save its workspace memory note. {}",
+      command.title, error_message
+    ),
+    attributes: Some(HashMap::from([
+      ("pluginId".to_string(), command.plugin_id.clone()),
+      ("commandId".to_string(), command.command_id.clone()),
+    ])),
+  }
 }
 
 fn handle_approval_respond(
@@ -4290,7 +4446,18 @@ mod tests {
       .as_str()
       .unwrap()
       .contains("Capture Workspace Note"));
+    let memory_item = items
+      .iter()
+      .find(|item| item["title"] == "Memory Note Saved")
+      .expect("memory note saved item");
+    assert_eq!(memory_item["kind"], "system");
+    assert_eq!(memory_item["attributes"]["pluginId"], "workspace-notes");
     assert_eq!(result["threadId"], "thread-1");
+    assert_eq!(context.memory_notes.len(), 3);
+    assert!(context
+      .memory_notes
+      .iter()
+      .any(|note| note.title == "Workspace Capture" && note.source == "plugin.workspace-notes"));
   }
 
   #[test]

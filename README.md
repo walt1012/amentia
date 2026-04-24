@@ -50,8 +50,8 @@ Milestone 1 is complete on the active development branch.
 
 Milestone 2 is now in progress with plugin discovery, enable and disable flow, installation and
 removal workflow, capability registry, permission gating, per-plugin permissions and validation
-surfaces, repair hints for invalid manifests, reviewed install and removal prompts, command execution, and shell-completed hook
-execution underway.
+surfaces, repair hints for invalid manifests, reviewed install and removal prompts, memory-aware
+plugin command execution, and shell-completed hook execution underway.
 
 Delivered in Milestone 1:
 

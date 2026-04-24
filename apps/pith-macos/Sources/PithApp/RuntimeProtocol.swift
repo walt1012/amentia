@@ -164,6 +164,7 @@ struct RuntimePluginCommandPayload: Codable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let memorySummary: String?
 }
 
 struct RuntimePluginHookPayload: Codable {

@@ -93,6 +93,11 @@ def main() -> int:
         "title": "Capture Workspace Note",
         "description": "Read the workspace README and prepare a concise note candidate.",
         "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
+        "memory": {
+          "noteTitle": "Workspace Capture",
+          "noteSource": "plugin.workspace-notes",
+          "noteTags": ["workspace", "preference", "plugin"],
+        },
       },
       indent=2,
     ),
@@ -330,6 +335,15 @@ def main() -> int:
     command_ids = {command["commandId"] for command in command_registry["result"]["commands"]}
     assert "workspace-notes::workspace.capture-note" in command_ids
     assert "shell-recorder::shell.summarize-session" in command_ids
+    workspace_capture_command = next(
+      command
+      for command in command_registry["result"]["commands"]
+      if command["commandId"] == "workspace-notes::workspace.capture-note"
+    )
+    assert (
+      workspace_capture_command["memorySummary"]
+      == "Stores a workspace memory note as `Workspace Capture` after execution."
+    )
     hook_registry, _ = send_request(
       process,
       {
@@ -724,6 +738,23 @@ def main() -> int:
     assert command_turn["result"]["items"][0]["attributes"]["pluginId"] == "workspace-notes"
     assert command_turn["result"]["items"][1]["kind"] == "userMessage"
     assert "Capture Workspace Note" in command_turn["result"]["items"][1]["content"]
+    memory_item = next(
+      item
+      for item in command_turn["result"]["items"]
+      if item["title"] == "Memory Note Saved"
+    )
+    assert memory_item["attributes"]["memoryNoteTitle"] == "Workspace Capture"
+    memory_list_after_plugin, _ = send_request(
+      process,
+      {
+        "id": 46,
+        "method": "memory/list",
+      },
+    )
+    assert any(
+      note["title"] == "Workspace Capture" and note["source"] == "plugin.workspace-notes"
+      for note in memory_list_after_plugin["result"]["notes"]
+    )
     return 0
   finally:
     process.terminate()

@@ -608,6 +608,13 @@ private struct PluginCommandRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
 
+      if let memorySummary = command.memorySummary {
+        Text(memorySummary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if !command.permissions.isEmpty {
         Text("Permissions: \(command.permissions.joined(separator: ", "))")
           .font(.caption2)
