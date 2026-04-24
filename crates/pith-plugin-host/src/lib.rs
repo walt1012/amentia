@@ -416,8 +416,7 @@ fn validation_hint_for_error(validation_error: &str) -> String {
       .to_string();
   }
 
-  if validation_error.contains("plugin permission")
-    && validation_error.contains("is not supported")
+  if validation_error.contains("plugin permission") && validation_error.contains("is not supported")
   {
     return format!(
       "Use one of the supported permissions: {}.",
