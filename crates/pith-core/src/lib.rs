@@ -3206,7 +3206,12 @@ fn summarize_file_result(
     result.content
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &relevant_memory_notes,
+  )
 }
 
 fn format_directory_result(entries: &[DirectoryEntry]) -> String {
@@ -3285,7 +3290,12 @@ fn summarize_directory_result(
     format_directory_result(entries)
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &relevant_memory_notes,
+  )
 }
 
 fn summarize_search_result(
@@ -3333,7 +3343,12 @@ fn summarize_search_result(
     format_search_result(query, matches)
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &relevant_memory_notes,
+  )
 }
 
 fn format_shell_result(result: &ShellCommandResult) -> String {
@@ -3387,7 +3402,12 @@ fn summarize_shell_result(
     result.stderr
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &relevant_memory_notes,
+  )
 }
 
 fn summarize_denied_approval(
@@ -3421,7 +3441,12 @@ fn summarize_denied_approval(
     approval.command.clone().unwrap_or_default()
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &relevant_memory_notes)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &relevant_memory_notes,
+  )
 }
 
 fn generate_local_summary(
@@ -4700,10 +4725,7 @@ mod tests {
     assert_eq!(commands.len(), 1);
     assert_eq!(commands[0]["pluginId"], "workspace-notes");
     assert_eq!(commands[0]["title"], "Capture Workspace Note");
-    assert_eq!(
-      commands[0]["executionKind"],
-      "builtin.workspaceReadmeNote"
-    );
+    assert_eq!(commands[0]["executionKind"], "builtin.workspaceReadmeNote");
   }
 
   #[test]
@@ -5015,7 +5037,9 @@ mod tests {
 
     let error = response.error.expect("command contract error");
     assert_eq!(error.code, -32053);
-    assert!(error.message.contains("requires an explicit execution contract"));
+    assert!(error
+      .message
+      .contains("requires an explicit execution contract"));
   }
 
   #[test]

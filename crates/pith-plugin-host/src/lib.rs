@@ -348,13 +348,10 @@ fn discover_plugin_manifests(directory: &Path, manifests: &mut Vec<PathBuf>) -> 
 }
 
 fn load_plugin_entry(manifest_path: PathBuf) -> PluginCatalogEntry {
-  let provenance = if manifest_path
-    .components()
-    .any(|component| {
-      let name = component.as_os_str();
-      name == "bundled" || name == "official"
-    })
-  {
+  let provenance = if manifest_path.components().any(|component| {
+    let name = component.as_os_str();
+    name == "bundled" || name == "official"
+  }) {
     "bundled"
   } else {
     "local"
