@@ -2004,8 +2004,7 @@ fn execute_builtin_plugin_command(
       }
       Ok(None) => {}
       Err(error) => {
-        let warning_item =
-          build_plugin_command_memory_warning_item(command, error.to_string());
+        let warning_item = build_plugin_command_memory_warning_item(command, error.to_string());
         if let Some(thread) = context
           .threads
           .iter_mut()
@@ -2092,7 +2091,11 @@ fn build_workspace_readme_note_result(
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
 ) -> String {
-  if !command.permissions.iter().any(|permission| permission == "file.read") {
+  if !command
+    .permissions
+    .iter()
+    .any(|permission| permission == "file.read")
+  {
     return "This command cannot read workspace files because its plugin does not declare `file.read`."
       .to_string();
   }
@@ -2161,7 +2164,11 @@ fn build_review_diff_summary_result(
   command: &HostPluginCommandEntry,
   workspace: Option<&WorkspaceSummary>,
 ) -> String {
-  if !command.permissions.iter().any(|permission| permission == "file.read") {
+  if !command
+    .permissions
+    .iter()
+    .any(|permission| permission == "file.read")
+  {
     return "This command cannot inspect the workspace because its plugin does not declare `file.read`."
       .to_string();
   }
@@ -4918,8 +4925,7 @@ mod tests {
   fn official_builtin_plugin_commands_return_owned_results() {
     let mut context = RuntimeContext::new_in_memory();
     let workspace = create_temp_workspace("official-plugin-results");
-    fs::write(workspace.join("README.md"), "# Official Plugin Results\n")
-      .expect("write readme");
+    fs::write(workspace.join("README.md"), "# Official Plugin Results\n").expect("write readme");
     context.plugins = vec![
       PluginCatalogEntry {
         id: "review-assistant".to_string(),
