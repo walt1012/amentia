@@ -597,10 +597,7 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
       let Ok(hook) = read_hook_manifest(&hook_path) else {
         continue;
       };
-      let memory_note_title = hook
-        .memory
-        .as_ref()
-        .map(|memory| memory.note_title.clone());
+      let memory_note_title = hook.memory.as_ref().map(|memory| memory.note_title.clone());
       let memory_note_source = hook
         .memory
         .as_ref()

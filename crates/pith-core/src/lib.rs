@@ -2062,7 +2062,10 @@ fn capture_plugin_hook_memory(
     return Ok(TimelineItem {
       kind: "system".to_string(),
       title: "Plugin Hook Memory Skipped".to_string(),
-      content: format!("{} did not declare a memory note title.", capture.hook.title),
+      content: format!(
+        "{} did not declare a memory note title.",
+        capture.hook.title
+      ),
       attributes: Some(HashMap::from([(
         "hookId".to_string(),
         capture.hook.hook_id.clone(),
@@ -2318,12 +2321,8 @@ fn handle_approval_respond(
               content: summary,
               attributes: Some(summary_attributes),
             });
-            let (hook_items, memory_captures) = build_shell_completed_hook_items(
-              &context.plugins,
-              &workspace,
-              &command,
-              &result,
-            );
+            let (hook_items, memory_captures) =
+              build_shell_completed_hook_items(&context.plugins, &workspace, &command, &result);
             hook_memory_captures.extend(memory_captures);
             items.extend(hook_items);
           }
