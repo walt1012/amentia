@@ -30,7 +30,8 @@ use pith_protocol::{
   ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
   ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
   TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
-  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSearchMatch,
+  WorkspaceSearchParams, WorkspaceSearchResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -398,6 +399,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       },
     ),
     methods::WORKSPACE_OPEN => handle_workspace_open(context, request),
+    methods::WORKSPACE_SEARCH => handle_workspace_search(context, request),
     methods::TURN_CANCEL => handle_turn_cancel(context, request),
     methods::THREAD_READ => handle_thread_read(context, request),
     methods::THREAD_START => handle_thread_start(context, request),
@@ -1259,6 +1261,55 @@ fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       items: thread.items.clone(),
       pending_approvals: approvals_for_thread(context, &thread.summary.id),
       active_turn_id: active_turn_id_for_thread(context, &thread.summary.id),
+    },
+  )
+}
+
+fn handle_workspace_search(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<WorkspaceSearchParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid workspace/search params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing workspace/search params");
+    }
+  };
+
+  let Some(workspace) = context.workspace.clone() else {
+    return JsonRpcResponse::error(request.id, -32040, "Open a workspace before searching");
+  };
+
+  let max_results = params.max_results.unwrap_or(24).clamp(1, 100);
+  let matches = match search_files(Path::new(&workspace.root_path), &params.query, max_results) {
+    Ok(matches) => matches
+      .into_iter()
+      .map(|entry| WorkspaceSearchMatch {
+        relative_path: entry.relative_path,
+        line_number: entry.line_number,
+        line: entry.line,
+      })
+      .collect::<Vec<_>>(),
+    Err(error) => {
+      return JsonRpcResponse::error(request.id, -32041, error.to_string());
+    }
+  };
+
+  JsonRpcResponse::success(
+    request.id,
+    &WorkspaceSearchResult {
+      query: params.query,
+      workspace,
+      matches,
     },
   )
 }
@@ -3752,6 +3803,47 @@ mod tests {
       result["workspace"]["displayName"].as_str().unwrap(),
       workspace.file_name().unwrap().to_string_lossy()
     );
+  }
+
+  #[test]
+  fn workspace_search_returns_matching_lines() {
+    let mut context = RuntimeContext::new_in_memory();
+    let workspace = create_temp_workspace("workspace-search");
+    fs::write(
+      workspace.join("README.md"),
+      "Pith local search\nNothing else\n",
+    )
+    .expect("write searchable file");
+
+    let _ = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_OPEN,
+        Some(json!({
+          "path": workspace.display().to_string()
+        })),
+      ),
+    );
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::WORKSPACE_SEARCH,
+        Some(json!({
+          "query": "local",
+          "maxResults": 8
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("workspace search result");
+    let matches = result["matches"].as_array().expect("matches");
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0]["relativePath"], "README.md");
+    assert_eq!(matches[0]["lineNumber"], 1);
   }
 
   #[test]

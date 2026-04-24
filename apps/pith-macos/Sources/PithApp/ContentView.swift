@@ -171,6 +171,42 @@ struct ContentView: View {
               .font(.subheadline)
               .foregroundColor(.secondary)
               .textSelection(.enabled)
+            TextField("Search workspace", text: $viewModel.workspaceSearchQuery)
+              .textFieldStyle(.roundedBorder)
+              .disabled(viewModel.runtimeState != .ready || viewModel.workspace == nil)
+            HStack(spacing: 8) {
+              Button("Search") {
+                viewModel.searchWorkspace()
+              }
+              .buttonStyle(.borderedProminent)
+              .disabled(!viewModel.canSearchWorkspace())
+
+              Button("Clear") {
+                viewModel.clearWorkspaceSearch()
+              }
+              .buttonStyle(.bordered)
+              .disabled(viewModel.workspaceSearchQuery.isEmpty && viewModel.workspaceSearchResults.isEmpty)
+            }
+            Text(viewModel.workspaceSearchStatus)
+              .font(.caption2)
+              .foregroundColor(.secondary)
+            if viewModel.isWorkspaceSearching {
+              ProgressView()
+                .progressViewStyle(.linear)
+            }
+            ForEach(viewModel.workspaceSearchResults.prefix(8)) { match in
+              VStack(alignment: .leading, spacing: 2) {
+                Text("\(match.relativePath):\(match.lineNumber)")
+                  .font(.caption.weight(.semibold))
+                  .textSelection(.enabled)
+                Text(match.line)
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .lineLimit(2)
+                  .textSelection(.enabled)
+              }
+              .padding(.vertical, 2)
+            }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }

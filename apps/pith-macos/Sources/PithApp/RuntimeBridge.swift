@@ -25,6 +25,12 @@ final class RuntimeBridge {
     let threadCount: Int
   }
 
+  struct RuntimeWorkspaceSearchMatch {
+    let relativePath: String
+    let lineNumber: Int
+    let line: String
+  }
+
   struct RuntimeModelHealth {
     let packID: String
     let displayName: String
@@ -751,6 +757,29 @@ final class RuntimeBridge {
       displayName: workspace.displayName,
       threadCount: 0
     )
+  }
+
+  func searchWorkspace(query: String, maxResults: Int = 24) async throws -> [RuntimeWorkspaceSearchMatch] {
+    let response: JSONRPCResponse<WorkspaceSearchResult> = try await sendRequest(
+      method: "workspace/search",
+      params: WorkspaceSearchParams(query: query, maxResults: maxResults)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result.matches.map { match in
+      RuntimeWorkspaceSearchMatch(
+        relativePath: match.relativePath,
+        lineNumber: match.lineNumber,
+        line: match.line
+      )
+    }
   }
 
   func startThread(title: String) async throws -> ThreadSummary {

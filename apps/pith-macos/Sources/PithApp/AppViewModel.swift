@@ -105,6 +105,10 @@ final class AppViewModel: ObservableObject {
   @Published var runtimeDetail: String
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
+  @Published var workspaceSearchQuery: String
+  @Published var workspaceSearchResults: [WorkspaceSearchMatchSummary]
+  @Published var workspaceSearchStatus: String
+  @Published var isWorkspaceSearching: Bool
   @Published var modelHealth: ModelHealthSummary?
   @Published var localModels: [LocalModelSummary]
   @Published var modelDownloadID: String?
@@ -162,6 +166,10 @@ final class AppViewModel: ObservableObject {
     self.runtimeDetail = "Runtime not launched"
     self.draftMessage = ""
     self.workspace = nil
+    self.workspaceSearchQuery = ""
+    self.workspaceSearchResults = []
+    self.workspaceSearchStatus = "Search the open workspace by text."
+    self.isWorkspaceSearching = false
     self.modelHealth = nil
     self.localModels = Self.localModelSummaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
@@ -283,6 +291,7 @@ final class AppViewModel: ObservableObject {
             rootPath: currentWorkspace.rootPath,
             displayName: currentWorkspace.displayName
           )
+          resetWorkspaceSearch()
           storeLastWorkspacePath(currentWorkspace.rootPath)
         }
 
@@ -470,6 +479,48 @@ final class AppViewModel: ObservableObject {
     runtimeState != .launching
   }
 
+  func canSearchWorkspace() -> Bool {
+    runtimeState == .ready
+      && workspace != nil
+      && !isWorkspaceSearching
+      && !workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  func searchWorkspace() {
+    let query = workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard runtimeState == .ready, workspace != nil, !query.isEmpty else {
+      return
+    }
+
+    isWorkspaceSearching = true
+    workspaceSearchStatus = "Searching for \"\(query)\"..."
+    Task {
+      do {
+        let matches = try await runtimeBridge.searchWorkspace(query: query)
+        workspaceSearchResults = matches.enumerated().map { index, match in
+          WorkspaceSearchMatchSummary(
+            id: "\(match.relativePath):\(match.lineNumber):\(index)",
+            relativePath: match.relativePath,
+            lineNumber: match.lineNumber,
+            line: match.line
+          )
+        }
+        workspaceSearchStatus = matches.isEmpty
+          ? "No matches found for \"\(query)\"."
+          : "Found \(matches.count) match(es) for \"\(query)\"."
+      } catch {
+        workspaceSearchResults = []
+        workspaceSearchStatus = "Workspace search failed: \(error.localizedDescription)"
+      }
+      isWorkspaceSearching = false
+    }
+  }
+
+  func clearWorkspaceSearch() {
+    workspaceSearchQuery = ""
+    resetWorkspaceSearch()
+  }
+
   func openWorkspace() {
     guard runtimeState == .ready else {
       return
@@ -493,6 +544,7 @@ final class AppViewModel: ObservableObject {
           rootPath: openedWorkspace.rootPath,
           displayName: openedWorkspace.displayName
         )
+        resetWorkspaceSearch()
         storeLastWorkspacePath(openedWorkspace.rootPath)
         await refreshMemoryState()
         appendEntry(
@@ -2189,6 +2241,14 @@ final class AppViewModel: ObservableObject {
     }
 
     UserDefaults.standard.set(path, forKey: Self.lastWorkspacePathKey)
+  }
+
+  private func resetWorkspaceSearch() {
+    workspaceSearchResults = []
+    workspaceSearchStatus = workspace == nil
+      ? "Open a workspace before searching."
+      : "Search the open workspace by text."
+    isWorkspaceSearching = false
   }
 
   private func isRestorableWorkspacePath(_ path: String) -> Bool {

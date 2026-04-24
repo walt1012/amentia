@@ -894,7 +894,7 @@ Deliverables:
 - better diff viewer
 - workspace and inspector state restoration
 - runtime crash recovery with pending request cleanup and relaunch affordance
-- workspace search
+- lightweight workspace search from the inspector
 - keyboard-first workflows
 - better loading and error states
 

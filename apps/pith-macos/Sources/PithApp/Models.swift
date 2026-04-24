@@ -11,6 +11,13 @@ struct WorkspaceSummary: Hashable {
   let displayName: String
 }
 
+struct WorkspaceSearchMatchSummary: Identifiable, Hashable {
+  let id: String
+  let relativePath: String
+  let lineNumber: Int
+  let line: String
+}
+
 struct ModelHealthSummary: Hashable {
   let packID: String
   let displayName: String

@@ -23,6 +23,7 @@ pub mod methods {
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
   pub const WORKSPACE_CURRENT: &str = "workspace/current";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
+  pub const WORKSPACE_SEARCH: &str = "workspace/search";
   pub const TURN_CANCEL: &str = "turn/cancel";
   pub const THREAD_READ: &str = "thread/read";
   pub const THREAD_START: &str = "thread/start";
@@ -382,6 +383,30 @@ pub struct WorkspaceOpenResult {
 pub struct WorkspaceCurrentResult {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub workspace: Option<WorkspaceSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSearchParams {
+  pub query: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub max_results: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSearchMatch {
+  pub relative_path: String,
+  pub line_number: usize,
+  pub line: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSearchResult {
+  pub query: String,
+  pub workspace: WorkspaceSummary,
+  pub matches: Vec<WorkspaceSearchMatch>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
