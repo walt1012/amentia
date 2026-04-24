@@ -336,6 +336,55 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func installPlugin() {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    let panel = NSOpenPanel()
+    panel.canChooseDirectories = true
+    panel.canChooseFiles = true
+    panel.allowsMultipleSelection = false
+    panel.prompt = "Install Plugin"
+    panel.message = "Choose a plugin folder or a pith-plugin.json manifest."
+
+    guard panel.runModal() == .OK, let url = panel.url else {
+      return
+    }
+
+    Task {
+      do {
+        let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: url.path)
+        await refreshPluginState()
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .system,
+            title: "Plugin Installed",
+            body: "\(installedPlugin.displayName) is now available in the local plugin manager.",
+            attributes: [
+              "pluginId": installedPlugin.id,
+              "pluginStatus": installedPlugin.status,
+              "pluginManifestPath": installedPlugin.manifestPath,
+            ]
+          )
+        )
+      } catch {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .warning,
+            title: "Plugin Install Failed",
+            body: error.localizedDescription,
+            attributes: [:]
+          )
+        )
+      }
+    }
+  }
+
   func createThread() {
     guard runtimeState == .ready else {
       return
@@ -471,6 +520,48 @@ final class AppViewModel: ObservableObject {
             id: UUID().uuidString,
             kind: .warning,
             title: "Plugin Update Failed",
+            body: error.localizedDescription,
+            attributes: [
+              "pluginId": pluginID
+            ]
+          )
+        )
+      }
+    }
+  }
+
+  func removePlugin(pluginID: String) {
+    guard runtimeState == .ready,
+          let plugin = plugins.first(where: { $0.id == pluginID }),
+          plugin.provenance == "local"
+    else {
+      return
+    }
+
+    Task {
+      do {
+        let removedPlugin = try await runtimeBridge.removePlugin(manifestPath: plugin.manifestPath)
+        await refreshPluginState()
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .system,
+            title: "Plugin Removed",
+            body: "\(removedPlugin.displayName) was removed from the local plugin catalog.",
+            attributes: [
+              "pluginId": removedPlugin.pluginID,
+              "removedPath": removedPlugin.removedPath,
+            ]
+          )
+        )
+      } catch {
+        appendEntry(
+          to: selectedThreadID,
+          TimelineEntry(
+            id: UUID().uuidString,
+            kind: .warning,
+            title: "Plugin Removal Failed",
             body: error.localizedDescription,
             attributes: [
               "pluginId": pluginID
@@ -817,6 +908,16 @@ final class AppViewModel: ObservableObject {
     return "\(readyCount) ready, \(invalidCount) invalid"
   }
 
+  func localPluginCountSummary() -> String {
+    let localPlugins = plugins.filter { $0.provenance == "local" }
+
+    if localPlugins.isEmpty {
+      return "No local plugin installs yet."
+    }
+
+    return "\(localPlugins.count) local plugin install\(localPlugins.count == 1 ? "" : "s")"
+  }
+
   func pluginDetailSummary() -> String {
     guard !plugins.isEmpty else {
       return "Pith discovers plugin manifests from the bundled plugins directory."
@@ -901,6 +1002,10 @@ final class AppViewModel: ObservableObject {
 
   func invalidPlugins() -> [PluginSummary] {
     plugins.filter { $0.status != "ready" }
+  }
+
+  func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
+    plugin.provenance == "local"
   }
 
   func revealPluginManifest(pluginID: String) {

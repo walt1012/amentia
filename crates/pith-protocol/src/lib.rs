@@ -15,7 +15,9 @@ pub mod methods {
   pub const PLUGIN_COMMAND_REGISTRY: &str = "plugin/commandRegistry";
   pub const PLUGIN_COMMAND_RUN: &str = "plugin/commandRun";
   pub const PLUGIN_HOOK_REGISTRY: &str = "plugin/hookRegistry";
+  pub const PLUGIN_INSTALL: &str = "plugin/install";
   pub const PLUGIN_LIST: &str = "plugin/list";
+  pub const PLUGIN_REMOVE: &str = "plugin/remove";
   pub const PLUGIN_SET_ENABLED: &str = "plugin/setEnabled";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
   pub const WORKSPACE_CURRENT: &str = "workspace/current";
@@ -193,6 +195,32 @@ pub struct PluginSummary {
 #[serde(rename_all = "camelCase")]
 pub struct PluginListResult {
   pub plugins: Vec<PluginSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginInstallParams {
+  pub source_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginInstallResult {
+  pub plugin: PluginSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRemoveParams {
+  pub manifest_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRemoveResult {
+  pub plugin_id: String,
+  pub display_name: String,
+  pub removed_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

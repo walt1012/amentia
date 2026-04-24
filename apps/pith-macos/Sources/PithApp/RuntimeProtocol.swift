@@ -109,6 +109,24 @@ struct PluginListResult: Codable {
   let plugins: [RuntimePluginPayload]
 }
 
+struct PluginInstallParams: Codable {
+  let sourcePath: String
+}
+
+struct PluginInstallResult: Codable {
+  let plugin: RuntimePluginPayload
+}
+
+struct PluginRemoveParams: Codable {
+  let manifestPath: String
+}
+
+struct PluginRemoveResult: Codable {
+  let pluginId: String
+  let displayName: String
+  let removedPath: String
+}
+
 struct PluginCapabilityRegistryResult: Codable {
   let capabilities: [RuntimePluginCapabilityPayload]
   let summary: RuntimePluginCapabilityRegistrySummaryPayload

@@ -77,6 +77,12 @@ final class RuntimeBridge {
     let validationError: String?
   }
 
+  struct RuntimePluginRemoval {
+    let pluginID: String
+    let displayName: String
+    let removedPath: String
+  }
+
   struct RuntimePluginCapabilityRegistry {
     let capabilities: [RuntimePluginCapability]
     let summary: RuntimePluginCapabilityRegistrySummary
@@ -434,6 +440,38 @@ final class RuntimeBridge {
     }
   }
 
+  func installPlugin(sourcePath: String) async throws -> RuntimePlugin {
+    let response: JSONRPCResponse<PluginInstallResult> = try await sendRequest(
+      method: "plugin/install",
+      params: PluginInstallParams(sourcePath: sourcePath)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePlugin(
+      id: result.plugin.id,
+      name: result.plugin.name,
+      version: result.plugin.version,
+      displayName: result.plugin.displayName,
+      status: result.plugin.status,
+      description: result.plugin.description,
+      authorName: result.plugin.authorName,
+      enabled: result.plugin.enabled,
+      defaultEnabled: result.plugin.defaultEnabled,
+      capabilities: result.plugin.capabilities,
+      permissions: result.plugin.permissions,
+      manifestPath: result.plugin.manifestPath,
+      provenance: result.plugin.provenance,
+      validationError: result.plugin.validationError
+    )
+  }
+
   func pluginCapabilityRegistry() async throws -> RuntimePluginCapabilityRegistry {
     let response: JSONRPCResponse<PluginCapabilityRegistryResult> = try await sendRequest(
       method: "plugin/capabilityRegistry",
@@ -552,6 +590,27 @@ final class RuntimeBridge {
       manifestPath: result.plugin.manifestPath,
       provenance: result.plugin.provenance,
       validationError: result.plugin.validationError
+    )
+  }
+
+  func removePlugin(manifestPath: String) async throws -> RuntimePluginRemoval {
+    let response: JSONRPCResponse<PluginRemoveResult> = try await sendRequest(
+      method: "plugin/remove",
+      params: PluginRemoveParams(manifestPath: manifestPath)
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimePluginRemoval(
+      pluginID: result.pluginId,
+      displayName: result.displayName,
+      removedPath: result.removedPath
     )
   }
 
@@ -857,6 +916,7 @@ final class RuntimeBridge {
   private func runtimeEnvironment() -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
     environment["PITH_DATA_DIR"] = appSupportStorageDirectory().path
+    environment["PITH_LOCAL_PLUGIN_DIR"] = appSupportPluginDirectory().path
     return environment
   }
 
@@ -868,6 +928,16 @@ final class RuntimeBridge {
     return baseDirectory
       .appendingPathComponent("Pith", isDirectory: true)
       .appendingPathComponent("storage", isDirectory: true)
+  }
+
+  private func appSupportPluginDirectory() -> URL {
+    let baseDirectory =
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+
+    return baseDirectory
+      .appendingPathComponent("Pith", isDirectory: true)
+      .appendingPathComponent("plugins", isDirectory: true)
   }
 
   private func sendRequest<Params: Encodable, ResultType: Decodable>(

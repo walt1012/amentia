@@ -25,6 +25,13 @@ struct ContentView: View {
         .disabled(viewModel.runtimeState != .ready)
       }
 
+      ToolbarItem {
+        Button("Install Plugin") {
+          viewModel.installPlugin()
+        }
+        .disabled(viewModel.runtimeState != .ready)
+      }
+
       ToolbarItem(placement: .primaryAction) {
         Button("Launch Runtime") {
           viewModel.launchRuntime()
@@ -242,6 +249,9 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.pluginCountSummary())
             .font(.headline)
+          Text(viewModel.localPluginCountSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
 
           if viewModel.plugins.isEmpty {
             Text(viewModel.pluginDetailSummary())
@@ -253,8 +263,12 @@ struct ContentView: View {
               PluginRow(
                 plugin: plugin,
                 canEdit: viewModel.runtimeState == .ready && plugin.status == "ready",
+                canRemove: viewModel.runtimeState == .ready && viewModel.isRemovablePlugin(plugin),
                 onSetEnabled: { enabled in
                   viewModel.setPluginEnabled(pluginID: plugin.id, enabled: enabled)
+                },
+                onRemove: {
+                  viewModel.removePlugin(pluginID: plugin.id)
                 }
               )
             }
@@ -303,6 +317,9 @@ struct ContentView: View {
                 plugin: plugin,
                 onRevealManifest: {
                   viewModel.revealPluginManifest(pluginID: plugin.id)
+                },
+                onRemove: {
+                  viewModel.removePlugin(pluginID: plugin.id)
                 }
               )
             }
@@ -453,7 +470,9 @@ struct ContentView: View {
 private struct PluginRow: View {
   let plugin: PluginSummary
   let canEdit: Bool
+  let canRemove: Bool
   let onSetEnabled: (Bool) -> Void
+  let onRemove: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -477,6 +496,13 @@ private struct PluginRow: View {
         )
         .labelsHidden()
         .disabled(!canEdit)
+      }
+
+      if canRemove {
+        Button("Remove Local Plugin") {
+          onRemove()
+        }
+        .buttonStyle(.bordered)
       }
 
       Text(plugin.description)
@@ -617,6 +643,7 @@ private struct PluginCommandRow: View {
 private struct InvalidPluginRow: View {
   let plugin: PluginSummary
   let onRevealManifest: () -> Void
+  let onRemove: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -636,6 +663,13 @@ private struct InvalidPluginRow: View {
           onRevealManifest()
         }
         .buttonStyle(.bordered)
+
+        if plugin.provenance == "local" {
+          Button("Remove Local Plugin") {
+            onRemove()
+          }
+          .buttonStyle(.bordered)
+        }
       }
 
       Text(plugin.validationError ?? "Plugin manifest did not pass runtime validation.")

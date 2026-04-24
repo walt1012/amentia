@@ -9,24 +9,25 @@ use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
 use pith_plugin_host::{
-  build_capability_registry, build_command_registry, build_hook_registry, default_plugin_root,
-  discover_plugins, PluginCapabilityRegistration as HostPluginCapabilityRegistration,
-  PluginCatalogEntry, PluginCommandEntry as HostPluginCommandEntry,
-  PluginHookEntry as HostPluginHookEntry,
+  build_capability_registry, build_command_registry, build_hook_registry,
+  configured_plugin_install_root, configured_plugin_roots, discover_plugins_in_roots,
+  inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle,
+  PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
+  PluginCommandEntry as HostPluginCommandEntry, PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
-  ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
-  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
-  PluginListResult, PluginSetEnabledParams, PluginSetEnabledResult,
-  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
-  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration, PluginCapabilityRegistryResult,
+  PluginCapabilityRegistrySummary, PluginCommandRegistryResult, PluginCommandRunParams,
+  PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
+  PluginInstallResult, PluginListResult, PluginRemoveParams, PluginRemoveResult,
+  PluginSetEnabledParams, PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary,
+  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
+  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
+  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
+  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -79,6 +80,8 @@ pub struct RuntimeContext {
   memory_notes: Vec<MemoryNote>,
   threads: Vec<StoredThread>,
   workspace: Option<WorkspaceSummary>,
+  plugin_roots: Vec<PathBuf>,
+  plugin_install_root: PathBuf,
   plugins: Vec<PluginCatalogEntry>,
   pending_approvals: HashMap<String, PendingApproval>,
   active_turns: HashMap<String, ActiveTurn>,
@@ -94,7 +97,9 @@ impl RuntimeContext {
     let persisted_pending_approvals = store.load_pending_approvals()?;
     let persisted_memory_notes = store.load_memory_notes(128)?;
     let persisted_plugin_states = store.load_plugin_states()?;
-    let plugins = apply_plugin_states(load_plugin_catalog()?, &persisted_plugin_states);
+    let plugin_roots = configured_plugin_roots();
+    let plugin_install_root = configured_plugin_install_root();
+    let plugins = apply_plugin_states(load_plugin_catalog(&plugin_roots)?, &persisted_plugin_states);
     let next_thread_number = persisted_threads.len() + 1;
     let next_approval_number = store.next_approval_sequence()?;
     let next_memory_number = store.next_memory_sequence()?;
@@ -116,6 +121,8 @@ impl RuntimeContext {
         })
         .collect(),
       workspace: persisted_workspace,
+      plugin_roots,
+      plugin_install_root,
       plugins,
       pending_approvals: persisted_pending_approvals
         .into_iter()
@@ -141,6 +148,8 @@ impl RuntimeContext {
   }
 
   pub fn new_in_memory() -> Self {
+    let plugin_roots = configured_plugin_roots();
+    let plugin_install_root = configured_plugin_install_root();
     Self {
       server_name: "pith-runtime".to_string(),
       server_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -150,7 +159,9 @@ impl RuntimeContext {
       memory_notes: vec![],
       threads: vec![],
       workspace: None,
-      plugins: load_plugin_catalog().unwrap_or_default(),
+      plugin_roots: plugin_roots.clone(),
+      plugin_install_root,
+      plugins: load_plugin_catalog(&plugin_roots).unwrap_or_default(),
       pending_approvals: HashMap::new(),
       active_turns: HashMap::new(),
       next_thread_number: 1,
@@ -272,6 +283,28 @@ impl RuntimeContext {
 
     store.save_plugin_enabled(plugin_id, enabled)
   }
+
+  fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
+    let Some(store) = &self.store else {
+      return Ok(());
+    };
+
+    store.delete_plugin_state(plugin_id)
+  }
+
+  fn persisted_plugin_states(&self) -> Result<HashMap<String, bool>> {
+    let Some(store) = &self.store else {
+      return Ok(HashMap::new());
+    };
+
+    store.load_plugin_states()
+  }
+
+  fn refresh_plugins(&mut self) -> Result<()> {
+    let plugin_states = self.persisted_plugin_states()?;
+    self.plugins = apply_plugin_states(load_plugin_catalog(&self.plugin_roots)?, &plugin_states);
+    Ok(())
+  }
 }
 
 impl Default for RuntimeContext {
@@ -324,6 +357,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::PLUGIN_HOOK_REGISTRY => {
       JsonRpcResponse::success(request.id, &build_protocol_hook_registry(&context.plugins))
     }
+    methods::PLUGIN_INSTALL => handle_plugin_install(context, request),
     methods::PLUGIN_LIST => JsonRpcResponse::success(
       request.id,
       &PluginListResult {
@@ -335,6 +369,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
           .collect(),
       },
     ),
+    methods::PLUGIN_REMOVE => handle_plugin_remove(context, request),
     methods::PLUGIN_SET_ENABLED => handle_plugin_set_enabled(context, request),
     methods::WORKSPACE_CURRENT => JsonRpcResponse::success(
       request.id,
@@ -633,12 +668,12 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
   )
 }
 
-fn load_plugin_catalog() -> Result<Vec<PluginCatalogEntry>> {
-  let Some(plugin_root) = default_plugin_root() else {
+fn load_plugin_catalog(plugin_roots: &[PathBuf]) -> Result<Vec<PluginCatalogEntry>> {
+  if plugin_roots.is_empty() {
     return Ok(vec![]);
-  };
+  }
 
-  discover_plugins(&plugin_root)
+  discover_plugins_in_roots(plugin_roots)
 }
 
 fn apply_plugin_states(
@@ -843,6 +878,106 @@ fn handle_plugin_set_enabled(
     request.id,
     &PluginSetEnabledResult {
       plugin: to_protocol_plugin(updated_plugin),
+    },
+  )
+}
+
+fn handle_plugin_install(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<PluginInstallParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid plugin/install params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/install params");
+    }
+  };
+
+  let source_path = PathBuf::from(&params.source_path);
+  let candidate_plugin = match inspect_plugin_bundle(&source_path) {
+    Ok(plugin) => plugin,
+    Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
+  };
+  if context.plugins.iter().any(|plugin| plugin.id == candidate_plugin.id) {
+    return JsonRpcResponse::error(
+      request.id,
+      -32053,
+      format!("Plugin `{}` is already installed", candidate_plugin.display_name),
+    );
+  }
+  let installed_plugin = match install_plugin_bundle(&source_path, &context.plugin_install_root) {
+    Ok(plugin) => plugin,
+    Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
+  };
+
+  if let Err(error) = context.refresh_plugins() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  let refreshed_plugin = context
+    .plugins
+    .iter()
+    .find(|plugin| plugin.id == installed_plugin.id)
+    .cloned()
+    .unwrap_or(installed_plugin);
+
+  JsonRpcResponse::success(
+    request.id,
+    &PluginInstallResult {
+      plugin: to_protocol_plugin(refreshed_plugin),
+    },
+  )
+}
+
+fn handle_plugin_remove(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match request.params {
+    Some(value) => match serde_json::from_value::<PluginRemoveParams>(value) {
+      Ok(params) => params,
+      Err(error) => {
+        return JsonRpcResponse::error(
+          request.id,
+          -32602,
+          format!("Invalid plugin/remove params: {error}"),
+        )
+      }
+    },
+    None => {
+      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/remove params");
+    }
+  };
+
+  let manifest_path = PathBuf::from(&params.manifest_path);
+  let removed_plugin = match remove_local_plugin_bundle(&manifest_path, &context.plugin_install_root)
+  {
+    Ok(plugin) => plugin,
+    Err(error) => return JsonRpcResponse::error(request.id, -32054, error.to_string()),
+  };
+
+  if let Err(error) = context.delete_plugin_state(&removed_plugin.plugin_id) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+  if let Err(error) = context.refresh_plugins() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  JsonRpcResponse::success(
+    request.id,
+    &PluginRemoveResult {
+      plugin_id: removed_plugin.plugin_id,
+      display_name: removed_plugin.display_name,
+      removed_path: removed_plugin.removed_path,
     },
   )
 }
@@ -2754,6 +2889,38 @@ mod tests {
     path
   }
 
+  fn create_temp_plugin_bundle(label: &str, plugin_name: &str, display_name: &str) -> PathBuf {
+    let root = create_temp_workspace(label);
+    let plugin_dir = root.join(plugin_name);
+    fs::create_dir_all(plugin_dir.join("commands")).expect("create plugin commands directory");
+    fs::write(
+      plugin_dir.join("pith-plugin.json"),
+      format!(
+        r#"{{
+  "name": "{plugin_name}",
+  "version": "0.1.0",
+  "displayName": "{display_name}",
+  "description": "Temporary test plugin",
+  "author": {{ "name": "Pith" }},
+  "capabilities": ["command:{plugin_name}.run"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}}"#
+      ),
+    )
+    .expect("write plugin manifest");
+    fs::write(
+      plugin_dir.join("commands").join(format!("{plugin_name}.run.json")),
+      r#"{
+  "title": "Run Temporary Plugin",
+  "description": "Execute a temporary plugin command.",
+  "prompt": "Summarize the local workspace in one paragraph."
+}"#,
+    )
+    .expect("write command manifest");
+    plugin_dir
+  }
+
   fn enable_full_access_plugin(context: &mut RuntimeContext) {
     context.plugins = vec![PluginCatalogEntry {
       id: "test-full-access".to_string(),
@@ -3676,6 +3843,131 @@ mod tests {
       response.result.expect("plugin set result")["plugin"]["enabled"],
       true
     );
+  }
+
+  #[test]
+  fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
+    let mut context = RuntimeContext::new_in_memory();
+    let source_root = create_temp_plugin_bundle("plugin-install-source", "focus-review", "Focus Review");
+    let install_root = create_temp_workspace("plugin-install-root");
+    context.plugin_roots = vec![install_root.clone()];
+    context.plugin_install_root = install_root.clone();
+    context.plugins = vec![];
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_INSTALL,
+        Some(json!({
+          "sourcePath": source_root.display().to_string()
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+      .expect("cleanup plugin source root");
+    fs::remove_dir_all(&install_root).expect("cleanup install root");
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("plugin install result");
+    assert_eq!(result["plugin"]["id"], "focus-review");
+    assert_eq!(result["plugin"]["provenance"], "local");
+    assert!(context.plugins.iter().any(|plugin| plugin.id == "focus-review"));
+  }
+
+  #[test]
+  fn plugin_install_rejects_duplicate_plugin_ids() {
+    let mut context = RuntimeContext::new_in_memory();
+    let source_root = create_temp_plugin_bundle("plugin-install-duplicate", "workspace-notes", "Workspace Notes");
+    context.plugins = vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Bundled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: "plugins/official/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "official".to_string(),
+      validation_error: None,
+    }];
+
+    let response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_INSTALL,
+        Some(json!({
+          "sourcePath": source_root.display().to_string()
+        })),
+      ),
+    );
+
+    fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+      .expect("cleanup plugin source root");
+
+    assert!(response.result.is_none());
+    let error = response.error.expect("plugin install error");
+    assert!(error.message.contains("already installed"));
+  }
+
+  #[test]
+  fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
+    let mut context = RuntimeContext::new_in_memory();
+    let storage_root = create_temp_workspace("plugin-remove-storage");
+    let source_root = create_temp_plugin_bundle("plugin-remove-source", "focus-review", "Focus Review");
+    let install_root = create_temp_workspace("plugin-remove-root");
+    let store = FileThreadStore::new(storage_root.join("pith.db"), storage_root.join("threads.json"));
+    store
+      .save_plugin_enabled("focus-review", true)
+      .expect("save persisted plugin state");
+    context.store = Some(store);
+    context.plugin_roots = vec![install_root.clone()];
+    context.plugin_install_root = install_root.clone();
+    context.plugins = vec![];
+
+    let install_response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_INSTALL,
+        Some(json!({
+          "sourcePath": source_root.display().to_string()
+        })),
+      ),
+    );
+    assert!(install_response.error.is_none());
+
+    let manifest_path = context.plugins[0].manifest_path.clone();
+    let remove_response = handle_request(
+      &mut context,
+      request(
+        methods::PLUGIN_REMOVE,
+        Some(json!({
+          "manifestPath": manifest_path
+        })),
+      ),
+    );
+
+    let persisted_states = context
+      .store
+      .as_ref()
+      .expect("store")
+      .load_plugin_states()
+      .expect("load plugin states");
+
+    fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+      .expect("cleanup plugin source root");
+    fs::remove_dir_all(&install_root).expect("cleanup install root");
+    fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+    assert!(remove_response.error.is_none());
+    let result = remove_response.result.expect("plugin remove result");
+    assert_eq!(result["pluginId"], "focus-review");
+    assert!(context.plugins.is_empty());
+    assert!(!persisted_states.contains_key("focus-review"));
   }
 
   #[test]

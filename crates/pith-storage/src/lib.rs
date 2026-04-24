@@ -534,6 +534,12 @@ impl FileThreadStore {
     Ok(())
   }
 
+  pub fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
+    let connection = self.open_connection()?;
+    connection.execute("DELETE FROM plugin_state WHERE plugin_id = ?1", params![plugin_id])?;
+    Ok(())
+  }
+
   fn open_connection(&self) -> Result<Connection> {
     if let Some(parent) = self.database_path.parent() {
       fs::create_dir_all(parent)
@@ -993,5 +999,23 @@ mod tests {
 
     assert_eq!(plugin_states.get("workspace-notes"), Some(&true));
     assert_eq!(plugin_states.get("shell-recorder"), Some(&false));
+  }
+
+  #[test]
+  fn sqlite_store_deletes_plugin_state() {
+    let root = create_temp_directory("plugin-state-delete");
+    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+
+    store
+      .save_plugin_enabled("workspace-notes", true)
+      .expect("save plugin enabled");
+    store
+      .delete_plugin_state("workspace-notes")
+      .expect("delete plugin state");
+    let plugin_states = store.load_plugin_states().expect("load plugin states");
+
+    fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+    assert!(!plugin_states.contains_key("workspace-notes"));
   }
 }

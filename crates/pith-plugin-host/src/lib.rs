@@ -121,6 +121,14 @@ pub struct PluginHookEntry {
   pub source_path: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRemovalRecord {
+  pub plugin_id: String,
+  pub display_name: String,
+  pub removed_path: String,
+}
+
 pub fn default_plugin_root() -> Option<PathBuf> {
   if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
     return Some(PathBuf::from(path));
@@ -135,6 +143,45 @@ pub fn default_plugin_root() -> Option<PathBuf> {
   }
 
   roots.into_iter().next().map(|root| root.join("plugins"))
+}
+
+pub fn configured_plugin_roots() -> Vec<PathBuf> {
+  let mut roots = vec![];
+
+  if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
+    roots.push(PathBuf::from(path));
+    if let Ok(local_path) = env::var("PITH_LOCAL_PLUGIN_DIR") {
+      let local_root = PathBuf::from(local_path);
+      if !roots.contains(&local_root) {
+        roots.push(local_root);
+      }
+    }
+    return roots;
+  }
+
+  if let Ok(path) = env::var("PITH_LOCAL_PLUGIN_DIR") {
+    roots.push(PathBuf::from(path));
+  }
+
+  if let Some(default_root) = default_plugin_root() {
+    if !roots.contains(&default_root) {
+      roots.push(default_root);
+    }
+  }
+
+  roots
+}
+
+pub fn configured_plugin_install_root() -> PathBuf {
+  if let Ok(path) = env::var("PITH_LOCAL_PLUGIN_DIR") {
+    return PathBuf::from(path);
+  }
+  if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
+    return PathBuf::from(path);
+  }
+  default_plugin_root()
+    .map(|root| root.join("local"))
+    .unwrap_or_else(|| PathBuf::from("plugins").join("local"))
 }
 
 pub fn discover_plugins(root: &Path) -> Result<Vec<PluginCatalogEntry>> {
@@ -152,6 +199,86 @@ pub fn discover_plugins(root: &Path) -> Result<Vec<PluginCatalogEntry>> {
 
   plugins.sort_by(|left, right| left.display_name.cmp(&right.display_name));
   Ok(plugins)
+}
+
+pub fn discover_plugins_in_roots(roots: &[PathBuf]) -> Result<Vec<PluginCatalogEntry>> {
+  let mut plugins = vec![];
+
+  for root in roots {
+    plugins.extend(discover_plugins(root)?);
+  }
+
+  plugins.sort_by(|left, right| {
+    left
+      .display_name
+      .cmp(&right.display_name)
+      .then_with(|| left.id.cmp(&right.id))
+      .then_with(|| left.manifest_path.cmp(&right.manifest_path))
+  });
+  plugins.dedup_by(|left, right| left.manifest_path == right.manifest_path);
+  Ok(plugins)
+}
+
+pub fn install_plugin_bundle(source_path: &Path, install_root: &Path) -> Result<PluginCatalogEntry> {
+  let source_root = resolve_plugin_source_root(source_path)?;
+  let plugin = inspect_plugin_bundle(&source_root)?;
+  let manifest_name = plugin.name.clone();
+
+  fs::create_dir_all(install_root)
+    .with_context(|| format!("failed to create plugin install root {}", install_root.display()))?;
+
+  let destination_root = install_root.join(&manifest_name);
+  if destination_root.exists() {
+    anyhow::bail!(
+      "plugin `{}` is already installed at {}",
+      plugin.display_name,
+      destination_root.display()
+    );
+  }
+
+  copy_directory(&source_root, &destination_root)?;
+  Ok(load_plugin_entry(destination_root.join("pith-plugin.json")))
+}
+
+pub fn inspect_plugin_bundle(source_path: &Path) -> Result<PluginCatalogEntry> {
+  let source_root = resolve_plugin_source_root(source_path)?;
+  let source_manifest_path = source_root.join("pith-plugin.json");
+  let manifest = read_manifest(&source_manifest_path)?;
+  validate_manifest(&manifest)?;
+  Ok(load_plugin_entry(source_manifest_path))
+}
+
+pub fn remove_local_plugin_bundle(
+  manifest_path: &Path,
+  install_root: &Path,
+) -> Result<PluginRemovalRecord> {
+  let resolved_manifest_path = fs::canonicalize(manifest_path)
+    .with_context(|| format!("failed to resolve plugin manifest {}", manifest_path.display()))?;
+  let plugin_entry = load_plugin_entry(resolved_manifest_path.clone());
+  let plugin_root = resolved_manifest_path
+    .parent()
+    .context("plugin manifest is missing a parent directory")?
+    .to_path_buf();
+  let resolved_install_root = canonicalize_or_prepare(install_root)?;
+
+  if !plugin_root.starts_with(&resolved_install_root) {
+    anyhow::bail!(
+      "plugin removal is only supported for locally installed plugins under {}",
+      resolved_install_root.display()
+    );
+  }
+  if plugin_entry.provenance != "local" {
+    anyhow::bail!("plugin removal is only supported for local plugins");
+  }
+
+  fs::remove_dir_all(&plugin_root)
+    .with_context(|| format!("failed to remove plugin bundle {}", plugin_root.display()))?;
+
+  Ok(PluginRemovalRecord {
+    plugin_id: plugin_entry.id,
+    display_name: plugin_entry.display_name,
+    removed_path: plugin_root.display().to_string(),
+  })
 }
 
 fn discover_plugin_manifests(directory: &Path, manifests: &mut Vec<PathBuf>) -> Result<()> {
@@ -429,6 +556,76 @@ fn read_hook_manifest(path: &Path) -> Result<PluginHookManifest> {
     .with_context(|| format!("failed to parse plugin hook {}", path.display()))
 }
 
+fn resolve_plugin_source_root(path: &Path) -> Result<PathBuf> {
+  let source_path = fs::canonicalize(path)
+    .with_context(|| format!("failed to resolve plugin source {}", path.display()))?;
+
+  if source_path.is_dir() {
+    let manifest_path = source_path.join("pith-plugin.json");
+    if !manifest_path.is_file() {
+      anyhow::bail!(
+        "plugin directory {} does not contain pith-plugin.json",
+        source_path.display()
+      );
+    }
+    return Ok(source_path);
+  }
+
+  if source_path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .is_some_and(|name| name == "pith-plugin.json")
+  {
+    return source_path
+      .parent()
+      .map(Path::to_path_buf)
+      .context("plugin manifest is missing a parent directory");
+  }
+
+  anyhow::bail!(
+    "plugin source must be a plugin directory or pith-plugin.json file"
+  );
+}
+
+fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
+  fs::create_dir_all(destination)
+    .with_context(|| format!("failed to create {}", destination.display()))?;
+
+  for entry in fs::read_dir(source)
+    .with_context(|| format!("failed to read plugin directory {}", source.display()))?
+  {
+    let entry = entry.with_context(|| format!("failed to inspect {}", source.display()))?;
+    let entry_path = entry.path();
+    let destination_path = destination.join(entry.file_name());
+
+    if entry_path.is_dir() {
+      copy_directory(&entry_path, &destination_path)?;
+    } else {
+      fs::copy(&entry_path, &destination_path).with_context(|| {
+        format!(
+          "failed to copy {} to {}",
+          entry_path.display(),
+          destination_path.display()
+        )
+      })?;
+    }
+  }
+
+  Ok(())
+}
+
+fn canonicalize_or_prepare(path: &Path) -> Result<PathBuf> {
+  if path.exists() {
+    fs::canonicalize(path)
+      .with_context(|| format!("failed to resolve plugin install root {}", path.display()))
+  } else {
+    fs::create_dir_all(path)
+      .with_context(|| format!("failed to create plugin install root {}", path.display()))?;
+    fs::canonicalize(path)
+      .with_context(|| format!("failed to resolve plugin install root {}", path.display()))
+  }
+}
+
 fn discovery_roots() -> Vec<PathBuf> {
   let mut roots = vec![];
 
@@ -668,6 +865,99 @@ mod tests {
     assert_eq!(hooks[0].plugin_id, "shell-recorder");
     assert_eq!(hooks[0].event, "shell.completed");
     assert!(hooks[0].source_path.ends_with("shell.recorder.json"));
+  }
+
+  #[test]
+  fn discover_plugins_in_roots_merges_local_and_bundled_catalogs() {
+    let official_root = create_temp_plugin_root("discover-multi-official");
+    let local_root = create_temp_plugin_root("discover-multi-local");
+    let official_plugin_dir = official_root.join("official").join("workspace-notes");
+    let local_plugin_dir = local_root.join("focus-review");
+    fs::create_dir_all(&official_plugin_dir).expect("create official plugin dir");
+    fs::create_dir_all(&local_plugin_dir).expect("create local plugin dir");
+    fs::write(
+      official_plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "workspace-notes",
+  "version": "0.1.0",
+  "displayName": "Workspace Notes",
+  "description": "Official plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["prompt_pack:workspace.notes"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+    )
+    .expect("write official manifest");
+    fs::write(
+      local_plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "focus-review",
+  "version": "0.1.0",
+  "displayName": "Focus Review",
+  "description": "Local plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:review.focus"],
+  "permissions": ["file.read"],
+  "defaultEnabled": false
+}"#,
+    )
+    .expect("write local manifest");
+
+    let plugins = discover_plugins_in_roots(&[official_root.clone(), local_root.clone()])
+      .expect("discover plugins across roots");
+
+    fs::remove_dir_all(&official_root).expect("cleanup official plugin root");
+    fs::remove_dir_all(&local_root).expect("cleanup local plugin root");
+
+    assert_eq!(plugins.len(), 2);
+    assert!(plugins.iter().any(|plugin| plugin.id == "workspace-notes"));
+    assert!(plugins.iter().any(|plugin| plugin.id == "focus-review"));
+  }
+
+  #[test]
+  fn install_and_remove_local_plugin_bundle_round_trip() {
+    let source_root = create_temp_plugin_root("install-source");
+    let install_root = create_temp_plugin_root("install-target");
+    let source_plugin_dir = source_root.join("focus-review");
+    fs::create_dir_all(source_plugin_dir.join("commands")).expect("create source commands dir");
+    fs::write(
+      source_plugin_dir.join("pith-plugin.json"),
+      r#"{
+  "name": "focus-review",
+  "version": "0.1.0",
+  "displayName": "Focus Review",
+  "description": "Local plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:review.focus"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+    )
+    .expect("write source manifest");
+    fs::write(
+      source_plugin_dir.join("commands/review.focus.json"),
+      r#"{
+  "title": "Focus Review",
+  "description": "Prepare a focused review summary.",
+  "prompt": "Review the latest diff and keep the summary focused."
+}"#,
+    )
+    .expect("write command definition");
+
+    let installed_plugin =
+      install_plugin_bundle(&source_plugin_dir, &install_root).expect("install plugin bundle");
+    let installed_manifest = PathBuf::from(&installed_plugin.manifest_path);
+    let removed_plugin =
+      remove_local_plugin_bundle(&installed_manifest, &install_root).expect("remove plugin");
+
+    fs::remove_dir_all(&source_root).expect("cleanup source root");
+    fs::remove_dir_all(&install_root).expect("cleanup install root");
+
+    assert_eq!(installed_plugin.id, "focus-review");
+    assert_eq!(installed_plugin.provenance, "local");
+    assert_eq!(removed_plugin.plugin_id, "focus-review");
+    assert!(removed_plugin.removed_path.ends_with("focus-review"));
   }
 
   #[test]

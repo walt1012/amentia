@@ -47,11 +47,14 @@ def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
   state_dir = repo_root / ".tmp-runtime-state"
   plugin_dir = repo_root / ".tmp-runtime-plugins"
+  plugin_import_dir = repo_root / ".tmp-runtime-plugin-import"
   workspace_dir = repo_root / ".tmp-runtime-workspace"
   if state_dir.exists():
     shutil.rmtree(state_dir)
   if plugin_dir.exists():
     shutil.rmtree(plugin_dir)
+  if plugin_import_dir.exists():
+    shutil.rmtree(plugin_import_dir)
   if workspace_dir.exists():
     shutil.rmtree(workspace_dir)
   (plugin_dir / "workspace-notes").mkdir(parents=True, exist_ok=True)
@@ -137,6 +140,40 @@ def main() -> int:
         "description": "Capture a compact shell completion note in the thread timeline.",
         "event": "shell.completed",
         "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_import_dir / "focus-review" / "commands").mkdir(parents=True, exist_ok=True)
+  (plugin_import_dir / "focus-review" / "pith-plugin.json").write_text(
+    json.dumps(
+      {
+        "name": "focus-review",
+        "version": "0.1.0",
+        "displayName": "Focus Review",
+        "description": "Installs into the local plugin catalog during the runtime smoke test.",
+        "author": {
+          "name": "Pith",
+        },
+        "capabilities": [
+          "command:focus.review",
+        ],
+        "permissions": [
+          "file.read",
+        ],
+        "defaultEnabled": True,
+      },
+      indent=2,
+    ),
+    encoding="utf-8",
+  )
+  (plugin_import_dir / "focus-review" / "commands" / "focus.review.json").write_text(
+    json.dumps(
+      {
+        "title": "Focus Review",
+        "description": "Prepare a focused local review summary.",
+        "prompt": "Review the latest local changes and keep the summary focused on the most important issues.",
       },
       indent=2,
     ),
@@ -619,6 +656,59 @@ def main() -> int:
       for item in shell_approval["result"]["items"]
     )
 
+    plugin_install, _ = send_request(
+      process,
+      {
+        "id": 42,
+        "method": "plugin/install",
+        "params": {
+          "sourcePath": str(plugin_import_dir / "focus-review"),
+        },
+      },
+    )
+    assert plugin_install["result"]["plugin"]["id"] == "focus-review"
+    assert plugin_install["result"]["plugin"]["provenance"] == "local"
+
+    plugin_list_after_install, _ = send_request(
+      process,
+      {
+        "id": 43,
+        "method": "plugin/list",
+      },
+    )
+    installed_plugin = next(
+      plugin
+      for plugin in plugin_list_after_install["result"]["plugins"]
+      if plugin["id"] == "focus-review"
+    )
+    assert installed_plugin["enabled"] is True
+    assert Path(installed_plugin["manifestPath"]).is_file()
+
+    plugin_remove, _ = send_request(
+      process,
+      {
+        "id": 44,
+        "method": "plugin/remove",
+        "params": {
+          "manifestPath": installed_plugin["manifestPath"],
+        },
+      },
+    )
+    assert plugin_remove["result"]["pluginId"] == "focus-review"
+    assert Path(plugin_remove["result"]["removedPath"]).exists() is False
+
+    plugin_list_after_remove, _ = send_request(
+      process,
+      {
+        "id": 45,
+        "method": "plugin/list",
+      },
+    )
+    assert not any(
+      plugin["id"] == "focus-review"
+      for plugin in plugin_list_after_remove["result"]["plugins"]
+    )
+
     command_turn, _ = send_request(
       process,
       {
@@ -638,6 +728,8 @@ def main() -> int:
     process.wait(timeout=5)
     if plugin_dir.exists():
       shutil.rmtree(plugin_dir)
+    if plugin_import_dir.exists():
+      shutil.rmtree(plugin_import_dir)
     if workspace_dir.exists():
       shutil.rmtree(workspace_dir)
 

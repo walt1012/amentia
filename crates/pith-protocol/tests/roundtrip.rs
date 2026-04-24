@@ -2,8 +2,9 @@ use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
   PluginCommandRunParams, PluginCommandSummary, PluginHookRegistryResult, PluginHookSummary,
-  PluginSetEnabledParams, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
+  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -132,6 +133,31 @@ fn plugin_set_enabled_params_use_camel_case_fields() {
     value.get("enabled").and_then(|item| item.as_bool()),
     Some(true)
   );
+}
+
+#[test]
+fn plugin_install_and_remove_payloads_use_camel_case_fields() {
+  let install_params = PluginInstallParams {
+    source_path: "/tmp/pith/plugins/focus-review".to_string(),
+  };
+  let remove_params = PluginRemoveParams {
+    manifest_path: "/tmp/pith/plugins/local/focus-review/pith-plugin.json".to_string(),
+  };
+  let remove_result = PluginRemoveResult {
+    plugin_id: "focus-review".to_string(),
+    display_name: "Focus Review".to_string(),
+    removed_path: "/tmp/pith/plugins/local/focus-review".to_string(),
+  };
+
+  let install_value = serde_json::to_value(install_params).expect("serialize plugin install params");
+  let remove_value = serde_json::to_value(remove_params).expect("serialize plugin remove params");
+  let result_value = serde_json::to_value(remove_result).expect("serialize plugin remove result");
+
+  assert!(install_value.get("sourcePath").is_some());
+  assert!(remove_value.get("manifestPath").is_some());
+  assert!(result_value.get("pluginId").is_some());
+  assert!(result_value.get("displayName").is_some());
+  assert!(result_value.get("removedPath").is_some());
 }
 
 #[test]
