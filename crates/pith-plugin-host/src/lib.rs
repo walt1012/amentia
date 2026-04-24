@@ -1261,7 +1261,10 @@ mod tests {
     assert_eq!(connector.metadata["service"], "notion");
     assert_eq!(connector.metadata["authType"], "oauth2");
     assert_eq!(connector.metadata["credentialStore"], "keychain");
-    assert_eq!(connector.metadata["authScopes"], "read_content, insert_content");
+    assert_eq!(
+      connector.metadata["authScopes"],
+      "read_content, insert_content"
+    );
 
     let mcp_server = registry
       .iter()

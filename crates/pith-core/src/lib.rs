@@ -10,13 +10,11 @@ use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
 use pith_plugin_host::{
-  build_capability_registry, build_command_registry, build_connector_registry,
-  build_hook_registry, configured_plugin_install_root, configured_plugin_roots,
-  discover_plugins_in_roots, inspect_plugin_bundle, install_plugin_bundle,
-  remove_local_plugin_bundle,
+  build_capability_registry, build_command_registry, build_connector_registry, build_hook_registry,
+  configured_plugin_install_root, configured_plugin_roots, discover_plugins_in_roots,
+  inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle,
   PluginCapabilityRegistration as HostPluginCapabilityRegistration, PluginCatalogEntry,
-  PluginCommandEntry as HostPluginCommandEntry,
-  PluginConnectorEntry as HostPluginConnectorEntry,
+  PluginCommandEntry as HostPluginCommandEntry, PluginConnectorEntry as HostPluginConnectorEntry,
   PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
@@ -28,12 +26,11 @@ use pith_protocol::{
   PluginCommandRunParams, PluginCommandSummary, PluginConnectorRegistryResult,
   PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
   PluginInstallResult, PluginListResult, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSetEnabledResult,
-  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
-  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  PluginSetEnabledParams, PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary,
+  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
+  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
+  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
+  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{

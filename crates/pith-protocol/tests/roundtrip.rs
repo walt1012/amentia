@@ -3,9 +3,9 @@ use pith_protocol::{
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
   PluginCommandRunParams, PluginCommandSummary, PluginConnectorRegistryResult,
   PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
-  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary,
-  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
+  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -272,7 +272,10 @@ fn plugin_connector_registry_round_trips() {
   let value = serde_json::to_value(&decoded).expect("serialize connector registry value");
 
   assert_eq!(decoded.connectors.len(), 1);
-  assert_eq!(decoded.connectors[0].connector_id, "notion-connector::notion");
+  assert_eq!(
+    decoded.connectors[0].connector_id,
+    "notion-connector::notion"
+  );
   assert_eq!(decoded.connectors[0].status, "disabled");
   assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
   assert!(value["connectors"][0].get("connectorId").is_some());
