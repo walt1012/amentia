@@ -18,12 +18,11 @@ use pith_protocol::{
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, MemoryNoteSummary, MemoryStatusResult,
   ModelBootstrapResult, ModelHealthResult, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginListResult,
-  PluginSetEnabledParams, PluginSetEnabledResult,
-  PluginSummary as ProtocolPluginSummary, ServerCapabilities, ServerInfo, ThreadListResult,
-  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  PluginSetEnabledParams, PluginSetEnabledResult, PluginSummary as ProtocolPluginSummary,
+  ServerCapabilities, ServerInfo, ThreadListResult, ThreadReadParams, ThreadReadResult,
+  ThreadStartParams, ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams,
+  TimelineItem, TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult,
+  WorkspaceCurrentResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
@@ -3416,12 +3415,7 @@ mod tests {
     assert!(turn_response.error.is_none());
     let result = turn_response.result.expect("turn result");
     let items = result["items"].as_array().expect("items");
-    assert!(
-      items[3]["content"]
-        .as_str()
-        .unwrap()
-        .contains("Workspace A")
-    );
+    assert!(items[3]["content"].as_str().unwrap().contains("Workspace A"));
     assert!(items[3]["content"]
       .as_str()
       .unwrap()
