@@ -39,6 +39,8 @@ final class AppViewModel: ObservableObject {
     let downloadURL: String
     let homepage: String
     let sizeBytes: Int64
+    let contextSize: Int
+    let maxOutputTokens: Int
     let license: String
     let tags: [String]
     let installSegments: [String]
@@ -49,6 +51,32 @@ final class AppViewModel: ObservableObject {
       }
       .appendingPathComponent(fileName)
       .path
+    }
+  }
+
+  private struct LocalModelPackManifest: Encodable {
+    let id: String
+    let displayName: String
+    let fileName: String
+    let contextSize: Int
+    let maxOutputTokens: Int
+    let backend: String
+    let license: String
+    let homepage: String
+    let downloadURL: String
+    let sizeBytes: Int64
+
+    enum CodingKeys: String, CodingKey {
+      case id
+      case displayName = "display_name"
+      case fileName = "file_name"
+      case contextSize = "context_size"
+      case maxOutputTokens = "max_output_tokens"
+      case backend
+      case license
+      case homepage
+      case downloadURL = "download_url"
+      case sizeBytes = "size_bytes"
     }
   }
 
@@ -113,7 +141,7 @@ final class AppViewModel: ObservableObject {
     self.modelHealth = nil
     self.localModels = Self.localModelSummaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: nil
+      activeModelPath: runtimeBridge.activeLocalModelPath()
     )
     self.memoryStatus = nil
     self.memoryNotes = []
@@ -991,6 +1019,18 @@ final class AppViewModel: ObservableObject {
     return !model.downloaded
   }
 
+  func canActivateRecommendedModel(modelID: String) -> Bool {
+    guard let model = localModels.first(where: { $0.id == modelID }) else {
+      return false
+    }
+
+    return model.downloaded && !model.active
+  }
+
+  func canResetActiveLocalModel() -> Bool {
+    runtimeBridge.activeLocalModelPath() != nil
+  }
+
   func downloadRecommendedModel(modelID: String) {
     guard let model = localModels.first(where: { $0.id == modelID }) else {
       runtimeDetail = "The selected local model is unavailable."
@@ -1045,6 +1085,66 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = "Model download failed: \(error.localizedDescription)"
       }
     }
+  }
+
+  func activateRecommendedModel(modelID: String) {
+    guard let model = localModels.first(where: { $0.id == modelID }) else {
+      runtimeDetail = "The selected local model is unavailable."
+      return
+    }
+
+    guard model.downloaded else {
+      runtimeDetail = "Download \(model.displayName) before using it."
+      return
+    }
+
+    do {
+      let manifestPath = try writeLocalModelPackManifest(for: model)
+      runtimeBridge.configureActiveLocalModel(
+        manifestPath: manifestPath,
+        modelPath: model.installPath
+      )
+      refreshLocalModelCatalog()
+      appendEntry(
+        to: selectedThreadID,
+        TimelineEntry(
+          id: UUID().uuidString,
+          kind: .system,
+          title: "Local Model Selected",
+          body: "\(model.displayName) is now the active local model.",
+          attributes: [
+            "modelId": model.id,
+            "manifestPath": manifestPath,
+            "modelPath": model.installPath,
+          ]
+        )
+      )
+      relaunchRuntimeIfNeeded(
+        runningDetail: "Restarting local runtime with \(model.displayName)...",
+        idleDetail: "\(model.displayName) will be used when the runtime launches."
+      )
+    } catch {
+      runtimeDetail = "Model selection failed: \(error.localizedDescription)"
+    }
+  }
+
+  func resetActiveLocalModel() {
+    runtimeBridge.clearActiveLocalModel()
+    refreshLocalModelCatalog()
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: "Local Model Reset",
+        body: "Pith will use the default local model discovery path.",
+        attributes: [:]
+      )
+    )
+    relaunchRuntimeIfNeeded(
+      runningDetail: "Restarting local runtime with default model discovery...",
+      idleDetail: "Default model discovery will be used when the runtime launches."
+    )
   }
 
   func revealRecommendedModel(modelID: String) {
@@ -1568,10 +1668,49 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshLocalModelCatalog() {
+    let activeModelPath = runtimeBridge.activeLocalModelPath() ?? modelHealth?.modelPath
     localModels = Self.localModelSummaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: modelHealth?.modelPath
+      activeModelPath: activeModelPath
     )
+  }
+
+  private func relaunchRuntimeIfNeeded(runningDetail: String, idleDetail: String) {
+    if runtimeState == .ready || runtimeState == .launching {
+      runtimeDetail = runningDetail
+      runtimeBridge.stopRuntime(detail: runningDetail)
+      launchRuntime()
+    } else {
+      runtimeDetail = idleDetail
+    }
+  }
+
+  private func writeLocalModelPackManifest(for model: LocalModelSummary) throws -> String {
+    let modelURL = URL(fileURLWithPath: model.installPath)
+    let manifestURL = modelURL
+      .deletingLastPathComponent()
+      .appendingPathComponent("model-pack.json")
+    let manifest = LocalModelPackManifest(
+      id: model.id,
+      displayName: model.displayName,
+      fileName: model.fileName,
+      contextSize: model.contextSize,
+      maxOutputTokens: model.maxOutputTokens,
+      backend: "llama.cpp",
+      license: model.license,
+      homepage: model.homepage,
+      downloadURL: model.downloadURL,
+      sizeBytes: model.sizeBytes
+    )
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    let data = try encoder.encode(manifest)
+    try FileManager.default.createDirectory(
+      at: manifestURL.deletingLastPathComponent(),
+      withIntermediateDirectories: true
+    )
+    try data.write(to: manifestURL, options: .atomic)
+    return manifestURL.path
   }
 
   private func revealSuggestedPath(metricKey: String, successDetail: String) {
@@ -1960,6 +2099,8 @@ final class AppViewModel: ObservableObject {
         downloadURL: item.downloadURL,
         homepage: item.homepage,
         sizeBytes: item.sizeBytes,
+        contextSize: item.contextSize,
+        maxOutputTokens: item.maxOutputTokens,
         license: item.license,
         tags: item.tags,
         installPath: installPath,
@@ -1994,6 +2135,8 @@ final class AppViewModel: ObservableObject {
         downloadURL: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
         homepage: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",
         sizeBytes: 229_312_224,
+        contextSize: 4096,
+        maxOutputTokens: 160,
         license: "lfm1.0",
         tags: ["default", "tiny", "edge"],
         installSegments: ["builtin", "lfm2.5-350m"]
@@ -2006,6 +2149,8 @@ final class AppViewModel: ObservableObject {
         downloadURL: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
         homepage: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
         sizeBytes: 491_000_000,
+        contextSize: 4096,
+        maxOutputTokens: 192,
         license: "apache-2.0",
         tags: ["code", "0.5B", "qwen"],
         installSegments: ["catalog", "qwen2.5-coder-0.5b-instruct"]
@@ -2018,6 +2163,8 @@ final class AppViewModel: ObservableObject {
         downloadURL: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
         homepage: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF",
         sizeBytes: 491_000_000,
+        contextSize: 4096,
+        maxOutputTokens: 192,
         license: "apache-2.0",
         tags: ["chat", "0.5B", "multilingual"],
         installSegments: ["catalog", "qwen2.5-0.5b-instruct"]
@@ -2030,6 +2177,8 @@ final class AppViewModel: ObservableObject {
         downloadURL: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct.Q4_K_M.gguf",
         homepage: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF",
         sizeBytes: 271_000_000,
+        contextSize: 4096,
+        maxOutputTokens: 160,
         license: "apache-2.0",
         tags: ["tiny", "english", "fast"],
         installSegments: ["catalog", "smollm2-360m-instruct"]

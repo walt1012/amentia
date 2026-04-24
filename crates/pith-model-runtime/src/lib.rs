@@ -127,10 +127,17 @@ impl LocalModelRuntime {
     binary_path: Option<PathBuf>,
     model_path: Option<PathBuf>,
   ) -> Self {
-    let pack = built_in_model_pack();
     let manifest = manifest_resolution
       .as_ref()
       .map(|resolution| resolution.manifest.clone());
+    let pack = manifest
+      .as_ref()
+      .map(|manifest| ModelPackDescriptor {
+        id: manifest.id.clone(),
+        display_name: manifest.display_name.clone(),
+        default_role: ModelRole::Default,
+      })
+      .unwrap_or_else(built_in_model_pack);
     let manifest_path = manifest_resolution
       .as_ref()
       .map(|resolution| resolution.manifest_path.clone());
@@ -959,6 +966,36 @@ mod tests {
     assert_eq!(response.backend, "unconfigured");
     assert_eq!(response.status, "unavailable");
     assert_eq!(response.model_id, "lfm2.5-350m");
+  }
+
+  #[test]
+  fn runtime_health_uses_selected_manifest_identity() {
+    let runtime = LocalModelRuntime::from_resolution(
+      Some(ManifestResolution {
+        manifest: ModelPackManifest {
+          id: "qwen2.5-coder-0.5b-instruct".to_string(),
+          display_name: "Qwen2.5-Coder-0.5B Q4_K_M".to_string(),
+          file_name: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf".to_string(),
+          context_size: 4096,
+          max_output_tokens: 192,
+          backend: "llama.cpp".to_string(),
+          license: Some("apache-2.0".to_string()),
+          homepage: None,
+          download_url: None,
+          sha256: None,
+          size_bytes: None,
+        },
+        manifest_path: PathBuf::from("model-pack.json"),
+        source: "environment".to_string(),
+      }),
+      None,
+      None,
+    );
+    let health = runtime.health();
+
+    assert_eq!(health.pack_id, "qwen2.5-coder-0.5b-instruct");
+    assert_eq!(health.display_name, "Qwen2.5-Coder-0.5B Q4_K_M");
+    assert_eq!(health.metrics["maxOutputTokens"], "192");
   }
 
   #[test]

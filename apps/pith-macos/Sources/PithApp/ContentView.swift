@@ -223,9 +223,17 @@ struct ContentView: View {
             }
             DisclosureGroup("Model Manager", isExpanded: $modelManagerExpanded) {
               VStack(alignment: .leading, spacing: 10) {
-                Text(viewModel.modelManagerSummary())
-                  .font(.caption2)
-                  .foregroundColor(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                  Text(viewModel.modelManagerSummary())
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                  Spacer()
+                  Button("Use Default") {
+                    viewModel.resetActiveLocalModel()
+                  }
+                  .buttonStyle(.bordered)
+                  .disabled(!viewModel.canResetActiveLocalModel())
+                }
                 ForEach(viewModel.localModels) { model in
                   VStack(alignment: .leading, spacing: 5) {
                     Text(model.displayName)
@@ -241,6 +249,12 @@ struct ContentView: View {
                       .font(.caption2)
                       .foregroundColor(.secondary)
                     HStack(spacing: 8) {
+                      Button(model.active ? "Active" : "Use") {
+                        viewModel.activateRecommendedModel(modelID: model.id)
+                      }
+                      .buttonStyle(.borderedProminent)
+                      .disabled(!viewModel.canActivateRecommendedModel(modelID: model.id))
+
                       Button(model.downloaded ? "Downloaded" : "Download") {
                         viewModel.downloadRecommendedModel(modelID: model.id)
                       }

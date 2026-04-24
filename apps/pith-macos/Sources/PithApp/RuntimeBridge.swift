@@ -210,6 +210,8 @@ final class RuntimeBridge {
   private let stateQueue = DispatchQueue(label: "pith.runtime.bridge.state")
   private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
   private var readerTask: Task<Void, Never>?
+  private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
+  private static let activeModelPathKey = "pith.activeModelPath"
 
   func launchAndInitialize() async throws -> SessionInfo {
     if process == nil || process?.isRunning != true {
@@ -632,6 +634,20 @@ final class RuntimeBridge {
       .path
   }
 
+  func activeLocalModelPath() -> String? {
+    UserDefaults.standard.string(forKey: Self.activeModelPathKey)
+  }
+
+  func configureActiveLocalModel(manifestPath: String, modelPath: String) {
+    UserDefaults.standard.set(manifestPath, forKey: Self.activeModelManifestPathKey)
+    UserDefaults.standard.set(modelPath, forKey: Self.activeModelPathKey)
+  }
+
+  func clearActiveLocalModel() {
+    UserDefaults.standard.removeObject(forKey: Self.activeModelManifestPathKey)
+    UserDefaults.standard.removeObject(forKey: Self.activeModelPathKey)
+  }
+
   func runPluginCommand(threadID: String, commandID: String, input: String? = nil) async throws
     -> RuntimeTurnResult
   {
@@ -794,6 +810,16 @@ final class RuntimeBridge {
     )
   }
 
+  func stopRuntime(detail: String = "Runtime stopped.") {
+    failPendingResponses(with: RuntimeError.rpc(detail))
+    if let process, process.isRunning {
+      process.terminationHandler = nil
+      process.terminate()
+    }
+    resetProcessState()
+    updateConnectionState(.disconnected, detail: detail)
+  }
+
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
     let process = Process()
@@ -807,9 +833,10 @@ final class RuntimeBridge {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
+    let processIdentifier = ObjectIdentifier(process)
     process.terminationHandler = { [weak self] process in
       let detail = "Runtime exited with status \(process.terminationStatus)."
-      self?.handleProcessTermination(detail: detail)
+      self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
     }
 
     try process.run()
@@ -817,10 +844,10 @@ final class RuntimeBridge {
     self.process = process
     inputHandle = stdinPipe.fileHandleForWriting
     outputHandle = stdoutPipe.fileHandleForReading
-    startReaderLoop(with: stdoutPipe.fileHandleForReading)
+    startReaderLoop(with: stdoutPipe.fileHandleForReading, processIdentifier: processIdentifier)
   }
 
-  private func startReaderLoop(with handle: FileHandle) {
+  private func startReaderLoop(with handle: FileHandle, processIdentifier: ObjectIdentifier) {
     readerTask?.cancel()
     readerTask = Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else {
@@ -833,7 +860,10 @@ final class RuntimeBridge {
           line = try Self.readLine(from: handle)
         } catch {
           self.failPendingResponses(with: error)
-          self.handleProcessTermination(detail: "Runtime disconnected.")
+          self.handleProcessTermination(
+            processIdentifier: processIdentifier,
+            detail: "Runtime disconnected."
+          )
           return
         }
 
@@ -890,7 +920,11 @@ final class RuntimeBridge {
     }
   }
 
-  private func handleProcessTermination(detail: String) {
+  private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
+    guard let process, ObjectIdentifier(process) == processIdentifier else {
+      return
+    }
+
     resetProcessState()
     updateConnectionState(.failed, detail: detail)
   }
@@ -935,6 +969,14 @@ final class RuntimeBridge {
     var environment = ProcessInfo.processInfo.environment
     environment["PITH_DATA_DIR"] = appSupportStorageDirectory().path
     environment["PITH_LOCAL_PLUGIN_DIR"] = appSupportPluginDirectory().path
+    if let manifestPath = UserDefaults.standard.string(forKey: Self.activeModelManifestPathKey),
+       !manifestPath.isEmpty,
+       let modelPath = UserDefaults.standard.string(forKey: Self.activeModelPathKey),
+       !modelPath.isEmpty
+    {
+      environment["PITH_MODEL_PACK_MANIFEST"] = manifestPath
+      environment["PITH_LFM_MODEL_PATH"] = modelPath
+    }
     return environment
   }
 
