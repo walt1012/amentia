@@ -129,6 +129,20 @@ struct ContentView: View {
           tone: viewModel.setupProgressTone()
         )
 
+        if viewModel.shouldShowModelSetupCallout() {
+          ModelSetupCallout(
+            title: viewModel.modelSetupCalloutTitle(),
+            summary: viewModel.modelSetupCalloutSummary(),
+            detail: viewModel.modelSetupCalloutDetail(),
+            tone: viewModel.modelSetupCalloutTone(),
+            actionTitle: viewModel.modelSetupCalloutActionTitle(),
+            canRunAction: viewModel.canRunModelSetupCalloutAction(),
+            onAction: {
+              viewModel.runModelSetupCalloutAction()
+            }
+          )
+        }
+
         HStack(spacing: 8) {
           ForEach(viewModel.runtimeReadinessSteps()) { step in
             ReadinessChip(step: step)
@@ -721,6 +735,46 @@ private struct SetupProgressView: View {
         .progressViewStyle(.linear)
         .tint(tone.color)
     }
+  }
+}
+
+private struct ModelSetupCallout: View {
+  let title: String
+  let summary: String
+  let detail: String
+  let tone: StatusTone
+  let actionTitle: String?
+  let canRunAction: Bool
+  let onAction: () -> Void
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(title)
+          .font(.caption.weight(.semibold))
+          .foregroundColor(tone.color)
+        Text(summary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+        Text(detail)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+      }
+
+      Spacer()
+
+      if let actionTitle {
+        Button(actionTitle) {
+          onAction()
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(!canRunAction)
+      }
+    }
+    .padding(10)
+    .background(tone.color.opacity(0.10))
+    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
 

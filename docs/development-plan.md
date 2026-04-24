@@ -904,6 +904,7 @@ Deliverables:
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
 - composer gating that keeps input disabled until the local setup path is actually ready
 - first-use model-missing timeline guidance that tells users to download or select the local model
+- first-use model download callout with default model size, license, status, and one clear action
 
 Exit criteria:
 

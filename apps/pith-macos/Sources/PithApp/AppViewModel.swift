@@ -606,21 +606,95 @@ final class AppViewModel: ObservableObject {
     return setupReadyStepCount() == setupStepCount ? .ready : .warning
   }
 
+  func shouldShowModelSetupCallout() -> Bool {
+    runtimeState == .ready && !isLocalModelReady()
+  }
+
+  func modelSetupCalloutTitle() -> String {
+    if modelDownloadID != nil {
+      return "Downloading Local Model"
+    }
+    if pausedModelDownloadID != nil {
+      return "Continue Local Model Download"
+    }
+    if isDefaultModelDownloaded() {
+      return "Select Downloaded Local Model"
+    }
+    return "Download Local Model"
+  }
+
+  func modelSetupCalloutSummary() -> String {
+    if let modelDownloadID,
+       let model = localModels.first(where: { $0.id == modelDownloadID })
+    {
+      return "\(model.displayName) is downloading. Pith will unlock offline agent work after it is ready."
+    }
+    if let pausedModelDownloadID,
+       let model = localModels.first(where: { $0.id == pausedModelDownloadID })
+    {
+      return "\(model.displayName) is paused. Continue the download or cancel to clear the partial file."
+    }
+    if let model = defaultLocalModel(), model.downloaded {
+      return "\(model.displayName) is downloaded but not active. Select it to finish first-use setup."
+    }
+    if let model = defaultLocalModel() {
+      return "Fresh installs need \(model.displayName) before Pith can answer locally."
+    }
+
+    return "Fresh installs need a local model before Pith can answer without an external API."
+  }
+
+  func modelSetupCalloutDetail() -> String {
+    guard let model = defaultLocalModel() else {
+      return "Default model catalog unavailable. Relaunch the runtime to refresh local model metadata."
+    }
+
+    return "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context"
+  }
+
+  func modelSetupCalloutTone() -> StatusTone {
+    if modelDownloadID != nil {
+      return .active
+    }
+
+    return .warning
+  }
+
+  func modelSetupCalloutActionTitle() -> String? {
+    guard modelDownloadID == nil else {
+      return nil
+    }
+    if canDownloadLocalModel() {
+      return defaultModelDownloadButtonTitle()
+    }
+    if canBootstrapModelPackMetadata() {
+      return "Install Metadata"
+    }
+
+    return nil
+  }
+
+  func canRunModelSetupCalloutAction() -> Bool {
+    modelDownloadID == nil
+      && (canDownloadLocalModel() || canBootstrapModelPackMetadata())
+  }
+
+  func runModelSetupCalloutAction() {
+    if canDownloadLocalModel() {
+      downloadLocalModel()
+      return
+    }
+    if canBootstrapModelPackMetadata() {
+      bootstrapModelPackMetadata()
+    }
+  }
+
   func runtimePrimaryActionTitle() -> String? {
     switch runtimeState {
     case .disconnected, .failed, .launching:
       return runtimeLaunchButtonTitle()
     case .ready:
       if !isLocalModelReady() {
-        if modelDownloadID != nil {
-          return nil
-        }
-        if canDownloadLocalModel() {
-          return defaultModelDownloadButtonTitle()
-        }
-        if canBootstrapModelPackMetadata() {
-          return "Install Metadata"
-        }
         return nil
       }
       if workspace == nil {
@@ -644,8 +718,7 @@ final class AppViewModel: ObservableObject {
       return false
     case .ready:
       if !isLocalModelReady() {
-        return modelDownloadID == nil
-          && (canDownloadLocalModel() || canBootstrapModelPackMetadata())
+        return false
       }
       if workspace == nil {
         return canOpenWorkspace()
@@ -668,11 +741,6 @@ final class AppViewModel: ObservableObject {
       return
     case .ready:
       if !isLocalModelReady() {
-        if canDownloadLocalModel() {
-          downloadLocalModel()
-        } else if canBootstrapModelPackMetadata() {
-          bootstrapModelPackMetadata()
-        }
         return
       }
       if workspace == nil {
