@@ -924,6 +924,7 @@ Deliverables:
 - first-use model download callout with selected model size, license, progress, pause, continue, cancel, and one primary action
 - contextual Local Model panel actions so download, pause, continue, activation, repair, and cancel do not become an always-visible control cluster
 - compact first-message suggestions after setup is complete, without adding a separate onboarding panel
+- first-message suggestions stay first-turn only and adapt to the selected workspace instead of becoming persistent composer chrome
 - preserved timeline selection across refreshes so inspector review work stays stable during streaming updates
 - compact inspector session summary with workspace search moved behind progressive disclosure
 - plugin installation kept inside Plugin Manager so the primary toolbar stays focused on the local daily loop

@@ -861,29 +861,28 @@ final class AppViewModel: ObservableObject {
 
   func composerSuggestions() -> [ComposerSuggestionSummary] {
     guard canUseComposer(),
-          draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+          draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+          selectedThreadIsWaitingForFirstMessage()
     else {
       return []
     }
 
+    let workspaceName = workspace?.displayName ?? "this workspace"
     return [
       ComposerSuggestionSummary(
         id: "map-workspace",
         title: "Map Workspace",
-        message:
-          "Map this workspace. Explain the main modules, runtime flow, and the safest next development step."
+        message: "Map \(workspaceName). Explain the main modules, runtime flow, and one safe next development step."
       ),
       ComposerSuggestionSummary(
         id: "review-changes",
         title: "Review Changes",
-        message:
-          "Review the current workspace changes and call out the highest-risk issues first."
+        message: "Review the current changes in \(workspaceName). Call out the highest-risk issues first."
       ),
       ComposerSuggestionSummary(
-        id: "find-small-fixes",
-        title: "Find Small Fixes",
-        message:
-          "Scan this workspace for small, high-leverage improvements that fit the current product plan."
+        id: "plan-small-patch",
+        title: "Plan Small Patch",
+        message: "Find one small high-leverage patch for \(workspaceName) that keeps Pith lightweight and local-first."
       ),
     ]
   }
@@ -2872,6 +2871,17 @@ final class AppViewModel: ObservableObject {
     }
 
     return selectedThread.workspaceRootPath == workspace.rootPath
+  }
+
+  private func selectedThreadIsWaitingForFirstMessage() -> Bool {
+    guard let selectedThreadID,
+          !selectedThreadID.hasPrefix("local-")
+    else {
+      return false
+    }
+
+    let entries = threadTimelines[selectedThreadID] ?? timeline
+    return !entries.contains { $0.kind == .userMessage }
   }
 
   private func selectedSetupModel() -> LocalModelSummary? {
