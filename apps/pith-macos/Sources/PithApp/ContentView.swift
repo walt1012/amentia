@@ -108,6 +108,7 @@ struct ContentView: View {
 
         SetupProgressView(
           summary: viewModel.setupProgressSummary(),
+          detail: viewModel.setupProgressDetail(),
           value: viewModel.setupProgressValue(),
           tone: viewModel.setupProgressTone()
         )
@@ -439,6 +440,7 @@ private struct ComposerSuggestionStrip: View {
 
 private struct SetupProgressView: View {
   let summary: String
+  let detail: String
   let value: Double
   let tone: StatusTone
 
@@ -449,9 +451,10 @@ private struct SetupProgressView: View {
           .font(.caption2.weight(.semibold))
           .foregroundColor(tone.color)
         Spacer()
-        Text("Runtime -> Model -> Workspace -> Thread")
+        Text(detail)
           .font(.caption2)
           .foregroundColor(.secondary)
+          .lineLimit(1)
       }
       ProgressView(value: value)
         .progressViewStyle(.linear)

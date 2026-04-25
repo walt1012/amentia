@@ -920,6 +920,9 @@ Deliverables:
 - compact runtime, model, workspace, and thread readiness cockpit in the main timeline surface
 - readiness cockpit chips expose contextual launch, model, workspace, and thread actions without adding another control panel
 - composer status text points users back to readiness chips and keyboard shortcuts while setup is incomplete
+- setup progress now names the next local action instead of showing a static setup sequence
+- inspector setup meta now mirrors the same next action instead of repeating every pending subsystem
+- stale restored workspace paths are cleared with a short timeline prompt to reopen a project
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
 - composer gating that keeps input disabled until the local setup path is actually ready
 - first-use model-missing timeline guidance that tells users to download or select the local model

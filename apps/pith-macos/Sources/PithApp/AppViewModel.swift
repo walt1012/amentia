@@ -171,15 +171,18 @@ final class AppViewModel: ObservableObject {
         var currentWorkspace = try? await runtimeBridge.currentWorkspace()
         var restoredWorkspace = false
         var workspaceRestoreError: Error?
-        if currentWorkspace == nil,
-           let lastWorkspacePath = storedLastWorkspacePath(),
-           isRestorableWorkspacePath(lastWorkspacePath)
-        {
-          do {
-            currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
-            restoredWorkspace = true
-          } catch {
-            workspaceRestoreError = error
+        var skippedWorkspaceRestorePath: String?
+        if currentWorkspace == nil, let lastWorkspacePath = storedLastWorkspacePath() {
+          if isRestorableWorkspacePath(lastWorkspacePath) {
+            do {
+              currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
+              restoredWorkspace = true
+            } catch {
+              workspaceRestoreError = error
+            }
+          } else {
+            skippedWorkspaceRestorePath = lastWorkspacePath
+            clearLastWorkspacePath()
           }
         }
         let threadList = try await runtimeBridge.listThreads()
@@ -244,6 +247,20 @@ final class AppViewModel: ObservableObject {
               body: "Restored \(currentWorkspace.displayName) at \(currentWorkspace.rootPath).",
               attributes: [
                 "workspacePath": currentWorkspace.rootPath
+              ]
+            )
+          )
+        }
+        if let skippedWorkspaceRestorePath {
+          appendEntry(
+            to: selectedThreadID,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .warning,
+              title: "Workspace Restore Skipped",
+              body: "The last workspace no longer exists. Open a workspace to continue.",
+              attributes: [
+                "workspacePath": skippedWorkspaceRestorePath
               ]
             )
           )
@@ -558,6 +575,20 @@ final class AppViewModel: ObservableObject {
     return "Local setup \(readyCount)/\(setupStepCount)"
   }
 
+  func setupProgressDetail() -> String {
+    if let nextStep = setupProgressNextStep() {
+      return "Next: \(nextStep)"
+    }
+    if activeTurnID != nil {
+      return "Turn running"
+    }
+    if selectedThreadIsWaitingForFirstMessage() {
+      return "Next: First request"
+    }
+
+    return "Ready"
+  }
+
   func setupProgressValue() -> Double {
     Double(setupReadyStepCount()) / Double(setupStepCount)
   }
@@ -623,6 +654,13 @@ final class AppViewModel: ObservableObject {
   }
 
   func inspectorSessionMetaSummary() -> String {
+    if setupReadyStepCount() < setupStepCount
+      || activeTurnID != nil
+      || selectedThreadIsWaitingForFirstMessage()
+    {
+      return setupProgressDetail()
+    }
+
     let modelSummary = isLocalModelReady() ? "Model ready" : "Model pending"
     let workspaceSummary = workspace?.displayName ?? "No workspace"
     let threadSummary = hasRuntimeThreadSelection() ? selectedThreadTitle() : "No thread"
@@ -2936,6 +2974,46 @@ final class AppViewModel: ObservableObject {
     return readyCount
   }
 
+  private func setupProgressNextStep() -> String? {
+    switch runtimeState {
+    case .disconnected:
+      return "Launch Runtime"
+    case .launching:
+      return "Runtime Starting"
+    case .failed:
+      return "Relaunch Runtime"
+    case .ready:
+      if !isLocalModelReady() {
+        return modelSetupNextStep()
+      }
+      if workspace == nil {
+        return "Open Workspace"
+      }
+      if !hasRuntimeThreadSelection() {
+        return "Create Thread"
+      }
+
+      return nil
+    }
+  }
+
+  private func modelSetupNextStep() -> String {
+    switch localModelSetupGuidance().readinessDetail {
+    case "Downloading":
+      return "Monitor Model"
+    case "Paused":
+      return "Continue Download"
+    case "Streaming":
+      return "Finish Turn"
+    case "Select":
+      return "Use Model"
+    case "Metadata":
+      return "Install Metadata"
+    default:
+      return "Download Model"
+    }
+  }
+
   private func hasRuntimeThreadSelection() -> Bool {
     guard let selectedThreadID,
           !selectedThreadID.hasPrefix("local-"),
@@ -3400,6 +3478,10 @@ final class AppViewModel: ObservableObject {
     }
 
     UserDefaults.standard.set(path, forKey: Self.lastWorkspacePathKey)
+  }
+
+  private func clearLastWorkspacePath() {
+    UserDefaults.standard.removeObject(forKey: Self.lastWorkspacePathKey)
   }
 
   private func resetWorkspaceSearch() {
