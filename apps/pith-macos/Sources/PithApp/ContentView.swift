@@ -91,11 +91,13 @@ struct ContentView: View {
               .font(.caption2)
               .foregroundColor(.secondary)
               .multilineTextAlignment(.trailing)
-            Text(viewModel.runtimeDetail)
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .lineLimit(2)
-              .multilineTextAlignment(.trailing)
+            if viewModel.shouldShowRuntimeHeaderDetail() {
+              Text(viewModel.runtimeDetail)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+            }
             if let actionTitle = viewModel.runtimePrimaryActionTitle() {
               Button(actionTitle) {
                 viewModel.runRuntimePrimaryAction()

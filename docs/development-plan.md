@@ -923,6 +923,8 @@ Deliverables:
 - setup progress now names the next local action instead of showing a static setup sequence
 - inspector setup meta now mirrors the same next action instead of repeating every pending subsystem
 - stale restored workspace paths are cleared with a short timeline prompt to reopen a project
+- runtime header detail now hides in the normal ready state and stays visible for setup, recovery, and active work
+- setup callout continues paused model downloads directly, even when the persisted setup selection differs
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
 - composer gating that keeps input disabled until the local setup path is actually ready
 - first-use model-missing timeline guidance that tells users to download or select the local model

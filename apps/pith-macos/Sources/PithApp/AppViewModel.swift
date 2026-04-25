@@ -490,6 +490,27 @@ final class AppViewModel: ObservableObject {
       || activeTurnID != nil
   }
 
+  func shouldShowRuntimeHeaderDetail() -> Bool {
+    guard !runtimeDetail.isEmpty else {
+      return false
+    }
+
+    switch runtimeState {
+    case .disconnected:
+      return runtimeDetail != "Runtime not launched"
+    case .launching, .failed:
+      return true
+    case .ready:
+      return activeTurnID != nil
+        || modelDownloadID != nil
+        || pausedModelDownloadID != nil
+        || isWorkspaceSearching
+        || !isLocalModelReady()
+        || workspace == nil
+        || !hasRuntimeThreadSelection()
+    }
+  }
+
   func runtimeReadinessSteps() -> [ReadinessStepSummary] {
     [
       runtimeReadinessStep(),
@@ -841,6 +862,9 @@ final class AppViewModel: ObservableObject {
     if modelDownloadID != nil {
       return "Pause Download"
     }
+    if pausedModelDownloadID != nil {
+      return "Continue Download"
+    }
     if canDownloadLocalModel() {
       return defaultModelDownloadButtonTitle()
     }
@@ -855,6 +879,9 @@ final class AppViewModel: ObservableObject {
     if modelDownloadID != nil {
       return canPauseModelDownload()
     }
+    if let pausedModelDownloadID {
+      return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    }
 
     return canDownloadLocalModel() || canBootstrapModelPackMetadata()
   }
@@ -862,6 +889,12 @@ final class AppViewModel: ObservableObject {
   func runModelSetupCalloutAction() {
     if modelDownloadID != nil {
       pauseModelDownload()
+      return
+    }
+    if let pausedModelDownloadID,
+       canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    {
+      downloadRecommendedModel(modelID: pausedModelDownloadID, activateAfterDownload: !isLocalModelReady())
       return
     }
     if canDownloadLocalModel() {
