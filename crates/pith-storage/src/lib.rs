@@ -224,7 +224,10 @@ impl FileThreadStore {
     for thread in threads {
       let items_json =
         serde_json::to_string(&thread.items).context("failed to serialize timeline items")?;
-      let workspace = thread.workspace.clone().or(thread.summary.workspace.clone());
+      let workspace = thread
+        .workspace
+        .clone()
+        .or(thread.summary.workspace.clone());
 
       transaction.execute(
         "INSERT INTO threads (
@@ -243,8 +246,12 @@ impl FileThreadStore {
           &thread.summary.status,
           thread.turn_count as i64,
           items_json,
-          workspace.as_ref().map(|workspace| workspace.root_path.clone()),
-          workspace.as_ref().map(|workspace| workspace.display_name.clone()),
+          workspace
+            .as_ref()
+            .map(|workspace| workspace.root_path.clone()),
+          workspace
+            .as_ref()
+            .map(|workspace| workspace.display_name.clone()),
           current_timestamp()?,
         ],
       )?;
@@ -620,7 +627,10 @@ impl FileThreadStore {
     for thread in legacy_threads {
       let items_json =
         serde_json::to_string(&thread.items).context("failed to serialize migrated items")?;
-      let workspace = thread.workspace.clone().or(thread.summary.workspace.clone());
+      let workspace = thread
+        .workspace
+        .clone()
+        .or(thread.summary.workspace.clone());
       connection.execute(
         "INSERT INTO threads (
           id,
@@ -638,8 +648,12 @@ impl FileThreadStore {
           thread.summary.status,
           thread.turn_count as i64,
           items_json,
-          workspace.as_ref().map(|workspace| workspace.root_path.clone()),
-          workspace.as_ref().map(|workspace| workspace.display_name.clone()),
+          workspace
+            .as_ref()
+            .map(|workspace| workspace.root_path.clone()),
+          workspace
+            .as_ref()
+            .map(|workspace| workspace.display_name.clone()),
           current_timestamp()?,
         ],
       )?;
@@ -903,7 +917,10 @@ mod tests {
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].summary.id, "thread-legacy");
     assert_eq!(
-      threads[0].workspace.as_ref().map(|workspace| workspace.root_path.as_str()),
+      threads[0]
+        .workspace
+        .as_ref()
+        .map(|workspace| workspace.root_path.as_str()),
       Some("/tmp/pith-legacy")
     );
     assert_eq!(
