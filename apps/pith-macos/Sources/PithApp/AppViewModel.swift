@@ -1889,7 +1889,13 @@ final class AppViewModel: ObservableObject {
       : "unknown size"
     let isPaused = pausedModelDownloadID == modelDownloadProgress.modelID
     let status = isPaused ? "Paused" : (modelDownloadProgress.isResuming ? "Continuing" : "Downloading")
-    let trailingStatus = isPaused ? "Ready to continue" : modelDownloadSpeedSummary(modelDownloadProgress)
+    let trailingStatus: String
+    if isPaused {
+      trailingStatus = "Ready to continue"
+    } else {
+      let eta = modelDownloadETASummary(modelDownloadProgress).map { " | \($0)" } ?? ""
+      trailingStatus = "\(modelDownloadSpeedSummary(modelDownloadProgress))\(eta)"
+    }
     let percent = modelDownloadProgressValue()
       .map { " | \(Int($0 * 100))%" }
       ?? ""
@@ -3786,6 +3792,43 @@ final class AppViewModel: ObservableObject {
     let elapsed = max(progress.updatedAt.timeIntervalSince(progress.startedAt), 1)
     let bytesPerSecond = Int64(Double(progress.bytesReceived) / elapsed)
     return "\(formattedByteCount(bytesPerSecond))/s"
+  }
+
+  private func modelDownloadETASummary(_ progress: ModelDownloadProgress) -> String? {
+    guard progress.bytesReceived > 0,
+          progress.totalBytes > progress.bytesReceived
+    else {
+      return nil
+    }
+
+    let elapsed = max(progress.updatedAt.timeIntervalSince(progress.startedAt), 1)
+    let bytesPerSecond = Double(progress.bytesReceived) / elapsed
+    guard bytesPerSecond > 0 else {
+      return nil
+    }
+
+    let remainingSeconds = Double(progress.totalBytes - progress.bytesReceived) / bytesPerSecond
+    return "ETA \(formattedDuration(remainingSeconds))"
+  }
+
+  private func formattedDuration(_ seconds: TimeInterval) -> String {
+    let roundedSeconds = max(Int(seconds.rounded()), 0)
+    if roundedSeconds < 60 {
+      return "\(roundedSeconds)s"
+    }
+
+    let minutes = roundedSeconds / 60
+    if minutes < 60 {
+      return "\(minutes)m"
+    }
+
+    let hours = minutes / 60
+    let remainingMinutes = minutes % 60
+    if remainingMinutes == 0 {
+      return "\(hours)h"
+    }
+
+    return "\(hours)h \(remainingMinutes)m"
   }
 
   private static func localModelSummaries(
