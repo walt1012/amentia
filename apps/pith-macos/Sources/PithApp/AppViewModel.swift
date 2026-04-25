@@ -1524,9 +1524,11 @@ final class AppViewModel: ObservableObject {
       let truncatedCount = entry.attributes["contextTruncatedNoteCount"] ?? "0"
       let candidateCount = entry.attributes["contextCandidateNoteCount"] ?? noteCount
       let sourceCount = entry.attributes["contextSourceNoteCount"] ?? candidateCount
+      let windowTokens = entry.attributes["contextWindowTokens"] ?? "unknown"
       lines.append(
         "Context: \(contextMode) | \(noteCount)/\(candidateCount) relevant notes | "
           + "\(sourceCount) stored | \(estimatedChars)/\(budgetChars) chars | "
+          + "\(windowTokens) token window | "
           + "omitted \(omittedCount) | truncated \(truncatedCount)"
       )
     }

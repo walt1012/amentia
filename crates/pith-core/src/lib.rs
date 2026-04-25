@@ -42,6 +42,11 @@ use pith_tools::{
 
 mod context_compaction;
 
+const DEFAULT_MODEL_CONTEXT_TOKENS: usize = 4096;
+const CONTEXT_MEMORY_BUDGET_PERCENT: usize = 30;
+const MIN_CONTEXT_MEMORY_CHAR_BUDGET: usize = 900;
+const MAX_CONTEXT_MEMORY_CHAR_BUDGET: usize = 2400;
+
 #[derive(Debug, Clone)]
 struct StoredThread {
   summary: ThreadSummary,
@@ -1122,6 +1127,7 @@ fn handle_plugin_command_run(
       )
     });
   let context_pack = pack_memory_context(
+    &context.model_runtime,
     &context.memory_notes,
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
@@ -3207,6 +3213,7 @@ fn build_plan_item(
   plan_hint: String,
 ) -> TimelineItem {
   let context_pack = pack_memory_context(
+    model_runtime,
     memory_notes,
     workspace.map(|entry| entry.display_name.as_str()),
     message,
@@ -3275,6 +3282,7 @@ fn summarize_file_result(
   result: &ReadFileResult,
 ) -> (String, HashMap<String, String>) {
   let context_pack = pack_memory_context(
+    model_runtime,
     memory_notes,
     Some(workspace_name),
     &format!("{thread_title} {}", result.relative_path),
@@ -3336,6 +3344,7 @@ fn summarize_directory_result(
   entries: &[DirectoryEntry],
 ) -> (String, HashMap<String, String>) {
   let context_pack = pack_memory_context(
+    model_runtime,
     memory_notes,
     Some(workspace_name),
     &format!("{thread_title} workspace root"),
@@ -3386,7 +3395,7 @@ fn summarize_search_result(
   query: &str,
   matches: &[SearchMatch],
 ) -> (String, HashMap<String, String>) {
-  let context_pack = pack_memory_context(memory_notes, Some(workspace_name), query);
+  let context_pack = pack_memory_context(model_runtime, memory_notes, Some(workspace_name), query);
   if matches.is_empty() {
     return generate_local_summary(
       model_runtime,
@@ -3455,7 +3464,8 @@ fn summarize_shell_result(
   workspace_name: &str,
   result: &ShellCommandResult,
 ) -> (String, HashMap<String, String>) {
-  let context_pack = pack_memory_context(memory_notes, Some(workspace_name), &result.command);
+  let context_pack =
+    pack_memory_context(model_runtime, memory_notes, Some(workspace_name), &result.command);
   let observation_summary = if result.exit_code == 0 {
     format!(
       "Pith ran `{}` in {} and it finished successfully.",
@@ -3489,7 +3499,7 @@ fn summarize_denied_approval(
     .command
     .clone()
     .unwrap_or_else(|| format!("{} {}", approval.action, approval.relative_path));
-  let context_pack = pack_memory_context(memory_notes, Some(workspace_name), &query);
+  let context_pack = pack_memory_context(model_runtime, memory_notes, Some(workspace_name), &query);
   let observation_summary = if approval.action == "run_shell" {
     let command = approval.command.clone().unwrap_or_default();
     format!(
@@ -3536,16 +3546,24 @@ fn generate_local_summary(
 }
 
 fn pack_memory_context(
+  model_runtime: &LocalModelRuntime,
   memory_notes: &[MemoryNote],
   workspace_scope: Option<&str>,
   query: &str,
 ) -> ContextPack {
-  pack_relevant_memory_notes(memory_notes, workspace_scope, query)
+  let (budget_char_count, context_window_tokens) = context_budget_for_model(model_runtime);
+  pack_relevant_memory_notes(
+    memory_notes,
+    workspace_scope,
+    query,
+    budget_char_count,
+    context_window_tokens,
+  )
 }
 
 fn format_context_prompt(context_pack: &ContextPack) -> String {
   let header = format!(
-    "Context pack: {}. Using {} of {} relevant memory note(s) from {} stored note(s), {} omitted, {} truncated, {} of {} char budget used.",
+    "Context pack: {}. Using {} of {} relevant memory note(s) from {} stored note(s), {} omitted, {} truncated, {} of {} char budget used from a {} token local context window.",
     context_pack.mode(),
     context_pack.notes.len(),
     context_pack.candidate_note_count,
@@ -3553,9 +3571,25 @@ fn format_context_prompt(context_pack: &ContextPack) -> String {
     context_pack.omitted_note_count,
     context_pack.truncated_note_count,
     context_pack.estimated_char_count,
-    context_pack.budget_char_count
+    context_pack.budget_char_count,
+    context_pack.context_window_tokens
   );
   format!("{}\n{}", header, format_memory_prompt(&context_pack.notes))
+}
+
+fn context_budget_for_model(model_runtime: &LocalModelRuntime) -> (usize, usize) {
+  let health = model_runtime.health();
+  let context_window_tokens = health
+    .metrics
+    .get("contextSize")
+    .and_then(|value| value.parse::<usize>().ok())
+    .filter(|value| *value > 0)
+    .unwrap_or(DEFAULT_MODEL_CONTEXT_TOKENS);
+  let raw_budget = context_window_tokens.saturating_mul(CONTEXT_MEMORY_BUDGET_PERCENT) / 100;
+  let budget_char_count = raw_budget
+    .max(MIN_CONTEXT_MEMORY_CHAR_BUDGET)
+    .min(MAX_CONTEXT_MEMORY_CHAR_BUDGET);
+  (budget_char_count, context_window_tokens)
 }
 
 fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
@@ -3610,6 +3644,10 @@ fn merge_context_pack_attributes(
 ) {
   merge_memory_attributes(attributes, &context_pack.notes);
   attributes.insert("contextMode".to_string(), context_pack.mode().to_string());
+  attributes.insert(
+    "contextWindowTokens".to_string(),
+    context_pack.context_window_tokens.to_string(),
+  );
   attributes.insert(
     "contextSourceNoteCount".to_string(),
     context_pack.source_note_count.to_string(),
@@ -4578,6 +4616,8 @@ mod tests {
       .clone();
 
     assert_eq!(items[1]["attributes"]["memoryNoteCount"], "3");
+    assert_eq!(items[1]["attributes"]["contextWindowTokens"], "4096");
+    assert_eq!(items[1]["attributes"]["contextBudgetChars"], "1228");
     assert!(items[1]["attributes"]["memoryNoteTitles"]
       .as_str()
       .unwrap()
@@ -4587,6 +4627,7 @@ mod tests {
       .unwrap()
       .contains("Wrote docs/output.txt"));
     assert_eq!(items[4]["attributes"]["memoryNoteCount"], "3");
+    assert_eq!(items[4]["attributes"]["contextWindowTokens"], "4096");
   }
 
   #[test]

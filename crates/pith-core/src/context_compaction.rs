@@ -2,12 +2,12 @@ use pith_memory::{retrieve_relevant_notes, MemoryNote};
 
 pub const CONTEXT_MEMORY_NOTE_LIMIT: usize = 3;
 const CONTEXT_MEMORY_CANDIDATE_LIMIT: usize = 8;
-const LOCAL_CONTEXT_CHAR_BUDGET: usize = 1_200;
 const MIN_NOTE_BODY_CHARS: usize = 160;
 
 #[derive(Debug, Clone)]
 pub struct ContextPack {
   pub notes: Vec<MemoryNote>,
+  pub context_window_tokens: usize,
   pub source_note_count: usize,
   pub candidate_note_count: usize,
   pub omitted_note_count: usize,
@@ -32,7 +32,10 @@ pub fn pack_relevant_memory_notes(
   memory_notes: &[MemoryNote],
   workspace_scope: Option<&str>,
   query: &str,
+  budget_char_count: usize,
+  context_window_tokens: usize,
 ) -> ContextPack {
+  let budget_char_count = budget_char_count.max(MIN_NOTE_BODY_CHARS);
   let candidates = retrieve_relevant_notes(
     memory_notes,
     workspace_scope,
@@ -45,13 +48,13 @@ pub fn pack_relevant_memory_notes(
 
   for note in candidates.iter().take(CONTEXT_MEMORY_NOTE_LIMIT) {
     let full_note_size = estimated_note_char_count(note);
-    if estimated_char_count + full_note_size <= LOCAL_CONTEXT_CHAR_BUDGET {
+    if estimated_char_count + full_note_size <= budget_char_count {
       notes.push(note.clone());
       estimated_char_count += full_note_size;
       continue;
     }
 
-    let remaining_budget = LOCAL_CONTEXT_CHAR_BUDGET.saturating_sub(estimated_char_count);
+    let remaining_budget = budget_char_count.saturating_sub(estimated_char_count);
     let Some(compacted_note) = compact_note(note, remaining_budget) else {
       break;
     };
@@ -65,12 +68,13 @@ pub fn pack_relevant_memory_notes(
 
   ContextPack {
     notes,
+    context_window_tokens,
     source_note_count: memory_notes.len(),
     candidate_note_count: candidates.len(),
     omitted_note_count,
     truncated_note_count,
     estimated_char_count,
-    budget_char_count: LOCAL_CONTEXT_CHAR_BUDGET,
+    budget_char_count,
   }
 }
 
@@ -137,17 +141,18 @@ mod tests {
       })
       .collect::<Vec<_>>();
 
-    let pack = pack_relevant_memory_notes(&notes, Some("pith"), "review README");
+    let pack = pack_relevant_memory_notes(&notes, Some("pith"), "review README", 1_200, 4096);
 
     assert!(pack.notes.len() <= CONTEXT_MEMORY_NOTE_LIMIT);
     assert!(pack.estimated_char_count <= pack.budget_char_count);
     assert_eq!(pack.mode(), "compacted");
+    assert_eq!(pack.context_window_tokens, 4096);
     assert_eq!(pack.candidate_note_count, 6);
   }
 
   #[test]
   fn pack_reports_empty_context_without_memory_notes() {
-    let pack = pack_relevant_memory_notes(&[], Some("pith"), "review README");
+    let pack = pack_relevant_memory_notes(&[], Some("pith"), "review README", 1_200, 4096);
 
     assert!(pack.notes.is_empty());
     assert_eq!(pack.mode(), "empty");

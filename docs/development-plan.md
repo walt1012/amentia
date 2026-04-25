@@ -913,6 +913,7 @@ Deliverables:
 - compact runtime detail text with plugin inventory kept inside timeline and Plugin Manager surfaces
 - local context packing for planner, summary, and plugin-command prompts with memory note compaction metadata
 - local context pack headers inside model prompts so the local model can see relevant-note counts, omissions, truncation, and hard budget usage
+- model-aware context budgets so small local models stay conservative while larger local context windows can carry more relevant memory
 - contextual single-action recovery from the timeline header for blocked runtime, model, workspace, thread, and turn states
 - compact runtime, model, workspace, and thread readiness cockpit in the main timeline surface
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
