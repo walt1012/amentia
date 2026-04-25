@@ -918,6 +918,8 @@ Deliverables:
 - model-aware tool observation previews so file, search, directory, and shell summaries stay compact without hiding full timeline results
 - contextual single-action recovery from the timeline header for blocked runtime, model, workspace, thread, and turn states
 - compact runtime, model, workspace, and thread readiness cockpit in the main timeline surface
+- readiness cockpit chips expose contextual launch, model, workspace, and thread actions without adding another control panel
+- composer status text points users back to readiness chips and keyboard shortcuts while setup is incomplete
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
 - composer gating that keeps input disabled until the local setup path is actually ready
 - first-use model-missing timeline guidance that tells users to download or select the local model

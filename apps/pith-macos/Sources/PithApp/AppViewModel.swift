@@ -482,6 +482,73 @@ final class AppViewModel: ObservableObject {
     ]
   }
 
+  func readinessStepActionTitle(_ step: ReadinessStepSummary) -> String? {
+    switch step.id {
+    case "runtime":
+      if runtimeState == .disconnected || runtimeState == .failed {
+        return runtimeLaunchButtonTitle()
+      }
+    case "model":
+      if runtimeState == .ready && !isLocalModelReady() {
+        return modelSetupCalloutActionTitle()
+      }
+    case "workspace":
+      if runtimeState == .ready && workspace == nil {
+        return "Open"
+      }
+    case "thread":
+      if runtimeState == .ready
+        && isLocalModelReady()
+        && workspace != nil
+        && !hasRuntimeThreadSelection()
+      {
+        return "New"
+      }
+    default:
+      return nil
+    }
+
+    return nil
+  }
+
+  func canRunReadinessStepAction(_ step: ReadinessStepSummary) -> Bool {
+    switch step.id {
+    case "runtime":
+      return (runtimeState == .disconnected || runtimeState == .failed) && canLaunchRuntime()
+    case "model":
+      return runtimeState == .ready && !isLocalModelReady() && canRunModelSetupCalloutAction()
+    case "workspace":
+      return runtimeState == .ready && workspace == nil && canOpenWorkspace()
+    case "thread":
+      return runtimeState == .ready
+        && isLocalModelReady()
+        && workspace != nil
+        && !hasRuntimeThreadSelection()
+        && canCreateThread()
+    default:
+      return false
+    }
+  }
+
+  func runReadinessStepAction(_ step: ReadinessStepSummary) {
+    guard canRunReadinessStepAction(step) else {
+      return
+    }
+
+    switch step.id {
+    case "runtime":
+      launchRuntime()
+    case "model":
+      runModelSetupCalloutAction()
+    case "workspace":
+      openWorkspace()
+    case "thread":
+      createThread()
+    default:
+      return
+    }
+  }
+
   func setupProgressSummary() -> String {
     let readyCount = setupReadyStepCount()
     if readyCount == setupStepCount {
@@ -2421,26 +2488,30 @@ final class AppViewModel: ObservableObject {
   func composerStatusSummary() -> String {
     switch runtimeState {
     case .disconnected:
-      return "Launch the local runtime before starting agent work."
+      return "Use the Runtime chip or Command-R to launch the local agent loop."
     case .launching:
       return "Launching the local runtime..."
     case .failed:
-      return "Runtime is unavailable. Relaunch it to recover the local agent loop."
+      return "Use the Runtime chip or Command-R to recover the local agent loop."
     case .ready:
       if !isLocalModelReady() {
-        return localModelSetupGuidance().summary
+        return "\(localModelSetupGuidance().summary) Use the Model chip or setup callout to continue."
       }
 
       if workspace == nil {
-        return "Open a workspace to bind threads and tools to a local project."
+        return "Use the Workspace chip or Command-O to bind tools to a local project."
       }
 
       if !hasRuntimeThreadSelection() {
-        return "Create or select a thread to start local agent work."
+        return "Use the Thread chip or Command-N to start local agent work."
       }
 
       if activeTurnID != nil {
         return "Pith is streaming locally. Cancel the turn if it is no longer useful."
+      }
+
+      if selectedThreadIsWaitingForFirstMessage() {
+        return "Pick a first-message suggestion or type a local request. Press Command-Return to send."
       }
 
       return "Ready for local agent work. Press Command-Return to send."
