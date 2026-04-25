@@ -3590,9 +3590,10 @@ fn context_budget_for_model(model_runtime: &LocalModelRuntime) -> (usize, usize)
     .filter(|value| *value > 0)
     .unwrap_or(DEFAULT_MODEL_CONTEXT_TOKENS);
   let raw_budget = context_window_tokens.saturating_mul(CONTEXT_MEMORY_BUDGET_PERCENT) / 100;
-  let budget_char_count = raw_budget
-    .max(MIN_CONTEXT_MEMORY_CHAR_BUDGET)
-    .min(MAX_CONTEXT_MEMORY_CHAR_BUDGET);
+  let budget_char_count = raw_budget.clamp(
+    MIN_CONTEXT_MEMORY_CHAR_BUDGET,
+    MAX_CONTEXT_MEMORY_CHAR_BUDGET,
+  );
   (budget_char_count, context_window_tokens)
 }
 
