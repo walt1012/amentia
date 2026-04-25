@@ -1859,7 +1859,7 @@ fn execute_turn_request(
         kind: "assistantMessage".to_string(),
         title: "Assistant".to_string(),
         content: format!(
-          "Pith received your message in {}, but Milestone 1 tools need an opened workspace first.",
+          "Pith received your message in {}, but project tools need an opened workspace first.",
           thread_title
         ),
         attributes: None,

@@ -67,7 +67,7 @@ final class AppViewModel: ObservableObject {
         kind: .assistantMessage,
         title: "Local-First Agent Loop",
         body:
-          "Pith runs the core agent loop against local workspaces and does not use an external model API fallback.",
+          "Pith runs the core agent loop against local workspaces and does not call external model APIs for core responses.",
         attributes: [
           "model": "local"
         ]
@@ -604,7 +604,7 @@ final class AppViewModel: ObservableObject {
       return "Turn running"
     }
     if selectedThreadIsWaitingForFirstMessage() {
-      if !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      if !trimmedDraftMessage.isEmpty {
         return "Draft ready"
       }
       return "Next: First request"
@@ -816,7 +816,7 @@ final class AppViewModel: ObservableObject {
 
   func shouldShowFirstRequestCallout() -> Bool {
     canUseComposer()
-      && draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && trimmedDraftMessage.isEmpty
       && selectedThreadIsWaitingForFirstMessage()
   }
 
@@ -825,39 +825,39 @@ final class AppViewModel: ObservableObject {
   }
 
   func firstRequestCalloutSummary() -> String {
-    "Setup is complete. Choose a starter prompt, review it in the composer, then send locally."
+    FirstRequestPromptPresenter.calloutSummary()
   }
 
   func firstRequestCalloutDetail() -> String {
-    guard let workspace else {
-      return "Choose a workspace before starting the first local request."
-    }
-
-    return "Pith will use \(workspace.displayName) as the working context and keep the first request scoped."
+    FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: workspace?.displayName)
   }
 
   func firstRequestCalloutActionTitle() -> String? {
-    firstRequestSuggestion(id: "map-workspace") == nil ? nil : "Use Map Prompt"
+    FirstRequestPromptPresenter.primaryActionTitle(
+      for: firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
+    )
   }
 
   func canRunFirstRequestCalloutAction() -> Bool {
-    firstRequestSuggestion(id: "map-workspace") != nil
+    firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil
   }
 
   func runFirstRequestCalloutAction() {
-    useFirstRequestSuggestion(id: "map-workspace")
+    useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
   }
 
   func firstRequestCalloutSecondaryActionTitle() -> String? {
-    firstRequestSuggestion(id: "review-changes") == nil ? nil : "Use Review Prompt"
+    FirstRequestPromptPresenter.secondaryActionTitle(
+      for: firstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
+    )
   }
 
   func canRunFirstRequestCalloutSecondaryAction() -> Bool {
-    firstRequestSuggestion(id: "review-changes") != nil
+    firstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID) != nil
   }
 
   func runFirstRequestCalloutSecondaryAction() {
-    useFirstRequestSuggestion(id: "review-changes")
+    useFirstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
   }
 
   func shouldShowSetupModelChoice() -> Bool {
@@ -1035,7 +1035,7 @@ final class AppViewModel: ObservableObject {
       && isLocalModelReady()
       && hasRuntimeThreadSelection()
       && !isTurnStreaming()
-      && !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !trimmedDraftMessage.isEmpty
   }
 
   func canCancelActiveTurn() -> Bool {
@@ -1052,7 +1052,7 @@ final class AppViewModel: ObservableObject {
 
   func composerSuggestions() -> [ComposerSuggestionSummary] {
     guard canUseComposer(),
-          draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+          trimmedDraftMessage.isEmpty,
           selectedThreadIsWaitingForFirstMessage()
     else {
       return []
@@ -1070,35 +1070,18 @@ final class AppViewModel: ObservableObject {
   }
 
   private func firstRequestSuggestions() -> [ComposerSuggestionSummary] {
-    let workspaceName = workspace?.displayName ?? "this workspace"
-    return [
-      ComposerSuggestionSummary(
-        id: "map-workspace",
-        title: "Map Workspace",
-        message: "Map \(workspaceName). Explain the main modules, runtime flow, and one safe next development step."
-      ),
-      ComposerSuggestionSummary(
-        id: "review-changes",
-        title: "Review Changes",
-        message: "Review the current changes in \(workspaceName). Call out the highest-risk issues first."
-      ),
-      ComposerSuggestionSummary(
-        id: "plan-small-patch",
-        title: "Plan Small Patch",
-        message: "Find one small high-leverage patch for \(workspaceName) that keeps Pith lightweight and local-first."
-      ),
-    ]
+    FirstRequestPromptPresenter.suggestions(workspaceDisplayName: workspace?.displayName)
   }
 
   private func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {
     guard canUseComposer(),
-          draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+          trimmedDraftMessage.isEmpty,
           selectedThreadIsWaitingForFirstMessage()
     else {
       return nil
     }
 
-    return firstRequestSuggestions().first(where: { $0.id == id })
+    return FirstRequestPromptPresenter.suggestion(id: id, workspaceDisplayName: workspace?.displayName)
   }
 
   private func useFirstRequestSuggestion(id: String) {
@@ -1354,7 +1337,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func sendDraftMessage() {
-    let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+    let message = trimmedDraftMessage
 
     guard runtimeState == .ready,
           workspace != nil,
@@ -2654,7 +2637,7 @@ final class AppViewModel: ObservableObject {
       }
 
       if selectedThreadIsWaitingForFirstMessage() {
-        if !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if !trimmedDraftMessage.isEmpty {
           return "Review the starter prompt, then press Command-Return to send the first local request."
         }
         return "Pick a first-message suggestion or type a local request. Press Command-Return to send."
@@ -2797,7 +2780,7 @@ final class AppViewModel: ObservableObject {
         kind: .assistantMessage,
         title: "Local-First Agent Loop",
         body:
-          "Pith runs the core agent loop against local workspaces and does not use an external model API fallback.",
+          "Pith runs the core agent loop against local workspaces and does not call external model APIs for core responses.",
         attributes: [
           "model": "local"
         ]
@@ -3132,6 +3115,10 @@ final class AppViewModel: ObservableObject {
     }
 
     return selectedThread.workspaceRootPath == workspace.rootPath
+  }
+
+  private var trimmedDraftMessage: String {
+    draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   private func selectedThreadIsWaitingForFirstMessage() -> Bool {
