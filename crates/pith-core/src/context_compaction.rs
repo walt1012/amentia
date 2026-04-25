@@ -78,7 +78,11 @@ fn compact_note(note: &MemoryNote, budget: usize) -> MemoryNote {
   let fixed_size = note.title.chars().count()
     + note.scope.chars().count()
     + note.source.chars().count()
-    + note.tags.iter().map(|tag| tag.chars().count()).sum::<usize>()
+    + note
+      .tags
+      .iter()
+      .map(|tag| tag.chars().count())
+      .sum::<usize>()
     + 24;
   let body_budget = budget.saturating_sub(fixed_size).max(MIN_NOTE_BODY_CHARS);
   let mut compacted = note.clone();
@@ -91,7 +95,11 @@ fn estimated_note_char_count(note: &MemoryNote) -> usize {
     + note.body.chars().count()
     + note.scope.chars().count()
     + note.source.chars().count()
-    + note.tags.iter().map(|tag| tag.chars().count()).sum::<usize>()
+    + note
+      .tags
+      .iter()
+      .map(|tag| tag.chars().count())
+      .sum::<usize>()
     + 24
 }
 

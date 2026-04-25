@@ -1126,12 +1126,8 @@ fn handle_plugin_command_run(
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
   );
-  let command_item = build_plugin_command_timeline_item(
-    &command,
-    workspace.as_ref(),
-    command_input,
-    &context_pack,
-  );
+  let command_item =
+    build_plugin_command_timeline_item(&command, workspace.as_ref(), command_input, &context_pack);
   if let Some(result) = execute_builtin_plugin_command(
     context,
     &params.thread_id,
@@ -3300,12 +3296,7 @@ fn summarize_file_result(
     result.content
   );
 
-  generate_local_summary(
-    model_runtime,
-    prompt,
-    observation_summary,
-    &context_pack,
-  )
+  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
 }
 
 fn format_directory_result(entries: &[DirectoryEntry]) -> String {
@@ -3384,12 +3375,7 @@ fn summarize_directory_result(
     format_directory_result(entries)
   );
 
-  generate_local_summary(
-    model_runtime,
-    prompt,
-    observation_summary,
-    &context_pack,
-  )
+  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
 }
 
 fn summarize_search_result(
@@ -3437,12 +3423,7 @@ fn summarize_search_result(
     format_search_result(query, matches)
   );
 
-  generate_local_summary(
-    model_runtime,
-    prompt,
-    observation_summary,
-    &context_pack,
-  )
+  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
 }
 
 fn format_shell_result(result: &ShellCommandResult) -> String {
@@ -3495,12 +3476,7 @@ fn summarize_shell_result(
     result.stderr
   );
 
-  generate_local_summary(
-    model_runtime,
-    prompt,
-    observation_summary,
-    &context_pack,
-  )
+  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
 }
 
 fn summarize_denied_approval(
@@ -3534,12 +3510,7 @@ fn summarize_denied_approval(
     approval.command.clone().unwrap_or_default()
   );
 
-  generate_local_summary(
-    model_runtime,
-    prompt,
-    observation_summary,
-    &context_pack,
-  )
+  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
 }
 
 fn generate_local_summary(
