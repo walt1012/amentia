@@ -62,8 +62,9 @@ when needed so a fresh install reaches a real local model path with fewer manual
 restores the last workspace and key inspector disclosure state across launches, and surfaces a
 clear relaunch path when the local runtime exits unexpectedly. A lightweight workspace search now
 lets users find matching lines from the inspector without opening a separate file browser. Native
-menu shortcuts cover runtime launch, workspace opening, thread creation, plugin install, message
-send, and turn cancellation without adding more visible controls. The composer now explains
+menu shortcuts cover runtime launch, workspace opening, thread creation, message send, and turn
+cancellation without adding more visible controls. Plugin installation stays inside Plugin Manager
+so the main toolbar remains focused on the local daily loop. The composer now explains
 blocking states inline so users can recover the local runtime, model, workspace, or thread setup
 without guessing why send is disabled. The timeline header now carries the same compact status
 language for runtime recovery, first-use model download, workspace binding, and active streaming, plus a
@@ -75,7 +76,8 @@ while workspace and thread blockers explain their next action without opening in
 The welcome timeline starts with the actual fresh-install path instead of internal milestone
 language, and the ready composer offers three compact first-message suggestions so a new user can
 begin useful local work without opening another onboarding surface. Workspace search includes
-empty-state guidance instead of becoming another admin panel. The Local
+empty-state guidance and now lives behind progressive disclosure, while a compact inspector session
+card summarizes the current model, workspace, and thread state. The Local
 Model panel also gives a compact next action for runtime launch, model download, pause/resume,
 activation, and readiness repair while deeper model diagnostics stay tucked away; if the default
 model is already downloaded, the primary action can select it directly. Model download start,

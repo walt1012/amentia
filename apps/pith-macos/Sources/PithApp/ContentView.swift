@@ -14,6 +14,7 @@ struct ContentView: View {
 
   @ObservedObject var viewModel: AppViewModel
   @State private var pluginInspectorSection: PluginInspectorSection = .catalog
+  @AppStorage("pith.inspector.workspaceExpanded") private var workspaceExpanded = false
   @AppStorage("pith.inspector.localModelExpanded") private var localModelExpanded = false
   @AppStorage("pith.inspector.modelManagerExpanded") private var modelManagerExpanded = false
   @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
@@ -43,13 +44,6 @@ struct ContentView: View {
           viewModel.createThread()
         }
         .disabled(!viewModel.canCreateThread())
-      }
-
-      ToolbarItem {
-        Button("Install Plugin") {
-          viewModel.installPlugin()
-        }
-        .disabled(!viewModel.canInstallPlugin())
       }
 
       ToolbarItem(placement: .primaryAction) {
@@ -243,7 +237,14 @@ struct ContentView: View {
         Text("Inspector")
           .font(.title3.weight(.semibold))
 
-        GroupBox("Workspace") {
+        InspectorSessionCard(
+          title: viewModel.inspectorSessionTitle(),
+          detail: viewModel.inspectorSessionDetail(),
+          meta: viewModel.inspectorSessionMetaSummary(),
+          tone: viewModel.runtimeStatusTone()
+        )
+
+        DisclosureGroup("Workspace Search", isExpanded: $workspaceExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.workspaceDisplayName())
               .font(.headline)
@@ -501,11 +502,21 @@ struct ContentView: View {
           VStack(alignment: .leading, spacing: 10) {
             Text(viewModel.pluginCountSummary())
               .font(.headline)
-            Text(
-              "\(viewModel.pluginRegistryCountSummary()) | \(viewModel.pluginConnectorCountSummary()) | \(viewModel.pluginCommandCountSummary()) | \(viewModel.pluginHookCountSummary())"
-            )
-            .font(.caption)
-            .foregroundColor(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+              Text(
+                "\(viewModel.pluginRegistryCountSummary()) | \(viewModel.pluginConnectorCountSummary()) | \(viewModel.pluginCommandCountSummary()) | \(viewModel.pluginHookCountSummary())"
+              )
+              .font(.caption)
+              .foregroundColor(.secondary)
+
+              Spacer()
+
+              Button("Install Local Plugin") {
+                viewModel.installPlugin()
+              }
+              .buttonStyle(.bordered)
+              .disabled(!viewModel.canInstallPlugin())
+            }
             Picker("Surface", selection: $pluginInspectorSection) {
               ForEach(PluginInspectorSection.allCases) { section in
                 Text(section.rawValue)
@@ -704,6 +715,40 @@ private struct StatusPill: View {
       .padding(.vertical, 4)
       .background(tone.color.opacity(0.12))
       .clipShape(Capsule())
+  }
+}
+
+private struct InspectorSessionCard: View {
+  let title: String
+  let detail: String
+  let meta: String
+  let tone: StatusTone
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(spacing: 8) {
+        Circle()
+          .fill(tone.color)
+          .frame(width: 8, height: 8)
+        Text(title)
+          .font(.headline)
+        Spacer()
+      }
+
+      Text(detail)
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Text(meta)
+        .font(.caption2.weight(.medium))
+        .foregroundColor(tone.color)
+        .lineLimit(2)
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(tone.color.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
 

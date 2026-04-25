@@ -908,6 +908,8 @@ Deliverables:
 - first-use model download callout with default model size, license, progress, pause, continue, cancel, and one primary action
 - compact first-message suggestions after setup is complete, without adding a separate onboarding panel
 - preserved timeline selection across refreshes so inspector review work stays stable during streaming updates
+- compact inspector session summary with workspace search moved behind progressive disclosure
+- plugin installation kept inside Plugin Manager so the primary toolbar stays focused on the local daily loop
 
 Exit criteria:
 

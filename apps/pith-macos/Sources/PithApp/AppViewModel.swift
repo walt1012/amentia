@@ -606,6 +606,63 @@ final class AppViewModel: ObservableObject {
     return setupReadyStepCount() == setupStepCount ? .ready : .warning
   }
 
+  func inspectorSessionTitle() -> String {
+    switch runtimeState {
+    case .disconnected:
+      return "Local Runtime Offline"
+    case .launching:
+      return "Starting Local Runtime"
+    case .failed:
+      return "Runtime Needs Relaunch"
+    case .ready:
+      if activeTurnID != nil {
+        return "Local Turn Running"
+      }
+      if !isLocalModelReady() {
+        return "Model Setup Needed"
+      }
+      if workspace == nil {
+        return "Workspace Needed"
+      }
+      if !hasRuntimeThreadSelection() {
+        return "Thread Needed"
+      }
+      return "Local Session Ready"
+    }
+  }
+
+  func inspectorSessionDetail() -> String {
+    switch runtimeState {
+    case .disconnected:
+      return "Launch Pith's runtime before inspecting project tools, model state, memory, or plugins."
+    case .launching:
+      return "Pith is reconnecting local model, workspace, thread, memory, and plugin state."
+    case .failed:
+      return "Use the relaunch action in the timeline header to recover the local agent loop."
+    case .ready:
+      if activeTurnID != nil {
+        return "Pith is streaming locally. Keep review focused on the timeline unless the turn should be cancelled."
+      }
+      if !isLocalModelReady() {
+        return "Complete the model step from the timeline callout before starting agent work."
+      }
+      if workspace == nil {
+        return "Open one workspace so file, shell, search, diff, and memory actions stay scoped."
+      }
+      if !hasRuntimeThreadSelection() {
+        return "Create or select a thread to keep messages, approvals, memory, and cancellation together."
+      }
+      return "Use the composer for the next request. Open inspector sections only when detail is needed."
+    }
+  }
+
+  func inspectorSessionMetaSummary() -> String {
+    let modelSummary = isLocalModelReady() ? "Model ready" : "Model pending"
+    let workspaceSummary = workspace?.displayName ?? "No workspace"
+    let threadSummary = hasRuntimeThreadSelection() ? selectedThreadTitle() : "No thread"
+    return "\(modelSummary) | \(workspaceSummary) | \(threadSummary)"
+  }
+
   func shouldShowModelSetupCallout() -> Bool {
     runtimeState == .ready && !isLocalModelReady()
   }
