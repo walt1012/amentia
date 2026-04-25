@@ -37,11 +37,6 @@ enum FirstRequestPromptPresenter {
         title: "Review Changes",
         message: "Review current changes in \(workspaceName). Return only: 1. highest-risk issue, 2. missing test, 3. safe fix."
       ),
-      ComposerSuggestionSummary(
-        id: "plan-small-patch",
-        title: "Plan Small Patch",
-        message: "Find one small patch for \(workspaceName). Keep it local-first. Return: target file, reason, first edit."
-      ),
     ]
   }
 

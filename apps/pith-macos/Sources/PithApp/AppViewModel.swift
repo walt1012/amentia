@@ -861,29 +861,6 @@ final class AppViewModel: ObservableObject {
       && activeTurnID == nil
   }
 
-  func composerSuggestions() -> [ComposerSuggestionSummary] {
-    guard canUseComposer(),
-          trimmedDraftMessage.isEmpty,
-          selectedThreadIsWaitingForFirstMessage()
-    else {
-      return []
-    }
-
-    return firstRequestSuggestions()
-  }
-
-  func useComposerSuggestion(_ suggestion: ComposerSuggestionSummary) {
-    guard canUseComposer() else {
-      return
-    }
-
-    draftMessage = suggestion.message
-  }
-
-  private func firstRequestSuggestions() -> [ComposerSuggestionSummary] {
-    FirstRequestPromptPresenter.suggestions(workspaceDisplayName: workspace?.displayName)
-  }
-
   private func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {
     guard canUseComposer(),
           trimmedDraftMessage.isEmpty,
@@ -900,7 +877,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    useComposerSuggestion(suggestion)
+    draftMessage = suggestion.message
   }
 
   func canSearchWorkspace() -> Bool {
