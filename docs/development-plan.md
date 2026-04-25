@@ -887,6 +887,7 @@ Deliverables:
 
 - release-bundled or guided local model pack delivery
 - first-use model chooser with `LFM2.5-350M` as the default selection and small local alternatives available
+- persisted first-use model choice so user-selected alternatives survive app relaunch
 - one-click selected model download, activation, and runtime restart flow
 - single active local model guard so model switches and resets wait for current turn completion
 - guarded model download request planning for active, paused, duplicate, and invalid download states

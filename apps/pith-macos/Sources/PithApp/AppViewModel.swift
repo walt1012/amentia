@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
+  private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
   private let setupStepCount = 4
 
   @Published var threads: [ThreadSummary]
@@ -21,7 +22,11 @@ final class AppViewModel: ObservableObject {
   @Published var isWorkspaceSearching: Bool
   @Published var modelHealth: ModelHealthSummary?
   @Published var localModels: [LocalModelSummary]
-  @Published var selectedSetupModelID: String
+  @Published var selectedSetupModelID: String {
+    didSet {
+      Self.storeSelectedSetupModelID(selectedSetupModelID)
+    }
+  }
   @Published var modelDownloadID: String?
   @Published var pausedModelDownloadID: String?
   @Published private var modelDownloadProgress: ModelDownloadProgress?
@@ -84,6 +89,10 @@ final class AppViewModel: ObservableObject {
       activeModelPath: runtimeBridge.activeLocalModelPath()
     )
     let pausedDownload = LocalModelCatalog.loadPausedDownload(matching: initialLocalModels)
+    let initialSelectedSetupModelID =
+      pausedDownload?.modelID
+      ?? Self.storedSelectedSetupModelID(matching: initialLocalModels)
+      ?? LocalModelCatalog.defaultFirstUseModelID
 
     self.runtimeBridge = runtimeBridge
     self.runtimeState = runtimeBridge.connectionState
@@ -100,7 +109,7 @@ final class AppViewModel: ObservableObject {
     self.isWorkspaceSearching = false
     self.modelHealth = nil
     self.localModels = initialLocalModels
-    self.selectedSetupModelID = pausedDownload?.modelID ?? LocalModelCatalog.defaultFirstUseModelID
+    self.selectedSetupModelID = initialSelectedSetupModelID
     self.modelDownloadID = nil
     self.pausedModelDownloadID = pausedDownload?.modelID
     self.modelDownloadProgress = LocalModelCatalog.restoredProgress(
@@ -2786,6 +2795,20 @@ final class AppViewModel: ObservableObject {
     if !localModels.contains(where: { $0.id == selectedSetupModelID }) {
       selectedSetupModelID = LocalModelCatalog.defaultFirstUseModelID
     }
+  }
+
+  private static func storedSelectedSetupModelID(matching models: [LocalModelSummary]) -> String? {
+    guard let modelID = UserDefaults.standard.string(forKey: selectedSetupModelIDKey),
+          models.contains(where: { $0.id == modelID })
+    else {
+      return nil
+    }
+
+    return modelID
+  }
+
+  private static func storeSelectedSetupModelID(_ modelID: String) {
+    UserDefaults.standard.set(modelID, forKey: selectedSetupModelIDKey)
   }
 
   private func setupReadyStepCount() -> Int {
