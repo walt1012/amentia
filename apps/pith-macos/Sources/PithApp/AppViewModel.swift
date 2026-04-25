@@ -564,67 +564,23 @@ final class AppViewModel: ObservableObject {
   }
 
   func setupCalloutTitle() -> String {
-    if !isLocalModelReady() {
-      return modelSetupCalloutTitle()
-    }
-    if workspace == nil {
-      return "Open Workspace"
-    }
-    if !hasRuntimeThreadSelection() {
-      return "Create Thread"
-    }
-
-    return "Local Setup Complete"
+    SetupCalloutPresenter.title(setupCalloutSnapshot())
   }
 
   func setupCalloutSummary() -> String {
-    if !isLocalModelReady() {
-      return modelSetupCalloutSummary()
-    }
-    if workspace == nil {
-      return "Choose the project Pith should inspect, search, and edit locally."
-    }
-    if !hasRuntimeThreadSelection() {
-      return "Create or select a runtime thread before sending the first local request."
-    }
-
-    return "Pith is ready for local agent work."
+    SetupCalloutPresenter.summary(setupCalloutSnapshot())
   }
 
   func setupCalloutDetail() -> String {
-    if !isLocalModelReady() {
-      return modelSetupCalloutDetail()
-    }
-    if workspace == nil {
-      return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
-    }
-    if !hasRuntimeThreadSelection() {
-      return "Threads keep the timeline, approvals, cancellation, and memory context together."
-    }
-
-    return "Ready"
+    SetupCalloutPresenter.detail(setupCalloutSnapshot())
   }
 
   func setupCalloutTone() -> StatusTone {
-    if !isLocalModelReady() {
-      return modelSetupCalloutTone()
-    }
-
-    return .warning
+    SetupCalloutPresenter.tone(setupCalloutSnapshot())
   }
 
   func setupCalloutActionTitle() -> String? {
-    if !isLocalModelReady() {
-      return modelSetupCalloutActionTitle()
-    }
-    if workspace == nil {
-      return "Open Workspace"
-    }
-    if !hasRuntimeThreadSelection() {
-      return "New Thread"
-    }
-
-    return nil
+    SetupCalloutPresenter.primaryActionTitle(setupCalloutSnapshot())
   }
 
   func canRunSetupCalloutAction() -> Bool {
@@ -656,11 +612,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func setupCalloutSecondaryActionTitle() -> String? {
-    if !isLocalModelReady() {
-      return modelSetupCalloutSecondaryActionTitle()
-    }
-
-    return nil
+    SetupCalloutPresenter.secondaryActionTitle(setupCalloutSnapshot())
   }
 
   func canRunSetupCalloutSecondaryAction() -> Bool {
@@ -736,14 +688,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func setupModelChoiceDetail() -> String {
-    guard let model = selectedSetupModel() else {
-      return "Choose one local model to download and run."
-    }
-
-    let role = model.id == LocalModelCatalog.defaultFirstUseModelID ? "Default" : "Alternative"
-    let status = model.downloaded ? "downloaded" : "not downloaded"
-    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). "
-      + "Pith runs one local model at a time."
+    LocalModelOperationPresenter.setupModelChoiceDetail(
+      localModelOperationSnapshot(),
+      defaultModelID: LocalModelCatalog.defaultFirstUseModelID
+    )
   }
 
   func setupDefaultModelID() -> String {
@@ -2980,6 +2928,25 @@ final class AppViewModel: ObservableObject {
       setupStepCount: setupStepCount,
       setupProgressDetail: setupProgressDetail(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage()
+    )
+  }
+
+  private func setupCalloutSnapshot() -> SetupCalloutSnapshot {
+    let modelProgressDetail: String?
+    if shouldShowModelDownloadProgress() {
+      modelProgressDetail = modelDownloadProgressSummary()
+    } else {
+      modelProgressDetail = nil
+    }
+
+    return SetupCalloutSnapshot(
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      modelGuidance: localModelSetupGuidance(),
+      modelProgressDetail: modelProgressDetail,
+      modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
+      modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
     )
   }
 

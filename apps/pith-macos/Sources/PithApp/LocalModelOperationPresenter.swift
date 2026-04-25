@@ -61,6 +61,20 @@ enum LocalModelOperationPresenter {
     setupGuidance(snapshot).actionSummary
   }
 
+  static func setupModelChoiceDetail(
+    _ snapshot: LocalModelOperationSnapshot,
+    defaultModelID: String
+  ) -> String {
+    guard let model = snapshot.selectedSetupModel else {
+      return "Choose one local model to download and run."
+    }
+
+    let role = model.id == defaultModelID ? "Default" : "Alternative"
+    let status = model.downloaded ? "downloaded" : "not downloaded"
+    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). "
+      + "Pith runs one local model at a time."
+  }
+
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
     snapshot.runtimeState == .failed
       || snapshot.hasActiveTurn
