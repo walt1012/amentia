@@ -491,31 +491,127 @@ private struct SetupModelChooser: View {
   let isDisabled: Bool
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
-      VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
         Text("Choose Local Model")
           .font(.caption.weight(.semibold))
-        Text(detail)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .fixedSize(horizontal: false, vertical: true)
+        StatusPill(label: "One active model", tone: .neutral)
+        Spacer()
       }
 
-      Spacer()
+      Text(detail)
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
 
-      Picker("Local Model", selection: $selectedModelID) {
+      VStack(alignment: .leading, spacing: 8) {
         ForEach(models) { model in
-          Text(model.displayName + (model.id == defaultModelID ? " (Default)" : ""))
-            .tag(model.id)
+          SetupModelOptionRow(
+            model: model,
+            isSelected: selectedModelID == model.id,
+            isDefault: model.id == defaultModelID,
+            isDisabled: isDisabled,
+            onSelect: {
+              selectedModelID = model.id
+            }
+          )
         }
       }
-      .labelsHidden()
-      .frame(width: 260)
-      .disabled(isDisabled)
     }
     .padding(10)
     .background(Color.secondary.opacity(0.08))
     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+  }
+}
+
+private struct SetupModelOptionRow: View {
+  let model: LocalModelSummary
+  let isSelected: Bool
+  let isDefault: Bool
+  let isDisabled: Bool
+  let onSelect: () -> Void
+
+  var body: some View {
+    Button(action: onSelect) {
+      VStack(alignment: .leading, spacing: 5) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          Text(model.displayName)
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.primary)
+          if isDefault {
+            SetupModelBadge(label: "Default", tone: .ready)
+          }
+          if model.active {
+            SetupModelBadge(label: "Active", tone: .active)
+          } else if model.downloaded {
+            SetupModelBadge(label: "Downloaded", tone: .neutral)
+          }
+          if isSelected {
+            Spacer()
+            SetupModelBadge(label: "Selected", tone: .warning)
+          }
+        }
+
+        Text(model.description)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
+        Text(detail)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
+        Text(metadata)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+
+        if !model.tags.isEmpty {
+          Text(model.tags.joined(separator: " / "))
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+      }
+      .padding(8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06))
+      .overlay(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .stroke(isSelected ? Color.accentColor.opacity(0.7) : Color.secondary.opacity(0.14), lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+  }
+
+  private var detail: String {
+    "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context | \(model.maxOutputTokens) output"
+  }
+
+  private var metadata: String {
+    model.downloaded
+      ? "Ready locally at \(model.installPath)"
+      : "Downloads from \(model.homepage)"
+  }
+
+  private func formattedByteCount(_ byteCount: Int64) -> String {
+    let formatter = ByteCountFormatter()
+    formatter.countStyle = .file
+    return formatter.string(fromByteCount: byteCount)
+  }
+}
+
+private struct SetupModelBadge: View {
+  let label: String
+  let tone: StatusTone
+
+  var body: some View {
+    Text(label)
+      .font(.caption2.weight(.semibold))
+      .foregroundColor(tone.color)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 2)
+      .background(tone.color.opacity(0.12))
+      .clipShape(Capsule())
   }
 }
 
