@@ -142,6 +142,23 @@ struct ContentView: View {
               viewModel.runSetupCalloutSecondaryAction()
             }
           )
+        } else if viewModel.shouldShowFirstRequestCallout() {
+          SetupCallout(
+            title: viewModel.firstRequestCalloutTitle(),
+            summary: viewModel.firstRequestCalloutSummary(),
+            detail: viewModel.firstRequestCalloutDetail(),
+            tone: .ready,
+            actionTitle: viewModel.firstRequestCalloutActionTitle(),
+            canRunAction: viewModel.canRunFirstRequestCalloutAction(),
+            secondaryActionTitle: viewModel.firstRequestCalloutSecondaryActionTitle(),
+            canRunSecondaryAction: viewModel.canRunFirstRequestCalloutSecondaryAction(),
+            onAction: {
+              viewModel.runFirstRequestCalloutAction()
+            },
+            onSecondaryAction: {
+              viewModel.runFirstRequestCalloutSecondaryAction()
+            }
+          )
         }
 
         HStack(spacing: 8) {
@@ -216,7 +233,8 @@ struct ContentView: View {
           .disabled(!viewModel.canCancelActiveTurn())
         }
 
-        if !viewModel.composerSuggestions().isEmpty {
+        if !viewModel.shouldShowFirstRequestCallout(),
+           !viewModel.composerSuggestions().isEmpty {
           ComposerSuggestionStrip(
             suggestions: viewModel.composerSuggestions(),
             onSelect: { suggestion in

@@ -604,6 +604,9 @@ final class AppViewModel: ObservableObject {
       return "Turn running"
     }
     if selectedThreadIsWaitingForFirstMessage() {
+      if !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        return "Draft ready"
+      }
       return "Next: First request"
     }
 
@@ -811,6 +814,52 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func shouldShowFirstRequestCallout() -> Bool {
+    canUseComposer()
+      && draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && selectedThreadIsWaitingForFirstMessage()
+  }
+
+  func firstRequestCalloutTitle() -> String {
+    "First Local Request"
+  }
+
+  func firstRequestCalloutSummary() -> String {
+    "Setup is complete. Choose a starter prompt, review it in the composer, then send locally."
+  }
+
+  func firstRequestCalloutDetail() -> String {
+    guard let workspace else {
+      return "Choose a workspace before starting the first local request."
+    }
+
+    return "Pith will use \(workspace.displayName) as the working context and keep the first request scoped."
+  }
+
+  func firstRequestCalloutActionTitle() -> String? {
+    firstRequestSuggestion(id: "map-workspace") == nil ? nil : "Use Map Prompt"
+  }
+
+  func canRunFirstRequestCalloutAction() -> Bool {
+    firstRequestSuggestion(id: "map-workspace") != nil
+  }
+
+  func runFirstRequestCalloutAction() {
+    useFirstRequestSuggestion(id: "map-workspace")
+  }
+
+  func firstRequestCalloutSecondaryActionTitle() -> String? {
+    firstRequestSuggestion(id: "review-changes") == nil ? nil : "Use Review Prompt"
+  }
+
+  func canRunFirstRequestCalloutSecondaryAction() -> Bool {
+    firstRequestSuggestion(id: "review-changes") != nil
+  }
+
+  func runFirstRequestCalloutSecondaryAction() {
+    useFirstRequestSuggestion(id: "review-changes")
+  }
+
   func shouldShowSetupModelChoice() -> Bool {
     runtimeState == .ready
       && !isLocalModelReady()
@@ -1009,6 +1058,18 @@ final class AppViewModel: ObservableObject {
       return []
     }
 
+    return firstRequestSuggestions()
+  }
+
+  func useComposerSuggestion(_ suggestion: ComposerSuggestionSummary) {
+    guard canUseComposer() else {
+      return
+    }
+
+    draftMessage = suggestion.message
+  }
+
+  private func firstRequestSuggestions() -> [ComposerSuggestionSummary] {
     let workspaceName = workspace?.displayName ?? "this workspace"
     return [
       ComposerSuggestionSummary(
@@ -1029,12 +1090,23 @@ final class AppViewModel: ObservableObject {
     ]
   }
 
-  func useComposerSuggestion(_ suggestion: ComposerSuggestionSummary) {
-    guard canUseComposer() else {
+  private func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {
+    guard canUseComposer(),
+          draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+          selectedThreadIsWaitingForFirstMessage()
+    else {
+      return nil
+    }
+
+    return firstRequestSuggestions().first(where: { $0.id == id })
+  }
+
+  private func useFirstRequestSuggestion(id: String) {
+    guard let suggestion = firstRequestSuggestion(id: id) else {
       return
     }
 
-    draftMessage = suggestion.message
+    useComposerSuggestion(suggestion)
   }
 
   func canSearchWorkspace() -> Bool {
@@ -2582,6 +2654,9 @@ final class AppViewModel: ObservableObject {
       }
 
       if selectedThreadIsWaitingForFirstMessage() {
+        if !draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+          return "Review the starter prompt, then press Command-Return to send the first local request."
+        }
         return "Pick a first-message suggestion or type a local request. Press Command-Return to send."
       }
 
