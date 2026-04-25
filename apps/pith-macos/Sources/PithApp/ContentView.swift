@@ -213,6 +213,15 @@ struct ContentView: View {
           .disabled(!viewModel.canCancelActiveTurn())
         }
 
+        if !viewModel.composerSuggestions().isEmpty {
+          ComposerSuggestionStrip(
+            suggestions: viewModel.composerSuggestions(),
+            onSelect: { suggestion in
+              viewModel.useComposerSuggestion(suggestion)
+            }
+          )
+        }
+
         HStack(spacing: 6) {
           if viewModel.showsComposerActivity() {
             ProgressView()
@@ -717,6 +726,31 @@ private struct ReadinessChip: View {
     .padding(.vertical, 5)
     .background(step.tone.color.opacity(0.10))
     .clipShape(Capsule())
+  }
+}
+
+private struct ComposerSuggestionStrip: View {
+  let suggestions: [ComposerSuggestionSummary]
+  let onSelect: (ComposerSuggestionSummary) -> Void
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 6) {
+        Text("Try")
+          .font(.caption2.weight(.semibold))
+          .foregroundColor(.secondary)
+
+        ForEach(suggestions) { suggestion in
+          Button(suggestion.title) {
+            onSelect(suggestion)
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .help(suggestion.message)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
   }
 }
 

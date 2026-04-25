@@ -183,6 +183,12 @@ struct ReadinessStepSummary: Identifiable, Hashable {
   let tone: StatusTone
 }
 
+struct ComposerSuggestionSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let message: String
+}
+
 struct DiffLineSummary: Identifiable, Hashable {
   let id: String
   let lineNumber: Int

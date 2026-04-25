@@ -892,6 +892,7 @@ final class AppViewModel: ObservableObject {
 
   func canSendDraftMessage() -> Bool {
     runtimeState == .ready
+      && workspace != nil
       && isLocalModelReady()
       && hasRuntimeThreadSelection()
       && !isTurnStreaming()
@@ -908,6 +909,43 @@ final class AppViewModel: ObservableObject {
       && isLocalModelReady()
       && hasRuntimeThreadSelection()
       && activeTurnID == nil
+  }
+
+  func composerSuggestions() -> [ComposerSuggestionSummary] {
+    guard canUseComposer(),
+          draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else {
+      return []
+    }
+
+    return [
+      ComposerSuggestionSummary(
+        id: "map-workspace",
+        title: "Map Workspace",
+        message:
+          "Map this workspace. Explain the main modules, runtime flow, and the safest next development step."
+      ),
+      ComposerSuggestionSummary(
+        id: "review-changes",
+        title: "Review Changes",
+        message:
+          "Review the current workspace changes and call out the highest-risk issues first."
+      ),
+      ComposerSuggestionSummary(
+        id: "find-small-fixes",
+        title: "Find Small Fixes",
+        message:
+          "Scan this workspace for small, high-leverage improvements that fit the current product plan."
+      ),
+    ]
+  }
+
+  func useComposerSuggestion(_ suggestion: ComposerSuggestionSummary) {
+    guard canUseComposer() else {
+      return
+    }
+
+    draftMessage = suggestion.message
   }
 
   func canSearchWorkspace() -> Bool {
@@ -2550,10 +2588,12 @@ final class AppViewModel: ObservableObject {
     threadTimelines[threadID] = entries
 
     if selectedThreadID == threadID {
+      let previousSelectionID = selectedEntryID
       timeline = entries
-      if !entries.contains(where: { $0.id == selectedEntryID }) {
-        selectedEntryID = entries.first?.id
-      }
+      selectedEntryID = bestTimelineSelectionID(
+        previousSelectionID: previousSelectionID,
+        entries: entries
+      )
     }
   }
 
@@ -2564,11 +2604,15 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    let previousSelectionID = selectedEntryID
     timeline =
       threadTimelines[selectedThreadID]
       ?? defaultTimeline(for: threadTitle(for: selectedThreadID))
     threadTimelines[selectedThreadID] = timeline
-    selectedEntryID = timeline.first?.id
+    selectedEntryID = bestTimelineSelectionID(
+      previousSelectionID: previousSelectionID,
+      entries: timeline
+    )
   }
 
   private func defaultTimeline(for title: String) -> [TimelineEntry] {
@@ -2601,12 +2645,10 @@ final class AppViewModel: ObservableObject {
 
       if selectedThreadID == threadID {
         timeline = entries
-        if let previousSelectionID,
-           entries.contains(where: { $0.id == previousSelectionID }) {
-          selectedEntryID = previousSelectionID
-        } else {
-          selectedEntryID = entries.first?.id
-        }
+        selectedEntryID = bestTimelineSelectionID(
+          previousSelectionID: previousSelectionID,
+          entries: entries
+        )
       }
     } catch {
       appendEntry(
@@ -2649,6 +2691,18 @@ final class AppViewModel: ObservableObject {
     }
 
     return timeline.first(where: { $0.id == selectedEntryID })
+  }
+
+  private func bestTimelineSelectionID(
+    previousSelectionID: TimelineEntry.ID?,
+    entries: [TimelineEntry]
+  ) -> TimelineEntry.ID? {
+    if let previousSelectionID,
+       entries.contains(where: { $0.id == previousSelectionID }) {
+      return previousSelectionID
+    }
+
+    return entries.first?.id
   }
 
   private func diffLines(from body: String) -> [DiffLineSummary] {
@@ -3277,12 +3331,10 @@ final class AppViewModel: ObservableObject {
 
     if selectedThreadID == state.id {
       timeline = entries
-      if let previousSelectionID,
-         entries.contains(where: { $0.id == previousSelectionID }) {
-        selectedEntryID = previousSelectionID
-      } else {
-        selectedEntryID = entries.first?.id
-      }
+      selectedEntryID = bestTimelineSelectionID(
+        previousSelectionID: previousSelectionID,
+        entries: entries
+      )
     }
   }
 

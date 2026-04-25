@@ -73,14 +73,17 @@ The same header now shows local setup progress and one setup callout for the cur
 first-use model download includes size, license, progress, pause, continue, and cancel controls,
 while workspace and thread blockers explain their next action without opening inspector sections.
 The welcome timeline starts with the actual fresh-install path instead of internal milestone
-language. Workspace search includes empty-state guidance instead of becoming another admin panel. The Local
+language, and the ready composer offers three compact first-message suggestions so a new user can
+begin useful local work without opening another onboarding surface. Workspace search includes
+empty-state guidance instead of becoming another admin panel. The Local
 Model panel also gives a compact next action for runtime launch, model download, pause/resume,
 activation, and readiness repair while deeper model diagnostics stay tucked away; if the default
 model is already downloaded, the primary action can select it directly. Model download start,
 continue, pause, cancel, failure, and success events are also recorded in the timeline so recovery
 does not depend on transient status text, and first-use runtime launch records a clear model-required
 event when no ready local model exists. The composer stays gated until runtime, model, workspace,
-and thread setup are ready. Diff timeline cards now stay compact, while selected diff
+and thread setup are ready. Timeline refreshes preserve the selected inspector item whenever it
+still exists, so streaming updates do not pull focus away from review work. Diff timeline cards now stay compact, while selected diff
 inspection uses a line-level view with change counts and highlighted additions, deletions, hunks,
 and metadata. Timeline cards include lightweight kind pills, and secondary inspector sections stay
 behind disclosure controls.
