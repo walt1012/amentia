@@ -606,14 +606,26 @@ private struct SetupModelOptionRow: View {
 
   private var metadata: String {
     model.downloaded
-      ? "Ready locally at \(model.installPath)"
-      : "Downloads from \(model.homepage)"
+      ? "Ready locally. Use this model without another download."
+      : "Source: \(sourceName(model.homepage))"
   }
 
   private func formattedByteCount(_ byteCount: Int64) -> String {
     let formatter = ByteCountFormatter()
     formatter.countStyle = .file
     return formatter.string(fromByteCount: byteCount)
+  }
+
+  private func sourceName(_ homepage: String) -> String {
+    guard let host = URL(string: homepage)?.host else {
+      return "open-source catalog"
+    }
+
+    if host == "huggingface.co" {
+      return "Hugging Face"
+    }
+
+    return host
   }
 }
 
