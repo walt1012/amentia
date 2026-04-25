@@ -321,7 +321,7 @@ final class AppViewModel: ObservableObject {
         )
         if restoredWorkspace, let currentWorkspace {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -335,7 +335,7 @@ final class AppViewModel: ObservableObject {
         }
         if let workspaceRestoreError {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .warning,
@@ -348,7 +348,7 @@ final class AppViewModel: ObservableObject {
         if let runtimeModel = modelHealth {
           if isLocalModelReady() {
             appendEntry(
-              to: selectedThread?.id,
+              to: selectedThreadID,
               TimelineEntry(
                 id: UUID().uuidString,
                 kind: .system,
@@ -365,7 +365,7 @@ final class AppViewModel: ObservableObject {
             )
           } else {
             appendEntry(
-              to: selectedThread?.id,
+              to: selectedThreadID,
               TimelineEntry(
                 id: UUID().uuidString,
                 kind: .warning,
@@ -382,7 +382,7 @@ final class AppViewModel: ObservableObject {
           }
         } else {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .warning,
@@ -396,7 +396,7 @@ final class AppViewModel: ObservableObject {
         }
         if let runtimeMemoryStatus {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -410,7 +410,7 @@ final class AppViewModel: ObservableObject {
         }
         if !plugins.isEmpty {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -423,7 +423,7 @@ final class AppViewModel: ObservableObject {
         if let registrySummary = pluginCapabilityRegistrySummary,
            registrySummary.totalCapabilityCount > 0 {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -439,7 +439,7 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginCommands.isEmpty {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -452,7 +452,7 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginHooks.isEmpty {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
