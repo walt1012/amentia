@@ -1933,8 +1933,14 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let isResuming = pausedModelDownloadID == model.id && modelDownloadResumeData != nil
-    if !isResuming {
+    let startPlan = LocalModelDownloadStartPlanner.plan(
+      model: model,
+      sourceURL: downloadURL,
+      pausedModelID: pausedModelDownloadID,
+      resumeData: modelDownloadResumeData,
+      currentProgress: modelDownloadProgress
+    )
+    if !startPlan.isResuming {
       guard confirmModelDownload(
         displayName: model.displayName,
         downloadURL: downloadURL,
@@ -1946,32 +1952,16 @@ final class AppViewModel: ObservableObject {
       }
     }
 
-    let resumeData = isResuming ? modelDownloadResumeData : nil
-    let resumedBytes = isResuming && modelDownloadProgress?.modelID == model.id
-      ? modelDownloadProgress?.bytesReceived ?? 0
-      : 0
     modelDownloadID = model.id
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
     LocalModelCatalog.clearPausedDownload()
-    modelDownloadProgress = ModelDownloadProgress(
-      modelID: model.id,
-      displayName: model.displayName,
-      bytesReceived: resumedBytes,
-      totalBytes: model.sizeBytes,
-      startedAt: Date(),
-      updatedAt: Date(),
-      isResuming: isResuming
-    )
+    modelDownloadProgress = startPlan.progress
     appendModelEvent(
-      title: isResuming ? "Local Model Download Continued" : "Local Model Download Started",
-      body:
-        "\(model.displayName) download \(isResuming ? "continued" : "started") from \(downloadURL.absoluteString).",
+      title: startPlan.timelineTitle,
+      body: startPlan.timelineBody,
       model: model,
-      attributes: [
-        "downloadUrl": downloadURL.absoluteString,
-        "size": formattedByteCount(model.sizeBytes)
-      ]
+      attributes: startPlan.attributes
     )
     modelDownloadTask = Task {
       defer {
@@ -1981,11 +1971,10 @@ final class AppViewModel: ObservableObject {
         refreshLocalModelCatalog()
       }
       do {
-        runtimeDetail =
-          "\(isResuming ? "Continuing" : "Downloading") \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
+        runtimeDetail = startPlan.runtimeDetail
         try await downloadModelFile(
           from: downloadURL,
-          resumeData: resumeData,
+          resumeData: startPlan.resumeData,
           modelID: model.id,
           expectedBytes: model.sizeBytes,
           to: URL(fileURLWithPath: model.installPath)
@@ -2012,36 +2001,7 @@ final class AppViewModel: ObservableObject {
           manifestPath: manifestPath
         )
 
-        switch completionPlan.mode {
-        case .activated, .waitingForTurn:
-          selectedSetupModelID = model.id
-        case .downloadedOnly:
-          break
-        }
-
-        runtimeDetail = completionPlan.runtimeDetail
-        modelDownloadProgress = nil
-        refreshLocalModelCatalog()
-
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
-            title: "Local Model Downloaded",
-            body: completionPlan.timelineBody,
-            attributes: completionPlan.attributes
-          )
-        )
-
-        if let relaunchRunningDetail = completionPlan.relaunchRunningDetail,
-           let relaunchIdleDetail = completionPlan.relaunchIdleDetail
-        {
-          relaunchRuntimeIfNeeded(
-            runningDetail: relaunchRunningDetail,
-            idleDetail: relaunchIdleDetail
-          )
-        }
+        applyModelDownloadCompletionPlan(completionPlan, model: model)
       } catch {
         let interruptionPlan = LocalModelDownloadInterruptionPlanner.plan(model: model, error: error)
         applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
@@ -3089,6 +3049,41 @@ final class AppViewModel: ObservableObject {
         attributes: eventAttributes
       )
     )
+  }
+
+  private func applyModelDownloadCompletionPlan(
+    _ plan: LocalModelDownloadCompletionPlan,
+    model: LocalModelSummary
+  ) {
+    switch plan.mode {
+    case .activated, .waitingForTurn:
+      selectedSetupModelID = model.id
+    case .downloadedOnly:
+      break
+    }
+
+    runtimeDetail = plan.runtimeDetail
+    modelDownloadProgress = nil
+    refreshLocalModelCatalog()
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: "Local Model Downloaded",
+        body: plan.timelineBody,
+        attributes: plan.attributes
+      )
+    )
+
+    if let relaunchRunningDetail = plan.relaunchRunningDetail,
+       let relaunchIdleDetail = plan.relaunchIdleDetail
+    {
+      relaunchRuntimeIfNeeded(
+        runningDetail: relaunchRunningDetail,
+        idleDetail: relaunchIdleDetail
+      )
+    }
   }
 
   private func applyModelDownloadInterruptionPlan(
