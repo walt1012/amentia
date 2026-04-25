@@ -5,7 +5,8 @@ use std::process::Command;
 use std::time::Instant;
 
 use anyhow::Result;
-use pith_memory::{retrieve_relevant_notes, MemoryEvent, MemoryManager, MemoryNote};
+use context_compaction::{pack_relevant_memory_notes, ContextPack};
+use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::{
   GenerateRequest, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
 };
@@ -38,6 +39,8 @@ use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, write_file, DirectoryEntry,
   ReadFileResult, SearchMatch, ShellCommandResult,
 };
+
+mod context_compaction;
 
 #[derive(Debug, Clone)]
 struct StoredThread {
@@ -1118,7 +1121,7 @@ fn handle_plugin_command_run(
         command.title, command.description, command.prompt
       )
     });
-  let relevant_memory_notes = retrieve_memory_context(
+  let context_pack = pack_memory_context(
     &context.memory_notes,
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
@@ -1127,7 +1130,7 @@ fn handle_plugin_command_run(
     &command,
     workspace.as_ref(),
     command_input,
-    &relevant_memory_notes,
+    &context_pack,
   );
   if let Some(result) = execute_builtin_plugin_command(
     context,
@@ -1907,7 +1910,7 @@ fn build_plugin_command_timeline_item(
   command: &HostPluginCommandEntry,
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
-  memory_notes: &[MemoryNote],
+  context_pack: &ContextPack,
 ) -> TimelineItem {
   let mut attributes = HashMap::from([
     ("commandId".to_string(), command.command_id.clone()),
@@ -1930,7 +1933,7 @@ fn build_plugin_command_timeline_item(
   if let Some(execution_kind) = command.execution_kind.as_ref() {
     attributes.insert("executionKind".to_string(), execution_kind.clone());
   }
-  merge_memory_attributes(&mut attributes, memory_notes);
+  merge_context_pack_attributes(&mut attributes, context_pack);
 
   let workspace_label = workspace
     .map(|entry| entry.display_name.clone())
@@ -3207,7 +3210,7 @@ fn build_plan_item(
   workspace: Option<&WorkspaceSummary>,
   plan_hint: String,
 ) -> TimelineItem {
-  let relevant_memory_notes = retrieve_memory_context(
+  let context_pack = pack_memory_context(
     memory_notes,
     workspace.map(|entry| entry.display_name.as_str()),
     message,
@@ -3225,7 +3228,7 @@ fn build_plan_item(
     prompt: format!(
       "You are the local planner for Pith.\n{}\n{}\nUser request: {}\nCandidate local action: {}\nWrite one concise English sentence describing the next action Pith should take.",
       workspace_context,
-      format_memory_prompt(&relevant_memory_notes),
+      format_memory_prompt(&context_pack.notes),
       message,
       plan_hint
     ),
@@ -3243,7 +3246,7 @@ fn build_plan_item(
       workspace.display_name.clone(),
     );
   }
-  merge_memory_attributes(&mut attributes, &relevant_memory_notes);
+  merge_context_pack_attributes(&mut attributes, &context_pack);
 
   TimelineItem {
     kind: "plan".to_string(),
@@ -3275,7 +3278,7 @@ fn summarize_file_result(
   workspace_name: &str,
   result: &ReadFileResult,
 ) -> (String, HashMap<String, String>) {
-  let relevant_memory_notes = retrieve_memory_context(
+  let context_pack = pack_memory_context(
     memory_notes,
     Some(workspace_name),
     &format!("{thread_title} {}", result.relative_path),
@@ -3292,7 +3295,7 @@ fn summarize_file_result(
   );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
-    format_memory_prompt(&relevant_memory_notes),
+    format_memory_prompt(&context_pack.notes),
     result.relative_path,
     result.content
   );
@@ -3301,7 +3304,7 @@ fn summarize_file_result(
     model_runtime,
     prompt,
     observation_summary,
-    &relevant_memory_notes,
+    &context_pack,
   )
 }
 
@@ -3341,7 +3344,7 @@ fn summarize_directory_result(
   workspace_name: &str,
   entries: &[DirectoryEntry],
 ) -> (String, HashMap<String, String>) {
-  let relevant_memory_notes = retrieve_memory_context(
+  let context_pack = pack_memory_context(
     memory_notes,
     Some(workspace_name),
     &format!("{thread_title} workspace root"),
@@ -3351,13 +3354,13 @@ fn summarize_directory_result(
       model_runtime,
       format!(
         "You are Pith, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
-        format_memory_prompt(&relevant_memory_notes)
+        format_memory_prompt(&context_pack.notes)
       ),
       format!(
         "Pith inspected {} for {} and found an empty root directory.",
         workspace_name, thread_title
       ),
-      &relevant_memory_notes,
+      &context_pack,
     );
   }
 
@@ -3377,7 +3380,7 @@ fn summarize_directory_result(
   );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
-    format_memory_prompt(&relevant_memory_notes),
+    format_memory_prompt(&context_pack.notes),
     format_directory_result(entries)
   );
 
@@ -3385,7 +3388,7 @@ fn summarize_directory_result(
     model_runtime,
     prompt,
     observation_summary,
-    &relevant_memory_notes,
+    &context_pack,
   )
 }
 
@@ -3397,19 +3400,19 @@ fn summarize_search_result(
   query: &str,
   matches: &[SearchMatch],
 ) -> (String, HashMap<String, String>) {
-  let relevant_memory_notes = retrieve_memory_context(memory_notes, Some(workspace_name), query);
+  let context_pack = pack_memory_context(memory_notes, Some(workspace_name), query);
   if matches.is_empty() {
     return generate_local_summary(
       model_runtime,
       format!(
         "You are Pith, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
-        format_memory_prompt(&relevant_memory_notes)
+        format_memory_prompt(&context_pack.notes)
       ),
       format!(
         "Pith searched {} for {} and found no matches for \"{}\".",
         workspace_name, thread_title, query
       ),
-      &relevant_memory_notes,
+      &context_pack,
     );
   }
 
@@ -3430,7 +3433,7 @@ fn summarize_search_result(
   );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
-    format_memory_prompt(&relevant_memory_notes),
+    format_memory_prompt(&context_pack.notes),
     format_search_result(query, matches)
   );
 
@@ -3438,7 +3441,7 @@ fn summarize_search_result(
     model_runtime,
     prompt,
     observation_summary,
-    &relevant_memory_notes,
+    &context_pack,
   )
 }
 
@@ -3471,8 +3474,7 @@ fn summarize_shell_result(
   workspace_name: &str,
   result: &ShellCommandResult,
 ) -> (String, HashMap<String, String>) {
-  let relevant_memory_notes =
-    retrieve_memory_context(memory_notes, Some(workspace_name), &result.command);
+  let context_pack = pack_memory_context(memory_notes, Some(workspace_name), &result.command);
   let observation_summary = if result.exit_code == 0 {
     format!(
       "Pith ran `{}` in {} and it finished successfully.",
@@ -3486,7 +3488,7 @@ fn summarize_shell_result(
   };
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nCommand: {}\nExit Code: {}\nstdout:\n{}\n\nstderr:\n{}",
-    format_memory_prompt(&relevant_memory_notes),
+    format_memory_prompt(&context_pack.notes),
     result.command,
     result.exit_code,
     result.stdout,
@@ -3497,7 +3499,7 @@ fn summarize_shell_result(
     model_runtime,
     prompt,
     observation_summary,
-    &relevant_memory_notes,
+    &context_pack,
   )
 }
 
@@ -3511,7 +3513,7 @@ fn summarize_denied_approval(
     .command
     .clone()
     .unwrap_or_else(|| format!("{} {}", approval.action, approval.relative_path));
-  let relevant_memory_notes = retrieve_memory_context(memory_notes, Some(workspace_name), &query);
+  let context_pack = pack_memory_context(memory_notes, Some(workspace_name), &query);
   let observation_summary = if approval.action == "run_shell" {
     let command = approval.command.clone().unwrap_or_default();
     format!(
@@ -3526,7 +3528,7 @@ fn summarize_denied_approval(
   };
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a denied approval in one sentence.\nWorkspace: {workspace_name}\n{}\nAction: {}\nTarget: {}\nCommand: {}",
-    format_memory_prompt(&relevant_memory_notes),
+    format_memory_prompt(&context_pack.notes),
     approval.action,
     approval.relative_path,
     approval.command.clone().unwrap_or_default()
@@ -3536,7 +3538,7 @@ fn summarize_denied_approval(
     model_runtime,
     prompt,
     observation_summary,
-    &relevant_memory_notes,
+    &context_pack,
   )
 }
 
@@ -3544,7 +3546,7 @@ fn generate_local_summary(
   model_runtime: &LocalModelRuntime,
   prompt: String,
   observation_summary: String,
-  memory_notes: &[MemoryNote],
+  context_pack: &ContextPack,
 ) -> (String, HashMap<String, String>) {
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Summarizer,
@@ -3557,17 +3559,17 @@ fn generate_local_summary(
     ("modelBackend".to_string(), result.backend),
     ("modelStatus".to_string(), result.status),
   ]);
-  merge_memory_attributes(&mut attributes, memory_notes);
+  merge_context_pack_attributes(&mut attributes, context_pack);
 
   (result.text, attributes)
 }
 
-fn retrieve_memory_context(
+fn pack_memory_context(
   memory_notes: &[MemoryNote],
   workspace_scope: Option<&str>,
   query: &str,
-) -> Vec<MemoryNote> {
-  retrieve_relevant_notes(memory_notes, workspace_scope, query, 3)
+) -> ContextPack {
+  pack_relevant_memory_notes(memory_notes, workspace_scope, query)
 }
 
 fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
@@ -3613,6 +3615,34 @@ fn merge_memory_attributes(attributes: &mut HashMap<String, String>, memory_note
       .map(|note| note.title.clone())
       .collect::<Vec<_>>()
       .join(" | "),
+  );
+}
+
+fn merge_context_pack_attributes(
+  attributes: &mut HashMap<String, String>,
+  context_pack: &ContextPack,
+) {
+  merge_memory_attributes(attributes, &context_pack.notes);
+  attributes.insert("contextMode".to_string(), context_pack.mode().to_string());
+  attributes.insert(
+    "contextSourceNoteCount".to_string(),
+    context_pack.source_note_count.to_string(),
+  );
+  attributes.insert(
+    "contextOmittedNoteCount".to_string(),
+    context_pack.omitted_note_count.to_string(),
+  );
+  attributes.insert(
+    "contextTruncatedNoteCount".to_string(),
+    context_pack.truncated_note_count.to_string(),
+  );
+  attributes.insert(
+    "contextEstimatedChars".to_string(),
+    context_pack.estimated_char_count.to_string(),
+  );
+  attributes.insert(
+    "contextBudgetChars".to_string(),
+    context_pack.budget_char_count.to_string(),
   );
 }
 

@@ -1507,7 +1507,24 @@ final class AppViewModel: ObservableObject {
 
     let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
     let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
-    return "Notes: \(noteCount)\nTitles: \(memoryTitles)\nIDs: \(memoryIDs)"
+    var lines = [
+      "Notes: \(noteCount)",
+      "Titles: \(memoryTitles)",
+      "IDs: \(memoryIDs)",
+    ]
+
+    if let contextMode = entry.attributes["contextMode"] {
+      let estimatedChars = entry.attributes["contextEstimatedChars"] ?? "unknown"
+      let budgetChars = entry.attributes["contextBudgetChars"] ?? "unknown"
+      let omittedCount = entry.attributes["contextOmittedNoteCount"] ?? "0"
+      let truncatedCount = entry.attributes["contextTruncatedNoteCount"] ?? "0"
+      lines.append(
+        "Context: \(contextMode) | \(estimatedChars)/\(budgetChars) chars | "
+          + "omitted \(omittedCount) | truncated \(truncatedCount)"
+      )
+    }
+
+    return lines.joined(separator: "\n")
   }
 
   func workspaceDisplayName() -> String {
