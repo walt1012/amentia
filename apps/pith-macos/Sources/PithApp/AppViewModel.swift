@@ -1838,19 +1838,13 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadTask == nil else {
-      return false
-    }
-    if let pausedModelDownloadID {
-      return pausedModelDownloadID == modelID && modelDownloadResumeData != nil
-    }
     guard let model = localModels.first(where: { $0.id == modelID }),
-          URL(string: model.downloadURL) != nil
+          !model.downloaded
     else {
       return false
     }
 
-    return !model.downloaded
+    return localModelDownloadRequestPlan(for: model).canStart
   }
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
@@ -1928,8 +1922,9 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    guard let downloadURL = URL(string: model.downloadURL) else {
-      runtimeDetail = "The selected local model has an invalid download URL."
+    let requestPlan = localModelDownloadRequestPlan(for: model)
+    guard let downloadURL = requestPlan.downloadURL else {
+      runtimeDetail = requestPlan.blockedDetail ?? "The selected local model is not ready to download."
       return
     }
 
@@ -3025,6 +3020,17 @@ final class AppViewModel: ObservableObject {
       totalModelCount: localModels.count,
       activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,
       downloadedLocalSizeBytes: downloadedLocalSize
+    )
+  }
+
+  private func localModelDownloadRequestPlan(
+    for model: LocalModelSummary
+  ) -> LocalModelDownloadRequestPlan {
+    LocalModelDownloadRequestPlanner.plan(
+      model: model,
+      isDownloadRunning: modelDownloadTask != nil,
+      pausedModelID: pausedModelDownloadID,
+      hasResumeData: modelDownloadResumeData != nil
     )
   }
 
