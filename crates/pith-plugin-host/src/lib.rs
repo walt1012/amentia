@@ -625,14 +625,10 @@ fn validate_manifest_identifier(kind: &str, identifier: &str) -> Result<()> {
     anyhow::bail!("plugin {kind} identifier must not be empty");
   }
   if identifier == "." || identifier == ".." {
-    anyhow::bail!(
-      "plugin {kind} identifier `{identifier}` must not be a relative path segment"
-    );
+    anyhow::bail!("plugin {kind} identifier `{identifier}` must not be a relative path segment");
   }
   if identifier.contains('/') || identifier.contains('\\') {
-    anyhow::bail!(
-      "plugin {kind} identifier `{identifier}` must not contain path separators"
-    );
+    anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain path separators");
   }
   if identifier.contains(':') {
     anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain `:`");
