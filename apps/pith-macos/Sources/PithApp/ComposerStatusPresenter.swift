@@ -41,6 +41,12 @@ enum ComposerStatusPresenter {
       return "Pith is streaming a response. Cancel to stop the current turn."
     }
 
+    if snapshot.isWaitingForFirstMessage {
+      return snapshot.hasDraftMessage
+        ? "Review the first local request, then send"
+        : "Choose a starter prompt or type the first local request"
+    }
+
     return "Ask Pith to inspect files, review diffs, run shell commands, or write files"
   }
 
@@ -73,7 +79,7 @@ enum ComposerStatusPresenter {
         if snapshot.hasDraftMessage {
           return "Review the starter prompt, then press Command-Return to send the first local request."
         }
-        return "Pick a first-message suggestion or type a local request. Press Command-Return to send."
+        return "Choose Map Workspace, Review Changes, or type a short local request."
       }
 
       return "Ready for local agent work. Press Command-Return to send."
