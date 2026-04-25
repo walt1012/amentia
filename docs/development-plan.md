@@ -910,6 +910,8 @@ Deliverables:
 - preserved timeline selection across refreshes so inspector review work stays stable during streaming updates
 - compact inspector session summary with workspace search moved behind progressive disclosure
 - plugin installation kept inside Plugin Manager so the primary toolbar stays focused on the local daily loop
+- workspace-bound thread summaries and app-side filtering so visible threads match the active workspace
+- thread creation gated until runtime, local model, workspace, and idle turn state are ready
 
 Exit criteria:
 

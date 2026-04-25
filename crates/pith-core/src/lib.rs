@@ -1331,10 +1331,12 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
     }
   };
 
+  let workspace = context.workspace.clone();
   let thread = ThreadSummary {
     id: format!("thread-{}", context.next_thread_number),
     title: params.title,
     status: "ready".to_string(),
+    workspace: workspace.clone(),
   };
   context.next_thread_number += 1;
   let items = vec![TimelineItem {
@@ -1347,7 +1349,7 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
     summary: thread.clone(),
     turn_count: 0,
     items: items.clone(),
-    workspace: context.workspace.clone(),
+    workspace,
   });
 
   if let Err(error) = context.persist_runtime_state() {
@@ -1412,6 +1414,7 @@ fn execute_turn_request(
     let thread_title = thread.summary.title.clone();
     if thread.workspace.is_none() {
       thread.workspace = current_workspace.clone();
+      thread.summary.workspace = thread.workspace.clone();
     }
     let workspace = thread.workspace.clone();
     let turn_id = format!("{thread_id}-turn-{turn_count}");
@@ -2485,6 +2488,7 @@ fn handle_approval_respond(
   };
   if thread.workspace.is_none() {
     thread.workspace = current_workspace;
+    thread.summary.workspace = thread.workspace.clone();
   }
   let workspace = match thread.workspace.clone() {
     Some(workspace) => workspace,

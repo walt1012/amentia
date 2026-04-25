@@ -163,7 +163,9 @@ final class AppViewModel: ObservableObject {
       ThreadSummary(
         id: "local-welcome",
         title: "Welcome to Pith",
-        preview: "Open a workspace to begin the local agent loop."
+        preview: "Open a workspace to begin the local agent loop.",
+        workspaceRootPath: nil,
+        workspaceDisplayName: nil
       ),
     ]
 
@@ -302,26 +304,13 @@ final class AppViewModel: ObservableObject {
           storeLastWorkspacePath(currentWorkspace.rootPath)
         }
 
-        if threadList.isEmpty {
-          let firstThread = try await runtimeBridge.startThread(title: "Workspace Thread")
-          threads = [firstThread]
-          threadTimelines = [firstThread.id: defaultTimeline(for: firstThread.title)]
+        if workspace != nil {
+          try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
         } else {
-          threads = threadList.map { ThreadSummary(id: $0.id, title: $0.title, preview: $0.status) }
-          threadTimelines = Dictionary(
-            uniqueKeysWithValues: threads.map { thread in
-              (thread.id, defaultTimeline(for: thread.title))
-            }
-          )
-        }
-
-        let selectedThread = threads.first
-        selectThread(id: selectedThread?.id)
-        if let selectedThreadID = selectedThread?.id {
-          await loadThreadHistory(threadID: selectedThreadID)
+          resetToWelcomeThread()
         }
         appendEntry(
-          to: selectedThread?.id,
+          to: selectedThreadID,
           TimelineEntry(
             id: UUID().uuidString,
             kind: .system,
@@ -941,6 +930,9 @@ final class AppViewModel: ObservableObject {
 
   func canCreateThread() -> Bool {
     runtimeState == .ready
+      && workspace != nil
+      && isLocalModelReady()
+      && activeTurnID == nil
   }
 
   func canInstallPlugin() -> Bool {
@@ -1103,6 +1095,8 @@ final class AppViewModel: ObservableObject {
         resetWorkspaceSearch()
         storeLastWorkspacePath(openedWorkspace.rootPath)
         await refreshMemoryState()
+        let threadList = try await runtimeBridge.listThreads()
+        try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -1206,7 +1200,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func createThread() {
-    guard runtimeState == .ready else {
+    guard canCreateThread() else {
       return
     }
 
@@ -2631,6 +2625,96 @@ final class AppViewModel: ObservableObject {
     threads[index].preview = preview
   }
 
+  private func refreshWorkspaceThreadSelection(
+    from runtimeThreads: [RuntimeBridge.RuntimeThreadSummary],
+    createIfEmpty: Bool
+  ) async throws {
+    guard let workspace else {
+      resetToWelcomeThread()
+      return
+    }
+
+    var workspaceThreads = runtimeThreads
+      .filter { $0.workspaceRootPath == workspace.rootPath }
+      .map { threadSummary(from: $0) }
+
+    if workspaceThreads.isEmpty && createIfEmpty {
+      let thread = try await runtimeBridge.startThread(title: "\(workspace.displayName) Thread")
+      workspaceThreads = [thread]
+    }
+
+    if workspaceThreads.isEmpty {
+      resetToWelcomeThread()
+      return
+    }
+
+    threads = workspaceThreads
+    threadTimelines = Dictionary(
+      uniqueKeysWithValues: workspaceThreads.map { thread in
+        (thread.id, threadTimelines[thread.id] ?? defaultTimeline(for: thread.title))
+      }
+    )
+    threadPendingApprovalIDs = threadPendingApprovalIDs.filter { entry in
+      workspaceThreads.contains(where: { $0.id == entry.key })
+    }
+
+    let selectedThread = workspaceThreads.first(where: { $0.id == selectedThreadID }) ?? workspaceThreads.first
+    selectedThreadID = selectedThread?.id
+    syncVisibleTimeline()
+
+    if let selectedThreadID {
+      await loadThreadHistory(threadID: selectedThreadID)
+      announceSetupCompleteIfNeeded()
+    }
+  }
+
+  private func threadSummary(from runtimeThread: RuntimeBridge.RuntimeThreadSummary) -> ThreadSummary {
+    ThreadSummary(
+      id: runtimeThread.id,
+      title: runtimeThread.title,
+      preview: runtimeThread.status,
+      workspaceRootPath: runtimeThread.workspaceRootPath,
+      workspaceDisplayName: runtimeThread.workspaceDisplayName
+    )
+  }
+
+  private func resetToWelcomeThread() {
+    let welcomeThread = ThreadSummary(
+      id: "local-welcome",
+      title: "Welcome to Pith",
+      preview: "Open a workspace to begin the local agent loop.",
+      workspaceRootPath: nil,
+      workspaceDisplayName: nil
+    )
+    let welcomeTimeline = [
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: "Start Local Setup",
+        body: "Launch the runtime, download the local LFM2.5-350M model, open a workspace, then create or select a thread.",
+        attributes: [
+          "path": "runtime -> model -> workspace -> thread"
+        ]
+      ),
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .assistantMessage,
+        title: "Local-First Agent Loop",
+        body:
+          "Pith runs the core agent loop against local workspaces and does not use an external model API fallback.",
+        attributes: [
+          "model": "local"
+        ]
+      ),
+    ]
+
+    threads = [welcomeThread]
+    threadTimelines = [welcomeThread.id: welcomeTimeline]
+    selectedThreadID = welcomeThread.id
+    timeline = welcomeTimeline
+    selectedEntryID = welcomeTimeline.first?.id
+  }
+
   private func appendEntry(to threadID: String?, _ entry: TimelineEntry) {
     guard let threadID else {
       timeline.insert(entry, at: 0)
@@ -2879,18 +2963,22 @@ final class AppViewModel: ObservableObject {
     if workspace != nil {
       readyCount += 1
     }
-    if hasRuntimeThreadSelection() {
+    if isLocalModelReady() && workspace != nil && hasRuntimeThreadSelection() {
       readyCount += 1
     }
     return readyCount
   }
 
   private func hasRuntimeThreadSelection() -> Bool {
-    guard let selectedThreadID else {
+    guard let selectedThreadID,
+          !selectedThreadID.hasPrefix("local-"),
+          let selectedThread = threads.first(where: { $0.id == selectedThreadID }),
+          let workspace
+    else {
       return false
     }
 
-    return !selectedThreadID.hasPrefix("local-")
+    return selectedThread.workspaceRootPath == workspace.rootPath
   }
 
   private func isDefaultModelDownloaded() -> Bool {
@@ -2990,6 +3078,9 @@ final class AppViewModel: ObservableObject {
 
   private func threadReadinessStep() -> ReadinessStepSummary {
     guard runtimeState == .ready else {
+      return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Waiting", tone: .neutral)
+    }
+    guard isLocalModelReady(), workspace != nil else {
       return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Waiting", tone: .neutral)
     }
     guard hasRuntimeThreadSelection() else {

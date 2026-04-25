@@ -70,6 +70,8 @@ without guessing why send is disabled. The timeline header now carries the same 
 language for runtime recovery, first-use model download, workspace binding, and active streaming, plus a
 single contextual next-action button when the daily loop is blocked. A compact readiness strip
 keeps runtime, model, workspace, and thread state visible without opening inspector sections.
+Thread summaries now carry their bound workspace, and the macOS app only offers workspace-matching
+threads in the daily flow so a selected thread cannot silently run against a different project.
 The same header now shows local setup progress and one setup callout for the current blocker:
 first-use model download includes size, license, progress, pause, continue, and cancel controls,
 while workspace and thread blockers explain their next action without opening inspector sections.

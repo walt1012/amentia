@@ -17,6 +17,8 @@ final class RuntimeBridge {
     let id: String
     let title: String
     let status: String
+    let workspaceRootPath: String?
+    let workspaceDisplayName: String?
   }
 
   struct RuntimeWorkspace {
@@ -289,7 +291,13 @@ final class RuntimeBridge {
     }
 
     return result.threads.map {
-      RuntimeThreadSummary(id: $0.id, title: $0.title, status: $0.status)
+      RuntimeThreadSummary(
+        id: $0.id,
+        title: $0.title,
+        status: $0.status,
+        workspaceRootPath: $0.workspace?.rootPath,
+        workspaceDisplayName: $0.workspace?.displayName
+      )
     }
   }
 
@@ -799,7 +807,9 @@ final class RuntimeBridge {
     return ThreadSummary(
       id: result.thread.id,
       title: result.thread.title,
-      preview: result.thread.status
+      preview: result.thread.status,
+      workspaceRootPath: result.thread.workspace?.rootPath,
+      workspaceDisplayName: result.thread.workspace?.displayName
     )
   }
 

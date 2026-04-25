@@ -186,24 +186,27 @@ impl FileThreadStore {
         )
       })?;
 
+      let workspace = match (
+        row.get::<_, Option<String>>(5)?,
+        row.get::<_, Option<String>>(6)?,
+      ) {
+        (Some(root_path), Some(display_name)) => Some(WorkspaceSummary {
+          root_path,
+          display_name,
+        }),
+        _ => None,
+      };
+
       Ok(StoredThreadRecord {
         summary: ThreadSummary {
           id: row.get(0)?,
           title: row.get(1)?,
           status: row.get(2)?,
+          workspace: workspace.clone(),
         },
         turn_count: row.get::<_, i64>(3)? as usize,
         items,
-        workspace: match (
-          row.get::<_, Option<String>>(5)?,
-          row.get::<_, Option<String>>(6)?,
-        ) {
-          (Some(root_path), Some(display_name)) => Some(WorkspaceSummary {
-            root_path,
-            display_name,
-          }),
-          _ => None,
-        },
+        workspace,
       })
     })?;
 
@@ -221,6 +224,7 @@ impl FileThreadStore {
     for thread in threads {
       let items_json =
         serde_json::to_string(&thread.items).context("failed to serialize timeline items")?;
+      let workspace = thread.workspace.clone().or(thread.summary.workspace.clone());
 
       transaction.execute(
         "INSERT INTO threads (
@@ -239,14 +243,8 @@ impl FileThreadStore {
           &thread.summary.status,
           thread.turn_count as i64,
           items_json,
-          thread
-            .workspace
-            .as_ref()
-            .map(|workspace| workspace.root_path.clone()),
-          thread
-            .workspace
-            .as_ref()
-            .map(|workspace| workspace.display_name.clone()),
+          workspace.as_ref().map(|workspace| workspace.root_path.clone()),
+          workspace.as_ref().map(|workspace| workspace.display_name.clone()),
           current_timestamp()?,
         ],
       )?;
@@ -622,6 +620,7 @@ impl FileThreadStore {
     for thread in legacy_threads {
       let items_json =
         serde_json::to_string(&thread.items).context("failed to serialize migrated items")?;
+      let workspace = thread.workspace.clone().or(thread.summary.workspace.clone());
       connection.execute(
         "INSERT INTO threads (
           id,
@@ -632,13 +631,15 @@ impl FileThreadStore {
           workspace_root_path,
           workspace_display_name,
           updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, NULL, NULL, ?6)",
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
           thread.summary.id,
           thread.summary.title,
           thread.summary.status,
           thread.turn_count as i64,
           items_json,
+          workspace.as_ref().map(|workspace| workspace.root_path.clone()),
+          workspace.as_ref().map(|workspace| workspace.display_name.clone()),
           current_timestamp()?,
         ],
       )?;
@@ -791,6 +792,10 @@ mod tests {
           id: "thread-1".to_string(),
           title: "Thread".to_string(),
           status: "ready".to_string(),
+          workspace: Some(WorkspaceSummary {
+            root_path: "/tmp/pith".to_string(),
+            display_name: "pith".to_string(),
+          }),
         },
         turn_count: 3,
         items: vec![TimelineItem {
@@ -869,6 +874,10 @@ mod tests {
     let root = create_temp_directory("legacy-import");
     let database_path = root.join("pith.db");
     let legacy_path = root.join("threads.json");
+    let legacy_workspace = WorkspaceSummary {
+      root_path: "/tmp/pith-legacy".to_string(),
+      display_name: "pith-legacy".to_string(),
+    };
     fs::write(
       &legacy_path,
       serde_json::to_string(&vec![StoredThreadRecord {
@@ -876,10 +885,11 @@ mod tests {
           id: "thread-legacy".to_string(),
           title: "Legacy".to_string(),
           status: "ready".to_string(),
+          workspace: Some(legacy_workspace.clone()),
         },
         turn_count: 1,
         items: vec![],
-        workspace: None,
+        workspace: Some(legacy_workspace.clone()),
       }])
       .expect("serialize legacy threads"),
     )
@@ -892,6 +902,18 @@ mod tests {
 
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].summary.id, "thread-legacy");
+    assert_eq!(
+      threads[0].workspace.as_ref().map(|workspace| workspace.root_path.as_str()),
+      Some("/tmp/pith-legacy")
+    );
+    assert_eq!(
+      threads[0]
+        .summary
+        .workspace
+        .as_ref()
+        .map(|workspace| workspace.display_name.as_str()),
+      Some("pith-legacy")
+    );
   }
 
   #[test]
