@@ -2046,46 +2046,32 @@ final class AppViewModel: ObservableObject {
           )
         }
       } catch {
-        if let paused = error as? ModelDownloadPaused {
-          modelDownloadResumeData = paused.resumeData
+        let interruptionPlan = LocalModelDownloadInterruptionPlanner.plan(model: model, error: error)
+        switch interruptionPlan.mode {
+        case .paused(let resumeData):
+          modelDownloadResumeData = resumeData
           pausedModelDownloadID = model.id
-          persistPausedModelDownload(modelID: model.id, resumeData: paused.resumeData)
-          runtimeDetail = "Paused \(model.displayName) download. Continue to resume from the saved partial state."
-          appendModelEvent(
-            title: "Local Model Download Paused",
-            body: "\(model.displayName) download was paused and can continue from the saved local state.",
-            model: model,
-            attributes: [
-              "result": "paused"
-            ]
-          )
-        } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
-          clearPausedModelDownload()
-          removeIncompleteModelFile(modelID: model.id)
-          modelDownloadProgress = nil
-          runtimeDetail = "Cancelled \(model.displayName) download and cleared partial state."
-          appendModelEvent(
-            title: "Local Model Download Cancelled",
-            body: "\(model.displayName) download was cancelled and the partial file was cleared.",
-            model: model,
-            attributes: [
-              "result": "cancelled"
-            ]
-          )
-        } else {
-          clearPausedModelDownload()
-          modelDownloadProgress = nil
-          runtimeDetail = "Model download failed: \(error.localizedDescription)"
-          appendModelEvent(
-            title: "Local Model Download Failed",
-            body: "\(model.displayName) download failed: \(error.localizedDescription)",
-            model: model,
-            kind: .warning,
-            attributes: [
-              "result": "failed"
-            ]
-          )
+          persistPausedModelDownload(modelID: model.id, resumeData: resumeData)
+        case .cancelled, .failed:
+          if interruptionPlan.clearsPausedState {
+            clearPausedModelDownload()
+          }
+          if interruptionPlan.removesPartialFile {
+            removeIncompleteModelFile(modelID: model.id)
+          }
         }
+
+        if interruptionPlan.clearsProgress {
+          modelDownloadProgress = nil
+        }
+        runtimeDetail = interruptionPlan.runtimeDetail
+        appendModelEvent(
+          title: interruptionPlan.timelineTitle,
+          body: interruptionPlan.timelineBody,
+          model: model,
+          kind: interruptionPlan.timelineKind,
+          attributes: interruptionPlan.attributes
+        )
       }
     }
   }
