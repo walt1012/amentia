@@ -911,6 +911,7 @@ Deliverables:
 - compact daily-loop status guidance that explains the next required action without adding new surfaces
 - shared local model guidance presenter so first-use setup, composer, runtime, and model-manager copy stay aligned
 - compact runtime detail text with plugin inventory kept inside timeline and Plugin Manager surfaces
+- runtime relaunch stays in recovery surfaces and the command menu instead of remaining as primary chrome while the app is ready
 - local context packing for planner, summary, and plugin-command prompts with memory note compaction metadata
 - local context pack headers inside model prompts so the local model can see relevant-note counts, omissions, truncation, and hard budget usage
 - model-aware context budgets so small local models stay conservative while larger local context windows can carry more relevant memory

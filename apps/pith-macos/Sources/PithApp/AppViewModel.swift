@@ -418,6 +418,10 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func shouldShowRuntimeToolbarAction() -> Bool {
+    runtimeState == .disconnected || runtimeState == .failed
+  }
+
   func runtimeStatusSummary() -> String {
     switch runtimeState {
     case .disconnected:
