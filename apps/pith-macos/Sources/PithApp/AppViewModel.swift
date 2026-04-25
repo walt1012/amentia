@@ -1906,23 +1906,20 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let displayName = localModels.first(where: { $0.id == pausedModelDownloadID })?.displayName
-      ?? "local model"
-    clearPausedModelDownload()
-    removeIncompleteModelFile(modelID: pausedModelDownloadID)
-    modelDownloadProgress = nil
-    runtimeDetail = "Cancelled \(displayName) download and cleared partial state."
-    refreshLocalModelCatalog()
-    if let model = localModels.first(where: { $0.id == pausedModelDownloadID }) {
-      appendModelEvent(
-        title: "Local Model Download Cancelled",
-        body: "\(model.displayName) download was cancelled and the partial file was cleared.",
-        model: model,
-        attributes: [
-          "result": "cancelled"
-        ]
-      )
+    guard let model = localModels.first(where: { $0.id == pausedModelDownloadID }) else {
+      clearPausedModelDownload()
+      removeIncompleteModelFile(modelID: pausedModelDownloadID)
+      modelDownloadProgress = nil
+      runtimeDetail = "Cancelled local model download and cleared partial state."
+      refreshLocalModelCatalog()
+      return
     }
+
+    applyModelDownloadInterruptionPlan(
+      LocalModelDownloadInterruptionPlanner.cancellationPlan(model: model),
+      model: model
+    )
+    refreshLocalModelCatalog()
   }
 
   func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
@@ -2047,31 +2044,7 @@ final class AppViewModel: ObservableObject {
         }
       } catch {
         let interruptionPlan = LocalModelDownloadInterruptionPlanner.plan(model: model, error: error)
-        switch interruptionPlan.mode {
-        case .paused(let resumeData):
-          modelDownloadResumeData = resumeData
-          pausedModelDownloadID = model.id
-          persistPausedModelDownload(modelID: model.id, resumeData: resumeData)
-        case .cancelled, .failed:
-          if interruptionPlan.clearsPausedState {
-            clearPausedModelDownload()
-          }
-          if interruptionPlan.removesPartialFile {
-            removeIncompleteModelFile(modelID: model.id)
-          }
-        }
-
-        if interruptionPlan.clearsProgress {
-          modelDownloadProgress = nil
-        }
-        runtimeDetail = interruptionPlan.runtimeDetail
-        appendModelEvent(
-          title: interruptionPlan.timelineTitle,
-          body: interruptionPlan.timelineBody,
-          model: model,
-          kind: interruptionPlan.timelineKind,
-          attributes: interruptionPlan.attributes
-        )
+        applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
       }
     }
   }
@@ -2100,26 +2073,11 @@ final class AppViewModel: ObservableObject {
       )
       selectedSetupModelID = model.id
       refreshLocalModelCatalog()
-      appendEntry(
-        to: selectedThreadID,
-        TimelineEntry(
-          id: UUID().uuidString,
-          kind: .system,
-          title: "Local Model Selected",
-          body: "\(model.displayName) is now the active local model.",
-          attributes: [
-            "modelId": model.id,
-            "manifestPath": manifestPath,
-            "modelPath": model.installPath,
-          ]
-        )
-      )
-      relaunchRuntimeIfNeeded(
-        runningDetail: "Restarting local runtime with \(model.displayName)...",
-        idleDetail: "\(model.displayName) will be used when the runtime launches."
+      applyLocalModelActivationPlan(
+        LocalModelActivationPlanner.selectionPlan(model: model, manifestPath: manifestPath)
       )
     } catch {
-      runtimeDetail = "Model selection failed: \(error.localizedDescription)"
+      runtimeDetail = LocalModelActivationPlanner.selectionFailureDetail(error: error)
     }
   }
 
@@ -2131,20 +2089,7 @@ final class AppViewModel: ObservableObject {
 
     runtimeBridge.clearActiveLocalModel()
     refreshLocalModelCatalog()
-    appendEntry(
-      to: selectedThreadID,
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
-        title: "Local Model Reset",
-        body: "Pith will use automatic local model discovery.",
-        attributes: [:]
-      )
-    )
-    relaunchRuntimeIfNeeded(
-      runningDetail: "Restarting local runtime with automatic model discovery...",
-      idleDetail: "Automatic model discovery will be used when the runtime launches."
-    )
+    applyLocalModelActivationPlan(LocalModelActivationPlanner.resetPlan())
   }
 
   func revealRecommendedModel(modelID: String) {
@@ -3143,6 +3088,54 @@ final class AppViewModel: ObservableObject {
         body: body,
         attributes: eventAttributes
       )
+    )
+  }
+
+  private func applyModelDownloadInterruptionPlan(
+    _ plan: LocalModelDownloadInterruptionPlan,
+    model: LocalModelSummary
+  ) {
+    switch plan.mode {
+    case .paused(let resumeData):
+      modelDownloadResumeData = resumeData
+      pausedModelDownloadID = model.id
+      persistPausedModelDownload(modelID: model.id, resumeData: resumeData)
+    case .cancelled, .failed:
+      if plan.clearsPausedState {
+        clearPausedModelDownload()
+      }
+      if plan.removesPartialFile {
+        removeIncompleteModelFile(modelID: model.id)
+      }
+    }
+
+    if plan.clearsProgress {
+      modelDownloadProgress = nil
+    }
+    runtimeDetail = plan.runtimeDetail
+    appendModelEvent(
+      title: plan.timelineTitle,
+      body: plan.timelineBody,
+      model: model,
+      kind: plan.timelineKind,
+      attributes: plan.attributes
+    )
+  }
+
+  private func applyLocalModelActivationPlan(_ plan: LocalModelActivationPlan) {
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: plan.timelineTitle,
+        body: plan.timelineBody,
+        attributes: plan.attributes
+      )
+    )
+    relaunchRuntimeIfNeeded(
+      runningDetail: plan.relaunchRunningDetail,
+      idleDetail: plan.relaunchIdleDetail
     )
   }
 

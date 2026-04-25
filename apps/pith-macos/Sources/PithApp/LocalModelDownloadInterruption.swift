@@ -38,19 +38,7 @@ enum LocalModelDownloadInterruptionPlanner {
     }
 
     if isCancellation(error) {
-      return LocalModelDownloadInterruptionPlan(
-        mode: .cancelled,
-        runtimeDetail: "Cancelled \(model.displayName) download and cleared partial state.",
-        timelineTitle: "Local Model Download Cancelled",
-        timelineBody: "\(model.displayName) download was cancelled and the partial file was cleared.",
-        timelineKind: .system,
-        attributes: [
-          "result": "cancelled"
-        ],
-        clearsPausedState: true,
-        clearsProgress: true,
-        removesPartialFile: true
-      )
+      return cancellationPlan(model: model)
     }
 
     return LocalModelDownloadInterruptionPlan(
@@ -66,6 +54,22 @@ enum LocalModelDownloadInterruptionPlanner {
       clearsPausedState: true,
       clearsProgress: true,
       removesPartialFile: false
+    )
+  }
+
+  static func cancellationPlan(model: LocalModelSummary) -> LocalModelDownloadInterruptionPlan {
+    LocalModelDownloadInterruptionPlan(
+      mode: .cancelled,
+      runtimeDetail: "Cancelled \(model.displayName) download and cleared partial state.",
+      timelineTitle: "Local Model Download Cancelled",
+      timelineBody: "\(model.displayName) download was cancelled and the partial file was cleared.",
+      timelineKind: .system,
+      attributes: [
+        "result": "cancelled"
+      ],
+      clearsPausedState: true,
+      clearsProgress: true,
+      removesPartialFile: true
     )
   }
 

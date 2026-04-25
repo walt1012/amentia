@@ -891,6 +891,7 @@ Deliverables:
 - single active local model guard so model switches and resets wait for current turn completion
 - explicit post-download completion states for downloaded-only, activated, and waiting-for-turn outcomes
 - explicit model download interruption states for paused, cancelled, and failed outcomes
+- explicit active model selection and reset plans with runtime relaunch details
 - pausable, resumable, and cancellable long-running model downloads with progress, speed, and ETA status
 - persisted paused model download recovery state across app relaunches
 - clear local model readiness and installation guidance
