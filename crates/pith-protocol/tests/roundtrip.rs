@@ -64,6 +64,7 @@ fn thread_read_result_contains_items() {
       id: "thread-1".to_string(),
       title: "Thread".to_string(),
       status: "ready".to_string(),
+      workspace: None,
     },
     items: vec![TimelineItem {
       kind: "system".to_string(),

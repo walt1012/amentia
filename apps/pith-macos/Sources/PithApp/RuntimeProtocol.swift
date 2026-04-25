@@ -278,6 +278,7 @@ struct RuntimeThreadPayload: Codable {
   let id: String
   let title: String
   let status: String
+  let workspace: RuntimeWorkspacePayload?
 }
 
 struct ThreadStartParams: Codable {

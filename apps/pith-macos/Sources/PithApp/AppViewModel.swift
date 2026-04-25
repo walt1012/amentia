@@ -1,100 +1,11 @@
 import AppKit
 import Foundation
 
-private struct ModelDownloadPaused: Error {
-  let resumeData: Data
-}
-
-private struct ModelDownloadProgress: Hashable {
-  let modelID: String
-  let displayName: String
-  var bytesReceived: Int64
-  var totalBytes: Int64
-  let startedAt: Date
-  var updatedAt: Date
-  let isResuming: Bool
-}
-
 @MainActor
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
-
-  private struct LocalPluginAuthor: Decodable {
-    let name: String
-  }
-
-  private struct LocalPluginManifest: Decodable {
-    let name: String
-    let version: String
-    let displayName: String
-    let description: String
-    let author: LocalPluginAuthor?
-    let capabilities: [String]
-    let permissions: [String]
-    let defaultEnabled: Bool
-  }
-
-  private struct PluginInstallPreview {
-    let sourcePath: String
-    let manifestPath: String
-    let installPath: String
-    let displayName: String
-    let version: String
-    let description: String
-    let authorName: String?
-    let capabilities: [String]
-    let permissions: [String]
-    let defaultEnabled: Bool
-  }
-
-  private struct LocalModelCatalogItem {
-    let id: String
-    let displayName: String
-    let description: String
-    let fileName: String
-    let downloadURL: String
-    let homepage: String
-    let sizeBytes: Int64
-    let contextSize: Int
-    let maxOutputTokens: Int
-    let license: String
-    let tags: [String]
-    let installSegments: [String]
-
-    func installPath(storageRootPath: String) -> String {
-      installSegments.reduce(URL(fileURLWithPath: storageRootPath, isDirectory: true)) { url, segment in
-        url.appendingPathComponent(segment)
-      }
-      .appendingPathComponent(fileName)
-      .path
-    }
-  }
-
-  private struct LocalModelPackManifest: Encodable {
-    let id: String
-    let displayName: String
-    let fileName: String
-    let contextSize: Int
-    let maxOutputTokens: Int
-    let backend: String
-    let license: String
-    let homepage: String
-    let downloadURL: String
-    let sizeBytes: Int64
-
-    enum CodingKeys: String, CodingKey {
-      case id
-      case displayName = "display_name"
-      case fileName = "file_name"
-      case contextSize = "context_size"
-      case maxOutputTokens = "max_output_tokens"
-      case backend
-      case license
-      case homepage
-      case downloadURL = "download_url"
-      case sizeBytes = "size_bytes"
-    }
-  }
+  private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
+  private let setupStepCount = 4
 
   @Published var threads: [ThreadSummary]
   @Published var selectedThreadID: ThreadSummary.ID?
@@ -111,6 +22,11 @@ final class AppViewModel: ObservableObject {
   @Published var isWorkspaceSearching: Bool
   @Published var modelHealth: ModelHealthSummary?
   @Published var localModels: [LocalModelSummary]
+  @Published var selectedSetupModelID: String {
+    didSet {
+      Self.storeSelectedSetupModelID(selectedSetupModelID)
+    }
+  }
   @Published var modelDownloadID: String?
   @Published var pausedModelDownloadID: String?
   @Published private var modelDownloadProgress: ModelDownloadProgress?
@@ -133,37 +49,38 @@ final class AppViewModel: ObservableObject {
   private var modelDownloadTask: Task<Void, Never>?
   private var modelDownloadTransfer: ModelDownloadTransfer?
   private var modelDownloadResumeData: Data?
+  private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
-    let initialTimeline = [
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
-        title: "Milestone 1 Ready",
-        body: "Open a workspace, launch the runtime, and ask Pith to inspect or change local files.",
-        attributes: [:]
-      ),
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .assistantMessage,
-        title: "Local Agent Loop",
-        body:
-          "Pith now supports workspace-aware read, search, shell, diff, memory, and approval-gated write actions.",
-        attributes: [:]
-      ),
-    ]
+    let initialTimeline = Self.welcomeTimeline()
 
     let initialThreads = [
       ThreadSummary(
         id: "local-welcome",
         title: "Welcome to Pith",
-        preview: "Open a workspace to begin the local agent loop."
+        preview: "Open a workspace to begin the local agent loop.",
+        workspaceRootPath: nil,
+        workspaceDisplayName: nil
       ),
     ]
 
+    let initialLocalModels = LocalModelCatalog.summaries(
+      storageRootPath: runtimeBridge.localModelStorageRootPath(),
+      activeModelPath: runtimeBridge.activeLocalModelPath()
+    )
+    let pausedDownload = LocalModelCatalog.loadPausedDownload(matching: initialLocalModels)
+    let initialSelectedSetupModelID =
+      pausedDownload?.modelID
+      ?? Self.storedSelectedSetupModelID(matching: initialLocalModels)
+      ?? LocalModelCatalog.defaultFirstUseModelID
+
     self.runtimeBridge = runtimeBridge
     self.runtimeState = runtimeBridge.connectionState
-    self.runtimeDetail = "Runtime not launched"
+    if pausedDownload == nil {
+      self.runtimeDetail = "Runtime not launched"
+    } else {
+      self.runtimeDetail = "Runtime not launched | paused model download available"
+    }
     self.draftMessage = ""
     self.workspace = nil
     self.workspaceSearchQuery = ""
@@ -171,13 +88,14 @@ final class AppViewModel: ObservableObject {
     self.workspaceSearchStatus = "Search the open workspace by text."
     self.isWorkspaceSearching = false
     self.modelHealth = nil
-    self.localModels = Self.localModelSummaries(
-      storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: runtimeBridge.activeLocalModelPath()
-    )
+    self.localModels = initialLocalModels
+    self.selectedSetupModelID = initialSelectedSetupModelID
     self.modelDownloadID = nil
-    self.pausedModelDownloadID = nil
-    self.modelDownloadProgress = nil
+    self.pausedModelDownloadID = pausedDownload?.modelID
+    self.modelDownloadProgress = LocalModelCatalog.restoredProgress(
+      from: pausedDownload,
+      localModels: initialLocalModels
+    )
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -197,7 +115,8 @@ final class AppViewModel: ObservableObject {
     self.lastRuntimeFailureDetail = nil
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
-    self.modelDownloadResumeData = nil
+    self.modelDownloadResumeData = pausedDownload?.resumeData
+    self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
       Task { @MainActor in
@@ -211,7 +130,7 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  func launchRuntime() {
+  func launchRuntime(launchDetail: String = "Launching local runtime") {
     guard runtimeState != .launching else {
       return
     }
@@ -221,26 +140,29 @@ final class AppViewModel: ObservableObject {
     }
 
     runtimeState = .launching
-    runtimeDetail = "Launching local runtime"
+    runtimeDetail = launchDetail
     lastRuntimeFailureDetail = nil
 
     Task {
       do {
-        let session = try await runtimeBridge.launchAndInitialize()
+        let session = try await runtimeBridge.launchAndInitialize(launchDetail: launchDetail)
         let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
         let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
         var currentWorkspace = try? await runtimeBridge.currentWorkspace()
         var restoredWorkspace = false
         var workspaceRestoreError: Error?
-        if currentWorkspace == nil,
-           let lastWorkspacePath = storedLastWorkspacePath(),
-           isRestorableWorkspacePath(lastWorkspacePath)
-        {
-          do {
-            currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
-            restoredWorkspace = true
-          } catch {
-            workspaceRestoreError = error
+        var skippedWorkspaceRestorePath: String?
+        if currentWorkspace == nil, let lastWorkspacePath = storedLastWorkspacePath() {
+          if isRestorableWorkspacePath(lastWorkspacePath) {
+            do {
+              currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
+              restoredWorkspace = true
+            } catch {
+              workspaceRestoreError = error
+            }
+          } else {
+            skippedWorkspaceRestorePath = lastWorkspacePath
+            clearLastWorkspacePath()
           }
         }
         let threadList = try await runtimeBridge.listThreads()
@@ -270,21 +192,6 @@ final class AppViewModel: ObservableObject {
         }
 
         await refreshPluginState()
-        if !plugins.isEmpty {
-          runtimeDetail += " | \(plugins.count) plugin(s)"
-        }
-        if !pluginCapabilities.isEmpty {
-          runtimeDetail += " | \(pluginCapabilities.count) capability(s)"
-        }
-        if !pluginCommands.isEmpty {
-          runtimeDetail += " | \(pluginCommands.count) command(s)"
-        }
-        if !pluginConnectors.isEmpty {
-          runtimeDetail += " | \(pluginConnectors.count) connector(s)"
-        }
-        if !pluginHooks.isEmpty {
-          runtimeDetail += " | \(pluginHooks.count) hook(s)"
-        }
 
         if let currentWorkspace {
           workspace = WorkspaceSummary(
@@ -295,26 +202,13 @@ final class AppViewModel: ObservableObject {
           storeLastWorkspacePath(currentWorkspace.rootPath)
         }
 
-        if threadList.isEmpty {
-          let firstThread = try await runtimeBridge.startThread(title: "Workspace Thread")
-          threads = [firstThread]
-          threadTimelines = [firstThread.id: defaultTimeline(for: firstThread.title)]
+        if workspace != nil {
+          try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
         } else {
-          threads = threadList.map { ThreadSummary(id: $0.id, title: $0.title, preview: $0.status) }
-          threadTimelines = Dictionary(
-            uniqueKeysWithValues: threads.map { thread in
-              (thread.id, defaultTimeline(for: thread.title))
-            }
-          )
-        }
-
-        let selectedThread = threads.first
-        selectThread(id: selectedThread?.id)
-        if let selectedThreadID = selectedThread?.id {
-          await loadThreadHistory(threadID: selectedThreadID)
+          resetToWelcomeThread()
         }
         appendEntry(
-          to: selectedThread?.id,
+          to: selectedThreadID,
           TimelineEntry(
             id: UUID().uuidString,
             kind: .system,
@@ -325,7 +219,7 @@ final class AppViewModel: ObservableObject {
         )
         if restoredWorkspace, let currentWorkspace {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -337,9 +231,23 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
+        if let skippedWorkspaceRestorePath {
+          appendEntry(
+            to: selectedThreadID,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .warning,
+              title: "Workspace Restore Skipped",
+              body: "The last workspace no longer exists. Open a workspace to continue.",
+              attributes: [
+                "workspacePath": skippedWorkspaceRestorePath
+              ]
+            )
+          )
+        }
         if let workspaceRestoreError {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .warning,
@@ -350,26 +258,57 @@ final class AppViewModel: ObservableObject {
           )
         }
         if let runtimeModel = modelHealth {
+          if isLocalModelReady() {
+            appendEntry(
+              to: selectedThreadID,
+              TimelineEntry(
+                id: UUID().uuidString,
+                kind: .system,
+                title: "Local Model Ready",
+                body:
+                  "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
+                attributes: [
+                  "modelId": runtimeModel.packID,
+                  "modelBackend": runtimeModel.backend,
+                  "modelStatus": runtimeModel.status,
+                  "modelSource": runtimeModel.source,
+                ]
+              )
+            )
+          } else {
+            appendEntry(
+              to: selectedThreadID,
+              TimelineEntry(
+                id: UUID().uuidString,
+                kind: .warning,
+                title: "Local Model Required",
+                body: localModelRequiredTimelineSummary(),
+                attributes: [
+                  "modelId": runtimeModel.packID,
+                  "modelBackend": runtimeModel.backend,
+                  "modelStatus": runtimeModel.status,
+                  "modelSource": runtimeModel.source,
+                ]
+              )
+            )
+          }
+        } else {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
-              kind: .system,
-              title: "Local Model Ready",
-              body:
-                "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
+              kind: .warning,
+              title: "Local Model Required",
+              body: localModelRequiredTimelineSummary(),
               attributes: [
-                "modelId": runtimeModel.packID,
-                "modelBackend": runtimeModel.backend,
-                "modelStatus": runtimeModel.status,
-                "modelSource": runtimeModel.source,
+                "modelStatus": "unavailable"
               ]
             )
           )
         }
         if let runtimeMemoryStatus {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -383,7 +322,7 @@ final class AppViewModel: ObservableObject {
         }
         if !plugins.isEmpty {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -396,7 +335,7 @@ final class AppViewModel: ObservableObject {
         if let registrySummary = pluginCapabilityRegistrySummary,
            registrySummary.totalCapabilityCount > 0 {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -412,7 +351,7 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginCommands.isEmpty {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -425,7 +364,7 @@ final class AppViewModel: ObservableObject {
         }
         if !pluginHooks.isEmpty {
           appendEntry(
-            to: selectedThread?.id,
+            to: selectedThreadID,
             TimelineEntry(
               id: UUID().uuidString,
               kind: .system,
@@ -436,6 +375,7 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
+        announceSetupCompleteIfNeeded()
       } catch {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
@@ -475,8 +415,449 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func shouldShowRuntimeToolbarAction() -> Bool {
+    runtimeState == .disconnected || runtimeState == .failed
+  }
+
+  func runtimeStatusSummary() -> String {
+    RuntimeHeaderPresenter.statusSummary(runtimeHeaderSnapshot())
+  }
+
+  func runtimeStatusTone() -> StatusTone {
+    RuntimeHeaderPresenter.statusTone(runtimeHeaderSnapshot())
+  }
+
+  func showsRuntimeActivity() -> Bool {
+    RuntimeHeaderPresenter.showsActivity(runtimeHeaderSnapshot())
+  }
+
+  func shouldShowRuntimeHeaderDetail() -> Bool {
+    RuntimeHeaderPresenter.shouldShowDetail(runtimeHeaderSnapshot())
+  }
+
+  func runtimeReadinessSteps() -> [ReadinessStepSummary] {
+    RuntimeReadinessPresenter.steps(runtimeReadinessSnapshot())
+  }
+
+  func readinessStepActionTitle(_ step: ReadinessStepSummary) -> String? {
+    switch step.id {
+    case "runtime":
+      if runtimeState == .disconnected || runtimeState == .failed {
+        return runtimeLaunchButtonTitle()
+      }
+    case "model":
+      if runtimeState == .ready && !isLocalModelReady() {
+        return modelSetupCalloutActionTitle()
+      }
+    case "workspace":
+      if runtimeState == .ready && workspace == nil {
+        return "Open"
+      }
+    case "thread":
+      if runtimeState == .ready
+        && isLocalModelReady()
+        && workspace != nil
+        && !hasRuntimeThreadSelection()
+      {
+        return "New"
+      }
+    default:
+      return nil
+    }
+
+    return nil
+  }
+
+  func canRunReadinessStepAction(_ step: ReadinessStepSummary) -> Bool {
+    switch step.id {
+    case "runtime":
+      return (runtimeState == .disconnected || runtimeState == .failed) && canLaunchRuntime()
+    case "model":
+      return runtimeState == .ready && !isLocalModelReady() && canRunModelSetupCalloutAction()
+    case "workspace":
+      return runtimeState == .ready && workspace == nil && canOpenWorkspace()
+    case "thread":
+      return runtimeState == .ready
+        && isLocalModelReady()
+        && workspace != nil
+        && !hasRuntimeThreadSelection()
+        && canCreateThread()
+    default:
+      return false
+    }
+  }
+
+  func runReadinessStepAction(_ step: ReadinessStepSummary) {
+    guard canRunReadinessStepAction(step) else {
+      return
+    }
+
+    switch step.id {
+    case "runtime":
+      launchRuntime()
+    case "model":
+      runModelSetupCalloutAction()
+    case "workspace":
+      openWorkspace()
+    case "thread":
+      createThread()
+    default:
+      return
+    }
+  }
+
+  func setupProgressSummary() -> String {
+    SetupProgressPresenter.summary(setupProgressSnapshot())
+  }
+
+  func setupProgressDetail() -> String {
+    SetupProgressPresenter.detail(setupProgressSnapshot())
+  }
+
+  func setupProgressValue() -> Double {
+    SetupProgressPresenter.value(setupProgressSnapshot())
+  }
+
+  func setupProgressTone() -> StatusTone {
+    SetupProgressPresenter.tone(setupProgressSnapshot())
+  }
+
+  func inspectorSessionTitle() -> String {
+    InspectorSessionPresenter.title(inspectorSessionSnapshot())
+  }
+
+  func inspectorSessionDetail() -> String {
+    InspectorSessionPresenter.detail(inspectorSessionSnapshot())
+  }
+
+  func inspectorSessionMetaSummary() -> String {
+    InspectorSessionPresenter.metaSummary(inspectorSessionSnapshot())
+  }
+
+  func shouldShowModelSetupCallout() -> Bool {
+    runtimeState == .ready && !isLocalModelReady()
+  }
+
+  func shouldShowSetupCallout() -> Bool {
+    runtimeState == .ready
+      && (!isLocalModelReady() || workspace == nil || !hasRuntimeThreadSelection())
+  }
+
+  func setupCalloutTitle() -> String {
+    SetupCalloutPresenter.title(setupCalloutSnapshot())
+  }
+
+  func setupCalloutSummary() -> String {
+    SetupCalloutPresenter.summary(setupCalloutSnapshot())
+  }
+
+  func setupCalloutDetail() -> String {
+    SetupCalloutPresenter.detail(setupCalloutSnapshot())
+  }
+
+  func setupCalloutTone() -> StatusTone {
+    SetupCalloutPresenter.tone(setupCalloutSnapshot())
+  }
+
+  func setupCalloutActionTitle() -> String? {
+    SetupCalloutPresenter.primaryActionTitle(setupCalloutSnapshot())
+  }
+
+  func canRunSetupCalloutAction() -> Bool {
+    if !isLocalModelReady() {
+      return canRunModelSetupCalloutAction()
+    }
+    if workspace == nil {
+      return canOpenWorkspace()
+    }
+    if !hasRuntimeThreadSelection() {
+      return canCreateThread()
+    }
+
+    return false
+  }
+
+  func runSetupCalloutAction() {
+    if !isLocalModelReady() {
+      runModelSetupCalloutAction()
+      return
+    }
+    if workspace == nil {
+      openWorkspace()
+      return
+    }
+    if !hasRuntimeThreadSelection() {
+      createThread()
+    }
+  }
+
+  func setupCalloutSecondaryActionTitle() -> String? {
+    SetupCalloutPresenter.secondaryActionTitle(setupCalloutSnapshot())
+  }
+
+  func canRunSetupCalloutSecondaryAction() -> Bool {
+    if !isLocalModelReady() {
+      return canRunModelSetupCalloutSecondaryAction()
+    }
+
+    return false
+  }
+
+  func runSetupCalloutSecondaryAction() {
+    if !isLocalModelReady() {
+      runModelSetupCalloutSecondaryAction()
+    }
+  }
+
+  func shouldShowFirstRequestCallout() -> Bool {
+    canUseComposer()
+      && trimmedDraftMessage.isEmpty
+      && selectedThreadIsWaitingForFirstMessage()
+  }
+
+  func firstRequestCalloutTitle() -> String {
+    "First Local Request"
+  }
+
+  func firstRequestCalloutSummary() -> String {
+    FirstRequestPromptPresenter.calloutSummary()
+  }
+
+  func firstRequestCalloutDetail() -> String {
+    FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: workspace?.displayName)
+  }
+
+  func firstRequestCalloutActionTitle() -> String? {
+    FirstRequestPromptPresenter.primaryActionTitle(
+      for: firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
+    )
+  }
+
+  func canRunFirstRequestCalloutAction() -> Bool {
+    firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil
+  }
+
+  func runFirstRequestCalloutAction() {
+    useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
+  }
+
+  func firstRequestCalloutSecondaryActionTitle() -> String? {
+    FirstRequestPromptPresenter.secondaryActionTitle(
+      for: firstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
+    )
+  }
+
+  func canRunFirstRequestCalloutSecondaryAction() -> Bool {
+    firstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID) != nil
+  }
+
+  func runFirstRequestCalloutSecondaryAction() {
+    useFirstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
+  }
+
+  func shouldShowSetupModelChoice() -> Bool {
+    runtimeState == .ready
+      && !isLocalModelReady()
+      && modelDownloadID == nil
+      && pausedModelDownloadID == nil
+      && !localModels.isEmpty
+  }
+
+  func canChangeSetupModelChoice() -> Bool {
+    shouldShowSetupModelChoice()
+  }
+
+  func setupModelChoiceDetail() -> String {
+    LocalModelOperationPresenter.setupModelChoiceDetail(
+      localModelOperationSnapshot(),
+      defaultModelID: LocalModelCatalog.defaultFirstUseModelID
+    )
+  }
+
+  func setupDefaultModelID() -> String {
+    LocalModelCatalog.defaultFirstUseModelID
+  }
+
+  func modelSetupCalloutTitle() -> String {
+    localModelSetupGuidance().title
+  }
+
+  func modelSetupCalloutSummary() -> String {
+    localModelSetupGuidance().summary
+  }
+
+  func modelSetupCalloutDetail() -> String {
+    if shouldShowModelDownloadProgress() {
+      return modelDownloadProgressSummary()
+    }
+
+    return localModelSetupGuidance().detail
+  }
+
+  func modelSetupCalloutTone() -> StatusTone {
+    localModelSetupGuidance().tone
+  }
+
+  func modelSetupCalloutActionTitle() -> String? {
+    if modelDownloadID != nil {
+      return "Pause Download"
+    }
+    if pausedModelDownloadID != nil {
+      return "Continue Download"
+    }
+    if canDownloadLocalModel() {
+      return defaultModelDownloadButtonTitle()
+    }
+    if canBootstrapModelPackMetadata() {
+      return "Install Metadata"
+    }
+
+    return nil
+  }
+
+  func canRunModelSetupCalloutAction() -> Bool {
+    if modelDownloadID != nil {
+      return canPauseModelDownload()
+    }
+    if let pausedModelDownloadID {
+      return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    }
+
+    return canDownloadLocalModel() || canBootstrapModelPackMetadata()
+  }
+
+  func runModelSetupCalloutAction() {
+    if modelDownloadID != nil {
+      pauseModelDownload()
+      return
+    }
+    if let pausedModelDownloadID,
+       canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    {
+      downloadRecommendedModel(modelID: pausedModelDownloadID, activateAfterDownload: !isLocalModelReady())
+      return
+    }
+    if canDownloadLocalModel() {
+      downloadLocalModel()
+      return
+    }
+    if canBootstrapModelPackMetadata() {
+      bootstrapModelPackMetadata()
+    }
+  }
+
+  func modelSetupCalloutSecondaryActionTitle() -> String? {
+    guard modelDownloadID != nil || pausedModelDownloadID != nil else {
+      return nil
+    }
+
+    return "Cancel Download"
+  }
+
+  func canRunModelSetupCalloutSecondaryAction() -> Bool {
+    canCancelModelDownload()
+  }
+
+  func runModelSetupCalloutSecondaryAction() {
+    cancelModelDownload()
+  }
+
+  func runtimePrimaryActionTitle() -> String? {
+    switch runtimeState {
+    case .disconnected, .failed, .launching:
+      return runtimeLaunchButtonTitle()
+    case .ready:
+      if activeTurnID != nil {
+        return "Cancel Turn"
+      }
+      return nil
+    }
+  }
+
+  func canRunRuntimePrimaryAction() -> Bool {
+    switch runtimeState {
+    case .disconnected, .failed:
+      return canLaunchRuntime()
+    case .launching:
+      return false
+    case .ready:
+      if activeTurnID != nil {
+        return canCancelActiveTurn()
+      }
+      return false
+    }
+  }
+
+  func runRuntimePrimaryAction() {
+    switch runtimeState {
+    case .disconnected, .failed:
+      launchRuntime()
+    case .launching:
+      return
+    case .ready:
+      if activeTurnID != nil {
+        cancelActiveTurn()
+      }
+    }
+  }
+
   func canLaunchRuntime() -> Bool {
     runtimeState != .launching
+  }
+
+  func canOpenWorkspace() -> Bool {
+    runtimeState == .ready
+  }
+
+  func canCreateThread() -> Bool {
+    runtimeState == .ready
+      && workspace != nil
+      && isLocalModelReady()
+      && activeTurnID == nil
+  }
+
+  func canInstallPlugin() -> Bool {
+    runtimeState == .ready
+  }
+
+  func canSendDraftMessage() -> Bool {
+    runtimeState == .ready
+      && workspace != nil
+      && isLocalModelReady()
+      && hasRuntimeThreadSelection()
+      && !isTurnStreaming()
+      && !trimmedDraftMessage.isEmpty
+  }
+
+  func canCancelActiveTurn() -> Bool {
+    runtimeState == .ready && isTurnStreaming()
+  }
+
+  func canUseComposer() -> Bool {
+    runtimeState == .ready
+      && workspace != nil
+      && isLocalModelReady()
+      && hasRuntimeThreadSelection()
+      && activeTurnID == nil
+  }
+
+  private func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {
+    guard canUseComposer(),
+          trimmedDraftMessage.isEmpty,
+          selectedThreadIsWaitingForFirstMessage()
+    else {
+      return nil
+    }
+
+    return FirstRequestPromptPresenter.suggestion(id: id, workspaceDisplayName: workspace?.displayName)
+  }
+
+  private func useFirstRequestSuggestion(id: String) {
+    guard let suggestion = firstRequestSuggestion(id: id) else {
+      return
+    }
+
+    draftMessage = suggestion.message
   }
 
   func canSearchWorkspace() -> Bool {
@@ -521,6 +902,36 @@ final class AppViewModel: ObservableObject {
     resetWorkspaceSearch()
   }
 
+  func workspaceSearchEmptyStateSummary() -> String? {
+    if isWorkspaceSearching || !workspaceSearchResults.isEmpty {
+      return nil
+    }
+    if runtimeState != .ready {
+      return "Launch the runtime to search workspace files."
+    }
+    if workspace == nil {
+      return "Open a workspace to search local files."
+    }
+    if workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      return "Search file contents or symbols, then press Return."
+    }
+    if workspaceSearchStatus.hasPrefix("No matches found") {
+      return "No results yet. Try a shorter query, filename, or symbol name."
+    }
+    if workspaceSearchStatus.hasPrefix("Workspace search failed") {
+      return "Search failed. Check the runtime status, then try again."
+    }
+    return nil
+  }
+
+  func workspaceSearchOverflowSummary() -> String? {
+    guard workspaceSearchResults.count > 8 else {
+      return nil
+    }
+
+    return "Showing the first 8 matches. Narrow the query to focus the review."
+  }
+
   func openWorkspace() {
     guard runtimeState == .ready else {
       return
@@ -547,6 +958,8 @@ final class AppViewModel: ObservableObject {
         resetWorkspaceSearch()
         storeLastWorkspacePath(openedWorkspace.rootPath)
         await refreshMemoryState()
+        let threadList = try await runtimeBridge.listThreads()
+        try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -557,6 +970,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
+        announceSetupCompleteIfNeeded()
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -590,7 +1004,10 @@ final class AppViewModel: ObservableObject {
 
     let preview: PluginInstallPreview
     do {
-      preview = try inspectPluginInstallCandidate(at: url)
+      preview = try PluginInstallInspector.preview(
+        for: url,
+        installRootPath: runtimeBridge.localPluginInstallRootPath()
+      )
     } catch {
       let repairHint = pluginInstallRepairHint(for: error)
       let body = repairHint.isEmpty ? error.localizedDescription : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
@@ -649,7 +1066,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func createThread() {
-    guard runtimeState == .ready else {
+    guard canCreateThread() else {
       return
     }
 
@@ -671,6 +1088,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
+        announceSetupCompleteIfNeeded()
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -687,12 +1105,14 @@ final class AppViewModel: ObservableObject {
   }
 
   func sendDraftMessage() {
-    let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+    let message = trimmedDraftMessage
 
     guard runtimeState == .ready,
+          workspace != nil,
           isLocalModelReady(),
           !message.isEmpty,
           let threadID = selectedThreadID,
+          !threadID.hasPrefix("local-"),
           activeTurnID == nil
     else {
       return
@@ -890,6 +1310,7 @@ final class AppViewModel: ObservableObject {
 
     Task {
       await loadThreadHistory(threadID: threadID)
+      announceSetupCompleteIfNeeded()
     }
   }
 
@@ -995,49 +1416,27 @@ final class AppViewModel: ObservableObject {
   }
 
   func selectedEntryTitle() -> String {
-    selectedEntry()?.title ?? "No Item Selected"
+    TimelineInspectorPresenter.selectedEntryTitle(timelineInspectorSnapshot())
   }
 
   func selectedEntryBody() -> String {
-    selectedEntry()?.body ?? "Select a timeline item to inspect its details."
+    TimelineInspectorPresenter.selectedEntryBody(timelineInspectorSnapshot())
   }
 
   func selectedEntryMetadata() -> String {
-    guard let entry = selectedEntry() else {
-      return "No timeline item is selected."
-    }
-
-    if entry.attributes.isEmpty {
-      return entry.kind.rawValue
-    }
-
-    let detail = entry.attributes
-      .sorted(by: { $0.key < $1.key })
-      .map { "\($0.key): \($0.value)" }
-      .joined(separator: "\n")
-
-    return "\(entry.kind.rawValue)\n\(detail)"
+    TimelineInspectorPresenter.selectedEntryMetadata(timelineInspectorSnapshot())
   }
 
-  func selectedDiffBody() -> String? {
-    guard let entry = selectedEntry(), entry.kind == .diff else {
-      return nil
-    }
+  func selectedDiffSummary() -> String? {
+    TimelineInspectorPresenter.selectedDiffSummary(timelineInspectorSnapshot())
+  }
 
-    return entry.body
+  func selectedDiffLines() -> [DiffLineSummary] {
+    TimelineInspectorPresenter.selectedDiffLines(timelineInspectorSnapshot())
   }
 
   func selectedEntryMemorySummary() -> String? {
-    guard let entry = selectedEntry(),
-          let noteCount = entry.attributes["memoryNoteCount"],
-          noteCount != "0"
-    else {
-      return nil
-    }
-
-    let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
-    let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
-    return "Notes: \(noteCount)\nTitles: \(memoryTitles)\nIDs: \(memoryIDs)"
+    TimelineInspectorPresenter.selectedEntryMemorySummary(timelineInspectorSnapshot())
   }
 
   func workspaceDisplayName() -> String {
@@ -1045,214 +1444,182 @@ final class AppViewModel: ObservableObject {
   }
 
   func workspacePath() -> String {
-    workspace?.rootPath ?? "Open a local workspace to enable Milestone 1 tools."
+    workspace?.rootPath ?? "Open a local workspace to enable project-scoped tools."
   }
 
   func modelDisplayName() -> String {
-    modelHealth?.displayName ?? "Local Model Not Loaded"
+    LocalModelStatusPresenter.displayName(localModelStatusSnapshot())
   }
 
   func modelStatusSummary() -> String {
-    guard let modelHealth else {
-      return "Launch the runtime to inspect local model health."
+    LocalModelStatusPresenter.statusSummary(localModelStatusSnapshot())
+  }
+
+  func modelActionSummary() -> String {
+    localModelSetupGuidance().actionSummary
+  }
+
+  func showsModelActivity() -> Bool {
+    LocalModelStatusPresenter.showsActivity(localModelStatusSnapshot())
+  }
+
+  func isModelActionBlocking() -> Bool {
+    LocalModelOperationPresenter.isActionBlocking(localModelOperationSnapshot())
+  }
+
+  func localModelPrimaryActionTitle() -> String? {
+    guard runtimeState == .ready else {
+      return nil
+    }
+    if modelDownloadID != nil {
+      return "Pause Download"
+    }
+    if pausedModelDownloadID != nil {
+      return "Continue Download"
+    }
+    if !isLocalModelReady() {
+      if canDownloadLocalModel() {
+        return defaultModelDownloadButtonTitle()
+      }
+      if canBootstrapModelPackMetadata() {
+        return "Install Metadata"
+      }
     }
 
-    return "\(modelHealth.backend) | \(modelHealth.status)"
+    return nil
+  }
+
+  func canRunLocalModelPrimaryAction() -> Bool {
+    guard runtimeState == .ready else {
+      return false
+    }
+    if modelDownloadID != nil {
+      return canPauseModelDownload()
+    }
+    if let pausedModelDownloadID {
+      return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    }
+    if !isLocalModelReady() {
+      return canDownloadLocalModel() || canBootstrapModelPackMetadata()
+    }
+
+    return false
+  }
+
+  func runLocalModelPrimaryAction() {
+    if modelDownloadID != nil {
+      pauseModelDownload()
+      return
+    }
+    if let pausedModelDownloadID,
+       canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    {
+      downloadRecommendedModel(modelID: pausedModelDownloadID, activateAfterDownload: !isLocalModelReady())
+      return
+    }
+    if !isLocalModelReady() {
+      if canDownloadLocalModel() {
+        downloadLocalModel()
+        return
+      }
+      if canBootstrapModelPackMetadata() {
+        bootstrapModelPackMetadata()
+      }
+    }
+  }
+
+  func localModelSecondaryActionTitle() -> String? {
+    canCancelModelDownload() ? "Cancel Download" : nil
+  }
+
+  func canRunLocalModelSecondaryAction() -> Bool {
+    canCancelModelDownload()
+  }
+
+  func runLocalModelSecondaryAction() {
+    cancelModelDownload()
   }
 
   func modelDetailSummary() -> String {
-    guard let modelHealth else {
-      return "Pith will use the built-in local model path after the runtime connects."
-    }
-
-    return modelHealth.detail
+    LocalModelStatusPresenter.detailSummary(localModelStatusSnapshot())
   }
 
   func modelSourceSummary() -> String {
-    guard let modelHealth else {
-      return "Source: unavailable"
-    }
-
-    let source = "Source: \(modelHealth.source)"
-    if let manifestPath = modelHealth.manifestPath {
-      return "\(source)\nManifest: \(manifestPath)"
-    }
-
-    return source
+    LocalModelStatusPresenter.sourceSummary(localModelStatusSnapshot())
   }
 
   func modelMetricsSummary() -> String {
-    guard let modelHealth else {
-      return "Metrics: unavailable"
-    }
-
-    let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
-    let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
-    let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
-    return "Context: \(contextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
+    LocalModelStatusPresenter.metricsSummary(localModelStatusSnapshot())
   }
 
   func modelReadinessSummary() -> String {
-    guard let modelHealth else {
-      return "Readiness: unavailable"
-    }
-
-    let readiness = modelHealth.metrics["readiness"] ?? "unknown"
-    let packReady = modelHealth.metrics["packReady"] ?? "false"
-    return "Readiness: \(readiness) | Pack Ready: \(packReady)"
+    LocalModelStatusPresenter.readinessSummary(localModelStatusSnapshot())
   }
 
   func modelInstallHintSummary() -> String {
-    guard let modelHealth else {
-      return "Install hint: launch the runtime to inspect local model setup."
-    }
-
-    return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
+    LocalModelStatusPresenter.installHintSummary(localModelStatusSnapshot())
   }
 
   func modelSuggestedPathSummary() -> String {
-    guard let modelHealth else {
-      return "Suggested install layout unavailable."
-    }
-
-    let manifestPath = modelHealth.metrics["suggestedManifestPath"] ?? "manifest path unavailable"
-    let modelPath = modelHealth.metrics["suggestedModelPath"] ?? "model path unavailable"
-    let binaryPath = modelHealth.metrics["suggestedBinaryPath"] ?? "binary path unavailable"
-    return "Suggested Manifest: \(manifestPath)\nSuggested Model: \(modelPath)\nSuggested Binary: \(binaryPath)"
+    LocalModelStatusPresenter.suggestedPathSummary(localModelStatusSnapshot())
   }
 
   func modelArtifactPathSummary() -> String {
-    guard let modelHealth else {
-      return "No local model paths available yet."
-    }
-
-    let modelPath = modelHealth.modelPath ?? "model path unavailable"
-    let binaryPath = modelHealth.binaryPath ?? "binary path unavailable"
-    let manifestPath = modelHealth.manifestPath ?? "manifest path unavailable"
-    return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
+    LocalModelStatusPresenter.artifactPathSummary(localModelStatusSnapshot())
   }
 
   func modelManagerSummary() -> String {
-    let downloadedModels = localModels.filter { $0.downloaded }
-    let activeModel = localModels.first(where: { $0.active })?.displayName ?? "none"
-    let downloadingModel = modelDownloadID
-      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
-    let pausedModel = pausedModelDownloadID
-      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
-    let localSize = downloadedModels
-      .compactMap { $0.localSizeBytes }
-      .reduce(Int64(0), +)
-    let downloadSummary = downloadingModel.map { " | Downloading: \($0)" } ?? ""
-    let pausedSummary = pausedModel.map { " | Paused: \($0)" } ?? ""
-    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)\(downloadSummary)\(pausedSummary)"
+    LocalModelOperationPresenter.managerSummary(localModelOperationSnapshot())
   }
 
   func shouldShowModelDownloadProgress() -> Bool {
-    guard let modelDownloadProgress else {
-      return false
-    }
-
-    return modelDownloadID == modelDownloadProgress.modelID
-      || pausedModelDownloadID == modelDownloadProgress.modelID
+    LocalModelStatusPresenter.shouldShowDownloadProgress(localModelStatusSnapshot())
   }
 
   func modelDownloadProgressValue() -> Double? {
-    guard let modelDownloadProgress,
-          modelDownloadProgress.totalBytes > 0
-    else {
-      return nil
-    }
-
-    let value = Double(modelDownloadProgress.bytesReceived)
-      / Double(modelDownloadProgress.totalBytes)
-    return min(max(value, 0), 1)
+    LocalModelStatusPresenter.downloadProgressValue(localModelStatusSnapshot())
   }
 
   func modelDownloadProgressSummary() -> String {
-    guard let modelDownloadProgress else {
-      return ""
-    }
-
-    let received = formattedByteCount(modelDownloadProgress.bytesReceived)
-    let total = modelDownloadProgress.totalBytes > 0
-      ? formattedByteCount(modelDownloadProgress.totalBytes)
-      : "unknown size"
-    let isPaused = pausedModelDownloadID == modelDownloadProgress.modelID
-    let status = isPaused ? "Paused" : (modelDownloadProgress.isResuming ? "Continuing" : "Downloading")
-    let trailingStatus = isPaused ? "Ready to continue" : modelDownloadSpeedSummary(modelDownloadProgress)
-    let percent = modelDownloadProgressValue()
-      .map { " | \(Int($0 * 100))%" }
-      ?? ""
-
-    return "\(status) \(modelDownloadProgress.displayName): \(received) of \(total)\(percent) | \(trailingStatus)"
+    LocalModelStatusPresenter.downloadProgressSummary(localModelStatusSnapshot())
   }
 
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {
-    let status: String
-    if modelDownloadID == model.id {
-      status = "downloading"
-    } else if pausedModelDownloadID == model.id {
-      status = "paused"
-    } else if model.active {
-      status = "active"
-    } else if model.downloaded {
-      status = "downloaded"
-    } else {
-      status = "available"
-    }
-
-    let localSize = model.localSizeBytes.map(formattedByteCount) ?? formattedByteCount(model.sizeBytes)
-    return "\(status) | \(localSize) | \(model.license)"
+    LocalModelStatusPresenter.localModelStatusSummary(model, snapshot: localModelStatusSnapshot())
   }
 
   func defaultModelDownloadButtonTitle() -> String {
-    if modelDownloadID == "lfm2.5-350m" {
-      return "Downloading Model"
-    }
-    if pausedModelDownloadID == "lfm2.5-350m" {
-      return "Continue Model"
-    }
-
-    return "Download Model"
+    LocalModelStatusPresenter.defaultDownloadButtonTitle(localModelStatusSnapshot())
   }
 
   func localModelDownloadButtonTitle(_ model: LocalModelSummary) -> String {
-    if modelDownloadID == model.id {
-      return "Downloading"
-    }
-    if pausedModelDownloadID == model.id {
-      return "Continue"
-    }
-
-    return model.downloaded ? "Downloaded" : "Download"
+    LocalModelStatusPresenter.downloadButtonTitle(model, snapshot: localModelStatusSnapshot())
   }
 
   func localModelTagSummary(_ model: LocalModelSummary) -> String {
-    model.tags.joined(separator: " / ")
+    LocalModelStatusPresenter.tagSummary(model)
   }
 
   func localModelPathSummary(_ model: LocalModelSummary) -> String {
-    model.installPath
+    LocalModelStatusPresenter.pathSummary(model)
   }
 
   func canDownloadRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadTask == nil else {
-      return false
-    }
-    if let pausedModelDownloadID {
-      return pausedModelDownloadID == modelID && modelDownloadResumeData != nil
-    }
     guard let model = localModels.first(where: { $0.id == modelID }),
-          URL(string: model.downloadURL) != nil
+          !model.downloaded
     else {
       return false
     }
 
-    return !model.downloaded
+    return localModelDownloadRequestPlan(for: model).canStart
   }
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
-    guard modelDownloadTask == nil, pausedModelDownloadID == nil else {
+    guard runtimeState != .launching,
+          activeTurnID == nil,
+          modelDownloadTask == nil,
+          pausedModelDownloadID == nil
+    else {
       return false
     }
     guard let model = localModels.first(where: { $0.id == modelID }) else {
@@ -1263,7 +1630,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func canResetActiveLocalModel() -> Bool {
-    runtimeBridge.activeLocalModelPath() != nil
+    runtimeState != .launching
+      && activeTurnID == nil
+      && modelDownloadTask == nil
+      && runtimeBridge.activeLocalModelPath() != nil
   }
 
   func canCancelModelDownload() -> Bool {
@@ -1297,28 +1667,42 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let displayName = localModels.first(where: { $0.id == pausedModelDownloadID })?.displayName
-      ?? "local model"
-    clearPausedModelDownload()
-    removeIncompleteModelFile(modelID: pausedModelDownloadID)
-    modelDownloadProgress = nil
-    runtimeDetail = "Cancelled \(displayName) download and cleared partial state."
+    guard let model = localModels.first(where: { $0.id == pausedModelDownloadID }) else {
+      clearPausedModelDownload()
+      removeIncompleteModelFile(modelID: pausedModelDownloadID)
+      modelDownloadProgress = nil
+      runtimeDetail = "Cancelled local model download and cleared partial state."
+      refreshLocalModelCatalog()
+      return
+    }
+
+    applyModelDownloadInterruptionPlan(
+      LocalModelDownloadInterruptionPlanner.cancellationPlan(model: model),
+      model: model
+    )
     refreshLocalModelCatalog()
   }
 
-  func downloadRecommendedModel(modelID: String) {
+  func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
     guard let model = localModels.first(where: { $0.id == modelID }) else {
       runtimeDetail = "The selected local model is unavailable."
       return
     }
 
-    guard let downloadURL = URL(string: model.downloadURL) else {
-      runtimeDetail = "The selected local model has an invalid download URL."
+    let requestPlan = localModelDownloadRequestPlan(for: model)
+    guard let downloadURL = requestPlan.downloadURL else {
+      runtimeDetail = requestPlan.blockedDetail ?? "The selected local model is not ready to download."
       return
     }
 
-    let isResuming = pausedModelDownloadID == model.id && modelDownloadResumeData != nil
-    if !isResuming {
+    let startPlan = LocalModelDownloadStartPlanner.plan(
+      model: model,
+      sourceURL: downloadURL,
+      pausedModelID: pausedModelDownloadID,
+      resumeData: modelDownloadResumeData,
+      currentProgress: modelDownloadProgress
+    )
+    if !startPlan.isResuming {
       guard confirmModelDownload(
         displayName: model.displayName,
         downloadURL: downloadURL,
@@ -1330,21 +1714,17 @@ final class AppViewModel: ObservableObject {
       }
     }
 
-    let resumeData = isResuming ? modelDownloadResumeData : nil
-    let resumedBytes = isResuming && modelDownloadProgress?.modelID == model.id
-      ? modelDownloadProgress?.bytesReceived ?? 0
-      : 0
     modelDownloadID = model.id
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
-    modelDownloadProgress = ModelDownloadProgress(
-      modelID: model.id,
-      displayName: model.displayName,
-      bytesReceived: resumedBytes,
-      totalBytes: model.sizeBytes,
-      startedAt: Date(),
-      updatedAt: Date(),
-      isResuming: isResuming
+    LocalModelCatalog.clearPausedDownload()
+    modelDownloadProgress = startPlan.progress
+    let shouldActivateAfterDownload = activateAfterDownload || !isLocalModelReady()
+    appendModelEvent(
+      title: startPlan.timelineTitle,
+      body: startPlan.timelineBody,
+      model: model,
+      attributes: startPlan.attributes
     )
     modelDownloadTask = Task {
       defer {
@@ -1354,85 +1734,50 @@ final class AppViewModel: ObservableObject {
         refreshLocalModelCatalog()
       }
       do {
-        runtimeDetail =
-          "\(isResuming ? "Continuing" : "Downloading") \(model.displayName) (\(formattedByteCount(model.sizeBytes)))..."
+        runtimeDetail = startPlan.runtimeDetail
         try await downloadModelFile(
           from: downloadURL,
-          resumeData: resumeData,
+          resumeData: startPlan.resumeData,
           modelID: model.id,
           expectedBytes: model.sizeBytes,
           to: URL(fileURLWithPath: model.installPath)
         )
 
-        var activatedDefaultModel = false
-        var manifestPath: String?
-        if model.id == "lfm2.5-350m" {
-          let defaultManifestPath = try writeLocalModelPackManifest(for: model)
+        let canActivateDownloadedModel = activeTurnID == nil
+        let manifestPath: String?
+        if shouldActivateAfterDownload && canActivateDownloadedModel {
+          let modelManifestPath = try LocalModelCatalog.writePackManifest(for: model)
           runtimeBridge.configureActiveLocalModel(
-            manifestPath: defaultManifestPath,
+            manifestPath: modelManifestPath,
             modelPath: model.installPath
           )
-          manifestPath = defaultManifestPath
-          activatedDefaultModel = true
-        }
-
-        if activatedDefaultModel {
-          runtimeDetail = "Downloaded and selected \(model.displayName)."
-          modelDownloadProgress = nil
-          refreshLocalModelCatalog()
+          manifestPath = modelManifestPath
         } else {
-          runtimeDetail = "Downloaded \(model.displayName) to \(model.installPath)."
-          modelDownloadProgress = nil
-          refreshLocalModelCatalog()
+          manifestPath = nil
         }
 
-        var attributes = [
-          "modelPath": model.installPath,
-          "source": downloadURL.absoluteString,
-        ]
-        if let manifestPath {
-          attributes["manifestPath"] = manifestPath
-        }
-
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
-            title: "Local Model Downloaded",
-            body: activatedDefaultModel
-              ? "\(model.displayName) was downloaded and selected as the active local model."
-              : "\(model.displayName) was downloaded to \(model.installPath).",
-            attributes: attributes
-          )
+        let completionPlan = LocalModelDownloadCompletionPlanner.plan(
+          model: model,
+          sourceURL: downloadURL,
+          activationRequested: shouldActivateAfterDownload,
+          canActivateNow: canActivateDownloadedModel,
+          manifestPath: manifestPath
         )
 
-        if activatedDefaultModel {
-          relaunchRuntimeIfNeeded(
-            runningDetail: "Restarting local runtime with \(model.displayName)...",
-            idleDetail: "\(model.displayName) will be used when the runtime launches."
-          )
-        }
+        applyModelDownloadCompletionPlan(completionPlan, model: model)
       } catch {
-        if let paused = error as? ModelDownloadPaused {
-          modelDownloadResumeData = paused.resumeData
-          pausedModelDownloadID = model.id
-          runtimeDetail = "Paused \(model.displayName) download. Continue to resume from the saved partial state."
-        } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
-          clearPausedModelDownload()
-          removeIncompleteModelFile(modelID: model.id)
-          modelDownloadProgress = nil
-          runtimeDetail = "Cancelled \(model.displayName) download and cleared partial state."
-        } else {
-          clearPausedModelDownload()
-          modelDownloadProgress = nil
-          runtimeDetail = "Model download failed: \(error.localizedDescription)"
-        }
+        let interruptionPlan = LocalModelDownloadInterruptionPlanner.plan(model: model, error: error)
+        applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
       }
     }
   }
 
   func activateRecommendedModel(modelID: String) {
+    guard activeTurnID == nil else {
+      runtimeDetail = "Finish or cancel the current local turn before switching models."
+      return
+    }
+
     guard let model = localModels.first(where: { $0.id == modelID }) else {
       runtimeDetail = "The selected local model is unavailable."
       return
@@ -1444,52 +1789,30 @@ final class AppViewModel: ObservableObject {
     }
 
     do {
-      let manifestPath = try writeLocalModelPackManifest(for: model)
+      let manifestPath = try LocalModelCatalog.writePackManifest(for: model)
       runtimeBridge.configureActiveLocalModel(
         manifestPath: manifestPath,
         modelPath: model.installPath
       )
+      selectedSetupModelID = model.id
       refreshLocalModelCatalog()
-      appendEntry(
-        to: selectedThreadID,
-        TimelineEntry(
-          id: UUID().uuidString,
-          kind: .system,
-          title: "Local Model Selected",
-          body: "\(model.displayName) is now the active local model.",
-          attributes: [
-            "modelId": model.id,
-            "manifestPath": manifestPath,
-            "modelPath": model.installPath,
-          ]
-        )
-      )
-      relaunchRuntimeIfNeeded(
-        runningDetail: "Restarting local runtime with \(model.displayName)...",
-        idleDetail: "\(model.displayName) will be used when the runtime launches."
+      applyLocalModelActivationPlan(
+        LocalModelActivationPlanner.selectionPlan(model: model, manifestPath: manifestPath)
       )
     } catch {
-      runtimeDetail = "Model selection failed: \(error.localizedDescription)"
+      runtimeDetail = LocalModelActivationPlanner.selectionFailureDetail(error: error)
     }
   }
 
   func resetActiveLocalModel() {
+    guard activeTurnID == nil else {
+      runtimeDetail = "Finish or cancel the current local turn before resetting model selection."
+      return
+    }
+
     runtimeBridge.clearActiveLocalModel()
     refreshLocalModelCatalog()
-    appendEntry(
-      to: selectedThreadID,
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
-        title: "Local Model Reset",
-        body: "Pith will use the default local model discovery path.",
-        attributes: [:]
-      )
-    )
-    relaunchRuntimeIfNeeded(
-      runningDetail: "Restarting local runtime with default model discovery...",
-      idleDetail: "Default model discovery will be used when the runtime launches."
-    )
+    applyLocalModelActivationPlan(LocalModelActivationPlanner.resetPlan())
   }
 
   func revealRecommendedModel(modelID: String) {
@@ -1516,11 +1839,42 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadLocalModel() -> Bool {
-    canDownloadRecommendedModel(modelID: "lfm2.5-350m")
+    guard let modelID = selectedSetupModel()?.id else {
+      return false
+    }
+
+    return canDownloadRecommendedModel(modelID: modelID)
+      || canActivateRecommendedModel(modelID: modelID)
   }
 
   func downloadLocalModel() {
-    downloadRecommendedModel(modelID: "lfm2.5-350m")
+    guard let modelID = selectedSetupModel()?.id else {
+      runtimeDetail = "Choose a local model before downloading."
+      return
+    }
+
+    if let model = localModels.first(where: { $0.id == modelID }),
+       model.active
+    {
+      runtimeDetail = "\(model.displayName) is already the active local model."
+      return
+    }
+
+    if localModels.first(where: { $0.id == modelID })?.downloaded == true {
+      activateRecommendedModel(modelID: modelID)
+      return
+    }
+
+    guard canDownloadRecommendedModel(modelID: modelID) else {
+      runtimeDetail = "The selected local model is not ready to download."
+      return
+    }
+
+    downloadRecommendedModel(modelID: modelID, activateAfterDownload: true)
+  }
+
+  func canBootstrapModelPackMetadata() -> Bool {
+    runtimeState == .ready && modelDownloadTask == nil
   }
 
   func bootstrapModelPackMetadata() {
@@ -1544,115 +1898,39 @@ final class AppViewModel: ObservableObject {
   }
 
   func pluginCountSummary() -> String {
-    if plugins.isEmpty {
-      return "No bundled plugins discovered yet."
-    }
-
-    let readyCount = plugins.filter { $0.status == "ready" }.count
-    let invalidCount = plugins.count - readyCount
-    if invalidCount == 0 {
-      return "\(readyCount) plugin(s) discovered"
-    }
-
-    return "\(readyCount) ready, \(invalidCount) invalid"
+    PluginDashboardPresenter.pluginCountSummary(pluginDashboardSnapshot())
   }
 
   func localPluginCountSummary() -> String {
-    let localPlugins = plugins.filter { $0.provenance == "local" }
-
-    if localPlugins.isEmpty {
-      return "No local plugin installs yet."
-    }
-
-    return "\(localPlugins.count) local plugin install\(localPlugins.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.localPluginCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginDetailSummary() -> String {
-    guard !plugins.isEmpty else {
-      return "Pith discovers plugin manifests from the bundled plugins directory."
-    }
-
-    return plugins
-      .map { plugin in
-        let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
-        let validation = plugin.validationError ?? "ok"
-        let hint = plugin.validationHint.map { " | repair: \($0)" } ?? ""
-        return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | capabilities: \(capabilities) | validation: \(validation)\(hint)"
-      }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginPermissionCountSummary() -> String {
-    let readyPlugins = plugins.filter { $0.status == "ready" }
-    let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
-
-    guard !readyPlugins.isEmpty else {
-      return "Plugin permissions are not loaded yet."
-    }
-
-    if uniquePermissions.isEmpty {
-      return "\(readyPlugins.count) ready plugin(s), no declared permissions"
-    }
-
-    return "\(uniquePermissions.count) permission(s) across \(readyPlugins.count) ready plugin(s)"
+    PluginDashboardPresenter.permissionCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginPermissionDetailSummary() -> String {
-    let readyPlugins = plugins.filter { $0.status == "ready" }
-
-    guard !readyPlugins.isEmpty else {
-      return "Permission coverage appears here after the runtime loads plugin manifests."
-    }
-
-    let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
-    if uniquePermissions.isEmpty {
-      return "The current ready plugins do not declare extra runtime permissions."
-    }
-
-    return uniquePermissions
-      .sorted()
-      .map { permission in
-        let grantingPlugins = readyPlugins
-          .filter { $0.permissions.contains(permission) }
-          .map(\.displayName)
-          .sorted()
-          .joined(separator: ", ")
-        return "\(permission): \(grantingPlugins)"
-      }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.permissionDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginPermissionPreview() -> [PluginSummary] {
-    plugins.filter { $0.status == "ready" }
+    PluginDashboardPresenter.permissionPreview(pluginDashboardSnapshot())
   }
 
   func invalidPluginCountSummary() -> String {
-    let invalidPlugins = plugins.filter { $0.status != "ready" }
-
-    if invalidPlugins.isEmpty {
-      return "No Manifest Issues"
-    }
-
-    return "\(invalidPlugins.count) Invalid Plugin Manifest\(invalidPlugins.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.invalidPluginCountSummary(pluginDashboardSnapshot())
   }
 
   func invalidPluginDetailSummary() -> String {
-    let invalidPlugins = plugins.filter { $0.status != "ready" }
-
-    guard !invalidPlugins.isEmpty else {
-      return "All discovered plugin manifests match the current runtime schema."
-    }
-
-    return invalidPlugins
-      .map { plugin in
-        let hint = plugin.validationHint.map { " Repair hint: \($0)" } ?? ""
-        return "\(plugin.displayName): \(plugin.validationError ?? "Unknown validation error")\(hint)"
-      }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot())
   }
 
   func invalidPlugins() -> [PluginSummary] {
-    plugins.filter { $0.status != "ready" }
+    PluginDashboardPresenter.invalidPlugins(pluginDashboardSnapshot())
   }
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
@@ -1669,124 +1947,55 @@ final class AppViewModel: ObservableObject {
   }
 
   func pluginRegistryCountSummary() -> String {
-    guard let pluginCapabilityRegistrySummary else {
-      return "Capability registry not loaded yet."
-    }
-
-    return
-      "\(pluginCapabilityRegistrySummary.totalCapabilityCount) capability(ies) from \(pluginCapabilityRegistrySummary.enabledPluginCount) enabled plugin(s)"
+    PluginDashboardPresenter.registryCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginRegistryDetailSummary() -> String {
-    guard let pluginCapabilityRegistrySummary else {
-      return "Enable a ready plugin to populate the typed capability registry."
-    }
-
-    let kindSummary = pluginCapabilityRegistrySummary.capabilityCountsByKind
-      .sorted(by: { $0.key < $1.key })
-      .map { "\($0.key): \($0.value)" }
-      .joined(separator: " | ")
-    if kindSummary.isEmpty {
-      return "No capabilities are currently registered."
-    }
-
-    return kindSummary
+    PluginDashboardPresenter.registryDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginCapabilityPreview() -> [PluginCapabilitySummary] {
-    Array(pluginCapabilities.prefix(6))
+    PluginDashboardPresenter.capabilityPreview(pluginDashboardSnapshot())
   }
 
   func pluginConnectorCountSummary() -> String {
-    if pluginConnectors.isEmpty {
-      return "No Connectors"
-    }
-
-    return "\(pluginConnectors.count) Connector\(pluginConnectors.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.connectorCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginConnectorDetailSummary() -> String {
-    guard !pluginConnectors.isEmpty else {
-      return "Install or enable connector plugins to prepare third-party app integrations."
-    }
-
-    return pluginConnectors
-      .map { "\($0.displayName): \($0.status) via \($0.pluginDisplayName)" }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.connectorDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginConnectorPreview() -> [PluginConnectorSummary] {
-    Array(pluginConnectors.prefix(6))
+    PluginDashboardPresenter.connectorPreview(pluginDashboardSnapshot())
   }
 
   func pluginCommandCountSummary() -> String {
-    if pluginCommands.isEmpty {
-      return "No Plugin Commands"
-    }
-
-    return "\(pluginCommands.count) Plugin Command\(pluginCommands.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.commandCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginCommandDetailSummary() -> String {
-    guard !pluginCommands.isEmpty else {
-      return "Enable ready plugins with declared command capabilities to run reusable local workflows."
-    }
-
-    return pluginCommands
-      .map { "\($0.pluginDisplayName): \($0.title)" }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginHookCountSummary() -> String {
-    if pluginHooks.isEmpty {
-      return "No Plugin Hooks"
-    }
-
-    return "\(pluginHooks.count) Plugin Hook\(pluginHooks.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginHookDetailSummary() -> String {
-    guard !pluginHooks.isEmpty else {
-      return "Enable ready plugins with declared hook capabilities to extend local runtime events."
-    }
-
-    return pluginHooks
-      .map { "\($0.pluginDisplayName): \($0.title) (\($0.event))" }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot())
   }
 
   func memoryCountSummary() -> String {
-    guard let memoryStatus else {
-      return "Built-in memory is not connected yet."
-    }
-
-    return "\(memoryStatus.noteCount) note(s) captured"
+    MemoryPresenter.countSummary(memorySnapshot())
   }
 
   func memoryDetailSummary() -> String {
-    guard let memoryStatus else {
-      return "Pith uses built-in memory instead of a memory plugin. Workspace notes are stored locally by the runtime."
-    }
-
-    if memoryNotes.isEmpty {
-      return memoryStatus.summary
-    }
-
-    return memoryNotes
-      .prefix(4)
-      .map { note in
-        let tagSummary = note.tags.isEmpty ? "untagged" : note.tags.joined(separator: ", ")
-        return "\(note.title) | \(note.scope) | \(note.source) | tags: \(tagSummary)"
-      }
-      .joined(separator: "\n")
+    MemoryPresenter.detailSummary(memorySnapshot())
   }
 
   func memoryLatestSummary() -> String {
-    guard let latestNote = memoryNotes.first else {
-      return "No memory notes have been captured yet."
-    }
-
-    return "\(latestNote.body)\nSource: \(latestNote.source)"
+    MemoryPresenter.latestSummary(memorySnapshot())
   }
 
   func canSaveWorkspaceMemoryNote() -> Bool {
@@ -1808,19 +2017,15 @@ final class AppViewModel: ObservableObject {
   }
 
   func composerPlaceholder() -> String {
-    if workspace == nil {
-      return "Open a workspace to start local agent work"
-    }
+    ComposerStatusPresenter.placeholder(composerStatusSnapshot())
+  }
 
-    if !isLocalModelReady() {
-      return "Install the local LFM2.5-350M runtime before starting agent work"
-    }
+  func composerStatusSummary() -> String {
+    ComposerStatusPresenter.statusSummary(composerStatusSnapshot())
+  }
 
-    if activeTurnID != nil {
-      return "Pith is streaming a response. Cancel to stop the current turn."
-    }
-
-    return "Ask Pith to inspect files, review diffs, run shell commands, or write files"
+  func showsComposerActivity() -> Bool {
+    runtimeState == .launching || activeTurnID != nil
   }
 
   func isTurnStreaming() -> Bool {
@@ -1876,6 +2081,100 @@ final class AppViewModel: ObservableObject {
     threads[index].preview = preview
   }
 
+  private func refreshWorkspaceThreadSelection(
+    from runtimeThreads: [RuntimeBridge.RuntimeThreadSummary],
+    createIfEmpty: Bool
+  ) async throws {
+    guard let workspace else {
+      resetToWelcomeThread()
+      return
+    }
+
+    var workspaceThreads = runtimeThreads
+      .filter { $0.workspaceRootPath == workspace.rootPath }
+      .map { threadSummary(from: $0) }
+
+    if workspaceThreads.isEmpty && createIfEmpty {
+      let thread = try await runtimeBridge.startThread(title: "\(workspace.displayName) Thread")
+      workspaceThreads = [thread]
+    }
+
+    if workspaceThreads.isEmpty {
+      resetToWelcomeThread()
+      return
+    }
+
+    threads = workspaceThreads
+    threadTimelines = Dictionary(
+      uniqueKeysWithValues: workspaceThreads.map { thread in
+        (thread.id, threadTimelines[thread.id] ?? defaultTimeline(for: thread.title))
+      }
+    )
+    threadPendingApprovalIDs = threadPendingApprovalIDs.filter { entry in
+      workspaceThreads.contains(where: { $0.id == entry.key })
+    }
+
+    let selectedThread = workspaceThreads.first(where: { $0.id == selectedThreadID }) ?? workspaceThreads.first
+    selectedThreadID = selectedThread?.id
+    syncVisibleTimeline()
+
+    if let selectedThreadID {
+      await loadThreadHistory(threadID: selectedThreadID)
+      announceSetupCompleteIfNeeded()
+    }
+  }
+
+  private func threadSummary(from runtimeThread: RuntimeBridge.RuntimeThreadSummary) -> ThreadSummary {
+    ThreadSummary(
+      id: runtimeThread.id,
+      title: runtimeThread.title,
+      preview: runtimeThread.status,
+      workspaceRootPath: runtimeThread.workspaceRootPath,
+      workspaceDisplayName: runtimeThread.workspaceDisplayName
+    )
+  }
+
+  private func resetToWelcomeThread() {
+    let welcomeThread = ThreadSummary(
+      id: "local-welcome",
+      title: "Welcome to Pith",
+      preview: "Open a workspace to begin the local agent loop.",
+      workspaceRootPath: nil,
+      workspaceDisplayName: nil
+    )
+    let welcomeTimeline = Self.welcomeTimeline()
+
+    threads = [welcomeThread]
+    threadTimelines = [welcomeThread.id: welcomeTimeline]
+    selectedThreadID = welcomeThread.id
+    timeline = welcomeTimeline
+    selectedEntryID = welcomeTimeline.first?.id
+  }
+
+  private static func welcomeTimeline() -> [TimelineEntry] {
+    [
+      TimelineEntry(
+        id: "welcome-start-local-setup",
+        kind: .system,
+        title: "Start Local Setup",
+        body: "Launch the runtime, choose a local model, open a workspace, then create or select a thread.",
+        attributes: [
+          "path": "runtime -> model -> workspace -> thread"
+        ]
+      ),
+      TimelineEntry(
+        id: "welcome-local-first-agent-loop",
+        kind: .assistantMessage,
+        title: "Local-First Agent Loop",
+        body:
+          "Pith runs the core agent loop against local workspaces and does not call external model APIs for core responses.",
+        attributes: [
+          "model": "local"
+        ]
+      ),
+    ]
+  }
+
   private func appendEntry(to threadID: String?, _ entry: TimelineEntry) {
     guard let threadID else {
       timeline.insert(entry, at: 0)
@@ -1890,10 +2189,12 @@ final class AppViewModel: ObservableObject {
     threadTimelines[threadID] = entries
 
     if selectedThreadID == threadID {
+      let previousSelectionID = selectedEntryID
       timeline = entries
-      if !entries.contains(where: { $0.id == selectedEntryID }) {
-        selectedEntryID = entries.first?.id
-      }
+      selectedEntryID = bestTimelineSelectionID(
+        previousSelectionID: previousSelectionID,
+        entries: entries
+      )
     }
   }
 
@@ -1904,21 +2205,27 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    let previousSelectionID = selectedEntryID
     timeline =
       threadTimelines[selectedThreadID]
       ?? defaultTimeline(for: threadTitle(for: selectedThreadID))
     threadTimelines[selectedThreadID] = timeline
-    selectedEntryID = timeline.first?.id
+    selectedEntryID = bestTimelineSelectionID(
+      previousSelectionID: previousSelectionID,
+      entries: timeline
+    )
   }
 
   private func defaultTimeline(for title: String) -> [TimelineEntry] {
     [
       TimelineEntry(
-        id: UUID().uuidString,
+        id: "default-thread-ready:\(title)",
         kind: .system,
         title: "Thread Ready",
-        body: "\(title) is ready for local runtime messages.",
-        attributes: [:]
+        body: "\(title) is ready after runtime, model, workspace, and thread setup are complete.",
+        attributes: [
+          "setup": "runtime, model, workspace, thread"
+        ]
       ),
     ]
   }
@@ -1931,7 +2238,7 @@ final class AppViewModel: ObservableObject {
     do {
       let result = try await runtimeBridge.readThread(threadID: threadID)
       let previousSelectionID = selectedThreadID == threadID ? selectedEntryID : nil
-      let entries = timelineEntries(from: result.items)
+      let entries = timelineEntries(from: result.items, fallbackThreadID: threadID)
       threadTimelines[threadID] = entries
       updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
       updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
@@ -1939,12 +2246,10 @@ final class AppViewModel: ObservableObject {
 
       if selectedThreadID == threadID {
         timeline = entries
-        if let previousSelectionID,
-           entries.contains(where: { $0.id == previousSelectionID }) {
-          selectedEntryID = previousSelectionID
-        } else {
-          selectedEntryID = entries.first?.id
-        }
+        selectedEntryID = bestTimelineSelectionID(
+          previousSelectionID: previousSelectionID,
+          entries: entries
+        )
       }
     } catch {
       appendEntry(
@@ -1987,6 +2292,18 @@ final class AppViewModel: ObservableObject {
     }
 
     return timeline.first(where: { $0.id == selectedEntryID })
+  }
+
+  private func bestTimelineSelectionID(
+    previousSelectionID: TimelineEntry.ID?,
+    entries: [TimelineEntry]
+  ) -> TimelineEntry.ID? {
+    if let previousSelectionID,
+       entries.contains(where: { $0.id == previousSelectionID }) {
+      return previousSelectionID
+    }
+
+    return entries.first?.id
   }
 
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {
@@ -2032,22 +2349,418 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = serverLabel
       }
     }
+    announceSetupCompleteIfNeeded()
   }
 
   private func refreshLocalModelCatalog() {
     let activeModelPath = runtimeBridge.activeLocalModelPath() ?? modelHealth?.modelPath
-    localModels = Self.localModelSummaries(
+    localModels = LocalModelCatalog.summaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
       activeModelPath: activeModelPath
+    )
+    if !localModels.contains(where: { $0.id == selectedSetupModelID }) {
+      selectedSetupModelID = LocalModelCatalog.defaultFirstUseModelID
+    }
+  }
+
+  private static func storedSelectedSetupModelID(matching models: [LocalModelSummary]) -> String? {
+    guard let modelID = UserDefaults.standard.string(forKey: selectedSetupModelIDKey),
+          models.contains(where: { $0.id == modelID })
+    else {
+      return nil
+    }
+
+    return modelID
+  }
+
+  private static func storeSelectedSetupModelID(_ modelID: String) {
+    UserDefaults.standard.set(modelID, forKey: selectedSetupModelIDKey)
+  }
+
+  private func runtimeHeaderSnapshot() -> RuntimeHeaderSnapshot {
+    let isModelReady = isLocalModelReady()
+    let modelSetupSummary = runtimeState == .ready && !isModelReady
+      ? localModelSetupGuidance().summary
+      : ""
+    return RuntimeHeaderSnapshot(
+      runtimeState: runtimeState,
+      runtimeDetail: runtimeDetail,
+      modelSetupSummary: modelSetupSummary,
+      isLocalModelReady: isModelReady,
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil,
+      isWorkspaceSearching: isWorkspaceSearching,
+      hasModelDownload: modelDownloadID != nil,
+      hasPausedModelDownload: pausedModelDownloadID != nil
+    )
+  }
+
+  private func setupProgressSnapshot() -> SetupProgressSnapshot {
+    let isModelReady = isLocalModelReady()
+    let modelReadinessDetail = runtimeState == .ready && !isModelReady
+      ? localModelSetupGuidance().readinessDetail
+      : ""
+    return SetupProgressSnapshot(
+      readyStepCount: setupReadyStepCount(),
+      stepCount: setupStepCount,
+      runtimeState: runtimeState,
+      showsRuntimeActivity: showsRuntimeActivity(),
+      isLocalModelReady: isModelReady,
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil,
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraft: !trimmedDraftMessage.isEmpty,
+      modelReadinessDetail: modelReadinessDetail
+    )
+  }
+
+  private func runtimeReadinessSnapshot() -> RuntimeReadinessSnapshot {
+    let isModelReady = isLocalModelReady()
+    let modelGuidance = runtimeState == .ready
+      ? localModelSetupGuidance()
+      : nil
+    return RuntimeReadinessSnapshot(
+      runtimeState: runtimeState,
+      modelReadinessDetail: modelGuidance?.readinessDetail ?? "Waiting",
+      modelTone: modelGuidance?.tone ?? .neutral,
+      workspaceDisplayName: workspace?.displayName,
+      isLocalModelReady: isModelReady,
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil
+    )
+  }
+
+  private func inspectorSessionSnapshot() -> InspectorSessionSnapshot {
+    return InspectorSessionSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      workspaceDisplayName: workspace?.displayName,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      selectedThreadTitle: selectedThreadTitle(),
+      hasActiveTurn: activeTurnID != nil,
+      setupReadyStepCount: setupReadyStepCount(),
+      setupStepCount: setupStepCount,
+      setupProgressDetail: setupProgressDetail(),
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage()
+    )
+  }
+
+  private func setupCalloutSnapshot() -> SetupCalloutSnapshot {
+    let modelProgressDetail: String?
+    if shouldShowModelDownloadProgress() {
+      modelProgressDetail = modelDownloadProgressSummary()
+    } else {
+      modelProgressDetail = nil
+    }
+
+    return SetupCalloutSnapshot(
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      modelGuidance: localModelSetupGuidance(),
+      modelProgressDetail: modelProgressDetail,
+      modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
+      modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
+    )
+  }
+
+  private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
+    return PluginDashboardSnapshot(
+      plugins: plugins,
+      registrySummary: pluginCapabilityRegistrySummary,
+      capabilities: pluginCapabilities,
+      connectors: pluginConnectors,
+      commands: pluginCommands,
+      hooks: pluginHooks
+    )
+  }
+
+  private func memorySnapshot() -> MemorySnapshot {
+    return MemorySnapshot(
+      status: memoryStatus,
+      notes: memoryNotes
+    )
+  }
+
+  private func composerStatusSnapshot() -> ComposerStatusSnapshot {
+    let modelGuidance = localModelSetupGuidance()
+    return ComposerStatusSnapshot(
+      runtimeState: runtimeState,
+      modelSetupTitle: modelGuidance.title,
+      modelSetupSummary: modelGuidance.summary,
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil,
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraftMessage: !trimmedDraftMessage.isEmpty
+    )
+  }
+
+  private func timelineInspectorSnapshot() -> TimelineInspectorSnapshot {
+    return TimelineInspectorSnapshot(selectedEntry: selectedEntry())
+  }
+
+  private func localModelStatusSnapshot() -> LocalModelStatusSnapshot {
+    return LocalModelStatusSnapshot(
+      runtimeState: runtimeState,
+      modelHealth: modelHealth,
+      modelDownloadID: modelDownloadID,
+      pausedModelDownloadID: pausedModelDownloadID,
+      modelDownloadProgress: modelDownloadProgress,
+      selectedSetupModelID: selectedSetupModelID,
+      selectedSetupModel: selectedSetupModel()
+    )
+  }
+
+  private func setupReadyStepCount() -> Int {
+    var readyCount = 0
+    if runtimeState == .ready {
+      readyCount += 1
+    }
+    if isLocalModelReady() {
+      readyCount += 1
+    }
+    if workspace != nil {
+      readyCount += 1
+    }
+    if isLocalModelReady() && workspace != nil && hasRuntimeThreadSelection() {
+      readyCount += 1
+    }
+    return readyCount
+  }
+
+  private func hasRuntimeThreadSelection() -> Bool {
+    guard let selectedThreadID,
+          !selectedThreadID.hasPrefix("local-"),
+          let selectedThread = threads.first(where: { $0.id == selectedThreadID }),
+          let workspace
+    else {
+      return false
+    }
+
+    return selectedThread.workspaceRootPath == workspace.rootPath
+  }
+
+  private var trimmedDraftMessage: String {
+    draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  private func selectedThreadIsWaitingForFirstMessage() -> Bool {
+    guard let selectedThreadID,
+          !selectedThreadID.hasPrefix("local-")
+    else {
+      return false
+    }
+
+    let entries = threadTimelines[selectedThreadID] ?? timeline
+    return !entries.contains { $0.kind == .userMessage }
+  }
+
+  private func selectedSetupModel() -> LocalModelSummary? {
+    localModels.first(where: { $0.id == selectedSetupModelID })
+      ?? localModels.first(where: { $0.id == LocalModelCatalog.defaultFirstUseModelID })
+      ?? localModels.first
+  }
+
+  private func localModelSetupGuidance() -> LocalModelSetupGuidance {
+    LocalModelOperationPresenter.setupGuidance(localModelOperationSnapshot())
+  }
+
+  private func localModelRequiredTimelineSummary() -> String {
+    localModelSetupGuidance().summary
+  }
+
+  private func announceSetupCompleteIfNeeded() {
+    guard setupReadyStepCount() == setupStepCount,
+          let threadID = selectedThreadID,
+          !threadID.hasPrefix("local-"),
+          !announcedSetupCompleteThreadIDs.contains(threadID)
+    else {
+      return
+    }
+
+    announcedSetupCompleteThreadIDs.insert(threadID)
+    appendEntry(
+      to: threadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: "Local Setup Complete",
+        body: "Runtime, local model, workspace, and thread are ready. Ask Pith to inspect files, review diffs, or make a small change.",
+        attributes: [
+          "setup": "complete"
+        ]
+      )
+    )
+  }
+
+  private func localModelOperationSnapshot() -> LocalModelOperationSnapshot {
+    let downloadedModels = localModels.filter { $0.downloaded }
+    let downloadedLocalSize = downloadedModels
+      .compactMap { $0.localSizeBytes }
+      .reduce(Int64(0), +)
+
+    return LocalModelOperationSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasActiveTurn: activeTurnID != nil,
+      downloadingModel: modelDownloadID
+        .flatMap { id in localModels.first(where: { $0.id == id }) },
+      pausedModel: pausedModelDownloadID
+        .flatMap { id in localModels.first(where: { $0.id == id }) },
+      selectedSetupModel: selectedSetupModel(),
+      downloadedModelCount: downloadedModels.count,
+      totalModelCount: localModels.count,
+      activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,
+      downloadedLocalSizeBytes: downloadedLocalSize
+    )
+  }
+
+  private func localModelDownloadRequestPlan(
+    for model: LocalModelSummary
+  ) -> LocalModelDownloadRequestPlan {
+    LocalModelDownloadRequestPlanner.plan(
+      model: model,
+      isDownloadRunning: modelDownloadTask != nil,
+      pausedModelID: pausedModelDownloadID,
+      hasResumeData: modelDownloadResumeData != nil
+    )
+  }
+
+  private func appendModelEvent(
+    title: String,
+    body: String,
+    model: LocalModelSummary,
+    kind: TimelineEntry.Kind = .system,
+    attributes: [String: String] = [:]
+  ) {
+    var eventAttributes = attributes
+    eventAttributes["modelId"] = model.id
+    eventAttributes["modelPath"] = model.installPath
+    eventAttributes["modelLicense"] = model.license
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: kind,
+        title: title,
+        body: body,
+        attributes: eventAttributes
+      )
+    )
+  }
+
+  private func applyModelDownloadCompletionPlan(
+    _ plan: LocalModelDownloadCompletionPlan,
+    model: LocalModelSummary
+  ) {
+    switch plan.mode {
+    case .activated, .waitingForTurn:
+      selectedSetupModelID = model.id
+    case .downloadedOnly:
+      break
+    }
+
+    runtimeDetail = plan.runtimeDetail
+    modelDownloadProgress = nil
+    refreshLocalModelCatalog()
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: "Local Model Downloaded",
+        body: plan.timelineBody,
+        attributes: plan.attributes
+      )
+    )
+
+    if let relaunchRunningDetail = plan.relaunchRunningDetail,
+       let relaunchIdleDetail = plan.relaunchIdleDetail
+    {
+      relaunchRuntimeIfNeeded(
+        runningDetail: relaunchRunningDetail,
+        idleDetail: relaunchIdleDetail
+      )
+    }
+  }
+
+  private func applyModelDownloadInterruptionPlan(
+    _ plan: LocalModelDownloadInterruptionPlan,
+    model: LocalModelSummary
+  ) {
+    switch plan.mode {
+    case .paused(let resumeData):
+      modelDownloadResumeData = resumeData
+      pausedModelDownloadID = model.id
+      persistPausedModelDownload(modelID: model.id, resumeData: resumeData)
+    case .cancelled, .failed:
+      if plan.clearsPausedState {
+        clearPausedModelDownload()
+      }
+      if plan.removesPartialFile {
+        removeIncompleteModelFile(modelID: model.id)
+      }
+    }
+
+    if plan.clearsProgress {
+      modelDownloadProgress = nil
+    }
+    runtimeDetail = plan.runtimeDetail
+    appendModelEvent(
+      title: plan.timelineTitle,
+      body: plan.timelineBody,
+      model: model,
+      kind: plan.timelineKind,
+      attributes: plan.attributes
+    )
+  }
+
+  private func applyLocalModelActivationPlan(_ plan: LocalModelActivationPlan) {
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntry(
+        id: UUID().uuidString,
+        kind: .system,
+        title: plan.timelineTitle,
+        body: plan.timelineBody,
+        attributes: plan.attributes
+      )
+    )
+    relaunchRuntimeIfNeeded(
+      runningDetail: plan.relaunchRunningDetail,
+      idleDetail: plan.relaunchIdleDetail
     )
   }
 
   private func relaunchRuntimeIfNeeded(runningDetail: String, idleDetail: String) {
-    if runtimeState == .ready || runtimeState == .launching {
+    switch runtimeState {
+    case .ready:
       runtimeDetail = runningDetail
       runtimeBridge.stopRuntime(detail: runningDetail)
-      launchRuntime()
-    } else {
+      launchRuntime(launchDetail: runningDetail)
+    case .launching:
+      runtimeDetail = runningDetail
+      runtimeBridge.stopRuntime(detail: runningDetail)
+      Task {
+        for _ in 0..<10 {
+          if runtimeState != .launching {
+            break
+          }
+          try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        if runtimeState == .launching {
+          runtimeDetail = "Runtime is still launching. Relaunch it after model setup finishes."
+          return
+        }
+        launchRuntime(launchDetail: runningDetail)
+      }
+    case .disconnected, .failed:
       runtimeDetail = idleDetail
     }
   }
@@ -2086,34 +2799,6 @@ final class AppViewModel: ObservableObject {
     case .launching:
       break
     }
-  }
-
-  private func writeLocalModelPackManifest(for model: LocalModelSummary) throws -> String {
-    let modelURL = URL(fileURLWithPath: model.installPath)
-    let manifestURL = modelURL
-      .deletingLastPathComponent()
-      .appendingPathComponent("model-pack.json")
-    let manifest = LocalModelPackManifest(
-      id: model.id,
-      displayName: model.displayName,
-      fileName: model.fileName,
-      contextSize: model.contextSize,
-      maxOutputTokens: model.maxOutputTokens,
-      backend: "llama.cpp",
-      license: model.license,
-      homepage: model.homepage,
-      downloadURL: model.downloadURL,
-      sizeBytes: model.sizeBytes
-    )
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    let data = try encoder.encode(manifest)
-    try FileManager.default.createDirectory(
-      at: manifestURL.deletingLastPathComponent(),
-      withIntermediateDirectories: true
-    )
-    try data.write(to: manifestURL, options: .atomic)
-    return manifestURL.path
   }
 
   private func revealSuggestedPath(metricKey: String, successDetail: String) {
@@ -2188,6 +2873,22 @@ final class AppViewModel: ObservableObject {
   private func clearPausedModelDownload() {
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
+    LocalModelCatalog.clearPausedDownload()
+  }
+
+  private func persistPausedModelDownload(modelID: String, resumeData: Data) {
+    guard !resumeData.isEmpty else {
+      return
+    }
+
+    let progress = modelDownloadProgress
+    LocalModelCatalog.savePausedDownload(
+      modelID: modelID,
+      resumeData: resumeData,
+      bytesReceived: progress?.bytesReceived ?? 0,
+      totalBytes: progress?.totalBytes ?? 0,
+      updatedAt: progress?.updatedAt ?? Date()
+    )
   }
 
   private func removeIncompleteModelFile(modelID: String) {
@@ -2241,6 +2942,10 @@ final class AppViewModel: ObservableObject {
     }
 
     UserDefaults.standard.set(path, forKey: Self.lastWorkspacePathKey)
+  }
+
+  private func clearLastWorkspacePath() {
+    UserDefaults.standard.removeObject(forKey: Self.lastWorkspacePathKey)
   }
 
   private func resetWorkspaceSearch() {
@@ -2379,7 +3084,7 @@ final class AppViewModel: ObservableObject {
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
     let previousSelectionID = selectedThreadID == state.id ? selectedEntryID : nil
-    let entries = timelineEntries(from: state.items)
+    let entries = timelineEntries(from: state.items, fallbackThreadID: state.id)
 
     threadTimelines[state.id] = entries
     updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
@@ -2388,12 +3093,10 @@ final class AppViewModel: ObservableObject {
 
     if selectedThreadID == state.id {
       timeline = entries
-      if let previousSelectionID,
-         entries.contains(where: { $0.id == previousSelectionID }) {
-        selectedEntryID = previousSelectionID
-      } else {
-        selectedEntryID = entries.first?.id
-      }
+      selectedEntryID = bestTimelineSelectionID(
+        previousSelectionID: previousSelectionID,
+        entries: entries
+      )
     }
   }
 
@@ -2407,6 +3110,18 @@ final class AppViewModel: ObservableObject {
         attributes: item.attributes
       )
     }
+  }
+
+  private func timelineEntries(
+    from items: [RuntimeBridge.RuntimeTimelineItemResult],
+    fallbackThreadID threadID: String
+  ) -> [TimelineEntry] {
+    let entries = timelineEntries(from: items)
+    if entries.isEmpty {
+      return defaultTimeline(for: threadTitle(for: threadID))
+    }
+
+    return entries
   }
 
   private func runtimeTimelineID(for item: RuntimeBridge.RuntimeTimelineItemResult, index: Int) -> String {
@@ -2437,63 +3152,6 @@ final class AppViewModel: ObservableObject {
       validationError: plugin.validationError,
       validationHint: plugin.validationHint
     )
-  }
-
-  private func inspectPluginInstallCandidate(at url: URL) throws -> PluginInstallPreview {
-    let manifestURL = try pluginManifestURL(for: url)
-    let data = try Data(contentsOf: manifestURL)
-    let manifest = try JSONDecoder().decode(LocalPluginManifest.self, from: data)
-    let installRoot = URL(
-      fileURLWithPath: runtimeBridge.localPluginInstallRootPath(),
-      isDirectory: true
-    )
-    let installURL = installRoot.appendingPathComponent(manifest.name, isDirectory: true)
-
-    return PluginInstallPreview(
-      sourcePath: url.path,
-      manifestPath: manifestURL.path,
-      installPath: installURL.path,
-      displayName: manifest.displayName,
-      version: manifest.version,
-      description: manifest.description,
-      authorName: manifest.author?.name,
-      capabilities: manifest.capabilities,
-      permissions: manifest.permissions,
-      defaultEnabled: manifest.defaultEnabled
-    )
-  }
-
-  private func pluginManifestURL(for url: URL) throws -> URL {
-    var isDirectory = ObjCBool(false)
-    if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-       isDirectory.boolValue
-    {
-      let manifestURL = url.appendingPathComponent("pith-plugin.json", isDirectory: false)
-      guard FileManager.default.fileExists(atPath: manifestURL.path) else {
-        throw NSError(
-          domain: "PithPluginInstall",
-          code: 1,
-          userInfo: [
-            NSLocalizedDescriptionKey:
-              "The selected folder does not contain pith-plugin.json."
-          ]
-        )
-      }
-      return manifestURL
-    }
-
-    guard url.lastPathComponent == "pith-plugin.json" else {
-      throw NSError(
-        domain: "PithPluginInstall",
-        code: 2,
-        userInfo: [
-          NSLocalizedDescriptionKey:
-            "Select a plugin folder or a pith-plugin.json manifest."
-        ]
-      )
-    }
-
-    return url
   }
 
   private func confirmPluginInstall(preview: PluginInstallPreview) -> Bool {
@@ -2530,10 +3188,10 @@ final class AppViewModel: ObservableObject {
     alert.informativeText = """
       Model: \(displayName)
       Size: \(sizeSummary)
-      Source: \(downloadURL.absoluteString)
-      Target: \(targetPath)
+      Source: \(LocalModelDisplayPresenter.sourceName(downloadURL))
+      File: \(URL(fileURLWithPath: targetPath).lastPathComponent)
 
-      Pith will store the model locally in app data. The model file is not added to git.
+      Pith stores the model locally in app data and runs one local model at a time.
       """
     alert.addButton(withTitle: "Download")
     alert.addButton(withTitle: "Cancel")
@@ -2580,118 +3238,6 @@ final class AppViewModel: ObservableObject {
     return formatter.string(fromByteCount: byteCount)
   }
 
-  private func modelDownloadSpeedSummary(_ progress: ModelDownloadProgress) -> String {
-    let elapsed = max(progress.updatedAt.timeIntervalSince(progress.startedAt), 1)
-    let bytesPerSecond = Int64(Double(progress.bytesReceived) / elapsed)
-    return "\(formattedByteCount(bytesPerSecond))/s"
-  }
-
-  private static func localModelSummaries(
-    storageRootPath: String,
-    activeModelPath: String?
-  ) -> [LocalModelSummary] {
-    let manager = FileManager.default
-    let normalizedActivePath = activeModelPath.map { normalizedPath($0) }
-    return localModelCatalog().map { item in
-      let installPath = item.installPath(storageRootPath: storageRootPath)
-      let normalizedInstallPath = normalizedPath(installPath)
-      let downloaded = manager.fileExists(atPath: installPath)
-      let localSizeBytes = localFileSize(at: installPath)
-      return LocalModelSummary(
-        id: item.id,
-        displayName: item.displayName,
-        description: item.description,
-        fileName: item.fileName,
-        downloadURL: item.downloadURL,
-        homepage: item.homepage,
-        sizeBytes: item.sizeBytes,
-        contextSize: item.contextSize,
-        maxOutputTokens: item.maxOutputTokens,
-        license: item.license,
-        tags: item.tags,
-        installPath: installPath,
-        downloaded: downloaded,
-        active: normalizedActivePath == Optional(normalizedInstallPath),
-        localSizeBytes: localSizeBytes
-      )
-    }
-  }
-
-  private static func localFileSize(at path: String) -> Int64? {
-    guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
-          let size = attributes[.size] as? NSNumber
-    else {
-      return nil
-    }
-
-    return size.int64Value
-  }
-
-  private static func normalizedPath(_ path: String) -> String {
-    URL(fileURLWithPath: path).standardizedFileURL.path
-  }
-
-  private static func localModelCatalog() -> [LocalModelCatalogItem] {
-    [
-      LocalModelCatalogItem(
-        id: "lfm2.5-350m",
-        displayName: "LFM2.5-350M Q4_K_M",
-        description: "Default tiny local model for the first Pith agent loop.",
-        fileName: "LFM2.5-350M-Q4_K_M.gguf",
-        downloadURL: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
-        homepage: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",
-        sizeBytes: 229_312_224,
-        contextSize: 4096,
-        maxOutputTokens: 160,
-        license: "lfm1.0",
-        tags: ["default", "tiny", "edge"],
-        installSegments: ["builtin", "lfm2.5-350m"]
-      ),
-      LocalModelCatalogItem(
-        id: "qwen2.5-coder-0.5b-instruct",
-        displayName: "Qwen2.5-Coder-0.5B Q4_K_M",
-        description: "Small code-oriented model for local code generation and repair experiments.",
-        fileName: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
-        downloadURL: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
-        homepage: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
-        sizeBytes: 491_000_000,
-        contextSize: 4096,
-        maxOutputTokens: 192,
-        license: "apache-2.0",
-        tags: ["code", "0.5B", "qwen"],
-        installSegments: ["catalog", "qwen2.5-coder-0.5b-instruct"]
-      ),
-      LocalModelCatalogItem(
-        id: "qwen2.5-0.5b-instruct",
-        displayName: "Qwen2.5-0.5B Instruct Q4_K_M",
-        description: "Compact general chat model with strong multilingual coverage for its size.",
-        fileName: "qwen2.5-0.5b-instruct-q4_k_m.gguf",
-        downloadURL: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-        homepage: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF",
-        sizeBytes: 491_000_000,
-        contextSize: 4096,
-        maxOutputTokens: 192,
-        license: "apache-2.0",
-        tags: ["chat", "0.5B", "multilingual"],
-        installSegments: ["catalog", "qwen2.5-0.5b-instruct"]
-      ),
-      LocalModelCatalogItem(
-        id: "smollm2-360m-instruct",
-        displayName: "SmolLM2-360M Q4_K_M",
-        description: "Very small instruction model for fast local English assistant experiments.",
-        fileName: "SmolLM2-360M-Instruct.Q4_K_M.gguf",
-        downloadURL: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct.Q4_K_M.gguf",
-        homepage: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF",
-        sizeBytes: 271_000_000,
-        contextSize: 4096,
-        maxOutputTokens: 160,
-        license: "apache-2.0",
-        tags: ["tiny", "english", "fast"],
-        installSegments: ["catalog", "smollm2-360m-instruct"]
-      ),
-    ]
-  }
-
   private func pluginInstallRepairHint(for error: Error) -> String {
     let message = error.localizedDescription
 
@@ -2703,6 +3249,10 @@ final class AppViewModel: ObservableObject {
       return "Point the installer at a plugin directory or the manifest file itself."
     }
 
+    if message.contains("Plugin manifest name") {
+      return "Use a stable plugin name without path separators or colons, for example notion-connector."
+    }
+
     if message.contains("correct format")
       || message.contains("is missing")
     {
@@ -2710,146 +3260,5 @@ final class AppViewModel: ObservableObject {
     }
 
     return ""
-  }
-}
-
-private final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
-  private let targetURL: URL
-  private let onProgress: (Int64, Int64) -> Void
-  private var continuation: CheckedContinuation<Void, Error>?
-  private var session: URLSession?
-  private var task: URLSessionDownloadTask?
-  private var pauseRequested = false
-
-  init(targetURL: URL, onProgress: @escaping (Int64, Int64) -> Void) {
-    self.targetURL = targetURL
-    self.onProgress = onProgress
-  }
-
-  func start(from sourceURL: URL, resumeData: Data?) async throws {
-    try await withTaskCancellationHandler {
-      try await withCheckedThrowingContinuation { continuation in
-        self.continuation = continuation
-        let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        self.session = session
-        let task = resumeData.map { session.downloadTask(withResumeData: $0) }
-          ?? session.downloadTask(with: sourceURL)
-        self.task = task
-        task.resume()
-      }
-    } onCancel: {
-      self.cancel()
-    }
-  }
-
-  func pause() {
-    pauseRequested = true
-    task?.cancel(byProducingResumeData: { [weak self] resumeData in
-      guard let self else {
-        return
-      }
-
-      guard let resumeData, !resumeData.isEmpty else {
-        self.complete(.failure(CancellationError()))
-        return
-      }
-
-      self.complete(.failure(ModelDownloadPaused(resumeData: resumeData)))
-    })
-  }
-
-  func cancel() {
-    pauseRequested = false
-    task?.cancel()
-  }
-
-  func urlSession(
-    _ session: URLSession,
-    downloadTask: URLSessionDownloadTask,
-    didWriteData _: Int64,
-    totalBytesWritten: Int64,
-    totalBytesExpectedToWrite: Int64
-  ) {
-    onProgress(totalBytesWritten, totalBytesExpectedToWrite)
-  }
-
-  func urlSession(
-    _ session: URLSession,
-    downloadTask: URLSessionDownloadTask,
-    didFinishDownloadingTo location: URL
-  ) {
-    if let httpResponse = downloadTask.response as? HTTPURLResponse,
-       !(200..<300).contains(httpResponse.statusCode)
-    {
-      complete(
-        .failure(
-          NSError(
-            domain: "PithModelDownload",
-            code: httpResponse.statusCode,
-            userInfo: [
-              NSLocalizedDescriptionKey:
-                "Model download failed with HTTP \(httpResponse.statusCode)."
-            ]
-          )
-        )
-      )
-      return
-    }
-
-    do {
-      let manager = FileManager.default
-      try manager.createDirectory(
-        at: targetURL.deletingLastPathComponent(),
-        withIntermediateDirectories: true
-      )
-
-      if manager.fileExists(atPath: targetURL.path) {
-        try manager.removeItem(at: targetURL)
-      }
-
-      try manager.moveItem(at: location, to: targetURL)
-      complete(.success(()))
-    } catch {
-      complete(.failure(error))
-    }
-  }
-
-  func urlSession(
-    _ session: URLSession,
-    task: URLSessionTask,
-    didCompleteWithError error: Error?
-  ) {
-    guard let error else {
-      return
-    }
-
-    if pauseRequested {
-      if let resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data,
-         !resumeData.isEmpty
-      {
-        complete(.failure(ModelDownloadPaused(resumeData: resumeData)))
-      }
-      return
-    }
-
-    complete(.failure(error))
-  }
-
-  private func complete(_ result: Result<Void, Error>) {
-    guard let continuation else {
-      return
-    }
-
-    self.continuation = nil
-    task = nil
-    session?.invalidateAndCancel()
-    session = nil
-
-    switch result {
-    case .success:
-      continuation.resume()
-    case .failure(let error):
-      continuation.resume(throwing: error)
-    }
   }
 }

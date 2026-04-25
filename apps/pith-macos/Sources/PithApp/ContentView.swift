@@ -2,22 +2,15 @@ import AppKit
 import SwiftUI
 
 struct ContentView: View {
-  private enum PluginInspectorSection: String, CaseIterable, Identifiable {
-    case catalog = "Catalog"
-    case access = "Access"
-    case connectors = "Connectors"
-    case commands = "Commands"
-    case hooks = "Hooks"
-
-    var id: String { rawValue }
-  }
-
   @ObservedObject var viewModel: AppViewModel
-  @State private var pluginInspectorSection: PluginInspectorSection = .catalog
+  @AppStorage("pith.inspector.workspaceExpanded") private var workspaceExpanded = false
   @AppStorage("pith.inspector.localModelExpanded") private var localModelExpanded = false
-  @AppStorage("pith.inspector.modelManagerExpanded") private var modelManagerExpanded = false
   @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
   @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
+  @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
+  @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = true
+  @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
+  @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
   var body: some View {
     NavigationView {
@@ -30,28 +23,23 @@ struct ContentView: View {
         Button("Open Workspace") {
           viewModel.openWorkspace()
         }
-        .disabled(viewModel.runtimeState != .ready)
+        .disabled(!viewModel.canOpenWorkspace())
       }
 
       ToolbarItem {
         Button("New Thread") {
           viewModel.createThread()
         }
-        .disabled(viewModel.runtimeState != .ready)
-      }
-
-      ToolbarItem {
-        Button("Install Plugin") {
-          viewModel.installPlugin()
-        }
-        .disabled(viewModel.runtimeState != .ready)
+        .disabled(!viewModel.canCreateThread())
       }
 
       ToolbarItem(placement: .primaryAction) {
-        Button(viewModel.runtimeLaunchButtonTitle()) {
-          viewModel.launchRuntime()
+        if viewModel.shouldShowRuntimeToolbarAction() {
+          Button(viewModel.runtimeLaunchButtonTitle()) {
+            viewModel.launchRuntime()
+          }
+          .disabled(!viewModel.canLaunchRuntime())
         }
-        .disabled(!viewModel.canLaunchRuntime())
       }
     }
   }
@@ -78,22 +66,118 @@ struct ContentView: View {
 
   private var timeline: some View {
     VStack(alignment: .leading, spacing: 0) {
-      HStack {
-        VStack(alignment: .leading, spacing: 4) {
-          Text("Timeline")
-            .font(.title2.weight(.semibold))
-          Text(viewModel.workspaceDisplayName())
-            .font(.caption)
-            .foregroundColor(.secondary)
+      VStack(alignment: .leading, spacing: 10) {
+        HStack {
+          VStack(alignment: .leading, spacing: 4) {
+            Text("Timeline")
+              .font(.title2.weight(.semibold))
+            Text(viewModel.workspaceDisplayName())
+              .font(.caption)
+              .foregroundColor(.secondary)
+          }
+          Spacer()
+          VStack(alignment: .trailing, spacing: 6) {
+            HStack(spacing: 6) {
+              if viewModel.showsRuntimeActivity() {
+                ProgressView()
+                  .controlSize(.small)
+              }
+              StatusPill(
+                label: viewModel.runtimeState.rawValue.capitalized,
+                tone: viewModel.runtimeStatusTone()
+              )
+            }
+            Text(viewModel.runtimeStatusSummary())
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .multilineTextAlignment(.trailing)
+            if viewModel.shouldShowRuntimeHeaderDetail() {
+              Text(viewModel.runtimeDetail)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+            }
+            if let actionTitle = viewModel.runtimePrimaryActionTitle() {
+              Button(actionTitle) {
+                viewModel.runRuntimePrimaryAction()
+              }
+              .buttonStyle(.bordered)
+              .disabled(!viewModel.canRunRuntimePrimaryAction())
+            }
+          }
         }
-        Spacer()
-        VStack(alignment: .trailing, spacing: 2) {
-          Text(viewModel.runtimeState.rawValue.capitalized)
-            .font(.caption.weight(.medium))
-            .foregroundColor(.secondary)
-          Text(viewModel.runtimeDetail)
-            .font(.caption2)
-            .foregroundColor(.secondary)
+
+        SetupProgressView(
+          summary: viewModel.setupProgressSummary(),
+          detail: viewModel.setupProgressDetail(),
+          value: viewModel.setupProgressValue(),
+          tone: viewModel.setupProgressTone()
+        )
+
+        if viewModel.shouldShowSetupCallout() {
+          if viewModel.shouldShowSetupModelChoice() {
+            SetupModelChooser(
+              models: viewModel.localModels,
+              selectedModelID: $viewModel.selectedSetupModelID,
+              defaultModelID: viewModel.setupDefaultModelID(),
+              detail: viewModel.setupModelChoiceDetail(),
+              isDisabled: !viewModel.canChangeSetupModelChoice(),
+              actionTitle: viewModel.modelSetupCalloutActionTitle(),
+              canRunAction: viewModel.canRunModelSetupCalloutAction(),
+              onAction: {
+                viewModel.runModelSetupCalloutAction()
+              }
+            )
+          }
+
+          SetupCallout(
+            title: viewModel.setupCalloutTitle(),
+            summary: viewModel.setupCalloutSummary(),
+            detail: viewModel.setupCalloutDetail(),
+            tone: viewModel.setupCalloutTone(),
+            actionTitle: viewModel.shouldShowSetupModelChoice() ? nil : viewModel.setupCalloutActionTitle(),
+            canRunAction: viewModel.shouldShowSetupModelChoice() ? false : viewModel.canRunSetupCalloutAction(),
+            secondaryActionTitle: viewModel.setupCalloutSecondaryActionTitle(),
+            canRunSecondaryAction: viewModel.canRunSetupCalloutSecondaryAction(),
+            onAction: {
+              viewModel.runSetupCalloutAction()
+            },
+            onSecondaryAction: {
+              viewModel.runSetupCalloutSecondaryAction()
+            }
+          )
+        } else if viewModel.shouldShowFirstRequestCallout() {
+          SetupCallout(
+            title: viewModel.firstRequestCalloutTitle(),
+            summary: viewModel.firstRequestCalloutSummary(),
+            detail: viewModel.firstRequestCalloutDetail(),
+            tone: .ready,
+            actionTitle: viewModel.firstRequestCalloutActionTitle(),
+            canRunAction: viewModel.canRunFirstRequestCalloutAction(),
+            secondaryActionTitle: viewModel.firstRequestCalloutSecondaryActionTitle(),
+            canRunSecondaryAction: viewModel.canRunFirstRequestCalloutSecondaryAction(),
+            onAction: {
+              viewModel.runFirstRequestCalloutAction()
+            },
+            onSecondaryAction: {
+              viewModel.runFirstRequestCalloutSecondaryAction()
+            }
+          )
+        }
+
+        HStack(spacing: 8) {
+          ForEach(viewModel.runtimeReadinessSteps()) { step in
+            ReadinessChip(
+              step: step,
+              actionTitle: viewModel.readinessStepActionTitle(step),
+              canRunAction: viewModel.canRunReadinessStepAction(step),
+              onAction: {
+                viewModel.runReadinessStepAction(step)
+              }
+            )
+          }
+          Spacer()
         }
       }
       .padding(20)
@@ -130,27 +214,39 @@ struct ContentView: View {
 
       Divider()
 
-      HStack(alignment: .bottom, spacing: 12) {
-        TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
-          .textFieldStyle(.roundedBorder)
+      VStack(alignment: .leading, spacing: 8) {
+        HStack(alignment: .bottom, spacing: 12) {
+          TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
+            .textFieldStyle(.roundedBorder)
+            .disabled(!viewModel.canUseComposer())
+            .onSubmit {
+              if viewModel.canSendDraftMessage() {
+                viewModel.sendDraftMessage()
+              }
+            }
 
-        Button("Send") {
-          viewModel.sendDraftMessage()
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(
-          viewModel.runtimeState != .ready
-            || !viewModel.isLocalModelReady()
-            || viewModel.selectedThreadID == nil
-            || viewModel.isTurnStreaming()
-            || viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        )
+          Button("Send") {
+            viewModel.sendDraftMessage()
+          }
+          .buttonStyle(.borderedProminent)
+          .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel") {
-          viewModel.cancelActiveTurn()
+          Button("Cancel") {
+            viewModel.cancelActiveTurn()
+          }
+          .buttonStyle(.bordered)
+          .disabled(!viewModel.canCancelActiveTurn())
         }
-        .buttonStyle(.bordered)
-        .disabled(!viewModel.isTurnStreaming())
+
+        HStack(spacing: 6) {
+          if viewModel.showsComposerActivity() {
+            ProgressView()
+              .controlSize(.small)
+          }
+          Text(viewModel.composerStatusSummary())
+            .font(.caption2)
+            .foregroundColor(viewModel.runtimeState == .failed ? .red : .secondary)
+        }
       }
       .padding(20)
     }
@@ -163,375 +259,30 @@ struct ContentView: View {
         Text("Inspector")
           .font(.title3.weight(.semibold))
 
-        GroupBox("Workspace") {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.workspaceDisplayName())
-              .font(.headline)
-            Text(viewModel.workspacePath())
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            TextField("Search workspace", text: $viewModel.workspaceSearchQuery)
-              .textFieldStyle(.roundedBorder)
-              .disabled(viewModel.runtimeState != .ready || viewModel.workspace == nil)
-            HStack(spacing: 8) {
-              Button("Search") {
-                viewModel.searchWorkspace()
-              }
-              .buttonStyle(.borderedProminent)
-              .disabled(!viewModel.canSearchWorkspace())
+        InspectorSessionCard(
+          title: viewModel.inspectorSessionTitle(),
+          detail: viewModel.inspectorSessionDetail(),
+          meta: viewModel.inspectorSessionMetaSummary(),
+          tone: viewModel.runtimeStatusTone()
+        )
 
-              Button("Clear") {
-                viewModel.clearWorkspaceSearch()
-              }
-              .buttonStyle(.bordered)
-              .disabled(viewModel.workspaceSearchQuery.isEmpty && viewModel.workspaceSearchResults.isEmpty)
-            }
-            Text(viewModel.workspaceSearchStatus)
-              .font(.caption2)
-              .foregroundColor(.secondary)
-            if viewModel.isWorkspaceSearching {
-              ProgressView()
-                .progressViewStyle(.linear)
-            }
-            ForEach(viewModel.workspaceSearchResults.prefix(8)) { match in
-              VStack(alignment: .leading, spacing: 2) {
-                Text("\(match.relativePath):\(match.lineNumber)")
-                  .font(.caption.weight(.semibold))
-                  .textSelection(.enabled)
-                Text(match.line)
-                  .font(.caption2)
-                  .foregroundColor(.secondary)
-                  .lineLimit(2)
-                  .textSelection(.enabled)
-              }
-              .padding(.vertical, 2)
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+        DisclosureGroup("Workspace Search", isExpanded: $workspaceExpanded) {
+          WorkspaceSearchPanel(viewModel: viewModel)
         }
 
         DisclosureGroup("Local Model", isExpanded: $localModelExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.modelDisplayName())
-              .font(.headline)
-            Text(viewModel.modelStatusSummary())
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-            Text(viewModel.modelDetailSummary())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.modelSourceSummary())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.modelMetricsSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-            Text(viewModel.modelReadinessSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-            Text(viewModel.modelInstallHintSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.modelSuggestedPathSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            if viewModel.shouldShowModelDownloadProgress() {
-              VStack(alignment: .leading, spacing: 4) {
-                if let progressValue = viewModel.modelDownloadProgressValue() {
-                  ProgressView(value: progressValue)
-                    .progressViewStyle(.linear)
-                } else {
-                  ProgressView()
-                    .progressViewStyle(.linear)
-                }
-                Text(viewModel.modelDownloadProgressSummary())
-                  .font(.caption2)
-                  .foregroundColor(.secondary)
-                  .textSelection(.enabled)
-              }
-            }
-            HStack(spacing: 8) {
-              Button(viewModel.defaultModelDownloadButtonTitle()) {
-                viewModel.downloadLocalModel()
-              }
-              .buttonStyle(.borderedProminent)
-              .disabled(!viewModel.canDownloadLocalModel())
-
-              Button("Pause Download") {
-                viewModel.pauseModelDownload()
-              }
-              .buttonStyle(.bordered)
-              .disabled(!viewModel.canPauseModelDownload())
-
-              Button("Cancel Download") {
-                viewModel.cancelModelDownload()
-              }
-              .buttonStyle(.bordered)
-              .disabled(!viewModel.canCancelModelDownload())
-
-              Button("Install Pack Metadata") {
-                viewModel.bootstrapModelPackMetadata()
-              }
-              .buttonStyle(.bordered)
-
-              Button("Reveal Model Folder") {
-                viewModel.revealSuggestedModelDirectory()
-              }
-              .buttonStyle(.bordered)
-
-              Button("Reveal Binary Folder") {
-                viewModel.revealSuggestedBinaryDirectory()
-              }
-              .buttonStyle(.bordered)
-            }
-            DisclosureGroup("Model Manager", isExpanded: $modelManagerExpanded) {
-              VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                  Text(viewModel.modelManagerSummary())
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                  Spacer()
-                  Button("Use Default") {
-                    viewModel.resetActiveLocalModel()
-                  }
-                  .buttonStyle(.bordered)
-                  .disabled(!viewModel.canResetActiveLocalModel())
-                }
-                ForEach(viewModel.localModels) { model in
-                  VStack(alignment: .leading, spacing: 5) {
-                    Text(model.displayName)
-                      .font(.caption)
-                      .fontWeight(.semibold)
-                    Text(model.description)
-                      .font(.caption2)
-                      .foregroundColor(.secondary)
-                    Text(viewModel.localModelStatusSummary(model))
-                      .font(.caption2)
-                      .foregroundColor(.secondary)
-                    Text(viewModel.localModelTagSummary(model))
-                      .font(.caption2)
-                      .foregroundColor(.secondary)
-                    HStack(spacing: 8) {
-                      Button(model.active ? "Active" : "Use") {
-                        viewModel.activateRecommendedModel(modelID: model.id)
-                      }
-                      .buttonStyle(.borderedProminent)
-                      .disabled(!viewModel.canActivateRecommendedModel(modelID: model.id))
-
-                      Button(viewModel.localModelDownloadButtonTitle(model)) {
-                        viewModel.downloadRecommendedModel(modelID: model.id)
-                      }
-                      .buttonStyle(.bordered)
-                      .disabled(!viewModel.canDownloadRecommendedModel(modelID: model.id))
-
-                      Button("Reveal") {
-                        viewModel.revealRecommendedModel(modelID: model.id)
-                      }
-                      .buttonStyle(.bordered)
-                      .disabled(!model.downloaded)
-                    }
-                    Text(viewModel.localModelPathSummary(model))
-                      .font(.caption2)
-                      .foregroundColor(.secondary)
-                      .textSelection(.enabled)
-                  }
-                  .padding(.vertical, 4)
-                }
-              }
-              .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            Text(viewModel.modelArtifactPathSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          LocalModelPanel(viewModel: viewModel)
         }
 
         DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.memoryCountSummary())
-              .font(.headline)
-            Text(viewModel.memoryDetailSummary())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.memoryLatestSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-
-            Divider()
-
-            TextField("Workspace note title", text: $viewModel.memoryNoteTitle)
-              .textFieldStyle(.roundedBorder)
-
-            TextEditor(text: $viewModel.memoryNoteBody)
-              .font(.caption)
-              .frame(minHeight: 72)
-              .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                  .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-              )
-
-            Button("Save Workspace Note") {
-              viewModel.saveWorkspaceMemoryNote()
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!viewModel.canSaveWorkspaceMemoryNote())
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          MemoryPanel(viewModel: viewModel)
         }
 
         DisclosureGroup("Plugin Manager", isExpanded: $pluginManagerExpanded) {
-          VStack(alignment: .leading, spacing: 10) {
-            Text(viewModel.pluginCountSummary())
-              .font(.headline)
-            Text(
-              "\(viewModel.pluginRegistryCountSummary()) | \(viewModel.pluginConnectorCountSummary()) | \(viewModel.pluginCommandCountSummary()) | \(viewModel.pluginHookCountSummary())"
-            )
-            .font(.caption)
-            .foregroundColor(.secondary)
-            Picker("Surface", selection: $pluginInspectorSection) {
-              ForEach(PluginInspectorSection.allCases) { section in
-                Text(section.rawValue)
-                  .tag(section)
-              }
-            }
-            .pickerStyle(.menu)
-
-            switch pluginInspectorSection {
-            case .catalog:
-              Text(viewModel.pluginDetailSummary())
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textSelection(.enabled)
-
-              if !viewModel.plugins.isEmpty {
-                Divider()
-                ForEach(viewModel.plugins) { plugin in
-                  PluginRow(
-                    plugin: plugin,
-                    canEdit: viewModel.runtimeState == .ready && plugin.status == "ready",
-                    canRemove: viewModel.runtimeState == .ready
-                      && viewModel.isRemovablePlugin(plugin),
-                    onSetEnabled: { enabled in
-                      viewModel.setPluginEnabled(pluginID: plugin.id, enabled: enabled)
-                    },
-                    onRemove: {
-                      viewModel.removePlugin(pluginID: plugin.id)
-                    }
-                  )
-                }
-              }
-
-              if !viewModel.pluginCapabilityPreview().isEmpty {
-                Divider()
-                Text(viewModel.pluginRegistryDetailSummary())
-                  .font(.caption2)
-                  .foregroundColor(.secondary)
-                  .textSelection(.enabled)
-                ForEach(viewModel.pluginCapabilityPreview()) { capability in
-                  PluginCapabilityRow(capability: capability)
-                }
-              }
-
-            case .access:
-              Text(viewModel.pluginPermissionDetailSummary())
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textSelection(.enabled)
-
-              if !viewModel.pluginPermissionPreview().isEmpty {
-                Divider()
-                ForEach(viewModel.pluginPermissionPreview()) { plugin in
-                  PluginPermissionRow(
-                    plugin: plugin,
-                    onRevealManifest: {
-                      viewModel.revealPluginManifest(pluginID: plugin.id)
-                    }
-                  )
-                }
-              }
-
-              if !viewModel.invalidPlugins().isEmpty {
-                Divider()
-                Text(viewModel.invalidPluginDetailSummary())
-                  .font(.caption2)
-                  .foregroundColor(.secondary)
-                  .textSelection(.enabled)
-                ForEach(viewModel.invalidPlugins()) { plugin in
-                  InvalidPluginRow(
-                    plugin: plugin,
-                    onRevealManifest: {
-                      viewModel.revealPluginManifest(pluginID: plugin.id)
-                    },
-                    onRemove: {
-                      viewModel.removePlugin(pluginID: plugin.id)
-                    }
-                  )
-                }
-              }
-
-            case .commands:
-              Text(viewModel.pluginCommandDetailSummary())
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textSelection(.enabled)
-
-              if !viewModel.pluginCommands.isEmpty {
-                Divider()
-                ForEach(viewModel.pluginCommands) { command in
-                  PluginCommandRow(
-                    command: command,
-                    canRun: viewModel.runtimeState == .ready
-                      && viewModel.isLocalModelReady()
-                      && viewModel.selectedThreadID != nil
-                      && viewModel.activeTurnID == nil
-                      && command.executionKind != nil,
-                    onRun: {
-                      viewModel.runPluginCommand(commandID: command.id)
-                    }
-                  )
-                }
-              }
-
-            case .connectors:
-              Text(viewModel.pluginConnectorDetailSummary())
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textSelection(.enabled)
-
-              if !viewModel.pluginConnectorPreview().isEmpty {
-                Divider()
-                ForEach(viewModel.pluginConnectorPreview()) { connector in
-                  PluginConnectorRow(connector: connector)
-                }
-              }
-
-            case .hooks:
-              Text(viewModel.pluginHookDetailSummary())
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textSelection(.enabled)
-
-              if !viewModel.pluginHooks.isEmpty {
-                Divider()
-                ForEach(viewModel.pluginHooks) { hook in
-                  PluginHookRow(hook: hook)
-                }
-              }
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          PluginManagerPanel(viewModel: viewModel)
         }
 
-        GroupBox("Thread") {
+        DisclosureGroup("Thread", isExpanded: $threadExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.selectedThreadTitle())
               .font(.headline)
@@ -542,34 +293,33 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        GroupBox("Selected Item") {
+        DisclosureGroup("Selected Item", isExpanded: $selectedItemExpanded) {
           VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.selectedEntryTitle())
               .font(.headline)
-            Text(viewModel.selectedEntryMetadata())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
             Text(viewModel.selectedEntryBody())
               .font(.subheadline)
               .foregroundColor(.secondary)
               .textSelection(.enabled)
+            DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
+              Text(viewModel.selectedEntryMetadata())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        if let diffBody = viewModel.selectedDiffBody() {
+        if let diffSummary = viewModel.selectedDiffSummary() {
           GroupBox("Diff Detail") {
-            Text(diffBody)
-              .font(.system(.caption, design: .monospaced))
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-              .frame(maxWidth: .infinity, alignment: .leading)
+            DiffDetailView(summary: diffSummary, lines: viewModel.selectedDiffLines())
           }
         }
 
         if let memorySummary = viewModel.selectedEntryMemorySummary() {
-          GroupBox("Selected Memory Context") {
+          DisclosureGroup("Selected Memory Context", isExpanded: $selectedMemoryExpanded) {
             Text(memorySummary)
               .font(.caption)
               .foregroundColor(.secondary)
@@ -584,363 +334,414 @@ struct ContentView: View {
   }
 }
 
-private struct PluginRow: View {
-  let plugin: PluginSummary
-  let canEdit: Bool
-  let canRemove: Bool
-  let onSetEnabled: (Bool) -> Void
-  let onRemove: () -> Void
+private struct StatusPill: View {
+  let label: String
+  let tone: StatusTone
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(plugin.displayName)
-            .font(.subheadline.weight(.semibold))
-          Text("\(plugin.version) | \(plugin.provenance) | \(plugin.status)")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
-
-        Spacer()
-
-        Toggle(
-          "",
-          isOn: Binding(
-            get: { plugin.enabled },
-            set: onSetEnabled
-          )
-        )
-        .labelsHidden()
-        .disabled(!canEdit)
-      }
-
-      if canRemove {
-        Button("Remove Local Plugin") {
-          onRemove()
-        }
-        .buttonStyle(.bordered)
-      }
-
-      Text(plugin.description)
-        .font(.caption)
-        .foregroundColor(.secondary)
-
-      if !plugin.capabilities.isEmpty {
-        Text("Capabilities: \(plugin.capabilities.joined(separator: ", "))")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-
-      if !plugin.permissions.isEmpty {
-        Text("Permissions: \(plugin.permissions.joined(separator: ", "))")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-
-      if let validationError = plugin.validationError {
-        Text(validationError)
-          .font(.caption2)
-          .foregroundColor(.orange)
-          .textSelection(.enabled)
-      }
-
-      if let validationHint = plugin.validationHint {
-        Text("Repair: \(validationHint)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-    }
-    .padding(.vertical, 4)
+    Text(label)
+      .font(.caption.weight(.medium))
+      .foregroundColor(tone.color)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(tone.color.opacity(0.12))
+      .clipShape(Capsule())
   }
 }
 
-private struct PluginCapabilityRow: View {
-  let capability: PluginCapabilitySummary
+private struct InspectorSessionCard: View {
+  let title: String
+  let detail: String
+  let meta: String
+  let tone: StatusTone
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(spacing: 8) {
+        Circle()
+          .fill(tone.color)
+          .frame(width: 8, height: 8)
+        Text(title)
+          .font(.headline)
+        Spacer()
+      }
+
+      Text(detail)
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Text(meta)
+        .font(.caption2.weight(.medium))
+        .foregroundColor(tone.color)
+        .lineLimit(2)
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(tone.color.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+  }
+}
+
+private struct ReadinessChip: View {
+  let step: ReadinessStepSummary
+  let actionTitle: String?
+  let canRunAction: Bool
+  let onAction: () -> Void
+
+  var body: some View {
+    if actionTitle != nil {
+      Button(action: onAction) {
+        content
+      }
+      .buttonStyle(.plain)
+      .disabled(!canRunAction)
+      .help(actionTitle.map { "\($0) \(step.label)" } ?? "\(step.label): \(step.detail)")
+    } else {
+      content
+    }
+  }
+
+  private var content: some View {
+    HStack(spacing: 5) {
+      Text(step.label)
+        .font(.caption2.weight(.medium))
+        .foregroundColor(.secondary)
+
+      Text(step.detail)
+        .font(.caption2.weight(.semibold))
+        .foregroundColor(step.tone.color)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .frame(maxWidth: 150, alignment: .leading)
+
+      if let actionTitle {
+        Text(actionTitle)
+          .font(.caption2.weight(.bold))
+          .foregroundColor(canRunAction ? step.tone.color : .secondary)
+      }
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 5)
+    .background(step.tone.color.opacity(actionTitle == nil ? 0.10 : 0.16))
+    .clipShape(Capsule())
+  }
+}
+
+private struct SetupProgressView: View {
+  let summary: String
+  let detail: String
+  let value: Double
+  let tone: StatusTone
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text("\(capability.kind):\(capability.identifier)")
-            .font(.caption.weight(.semibold))
-          Text("\(capability.pluginDisplayName) | \(capability.pluginID)")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
-
+      HStack {
+        Text(summary)
+          .font(.caption2.weight(.semibold))
+          .foregroundColor(tone.color)
         Spacer()
-      }
-
-      if !capability.permissions.isEmpty {
-        Text("Permissions: \(capability.permissions.joined(separator: ", "))")
+        Text(detail)
           .font(.caption2)
           .foregroundColor(.secondary)
-          .textSelection(.enabled)
+          .lineLimit(1)
       }
-
-      if !capability.metadata.isEmpty {
-        Text("Metadata: \(capability.metadataSummary)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
+      ProgressView(value: value)
+        .progressViewStyle(.linear)
+        .tint(tone.color)
     }
-    .padding(.vertical, 4)
   }
 }
 
-private extension PluginCapabilitySummary {
-  var metadataSummary: String {
-    metadata
-      .sorted(by: { $0.key < $1.key })
-      .map { "\($0.key)=\($0.value)" }
-      .joined(separator: " | ")
-  }
-}
-
-private struct PluginConnectorRow: View {
-  let connector: PluginConnectorSummary
+private struct SetupModelChooser: View {
+  let models: [LocalModelSummary]
+  @Binding var selectedModelID: String
+  let defaultModelID: String
+  let detail: String
+  let isDisabled: Bool
+  let actionTitle: String?
+  let canRunAction: Bool
+  let onAction: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(connector.displayName)
-            .font(.caption.weight(.semibold))
-          Text("\(connector.service) | \(connector.status)")
-            .font(.caption2)
-            .foregroundColor(statusColor)
-        }
-
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text("Choose Local Model")
+          .font(.caption.weight(.semibold))
+        StatusPill(label: "One active model", tone: .neutral)
         Spacer()
+
+        if let actionTitle {
+          Button(actionTitle) {
+            onAction()
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.small)
+          .disabled(!canRunAction)
+        }
       }
 
-      Text("\(connector.pluginDisplayName) | \(connector.pluginID)")
+      Text(detail)
         .font(.caption2)
         .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
 
-      Text(connector.authSummary)
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
-
-      if !connector.permissions.isEmpty {
-        Text("Permissions: \(connector.permissions.joined(separator: ", "))")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-
-      if let homepage = connector.homepage {
-        Text("Homepage: \(homepage)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
+      VStack(alignment: .leading, spacing: 8) {
+        ForEach(models) { model in
+          SetupModelOptionRow(
+            model: model,
+            isSelected: selectedModelID == model.id,
+            isDefault: model.id == defaultModelID,
+            defaultModelID: defaultModelID,
+            isDisabled: isDisabled,
+            onSelect: {
+              selectedModelID = model.id
+            }
+          )
+        }
       }
     }
-    .padding(.vertical, 4)
-  }
-
-  private var statusColor: Color {
-    switch connector.status {
-    case "ready":
-      return .green
-    case "needsAuth":
-      return .orange
-    default:
-      return .secondary
-    }
+    .padding(10)
+    .background(Color.secondary.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
 
-private extension PluginConnectorSummary {
-  var authSummary: String {
-    let type = authType ?? "none"
-    let required = authRequired ? "required" : "optional"
-    let scopes = authScopes.isEmpty ? "no scopes" : authScopes.joined(separator: ", ")
-    let store = credentialStore ?? "none"
-    return "Auth: \(type) | \(required) | \(scopes) | store: \(store)"
-  }
-}
-
-private struct PluginPermissionRow: View {
-  let plugin: PluginSummary
-  let onRevealManifest: () -> Void
+private struct SetupModelOptionRow: View {
+  let model: LocalModelSummary
+  let isSelected: Bool
+  let isDefault: Bool
+  let defaultModelID: String
+  let isDisabled: Bool
+  let onSelect: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(plugin.displayName)
+    Button(action: onSelect) {
+      VStack(alignment: .leading, spacing: 5) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          Text(model.displayName)
             .font(.caption.weight(.semibold))
-          Text(plugin.enabled ? "Enabled" : "Disabled")
-            .font(.caption2)
-            .foregroundColor(.secondary)
+            .foregroundColor(.primary)
+          if isDefault {
+            SetupModelBadge(label: "Default", tone: .ready)
+          }
+          if model.active {
+            SetupModelBadge(label: "Active", tone: .active)
+          } else if model.downloaded {
+            SetupModelBadge(label: "Downloaded", tone: .neutral)
+          }
+          if isSelected {
+            Spacer()
+            SetupModelBadge(label: "Selected", tone: .warning)
+          }
         }
 
-        Spacer()
-
-        Button("Reveal Manifest") {
-          onRevealManifest()
-        }
-        .buttonStyle(.bordered)
-      }
-
-      if plugin.permissions.isEmpty {
-        Text("No extra runtime permissions declared.")
+        Text(model.description)
           .font(.caption2)
           .foregroundColor(.secondary)
-      } else {
-        Text(plugin.permissions.joined(separator: ", "))
+
+        Text(detail)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
+        Text(fit)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
+        Text(metadata)
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
+      .padding(8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06))
+      .overlay(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .stroke(isSelected ? Color.accentColor.opacity(0.7) : Color.secondary.opacity(0.14), lineWidth: 1)
+      )
     }
-    .padding(.vertical, 4)
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+  }
+
+  private var detail: String {
+    "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context | \(model.maxOutputTokens) output"
+  }
+
+  private var metadata: String {
+    LocalModelDisplayPresenter.firstUseMetadata(model)
+  }
+
+  private var fit: String {
+    LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
+  }
+
+  private func formattedByteCount(_ byteCount: Int64) -> String {
+    let formatter = ByteCountFormatter()
+    formatter.countStyle = .file
+    return formatter.string(fromByteCount: byteCount)
   }
 }
 
-private struct PluginCommandRow: View {
-  let command: PluginCommandSummary
-  let canRun: Bool
-  let onRun: () -> Void
+private struct SetupModelBadge: View {
+  let label: String
+  let tone: StatusTone
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(command.title)
-            .font(.caption.weight(.semibold))
-          Text("\(command.pluginDisplayName) | \(command.pluginID)")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
-
-        Spacer()
-
-        Button("Run") {
-          onRun()
-        }
-        .buttonStyle(.bordered)
-        .disabled(!canRun)
-      }
-
-      Text(command.description)
-        .font(.caption2)
-        .foregroundColor(.secondary)
-
-      Text("Execution: \(command.executionKind ?? "missing contract")")
-        .font(.caption2)
-        .foregroundColor(command.executionKind == nil ? .orange : .secondary)
-        .textSelection(.enabled)
-
-      if let memorySummary = command.memorySummary {
-        Text(memorySummary)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-
-      if !command.permissions.isEmpty {
-        Text("Permissions: \(command.permissions.joined(separator: ", "))")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-    }
-    .padding(.vertical, 4)
+    Text(label)
+      .font(.caption2.weight(.semibold))
+      .foregroundColor(tone.color)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 2)
+      .background(tone.color.opacity(0.12))
+      .clipShape(Capsule())
   }
 }
 
-private struct InvalidPluginRow: View {
-  let plugin: PluginSummary
-  let onRevealManifest: () -> Void
-  let onRemove: () -> Void
+private struct SetupCallout: View {
+  let title: String
+  let summary: String
+  let detail: String
+  let tone: StatusTone
+  let actionTitle: String?
+  let canRunAction: Bool
+  let secondaryActionTitle: String?
+  let canRunSecondaryAction: Bool
+  let onAction: () -> Void
+  let onSecondaryAction: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(plugin.displayName)
-            .font(.caption.weight(.semibold))
-          Text(plugin.manifestPath)
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .textSelection(.enabled)
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(title)
+          .font(.caption.weight(.semibold))
+          .foregroundColor(tone.color)
+        Text(summary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+        Text(detail)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+      }
+
+      Spacer()
+
+      VStack(alignment: .trailing, spacing: 6) {
+        if let actionTitle {
+          Button(actionTitle) {
+            onAction()
+          }
+          .buttonStyle(.borderedProminent)
+          .disabled(!canRunAction)
         }
 
-        Spacer()
-
-        Button("Reveal Manifest") {
-          onRevealManifest()
-        }
-        .buttonStyle(.bordered)
-
-        if plugin.provenance == "local" {
-          Button("Remove Local Plugin") {
-            onRemove()
+        if let secondaryActionTitle {
+          Button(secondaryActionTitle) {
+            onSecondaryAction()
           }
           .buttonStyle(.bordered)
+          .disabled(!canRunSecondaryAction)
         }
       }
-
-      Text(plugin.validationError ?? "Plugin manifest did not pass runtime validation.")
-        .font(.caption2)
-        .foregroundColor(.orange)
-        .textSelection(.enabled)
-
-      if let validationHint = plugin.validationHint {
-        Text("Repair: \(validationHint)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
     }
-    .padding(.vertical, 4)
+    .padding(10)
+    .background(tone.color.opacity(0.10))
+    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
 
-private struct PluginHookRow: View {
-  let hook: PluginHookSummary
+private extension StatusTone {
+  var color: Color {
+    switch self {
+    case .neutral:
+      return .secondary
+    case .ready:
+      return .green
+    case .active:
+      return .blue
+    case .warning:
+      return .orange
+    case .danger:
+      return .red
+    }
+  }
+}
+
+private struct DiffDetailView: View {
+  let summary: String
+  let lines: [DiffLineSummary]
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(hook.title)
-            .font(.caption.weight(.semibold))
-          Text("\(hook.pluginDisplayName) | \(hook.event)")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
-
-        Spacer()
-      }
-
-      Text(hook.description)
-        .font(.caption2)
+    VStack(alignment: .leading, spacing: 8) {
+      Text(summary)
+        .font(.caption.weight(.semibold))
         .foregroundColor(.secondary)
+        .textSelection(.enabled)
 
-      if let memorySummary = hook.memorySummary {
-        Text(memorySummary)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-
-      if !hook.permissions.isEmpty {
-        Text("Permissions: \(hook.permissions.joined(separator: ", "))")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
+      ScrollView(.horizontal) {
+        VStack(alignment: .leading, spacing: 2) {
+          ForEach(lines) { line in
+            DiffLineRow(line: line)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
-    .padding(.vertical, 4)
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+private struct DiffLineRow: View {
+  let line: DiffLineSummary
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 8) {
+      Text("\(line.lineNumber)")
+        .font(.system(.caption2, design: .monospaced))
+        .foregroundColor(.secondary)
+        .frame(width: 34, alignment: .trailing)
+
+      Text(line.text.isEmpty ? " " : line.text)
+        .font(.system(.caption, design: .monospaced))
+        .foregroundColor(foregroundColor)
+        .textSelection(.enabled)
+    }
+    .padding(.vertical, 2)
+    .padding(.horizontal, 6)
+    .background(backgroundColor)
+    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+  }
+
+  private var foregroundColor: Color {
+    switch line.kind {
+    case .addition:
+      return .green
+    case .deletion:
+      return .red
+    case .hunk:
+      return .blue
+    case .metadata:
+      return .secondary
+    case .context:
+      return .primary
+    }
+  }
+
+  private var backgroundColor: Color {
+    switch line.kind {
+    case .addition:
+      return Color.green.opacity(0.10)
+    case .deletion:
+      return Color.red.opacity(0.10)
+    case .hunk:
+      return Color.blue.opacity(0.10)
+    case .metadata:
+      return Color.secondary.opacity(0.08)
+    case .context:
+      return Color.clear
+    }
   }
 }
 
@@ -955,6 +756,14 @@ private struct TimelineCard: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(alignment: .center, spacing: 8) {
+        Text(kindLabel)
+          .font(.caption2.weight(.semibold))
+          .foregroundColor(kindColor)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(kindColor.opacity(0.12))
+          .clipShape(Capsule())
+
         Text(entry.title)
           .font(.headline)
 
@@ -977,7 +786,7 @@ private struct TimelineCard: View {
           .tint(streamingColor)
       }
 
-      Text(entry.body)
+      Text(displayBody)
         .font(bodyFont)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
@@ -1028,13 +837,70 @@ private struct TimelineCard: View {
     }
   }
 
+  private var kindLabel: String {
+    switch entry.kind {
+    case .userMessage:
+      return "User"
+    case .assistantMessage:
+      return "Assistant"
+    case .system:
+      return "System"
+    case .plan:
+      return "Plan"
+    case .tool:
+      return "Tool"
+    case .diff:
+      return "Diff"
+    case .approval:
+      return "Approval"
+    case .warning:
+      return "Warning"
+    }
+  }
+
+  private var kindColor: Color {
+    switch entry.kind {
+    case .userMessage:
+      return .accentColor
+    case .assistantMessage:
+      return .blue
+    case .system:
+      return .secondary
+    case .plan:
+      return .accentColor
+    case .tool:
+      return .green
+    case .diff:
+      return .blue
+    case .approval:
+      return .orange
+    case .warning:
+      return .orange
+    }
+  }
+
   private var bodyFont: Font {
     switch entry.kind {
     case .diff:
-      return .system(.body, design: .monospaced)
+      return .system(.caption, design: .monospaced)
     default:
       return .body
     }
+  }
+
+  private var displayBody: String {
+    guard entry.kind == .diff else {
+      return entry.body
+    }
+
+    let lines = entry.body.components(separatedBy: .newlines)
+    let previewLimit = 10
+    let preview = lines.prefix(previewLimit).joined(separator: "\n")
+    if lines.count <= previewLimit {
+      return preview
+    }
+
+    return "\(preview)\n... \(lines.count - previewLimit) more line(s). Select this diff to inspect the full highlighted change."
   }
 
   private var streamingLabel: String? {
@@ -1101,7 +967,7 @@ struct SettingsView: View {
   var body: some View {
     Form {
       Section("Model") {
-        Text("Default built-in model: LFM2.5-350M")
+        Text("Default first-use suggestion: LFM2.5-350M")
       }
 
       Section("Platform") {

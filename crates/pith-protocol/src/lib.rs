@@ -356,6 +356,8 @@ pub struct ThreadSummary {
   pub id: String,
   pub title: String,
   pub status: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workspace: Option<WorkspaceSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

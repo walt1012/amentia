@@ -8,6 +8,8 @@ This document defines the product, architecture, engineering rules, and phased e
 
 This plan is designed to be implementation-ready. It is not just a vision statement. Each section exists to reduce future rework when code implementation begins.
 
+This document is not an implementation changelog. Completed micro-steps belong in commits, pull requests, and release notes. The plan should stay focused on product direction, architectural boundaries, milestone outcomes, and the next highest-leverage work.
+
 ## 2. Non-Negotiable Constraints
 
 These constraints are mandatory and should be treated as project requirements, not preferences.
@@ -17,7 +19,7 @@ These constraints are mandatory and should be treated as project requirements, n
 - CPU target: `x86_64` only
 - Distribution target: signed and notarized `.app` bundle outside the Mac App Store
 - Core inference path: fully local, no required external model API
-- Default built-in model: `LFM2.5-350M`
+- Default first-use model: `LFM2.5-350M`
 - Development model: free and open source only
 - Repository language policy: English only for source code, comments, docs, commit messages, branch names, PR titles, CI messages, and generated project templates where practical
 - Product positioning: start as a small but strong local agent assistant, then grow into a plugin-powered local coworker platform
@@ -885,23 +887,22 @@ Goal:
 
 Deliverables:
 
-- release-bundled or guided local model pack delivery
-- one-click default model download, activation, and runtime restart flow
-- pausable, resumable, and cancellable long-running model downloads with progress and speed status
-- clear local model readiness and installation guidance
-- refined visual system
-- improved inspector
-- better diff viewer
-- workspace and inspector state restoration
-- runtime crash recovery with pending request cleanup and relaunch affordance
-- lightweight workspace search from the inspector
-- keyboard-first workflows
-- better loading and error states
+- guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
+- strict local model readiness with no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
+- fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
+- compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
+- timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
+- inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
+- workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
+- local context management for small models through compact prompts, memory note packing, budget-aware context headers, and short tool observation previews
+- native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
+- plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 
 Exit criteria:
 
-- a fresh install can reach a ready local `LFM2.5-350M` runtime without hidden degraded-generation behavior
-- the product feels stable, intentional, and distinctly native on Intel Mac hardware
+- a fresh install can choose, download, activate, and run a selected small local model without hidden degraded-generation behavior
+- a user can bind a workspace, create or resume a thread, send the first local request, and recover from common setup failures without reading external docs
+- the normal ready state feels quiet, stable, intentional, and distinctly native on Intel Mac hardware
 
 ### Milestone 4: Platform Expansion
 
@@ -916,6 +917,7 @@ Deliverables:
 - background tasks
 - richer memory retrieval
 - plugin-defined agents
+- third-party connector execution and auth flows, with Notion as the first reference connector
 - MCP client support
 
 Exit criteria:
@@ -1130,14 +1132,19 @@ Mitigation:
 
 ## 25. Immediate Next Actions
 
-The highest-leverage next step is to begin Milestone 0 now.
+The project is currently in Milestone 3. The highest-leverage next step is to keep tightening the
+daily-driver loop without expanding the visible surface area. The current product review says the
+code is still aligned with the main line, but this plan had started to accumulate implementation
+notes. Going forward, this document should stay outcome-based instead of mirroring every commit.
 
-Recommended first implementation sequence:
+Recommended current implementation sequence:
 
-1. create the monorepo directory structure
-2. scaffold `apps/pith-macos`
-3. scaffold the Rust workspace and runtime binary
-4. define the initial protocol types
-5. make the UI and runtime exchange one real `initialize` message over `stdio`
+1. close remaining fresh-install gaps from runtime launch to model download, activation, workspace, first thread, and first message
+2. reduce always-visible UI noise whenever setup, model, workspace, plugin, or diagnostic controls compete with the timeline
+3. refine first-message, empty-state, review, and recovery prompts around the main timeline instead of adding new panels
+4. keep model delivery focused on one-click local downloads with pause, resume, cancel, activation, and one active model at a time
+5. defer broad third-party plugin execution, connector auth, and multi-agent platform work until the local daily-driver loop feels stable and compact
 
-Once that foundation exists, the rest of the roadmap becomes much easier to implement incrementally.
+Remote CI verification is a routine engineering practice for every pushed change, not a product
+milestone. Each product step should stay small and reviewable so the app continues moving toward a
+premium, local-first, small-but-strong desktop experience.

@@ -30,7 +30,8 @@ Pith can download the recommended Q4_K_M GGUF from the model pack manifest into 
 The runtime can also resolve:
 
 - `PITH_MODEL_PACK_MANIFEST`
-- `PITH_LFM_MODEL_PATH`
+- `PITH_MODEL_PATH`
+- `PITH_LFM_MODEL_PATH` as a legacy alias
 - repo-local manifests for development
 
 The repository keeps the manifest so the product can describe the built-in pack without forcing the large GGUF file into source control.

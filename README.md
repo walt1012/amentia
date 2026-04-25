@@ -18,7 +18,7 @@ The repository is intentionally English-only.
 - Keep the app lightweight and intentionally small while preserving a strong local agent loop.
 - Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
 - Keep the default intelligence path fully local with no required external model API.
-- Treat `LFM2.5-350M` as the default built-in model pack baseline.
+- Treat `LFM2.5-350M` as the default first-use model while keeping small GGUF alternatives available.
 - Design plugins as first-class product modules so `Pith` can expand beyond code assistance into a broader local agent platform.
 - Prefer free and open source dependencies, tooling, and model delivery paths.
 
@@ -46,42 +46,16 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestone 1 is complete on the active development branch.
+Milestone 1 and Milestone 2 are complete on the active development branch.
 
-Milestone 2 is now complete on the active development branch. It includes plugin discovery, enable
-and disable flow, installation and removal workflow, capability registry, permission gating,
-per-plugin permissions and validation surfaces, repair hints for invalid manifests, reviewed install
-and removal prompts, memory-aware plugin command execution, memory-aware shell-completed hook
-execution, executable bundled plugin examples, and a Notion connector manifest template plus
-connector registry for the third-party plugin surface.
+Milestone 3 is underway. The current focus is first-use local model delivery and daily-driver polish
+while keeping the UI compact, local-first, and workspace-safe.
 
-Milestone 3 is underway with one-click default local model delivery work: the macOS app streams
-model downloads to disk, shows lightweight progress and speed status, lets users pause, continue,
-or cancel long downloads, activates the default LFM model after download, and restarts the runtime
-when needed so a fresh install reaches a real local model path with fewer manual steps. It also
-restores the last workspace and key inspector disclosure state across launches, and surfaces a
-clear relaunch path when the local runtime exits unexpectedly. A lightweight workspace search now
-lets users find matching lines from the inspector without opening a separate file browser.
+The active branch includes guided local model choice, download, and activation, pause/continue/cancel
+with persisted recovery state, workspace-bound thread filtering, compact setup guidance, progressive
+inspector disclosure, and timeline/diff readability polish.
 
-Delivered in Milestone 1:
-
-- monorepo scaffolding
-- Rust workspace skeleton and local runtime binary
-- runtime protocol types and `stdio` JSON-RPC bridge
-- macOS app shell with thread, timeline, and inspector views
-- workspace-aware read, search, shell, diff preview, and approval-gated write tools
-- SQLite-backed persistence for workspace, threads, approvals, and memory notes
-- built-in memory retrieval, user workspace notes, and thread summary notes
-- local model health inspection and local pack metadata bootstrap for the `LFM2.5-350M` runtime path
-
-Milestone 1 exit criteria now covered:
-
-- open a workspace
-- create or resume a thread
-- send a request through the local runtime
-- approve file writes or shell commands
-- inspect diff output
-- receive a file change end to end
+Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 
 Model packaging note:
 
@@ -93,7 +67,7 @@ Model packaging note:
 - Native macOS shell in `SwiftUI`
 - Local runtime in `Rust`
 - JSON-RPC style communication over `stdio`
-- Local model runtime with `LFM2.5-350M` as the default built-in model
+- Local model runtime with `LFM2.5-350M` as the default first-use model option
 
 ## Development Notes
 
