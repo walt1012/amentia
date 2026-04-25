@@ -240,13 +240,13 @@ final class RuntimeBridge {
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
 
-  func launchAndInitialize() async throws -> SessionInfo {
+  func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
     if process == nil || process?.isRunning != true {
       resetProcessState()
       try launchProcess()
     }
 
-    updateConnectionState(.launching, detail: "Launching local runtime")
+    updateConnectionState(.launching, detail: launchDetail)
 
     let initializeParams = InitializeParams(
       clientInfo: ClientInfo(

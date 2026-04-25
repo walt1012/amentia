@@ -141,7 +141,7 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  func launchRuntime() {
+  func launchRuntime(launchDetail: String = "Launching local runtime") {
     guard runtimeState != .launching else {
       return
     }
@@ -151,12 +151,12 @@ final class AppViewModel: ObservableObject {
     }
 
     runtimeState = .launching
-    runtimeDetail = "Launching local runtime"
+    runtimeDetail = launchDetail
     lastRuntimeFailureDetail = nil
 
     Task {
       do {
-        let session = try await runtimeBridge.launchAndInitialize()
+        let session = try await runtimeBridge.launchAndInitialize(launchDetail: launchDetail)
         let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
         let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
         var currentWorkspace = try? await runtimeBridge.currentWorkspace()
@@ -200,21 +200,6 @@ final class AppViewModel: ObservableObject {
         }
 
         await refreshPluginState()
-        if !plugins.isEmpty {
-          runtimeDetail += " | \(plugins.count) plugin(s)"
-        }
-        if !pluginCapabilities.isEmpty {
-          runtimeDetail += " | \(pluginCapabilities.count) capability(s)"
-        }
-        if !pluginCommands.isEmpty {
-          runtimeDetail += " | \(pluginCommands.count) command(s)"
-        }
-        if !pluginConnectors.isEmpty {
-          runtimeDetail += " | \(pluginConnectors.count) connector(s)"
-        }
-        if !pluginHooks.isEmpty {
-          runtimeDetail += " | \(pluginHooks.count) hook(s)"
-        }
 
         if let currentWorkspace {
           workspace = WorkspaceSummary(
@@ -3074,7 +3059,7 @@ final class AppViewModel: ObservableObject {
     case .ready:
       runtimeDetail = runningDetail
       runtimeBridge.stopRuntime(detail: runningDetail)
-      launchRuntime()
+      launchRuntime(launchDetail: runningDetail)
     case .launching:
       runtimeDetail = runningDetail
       runtimeBridge.stopRuntime(detail: runningDetail)
@@ -3089,7 +3074,7 @@ final class AppViewModel: ObservableObject {
           runtimeDetail = "Runtime is still launching. Relaunch it after model setup finishes."
           return
         }
-        launchRuntime()
+        launchRuntime(launchDetail: runningDetail)
       }
     case .disconnected, .failed:
       runtimeDetail = idleDetail

@@ -894,6 +894,7 @@ Deliverables:
 - explicit post-download completion states for downloaded-only, activated, and waiting-for-turn outcomes
 - explicit model download interruption states for paused, cancelled, and failed outcomes
 - explicit active model selection and reset plans with runtime relaunch details
+- model relaunch state preserves selected-model context during restart
 - pausable, resumable, and cancellable long-running model downloads with progress, speed, and ETA status
 - persisted paused model download recovery state across app relaunches
 - clear local model readiness and installation guidance
@@ -908,6 +909,7 @@ Deliverables:
 - better loading, blocking, and error states for composer, runtime, workspace-search, and model-manager flows
 - compact daily-loop status guidance that explains the next required action without adding new surfaces
 - shared local model guidance presenter so first-use setup, composer, runtime, and model-manager copy stay aligned
+- compact runtime detail text with plugin inventory kept inside timeline and Plugin Manager surfaces
 - contextual single-action recovery from the timeline header for blocked runtime, model, workspace, thread, and turn states
 - compact runtime, model, workspace, and thread readiness cockpit in the main timeline surface
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
