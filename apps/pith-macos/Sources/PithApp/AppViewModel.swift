@@ -440,75 +440,19 @@ final class AppViewModel: ObservableObject {
   }
 
   func runtimeStatusSummary() -> String {
-    switch runtimeState {
-    case .disconnected:
-      return "Launch the local runtime to restore model, workspace, plugins, and memory."
-    case .launching:
-      return "Starting the local runtime and reconnecting app state..."
-    case .failed:
-      return "Runtime stopped. Relaunch to recover the local agent loop."
-    case .ready:
-      if !isLocalModelReady() {
-        return localModelSetupGuidance().summary
-      }
-      if workspace == nil {
-        return "Model is ready. Open a workspace to bind tools to a project."
-      }
-      if activeTurnID != nil {
-        return "Pith is streaming locally. Cancel only if the turn is no longer useful."
-      }
-      if !hasRuntimeThreadSelection() {
-        return "Select or create a thread to start local agent work."
-      }
-      return "Ready for local agent work."
-    }
+    RuntimeHeaderPresenter.statusSummary(runtimeHeaderSnapshot())
   }
 
   func runtimeStatusTone() -> StatusTone {
-    switch runtimeState {
-    case .disconnected:
-      return .warning
-    case .launching:
-      return .active
-    case .failed:
-      return .danger
-    case .ready:
-      if activeTurnID != nil || modelDownloadID != nil || isWorkspaceSearching {
-        return .active
-      }
-      if workspace == nil || !isLocalModelReady() || !hasRuntimeThreadSelection() {
-        return .warning
-      }
-      return .ready
-    }
+    RuntimeHeaderPresenter.statusTone(runtimeHeaderSnapshot())
   }
 
   func showsRuntimeActivity() -> Bool {
-    runtimeState == .launching
-      || isWorkspaceSearching
-      || modelDownloadID != nil
-      || activeTurnID != nil
+    RuntimeHeaderPresenter.showsActivity(runtimeHeaderSnapshot())
   }
 
   func shouldShowRuntimeHeaderDetail() -> Bool {
-    guard !runtimeDetail.isEmpty else {
-      return false
-    }
-
-    switch runtimeState {
-    case .disconnected:
-      return runtimeDetail != "Runtime not launched"
-    case .launching, .failed:
-      return true
-    case .ready:
-      return activeTurnID != nil
-        || modelDownloadID != nil
-        || pausedModelDownloadID != nil
-        || isWorkspaceSearching
-        || !isLocalModelReady()
-        || workspace == nil
-        || !hasRuntimeThreadSelection()
-    }
+    RuntimeHeaderPresenter.shouldShowDetail(runtimeHeaderSnapshot())
   }
 
   func runtimeReadinessSteps() -> [ReadinessStepSummary] {
@@ -588,43 +532,19 @@ final class AppViewModel: ObservableObject {
   }
 
   func setupProgressSummary() -> String {
-    let readyCount = setupReadyStepCount()
-    if readyCount == setupStepCount {
-      return "Local setup complete"
-    }
-
-    return "Local setup \(readyCount)/\(setupStepCount)"
+    SetupProgressPresenter.summary(setupProgressSnapshot())
   }
 
   func setupProgressDetail() -> String {
-    if let nextStep = setupProgressNextStep() {
-      return "Next: \(nextStep)"
-    }
-    if activeTurnID != nil {
-      return "Turn running"
-    }
-    if selectedThreadIsWaitingForFirstMessage() {
-      if !trimmedDraftMessage.isEmpty {
-        return "Draft ready"
-      }
-      return "Next: First request"
-    }
-
-    return "Ready"
+    SetupProgressPresenter.detail(setupProgressSnapshot())
   }
 
   func setupProgressValue() -> Double {
-    Double(setupReadyStepCount()) / Double(setupStepCount)
+    SetupProgressPresenter.value(setupProgressSnapshot())
   }
 
   func setupProgressTone() -> StatusTone {
-    if runtimeState == .failed {
-      return .danger
-    }
-    if showsRuntimeActivity() {
-      return .active
-    }
-    return setupReadyStepCount() == setupStepCount ? .ready : .warning
+    SetupProgressPresenter.tone(setupProgressSnapshot())
   }
 
   func inspectorSessionTitle() -> String {
@@ -3048,6 +2968,45 @@ final class AppViewModel: ObservableObject {
     UserDefaults.standard.set(modelID, forKey: selectedSetupModelIDKey)
   }
 
+  private func runtimeHeaderSnapshot() -> RuntimeHeaderSnapshot {
+    let isModelReady = isLocalModelReady()
+    let modelSetupSummary = runtimeState == .ready && !isModelReady
+      ? localModelSetupGuidance().summary
+      : ""
+    RuntimeHeaderSnapshot(
+      runtimeState: runtimeState,
+      runtimeDetail: runtimeDetail,
+      modelSetupSummary: modelSetupSummary,
+      isLocalModelReady: isModelReady,
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil,
+      isWorkspaceSearching: isWorkspaceSearching,
+      hasModelDownload: modelDownloadID != nil,
+      hasPausedModelDownload: pausedModelDownloadID != nil
+    )
+  }
+
+  private func setupProgressSnapshot() -> SetupProgressSnapshot {
+    let isModelReady = isLocalModelReady()
+    let modelReadinessDetail = runtimeState == .ready && !isModelReady
+      ? localModelSetupGuidance().readinessDetail
+      : ""
+    SetupProgressSnapshot(
+      readyStepCount: setupReadyStepCount(),
+      stepCount: setupStepCount,
+      runtimeState: runtimeState,
+      showsRuntimeActivity: showsRuntimeActivity(),
+      isLocalModelReady: isModelReady,
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil,
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraft: !trimmedDraftMessage.isEmpty,
+      modelReadinessDetail: modelReadinessDetail
+    )
+  }
+
   private func setupReadyStepCount() -> Int {
     var readyCount = 0
     if runtimeState == .ready {
@@ -3063,46 +3022,6 @@ final class AppViewModel: ObservableObject {
       readyCount += 1
     }
     return readyCount
-  }
-
-  private func setupProgressNextStep() -> String? {
-    switch runtimeState {
-    case .disconnected:
-      return "Launch Runtime"
-    case .launching:
-      return "Runtime Starting"
-    case .failed:
-      return "Relaunch Runtime"
-    case .ready:
-      if !isLocalModelReady() {
-        return modelSetupNextStep()
-      }
-      if workspace == nil {
-        return "Open Workspace"
-      }
-      if !hasRuntimeThreadSelection() {
-        return "Create Thread"
-      }
-
-      return nil
-    }
-  }
-
-  private func modelSetupNextStep() -> String {
-    switch localModelSetupGuidance().readinessDetail {
-    case "Downloading":
-      return "Monitor Model"
-    case "Paused":
-      return "Continue Download"
-    case "Streaming":
-      return "Finish Turn"
-    case "Select":
-      return "Use Model"
-    case "Metadata":
-      return "Install Metadata"
-    default:
-      return "Download Model"
-    }
   }
 
   private func hasRuntimeThreadSelection() -> Bool {
