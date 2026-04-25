@@ -46,73 +46,16 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestone 1 is complete on the active development branch.
+Milestone 1 and Milestone 2 are complete on the active development branch.
 
-Milestone 2 is now complete on the active development branch. It includes plugin discovery, enable
-and disable flow, installation and removal workflow, capability registry, permission gating,
-per-plugin permissions and validation surfaces, repair hints for invalid manifests, reviewed install
-and removal prompts, memory-aware plugin command execution, memory-aware shell-completed hook
-execution, executable bundled plugin examples, and a Notion connector manifest template plus
-connector registry for the third-party plugin surface.
+Milestone 3 is underway. The current focus is first-use local model delivery and daily-driver polish
+while keeping the UI compact, local-first, and workspace-safe.
 
-Milestone 3 is underway with one-click default local model delivery work: the macOS app streams
-model downloads to disk, shows lightweight progress, speed, and ETA status, lets users pause, continue,
-or cancel long downloads, persists paused download recovery state across app relaunches, activates
-the default LFM model after download, and restarts the runtime
-when needed so a fresh install reaches a real local model path with fewer manual steps. It also
-restores the last workspace and key inspector disclosure state across launches, and surfaces a
-clear relaunch path when the local runtime exits unexpectedly. A lightweight workspace search now
-lets users find matching lines from the inspector without opening a separate file browser. Native
-menu shortcuts cover runtime launch, workspace opening, thread creation, message send, and turn
-cancellation without adding more visible controls. Plugin installation stays inside Plugin Manager
-so the main toolbar remains focused on the local daily loop. The composer now explains
-blocking states inline so users can recover the local runtime, model, workspace, or thread setup
-without guessing why send is disabled. The timeline header now carries the same compact status
-language for runtime recovery, first-use model download, workspace binding, and active streaming, plus a
-single contextual next-action button when the daily loop is blocked. A compact readiness strip
-keeps runtime, model, workspace, and thread state visible without opening inspector sections.
-Thread summaries now carry their bound workspace, and the macOS app only offers workspace-matching
-threads in the daily flow so a selected thread cannot silently run against a different project.
-The same header now shows local setup progress and one setup callout for the current blocker:
-first-use model download includes size, license, progress, pause, continue, and cancel controls,
-while workspace and thread blockers explain their next action without opening inspector sections.
-The welcome timeline starts with the actual fresh-install path instead of internal milestone
-language, and the ready composer offers three compact first-message suggestions so a new user can
-begin useful local work without opening another onboarding surface. Workspace search includes
-empty-state guidance and now lives behind progressive disclosure, while a compact inspector session
-card summarizes the current model, workspace, and thread state. The Local
-Model panel now shows one contextual primary action and only reveals cancel while a download can be
-cancelled, keeping pause, continue, activation, and readiness repair focused while deeper model
-diagnostics stay tucked away; if the default model is already downloaded, the primary action can
-select it directly. Model download start,
-continue, pause, cancel, failure, and success events are also recorded in the timeline so recovery
-does not depend on transient status text, and first-use runtime launch records a clear model-required
-event when no ready local model exists. The composer stays gated until runtime, model, workspace,
-and thread setup are ready. Timeline refreshes preserve the selected inspector item whenever it
-still exists, so streaming updates do not pull focus away from review work. Diff timeline cards now stay compact, while selected diff
-inspection uses a line-level view with change counts and highlighted additions, deletions, hunks,
-and metadata. Timeline cards include lightweight kind pills, and secondary inspector sections stay
-behind disclosure controls.
+The active branch includes guided local model download and activation, pause/continue/cancel with
+persisted recovery state, workspace-bound thread filtering, compact setup guidance, progressive
+inspector disclosure, and timeline/diff readability polish.
 
-Delivered in Milestone 1:
-
-- monorepo scaffolding
-- Rust workspace skeleton and local runtime binary
-- runtime protocol types and `stdio` JSON-RPC bridge
-- macOS app shell with thread, timeline, and inspector views
-- workspace-aware read, search, shell, diff preview, and approval-gated write tools
-- SQLite-backed persistence for workspace, threads, approvals, and memory notes
-- built-in memory retrieval, user workspace notes, and thread summary notes
-- local model health inspection and local pack metadata bootstrap for the `LFM2.5-350M` runtime path
-
-Milestone 1 exit criteria now covered:
-
-- open a workspace
-- create or resume a thread
-- send a request through the local runtime
-- approve file writes or shell commands
-- inspect diff output
-- receive a file change end to end
+Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 
 Model packaging note:
 
