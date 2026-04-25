@@ -2973,7 +2973,7 @@ final class AppViewModel: ObservableObject {
     let modelSetupSummary = runtimeState == .ready && !isModelReady
       ? localModelSetupGuidance().summary
       : ""
-    RuntimeHeaderSnapshot(
+    return RuntimeHeaderSnapshot(
       runtimeState: runtimeState,
       runtimeDetail: runtimeDetail,
       modelSetupSummary: modelSetupSummary,
@@ -2992,7 +2992,7 @@ final class AppViewModel: ObservableObject {
     let modelReadinessDetail = runtimeState == .ready && !isModelReady
       ? localModelSetupGuidance().readinessDetail
       : ""
-    SetupProgressSnapshot(
+    return SetupProgressSnapshot(
       readyStepCount: setupReadyStepCount(),
       stepCount: setupStepCount,
       runtimeState: runtimeState,
