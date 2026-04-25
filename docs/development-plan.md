@@ -888,6 +888,7 @@ Deliverables:
 - release-bundled or guided local model pack delivery
 - one-click default model download, activation, and runtime restart flow
 - pausable, resumable, and cancellable long-running model downloads with progress and speed status
+- persisted paused model download recovery state across app relaunches
 - clear local model readiness and installation guidance
 - timeline-backed model operation history for download, pause, resume, cancel, selection, and failure states
 - refined visual system with compact timeline taxonomy

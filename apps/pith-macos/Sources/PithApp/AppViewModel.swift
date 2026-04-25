@@ -15,9 +15,21 @@ private struct ModelDownloadProgress: Hashable {
   let isResuming: Bool
 }
 
+private struct PersistedModelDownload {
+  let modelID: String
+  let resumeData: Data
+  let bytesReceived: Int64
+  let totalBytes: Int64
+  let updatedAt: Date
+}
+
 @MainActor
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
+  private static let pausedModelDownloadIDKey = "pith.pausedModelDownloadID"
+  private static let pausedModelDownloadBytesReceivedKey = "pith.pausedModelDownloadBytesReceived"
+  private static let pausedModelDownloadTotalBytesKey = "pith.pausedModelDownloadTotalBytes"
+  private static let pausedModelDownloadUpdatedAtKey = "pith.pausedModelDownloadUpdatedAt"
   private let setupStepCount = 4
 
   private struct LocalPluginAuthor: Decodable {
@@ -169,9 +181,19 @@ final class AppViewModel: ObservableObject {
       ),
     ]
 
+    let initialLocalModels = Self.localModelSummaries(
+      storageRootPath: runtimeBridge.localModelStorageRootPath(),
+      activeModelPath: runtimeBridge.activeLocalModelPath()
+    )
+    let pausedDownload = Self.loadPausedModelDownload(matching: initialLocalModels)
+
     self.runtimeBridge = runtimeBridge
     self.runtimeState = runtimeBridge.connectionState
-    self.runtimeDetail = "Runtime not launched"
+    if pausedDownload == nil {
+      self.runtimeDetail = "Runtime not launched"
+    } else {
+      self.runtimeDetail = "Runtime not launched | paused model download available"
+    }
     self.draftMessage = ""
     self.workspace = nil
     self.workspaceSearchQuery = ""
@@ -179,13 +201,13 @@ final class AppViewModel: ObservableObject {
     self.workspaceSearchStatus = "Search the open workspace by text."
     self.isWorkspaceSearching = false
     self.modelHealth = nil
-    self.localModels = Self.localModelSummaries(
-      storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: runtimeBridge.activeLocalModelPath()
-    )
+    self.localModels = initialLocalModels
     self.modelDownloadID = nil
-    self.pausedModelDownloadID = nil
-    self.modelDownloadProgress = nil
+    self.pausedModelDownloadID = pausedDownload?.modelID
+    self.modelDownloadProgress = Self.restoredModelDownloadProgress(
+      from: pausedDownload,
+      localModels: initialLocalModels
+    )
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -205,7 +227,7 @@ final class AppViewModel: ObservableObject {
     self.lastRuntimeFailureDetail = nil
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
-    self.modelDownloadResumeData = nil
+    self.modelDownloadResumeData = pausedDownload?.resumeData
     self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
@@ -1646,7 +1668,7 @@ final class AppViewModel: ObservableObject {
       if let pausedModelDownloadID,
          let model = localModels.first(where: { $0.id == pausedModelDownloadID })
       {
-        return "\(model.displayName) is paused. Continue to resume or cancel to clear the partial file."
+        return "\(model.displayName) is paused. Continue from the saved local state or cancel to clear it."
       }
 
       if isLocalModelReady() {
@@ -2048,6 +2070,7 @@ final class AppViewModel: ObservableObject {
     modelDownloadID = model.id
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
+    Self.clearPersistedPausedModelDownload()
     modelDownloadProgress = ModelDownloadProgress(
       modelID: model.id,
       displayName: model.displayName,
@@ -2138,10 +2161,11 @@ final class AppViewModel: ObservableObject {
         if let paused = error as? ModelDownloadPaused {
           modelDownloadResumeData = paused.resumeData
           pausedModelDownloadID = model.id
+          persistPausedModelDownload(modelID: model.id, resumeData: paused.resumeData)
           runtimeDetail = "Paused \(model.displayName) download. Continue to resume from the saved partial state."
           appendModelEvent(
             title: "Local Model Download Paused",
-            body: "\(model.displayName) download was paused and can continue from the saved partial state.",
+            body: "\(model.displayName) download was paused and can continue from the saved local state.",
             model: model,
             attributes: [
               "result": "paused"
@@ -3352,6 +3376,22 @@ final class AppViewModel: ObservableObject {
   private func clearPausedModelDownload() {
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
+    Self.clearPersistedPausedModelDownload()
+  }
+
+  private func persistPausedModelDownload(modelID: String, resumeData: Data) {
+    guard !resumeData.isEmpty else {
+      return
+    }
+
+    let progress = modelDownloadProgress
+    Self.savePausedModelDownload(
+      modelID: modelID,
+      resumeData: resumeData,
+      bytesReceived: progress?.bytesReceived ?? 0,
+      totalBytes: progress?.totalBytes ?? 0,
+      updatedAt: progress?.updatedAt ?? Date()
+    )
   }
 
   private func removeIncompleteModelFile(modelID: String) {
@@ -3787,6 +3827,97 @@ final class AppViewModel: ObservableObject {
     }
 
     return size.int64Value
+  }
+
+  private static func loadPausedModelDownload(matching localModels: [LocalModelSummary]) -> PersistedModelDownload? {
+    let defaults = UserDefaults.standard
+    guard let modelID = defaults.string(forKey: pausedModelDownloadIDKey),
+          localModels.contains(where: { $0.id == modelID }),
+          let resumeData = try? Data(contentsOf: pausedModelDownloadResumeDataURL()),
+          !resumeData.isEmpty
+    else {
+      clearPersistedPausedModelDownload()
+      return nil
+    }
+
+    let bytesReceived = max(Int64(defaults.integer(forKey: pausedModelDownloadBytesReceivedKey)), 0)
+    let totalBytes = max(Int64(defaults.integer(forKey: pausedModelDownloadTotalBytesKey)), 0)
+    let updatedAt = defaults.object(forKey: pausedModelDownloadUpdatedAtKey) as? Date ?? Date()
+    return PersistedModelDownload(
+      modelID: modelID,
+      resumeData: resumeData,
+      bytesReceived: bytesReceived,
+      totalBytes: totalBytes,
+      updatedAt: updatedAt
+    )
+  }
+
+  private static func restoredModelDownloadProgress(
+    from pausedDownload: PersistedModelDownload?,
+    localModels: [LocalModelSummary]
+  ) -> ModelDownloadProgress? {
+    guard let pausedDownload,
+          let model = localModels.first(where: { $0.id == pausedDownload.modelID })
+    else {
+      return nil
+    }
+
+    return ModelDownloadProgress(
+      modelID: model.id,
+      displayName: model.displayName,
+      bytesReceived: pausedDownload.bytesReceived,
+      totalBytes: pausedDownload.totalBytes > 0 ? pausedDownload.totalBytes : model.sizeBytes,
+      startedAt: pausedDownload.updatedAt,
+      updatedAt: pausedDownload.updatedAt,
+      isResuming: true
+    )
+  }
+
+  private static func savePausedModelDownload(
+    modelID: String,
+    resumeData: Data,
+    bytesReceived: Int64,
+    totalBytes: Int64,
+    updatedAt: Date
+  ) {
+    let resumeDataURL = pausedModelDownloadResumeDataURL()
+    let manager = FileManager.default
+    do {
+      try manager.createDirectory(
+        at: resumeDataURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+      )
+      try resumeData.write(to: resumeDataURL, options: .atomic)
+    } catch {
+      clearPersistedPausedModelDownload()
+      return
+    }
+
+    let defaults = UserDefaults.standard
+    defaults.set(modelID, forKey: pausedModelDownloadIDKey)
+    defaults.set(max(bytesReceived, 0), forKey: pausedModelDownloadBytesReceivedKey)
+    defaults.set(max(totalBytes, 0), forKey: pausedModelDownloadTotalBytesKey)
+    defaults.set(updatedAt, forKey: pausedModelDownloadUpdatedAtKey)
+  }
+
+  private static func clearPersistedPausedModelDownload() {
+    try? FileManager.default.removeItem(at: pausedModelDownloadResumeDataURL())
+    let defaults = UserDefaults.standard
+    defaults.removeObject(forKey: pausedModelDownloadIDKey)
+    defaults.removeObject(forKey: pausedModelDownloadBytesReceivedKey)
+    defaults.removeObject(forKey: pausedModelDownloadTotalBytesKey)
+    defaults.removeObject(forKey: pausedModelDownloadUpdatedAtKey)
+  }
+
+  private static func pausedModelDownloadResumeDataURL() -> URL {
+    let baseDirectory =
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+
+    return baseDirectory
+      .appendingPathComponent("Pith", isDirectory: true)
+      .appendingPathComponent("model-downloads", isDirectory: true)
+      .appendingPathComponent("resume.data")
   }
 
   private static func normalizedPath(_ path: String) -> String {
