@@ -1533,6 +1533,14 @@ final class AppViewModel: ObservableObject {
       )
     }
 
+    if let observationTruncated = entry.attributes["observationTruncated"] {
+      let sourceChars = entry.attributes["observationSourceChars"] ?? "unknown"
+      let budgetChars = entry.attributes["observationBudgetChars"] ?? "unknown"
+      lines.append(
+        "Observation: \(sourceChars)/\(budgetChars) chars | truncated \(observationTruncated)"
+      )
+    }
+
     return lines.joined(separator: "\n")
   }
 

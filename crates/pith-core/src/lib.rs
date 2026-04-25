@@ -46,6 +46,9 @@ const DEFAULT_MODEL_CONTEXT_TOKENS: usize = 4096;
 const CONTEXT_MEMORY_BUDGET_PERCENT: usize = 30;
 const MIN_CONTEXT_MEMORY_CHAR_BUDGET: usize = 900;
 const MAX_CONTEXT_MEMORY_CHAR_BUDGET: usize = 2400;
+const CONTEXT_OBSERVATION_BUDGET_PERCENT: usize = 45;
+const MIN_CONTEXT_OBSERVATION_CHAR_BUDGET: usize = 1200;
+const MAX_CONTEXT_OBSERVATION_CHAR_BUDGET: usize = 3600;
 
 #[derive(Debug, Clone)]
 struct StoredThread {
@@ -3263,6 +3266,14 @@ fn take_characters(content: &str, count: usize) -> String {
   content.chars().take(count).collect()
 }
 
+#[derive(Debug, Clone)]
+struct PromptObservation {
+  text: String,
+  source_char_count: usize,
+  budget_char_count: usize,
+  was_truncated: bool,
+}
+
 fn format_file_result(result: &ReadFileResult) -> String {
   if result.is_truncated {
     format!(
@@ -3297,14 +3308,21 @@ fn summarize_file_result(
     "Pith inspected {} for {} in {}. First useful line: {}",
     result.relative_path, thread_title, workspace_name, preview
   );
+  let observation = compact_prompt_observation(&result.content, &context_pack);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
     format_context_prompt(&context_pack),
     result.relative_path,
-    result.content
+    observation.text
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &context_pack,
+    Some(&observation),
+  )
 }
 
 fn format_directory_result(entries: &[DirectoryEntry]) -> String {
@@ -3361,6 +3379,7 @@ fn summarize_directory_result(
         workspace_name, thread_title
       ),
       &context_pack,
+      None,
     );
   }
 
@@ -3378,13 +3397,20 @@ fn summarize_directory_result(
     entries.len(),
     preview
   );
+  let observation = compact_prompt_observation(&format_directory_result(entries), &context_pack);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
     format_context_prompt(&context_pack),
-    format_directory_result(entries)
+    observation.text
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &context_pack,
+    Some(&observation),
+  )
 }
 
 fn summarize_search_result(
@@ -3408,6 +3434,7 @@ fn summarize_search_result(
         workspace_name, thread_title, query
       ),
       &context_pack,
+      None,
     );
   }
 
@@ -3426,13 +3453,23 @@ fn summarize_search_result(
     query,
     preview
   );
+  let observation = compact_prompt_observation(
+    &format_search_result(query, matches),
+    &context_pack,
+  );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
     format_context_prompt(&context_pack),
-    format_search_result(query, matches)
+    observation.text
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &context_pack,
+    Some(&observation),
+  )
 }
 
 fn format_shell_result(result: &ShellCommandResult) -> String {
@@ -3481,16 +3518,20 @@ fn summarize_shell_result(
       result.command, workspace_name, result.exit_code
     )
   };
+  let observation = compact_prompt_observation(&format_shell_result(result), &context_pack);
   let prompt = format!(
-    "You are Pith, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nCommand: {}\nExit Code: {}\nstdout:\n{}\n\nstderr:\n{}",
+    "You are Pith, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nResult Preview:\n{}",
     format_context_prompt(&context_pack),
-    result.command,
-    result.exit_code,
-    result.stdout,
-    result.stderr
+    observation.text
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &context_pack,
+    Some(&observation),
+  )
 }
 
 fn summarize_denied_approval(
@@ -3524,7 +3565,7 @@ fn summarize_denied_approval(
     approval.command.clone().unwrap_or_default()
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack)
+  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack, None)
 }
 
 fn generate_local_summary(
@@ -3532,6 +3573,7 @@ fn generate_local_summary(
   prompt: String,
   observation_summary: String,
   context_pack: &ContextPack,
+  observation: Option<&PromptObservation>,
 ) -> (String, HashMap<String, String>) {
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Summarizer,
@@ -3545,6 +3587,9 @@ fn generate_local_summary(
     ("modelStatus".to_string(), result.status),
   ]);
   merge_context_pack_attributes(&mut attributes, context_pack);
+  if let Some(observation) = observation {
+    merge_observation_attributes(&mut attributes, observation);
+  }
 
   (result.text, attributes)
 }
@@ -3595,6 +3640,62 @@ fn context_budget_for_model(model_runtime: &LocalModelRuntime) -> (usize, usize)
     MAX_CONTEXT_MEMORY_CHAR_BUDGET,
   );
   (budget_char_count, context_window_tokens)
+}
+
+fn compact_prompt_observation(content: &str, context_pack: &ContextPack) -> PromptObservation {
+  let budget_char_count = observation_budget_for_context(context_pack);
+  let source_char_count = content.chars().count();
+  if source_char_count <= budget_char_count {
+    return PromptObservation {
+      text: content.to_string(),
+      source_char_count,
+      budget_char_count,
+      was_truncated: false,
+    };
+  }
+
+  let marker = format!(
+    "\n\n[observation compacted: {} chars omitted]\n\n",
+    source_char_count.saturating_sub(budget_char_count)
+  );
+  let marker_char_count = marker.chars().count();
+  let available_chars = budget_char_count.saturating_sub(marker_char_count);
+  let head_char_count = (available_chars * 2) / 3;
+  let tail_char_count = available_chars.saturating_sub(head_char_count);
+  let text = format!(
+    "{}{}{}",
+    take_characters(content, head_char_count),
+    marker,
+    take_last_characters(content, tail_char_count)
+  );
+
+  PromptObservation {
+    text,
+    source_char_count,
+    budget_char_count,
+    was_truncated: true,
+  }
+}
+
+fn observation_budget_for_context(context_pack: &ContextPack) -> usize {
+  let raw_budget =
+    context_pack.context_window_tokens.saturating_mul(CONTEXT_OBSERVATION_BUDGET_PERCENT) / 100;
+  raw_budget.clamp(
+    MIN_CONTEXT_OBSERVATION_CHAR_BUDGET,
+    MAX_CONTEXT_OBSERVATION_CHAR_BUDGET,
+  )
+}
+
+fn take_last_characters(content: &str, count: usize) -> String {
+  let character_count = content.chars().count();
+  if character_count <= count {
+    return content.to_string();
+  }
+
+  content
+    .chars()
+    .skip(character_count.saturating_sub(count))
+    .collect()
 }
 
 fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
@@ -3676,6 +3777,24 @@ fn merge_context_pack_attributes(
   attributes.insert(
     "contextBudgetChars".to_string(),
     context_pack.budget_char_count.to_string(),
+  );
+}
+
+fn merge_observation_attributes(
+  attributes: &mut HashMap<String, String>,
+  observation: &PromptObservation,
+) {
+  attributes.insert(
+    "observationSourceChars".to_string(),
+    observation.source_char_count.to_string(),
+  );
+  attributes.insert(
+    "observationBudgetChars".to_string(),
+    observation.budget_char_count.to_string(),
+  );
+  attributes.insert(
+    "observationTruncated".to_string(),
+    observation.was_truncated.to_string(),
   );
 }
 
@@ -3790,6 +3909,29 @@ mod tests {
       validation_error: None,
       validation_hint: None,
     }];
+  }
+
+  #[test]
+  fn prompt_observation_compacts_large_tool_output_for_small_models() {
+    let context_pack = ContextPack {
+      notes: vec![],
+      context_window_tokens: 4096,
+      source_note_count: 0,
+      candidate_note_count: 0,
+      omitted_note_count: 0,
+      truncated_note_count: 0,
+      estimated_char_count: 0,
+      budget_char_count: 1228,
+    };
+    let content = format!("{}TAIL", "A".repeat(3000));
+
+    let observation = compact_prompt_observation(&content, &context_pack);
+
+    assert!(observation.was_truncated);
+    assert_eq!(observation.budget_char_count, 1843);
+    assert!(observation.text.contains("[observation compacted"));
+    assert!(observation.text.ends_with("TAIL"));
+    assert!(observation.text.chars().count() <= observation.budget_char_count);
   }
 
   #[test]
@@ -4094,6 +4236,8 @@ mod tests {
     assert_eq!(items[4]["kind"], "assistantMessage");
     assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
     assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
+    assert_eq!(items[4]["attributes"]["observationTruncated"], "false");
+    assert_eq!(items[4]["attributes"]["observationBudgetChars"], "1843");
     assert!(items[4]["attributes"]["memoryNoteTitles"]
       .as_str()
       .unwrap()
