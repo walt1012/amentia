@@ -889,6 +889,7 @@ Deliverables:
 - first-use model chooser with `LFM2.5-350M` as the default selection and small local alternatives available
 - one-click selected model download, activation, and runtime restart flow
 - single active local model guard so model switches and resets wait for current turn completion
+- explicit post-download completion states for downloaded-only, activated, and waiting-for-turn outcomes
 - pausable, resumable, and cancellable long-running model downloads with progress, speed, and ETA status
 - persisted paused model download recovery state across app relaunches
 - clear local model readiness and installation guidance

@@ -1994,36 +1994,37 @@ final class AppViewModel: ObservableObject {
           to: URL(fileURLWithPath: model.installPath)
         )
 
-        var activatedDownloadedModel = false
-        var manifestPath: String?
-        if activateAfterDownload {
+        let canActivateDownloadedModel = activeTurnID == nil
+        let manifestPath: String?
+        if activateAfterDownload && canActivateDownloadedModel {
           let modelManifestPath = try LocalModelCatalog.writePackManifest(for: model)
           runtimeBridge.configureActiveLocalModel(
             manifestPath: modelManifestPath,
             modelPath: model.installPath
           )
           manifestPath = modelManifestPath
-          activatedDownloadedModel = true
-        }
-
-        if activatedDownloadedModel {
-          selectedSetupModelID = model.id
-          runtimeDetail = "Downloaded and selected \(model.displayName)."
-          modelDownloadProgress = nil
-          refreshLocalModelCatalog()
         } else {
-          runtimeDetail = "Downloaded \(model.displayName) to \(model.installPath)."
-          modelDownloadProgress = nil
-          refreshLocalModelCatalog()
+          manifestPath = nil
         }
 
-        var attributes = [
-          "modelPath": model.installPath,
-          "source": downloadURL.absoluteString,
-        ]
-        if let manifestPath {
-          attributes["manifestPath"] = manifestPath
+        let completionPlan = LocalModelDownloadCompletionPlanner.plan(
+          model: model,
+          sourceURL: downloadURL,
+          activationRequested: activateAfterDownload,
+          canActivateNow: canActivateDownloadedModel,
+          manifestPath: manifestPath
+        )
+
+        switch completionPlan.mode {
+        case .activated, .waitingForTurn:
+          selectedSetupModelID = model.id
+        case .downloadedOnly:
+          break
         }
+
+        runtimeDetail = completionPlan.runtimeDetail
+        modelDownloadProgress = nil
+        refreshLocalModelCatalog()
 
         appendEntry(
           to: selectedThreadID,
@@ -2031,17 +2032,17 @@ final class AppViewModel: ObservableObject {
             id: UUID().uuidString,
             kind: .system,
             title: "Local Model Downloaded",
-            body: activatedDownloadedModel
-              ? "\(model.displayName) was downloaded and selected as the active local model."
-              : "\(model.displayName) was downloaded to \(model.installPath).",
-            attributes: attributes
+            body: completionPlan.timelineBody,
+            attributes: completionPlan.attributes
           )
         )
 
-        if activatedDownloadedModel {
+        if let relaunchRunningDetail = completionPlan.relaunchRunningDetail,
+           let relaunchIdleDetail = completionPlan.relaunchIdleDetail
+        {
           relaunchRuntimeIfNeeded(
-            runningDetail: "Restarting local runtime with \(model.displayName)...",
-            idleDetail: "\(model.displayName) will be used when the runtime launches."
+            runningDetail: relaunchRunningDetail,
+            idleDetail: relaunchIdleDetail
           )
         }
       } catch {
