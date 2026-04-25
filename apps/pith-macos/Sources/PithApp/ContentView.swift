@@ -527,6 +527,7 @@ private struct SetupModelChooser: View {
             model: model,
             isSelected: selectedModelID == model.id,
             isDefault: model.id == defaultModelID,
+            defaultModelID: defaultModelID,
             isDisabled: isDisabled,
             onSelect: {
               selectedModelID = model.id
@@ -545,6 +546,7 @@ private struct SetupModelOptionRow: View {
   let model: LocalModelSummary
   let isSelected: Bool
   let isDefault: Bool
+  let defaultModelID: String
   let isDisabled: Bool
   let onSelect: () -> Void
 
@@ -577,16 +579,14 @@ private struct SetupModelOptionRow: View {
           .font(.caption2)
           .foregroundColor(.secondary)
 
+        Text(fit)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
         Text(metadata)
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
-
-        if !model.tags.isEmpty {
-          Text(model.tags.joined(separator: " / "))
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
       }
       .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -605,27 +605,17 @@ private struct SetupModelOptionRow: View {
   }
 
   private var metadata: String {
-    model.downloaded
-      ? "Ready locally. Use this model without another download."
-      : "Source: \(sourceName(model.homepage))"
+    LocalModelDisplayPresenter.firstUseMetadata(model)
+  }
+
+  private var fit: String {
+    LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
   }
 
   private func formattedByteCount(_ byteCount: Int64) -> String {
     let formatter = ByteCountFormatter()
     formatter.countStyle = .file
     return formatter.string(fromByteCount: byteCount)
-  }
-
-  private func sourceName(_ homepage: String) -> String {
-    guard let host = URL(string: homepage)?.host else {
-      return "open-source catalog"
-    }
-
-    if host == "huggingface.co" {
-      return "Hugging Face"
-    }
-
-    return host
   }
 }
 

@@ -3214,7 +3214,7 @@ final class AppViewModel: ObservableObject {
     alert.informativeText = """
       Model: \(displayName)
       Size: \(sizeSummary)
-      Source: \(downloadSourceName(downloadURL))
+      Source: \(LocalModelDisplayPresenter.sourceName(downloadURL))
       File: \(URL(fileURLWithPath: targetPath).lastPathComponent)
 
       Pith stores the model locally in app data and runs one local model at a time.
@@ -3222,18 +3222,6 @@ final class AppViewModel: ObservableObject {
     alert.addButton(withTitle: "Download")
     alert.addButton(withTitle: "Cancel")
     return alert.runModal() == .alertFirstButtonReturn
-  }
-
-  private func downloadSourceName(_ downloadURL: URL) -> String {
-    guard let host = downloadURL.host else {
-      return "open-source catalog"
-    }
-
-    if host == "huggingface.co" {
-      return "Hugging Face"
-    }
-
-    return host
   }
 
   private func confirmPluginRemoval(plugin: PluginSummary) -> Bool {
