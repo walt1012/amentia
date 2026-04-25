@@ -3464,8 +3464,12 @@ fn summarize_shell_result(
   workspace_name: &str,
   result: &ShellCommandResult,
 ) -> (String, HashMap<String, String>) {
-  let context_pack =
-    pack_memory_context(model_runtime, memory_notes, Some(workspace_name), &result.command);
+  let context_pack = pack_memory_context(
+    model_runtime,
+    memory_notes,
+    Some(workspace_name),
+    &result.command,
+  );
   let observation_summary = if result.exit_code == 0 {
     format!(
       "Pith ran `{}` in {} and it finished successfully.",
