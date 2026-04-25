@@ -8,6 +8,8 @@ This document defines the product, architecture, engineering rules, and phased e
 
 This plan is designed to be implementation-ready. It is not just a vision statement. Each section exists to reduce future rework when code implementation begins.
 
+This document is not an implementation changelog. Completed micro-steps belong in commits, pull requests, and release notes. The plan should stay focused on product direction, architectural boundaries, milestone outcomes, and the next highest-leverage work.
+
 ## 2. Non-Negotiable Constraints
 
 These constraints are mandatory and should be treated as project requirements, not preferences.
@@ -885,64 +887,22 @@ Goal:
 
 Deliverables:
 
-- release-bundled or guided local model pack delivery
-- first-use model chooser with `LFM2.5-350M` as the default selection and small local alternatives available
-- persisted first-use model choice so user-selected alternatives survive app relaunch
-- one-click selected model download, activation, and runtime restart flow
-- single active local model guard so model switches and resets wait for current turn completion
-- guarded model download request planning for active, paused, duplicate, and invalid download states
-- explicit model download start plans for new and resumed transfers
-- explicit post-download completion states for downloaded-only, activated, and waiting-for-turn outcomes
-- explicit model download interruption states for paused, cancelled, and failed outcomes
-- explicit active model selection and reset plans with runtime relaunch details
-- model relaunch state preserves selected-model context during restart
-- pausable, resumable, and cancellable long-running model downloads with progress, speed, and ETA status
-- persisted paused model download recovery state across app relaunches
-- clear local model readiness and installation guidance
-- timeline-backed model operation history for download, pause, resume, cancel, selection, and failure states
-- refined visual system with compact timeline taxonomy
-- improved inspector with progressive disclosure for secondary and diagnostic detail
-- better diff viewer with line-level readability
-- workspace and inspector state restoration
-- runtime crash recovery with pending request cleanup and relaunch affordance
-- lightweight workspace search from the inspector
-- keyboard-first launch, workspace, thread, composer, and cancellation workflows
-- better loading, blocking, and error states for composer, runtime, workspace-search, and model-manager flows
-- compact daily-loop status guidance that explains the next required action without adding new surfaces
-- shared local model guidance presenter so first-use setup, composer, runtime, and model-manager copy stay aligned
-- compact runtime detail text with plugin inventory kept inside timeline and Plugin Manager surfaces
-- runtime relaunch stays in recovery surfaces and the command menu instead of remaining as primary chrome while the app is ready
-- local context packing for planner, summary, and plugin-command prompts with memory note compaction metadata
-- local context pack headers inside model prompts so the local model can see relevant-note counts, omissions, truncation, and hard budget usage
-- model-aware context budgets so small local models stay conservative while larger local context windows can carry more relevant memory
-- model-aware tool observation previews so file, search, directory, and shell summaries stay compact without hiding full timeline results
-- contextual single-action recovery from the timeline header for blocked runtime, model, workspace, thread, and turn states
-- compact runtime, model, workspace, and thread readiness cockpit in the main timeline surface
-- readiness cockpit chips expose contextual launch, model, workspace, and thread actions without adding another control panel
-- composer status text points users back to readiness chips and keyboard shortcuts while setup is incomplete
-- setup progress now names the next local action instead of showing a static setup sequence
-- inspector setup meta now mirrors the same next action instead of repeating every pending subsystem
-- stale restored workspace paths are cleared with a short timeline prompt to reopen a project
-- runtime header detail now hides in the normal ready state and stays visible for setup, recovery, and active work
-- setup callout continues paused model downloads directly, even when the persisted setup selection differs
-- fresh-install setup progress and onboarding copy that avoids internal milestone language
-- composer gating that keeps input disabled until the local setup path is actually ready
-- first-use model-missing timeline guidance that tells users to download or select the local model
-- unified setup callout for model, workspace, and thread blockers
-- first-use model download callout with selected model size, license, progress, pause, continue, cancel, and one primary action
-- contextual Local Model panel actions so download, pause, continue, activation, repair, and cancel do not become an always-visible control cluster
-- compact first-message suggestions after setup is complete, without adding a separate onboarding panel
-- first-message suggestions stay first-turn only and adapt to the selected workspace instead of becoming persistent composer chrome
-- preserved timeline selection across refreshes so inspector review work stays stable during streaming updates
-- compact inspector session summary with workspace search moved behind progressive disclosure
-- plugin installation kept inside Plugin Manager so the primary toolbar stays focused on the local daily loop
-- workspace-bound thread summaries and app-side filtering so visible threads match the active workspace
-- thread creation gated until runtime, local model, workspace, and idle turn state are ready
+- guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
+- strict local model readiness with no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
+- fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
+- compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
+- timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
+- inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
+- workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
+- local context management for small models through compact prompts, memory note packing, budget-aware context headers, and short tool observation previews
+- native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
+- plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 
 Exit criteria:
 
-- a fresh install can choose, download, and reach a ready selected small local model without hidden degraded-generation behavior
-- the product feels stable, intentional, and distinctly native on Intel Mac hardware
+- a fresh install can choose, download, activate, and run a selected small local model without hidden degraded-generation behavior
+- a user can bind a workspace, create or resume a thread, send the first local request, and recover from common setup failures without reading external docs
+- the normal ready state feels quiet, stable, intentional, and distinctly native on Intel Mac hardware
 
 ### Milestone 4: Platform Expansion
 
@@ -1173,17 +1133,18 @@ Mitigation:
 ## 25. Immediate Next Actions
 
 The project is currently in Milestone 3. The highest-leverage next step is to keep tightening the
-daily-driver loop without expanding the visible surface area. Current product review says the main
-adjustment is to move daily readiness and recovery guidance into the timeline header, while keeping
-inspector sections for secondary detail instead of adding more always-visible admin controls.
+daily-driver loop without expanding the visible surface area. The current product review says the
+code is still aligned with the main line, but this plan had started to accumulate implementation
+notes. Going forward, this document should stay outcome-based instead of mirroring every commit.
 
 Recommended current implementation sequence:
 
-1. verify the fresh-install path from launch to model download, model activation, workspace, first thread, and first message
-2. continue reducing inspector noise through stronger defaults, preserved selection, and fewer always-visible admin controls
-3. refine first-message, review, empty-state, and recovery prompts around the main timeline
-4. keep model delivery focused on one-click local downloads with pause, resume, cancel, and activation
-5. defer broad third-party plugin and connector expansion until the local daily-driver loop feels stable and compact
+1. close remaining fresh-install gaps from runtime launch to model download, activation, workspace, first thread, and first message
+2. reduce always-visible UI noise whenever setup, model, workspace, plugin, or diagnostic controls compete with the timeline
+3. refine first-message, empty-state, review, and recovery prompts around the main timeline instead of adding new panels
+4. keep model delivery focused on one-click local downloads with pause, resume, cancel, activation, and one active model at a time
+5. defer broad third-party plugin execution, connector auth, and multi-agent platform work until the local daily-driver loop feels stable and compact
 
-Each step should stay small, reviewable, and remotely verified so the app continues moving toward a
+Remote CI verification is a routine engineering practice for every pushed change, not a product
+milestone. Each product step should stay small and reviewable so the app continues moving toward a
 premium, local-first, small-but-strong desktop experience.
