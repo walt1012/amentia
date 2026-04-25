@@ -434,16 +434,7 @@ final class AppViewModel: ObservableObject {
       return "Runtime stopped. Relaunch to recover the local agent loop."
     case .ready:
       if !isLocalModelReady() {
-        if modelDownloadID != nil {
-          return "Downloading the local model. Agent work unlocks when it is ready."
-        }
-        if pausedModelDownloadID != nil {
-          return "Model download is paused. Continue it from Local Model."
-        }
-        if selectedSetupModelDownloaded() {
-          return "Use the downloaded selected model to complete the local setup."
-        }
-        return "Choose and download a local model to enable offline agent work."
+        return localModelSetupGuidance().summary
       }
       if workspace == nil {
         return "Model is ready. Open a workspace to bind tools to a project."
@@ -718,37 +709,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelSetupCalloutTitle() -> String {
-    if modelDownloadID != nil {
-      return "Downloading Local Model"
-    }
-    if pausedModelDownloadID != nil {
-      return "Continue Local Model Download"
-    }
-    if selectedSetupModelDownloaded() {
-      return "Select Downloaded Local Model"
-    }
-    return "Download Local Model"
+    localModelSetupGuidance().title
   }
 
   func modelSetupCalloutSummary() -> String {
-    if let modelDownloadID,
-       let model = localModels.first(where: { $0.id == modelDownloadID })
-    {
-      return "\(model.displayName) is downloading. Pith will unlock offline agent work after it is ready."
-    }
-    if let pausedModelDownloadID,
-       let model = localModels.first(where: { $0.id == pausedModelDownloadID })
-    {
-      return "\(model.displayName) is paused. Continue the download or cancel to clear the partial file."
-    }
-    if let model = selectedSetupModel(), model.downloaded {
-      return "\(model.displayName) is downloaded but not active. Select it to finish first-use setup."
-    }
-    if let model = selectedSetupModel() {
-      return "Fresh installs need one local model before Pith can answer locally. \(model.displayName) is selected."
-    }
-
-    return "Fresh installs need a local model before Pith can answer without an external API."
+    localModelSetupGuidance().summary
   }
 
   func modelSetupCalloutDetail() -> String {
@@ -756,19 +721,11 @@ final class AppViewModel: ObservableObject {
       return modelDownloadProgressSummary()
     }
 
-    guard let model = selectedSetupModel() else {
-      return "Local model catalog unavailable. Relaunch the runtime to refresh model metadata."
-    }
-
-    return "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context"
+    return localModelSetupGuidance().detail
   }
 
   func modelSetupCalloutTone() -> StatusTone {
-    if modelDownloadID != nil {
-      return .active
-    }
-
-    return .warning
+    localModelSetupGuidance().tone
   }
 
   func modelSetupCalloutActionTitle() -> String? {
@@ -1574,7 +1531,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelActionSummary() -> String {
-    LocalModelOperationPresenter.actionSummary(localModelOperationSnapshot())
+    localModelSetupGuidance().actionSummary
   }
 
   func showsModelActivity() -> Bool {
@@ -2406,16 +2363,7 @@ final class AppViewModel: ObservableObject {
     }
 
     if !isLocalModelReady() {
-      if modelDownloadID != nil {
-        return "Model download is running..."
-      }
-      if pausedModelDownloadID != nil {
-        return "Continue the paused model download"
-      }
-      if selectedSetupModelDownloaded() {
-        return "Use the downloaded local model"
-      }
-      return "Choose and download a local model"
+      return localModelSetupGuidance().title
     }
 
     if workspace == nil {
@@ -2443,16 +2391,7 @@ final class AppViewModel: ObservableObject {
       return "Runtime is unavailable. Relaunch it to recover the local agent loop."
     case .ready:
       if !isLocalModelReady() {
-        if modelDownloadID != nil {
-          return "Model download is running. Agent work unlocks after the local model is ready."
-        }
-        if pausedModelDownloadID != nil {
-          return "Model download is paused. Continue it from Local Model."
-        }
-        if selectedSetupModelDownloaded() {
-          return "Use the downloaded local model to finish setup."
-        }
-        return "Choose and download a local model to enable offline agent work."
+        return localModelSetupGuidance().summary
       }
 
       if workspace == nil {
@@ -2887,28 +2826,18 @@ final class AppViewModel: ObservableObject {
     return selectedThread.workspaceRootPath == workspace.rootPath
   }
 
-  private func selectedSetupModelDownloaded() -> Bool {
-    selectedSetupModel()?.downloaded == true
-  }
-
   private func selectedSetupModel() -> LocalModelSummary? {
     localModels.first(where: { $0.id == selectedSetupModelID })
       ?? localModels.first(where: { $0.id == LocalModelCatalog.defaultFirstUseModelID })
       ?? localModels.first
   }
 
-  private func localModelRequiredTimelineSummary() -> String {
-    if modelDownloadID != nil {
-      return "The local model is downloading. Pith will unlock agent work after the model is ready."
-    }
-    if pausedModelDownloadID != nil {
-      return "The local model download is paused. Continue the download to finish first-use setup."
-    }
-    if selectedSetupModelDownloaded() {
-      return "The selected model is downloaded but not active. Use it to finish first-use setup."
-    }
+  private func localModelSetupGuidance() -> LocalModelSetupGuidance {
+    LocalModelOperationPresenter.setupGuidance(localModelOperationSnapshot())
+  }
 
-    return "No ready local model is installed yet. Choose a small local model to finish first-use setup without an external API."
+  private func localModelRequiredTimelineSummary() -> String {
+    localModelSetupGuidance().summary
   }
 
   private func announceSetupCompleteIfNeeded() {
@@ -2968,20 +2897,14 @@ final class AppViewModel: ObservableObject {
     guard runtimeState == .ready else {
       return ReadinessStepSummary(id: "model", label: "Model", detail: "Waiting", tone: .neutral)
     }
-    if modelDownloadID != nil {
-      return ReadinessStepSummary(id: "model", label: "Model", detail: "Downloading", tone: .active)
-    }
-    if pausedModelDownloadID != nil {
-      return ReadinessStepSummary(id: "model", label: "Model", detail: "Paused", tone: .warning)
-    }
-    if isLocalModelReady() {
-      return ReadinessStepSummary(id: "model", label: "Model", detail: "Ready", tone: .ready)
-    }
-    if selectedSetupModelDownloaded() {
-      return ReadinessStepSummary(id: "model", label: "Model", detail: "Select", tone: .warning)
-    }
 
-    return ReadinessStepSummary(id: "model", label: "Model", detail: "Download", tone: .warning)
+    let guidance = localModelSetupGuidance()
+    return ReadinessStepSummary(
+      id: "model",
+      label: "Model",
+      detail: guidance.readinessDetail,
+      tone: guidance.tone
+    )
   }
 
   private func threadReadinessStep() -> ReadinessStepSummary {
@@ -3015,7 +2938,7 @@ final class AppViewModel: ObservableObject {
         .flatMap { id in localModels.first(where: { $0.id == id }) },
       pausedModel: pausedModelDownloadID
         .flatMap { id in localModels.first(where: { $0.id == id }) },
-      selectedSetupModelDownloaded: selectedSetupModelDownloaded(),
+      selectedSetupModel: selectedSetupModel(),
       downloadedModelCount: downloadedModels.count,
       totalModelCount: localModels.count,
       activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,

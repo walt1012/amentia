@@ -907,6 +907,7 @@ Deliverables:
 - keyboard-first launch, workspace, thread, composer, and cancellation workflows
 - better loading, blocking, and error states for composer, runtime, workspace-search, and model-manager flows
 - compact daily-loop status guidance that explains the next required action without adding new surfaces
+- shared local model guidance presenter so first-use setup, composer, runtime, and model-manager copy stay aligned
 - contextual single-action recovery from the timeline header for blocked runtime, model, workspace, thread, and turn states
 - compact runtime, model, workspace, and thread readiness cockpit in the main timeline surface
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
