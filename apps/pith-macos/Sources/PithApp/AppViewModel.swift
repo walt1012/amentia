@@ -610,6 +610,125 @@ final class AppViewModel: ObservableObject {
     runtimeState == .ready && !isLocalModelReady()
   }
 
+  func shouldShowSetupCallout() -> Bool {
+    runtimeState == .ready
+      && (!isLocalModelReady() || workspace == nil || !hasRuntimeThreadSelection())
+  }
+
+  func setupCalloutTitle() -> String {
+    if !isLocalModelReady() {
+      return modelSetupCalloutTitle()
+    }
+    if workspace == nil {
+      return "Open Workspace"
+    }
+    if !hasRuntimeThreadSelection() {
+      return "Create Thread"
+    }
+
+    return "Local Setup Complete"
+  }
+
+  func setupCalloutSummary() -> String {
+    if !isLocalModelReady() {
+      return modelSetupCalloutSummary()
+    }
+    if workspace == nil {
+      return "Choose the project Pith should inspect, search, and edit locally."
+    }
+    if !hasRuntimeThreadSelection() {
+      return "Create or select a runtime thread before sending the first local request."
+    }
+
+    return "Pith is ready for local agent work."
+  }
+
+  func setupCalloutDetail() -> String {
+    if !isLocalModelReady() {
+      return modelSetupCalloutDetail()
+    }
+    if workspace == nil {
+      return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
+    }
+    if !hasRuntimeThreadSelection() {
+      return "Threads keep the timeline, approvals, cancellation, and memory context together."
+    }
+
+    return "Ready"
+  }
+
+  func setupCalloutTone() -> StatusTone {
+    if !isLocalModelReady() {
+      return modelSetupCalloutTone()
+    }
+
+    return .warning
+  }
+
+  func setupCalloutActionTitle() -> String? {
+    if !isLocalModelReady() {
+      return modelSetupCalloutActionTitle()
+    }
+    if workspace == nil {
+      return "Open Workspace"
+    }
+    if !hasRuntimeThreadSelection() {
+      return "New Thread"
+    }
+
+    return nil
+  }
+
+  func canRunSetupCalloutAction() -> Bool {
+    if !isLocalModelReady() {
+      return canRunModelSetupCalloutAction()
+    }
+    if workspace == nil {
+      return canOpenWorkspace()
+    }
+    if !hasRuntimeThreadSelection() {
+      return canCreateThread()
+    }
+
+    return false
+  }
+
+  func runSetupCalloutAction() {
+    if !isLocalModelReady() {
+      runModelSetupCalloutAction()
+      return
+    }
+    if workspace == nil {
+      openWorkspace()
+      return
+    }
+    if !hasRuntimeThreadSelection() {
+      createThread()
+    }
+  }
+
+  func setupCalloutSecondaryActionTitle() -> String? {
+    if !isLocalModelReady() {
+      return modelSetupCalloutSecondaryActionTitle()
+    }
+
+    return nil
+  }
+
+  func canRunSetupCalloutSecondaryAction() -> Bool {
+    if !isLocalModelReady() {
+      return canRunModelSetupCalloutSecondaryAction()
+    }
+
+    return false
+  }
+
+  func runSetupCalloutSecondaryAction() {
+    if !isLocalModelReady() {
+      runModelSetupCalloutSecondaryAction()
+    }
+  }
+
   func modelSetupCalloutTitle() -> String {
     if modelDownloadID != nil {
       return "Downloading Local Model"
@@ -721,17 +840,8 @@ final class AppViewModel: ObservableObject {
     case .disconnected, .failed, .launching:
       return runtimeLaunchButtonTitle()
     case .ready:
-      if !isLocalModelReady() {
-        return nil
-      }
-      if workspace == nil {
-        return "Open Workspace"
-      }
       if activeTurnID != nil {
         return "Cancel Turn"
-      }
-      if !hasRuntimeThreadSelection() {
-        return "New Thread"
       }
       return nil
     }
@@ -744,17 +854,8 @@ final class AppViewModel: ObservableObject {
     case .launching:
       return false
     case .ready:
-      if !isLocalModelReady() {
-        return false
-      }
-      if workspace == nil {
-        return canOpenWorkspace()
-      }
       if activeTurnID != nil {
         return canCancelActiveTurn()
-      }
-      if !hasRuntimeThreadSelection() {
-        return canCreateThread()
       }
       return false
     }
@@ -767,19 +868,8 @@ final class AppViewModel: ObservableObject {
     case .launching:
       return
     case .ready:
-      if !isLocalModelReady() {
-        return
-      }
-      if workspace == nil {
-        openWorkspace()
-        return
-      }
       if activeTurnID != nil {
         cancelActiveTurn()
-        return
-      }
-      if !hasRuntimeThreadSelection() {
-        createThread()
       }
     }
   }
@@ -1434,7 +1524,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func workspacePath() -> String {
-    workspace?.rootPath ?? "Open a local workspace to enable Milestone 1 tools."
+    workspace?.rootPath ?? "Open a local workspace to enable project-scoped tools."
   }
 
   func modelDisplayName() -> String {

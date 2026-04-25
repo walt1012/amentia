@@ -904,6 +904,7 @@ Deliverables:
 - fresh-install setup progress and onboarding copy that avoids internal milestone language
 - composer gating that keeps input disabled until the local setup path is actually ready
 - first-use model-missing timeline guidance that tells users to download or select the local model
+- unified setup callout for model, workspace, and thread blockers
 - first-use model download callout with default model size, license, progress, pause, continue, cancel, and one primary action
 
 Exit criteria:
@@ -1146,7 +1147,7 @@ inspector sections for secondary detail instead of adding more always-visible ad
 
 Recommended current implementation sequence:
 
-1. verify the fresh-install path from launch to model download, model activation, workspace, and first thread
+1. verify the fresh-install path from launch to model download, model activation, workspace, first thread, and first message
 2. continue reducing inspector noise through stronger defaults and fewer always-visible admin controls
 3. refine review surfaces, empty states, and recovery prompts around the main timeline
 4. keep model delivery focused on one-click local downloads with pause, resume, cancel, and activation

@@ -129,21 +129,21 @@ struct ContentView: View {
           tone: viewModel.setupProgressTone()
         )
 
-        if viewModel.shouldShowModelSetupCallout() {
-          ModelSetupCallout(
-            title: viewModel.modelSetupCalloutTitle(),
-            summary: viewModel.modelSetupCalloutSummary(),
-            detail: viewModel.modelSetupCalloutDetail(),
-            tone: viewModel.modelSetupCalloutTone(),
-            actionTitle: viewModel.modelSetupCalloutActionTitle(),
-            canRunAction: viewModel.canRunModelSetupCalloutAction(),
-            secondaryActionTitle: viewModel.modelSetupCalloutSecondaryActionTitle(),
-            canRunSecondaryAction: viewModel.canRunModelSetupCalloutSecondaryAction(),
+        if viewModel.shouldShowSetupCallout() {
+          SetupCallout(
+            title: viewModel.setupCalloutTitle(),
+            summary: viewModel.setupCalloutSummary(),
+            detail: viewModel.setupCalloutDetail(),
+            tone: viewModel.setupCalloutTone(),
+            actionTitle: viewModel.setupCalloutActionTitle(),
+            canRunAction: viewModel.canRunSetupCalloutAction(),
+            secondaryActionTitle: viewModel.setupCalloutSecondaryActionTitle(),
+            canRunSecondaryAction: viewModel.canRunSetupCalloutSecondaryAction(),
             onAction: {
-              viewModel.runModelSetupCalloutAction()
+              viewModel.runSetupCalloutAction()
             },
             onSecondaryAction: {
-              viewModel.runModelSetupCalloutSecondaryAction()
+              viewModel.runSetupCalloutSecondaryAction()
             }
           )
         }
@@ -743,7 +743,7 @@ private struct SetupProgressView: View {
   }
 }
 
-private struct ModelSetupCallout: View {
+private struct SetupCallout: View {
   let title: String
   let summary: String
   let detail: String
