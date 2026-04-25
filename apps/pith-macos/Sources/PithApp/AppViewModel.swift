@@ -1574,41 +1574,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelActionSummary() -> String {
-    switch runtimeState {
-    case .disconnected:
-      return "Launch the runtime to inspect local model setup."
-    case .launching:
-      return "Checking local model setup..."
-    case .failed:
-      return "Relaunch the runtime before changing model setup."
-    case .ready:
-      if let modelDownloadID,
-         let model = localModels.first(where: { $0.id == modelDownloadID })
-      {
-        return "Downloading \(model.displayName). You can pause or cancel without losing control."
-      }
-
-      if let pausedModelDownloadID,
-         let model = localModels.first(where: { $0.id == pausedModelDownloadID })
-      {
-        return "\(model.displayName) is paused. Continue from the saved local state or cancel to clear it."
-      }
-
-      if isLocalModelReady() {
-        return "Local model is ready for offline agent work."
-      }
-
-      let downloadedModels = localModels.filter { $0.downloaded }
-      if downloadedModels.isEmpty {
-        return "Choose a small local model to download and unlock local agent work."
-      }
-
-      if selectedSetupModelDownloaded() {
-        return "Use the selected downloaded model or reinstall pack metadata to repair readiness."
-      }
-
-      return "Select a downloaded model or download the currently selected local baseline."
-    }
+    LocalModelOperationPresenter.actionSummary(localModelOperationSnapshot())
   }
 
   func showsModelActivity() -> Bool {
@@ -1616,8 +1582,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func isModelActionBlocking() -> Bool {
-    runtimeState == .failed
-      || (runtimeState == .ready && !isLocalModelReady() && modelDownloadID == nil)
+    LocalModelOperationPresenter.isActionBlocking(localModelOperationSnapshot())
   }
 
   func localModelPrimaryActionTitle() -> String? {
@@ -1766,18 +1731,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelManagerSummary() -> String {
-    let downloadedModels = localModels.filter { $0.downloaded }
-    let activeModel = localModels.first(where: { $0.active })?.displayName ?? "none"
-    let downloadingModel = modelDownloadID
-      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
-    let pausedModel = pausedModelDownloadID
-      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
-    let localSize = downloadedModels
-      .compactMap { $0.localSizeBytes }
-      .reduce(Int64(0), +)
-    let downloadSummary = downloadingModel.map { " | Downloading: \($0)" } ?? ""
-    let pausedSummary = pausedModel.map { " | Paused: \($0)" } ?? ""
-    return "Downloaded: \(downloadedModels.count)/\(localModels.count) | Local Size: \(formattedByteCount(localSize)) | Active: \(activeModel)\(downloadSummary)\(pausedSummary)"
+    LocalModelOperationPresenter.managerSummary(localModelOperationSnapshot())
   }
 
   func shouldShowModelDownloadProgress() -> Bool {
@@ -1901,6 +1855,7 @@ final class AppViewModel: ObservableObject {
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
     guard runtimeState != .launching,
+          activeTurnID == nil,
           modelDownloadTask == nil,
           pausedModelDownloadID == nil
     else {
@@ -1915,6 +1870,7 @@ final class AppViewModel: ObservableObject {
 
   func canResetActiveLocalModel() -> Bool {
     runtimeState != .launching
+      && activeTurnID == nil
       && modelDownloadTask == nil
       && runtimeBridge.activeLocalModelPath() != nil
   }
@@ -2134,6 +2090,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func activateRecommendedModel(modelID: String) {
+    guard activeTurnID == nil else {
+      runtimeDetail = "Finish or cancel the current local turn before switching models."
+      return
+    }
+
     guard let model = localModels.first(where: { $0.id == modelID }) else {
       runtimeDetail = "The selected local model is unavailable."
       return
@@ -2176,6 +2137,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func resetActiveLocalModel() {
+    guard activeTurnID == nil else {
+      runtimeDetail = "Finish or cancel the current local turn before resetting model selection."
+      return
+    }
+
     runtimeBridge.clearActiveLocalModel()
     refreshLocalModelCatalog()
     appendEntry(
@@ -2232,8 +2198,20 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    if canActivateRecommendedModel(modelID: modelID) {
+    if let model = localModels.first(where: { $0.id == modelID }),
+       model.active
+    {
+      runtimeDetail = "\(model.displayName) is already the active local model."
+      return
+    }
+
+    if localModels.first(where: { $0.id == modelID })?.downloaded == true {
       activateRecommendedModel(modelID: modelID)
+      return
+    }
+
+    guard canDownloadRecommendedModel(modelID: modelID) else {
+      runtimeDetail = "The selected local model is not ready to download."
       return
     }
 
@@ -3134,6 +3112,28 @@ final class AppViewModel: ObservableObject {
     }
 
     return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Ready", tone: .ready)
+  }
+
+  private func localModelOperationSnapshot() -> LocalModelOperationSnapshot {
+    let downloadedModels = localModels.filter { $0.downloaded }
+    let downloadedLocalSize = downloadedModels
+      .compactMap { $0.localSizeBytes }
+      .reduce(Int64(0), +)
+
+    return LocalModelOperationSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasActiveTurn: activeTurnID != nil,
+      downloadingModel: modelDownloadID
+        .flatMap { id in localModels.first(where: { $0.id == id }) },
+      pausedModel: pausedModelDownloadID
+        .flatMap { id in localModels.first(where: { $0.id == id }) },
+      selectedSetupModelDownloaded: selectedSetupModelDownloaded(),
+      downloadedModelCount: downloadedModels.count,
+      totalModelCount: localModels.count,
+      activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,
+      downloadedLocalSizeBytes: downloadedLocalSize
+    )
   }
 
   private func appendModelEvent(
