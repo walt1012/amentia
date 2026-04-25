@@ -3224,7 +3224,7 @@ fn build_plan_item(
     prompt: format!(
       "You are the local planner for Pith.\n{}\n{}\nUser request: {}\nCandidate local action: {}\nWrite one concise English sentence describing the next action Pith should take.",
       workspace_context,
-      format_memory_prompt(&context_pack.notes),
+      format_context_prompt(&context_pack),
       message,
       plan_hint
     ),
@@ -3291,7 +3291,7 @@ fn summarize_file_result(
   );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
-    format_memory_prompt(&context_pack.notes),
+    format_context_prompt(&context_pack),
     result.relative_path,
     result.content
   );
@@ -3345,7 +3345,7 @@ fn summarize_directory_result(
       model_runtime,
       format!(
         "You are Pith, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
-        format_memory_prompt(&context_pack.notes)
+        format_context_prompt(&context_pack)
       ),
       format!(
         "Pith inspected {} for {} and found an empty root directory.",
@@ -3371,7 +3371,7 @@ fn summarize_directory_result(
   );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
-    format_memory_prompt(&context_pack.notes),
+    format_context_prompt(&context_pack),
     format_directory_result(entries)
   );
 
@@ -3392,7 +3392,7 @@ fn summarize_search_result(
       model_runtime,
       format!(
         "You are Pith, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
-        format_memory_prompt(&context_pack.notes)
+        format_context_prompt(&context_pack)
       ),
       format!(
         "Pith searched {} for {} and found no matches for \"{}\".",
@@ -3419,7 +3419,7 @@ fn summarize_search_result(
   );
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
-    format_memory_prompt(&context_pack.notes),
+    format_context_prompt(&context_pack),
     format_search_result(query, matches)
   );
 
@@ -3469,7 +3469,7 @@ fn summarize_shell_result(
   };
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nCommand: {}\nExit Code: {}\nstdout:\n{}\n\nstderr:\n{}",
-    format_memory_prompt(&context_pack.notes),
+    format_context_prompt(&context_pack),
     result.command,
     result.exit_code,
     result.stdout,
@@ -3504,7 +3504,7 @@ fn summarize_denied_approval(
   };
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a denied approval in one sentence.\nWorkspace: {workspace_name}\n{}\nAction: {}\nTarget: {}\nCommand: {}",
-    format_memory_prompt(&context_pack.notes),
+    format_context_prompt(&context_pack),
     approval.action,
     approval.relative_path,
     approval.command.clone().unwrap_or_default()
@@ -3541,6 +3541,21 @@ fn pack_memory_context(
   query: &str,
 ) -> ContextPack {
   pack_relevant_memory_notes(memory_notes, workspace_scope, query)
+}
+
+fn format_context_prompt(context_pack: &ContextPack) -> String {
+  let header = format!(
+    "Context pack: {}. Using {} of {} relevant memory note(s) from {} stored note(s), {} omitted, {} truncated, {} of {} char budget used.",
+    context_pack.mode(),
+    context_pack.notes.len(),
+    context_pack.candidate_note_count,
+    context_pack.source_note_count,
+    context_pack.omitted_note_count,
+    context_pack.truncated_note_count,
+    context_pack.estimated_char_count,
+    context_pack.budget_char_count
+  );
+  format!("{}\n{}", header, format_memory_prompt(&context_pack.notes))
 }
 
 fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
@@ -3598,6 +3613,10 @@ fn merge_context_pack_attributes(
   attributes.insert(
     "contextSourceNoteCount".to_string(),
     context_pack.source_note_count.to_string(),
+  );
+  attributes.insert(
+    "contextCandidateNoteCount".to_string(),
+    context_pack.candidate_note_count.to_string(),
   );
   attributes.insert(
     "contextOmittedNoteCount".to_string(),

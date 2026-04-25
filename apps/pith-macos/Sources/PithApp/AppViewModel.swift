@@ -1498,28 +1498,35 @@ final class AppViewModel: ObservableObject {
   }
 
   func selectedEntryMemorySummary() -> String? {
-    guard let entry = selectedEntry(),
-          let noteCount = entry.attributes["memoryNoteCount"],
-          noteCount != "0"
-    else {
+    guard let entry = selectedEntry() else {
       return nil
     }
 
-    let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
-    let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
-    var lines = [
-      "Notes: \(noteCount)",
-      "Titles: \(memoryTitles)",
-      "IDs: \(memoryIDs)",
-    ]
+    let noteCount = entry.attributes["memoryNoteCount"] ?? "0"
+    let hasMemoryNotes = noteCount != "0"
+    let hasContextPack = entry.attributes["contextMode"] != nil
+    if !hasMemoryNotes && !hasContextPack {
+      return nil
+    }
+
+    var lines = ["Notes: \(noteCount)"]
+    if hasMemoryNotes {
+      let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
+      let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
+      lines.append("Titles: \(memoryTitles)")
+      lines.append("IDs: \(memoryIDs)")
+    }
 
     if let contextMode = entry.attributes["contextMode"] {
       let estimatedChars = entry.attributes["contextEstimatedChars"] ?? "unknown"
       let budgetChars = entry.attributes["contextBudgetChars"] ?? "unknown"
       let omittedCount = entry.attributes["contextOmittedNoteCount"] ?? "0"
       let truncatedCount = entry.attributes["contextTruncatedNoteCount"] ?? "0"
+      let candidateCount = entry.attributes["contextCandidateNoteCount"] ?? noteCount
+      let sourceCount = entry.attributes["contextSourceNoteCount"] ?? candidateCount
       lines.append(
-        "Context: \(contextMode) | \(estimatedChars)/\(budgetChars) chars | "
+        "Context: \(contextMode) | \(noteCount)/\(candidateCount) relevant notes | "
+          + "\(sourceCount) stored | \(estimatedChars)/\(budgetChars) chars | "
           + "omitted \(omittedCount) | truncated \(truncatedCount)"
       )
     }

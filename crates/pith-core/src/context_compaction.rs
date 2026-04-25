@@ -9,6 +9,7 @@ const MIN_NOTE_BODY_CHARS: usize = 160;
 pub struct ContextPack {
   pub notes: Vec<MemoryNote>,
   pub source_note_count: usize,
+  pub candidate_note_count: usize,
   pub omitted_note_count: usize,
   pub truncated_note_count: usize,
   pub estimated_char_count: usize,
@@ -51,11 +52,9 @@ pub fn pack_relevant_memory_notes(
     }
 
     let remaining_budget = LOCAL_CONTEXT_CHAR_BUDGET.saturating_sub(estimated_char_count);
-    if remaining_budget < MIN_NOTE_BODY_CHARS {
+    let Some(compacted_note) = compact_note(note, remaining_budget) else {
       break;
-    }
-
-    let compacted_note = compact_note(note, remaining_budget);
+    };
     estimated_char_count += estimated_note_char_count(&compacted_note);
     truncated_note_count += 1;
     notes.push(compacted_note);
@@ -67,6 +66,7 @@ pub fn pack_relevant_memory_notes(
   ContextPack {
     notes,
     source_note_count: memory_notes.len(),
+    candidate_note_count: candidates.len(),
     omitted_note_count,
     truncated_note_count,
     estimated_char_count,
@@ -74,7 +74,7 @@ pub fn pack_relevant_memory_notes(
   }
 }
 
-fn compact_note(note: &MemoryNote, budget: usize) -> MemoryNote {
+fn compact_note(note: &MemoryNote, budget: usize) -> Option<MemoryNote> {
   let fixed_size = note.title.chars().count()
     + note.scope.chars().count()
     + note.source.chars().count()
@@ -84,10 +84,13 @@ fn compact_note(note: &MemoryNote, budget: usize) -> MemoryNote {
       .map(|tag| tag.chars().count())
       .sum::<usize>()
     + 24;
-  let body_budget = budget.saturating_sub(fixed_size).max(MIN_NOTE_BODY_CHARS);
+  let body_budget = budget.saturating_sub(fixed_size);
+  if body_budget < MIN_NOTE_BODY_CHARS {
+    return None;
+  }
   let mut compacted = note.clone();
   compacted.body = truncate_text(&note.body, body_budget);
-  compacted
+  Some(compacted)
 }
 
 fn estimated_note_char_count(note: &MemoryNote) -> usize {
@@ -137,8 +140,9 @@ mod tests {
     let pack = pack_relevant_memory_notes(&notes, Some("pith"), "review README");
 
     assert!(pack.notes.len() <= CONTEXT_MEMORY_NOTE_LIMIT);
-    assert!(pack.estimated_char_count <= pack.budget_char_count + MIN_NOTE_BODY_CHARS);
+    assert!(pack.estimated_char_count <= pack.budget_char_count);
     assert_eq!(pack.mode(), "compacted");
+    assert_eq!(pack.candidate_note_count, 6);
   }
 
   #[test]
@@ -147,5 +151,6 @@ mod tests {
 
     assert!(pack.notes.is_empty());
     assert_eq!(pack.mode(), "empty");
+    assert_eq!(pack.candidate_note_count, 0);
   }
 }
