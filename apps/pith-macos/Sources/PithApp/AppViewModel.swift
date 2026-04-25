@@ -1459,96 +1459,27 @@ final class AppViewModel: ObservableObject {
   }
 
   func selectedEntryTitle() -> String {
-    selectedEntry()?.title ?? "No Item Selected"
+    TimelineInspectorPresenter.selectedEntryTitle(timelineInspectorSnapshot())
   }
 
   func selectedEntryBody() -> String {
-    selectedEntry()?.body ?? "Select a timeline item to inspect its details."
+    TimelineInspectorPresenter.selectedEntryBody(timelineInspectorSnapshot())
   }
 
   func selectedEntryMetadata() -> String {
-    guard let entry = selectedEntry() else {
-      return "No timeline item is selected."
-    }
-
-    if entry.attributes.isEmpty {
-      return entry.kind.rawValue
-    }
-
-    let detail = entry.attributes
-      .sorted(by: { $0.key < $1.key })
-      .map { "\($0.key): \($0.value)" }
-      .joined(separator: "\n")
-
-    return "\(entry.kind.rawValue)\n\(detail)"
+    TimelineInspectorPresenter.selectedEntryMetadata(timelineInspectorSnapshot())
   }
 
   func selectedDiffSummary() -> String? {
-    guard let entry = selectedEntry(), entry.kind == .diff else {
-      return nil
-    }
-
-    let lines = diffLines(from: entry.body)
-    let additions = lines.filter { $0.kind == .addition }.count
-    let deletions = lines.filter { $0.kind == .deletion }.count
-    let hunks = lines.filter { $0.kind == .hunk }.count
-    let path = entry.attributes["relativePath"] ?? diffPathSummary(from: lines)
-    return "\(path) | +\(additions) -\(deletions) | \(hunks) hunk\(hunks == 1 ? "" : "s")"
+    TimelineInspectorPresenter.selectedDiffSummary(timelineInspectorSnapshot())
   }
 
   func selectedDiffLines() -> [DiffLineSummary] {
-    guard let entry = selectedEntry(), entry.kind == .diff else {
-      return []
-    }
-
-    return diffLines(from: entry.body)
+    TimelineInspectorPresenter.selectedDiffLines(timelineInspectorSnapshot())
   }
 
   func selectedEntryMemorySummary() -> String? {
-    guard let entry = selectedEntry() else {
-      return nil
-    }
-
-    let noteCount = entry.attributes["memoryNoteCount"] ?? "0"
-    let hasMemoryNotes = noteCount != "0"
-    let hasContextPack = entry.attributes["contextMode"] != nil
-    if !hasMemoryNotes && !hasContextPack {
-      return nil
-    }
-
-    var lines = ["Notes: \(noteCount)"]
-    if hasMemoryNotes {
-      let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
-      let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
-      lines.append("Titles: \(memoryTitles)")
-      lines.append("IDs: \(memoryIDs)")
-    }
-
-    if let contextMode = entry.attributes["contextMode"] {
-      let estimatedChars = entry.attributes["contextEstimatedChars"] ?? "unknown"
-      let budgetChars = entry.attributes["contextBudgetChars"] ?? "unknown"
-      let omittedCount = entry.attributes["contextOmittedNoteCount"] ?? "0"
-      let truncatedCount = entry.attributes["contextTruncatedNoteCount"] ?? "0"
-      let candidateCount = entry.attributes["contextCandidateNoteCount"] ?? noteCount
-      let sourceCount = entry.attributes["contextSourceNoteCount"] ?? candidateCount
-      let windowTokens = entry.attributes["contextWindowTokens"] ?? "unknown"
-      lines.append(
-        "Context: \(contextMode) | \(noteCount)/\(candidateCount) relevant notes | "
-          + "\(sourceCount) stored | \(estimatedChars)/\(budgetChars) chars | "
-          + "\(windowTokens) token window | "
-          + "omitted \(omittedCount) | truncated \(truncatedCount)"
-      )
-    }
-
-    if let observationTruncated = entry.attributes["observationTruncated"] {
-      let sourceChars = entry.attributes["observationSourceChars"] ?? "unknown"
-      let budgetChars = entry.attributes["observationBudgetChars"] ?? "unknown"
-      lines.append(
-        "Observation: \(sourceChars)/\(budgetChars) chars | truncated \(observationTruncated)"
-      )
-    }
-
-    return lines.joined(separator: "\n")
+    TimelineInspectorPresenter.selectedEntryMemorySummary(timelineInspectorSnapshot())
   }
 
   func workspaceDisplayName() -> String {
@@ -2532,58 +2463,6 @@ final class AppViewModel: ObservableObject {
     return entries.first?.id
   }
 
-  private func diffLines(from body: String) -> [DiffLineSummary] {
-    body
-      .components(separatedBy: .newlines)
-      .enumerated()
-      .map { index, line in
-        DiffLineSummary(
-          id: "\(index)",
-          lineNumber: index + 1,
-          text: line,
-          kind: diffLineKind(for: line)
-        )
-      }
-  }
-
-  private func diffLineKind(for line: String) -> DiffLineKind {
-    if line.hasPrefix("@@") {
-      return .hunk
-    }
-
-    if line.hasPrefix("diff --git")
-      || line.hasPrefix("index ")
-      || line.hasPrefix("+++")
-      || line.hasPrefix("---")
-    {
-      return .metadata
-    }
-
-    if line.hasPrefix("+") {
-      return .addition
-    }
-
-    if line.hasPrefix("-") {
-      return .deletion
-    }
-
-    return .context
-  }
-
-  private func diffPathSummary(from lines: [DiffLineSummary]) -> String {
-    let pathLine = lines.first { line in
-      line.text.hasPrefix("+++ b/") || line.text.hasPrefix("--- a/")
-    }
-
-    guard let pathLine else {
-      return "Diff"
-    }
-
-    return pathLine.text
-      .replacingOccurrences(of: "+++ b/", with: "")
-      .replacingOccurrences(of: "--- a/", with: "")
-  }
-
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {
     if activeTurnID == nil {
       if activeTurnThreadID == threadID {
@@ -2777,6 +2656,10 @@ final class AppViewModel: ObservableObject {
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty
     )
+  }
+
+  private func timelineInspectorSnapshot() -> TimelineInspectorSnapshot {
+    return TimelineInspectorSnapshot(selectedEntry: selectedEntry())
   }
 
   private func setupReadyStepCount() -> Int {
