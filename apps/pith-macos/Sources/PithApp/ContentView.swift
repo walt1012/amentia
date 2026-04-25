@@ -336,30 +336,22 @@ struct ContentView: View {
                   .textSelection(.enabled)
               }
             }
-            HStack(spacing: 8) {
-              Button(viewModel.defaultModelDownloadButtonTitle()) {
-                viewModel.downloadLocalModel()
-              }
-              .buttonStyle(.borderedProminent)
-              .disabled(!viewModel.canDownloadLocalModel())
+            if let primaryActionTitle = viewModel.localModelPrimaryActionTitle() {
+              HStack(spacing: 8) {
+                Button(primaryActionTitle) {
+                  viewModel.runLocalModelPrimaryAction()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!viewModel.canRunLocalModelPrimaryAction())
 
-              Button("Pause Download") {
-                viewModel.pauseModelDownload()
+                if let secondaryActionTitle = viewModel.localModelSecondaryActionTitle() {
+                  Button(secondaryActionTitle) {
+                    viewModel.runLocalModelSecondaryAction()
+                  }
+                  .buttonStyle(.bordered)
+                  .disabled(!viewModel.canRunLocalModelSecondaryAction())
+                }
               }
-              .buttonStyle(.bordered)
-              .disabled(!viewModel.canPauseModelDownload())
-
-              Button("Cancel Download") {
-                viewModel.cancelModelDownload()
-              }
-              .buttonStyle(.bordered)
-              .disabled(!viewModel.canCancelModelDownload())
-
-              Button("Install Pack Metadata") {
-                viewModel.bootstrapModelPackMetadata()
-              }
-              .buttonStyle(.bordered)
-              .disabled(!viewModel.canBootstrapModelPackMetadata())
             }
             DisclosureGroup("Model Manager", isExpanded: $modelManagerExpanded) {
               VStack(alignment: .leading, spacing: 10) {

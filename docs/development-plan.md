@@ -906,6 +906,7 @@ Deliverables:
 - first-use model-missing timeline guidance that tells users to download or select the local model
 - unified setup callout for model, workspace, and thread blockers
 - first-use model download callout with default model size, license, progress, pause, continue, cancel, and one primary action
+- contextual Local Model panel actions so download, pause, continue, activation, repair, and cancel do not become an always-visible control cluster
 - compact first-message suggestions after setup is complete, without adding a separate onboarding panel
 - preserved timeline selection across refreshes so inspector review work stays stable during streaming updates
 - compact inspector session summary with workspace search moved behind progressive disclosure

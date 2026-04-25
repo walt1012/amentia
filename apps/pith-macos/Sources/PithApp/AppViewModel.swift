@@ -1675,6 +1675,79 @@ final class AppViewModel: ObservableObject {
       || (runtimeState == .ready && !isLocalModelReady() && modelDownloadID == nil)
   }
 
+  func localModelPrimaryActionTitle() -> String? {
+    guard runtimeState == .ready else {
+      return nil
+    }
+    if modelDownloadID != nil {
+      return "Pause Download"
+    }
+    if pausedModelDownloadID != nil {
+      return "Continue Download"
+    }
+    if !isLocalModelReady() {
+      if canDownloadLocalModel() {
+        return defaultModelDownloadButtonTitle()
+      }
+      if canBootstrapModelPackMetadata() {
+        return "Install Metadata"
+      }
+    }
+
+    return nil
+  }
+
+  func canRunLocalModelPrimaryAction() -> Bool {
+    guard runtimeState == .ready else {
+      return false
+    }
+    if modelDownloadID != nil {
+      return canPauseModelDownload()
+    }
+    if let pausedModelDownloadID {
+      return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    }
+    if !isLocalModelReady() {
+      return canDownloadLocalModel() || canBootstrapModelPackMetadata()
+    }
+
+    return false
+  }
+
+  func runLocalModelPrimaryAction() {
+    if modelDownloadID != nil {
+      pauseModelDownload()
+      return
+    }
+    if let pausedModelDownloadID,
+       canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    {
+      downloadRecommendedModel(modelID: pausedModelDownloadID)
+      return
+    }
+    if !isLocalModelReady() {
+      if canDownloadLocalModel() {
+        downloadLocalModel()
+        return
+      }
+      if canBootstrapModelPackMetadata() {
+        bootstrapModelPackMetadata()
+      }
+    }
+  }
+
+  func localModelSecondaryActionTitle() -> String? {
+    canCancelModelDownload() ? "Cancel Download" : nil
+  }
+
+  func canRunLocalModelSecondaryAction() -> Bool {
+    canCancelModelDownload()
+  }
+
+  func runLocalModelSecondaryAction() {
+    cancelModelDownload()
+  }
+
   func modelDetailSummary() -> String {
     guard let modelHealth else {
       return "Pith will use the built-in local model path after the runtime connects."

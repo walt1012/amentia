@@ -80,9 +80,10 @@ language, and the ready composer offers three compact first-message suggestions 
 begin useful local work without opening another onboarding surface. Workspace search includes
 empty-state guidance and now lives behind progressive disclosure, while a compact inspector session
 card summarizes the current model, workspace, and thread state. The Local
-Model panel also gives a compact next action for runtime launch, model download, pause/resume,
-activation, and readiness repair while deeper model diagnostics stay tucked away; if the default
-model is already downloaded, the primary action can select it directly. Model download start,
+Model panel now shows one contextual primary action and only reveals cancel while a download can be
+cancelled, keeping pause, continue, activation, and readiness repair focused while deeper model
+diagnostics stay tucked away; if the default model is already downloaded, the primary action can
+select it directly. Model download start,
 continue, pause, cancel, failure, and success events are also recorded in the timeline so recovery
 does not depend on transient status text, and first-use runtime launch records a clear model-required
 event when no ready local model exists. The composer stays gated until runtime, model, workspace,
