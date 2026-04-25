@@ -1491,15 +1491,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelDisplayName() -> String {
-    modelHealth?.displayName ?? "Local Model Not Loaded"
+    LocalModelStatusPresenter.displayName(localModelStatusSnapshot())
   }
 
   func modelStatusSummary() -> String {
-    guard let modelHealth else {
-      return "Launch the runtime to inspect local model health."
-    }
-
-    return "\(modelHealth.backend) | \(modelHealth.status)"
+    LocalModelStatusPresenter.statusSummary(localModelStatusSnapshot())
   }
 
   func modelActionSummary() -> String {
@@ -1507,7 +1503,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func showsModelActivity() -> Bool {
-    runtimeState == .launching || modelDownloadID != nil
+    LocalModelStatusPresenter.showsActivity(localModelStatusSnapshot())
   }
 
   func isModelActionBlocking() -> Bool {
@@ -1588,75 +1584,31 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelDetailSummary() -> String {
-    guard let modelHealth else {
-      return "Pith will use the built-in local model path after the runtime connects."
-    }
-
-    return modelHealth.detail
+    LocalModelStatusPresenter.detailSummary(localModelStatusSnapshot())
   }
 
   func modelSourceSummary() -> String {
-    guard let modelHealth else {
-      return "Source: unavailable"
-    }
-
-    let source = "Source: \(modelHealth.source)"
-    if let manifestPath = modelHealth.manifestPath {
-      return "\(source)\nManifest: \(manifestPath)"
-    }
-
-    return source
+    LocalModelStatusPresenter.sourceSummary(localModelStatusSnapshot())
   }
 
   func modelMetricsSummary() -> String {
-    guard let modelHealth else {
-      return "Metrics: unavailable"
-    }
-
-    let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
-    let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
-    let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
-    return "Context: \(contextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
+    LocalModelStatusPresenter.metricsSummary(localModelStatusSnapshot())
   }
 
   func modelReadinessSummary() -> String {
-    guard let modelHealth else {
-      return "Readiness: unavailable"
-    }
-
-    let readiness = modelHealth.metrics["readiness"] ?? "unknown"
-    let packReady = modelHealth.metrics["packReady"] ?? "false"
-    return "Readiness: \(readiness) | Pack Ready: \(packReady)"
+    LocalModelStatusPresenter.readinessSummary(localModelStatusSnapshot())
   }
 
   func modelInstallHintSummary() -> String {
-    guard let modelHealth else {
-      return "Install hint: launch the runtime to inspect local model setup."
-    }
-
-    return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
+    LocalModelStatusPresenter.installHintSummary(localModelStatusSnapshot())
   }
 
   func modelSuggestedPathSummary() -> String {
-    guard let modelHealth else {
-      return "Suggested install layout unavailable."
-    }
-
-    let manifestPath = modelHealth.metrics["suggestedManifestPath"] ?? "manifest path unavailable"
-    let modelPath = modelHealth.metrics["suggestedModelPath"] ?? "model path unavailable"
-    let binaryPath = modelHealth.metrics["suggestedBinaryPath"] ?? "binary path unavailable"
-    return "Suggested Manifest: \(manifestPath)\nSuggested Model: \(modelPath)\nSuggested Binary: \(binaryPath)"
+    LocalModelStatusPresenter.suggestedPathSummary(localModelStatusSnapshot())
   }
 
   func modelArtifactPathSummary() -> String {
-    guard let modelHealth else {
-      return "No local model paths available yet."
-    }
-
-    let modelPath = modelHealth.modelPath ?? "model path unavailable"
-    let binaryPath = modelHealth.binaryPath ?? "binary path unavailable"
-    let manifestPath = modelHealth.manifestPath ?? "manifest path unavailable"
-    return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
+    LocalModelStatusPresenter.artifactPathSummary(localModelStatusSnapshot())
   }
 
   func modelManagerSummary() -> String {
@@ -1664,106 +1616,35 @@ final class AppViewModel: ObservableObject {
   }
 
   func shouldShowModelDownloadProgress() -> Bool {
-    guard let modelDownloadProgress else {
-      return false
-    }
-
-    return modelDownloadID == modelDownloadProgress.modelID
-      || pausedModelDownloadID == modelDownloadProgress.modelID
+    LocalModelStatusPresenter.shouldShowDownloadProgress(localModelStatusSnapshot())
   }
 
   func modelDownloadProgressValue() -> Double? {
-    guard let modelDownloadProgress,
-          modelDownloadProgress.totalBytes > 0
-    else {
-      return nil
-    }
-
-    let value = Double(modelDownloadProgress.bytesReceived)
-      / Double(modelDownloadProgress.totalBytes)
-    return min(max(value, 0), 1)
+    LocalModelStatusPresenter.downloadProgressValue(localModelStatusSnapshot())
   }
 
   func modelDownloadProgressSummary() -> String {
-    guard let modelDownloadProgress else {
-      return ""
-    }
-
-    let received = formattedByteCount(modelDownloadProgress.bytesReceived)
-    let total = modelDownloadProgress.totalBytes > 0
-      ? formattedByteCount(modelDownloadProgress.totalBytes)
-      : "unknown size"
-    let isPaused = pausedModelDownloadID == modelDownloadProgress.modelID
-    let status = isPaused ? "Paused" : (modelDownloadProgress.isResuming ? "Continuing" : "Downloading")
-    let trailingStatus: String
-    if isPaused {
-      trailingStatus = "Ready to continue"
-    } else {
-      let eta = modelDownloadETASummary(modelDownloadProgress).map { " | \($0)" } ?? ""
-      trailingStatus = "\(modelDownloadSpeedSummary(modelDownloadProgress))\(eta)"
-    }
-    let percent = modelDownloadProgressValue()
-      .map { " | \(Int($0 * 100))%" }
-      ?? ""
-
-    return "\(status) \(modelDownloadProgress.displayName): \(received) of \(total)\(percent) | \(trailingStatus)"
+    LocalModelStatusPresenter.downloadProgressSummary(localModelStatusSnapshot())
   }
 
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {
-    let status: String
-    if modelDownloadID == model.id {
-      status = "downloading"
-    } else if pausedModelDownloadID == model.id {
-      status = "paused"
-    } else if model.active {
-      status = "active"
-    } else if model.downloaded {
-      status = "downloaded"
-    } else {
-      status = "available"
-    }
-
-    let localSize = model.localSizeBytes.map(formattedByteCount) ?? formattedByteCount(model.sizeBytes)
-    return "\(status) | \(localSize) | \(model.license)"
+    LocalModelStatusPresenter.localModelStatusSummary(model, snapshot: localModelStatusSnapshot())
   }
 
   func defaultModelDownloadButtonTitle() -> String {
-    let setupModelID = selectedSetupModel()?.id ?? selectedSetupModelID
-    if modelDownloadID == setupModelID {
-      return "Downloading Model"
-    }
-    if pausedModelDownloadID == setupModelID {
-      return "Continue Model"
-    }
-    if let setupModel = selectedSetupModel() {
-      if setupModel.active {
-        return "Model Selected"
-      }
-      if setupModel.downloaded {
-        return "Use Downloaded Model"
-      }
-    }
-
-    return "Download Model"
+    LocalModelStatusPresenter.defaultDownloadButtonTitle(localModelStatusSnapshot())
   }
 
   func localModelDownloadButtonTitle(_ model: LocalModelSummary) -> String {
-    if modelDownloadID == model.id {
-      return "Downloading"
-    }
-    if pausedModelDownloadID == model.id {
-      return "Continue"
-    }
-
-    return model.downloaded ? "Downloaded" : "Download"
+    LocalModelStatusPresenter.downloadButtonTitle(model, snapshot: localModelStatusSnapshot())
   }
 
   func localModelTagSummary(_ model: LocalModelSummary) -> String {
-    model.tags.joined(separator: " / ")
+    LocalModelStatusPresenter.tagSummary(model)
   }
 
   func localModelPathSummary(_ model: LocalModelSummary) -> String {
-    model.installPath
+    LocalModelStatusPresenter.pathSummary(model)
   }
 
   func canDownloadRecommendedModel(modelID: String) -> Bool {
@@ -2662,6 +2543,18 @@ final class AppViewModel: ObservableObject {
     return TimelineInspectorSnapshot(selectedEntry: selectedEntry())
   }
 
+  private func localModelStatusSnapshot() -> LocalModelStatusSnapshot {
+    return LocalModelStatusSnapshot(
+      runtimeState: runtimeState,
+      modelHealth: modelHealth,
+      modelDownloadID: modelDownloadID,
+      pausedModelDownloadID: pausedModelDownloadID,
+      modelDownloadProgress: modelDownloadProgress,
+      selectedSetupModelID: selectedSetupModelID,
+      selectedSetupModel: selectedSetupModel()
+    )
+  }
+
   private func setupReadyStepCount() -> Int {
     var readyCount = 0
     if runtimeState == .ready {
@@ -3369,49 +3262,6 @@ final class AppViewModel: ObservableObject {
     let formatter = ByteCountFormatter()
     formatter.countStyle = .file
     return formatter.string(fromByteCount: byteCount)
-  }
-
-  private func modelDownloadSpeedSummary(_ progress: ModelDownloadProgress) -> String {
-    let elapsed = max(progress.updatedAt.timeIntervalSince(progress.startedAt), 1)
-    let bytesPerSecond = Int64(Double(progress.bytesReceived) / elapsed)
-    return "\(formattedByteCount(bytesPerSecond))/s"
-  }
-
-  private func modelDownloadETASummary(_ progress: ModelDownloadProgress) -> String? {
-    guard progress.bytesReceived > 0,
-          progress.totalBytes > progress.bytesReceived
-    else {
-      return nil
-    }
-
-    let elapsed = max(progress.updatedAt.timeIntervalSince(progress.startedAt), 1)
-    let bytesPerSecond = Double(progress.bytesReceived) / elapsed
-    guard bytesPerSecond > 0 else {
-      return nil
-    }
-
-    let remainingSeconds = Double(progress.totalBytes - progress.bytesReceived) / bytesPerSecond
-    return "ETA \(formattedDuration(remainingSeconds))"
-  }
-
-  private func formattedDuration(_ seconds: TimeInterval) -> String {
-    let roundedSeconds = max(Int(seconds.rounded()), 0)
-    if roundedSeconds < 60 {
-      return "\(roundedSeconds)s"
-    }
-
-    let minutes = roundedSeconds / 60
-    if minutes < 60 {
-      return "\(minutes)m"
-    }
-
-    let hours = minutes / 60
-    let remainingMinutes = minutes % 60
-    if remainingMinutes == 0 {
-      return "\(hours)h"
-    }
-
-    return "\(hours)h \(remainingMinutes)m"
   }
 
   private func pluginInstallRepairHint(for error: Error) -> String {
