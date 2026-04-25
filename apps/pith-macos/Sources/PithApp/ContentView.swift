@@ -122,7 +122,12 @@ struct ContentView: View {
               selectedModelID: $viewModel.selectedSetupModelID,
               defaultModelID: viewModel.setupDefaultModelID(),
               detail: viewModel.setupModelChoiceDetail(),
-              isDisabled: !viewModel.canChangeSetupModelChoice()
+              isDisabled: !viewModel.canChangeSetupModelChoice(),
+              actionTitle: viewModel.modelSetupCalloutActionTitle(),
+              canRunAction: viewModel.canRunModelSetupCalloutAction(),
+              onAction: {
+                viewModel.runModelSetupCalloutAction()
+              }
             )
           }
 
@@ -131,8 +136,8 @@ struct ContentView: View {
             summary: viewModel.setupCalloutSummary(),
             detail: viewModel.setupCalloutDetail(),
             tone: viewModel.setupCalloutTone(),
-            actionTitle: viewModel.setupCalloutActionTitle(),
-            canRunAction: viewModel.canRunSetupCalloutAction(),
+            actionTitle: viewModel.shouldShowSetupModelChoice() ? nil : viewModel.setupCalloutActionTitle(),
+            canRunAction: viewModel.shouldShowSetupModelChoice() ? false : viewModel.canRunSetupCalloutAction(),
             secondaryActionTitle: viewModel.setupCalloutSecondaryActionTitle(),
             canRunSecondaryAction: viewModel.canRunSetupCalloutSecondaryAction(),
             onAction: {
@@ -489,6 +494,9 @@ private struct SetupModelChooser: View {
   let defaultModelID: String
   let detail: String
   let isDisabled: Bool
+  let actionTitle: String?
+  let canRunAction: Bool
+  let onAction: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -497,6 +505,15 @@ private struct SetupModelChooser: View {
           .font(.caption.weight(.semibold))
         StatusPill(label: "One active model", tone: .neutral)
         Spacer()
+
+        if let actionTitle {
+          Button(actionTitle) {
+            onAction()
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.small)
+          .disabled(!canRunAction)
+        }
       }
 
       Text(detail)
