@@ -3453,10 +3453,8 @@ fn summarize_search_result(
     query,
     preview
   );
-  let observation = compact_prompt_observation(
-    &format_search_result(query, matches),
-    &context_pack,
-  );
+  let observation =
+    compact_prompt_observation(&format_search_result(query, matches), &context_pack);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
     format_context_prompt(&context_pack),
@@ -3565,7 +3563,13 @@ fn summarize_denied_approval(
     approval.command.clone().unwrap_or_default()
   );
 
-  generate_local_summary(model_runtime, prompt, observation_summary, &context_pack, None)
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &context_pack,
+    None,
+  )
 }
 
 fn generate_local_summary(
@@ -3678,8 +3682,10 @@ fn compact_prompt_observation(content: &str, context_pack: &ContextPack) -> Prom
 }
 
 fn observation_budget_for_context(context_pack: &ContextPack) -> usize {
-  let raw_budget =
-    context_pack.context_window_tokens.saturating_mul(CONTEXT_OBSERVATION_BUDGET_PERCENT) / 100;
+  let raw_budget = context_pack
+    .context_window_tokens
+    .saturating_mul(CONTEXT_OBSERVATION_BUDGET_PERCENT)
+    / 100;
   raw_budget.clamp(
     MIN_CONTEXT_OBSERVATION_CHAR_BUDGET,
     MAX_CONTEXT_OBSERVATION_CHAR_BUDGET,
