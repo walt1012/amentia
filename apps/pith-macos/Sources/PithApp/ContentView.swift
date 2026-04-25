@@ -241,64 +241,7 @@ struct ContentView: View {
         )
 
         DisclosureGroup("Workspace Search", isExpanded: $workspaceExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.workspaceDisplayName())
-              .font(.headline)
-            Text(viewModel.workspacePath())
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            TextField("Search workspace", text: $viewModel.workspaceSearchQuery)
-              .textFieldStyle(.roundedBorder)
-              .disabled(viewModel.runtimeState != .ready || viewModel.workspace == nil)
-              .onSubmit {
-                if viewModel.canSearchWorkspace() {
-                  viewModel.searchWorkspace()
-                }
-              }
-            HStack(spacing: 8) {
-              Button("Search") {
-                viewModel.searchWorkspace()
-              }
-              .buttonStyle(.borderedProminent)
-              .disabled(!viewModel.canSearchWorkspace())
-
-              Button("Clear") {
-                viewModel.clearWorkspaceSearch()
-              }
-              .buttonStyle(.bordered)
-              .disabled(viewModel.workspaceSearchQuery.isEmpty && viewModel.workspaceSearchResults.isEmpty)
-            }
-            Text(viewModel.workspaceSearchStatus)
-              .font(.caption2)
-              .foregroundColor(.secondary)
-            if viewModel.isWorkspaceSearching {
-              ProgressView()
-                .progressViewStyle(.linear)
-            }
-            if let emptyState = viewModel.workspaceSearchEmptyStateSummary() {
-              EmptyStateHint(text: emptyState)
-            }
-            ForEach(viewModel.workspaceSearchResults.prefix(8)) { match in
-              VStack(alignment: .leading, spacing: 2) {
-                Text("\(match.relativePath):\(match.lineNumber)")
-                  .font(.caption.weight(.semibold))
-                  .textSelection(.enabled)
-                Text(match.line)
-                  .font(.caption2)
-                  .foregroundColor(.secondary)
-                  .lineLimit(2)
-                  .textSelection(.enabled)
-              }
-              .padding(.vertical, 2)
-            }
-            if let overflow = viewModel.workspaceSearchOverflowSummary() {
-              Text(overflow)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          WorkspaceSearchPanel(viewModel: viewModel)
         }
 
         DisclosureGroup("Local Model", isExpanded: $localModelExpanded) {
@@ -306,38 +249,7 @@ struct ContentView: View {
         }
 
         DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.memoryCountSummary())
-              .font(.headline)
-            Text(viewModel.memoryDetailSummary())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            Text(viewModel.memoryLatestSummary())
-              .font(.caption2)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-
-            Divider()
-
-            TextField("Workspace note title", text: $viewModel.memoryNoteTitle)
-              .textFieldStyle(.roundedBorder)
-
-            TextEditor(text: $viewModel.memoryNoteBody)
-              .font(.caption)
-              .frame(minHeight: 72)
-              .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                  .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-              )
-
-            Button("Save Workspace Note") {
-              viewModel.saveWorkspaceMemoryNote()
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!viewModel.canSaveWorkspaceMemoryNote())
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          MemoryPanel(viewModel: viewModel)
         }
 
         DisclosureGroup("Plugin Manager", isExpanded: $pluginManagerExpanded) {
@@ -616,20 +528,6 @@ private extension StatusTone {
     case .danger:
       return .red
     }
-  }
-}
-
-private struct EmptyStateHint: View {
-  let text: String
-
-  var body: some View {
-    Text(text)
-      .font(.caption2)
-      .foregroundColor(.secondary)
-      .padding(8)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .background(Color.secondary.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
 }
 

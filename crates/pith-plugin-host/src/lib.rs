@@ -525,6 +525,13 @@ fn validation_hint_for_error(validation_error: &str) -> String {
       .to_string();
   }
 
+  if validation_error.contains("relative path segment")
+    || validation_error.contains("path separators")
+  {
+    return "Use stable plugin identifiers without path separators, for example `notion-connector`."
+      .to_string();
+  }
+
   if validation_error.contains("plugin permission") && validation_error.contains("is not supported")
   {
     return format!(
@@ -538,6 +545,8 @@ fn validation_hint_for_error(validation_error: &str) -> String {
 }
 
 fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
+  validate_manifest_identifier("name", &manifest.name)?;
+
   for capability in manifest_capabilities(manifest) {
     let Some((kind, identifier)) = capability.split_once(':') else {
       anyhow::bail!(
@@ -614,6 +623,16 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
 fn validate_manifest_identifier(kind: &str, identifier: &str) -> Result<()> {
   if identifier.trim().is_empty() {
     anyhow::bail!("plugin {kind} identifier must not be empty");
+  }
+  if identifier == "." || identifier == ".." {
+    anyhow::bail!(
+      "plugin {kind} identifier `{identifier}` must not be a relative path segment"
+    );
+  }
+  if identifier.contains('/') || identifier.contains('\\') {
+    anyhow::bail!(
+      "plugin {kind} identifier `{identifier}` must not contain path separators"
+    );
   }
   if identifier.contains(':') {
     anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain `:`");
@@ -1140,6 +1159,18 @@ mod tests {
     assert!(error
       .to_string()
       .contains("must use the `<kind>:<identifier>` format"));
+  }
+
+  #[test]
+  fn validate_manifest_rejects_plugin_name_path_segments() {
+    let mut manifest = manifest(vec!["command:review.focus"], vec!["file.read"]);
+    manifest.name = "../focus-review".to_string();
+
+    let error = validate_manifest(&manifest).expect_err("path segment plugin name should fail");
+
+    assert!(error
+      .to_string()
+      .contains("must not contain path separators"));
   }
 
   #[test]
