@@ -2247,70 +2247,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func composerPlaceholder() -> String {
-    switch runtimeState {
-    case .disconnected:
-      return "Launch the local runtime to start"
-    case .launching:
-      return "Runtime is starting..."
-    case .failed:
-      return "Relaunch the runtime to recover"
-    case .ready:
-      break
-    }
-
-    if !isLocalModelReady() {
-      return localModelSetupGuidance().title
-    }
-
-    if workspace == nil {
-      return "Open a workspace to start local agent work"
-    }
-
-    if !hasRuntimeThreadSelection() {
-      return "Create or select a thread"
-    }
-
-    if activeTurnID != nil {
-      return "Pith is streaming a response. Cancel to stop the current turn."
-    }
-
-    return "Ask Pith to inspect files, review diffs, run shell commands, or write files"
+    ComposerStatusPresenter.placeholder(composerStatusSnapshot())
   }
 
   func composerStatusSummary() -> String {
-    switch runtimeState {
-    case .disconnected:
-      return "Use the Runtime chip or Command-R to launch the local agent loop."
-    case .launching:
-      return "Launching the local runtime..."
-    case .failed:
-      return "Use the Runtime chip or Command-R to recover the local agent loop."
-    case .ready:
-      if !isLocalModelReady() {
-        return "\(localModelSetupGuidance().summary) Use the Model chip or setup callout to continue."
-      }
-
-      if workspace == nil {
-        return "Use the Workspace chip or Command-O to bind tools to a local project."
-      }
-
-      if !hasRuntimeThreadSelection() {
-        return "Use the Thread chip or Command-N to start local agent work."
-      }
-
-      if activeTurnID != nil {
-        return "Pith is streaming locally. Cancel the turn if it is no longer useful."
-      }
-
-      if selectedThreadIsWaitingForFirstMessage() {
-        if !trimmedDraftMessage.isEmpty {
-          return "Review the starter prompt, then press Command-Return to send the first local request."
-        }
-        return "Pick a first-message suggestion or type a local request. Press Command-Return to send."
-      }
-
-      return "Ready for local agent work. Press Command-Return to send."
-    }
+    ComposerStatusPresenter.statusSummary(composerStatusSnapshot())
   }
 
   func showsComposerActivity() -> Bool {
@@ -2820,6 +2761,21 @@ final class AppViewModel: ObservableObject {
     return MemorySnapshot(
       status: memoryStatus,
       notes: memoryNotes
+    )
+  }
+
+  private func composerStatusSnapshot() -> ComposerStatusSnapshot {
+    let modelGuidance = localModelSetupGuidance()
+    return ComposerStatusSnapshot(
+      runtimeState: runtimeState,
+      modelSetupTitle: modelGuidance.title,
+      modelSetupSummary: modelGuidance.summary,
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveTurn: activeTurnID != nil,
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraftMessage: !trimmedDraftMessage.isEmpty
     )
   }
 
