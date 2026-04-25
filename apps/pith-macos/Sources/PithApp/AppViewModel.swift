@@ -1762,6 +1762,7 @@ final class AppViewModel: ObservableObject {
     modelDownloadResumeData = nil
     LocalModelCatalog.clearPausedDownload()
     modelDownloadProgress = startPlan.progress
+    let shouldActivateAfterDownload = activateAfterDownload || !isLocalModelReady()
     appendModelEvent(
       title: startPlan.timelineTitle,
       body: startPlan.timelineBody,
@@ -1787,7 +1788,7 @@ final class AppViewModel: ObservableObject {
 
         let canActivateDownloadedModel = activeTurnID == nil
         let manifestPath: String?
-        if activateAfterDownload && canActivateDownloadedModel {
+        if shouldActivateAfterDownload && canActivateDownloadedModel {
           let modelManifestPath = try LocalModelCatalog.writePackManifest(for: model)
           runtimeBridge.configureActiveLocalModel(
             manifestPath: modelManifestPath,
@@ -1801,7 +1802,7 @@ final class AppViewModel: ObservableObject {
         let completionPlan = LocalModelDownloadCompletionPlanner.plan(
           model: model,
           sourceURL: downloadURL,
-          activationRequested: activateAfterDownload,
+          activationRequested: shouldActivateAfterDownload,
           canActivateNow: canActivateDownloadedModel,
           manifestPath: manifestPath
         )
