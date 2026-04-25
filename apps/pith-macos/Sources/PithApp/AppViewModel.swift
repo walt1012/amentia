@@ -2209,13 +2209,13 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Local Model Reset",
-        body: "Pith will use the default local model discovery path.",
+        body: "Pith will use automatic local model discovery.",
         attributes: [:]
       )
     )
     relaunchRuntimeIfNeeded(
-      runningDetail: "Restarting local runtime with default model discovery...",
-      idleDetail: "Default model discovery will be used when the runtime launches."
+      runningDetail: "Restarting local runtime with automatic model discovery...",
+      idleDetail: "Automatic model discovery will be used when the runtime launches."
     )
   }
 
