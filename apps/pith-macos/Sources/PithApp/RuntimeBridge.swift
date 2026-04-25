@@ -1070,6 +1070,7 @@ final class RuntimeBridge {
        !modelPath.isEmpty
     {
       environment["PITH_MODEL_PACK_MANIFEST"] = manifestPath
+      environment["PITH_MODEL_PATH"] = modelPath
       environment["PITH_LFM_MODEL_PATH"] = modelPath
     }
     return environment

@@ -355,6 +355,10 @@ fn resolve_model_path(
   manifest_directory: Option<PathBuf>,
   manifest: Option<&ModelPackManifest>,
 ) -> Option<PathBuf> {
+  if let Ok(path) = env::var("PITH_MODEL_PATH") {
+    return Some(PathBuf::from(path));
+  }
+
   if let Ok(path) = env::var("PITH_LFM_MODEL_PATH") {
     return Some(PathBuf::from(path));
   }
@@ -617,7 +621,10 @@ fn model_metrics(
     .map(|item| item.file_name.as_str())
     .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
   let suggested_manifest_path = suggested_manifest_install_path();
-  let suggested_model_path = suggested_model_install_path(suggested_file_name);
+  let suggested_model_path = manifest_path
+    .and_then(|path| path.parent())
+    .map(|directory| directory.join(suggested_file_name))
+    .unwrap_or_else(|| suggested_model_install_path(suggested_file_name));
   let suggested_binary_path = suggested_binary_install_path();
   metrics.insert(
     "suggestedManifestPath".to_string(),
@@ -684,17 +691,20 @@ fn install_hint(
     .map(|item| item.file_name.as_str())
     .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
   let suggested_manifest = suggested_manifest_install_path();
-  let suggested_model = suggested_model_install_path(file_name);
+  let suggested_model = manifest_path
+    .and_then(|path| path.parent())
+    .map(|directory| directory.join(file_name))
+    .unwrap_or_else(|| suggested_model_install_path(file_name));
   let suggested_binary = suggested_binary_install_path();
 
   match readiness {
     "ready" => format!(
       "Local inference is ready. Keep the manifest near {} and use {} if you need to override discovery.",
       file_name,
-      "PITH_LFM_MODEL_PATH"
+      "PITH_MODEL_PATH"
     ),
     "model_missing" => format!(
-      "Place {} at {} or set PITH_LFM_MODEL_PATH. Current binary candidate: {}.",
+      "Place {} at {} or set PITH_MODEL_PATH. Current binary candidate: {}.",
       file_name,
       suggested_model.display(),
       binary_path
@@ -709,7 +719,7 @@ fn install_hint(
         .unwrap_or_else(|| suggested_model.display().to_string())
     ),
     "manifest_only" => format!(
-      "Keep the manifest at {} and place {} beside it. Then install llama.cpp CLI at {} or set PITH_MODEL_PACK_MANIFEST, PITH_LFM_MODEL_PATH, and PITH_LLAMACPP_PATH.",
+      "Keep the manifest at {} and place {} beside it. Then install llama.cpp CLI at {} or set PITH_MODEL_PACK_MANIFEST, PITH_MODEL_PATH, and PITH_LLAMACPP_PATH.",
       manifest_path
         .map(display_path)
         .unwrap_or_else(|| suggested_manifest.display().to_string()),
@@ -729,7 +739,7 @@ fn install_hint(
         .unwrap_or_else(|| suggested_binary.display().to_string())
     ),
     _ => format!(
-      "Add model-pack.json at {}, place {} beside it, and install llama.cpp CLI at {}. You can also set PITH_MODEL_PACK_MANIFEST, PITH_LFM_MODEL_PATH, and PITH_LLAMACPP_PATH directly.",
+      "Add model-pack.json at {}, place {} beside it, and install llama.cpp CLI at {}. You can also set PITH_MODEL_PACK_MANIFEST, PITH_MODEL_PATH, and PITH_LLAMACPP_PATH directly.",
       suggested_manifest.display(),
       file_name,
       suggested_binary.display()
@@ -841,10 +851,10 @@ fn missing_runtime_detail(
       model_path.display()
     ),
     (None, None, Some(manifest_path)) => format!(
-      "Local model runtime is unavailable because no llama.cpp CLI binary or resolved LFM2.5-350M model file is configured yet. Manifest: {}.",
+      "Local model runtime is unavailable because no llama.cpp CLI binary or resolved local model file is configured yet. Manifest: {}.",
       manifest_path.display()
     ),
-    (None, None, None) => "Local model runtime is unavailable because no llama.cpp CLI binary or LFM2.5-350M model pack is configured yet.".to_string(),
+    (None, None, None) => "Local model runtime is unavailable because no llama.cpp CLI binary or local model pack is configured yet.".to_string(),
   }
 }
 
