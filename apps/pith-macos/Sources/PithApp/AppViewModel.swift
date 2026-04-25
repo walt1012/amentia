@@ -2128,115 +2128,39 @@ final class AppViewModel: ObservableObject {
   }
 
   func pluginCountSummary() -> String {
-    if plugins.isEmpty {
-      return "No bundled plugins discovered yet."
-    }
-
-    let readyCount = plugins.filter { $0.status == "ready" }.count
-    let invalidCount = plugins.count - readyCount
-    if invalidCount == 0 {
-      return "\(readyCount) plugin(s) discovered"
-    }
-
-    return "\(readyCount) ready, \(invalidCount) invalid"
+    PluginDashboardPresenter.pluginCountSummary(pluginDashboardSnapshot())
   }
 
   func localPluginCountSummary() -> String {
-    let localPlugins = plugins.filter { $0.provenance == "local" }
-
-    if localPlugins.isEmpty {
-      return "No local plugin installs yet."
-    }
-
-    return "\(localPlugins.count) local plugin install\(localPlugins.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.localPluginCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginDetailSummary() -> String {
-    guard !plugins.isEmpty else {
-      return "Pith discovers plugin manifests from the bundled plugins directory."
-    }
-
-    return plugins
-      .map { plugin in
-        let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
-        let validation = plugin.validationError ?? "ok"
-        let hint = plugin.validationHint.map { " | repair: \($0)" } ?? ""
-        return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | capabilities: \(capabilities) | validation: \(validation)\(hint)"
-      }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginPermissionCountSummary() -> String {
-    let readyPlugins = plugins.filter { $0.status == "ready" }
-    let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
-
-    guard !readyPlugins.isEmpty else {
-      return "Plugin permissions are not loaded yet."
-    }
-
-    if uniquePermissions.isEmpty {
-      return "\(readyPlugins.count) ready plugin(s), no declared permissions"
-    }
-
-    return "\(uniquePermissions.count) permission(s) across \(readyPlugins.count) ready plugin(s)"
+    PluginDashboardPresenter.permissionCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginPermissionDetailSummary() -> String {
-    let readyPlugins = plugins.filter { $0.status == "ready" }
-
-    guard !readyPlugins.isEmpty else {
-      return "Permission coverage appears here after the runtime loads plugin manifests."
-    }
-
-    let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
-    if uniquePermissions.isEmpty {
-      return "The current ready plugins do not declare extra runtime permissions."
-    }
-
-    return uniquePermissions
-      .sorted()
-      .map { permission in
-        let grantingPlugins = readyPlugins
-          .filter { $0.permissions.contains(permission) }
-          .map(\.displayName)
-          .sorted()
-          .joined(separator: ", ")
-        return "\(permission): \(grantingPlugins)"
-      }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.permissionDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginPermissionPreview() -> [PluginSummary] {
-    plugins.filter { $0.status == "ready" }
+    PluginDashboardPresenter.permissionPreview(pluginDashboardSnapshot())
   }
 
   func invalidPluginCountSummary() -> String {
-    let invalidPlugins = plugins.filter { $0.status != "ready" }
-
-    if invalidPlugins.isEmpty {
-      return "No Manifest Issues"
-    }
-
-    return "\(invalidPlugins.count) Invalid Plugin Manifest\(invalidPlugins.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.invalidPluginCountSummary(pluginDashboardSnapshot())
   }
 
   func invalidPluginDetailSummary() -> String {
-    let invalidPlugins = plugins.filter { $0.status != "ready" }
-
-    guard !invalidPlugins.isEmpty else {
-      return "All discovered plugin manifests match the current runtime schema."
-    }
-
-    return invalidPlugins
-      .map { plugin in
-        let hint = plugin.validationHint.map { " Repair hint: \($0)" } ?? ""
-        return "\(plugin.displayName): \(plugin.validationError ?? "Unknown validation error")\(hint)"
-      }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot())
   }
 
   func invalidPlugins() -> [PluginSummary] {
-    plugins.filter { $0.status != "ready" }
+    PluginDashboardPresenter.invalidPlugins(pluginDashboardSnapshot())
   }
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
@@ -2253,124 +2177,55 @@ final class AppViewModel: ObservableObject {
   }
 
   func pluginRegistryCountSummary() -> String {
-    guard let pluginCapabilityRegistrySummary else {
-      return "Capability registry not loaded yet."
-    }
-
-    return
-      "\(pluginCapabilityRegistrySummary.totalCapabilityCount) capability(ies) from \(pluginCapabilityRegistrySummary.enabledPluginCount) enabled plugin(s)"
+    PluginDashboardPresenter.registryCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginRegistryDetailSummary() -> String {
-    guard let pluginCapabilityRegistrySummary else {
-      return "Enable a ready plugin to populate the typed capability registry."
-    }
-
-    let kindSummary = pluginCapabilityRegistrySummary.capabilityCountsByKind
-      .sorted(by: { $0.key < $1.key })
-      .map { "\($0.key): \($0.value)" }
-      .joined(separator: " | ")
-    if kindSummary.isEmpty {
-      return "No capabilities are currently registered."
-    }
-
-    return kindSummary
+    PluginDashboardPresenter.registryDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginCapabilityPreview() -> [PluginCapabilitySummary] {
-    Array(pluginCapabilities.prefix(6))
+    PluginDashboardPresenter.capabilityPreview(pluginDashboardSnapshot())
   }
 
   func pluginConnectorCountSummary() -> String {
-    if pluginConnectors.isEmpty {
-      return "No Connectors"
-    }
-
-    return "\(pluginConnectors.count) Connector\(pluginConnectors.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.connectorCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginConnectorDetailSummary() -> String {
-    guard !pluginConnectors.isEmpty else {
-      return "Install or enable connector plugins to prepare third-party app integrations."
-    }
-
-    return pluginConnectors
-      .map { "\($0.displayName): \($0.status) via \($0.pluginDisplayName)" }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.connectorDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginConnectorPreview() -> [PluginConnectorSummary] {
-    Array(pluginConnectors.prefix(6))
+    PluginDashboardPresenter.connectorPreview(pluginDashboardSnapshot())
   }
 
   func pluginCommandCountSummary() -> String {
-    if pluginCommands.isEmpty {
-      return "No Plugin Commands"
-    }
-
-    return "\(pluginCommands.count) Plugin Command\(pluginCommands.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.commandCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginCommandDetailSummary() -> String {
-    guard !pluginCommands.isEmpty else {
-      return "Enable ready plugins with declared command capabilities to run reusable local workflows."
-    }
-
-    return pluginCommands
-      .map { "\($0.pluginDisplayName): \($0.title)" }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot())
   }
 
   func pluginHookCountSummary() -> String {
-    if pluginHooks.isEmpty {
-      return "No Plugin Hooks"
-    }
-
-    return "\(pluginHooks.count) Plugin Hook\(pluginHooks.count == 1 ? "" : "s")"
+    PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot())
   }
 
   func pluginHookDetailSummary() -> String {
-    guard !pluginHooks.isEmpty else {
-      return "Enable ready plugins with declared hook capabilities to extend local runtime events."
-    }
-
-    return pluginHooks
-      .map { "\($0.pluginDisplayName): \($0.title) (\($0.event))" }
-      .joined(separator: "\n")
+    PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot())
   }
 
   func memoryCountSummary() -> String {
-    guard let memoryStatus else {
-      return "Built-in memory is not connected yet."
-    }
-
-    return "\(memoryStatus.noteCount) note(s) captured"
+    MemoryPresenter.countSummary(memorySnapshot())
   }
 
   func memoryDetailSummary() -> String {
-    guard let memoryStatus else {
-      return "Pith uses built-in memory instead of a memory plugin. Workspace notes are stored locally by the runtime."
-    }
-
-    if memoryNotes.isEmpty {
-      return memoryStatus.summary
-    }
-
-    return memoryNotes
-      .prefix(4)
-      .map { note in
-        let tagSummary = note.tags.isEmpty ? "untagged" : note.tags.joined(separator: ", ")
-        return "\(note.title) | \(note.scope) | \(note.source) | tags: \(tagSummary)"
-      }
-      .joined(separator: "\n")
+    MemoryPresenter.detailSummary(memorySnapshot())
   }
 
   func memoryLatestSummary() -> String {
-    guard let latestNote = memoryNotes.first else {
-      return "No memory notes have been captured yet."
-    }
-
-    return "\(latestNote.body)\nSource: \(latestNote.source)"
+    MemoryPresenter.latestSummary(memorySnapshot())
   }
 
   func canSaveWorkspaceMemoryNote() -> Bool {
@@ -2947,6 +2802,24 @@ final class AppViewModel: ObservableObject {
       modelProgressDetail: modelProgressDetail,
       modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
       modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
+    )
+  }
+
+  private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
+    return PluginDashboardSnapshot(
+      plugins: plugins,
+      registrySummary: pluginCapabilityRegistrySummary,
+      capabilities: pluginCapabilities,
+      connectors: pluginConnectors,
+      commands: pluginCommands,
+      hooks: pluginHooks
+    )
+  }
+
+  private func memorySnapshot() -> MemorySnapshot {
+    return MemorySnapshot(
+      status: memoryStatus,
+      notes: memoryNotes
     )
   }
 
