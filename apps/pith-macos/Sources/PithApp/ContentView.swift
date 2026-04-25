@@ -124,6 +124,15 @@ struct ContentView: View {
         )
 
         if viewModel.shouldShowSetupCallout() {
+          if viewModel.shouldShowSetupModelChoice() {
+            SetupModelChooser(
+              models: viewModel.localModels,
+              selectedModelID: $viewModel.selectedSetupModelID,
+              detail: viewModel.setupModelChoiceDetail(),
+              isDisabled: !viewModel.canChangeSetupModelChoice()
+            )
+          }
+
           SetupCallout(
             title: viewModel.setupCalloutTitle(),
             summary: viewModel.setupCalloutSummary(),
@@ -811,6 +820,40 @@ private struct SetupProgressView: View {
         .progressViewStyle(.linear)
         .tint(tone.color)
     }
+  }
+}
+
+private struct SetupModelChooser: View {
+  let models: [LocalModelSummary]
+  @Binding var selectedModelID: String
+  let detail: String
+  let isDisabled: Bool
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Choose Local Model")
+          .font(.caption.weight(.semibold))
+        Text(detail)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      Spacer()
+
+      Picker("Local Model", selection: $selectedModelID) {
+        ForEach(models) { model in
+          Text(model.displayName).tag(model.id)
+        }
+      }
+      .labelsHidden()
+      .frame(width: 260)
+      .disabled(isDisabled)
+    }
+    .padding(10)
+    .background(Color.secondary.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
 
@@ -1556,7 +1599,7 @@ struct SettingsView: View {
   var body: some View {
     Form {
       Section("Model") {
-        Text("Default built-in model: LFM2.5-350M")
+        Text("Default first-use suggestion: LFM2.5-350M")
       }
 
       Section("Platform") {

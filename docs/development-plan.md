@@ -17,7 +17,7 @@ These constraints are mandatory and should be treated as project requirements, n
 - CPU target: `x86_64` only
 - Distribution target: signed and notarized `.app` bundle outside the Mac App Store
 - Core inference path: fully local, no required external model API
-- Default built-in model: `LFM2.5-350M`
+- Default first-use model: `LFM2.5-350M`
 - Development model: free and open source only
 - Repository language policy: English only for source code, comments, docs, commit messages, branch names, PR titles, CI messages, and generated project templates where practical
 - Product positioning: start as a small but strong local agent assistant, then grow into a plugin-powered local coworker platform
@@ -886,7 +886,8 @@ Goal:
 Deliverables:
 
 - release-bundled or guided local model pack delivery
-- one-click default model download, activation, and runtime restart flow
+- first-use model chooser with `LFM2.5-350M` as the default selection and small local alternatives available
+- one-click selected model download, activation, and runtime restart flow
 - pausable, resumable, and cancellable long-running model downloads with progress, speed, and ETA status
 - persisted paused model download recovery state across app relaunches
 - clear local model readiness and installation guidance
@@ -906,7 +907,7 @@ Deliverables:
 - composer gating that keeps input disabled until the local setup path is actually ready
 - first-use model-missing timeline guidance that tells users to download or select the local model
 - unified setup callout for model, workspace, and thread blockers
-- first-use model download callout with default model size, license, progress, pause, continue, cancel, and one primary action
+- first-use model download callout with selected model size, license, progress, pause, continue, cancel, and one primary action
 - contextual Local Model panel actions so download, pause, continue, activation, repair, and cancel do not become an always-visible control cluster
 - compact first-message suggestions after setup is complete, without adding a separate onboarding panel
 - preserved timeline selection across refreshes so inspector review work stays stable during streaming updates
@@ -917,7 +918,7 @@ Deliverables:
 
 Exit criteria:
 
-- a fresh install can reach a ready local `LFM2.5-350M` runtime without hidden degraded-generation behavior
+- a fresh install can choose, download, and reach a ready selected small local model without hidden degraded-generation behavior
 - the product feels stable, intentional, and distinctly native on Intel Mac hardware
 
 ### Milestone 4: Platform Expansion

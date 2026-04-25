@@ -18,7 +18,7 @@ The repository is intentionally English-only.
 - Keep the app lightweight and intentionally small while preserving a strong local agent loop.
 - Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
 - Keep the default intelligence path fully local with no required external model API.
-- Treat `LFM2.5-350M` as the default built-in model pack baseline.
+- Treat `LFM2.5-350M` as the default first-use model while keeping small GGUF alternatives available.
 - Design plugins as first-class product modules so `Pith` can expand beyond code assistance into a broader local agent platform.
 - Prefer free and open source dependencies, tooling, and model delivery paths.
 
@@ -51,8 +51,8 @@ Milestone 1 and Milestone 2 are complete on the active development branch.
 Milestone 3 is underway. The current focus is first-use local model delivery and daily-driver polish
 while keeping the UI compact, local-first, and workspace-safe.
 
-The active branch includes guided local model download and activation, pause/continue/cancel with
-persisted recovery state, workspace-bound thread filtering, compact setup guidance, progressive
+The active branch includes guided local model choice, download, and activation, pause/continue/cancel
+with persisted recovery state, workspace-bound thread filtering, compact setup guidance, progressive
 inspector disclosure, and timeline/diff readability polish.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
@@ -67,7 +67,7 @@ Model packaging note:
 - Native macOS shell in `SwiftUI`
 - Local runtime in `Rust`
 - JSON-RPC style communication over `stdio`
-- Local model runtime with `LFM2.5-350M` as the default built-in model
+- Local model runtime with `LFM2.5-350M` as the default first-use model option
 
 ## Development Notes
 

@@ -124,6 +124,7 @@ final class AppViewModel: ObservableObject {
   @Published var isWorkspaceSearching: Bool
   @Published var modelHealth: ModelHealthSummary?
   @Published var localModels: [LocalModelSummary]
+  @Published var selectedSetupModelID: String
   @Published var modelDownloadID: String?
   @Published var pausedModelDownloadID: String?
   @Published private var modelDownloadProgress: ModelDownloadProgress?
@@ -154,7 +155,7 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Start Local Setup",
-        body: "Launch the runtime, download the local LFM2.5-350M model, open a workspace, then create or select a thread.",
+        body: "Launch the runtime, choose a local model, open a workspace, then create or select a thread.",
         attributes: [
           "path": "runtime -> model -> workspace -> thread"
         ]
@@ -202,6 +203,7 @@ final class AppViewModel: ObservableObject {
     self.isWorkspaceSearching = false
     self.modelHealth = nil
     self.localModels = initialLocalModels
+    self.selectedSetupModelID = pausedDownload?.modelID ?? "lfm2.5-350m"
     self.modelDownloadID = nil
     self.pausedModelDownloadID = pausedDownload?.modelID
     self.modelDownloadProgress = Self.restoredModelDownloadProgress(
@@ -541,10 +543,10 @@ final class AppViewModel: ObservableObject {
         if pausedModelDownloadID != nil {
           return "Model download is paused. Continue it from Local Model."
         }
-        if isDefaultModelDownloaded() {
-          return "Use the downloaded default model to complete the local setup."
+        if selectedSetupModelDownloaded() {
+          return "Use the downloaded selected model to complete the local setup."
         }
-        return "Download the local LFM2.5-350M model to enable offline agent work."
+        return "Choose and download a local model to enable offline agent work."
       }
       if workspace == nil {
         return "Model is ready. Open a workspace to bind tools to a project."
@@ -797,6 +799,27 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  func shouldShowSetupModelChoice() -> Bool {
+    runtimeState == .ready
+      && !isLocalModelReady()
+      && modelDownloadID == nil
+      && pausedModelDownloadID == nil
+      && !localModels.isEmpty
+  }
+
+  func canChangeSetupModelChoice() -> Bool {
+    shouldShowSetupModelChoice()
+  }
+
+  func setupModelChoiceDetail() -> String {
+    guard let model = selectedSetupModel() else {
+      return "Choose one local model to download and run."
+    }
+
+    let status = model.downloaded ? "downloaded" : "not downloaded"
+    return "\(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status)"
+  }
+
   func modelSetupCalloutTitle() -> String {
     if modelDownloadID != nil {
       return "Downloading Local Model"
@@ -804,7 +827,7 @@ final class AppViewModel: ObservableObject {
     if pausedModelDownloadID != nil {
       return "Continue Local Model Download"
     }
-    if isDefaultModelDownloaded() {
+    if selectedSetupModelDownloaded() {
       return "Select Downloaded Local Model"
     }
     return "Download Local Model"
@@ -821,11 +844,11 @@ final class AppViewModel: ObservableObject {
     {
       return "\(model.displayName) is paused. Continue the download or cancel to clear the partial file."
     }
-    if let model = defaultLocalModel(), model.downloaded {
+    if let model = selectedSetupModel(), model.downloaded {
       return "\(model.displayName) is downloaded but not active. Select it to finish first-use setup."
     }
-    if let model = defaultLocalModel() {
-      return "Fresh installs need \(model.displayName) before Pith can answer locally."
+    if let model = selectedSetupModel() {
+      return "Fresh installs need one local model before Pith can answer locally. \(model.displayName) is selected."
     }
 
     return "Fresh installs need a local model before Pith can answer without an external API."
@@ -836,8 +859,8 @@ final class AppViewModel: ObservableObject {
       return modelDownloadProgressSummary()
     }
 
-    guard let model = defaultLocalModel() else {
-      return "Default model catalog unavailable. Relaunch the runtime to refresh local model metadata."
+    guard let model = selectedSetupModel() else {
+      return "Local model catalog unavailable. Relaunch the runtime to refresh model metadata."
     }
 
     return "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context"
@@ -1677,14 +1700,14 @@ final class AppViewModel: ObservableObject {
 
       let downloadedModels = localModels.filter { $0.downloaded }
       if downloadedModels.isEmpty {
-        return "Download the default LFM2.5-350M model to unlock local agent work."
+        return "Choose a small local model to download and unlock local agent work."
       }
 
-      if downloadedModels.contains(where: { $0.id == "lfm2.5-350m" }) {
-        return "Use the downloaded default model or reinstall pack metadata to repair readiness."
+      if selectedSetupModelDownloaded() {
+        return "Use the selected downloaded model or reinstall pack metadata to repair readiness."
       }
 
-      return "Select a downloaded model or download the default LFM2.5-350M baseline."
+      return "Select a downloaded model or download the currently selected local baseline."
     }
   }
 
@@ -1744,7 +1767,7 @@ final class AppViewModel: ObservableObject {
     if let pausedModelDownloadID,
        canDownloadRecommendedModel(modelID: pausedModelDownloadID)
     {
-      downloadRecommendedModel(modelID: pausedModelDownloadID)
+      downloadRecommendedModel(modelID: pausedModelDownloadID, activateAfterDownload: !isLocalModelReady())
       return
     }
     if !isLocalModelReady() {
@@ -1922,17 +1945,18 @@ final class AppViewModel: ObservableObject {
   }
 
   func defaultModelDownloadButtonTitle() -> String {
-    if modelDownloadID == "lfm2.5-350m" {
+    let setupModelID = selectedSetupModel()?.id ?? selectedSetupModelID
+    if modelDownloadID == setupModelID {
       return "Downloading Model"
     }
-    if pausedModelDownloadID == "lfm2.5-350m" {
+    if pausedModelDownloadID == setupModelID {
       return "Continue Model"
     }
-    if let defaultModel = localModels.first(where: { $0.id == "lfm2.5-350m" }) {
-      if defaultModel.active {
+    if let setupModel = selectedSetupModel() {
+      if setupModel.active {
         return "Model Selected"
       }
-      if defaultModel.downloaded {
+      if setupModel.downloaded {
         return "Use Downloaded Model"
       }
     }
@@ -2045,7 +2069,7 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  func downloadRecommendedModel(modelID: String) {
+  func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
     guard let model = localModels.first(where: { $0.id == modelID }) else {
       runtimeDetail = "The selected local model is unavailable."
       return
@@ -2114,19 +2138,20 @@ final class AppViewModel: ObservableObject {
           to: URL(fileURLWithPath: model.installPath)
         )
 
-        var activatedDefaultModel = false
+        var activatedDownloadedModel = false
         var manifestPath: String?
-        if model.id == "lfm2.5-350m" {
-          let defaultManifestPath = try writeLocalModelPackManifest(for: model)
+        if activateAfterDownload {
+          let modelManifestPath = try writeLocalModelPackManifest(for: model)
           runtimeBridge.configureActiveLocalModel(
-            manifestPath: defaultManifestPath,
+            manifestPath: modelManifestPath,
             modelPath: model.installPath
           )
-          manifestPath = defaultManifestPath
-          activatedDefaultModel = true
+          manifestPath = modelManifestPath
+          activatedDownloadedModel = true
         }
 
-        if activatedDefaultModel {
+        if activatedDownloadedModel {
+          selectedSetupModelID = model.id
           runtimeDetail = "Downloaded and selected \(model.displayName)."
           modelDownloadProgress = nil
           refreshLocalModelCatalog()
@@ -2150,14 +2175,14 @@ final class AppViewModel: ObservableObject {
             id: UUID().uuidString,
             kind: .system,
             title: "Local Model Downloaded",
-            body: activatedDefaultModel
+            body: activatedDownloadedModel
               ? "\(model.displayName) was downloaded and selected as the active local model."
               : "\(model.displayName) was downloaded to \(model.installPath).",
             attributes: attributes
           )
         )
 
-        if activatedDefaultModel {
+        if activatedDownloadedModel {
           relaunchRuntimeIfNeeded(
             runningDetail: "Restarting local runtime with \(model.displayName)...",
             idleDetail: "\(model.displayName) will be used when the runtime launches."
@@ -2225,6 +2250,7 @@ final class AppViewModel: ObservableObject {
         manifestPath: manifestPath,
         modelPath: model.installPath
       )
+      selectedSetupModelID = model.id
       refreshLocalModelCatalog()
       appendEntry(
         to: selectedThreadID,
@@ -2292,17 +2318,26 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadLocalModel() -> Bool {
-    canDownloadRecommendedModel(modelID: "lfm2.5-350m")
-      || canActivateRecommendedModel(modelID: "lfm2.5-350m")
+    guard let modelID = selectedSetupModel()?.id else {
+      return false
+    }
+
+    return canDownloadRecommendedModel(modelID: modelID)
+      || canActivateRecommendedModel(modelID: modelID)
   }
 
   func downloadLocalModel() {
-    if canActivateRecommendedModel(modelID: "lfm2.5-350m") {
-      activateRecommendedModel(modelID: "lfm2.5-350m")
+    guard let modelID = selectedSetupModel()?.id else {
+      runtimeDetail = "Choose a local model before downloading."
       return
     }
 
-    downloadRecommendedModel(modelID: "lfm2.5-350m")
+    if canActivateRecommendedModel(modelID: modelID) {
+      activateRecommendedModel(modelID: modelID)
+      return
+    }
+
+    downloadRecommendedModel(modelID: modelID, activateAfterDownload: true)
   }
 
   func canBootstrapModelPackMetadata() -> Bool {
@@ -2612,10 +2647,10 @@ final class AppViewModel: ObservableObject {
       if pausedModelDownloadID != nil {
         return "Continue the paused model download"
       }
-      if isDefaultModelDownloaded() {
+      if selectedSetupModelDownloaded() {
         return "Use the downloaded local model"
       }
-      return "Download the local LFM2.5-350M model"
+      return "Choose and download a local model"
     }
 
     if workspace == nil {
@@ -2649,10 +2684,10 @@ final class AppViewModel: ObservableObject {
         if pausedModelDownloadID != nil {
           return "Model download is paused. Continue it from Local Model."
         }
-        if isDefaultModelDownloaded() {
+        if selectedSetupModelDownloaded() {
           return "Use the downloaded local model to finish setup."
         }
-        return "Download the local LFM2.5-350M model to enable offline agent work."
+        return "Choose and download a local model to enable offline agent work."
       }
 
       if workspace == nil {
@@ -2794,7 +2829,7 @@ final class AppViewModel: ObservableObject {
         id: UUID().uuidString,
         kind: .system,
         title: "Start Local Setup",
-        body: "Launch the runtime, download the local LFM2.5-350M model, open a workspace, then create or select a thread.",
+        body: "Launch the runtime, choose a local model, open a workspace, then create or select a thread.",
         attributes: [
           "path": "runtime -> model -> workspace -> thread"
         ]
@@ -3053,6 +3088,9 @@ final class AppViewModel: ObservableObject {
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
       activeModelPath: activeModelPath
     )
+    if !localModels.contains(where: { $0.id == selectedSetupModelID }) {
+      selectedSetupModelID = "lfm2.5-350m"
+    }
   }
 
   private func setupReadyStepCount() -> Int {
@@ -3084,12 +3122,14 @@ final class AppViewModel: ObservableObject {
     return selectedThread.workspaceRootPath == workspace.rootPath
   }
 
-  private func isDefaultModelDownloaded() -> Bool {
-    defaultLocalModel()?.downloaded == true
+  private func selectedSetupModelDownloaded() -> Bool {
+    selectedSetupModel()?.downloaded == true
   }
 
-  private func defaultLocalModel() -> LocalModelSummary? {
-    localModels.first(where: { $0.id == "lfm2.5-350m" })
+  private func selectedSetupModel() -> LocalModelSummary? {
+    localModels.first(where: { $0.id == selectedSetupModelID })
+      ?? localModels.first(where: { $0.id == "lfm2.5-350m" })
+      ?? localModels.first
   }
 
   private func localModelRequiredTimelineSummary() -> String {
@@ -3099,11 +3139,11 @@ final class AppViewModel: ObservableObject {
     if pausedModelDownloadID != nil {
       return "The local model download is paused. Continue the download to finish first-use setup."
     }
-    if isDefaultModelDownloaded() {
-      return "The default model is downloaded but not active. Use the downloaded model to finish first-use setup."
+    if selectedSetupModelDownloaded() {
+      return "The selected model is downloaded but not active. Use it to finish first-use setup."
     }
 
-    return "No ready local model is installed yet. Download the LFM2.5-350M model to finish first-use setup without an external API."
+    return "No ready local model is installed yet. Choose a small local model to finish first-use setup without an external API."
   }
 
   private func announceSetupCompleteIfNeeded() {
@@ -3172,7 +3212,7 @@ final class AppViewModel: ObservableObject {
     if isLocalModelReady() {
       return ReadinessStepSummary(id: "model", label: "Model", detail: "Ready", tone: .ready)
     }
-    if isDefaultModelDownloaded() {
+    if selectedSetupModelDownloaded() {
       return ReadinessStepSummary(id: "model", label: "Model", detail: "Select", tone: .warning)
     }
 
