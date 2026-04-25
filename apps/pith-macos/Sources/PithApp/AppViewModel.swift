@@ -52,27 +52,7 @@ final class AppViewModel: ObservableObject {
   private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
-    let initialTimeline = [
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
-        title: "Start Local Setup",
-        body: "Launch the runtime, choose a local model, open a workspace, then create or select a thread.",
-        attributes: [
-          "path": "runtime -> model -> workspace -> thread"
-        ]
-      ),
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .assistantMessage,
-        title: "Local-First Agent Loop",
-        body:
-          "Pith runs the core agent loop against local workspaces and does not call external model APIs for core responses.",
-        attributes: [
-          "model": "local"
-        ]
-      ),
-    ]
+    let initialTimeline = Self.welcomeTimeline()
 
     let initialThreads = [
       ThreadSummary(
@@ -2162,9 +2142,19 @@ final class AppViewModel: ObservableObject {
       workspaceRootPath: nil,
       workspaceDisplayName: nil
     )
-    let welcomeTimeline = [
+    let welcomeTimeline = Self.welcomeTimeline()
+
+    threads = [welcomeThread]
+    threadTimelines = [welcomeThread.id: welcomeTimeline]
+    selectedThreadID = welcomeThread.id
+    timeline = welcomeTimeline
+    selectedEntryID = welcomeTimeline.first?.id
+  }
+
+  private static func welcomeTimeline() -> [TimelineEntry] {
+    [
       TimelineEntry(
-        id: UUID().uuidString,
+        id: "welcome-start-local-setup",
         kind: .system,
         title: "Start Local Setup",
         body: "Launch the runtime, choose a local model, open a workspace, then create or select a thread.",
@@ -2173,7 +2163,7 @@ final class AppViewModel: ObservableObject {
         ]
       ),
       TimelineEntry(
-        id: UUID().uuidString,
+        id: "welcome-local-first-agent-loop",
         kind: .assistantMessage,
         title: "Local-First Agent Loop",
         body:
@@ -2183,12 +2173,6 @@ final class AppViewModel: ObservableObject {
         ]
       ),
     ]
-
-    threads = [welcomeThread]
-    threadTimelines = [welcomeThread.id: welcomeTimeline]
-    selectedThreadID = welcomeThread.id
-    timeline = welcomeTimeline
-    selectedEntryID = welcomeTimeline.first?.id
   }
 
   private func appendEntry(to threadID: String?, _ entry: TimelineEntry) {
@@ -2235,7 +2219,7 @@ final class AppViewModel: ObservableObject {
   private func defaultTimeline(for title: String) -> [TimelineEntry] {
     [
       TimelineEntry(
-        id: UUID().uuidString,
+        id: "default-thread-ready:\(title)",
         kind: .system,
         title: "Thread Ready",
         body: "\(title) is ready after runtime, model, workspace, and thread setup are complete.",
@@ -2254,7 +2238,7 @@ final class AppViewModel: ObservableObject {
     do {
       let result = try await runtimeBridge.readThread(threadID: threadID)
       let previousSelectionID = selectedThreadID == threadID ? selectedEntryID : nil
-      let entries = timelineEntries(from: result.items)
+      let entries = timelineEntries(from: result.items, fallbackThreadID: threadID)
       threadTimelines[threadID] = entries
       updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
       updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
@@ -3100,7 +3084,7 @@ final class AppViewModel: ObservableObject {
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
     let previousSelectionID = selectedThreadID == state.id ? selectedEntryID : nil
-    let entries = timelineEntries(from: state.items)
+    let entries = timelineEntries(from: state.items, fallbackThreadID: state.id)
 
     threadTimelines[state.id] = entries
     updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
@@ -3126,6 +3110,18 @@ final class AppViewModel: ObservableObject {
         attributes: item.attributes
       )
     }
+  }
+
+  private func timelineEntries(
+    from items: [RuntimeBridge.RuntimeTimelineItemResult],
+    fallbackThreadID threadID: String
+  ) -> [TimelineEntry] {
+    let entries = timelineEntries(from: items)
+    if entries.isEmpty {
+      return defaultTimeline(for: threadTitle(for: threadID))
+    }
+
+    return entries
   }
 
   private func runtimeTimelineID(for item: RuntimeBridge.RuntimeTimelineItemResult, index: Int) -> String {
