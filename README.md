@@ -70,9 +70,9 @@ language for runtime recovery, first-use model download, workspace binding, and 
 single contextual next-action button when the daily loop is blocked. A compact readiness strip
 keeps runtime, model, workspace, and thread state visible without opening inspector sections.
 The same header now shows local setup progress, includes a first-use model download callout with
-size and license context, and the welcome timeline starts with the actual fresh-install path
-instead of internal milestone language. Workspace search includes empty-state guidance instead of
-becoming another admin panel. The Local
+size, license, progress, pause, continue, and cancel controls, and the welcome timeline starts with
+the actual fresh-install path instead of internal milestone language. Workspace search includes
+empty-state guidance instead of becoming another admin panel. The Local
 Model panel also gives a compact next action for runtime launch, model download, pause/resume,
 activation, and readiness repair while deeper model diagnostics stay tucked away; if the default
 model is already downloaded, the primary action can select it directly. Model download start,

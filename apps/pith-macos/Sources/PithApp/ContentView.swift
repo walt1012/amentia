@@ -137,8 +137,13 @@ struct ContentView: View {
             tone: viewModel.modelSetupCalloutTone(),
             actionTitle: viewModel.modelSetupCalloutActionTitle(),
             canRunAction: viewModel.canRunModelSetupCalloutAction(),
+            secondaryActionTitle: viewModel.modelSetupCalloutSecondaryActionTitle(),
+            canRunSecondaryAction: viewModel.canRunModelSetupCalloutSecondaryAction(),
             onAction: {
               viewModel.runModelSetupCalloutAction()
+            },
+            onSecondaryAction: {
+              viewModel.runModelSetupCalloutSecondaryAction()
             }
           )
         }
@@ -745,7 +750,10 @@ private struct ModelSetupCallout: View {
   let tone: StatusTone
   let actionTitle: String?
   let canRunAction: Bool
+  let secondaryActionTitle: String?
+  let canRunSecondaryAction: Bool
   let onAction: () -> Void
+  let onSecondaryAction: () -> Void
 
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
@@ -764,12 +772,22 @@ private struct ModelSetupCallout: View {
 
       Spacer()
 
-      if let actionTitle {
-        Button(actionTitle) {
-          onAction()
+      VStack(alignment: .trailing, spacing: 6) {
+        if let actionTitle {
+          Button(actionTitle) {
+            onAction()
+          }
+          .buttonStyle(.borderedProminent)
+          .disabled(!canRunAction)
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(!canRunAction)
+
+        if let secondaryActionTitle {
+          Button(secondaryActionTitle) {
+            onSecondaryAction()
+          }
+          .buttonStyle(.bordered)
+          .disabled(!canRunSecondaryAction)
+        }
       }
     }
     .padding(10)

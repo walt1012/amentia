@@ -645,6 +645,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelSetupCalloutDetail() -> String {
+    if shouldShowModelDownloadProgress() {
+      return modelDownloadProgressSummary()
+    }
+
     guard let model = defaultLocalModel() else {
       return "Default model catalog unavailable. Relaunch the runtime to refresh local model metadata."
     }
@@ -661,8 +665,8 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelSetupCalloutActionTitle() -> String? {
-    guard modelDownloadID == nil else {
-      return nil
+    if modelDownloadID != nil {
+      return "Pause Download"
     }
     if canDownloadLocalModel() {
       return defaultModelDownloadButtonTitle()
@@ -675,11 +679,18 @@ final class AppViewModel: ObservableObject {
   }
 
   func canRunModelSetupCalloutAction() -> Bool {
-    modelDownloadID == nil
-      && (canDownloadLocalModel() || canBootstrapModelPackMetadata())
+    if modelDownloadID != nil {
+      return canPauseModelDownload()
+    }
+
+    return canDownloadLocalModel() || canBootstrapModelPackMetadata()
   }
 
   func runModelSetupCalloutAction() {
+    if modelDownloadID != nil {
+      pauseModelDownload()
+      return
+    }
     if canDownloadLocalModel() {
       downloadLocalModel()
       return
@@ -687,6 +698,22 @@ final class AppViewModel: ObservableObject {
     if canBootstrapModelPackMetadata() {
       bootstrapModelPackMetadata()
     }
+  }
+
+  func modelSetupCalloutSecondaryActionTitle() -> String? {
+    guard modelDownloadID != nil || pausedModelDownloadID != nil else {
+      return nil
+    }
+
+    return "Cancel Download"
+  }
+
+  func canRunModelSetupCalloutSecondaryAction() -> Bool {
+    canCancelModelDownload()
+  }
+
+  func runModelSetupCalloutSecondaryAction() {
+    cancelModelDownload()
   }
 
   func runtimePrimaryActionTitle() -> String? {
