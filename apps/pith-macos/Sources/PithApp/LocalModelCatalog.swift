@@ -35,8 +35,9 @@ enum LocalModelCatalog {
     return items().map { item in
       let installPath = item.installPath(storageRootPath: storageRootPath)
       let normalizedInstallPath = normalizedPath(installPath)
-      let downloaded = manager.fileExists(atPath: installPath)
       let localSizeBytes = localFileSize(at: installPath)
+      let downloaded = manager.fileExists(atPath: installPath)
+        && (localSizeBytes ?? 0) > 0
       return LocalModelSummary(
         id: item.id,
         displayName: item.displayName,
@@ -51,7 +52,7 @@ enum LocalModelCatalog {
         tags: item.tags,
         installPath: installPath,
         downloaded: downloaded,
-        active: normalizedActivePath == Optional(normalizedInstallPath),
+        active: downloaded && normalizedActivePath == Optional(normalizedInstallPath),
         localSizeBytes: localSizeBytes
       )
     }
