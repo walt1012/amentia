@@ -704,8 +704,14 @@ final class AppViewModel: ObservableObject {
       return "Choose one local model to download and run."
     }
 
+    let role = model.id == LocalModelCatalog.defaultFirstUseModelID ? "Default" : "Alternative"
     let status = model.downloaded ? "downloaded" : "not downloaded"
-    return "\(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status)"
+    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). "
+      + "Pith runs one local model at a time."
+  }
+
+  func setupDefaultModelID() -> String {
+    LocalModelCatalog.defaultFirstUseModelID
   }
 
   func modelSetupCalloutTitle() -> String {

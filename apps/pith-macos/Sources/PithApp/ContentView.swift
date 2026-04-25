@@ -115,6 +115,7 @@ struct ContentView: View {
             SetupModelChooser(
               models: viewModel.localModels,
               selectedModelID: $viewModel.selectedSetupModelID,
+              defaultModelID: viewModel.setupDefaultModelID(),
               detail: viewModel.setupModelChoiceDetail(),
               isDisabled: !viewModel.canChangeSetupModelChoice()
             )
@@ -430,6 +431,7 @@ private struct SetupProgressView: View {
 private struct SetupModelChooser: View {
   let models: [LocalModelSummary]
   @Binding var selectedModelID: String
+  let defaultModelID: String
   let detail: String
   let isDisabled: Bool
 
@@ -448,7 +450,8 @@ private struct SetupModelChooser: View {
 
       Picker("Local Model", selection: $selectedModelID) {
         ForEach(models) { model in
-          Text(model.displayName).tag(model.id)
+          Text(model.displayName + (model.id == defaultModelID ? " (Default)" : ""))
+            .tag(model.id)
         }
       }
       .labelsHidden()
