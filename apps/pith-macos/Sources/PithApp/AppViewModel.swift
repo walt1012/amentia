@@ -580,6 +580,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runSetupCalloutAction() {
+    guard canRunSetupCalloutAction() else {
+      return
+    }
+
     if !isLocalModelReady() {
       runModelSetupCalloutAction()
       return
@@ -606,6 +610,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runSetupCalloutSecondaryAction() {
+    guard canRunSetupCalloutSecondaryAction() else {
+      return
+    }
+
     if !isLocalModelReady() {
       runModelSetupCalloutSecondaryAction()
     }
@@ -640,6 +648,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runFirstRequestCalloutAction() {
+    guard canRunFirstRequestCalloutAction() else {
+      return
+    }
+
     useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
   }
 
@@ -654,6 +666,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runFirstRequestCalloutSecondaryAction() {
+    guard canRunFirstRequestCalloutSecondaryAction() else {
+      return
+    }
+
     useFirstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
   }
 
@@ -729,6 +745,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runModelSetupCalloutAction() {
+    guard canRunModelSetupCalloutAction() else {
+      return
+    }
+
     if modelDownloadID != nil {
       pauseModelDownload()
       return
@@ -761,6 +781,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runModelSetupCalloutSecondaryAction() {
+    guard canRunModelSetupCalloutSecondaryAction() else {
+      return
+    }
+
     cancelModelDownload()
   }
 
@@ -769,7 +793,7 @@ final class AppViewModel: ObservableObject {
     case .disconnected, .failed, .launching:
       return runtimeLaunchButtonTitle()
     case .ready:
-      if activeTurnID != nil {
+      if canCancelActiveTurn() {
         return "Cancel Turn"
       }
       return nil
@@ -783,8 +807,8 @@ final class AppViewModel: ObservableObject {
     case .launching:
       return false
     case .ready:
-      if activeTurnID != nil {
-        return canCancelActiveTurn()
+      if canCancelActiveTurn() {
+        return true
       }
       return false
     }
@@ -797,7 +821,7 @@ final class AppViewModel: ObservableObject {
     case .launching:
       return
     case .ready:
-      if activeTurnID != nil {
+      if canCancelActiveTurn() {
         cancelActiveTurn()
       }
     }
@@ -808,7 +832,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canOpenWorkspace() -> Bool {
-    runtimeState == .ready
+    runtimeState == .ready && activeTurnID == nil
   }
 
   func canCreateThread() -> Bool {
@@ -819,7 +843,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canInstallPlugin() -> Bool {
-    runtimeState == .ready
+    runtimeState == .ready && activeTurnID == nil
   }
 
   func canSendDraftMessage() -> Bool {
@@ -882,10 +906,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func searchWorkspace() {
-    let query = workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard runtimeState == .ready, workspace != nil, !query.isEmpty else {
+    guard canSearchWorkspace() else {
       return
     }
+
+    let query = workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 
     isWorkspaceSearching = true
     let requestID = UUID()
@@ -964,7 +989,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func openWorkspace() {
-    guard runtimeState == .ready else {
+    guard canOpenWorkspace() else {
       return
     }
 
@@ -1018,7 +1043,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func installPlugin() {
-    guard runtimeState == .ready else {
+    guard canInstallPlugin() else {
       return
     }
 
@@ -1306,11 +1331,8 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    guard runtimeState == .ready,
-          isLocalModelReady(),
-          hasRuntimeThreadSelection(),
-          let threadID = selectedThreadID,
-          activeTurnID == nil
+    guard canRunPluginCommand(commandID: commandID),
+          let threadID = selectedThreadID
     else {
       return
     }
