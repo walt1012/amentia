@@ -1288,6 +1288,7 @@ final class AppViewModel: ObservableObject {
   func runPluginCommand(commandID: String) {
     guard runtimeState == .ready,
           isLocalModelReady(),
+          hasRuntimeThreadSelection(),
           let threadID = selectedThreadID,
           activeTurnID == nil
     else {
