@@ -973,12 +973,10 @@ final class RuntimeBridge {
     if let response = try? decoder.decode(JSONRPCAnyResponse.self, from: data),
        let responseID = response.id
     {
-      stateQueue.async {
-        guard let continuation = self.pendingResponses.removeValue(forKey: responseID) else {
-          return
-        }
-        continuation.resume(returning: data)
+      let continuation = stateQueue.sync {
+        pendingResponses.removeValue(forKey: responseID)
       }
+      continuation?.resume(returning: data)
       return
     }
 
@@ -1005,12 +1003,13 @@ final class RuntimeBridge {
   }
 
   private func failPendingResponses(with error: Error) {
-    stateQueue.async {
-      let continuations = self.pendingResponses.values
-      self.pendingResponses.removeAll()
-      for continuation in continuations {
-        continuation.resume(throwing: error)
-      }
+    let continuations = stateQueue.sync {
+      let continuations = Array(pendingResponses.values)
+      pendingResponses.removeAll()
+      return continuations
+    }
+    for continuation in continuations {
+      continuation.resume(throwing: error)
     }
   }
 
@@ -1125,10 +1124,10 @@ final class RuntimeBridge {
         let payload = try encoder.encode(request) + Data([0x0A])
         try inputHandle.write(contentsOf: payload)
       } catch {
-        stateQueue.async {
-          let pending = self.pendingResponses.removeValue(forKey: requestID)
-          pending?.resume(throwing: error)
+        let pending = stateQueue.sync {
+          pendingResponses.removeValue(forKey: requestID)
         }
+        pending?.resume(throwing: error)
       }
     }
 

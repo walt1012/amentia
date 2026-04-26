@@ -297,23 +297,25 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        DisclosureGroup("Selected Item", isExpanded: $selectedItemExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.selectedEntryTitle())
-              .font(.headline)
-            Text(viewModel.selectedEntryBody())
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-            DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
-              Text(viewModel.selectedEntryMetadata())
-                .font(.caption)
+        if viewModel.shouldShowSelectedEntryInspector() {
+          DisclosureGroup("Selected Item", isExpanded: $selectedItemExpanded) {
+            VStack(alignment: .leading, spacing: 8) {
+              Text(viewModel.selectedEntryTitle())
+                .font(.headline)
+              Text(viewModel.selectedEntryBody())
+                .font(.subheadline)
                 .foregroundColor(.secondary)
                 .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+              DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
+                Text(viewModel.selectedEntryMetadata())
+                  .font(.caption)
+                  .foregroundColor(.secondary)
+                  .textSelection(.enabled)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+              }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
           }
-          .frame(maxWidth: .infinity, alignment: .leading)
         }
 
         if let diffSummary = viewModel.selectedDiffSummary() {

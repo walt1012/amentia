@@ -308,75 +308,6 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
-        if let runtimeMemoryStatus {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
-              title: "Memory Ready",
-              body: runtimeMemoryStatus.summary,
-              attributes: [
-                "noteCount": String(runtimeMemoryStatus.noteCount)
-              ]
-            )
-          )
-        }
-        if !plugins.isEmpty {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
-              title: "Plugins Ready",
-              body: "Discovered \(plugins.count) plugin(s): \(plugins.map(\.displayName).joined(separator: ", ")).",
-              attributes: [:]
-            )
-          )
-        }
-        if let registrySummary = pluginCapabilityRegistrySummary,
-           registrySummary.totalCapabilityCount > 0 {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
-              title: "Capability Registry Ready",
-              body:
-                "Registered \(registrySummary.totalCapabilityCount) capability(ies) across \(registrySummary.enabledPluginCount) enabled plugin(s).",
-              attributes: [
-                "enabledPluginCount": String(registrySummary.enabledPluginCount),
-                "totalCapabilityCount": String(registrySummary.totalCapabilityCount)
-              ]
-            )
-          )
-        }
-        if !pluginCommands.isEmpty {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
-              title: "Plugin Commands Ready",
-              body:
-                "Loaded \(pluginCommands.count) plugin command(s): \(pluginCommands.map(\.title).joined(separator: ", ")).",
-              attributes: [:]
-            )
-          )
-        }
-        if !pluginHooks.isEmpty {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
-              title: "Plugin Hooks Ready",
-              body:
-                "Loaded \(pluginHooks.count) plugin hook(s): \(pluginHooks.map(\.title).joined(separator: ", ")).",
-              attributes: [:]
-            )
-          )
-        }
         announceSetupCompleteIfNeeded()
       } catch {
         runtimeState = .failed
@@ -1531,6 +1462,19 @@ final class AppViewModel: ObservableObject {
     TimelineInspectorPresenter.selectedEntryMemorySummary(timelineInspectorSnapshot())
   }
 
+  func shouldShowSelectedEntryInspector() -> Bool {
+    guard let entry = selectedEntry() else {
+      return false
+    }
+
+    if entry.kind != .system {
+      return true
+    }
+
+    return !entry.id.hasPrefix("welcome-")
+      && !entry.id.hasPrefix("default-thread-ready:")
+  }
+
   func workspaceDisplayName() -> String {
     workspace?.displayName ?? "No Workspace"
   }
@@ -1745,6 +1689,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func pauseModelDownload() {
+    guard canPauseModelDownload() else {
+      return
+    }
+
     let displayName = modelDownloadID
       .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
       ?? "local model"
@@ -1753,6 +1701,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func cancelModelDownload() {
+    guard canCancelModelDownload() else {
+      return
+    }
+
     if let modelDownloadTask {
       let displayName = modelDownloadID
         .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
