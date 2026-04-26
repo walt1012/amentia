@@ -832,7 +832,19 @@ final class AppViewModel: ObservableObject {
   }
 
   func canCancelActiveTurn() -> Bool {
-    runtimeState == .ready && isTurnStreaming()
+    runtimeState == .ready
+      && activeTurnID != nil
+      && activeTurnThreadID != nil
+  }
+
+  func canRespondToApproval(approvalID: String) -> Bool {
+    guard let selectedThreadID else {
+      return false
+    }
+
+    return runtimeState == .ready
+      && hasRuntimeThreadSelection()
+      && threadPendingApprovalIDs[selectedThreadID, default: Set<String>()].contains(approvalID)
   }
 
   func canUseComposer() -> Bool {
@@ -1169,7 +1181,9 @@ final class AppViewModel: ObservableObject {
   }
 
   func respondToApproval(approvalID: String, decision: String) {
-    guard runtimeState == .ready else {
+    guard canRespondToApproval(approvalID: approvalID),
+          decision == "approved" || decision == "denied"
+    else {
       return
     }
 
@@ -1406,7 +1420,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func cancelActiveTurn() {
-    guard runtimeState == .ready,
+    guard canCancelActiveTurn(),
           let activeTurnID,
           let activeTurnThreadID
     else {
@@ -2094,13 +2108,12 @@ final class AppViewModel: ObservableObject {
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {
     guard entry.kind == .approval,
-          let selectedThreadID,
           let approvalID = entry.attributes["approvalId"]
     else {
       return false
     }
 
-    return threadPendingApprovalIDs[selectedThreadID, default: Set<String>()].contains(approvalID)
+    return canRespondToApproval(approvalID: approvalID)
   }
 
   func approvalID(for entry: TimelineEntry) -> String? {
