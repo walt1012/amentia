@@ -3118,6 +3118,11 @@ final class AppViewModel: ObservableObject {
   ) -> [TimelineEntry] {
     let entries = timelineEntries(from: items)
     if entries.isEmpty {
+      let existingEntries = threadTimelines[threadID] ?? []
+      if !existingEntries.isEmpty {
+        return existingEntries
+      }
+
       return defaultTimeline(for: threadTitle(for: threadID))
     }
 
