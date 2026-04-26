@@ -1199,7 +1199,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func setPluginEnabled(pluginID: String, enabled: Bool) {
-    guard runtimeState == .ready else {
+    guard canSetPluginEnabled(pluginID: pluginID) else {
       return
     }
 
@@ -1238,9 +1238,8 @@ final class AppViewModel: ObservableObject {
   }
 
   func removePlugin(pluginID: String) {
-    guard runtimeState == .ready,
-          let plugin = plugins.first(where: { $0.id == pluginID }),
-          plugin.provenance == "local"
+    guard canRemovePlugin(pluginID: pluginID),
+          let plugin = plugins.first(where: { $0.id == pluginID })
     else {
       return
     }
@@ -1286,6 +1285,13 @@ final class AppViewModel: ObservableObject {
   }
 
   func runPluginCommand(commandID: String) {
+    guard let command = pluginCommands.first(where: { $0.id == commandID }),
+          command.executionKind != nil
+    else {
+      runtimeDetail = "Plugin command needs an execution contract before it can run."
+      return
+    }
+
     guard runtimeState == .ready,
           isLocalModelReady(),
           hasRuntimeThreadSelection(),
@@ -1319,6 +1325,20 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
+  }
+
+  func canRunPluginCommand(commandID: String) -> Bool {
+    guard let command = pluginCommands.first(where: { $0.id == commandID }),
+          command.executionKind != nil
+    else {
+      return false
+    }
+
+    return runtimeState == .ready
+      && isLocalModelReady()
+      && hasRuntimeThreadSelection()
+      && selectedThreadID != nil
+      && activeTurnID == nil
   }
 
   func selectThread(id: String?) {
@@ -1959,6 +1979,22 @@ final class AppViewModel: ObservableObject {
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
     plugin.provenance == "local"
+  }
+
+  func canSetPluginEnabled(pluginID: String) -> Bool {
+    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
+      return false
+    }
+
+    return runtimeState == .ready && plugin.status == "ready"
+  }
+
+  func canRemovePlugin(pluginID: String) -> Bool {
+    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
+      return false
+    }
+
+    return runtimeState == .ready && isRemovablePlugin(plugin)
   }
 
   func revealPluginManifest(pluginID: String) {

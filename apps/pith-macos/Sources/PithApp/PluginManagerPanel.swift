@@ -83,9 +83,8 @@ struct PluginManagerPanel: View {
         ForEach(viewModel.plugins) { plugin in
           PluginRow(
             plugin: plugin,
-            canEdit: viewModel.runtimeState == .ready && plugin.status == "ready",
-            canRemove: viewModel.runtimeState == .ready
-              && viewModel.isRemovablePlugin(plugin),
+            canEdit: viewModel.canSetPluginEnabled(pluginID: plugin.id),
+            canRemove: viewModel.canRemovePlugin(pluginID: plugin.id),
             onSetEnabled: { enabled in
               viewModel.setPluginEnabled(pluginID: plugin.id, enabled: enabled)
             },
@@ -137,6 +136,7 @@ struct PluginManagerPanel: View {
         ForEach(viewModel.invalidPlugins()) { plugin in
           InvalidPluginRow(
             plugin: plugin,
+            canRemove: viewModel.canRemovePlugin(pluginID: plugin.id),
             onRevealManifest: {
               viewModel.revealPluginManifest(pluginID: plugin.id)
             },
@@ -161,11 +161,7 @@ struct PluginManagerPanel: View {
         ForEach(viewModel.pluginCommands) { command in
           PluginCommandRow(
             command: command,
-            canRun: viewModel.runtimeState == .ready
-              && viewModel.isLocalModelReady()
-              && viewModel.selectedThreadID != nil
-              && viewModel.activeTurnID == nil
-              && command.executionKind != nil,
+            canRun: viewModel.canRunPluginCommand(commandID: command.id),
             onRun: {
               viewModel.runPluginCommand(commandID: command.id)
             }
@@ -483,6 +479,7 @@ private struct PluginCommandRow: View {
 
 private struct InvalidPluginRow: View {
   let plugin: PluginSummary
+  let canRemove: Bool
   let onRevealManifest: () -> Void
   let onRemove: () -> Void
 
@@ -510,6 +507,7 @@ private struct InvalidPluginRow: View {
             onRemove()
           }
           .buttonStyle(.bordered)
+          .disabled(!canRemove)
         }
       }
 
