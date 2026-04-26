@@ -2661,7 +2661,7 @@ final class AppViewModel: ObservableObject {
     }
 
     let entries = threadTimelines[selectedThreadID] ?? timeline
-    return !entries.contains(isUserStartedTimelineEntry)
+    return !entries.contains(where: isUserStartedTimelineEntry)
   }
 
   private func isUserStartedTimelineEntry(_ entry: TimelineEntry) -> Bool {
