@@ -5,7 +5,7 @@ enum FirstRequestPromptPresenter {
   static let reviewChangesID = "review-changes"
 
   static func calloutSummary() -> String {
-    "Setup is complete. Choose a short starter prompt, review it, then send it to the local model."
+    "Setup is complete. Pick a short starter prompt or type your own first local request."
   }
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {
@@ -13,7 +13,7 @@ enum FirstRequestPromptPresenter {
       return "Choose a workspace before starting the first local request."
     }
 
-    return "Pith will use \(workspaceDisplayName) as the working context. Keep the first request small so the local model can stay focused."
+    return "Pith will use \(workspaceDisplayName) as the working context. Short first requests work best for the local model."
   }
 
   static func primaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {

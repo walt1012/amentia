@@ -2661,7 +2661,16 @@ final class AppViewModel: ObservableObject {
     }
 
     let entries = threadTimelines[selectedThreadID] ?? timeline
-    return !entries.contains { $0.kind == .userMessage }
+    return !entries.contains(isUserStartedTimelineEntry)
+  }
+
+  private func isUserStartedTimelineEntry(_ entry: TimelineEntry) -> Bool {
+    switch entry.kind {
+    case .userMessage, .assistantMessage, .plan, .tool, .diff, .approval, .warning:
+      return true
+    case .system:
+      return false
+    }
   }
 
   private func selectedSetupModel() -> LocalModelSummary? {

@@ -8,7 +8,7 @@ struct ContentView: View {
   @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
   @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
-  @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = true
+  @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = false
   @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
   @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
