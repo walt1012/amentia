@@ -524,6 +524,18 @@ final class AppViewModel: ObservableObject {
     SetupProgressPresenter.tone(setupProgressSnapshot())
   }
 
+  func shouldShowSetupProgress() -> Bool {
+    let snapshot = setupProgressSnapshot()
+    return snapshot.readyStepCount < snapshot.stepCount
+      || snapshot.runtimeState == .launching
+      || modelDownloadID != nil
+      || pausedModelDownloadID != nil
+  }
+
+  func shouldShowReadinessSteps() -> Bool {
+    shouldShowSetupProgress()
+  }
+
   func inspectorSessionTitle() -> String {
     InspectorSessionPresenter.title(inspectorSessionSnapshot())
   }
@@ -1587,6 +1599,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runLocalModelPrimaryAction() {
+    guard canRunLocalModelPrimaryAction() else {
+      return
+    }
+
     if modelDownloadID != nil {
       pauseModelDownload()
       return
@@ -1617,6 +1633,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func runLocalModelSecondaryAction() {
+    guard canRunLocalModelSecondaryAction() else {
+      return
+    }
+
     cancelModelDownload()
   }
 
@@ -1782,18 +1802,6 @@ final class AppViewModel: ObservableObject {
       resumeData: modelDownloadResumeData,
       currentProgress: modelDownloadProgress
     )
-    if !startPlan.isResuming {
-      guard confirmModelDownload(
-        displayName: model.displayName,
-        downloadURL: downloadURL,
-        targetPath: model.installPath,
-        sizeSummary: formattedByteCount(model.sizeBytes)
-      ) else {
-        runtimeDetail = "Local model download was cancelled."
-        return
-      }
-    }
-
     modelDownloadID = model.id
     pausedModelDownloadID = nil
     modelDownloadResumeData = nil
@@ -1958,7 +1966,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func bootstrapModelPackMetadata() {
-    guard runtimeState == .ready else {
+    guard canBootstrapModelPackMetadata() else {
       runtimeDetail = "Launch the runtime before preparing local model metadata."
       return
     }
@@ -3280,28 +3288,6 @@ final class AppViewModel: ObservableObject {
       \(preview.description)
       """
     alert.addButton(withTitle: "Install")
-    alert.addButton(withTitle: "Cancel")
-    return alert.runModal() == .alertFirstButtonReturn
-  }
-
-  private func confirmModelDownload(
-    displayName: String,
-    downloadURL: URL,
-    targetPath: String,
-    sizeSummary: String
-  ) -> Bool {
-    let alert = NSAlert()
-    alert.alertStyle = .informational
-    alert.messageText = "Download Local Model?"
-    alert.informativeText = """
-      Model: \(displayName)
-      Size: \(sizeSummary)
-      Source: \(LocalModelDisplayPresenter.sourceName(downloadURL))
-      File: \(URL(fileURLWithPath: targetPath).lastPathComponent)
-
-      Pith stores the model locally in app data and runs one local model at a time.
-      """
-    alert.addButton(withTitle: "Download")
     alert.addButton(withTitle: "Cancel")
     return alert.runModal() == .alertFirstButtonReturn
   }

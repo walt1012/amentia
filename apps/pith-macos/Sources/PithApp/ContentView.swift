@@ -108,12 +108,14 @@ struct ContentView: View {
           }
         }
 
-        SetupProgressView(
-          summary: viewModel.setupProgressSummary(),
-          detail: viewModel.setupProgressDetail(),
-          value: viewModel.setupProgressValue(),
-          tone: viewModel.setupProgressTone()
-        )
+        if viewModel.shouldShowSetupProgress() {
+          SetupProgressView(
+            summary: viewModel.setupProgressSummary(),
+            detail: viewModel.setupProgressDetail(),
+            value: viewModel.setupProgressValue(),
+            tone: viewModel.setupProgressTone()
+          )
+        }
 
         if viewModel.shouldShowSetupCallout() {
           if viewModel.shouldShowSetupModelChoice() {
@@ -166,18 +168,20 @@ struct ContentView: View {
           )
         }
 
-        HStack(spacing: 8) {
-          ForEach(viewModel.runtimeReadinessSteps()) { step in
-            ReadinessChip(
-              step: step,
-              actionTitle: viewModel.readinessStepActionTitle(step),
-              canRunAction: viewModel.canRunReadinessStepAction(step),
-              onAction: {
-                viewModel.runReadinessStepAction(step)
-              }
-            )
+        if viewModel.shouldShowReadinessSteps() {
+          HStack(spacing: 8) {
+            ForEach(viewModel.runtimeReadinessSteps()) { step in
+              ReadinessChip(
+                step: step,
+                actionTitle: viewModel.readinessStepActionTitle(step),
+                canRunAction: viewModel.canRunReadinessStepAction(step),
+                onAction: {
+                  viewModel.runReadinessStepAction(step)
+                }
+              )
+            }
+            Spacer()
           }
-          Spacer()
         }
       }
       .padding(20)

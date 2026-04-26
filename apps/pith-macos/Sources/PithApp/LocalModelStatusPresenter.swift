@@ -182,7 +182,7 @@ enum LocalModelStatusPresenter {
       }
     }
 
-    return "Download Model"
+    return "Download Selected"
   }
 
   static func downloadButtonTitle(

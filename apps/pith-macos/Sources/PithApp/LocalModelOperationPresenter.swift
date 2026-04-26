@@ -71,8 +71,7 @@ enum LocalModelOperationPresenter {
 
     let role = model.id == defaultModelID ? "Default" : "Alternative"
     let status = model.downloaded ? "downloaded" : "not downloaded"
-    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). "
-      + "Pith runs one local model at a time."
+    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). Pith runs one local model at a time."
   }
 
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
@@ -84,12 +83,19 @@ enum LocalModelOperationPresenter {
   }
 
   static func managerSummary(_ snapshot: LocalModelOperationSnapshot) -> String {
+    if let model = snapshot.downloadingModel {
+      return "Downloading \(model.displayName). One active model will run at a time."
+    }
+    if let model = snapshot.pausedModel {
+      return "Paused \(model.displayName). Continue or cancel before starting another download."
+    }
+    if snapshot.hasActiveTurn {
+      return "Active: \(snapshot.activeModelDisplayName ?? "local model"). Switching waits for the current turn."
+    }
+
     let activeModel = snapshot.activeModelDisplayName ?? "none"
-    let downloadSummary = snapshot.downloadingModel.map { " | Downloading: \($0.displayName)" } ?? ""
-    let pausedSummary = snapshot.pausedModel.map { " | Paused: \($0.displayName)" } ?? ""
-    let switchSummary = snapshot.hasActiveTurn ? " | Switch: waiting for current turn" : ""
     let localSize = formattedByteCount(snapshot.downloadedLocalSizeBytes)
-    return "Downloaded: \(snapshot.downloadedModelCount)/\(snapshot.totalModelCount) | Local Size: \(localSize) | Active: \(activeModel)\(downloadSummary)\(pausedSummary)\(switchSummary)"
+    return "Active: \(activeModel) | \(snapshot.downloadedModelCount)/\(snapshot.totalModelCount) downloaded | \(localSize)"
   }
 
   private static func formattedByteCount(_ byteCount: Int64) -> String {

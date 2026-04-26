@@ -3616,7 +3616,7 @@ fn pack_memory_context(
 
 fn format_context_prompt(context_pack: &ContextPack) -> String {
   let header = format!(
-    "Context pack: {}. Using {} of {} relevant memory note(s) from {} stored note(s), {} omitted, {} truncated, {} of {} char budget used from a {} token local context window.",
+    "Context: mode={}, notes={}/{}, stored={}, omitted={}, truncated={}, chars={}/{}, window={}t.",
     context_pack.mode(),
     context_pack.notes.len(),
     context_pack.candidate_note_count,
@@ -3713,7 +3713,7 @@ fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
     .iter()
     .map(|note| {
       format!(
-        "- {} | scope={} | source={} | {}",
+        "- {} ({}/{}): {}",
         note.title, note.scope, note.source, note.body
       )
     })
@@ -3938,6 +3938,26 @@ mod tests {
     assert!(observation.text.contains("[observation compacted"));
     assert!(observation.text.ends_with("TAIL"));
     assert!(observation.text.chars().count() <= observation.budget_char_count);
+  }
+
+  #[test]
+  fn context_prompt_uses_compact_local_model_header() {
+    let context_pack = ContextPack {
+      notes: vec![],
+      context_window_tokens: 4096,
+      source_note_count: 0,
+      candidate_note_count: 0,
+      omitted_note_count: 0,
+      truncated_note_count: 0,
+      estimated_char_count: 0,
+      budget_char_count: 1228,
+    };
+
+    let prompt = format_context_prompt(&context_pack);
+
+    assert!(prompt.starts_with("Context: mode=empty"));
+    assert!(prompt.contains("window=4096t"));
+    assert!(!prompt.contains("stored note(s)"));
   }
 
   #[test]
