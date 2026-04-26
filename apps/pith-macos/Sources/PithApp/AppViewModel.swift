@@ -46,6 +46,7 @@ final class AppViewModel: ObservableObject {
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
   private var lastRuntimeFailureDetail: String?
+  private var workspaceSearchRequestID: UUID?
   private var modelDownloadTask: Task<Void, Never>?
   private var modelDownloadTransfer: ModelDownloadTransfer?
   private var modelDownloadResumeData: Data?
@@ -113,6 +114,7 @@ final class AppViewModel: ObservableObject {
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.lastRuntimeFailureDetail = nil
+    self.workspaceSearchRequestID = nil
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
     self.modelDownloadResumeData = pausedDownload?.resumeData
@@ -874,10 +876,19 @@ final class AppViewModel: ObservableObject {
     }
 
     isWorkspaceSearching = true
+    let requestID = UUID()
+    workspaceSearchRequestID = requestID
     workspaceSearchStatus = "Searching for \"\(query)\"..."
     Task {
       do {
         let matches = try await runtimeBridge.searchWorkspace(query: query)
+        guard workspaceSearchRequestID == requestID else {
+          return
+        }
+        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query else {
+          finishChangedWorkspaceSearch()
+          return
+        }
         workspaceSearchResults = matches.enumerated().map { index, match in
           WorkspaceSearchMatchSummary(
             id: "\(match.relativePath):\(match.lineNumber):\(index)",
@@ -890,9 +901,17 @@ final class AppViewModel: ObservableObject {
           ? "No matches found for \"\(query)\"."
           : "Found \(matches.count) match(es) for \"\(query)\"."
       } catch {
+        guard workspaceSearchRequestID == requestID else {
+          return
+        }
+        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query else {
+          finishChangedWorkspaceSearch()
+          return
+        }
         workspaceSearchResults = []
         workspaceSearchStatus = "Workspace search failed: \(error.localizedDescription)"
       }
+      workspaceSearchRequestID = nil
       isWorkspaceSearching = false
     }
   }
@@ -1132,6 +1151,9 @@ final class AppViewModel: ObservableObject {
           preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
         )
       } catch {
+        if draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+          draftMessage = message
+        }
         appendEntry(
           to: threadID,
           TimelineEntry(
@@ -2950,10 +2972,18 @@ final class AppViewModel: ObservableObject {
   }
 
   private func resetWorkspaceSearch() {
+    workspaceSearchRequestID = nil
     workspaceSearchResults = []
     workspaceSearchStatus = workspace == nil
       ? "Open a workspace before searching."
       : "Search the open workspace by text."
+    isWorkspaceSearching = false
+  }
+
+  private func finishChangedWorkspaceSearch() {
+    workspaceSearchResults = []
+    workspaceSearchStatus = "Query changed. Press Return to search again."
+    workspaceSearchRequestID = nil
     isWorkspaceSearching = false
   }
 
