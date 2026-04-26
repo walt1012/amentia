@@ -240,6 +240,11 @@ final class RuntimeBridge {
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
 
+  private struct ActiveLocalModelSelection {
+    let manifestPath: String
+    let modelPath: String
+  }
+
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
     if process == nil || process?.isRunning != true {
       resetProcessState()
@@ -704,7 +709,7 @@ final class RuntimeBridge {
   }
 
   func activeLocalModelPath() -> String? {
-    UserDefaults.standard.string(forKey: Self.activeModelPathKey)
+    activeLocalModelSelection()?.modelPath
   }
 
   func configureActiveLocalModel(manifestPath: String, modelPath: String) {
@@ -1063,16 +1068,33 @@ final class RuntimeBridge {
     var environment = ProcessInfo.processInfo.environment
     environment["PITH_DATA_DIR"] = appSupportStorageDirectory().path
     environment["PITH_LOCAL_PLUGIN_DIR"] = appSupportPluginDirectory().path
-    if let manifestPath = UserDefaults.standard.string(forKey: Self.activeModelManifestPathKey),
-       !manifestPath.isEmpty,
-       let modelPath = UserDefaults.standard.string(forKey: Self.activeModelPathKey),
-       !modelPath.isEmpty
-    {
-      environment["PITH_MODEL_PACK_MANIFEST"] = manifestPath
-      environment["PITH_MODEL_PATH"] = modelPath
-      environment["PITH_LFM_MODEL_PATH"] = modelPath
+    if let activeModel = activeLocalModelSelection() {
+      environment["PITH_MODEL_PACK_MANIFEST"] = activeModel.manifestPath
+      environment["PITH_MODEL_PATH"] = activeModel.modelPath
+      environment["PITH_LFM_MODEL_PATH"] = activeModel.modelPath
     }
     return environment
+  }
+
+  private func activeLocalModelSelection() -> ActiveLocalModelSelection? {
+    let defaults = UserDefaults.standard
+    guard let manifestPath = defaults.string(forKey: Self.activeModelManifestPathKey),
+          !manifestPath.isEmpty,
+          let modelPath = defaults.string(forKey: Self.activeModelPathKey),
+          !modelPath.isEmpty
+    else {
+      return nil
+    }
+
+    let manager = FileManager.default
+    guard manager.fileExists(atPath: manifestPath),
+          manager.fileExists(atPath: modelPath)
+    else {
+      clearActiveLocalModel()
+      return nil
+    }
+
+    return ActiveLocalModelSelection(manifestPath: manifestPath, modelPath: modelPath)
   }
 
   private func appSupportStorageDirectory() -> URL {

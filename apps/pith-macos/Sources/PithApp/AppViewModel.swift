@@ -209,16 +209,19 @@ final class AppViewModel: ObservableObject {
         } else {
           resetToWelcomeThread()
         }
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
-            title: "Runtime Connected",
-            body: "Connected to \(session.serverName) \(session.serverVersion) over stdio.",
-            attributes: [:]
+        let shouldAnnotateSetupLaunch = shouldAnnotateLaunchWithSetupEvents()
+        if shouldAnnotateSetupLaunch {
+          appendEntry(
+            to: selectedThreadID,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .system,
+              title: "Runtime Connected",
+              body: "Connected to \(session.serverName) \(session.serverVersion) over stdio.",
+              attributes: [:]
+            )
           )
-        )
+        }
         if restoredWorkspace, let currentWorkspace {
           appendEntry(
             to: selectedThreadID,
@@ -261,22 +264,24 @@ final class AppViewModel: ObservableObject {
         }
         if let runtimeModel = modelHealth {
           if isLocalModelReady() {
-            appendEntry(
-              to: selectedThreadID,
-              TimelineEntry(
-                id: UUID().uuidString,
-                kind: .system,
-                title: "Local Model Ready",
-                body:
-                  "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
-                attributes: [
-                  "modelId": runtimeModel.packID,
-                  "modelBackend": runtimeModel.backend,
-                  "modelStatus": runtimeModel.status,
-                  "modelSource": runtimeModel.source,
-                ]
+            if shouldAnnotateSetupLaunch {
+              appendEntry(
+                to: selectedThreadID,
+                TimelineEntry(
+                  id: UUID().uuidString,
+                  kind: .system,
+                  title: "Local Model Ready",
+                  body:
+                    "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
+                  attributes: [
+                    "modelId": runtimeModel.packID,
+                    "modelBackend": runtimeModel.backend,
+                    "modelStatus": runtimeModel.status,
+                    "modelSource": runtimeModel.source,
+                  ]
+                )
               )
-            )
+            }
           } else {
             appendEntry(
               to: selectedThreadID,
@@ -2621,6 +2626,10 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  private func shouldAnnotateLaunchWithSetupEvents() -> Bool {
+    setupReadyStepCount() < setupStepCount || selectedThreadIsWaitingForFirstMessage()
+  }
+
   private func selectedSetupModel() -> LocalModelSummary? {
     localModels.first(where: { $0.id == selectedSetupModelID })
       ?? localModels.first(where: { $0.id == LocalModelCatalog.defaultFirstUseModelID })
@@ -2639,6 +2648,7 @@ final class AppViewModel: ObservableObject {
     guard setupReadyStepCount() == setupStepCount,
           let threadID = selectedThreadID,
           !threadID.hasPrefix("local-"),
+          selectedThreadIsWaitingForFirstMessage(),
           !announcedSetupCompleteThreadIDs.contains(threadID)
     else {
       return
