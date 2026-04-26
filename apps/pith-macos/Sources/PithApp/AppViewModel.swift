@@ -1110,6 +1110,7 @@ final class AppViewModel: ObservableObject {
     guard runtimeState == .ready,
           workspace != nil,
           isLocalModelReady(),
+          hasRuntimeThreadSelection(),
           !message.isEmpty,
           let threadID = selectedThreadID,
           !threadID.hasPrefix("local-"),
