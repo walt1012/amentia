@@ -277,7 +277,7 @@ impl LocalModelRuntime {
   pub fn bootstrap_pack_metadata(&self) -> Result<ModelBootstrap> {
     let target_manifest_path = suggested_manifest_install_path();
     let resolution = resolve_bootstrap_manifest(&target_manifest_path)
-      .context("failed to locate a bundled model-pack.json for bootstrap")?;
+      .context("failed to locate a default model-pack.json for bootstrap")?;
     let target_directory = target_manifest_path
       .parent()
       .context("suggested manifest path has no parent directory")?;
@@ -390,14 +390,14 @@ fn resolve_manifest() -> Option<ManifestResolution> {
         .join("builtin")
         .join("lfm2.5-350m")
         .join("model-pack.json"),
-      "bundle-manifest".to_string(),
+      "default-manifest".to_string(),
     ));
     candidates.push((
       current_dir
         .join("model-packs")
         .join("lfm2.5-350m")
         .join("model-pack.json"),
-      "bundle-manifest".to_string(),
+      "default-manifest".to_string(),
     ));
   }
 
@@ -446,7 +446,7 @@ fn resolve_bootstrap_manifest(target_manifest_path: &Path) -> Option<ManifestRes
         return Some(ManifestResolution {
           manifest,
           manifest_path: path,
-          source: "bundle-manifest".to_string(),
+          source: "default-manifest".to_string(),
         });
       }
     }
@@ -1055,7 +1055,7 @@ mod tests {
     .expect("manifest");
     fs::write(
       source_pack_root.join("README.md"),
-      "Built-in model pack metadata",
+      "Default model pack metadata",
     )
     .expect("readme");
 

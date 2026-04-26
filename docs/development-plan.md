@@ -499,11 +499,11 @@ It is not sufficient as the final long-term answer for strong coding quality acr
 
 Phase 1 should use `LFM2.5-350M` as:
 
-- the mandatory built-in model
+- the default first-use download
 - the orchestration baseline
-- the always-available offline baseline
+- the offline baseline after first setup
 
-The architecture must also support optional future local packs for stronger coding performance without violating the requirement that the product ships with a built-in local model.
+The architecture must also support optional future local packs for stronger coding performance without violating the requirement that the first-use path stays fully local after the selected model is downloaded.
 
 ### 12.3 Backend Order
 
@@ -1081,7 +1081,7 @@ Measure on actual Intel Mac hardware:
 
 - successful CI
 - smoke test on Intel Mac
-- bundled model presence verified
+- first-use model download and activation verified
 - plugin bundle presence verified
 - migration test for existing local data
 

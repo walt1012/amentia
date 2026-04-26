@@ -17,7 +17,16 @@ enum LocalModelStatusPresenter {
 
   static func statusSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Launch the runtime to inspect local model health."
+      switch snapshot.runtimeState {
+      case .disconnected:
+        return "Launch the runtime to inspect local model setup."
+      case .launching:
+        return "Checking local model setup..."
+      case .failed:
+        return "Relaunch the runtime to recover local model setup."
+      case .ready:
+        return "Choose and download one local model to continue."
+      }
     }
 
     return "\(modelHealth.backend) | \(modelHealth.status)"
@@ -29,7 +38,15 @@ enum LocalModelStatusPresenter {
 
   static func detailSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Pith will use the built-in local model path after the runtime connects."
+      if let model = snapshot.selectedSetupModel {
+        if model.downloaded {
+          return "Pith will use \(model.displayName) after it is selected."
+        }
+
+        return "Pith will use \(model.displayName) after it is downloaded and selected."
+      }
+
+      return "Pith needs one downloaded GGUF model selected before it can answer locally."
     }
 
     return modelHealth.detail

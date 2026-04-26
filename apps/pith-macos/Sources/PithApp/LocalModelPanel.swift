@@ -188,11 +188,13 @@ private struct ModelDiagnosticsPanel: View {
           viewModel.revealSuggestedModelDirectory()
         }
         .buttonStyle(.bordered)
+        .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
         Button("Reveal Binary Folder") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)
+        .disabled(!viewModel.canRevealSuggestedBinaryDirectory())
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)

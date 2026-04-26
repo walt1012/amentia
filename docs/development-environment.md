@@ -75,7 +75,7 @@ The resolved model file path then checks:
 5. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
 6. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
 
-The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M-Q4_K_M.gguf` file should not be committed to git history. It should live in the local data directory, a release bundle, or another local install path. The macOS app exposes the manifest `download_url` as a one-click local model download into the suggested app data path.
+The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M-Q4_K_M.gguf` file should not be committed to git history. The macOS app exposes the manifest `download_url` as a one-click local model download into the suggested app data path, while advanced local installs can still point `PITH_MODEL_PATH` at another local GGUF file.
 
 The macOS Local Model panel also includes a small local model manager. It keeps a curated list of lightweight GGUF models, downloads each file into `PITH_DATA_DIR/models`, monitors which recommended models are present on disk, and can activate a downloaded model by writing a local `model-pack.json` beside the GGUF file. Activating a model stores the selected manifest and model paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and `PITH_MODEL_PATH` for the runtime, and relaunches the local runtime so health checks report the selected model.
 

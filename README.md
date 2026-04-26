@@ -60,14 +60,14 @@ Detailed milestone scope and implementation history live in [docs/development-pl
 Model packaging note:
 
 - the repository tracks model pack manifests and small metadata
-- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file should live in a local data directory or release bundle, not git history
+- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file is downloaded by the app into local data storage, not committed to git history
 
 ## Planned Runtime Shape
 
 - Native macOS shell in `SwiftUI`
 - Local runtime in `Rust`
 - JSON-RPC style communication over `stdio`
-- Local model runtime with `LFM2.5-350M` as the default first-use model option
+- Local model runtime with `LFM2.5-350M` as the default downloadable first-use model option
 
 ## Development Notes
 

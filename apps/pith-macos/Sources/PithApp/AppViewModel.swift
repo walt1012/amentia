@@ -1872,11 +1872,19 @@ final class AppViewModel: ObservableObject {
     )
   }
 
+  func canRevealSuggestedModelDirectory() -> Bool {
+    hasSuggestedPath(metricKey: "suggestedModelPath")
+  }
+
   func revealSuggestedBinaryDirectory() {
     revealSuggestedPath(
       metricKey: "suggestedBinaryPath",
       successDetail: "Opened the suggested llama.cpp binary folder."
     )
+  }
+
+  func canRevealSuggestedBinaryDirectory() -> Bool {
+    hasSuggestedPath(metricKey: "suggestedBinaryPath")
   }
 
   func canDownloadLocalModel() -> Bool {
@@ -2900,6 +2908,14 @@ final class AppViewModel: ObservableObject {
     } else {
       runtimeDetail = "Failed to open \(directoryURL.path)"
     }
+  }
+
+  private func hasSuggestedPath(metricKey: String) -> Bool {
+    guard let value = modelHealth?.metrics[metricKey] else {
+      return false
+    }
+
+    return !value.isEmpty
   }
 
   private func downloadModelFile(
