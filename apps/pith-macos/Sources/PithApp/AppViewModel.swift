@@ -479,10 +479,6 @@ final class AppViewModel: ObservableObject {
     InspectorSessionPresenter.metaSummary(inspectorSessionSnapshot())
   }
 
-  func shouldShowModelSetupCallout() -> Bool {
-    runtimeState == .ready && !isLocalModelReady()
-  }
-
   func shouldShowSetupCallout() -> Bool {
     runtimeState == .ready
       && (!isLocalModelReady() || workspace == nil || !hasRuntimeThreadSelection())
