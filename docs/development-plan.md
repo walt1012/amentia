@@ -531,7 +531,7 @@ Reasoning:
 
 ### 12.5 Model Role Abstraction
 
-Even if all roles use the same built-in model initially, the runtime should support separate logical roles:
+Even if all roles use the same selected local model initially, the runtime should support separate logical roles:
 
 - `default`
 - `planner`
@@ -998,8 +998,8 @@ Recommended implementation order:
 ### 21.2 Inference
 
 - integrate `llama.cpp`
-- prepare local `LFM2.5-350M` model pack metadata and bootstrap flow
-- support release-bundled or downloaded GGUF delivery without committing weights to git
+- prepare local `LFM2.5-350M` catalog metadata and first-use download flow
+- support app-downloaded GGUF delivery without committing weights to git
 - implement streaming token delivery
 - implement cancellation
 - expose model health and metrics

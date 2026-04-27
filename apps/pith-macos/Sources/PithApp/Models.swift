@@ -41,6 +41,7 @@ struct LocalModelSummary: Identifiable, Hashable {
   let downloadURL: String
   let homepage: String
   let sizeBytes: Int64
+  let sha256: String?
   let contextSize: Int
   let maxOutputTokens: Int
   let license: String

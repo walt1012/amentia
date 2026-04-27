@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 struct ModelDownloadProgress: Hashable {
@@ -21,6 +22,8 @@ struct PersistedModelDownload {
 enum LocalModelCatalog {
   static let defaultFirstUseModelID = "lfm2.5-350m"
 
+  private static let ggufMagic = Data([0x47, 0x47, 0x55, 0x46])
+  private static let minimumModelBytes: Int64 = 64 * 1024 * 1024
   private static let pausedDownloadIDKey = "pith.pausedModelDownloadID"
   private static let pausedDownloadBytesReceivedKey = "pith.pausedModelDownloadBytesReceived"
   private static let pausedDownloadTotalBytesKey = "pith.pausedModelDownloadTotalBytes"
@@ -37,7 +40,7 @@ enum LocalModelCatalog {
       let normalizedInstallPath = normalizedPath(installPath)
       let localSizeBytes = localFileSize(at: installPath)
       let downloaded = manager.fileExists(atPath: installPath)
-        && (localSizeBytes ?? 0) > 0
+        && isPlausibleModelFile(at: installPath, localSizeBytes: localSizeBytes, item: item)
       return LocalModelSummary(
         id: item.id,
         displayName: item.displayName,
@@ -46,6 +49,7 @@ enum LocalModelCatalog {
         downloadURL: item.downloadURL,
         homepage: item.homepage,
         sizeBytes: item.sizeBytes,
+        sha256: item.sha256,
         contextSize: item.contextSize,
         maxOutputTokens: item.maxOutputTokens,
         license: item.license,
@@ -73,6 +77,7 @@ enum LocalModelCatalog {
       license: model.license,
       homepage: model.homepage,
       downloadURL: model.downloadURL,
+      sha256: model.sha256,
       sizeBytes: model.sizeBytes
     )
     let encoder = JSONEncoder()
@@ -84,6 +89,24 @@ enum LocalModelCatalog {
     )
     try data.write(to: manifestURL, options: .atomic)
     return manifestURL.path
+  }
+
+  static func validateDownloadedModel(_ model: LocalModelSummary) throws {
+    let fileURL = URL(fileURLWithPath: model.installPath)
+    let size = try localFileSizeOrThrow(at: fileURL)
+    try validateModelSize(size, displayName: model.displayName, expectedSizeBytes: model.sizeBytes)
+    try validateGGUFMagic(at: fileURL, displayName: model.displayName)
+
+    if let expectedSHA256 = model.sha256, !expectedSHA256.isEmpty {
+      let actualSHA256 = try sha256Hex(at: fileURL)
+      guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+        throw LocalModelIntegrityError.checksumMismatch(
+          displayName: model.displayName,
+          expected: expectedSHA256,
+          actual: actualSHA256
+        )
+      }
+    }
   }
 
   static func loadPausedDownload(matching localModels: [LocalModelSummary]) -> PersistedModelDownload? {
@@ -176,6 +199,82 @@ enum LocalModelCatalog {
     return size.int64Value
   }
 
+  private static func localFileSizeOrThrow(at fileURL: URL) throws -> Int64 {
+    let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+    guard let size = attributes[.size] as? NSNumber else {
+      throw LocalModelIntegrityError.missingSize(path: fileURL.path)
+    }
+
+    return size.int64Value
+  }
+
+  private static func isPlausibleModelFile(
+    at path: String,
+    localSizeBytes: Int64?,
+    item: LocalModelCatalogItem
+  ) -> Bool {
+    guard let localSizeBytes else {
+      return false
+    }
+
+    do {
+      try validateModelSize(
+        localSizeBytes,
+        displayName: item.displayName,
+        expectedSizeBytes: item.sizeBytes
+      )
+      try validateGGUFMagic(at: URL(fileURLWithPath: path), displayName: item.displayName)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private static func validateModelSize(
+    _ localSizeBytes: Int64,
+    displayName: String,
+    expectedSizeBytes: Int64
+  ) throws {
+    let minimumBytes = max(minimumModelBytes, expectedSizeBytes * 9 / 10)
+    guard localSizeBytes >= minimumBytes else {
+      throw LocalModelIntegrityError.sizeTooSmall(
+        displayName: displayName,
+        expectedMinimumBytes: minimumBytes,
+        actualBytes: localSizeBytes
+      )
+    }
+  }
+
+  private static func validateGGUFMagic(at fileURL: URL, displayName: String) throws {
+    let handle = try FileHandle(forReadingFrom: fileURL)
+    defer {
+      try? handle.close()
+    }
+
+    let magic = try handle.read(upToCount: ggufMagic.count) ?? Data()
+    guard magic == ggufMagic else {
+      throw LocalModelIntegrityError.invalidMagic(displayName: displayName)
+    }
+  }
+
+  private static func sha256Hex(at fileURL: URL) throws -> String {
+    let handle = try FileHandle(forReadingFrom: fileURL)
+    defer {
+      try? handle.close()
+    }
+
+    var hasher = SHA256()
+    while true {
+      let chunk = try handle.read(upToCount: 1024 * 1024) ?? Data()
+      if chunk.isEmpty {
+        break
+      }
+      hasher.update(data: chunk)
+    }
+
+    return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+  }
+
   private static func pausedDownloadResumeDataURL() -> URL {
     let baseDirectory =
       FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -200,7 +299,8 @@ enum LocalModelCatalog {
         fileName: "LFM2.5-350M-Q4_K_M.gguf",
         downloadURL: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
         homepage: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",
-        sizeBytes: 229_312_224,
+        sizeBytes: 267_000_000,
+        sha256: "19d7327a9cb6001bf723563f7098299e9c66ed105c1cb45b960e5987cb1cb9f6",
         contextSize: 4096,
         maxOutputTokens: 160,
         license: "lfm1.0",
@@ -214,7 +314,8 @@ enum LocalModelCatalog {
         fileName: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
         downloadURL: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
         homepage: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
-        sizeBytes: 491_000_000,
+        sizeBytes: 397_000_000,
+        sha256: "36515e0455aff5a1f5b7685d4c3e59e5bf112c3666aaae9f249b4788289d5a4b",
         contextSize: 4096,
         maxOutputTokens: 192,
         license: "apache-2.0",
@@ -228,7 +329,8 @@ enum LocalModelCatalog {
         fileName: "qwen2.5-0.5b-instruct-q4_k_m.gguf",
         downloadURL: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
         homepage: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF",
-        sizeBytes: 491_000_000,
+        sizeBytes: 397_000_000,
+        sha256: "a3f55564e8ab2a0428de0bdfccf517f6e37dd4f7f336f62ee49bc2f45968f329",
         contextSize: 4096,
         maxOutputTokens: 192,
         license: "apache-2.0",
@@ -243,6 +345,7 @@ enum LocalModelCatalog {
         downloadURL: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct.Q4_K_M.gguf",
         homepage: "https://huggingface.co/QuantFactory/SmolLM2-360M-Instruct-GGUF",
         sizeBytes: 271_000_000,
+        sha256: nil,
         contextSize: 4096,
         maxOutputTokens: 160,
         license: "apache-2.0",
@@ -261,6 +364,7 @@ private struct LocalModelCatalogItem {
   let downloadURL: String
   let homepage: String
   let sizeBytes: Int64
+  let sha256: String?
   let contextSize: Int
   let maxOutputTokens: Int
   let license: String
@@ -286,6 +390,7 @@ private struct LocalModelPackManifest: Encodable {
   let license: String
   let homepage: String
   let downloadURL: String
+  let sha256: String?
   let sizeBytes: Int64
 
   enum CodingKeys: String, CodingKey {
@@ -298,6 +403,28 @@ private struct LocalModelPackManifest: Encodable {
     case license
     case homepage
     case downloadURL = "download_url"
+    case sha256
     case sizeBytes = "size_bytes"
+  }
+}
+
+private enum LocalModelIntegrityError: LocalizedError {
+  case missingSize(path: String)
+  case sizeTooSmall(displayName: String, expectedMinimumBytes: Int64, actualBytes: Int64)
+  case invalidMagic(displayName: String)
+  case checksumMismatch(displayName: String, expected: String, actual: String)
+
+  var errorDescription: String? {
+    switch self {
+    case .missingSize(let path):
+      return "Could not inspect local model size at \(path)."
+    case .sizeTooSmall(let displayName, let expectedMinimumBytes, let actualBytes):
+      return
+        "\(displayName) is incomplete. Expected at least \(expectedMinimumBytes) bytes, found \(actualBytes)."
+    case .invalidMagic(let displayName):
+      return "\(displayName) is not a valid GGUF file."
+    case .checksumMismatch(let displayName, let expected, let actual):
+      return "\(displayName) checksum mismatch. Expected \(expected), found \(actual)."
+    }
   }
 }

@@ -1783,6 +1783,12 @@ final class AppViewModel: ObservableObject {
           expectedBytes: model.sizeBytes,
           to: URL(fileURLWithPath: model.installPath)
         )
+        do {
+          try LocalModelCatalog.validateDownloadedModel(model)
+        } catch {
+          removeIncompleteModelFile(modelID: model.id)
+          throw error
+        }
 
         let canActivateDownloadedModel = activeTurnID == nil
         let manifestPath: String?
@@ -1826,6 +1832,15 @@ final class AppViewModel: ObservableObject {
 
     guard model.downloaded else {
       runtimeDetail = "Download \(model.displayName) before using it."
+      return
+    }
+
+    do {
+      try LocalModelCatalog.validateDownloadedModel(model)
+    } catch {
+      removeIncompleteModelFile(modelID: model.id)
+      refreshLocalModelCatalog()
+      runtimeDetail = "Model integrity check failed: \(error.localizedDescription)"
       return
     }
 

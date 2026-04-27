@@ -237,6 +237,7 @@ final class RuntimeBridge {
   private let stateQueue = DispatchQueue(label: "pith.runtime.bridge.state")
   private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
   private var readerTask: Task<Void, Never>?
+  private var errorReaderTask: Task<Void, Never>?
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
 
@@ -944,6 +945,7 @@ final class RuntimeBridge {
     inputHandle = stdinPipe.fileHandleForWriting
     outputHandle = stdoutPipe.fileHandleForReading
     startReaderLoop(with: stdoutPipe.fileHandleForReading, processIdentifier: processIdentifier)
+    startErrorReaderLoop(with: stderrPipe.fileHandleForReading)
   }
 
   private func startReaderLoop(with handle: FileHandle, processIdentifier: ObjectIdentifier) {
@@ -1007,6 +1009,32 @@ final class RuntimeBridge {
     }
   }
 
+  private func startErrorReaderLoop(with handle: FileHandle) {
+    errorReaderTask?.cancel()
+    errorReaderTask = Task.detached(priority: .utility) {
+      while !Task.isCancelled {
+        do {
+          let chunk = try handle.read(upToCount: 4096) ?? Data()
+          if chunk.isEmpty {
+            return
+          }
+
+          #if DEBUG
+            if let rawMessage = String(data: chunk, encoding: .utf8) {
+              let message = rawMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+              guard !message.isEmpty else {
+                continue
+              }
+              print("[pith-runtime stderr] \(message)")
+            }
+          #endif
+        } catch {
+          return
+        }
+      }
+    }
+  }
+
   private func failPendingResponses(with error: Error) {
     let continuations = stateQueue.sync {
       let continuations = Array(pendingResponses.values)
@@ -1031,6 +1059,8 @@ final class RuntimeBridge {
   private func resetProcessState() {
     readerTask?.cancel()
     readerTask = nil
+    errorReaderTask?.cancel()
+    errorReaderTask = nil
 
     if let process, process.isRunning {
       process.terminationHandler = nil

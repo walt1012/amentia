@@ -1,6 +1,9 @@
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -43,7 +46,11 @@ pub struct ShellCommandResult {
   pub stdout: String,
   pub stderr: String,
   pub was_truncated: bool,
+  pub timed_out: bool,
 }
+
+const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
+const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub fn list_directory(
   workspace_root: &Path,
@@ -172,27 +179,73 @@ pub fn run_shell(
     bail!("shell command must not be empty");
   }
 
-  let output = build_shell_command(trimmed_command)
-    .current_dir(&workspace_root)
-    .output()
-    .with_context(|| {
-      format!(
-        "failed to run shell command in {}",
-        workspace_root.display()
-      )
-    })?;
+  let output = run_shell_with_timeout(trimmed_command, &workspace_root).with_context(|| {
+    format!(
+      "failed to run shell command in {}",
+      workspace_root.display()
+    )
+  })?;
 
   let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-  let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+  let mut stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+  if output.timed_out {
+    let timeout_message = format!(
+      "Command timed out after {} seconds and was terminated.",
+      SHELL_COMMAND_TIMEOUT.as_secs()
+    );
+    if stderr.trim().is_empty() {
+      stderr = timeout_message;
+    } else {
+      stderr = format!("{stderr}\n{timeout_message}");
+    }
+  }
   let combined_len = stdout.len() + stderr.len();
   let was_truncated = combined_len > max_output_bytes * 2;
 
   Ok(ShellCommandResult {
     command: trimmed_command.to_string(),
-    exit_code: output.status.code().unwrap_or(-1),
+    exit_code: output.exit_code,
     stdout: truncate_output(&stdout, max_output_bytes),
     stderr: truncate_output(&stderr, max_output_bytes),
     was_truncated,
+    timed_out: output.timed_out,
+  })
+}
+
+fn run_shell_with_timeout(command: &str, workspace_root: &Path) -> Result<ShellOutput> {
+  let mut child = build_shell_command(command)
+    .current_dir(workspace_root)
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?;
+  let stdout_reader = child.stdout.take().map(read_pipe_in_background);
+  let stderr_reader = child.stderr.take().map(read_pipe_in_background);
+  let started_at = Instant::now();
+  let mut timed_out = false;
+
+  let status = loop {
+    if let Some(status) = child.try_wait()? {
+      break status;
+    }
+
+    if started_at.elapsed() >= SHELL_COMMAND_TIMEOUT {
+      timed_out = true;
+      terminate_shell_child(&mut child);
+      break child.wait()?;
+    }
+
+    thread::sleep(SHELL_POLL_INTERVAL);
+  };
+
+  Ok(ShellOutput {
+    exit_code: if timed_out {
+      -1
+    } else {
+      status.code().unwrap_or(-1)
+    },
+    stdout: join_pipe_reader(stdout_reader),
+    stderr: join_pipe_reader(stderr_reader),
+    timed_out,
   })
 }
 
@@ -366,6 +419,57 @@ fn sanitize_relative_path(relative_path: &str) -> Result<String> {
   Ok(sanitized.to_string_lossy().replace('\\', "/"))
 }
 
+struct ShellOutput {
+  exit_code: i32,
+  stdout: Vec<u8>,
+  stderr: Vec<u8>,
+  timed_out: bool,
+}
+
+fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
+where
+  R: Read + Send + 'static,
+{
+  thread::spawn(move || {
+    let mut bytes = vec![];
+    let _ = reader.read_to_end(&mut bytes);
+    bytes
+  })
+}
+
+fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
+  reader
+    .and_then(|handle| handle.join().ok())
+    .unwrap_or_default()
+}
+
+fn terminate_shell_child(child: &mut Child) {
+  #[cfg(unix)]
+  {
+    terminate_unix_process_group(child);
+    return;
+  }
+
+  #[cfg(not(unix))]
+  {
+    let _ = child.kill();
+  }
+}
+
+#[cfg(unix)]
+fn terminate_unix_process_group(child: &mut Child) {
+  let process_group_id = -(child.id() as i32);
+  unsafe {
+    kill(process_group_id, SIGTERM);
+  }
+  thread::sleep(Duration::from_millis(200));
+  if matches!(child.try_wait(), Ok(None)) {
+    unsafe {
+      kill(process_group_id, SIGKILL);
+    }
+  }
+}
+
 #[cfg(target_family = "windows")]
 fn build_shell_command(command: &str) -> Command {
   let mut process = Command::new("powershell");
@@ -375,9 +479,31 @@ fn build_shell_command(command: &str) -> Command {
 
 #[cfg(not(target_family = "windows"))]
 fn build_shell_command(command: &str) -> Command {
+  use std::os::unix::process::CommandExt;
+
   let mut process = Command::new("sh");
   process.args(["-lc", command]);
+  unsafe {
+    process.pre_exec(|| {
+      if unsafe { setpgid(0, 0) } == 0 {
+        Ok(())
+      } else {
+        Err(std::io::Error::last_os_error())
+      }
+    });
+  }
   process
+}
+
+#[cfg(unix)]
+const SIGTERM: i32 = 15;
+#[cfg(unix)]
+const SIGKILL: i32 = 9;
+
+#[cfg(unix)]
+extern "C" {
+  fn kill(pid: i32, sig: i32) -> i32;
+  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 fn truncate_output(output: &str, max_output_bytes: usize) -> String {

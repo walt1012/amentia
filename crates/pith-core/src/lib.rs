@@ -3486,10 +3486,15 @@ fn format_shell_result(result: &ShellCommandResult) -> String {
   } else {
     ""
   };
+  let timeout_note = if result.timed_out {
+    "\n\n[command timed out]"
+  } else {
+    ""
+  };
 
   format!(
-    "Command: {}\nExit Code: {}\n\nstdout:\n{}\n\nstderr:\n{}{}",
-    result.command, result.exit_code, stdout, stderr, truncation_note
+    "Command: {}\nExit Code: {}\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
+    result.command, result.exit_code, stdout, stderr, truncation_note, timeout_note
   )
 }
 

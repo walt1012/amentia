@@ -331,7 +331,11 @@ def main() -> int:
     assert model_health["result"]["metrics"]["downloadUrl"].startswith(
       "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
     )
-    assert model_health["result"]["metrics"]["sizeBytes"] == "229312224"
+    assert (
+      model_health["result"]["metrics"]["sha256"]
+      == "19d7327a9cb6001bf723563f7098299e9c66ed105c1cb45b960e5987cb1cb9f6"
+    )
+    assert model_health["result"]["metrics"]["sizeBytes"] == "267000000"
     assert model_health["result"]["metrics"]["readiness"] in {
       "ready",
       "manifest_only",
