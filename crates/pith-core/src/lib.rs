@@ -14,9 +14,6 @@ use local_responses::{
   format_shell_result, summarize_denied_approval, summarize_directory_result,
   summarize_file_result, summarize_search_result, summarize_shell_result,
 };
-use plugin_permissions::{
-  build_permission_denied_items, granted_permission_sources, permission_is_granted,
-};
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{
@@ -40,6 +37,9 @@ use pith_protocol::{
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, write_file, ShellCommandResult,
+};
+use plugin_permissions::{
+  build_permission_denied_items, granted_permission_sources, permission_is_granted,
 };
 use protocol_adapters::{
   build_protocol_capability_registry, build_protocol_command_registry,
