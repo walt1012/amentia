@@ -14,9 +14,8 @@ use intent_inference::{
 };
 use local_responses::{
   build_plan_item, format_directory_result, format_file_result, format_search_result,
-  format_shell_result, shell_sandbox_attributes, summarize_denied_approval,
-  summarize_directory_result, summarize_file_result, summarize_search_result,
-  summarize_shell_result,
+  format_shell_result, summarize_denied_approval, summarize_directory_result,
+  summarize_file_result, summarize_search_result, summarize_shell_result,
 };
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
@@ -1216,7 +1215,6 @@ fn execute_turn_request(
           let approval_id = format!("approval-{}", context.next_approval_number);
           context.next_approval_number += 1;
           let sandbox = shell_sandbox_summary(Path::new(&workspace.root_path));
-          let sandbox_state = if sandbox.active { "active" } else { "limited" };
 
           let approval = PendingApproval {
             id: approval_id.clone(),
@@ -1235,18 +1233,20 @@ fn execute_turn_request(
             kind: "approvalRequested".to_string(),
             title: "Approval Requested".to_string(),
             content: format!(
-              "Pith wants to run this shell command in {}:\n{}\n\nSandbox: {} via {} ({})",
-              workspace.display_name, shell_command, sandbox.mode, sandbox.backend, sandbox_state
+              "Pith wants to run this shell command in {}:\n{}\n\n{}",
+              workspace.display_name,
+              shell_command,
+              sandbox.display_line()
             ),
-            attributes: Some(HashMap::from([
-              ("approvalId".to_string(), approval.id.clone()),
-              ("action".to_string(), approval.action.clone()),
-              ("command".to_string(), shell_command),
-              ("sandboxMode".to_string(), sandbox.mode),
-              ("sandboxBackend".to_string(), sandbox.backend),
-              ("sandboxActive".to_string(), sandbox.active.to_string()),
-              ("sandboxDetail".to_string(), sandbox.detail),
-            ])),
+            attributes: Some({
+              let mut attributes = sandbox.attributes();
+              attributes.extend(HashMap::from([
+                ("approvalId".to_string(), approval.id.clone()),
+                ("action".to_string(), approval.action.clone()),
+                ("command".to_string(), shell_command),
+              ]));
+              attributes
+            }),
           });
           items.push(TimelineItem {
             kind: "assistantMessage".to_string(),
@@ -2232,7 +2232,7 @@ fn handle_approval_respond(
               kind: "toolResult".to_string(),
               title: "run_shell result".to_string(),
               content: format_shell_result(&result),
-              attributes: Some(shell_sandbox_attributes(&result)),
+              attributes: Some(result.sandbox.attributes()),
             });
             items.push(TimelineItem {
               kind: "assistantMessage".to_string(),

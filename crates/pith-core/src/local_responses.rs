@@ -281,36 +281,16 @@ pub(crate) fn format_shell_result(result: &ShellCommandResult) -> String {
   } else {
     ""
   };
-  let sandbox_state = if result.sandbox.active {
-    "active"
-  } else {
-    "limited"
-  };
-
   format!(
-    "Command: {}\nExit Code: {}\nSandbox: {} via {} ({})\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
+    "Command: {}\nExit Code: {}\n{}\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
     result.command,
     result.exit_code,
-    result.sandbox.mode,
-    result.sandbox.backend,
-    sandbox_state,
+    result.sandbox.display_line(),
     stdout,
     stderr,
     truncation_note,
     timeout_note
   )
-}
-
-pub(crate) fn shell_sandbox_attributes(result: &ShellCommandResult) -> HashMap<String, String> {
-  HashMap::from([
-    ("sandboxMode".to_string(), result.sandbox.mode.clone()),
-    ("sandboxBackend".to_string(), result.sandbox.backend.clone()),
-    (
-      "sandboxActive".to_string(),
-      result.sandbox.active.to_string(),
-    ),
-    ("sandboxDetail".to_string(), result.sandbox.detail.clone()),
-  ])
 }
 
 pub(crate) fn summarize_shell_result(
@@ -355,7 +335,7 @@ pub(crate) fn summarize_shell_result(
     &context_pack,
     Some(&observation),
   );
-  attributes.extend(shell_sandbox_attributes(result));
+  attributes.extend(result.sandbox.attributes());
 
   (summary, attributes)
 }

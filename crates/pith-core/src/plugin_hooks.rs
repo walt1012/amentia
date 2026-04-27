@@ -4,7 +4,7 @@ use pith_plugin_host::{
   build_hook_registry, PluginCatalogEntry, PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::ShellCommandResult;
+use pith_tools::{ShellCommandResult, ShellSandboxSummary};
 
 #[derive(Debug, Clone)]
 pub(crate) struct PluginHookMemoryCapture {
@@ -12,9 +12,7 @@ pub(crate) struct PluginHookMemoryCapture {
   pub(crate) content: String,
   pub(crate) command: String,
   pub(crate) exit_code: i32,
-  pub(crate) sandbox_mode: String,
-  pub(crate) sandbox_backend: String,
-  pub(crate) sandbox_active: bool,
+  pub(crate) sandbox: ShellSandboxSummary,
   pub(crate) stdout_preview: String,
   pub(crate) stderr_preview: String,
 }
@@ -50,31 +48,25 @@ pub(crate) fn build_shell_completed_hook_items(
         content: content.clone(),
         command: command.to_string(),
         exit_code: result.exit_code,
-        sandbox_mode: result.sandbox.mode.clone(),
-        sandbox_backend: result.sandbox.backend.clone(),
-        sandbox_active: result.sandbox.active,
+        sandbox: result.sandbox.clone(),
         stdout_preview: stdout_preview.clone(),
         stderr_preview: stderr_preview.clone(),
       });
     }
+    let mut attributes = result.sandbox.attributes();
+    attributes.extend(HashMap::from([
+      ("hookId".to_string(), hook.hook_id),
+      ("hookEvent".to_string(), hook.event),
+      ("pluginId".to_string(), hook.plugin_id),
+      ("command".to_string(), command.to_string()),
+      ("exitCode".to_string(), result.exit_code.to_string()),
+      ("sourcePath".to_string(), hook.source_path),
+    ]));
     items.push(TimelineItem {
       kind: "pluginHook".to_string(),
       title: hook.title,
       content,
-      attributes: Some(HashMap::from([
-        ("hookId".to_string(), hook.hook_id),
-        ("hookEvent".to_string(), hook.event),
-        ("pluginId".to_string(), hook.plugin_id),
-        ("command".to_string(), command.to_string()),
-        ("exitCode".to_string(), result.exit_code.to_string()),
-        ("sandboxMode".to_string(), result.sandbox.mode.clone()),
-        ("sandboxBackend".to_string(), result.sandbox.backend.clone()),
-        (
-          "sandboxActive".to_string(),
-          result.sandbox.active.to_string(),
-        ),
-        ("sourcePath".to_string(), hook.source_path),
-      ])),
+      attributes: Some(attributes),
     });
   }
 
@@ -96,13 +88,9 @@ pub(crate) fn build_plugin_hook_memory_body(
     workspace.root_path,
     capture.command,
     capture.exit_code,
-    capture.sandbox_mode,
-    capture.sandbox_backend,
-    if capture.sandbox_active {
-      "active"
-    } else {
-      "limited"
-    },
+    capture.sandbox.mode,
+    capture.sandbox.backend,
+    capture.sandbox.state(),
     capture.stdout_preview,
     capture.stderr_preview,
     capture.content

@@ -790,13 +790,13 @@ private struct TimelineCard: View {
             .clipShape(Capsule())
         }
 
-        if let sandboxLabel {
-          Text(sandboxLabel)
+        if let sandboxBadge {
+          Text(sandboxBadge.label)
             .font(.caption2.weight(.semibold))
-            .foregroundColor(sandboxColor)
+            .foregroundColor(sandboxBadge.tone.color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(sandboxColor.opacity(0.12))
+            .background(sandboxBadge.tone.color.opacity(0.12))
             .clipShape(Capsule())
         }
       }
@@ -969,22 +969,8 @@ private struct TimelineCard: View {
     }
   }
 
-  private var sandboxLabel: String? {
-    guard entry.attributes["sandboxMode"] != nil else {
-      return nil
-    }
-
-    if entry.attributes["sandboxActive"] == "true" {
-      return entry.attributes["sandboxBackend"] == "macosSeatbelt"
-        ? "Native Sandbox"
-        : "Sandbox Active"
-    }
-
-    return "Sandbox Limited"
-  }
-
-  private var sandboxColor: Color {
-    entry.attributes["sandboxActive"] == "true" ? .green : .orange
+  private var sandboxBadge: TimelineSandboxBadgeSummary? {
+    TimelineSandboxBadgePresenter.badge(attributes: entry.attributes)
   }
 
   private func progressLabel() -> String? {

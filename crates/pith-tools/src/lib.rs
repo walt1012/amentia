@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -56,6 +57,34 @@ pub struct ShellSandboxSummary {
   pub backend: String,
   pub active: bool,
   pub detail: String,
+}
+
+impl ShellSandboxSummary {
+  pub fn state(&self) -> &'static str {
+    if self.active {
+      "active"
+    } else {
+      "limited"
+    }
+  }
+
+  pub fn display_line(&self) -> String {
+    format!(
+      "Sandbox: {} via {} ({})",
+      self.mode,
+      self.backend,
+      self.state()
+    )
+  }
+
+  pub fn attributes(&self) -> HashMap<String, String> {
+    HashMap::from([
+      ("sandboxMode".to_string(), self.mode.clone()),
+      ("sandboxBackend".to_string(), self.backend.clone()),
+      ("sandboxActive".to_string(), self.active.to_string()),
+      ("sandboxDetail".to_string(), self.detail.clone()),
+    ])
+  }
 }
 
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
