@@ -12,6 +12,9 @@ pub(crate) struct PluginHookMemoryCapture {
   pub(crate) content: String,
   pub(crate) command: String,
   pub(crate) exit_code: i32,
+  pub(crate) sandbox_mode: String,
+  pub(crate) sandbox_backend: String,
+  pub(crate) sandbox_active: bool,
   pub(crate) stdout_preview: String,
   pub(crate) stderr_preview: String,
 }
@@ -47,6 +50,9 @@ pub(crate) fn build_shell_completed_hook_items(
         content: content.clone(),
         command: command.to_string(),
         exit_code: result.exit_code,
+        sandbox_mode: result.sandbox.mode.clone(),
+        sandbox_backend: result.sandbox.backend.clone(),
+        sandbox_active: result.sandbox.active,
         stdout_preview: stdout_preview.clone(),
         stderr_preview: stderr_preview.clone(),
       });
@@ -61,6 +67,9 @@ pub(crate) fn build_shell_completed_hook_items(
         ("pluginId".to_string(), hook.plugin_id),
         ("command".to_string(), command.to_string()),
         ("exitCode".to_string(), result.exit_code.to_string()),
+        ("sandboxMode".to_string(), result.sandbox.mode.clone()),
+        ("sandboxBackend".to_string(), result.sandbox.backend.clone()),
+        ("sandboxActive".to_string(), result.sandbox.active.to_string()),
         ("sourcePath".to_string(), hook.source_path),
       ])),
     });
@@ -74,7 +83,7 @@ pub(crate) fn build_plugin_hook_memory_body(
   capture: &PluginHookMemoryCapture,
 ) -> String {
   format!(
-    "Plugin: {} ({})\nHook: {} ({})\nEvent: {}\nWorkspace: {} at {}.\nCommand: {}\nExit code: {}\nstdout: {}\nstderr: {}\n\nHook result:\n{}",
+    "Plugin: {} ({})\nHook: {} ({})\nEvent: {}\nWorkspace: {} at {}.\nCommand: {}\nExit code: {}\nSandbox: {} via {} ({})\nstdout: {}\nstderr: {}\n\nHook result:\n{}",
     capture.hook.plugin_display_name,
     capture.hook.plugin_id,
     capture.hook.title,
@@ -84,6 +93,13 @@ pub(crate) fn build_plugin_hook_memory_body(
     workspace.root_path,
     capture.command,
     capture.exit_code,
+    capture.sandbox_mode,
+    capture.sandbox_backend,
+    if capture.sandbox_active {
+      "active"
+    } else {
+      "limited"
+    },
     capture.stdout_preview,
     capture.stderr_preview,
     capture.content

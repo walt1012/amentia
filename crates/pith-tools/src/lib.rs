@@ -47,6 +47,15 @@ pub struct ShellCommandResult {
   pub stderr: String,
   pub was_truncated: bool,
   pub timed_out: bool,
+  pub sandbox: ShellSandboxSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellSandboxSummary {
+  pub mode: String,
+  pub backend: String,
+  pub active: bool,
+  pub detail: String,
 }
 
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
@@ -182,6 +191,7 @@ pub fn run_shell(
   if trimmed_command.is_empty() {
     bail!("shell command must not be empty");
   }
+  let sandbox = shell_sandbox_summary(&workspace_root);
 
   let output = run_shell_with_timeout(trimmed_command, &workspace_root, SHELL_COMMAND_TIMEOUT)
     .with_context(|| {
@@ -214,7 +224,21 @@ pub fn run_shell(
     stderr: truncate_output(&stderr, max_output_bytes),
     was_truncated,
     timed_out: output.timed_out,
+    sandbox,
   })
+}
+
+pub fn shell_sandbox_summary(workspace_root: &Path) -> ShellSandboxSummary {
+  let status = pith_sandbox::native_sandbox_status(
+    &pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root),
+  );
+
+  ShellSandboxSummary {
+    mode: status.mode,
+    backend: status.backend,
+    active: status.active,
+    detail: status.detail,
+  }
 }
 
 fn run_shell_with_timeout(
@@ -625,6 +649,22 @@ mod tests {
 
     assert!(result.timed_out);
     assert_eq!(result.exit_code, -1);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_result_reports_sandbox_summary() {
+    let workspace = unique_temp_workspace("shell-sandbox");
+    fs::create_dir_all(&workspace).expect("workspace");
+
+    let result = run_shell(&workspace, "printf pith", 1024).expect("shell result");
+
+    assert_eq!(result.stdout, "pith");
+    assert_eq!(result.sandbox.mode, "workspaceReadWrite");
+    assert!(!result.sandbox.backend.is_empty());
+    assert!(!result.sandbox.detail.is_empty());
 
     let _ = fs::remove_dir_all(workspace);
   }

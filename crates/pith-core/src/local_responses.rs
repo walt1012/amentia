@@ -281,11 +281,33 @@ pub(crate) fn format_shell_result(result: &ShellCommandResult) -> String {
   } else {
     ""
   };
+  let sandbox_state = if result.sandbox.active {
+    "active"
+  } else {
+    "limited"
+  };
 
   format!(
-    "Command: {}\nExit Code: {}\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
-    result.command, result.exit_code, stdout, stderr, truncation_note, timeout_note
+    "Command: {}\nExit Code: {}\nSandbox: {} via {} ({})\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
+    result.command,
+    result.exit_code,
+    result.sandbox.mode,
+    result.sandbox.backend,
+    sandbox_state,
+    stdout,
+    stderr,
+    truncation_note,
+    timeout_note
   )
+}
+
+pub(crate) fn shell_sandbox_attributes(result: &ShellCommandResult) -> HashMap<String, String> {
+  HashMap::from([
+    ("sandboxMode".to_string(), result.sandbox.mode.clone()),
+    ("sandboxBackend".to_string(), result.sandbox.backend.clone()),
+    ("sandboxActive".to_string(), result.sandbox.active.to_string()),
+    ("sandboxDetail".to_string(), result.sandbox.detail.clone()),
+  ])
 }
 
 pub(crate) fn summarize_shell_result(
@@ -300,15 +322,20 @@ pub(crate) fn summarize_shell_result(
     Some(workspace_name),
     &result.command,
   );
+  let sandbox_summary = if result.sandbox.active {
+    "native sandbox active"
+  } else {
+    "native sandbox limited"
+  };
   let observation_summary = if result.exit_code == 0 {
     format!(
-      "Pith ran `{}` in {} and it finished successfully.",
-      result.command, workspace_name
+      "Pith ran `{}` in {} with {} and it finished successfully.",
+      result.command, workspace_name, sandbox_summary
     )
   } else {
     format!(
-      "Pith ran `{}` in {} and it exited with code {}.",
-      result.command, workspace_name, result.exit_code
+      "Pith ran `{}` in {} with {} and it exited with code {}.",
+      result.command, workspace_name, sandbox_summary, result.exit_code
     )
   };
   let observation = compact_prompt_observation(&format_shell_result(result), &context_pack);
@@ -318,13 +345,16 @@ pub(crate) fn summarize_shell_result(
     observation.text
   );
 
-  generate_local_summary(
+  let (summary, mut attributes) = generate_local_summary(
     model_runtime,
     prompt,
     observation_summary,
     &context_pack,
     Some(&observation),
-  )
+  );
+  attributes.extend(shell_sandbox_attributes(result));
+
+  (summary, attributes)
 }
 
 pub(crate) fn summarize_denied_approval(

@@ -833,10 +833,20 @@ def main() -> int:
     )
     assert shell_approval["result"]["items"][1]["title"] == "run_shell"
     assert "notes.txt" in shell_approval["result"]["items"][2]["content"]
+    assert shell_approval["result"]["items"][2]["attributes"]["sandboxMode"] == "workspaceReadWrite"
+    assert shell_approval["result"]["items"][2]["attributes"]["sandboxBackend"] in {
+      "macosSeatbelt",
+      "processOnly",
+    }
+    assert shell_approval["result"]["items"][2]["attributes"]["sandboxActive"] in {
+      "true",
+      "false",
+    }
     assert any(item["kind"] == "pluginHook" for item in shell_approval["result"]["items"])
     assert any(
       item["title"] == "Record Shell Completion"
       and item["attributes"]["hookEvent"] == "shell.completed"
+      and item["attributes"]["sandboxMode"] == "workspaceReadWrite"
       for item in shell_approval["result"]["items"]
     )
     assert any(

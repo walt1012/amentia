@@ -14,8 +14,9 @@ use intent_inference::{
 };
 use local_responses::{
   build_plan_item, format_directory_result, format_file_result, format_search_result,
-  format_shell_result, summarize_denied_approval, summarize_directory_result,
-  summarize_file_result, summarize_search_result, summarize_shell_result,
+  format_shell_result, shell_sandbox_attributes, summarize_denied_approval,
+  summarize_directory_result, summarize_file_result, summarize_search_result,
+  summarize_shell_result,
 };
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
@@ -2222,7 +2223,7 @@ fn handle_approval_respond(
               kind: "toolResult".to_string(),
               title: "run_shell result".to_string(),
               content: format_shell_result(&result),
-              attributes: None,
+              attributes: Some(shell_sandbox_attributes(&result)),
             });
             items.push(TimelineItem {
               kind: "assistantMessage".to_string(),
@@ -3415,10 +3416,14 @@ mod tests {
 
     assert_eq!(items[1]["title"], "run_shell");
     assert!(items[2]["content"].as_str().unwrap().contains("marker.txt"));
+    assert_eq!(items[2]["attributes"]["sandboxMode"], "workspaceReadWrite");
+    assert!(items[2]["attributes"]["sandboxBackend"].is_string());
+    assert!(items[2]["attributes"]["sandboxActive"].is_string());
     assert!(items.iter().any(|item| item["kind"] == "pluginHook"));
     assert!(items.iter().any(|item| {
       item["title"] == "Record Shell Completion"
         && item["attributes"]["hookEvent"] == "shell.completed"
+        && item["attributes"]["sandboxMode"] == "workspaceReadWrite"
     }));
     assert!(items.iter().any(|item| {
       item["title"] == "Hook Memory Note Saved"
