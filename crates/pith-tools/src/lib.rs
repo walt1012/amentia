@@ -523,38 +523,6 @@ fn truncate_output(output: &str, max_output_bytes: usize) -> String {
   collected
 }
 
-#[cfg(test)]
-mod tests {
-  use std::fs;
-  use std::path::PathBuf;
-  use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-  use super::*;
-
-  #[cfg(unix)]
-  #[test]
-  fn shell_timeout_terminates_blocking_command() {
-    let workspace = unique_temp_workspace("shell-timeout");
-    fs::create_dir_all(&workspace).expect("workspace");
-
-    let result = run_shell_with_timeout("sleep 5", &workspace, Duration::from_millis(100))
-      .expect("shell result");
-
-    assert!(result.timed_out);
-    assert_eq!(result.exit_code, -1);
-
-    let _ = fs::remove_dir_all(workspace);
-  }
-
-  fn unique_temp_workspace(prefix: &str) -> PathBuf {
-    let nonce = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .expect("clock")
-      .as_nanos();
-    std::env::temp_dir().join(format!("pith-tools-{prefix}-{nonce}"))
-  }
-}
-
 fn build_unified_diff(relative_path: &str, previous_content: &str, next_content: &str) -> String {
   let previous_lines = collect_diff_lines(previous_content);
   let next_lines = collect_diff_lines(next_content);
@@ -603,4 +571,36 @@ fn collect_diff_lines(content: &str) -> Vec<String> {
     lines.push(String::new());
   }
   lines
+}
+
+#[cfg(test)]
+mod tests {
+  use std::fs;
+  use std::path::PathBuf;
+  use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+  use super::*;
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_timeout_terminates_blocking_command() {
+    let workspace = unique_temp_workspace("shell-timeout");
+    fs::create_dir_all(&workspace).expect("workspace");
+
+    let result = run_shell_with_timeout("sleep 5", &workspace, Duration::from_millis(100))
+      .expect("shell result");
+
+    assert!(result.timed_out);
+    assert_eq!(result.exit_code, -1);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  fn unique_temp_workspace(prefix: &str) -> PathBuf {
+    let nonce = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("clock")
+      .as_nanos();
+    std::env::temp_dir().join(format!("pith-tools-{prefix}-{nonce}"))
+  }
 }
