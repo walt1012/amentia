@@ -1115,8 +1115,6 @@ fn execute_turn_request(
         } else {
           let approval_id = format!("approval-{}", context.next_approval_number);
           context.next_approval_number += 1;
-          let sandbox = shell_sandbox_summary(Path::new(&workspace.root_path));
-          let sandbox_state = if sandbox.active { "active" } else { "limited" };
 
           let approval = PendingApproval {
             id: approval_id.clone(),
@@ -1217,6 +1215,8 @@ fn execute_turn_request(
         } else {
           let approval_id = format!("approval-{}", context.next_approval_number);
           context.next_approval_number += 1;
+          let sandbox = shell_sandbox_summary(Path::new(&workspace.root_path));
+          let sandbox_state = if sandbox.active { "active" } else { "limited" };
 
           let approval = PendingApproval {
             id: approval_id.clone(),
