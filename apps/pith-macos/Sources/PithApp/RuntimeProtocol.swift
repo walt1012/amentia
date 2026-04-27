@@ -45,6 +45,7 @@ struct ServerInfo: Codable {
 }
 
 struct ServerCapabilities: Codable {
+  let supportsHarness: Bool
   let supportsMemory: Bool
   let supportsThreads: Bool
   let supportsTools: Bool
@@ -67,6 +68,20 @@ struct ModelHealthResult: Codable {
   let binaryPath: String?
   let modelPath: String?
   let manifestPath: String?
+  let metrics: [String: String]
+}
+
+struct HarnessCheckResult: Codable {
+  let id: String
+  let title: String
+  let status: String
+  let detail: String
+}
+
+struct HarnessStatusResult: Codable {
+  let status: String
+  let summary: String
+  let checks: [HarnessCheckResult]
   let metrics: [String: String]
 }
 

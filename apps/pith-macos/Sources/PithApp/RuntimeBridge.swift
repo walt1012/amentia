@@ -46,6 +46,20 @@ final class RuntimeBridge {
     let metrics: [String: String]
   }
 
+  struct RuntimeHarnessCheck {
+    let id: String
+    let title: String
+    let status: String
+    let detail: String
+  }
+
+  struct RuntimeHarnessStatus {
+    let status: String
+    let summary: String
+    let checks: [RuntimeHarnessCheck]
+    let metrics: [String: String]
+  }
+
   struct RuntimeModelBootstrap {
     let manifestPath: String
     let readmePath: String?
@@ -338,6 +352,35 @@ final class RuntimeBridge {
       binaryPath: result.binaryPath,
       modelPath: result.modelPath,
       manifestPath: result.manifestPath,
+      metrics: result.metrics
+    )
+  }
+
+  func harnessStatus() async throws -> RuntimeHarnessStatus {
+    let response: JSONRPCResponse<HarnessStatusResult> = try await sendRequest(
+      method: "harness/status",
+      params: OptionalRequestParams.none
+    )
+
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return RuntimeHarnessStatus(
+      status: result.status,
+      summary: result.summary,
+      checks: result.checks.map { check in
+        RuntimeHarnessCheck(
+          id: check.id,
+          title: check.title,
+          status: check.status,
+          detail: check.detail
+        )
+      },
       metrics: result.metrics
     )
   }

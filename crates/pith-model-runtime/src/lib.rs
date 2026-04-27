@@ -992,6 +992,10 @@ fn llama_cpp_timeout() -> Duration {
     .unwrap_or(LLAMA_CPP_TIMEOUT)
 }
 
+pub fn llama_cpp_timeout_seconds() -> u64 {
+  llama_cpp_timeout().as_secs()
+}
+
 fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
 where
   R: Read + Send + 'static,

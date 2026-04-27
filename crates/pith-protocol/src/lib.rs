@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 pub mod methods {
   pub const APPROVAL_RESPOND: &str = "approval/respond";
+  pub const HARNESS_STATUS: &str = "harness/status";
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const MEMORY_CREATE: &str = "memory/create";
@@ -84,6 +85,7 @@ pub struct ServerInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerCapabilities {
+  pub supports_harness: bool,
   pub supports_memory: bool,
   pub supports_threads: bool,
   pub supports_tools: bool,
@@ -102,6 +104,25 @@ pub struct InitializeResult {
 #[serde(rename_all = "camelCase")]
 pub struct HealthPingResult {
   pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessCheck {
+  pub id: String,
+  pub title: String,
+  pub status: String,
+  pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessStatusResult {
+  pub status: String,
+  pub summary: String,
+  pub checks: Vec<HarnessCheck>,
+  #[serde(default)]
+  pub metrics: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -9,6 +9,7 @@ use active_turns::{
 };
 use anyhow::Result;
 use context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
+use harness_status::build_harness_status;
 use intent_inference::{
   infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
 };
@@ -56,6 +57,7 @@ use text_utils::{take_characters, truncate_text};
 
 mod active_turns;
 mod context_compaction;
+mod harness_status;
 mod intent_inference;
 mod local_responses;
 mod plugin_catalog_state;
@@ -339,6 +341,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
         status: "ok".to_string(),
       },
     ),
+    methods::HARNESS_STATUS => JsonRpcResponse::success(request.id, &build_harness_status(context)),
     methods::MEMORY_CREATE => handle_memory_create(context, request),
     methods::MEMORY_LIST => JsonRpcResponse::success(
       request.id,
@@ -467,6 +470,7 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
       },
       protocol_version: "0.1.0".to_string(),
       capabilities: ServerCapabilities {
+        supports_harness: true,
         supports_memory: true,
         supports_threads: true,
         supports_tools: true,
@@ -2723,6 +2727,7 @@ mod tests {
     assert!(response.error.is_none());
     let result = response.result.expect("initialize result");
     assert_eq!(result["protocolVersion"], "0.1.0");
+    assert_eq!(result["capabilities"]["supportsHarness"], true);
     assert_eq!(result["capabilities"]["supportsThreads"], true);
     assert_eq!(result["capabilities"]["supportsTools"], true);
   }
@@ -2735,6 +2740,30 @@ mod tests {
     assert!(response.error.is_none());
     let result = response.result.expect("health result");
     assert_eq!(result["status"], "ok");
+  }
+
+  #[test]
+  fn harness_status_reports_agent_control_surface() {
+    let mut context = RuntimeContext::new_in_memory();
+    let response = handle_request(&mut context, request(methods::HARNESS_STATUS, None));
+
+    assert!(response.error.is_none());
+    let result = response.result.expect("harness status result");
+    assert_eq!(result["status"], "setup_required");
+    assert!(result["summary"]
+      .as_str()
+      .expect("summary")
+      .contains("agent harness"));
+    let check_ids = result["checks"]
+      .as_array()
+      .expect("checks")
+      .iter()
+      .filter_map(|check| check["id"].as_str())
+      .collect::<Vec<_>>();
+    assert!(check_ids.contains(&"localModel"));
+    assert!(check_ids.contains(&"workspace"));
+    assert!(check_ids.contains(&"boundedRuntime"));
+    assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
   }
 
   #[test]

@@ -33,6 +33,20 @@ struct ModelHealthSummary: Hashable {
   let metrics: [String: String]
 }
 
+struct HarnessCheckSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let status: String
+  let detail: String
+}
+
+struct HarnessStatusSummary: Hashable {
+  let status: String
+  let summary: String
+  let checks: [HarnessCheckSummary]
+  let metrics: [String: String]
+}
+
 struct LocalModelSummary: Identifiable, Hashable {
   let id: String
   let displayName: String

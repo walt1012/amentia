@@ -52,6 +52,10 @@ pub struct ShellCommandResult {
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
+pub fn shell_command_timeout_seconds() -> u64 {
+  SHELL_COMMAND_TIMEOUT.as_secs()
+}
+
 pub fn list_directory(
   workspace_root: &Path,
   relative_path: Option<&str>,

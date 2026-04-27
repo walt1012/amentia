@@ -40,6 +40,8 @@ The core thesis is:
 
 The first shipping goal is not to match the full intelligence quality of hosted frontier systems. The first shipping goal is to deliver a stable, elegant, local agent desktop application with a tight end-to-end task loop on Intel Macs, then expand that core into a broader platform.
 
+Pith should be engineered as an agent harness, not a model wrapper. The runtime owns bounded model execution, workspace-scoped tools, explicit approvals, context packing, plugin capability contracts, and machine-readable readiness diagnostics.
+
 ## 4. Source Study Summary
 
 This plan is informed by direct inspection of the following reference repositories:
