@@ -600,7 +600,10 @@ fn model_metrics(
     metrics.insert("backend".to_string(), manifest.backend.clone());
     metrics.insert("contextSize".to_string(), manifest.context_size.to_string());
     if let Some(model_context_size) = manifest.model_context_size {
-      metrics.insert("modelContextSize".to_string(), model_context_size.to_string());
+      metrics.insert(
+        "modelContextSize".to_string(),
+        model_context_size.to_string(),
+      );
     }
     metrics.insert(
       "maxOutputTokens".to_string(),
