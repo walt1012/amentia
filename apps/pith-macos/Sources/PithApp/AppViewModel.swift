@@ -1,23 +1,6 @@
 import AppKit
 import Foundation
 
-private struct LocalModelDownloadRequestCacheKey: Hashable {
-  let modelID: String
-  let modelDownloaded: Bool
-  let modelSizeBytes: Int64
-  let modelInstallPath: String
-  let isDownloadRunning: Bool
-  let pausedModelID: String?
-  let hasResumeData: Bool
-  let resumeBytesReceived: Int64?
-}
-
-private struct LocalModelDownloadRequestCache {
-  let key: LocalModelDownloadRequestCacheKey
-  let createdAt: Date
-  let plan: LocalModelDownloadRequestPlan
-}
-
 @MainActor
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
@@ -73,7 +56,7 @@ final class AppViewModel: ObservableObject {
   private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
-    let initialTimeline = Self.welcomeTimeline()
+    let initialTimeline = TimelineEntryFactory.welcomeTimeline()
 
     let initialThreads = [
       ThreadSummary(
@@ -195,24 +178,12 @@ final class AppViewModel: ObservableObject {
         await refreshModelHealthState(serverLabel: "\(session.serverName) \(session.serverVersion)")
 
         if let runtimeMemoryStatus {
-          memoryStatus = MemoryStatusSummary(
-            noteCount: runtimeMemoryStatus.noteCount,
-            latestTitle: runtimeMemoryStatus.latestTitle,
-            summary: runtimeMemoryStatus.summary
-          )
+          memoryStatus = RuntimeSummaryMapper.memoryStatusSummary(from: runtimeMemoryStatus)
         } else {
           memoryStatus = nil
         }
-        memoryNotes = (runtimeMemoryNotes ?? []).map { note in
-          MemoryNoteSummary(
-            id: note.id,
-            title: note.title,
-            body: note.body,
-            scope: note.scope,
-            source: note.source,
-            createdAt: note.createdAt,
-            tags: note.tags
-          )
+        memoryNotes = (runtimeMemoryNotes ?? []).map {
+          RuntimeSummaryMapper.memoryNoteSummary(from: $0)
         }
 
         await refreshPluginState()
@@ -1133,7 +1104,7 @@ final class AppViewModel: ObservableObject {
       do {
         let thread = try await runtimeBridge.startThread(title: "Thread \(threads.count + 1)")
         threads.insert(thread, at: 0)
-        threadTimelines[thread.id] = defaultTimeline(for: thread.title)
+        threadTimelines[thread.id] = TimelineEntryFactory.defaultTimeline(for: thread.title)
         threadPendingApprovalIDs[thread.id] = Set<String>()
         selectThread(id: thread.id)
         await loadThreadHistory(threadID: thread.id)
@@ -2257,15 +2228,7 @@ final class AppViewModel: ObservableObject {
     threadID: String,
     items: [RuntimeBridge.RuntimeTimelineItemResult]
   ) {
-    let newEntries = items.map { item in
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: timelineKind(for: item.kind),
-        title: item.title,
-        body: item.content,
-        attributes: item.attributes
-      )
-    }
+    let newEntries = TimelineEntryFactory.transientEntries(from: items)
 
     for entry in newEntries.reversed() {
       appendEntry(to: threadID, entry)
@@ -2298,7 +2261,7 @@ final class AppViewModel: ObservableObject {
 
     var workspaceThreads = runtimeThreads
       .filter { $0.workspaceRootPath == workspace.rootPath }
-      .map { threadSummary(from: $0) }
+      .map { RuntimeSummaryMapper.threadSummary(from: $0) }
 
     if workspaceThreads.isEmpty && createIfEmpty {
       let thread = try await runtimeBridge.startThread(title: "\(workspace.displayName) Thread")
@@ -2313,7 +2276,11 @@ final class AppViewModel: ObservableObject {
     threads = workspaceThreads
     threadTimelines = Dictionary(
       uniqueKeysWithValues: workspaceThreads.map { thread in
-        (thread.id, threadTimelines[thread.id] ?? defaultTimeline(for: thread.title))
+        (
+          thread.id,
+          threadTimelines[thread.id]
+            ?? TimelineEntryFactory.defaultTimeline(for: thread.title)
+        )
       }
     )
     threadPendingApprovalIDs = threadPendingApprovalIDs.filter { entry in
@@ -2330,16 +2297,6 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func threadSummary(from runtimeThread: RuntimeBridge.RuntimeThreadSummary) -> ThreadSummary {
-    ThreadSummary(
-      id: runtimeThread.id,
-      title: runtimeThread.title,
-      preview: runtimeThread.status,
-      workspaceRootPath: runtimeThread.workspaceRootPath,
-      workspaceDisplayName: runtimeThread.workspaceDisplayName
-    )
-  }
-
   private func resetToWelcomeThread() {
     let welcomeThread = ThreadSummary(
       id: "local-welcome",
@@ -2348,37 +2305,13 @@ final class AppViewModel: ObservableObject {
       workspaceRootPath: nil,
       workspaceDisplayName: nil
     )
-    let welcomeTimeline = Self.welcomeTimeline()
+    let welcomeTimeline = TimelineEntryFactory.welcomeTimeline()
 
     threads = [welcomeThread]
     threadTimelines = [welcomeThread.id: welcomeTimeline]
     selectedThreadID = welcomeThread.id
     timeline = welcomeTimeline
     selectedEntryID = welcomeTimeline.first?.id
-  }
-
-  private static func welcomeTimeline() -> [TimelineEntry] {
-    [
-      TimelineEntry(
-        id: "welcome-start-local-setup",
-        kind: .system,
-        title: "Start Local Setup",
-        body: "Launch the runtime, choose a local model, open a workspace, create or select a thread, then send one short local request.",
-        attributes: [
-          "path": "runtime -> model -> workspace -> thread -> first request"
-        ]
-      ),
-      TimelineEntry(
-        id: "welcome-local-first-agent-loop",
-        kind: .assistantMessage,
-        title: "Local-First Agent Loop",
-        body:
-          "Pith runs the core agent loop against local workspaces and does not call external model APIs for core responses.",
-        attributes: [
-          "model": "local"
-        ]
-      ),
-    ]
   }
 
   private func appendEntry(to threadID: String?, _ entry: TimelineEntry) {
@@ -2390,14 +2323,15 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    var entries = threadTimelines[threadID] ?? defaultTimeline(for: threadTitle(for: threadID))
+    var entries = threadTimelines[threadID]
+      ?? TimelineEntryFactory.defaultTimeline(for: threadTitle(for: threadID))
     entries.insert(entry, at: 0)
     threadTimelines[threadID] = entries
 
     if selectedThreadID == threadID {
       let previousSelectionID = selectedEntryID
       timeline = entries
-      selectedEntryID = bestTimelineSelectionID(
+      selectedEntryID = TimelineEntryFactory.bestSelectionID(
         previousSelectionID: previousSelectionID,
         entries: entries
       )
@@ -2414,26 +2348,12 @@ final class AppViewModel: ObservableObject {
     let previousSelectionID = selectedEntryID
     timeline =
       threadTimelines[selectedThreadID]
-      ?? defaultTimeline(for: threadTitle(for: selectedThreadID))
+      ?? TimelineEntryFactory.defaultTimeline(for: threadTitle(for: selectedThreadID))
     threadTimelines[selectedThreadID] = timeline
-    selectedEntryID = bestTimelineSelectionID(
+    selectedEntryID = TimelineEntryFactory.bestSelectionID(
       previousSelectionID: previousSelectionID,
       entries: timeline
     )
-  }
-
-  private func defaultTimeline(for title: String) -> [TimelineEntry] {
-    [
-      TimelineEntry(
-        id: "default-thread-ready:\(title)",
-        kind: .system,
-        title: "Thread Ready",
-        body: "\(title) is ready after runtime, model, workspace, and thread setup. Send one short request to finish first-use setup.",
-        attributes: [
-          "setup": "runtime, model, workspace, thread, first request"
-        ]
-      ),
-    ]
   }
 
   private func threadTitle(for threadID: String) -> String {
@@ -2444,7 +2364,11 @@ final class AppViewModel: ObservableObject {
     do {
       let result = try await runtimeBridge.readThread(threadID: threadID)
       let previousSelectionID = selectedThreadID == threadID ? selectedEntryID : nil
-      let entries = timelineEntries(from: result.items, fallbackThreadID: threadID)
+      let entries = TimelineEntryFactory.runtimeEntries(
+        from: result.items,
+        existingEntries: threadTimelines[threadID],
+        fallbackTitle: threadTitle(for: threadID)
+      )
       threadTimelines[threadID] = entries
       updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
       updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
@@ -2452,7 +2376,7 @@ final class AppViewModel: ObservableObject {
 
       if selectedThreadID == threadID {
         timeline = entries
-        selectedEntryID = bestTimelineSelectionID(
+        selectedEntryID = TimelineEntryFactory.bestSelectionID(
           previousSelectionID: previousSelectionID,
           entries: entries
         )
@@ -2471,45 +2395,12 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func timelineKind(for rawKind: String) -> TimelineEntry.Kind {
-    switch rawKind {
-    case "userMessage":
-      return .userMessage
-    case "assistantMessage":
-      return .assistantMessage
-    case "plan":
-      return .plan
-    case "diffArtifact":
-      return .diff
-    case "toolStart", "toolResult", "pluginCommand", "pluginResult":
-      return .tool
-    case "approvalRequested", "approvalResolved":
-      return .approval
-    case "warning":
-      return .warning
-    default:
-      return .system
-    }
-  }
-
   private func selectedEntry() -> TimelineEntry? {
     guard let selectedEntryID else {
       return nil
     }
 
     return timeline.first(where: { $0.id == selectedEntryID })
-  }
-
-  private func bestTimelineSelectionID(
-    previousSelectionID: TimelineEntry.ID?,
-    entries: [TimelineEntry]
-  ) -> TimelineEntry.ID? {
-    if let previousSelectionID,
-       entries.contains(where: { $0.id == previousSelectionID }) {
-      return previousSelectionID
-    }
-
-    return entries.first?.id
   }
 
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {
@@ -2542,18 +2433,7 @@ final class AppViewModel: ObservableObject {
   private func refreshModelHealthState(serverLabel: String? = nil) async {
     let runtimeModel = try? await runtimeBridge.modelHealth()
     if let runtimeModel {
-      modelHealth = ModelHealthSummary(
-        packID: runtimeModel.packID,
-        displayName: runtimeModel.displayName,
-        backend: runtimeModel.backend,
-        status: runtimeModel.status,
-        detail: runtimeModel.detail,
-        source: runtimeModel.source,
-        binaryPath: runtimeModel.binaryPath,
-        modelPath: runtimeModel.modelPath,
-        manifestPath: runtimeModel.manifestPath,
-        metrics: runtimeModel.metrics
-      )
+      modelHealth = RuntimeSummaryMapper.modelHealthSummary(from: runtimeModel)
       if let serverLabel {
         runtimeDetail = "\(serverLabel) | \(runtimeModel.displayName)"
       }
@@ -2576,19 +2456,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    runtimeReadiness = RuntimeReadinessSummary(
-      status: readiness.status,
-      summary: readiness.summary,
-      checks: readiness.checks.map { check in
-        RuntimeReadinessCheckSummary(
-          id: check.id,
-          title: check.title,
-          status: check.status,
-          detail: check.detail
-        )
-      },
-      metrics: readiness.metrics
-    )
+    runtimeReadiness = RuntimeSummaryMapper.readinessSummary(from: readiness)
   }
 
   private func refreshLocalModelCatalog() {
@@ -3304,24 +3172,10 @@ final class AppViewModel: ObservableObject {
     let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
 
     if let runtimeMemoryStatus {
-      memoryStatus = MemoryStatusSummary(
-        noteCount: runtimeMemoryStatus.noteCount,
-        latestTitle: runtimeMemoryStatus.latestTitle,
-        summary: runtimeMemoryStatus.summary
-      )
+      memoryStatus = RuntimeSummaryMapper.memoryStatusSummary(from: runtimeMemoryStatus)
     }
     if let runtimeMemoryNotes {
-      memoryNotes = runtimeMemoryNotes.map { note in
-        MemoryNoteSummary(
-          id: note.id,
-          title: note.title,
-          body: note.body,
-          scope: note.scope,
-          source: note.source,
-          createdAt: note.createdAt,
-          tags: note.tags
-        )
-      }
+      memoryNotes = runtimeMemoryNotes.map { RuntimeSummaryMapper.memoryNoteSummary(from: $0) }
     }
   }
 
@@ -3333,26 +3187,13 @@ final class AppViewModel: ObservableObject {
     let runtimeHooks = try? await runtimeBridge.listPluginHooks()
 
     if let runtimePlugins {
-      plugins = runtimePlugins.map { pluginSummary(from: $0) }
+      plugins = runtimePlugins.map { RuntimeSummaryMapper.pluginSummary(from: $0) }
     }
     if let runtimeRegistry {
-      pluginCapabilityRegistrySummary = PluginCapabilityRegistrySummary(
-        enabledPluginCount: runtimeRegistry.summary.enabledPluginCount,
-        totalCapabilityCount: runtimeRegistry.summary.totalCapabilityCount,
-        capabilityCountsByKind: runtimeRegistry.summary.capabilityCountsByKind
-      )
-      pluginCapabilities = runtimeRegistry.capabilities.map { capability in
-        PluginCapabilitySummary(
-          id: capability.capabilityID,
-          kind: capability.kind,
-          identifier: capability.identifier,
-          pluginID: capability.pluginID,
-          pluginDisplayName: capability.pluginDisplayName,
-          permissions: capability.permissions,
-          manifestPath: capability.manifestPath,
-          metadata: capability.metadata
-        )
-      }
+      pluginCapabilityRegistrySummary =
+        RuntimeSummaryMapper.pluginRegistrySummary(from: runtimeRegistry.summary)
+      pluginCapabilities =
+        runtimeRegistry.capabilities.map { RuntimeSummaryMapper.pluginCapabilitySummary(from: $0) }
     } else if runtimePlugins != nil {
       pluginCapabilityRegistrySummary = PluginCapabilityRegistrySummary(
         enabledPluginCount: plugins.filter { $0.status == "ready" && $0.enabled }.count,
@@ -3362,58 +3203,19 @@ final class AppViewModel: ObservableObject {
       pluginCapabilities = []
     }
     if let runtimeCommands {
-      pluginCommands = runtimeCommands.map { command in
-        PluginCommandSummary(
-          id: command.commandID,
-          title: command.title,
-          description: command.description,
-          pluginID: command.pluginID,
-          pluginDisplayName: command.pluginDisplayName,
-          permissions: command.permissions,
-          sourcePath: command.sourcePath,
-          executionKind: command.executionKind,
-          memorySummary: command.memorySummary
-        )
-      }
+      pluginCommands = runtimeCommands.map { RuntimeSummaryMapper.pluginCommandSummary(from: $0) }
     } else if runtimePlugins != nil {
       pluginCommands = []
     }
     if let runtimeConnectors {
-      pluginConnectors = runtimeConnectors.map { connector in
-        PluginConnectorSummary(
-          id: connector.connectorID,
-          displayName: connector.displayName,
-          service: connector.service,
-          pluginID: connector.pluginID,
-          pluginDisplayName: connector.pluginDisplayName,
-          enabled: connector.enabled,
-          status: connector.status,
-          permissions: connector.permissions,
-          manifestPath: connector.manifestPath,
-          homepage: connector.homepage,
-          authType: connector.authType,
-          authRequired: connector.authRequired,
-          authScopes: connector.authScopes,
-          credentialStore: connector.credentialStore
-        )
+      pluginConnectors = runtimeConnectors.map {
+        RuntimeSummaryMapper.pluginConnectorSummary(from: $0)
       }
     } else if runtimePlugins != nil {
       pluginConnectors = []
     }
     if let runtimeHooks {
-      pluginHooks = runtimeHooks.map { hook in
-        PluginHookSummary(
-          id: hook.hookID,
-          title: hook.title,
-          description: hook.description,
-          event: hook.event,
-          pluginID: hook.pluginID,
-          pluginDisplayName: hook.pluginDisplayName,
-          permissions: hook.permissions,
-          sourcePath: hook.sourcePath,
-          memorySummary: hook.memorySummary
-        )
-      }
+      pluginHooks = runtimeHooks.map { RuntimeSummaryMapper.pluginHookSummary(from: $0) }
     } else if runtimePlugins != nil {
       pluginHooks = []
     }
@@ -3422,7 +3224,11 @@ final class AppViewModel: ObservableObject {
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
     let previousSelectionID = selectedThreadID == state.id ? selectedEntryID : nil
-    let entries = timelineEntries(from: state.items, fallbackThreadID: state.id)
+    let entries = TimelineEntryFactory.runtimeEntries(
+      from: state.items,
+      existingEntries: threadTimelines[state.id],
+      fallbackTitle: threadTitle(for: state.id)
+    )
 
     threadTimelines[state.id] = entries
     updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
@@ -3431,70 +3237,11 @@ final class AppViewModel: ObservableObject {
 
     if selectedThreadID == state.id {
       timeline = entries
-      selectedEntryID = bestTimelineSelectionID(
+      selectedEntryID = TimelineEntryFactory.bestSelectionID(
         previousSelectionID: previousSelectionID,
         entries: entries
       )
     }
-  }
-
-  private func timelineEntries(from items: [RuntimeBridge.RuntimeTimelineItemResult]) -> [TimelineEntry] {
-    items.enumerated().map { index, item in
-      TimelineEntry(
-        id: runtimeTimelineID(for: item, index: index),
-        kind: timelineKind(for: item.kind),
-        title: item.title,
-        body: item.content,
-        attributes: item.attributes
-      )
-    }
-  }
-
-  private func timelineEntries(
-    from items: [RuntimeBridge.RuntimeTimelineItemResult],
-    fallbackThreadID threadID: String
-  ) -> [TimelineEntry] {
-    let entries = timelineEntries(from: items)
-    if entries.isEmpty {
-      let existingEntries = threadTimelines[threadID] ?? []
-      if !existingEntries.isEmpty {
-        return existingEntries
-      }
-
-      return defaultTimeline(for: threadTitle(for: threadID))
-    }
-
-    return entries
-  }
-
-  private func runtimeTimelineID(for item: RuntimeBridge.RuntimeTimelineItemResult, index: Int) -> String {
-    if let approvalID = item.attributes["approvalId"] {
-      return "approval:\(approvalID):\(item.kind):\(item.title)"
-    }
-    if let turnID = item.attributes["turnId"] {
-      return "turn:\(turnID):\(item.kind):\(item.title)"
-    }
-    return "runtime:\(index):\(item.kind):\(item.title)"
-  }
-
-  private func pluginSummary(from plugin: RuntimeBridge.RuntimePlugin) -> PluginSummary {
-    PluginSummary(
-      id: plugin.id,
-      name: plugin.name,
-      version: plugin.version,
-      displayName: plugin.displayName,
-      status: plugin.status,
-      description: plugin.description,
-      authorName: plugin.authorName,
-      enabled: plugin.enabled,
-      defaultEnabled: plugin.defaultEnabled,
-      capabilities: plugin.capabilities,
-      permissions: plugin.permissions,
-      manifestPath: plugin.manifestPath,
-      provenance: plugin.provenance,
-      validationError: plugin.validationError,
-      validationHint: plugin.validationHint
-    )
   }
 
   private func confirmPluginInstall(preview: PluginInstallPreview) -> Bool {

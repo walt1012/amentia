@@ -55,6 +55,7 @@ use protocol_adapters::{
   to_protocol_memory_status, to_protocol_model_bootstrap, to_protocol_model_health,
   to_protocol_plugin,
 };
+use request_params::parse_required_params;
 use runtime_readiness::build_runtime_readiness;
 use text_utils::{take_characters, truncate_text};
 
@@ -66,6 +67,7 @@ mod plugin_catalog_state;
 mod plugin_hooks;
 mod plugin_permissions;
 mod protocol_adapters;
+mod request_params;
 mod runtime_readiness;
 mod text_utils;
 
@@ -448,20 +450,9 @@ pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpc
 }
 
 fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<InitializeParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid initialize params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing initialize params");
-    }
+  let params = match parse_required_params::<InitializeParams>(&request, "initialize") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let _client = params.client_info;
@@ -486,20 +477,9 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
 }
 
 fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<MemoryCreateParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid memory/create params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing memory/create params");
-    }
+  let params = match parse_required_params::<MemoryCreateParams>(&request, "memory/create") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let Some(workspace) = context.workspace.clone() else {
@@ -558,21 +538,11 @@ fn handle_plugin_set_enabled(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<PluginSetEnabledParams>(value) {
+  let params =
+    match parse_required_params::<PluginSetEnabledParams>(&request, "plugin/setEnabled") {
       Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid plugin/setEnabled params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/setEnabled params");
-    }
-  };
+      Err(response) => return response,
+    };
 
   let Some(plugin_index) = context
     .plugins
@@ -610,20 +580,9 @@ fn handle_plugin_set_enabled(
 }
 
 fn handle_plugin_install(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<PluginInstallParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid plugin/install params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/install params");
-    }
+  let params = match parse_required_params::<PluginInstallParams>(&request, "plugin/install") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let source_path = PathBuf::from(&params.source_path);
@@ -670,20 +629,9 @@ fn handle_plugin_install(context: &mut RuntimeContext, request: JsonRpcRequest) 
 }
 
 fn handle_plugin_remove(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<PluginRemoveParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid plugin/remove params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/remove params");
-    }
+  let params = match parse_required_params::<PluginRemoveParams>(&request, "plugin/remove") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let manifest_path = PathBuf::from(&params.manifest_path);
@@ -714,21 +662,11 @@ fn handle_plugin_command_run(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<PluginCommandRunParams>(value) {
+  let params =
+    match parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun") {
       Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid plugin/commandRun params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing plugin/commandRun params");
-    }
-  };
+      Err(response) => return response,
+    };
 
   let Some(command) = build_command_registry(&context.plugins)
     .into_iter()
@@ -800,20 +738,9 @@ fn handle_plugin_command_run(
 }
 
 fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<WorkspaceOpenParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid workspace/open params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing workspace/open params");
-    }
+  let params = match parse_required_params::<WorkspaceOpenParams>(&request, "workspace/open") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let workspace_path = PathBuf::from(params.path);
@@ -863,20 +790,9 @@ fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) 
 }
 
 fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<ThreadReadParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid thread/read params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing thread/read params");
-    }
+  let params = match parse_required_params::<ThreadReadParams>(&request, "thread/read") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let did_refresh = match refresh_active_turn_for_thread(context, &params.thread_id) {
@@ -915,20 +831,9 @@ fn handle_workspace_search(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<WorkspaceSearchParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid workspace/search params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing workspace/search params");
-    }
+  let params = match parse_required_params::<WorkspaceSearchParams>(&request, "workspace/search") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let Some(workspace) = context.workspace.clone() else {
@@ -961,20 +866,9 @@ fn handle_workspace_search(
 }
 
 fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<ThreadStartParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid thread/start params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing thread/start params");
-    }
+  let params = match parse_required_params::<ThreadStartParams>(&request, "thread/start") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let workspace = context.workspace.clone();
@@ -1006,20 +900,9 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
 }
 
 fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<TurnStartParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid turn/start params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing turn/start params");
-    }
+  let params = match parse_required_params::<TurnStartParams>(&request, "turn/start") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   match execute_turn_request(
@@ -2061,20 +1944,9 @@ fn handle_approval_respond(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<ApprovalRespondParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid approval/respond params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing approval/respond params");
-    }
+  let params = match parse_required_params::<ApprovalRespondParams>(&request, "approval/respond") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let decision = params.decision.to_lowercase();
@@ -2353,20 +2225,9 @@ fn handle_approval_respond(
 }
 
 fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match request.params {
-    Some(value) => match serde_json::from_value::<TurnCancelParams>(value) {
-      Ok(params) => params,
-      Err(error) => {
-        return JsonRpcResponse::error(
-          request.id,
-          -32602,
-          format!("Invalid turn/cancel params: {error}"),
-        )
-      }
-    },
-    None => {
-      return JsonRpcResponse::error(request.id, -32602, "Missing turn/cancel params");
-    }
+  let params = match parse_required_params::<TurnCancelParams>(&request, "turn/cancel") {
+    Ok(params) => params,
+    Err(response) => return response,
   };
 
   let Some(active_turn_snapshot) = context.active_turns.get(&params.turn_id).cloned() else {
