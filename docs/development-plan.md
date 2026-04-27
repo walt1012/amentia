@@ -511,10 +511,8 @@ The app should not feel like a model zoo. Keep the first-use catalog compact, cu
 
 - `LFM2.5-350M Q4_K_M` remains the default fastest first-use download
 - `Granite 4.0-H-350M Q4_K_M` is the preferred Apache-2.0 tiny model for tool, code, and RAG workflows
-- `Qwen3-0.6B Q8_0` is the stronger small general and multilingual option
-- `Qwen2.5-Coder-0.5B Q4_K_M` stays as a focused coding fallback until a newer official sub-1B coder GGUF is validated
 
-Retire older or redundant entries when they do not clearly beat the active set. Every built-in catalog entry must include verified file size and SHA-256 metadata before activation is allowed.
+Retire older, redundant, or awkward-fit entries when they do not clearly beat the active set. Every built-in catalog entry must include verified file size and SHA-256 metadata before activation is allowed.
 
 ### 12.4 Backend Order
 
@@ -1104,7 +1102,7 @@ Mitigation:
 
 - treat it as a required baseline model, not the only long-term model strategy
 - optimize for structured orchestration
-- keep the curated in-app catalog available with Granite and Qwen options for stronger local tasks
+- keep the curated in-app catalog available with Granite while validating future small-model candidates before adding them
 
 ### Risk 2: Intel performance is not good enough
 

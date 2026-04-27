@@ -322,36 +322,6 @@ enum LocalModelCatalog {
         tags: ["recommended", "tiny", "tools", "code"],
         installSegments: ["catalog", "granite-4.0-h-350m"]
       ),
-      LocalModelCatalogItem(
-        id: "qwen3-0.6b",
-        displayName: "Qwen3-0.6B Q8_0",
-        description: "Newer small general model for stronger local agent and multilingual tasks.",
-        fileName: "Qwen3-0.6B-Q8_0.gguf",
-        downloadURL: "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf",
-        homepage: "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
-        sizeBytes: 639_446_688,
-        sha256: "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
-        contextSize: 8192,
-        maxOutputTokens: 256,
-        license: "apache-2.0",
-        tags: ["stronger", "agent", "multilingual", "qwen"],
-        installSegments: ["catalog", "qwen3-0.6b"]
-      ),
-      LocalModelCatalogItem(
-        id: "qwen2.5-coder-0.5b-instruct",
-        displayName: "Qwen2.5-Coder-0.5B Q4_K_M",
-        description: "Focused small code model kept as a lightweight coding fallback.",
-        fileName: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
-        downloadURL: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
-        homepage: "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
-        sizeBytes: 491_400_064,
-        sha256: "1d9614638d18024d0fbb36575a15f1302a3adf044df10345688ec4f6e1c4ff32",
-        contextSize: 4096,
-        maxOutputTokens: 192,
-        license: "apache-2.0",
-        tags: ["code", "fallback", "qwen"],
-        installSegments: ["catalog", "qwen2.5-coder-0.5b-instruct"]
-      ),
     ]
   }
 }

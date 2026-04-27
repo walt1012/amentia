@@ -981,9 +981,9 @@ mod tests {
     let runtime = LocalModelRuntime::from_resolution(
       Some(ManifestResolution {
         manifest: ModelPackManifest {
-          id: "qwen2.5-coder-0.5b-instruct".to_string(),
-          display_name: "Qwen2.5-Coder-0.5B Q4_K_M".to_string(),
-          file_name: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf".to_string(),
+          id: "granite-4.0-h-350m".to_string(),
+          display_name: "Granite 4.0-H-350M Q4_K_M".to_string(),
+          file_name: "granite-4.0-h-350m-Q4_K_M.gguf".to_string(),
           context_size: 4096,
           max_output_tokens: 192,
           backend: "llama.cpp".to_string(),
@@ -1001,8 +1001,8 @@ mod tests {
     );
     let health = runtime.health();
 
-    assert_eq!(health.pack_id, "qwen2.5-coder-0.5b-instruct");
-    assert_eq!(health.display_name, "Qwen2.5-Coder-0.5B Q4_K_M");
+    assert_eq!(health.pack_id, "granite-4.0-h-350m");
+    assert_eq!(health.display_name, "Granite 4.0-H-350M Q4_K_M");
     assert_eq!(health.metrics["maxOutputTokens"], "192");
   }
 
