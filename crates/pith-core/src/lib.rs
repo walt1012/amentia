@@ -58,8 +58,8 @@ use runtime_readiness::build_runtime_readiness;
 use text_utils::{take_characters, truncate_text};
 
 mod active_turns;
-mod context_state;
 mod context_compaction;
+mod context_state;
 mod intent_inference;
 mod local_responses;
 mod plugin_catalog_state;
