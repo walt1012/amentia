@@ -322,7 +322,7 @@ def main() -> int:
         "method": "model/health",
       },
     )
-    assert model_health["result"]["displayName"] == "LFM2.5-350M"
+    assert model_health["result"]["displayName"] == "LFM2.5-350M Q4_K_M"
     assert model_health["result"]["backend"] in {"unconfigured", "llama.cpp"}
     assert model_health["result"]["status"] in {"unavailable", "ready"}
     assert model_health["result"]["source"] in {"default-manifest", "environment", "path-scan"}
