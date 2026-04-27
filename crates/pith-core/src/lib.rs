@@ -34,15 +34,15 @@ use pith_protocol::{
   WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSearchMatch, WorkspaceSearchParams,
   WorkspaceSearchResult, WorkspaceSummary,
 };
+use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
+use pith_tools::{
+  generate_diff, list_directory, read_file, run_shell, search_files, write_file, ShellCommandResult,
+};
 use protocol_adapters::{
   build_protocol_capability_registry, build_protocol_command_registry,
   build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_memory_note,
   to_protocol_memory_status, to_protocol_model_bootstrap, to_protocol_model_health,
   to_protocol_plugin,
-};
-use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
-use pith_tools::{
-  generate_diff, list_directory, read_file, run_shell, search_files, write_file, ShellCommandResult,
 };
 use text_utils::{take_characters, truncate_text};
 
