@@ -1193,11 +1193,12 @@ mod tests {
       source_pack_root.join("model-pack.json"),
       r#"{
   "id": "lfm2.5-350m",
-  "display_name": "LFM2.5-350M",
+  "display_name": "LFM2.5-350M Q4_K_M",
   "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
   "max_output_tokens": 160,
   "backend": "llama.cpp",
+  "license": "lfm1.0",
   "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
   "sha256": "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
   "size_bytes": 229312224
