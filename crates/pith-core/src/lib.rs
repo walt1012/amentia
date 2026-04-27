@@ -2,8 +2,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Instant;
 
+use active_turns::{
+  active_turn_id_for_thread, compute_streamed_char_count, start_streaming_assistant_turn,
+  streaming_progress_label, update_streaming_item, ActiveTurn,
+};
 use anyhow::Result;
 use context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
 use local_responses::{
@@ -41,8 +44,9 @@ use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, write_file, ShellCommandResult,
 };
-use text_utils::take_characters;
+use text_utils::{take_characters, truncate_text};
 
+mod active_turns;
 mod context_compaction;
 mod local_responses;
 mod text_utils;
@@ -80,16 +84,6 @@ struct PluginHookMemoryCapture {
 struct WriteIntent {
   relative_path: String,
   content: String,
-}
-
-#[derive(Debug, Clone)]
-struct ActiveTurn {
-  id: String,
-  thread_id: String,
-  full_content: String,
-  emitted_chars: usize,
-  total_chars: usize,
-  started_at: Instant,
 }
 
 #[derive(Debug, Clone)]
@@ -1265,7 +1259,7 @@ fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       thread: thread.summary.clone(),
       items: thread.items.clone(),
       pending_approvals: approvals_for_thread(context, &thread.summary.id),
-      active_turn_id: active_turn_id_for_thread(context, &thread.summary.id),
+      active_turn_id: active_turn_id_for_thread(&context.active_turns, &thread.summary.id),
     },
   )
 }
@@ -1657,7 +1651,7 @@ fn execute_turn_request(
                 &workspace.display_name,
                 &result,
               );
-              pending_active_turn = maybe_start_streaming_assistant_turn(
+              pending_active_turn = start_streaming_assistant_turn(
                 &thread_id,
                 &turn_id,
                 &mut items,
@@ -1734,7 +1728,7 @@ fn execute_turn_request(
                 &search_query,
                 &matches,
               );
-              pending_active_turn = maybe_start_streaming_assistant_turn(
+              pending_active_turn = start_streaming_assistant_turn(
                 &thread_id,
                 &turn_id,
                 &mut items,
@@ -1810,7 +1804,7 @@ fn execute_turn_request(
                 &workspace.display_name,
                 &entries,
               );
-              pending_active_turn = maybe_start_streaming_assistant_turn(
+              pending_active_turn = start_streaming_assistant_turn(
                 &thread_id,
                 &turn_id,
                 &mut items,
@@ -2778,7 +2772,7 @@ fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       .min(active_turn_snapshot.full_content.chars().count()),
   );
   update_streaming_item(
-    thread,
+    &mut thread.items,
     &params.turn_id,
     &partial_content,
     "cancelled",
@@ -2826,7 +2820,7 @@ fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       turn_id: params.turn_id,
       thread_id: active_turn_snapshot.thread_id,
       items,
-      active_turn_id: active_turn_id_for_thread(context, &cancelled_thread_id),
+      active_turn_id: active_turn_id_for_thread(&context.active_turns, &cancelled_thread_id),
     },
   )
 }
@@ -2978,14 +2972,14 @@ fn build_thread_summary_body(
     .iter()
     .rev()
     .find(|item| item.kind == "userMessage")
-    .map(|item| truncate_memory_line(&item.content, 180))
+    .map(|item| truncate_text(&item.content, 180))
     .unwrap_or_else(|| "No user request captured yet.".to_string());
   let latest_assistant = thread
     .items
     .iter()
     .rev()
     .find(|item| item.kind == "assistantMessage")
-    .map(|item| truncate_memory_line(&item.content, 180))
+    .map(|item| truncate_text(&item.content, 180))
     .unwrap_or_else(|| "No assistant update captured yet.".to_string());
   let recent_activity = thread
     .items
@@ -3009,63 +3003,6 @@ fn build_thread_summary_body(
     pending_approvals.len(),
     activity_line
   )
-}
-
-fn truncate_memory_line(content: &str, limit: usize) -> String {
-  let normalized = content.split_whitespace().collect::<Vec<_>>().join(" ");
-  let character_count = normalized.chars().count();
-  if character_count <= limit {
-    return normalized;
-  }
-
-  let truncated = normalized
-    .chars()
-    .take(limit.saturating_sub(3))
-    .collect::<String>();
-  format!("{truncated}...")
-}
-
-fn maybe_start_streaming_assistant_turn(
-  thread_id: &str,
-  turn_id: &str,
-  items: &mut Vec<TimelineItem>,
-  full_content: String,
-  mut attributes: HashMap<String, String>,
-) -> Option<ActiveTurn> {
-  let initial_chars = 48.min(full_content.chars().count());
-  let total_chars = full_content.chars().count();
-  let initial_content = take_characters(&full_content, initial_chars);
-  let is_complete = initial_chars >= total_chars;
-  let streaming_status = if is_complete {
-    "completed"
-  } else {
-    "in_progress"
-  };
-  attributes.insert("turnId".to_string(), turn_id.to_string());
-  attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
-  attributes.insert("streamedCharacters".to_string(), initial_chars.to_string());
-  attributes.insert("totalCharacters".to_string(), total_chars.to_string());
-  attributes.insert("responseRole".to_string(), "summarizer".to_string());
-
-  items.push(TimelineItem {
-    kind: "assistantMessage".to_string(),
-    title: "Assistant".to_string(),
-    content: initial_content,
-    attributes: Some(attributes),
-  });
-
-  if is_complete {
-    return None;
-  }
-
-  Some(ActiveTurn {
-    id: turn_id.to_string(),
-    thread_id: thread_id.to_string(),
-    full_content,
-    emitted_chars: initial_chars,
-    total_chars,
-    started_at: Instant::now(),
-  })
 }
 
 fn refresh_active_turn_for_thread(context: &mut RuntimeContext, thread_id: &str) -> Result<bool> {
@@ -3118,7 +3055,7 @@ fn advance_active_turn(
     };
 
     update_streaming_item(
-      thread,
+      &mut thread.items,
       turn_id,
       &streamed_content,
       streaming_status,
@@ -3149,62 +3086,8 @@ fn advance_active_turn(
     thread: thread_snapshot.0,
     items: thread_snapshot.1,
     pending_approvals: approvals_for_thread(context, &thread_id),
-    active_turn_id: active_turn_id_for_thread(context, &thread_id),
+    active_turn_id: active_turn_id_for_thread(&context.active_turns, &thread_id),
   }))
-}
-
-fn compute_streamed_char_count(turn: &ActiveTurn) -> usize {
-  let elapsed_steps = (turn.started_at.elapsed().as_millis() / 180) as usize;
-  let base_chars = 48;
-  let step_chars = 72;
-
-  base_chars + elapsed_steps * step_chars
-}
-
-fn update_streaming_item(
-  thread: &mut StoredThread,
-  turn_id: &str,
-  content: &str,
-  streaming_status: &str,
-  streamed_chars: usize,
-  total_chars: usize,
-) {
-  let Some(item) = thread.items.iter_mut().rev().find(|item| {
-    item.kind == "assistantMessage"
-      && item
-        .attributes
-        .as_ref()
-        .and_then(|attributes| attributes.get("turnId"))
-        .map(|value| value == turn_id)
-        .unwrap_or(false)
-  }) else {
-    return;
-  };
-
-  item.content = content.to_string();
-  let mut attributes = item.attributes.clone().unwrap_or_default();
-  attributes.insert("turnId".to_string(), turn_id.to_string());
-  attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
-  attributes.insert("streamedCharacters".to_string(), streamed_chars.to_string());
-  attributes.insert("totalCharacters".to_string(), total_chars.to_string());
-  item.attributes = Some(attributes);
-}
-
-fn active_turn_id_for_thread(context: &RuntimeContext, thread_id: &str) -> Option<String> {
-  context
-    .active_turns
-    .values()
-    .find(|turn| turn.thread_id == thread_id)
-    .map(|turn| turn.id.clone())
-}
-
-fn streaming_progress_label(streamed_chars: usize, total_chars: usize) -> String {
-  if total_chars == 0 {
-    return "0%".to_string();
-  }
-
-  let percentage = ((streamed_chars as f64 / total_chars as f64) * 100.0).round() as usize;
-  format!("{}%", percentage.min(100))
 }
 
 fn stored_approval_record(approval: PendingApproval) -> StoredApprovalRecord {
