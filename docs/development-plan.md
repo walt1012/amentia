@@ -40,7 +40,7 @@ The core thesis is:
 
 The first shipping goal is not to match the full intelligence quality of hosted frontier systems. The first shipping goal is to deliver a stable, elegant, local agent desktop application with a tight end-to-end task loop on Intel Macs, then expand that core into a broader platform.
 
-Pith should be engineered as an agent harness, not a model wrapper. The runtime owns bounded model execution, workspace-scoped tools, explicit approvals, context packing, plugin capability contracts, and machine-readable readiness diagnostics.
+Pith should be engineered as a controlled local agent runtime, not a model wrapper. The runtime owns bounded model execution, workspace-scoped tools, explicit approvals, context packing, plugin capability contracts, and machine-readable readiness diagnostics.
 
 ## 4. Source Study Summary
 
@@ -48,6 +48,7 @@ This plan is informed by direct inspection of the following reference repositori
 
 - `openai/codex`
 - `anthropics/claude-code`
+- `OpenHands/OpenHands`
 
 ### 4.1 What To Learn From Codex
 
@@ -88,7 +89,23 @@ Relevant reference areas:
 - `plugins/*/hooks`
 - `plugins/*/skills`
 
-### 4.3 Source-Informed Direction For Pith
+### 4.3 What To Learn From OpenHands
+
+From `OpenHands/OpenHands`, especially the sandbox service layer:
+
+- Agent actions should cross an explicit execution-environment boundary.
+- The runtime should track sandbox lifecycle and readiness separately from chat state.
+- Workspace scope, process lifecycle, health checks, and cleanup should be first-class runtime concerns.
+- Pith should learn the boundary model, not the Docker dependency. The product direction remains a native macOS sandbox with no required third-party container runtime.
+
+Relevant reference areas:
+
+- `openhands/app_server/sandbox/README.md`
+- `openhands/app_server/sandbox/sandbox_service.py`
+- `openhands/app_server/sandbox/docker_sandbox_service.py`
+- `openhands/app_server/sandbox/process_sandbox_service.py`
+
+### 4.4 Source-Informed Direction For Pith
 
 Based on those references, `Pith` should adopt:
 
@@ -100,6 +117,7 @@ Based on those references, `Pith` should adopt:
 - explicit approval gates
 - typed plugin permissions
 - a local model runtime abstraction that allows future stronger local models
+- a native sandbox boundary for shell and plugin execution on macOS
 
 ## 5. Product Scope
 
@@ -728,13 +746,16 @@ Phase 1:
 
 - local trust boundary
 - explicit approvals
-- plugin subprocess isolation where practical
+- bounded subprocess execution with timeout and cleanup
+- native macOS workspace sandbox for shell actions when the platform backend is available
+- no required Docker, VM, or third-party container runtime
 
 Phase 2:
 
 - stricter capability-based execution
 - per-plugin environment controls
 - improved subprocess isolation
+- sandbox readiness surfaced as machine-readable runtime diagnostics
 
 ### 15.4 Provenance Requirements
 
@@ -758,6 +779,7 @@ Recommended monorepo layout:
 |   |-- pith-core/
 |   |-- pith-model-runtime/
 |   |-- pith-plugin-host/
+|   |-- pith-sandbox/
 |   |-- pith-protocol/
 |   |-- pith-runtime-bin/
 |   |-- pith-storage/
@@ -907,6 +929,7 @@ Deliverables:
 - guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
 - strict local model readiness with verified model integrity, no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
 - bounded local inference with generation timeouts, cancellation, subprocess cleanup, and runtime unblocking after model failure
+- native local sandbox foundation for shell execution, with workspace-scoped policy and readiness diagnostics
 - fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
 - compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
@@ -920,6 +943,7 @@ Exit criteria:
 
 - a fresh install can choose, download, activate, and run a selected small local model without hidden degraded-generation behavior
 - model generation timeout, cancellation, or backend failure does not require restarting the app to recover the runtime loop
+- shell execution is bounded by approvals, timeouts, cleanup, and native sandbox diagnostics without requiring third-party containers
 - a user can bind a workspace, create or resume a thread, send the first local request, and recover from common setup failures without reading external docs
 - the normal ready state feels quiet, stable, intentional, and distinctly native on Intel Mac hardware
 

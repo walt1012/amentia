@@ -12,7 +12,7 @@ struct InspectorSessionSnapshot {
   let setupStepCount: Int
   let setupProgressDetail: String
   let isWaitingForFirstMessage: Bool
-  let harnessStatus: String?
+  let runtimeReadinessStatus: String?
 }
 
 enum InspectorSessionPresenter {
@@ -81,24 +81,25 @@ enum InspectorSessionPresenter {
     }
 
     let modelSummary = snapshot.isLocalModelReady ? "Model ready" : "Model pending"
-    let harnessSummary = snapshot.harnessStatus.map(harnessStatusSummary) ?? modelSummary
+    let readinessSummary =
+      snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
-    return "\(harnessSummary) | \(workspaceSummary) | \(threadSummary)"
+    return "\(readinessSummary) | \(workspaceSummary) | \(threadSummary)"
   }
 
-  private static func harnessStatusSummary(_ status: String) -> String {
+  private static func runtimeReadinessSummary(_ status: String) -> String {
     switch status {
     case "ready":
-      return "Harness ready"
+      return "Runtime ready"
     case "running":
-      return "Harness running"
+      return "Runtime running"
     case "needs_approval":
-      return "Harness needs approval"
+      return "Runtime needs approval"
     case "setup_required":
-      return "Harness setup"
+      return "Runtime setup"
     default:
-      return "Harness \(status)"
+      return "Runtime \(status)"
     }
   }
 }

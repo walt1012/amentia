@@ -305,7 +305,7 @@ def main() -> int:
       },
     )
     assert initialize["result"]["serverInfo"]["name"] == "pith-runtime"
-    assert initialize["result"]["capabilities"]["supportsHarness"] is True
+    assert initialize["result"]["capabilities"]["supportsRuntimeReadiness"] is True
 
     health, _ = send_request(
       process,
@@ -354,27 +354,30 @@ def main() -> int:
     )
     assert model_health["result"]["metrics"]["suggestedBinaryPath"]
 
-    harness_status, _ = send_request(
+    runtime_readiness, _ = send_request(
       process,
       {
         "id": 22,
-        "method": "harness/status",
+        "method": "runtime/readiness",
       },
     )
-    assert harness_status["result"]["status"] in {"setup_required", "ready"}
-    assert harness_status["result"]["summary"]
-    harness_check_ids = {check["id"] for check in harness_status["result"]["checks"]}
+    assert runtime_readiness["result"]["status"] in {"setup_required", "ready"}
+    assert runtime_readiness["result"]["summary"]
+    readiness_check_ids = {check["id"] for check in runtime_readiness["result"]["checks"]}
     assert {
       "localModel",
       "workspace",
       "context",
       "executionControls",
+      "nativeSandbox",
       "plugins",
       "boundedRuntime",
-    }.issubset(harness_check_ids)
-    assert harness_status["result"]["metrics"]["contextWindowTokens"] == "4096"
-    assert harness_status["result"]["metrics"]["shellTimeoutSeconds"] == "120"
-    assert harness_status["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
+    }.issubset(readiness_check_ids)
+    assert runtime_readiness["result"]["metrics"]["contextWindowTokens"] == "4096"
+    assert runtime_readiness["result"]["metrics"]["shellTimeoutSeconds"] == "120"
+    assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
+    assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"
+    assert runtime_readiness["result"]["metrics"]["sandboxActive"] in {"true", "false"}
 
     model_bootstrap, _ = send_request(
       process,
@@ -521,18 +524,18 @@ def main() -> int:
     )
     assert workspace["result"]["workspace"]["displayName"] == workspace_dir.name
 
-    workspace_harness_status, _ = send_request(
+    workspace_readiness, _ = send_request(
       process,
       {
         "id": 49,
-        "method": "harness/status",
+        "method": "runtime/readiness",
       },
     )
-    workspace_harness_checks = {
-      check["id"]: check for check in workspace_harness_status["result"]["checks"]
+    workspace_readiness_checks = {
+      check["id"]: check for check in workspace_readiness["result"]["checks"]
     }
-    assert workspace_harness_status["result"]["metrics"]["workspaceBound"] == "true"
-    assert workspace_harness_checks["workspace"]["status"] == "ready"
+    assert workspace_readiness["result"]["metrics"]["workspaceBound"] == "true"
+    assert workspace_readiness_checks["workspace"]["status"] == "ready"
 
     memory_status_after_workspace, _ = send_request(
       process,

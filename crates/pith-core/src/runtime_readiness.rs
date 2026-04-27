@@ -1,17 +1,27 @@
 use std::collections::HashMap;
 
 use pith_model_runtime::llama_cpp_timeout_seconds;
-use pith_protocol::{HarnessCheck, HarnessStatusResult};
+use pith_protocol::{RuntimeReadinessCheck, RuntimeReadinessResult};
+use pith_sandbox::{native_sandbox_status, workspace_required_status, SandboxPolicy};
 use pith_tools::shell_command_timeout_seconds;
 
 use crate::RuntimeContext;
 
-pub(crate) fn build_harness_status(context: &RuntimeContext) -> HarnessStatusResult {
+pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_runtime.health();
   let model_ready = model_health.status == "ready";
   let workspace_ready = context.workspace.is_some();
   let pending_approval_count = context.pending_approvals.len();
   let active_turn_count = context.active_turns.len();
+  let sandbox_status = context
+    .workspace
+    .as_ref()
+    .map(|workspace| {
+      native_sandbox_status(&SandboxPolicy::workspace_read_write(
+        workspace.root_path.clone(),
+      ))
+    })
+    .unwrap_or_else(workspace_required_status);
   let enabled_plugin_count = context
     .plugins
     .iter()
@@ -38,9 +48,9 @@ pub(crate) fn build_harness_status(context: &RuntimeContext) -> HarnessStatusRes
     .cloned()
     .unwrap_or_else(|| "unknown".to_string());
 
-  HarnessStatusResult {
+  RuntimeReadinessResult {
     status: status.to_string(),
-    summary: harness_summary(
+    summary: readiness_summary(
       status,
       model_ready,
       workspace_ready,
@@ -56,27 +66,33 @@ pub(crate) fn build_harness_status(context: &RuntimeContext) -> HarnessStatusRes
       workspace_check(context),
       context_check(&context_window, &output_cap),
       execution_control_check(pending_approval_count, active_turn_count),
+      native_sandbox_check(&sandbox_status),
       plugin_check(enabled_plugin_count, context.plugins.len()),
       bounded_runtime_check(),
     ],
-    metrics: harness_metrics(
+    metrics: readiness_metrics(
       context,
       &model_health.status,
       &model_health.pack_id,
       &context_window,
       enabled_plugin_count,
+      &sandbox_status,
     ),
   }
 }
 
-fn local_model_check(model_ready: bool, display_name: &str, backend: &str) -> HarnessCheck {
+fn local_model_check(
+  model_ready: bool,
+  display_name: &str,
+  backend: &str,
+) -> RuntimeReadinessCheck {
   let status = if model_ready {
     "ready"
   } else {
     "setup_required"
   };
 
-  HarnessCheck {
+  RuntimeReadinessCheck {
     id: "localModel".to_string(),
     title: "Local Model".to_string(),
     status: status.to_string(),
@@ -88,14 +104,14 @@ fn local_model_check(model_ready: bool, display_name: &str, backend: &str) -> Ha
   }
 }
 
-fn workspace_check(context: &RuntimeContext) -> HarnessCheck {
+fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck {
   let status = if context.workspace.is_some() {
     "ready"
   } else {
     "setup_required"
   };
 
-  HarnessCheck {
+  RuntimeReadinessCheck {
     id: "workspace".to_string(),
     title: "Workspace".to_string(),
     status: status.to_string(),
@@ -109,8 +125,8 @@ fn workspace_check(context: &RuntimeContext) -> HarnessCheck {
   }
 }
 
-fn context_check(context_window: &str, output_cap: &str) -> HarnessCheck {
-  HarnessCheck {
+fn context_check(context_window: &str, output_cap: &str) -> RuntimeReadinessCheck {
+  RuntimeReadinessCheck {
     id: "context".to_string(),
     title: "Context".to_string(),
     status: "ready".to_string(),
@@ -123,8 +139,8 @@ fn context_check(context_window: &str, output_cap: &str) -> HarnessCheck {
 fn execution_control_check(
   pending_approval_count: usize,
   active_turn_count: usize,
-) -> HarnessCheck {
-  HarnessCheck {
+) -> RuntimeReadinessCheck {
+  RuntimeReadinessCheck {
     id: "executionControls".to_string(),
     title: "Execution Controls".to_string(),
     status: execution_control_status(pending_approval_count, active_turn_count).to_string(),
@@ -132,14 +148,14 @@ fn execution_control_check(
   }
 }
 
-fn plugin_check(enabled_plugin_count: usize, plugin_count: usize) -> HarnessCheck {
+fn plugin_check(enabled_plugin_count: usize, plugin_count: usize) -> RuntimeReadinessCheck {
   let status = if enabled_plugin_count > 0 {
     "ready"
   } else {
     "optional"
   };
 
-  HarnessCheck {
+  RuntimeReadinessCheck {
     id: "plugins".to_string(),
     title: "Plugins".to_string(),
     status: status.to_string(),
@@ -147,8 +163,25 @@ fn plugin_check(enabled_plugin_count: usize, plugin_count: usize) -> HarnessChec
   }
 }
 
-fn bounded_runtime_check() -> HarnessCheck {
-  HarnessCheck {
+fn native_sandbox_check(status: &pith_sandbox::NativeSandboxStatus) -> RuntimeReadinessCheck {
+  let check_status = if status.active {
+    "ready"
+  } else if status.available {
+    "setup_required"
+  } else {
+    "limited"
+  };
+
+  RuntimeReadinessCheck {
+    id: "nativeSandbox".to_string(),
+    title: "Native Sandbox".to_string(),
+    status: check_status.to_string(),
+    detail: status.detail.clone(),
+  }
+}
+
+fn bounded_runtime_check() -> RuntimeReadinessCheck {
+  RuntimeReadinessCheck {
     id: "boundedRuntime".to_string(),
     title: "Bounded Runtime".to_string(),
     status: "ready".to_string(),
@@ -156,7 +189,7 @@ fn bounded_runtime_check() -> HarnessCheck {
   }
 }
 
-fn harness_summary(
+fn readiness_summary(
   status: &str,
   model_ready: bool,
   workspace_ready: bool,
@@ -165,16 +198,16 @@ fn harness_summary(
 ) -> String {
   match status {
     "setup_required" if !model_ready => {
-      "Download and select one local model to enable the agent harness.".to_string()
+      "Download and select one local model to enable local agent work.".to_string()
     }
     "setup_required" if !workspace_ready => {
       "Open a workspace so tools, memory, and approvals are scoped safely.".to_string()
     }
     "needs_approval" => {
-      format!("Harness is waiting on {pending_approval_count} approval(s) before continuing.")
+      format!("Runtime is waiting on {pending_approval_count} approval(s) before continuing.")
     }
-    "running" => format!("Harness is running {active_turn_count} active turn(s)."),
-    _ => "Harness ready: model, workspace, tools, context, and plugins are controlled.".to_string(),
+    "running" => format!("Runtime is running {active_turn_count} active turn(s)."),
+    _ => "Runtime ready: model, workspace, tools, context, and plugins are controlled.".to_string(),
   }
 }
 
@@ -202,12 +235,13 @@ fn execution_control_detail(pending_approval_count: usize, active_turn_count: us
   "Risky actions require approval, and turns can be cancelled.".to_string()
 }
 
-fn harness_metrics(
+fn readiness_metrics(
   context: &RuntimeContext,
   model_status: &str,
   model_pack_id: &str,
   context_window: &str,
   enabled_plugin_count: usize,
+  sandbox_status: &pith_sandbox::NativeSandboxStatus,
 ) -> HashMap<String, String> {
   HashMap::from([
     ("modelStatus".to_string(), model_status.to_string()),
@@ -232,6 +266,22 @@ fn harness_metrics(
     (
       "enabledPluginCount".to_string(),
       enabled_plugin_count.to_string(),
+    ),
+    (
+      "sandboxMode".to_string(),
+      sandbox_status.mode.clone(),
+    ),
+    (
+      "sandboxBackend".to_string(),
+      sandbox_status.backend.clone(),
+    ),
+    (
+      "sandboxAvailable".to_string(),
+      sandbox_status.available.to_string(),
+    ),
+    (
+      "sandboxActive".to_string(),
+      sandbox_status.active.to_string(),
     ),
     (
       "contextWindowTokens".to_string(),

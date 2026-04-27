@@ -45,11 +45,11 @@ struct ServerInfo: Codable {
 }
 
 struct ServerCapabilities: Codable {
-  let supportsHarness: Bool
   let supportsMemory: Bool
   let supportsThreads: Bool
   let supportsTools: Bool
   let supportsPlugins: Bool
+  let supportsRuntimeReadiness: Bool
 }
 
 struct InitializeResult: Codable {
@@ -71,17 +71,17 @@ struct ModelHealthResult: Codable {
   let metrics: [String: String]
 }
 
-struct HarnessCheckResult: Codable {
+struct RuntimeReadinessCheckResult: Codable {
   let id: String
   let title: String
   let status: String
   let detail: String
 }
 
-struct HarnessStatusResult: Codable {
+struct RuntimeReadinessResult: Codable {
   let status: String
   let summary: String
-  let checks: [HarnessCheckResult]
+  let checks: [RuntimeReadinessCheckResult]
   let metrics: [String: String]
 }
 

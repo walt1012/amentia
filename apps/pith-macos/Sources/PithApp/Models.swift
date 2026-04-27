@@ -33,17 +33,17 @@ struct ModelHealthSummary: Hashable {
   let metrics: [String: String]
 }
 
-struct HarnessCheckSummary: Identifiable, Hashable {
+struct RuntimeReadinessCheckSummary: Identifiable, Hashable {
   let id: String
   let title: String
   let status: String
   let detail: String
 }
 
-struct HarnessStatusSummary: Hashable {
+struct RuntimeReadinessSummary: Hashable {
   let status: String
   let summary: String
-  let checks: [HarnessCheckSummary]
+  let checks: [RuntimeReadinessCheckSummary]
   let metrics: [String: String]
 }
 

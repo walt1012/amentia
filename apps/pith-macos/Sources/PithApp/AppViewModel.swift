@@ -38,7 +38,7 @@ final class AppViewModel: ObservableObject {
   @Published var workspaceSearchStatus: String
   @Published var isWorkspaceSearching: Bool
   @Published var modelHealth: ModelHealthSummary?
-  @Published var harnessStatus: HarnessStatusSummary?
+  @Published var runtimeReadiness: RuntimeReadinessSummary?
   @Published var localModels: [LocalModelSummary]
   @Published var selectedSetupModelID: String {
     didSet {
@@ -109,7 +109,7 @@ final class AppViewModel: ObservableObject {
     self.workspaceSearchStatus = "Search the open workspace by text."
     self.isWorkspaceSearching = false
     self.modelHealth = nil
-    self.harnessStatus = nil
+    self.runtimeReadiness = nil
     self.localModels = initialLocalModels
     self.selectedSetupModelID = initialSelectedSetupModelID
     self.modelDownloadID = nil
@@ -231,7 +231,7 @@ final class AppViewModel: ObservableObject {
         } else {
           resetToWelcomeThread()
         }
-        await refreshHarnessStatus()
+        await refreshRuntimeReadiness()
         let shouldAnnotateSetupLaunch = shouldAnnotateLaunchWithSetupEvents()
         if shouldAnnotateSetupLaunch {
           appendEntry(
@@ -341,7 +341,7 @@ final class AppViewModel: ObservableObject {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
         modelHealth = nil
-        harnessStatus = nil
+        runtimeReadiness = nil
         memoryStatus = nil
         memoryNotes = []
         plugins = []
@@ -1018,7 +1018,7 @@ final class AppViewModel: ObservableObject {
         await refreshMemoryState()
         let threadList = try await runtimeBridge.listThreads()
         try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
-        await refreshHarnessStatus()
+        await refreshRuntimeReadiness()
         appendEntry(
           to: selectedThreadID,
           TimelineEntry(
@@ -2565,29 +2565,29 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = serverLabel
       }
     }
-    await refreshHarnessStatus()
+    await refreshRuntimeReadiness()
     announceFirstRequestReadyIfNeeded()
   }
 
-  private func refreshHarnessStatus() async {
-    let runtimeHarness = try? await runtimeBridge.harnessStatus()
-    guard let runtimeHarness else {
-      harnessStatus = nil
+  private func refreshRuntimeReadiness() async {
+    let readiness = try? await runtimeBridge.runtimeReadiness()
+    guard let readiness else {
+      runtimeReadiness = nil
       return
     }
 
-    harnessStatus = HarnessStatusSummary(
-      status: runtimeHarness.status,
-      summary: runtimeHarness.summary,
-      checks: runtimeHarness.checks.map { check in
-        HarnessCheckSummary(
+    runtimeReadiness = RuntimeReadinessSummary(
+      status: readiness.status,
+      summary: readiness.summary,
+      checks: readiness.checks.map { check in
+        RuntimeReadinessCheckSummary(
           id: check.id,
           title: check.title,
           status: check.status,
           detail: check.detail
         )
       },
-      metrics: runtimeHarness.metrics
+      metrics: readiness.metrics
     )
   }
 
@@ -2700,7 +2700,7 @@ final class AppViewModel: ObservableObject {
       setupStepCount: SetupFlowState.stepCount,
       setupProgressDetail: setupProgressDetail(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
-      harnessStatus: harnessStatus?.status
+      runtimeReadinessStatus: runtimeReadiness?.status
     )
   }
 
@@ -3095,7 +3095,7 @@ final class AppViewModel: ObservableObject {
       activeTurnThreadID = nil
       pendingTurnRequest.clear()
       modelHealth = nil
-      harnessStatus = nil
+      runtimeReadiness = nil
       if previousState != .failed || lastRuntimeFailureDetail != detail {
         appendEntry(
           to: selectedThreadID,
@@ -3116,7 +3116,7 @@ final class AppViewModel: ObservableObject {
       activeTurnThreadID = nil
       pendingTurnRequest.clear()
       modelHealth = nil
-      harnessStatus = nil
+      runtimeReadiness = nil
     case .launching:
       break
     }
@@ -3417,7 +3417,7 @@ final class AppViewModel: ObservableObject {
     } else if runtimePlugins != nil {
       pluginHooks = []
     }
-    await refreshHarnessStatus()
+    await refreshRuntimeReadiness()
   }
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {

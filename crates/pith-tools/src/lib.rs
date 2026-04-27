@@ -222,7 +222,7 @@ fn run_shell_with_timeout(
   workspace_root: &Path,
   timeout: Duration,
 ) -> Result<ShellOutput> {
-  let mut child = build_shell_command(command)
+  let mut child = build_shell_command(command, workspace_root)
     .current_dir(workspace_root)
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
@@ -479,18 +479,48 @@ fn terminate_unix_process_group(child: &mut Child) {
 }
 
 #[cfg(target_family = "windows")]
-fn build_shell_command(command: &str) -> Command {
+fn build_shell_command(command: &str, _workspace_root: &Path) -> Command {
   let mut process = Command::new("powershell");
   process.args(["-NoProfile", "-Command", command]);
   process
 }
 
-#[cfg(not(target_family = "windows"))]
-fn build_shell_command(command: &str) -> Command {
-  use std::os::unix::process::CommandExt;
+#[cfg(target_os = "macos")]
+fn build_shell_command(command: &str, workspace_root: &Path) -> Command {
+  if pith_sandbox::native_sandbox_available() {
+    let policy = pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root);
+    let profile = pith_sandbox::macos_seatbelt_profile(&policy);
+    let mut process = Command::new(pith_sandbox::macos_sandbox_exec_path());
+    process
+      .arg("-p")
+      .arg(profile)
+      .arg("/bin/sh")
+      .arg("-lc")
+      .arg(command);
+    set_unix_process_group(&mut process);
+    return process;
+  }
 
+  build_unix_shell_command(command)
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn build_shell_command(command: &str, _workspace_root: &Path) -> Command {
+  build_unix_shell_command(command)
+}
+
+#[cfg(unix)]
+fn build_unix_shell_command(command: &str) -> Command {
   let mut process = Command::new("sh");
   process.args(["-lc", command]);
+  set_unix_process_group(&mut process);
+  process
+}
+
+#[cfg(unix)]
+fn set_unix_process_group(process: &mut Command) {
+  use std::os::unix::process::CommandExt;
+
   unsafe {
     process.pre_exec(|| {
       if setpgid(0, 0) == 0 {
@@ -500,7 +530,6 @@ fn build_shell_command(command: &str) -> Command {
       }
     });
   }
-  process
 }
 
 #[cfg(unix)]

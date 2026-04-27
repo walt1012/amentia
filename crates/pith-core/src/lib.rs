@@ -9,7 +9,6 @@ use active_turns::{
 };
 use anyhow::Result;
 use context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
-use harness_status::build_harness_status;
 use intent_inference::{
   infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
 };
@@ -53,17 +52,18 @@ use protocol_adapters::{
   to_protocol_memory_status, to_protocol_model_bootstrap, to_protocol_model_health,
   to_protocol_plugin,
 };
+use runtime_readiness::build_runtime_readiness;
 use text_utils::{take_characters, truncate_text};
 
 mod active_turns;
 mod context_compaction;
-mod harness_status;
 mod intent_inference;
 mod local_responses;
 mod plugin_catalog_state;
 mod plugin_hooks;
 mod plugin_permissions;
 mod protocol_adapters;
+mod runtime_readiness;
 mod text_utils;
 
 #[derive(Debug, Clone)]
@@ -341,7 +341,6 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
         status: "ok".to_string(),
       },
     ),
-    methods::HARNESS_STATUS => JsonRpcResponse::success(request.id, &build_harness_status(context)),
     methods::MEMORY_CREATE => handle_memory_create(context, request),
     methods::MEMORY_LIST => JsonRpcResponse::success(
       request.id,
@@ -394,6 +393,9 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     ),
     methods::PLUGIN_REMOVE => handle_plugin_remove(context, request),
     methods::PLUGIN_SET_ENABLED => handle_plugin_set_enabled(context, request),
+    methods::RUNTIME_READINESS => {
+      JsonRpcResponse::success(request.id, &build_runtime_readiness(context))
+    }
     methods::WORKSPACE_CURRENT => JsonRpcResponse::success(
       request.id,
       &WorkspaceCurrentResult {
@@ -470,11 +472,11 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
       },
       protocol_version: "0.1.0".to_string(),
       capabilities: ServerCapabilities {
-        supports_harness: true,
         supports_memory: true,
         supports_threads: true,
         supports_tools: true,
         supports_plugins: !context.plugins.is_empty(),
+        supports_runtime_readiness: true,
       },
     },
   )
@@ -2727,7 +2729,7 @@ mod tests {
     assert!(response.error.is_none());
     let result = response.result.expect("initialize result");
     assert_eq!(result["protocolVersion"], "0.1.0");
-    assert_eq!(result["capabilities"]["supportsHarness"], true);
+    assert_eq!(result["capabilities"]["supportsRuntimeReadiness"], true);
     assert_eq!(result["capabilities"]["supportsThreads"], true);
     assert_eq!(result["capabilities"]["supportsTools"], true);
   }
@@ -2743,17 +2745,17 @@ mod tests {
   }
 
   #[test]
-  fn harness_status_reports_agent_control_surface() {
+  fn runtime_readiness_reports_agent_control_surface() {
     let mut context = RuntimeContext::new_in_memory();
-    let response = handle_request(&mut context, request(methods::HARNESS_STATUS, None));
+    let response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
 
     assert!(response.error.is_none());
-    let result = response.result.expect("harness status result");
+    let result = response.result.expect("runtime readiness result");
     assert_eq!(result["status"], "setup_required");
     assert!(result["summary"]
       .as_str()
       .expect("summary")
-      .contains("agent harness"));
+      .contains("local agent work"));
     let check_ids = result["checks"]
       .as_array()
       .expect("checks")

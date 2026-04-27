@@ -6,4 +6,5 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+pith-sandbox = { path = "../pith-sandbox" }
 serde.workspace = true

@@ -5,6 +5,7 @@ members = [
   "crates/pith-model-runtime",
   "crates/pith-plugin-host",
   "crates/pith-protocol",
+  "crates/pith-sandbox",
   "crates/pith-runtime-bin",
   "crates/pith-storage",
   "crates/pith-tools",

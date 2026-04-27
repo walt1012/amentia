@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 pub mod methods {
   pub const APPROVAL_RESPOND: &str = "approval/respond";
-  pub const HARNESS_STATUS: &str = "harness/status";
   pub const INITIALIZE: &str = "initialize";
   pub const HEALTH_PING: &str = "health/ping";
   pub const MEMORY_CREATE: &str = "memory/create";
@@ -21,6 +20,7 @@ pub mod methods {
   pub const PLUGIN_LIST: &str = "plugin/list";
   pub const PLUGIN_REMOVE: &str = "plugin/remove";
   pub const PLUGIN_SET_ENABLED: &str = "plugin/setEnabled";
+  pub const RUNTIME_READINESS: &str = "runtime/readiness";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
   pub const WORKSPACE_CURRENT: &str = "workspace/current";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
@@ -85,11 +85,11 @@ pub struct ServerInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerCapabilities {
-  pub supports_harness: bool,
   pub supports_memory: bool,
   pub supports_threads: bool,
   pub supports_tools: bool,
   pub supports_plugins: bool,
+  pub supports_runtime_readiness: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,7 +108,7 @@ pub struct HealthPingResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HarnessCheck {
+pub struct RuntimeReadinessCheck {
   pub id: String,
   pub title: String,
   pub status: String,
@@ -117,10 +117,10 @@ pub struct HarnessCheck {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HarnessStatusResult {
+pub struct RuntimeReadinessResult {
   pub status: String,
   pub summary: String,
-  pub checks: Vec<HarnessCheck>,
+  pub checks: Vec<RuntimeReadinessCheck>,
   #[serde(default)]
   pub metrics: HashMap<String, String>,
 }

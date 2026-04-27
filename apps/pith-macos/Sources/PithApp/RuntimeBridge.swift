@@ -46,17 +46,17 @@ final class RuntimeBridge {
     let metrics: [String: String]
   }
 
-  struct RuntimeHarnessCheck {
+  struct RuntimeReadinessCheck {
     let id: String
     let title: String
     let status: String
     let detail: String
   }
 
-  struct RuntimeHarnessStatus {
+  struct RuntimeReadiness {
     let status: String
     let summary: String
-    let checks: [RuntimeHarnessCheck]
+    let checks: [RuntimeReadinessCheck]
     let metrics: [String: String]
   }
 
@@ -356,9 +356,9 @@ final class RuntimeBridge {
     )
   }
 
-  func harnessStatus() async throws -> RuntimeHarnessStatus {
-    let response: JSONRPCResponse<HarnessStatusResult> = try await sendRequest(
-      method: "harness/status",
+  func runtimeReadiness() async throws -> RuntimeReadiness {
+    let response: JSONRPCResponse<RuntimeReadinessResult> = try await sendRequest(
+      method: "runtime/readiness",
       params: OptionalRequestParams.none
     )
 
@@ -370,11 +370,11 @@ final class RuntimeBridge {
       throw RuntimeError.invalidResponse
     }
 
-    return RuntimeHarnessStatus(
+    return RuntimeReadiness(
       status: result.status,
       summary: result.summary,
       checks: result.checks.map { check in
-        RuntimeHarnessCheck(
+        RuntimeReadinessCheck(
           id: check.id,
           title: check.title,
           status: check.status,

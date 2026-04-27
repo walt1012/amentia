@@ -11,5 +11,6 @@ pith-memory = { path = "../pith-memory" }
 pith-model-runtime = { path = "../pith-model-runtime" }
 pith-plugin-host = { path = "../pith-plugin-host" }
 pith-protocol = { path = "../pith-protocol" }
+pith-sandbox = { path = "../pith-sandbox" }
 pith-storage = { path = "../pith-storage" }
 pith-tools = { path = "../pith-tools" }
