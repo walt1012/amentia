@@ -43,6 +43,7 @@ struct LocalModelSummary: Identifiable, Hashable {
   let sizeBytes: Int64
   let sha256: String
   let contextSize: Int
+  let modelContextSize: Int
   let maxOutputTokens: Int
   let license: String
   let tags: [String]

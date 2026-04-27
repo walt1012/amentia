@@ -53,6 +53,7 @@ enum LocalModelCatalog {
         sizeBytes: item.sizeBytes,
         sha256: item.sha256,
         contextSize: item.contextSize,
+        modelContextSize: item.modelContextSize,
         maxOutputTokens: item.maxOutputTokens,
         license: item.license,
         tags: item.tags,
@@ -74,6 +75,7 @@ enum LocalModelCatalog {
       displayName: model.displayName,
       fileName: model.fileName,
       contextSize: model.contextSize,
+      modelContextSize: model.modelContextSize,
       maxOutputTokens: model.maxOutputTokens,
       backend: "llama.cpp",
       license: model.license,
@@ -399,6 +401,7 @@ enum LocalModelCatalog {
         sizeBytes: 229_312_224,
         sha256: "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
         contextSize: 4096,
+        modelContextSize: 32_768,
         maxOutputTokens: 160,
         license: "lfm1.0",
         tags: ["default", "tiny", "edge"],
@@ -414,6 +417,7 @@ enum LocalModelCatalog {
         sizeBytes: 222_662_560,
         sha256: "0a8d6a7373602fadfba274a640ba784b86cc6847f1c67f1b0a90fa2ec266b7fb",
         contextSize: 4096,
+        modelContextSize: 32_768,
         maxOutputTokens: 192,
         license: "apache-2.0",
         tags: ["recommended", "tiny", "tools", "code"],
@@ -446,6 +450,7 @@ private struct LocalModelCatalogItem {
   let sizeBytes: Int64
   let sha256: String
   let contextSize: Int
+  let modelContextSize: Int
   let maxOutputTokens: Int
   let license: String
   let tags: [String]
@@ -465,6 +470,7 @@ private struct LocalModelPackManifest: Encodable {
   let displayName: String
   let fileName: String
   let contextSize: Int
+  let modelContextSize: Int
   let maxOutputTokens: Int
   let backend: String
   let license: String
@@ -478,6 +484,7 @@ private struct LocalModelPackManifest: Encodable {
     case displayName = "display_name"
     case fileName = "file_name"
     case contextSize = "context_size"
+    case modelContextSize = "model_context_size"
     case maxOutputTokens = "max_output_tokens"
     case backend
     case license

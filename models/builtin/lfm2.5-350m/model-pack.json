@@ -3,6 +3,7 @@
   "display_name": "LFM2.5-350M Q4_K_M",
   "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
+  "model_context_size": 32768,
   "max_output_tokens": 160,
   "backend": "llama.cpp",
   "license": "lfm1.0",

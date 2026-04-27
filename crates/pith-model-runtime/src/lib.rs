@@ -48,6 +48,8 @@ pub struct ModelPackManifest {
   pub display_name: String,
   pub file_name: String,
   pub context_size: usize,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub model_context_size: Option<usize>,
   pub max_output_tokens: usize,
   pub backend: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -597,6 +599,9 @@ fn model_metrics(
   if let Some(manifest) = manifest {
     metrics.insert("backend".to_string(), manifest.backend.clone());
     metrics.insert("contextSize".to_string(), manifest.context_size.to_string());
+    if let Some(model_context_size) = manifest.model_context_size {
+      metrics.insert("modelContextSize".to_string(), model_context_size.to_string());
+    }
     metrics.insert(
       "maxOutputTokens".to_string(),
       manifest.max_output_tokens.to_string(),
@@ -1135,6 +1140,7 @@ mod tests {
           display_name: "Granite 4.0-H-350M Q4_K_M".to_string(),
           file_name: "granite-4.0-h-350m-Q4_K_M.gguf".to_string(),
           context_size: 4096,
+          model_context_size: Some(32_768),
           max_output_tokens: 192,
           backend: "llama.cpp".to_string(),
           license: Some("apache-2.0".to_string()),
@@ -1153,6 +1159,8 @@ mod tests {
 
     assert_eq!(health.pack_id, "granite-4.0-h-350m");
     assert_eq!(health.display_name, "Granite 4.0-H-350M Q4_K_M");
+    assert_eq!(health.metrics["contextSize"], "4096");
+    assert_eq!(health.metrics["modelContextSize"], "32768");
     assert_eq!(health.metrics["maxOutputTokens"], "192");
   }
 
@@ -1196,6 +1204,7 @@ mod tests {
   "display_name": "LFM2.5-350M Q4_K_M",
   "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
+  "model_context_size": 32768,
   "max_output_tokens": 160,
   "backend": "llama.cpp",
   "license": "lfm1.0",

@@ -199,6 +199,8 @@ enum LocalModelOperationPresenter {
   }
 
   private static func modelDetail(_ model: LocalModelSummary) -> String {
-    "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context"
+    let size = formattedByteCount(model.sizeBytes)
+    let context = "\(model.contextSize) runtime / \(model.modelContextSize) model context"
+    return "\(size) | \(model.license) | \(context)"
   }
 }

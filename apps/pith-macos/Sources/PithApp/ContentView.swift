@@ -575,7 +575,9 @@ private struct SetupModelOptionRow: View {
   }
 
   private var detail: String {
-    "\(formattedByteCount(model.sizeBytes)) | \(model.license) | \(model.contextSize) context | \(model.maxOutputTokens) output"
+    let size = formattedByteCount(model.sizeBytes)
+    let context = "\(model.contextSize) runtime / \(model.modelContextSize) model context"
+    return "\(size) | \(model.license) | \(context) | \(model.maxOutputTokens) output"
   }
 
   private var metadata: String {

@@ -80,9 +80,12 @@ enum LocalModelStatusPresenter {
     }
 
     let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
+    let modelContextSize = modelHealth.metrics["modelContextSize"]
+      .map { "\(contextSize) runtime / \($0) model" }
+      ?? contextSize
     let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
     let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
-    return "Context: \(contextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
+    return "Context: \(modelContextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
   }
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {

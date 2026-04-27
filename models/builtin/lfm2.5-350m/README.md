@@ -27,6 +27,12 @@ Recommended local layout:
 
 Pith can download the recommended Q4_K_M GGUF from the catalog manifest into the suggested app data path. The download target stays local and is never tracked in git.
 
+Manifest sizing metadata is intentionally split:
+
+- `model_context_size` is the published model context window from the upstream model documentation.
+- `context_size` is Pith's default llama.cpp runtime window for the lightweight first-use path.
+- `max_output_tokens` is Pith's conservative generation cap, not an intrinsic model limit.
+
 The runtime can also resolve:
 
 - `PITH_MODEL_PACK_MANIFEST`

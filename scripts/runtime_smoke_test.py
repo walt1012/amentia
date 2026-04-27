@@ -327,6 +327,7 @@ def main() -> int:
     assert model_health["result"]["status"] in {"unavailable", "ready"}
     assert model_health["result"]["source"] in {"default-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
+    assert model_health["result"]["metrics"]["modelContextSize"] == "32768"
     assert model_health["result"]["metrics"]["fileName"] == "LFM2.5-350M-Q4_K_M.gguf"
     assert model_health["result"]["metrics"]["downloadUrl"].startswith(
       "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
