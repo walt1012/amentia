@@ -447,7 +447,6 @@ fn terminate_shell_child(child: &mut Child) {
   #[cfg(unix)]
   {
     terminate_unix_process_group(child);
-    return;
   }
 
   #[cfg(not(unix))]
