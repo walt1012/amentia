@@ -267,14 +267,8 @@ fn readiness_metrics(
       "enabledPluginCount".to_string(),
       enabled_plugin_count.to_string(),
     ),
-    (
-      "sandboxMode".to_string(),
-      sandbox_status.mode.clone(),
-    ),
-    (
-      "sandboxBackend".to_string(),
-      sandbox_status.backend.clone(),
-    ),
+    ("sandboxMode".to_string(), sandbox_status.mode.clone()),
+    ("sandboxBackend".to_string(), sandbox_status.backend.clone()),
     (
       "sandboxAvailable".to_string(),
       sandbox_status.available.to_string(),
