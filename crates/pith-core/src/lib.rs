@@ -538,11 +538,11 @@ fn handle_plugin_set_enabled(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params =
-    match parse_required_params::<PluginSetEnabledParams>(&request, "plugin/setEnabled") {
-      Ok(params) => params,
-      Err(response) => return response,
-    };
+  let params = match parse_required_params::<PluginSetEnabledParams>(&request, "plugin/setEnabled")
+  {
+    Ok(params) => params,
+    Err(response) => return response,
+  };
 
   let Some(plugin_index) = context
     .plugins
@@ -662,11 +662,11 @@ fn handle_plugin_command_run(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params =
-    match parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun") {
-      Ok(params) => params,
-      Err(response) => return response,
-    };
+  let params = match parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun")
+  {
+    Ok(params) => params,
+    Err(response) => return response,
+  };
 
   let Some(command) = build_command_registry(&context.plugins)
     .into_iter()
