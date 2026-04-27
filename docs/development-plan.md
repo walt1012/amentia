@@ -505,6 +505,10 @@ Phase 1 should use `LFM2.5-350M` as:
 
 The architecture must also support optional future local packs for stronger coding performance without violating the requirement that the first-use path stays fully local after the selected model is downloaded.
 
+Model files are delivered through the in-app first-use download flow, not bundled inside the `.app`
+and not primarily imported from the filesystem. The app may ship catalog metadata and runtime
+support, but the selected GGUF is downloaded, verified, activated, and then reused locally.
+
 ### 12.3 Curated Small Model Catalog
 
 The app should not feel like a model zoo. Keep the first-use catalog compact, current, and easy to understand:
@@ -1024,6 +1028,7 @@ Measure on actual Intel Mac hardware:
 - successful CI
 - smoke test on Intel Mac
 - first-use model download and activation verified
+- model integrity verification confirmed through catalog size, GGUF magic, and SHA-256 metadata
 - plugin bundle presence verified
 - migration test for existing local data
 

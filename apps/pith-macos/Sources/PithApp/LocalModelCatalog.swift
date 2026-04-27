@@ -103,15 +103,14 @@ enum LocalModelCatalog {
     )
     try validateGGUFMagic(at: fileURL, displayName: model.displayName)
 
-    if let expectedSHA256 = model.sha256, !expectedSHA256.isEmpty {
-      let actualSHA256 = try sha256Hex(at: fileURL)
-      guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
-        throw LocalModelIntegrityError.checksumMismatch(
-          displayName: model.displayName,
-          expected: expectedSHA256,
-          actual: actualSHA256
-        )
-      }
+    try validateExpectedSHA256(model.sha256, displayName: model.displayName)
+    let actualSHA256 = try sha256Hex(at: fileURL)
+    guard actualSHA256.caseInsensitiveCompare(model.sha256) == .orderedSame else {
+      throw LocalModelIntegrityError.checksumMismatch(
+        displayName: model.displayName,
+        expected: model.sha256,
+        actual: actualSHA256
+      )
     }
 
     rememberVerifiedModel(
@@ -243,27 +242,25 @@ enum LocalModelCatalog {
         expectedSizeBytes: item.sizeBytes
       )
       try validateGGUFMagic(at: URL(fileURLWithPath: path), displayName: item.displayName)
-      guard let expectedSHA256 = item.sha256, !expectedSHA256.isEmpty else {
-        return true
-      }
+      try validateExpectedSHA256(item.sha256, displayName: item.displayName)
       if hasVerifiedModel(
         modelID: item.id,
         path: path,
-        expectedSHA256: expectedSHA256,
+        expectedSHA256: item.sha256,
         localMetadata: localMetadata
       ) {
         return true
       }
 
       let actualSHA256 = try sha256Hex(at: URL(fileURLWithPath: path))
-      guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+      guard actualSHA256.caseInsensitiveCompare(item.sha256) == .orderedSame else {
         forgetVerifiedModel(modelID: item.id)
         return false
       }
       rememberVerifiedModel(
         modelID: item.id,
         path: path,
-        expectedSHA256: expectedSHA256,
+        expectedSHA256: item.sha256,
         localMetadata: localMetadata
       )
       return true
@@ -285,6 +282,15 @@ enum LocalModelCatalog {
         expectedMinimumBytes: minimumBytes,
         actualBytes: localSizeBytes
       )
+    }
+  }
+
+  private static func validateExpectedSHA256(
+    _ expectedSHA256: String,
+    displayName: String
+  ) throws {
+    guard !expectedSHA256.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw LocalModelIntegrityError.missingChecksum(displayName: displayName)
     }
   }
 
@@ -334,12 +340,12 @@ enum LocalModelCatalog {
   private static func rememberVerifiedModel(
     modelID: String,
     path: String,
-    expectedSHA256: String?,
+    expectedSHA256: String,
     localMetadata: LocalModelFileMetadata
   ) {
     let stamp = verificationStamp(
       path: path,
-      expectedSHA256: expectedSHA256 ?? "",
+      expectedSHA256: expectedSHA256,
       localMetadata: localMetadata
     )
     UserDefaults.standard.set(stamp, forKey: verifiedModelKey(for: modelID))
@@ -438,7 +444,7 @@ private struct LocalModelCatalogItem {
   let downloadURL: String
   let homepage: String
   let sizeBytes: Int64
-  let sha256: String?
+  let sha256: String
   let contextSize: Int
   let maxOutputTokens: Int
   let license: String
@@ -464,7 +470,7 @@ private struct LocalModelPackManifest: Encodable {
   let license: String
   let homepage: String
   let downloadURL: String
-  let sha256: String?
+  let sha256: String
   let sizeBytes: Int64
 
   enum CodingKeys: String, CodingKey {
@@ -486,6 +492,7 @@ private enum LocalModelIntegrityError: LocalizedError {
   case missingSize(path: String)
   case sizeTooSmall(displayName: String, expectedMinimumBytes: Int64, actualBytes: Int64)
   case invalidMagic(displayName: String)
+  case missingChecksum(displayName: String)
   case checksumMismatch(displayName: String, expected: String, actual: String)
 
   var errorDescription: String? {
@@ -497,6 +504,8 @@ private enum LocalModelIntegrityError: LocalizedError {
         "\(displayName) is incomplete. Expected at least \(expectedMinimumBytes) bytes, found \(actualBytes)."
     case .invalidMagic(let displayName):
       return "\(displayName) is not a valid GGUF file."
+    case .missingChecksum(let displayName):
+      return "\(displayName) is missing required SHA-256 metadata."
     case .checksumMismatch(let displayName, let expected, let actual):
       return "\(displayName) checksum mismatch. Expected \(expected), found \(actual)."
     }

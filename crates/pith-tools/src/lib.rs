@@ -179,12 +179,13 @@ pub fn run_shell(
     bail!("shell command must not be empty");
   }
 
-  let output = run_shell_with_timeout(trimmed_command, &workspace_root).with_context(|| {
-    format!(
-      "failed to run shell command in {}",
-      workspace_root.display()
-    )
-  })?;
+  let output = run_shell_with_timeout(trimmed_command, &workspace_root, SHELL_COMMAND_TIMEOUT)
+    .with_context(|| {
+      format!(
+        "failed to run shell command in {}",
+        workspace_root.display()
+      )
+    })?;
 
   let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
   let mut stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -212,7 +213,11 @@ pub fn run_shell(
   })
 }
 
-fn run_shell_with_timeout(command: &str, workspace_root: &Path) -> Result<ShellOutput> {
+fn run_shell_with_timeout(
+  command: &str,
+  workspace_root: &Path,
+  timeout: Duration,
+) -> Result<ShellOutput> {
   let mut child = build_shell_command(command)
     .current_dir(workspace_root)
     .stdout(Stdio::piped())
@@ -228,7 +233,7 @@ fn run_shell_with_timeout(command: &str, workspace_root: &Path) -> Result<ShellO
       break status;
     }
 
-    if started_at.elapsed() >= SHELL_COMMAND_TIMEOUT {
+    if started_at.elapsed() >= timeout {
       timed_out = true;
       terminate_shell_child(&mut child);
       break child.wait()?;
@@ -516,6 +521,38 @@ fn truncate_output(output: &str, max_output_bytes: usize) -> String {
   }
 
   collected
+}
+
+#[cfg(test)]
+mod tests {
+  use std::fs;
+  use std::path::PathBuf;
+  use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+  use super::*;
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_timeout_terminates_blocking_command() {
+    let workspace = unique_temp_workspace("shell-timeout");
+    fs::create_dir_all(&workspace).expect("workspace");
+
+    let result = run_shell_with_timeout("sleep 5", &workspace, Duration::from_millis(100))
+      .expect("shell result");
+
+    assert!(result.timed_out);
+    assert_eq!(result.exit_code, -1);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  fn unique_temp_workspace(prefix: &str) -> PathBuf {
+    let nonce = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("clock")
+      .as_nanos();
+    std::env::temp_dir().join(format!("pith-tools-{prefix}-{nonce}"))
+  }
 }
 
 fn build_unified_diff(relative_path: &str, previous_content: &str, next_content: &str) -> String {
