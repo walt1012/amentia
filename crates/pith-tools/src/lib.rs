@@ -484,7 +484,7 @@ fn build_shell_command(command: &str) -> Command {
   process.args(["-lc", command]);
   unsafe {
     process.pre_exec(|| {
-      if unsafe { setpgid(0, 0) } == 0 {
+      if setpgid(0, 0) == 0 {
         Ok(())
       } else {
         Err(std::io::Error::last_os_error())
