@@ -19,22 +19,14 @@ enum LocalModelDisplayPresenter {
 
   static func firstUseFit(_ model: LocalModelSummary, defaultModelID: String) -> String {
     if model.id == defaultModelID {
-      return "Best for: first setup and the fastest local loop."
+      return "Default path: fastest first setup and the lightest local loop."
     }
 
-    if model.tags.contains("code") {
-      return "Best for: small code generation and repair experiments."
+    if model.tags.contains("recommended") {
+      return "Recommended alternative: still tiny, stronger for tools, code, and RAG."
     }
 
-    if model.tags.contains("multilingual") {
-      return "Best for: compact multilingual chat."
-    }
-
-    if model.tags.contains("english") {
-      return "Best for: fast English assistant tests."
-    }
-
-    return "Best for: lightweight local experiments."
+    return "Catalog candidate: lightweight, local, and verified before activation."
   }
 
   private static func sourceName(host: String?) -> String {

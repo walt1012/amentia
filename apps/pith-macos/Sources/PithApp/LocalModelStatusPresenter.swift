@@ -8,6 +8,7 @@ struct LocalModelStatusSnapshot {
   let modelDownloadProgress: ModelDownloadProgress?
   let selectedSetupModelID: String
   let selectedSetupModel: LocalModelSummary?
+  let hasActiveCatalogModel: Bool
 }
 
 enum LocalModelStatusPresenter {
@@ -29,6 +30,10 @@ enum LocalModelStatusPresenter {
       }
     }
 
+    if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
+      return "Model ready outside curated catalog"
+    }
+
     return "\(modelHealth.backend) | \(modelHealth.status)"
   }
 
@@ -47,6 +52,10 @@ enum LocalModelStatusPresenter {
       }
 
       return "Pith needs one downloaded GGUF model selected before it can answer locally."
+    }
+
+    if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
+      return "Choose LFM2.5 or Granite from the local catalog before running Pith. Removed or external model selections are not treated as first-use ready."
     }
 
     return modelHealth.detail

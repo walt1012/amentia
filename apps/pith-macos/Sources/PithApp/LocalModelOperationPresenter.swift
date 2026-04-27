@@ -69,9 +69,9 @@ enum LocalModelOperationPresenter {
       return "Choose one local model to download and run."
     }
 
-    let role = model.id == defaultModelID ? "Default" : "Alternative"
+    let role = model.id == defaultModelID ? "Default" : "Recommended alternative"
     let status = model.downloaded ? "downloaded" : "not downloaded"
-    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). Pith runs one local model at a time."
+    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). The first-use catalog is intentionally small, and Pith runs one active model at a time."
   }
 
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
@@ -166,9 +166,9 @@ enum LocalModelOperationPresenter {
     if let model = snapshot.selectedSetupModel {
       return LocalModelSetupGuidance(
         title: "Download Local Model",
-        summary: "Fresh installs need one local model before Pith can answer locally. \(model.displayName) is selected.",
+        summary: "Fresh installs need one curated local model before Pith can answer locally. \(model.displayName) is selected.",
         detail: modelDetail(model),
-        actionSummary: "Choose a small local model to download and unlock local agent work.",
+        actionSummary: "Choose between the fastest default and the stronger tiny alternative.",
         readinessDetail: "Download",
         tone: .warning
       )

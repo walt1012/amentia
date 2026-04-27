@@ -2088,7 +2088,8 @@ final class AppViewModel: ObservableObject {
   func isLocalModelReady() -> Bool {
     guard runtimeState == .ready,
           let modelHealth,
-          modelHealth.status == "ready"
+          modelHealth.status == "ready",
+          hasActiveCatalogModel()
     else {
       return false
     }
@@ -2433,10 +2434,21 @@ final class AppViewModel: ObservableObject {
 
   private func refreshLocalModelCatalog() {
     let activeModelPath = runtimeBridge.activeLocalModelPath() ?? modelHealth?.modelPath
-    localModels = LocalModelCatalog.summaries(
+    var refreshedModels = LocalModelCatalog.summaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
       activeModelPath: activeModelPath
     )
+    if runtimeBridge.activeLocalModelPath() != nil,
+       activeModelPath != nil,
+       !refreshedModels.contains(where: { $0.active })
+    {
+      runtimeBridge.clearActiveLocalModel()
+      refreshedModels = LocalModelCatalog.summaries(
+        storageRootPath: runtimeBridge.localModelStorageRootPath(),
+        activeModelPath: modelHealth?.modelPath
+      )
+    }
+    localModels = refreshedModels
     if !localModels.contains(where: { $0.id == selectedSetupModelID }) {
       selectedSetupModelID = LocalModelCatalog.defaultFirstUseModelID
     }
@@ -2592,7 +2604,8 @@ final class AppViewModel: ObservableObject {
       pausedModelDownloadID: pausedModelDownloadID,
       modelDownloadProgress: modelDownloadProgress,
       selectedSetupModelID: selectedSetupModelID,
-      selectedSetupModel: selectedSetupModel()
+      selectedSetupModel: selectedSetupModel(),
+      hasActiveCatalogModel: hasActiveCatalogModel()
     )
   }
 
@@ -2657,6 +2670,10 @@ final class AppViewModel: ObservableObject {
     localModels.first(where: { $0.id == selectedSetupModelID })
       ?? localModels.first(where: { $0.id == LocalModelCatalog.defaultFirstUseModelID })
       ?? localModels.first
+  }
+
+  private func hasActiveCatalogModel() -> Bool {
+    localModels.contains(where: { $0.active })
   }
 
   private func localModelSetupGuidance() -> LocalModelSetupGuidance {

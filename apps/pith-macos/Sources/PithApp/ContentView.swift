@@ -531,6 +531,9 @@ private struct SetupModelOptionRow: View {
           if isDefault {
             SetupModelBadge(label: "Default", tone: .ready)
           }
+          if model.tags.contains("recommended") {
+            SetupModelBadge(label: "Recommended", tone: .ready)
+          }
           if model.active {
             SetupModelBadge(label: "Active", tone: .active)
           } else if model.downloaded {
@@ -973,7 +976,7 @@ struct SettingsView: View {
   var body: some View {
     Form {
       Section("Model") {
-        Text("Default first-use suggestion: LFM2.5-350M")
+        Text("First-use catalog: LFM2.5-350M default, Granite 4.0-H-350M recommended alternative")
       }
 
       Section("Platform") {
