@@ -48,7 +48,11 @@ pub(crate) fn build_harness_status(context: &RuntimeContext) -> HarnessStatusRes
       active_turn_count,
     ),
     checks: vec![
-      local_model_check(model_ready, &model_health.display_name, &model_health.backend),
+      local_model_check(
+        model_ready,
+        &model_health.display_name,
+        &model_health.backend,
+      ),
       workspace_check(context),
       context_check(&context_window, &output_cap),
       execution_control_check(pending_approval_count, active_turn_count),
@@ -208,16 +212,31 @@ fn harness_metrics(
   HashMap::from([
     ("modelStatus".to_string(), model_status.to_string()),
     ("modelPackId".to_string(), model_pack_id.to_string()),
-    ("workspaceBound".to_string(), context.workspace.is_some().to_string()),
+    (
+      "workspaceBound".to_string(),
+      context.workspace.is_some().to_string(),
+    ),
     (
       "pendingApprovalCount".to_string(),
       context.pending_approvals.len().to_string(),
     ),
-    ("activeTurnCount".to_string(), context.active_turns.len().to_string()),
-    ("memoryNoteCount".to_string(), context.memory_notes.len().to_string()),
+    (
+      "activeTurnCount".to_string(),
+      context.active_turns.len().to_string(),
+    ),
+    (
+      "memoryNoteCount".to_string(),
+      context.memory_notes.len().to_string(),
+    ),
     ("pluginCount".to_string(), context.plugins.len().to_string()),
-    ("enabledPluginCount".to_string(), enabled_plugin_count.to_string()),
-    ("contextWindowTokens".to_string(), context_window.to_string()),
+    (
+      "enabledPluginCount".to_string(),
+      enabled_plugin_count.to_string(),
+    ),
+    (
+      "contextWindowTokens".to_string(),
+      context_window.to_string(),
+    ),
     (
       "shellTimeoutSeconds".to_string(),
       shell_command_timeout_seconds().to_string(),
