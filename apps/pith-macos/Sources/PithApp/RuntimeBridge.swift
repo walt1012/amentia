@@ -205,6 +205,7 @@ final class RuntimeBridge {
     case runtimePathMissing
     case runtimePipeUnavailable
     case invalidResponse
+    case requestTimedOut(method: String, seconds: Int)
     case rpc(String)
 
     var errorDescription: String? {
@@ -217,6 +218,10 @@ final class RuntimeBridge {
         return "The runtime process pipes are not available."
       case .invalidResponse:
         return "The runtime returned an invalid response."
+      case .requestTimedOut(let method, let seconds):
+        return
+          "Runtime request \(method) timed out after \(seconds) seconds. " +
+          "The local runtime was stopped so it can recover cleanly."
       case .rpc(let message):
         return message
       }
@@ -240,6 +245,8 @@ final class RuntimeBridge {
   private var errorReaderTask: Task<Void, Never>?
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
+  private static let defaultRequestTimeoutNanoseconds: UInt64 = 30_000_000_000
+  private static let turnRequestTimeoutNanoseconds: UInt64 = 210_000_000_000
 
   private struct ActiveLocalModelSelection {
     let manifestPath: String
@@ -980,9 +987,7 @@ final class RuntimeBridge {
     if let response = try? decoder.decode(JSONRPCAnyResponse.self, from: data),
        let responseID = response.id
     {
-      let continuation = stateQueue.sync {
-        pendingResponses.removeValue(forKey: responseID)
-      }
+      let continuation = takePendingResponse(requestID: responseID)
       continuation?.resume(returning: data)
       return
     }
@@ -1033,6 +1038,76 @@ final class RuntimeBridge {
         }
       }
     }
+  }
+
+  private func requestTimeoutNanoseconds(for method: String) -> UInt64 {
+    switch method {
+    case "turn/start", "plugin/commandRun":
+      return Self.turnRequestTimeoutNanoseconds
+    default:
+      return Self.defaultRequestTimeoutNanoseconds
+    }
+  }
+
+  private func requestTimeoutSeconds(from timeoutNanoseconds: UInt64) -> Int {
+    max(Int(timeoutNanoseconds / 1_000_000_000), 1)
+  }
+
+  private func takePendingResponse(requestID: Int) -> CheckedContinuation<Data, Error>? {
+    stateQueue.sync {
+      pendingResponses.removeValue(forKey: requestID)
+    }
+  }
+
+  private func handleRequestTimeout(requestID: Int, method: String, timeoutNanoseconds: UInt64) {
+    guard let continuation = takePendingResponse(requestID: requestID) else {
+      return
+    }
+
+    let seconds = requestTimeoutSeconds(from: timeoutNanoseconds)
+    let error = RuntimeError.requestTimedOut(method: method, seconds: seconds)
+    continuation.resume(throwing: error)
+    stopRuntimeAfterRequestTimeout(method: method, seconds: seconds)
+  }
+
+  private func handleRequestCancellation(requestID: Int, method: String) {
+    guard let continuation = takePendingResponse(requestID: requestID) else {
+      return
+    }
+
+    let detail = "Runtime request \(method) was cancelled."
+    continuation.resume(throwing: RuntimeError.rpc(detail))
+    if shouldStopRuntimeAfterCancelledRequest(method: method) {
+      stopRuntimeAfterRequestCancellation(method: method)
+    }
+  }
+
+  private func shouldStopRuntimeAfterCancelledRequest(method: String) -> Bool {
+    method == "turn/start" || method == "plugin/commandRun"
+  }
+
+  private func stopRuntimeAfterRequestCancellation(method: String) {
+    let detail =
+      "Runtime request \(method) was cancelled. " +
+      "Relaunch the local runtime to continue."
+    stopRuntimeAfterRequestBoundary(detail: detail)
+  }
+
+  private func stopRuntimeAfterRequestTimeout(method: String, seconds: Int) {
+    let detail =
+      "Runtime request \(method) timed out after \(seconds) seconds. " +
+      "Relaunch the local runtime to continue."
+    stopRuntimeAfterRequestBoundary(detail: detail)
+  }
+
+  private func stopRuntimeAfterRequestBoundary(detail: String) {
+    failPendingResponses(with: RuntimeError.rpc(detail))
+    if let process, process.isRunning {
+      process.terminationHandler = nil
+      process.terminate()
+    }
+    resetProcessState()
+    updateConnectionState(.failed, detail: detail)
   }
 
   private func failPendingResponses(with error: Error) {
@@ -1160,28 +1235,54 @@ final class RuntimeBridge {
       nextRequestID += 1
       return id
     }
-
-    let data = try await withCheckedThrowingContinuation { continuation in
-      stateQueue.sync {
-        self.pendingResponses[requestID] = continuation
-      }
-
+    let timeoutNanoseconds = requestTimeoutNanoseconds(for: method)
+    let timeoutTask = Task { [weak self] in
       do {
-        let request = JSONRPCRequest(
-          id: requestID,
-          method: method,
-          params: params
-        )
-        let encoder = JSONEncoder()
-        let payload = try encoder.encode(request) + Data([0x0A])
-        try inputHandle.write(contentsOf: payload)
+        try await Task.sleep(nanoseconds: timeoutNanoseconds)
       } catch {
-        let pending = stateQueue.sync {
-          pendingResponses.removeValue(forKey: requestID)
-        }
-        pending?.resume(throwing: error)
+        return
       }
+      guard !Task.isCancelled else {
+        return
+      }
+      self?.handleRequestTimeout(
+        requestID: requestID,
+        method: method,
+        timeoutNanoseconds: timeoutNanoseconds
+      )
     }
+
+    let data: Data
+    do {
+      data = try await withTaskCancellationHandler(operation: {
+        try await withCheckedThrowingContinuation { continuation in
+          stateQueue.sync {
+            self.pendingResponses[requestID] = continuation
+          }
+
+          do {
+            let request = JSONRPCRequest(
+              id: requestID,
+              method: method,
+              params: params
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(request) + Data([0x0A])
+            try inputHandle.write(contentsOf: payload)
+          } catch {
+            let pending = takePendingResponse(requestID: requestID)
+            pending?.resume(throwing: error)
+          }
+        }
+      }, onCancel: {
+        timeoutTask.cancel()
+        handleRequestCancellation(requestID: requestID, method: method)
+      })
+    } catch {
+      timeoutTask.cancel()
+      throw error
+    }
+    timeoutTask.cancel()
 
     let decoder = JSONDecoder()
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)

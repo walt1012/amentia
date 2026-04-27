@@ -63,6 +63,9 @@ final class AppViewModel: ObservableObject {
   private var threadTimelines: [String: [TimelineEntry]]
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
+  private var pendingTurnRequestID: UUID?
+  private var pendingTurnThreadID: String?
+  private var pendingTurnTask: Task<Void, Never>?
   private var lastRuntimeFailureDetail: String?
   private var workspaceSearchRequestID: UUID?
   private var modelDownloadTask: Task<Void, Never>?
@@ -132,6 +135,9 @@ final class AppViewModel: ObservableObject {
     self.activeTurnID = nil
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
+    self.pendingTurnRequestID = nil
+    self.pendingTurnThreadID = nil
+    self.pendingTurnTask = nil
     self.lastRuntimeFailureDetail = nil
     self.workspaceSearchRequestID = nil
     self.modelDownloadTask = nil
@@ -805,18 +811,18 @@ final class AppViewModel: ObservableObject {
   }
 
   func canOpenWorkspace() -> Bool {
-    runtimeState == .ready && activeTurnID == nil
+    runtimeState == .ready && !hasActiveOrPendingTurn()
   }
 
   func canCreateThread() -> Bool {
     runtimeState == .ready
       && workspace != nil
       && isLocalModelReady()
-      && activeTurnID == nil
+      && !hasActiveOrPendingTurn()
   }
 
   func canInstallPlugin() -> Bool {
-    runtimeState == .ready && activeTurnID == nil
+    runtimeState == .ready && !hasActiveOrPendingTurn()
   }
 
   func canSendDraftMessage() -> Bool {
@@ -830,8 +836,10 @@ final class AppViewModel: ObservableObject {
 
   func canCancelActiveTurn() -> Bool {
     runtimeState == .ready
-      && activeTurnID != nil
-      && activeTurnThreadID != nil
+      && (
+        (activeTurnID != nil && activeTurnThreadID != nil)
+          || (pendingTurnRequestID != nil && pendingTurnThreadID != nil)
+      )
   }
 
   func canRespondToApproval(approvalID: String) -> Bool {
@@ -849,7 +857,7 @@ final class AppViewModel: ObservableObject {
       && workspace != nil
       && isLocalModelReady()
       && hasRuntimeThreadSelection()
-      && activeTurnID == nil
+      && !hasActiveOrPendingTurn()
   }
 
   private func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {
@@ -1143,14 +1151,21 @@ final class AppViewModel: ObservableObject {
           !message.isEmpty,
           let threadID = selectedThreadID,
           !threadID.hasPrefix("local-"),
-          activeTurnID == nil
+          !hasActiveOrPendingTurn()
     else {
       return
     }
 
     draftMessage = ""
+    runtimeDetail = "Generating local response..."
+    let requestID = UUID()
+    pendingTurnRequestID = requestID
+    pendingTurnThreadID = threadID
 
-    Task {
+    let task = Task {
+      defer {
+        clearPendingTurnRequest(requestID: requestID)
+      }
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
@@ -1161,9 +1176,25 @@ final class AppViewModel: ObservableObject {
           preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
         )
       } catch {
+        if Task.isCancelled {
+          runtimeDetail = "Local turn request cancelled."
+          refreshThreadPreview(threadID: threadID, preview: "Cancelled response")
+          appendEntry(
+            to: threadID,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .warning,
+              title: "Turn Cancelled",
+              body: "The pending local turn request was cancelled before streaming started.",
+              attributes: [:]
+            )
+          )
+          return
+        }
         if draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
           draftMessage = message
         }
+        runtimeDetail = error.localizedDescription
         appendEntry(
           to: threadID,
           TimelineEntry(
@@ -1175,6 +1206,10 @@ final class AppViewModel: ObservableObject {
           )
         )
       }
+    }
+    pendingTurnTask = task
+    if pendingTurnRequestID != requestID {
+      pendingTurnTask = nil
     }
   }
 
@@ -1310,7 +1345,15 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    Task {
+    runtimeDetail = "Running local plugin command..."
+    let requestID = UUID()
+    pendingTurnRequestID = requestID
+    pendingTurnThreadID = threadID
+
+    let task = Task {
+      defer {
+        clearPendingTurnRequest(requestID: requestID)
+      }
       do {
         let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
@@ -1322,6 +1365,22 @@ final class AppViewModel: ObservableObject {
         )
         await refreshMemoryState()
       } catch {
+        if Task.isCancelled {
+          runtimeDetail = "Local plugin command cancelled."
+          refreshThreadPreview(threadID: threadID, preview: "Cancelled plugin command")
+          appendEntry(
+            to: threadID,
+            TimelineEntry(
+              id: UUID().uuidString,
+              kind: .warning,
+              title: "Plugin Command Cancelled",
+              body: "The pending local plugin command was cancelled before streaming started.",
+              attributes: [:]
+            )
+          )
+          return
+        }
+        runtimeDetail = error.localizedDescription
         appendEntry(
           to: threadID,
           TimelineEntry(
@@ -1333,6 +1392,10 @@ final class AppViewModel: ObservableObject {
           )
         )
       }
+    }
+    pendingTurnTask = task
+    if pendingTurnRequestID != requestID {
+      pendingTurnTask = nil
     }
   }
 
@@ -1347,7 +1410,7 @@ final class AppViewModel: ObservableObject {
       && isLocalModelReady()
       && hasRuntimeThreadSelection()
       && selectedThreadID != nil
-      && activeTurnID == nil
+      && !hasActiveOrPendingTurn()
   }
 
   func selectThread(id: String?) {
@@ -1415,8 +1478,15 @@ final class AppViewModel: ObservableObject {
   }
 
   func cancelActiveTurn() {
-    guard canCancelActiveTurn(),
-          let activeTurnID,
+    guard canCancelActiveTurn() else {
+      return
+    }
+
+    if cancelPendingTurnRequest() {
+      return
+    }
+
+    guard let activeTurnID,
           let activeTurnThreadID
     else {
       return
@@ -1696,7 +1766,7 @@ final class AppViewModel: ObservableObject {
 
   func canActivateRecommendedModel(modelID: String) -> Bool {
     guard runtimeState != .launching,
-          activeTurnID == nil,
+          !hasActiveOrPendingTurn(),
           modelDownloadTask == nil,
           pausedModelDownloadID == nil
     else {
@@ -1711,7 +1781,7 @@ final class AppViewModel: ObservableObject {
 
   func canResetActiveLocalModel() -> Bool {
     runtimeState != .launching
-      && activeTurnID == nil
+      && !hasActiveOrPendingTurn()
       && modelDownloadTask == nil
       && runtimeBridge.activeLocalModelPath() != nil
   }
@@ -1825,7 +1895,7 @@ final class AppViewModel: ObservableObject {
           throw error
         }
 
-        let canActivateDownloadedModel = activeTurnID == nil
+        let canActivateDownloadedModel = !hasActiveOrPendingTurn()
         let manifestPath: String?
         if shouldActivateAfterDownload && canActivateDownloadedModel {
           let modelManifestPath = try LocalModelCatalog.writePackManifest(for: model)
@@ -1855,7 +1925,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func activateRecommendedModel(modelID: String) {
-    guard activeTurnID == nil else {
+    guard !hasActiveOrPendingTurn() else {
       runtimeDetail = "Finish or cancel the current local turn before switching models."
       return
     }
@@ -1896,7 +1966,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func resetActiveLocalModel() {
-    guard activeTurnID == nil else {
+    guard !hasActiveOrPendingTurn() else {
       runtimeDetail = "Finish or cancel the current local turn before resetting model selection."
       return
     }
@@ -2146,11 +2216,15 @@ final class AppViewModel: ObservableObject {
   }
 
   func showsComposerActivity() -> Bool {
-    runtimeState == .launching || activeTurnID != nil
+    runtimeState == .launching || hasActiveOrPendingTurn()
   }
 
   func isTurnStreaming() -> Bool {
-    activeTurnID != nil
+    hasActiveOrPendingTurn()
+  }
+
+  private func hasActiveOrPendingTurn() -> Bool {
+    activeTurnID != nil || pendingTurnRequestID != nil
   }
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {
@@ -2443,6 +2517,37 @@ final class AppViewModel: ObservableObject {
     activeTurnThreadID = threadID
   }
 
+  private func cancelPendingTurnRequest() -> Bool {
+    guard let requestID = pendingTurnRequestID,
+          let threadID = pendingTurnThreadID
+    else {
+      return false
+    }
+
+    let task = pendingTurnTask
+    clearPendingTurnRequest(requestID: requestID)
+    runtimeDetail = "Cancelling local turn request..."
+    refreshThreadPreview(threadID: threadID, preview: "Cancelling response")
+    task?.cancel()
+    return true
+  }
+
+  private func clearPendingTurnRequest(requestID: UUID) {
+    guard pendingTurnRequestID == requestID else {
+      return
+    }
+
+    pendingTurnRequestID = nil
+    pendingTurnThreadID = nil
+    pendingTurnTask = nil
+  }
+
+  private func clearPendingTurnRequest() {
+    pendingTurnRequestID = nil
+    pendingTurnThreadID = nil
+    pendingTurnTask = nil
+  }
+
   private func refreshModelHealthState(serverLabel: String? = nil) async {
     let runtimeModel = try? await runtimeBridge.modelHealth()
     if let runtimeModel {
@@ -2520,7 +2625,7 @@ final class AppViewModel: ObservableObject {
       isLocalModelReady: isModelReady,
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
-      hasActiveTurn: activeTurnID != nil,
+      hasActiveTurn: hasActiveOrPendingTurn(),
       isWorkspaceSearching: isWorkspaceSearching,
       hasModelDownload: modelDownloadID != nil,
       hasPausedModelDownload: pausedModelDownloadID != nil
@@ -2540,7 +2645,7 @@ final class AppViewModel: ObservableObject {
       isLocalModelReady: isModelReady,
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
-      hasActiveTurn: activeTurnID != nil,
+      hasActiveTurn: hasActiveOrPendingTurn(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraft: !trimmedDraftMessage.isEmpty,
       modelReadinessDetail: modelReadinessDetail
@@ -2560,7 +2665,7 @@ final class AppViewModel: ObservableObject {
       isLocalModelReady: isModelReady,
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
-      hasActiveTurn: activeTurnID != nil
+      hasActiveTurn: hasActiveOrPendingTurn()
     )
   }
 
@@ -2572,7 +2677,7 @@ final class AppViewModel: ObservableObject {
       workspaceDisplayName: workspace?.displayName,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       selectedThreadTitle: selectedThreadTitle(),
-      hasActiveTurn: activeTurnID != nil,
+      hasActiveTurn: hasActiveOrPendingTurn(),
       setupReadyStepCount: setupReadyStepCount(),
       setupStepCount: setupStepCount,
       setupProgressDetail: setupProgressDetail(),
@@ -2626,7 +2731,7 @@ final class AppViewModel: ObservableObject {
       isLocalModelReady: isLocalModelReady(),
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
-      hasActiveTurn: activeTurnID != nil,
+      hasActiveTurn: hasActiveOrPendingTurn(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty
     )
@@ -2758,7 +2863,7 @@ final class AppViewModel: ObservableObject {
     return LocalModelOperationSnapshot(
       runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
-      hasActiveTurn: activeTurnID != nil,
+      hasActiveTurn: hasActiveOrPendingTurn(),
       downloadingModel: modelDownloadID
         .flatMap { id in localModels.first(where: { $0.id == id }) },
       pausedModel: pausedModelDownloadID
@@ -2972,6 +3077,7 @@ final class AppViewModel: ObservableObject {
     case .failed:
       activeTurnID = nil
       activeTurnThreadID = nil
+      clearPendingTurnRequest()
       modelHealth = nil
       if previousState != .failed || lastRuntimeFailureDetail != detail {
         appendEntry(
@@ -2991,6 +3097,7 @@ final class AppViewModel: ObservableObject {
     case .disconnected:
       activeTurnID = nil
       activeTurnThreadID = nil
+      clearPendingTurnRequest()
       modelHealth = nil
     case .launching:
       break
