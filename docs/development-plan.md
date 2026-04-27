@@ -531,6 +531,9 @@ Reasoning:
 
 - streaming token delivery
 - cancellation
+- bounded generation timeouts
+- subprocess cleanup after timeout or cancellation
+- runtime request paths that unblock after model failure
 - configurable prompt templates
 - structured output mode
 - role-based prompt assembly
@@ -538,7 +541,7 @@ Reasoning:
 - token accounting
 - backend health reporting
 
-### 12.5 Model Role Abstraction
+### 12.6 Model Role Abstraction
 
 Even if all roles use the same selected local model initially, the runtime should support separate logical roles:
 
@@ -864,7 +867,7 @@ Exit criteria:
 
 Goal:
 
-- turn Pith into an extensible local platform
+- establish plugin discovery, provenance, metadata, and manager foundations without expanding beyond the local daily-driver loop
 
 Deliverables:
 
@@ -875,18 +878,17 @@ Deliverables:
 - plugin capability registry
 - memory-aware plugin integration points
 - per-plugin permissions UI
-- plugin-enabled commands and hooks
+- prompt-only plugin commands and hooks listed as metadata, but blocked until they declare executable contracts
 - Codex-inspired plugin package metadata for skills, MCP servers, app connectors, and third-party auth policies
-- capability registry metadata for connector service, auth, credential store, and MCP launch hints
-- connector registry for disabled, needs-auth, and ready third-party app integrations
-- Notion connector design spike covering auth, permission scopes, and local execution boundaries
+- connector registry metadata for disabled, needs-auth, and ready third-party app integrations
+- Notion connector design spike limited to auth, permission scopes, and local execution boundaries
 
 Exit criteria:
 
-- at least three executable bundled example plugins load and execute successfully in-app
-- at least one bundled connector template declares third-party auth, MCP, and app connector metadata
-- app surfaces connector status without requiring connector plugins to be enabled first
+- bundled and locally installed plugin manifests load, validate, and surface provenance in-app
+- connector metadata can be inspected without requiring third-party auth or execution
 - prompt-only plugin commands are visible but blocked until they provide an execution contract
+- real plugin-owned execution, third-party auth, and connector workflows are explicitly deferred to Milestone 4
 
 ### Milestone 3: Premium Desktop Quality
 
@@ -897,7 +899,8 @@ Goal:
 Deliverables:
 
 - guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
-- strict local model readiness with no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
+- strict local model readiness with verified model integrity, no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
+- bounded local inference with generation timeouts, cancellation, subprocess cleanup, and runtime unblocking after model failure
 - fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
 - compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
@@ -910,6 +913,7 @@ Deliverables:
 Exit criteria:
 
 - a fresh install can choose, download, activate, and run a selected small local model without hidden degraded-generation behavior
+- model generation timeout, cancellation, or backend failure does not require restarting the app to recover the runtime loop
 - a user can bind a workspace, create or resume a thread, send the first local request, and recover from common setup failures without reading external docs
 - the normal ready state feels quiet, stable, intentional, and distinctly native on Intel Mac hardware
 
@@ -921,6 +925,7 @@ Goal:
 
 Deliverables:
 
+- real plugin-owned execution contracts
 - multi-agent workflows
 - automation
 - background tasks
@@ -950,95 +955,21 @@ Recommended implementation order:
 11. implement diff and patch review
 12. expand plugin management after the built-in memory module is stable
 
-## 20. Detailed Backlog For Milestone 0
+## 20. Completed Milestone Archive
 
-### 20.1 Repository Setup
+Completed milestone details should live in commit history, pull requests, and release notes rather than the active plan.
 
-- add root `README.md`
-- add `.editorconfig`
-- add `apps/`, `crates/`, and `plugins/bundled/`
-- add GitHub Actions workflow skeleton
-- add formatter and linter configs
-- add contributor guidance
+### 20.1 Milestone 0 Outcome
 
-### 20.2 macOS App Setup
+Milestone 0 established the monorepo, SwiftUI app shell, Rust runtime workspace, JSON-RPC process boundary, basic thread shell, and CI baseline.
 
-- create Xcode project or Swift Package based app structure
-- build the app shell with sidebar, timeline placeholder, and composer placeholder
-- implement runtime process launcher
-- implement runtime connection manager
-- add app logging hooks
+### 20.2 Milestone 1 Outcome
 
-### 20.3 Rust Runtime Setup
+Milestone 1 established the local agent MVP: persistence, workspace-aware threads, local model integration, filesystem and shell tools, approvals, diff review, and timeline rendering.
 
-- create Cargo workspace
-- create protocol crate
-- create runtime binary crate
-- implement `initialize`
-- implement `health/ping`
-- implement stub `thread/list`
-- implement structured logging
+## 21. Testing Strategy
 
-### 20.4 Protocol Setup
-
-- define request and notification envelopes
-- define thread and turn data types
-- define a minimal timeline item schema
-- define schema fixture generation
-- add serialization tests
-
-### 20.5 CI Setup
-
-- Swift lint job
-- Rust lint job
-- Rust test job
-- protocol fixture validation job
-
-## 21. Detailed Backlog For Milestone 1
-
-### 21.1 Persistence
-
-- create SQLite schema
-- persist workspaces
-- persist threads and turns
-- persist timeline item metadata
-- add migration support
-
-### 21.2 Inference
-
-- integrate `llama.cpp`
-- prepare local `LFM2.5-350M` catalog metadata and first-use download flow
-- support app-downloaded GGUF delivery without committing weights to git
-- implement streaming token delivery
-- implement cancellation
-- expose model health and metrics
-
-### 21.3 Tooling
-
-- list directory
-- read file
-- write file
-- run shell command
-- generate diff artifact
-
-### 21.4 Approvals
-
-- approval request protocol types
-- modal or sheet-based approval UI
-- per-turn approval state updates
-- approval audit persistence
-
-### 21.5 Timeline Rendering
-
-- streaming assistant text
-- tool events
-- approval cards
-- diff preview cards
-- final summary cards
-
-## 22. Testing Strategy
-
-### 22.1 Unit Tests
+### 21.1 Unit Tests
 
 - protocol serialization
 - manifest validation
@@ -1047,7 +978,7 @@ Recommended implementation order:
 - approval reducer logic
 - storage migrations
 
-### 22.2 Integration Tests
+### 21.2 Integration Tests
 
 - app launches runtime
 - initialize handshake succeeds
@@ -1055,8 +986,9 @@ Recommended implementation order:
 - streaming response events render
 - approval request and response loop works
 - local model bootstrap and health checks succeed
+- bounded model generation timeout and recovery succeed
 
-### 22.3 UI Tests
+### 21.3 UI Tests
 
 - open workspace
 - create thread
@@ -1065,8 +997,9 @@ Recommended implementation order:
 - approve action
 - inspect diff
 - enable or disable plugin
+- recover after model timeout or runtime crash
 
-### 22.4 Performance Validation
+### 21.4 Performance Validation
 
 Measure on actual Intel Mac hardware:
 
@@ -1078,15 +1011,15 @@ Measure on actual Intel Mac hardware:
 - loaded-model memory usage
 - recovery after runtime crash
 
-## 23. Release Strategy
+## 22. Release Strategy
 
-### 23.1 Distribution
+### 22.1 Distribution
 
 - direct download from GitHub Releases
 - signed and notarized `.app`
 - zipped release artifact
 
-### 23.2 Release Requirements
+### 22.2 Release Requirements
 
 - successful CI
 - smoke test on Intel Mac
@@ -1094,7 +1027,7 @@ Measure on actual Intel Mac hardware:
 - plugin bundle presence verified
 - migration test for existing local data
 
-## 24. Main Risks And Mitigations
+## 23. Main Risks And Mitigations
 
 ### Risk 1: `LFM2.5-350M` is too weak for high-quality coding tasks
 
@@ -1139,7 +1072,7 @@ Mitigation:
 - add Intel hardware verification before release
 - avoid accidental universal or arm-only release assumptions
 
-## 25. Immediate Next Actions
+## 24. Immediate Next Actions
 
 The project is currently in Milestone 3. The highest-leverage next step is to keep tightening the
 daily-driver loop without expanding the visible surface area. The current product review says the
@@ -1148,11 +1081,12 @@ notes. Going forward, this document should stay outcome-based instead of mirrori
 
 Recommended current implementation sequence:
 
-1. close remaining fresh-install gaps from runtime launch to model download, activation, workspace, first thread, and first message
-2. reduce always-visible UI noise whenever setup, model, workspace, plugin, or diagnostic controls compete with the timeline
-3. refine first-message, empty-state, review, and recovery prompts around the main timeline instead of adding new panels
-4. keep model delivery focused on one-click local downloads with pause, resume, cancel, activation, and one active model at a time
-5. defer broad third-party plugin execution, connector auth, and multi-agent platform work until the local daily-driver loop feels stable and compact
+1. make bounded local inference a first-class daily-driver requirement: timeout, cancellation, subprocess cleanup, and runtime recovery must be visible and reliable
+2. close remaining fresh-install gaps from runtime launch to model download, activation, workspace, first thread, and first message
+3. refine context compaction for small local models through concise prompts, memory packing, and short tool observations
+4. reduce always-visible UI noise whenever setup, model, workspace, plugin, or diagnostic controls compete with the timeline
+5. refine first-message, empty-state, review, and recovery prompts around the main timeline instead of adding new panels
+6. defer broad third-party plugin execution, connector auth, and multi-agent platform work until the local daily-driver loop feels stable and compact
 
 Remote CI verification is a routine engineering practice for every pushed change, not a product
 milestone. Each product step should stay small and reviewable so the app continues moving toward a
