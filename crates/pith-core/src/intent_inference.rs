@@ -25,8 +25,9 @@ pub(crate) fn infer_requested_file_path(message: &str, workspace_root: &Path) ->
       continue;
     }
 
-    if workspace_root.join(candidate).is_file() {
-      return Some(candidate.replace('\\', "/"));
+    let normalized_candidate = candidate.replace('\\', "/");
+    if workspace_root.join(&normalized_candidate).is_file() {
+      return Some(normalized_candidate);
     }
   }
 
