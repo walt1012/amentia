@@ -56,6 +56,7 @@ pub struct ShellSandboxSummary {
   pub mode: String,
   pub backend: String,
   pub active: bool,
+  pub temporary_root: Option<String>,
   pub detail: String,
 }
 
@@ -78,17 +79,22 @@ impl ShellSandboxSummary {
   }
 
   pub fn attributes(&self) -> HashMap<String, String> {
-    HashMap::from([
+    let mut attributes = HashMap::from([
       ("sandboxMode".to_string(), self.mode.clone()),
       ("sandboxBackend".to_string(), self.backend.clone()),
       ("sandboxActive".to_string(), self.active.to_string()),
       ("sandboxDetail".to_string(), self.detail.clone()),
-    ])
+    ]);
+    if let Some(temporary_root) = &self.temporary_root {
+      attributes.insert("sandboxTempRoot".to_string(), temporary_root.clone());
+    }
+    attributes
   }
 }
 
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const SHELL_SANDBOX_TEMP_DIR: &str = ".pith/sandbox-tmp";
 
 pub fn shell_command_timeout_seconds() -> u64 {
   SHELL_COMMAND_TIMEOUT.as_secs()
@@ -221,6 +227,7 @@ pub fn run_shell(
     bail!("shell command must not be empty");
   }
   let sandbox = shell_sandbox_summary(&workspace_root);
+  prepare_shell_sandbox_environment(&workspace_root, &sandbox)?;
 
   let output = run_shell_with_timeout(trimmed_command, &workspace_root, SHELL_COMMAND_TIMEOUT)
     .with_context(|| {
@@ -258,16 +265,46 @@ pub fn run_shell(
 }
 
 pub fn shell_sandbox_summary(workspace_root: &Path) -> ShellSandboxSummary {
-  let status = pith_sandbox::native_sandbox_status(
-    &pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root),
-  );
+  let status = shell_sandbox_status(workspace_root);
 
   ShellSandboxSummary {
     mode: status.mode,
     backend: status.backend,
     active: status.active,
+    temporary_root: status.temporary_root,
     detail: status.detail,
   }
+}
+
+pub fn shell_sandbox_status(workspace_root: &Path) -> pith_sandbox::NativeSandboxStatus {
+  let policy = shell_sandbox_policy(workspace_root);
+  pith_sandbox::native_sandbox_status(&policy)
+}
+
+fn shell_sandbox_policy(workspace_root: &Path) -> pith_sandbox::SandboxPolicy {
+  pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root)
+    .with_temporary_root(shell_sandbox_temp_root(workspace_root))
+}
+
+fn shell_sandbox_temp_root(workspace_root: &Path) -> PathBuf {
+  workspace_root.join(SHELL_SANDBOX_TEMP_DIR)
+}
+
+fn prepare_shell_sandbox_environment(
+  workspace_root: &Path,
+  sandbox: &ShellSandboxSummary,
+) -> Result<()> {
+  if sandbox.active {
+    let temporary_root = shell_sandbox_temp_root(workspace_root);
+    fs::create_dir_all(&temporary_root).with_context(|| {
+      format!(
+        "failed to create sandbox temporary directory {}",
+        temporary_root.display()
+      )
+    })?;
+  }
+
+  Ok(())
 }
 
 fn run_shell_with_timeout(
@@ -541,15 +578,19 @@ fn build_shell_command(command: &str, _workspace_root: &Path) -> Command {
 #[cfg(target_os = "macos")]
 fn build_shell_command(command: &str, workspace_root: &Path) -> Command {
   if pith_sandbox::native_sandbox_available() {
-    let policy = pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root);
+    let policy = shell_sandbox_policy(workspace_root);
     let profile = pith_sandbox::macos_seatbelt_profile(&policy);
+    let temporary_root = shell_sandbox_temp_root(workspace_root);
     let mut process = Command::new(pith_sandbox::macos_sandbox_exec_path());
     process
       .arg("-p")
       .arg(profile)
       .arg("/bin/sh")
       .arg("-lc")
-      .arg(command);
+      .arg(command)
+      .env("TMPDIR", &temporary_root)
+      .env("TMP", &temporary_root)
+      .env("TEMP", &temporary_root);
     set_unix_process_group(&mut process);
     return process;
   }
@@ -693,6 +734,15 @@ mod tests {
     assert_eq!(result.stdout, "pith");
     assert_eq!(result.sandbox.mode, "workspaceReadWrite");
     assert!(!result.sandbox.backend.is_empty());
+    let expected_temp_root = workspace.join(SHELL_SANDBOX_TEMP_DIR).display().to_string();
+    if result.sandbox.active {
+      assert_eq!(
+        result.sandbox.temporary_root.as_deref(),
+        Some(expected_temp_root.as_str())
+      );
+    } else {
+      assert_eq!(result.sandbox.temporary_root, None);
+    }
     assert!(!result.sandbox.detail.is_empty());
 
     let _ = fs::remove_dir_all(workspace);

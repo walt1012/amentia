@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 use pith_model_runtime::llama_cpp_timeout_seconds;
 use pith_protocol::{RuntimeReadinessCheck, RuntimeReadinessResult};
-use pith_sandbox::{native_sandbox_status, workspace_required_status, SandboxPolicy};
-use pith_tools::shell_command_timeout_seconds;
+use pith_sandbox::workspace_required_status;
+use pith_tools::{shell_command_timeout_seconds, shell_sandbox_status};
 
 use crate::RuntimeContext;
 
@@ -16,11 +17,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let sandbox_status = context
     .workspace
     .as_ref()
-    .map(|workspace| {
-      native_sandbox_status(&SandboxPolicy::workspace_read_write(
-        workspace.root_path.clone(),
-      ))
-    })
+    .map(|workspace| shell_sandbox_status(Path::new(&workspace.root_path)))
     .unwrap_or_else(workspace_required_status);
   let enabled_plugin_count = context
     .plugins
@@ -243,7 +240,7 @@ fn readiness_metrics(
   enabled_plugin_count: usize,
   sandbox_status: &pith_sandbox::NativeSandboxStatus,
 ) -> HashMap<String, String> {
-  HashMap::from([
+  let mut metrics = HashMap::from([
     ("modelStatus".to_string(), model_status.to_string()),
     ("modelPackId".to_string(), model_pack_id.to_string()),
     (
@@ -289,5 +286,9 @@ fn readiness_metrics(
       "llamaTimeoutSeconds".to_string(),
       llama_cpp_timeout_seconds().to_string(),
     ),
-  ])
+  ]);
+  if let Some(temporary_root) = &sandbox_status.temporary_root {
+    metrics.insert("sandboxTempRoot".to_string(), temporary_root.clone());
+  }
+  metrics
 }
