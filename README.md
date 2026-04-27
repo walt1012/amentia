@@ -61,6 +61,7 @@ Model packaging note:
 
 - the repository tracks model pack manifests and small metadata
 - the actual `LFM2.5-350M-Q4_K_M.gguf` weight file is downloaded by the app into local data storage, not committed to git history
+- the in-app catalog stays intentionally small: default LFM, modern tiny Granite, stronger small Qwen3, and a focused Qwen coder fallback
 
 ## Planned Runtime Shape
 

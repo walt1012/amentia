@@ -505,7 +505,18 @@ Phase 1 should use `LFM2.5-350M` as:
 
 The architecture must also support optional future local packs for stronger coding performance without violating the requirement that the first-use path stays fully local after the selected model is downloaded.
 
-### 12.3 Backend Order
+### 12.3 Curated Small Model Catalog
+
+The app should not feel like a model zoo. Keep the first-use catalog compact, current, and easy to understand:
+
+- `LFM2.5-350M Q4_K_M` remains the default fastest first-use download
+- `Granite 4.0-H-350M Q4_K_M` is the preferred Apache-2.0 tiny model for tool, code, and RAG workflows
+- `Qwen3-0.6B Q8_0` is the stronger small general and multilingual option
+- `Qwen2.5-Coder-0.5B Q4_K_M` stays as a focused coding fallback until a newer official sub-1B coder GGUF is validated
+
+Retire older or redundant entries when they do not clearly beat the active set. Every built-in catalog entry must include verified file size and SHA-256 metadata before activation is allowed.
+
+### 12.4 Backend Order
 
 Recommended backend sequence:
 
@@ -518,7 +529,7 @@ Reasoning:
 - GGUF packaging is straightforward
 - `OpenVINO` can become the performance path after the end-to-end product loop is stable
 
-### 12.4 Model Runtime Requirements
+### 12.5 Model Runtime Requirements
 
 - streaming token delivery
 - cancellation
@@ -1093,7 +1104,7 @@ Mitigation:
 
 - treat it as a required baseline model, not the only long-term model strategy
 - optimize for structured orchestration
-- keep optional stronger local model packs possible from day one
+- keep the curated in-app catalog available with Granite and Qwen options for stronger local tasks
 
 ### Risk 2: Intel performance is not good enough
 

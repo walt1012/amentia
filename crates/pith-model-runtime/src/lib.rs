@@ -1049,8 +1049,8 @@ mod tests {
   "max_output_tokens": 160,
   "backend": "llama.cpp",
   "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
-  "sha256": "19d7327a9cb6001bf723563f7098299e9c66ed105c1cb45b960e5987cb1cb9f6",
-  "size_bytes": 267000000
+  "sha256": "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
+  "size_bytes": 229312224
 }"#,
     )
     .expect("manifest");

@@ -333,9 +333,9 @@ def main() -> int:
     )
     assert (
       model_health["result"]["metrics"]["sha256"]
-      == "19d7327a9cb6001bf723563f7098299e9c66ed105c1cb45b960e5987cb1cb9f6"
+      == "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
     )
-    assert model_health["result"]["metrics"]["sizeBytes"] == "267000000"
+    assert model_health["result"]["metrics"]["sizeBytes"] == "229312224"
     assert model_health["result"]["metrics"]["readiness"] in {
       "ready",
       "manifest_only",
