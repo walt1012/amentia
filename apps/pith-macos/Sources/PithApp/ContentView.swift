@@ -789,6 +789,16 @@ private struct TimelineCard: View {
             .background(streamingColor.opacity(0.12))
             .clipShape(Capsule())
         }
+
+        if let sandboxLabel {
+          Text(sandboxLabel)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(sandboxColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(sandboxColor.opacity(0.12))
+            .clipShape(Capsule())
+        }
       }
 
       if let streamingProgressValue {
@@ -957,6 +967,24 @@ private struct TimelineCard: View {
     default:
       return .accentColor
     }
+  }
+
+  private var sandboxLabel: String? {
+    guard entry.attributes["sandboxMode"] != nil else {
+      return nil
+    }
+
+    if entry.attributes["sandboxActive"] == "true" {
+      return entry.attributes["sandboxBackend"] == "macosSeatbelt"
+        ? "Native Sandbox"
+        : "Sandbox Active"
+    }
+
+    return "Sandbox Limited"
+  }
+
+  private var sandboxColor: Color {
+    entry.attributes["sandboxActive"] == "true" ? .green : .orange
   }
 
   private func progressLabel() -> String? {

@@ -818,6 +818,12 @@ def main() -> int:
       },
     )
     assert shell_turn["result"]["items"][2]["kind"] == "approvalRequested"
+    assert shell_turn["result"]["items"][2]["attributes"]["sandboxMode"] == "workspaceReadWrite"
+    assert shell_turn["result"]["items"][2]["attributes"]["sandboxActive"] in {
+      "true",
+      "false",
+    }
+    assert "Sandbox:" in shell_turn["result"]["items"][2]["content"]
     shell_approval_id = shell_turn["result"]["pendingApprovals"][0]["id"]
 
     shell_approval, _ = send_request(

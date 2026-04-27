@@ -38,7 +38,10 @@ use pith_protocol::{
   WorkspaceSearchResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
-use pith_tools::{generate_diff, list_directory, read_file, run_shell, search_files, write_file};
+use pith_tools::{
+  generate_diff, list_directory, read_file, run_shell, search_files, shell_sandbox_summary,
+  write_file,
+};
 use plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use plugin_hooks::{
   build_plugin_hook_memory_body, build_shell_completed_hook_items, plugin_hook_memory_tags,
@@ -1112,6 +1115,8 @@ fn execute_turn_request(
         } else {
           let approval_id = format!("approval-{}", context.next_approval_number);
           context.next_approval_number += 1;
+          let sandbox = shell_sandbox_summary(Path::new(&workspace.root_path));
+          let sandbox_state = if sandbox.active { "active" } else { "limited" };
 
           let approval = PendingApproval {
             id: approval_id.clone(),
@@ -1230,13 +1235,17 @@ fn execute_turn_request(
             kind: "approvalRequested".to_string(),
             title: "Approval Requested".to_string(),
             content: format!(
-              "Pith wants to run this shell command in {}:\n{}",
-              workspace.display_name, shell_command
+              "Pith wants to run this shell command in {}:\n{}\n\nSandbox: {} via {} ({})",
+              workspace.display_name, shell_command, sandbox.mode, sandbox.backend, sandbox_state
             ),
             attributes: Some(HashMap::from([
               ("approvalId".to_string(), approval.id.clone()),
               ("action".to_string(), approval.action.clone()),
               ("command".to_string(), shell_command),
+              ("sandboxMode".to_string(), sandbox.mode),
+              ("sandboxBackend".to_string(), sandbox.backend),
+              ("sandboxActive".to_string(), sandbox.active.to_string()),
+              ("sandboxDetail".to_string(), sandbox.detail),
             ])),
           });
           items.push(TimelineItem {
@@ -3392,6 +3401,15 @@ mod tests {
 
     assert!(turn_response.error.is_none());
     let turn_result = turn_response.result.expect("turn result");
+    let turn_items = turn_result["items"].as_array().expect("turn items");
+    assert_eq!(
+      turn_items[2]["attributes"]["sandboxMode"],
+      "workspaceReadWrite"
+    );
+    assert!(turn_items[2]["content"]
+      .as_str()
+      .expect("approval content")
+      .contains("Sandbox:"));
     let approval_id = turn_result["pendingApprovals"][0]["id"]
       .as_str()
       .expect("approval id")
