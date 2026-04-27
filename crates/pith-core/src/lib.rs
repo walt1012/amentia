@@ -9,6 +9,9 @@ use active_turns::{
 };
 use anyhow::Result;
 use context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
+use intent_inference::{
+  infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
+};
 use local_responses::{
   build_plan_item, format_directory_result, format_file_result, format_search_result,
   format_shell_result, summarize_denied_approval, summarize_directory_result,
@@ -17,10 +20,9 @@ use local_responses::{
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{
-  build_command_registry, build_hook_registry, configured_plugin_install_root,
-  configured_plugin_roots, discover_plugins_in_roots, inspect_plugin_bundle, install_plugin_bundle,
-  remove_local_plugin_bundle, PluginCatalogEntry, PluginCommandEntry as HostPluginCommandEntry,
-  PluginHookEntry as HostPluginHookEntry,
+  build_command_registry, configured_plugin_install_root, configured_plugin_roots,
+  inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle, PluginCatalogEntry,
+  PluginCommandEntry as HostPluginCommandEntry,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
@@ -36,7 +38,12 @@ use pith_protocol::{
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
 use pith_tools::{
-  generate_diff, list_directory, read_file, run_shell, search_files, write_file, ShellCommandResult,
+  generate_diff, list_directory, read_file, run_shell, search_files, write_file,
+};
+use plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
+use plugin_hooks::{
+  build_plugin_hook_memory_body, build_shell_completed_hook_items, plugin_hook_memory_tags,
+  PluginHookMemoryCapture,
 };
 use plugin_permissions::{
   build_permission_denied_items, granted_permission_sources, permission_is_granted,
@@ -51,7 +58,10 @@ use text_utils::{take_characters, truncate_text};
 
 mod active_turns;
 mod context_compaction;
+mod intent_inference;
 mod local_responses;
+mod plugin_catalog_state;
+mod plugin_hooks;
 mod plugin_permissions;
 mod protocol_adapters;
 mod text_utils;
@@ -73,22 +83,6 @@ struct PendingApproval {
   relative_path: String,
   content: Option<String>,
   command: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-struct PluginHookMemoryCapture {
-  hook: HostPluginHookEntry,
-  content: String,
-  command: String,
-  exit_code: i32,
-  stdout_preview: String,
-  stderr_preview: String,
-}
-
-#[derive(Debug, Clone)]
-struct WriteIntent {
-  relative_path: String,
-  content: String,
 }
 
 #[derive(Debug, Clone)]
@@ -447,81 +441,6 @@ pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpc
   Ok(notifications)
 }
 
-fn shell_output_preview(output: &str) -> String {
-  let preview = output
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .unwrap_or(output)
-    .trim();
-
-  if preview.is_empty() {
-    "none".to_string()
-  } else {
-    preview.chars().take(120).collect()
-  }
-}
-
-fn render_hook_message(template: &str, replacements: &[(&str, String)]) -> String {
-  let mut rendered = template.to_string();
-  for (key, value) in replacements {
-    rendered = rendered.replace(&format!("{{{{{key}}}}}"), value);
-  }
-  rendered
-}
-
-fn build_shell_completed_hook_items(
-  plugins: &[PluginCatalogEntry],
-  workspace: &WorkspaceSummary,
-  command: &str,
-  result: &ShellCommandResult,
-) -> (Vec<TimelineItem>, Vec<PluginHookMemoryCapture>) {
-  let stdout_preview = shell_output_preview(&result.stdout);
-  let stderr_preview = shell_output_preview(&result.stderr);
-  let mut items = vec![];
-  let mut memory_captures = vec![];
-
-  for hook in build_hook_registry(plugins)
-    .into_iter()
-    .filter(|hook| hook.event == "shell.completed")
-  {
-    let content = render_hook_message(
-      &hook.message_template,
-      &[
-        ("workspaceName", workspace.display_name.clone()),
-        ("command", command.to_string()),
-        ("exitCode", result.exit_code.to_string()),
-        ("stdoutPreview", stdout_preview.clone()),
-        ("stderrPreview", stderr_preview.clone()),
-      ],
-    );
-    if hook.memory_note_title.is_some() {
-      memory_captures.push(PluginHookMemoryCapture {
-        hook: hook.clone(),
-        content: content.clone(),
-        command: command.to_string(),
-        exit_code: result.exit_code,
-        stdout_preview: stdout_preview.clone(),
-        stderr_preview: stderr_preview.clone(),
-      });
-    }
-    items.push(TimelineItem {
-      kind: "pluginHook".to_string(),
-      title: hook.title,
-      content,
-      attributes: Some(HashMap::from([
-        ("hookId".to_string(), hook.hook_id),
-        ("hookEvent".to_string(), hook.event),
-        ("pluginId".to_string(), hook.plugin_id),
-        ("command".to_string(), command.to_string()),
-        ("exitCode".to_string(), result.exit_code.to_string()),
-        ("sourcePath".to_string(), hook.source_path),
-      ])),
-    });
-  }
-
-  (items, memory_captures)
-}
-
 fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   let params = match request.params {
     Some(value) => match serde_json::from_value::<InitializeParams>(value) {
@@ -557,31 +476,6 @@ fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonR
       },
     },
   )
-}
-
-fn load_plugin_catalog(plugin_roots: &[PathBuf]) -> Result<Vec<PluginCatalogEntry>> {
-  if plugin_roots.is_empty() {
-    return Ok(vec![]);
-  }
-
-  discover_plugins_in_roots(plugin_roots)
-}
-
-fn apply_plugin_states(
-  mut plugins: Vec<PluginCatalogEntry>,
-  persisted_states: &HashMap<String, bool>,
-) -> Vec<PluginCatalogEntry> {
-  for plugin in &mut plugins {
-    if plugin.status != "ready" {
-      plugin.enabled = false;
-      continue;
-    }
-    if let Some(enabled) = persisted_states.get(&plugin.id) {
-      plugin.enabled = *enabled;
-    }
-  }
-
-  plugins
 }
 
 fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -2149,43 +2043,6 @@ fn capture_plugin_hook_memory(
   })
 }
 
-fn build_plugin_hook_memory_body(
-  workspace: &WorkspaceSummary,
-  capture: &PluginHookMemoryCapture,
-) -> String {
-  format!(
-    "Plugin: {} ({})\nHook: {} ({})\nEvent: {}\nWorkspace: {} at {}.\nCommand: {}\nExit code: {}\nstdout: {}\nstderr: {}\n\nHook result:\n{}",
-    capture.hook.plugin_display_name,
-    capture.hook.plugin_id,
-    capture.hook.title,
-    capture.hook.hook_id,
-    capture.hook.event,
-    workspace.display_name,
-    workspace.root_path,
-    capture.command,
-    capture.exit_code,
-    capture.stdout_preview,
-    capture.stderr_preview,
-    capture.content
-  )
-}
-
-fn plugin_hook_memory_tags(hook: &HostPluginHookEntry) -> Vec<String> {
-  let mut tags = vec![
-    "plugin".to_string(),
-    "hook".to_string(),
-    hook.plugin_id.clone(),
-    hook.hook_id.clone(),
-    hook.event.clone(),
-  ];
-  for tag in &hook.memory_note_tags {
-    if !tags.iter().any(|existing| existing == tag) {
-      tags.push(tag.clone());
-    }
-  }
-  tags
-}
-
 fn handle_approval_respond(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
@@ -2569,106 +2426,6 @@ fn handle_turn_cancel(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       active_turn_id: active_turn_id_for_thread(&context.active_turns, &cancelled_thread_id),
     },
   )
-}
-
-fn infer_requested_file_path(message: &str, workspace_root: &Path) -> Option<String> {
-  let common_files = ["README.md", "Cargo.toml", "Package.swift"];
-  let lowercased_message = message.to_lowercase();
-
-  for candidate in common_files {
-    if lowercased_message.contains(&candidate.to_lowercase())
-      && workspace_root.join(candidate).is_file()
-    {
-      return Some(candidate.to_string());
-    }
-  }
-
-  let punctuation: &[char] = &['`', '"', '\'', ',', ';', ':', '(', ')', '[', ']', '{', '}'];
-  for token in message.split_whitespace() {
-    let candidate = token.trim_matches(punctuation);
-    if candidate.is_empty() || (!candidate.contains('/') && !candidate.contains('.')) {
-      continue;
-    }
-
-    if workspace_root.join(candidate).is_file() {
-      return Some(candidate.replace('\\', "/"));
-    }
-  }
-
-  None
-}
-
-fn infer_write_intent(message: &str) -> Option<WriteIntent> {
-  let trimmed = message.trim();
-  let lowercased_message = trimmed.to_lowercase();
-
-  for prefix in ["write ", "create ", "update "] {
-    if lowercased_message.starts_with(prefix) {
-      let remainder = &trimmed[prefix.len()..];
-      let (path, content) = remainder.split_once(':')?;
-      let relative_path = path
-        .trim()
-        .trim_matches(&['"', '\'', '`'][..])
-        .replace('\\', "/");
-      let content = content.trim().to_string();
-
-      if relative_path.is_empty() || content.is_empty() {
-        return None;
-      }
-
-      return Some(WriteIntent {
-        relative_path,
-        content,
-      });
-    }
-  }
-
-  None
-}
-
-fn infer_shell_command(message: &str) -> Option<String> {
-  let trimmed = message.trim();
-  let lowercased_message = trimmed.to_lowercase();
-
-  for prefix in ["run shell:", "shell:", "run command:"] {
-    if lowercased_message.starts_with(prefix) {
-      let command = trimmed[prefix.len()..].trim();
-      if !command.is_empty() {
-        return Some(command.to_string());
-      }
-    }
-  }
-
-  None
-}
-
-fn infer_search_query(message: &str) -> Option<String> {
-  let trimmed = message.trim();
-  let lowercased_message = trimmed.to_lowercase();
-
-  for keyword in ["search for ", "find ", "search "] {
-    if let Some(index) = lowercased_message.find(keyword) {
-      let query = trimmed[index + keyword.len()..]
-        .trim()
-        .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
-      if !query.is_empty() {
-        return Some(query.to_string());
-      }
-    }
-  }
-
-  if lowercased_message.contains("grep ") {
-    let query = trimmed
-      .split_once("grep ")
-      .map(|(_, remainder)| remainder.trim())
-      .unwrap_or_default()
-      .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
-    if !query.is_empty() {
-      return Some(query.to_string());
-    }
-  }
-
-  None
 }
 
 fn refresh_thread_summary_note(context: &mut RuntimeContext, thread_id: &str) -> Result<()> {
