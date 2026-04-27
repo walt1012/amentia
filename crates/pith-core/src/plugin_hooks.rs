@@ -151,7 +151,10 @@ mod tests {
 
   #[test]
   fn shell_output_preview_uses_first_non_empty_line() {
-    assert_eq!(shell_output_preview("\n\n  first line\nsecond line"), "first line");
+    assert_eq!(
+      shell_output_preview("\n\n  first line\nsecond line"),
+      "first line"
+    );
     assert_eq!(shell_output_preview("   \n\t"), "none");
   }
 

@@ -173,6 +173,9 @@ mod tests {
       infer_search_query("search for `RuntimeContext`?").as_deref(),
       Some("RuntimeContext")
     );
-    assert_eq!(infer_search_query("grep model_runtime.").as_deref(), Some("model_runtime"));
+    assert_eq!(
+      infer_search_query("grep model_runtime.").as_deref(),
+      Some("model_runtime")
+    );
   }
 }

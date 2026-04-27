@@ -37,9 +37,7 @@ use pith_protocol::{
   WorkspaceSearchResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord, StoredThreadRecord};
-use pith_tools::{
-  generate_diff, list_directory, read_file, run_shell, search_files, write_file,
-};
+use pith_tools::{generate_diff, list_directory, read_file, run_shell, search_files, write_file};
 use plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use plugin_hooks::{
   build_plugin_hook_memory_body, build_shell_completed_hook_items, plugin_hook_memory_tags,
