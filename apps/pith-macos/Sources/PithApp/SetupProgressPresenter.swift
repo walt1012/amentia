@@ -24,11 +24,11 @@ enum SetupProgressPresenter {
   }
 
   static func detail(_ snapshot: SetupProgressSnapshot) -> String {
-    if let nextStep = nextStep(snapshot) {
-      return "Next: \(nextStep)"
-    }
     if snapshot.hasActiveTurn {
       return "Turn running"
+    }
+    if let nextStep = nextStep(snapshot) {
+      return "Next: \(nextStep)"
     }
     if snapshot.isWaitingForFirstMessage {
       return snapshot.hasDraft ? "Draft ready" : "Next: First request"
@@ -73,6 +73,9 @@ enum SetupProgressPresenter {
       }
       if !snapshot.hasRuntimeThreadSelection {
         return "Create Thread"
+      }
+      if snapshot.isWaitingForFirstMessage {
+        return snapshot.hasDraft ? "Send First Request" : "Choose First Prompt"
       }
 
       return nil

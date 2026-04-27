@@ -22,7 +22,6 @@ private struct LocalModelDownloadRequestCache {
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
   private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
-  private let setupStepCount = 4
   private let localModelDownloadRequestCacheLifetime: TimeInterval = 2
 
   @Published var threads: [ThreadSummary]
@@ -63,9 +62,7 @@ final class AppViewModel: ObservableObject {
   private var threadTimelines: [String: [TimelineEntry]]
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
-  private var pendingTurnRequestID: UUID?
-  private var pendingTurnThreadID: String?
-  private var pendingTurnTask: Task<Void, Never>?
+  private let pendingTurnRequest = PendingTurnRequestState()
   private var lastRuntimeFailureDetail: String?
   private var workspaceSearchRequestID: UUID?
   private var modelDownloadTask: Task<Void, Never>?
@@ -135,9 +132,6 @@ final class AppViewModel: ObservableObject {
     self.activeTurnID = nil
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
-    self.pendingTurnRequestID = nil
-    self.pendingTurnThreadID = nil
-    self.pendingTurnTask = nil
     self.lastRuntimeFailureDetail = nil
     self.workspaceSearchRequestID = nil
     self.modelDownloadTask = nil
@@ -339,7 +333,7 @@ final class AppViewModel: ObservableObject {
             )
           )
         }
-        announceSetupCompleteIfNeeded()
+        announceFirstRequestReadyIfNeeded()
       } catch {
         runtimeState = .failed
         runtimeDetail = error.localizedDescription
@@ -425,6 +419,13 @@ final class AppViewModel: ObservableObject {
       {
         return "New"
       }
+    case "first-request":
+      if runtimeState == .ready,
+         canUseComposer(),
+         selectedThreadIsWaitingForFirstMessage()
+      {
+        return trimmedDraftMessage.isEmpty ? "Use Prompt" : "Send"
+      }
     default:
       return nil
     }
@@ -446,6 +447,16 @@ final class AppViewModel: ObservableObject {
         && workspace != nil
         && !hasRuntimeThreadSelection()
         && canCreateThread()
+    case "first-request":
+      guard runtimeState == .ready,
+            canUseComposer(),
+            selectedThreadIsWaitingForFirstMessage()
+      else {
+        return false
+      }
+
+      return !trimmedDraftMessage.isEmpty
+        || firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil
     default:
       return false
     }
@@ -465,6 +476,12 @@ final class AppViewModel: ObservableObject {
       openWorkspace()
     case "thread":
       createThread()
+    case "first-request":
+      if trimmedDraftMessage.isEmpty {
+        useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
+      } else {
+        sendDraftMessage()
+      }
     default:
       return
     }
@@ -838,7 +855,7 @@ final class AppViewModel: ObservableObject {
     runtimeState == .ready
       && (
         (activeTurnID != nil && activeTurnThreadID != nil)
-          || (pendingTurnRequestID != nil && pendingTurnThreadID != nil)
+          || pendingTurnRequest.canCancel
       )
   }
 
@@ -1007,7 +1024,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
-        announceSetupCompleteIfNeeded()
+        announceFirstRequestReadyIfNeeded()
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -1125,7 +1142,7 @@ final class AppViewModel: ObservableObject {
             attributes: [:]
           )
         )
-        announceSetupCompleteIfNeeded()
+        announceFirstRequestReadyIfNeeded()
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -1158,13 +1175,11 @@ final class AppViewModel: ObservableObject {
 
     draftMessage = ""
     runtimeDetail = "Generating local response..."
-    let requestID = UUID()
-    pendingTurnRequestID = requestID
-    pendingTurnThreadID = threadID
+    let requestID = pendingTurnRequest.begin(threadID: threadID)
 
     let task = Task {
       defer {
-        clearPendingTurnRequest(requestID: requestID)
+        pendingTurnRequest.clear(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
@@ -1207,10 +1222,7 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
-    pendingTurnTask = task
-    if pendingTurnRequestID != requestID {
-      pendingTurnTask = nil
-    }
+    pendingTurnRequest.bind(task: task, requestID: requestID)
   }
 
   func respondToApproval(approvalID: String, decision: String) {
@@ -1346,13 +1358,11 @@ final class AppViewModel: ObservableObject {
     }
 
     runtimeDetail = "Running local plugin command..."
-    let requestID = UUID()
-    pendingTurnRequestID = requestID
-    pendingTurnThreadID = threadID
+    let requestID = pendingTurnRequest.begin(threadID: threadID)
 
     let task = Task {
       defer {
-        clearPendingTurnRequest(requestID: requestID)
+        pendingTurnRequest.clear(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
@@ -1393,10 +1403,7 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
-    pendingTurnTask = task
-    if pendingTurnRequestID != requestID {
-      pendingTurnTask = nil
-    }
+    pendingTurnRequest.bind(task: task, requestID: requestID)
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {
@@ -1426,7 +1433,7 @@ final class AppViewModel: ObservableObject {
 
     Task {
       await loadThreadHistory(threadID: threadID)
-      announceSetupCompleteIfNeeded()
+      announceFirstRequestReadyIfNeeded()
     }
   }
 
@@ -2224,7 +2231,7 @@ final class AppViewModel: ObservableObject {
   }
 
   private func hasActiveOrPendingTurn() -> Bool {
-    activeTurnID != nil || pendingTurnRequestID != nil
+    activeTurnID != nil || pendingTurnRequest.isPending
   }
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {
@@ -2314,7 +2321,7 @@ final class AppViewModel: ObservableObject {
 
     if let selectedThreadID {
       await loadThreadHistory(threadID: selectedThreadID)
-      announceSetupCompleteIfNeeded()
+      announceFirstRequestReadyIfNeeded()
     }
   }
 
@@ -2351,9 +2358,9 @@ final class AppViewModel: ObservableObject {
         id: "welcome-start-local-setup",
         kind: .system,
         title: "Start Local Setup",
-        body: "Launch the runtime, choose a local model, open a workspace, then create or select a thread.",
+        body: "Launch the runtime, choose a local model, open a workspace, create or select a thread, then send one short local request.",
         attributes: [
-          "path": "runtime -> model -> workspace -> thread"
+          "path": "runtime -> model -> workspace -> thread -> first request"
         ]
       ),
       TimelineEntry(
@@ -2416,9 +2423,9 @@ final class AppViewModel: ObservableObject {
         id: "default-thread-ready:\(title)",
         kind: .system,
         title: "Thread Ready",
-        body: "\(title) is ready after runtime, model, workspace, and thread setup are complete.",
+        body: "\(title) is ready after runtime, model, workspace, and thread setup. Send one short request to finish first-use setup.",
         attributes: [
-          "setup": "runtime, model, workspace, thread"
+          "setup": "runtime, model, workspace, thread, first request"
         ]
       ),
     ]
@@ -2518,34 +2525,13 @@ final class AppViewModel: ObservableObject {
   }
 
   private func cancelPendingTurnRequest() -> Bool {
-    guard let requestID = pendingTurnRequestID,
-          let threadID = pendingTurnThreadID
-    else {
+    guard let threadID = pendingTurnRequest.cancel() else {
       return false
     }
 
-    let task = pendingTurnTask
-    clearPendingTurnRequest(requestID: requestID)
     runtimeDetail = "Cancelling local turn request..."
     refreshThreadPreview(threadID: threadID, preview: "Cancelling response")
-    task?.cancel()
     return true
-  }
-
-  private func clearPendingTurnRequest(requestID: UUID) {
-    guard pendingTurnRequestID == requestID else {
-      return
-    }
-
-    pendingTurnRequestID = nil
-    pendingTurnThreadID = nil
-    pendingTurnTask = nil
-  }
-
-  private func clearPendingTurnRequest() {
-    pendingTurnRequestID = nil
-    pendingTurnThreadID = nil
-    pendingTurnTask = nil
   }
 
   private func refreshModelHealthState(serverLabel: String? = nil) async {
@@ -2574,7 +2560,7 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = serverLabel
       }
     }
-    announceSetupCompleteIfNeeded()
+    announceFirstRequestReadyIfNeeded()
   }
 
   private func refreshLocalModelCatalog() {
@@ -2626,6 +2612,8 @@ final class AppViewModel: ObservableObject {
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       hasActiveTurn: hasActiveOrPendingTurn(),
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraftMessage: !trimmedDraftMessage.isEmpty,
       isWorkspaceSearching: isWorkspaceSearching,
       hasModelDownload: modelDownloadID != nil,
       hasPausedModelDownload: pausedModelDownloadID != nil
@@ -2639,7 +2627,7 @@ final class AppViewModel: ObservableObject {
       : ""
     return SetupProgressSnapshot(
       readyStepCount: setupReadyStepCount(),
-      stepCount: setupStepCount,
+      stepCount: SetupFlowState.stepCount,
       runtimeState: runtimeState,
       showsRuntimeActivity: showsRuntimeActivity(),
       isLocalModelReady: isModelReady,
@@ -2665,7 +2653,9 @@ final class AppViewModel: ObservableObject {
       isLocalModelReady: isModelReady,
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
-      hasActiveTurn: hasActiveOrPendingTurn()
+      hasActiveTurn: hasActiveOrPendingTurn(),
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraftMessage: !trimmedDraftMessage.isEmpty
     )
   }
 
@@ -2679,7 +2669,7 @@ final class AppViewModel: ObservableObject {
       selectedThreadTitle: selectedThreadTitle(),
       hasActiveTurn: hasActiveOrPendingTurn(),
       setupReadyStepCount: setupReadyStepCount(),
-      setupStepCount: setupStepCount,
+      setupStepCount: SetupFlowState.stepCount,
       setupProgressDetail: setupProgressDetail(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage()
     )
@@ -2754,21 +2744,18 @@ final class AppViewModel: ObservableObject {
     )
   }
 
+  private func setupFlowSnapshot() -> SetupFlowSnapshot {
+    SetupFlowSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage()
+    )
+  }
+
   private func setupReadyStepCount() -> Int {
-    var readyCount = 0
-    if runtimeState == .ready {
-      readyCount += 1
-    }
-    if isLocalModelReady() {
-      readyCount += 1
-    }
-    if workspace != nil {
-      readyCount += 1
-    }
-    if isLocalModelReady() && workspace != nil && hasRuntimeThreadSelection() {
-      readyCount += 1
-    }
-    return readyCount
+    SetupFlowState.readyStepCount(setupFlowSnapshot())
   }
 
   private func hasRuntimeThreadSelection() -> Bool {
@@ -2800,15 +2787,15 @@ final class AppViewModel: ObservableObject {
 
   private func isUserStartedTimelineEntry(_ entry: TimelineEntry) -> Bool {
     switch entry.kind {
-    case .userMessage, .assistantMessage, .plan, .tool, .diff, .approval, .warning:
+    case .userMessage, .assistantMessage, .plan, .tool, .diff, .approval:
       return true
-    case .system:
+    case .system, .warning:
       return false
     }
   }
 
   private func shouldAnnotateLaunchWithSetupEvents() -> Bool {
-    setupReadyStepCount() < setupStepCount || selectedThreadIsWaitingForFirstMessage()
+    SetupFlowState.shouldAnnotateLaunch(setupFlowSnapshot())
   }
 
   private func selectedSetupModel() -> LocalModelSummary? {
@@ -2829,8 +2816,8 @@ final class AppViewModel: ObservableObject {
     localModelSetupGuidance().summary
   }
 
-  private func announceSetupCompleteIfNeeded() {
-    guard setupReadyStepCount() == setupStepCount,
+  private func announceFirstRequestReadyIfNeeded() {
+    guard SetupFlowState.isCoreReadyForFirstRequest(setupFlowSnapshot()),
           let threadID = selectedThreadID,
           !threadID.hasPrefix("local-"),
           selectedThreadIsWaitingForFirstMessage(),
@@ -2845,10 +2832,10 @@ final class AppViewModel: ObservableObject {
       TimelineEntry(
         id: UUID().uuidString,
         kind: .system,
-        title: "Local Setup Complete",
-        body: "Runtime, local model, workspace, and thread are ready. Ask Pith to inspect files, review diffs, or make a small change.",
+        title: "First Request Ready",
+        body: "Runtime, local model, workspace, and thread are ready. Send one short local request to finish first-use setup.",
         attributes: [
-          "setup": "complete"
+          "setup": "first-request"
         ]
       )
     )
@@ -3077,7 +3064,7 @@ final class AppViewModel: ObservableObject {
     case .failed:
       activeTurnID = nil
       activeTurnThreadID = nil
-      clearPendingTurnRequest()
+      pendingTurnRequest.clear()
       modelHealth = nil
       if previousState != .failed || lastRuntimeFailureDetail != detail {
         appendEntry(
@@ -3097,7 +3084,7 @@ final class AppViewModel: ObservableObject {
     case .disconnected:
       activeTurnID = nil
       activeTurnThreadID = nil
-      clearPendingTurnRequest()
+      pendingTurnRequest.clear()
       modelHealth = nil
     case .launching:
       break

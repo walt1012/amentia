@@ -9,6 +9,8 @@ struct RuntimeReadinessSnapshot {
   let hasWorkspace: Bool
   let hasRuntimeThreadSelection: Bool
   let hasActiveTurn: Bool
+  let isWaitingForFirstMessage: Bool
+  let hasDraftMessage: Bool
 }
 
 enum RuntimeReadinessPresenter {
@@ -18,6 +20,7 @@ enum RuntimeReadinessPresenter {
       modelStep(snapshot),
       workspaceStep(snapshot),
       threadStep(snapshot),
+      firstRequestStep(snapshot),
     ]
   }
 
@@ -78,5 +81,58 @@ enum RuntimeReadinessPresenter {
     }
 
     return ReadinessStepSummary(id: "thread", label: "Thread", detail: "Ready", tone: .ready)
+  }
+
+  private static func firstRequestStep(_ snapshot: RuntimeReadinessSnapshot) -> ReadinessStepSummary {
+    guard snapshot.runtimeState == .ready else {
+      return ReadinessStepSummary(
+        id: "first-request",
+        label: "First Request",
+        detail: "Waiting",
+        tone: .neutral
+      )
+    }
+    guard snapshot.isLocalModelReady,
+          snapshot.hasWorkspace,
+          snapshot.hasRuntimeThreadSelection
+    else {
+      return ReadinessStepSummary(
+        id: "first-request",
+        label: "First Request",
+        detail: "Waiting",
+        tone: .neutral
+      )
+    }
+    if snapshot.hasActiveTurn {
+      return ReadinessStepSummary(
+        id: "first-request",
+        label: "First Request",
+        detail: "Running",
+        tone: .active
+      )
+    }
+    guard snapshot.isWaitingForFirstMessage else {
+      return ReadinessStepSummary(
+        id: "first-request",
+        label: "First Request",
+        detail: "Sent",
+        tone: .ready
+      )
+    }
+    if snapshot.hasDraftMessage {
+      return ReadinessStepSummary(
+        id: "first-request",
+        label: "First Request",
+        detail: "Draft",
+        tone: .warning
+      )
+    }
+
+    return ReadinessStepSummary(
+      id: "first-request",
+      label: "First Request",
+      detail: "Prompt",
+      tone: .warning
+    )
   }
 }

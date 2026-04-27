@@ -8,6 +8,8 @@ struct RuntimeHeaderSnapshot {
   let hasWorkspace: Bool
   let hasRuntimeThreadSelection: Bool
   let hasActiveTurn: Bool
+  let isWaitingForFirstMessage: Bool
+  let hasDraftMessage: Bool
   let isWorkspaceSearching: Bool
   let hasModelDownload: Bool
   let hasPausedModelDownload: Bool
@@ -35,6 +37,11 @@ enum RuntimeHeaderPresenter {
       if !snapshot.hasRuntimeThreadSelection {
         return "Select or create a thread to start local agent work."
       }
+      if snapshot.isWaitingForFirstMessage {
+        return snapshot.hasDraftMessage
+          ? "First local request is drafted. Send it to finish setup."
+          : "Ready for the first local request."
+      }
       return "Ready for local agent work."
     }
   }
@@ -51,7 +58,11 @@ enum RuntimeHeaderPresenter {
       if snapshot.hasActiveTurn || snapshot.hasModelDownload || snapshot.isWorkspaceSearching {
         return .active
       }
-      if !snapshot.hasWorkspace || !snapshot.isLocalModelReady || !snapshot.hasRuntimeThreadSelection {
+      if !snapshot.hasWorkspace
+        || !snapshot.isLocalModelReady
+        || !snapshot.hasRuntimeThreadSelection
+        || snapshot.isWaitingForFirstMessage
+      {
         return .warning
       }
       return .ready
@@ -83,6 +94,7 @@ enum RuntimeHeaderPresenter {
         || !snapshot.isLocalModelReady
         || !snapshot.hasWorkspace
         || !snapshot.hasRuntimeThreadSelection
+        || snapshot.isWaitingForFirstMessage
     }
   }
 }

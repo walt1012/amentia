@@ -36,6 +36,9 @@ enum InspectorSessionPresenter {
       if !snapshot.hasRuntimeThreadSelection {
         return "Thread Needed"
       }
+      if snapshot.isWaitingForFirstMessage {
+        return "First Request Ready"
+      }
       return "Local Session Ready"
     }
   }
@@ -60,6 +63,9 @@ enum InspectorSessionPresenter {
       }
       if !snapshot.hasRuntimeThreadSelection {
         return "Create or select a thread to keep messages, approvals, memory, and cancellation together."
+      }
+      if snapshot.isWaitingForFirstMessage {
+        return "Send one short local request from the composer to finish first-use setup."
       }
       return "Use the composer for the next request. Open inspector sections only when detail is needed."
     }

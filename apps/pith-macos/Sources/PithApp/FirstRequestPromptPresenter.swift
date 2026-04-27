@@ -5,7 +5,7 @@ enum FirstRequestPromptPresenter {
   static let reviewChangesID = "review-changes"
 
   static func calloutSummary() -> String {
-    "Setup is complete. Pick a short starter prompt or type your own first local request."
+    "Core setup is ready. Pick a short starter prompt or type your own first local request."
   }
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {
