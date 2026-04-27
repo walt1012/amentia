@@ -652,6 +652,9 @@ final class AppViewModel: ObservableObject {
     if shouldShowModelDownloadProgress() {
       return modelDownloadProgressSummary()
     }
+    if let blockedDetail = selectedSetupModelDownloadBlockedDetail() {
+      return blockedDetail
+    }
 
     return localModelSetupGuidance().detail
   }
@@ -670,6 +673,9 @@ final class AppViewModel: ObservableObject {
     if canDownloadLocalModel() {
       return defaultModelDownloadButtonTitle()
     }
+    if selectedSetupModelDownloadBlockedDetail() != nil {
+      return "Download Blocked"
+    }
     if canBootstrapModelPackMetadata() {
       return "Install Metadata"
     }
@@ -683,6 +689,9 @@ final class AppViewModel: ObservableObject {
     }
     if let pausedModelDownloadID {
       return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    }
+    if selectedSetupModelDownloadBlockedDetail() != nil {
+      return false
     }
 
     return canDownloadLocalModel() || canBootstrapModelPackMetadata()
@@ -1518,6 +1527,9 @@ final class AppViewModel: ObservableObject {
       if canDownloadLocalModel() {
         return defaultModelDownloadButtonTitle()
       }
+      if selectedSetupModelDownloadBlockedDetail() != nil {
+        return "Download Blocked"
+      }
       if canBootstrapModelPackMetadata() {
         return "Install Metadata"
       }
@@ -1535,6 +1547,9 @@ final class AppViewModel: ObservableObject {
     }
     if let pausedModelDownloadID {
       return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
+    }
+    if selectedSetupModelDownloadBlockedDetail() != nil {
+      return false
     }
     if !isLocalModelReady() {
       return canDownloadLocalModel() || canBootstrapModelPackMetadata()
@@ -1930,7 +1945,12 @@ final class AppViewModel: ObservableObject {
     }
 
     guard canDownloadRecommendedModel(modelID: modelID) else {
-      runtimeDetail = "The selected local model is not ready to download."
+      if let model = localModels.first(where: { $0.id == modelID }) {
+        runtimeDetail = localModelDownloadRequestPlan(for: model).blockedDetail
+          ?? "The selected local model is not ready to download."
+      } else {
+        runtimeDetail = "The selected local model is not ready to download."
+      }
       return
     }
 
@@ -2724,6 +2744,7 @@ final class AppViewModel: ObservableObject {
       pausedModel: pausedModelDownloadID
         .flatMap { id in localModels.first(where: { $0.id == id }) },
       selectedSetupModel: selectedSetupModel(),
+      selectedDownloadBlockedDetail: selectedSetupModelDownloadBlockedDetail(),
       downloadedModelCount: downloadedModels.count,
       totalModelCount: localModels.count,
       activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,
@@ -2740,6 +2761,16 @@ final class AppViewModel: ObservableObject {
       pausedModelID: pausedModelDownloadID,
       hasResumeData: modelDownloadResumeData != nil
     )
+  }
+
+  private func selectedSetupModelDownloadBlockedDetail() -> String? {
+    guard let model = selectedSetupModel(),
+          !model.downloaded
+    else {
+      return nil
+    }
+
+    return localModelDownloadRequestPlan(for: model).blockedDetail
   }
 
   private func appendModelEvent(

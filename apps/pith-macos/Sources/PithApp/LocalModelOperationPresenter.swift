@@ -7,6 +7,7 @@ struct LocalModelOperationSnapshot {
   let downloadingModel: LocalModelSummary?
   let pausedModel: LocalModelSummary?
   let selectedSetupModel: LocalModelSummary?
+  let selectedDownloadBlockedDetail: String?
   let downloadedModelCount: Int
   let totalModelCount: Int
   let activeModelDisplayName: String?
@@ -160,6 +161,19 @@ enum LocalModelOperationPresenter {
         actionSummary: "Use the selected downloaded model or reinstall pack metadata to repair readiness.",
         readinessDetail: "Select",
         tone: .warning
+      )
+    }
+
+    if let model = snapshot.selectedSetupModel,
+       let blockedDetail = snapshot.selectedDownloadBlockedDetail
+    {
+      return LocalModelSetupGuidance(
+        title: "Model Download Blocked",
+        summary: "\(model.displayName) cannot start downloading yet.",
+        detail: blockedDetail,
+        actionSummary: blockedDetail,
+        readinessDetail: "Blocked",
+        tone: .danger
       )
     }
 

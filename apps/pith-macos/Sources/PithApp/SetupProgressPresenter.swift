@@ -85,6 +85,8 @@ enum SetupProgressPresenter {
       return "Monitor Model"
     case "Paused":
       return "Continue Download"
+    case "Blocked":
+      return "Free Model Space"
     case "Streaming":
       return "Finish Turn"
     case "Select":

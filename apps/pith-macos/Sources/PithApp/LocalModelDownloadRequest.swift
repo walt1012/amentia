@@ -64,8 +64,69 @@ enum LocalModelDownloadRequestPlanner {
     guard let downloadURL = URL(string: model.downloadURL) else {
       return .blocked("The selected local model has an invalid download URL.")
     }
+    guard downloadURL.scheme == "https" else {
+      return .blocked("The selected local model must be downloaded over HTTPS.")
+    }
+
+    if let blockedDetail = storageCapacityBlockedDetail(for: model) {
+      return .blocked(blockedDetail)
+    }
 
     return .start(downloadURL: downloadURL)
+  }
+
+  private static func storageCapacityBlockedDetail(for model: LocalModelSummary) -> String? {
+    guard let availableBytes = availableStorageBytes(for: model.installPath) else {
+      return nil
+    }
+
+    let requiredBytes = model.sizeBytes + max(model.sizeBytes / 5, 64 * 1024 * 1024)
+    guard availableBytes < requiredBytes else {
+      return nil
+    }
+
+    return """
+      Free at least \(formattedByteCount(requiredBytes)) on the local model volume before downloading \(model.displayName). \
+      Available: \(formattedByteCount(availableBytes)).
+      """
+  }
+
+  private static func availableStorageBytes(for path: String) -> Int64? {
+    let targetURL = URL(fileURLWithPath: path)
+    guard let volumeURL = existingAncestor(for: targetURL) else {
+      return nil
+    }
+
+    guard let attributes = try? FileManager.default.attributesOfFileSystem(
+      forPath: volumeURL.path
+    ),
+          let freeSize = attributes[.systemFreeSize] as? NSNumber
+    else {
+      return nil
+    }
+
+    return freeSize.int64Value
+  }
+
+  private static func existingAncestor(for url: URL) -> URL? {
+    let manager = FileManager.default
+    var candidate = url.deletingLastPathComponent()
+
+    while !manager.fileExists(atPath: candidate.path) {
+      let parent = candidate.deletingLastPathComponent()
+      guard parent.path != candidate.path else {
+        return nil
+      }
+      candidate = parent
+    }
+
+    return candidate
+  }
+
+  private static func formattedByteCount(_ byteCount: Int64) -> String {
+    let formatter = ByteCountFormatter()
+    formatter.countStyle = .file
+    return formatter.string(fromByteCount: byteCount)
   }
 }
 
