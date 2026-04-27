@@ -145,7 +145,10 @@ mod tests {
     let attributes = items[0].attributes.as_ref().expect("attributes");
     assert_eq!(items[0].content, "new");
     assert_eq!(attributes.get("modelStatus"), Some(&"ready".to_string()));
-    assert_eq!(attributes.get("streamingStatus"), Some(&"completed".to_string()));
+    assert_eq!(
+      attributes.get("streamingStatus"),
+      Some(&"completed".to_string())
+    );
   }
 
   #[test]
