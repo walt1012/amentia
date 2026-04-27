@@ -14,6 +14,9 @@ use local_responses::{
   format_shell_result, summarize_denied_approval, summarize_directory_result,
   summarize_file_result, summarize_search_result, summarize_shell_result,
 };
+use plugin_permissions::{
+  build_permission_denied_items, granted_permission_sources, permission_is_granted,
+};
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{
@@ -49,6 +52,7 @@ use text_utils::{take_characters, truncate_text};
 mod active_turns;
 mod context_compaction;
 mod local_responses;
+mod plugin_permissions;
 mod protocol_adapters;
 mod text_utils;
 
@@ -578,71 +582,6 @@ fn apply_plugin_states(
   }
 
   plugins
-}
-
-fn granted_permission_sources(plugins: &[PluginCatalogEntry]) -> HashMap<String, Vec<String>> {
-  let mut permissions = HashMap::new();
-
-  for plugin in plugins
-    .iter()
-    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
-  {
-    for permission in &plugin.permissions {
-      permissions
-        .entry(permission.clone())
-        .or_insert_with(Vec::new)
-        .push(plugin.display_name.clone());
-    }
-  }
-
-  for plugin_names in permissions.values_mut() {
-    plugin_names.sort();
-    plugin_names.dedup();
-  }
-
-  permissions
-}
-
-fn permission_is_granted(
-  permission_sources: &HashMap<String, Vec<String>>,
-  permission: &str,
-) -> bool {
-  permission_sources.contains_key(permission)
-}
-
-fn build_permission_denied_items(
-  permission_sources: &HashMap<String, Vec<String>>,
-  permission: &str,
-  blocked_action: &str,
-  workspace_name: &str,
-  mut attributes: HashMap<String, String>,
-) -> Vec<TimelineItem> {
-  let granted_by = permission_sources
-    .get(permission)
-    .map(|plugins| plugins.join(", "))
-    .unwrap_or_else(|| "none".to_string());
-  attributes.insert("requiredPermission".to_string(), permission.to_string());
-  attributes.insert("blockedAction".to_string(), blocked_action.to_string());
-  attributes.insert("grantedBy".to_string(), granted_by.clone());
-
-  vec![
-    TimelineItem {
-      kind: "warning".to_string(),
-      title: "Plugin Permission Required".to_string(),
-      content: format!(
-        "Pith could not {blocked_action} in {workspace_name} because no enabled plugin grants `{permission}`."
-      ),
-      attributes: Some(attributes.clone()),
-    },
-    TimelineItem {
-      kind: "assistantMessage".to_string(),
-      title: "Assistant".to_string(),
-      content: format!(
-        "Enable a plugin that grants `{permission}` before asking Pith to {blocked_action}. Currently granted by: {granted_by}."
-      ),
-      attributes: Some(attributes),
-    },
-  ]
 }
 
 fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
