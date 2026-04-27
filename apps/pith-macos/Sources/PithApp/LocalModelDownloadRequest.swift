@@ -41,7 +41,8 @@ enum LocalModelDownloadRequestPlanner {
     model: LocalModelSummary,
     isDownloadRunning: Bool,
     pausedModelID: String?,
-    hasResumeData: Bool
+    hasResumeData: Bool,
+    resumeBytesReceived: Int64?
   ) -> LocalModelDownloadRequestPlan {
     if isDownloadRunning {
       return .blocked("Finish, pause, or cancel the current model download before starting another.")
@@ -51,6 +52,7 @@ enum LocalModelDownloadRequestPlanner {
       return .blocked("\(model.displayName) is already downloaded.")
     }
 
+    let isResumingSelectedModel: Bool
     if let pausedModelID {
       guard pausedModelID == model.id else {
         return .blocked("Continue or cancel the paused model download before starting another model.")
@@ -59,6 +61,9 @@ enum LocalModelDownloadRequestPlanner {
       guard hasResumeData else {
         return .blocked("Cancel the paused model download before trying again.")
       }
+      isResumingSelectedModel = true
+    } else {
+      isResumingSelectedModel = false
     }
 
     guard let downloadURL = URL(string: model.downloadURL) else {
@@ -68,27 +73,51 @@ enum LocalModelDownloadRequestPlanner {
       return .blocked("The selected local model must be downloaded over HTTPS.")
     }
 
-    if let blockedDetail = storageCapacityBlockedDetail(for: model) {
+    let resumedBytes = isResumingSelectedModel ? resumeBytesReceived : nil
+    if let blockedDetail = storageCapacityBlockedDetail(for: model, resumeBytesReceived: resumedBytes) {
       return .blocked(blockedDetail)
     }
 
     return .start(downloadURL: downloadURL)
   }
 
-  private static func storageCapacityBlockedDetail(for model: LocalModelSummary) -> String? {
+  private static func storageCapacityBlockedDetail(
+    for model: LocalModelSummary,
+    resumeBytesReceived: Int64?
+  ) -> String? {
     guard let availableBytes = availableStorageBytes(for: model.installPath) else {
       return nil
     }
 
-    let requiredBytes = model.sizeBytes + max(model.sizeBytes / 5, 64 * 1024 * 1024)
+    let remainingBytes = storageBytesNeeded(for: model, resumeBytesReceived: resumeBytesReceived)
+    let minimumBufferBytes: Int64
+    if resumeBytesReceived == nil {
+      minimumBufferBytes = 64 * 1024 * 1024
+    } else {
+      minimumBufferBytes = 16 * 1024 * 1024
+    }
+    let requiredBytes = remainingBytes + max(remainingBytes / 5, minimumBufferBytes)
     guard availableBytes < requiredBytes else {
       return nil
     }
 
+    let operation = resumeBytesReceived == nil ? "downloading" : "continuing"
     return """
-      Free at least \(formattedByteCount(requiredBytes)) on the local model volume before downloading \(model.displayName). \
+      Free at least \(formattedByteCount(requiredBytes)) on the local model volume before \(operation) \(model.displayName). \
       Available: \(formattedByteCount(availableBytes)).
       """
+  }
+
+  private static func storageBytesNeeded(
+    for model: LocalModelSummary,
+    resumeBytesReceived: Int64?
+  ) -> Int64 {
+    guard let resumeBytesReceived else {
+      return model.sizeBytes
+    }
+
+    let boundedReceivedBytes = min(max(resumeBytesReceived, 0), model.sizeBytes)
+    return max(model.sizeBytes - boundedReceivedBytes, 0)
   }
 
   private static func availableStorageBytes(for path: String) -> Int64? {

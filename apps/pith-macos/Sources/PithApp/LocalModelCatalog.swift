@@ -28,6 +28,7 @@ enum LocalModelCatalog {
   private static let pausedDownloadBytesReceivedKey = "pith.pausedModelDownloadBytesReceived"
   private static let pausedDownloadTotalBytesKey = "pith.pausedModelDownloadTotalBytes"
   private static let pausedDownloadUpdatedAtKey = "pith.pausedModelDownloadUpdatedAt"
+  private static let verifiedModelKeyPrefix = "pith.verifiedLocalModel."
 
   static func summaries(
     storageRootPath: String,
@@ -38,9 +39,10 @@ enum LocalModelCatalog {
     return items().map { item in
       let installPath = item.installPath(storageRootPath: storageRootPath)
       let normalizedInstallPath = normalizedPath(installPath)
-      let localSizeBytes = localFileSize(at: installPath)
+      let localMetadata = localFileMetadata(at: installPath)
+      let localSizeBytes = localMetadata?.sizeBytes
       let downloaded = manager.fileExists(atPath: installPath)
-        && isPlausibleModelFile(at: installPath, localSizeBytes: localSizeBytes, item: item)
+        && isVerifiedModelFile(at: installPath, localMetadata: localMetadata, item: item)
       return LocalModelSummary(
         id: item.id,
         displayName: item.displayName,
@@ -93,8 +95,12 @@ enum LocalModelCatalog {
 
   static func validateDownloadedModel(_ model: LocalModelSummary) throws {
     let fileURL = URL(fileURLWithPath: model.installPath)
-    let size = try localFileSizeOrThrow(at: fileURL)
-    try validateModelSize(size, displayName: model.displayName, expectedSizeBytes: model.sizeBytes)
+    let metadata = try localFileMetadataOrThrow(at: fileURL)
+    try validateModelSize(
+      metadata.sizeBytes,
+      displayName: model.displayName,
+      expectedSizeBytes: model.sizeBytes
+    )
     try validateGGUFMagic(at: fileURL, displayName: model.displayName)
 
     if let expectedSHA256 = model.sha256, !expectedSHA256.isEmpty {
@@ -107,6 +113,13 @@ enum LocalModelCatalog {
         )
       }
     }
+
+    rememberVerifiedModel(
+      modelID: model.id,
+      path: model.installPath,
+      expectedSHA256: model.sha256,
+      localMetadata: metadata
+    )
   }
 
   static func loadPausedDownload(matching localModels: [LocalModelSummary]) -> PersistedModelDownload? {
@@ -189,43 +202,73 @@ enum LocalModelCatalog {
     defaults.removeObject(forKey: pausedDownloadUpdatedAtKey)
   }
 
-  private static func localFileSize(at path: String) -> Int64? {
+  private static func localFileMetadata(at path: String) -> LocalModelFileMetadata? {
     guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
           let size = attributes[.size] as? NSNumber
     else {
       return nil
     }
 
-    return size.int64Value
+    return LocalModelFileMetadata(
+      sizeBytes: size.int64Value,
+      modificationDate: attributes[.modificationDate] as? Date
+    )
   }
 
-  private static func localFileSizeOrThrow(at fileURL: URL) throws -> Int64 {
+  private static func localFileMetadataOrThrow(at fileURL: URL) throws -> LocalModelFileMetadata {
     let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
     guard let size = attributes[.size] as? NSNumber else {
       throw LocalModelIntegrityError.missingSize(path: fileURL.path)
     }
 
-    return size.int64Value
+    return LocalModelFileMetadata(
+      sizeBytes: size.int64Value,
+      modificationDate: attributes[.modificationDate] as? Date
+    )
   }
 
-  private static func isPlausibleModelFile(
+  private static func isVerifiedModelFile(
     at path: String,
-    localSizeBytes: Int64?,
+    localMetadata: LocalModelFileMetadata?,
     item: LocalModelCatalogItem
   ) -> Bool {
-    guard let localSizeBytes else {
+    guard let localMetadata else {
       return false
     }
 
     do {
       try validateModelSize(
-        localSizeBytes,
+        localMetadata.sizeBytes,
         displayName: item.displayName,
         expectedSizeBytes: item.sizeBytes
       )
       try validateGGUFMagic(at: URL(fileURLWithPath: path), displayName: item.displayName)
+      guard let expectedSHA256 = item.sha256, !expectedSHA256.isEmpty else {
+        return true
+      }
+      if hasVerifiedModel(
+        modelID: item.id,
+        path: path,
+        expectedSHA256: expectedSHA256,
+        localMetadata: localMetadata
+      ) {
+        return true
+      }
+
+      let actualSHA256 = try sha256Hex(at: URL(fileURLWithPath: path))
+      guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+        forgetVerifiedModel(modelID: item.id)
+        return false
+      }
+      rememberVerifiedModel(
+        modelID: item.id,
+        path: path,
+        expectedSHA256: expectedSHA256,
+        localMetadata: localMetadata
+      )
       return true
     } catch {
+      forgetVerifiedModel(modelID: item.id)
       return false
     }
   }
@@ -273,6 +316,54 @@ enum LocalModelCatalog {
     }
 
     return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+  }
+
+  private static func hasVerifiedModel(
+    modelID: String,
+    path: String,
+    expectedSHA256: String,
+    localMetadata: LocalModelFileMetadata
+  ) -> Bool {
+    UserDefaults.standard.string(forKey: verifiedModelKey(for: modelID)) == verificationStamp(
+      path: path,
+      expectedSHA256: expectedSHA256,
+      localMetadata: localMetadata
+    )
+  }
+
+  private static func rememberVerifiedModel(
+    modelID: String,
+    path: String,
+    expectedSHA256: String?,
+    localMetadata: LocalModelFileMetadata
+  ) {
+    let stamp = verificationStamp(
+      path: path,
+      expectedSHA256: expectedSHA256 ?? "",
+      localMetadata: localMetadata
+    )
+    UserDefaults.standard.set(stamp, forKey: verifiedModelKey(for: modelID))
+  }
+
+  private static func forgetVerifiedModel(modelID: String) {
+    UserDefaults.standard.removeObject(forKey: verifiedModelKey(for: modelID))
+  }
+
+  private static func verifiedModelKey(for modelID: String) -> String {
+    "\(verifiedModelKeyPrefix)\(modelID)"
+  }
+
+  private static func verificationStamp(
+    path: String,
+    expectedSHA256: String,
+    localMetadata: LocalModelFileMetadata
+  ) -> String {
+    [
+      normalizedPath(path),
+      String(localMetadata.sizeBytes),
+      String(localMetadata.modificationMilliseconds),
+      expectedSHA256.lowercased(),
+    ].joined(separator: "|")
   }
 
   private static func pausedDownloadResumeDataURL() -> URL {
@@ -323,6 +414,19 @@ enum LocalModelCatalog {
         installSegments: ["catalog", "granite-4.0-h-350m"]
       ),
     ]
+  }
+}
+
+private struct LocalModelFileMetadata {
+  let sizeBytes: Int64
+  let modificationDate: Date?
+
+  var modificationMilliseconds: Int64 {
+    guard let modificationDate else {
+      return 0
+    }
+
+    return Int64(modificationDate.timeIntervalSince1970 * 1000)
   }
 }
 

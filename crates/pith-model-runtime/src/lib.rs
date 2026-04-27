@@ -1,11 +1,17 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command, Output, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
+
+const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
+const LLAMA_CPP_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelRole {
@@ -872,20 +878,14 @@ fn generate_with_llama_cpp(
   let max_tokens = manifest
     .map(|item| item.max_output_tokens.min(request.max_tokens))
     .unwrap_or(request.max_tokens);
-  let output = Command::new(binary_path)
-    .arg("-m")
-    .arg(model_path)
-    .arg("--temp")
-    .arg("0.2")
-    .arg("--ctx-size")
-    .arg(context_size.to_string())
-    .arg("-n")
-    .arg(max_tokens.to_string())
-    .arg("--no-display-prompt")
-    .arg("-p")
-    .arg(&request.prompt)
-    .output()
-    .with_context(|| format!("failed to execute {}", binary_path.display()))?;
+  let output = run_llama_cpp_with_timeout(
+    binary_path,
+    model_path,
+    context_size,
+    max_tokens,
+    &request.prompt,
+  )
+  .with_context(|| format!("failed to execute {}", binary_path.display()))?;
 
   if !output.status.success() {
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -907,6 +907,156 @@ fn generate_with_llama_cpp(
   }
 
   Ok(cleaned)
+}
+
+fn run_llama_cpp_with_timeout(
+  binary_path: &Path,
+  model_path: &Path,
+  context_size: usize,
+  max_tokens: usize,
+  prompt: &str,
+) -> Result<Output> {
+  let timeout = llama_cpp_timeout();
+  let mut child = build_llama_cpp_command(binary_path)
+    .arg("-m")
+    .arg(model_path)
+    .arg("--temp")
+    .arg("0.2")
+    .arg("--ctx-size")
+    .arg(context_size.to_string())
+    .arg("-n")
+    .arg(max_tokens.to_string())
+    .arg("--no-display-prompt")
+    .arg("-p")
+    .arg(prompt)
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?;
+  let stdout_reader = child.stdout.take().map(read_pipe_in_background);
+  let stderr_reader = child.stderr.take().map(read_pipe_in_background);
+  let started_at = Instant::now();
+  let mut timed_out = false;
+
+  let status = loop {
+    if let Some(status) = child.try_wait()? {
+      break status;
+    }
+
+    if started_at.elapsed() >= timeout {
+      timed_out = true;
+      terminate_llama_child(&mut child);
+      break child.wait()?;
+    }
+
+    thread::sleep(LLAMA_CPP_POLL_INTERVAL);
+  };
+
+  let stdout = join_pipe_reader(stdout_reader);
+  let stderr = join_pipe_reader(stderr_reader);
+
+  if timed_out {
+    let stderr_text = String::from_utf8_lossy(&stderr).trim().to_string();
+    if stderr_text.is_empty() {
+      bail!("llama.cpp timed out after {} seconds", timeout.as_secs());
+    }
+
+    bail!(
+      "llama.cpp timed out after {} seconds: {}",
+      timeout.as_secs(),
+      stderr_text
+    );
+  }
+
+  Ok(Output {
+    status,
+    stdout,
+    stderr,
+  })
+}
+
+fn llama_cpp_timeout() -> Duration {
+  env::var("PITH_LLAMA_CPP_TIMEOUT_SECONDS")
+    .ok()
+    .and_then(|value| value.parse::<u64>().ok())
+    .filter(|seconds| *seconds > 0)
+    .map(Duration::from_secs)
+    .unwrap_or(LLAMA_CPP_TIMEOUT)
+}
+
+fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
+where
+  R: Read + Send + 'static,
+{
+  thread::spawn(move || {
+    let mut bytes = vec![];
+    let _ = reader.read_to_end(&mut bytes);
+    bytes
+  })
+}
+
+fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
+  reader
+    .and_then(|handle| handle.join().ok())
+    .unwrap_or_default()
+}
+
+fn terminate_llama_child(child: &mut Child) {
+  #[cfg(unix)]
+  {
+    terminate_unix_process_group(child);
+  }
+
+  #[cfg(not(unix))]
+  {
+    let _ = child.kill();
+  }
+}
+
+fn build_llama_cpp_command(binary_path: &Path) -> Command {
+  let mut process = Command::new(binary_path);
+
+  #[cfg(unix)]
+  {
+    use std::os::unix::process::CommandExt;
+
+    unsafe {
+      process.pre_exec(|| {
+        if setpgid(0, 0) == 0 {
+          Ok(())
+        } else {
+          Err(std::io::Error::last_os_error())
+        }
+      });
+    }
+  }
+
+  process
+}
+
+#[cfg(unix)]
+fn terminate_unix_process_group(child: &mut Child) {
+  let process_group_id = -(child.id() as i32);
+  unsafe {
+    kill(process_group_id, SIGTERM);
+  }
+  thread::sleep(Duration::from_millis(200));
+  if matches!(child.try_wait(), Ok(None)) {
+    unsafe {
+      kill(process_group_id, SIGKILL);
+    }
+  }
+}
+
+#[cfg(unix)]
+const SIGTERM: i32 = 15;
+#[cfg(unix)]
+const SIGKILL: i32 = 9;
+
+#[cfg(unix)]
+extern "C" {
+  fn kill(pid: i32, sig: i32) -> i32;
+  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 fn clean_model_output(output: &str) -> String {

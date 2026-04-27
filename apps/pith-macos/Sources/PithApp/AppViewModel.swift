@@ -1,11 +1,29 @@
 import AppKit
 import Foundation
 
+private struct LocalModelDownloadRequestCacheKey: Hashable {
+  let modelID: String
+  let modelDownloaded: Bool
+  let modelSizeBytes: Int64
+  let modelInstallPath: String
+  let isDownloadRunning: Bool
+  let pausedModelID: String?
+  let hasResumeData: Bool
+  let resumeBytesReceived: Int64?
+}
+
+private struct LocalModelDownloadRequestCache {
+  let key: LocalModelDownloadRequestCacheKey
+  let createdAt: Date
+  let plan: LocalModelDownloadRequestPlan
+}
+
 @MainActor
 final class AppViewModel: ObservableObject {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
   private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
   private let setupStepCount = 4
+  private let localModelDownloadRequestCacheLifetime: TimeInterval = 2
 
   @Published var threads: [ThreadSummary]
   @Published var selectedThreadID: ThreadSummary.ID?
@@ -50,6 +68,7 @@ final class AppViewModel: ObservableObject {
   private var modelDownloadTask: Task<Void, Never>?
   private var modelDownloadTransfer: ModelDownloadTransfer?
   private var modelDownloadResumeData: Data?
+  private var localModelDownloadRequestCache: LocalModelDownloadRequestCache?
   private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
@@ -118,6 +137,7 @@ final class AppViewModel: ObservableObject {
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
     self.modelDownloadResumeData = pausedDownload?.resumeData
+    self.localModelDownloadRequestCache = nil
     self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
@@ -2755,12 +2775,47 @@ final class AppViewModel: ObservableObject {
   private func localModelDownloadRequestPlan(
     for model: LocalModelSummary
   ) -> LocalModelDownloadRequestPlan {
-    LocalModelDownloadRequestPlanner.plan(
-      model: model,
+    let key = LocalModelDownloadRequestCacheKey(
+      modelID: model.id,
+      modelDownloaded: model.downloaded,
+      modelSizeBytes: model.sizeBytes,
+      modelInstallPath: model.installPath,
       isDownloadRunning: modelDownloadTask != nil,
       pausedModelID: pausedModelDownloadID,
-      hasResumeData: modelDownloadResumeData != nil
+      hasResumeData: modelDownloadResumeData != nil,
+      resumeBytesReceived: resumeBytesReceived(for: model.id)
     )
+    if let cache = localModelDownloadRequestCache,
+       cache.key == key,
+       Date().timeIntervalSince(cache.createdAt) < localModelDownloadRequestCacheLifetime
+    {
+      return cache.plan
+    }
+
+    let plan = LocalModelDownloadRequestPlanner.plan(
+      model: model,
+      isDownloadRunning: key.isDownloadRunning,
+      pausedModelID: key.pausedModelID,
+      hasResumeData: key.hasResumeData,
+      resumeBytesReceived: key.resumeBytesReceived
+    )
+    localModelDownloadRequestCache = LocalModelDownloadRequestCache(
+      key: key,
+      createdAt: Date(),
+      plan: plan
+    )
+    return plan
+  }
+
+  private func resumeBytesReceived(for modelID: String) -> Int64? {
+    guard pausedModelDownloadID == modelID,
+          let progress = modelDownloadProgress,
+          progress.modelID == modelID
+    else {
+      return nil
+    }
+
+    return progress.bytesReceived
   }
 
   private func selectedSetupModelDownloadBlockedDetail() -> String? {
