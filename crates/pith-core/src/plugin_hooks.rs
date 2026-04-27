@@ -69,7 +69,10 @@ pub(crate) fn build_shell_completed_hook_items(
         ("exitCode".to_string(), result.exit_code.to_string()),
         ("sandboxMode".to_string(), result.sandbox.mode.clone()),
         ("sandboxBackend".to_string(), result.sandbox.backend.clone()),
-        ("sandboxActive".to_string(), result.sandbox.active.to_string()),
+        (
+          "sandboxActive".to_string(),
+          result.sandbox.active.to_string(),
+        ),
         ("sourcePath".to_string(), hook.source_path),
       ])),
     });

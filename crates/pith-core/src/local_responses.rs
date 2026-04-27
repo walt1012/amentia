@@ -305,7 +305,10 @@ pub(crate) fn shell_sandbox_attributes(result: &ShellCommandResult) -> HashMap<S
   HashMap::from([
     ("sandboxMode".to_string(), result.sandbox.mode.clone()),
     ("sandboxBackend".to_string(), result.sandbox.backend.clone()),
-    ("sandboxActive".to_string(), result.sandbox.active.to_string()),
+    (
+      "sandboxActive".to_string(),
+      result.sandbox.active.to_string(),
+    ),
     ("sandboxDetail".to_string(), result.sandbox.detail.clone()),
   ])
 }
