@@ -1576,38 +1576,18 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadLocalModel() -> Bool {
-    guard let modelID = selectedSetupModel()?.id else {
-      return false
-    }
-
-    return canDownloadRecommendedModel(modelID: modelID)
-      || canActivateRecommendedModel(modelID: modelID)
+    LocalModelSelectedActionPlanner.canRun(selectedLocalModelAction())
   }
 
   func downloadLocalModel() {
-    guard let model = selectedSetupModel() else {
-      runtimeDetail = "Choose a local model before downloading."
-      return
+    switch selectedLocalModelAction() {
+    case .activate(let modelID):
+      activateRecommendedModel(modelID: modelID)
+    case .download(let modelID):
+      downloadRecommendedModel(modelID: modelID, activateAfterDownload: true)
+    case .blocked(let detail):
+      runtimeDetail = detail
     }
-
-    if model.active {
-      runtimeDetail = "\(model.displayName) is already the active local model."
-      return
-    }
-
-    if model.downloaded {
-      activateRecommendedModel(modelID: model.id)
-      return
-    }
-
-    let requestPlan = localModelDownloadRequestPlan(for: model)
-    guard requestPlan.canStart else {
-      runtimeDetail = requestPlan.blockedDetail
-        ?? "The selected local model is not ready to download."
-      return
-    }
-
-    downloadRecommendedModel(modelID: model.id, activateAfterDownload: true)
   }
 
   func canBootstrapModelPackMetadata() -> Bool {
@@ -2429,6 +2409,42 @@ final class AppViewModel: ObservableObject {
     case .bootstrapModelPackMetadata:
       bootstrapModelPackMetadata()
     }
+  }
+
+  private func selectedLocalModelAction() -> LocalModelSelectedAction {
+    let model = selectedSetupModel()
+    let requestPlan: LocalModelDownloadRequestPlan?
+    if let model, !model.active, !model.downloaded {
+      requestPlan = localModelDownloadRequestPlan(for: model)
+    } else {
+      requestPlan = nil
+    }
+
+    return LocalModelSelectedActionPlanner.action(
+      LocalModelSelectedActionSnapshot(
+        selectedModel: model,
+        requestPlan: requestPlan,
+        canActivateDownloadedModel: model.map { canActivateRecommendedModel(modelID: $0.id) } ?? false,
+        activationBlockedDetail: selectedModelActivationBlockedDetail()
+      )
+    )
+  }
+
+  private func selectedModelActivationBlockedDetail() -> String {
+    if hasActiveOrPendingTurn() {
+      return "Finish or cancel the current local turn before switching models."
+    }
+    if runtimeState == .launching {
+      return "Wait for the runtime to finish launching before switching models."
+    }
+    if modelDownloadCoordinator.isDownloading {
+      return "Finish, pause, or cancel the current model download before switching models."
+    }
+    if pausedModelDownloadID != nil {
+      return "Continue or cancel the paused model download before switching models."
+    }
+
+    return "The selected local model is not ready to use."
   }
 
   private func localModelDownloadRequestPlan(
