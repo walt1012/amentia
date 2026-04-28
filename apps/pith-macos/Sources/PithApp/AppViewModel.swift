@@ -44,7 +44,7 @@ final class AppViewModel: ObservableObject {
   private var activeTurnThreadID: String?
   private let pendingTurnRequest = PendingTurnRequestState()
   private var lastRuntimeFailureDetail: String?
-  private var workspaceSearchRequestID: UUID?
+  private let workspaceSearchSession = WorkspaceSearchSession()
   private let modelDownloadCoordinator: LocalModelDownloadCoordinator
   private let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
   private var announcedSetupCompleteThreadIDs: Set<String>
@@ -112,7 +112,6 @@ final class AppViewModel: ObservableObject {
     self.threadTimelines = ["local-welcome": initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.lastRuntimeFailureDetail = nil
-    self.workspaceSearchRequestID = nil
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(resumeData: pausedDownload?.resumeData)
     self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
@@ -845,18 +844,17 @@ final class AppViewModel: ObservableObject {
     }
 
     let query = workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    let requestToken = workspaceSearchSession.begin(query: query)
 
     isWorkspaceSearching = true
-    let requestID = UUID()
-    workspaceSearchRequestID = requestID
-    workspaceSearchStatus = "Searching for \"\(query)\"..."
+    workspaceSearchStatus = requestToken.status
     Task {
       do {
-        let matches = try await runtimeBridge.searchWorkspace(query: query)
-        guard workspaceSearchRequestID == requestID else {
+        let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
+        guard workspaceSearchSession.isCurrent(requestToken) else {
           return
         }
-        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query else {
+        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == requestToken.query else {
           finishChangedWorkspaceSearch()
           return
         }
@@ -868,21 +866,22 @@ final class AppViewModel: ObservableObject {
             line: match.line
           )
         }
-        workspaceSearchStatus = matches.isEmpty
-          ? "No matches found for \"\(query)\"."
-          : "Found \(matches.count) match(es) for \"\(query)\"."
+        workspaceSearchStatus = WorkspaceSearchSession.successStatus(
+          query: requestToken.query,
+          matchCount: matches.count
+        )
       } catch {
-        guard workspaceSearchRequestID == requestID else {
+        guard workspaceSearchSession.isCurrent(requestToken) else {
           return
         }
-        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query else {
+        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == requestToken.query else {
           finishChangedWorkspaceSearch()
           return
         }
         workspaceSearchResults = []
-        workspaceSearchStatus = "Workspace search failed: \(error.localizedDescription)"
+        workspaceSearchStatus = WorkspaceSearchSession.failureStatus(error: error)
       }
-      workspaceSearchRequestID = nil
+      workspaceSearchSession.finish()
       isWorkspaceSearching = false
     }
   }
@@ -893,33 +892,18 @@ final class AppViewModel: ObservableObject {
   }
 
   func workspaceSearchEmptyStateSummary() -> String? {
-    if isWorkspaceSearching || !workspaceSearchResults.isEmpty {
-      return nil
-    }
-    if runtimeState != .ready {
-      return "Launch the runtime to search workspace files."
-    }
-    if workspace == nil {
-      return "Open a workspace to search local files."
-    }
-    if workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      return "Search file contents or symbols, then press Return."
-    }
-    if workspaceSearchStatus.hasPrefix("No matches found") {
-      return "No results yet. Try a shorter query, filename, or symbol name."
-    }
-    if workspaceSearchStatus.hasPrefix("Workspace search failed") {
-      return "Search failed. Check the runtime status, then try again."
-    }
-    return nil
+    WorkspaceSearchSession.emptyStateSummary(
+      runtimeState: runtimeState,
+      hasWorkspace: workspace != nil,
+      query: workspaceSearchQuery,
+      status: workspaceSearchStatus,
+      isSearching: isWorkspaceSearching,
+      hasResults: !workspaceSearchResults.isEmpty
+    )
   }
 
   func workspaceSearchOverflowSummary() -> String? {
-    guard workspaceSearchResults.count > 8 else {
-      return nil
-    }
-
-    return "Showing the first 8 matches. Narrow the query to focus the review."
+    WorkspaceSearchSession.overflowSummary(resultCount: workspaceSearchResults.count)
   }
 
   func openWorkspace() {
@@ -2982,18 +2966,14 @@ final class AppViewModel: ObservableObject {
   }
 
   private func resetWorkspaceSearch() {
-    workspaceSearchRequestID = nil
     workspaceSearchResults = []
-    workspaceSearchStatus = workspace == nil
-      ? "Open a workspace before searching."
-      : "Search the open workspace by text."
+    workspaceSearchStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
     isWorkspaceSearching = false
   }
 
   private func finishChangedWorkspaceSearch() {
     workspaceSearchResults = []
-    workspaceSearchStatus = "Query changed. Press Return to search again."
-    workspaceSearchRequestID = nil
+    workspaceSearchStatus = workspaceSearchSession.changedQueryStatus()
     isWorkspaceSearching = false
   }
 
