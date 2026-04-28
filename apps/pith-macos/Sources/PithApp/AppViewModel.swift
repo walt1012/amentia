@@ -2754,7 +2754,7 @@ final class AppViewModel: ObservableObject {
     for model: LocalModelSummary
   ) -> LocalModelDownloadRequestPlan {
     localModelDownloadRequestPlanCache.plan(
-      model: model,
+      for: model,
       isDownloadRunning: modelDownloadTask != nil,
       pausedModelID: pausedModelDownloadID,
       resumeData: modelDownloadResumeData,
