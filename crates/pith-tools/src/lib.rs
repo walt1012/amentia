@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::thread;
@@ -178,10 +178,13 @@ pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> 
   let target = workspace_root.join(&sanitized_relative_path);
 
   if let Some(parent) = target.parent() {
+    validate_workspace_write_parent(&workspace_root, parent)?;
     fs::create_dir_all(parent)
       .with_context(|| format!("failed to create directory {}", parent.display()))?;
+    validate_existing_workspace_path(&workspace_root, parent)?;
   }
 
+  validate_workspace_write_target(&workspace_root, &target)?;
   if target.is_dir() {
     bail!("workspace path points to a directory");
   }
@@ -357,6 +360,7 @@ pub fn generate_diff(
   let sanitized_relative_path = sanitize_relative_path(relative_path)?;
   let target = workspace_root.join(&sanitized_relative_path);
 
+  validate_workspace_write_target(&workspace_root, &target)?;
   if target.is_dir() {
     bail!("workspace path points to a directory");
   }
@@ -398,14 +402,21 @@ fn visit_directory(
     }
 
     let path = entry.path();
-    let metadata = entry
-      .metadata()
+    let metadata = fs::symlink_metadata(&path)
       .with_context(|| format!("failed to read metadata for {}", path.display()))?;
+    if metadata.file_type().is_symlink() {
+      continue;
+    }
 
     if metadata.is_dir() {
+      let resolved_directory = fs::canonicalize(&path)
+        .with_context(|| format!("failed to resolve directory {}", path.display()))?;
+      if !resolved_directory.starts_with(workspace_root) {
+        continue;
+      }
       visit_directory(
         workspace_root,
-        &path,
+        &resolved_directory,
         normalized_query,
         max_results,
         results,
@@ -494,6 +505,56 @@ fn canonical_workspace_root(workspace_root: &Path) -> Result<PathBuf> {
       workspace_root.display()
     )
   })
+}
+
+fn validate_workspace_write_target(workspace_root: &Path, target: &Path) -> Result<()> {
+  match fs::symlink_metadata(target) {
+    Ok(metadata) => {
+      if metadata.file_type().is_symlink() {
+        bail!("workspace path points to a symlink");
+      }
+      validate_existing_workspace_path(workspace_root, target)?;
+    }
+    Err(error) if error.kind() == ErrorKind::NotFound => {
+      if let Some(parent) = target.parent() {
+        validate_workspace_write_parent(workspace_root, parent)?;
+      }
+    }
+    Err(error) => {
+      return Err(error)
+        .with_context(|| format!("failed to read metadata for {}", target.display()));
+    }
+  }
+
+  Ok(())
+}
+
+fn validate_workspace_write_parent(workspace_root: &Path, parent: &Path) -> Result<()> {
+  let existing_parent = nearest_existing_ancestor(parent)
+    .with_context(|| format!("failed to locate an existing parent for {}", parent.display()))?;
+  validate_existing_workspace_path(workspace_root, &existing_parent)
+}
+
+fn validate_existing_workspace_path(workspace_root: &Path, path: &Path) -> Result<()> {
+  let resolved = fs::canonicalize(path)
+    .with_context(|| format!("failed to resolve workspace path {}", path.display()))?;
+  if !resolved.starts_with(workspace_root) {
+    bail!("workspace path escapes the selected workspace");
+  }
+
+  Ok(())
+}
+
+fn nearest_existing_ancestor(path: &Path) -> Option<PathBuf> {
+  let mut candidate = path.to_path_buf();
+  loop {
+    if candidate.exists() {
+      return Some(candidate);
+    }
+    if !candidate.pop() {
+      return None;
+    }
+  }
 }
 
 fn sanitize_relative_path(relative_path: &str) -> Result<String> {
@@ -746,6 +807,103 @@ mod tests {
     assert!(!result.sandbox.detail.is_empty());
 
     let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn write_file_rejects_symlink_escape() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("write-symlink");
+    let outside = unique_temp_workspace("write-outside");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::create_dir_all(&outside).expect("outside");
+    symlink(&outside, workspace.join("outside-link")).expect("symlink");
+
+    let error = write_file(&workspace, "outside-link/owned.txt", "nope")
+      .expect_err("symlink escape should fail");
+
+    assert!(error.to_string().contains("workspace path escapes"));
+    assert!(!outside.join("owned.txt").exists());
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn write_file_rejects_target_symlink() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("write-target-symlink");
+    let outside = unique_temp_workspace("write-target-outside");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(outside.join("target.txt"), "outside").expect("outside file");
+    symlink(
+      outside.join("target.txt"),
+      workspace.join("linked-target.txt"),
+    )
+    .expect("symlink");
+
+    let error = write_file(&workspace, "linked-target.txt", "inside")
+      .expect_err("target symlink should fail");
+
+    assert!(error.to_string().contains("workspace path points to a symlink"));
+    assert_eq!(
+      fs::read_to_string(outside.join("target.txt")).expect("outside file"),
+      "outside"
+    );
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn generate_diff_rejects_symlink_escape() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("diff-symlink");
+    let outside = unique_temp_workspace("diff-outside");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(outside.join("target.txt"), "outside").expect("outside file");
+    symlink(
+      outside.join("target.txt"),
+      workspace.join("linked-target.txt"),
+    )
+    .expect("symlink");
+
+    let error = generate_diff(&workspace, "linked-target.txt", "inside")
+      .expect_err("symlink diff should fail");
+
+    assert!(error.to_string().contains("workspace path points to a symlink"));
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn search_files_skips_symlinked_directories() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("search-symlink");
+    let outside = unique_temp_workspace("search-outside");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(workspace.join("inside.txt"), "visible needle").expect("inside file");
+    fs::write(outside.join("secret.txt"), "hidden needle").expect("outside file");
+    symlink(&outside, workspace.join("outside-link")).expect("symlink");
+
+    let matches = search_files(&workspace, "needle", 10).expect("search");
+
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].relative_path, "inside.txt");
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {

@@ -38,7 +38,7 @@ mod tests {
 
   #[test]
   fn truncate_text_preserves_unicode_boundaries() {
-    assert_eq!(truncate_text("世界abcdef", 5), "世界...");
+    assert_eq!(truncate_text("caféabcdef", 7), "café...");
   }
 
   #[test]

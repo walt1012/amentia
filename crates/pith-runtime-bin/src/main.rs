@@ -37,6 +37,7 @@ fn main() -> Result<()> {
     if trimmed.is_empty() {
       continue;
     }
+    reap_finished_threads(&mut request_threads);
 
     let request = match serde_json::from_str::<JsonRpcRequest>(trimmed) {
       Ok(request) => request,
@@ -51,7 +52,7 @@ fn main() -> Result<()> {
       request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
-        Arc::clone(&local_execution_lane),
+        Some(Arc::clone(&local_execution_lane)),
         request,
         prepare_turn_start,
         execute_prepared_turn_start,
@@ -64,7 +65,7 @@ fn main() -> Result<()> {
       request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
-        Arc::clone(&local_execution_lane),
+        Some(Arc::clone(&local_execution_lane)),
         request,
         prepare_approval_respond,
         execute_prepared_approval_respond,
@@ -77,7 +78,7 @@ fn main() -> Result<()> {
       request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
-        Arc::clone(&local_execution_lane),
+        Some(Arc::clone(&local_execution_lane)),
         request,
         prepare_plugin_command_run,
         execute_prepared_plugin_command_run,
@@ -90,7 +91,7 @@ fn main() -> Result<()> {
       request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
-        Arc::clone(&local_execution_lane),
+        None,
         request,
         prepare_workspace_search,
         execute_prepared_workspace_search,
@@ -119,7 +120,7 @@ fn main() -> Result<()> {
 fn start_prepared_request<Prepared, Completed, Prepare, Execute, Complete>(
   context: Arc<Mutex<RuntimeContext>>,
   stdout: Arc<Mutex<io::Stdout>>,
-  local_execution_lane: Arc<Mutex<()>>,
+  local_execution_lane: Option<Arc<Mutex<()>>>,
   request: JsonRpcRequest,
   prepare: Prepare,
   execute: Execute,
@@ -142,10 +143,14 @@ where
 
     let response = match prepared {
       Ok(prepared) => {
-        let _lane = local_execution_lane
-          .lock()
-          .expect("local execution lane lock");
-        let completed = execute(prepared);
+        let completed = if let Some(local_execution_lane) = local_execution_lane {
+          let _lane = local_execution_lane
+            .lock()
+            .expect("local execution lane lock");
+          execute(prepared)
+        } else {
+          execute(prepared)
+        };
         let mut locked_context = context.lock().expect("runtime context lock");
         complete(&mut locked_context, completed)
       }
@@ -154,6 +159,18 @@ where
 
     let _ = write_json_line(&stdout, &response);
   })
+}
+
+fn reap_finished_threads(request_threads: &mut Vec<thread::JoinHandle<()>>) {
+  let mut index = 0;
+  while index < request_threads.len() {
+    if request_threads[index].is_finished() {
+      let request_thread = request_threads.swap_remove(index);
+      let _ = request_thread.join();
+    } else {
+      index += 1;
+    }
+  }
 }
 
 fn start_notification_loop(
