@@ -435,33 +435,27 @@ final class AppViewModel: ObservableObject {
   }
 
   func canRunSetupCalloutAction() -> Bool {
-    if !isLocalModelReady() {
-      return canRunModelSetupCalloutAction()
-    }
-    if workspace == nil {
-      return canOpenWorkspace()
-    }
-    if !hasRuntimeThreadSelection() {
-      return canCreateThread()
-    }
-
-    return false
+    let snapshot = setupCalloutActionSnapshot()
+    return SetupCalloutActionPlanner.canRun(
+      SetupCalloutActionPlanner.primaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runSetupCalloutAction() {
-    guard canRunSetupCalloutAction() else {
+    let snapshot = setupCalloutActionSnapshot()
+    guard let action = SetupCalloutActionPlanner.primaryAction(snapshot),
+          SetupCalloutActionPlanner.canRun(action, snapshot: snapshot)
+    else {
       return
     }
 
-    if !isLocalModelReady() {
+    switch action {
+    case .setupModel:
       runModelSetupCalloutAction()
-      return
-    }
-    if workspace == nil {
+    case .openWorkspace:
       openWorkspace()
-      return
-    }
-    if !hasRuntimeThreadSelection() {
+    case .createThread:
       createThread()
     }
   }
@@ -471,19 +465,23 @@ final class AppViewModel: ObservableObject {
   }
 
   func canRunSetupCalloutSecondaryAction() -> Bool {
-    if !isLocalModelReady() {
-      return canRunModelSetupCalloutSecondaryAction()
-    }
-
-    return false
+    let snapshot = setupCalloutActionSnapshot()
+    return SetupCalloutActionPlanner.canRun(
+      SetupCalloutActionPlanner.secondaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runSetupCalloutSecondaryAction() {
-    guard canRunSetupCalloutSecondaryAction() else {
+    let snapshot = setupCalloutActionSnapshot()
+    guard let action = SetupCalloutActionPlanner.secondaryAction(snapshot),
+          SetupCalloutActionPlanner.canRun(action, snapshot: snapshot)
+    else {
       return
     }
 
-    if !isLocalModelReady() {
+    switch action {
+    case .setupModelSecondary:
       runModelSetupCalloutSecondaryAction()
     }
   }
@@ -2240,6 +2238,18 @@ final class AppViewModel: ObservableObject {
       modelProgressDetail: modelProgressDetail,
       modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
       modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
+    )
+  }
+
+  private func setupCalloutActionSnapshot() -> SetupCalloutActionSnapshot {
+    SetupCalloutActionSnapshot(
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      canRunModelSetupAction: canRunModelSetupCalloutAction(),
+      canRunModelSetupSecondaryAction: canRunModelSetupCalloutSecondaryAction(),
+      canOpenWorkspace: canOpenWorkspace(),
+      canCreateThread: canCreateThread()
     )
   }
 
