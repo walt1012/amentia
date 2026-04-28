@@ -993,13 +993,7 @@ final class AppViewModel: ObservableObject {
       }
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
-        appendItemsToTimeline(threadID: result.threadID, items: result.items)
-        updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
-        updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
-        refreshThreadPreview(
-          threadID: result.threadID,
-          preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
-        )
+        await applyRuntimeTurnResult(result)
       } catch {
         if Task.isCancelled {
           runtimeDetail = "Local turn request cancelled."
@@ -1048,10 +1042,7 @@ final class AppViewModel: ObservableObject {
           approvalID: approvalID,
           decision: decision
         )
-        appendItemsToTimeline(threadID: result.threadID, items: result.items)
-        updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
-        await refreshMemoryState()
-        await loadThreadHistory(threadID: result.threadID)
+        await applyApprovalResponse(result)
       } catch {
         appendEntry(
           to: selectedThreadID,
@@ -1175,14 +1166,7 @@ final class AppViewModel: ObservableObject {
       }
       do {
         let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
-        appendItemsToTimeline(threadID: result.threadID, items: result.items)
-        updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
-        updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
-        refreshThreadPreview(
-          threadID: result.threadID,
-          preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
-        )
-        await refreshMemoryState()
+        await applyRuntimeTurnResult(result, refreshMemory: true)
       } catch {
         if Task.isCancelled {
           runtimeDetail = "Local plugin command cancelled."
@@ -1294,10 +1278,7 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let result = try await runtimeBridge.cancelTurn(turnID: activeTurnID)
-        appendItemsToTimeline(threadID: result.threadID, items: result.items)
-        updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
-        refreshThreadPreview(threadID: activeTurnThreadID, preview: "Cancelled response")
-        await loadThreadHistory(threadID: result.threadID)
+        await applyTurnCancellation(result, previewThreadID: activeTurnThreadID)
       } catch {
         appendEntry(
           to: activeTurnThreadID,
@@ -1988,6 +1969,40 @@ final class AppViewModel: ObservableObject {
     approvals: [RuntimeBridge.RuntimeApproval]
   ) {
     threadPendingApprovalIDs[threadID] = TimelineMutationState.pendingApprovalIDs(from: approvals)
+  }
+
+  private func applyRuntimeTurnResult(
+    _ result: RuntimeBridge.RuntimeTurnResult,
+    refreshMemory: Bool = false
+  ) async {
+    appendItemsToTimeline(threadID: result.threadID, items: result.items)
+    updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
+    updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
+    refreshThreadPreview(
+      threadID: result.threadID,
+      preview: result.activeTurnID == nil ? "\(result.turnID) ready" : "Streaming response"
+    )
+
+    if refreshMemory {
+      await refreshMemoryState()
+    }
+  }
+
+  private func applyApprovalResponse(_ result: RuntimeBridge.RuntimeApprovalResponse) async {
+    appendItemsToTimeline(threadID: result.threadID, items: result.items)
+    updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
+    await refreshMemoryState()
+    await loadThreadHistory(threadID: result.threadID)
+  }
+
+  private func applyTurnCancellation(
+    _ result: RuntimeBridge.RuntimeTurnCancellation,
+    previewThreadID: String
+  ) async {
+    appendItemsToTimeline(threadID: result.threadID, items: result.items)
+    updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
+    refreshThreadPreview(threadID: previewThreadID, preview: "Cancelled response")
+    await loadThreadHistory(threadID: result.threadID)
   }
 
   private func refreshThreadPreview(threadID: String, preview: String) {
