@@ -9,8 +9,9 @@ use std::time::Duration;
 use anyhow::Result;
 use pith_core::{
   collect_notifications, complete_prepared_approval_respond, complete_prepared_turn_start,
-  execute_prepared_approval_respond, execute_prepared_turn_start, handle_request,
-  prepare_approval_respond, prepare_turn_start, RuntimeContext,
+  complete_prepared_plugin_command_run, execute_prepared_approval_respond,
+  execute_prepared_plugin_command_run, execute_prepared_turn_start, handle_request,
+  prepare_approval_respond, prepare_plugin_command_run, prepare_turn_start, RuntimeContext,
 };
 use pith_protocol::{methods, JsonRpcRequest, JsonRpcResponse};
 
@@ -56,6 +57,16 @@ fn main() -> Result<()> {
 
     if request.method == methods::APPROVAL_RESPOND {
       request_threads.push(start_approval_request(
+        Arc::clone(&context),
+        Arc::clone(&stdout),
+        Arc::clone(&local_execution_lane),
+        request,
+      ));
+      continue;
+    }
+
+    if request.method == methods::PLUGIN_COMMAND_RUN {
+      request_threads.push(start_plugin_command_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
         Arc::clone(&local_execution_lane),
@@ -129,6 +140,34 @@ fn start_approval_request(
         let completed = execute_prepared_approval_respond(prepared);
         let mut locked_context = context.lock().expect("runtime context lock");
         complete_prepared_approval_respond(&mut locked_context, completed)
+      }
+      Err(response) => response,
+    };
+
+    let _ = write_json_line(&stdout, &response);
+  })
+}
+
+fn start_plugin_command_request(
+  context: Arc<Mutex<RuntimeContext>>,
+  stdout: Arc<Mutex<io::Stdout>>,
+  local_execution_lane: Arc<Mutex<()>>,
+  request: JsonRpcRequest,
+) -> thread::JoinHandle<()> {
+  thread::spawn(move || {
+    let prepared = {
+      let mut locked_context = context.lock().expect("runtime context lock");
+      prepare_plugin_command_run(&mut locked_context, request)
+    };
+
+    let response = match prepared {
+      Ok(prepared) => {
+        let _lane = local_execution_lane
+          .lock()
+          .expect("local execution lane lock");
+        let completed = execute_prepared_plugin_command_run(prepared);
+        let mut locked_context = context.lock().expect("runtime context lock");
+        complete_prepared_plugin_command_run(&mut locked_context, completed)
       }
       Err(response) => response,
     };

@@ -67,6 +67,8 @@ mod request_params;
 mod runtime_readiness;
 mod text_utils;
 
+pub use plugin_commands::{CompletedPluginCommandRun, PreparedPluginCommandRun};
+
 #[derive(Debug, Clone)]
 struct StoredThread {
   summary: ThreadSummary,
@@ -1503,6 +1505,26 @@ pub fn execute_prepared_approval_respond(
     request_id: prepared.request_id,
     output: execute_approval_snapshot(prepared.snapshot),
   }
+}
+
+pub fn prepare_plugin_command_run(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> std::result::Result<PreparedPluginCommandRun, JsonRpcResponse> {
+  plugin_commands::prepare_plugin_command_run(context, request)
+}
+
+pub fn execute_prepared_plugin_command_run(
+  prepared: PreparedPluginCommandRun,
+) -> CompletedPluginCommandRun {
+  plugin_commands::execute_prepared_plugin_command_run(prepared)
+}
+
+pub fn complete_prepared_plugin_command_run(
+  context: &mut RuntimeContext,
+  completed: CompletedPluginCommandRun,
+) -> JsonRpcResponse {
+  plugin_commands::complete_prepared_plugin_command_run(context, completed)
 }
 
 fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExecutionOutput {

@@ -6,6 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
+use pith_memory::MemoryNote;
 use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, TimelineItem, TurnStartResult,
@@ -20,6 +21,37 @@ use super::{approvals_for_thread, refresh_thread_summary_note, RuntimeContext};
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
 const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
+#[derive(Debug)]
+pub struct PreparedPluginCommandRun {
+  request_id: serde_json::Value,
+  snapshot: PluginCommandSnapshot,
+}
+
+#[derive(Debug)]
+pub struct CompletedPluginCommandRun {
+  request_id: serde_json::Value,
+  output: std::result::Result<PluginCommandOutput, (i32, String)>,
+}
+
+#[derive(Debug)]
+struct PluginCommandSnapshot {
+  thread_id: String,
+  command: HostPluginCommandEntry,
+  workspace: Option<WorkspaceSummary>,
+  input: Option<String>,
+  command_item: TimelineItem,
+  memory_notes: Vec<MemoryNote>,
+}
+
+#[derive(Debug)]
+struct PluginCommandOutput {
+  thread_id: String,
+  command: HostPluginCommandEntry,
+  workspace: Option<WorkspaceSummary>,
+  input: Option<String>,
+  items: Vec<TimelineItem>,
+}
+
 struct GitCommandOutput {
   stdout: Vec<u8>,
   success: bool,
@@ -30,37 +62,65 @@ pub(super) fn handle_plugin_command_run(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun")
-  {
-    Ok(params) => params,
+  let prepared = match prepare_plugin_command_run(context, request) {
+    Ok(prepared) => prepared,
     Err(response) => return response,
   };
+  let completed = execute_prepared_plugin_command_run(prepared);
+  complete_prepared_plugin_command_run(context, completed)
+}
+
+pub fn prepare_plugin_command_run(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> std::result::Result<PreparedPluginCommandRun, JsonRpcResponse> {
+  let params = parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun")?;
 
   let Some(command) = build_command_registry(&context.plugins)
     .into_iter()
     .find(|command| command.command_id == params.command_id)
   else {
-    return JsonRpcResponse::error(request.id, -32052, "Plugin command not found");
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32052,
+      "Plugin command not found",
+    ));
   };
+  if !is_supported_builtin_execution(command.execution_kind.as_deref()) {
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32053,
+      format!(
+        "Plugin command `{}` requires an explicit execution contract.",
+        command.command_id
+      ),
+    ));
+  }
 
   let Some(thread) = context
     .threads
     .iter()
     .find(|thread| thread.summary.id == params.thread_id)
   else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32004,
+      "Thread not found",
+    ));
   };
 
   let workspace = thread
     .workspace
     .clone()
     .or_else(|| context.workspace.clone());
-  let command_input = params
+  let input = params
     .input
     .as_deref()
     .map(str::trim)
-    .filter(|input| !input.is_empty());
-  let memory_query = command_input
+    .filter(|input| !input.is_empty())
+    .map(str::to_string);
+  let memory_query = input
+    .as_deref()
     .map(|input| {
       format!(
         "{} {} {} {}",
@@ -79,29 +139,56 @@ pub(super) fn handle_plugin_command_run(
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
   );
-  let command_item =
-    build_plugin_command_timeline_item(&command, workspace.as_ref(), command_input, &context_pack);
-  if let Some(result) = execute_builtin_plugin_command(
-    context,
-    &params.thread_id,
+  let command_item = build_plugin_command_timeline_item(
     &command,
-    workspace.clone(),
-    command_input,
-    command_item.clone(),
-  ) {
-    return match result {
-      Ok(result) => JsonRpcResponse::success(request.id, &result),
-      Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
-    };
-  }
+    workspace.as_ref(),
+    input.as_deref(),
+    &context_pack,
+  );
 
-  JsonRpcResponse::error(
-    request.id,
-    -32053,
-    format!(
-      "Plugin command `{}` requires an explicit execution contract.",
-      command.command_id
-    ),
+  Ok(PreparedPluginCommandRun {
+    request_id: request.id,
+    snapshot: PluginCommandSnapshot {
+      thread_id: params.thread_id,
+      command,
+      workspace,
+      input,
+      command_item,
+      memory_notes: context.memory_notes.clone(),
+    },
+  })
+}
+
+pub fn execute_prepared_plugin_command_run(
+  prepared: PreparedPluginCommandRun,
+) -> CompletedPluginCommandRun {
+  CompletedPluginCommandRun {
+    request_id: prepared.request_id,
+    output: execute_plugin_command_snapshot(prepared.snapshot),
+  }
+}
+
+pub fn complete_prepared_plugin_command_run(
+  context: &mut RuntimeContext,
+  completed: CompletedPluginCommandRun,
+) -> JsonRpcResponse {
+  match completed.output {
+    Ok(output) => match complete_plugin_command_items(context, output) {
+      Ok(result) => JsonRpcResponse::success(completed.request_id, &result),
+      Err((code, message)) => JsonRpcResponse::error(completed.request_id, code, message),
+    },
+    Err((code, message)) => JsonRpcResponse::error(completed.request_id, code, message),
+  }
+}
+
+fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
+  matches!(
+    execution_kind,
+    Some(
+      "builtin.workspaceReadmeNote"
+        | "builtin.shellSessionSummary"
+        | "builtin.reviewDiffSummary"
+    )
   )
 }
 
@@ -153,87 +240,80 @@ fn build_plugin_command_timeline_item(
   }
 }
 
-fn execute_builtin_plugin_command(
-  context: &mut RuntimeContext,
-  thread_id: &str,
-  command: &HostPluginCommandEntry,
-  workspace: Option<WorkspaceSummary>,
-  input: Option<&str>,
-  command_item: TimelineItem,
-) -> Option<std::result::Result<TurnStartResult, (i32, String)>> {
-  let execution_kind = command.execution_kind.as_deref()?;
+fn execute_plugin_command_snapshot(
+  snapshot: PluginCommandSnapshot,
+) -> std::result::Result<PluginCommandOutput, (i32, String)> {
+  let execution_kind = snapshot
+    .command
+    .execution_kind
+    .as_deref()
+    .ok_or_else(|| {
+      (
+        -32053,
+        format!(
+          "Plugin command `{}` requires an explicit execution contract.",
+          snapshot.command.command_id
+        ),
+      )
+    })?;
   let result_content = match execution_kind {
-    "builtin.workspaceReadmeNote" => {
-      build_workspace_readme_note_result(command, workspace.as_ref(), input)
-    }
+    "builtin.workspaceReadmeNote" => build_workspace_readme_note_result(
+      &snapshot.command,
+      snapshot.workspace.as_ref(),
+      snapshot.input.as_deref(),
+    ),
     "builtin.shellSessionSummary" => {
-      build_shell_session_summary_result(context, workspace.as_ref())
+      build_shell_session_summary_result(&snapshot.memory_notes, snapshot.workspace.as_ref())
     }
-    "builtin.reviewDiffSummary" => build_review_diff_summary_result(command, workspace.as_ref()),
-    _ => return None,
+    "builtin.reviewDiffSummary" => {
+      build_review_diff_summary_result(&snapshot.command, snapshot.workspace.as_ref())
+    }
+    _ => {
+      return Err((
+        -32053,
+        format!(
+          "Plugin command `{}` requires an explicit execution contract.",
+          snapshot.command.command_id
+        ),
+      ))
+    }
   };
 
   let result_item =
-    build_plugin_result_timeline_item(command, execution_kind, result_content.clone());
+    build_plugin_result_timeline_item(&snapshot.command, execution_kind, result_content.clone());
   let assistant_item = TimelineItem {
     kind: "assistantMessage".to_string(),
     title: "Assistant".to_string(),
     content: format!(
       "{} completed through {}.\n\n{}",
-      command.title, command.plugin_display_name, result_content
+      snapshot.command.title, snapshot.command.plugin_display_name, result_content
     ),
     attributes: Some(HashMap::from([
-      ("pluginId".to_string(), command.plugin_id.clone()),
-      ("commandId".to_string(), command.command_id.clone()),
+      ("pluginId".to_string(), snapshot.command.plugin_id.clone()),
+      ("commandId".to_string(), snapshot.command.command_id.clone()),
       ("executionKind".to_string(), execution_kind.to_string()),
     ])),
   };
-  let items = vec![command_item, result_item, assistant_item];
-  let result = complete_plugin_command_items(context, thread_id, workspace, items);
-
-  Some(result.and_then(|mut result| {
-    match maybe_capture_plugin_command_memory(context, thread_id, command, input, &result.items) {
-      Ok(Some(memory_item)) => {
-        if let Some(thread) = context
-          .threads
-          .iter_mut()
-          .find(|thread| thread.summary.id == thread_id)
-        {
-          thread.items.push(memory_item.clone());
-        }
-        result.items.push(memory_item);
-        context
-          .persist_runtime_state()
-          .map_err(|error| (-32010, error.to_string()))?;
-        refresh_thread_summary_note(context, thread_id)
-          .map_err(|error| (-32012, error.to_string()))?;
-      }
-      Ok(None) => {}
-      Err(error) => {
-        let warning_item = build_plugin_command_memory_warning_item(command, error.to_string());
-        if let Some(thread) = context
-          .threads
-          .iter_mut()
-          .find(|thread| thread.summary.id == thread_id)
-        {
-          thread.items.push(warning_item.clone());
-        }
-        result.items.push(warning_item);
-        context
-          .persist_runtime_state()
-          .map_err(|error| (-32010, error.to_string()))?;
-      }
-    }
-    Ok(result)
-  }))
+  Ok(PluginCommandOutput {
+    thread_id: snapshot.thread_id,
+    command: snapshot.command,
+    workspace: snapshot.workspace,
+    input: snapshot.input,
+    items: vec![snapshot.command_item, result_item, assistant_item],
+  })
 }
 
 fn complete_plugin_command_items(
   context: &mut RuntimeContext,
-  requested_thread_id: &str,
-  workspace: Option<WorkspaceSummary>,
-  items: Vec<TimelineItem>,
+  output: PluginCommandOutput,
 ) -> std::result::Result<TurnStartResult, (i32, String)> {
+  let PluginCommandOutput {
+    thread_id: requested_thread_id,
+    command,
+    workspace,
+    input,
+    mut items,
+  } = output;
   let (thread_id, turn_id) = {
     let Some(thread) = context
       .threads
@@ -265,11 +345,51 @@ fn complete_plugin_command_items(
     .map_err(|error| (-32010, error.to_string()))?;
   refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
 
+  match maybe_capture_plugin_command_memory(
+    context,
+    &thread_id,
+    &command,
+    input.as_deref(),
+    workspace.as_ref(),
+    &items,
+  ) {
+    Ok(Some(memory_item)) => {
+      if let Some(thread) = context
+        .threads
+        .iter_mut()
+        .find(|thread| thread.summary.id == thread_id)
+      {
+        thread.items.push(memory_item.clone());
+      }
+      items.push(memory_item);
+      context
+        .persist_runtime_state()
+        .map_err(|error| (-32010, error.to_string()))?;
+      refresh_thread_summary_note(context, &thread_id)
+        .map_err(|error| (-32012, error.to_string()))?;
+    }
+    Ok(None) => {}
+    Err(error) => {
+      let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
+      if let Some(thread) = context
+        .threads
+        .iter_mut()
+        .find(|thread| thread.summary.id == thread_id)
+      {
+        thread.items.push(warning_item.clone());
+      }
+      items.push(warning_item);
+      context
+        .persist_runtime_state()
+        .map_err(|error| (-32010, error.to_string()))?;
+    }
+  }
+
   Ok(TurnStartResult {
     turn_id,
     thread_id,
     items,
-    pending_approvals: approvals_for_thread(context, requested_thread_id),
+    pending_approvals: approvals_for_thread(context, &requested_thread_id),
     active_turn_id: None,
   })
 }
@@ -328,14 +448,13 @@ fn build_workspace_readme_note_result(
 }
 
 fn build_shell_session_summary_result(
-  context: &RuntimeContext,
+  memory_notes: &[MemoryNote],
   workspace: Option<&WorkspaceSummary>,
 ) -> String {
   let workspace_label = workspace
     .map(|workspace| workspace.display_name.as_str())
     .unwrap_or("the current workspace");
-  let shell_notes = context
-    .memory_notes
+  let shell_notes = memory_notes
     .iter()
     .filter(|note| {
       note.source == "plugin.shell-recorder"
@@ -476,6 +595,7 @@ fn maybe_capture_plugin_command_memory(
   thread_id: &str,
   command: &HostPluginCommandEntry,
   input: Option<&str>,
+  workspace: Option<&WorkspaceSummary>,
   items: &[TimelineItem],
 ) -> Result<Option<TimelineItem>> {
   let Some(note_title) = command.memory_note_title.as_ref() else {
@@ -488,19 +608,17 @@ fn maybe_capture_plugin_command_memory(
   else {
     return Ok(None);
   };
-  let Some(thread) = context
-    .threads
-    .iter()
-    .find(|thread| thread.summary.id == thread_id)
-  else {
-    return Ok(None);
-  };
-  let Some(workspace) = thread
-    .workspace
-    .as_ref()
-    .or(context.workspace.as_ref())
+  let workspace = workspace
     .cloned()
-  else {
+    .or_else(|| {
+      context
+        .threads
+        .iter()
+        .find(|thread| thread.summary.id == thread_id)
+        .and_then(|thread| thread.workspace.clone())
+    })
+    .or_else(|| context.workspace.clone());
+  let Some(workspace) = workspace else {
     return Ok(None);
   };
 
