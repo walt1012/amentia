@@ -7,7 +7,7 @@ use pith_plugin_host::{
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::{ShellCommandResult, ShellSandboxSummary};
 
-use super::RuntimeContext;
+use crate::RuntimeContext;
 
 #[derive(Debug, Clone)]
 pub(crate) struct PluginHookMemoryCapture {

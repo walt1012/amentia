@@ -5,37 +5,73 @@ pub use request_state::{
 pub use runtime_context::RuntimeContext;
 use runtime_readiness::build_runtime_readiness;
 
-mod active_turns;
-mod approval_requests;
-mod approval_state;
-mod approval_types;
-mod context_compaction;
-mod context_state;
-mod intent_inference;
-mod local_responses;
-mod memory_requests;
-mod model_requests;
-mod plugin_catalog_state;
-mod plugin_commands;
-mod plugin_hooks;
-mod plugin_permissions;
-mod plugin_requests;
-mod protocol_adapters;
-mod request_params;
-mod request_state;
-mod runtime_context;
-mod runtime_readiness;
-mod runtime_sequences;
-mod server_requests;
-mod text_utils;
-mod thread_requests;
-mod thread_state;
-mod thread_summary;
-mod turn_actions;
-mod turn_requests;
-mod turn_streaming;
-mod workspace_requests;
-mod workspace_search;
+mod turn {
+  pub(crate) mod active_turns;
+  pub(crate) mod approval_state;
+  pub(crate) mod approval_types;
+  pub(crate) mod turn_actions;
+  pub(crate) mod turn_streaming;
+}
+pub(crate) use turn::{active_turns, approval_state, approval_types, turn_actions, turn_streaming};
+
+mod threads {
+  pub(crate) mod thread_state;
+  pub(crate) mod thread_summary;
+}
+pub(crate) use threads::{thread_state, thread_summary};
+
+mod context {
+  pub(crate) mod context_compaction;
+  pub(crate) mod context_state;
+  pub(crate) mod intent_inference;
+  pub(crate) mod local_responses;
+}
+pub(crate) use context::{context_compaction, intent_inference, local_responses};
+
+mod plugins {
+  pub(crate) mod plugin_catalog_state;
+  pub(crate) mod plugin_commands;
+  pub(crate) mod plugin_hooks;
+  pub(crate) mod plugin_permissions;
+  pub(crate) mod plugin_requests;
+}
+pub(crate) use plugins::{
+  plugin_catalog_state, plugin_commands, plugin_hooks, plugin_permissions, plugin_requests,
+};
+
+mod requests {
+  pub(crate) mod approval_requests;
+  pub(crate) mod memory_requests;
+  pub(crate) mod model_requests;
+  pub(crate) mod request_params;
+  pub(crate) mod request_state;
+  pub(crate) mod server_requests;
+  pub(crate) mod thread_requests;
+  pub(crate) mod turn_requests;
+  pub(crate) mod workspace_requests;
+}
+pub(crate) use requests::{
+  approval_requests, memory_requests, model_requests, request_params, request_state,
+  server_requests, thread_requests, turn_requests, workspace_requests,
+};
+
+mod runtime {
+  pub(crate) mod protocol_adapters;
+  pub(crate) mod runtime_context;
+  pub(crate) mod runtime_readiness;
+  pub(crate) mod runtime_sequences;
+}
+pub(crate) use runtime::{protocol_adapters, runtime_context, runtime_readiness, runtime_sequences};
+
+mod support {
+  pub(crate) mod text_utils;
+}
+pub(crate) use support::text_utils;
+
+mod workspace {
+  pub(crate) mod workspace_search;
+}
+pub(crate) use workspace::workspace_search;
 
 pub use approval_requests::{
   complete_prepared_approval_respond, execute_prepared_approval_respond, prepare_approval_respond,
