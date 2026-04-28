@@ -1,5 +1,5 @@
-use super::*;
 use super::protocol_adapters::build_protocol_capability_registry;
+use super::*;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_storage::FileThreadStore;
 use serde_json::{json, Value};

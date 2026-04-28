@@ -17,8 +17,8 @@ use local_responses::{
 use pith_memory::MemoryEvent;
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, JsonRpcNotification,
-  JsonRpcRequest, JsonRpcResponse, ThreadUpdatedNotificationParams, TimelineItem,
-  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceSummary,
+  JsonRpcRequest, JsonRpcResponse, ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams,
+  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceSummary,
 };
 use pith_storage::StoredApprovalRecord;
 use pith_tools::{

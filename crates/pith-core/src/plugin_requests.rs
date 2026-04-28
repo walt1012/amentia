@@ -27,7 +27,10 @@ pub(crate) fn handle_plugin_command_registry(
   context: &RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  JsonRpcResponse::success(request.id, &build_protocol_command_registry(&context.plugins))
+  JsonRpcResponse::success(
+    request.id,
+    &build_protocol_command_registry(&context.plugins),
+  )
 }
 
 pub(crate) fn handle_plugin_connector_registry(
