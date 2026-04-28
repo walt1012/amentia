@@ -45,9 +45,7 @@ final class AppViewModel: ObservableObject {
   private let pendingTurnRequest = PendingTurnRequestState()
   private var lastRuntimeFailureDetail: String?
   private var workspaceSearchRequestID: UUID?
-  private var modelDownloadTask: Task<Void, Never>?
-  private var modelDownloadTransfer: ModelDownloadTransfer?
-  private var modelDownloadResumeData: Data?
+  private let modelDownloadCoordinator: LocalModelDownloadCoordinator
   private let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
   private var announcedSetupCompleteThreadIDs: Set<String>
 
@@ -115,9 +113,7 @@ final class AppViewModel: ObservableObject {
     self.threadPendingApprovalIDs = [:]
     self.lastRuntimeFailureDetail = nil
     self.workspaceSearchRequestID = nil
-    self.modelDownloadTask = nil
-    self.modelDownloadTransfer = nil
-    self.modelDownloadResumeData = pausedDownload?.resumeData
+    self.modelDownloadCoordinator = LocalModelDownloadCoordinator(resumeData: pausedDownload?.resumeData)
     self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
@@ -1676,7 +1672,7 @@ final class AppViewModel: ObservableObject {
   func canActivateRecommendedModel(modelID: String) -> Bool {
     guard runtimeState != .launching,
           !hasActiveOrPendingTurn(),
-          modelDownloadTask == nil,
+          !modelDownloadCoordinator.isDownloading,
           pausedModelDownloadID == nil
     else {
       return false
@@ -1691,16 +1687,16 @@ final class AppViewModel: ObservableObject {
   func canResetActiveLocalModel() -> Bool {
     runtimeState != .launching
       && !hasActiveOrPendingTurn()
-      && modelDownloadTask == nil
+      && !modelDownloadCoordinator.isDownloading
       && runtimeBridge.activeLocalModelPath() != nil
   }
 
   func canCancelModelDownload() -> Bool {
-    modelDownloadTask != nil || pausedModelDownloadID != nil
+    modelDownloadCoordinator.isDownloading || pausedModelDownloadID != nil
   }
 
   func canPauseModelDownload() -> Bool {
-    modelDownloadTask != nil
+    modelDownloadCoordinator.canPause
   }
 
   func pauseModelDownload() {
@@ -1712,7 +1708,7 @@ final class AppViewModel: ObservableObject {
       .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
       ?? "local model"
     runtimeDetail = "Pausing \(displayName) download..."
-    modelDownloadTransfer?.pause()
+    modelDownloadCoordinator.pauseActiveTransfer()
   }
 
   func cancelModelDownload() {
@@ -1720,13 +1716,12 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    if let modelDownloadTask {
+    if modelDownloadCoordinator.isDownloading {
       let displayName = modelDownloadID
         .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
         ?? "local model"
       runtimeDetail = "Cancelling \(displayName) download..."
-      modelDownloadTask.cancel()
-      modelDownloadTransfer?.cancel()
+      modelDownloadCoordinator.cancelActiveDownload()
       return
     }
 
@@ -1766,12 +1761,12 @@ final class AppViewModel: ObservableObject {
       model: model,
       sourceURL: downloadURL,
       pausedModelID: pausedModelDownloadID,
-      resumeData: modelDownloadResumeData,
+      resumeData: modelDownloadCoordinator.resumeData,
       currentProgress: modelDownloadProgress
     )
     modelDownloadID = model.id
     pausedModelDownloadID = nil
-    modelDownloadResumeData = nil
+    modelDownloadCoordinator.clearResumeData()
     LocalModelCatalog.clearPausedDownload()
     modelDownloadProgress = startPlan.progress
     let shouldActivateAfterDownload = activateAfterDownload || !isLocalModelReady()
@@ -1781,11 +1776,10 @@ final class AppViewModel: ObservableObject {
       model: model,
       attributes: startPlan.attributes
     )
-    modelDownloadTask = Task {
+    let downloadTask = Task {
       defer {
         modelDownloadID = nil
-        modelDownloadTask = nil
-        modelDownloadTransfer = nil
+        modelDownloadCoordinator.finishActiveDownload()
         refreshLocalModelCatalog()
       }
       do {
@@ -1831,6 +1825,7 @@ final class AppViewModel: ObservableObject {
         applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
       }
     }
+    modelDownloadCoordinator.start(downloadTask)
   }
 
   func activateRecommendedModel(modelID: String) {
@@ -1962,7 +1957,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canBootstrapModelPackMetadata() -> Bool {
-    runtimeState == .ready && modelDownloadTask == nil
+    runtimeState == .ready && !modelDownloadCoordinator.isDownloading
   }
 
   func bootstrapModelPackMetadata() {
@@ -2725,9 +2720,9 @@ final class AppViewModel: ObservableObject {
   ) -> LocalModelDownloadRequestPlan {
     localModelDownloadRequestPlanCache.plan(
       for: model,
-      isDownloadRunning: modelDownloadTask != nil,
+      isDownloadRunning: modelDownloadCoordinator.isDownloading,
       pausedModelID: pausedModelDownloadID,
-      resumeData: modelDownloadResumeData,
+      resumeData: modelDownloadCoordinator.resumeData,
       currentProgress: modelDownloadProgress
     )
   }
@@ -2806,7 +2801,7 @@ final class AppViewModel: ObservableObject {
   ) {
     switch plan.mode {
     case .paused(let resumeData):
-      modelDownloadResumeData = resumeData
+      modelDownloadCoordinator.resumeData = resumeData
       pausedModelDownloadID = model.id
       persistPausedModelDownload(modelID: model.id, resumeData: resumeData)
     case .cancelled, .failed:
@@ -2931,7 +2926,7 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
-    modelDownloadTransfer = transfer
+    modelDownloadCoordinator.attachTransfer(transfer)
     try await transfer.start(from: sourceURL, resumeData: resumeData)
   }
 
@@ -2955,7 +2950,7 @@ final class AppViewModel: ObservableObject {
 
   private func clearPausedModelDownload() {
     pausedModelDownloadID = nil
-    modelDownloadResumeData = nil
+    modelDownloadCoordinator.clearResumeData()
     LocalModelCatalog.clearPausedDownload()
   }
 
