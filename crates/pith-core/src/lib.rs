@@ -104,6 +104,61 @@ pub struct RuntimeContext {
   next_approval_number: usize,
 }
 
+#[derive(Debug)]
+pub struct PreparedTurnStart {
+  request_id: serde_json::Value,
+  snapshot: PreparedTurnSnapshot,
+}
+
+#[derive(Debug)]
+pub struct CompletedTurnStart {
+  request_id: serde_json::Value,
+  output: TurnStartExecutionOutput,
+}
+
+#[derive(Debug)]
+struct PreparedTurnSnapshot {
+  thread_id: String,
+  turn_id: String,
+  thread_title: String,
+  display_message: String,
+  message: String,
+  workspace: Option<WorkspaceSummary>,
+  model_runtime: LocalModelRuntime,
+  memory_notes: Vec<MemoryNote>,
+  permission_sources: HashMap<String, Vec<String>>,
+  action: PreparedTurnAction,
+}
+
+#[derive(Debug)]
+enum PreparedTurnAction {
+  NoWorkspace,
+  Write {
+    intent: intent_inference::WriteIntent,
+    approval_id: Option<String>,
+  },
+  Shell {
+    command: String,
+    approval_id: Option<String>,
+  },
+  ReadFile {
+    relative_path: String,
+  },
+  Search {
+    query: String,
+  },
+  ListWorkspace,
+}
+
+#[derive(Debug)]
+struct TurnStartExecutionOutput {
+  thread_id: String,
+  turn_id: String,
+  items: Vec<TimelineItem>,
+  pending_approval: Option<PendingApproval>,
+  pending_active_turn: Option<ActiveTurn>,
+}
+
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   match request.method.as_str() {
     methods::APPROVAL_RESPOND => handle_approval_respond(context, request),
@@ -589,25 +644,85 @@ fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) ->
 }
 
 fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
+  let prepared = match prepare_turn_start(context, request) {
+    Ok(prepared) => prepared,
+    Err(response) => return response,
+  };
+  let completed = execute_prepared_turn_start(prepared);
+  complete_prepared_turn_start(context, completed)
+}
+
+pub fn prepare_turn_start(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> std::result::Result<PreparedTurnStart, JsonRpcResponse> {
   let params = match parse_required_params::<TurnStartParams>(&request, "turn/start") {
     Ok(params) => params,
-    Err(response) => return response,
+    Err(response) => return Err(response),
   };
 
   if let Err(message) = ensure_turn_model_ready(context) {
-    return JsonRpcResponse::error(request.id, -32060, message);
+    return Err(JsonRpcResponse::error(request.id, -32060, message));
   }
 
-  match execute_turn_request(
+  let current_workspace = context.workspace.clone();
+  let model_runtime = context.model_runtime.clone();
+  let memory_notes = context.memory_notes.clone();
+  let permission_sources = granted_permission_sources(&context.plugins);
+  let (thread_id, turn_id, thread_title, workspace) = {
+    let Some(thread) = context
+      .threads
+      .iter_mut()
+      .find(|thread| thread.summary.id == params.thread_id)
+    else {
+      return Err(JsonRpcResponse::error(
+        request.id,
+        -32004,
+        "Thread not found",
+      ));
+    };
+
+    thread.turn_count += 1;
+    let turn_count = thread.turn_count;
+    if thread.workspace.is_none() {
+      thread.workspace = current_workspace.clone();
+      thread.summary.workspace = thread.workspace.clone();
+    }
+    let workspace = thread.workspace.clone();
+    thread.summary.status = match &workspace {
+      Some(workspace) => format!("{turn_count} turn(s) in {}", workspace.display_name),
+      None => format!("{turn_count} turn(s)"),
+    };
+
+    (
+      thread.summary.id.clone(),
+      format!("{}-turn-{turn_count}", thread.summary.id),
+      thread.summary.title.clone(),
+      workspace,
+    )
+  };
+  let action = prepare_turn_action(
     context,
-    &params.thread_id,
-    params.message.clone(),
-    params.message,
-    vec![],
-  ) {
-    Ok(result) => JsonRpcResponse::success(request.id, &result),
-    Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
-  }
+    &params.message,
+    workspace.as_ref(),
+    &permission_sources,
+  );
+
+  Ok(PreparedTurnStart {
+    request_id: request.id,
+    snapshot: PreparedTurnSnapshot {
+      thread_id,
+      turn_id,
+      thread_title,
+      display_message: params.message.clone(),
+      message: params.message,
+      workspace,
+      model_runtime,
+      memory_notes,
+      permission_sources,
+      action,
+    },
+  })
 }
 
 fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), String> {
@@ -626,526 +741,634 @@ fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), 
   ))
 }
 
-fn execute_turn_request(
+fn prepare_turn_action(
   context: &mut RuntimeContext,
-  requested_thread_id: &str,
-  display_message: String,
-  message: String,
-  initial_items: Vec<TimelineItem>,
-) -> std::result::Result<TurnStartResult, (i32, String)> {
-  let current_workspace = context.workspace.clone();
-  let model_runtime = context.model_runtime.clone();
-  let memory_notes = context.memory_notes.clone();
-  let permission_sources = granted_permission_sources(&context.plugins);
-  let (thread_id, turn_id, items, active_turn_id, pending_active_turn) = {
-    let Some(thread) = context
-      .threads
-      .iter_mut()
-      .find(|thread| thread.summary.id == requested_thread_id)
-    else {
-      return Err((-32004, "Thread not found".to_string()));
+  message: &str,
+  workspace: Option<&WorkspaceSummary>,
+  permission_sources: &HashMap<String, Vec<String>>,
+) -> PreparedTurnAction {
+  let Some(workspace) = workspace else {
+    return PreparedTurnAction::NoWorkspace;
+  };
+  let workspace_root = Path::new(&workspace.root_path);
+
+  if let Some(intent) = infer_write_intent(message) {
+    let approval_id = permission_is_granted(permission_sources, "file.write")
+      .then(|| reserve_approval_id(context));
+    return PreparedTurnAction::Write {
+      intent,
+      approval_id,
     };
+  }
 
-    thread.turn_count += 1;
-    let turn_count = thread.turn_count;
-    let thread_id = thread.summary.id.clone();
-    let thread_title = thread.summary.title.clone();
-    if thread.workspace.is_none() {
-      thread.workspace = current_workspace.clone();
-      thread.summary.workspace = thread.workspace.clone();
-    }
-    let workspace = thread.workspace.clone();
-    let turn_id = format!("{thread_id}-turn-{turn_count}");
-    let mut pending_active_turn = None;
-
-    thread.summary.status = match &workspace {
-      Some(workspace) => format!("{turn_count} turn(s) in {}", workspace.display_name),
-      None => format!("{turn_count} turn(s)"),
+  if let Some(command) = infer_shell_command(message) {
+    let approval_id = permission_is_granted(permission_sources, "shell.exec")
+      .then(|| reserve_approval_id(context));
+    return PreparedTurnAction::Shell {
+      command,
+      approval_id,
     };
+  }
 
-    let mut items = initial_items;
-    items.push(TimelineItem {
-      kind: "userMessage".to_string(),
-      title: "User".to_string(),
-      content: display_message.clone(),
-      attributes: None,
-    });
+  if let Some(relative_path) = infer_requested_file_path(message, workspace_root) {
+    return PreparedTurnAction::ReadFile { relative_path };
+  }
 
-    if let Some(workspace) = workspace {
-      let workspace_root = Path::new(&workspace.root_path);
+  if let Some(query) = infer_search_query(message) {
+    return PreparedTurnAction::Search { query };
+  }
 
-      if let Some(write_intent) = infer_write_intent(&message) {
-        items.push(build_plan_item(
-          &context.model_runtime,
-          &memory_notes,
-          &message,
-          Some(&workspace),
-          if permission_is_granted(&permission_sources, "file.write") {
-            format!(
-              "Request approval before writing {} in {}.",
-              write_intent.relative_path, workspace.display_name
-            )
-          } else {
-            format!(
-              "Check plugin permissions before writing {} in {}.",
-              write_intent.relative_path, workspace.display_name
-            )
-          },
-        ));
-        if !permission_is_granted(&permission_sources, "file.write") {
-          items.extend(build_permission_denied_items(
-            &permission_sources,
-            "file.write",
-            "prepare a file write",
-            &workspace.display_name,
-            HashMap::from([(
-              "relativePath".to_string(),
-              write_intent.relative_path.clone(),
-            )]),
-          ));
-        } else {
-          let approval_id = format!("approval-{}", context.next_approval_number);
-          context.next_approval_number += 1;
+  PreparedTurnAction::ListWorkspace
+}
 
-          let approval = PendingApproval {
-            id: approval_id.clone(),
-            thread_id: thread_id.clone(),
-            action: "write_file".to_string(),
-            title: format!("Write {}", write_intent.relative_path),
-            relative_path: write_intent.relative_path.clone(),
-            content: Some(write_intent.content.clone()),
-            command: None,
-          };
-          context
-            .pending_approvals
-            .insert(approval_id.clone(), approval.clone());
+fn reserve_approval_id(context: &mut RuntimeContext) -> String {
+  let approval_id = format!("approval-{}", context.next_approval_number);
+  context.next_approval_number += 1;
+  approval_id
+}
 
-          items.push(TimelineItem {
-            kind: "toolStart".to_string(),
-            title: "generate_diff".to_string(),
-            content: write_intent.relative_path.clone(),
-            attributes: None,
-          });
-          match generate_diff(
-            workspace_root,
-            &write_intent.relative_path,
-            &write_intent.content,
-          ) {
-            Ok(diff) => {
-              items.push(TimelineItem {
-                kind: "diffArtifact".to_string(),
-                title: "Diff Preview".to_string(),
-                content: diff,
-                attributes: Some(HashMap::from([
-                  ("action".to_string(), "write_file".to_string()),
-                  (
-                    "relativePath".to_string(),
-                    write_intent.relative_path.clone(),
-                  ),
-                ])),
-              });
-            }
-            Err(error) => {
-              items.push(TimelineItem {
-                kind: "warning".to_string(),
-                title: "generate_diff failed".to_string(),
-                content: error.to_string(),
-                attributes: None,
-              });
-            }
-          }
-          items.push(TimelineItem {
-            kind: "approvalRequested".to_string(),
-            title: "Approval Requested".to_string(),
-            content: format!(
-              "Pith wants to write {} in {}.",
-              write_intent.relative_path, workspace.display_name
-            ),
-            attributes: Some(HashMap::from([
-              ("approvalId".to_string(), approval.id.clone()),
-              ("action".to_string(), approval.action.clone()),
-              ("relativePath".to_string(), approval.relative_path.clone()),
-            ])),
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: format!(
-              "Pith prepared a write for {} and is waiting for your approval.",
-              write_intent.relative_path
-            ),
-            attributes: None,
-          });
-        }
-      } else if let Some(shell_command) = infer_shell_command(&message) {
-        items.push(build_plan_item(
-          &context.model_runtime,
-          &memory_notes,
-          &message,
-          Some(&workspace),
-          if permission_is_granted(&permission_sources, "shell.exec") {
-            format!(
-              "Request approval before running a shell command in {}.",
-              workspace.display_name
-            )
-          } else {
-            format!(
-              "Check plugin permissions before running a shell command in {}.",
-              workspace.display_name
-            )
-          },
-        ));
-        if !permission_is_granted(&permission_sources, "shell.exec") {
-          items.extend(build_permission_denied_items(
-            &permission_sources,
-            "shell.exec",
-            "run a shell command",
-            &workspace.display_name,
-            HashMap::from([("command".to_string(), shell_command.clone())]),
-          ));
-        } else {
-          let approval_id = format!("approval-{}", context.next_approval_number);
-          context.next_approval_number += 1;
-          let sandbox = shell_sandbox_summary(Path::new(&workspace.root_path));
+pub fn execute_prepared_turn_start(prepared: PreparedTurnStart) -> CompletedTurnStart {
+  CompletedTurnStart {
+    request_id: prepared.request_id,
+    output: execute_prepared_turn_snapshot(prepared.snapshot),
+  }
+}
 
-          let approval = PendingApproval {
-            id: approval_id.clone(),
-            thread_id: thread_id.clone(),
-            action: "run_shell".to_string(),
-            title: "Run Shell Command".to_string(),
-            relative_path: ".".to_string(),
-            content: None,
-            command: Some(shell_command.clone()),
-          };
-          context
-            .pending_approvals
-            .insert(approval_id.clone(), approval.clone());
+fn execute_prepared_turn_snapshot(snapshot: PreparedTurnSnapshot) -> TurnStartExecutionOutput {
+  let mut items = vec![TimelineItem {
+    kind: "userMessage".to_string(),
+    title: "User".to_string(),
+    content: snapshot.display_message.clone(),
+    attributes: None,
+  }];
+  let mut pending_active_turn = None;
+  let mut pending_approval = None;
 
-          items.push(TimelineItem {
-            kind: "approvalRequested".to_string(),
-            title: "Approval Requested".to_string(),
-            content: format!(
-              "Pith wants to run this shell command in {}:\n{}\n\n{}",
-              workspace.display_name,
-              shell_command,
-              sandbox.display_line()
-            ),
-            attributes: Some({
-              let mut attributes = sandbox.attributes();
-              attributes.extend(HashMap::from([
-                ("approvalId".to_string(), approval.id.clone()),
-                ("action".to_string(), approval.action.clone()),
-                ("command".to_string(), shell_command),
-              ]));
-              attributes
-            }),
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: "Pith is waiting for your approval before running the shell command."
-              .to_string(),
-            attributes: None,
-          });
-        }
-      } else if let Some(relative_path) = infer_requested_file_path(&message, workspace_root) {
-        items.push(build_plan_item(
-          &context.model_runtime,
-          &memory_notes,
-          &message,
-          Some(&workspace),
-          if permission_is_granted(&permission_sources, "file.read") {
-            format!(
-              "Inspect {} in {} with the built-in read_file tool.",
-              relative_path, workspace.display_name
-            )
-          } else {
-            format!(
-              "Check plugin permissions before inspecting {} in {}.",
-              relative_path, workspace.display_name
-            )
-          },
-        ));
-        if !permission_is_granted(&permission_sources, "file.read") {
-          items.extend(build_permission_denied_items(
-            &permission_sources,
-            "file.read",
-            "inspect a file",
-            &workspace.display_name,
-            HashMap::from([("relativePath".to_string(), relative_path.clone())]),
-          ));
-        } else {
-          items.push(TimelineItem {
-            kind: "toolStart".to_string(),
-            title: "read_file".to_string(),
-            content: relative_path.clone(),
-            attributes: None,
-          });
-
-          match read_file(workspace_root, &relative_path, 4096) {
-            Ok(result) => {
-              items.push(TimelineItem {
-                kind: "toolResult".to_string(),
-                title: "read_file result".to_string(),
-                content: format_file_result(&result),
-                attributes: None,
-              });
-              let (summary, summary_attributes) = summarize_file_result(
-                &model_runtime,
-                &memory_notes,
-                &thread_title,
-                &workspace.display_name,
-                &result,
-              );
-              pending_active_turn = start_streaming_assistant_turn(
-                &thread_id,
-                &turn_id,
-                &mut items,
-                summary,
-                summary_attributes,
-              );
-            }
-            Err(error) => {
-              items.push(TimelineItem {
-                kind: "warning".to_string(),
-                title: "read_file failed".to_string(),
-                content: error.to_string(),
-                attributes: None,
-              });
-              items.push(TimelineItem {
-                kind: "assistantMessage".to_string(),
-                title: "Assistant".to_string(),
-                content: format!(
-                  "Pith could not inspect that file in {}. Try another path inside the workspace.",
-                  workspace.display_name
-                ),
-                attributes: None,
-              });
-            }
-          }
-        }
-      } else if let Some(search_query) = infer_search_query(&message) {
-        items.push(build_plan_item(
-          &context.model_runtime,
-          &memory_notes,
-          &message,
-          Some(&workspace),
-          if permission_is_granted(&permission_sources, "file.read") {
-            format!(
-              "Search {} for matches to \"{}\" with the built-in search_files tool.",
-              workspace.display_name, search_query
-            )
-          } else {
-            format!(
-              "Check plugin permissions before searching {} for \"{}\".",
-              workspace.display_name, search_query
-            )
-          },
-        ));
-        if !permission_is_granted(&permission_sources, "file.read") {
-          items.extend(build_permission_denied_items(
-            &permission_sources,
-            "file.read",
-            "search files",
-            &workspace.display_name,
-            HashMap::from([("query".to_string(), search_query.clone())]),
-          ));
-        } else {
-          items.push(TimelineItem {
-            kind: "toolStart".to_string(),
-            title: "search_files".to_string(),
-            content: search_query.clone(),
-            attributes: None,
-          });
-
-          match search_files(workspace_root, &search_query, 12) {
-            Ok(matches) => {
-              items.push(TimelineItem {
-                kind: "toolResult".to_string(),
-                title: "search_files result".to_string(),
-                content: format_search_result(&search_query, &matches),
-                attributes: None,
-              });
-              let (summary, summary_attributes) = summarize_search_result(
-                &model_runtime,
-                &memory_notes,
-                &thread_title,
-                &workspace.display_name,
-                &search_query,
-                &matches,
-              );
-              pending_active_turn = start_streaming_assistant_turn(
-                &thread_id,
-                &turn_id,
-                &mut items,
-                summary,
-                summary_attributes,
-              );
-            }
-            Err(error) => {
-              items.push(TimelineItem {
-                kind: "warning".to_string(),
-                title: "search_files failed".to_string(),
-                content: error.to_string(),
-                attributes: None,
-              });
-              items.push(TimelineItem {
-                kind: "assistantMessage".to_string(),
-                title: "Assistant".to_string(),
-                content: format!(
-                  "Pith could not search {} yet. Try a shorter query or re-open the workspace.",
-                  workspace.display_name
-                ),
-                attributes: None,
-              });
-            }
-          }
-        }
-      } else {
-        items.push(build_plan_item(
-          &context.model_runtime,
-          &memory_notes,
-          &message,
-          Some(&workspace),
-          if permission_is_granted(&permission_sources, "file.read") {
-            format!(
-              "Inspect the root of {} with the built-in list_directory tool.",
-              workspace.display_name
-            )
-          } else {
-            format!(
-              "Check plugin permissions before inspecting the root of {}.",
-              workspace.display_name
-            )
-          },
-        ));
-        if !permission_is_granted(&permission_sources, "file.read") {
-          items.extend(build_permission_denied_items(
-            &permission_sources,
-            "file.read",
-            "inspect the workspace",
-            &workspace.display_name,
-            HashMap::new(),
-          ));
-        } else {
-          items.push(TimelineItem {
-            kind: "toolStart".to_string(),
-            title: "list_directory".to_string(),
-            content: ".".to_string(),
-            attributes: None,
-          });
-
-          match list_directory(workspace_root, None, 24) {
-            Ok(entries) => {
-              items.push(TimelineItem {
-                kind: "toolResult".to_string(),
-                title: "list_directory result".to_string(),
-                content: format_directory_result(&entries),
-                attributes: None,
-              });
-              let (summary, summary_attributes) = summarize_directory_result(
-                &model_runtime,
-                &memory_notes,
-                &thread_title,
-                &workspace.display_name,
-                &entries,
-              );
-              pending_active_turn = start_streaming_assistant_turn(
-                &thread_id,
-                &turn_id,
-                &mut items,
-                summary,
-                summary_attributes,
-              );
-            }
-            Err(error) => {
-              items.push(TimelineItem {
-                kind: "warning".to_string(),
-                title: "list_directory failed".to_string(),
-                content: error.to_string(),
-                attributes: None,
-              });
-              items.push(TimelineItem {
-                kind: "assistantMessage".to_string(),
-                title: "Assistant".to_string(),
-                content: format!(
-                  "Pith could not inspect the root of {} yet. Re-open the workspace and try again.",
-                  workspace.display_name
-                ),
-                attributes: None,
-              });
-            }
-          }
-        }
-      }
-    } else {
-      items.push(build_plan_item(
-        &context.model_runtime,
-        &memory_notes,
-        &message,
-        None,
-        "Wait for a workspace before running filesystem tools.".to_string(),
-      ));
-      items.push(TimelineItem {
-        kind: "warning".to_string(),
-        title: "Workspace Required".to_string(),
-        content: "Open a workspace before asking Pith to inspect files.".to_string(),
-        attributes: None,
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: format!(
-          "Pith received your message in {}, but project tools need an opened workspace first.",
-          thread_title
-        ),
-        attributes: None,
-      });
+  match (&snapshot.workspace, &snapshot.action) {
+    (Some(workspace), PreparedTurnAction::Write { intent, approval_id }) => {
+      execute_write_turn(
+        &snapshot,
+        workspace,
+        intent,
+        approval_id,
+        &mut items,
+        &mut pending_approval,
+      );
     }
-
-    let active_turn_id = pending_active_turn.as_ref().map(|turn| turn.id.clone());
-    if active_turn_id.is_some() {
-      thread.summary.status = "Streaming assistant response".to_string();
-    } else if !thread.summary.status.contains("approval") {
-      thread.summary.status = "Ready".to_string();
+    (Some(workspace), PreparedTurnAction::Shell { command, approval_id }) => {
+      execute_shell_turn(
+        &snapshot,
+        workspace,
+        command,
+        approval_id,
+        &mut items,
+        &mut pending_approval,
+      );
     }
+    (Some(workspace), PreparedTurnAction::ReadFile { relative_path }) => {
+      execute_read_turn(
+        &snapshot,
+        workspace,
+        relative_path,
+        &mut items,
+        &mut pending_active_turn,
+      );
+    }
+    (Some(workspace), PreparedTurnAction::Search { query }) => {
+      execute_search_turn(&snapshot, workspace, query, &mut items, &mut pending_active_turn);
+    }
+    (Some(workspace), PreparedTurnAction::ListWorkspace) => {
+      execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);
+    }
+    _ => execute_no_workspace_turn(&snapshot, &mut items),
+  }
 
-    thread.items.extend(items.clone());
+  TurnStartExecutionOutput {
+    thread_id: snapshot.thread_id,
+    turn_id: snapshot.turn_id,
+    items,
+    pending_approval,
+    pending_active_turn,
+  }
+}
 
-    (
-      thread_id,
-      turn_id,
-      items,
-      active_turn_id,
-      pending_active_turn,
-    )
+pub fn complete_prepared_turn_start(
+  context: &mut RuntimeContext,
+  completed: CompletedTurnStart,
+) -> JsonRpcResponse {
+  let output = completed.output;
+  let active_turn_id = output
+    .pending_active_turn
+    .as_ref()
+    .map(|turn| turn.id.clone());
+
+  if let Some(approval) = output.pending_approval.clone() {
+    context
+      .pending_approvals
+      .insert(approval.id.clone(), approval);
+  }
+
+  let Some(thread) = context
+    .threads
+    .iter_mut()
+    .find(|thread| thread.summary.id == output.thread_id)
+  else {
+    return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
   };
 
-  if let Some(active_turn) = pending_active_turn {
+  if active_turn_id.is_some() {
+    thread.summary.status = "Streaming assistant response".to_string();
+  } else if !thread.summary.status.contains("approval") {
+    thread.summary.status = "Ready".to_string();
+  }
+  thread.items.extend(output.items.clone());
+
+  if let Some(active_turn) = output.pending_active_turn {
     context
       .active_turns
       .insert(active_turn.id.clone(), active_turn);
   }
 
   if let Err(error) = context.persist_runtime_state() {
-    return Err((-32010, error.to_string()));
+    return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
   }
 
   if active_turn_id.is_none() {
-    if let Err(error) = refresh_thread_summary_note(context, &thread_id) {
-      return Err((-32012, error.to_string()));
+    if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
+      return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
     }
   }
 
-  let pending_approvals = approvals_for_thread(context, &thread_id);
+  JsonRpcResponse::success(
+    completed.request_id,
+    &TurnStartResult {
+      turn_id: output.turn_id,
+      thread_id: output.thread_id.clone(),
+      items: output.items,
+      pending_approvals: approvals_for_thread(context, &output.thread_id),
+      active_turn_id,
+    },
+  )
+}
 
-  Ok(TurnStartResult {
-    turn_id,
-    thread_id,
-    items,
-    pending_approvals,
-    active_turn_id,
-  })
+fn execute_write_turn(
+  snapshot: &PreparedTurnSnapshot,
+  workspace: &WorkspaceSummary,
+  intent: &intent_inference::WriteIntent,
+  approval_id: &Option<String>,
+  items: &mut Vec<TimelineItem>,
+  pending_approval: &mut Option<PendingApproval>,
+) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    Some(workspace),
+    if approval_id.is_some() {
+      format!(
+        "Request approval before writing {} in {}.",
+        intent.relative_path, workspace.display_name
+      )
+    } else {
+      format!(
+        "Check plugin permissions before writing {} in {}.",
+        intent.relative_path, workspace.display_name
+      )
+    },
+  ));
+  let Some(approval_id) = approval_id else {
+    items.extend(build_permission_denied_items(
+      &snapshot.permission_sources,
+      "file.write",
+      "prepare a file write",
+      &workspace.display_name,
+      HashMap::from([(
+        "relativePath".to_string(),
+        intent.relative_path.clone(),
+      )]),
+    ));
+    return;
+  };
+
+  let approval = PendingApproval {
+    id: approval_id.clone(),
+    thread_id: snapshot.thread_id.clone(),
+    action: "write_file".to_string(),
+    title: format!("Write {}", intent.relative_path),
+    relative_path: intent.relative_path.clone(),
+    content: Some(intent.content.clone()),
+    command: None,
+  };
+  *pending_approval = Some(approval.clone());
+
+  items.push(TimelineItem {
+    kind: "toolStart".to_string(),
+    title: "generate_diff".to_string(),
+    content: intent.relative_path.clone(),
+    attributes: None,
+  });
+  match generate_diff(
+    Path::new(&workspace.root_path),
+    &intent.relative_path,
+    &intent.content,
+  ) {
+    Ok(diff) => {
+      items.push(TimelineItem {
+        kind: "diffArtifact".to_string(),
+        title: "Diff Preview".to_string(),
+        content: diff,
+        attributes: Some(HashMap::from([
+          ("action".to_string(), "write_file".to_string()),
+          ("relativePath".to_string(), intent.relative_path.clone()),
+        ])),
+      });
+    }
+    Err(error) => {
+      items.push(TimelineItem {
+        kind: "warning".to_string(),
+        title: "generate_diff failed".to_string(),
+        content: error.to_string(),
+        attributes: None,
+      });
+    }
+  }
+  items.push(TimelineItem {
+    kind: "approvalRequested".to_string(),
+    title: "Approval Requested".to_string(),
+    content: format!(
+      "Pith wants to write {} in {}.",
+      intent.relative_path, workspace.display_name
+    ),
+    attributes: Some(HashMap::from([
+      ("approvalId".to_string(), approval.id.clone()),
+      ("action".to_string(), approval.action.clone()),
+      ("relativePath".to_string(), approval.relative_path.clone()),
+    ])),
+  });
+  items.push(TimelineItem {
+    kind: "assistantMessage".to_string(),
+    title: "Assistant".to_string(),
+    content: format!(
+      "Pith prepared a write for {} and is waiting for your approval.",
+      intent.relative_path
+    ),
+    attributes: None,
+  });
+}
+
+fn execute_shell_turn(
+  snapshot: &PreparedTurnSnapshot,
+  workspace: &WorkspaceSummary,
+  command: &str,
+  approval_id: &Option<String>,
+  items: &mut Vec<TimelineItem>,
+  pending_approval: &mut Option<PendingApproval>,
+) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    Some(workspace),
+    if approval_id.is_some() {
+      format!(
+        "Request approval before running a shell command in {}.",
+        workspace.display_name
+      )
+    } else {
+      format!(
+        "Check plugin permissions before running a shell command in {}.",
+        workspace.display_name
+      )
+    },
+  ));
+  let Some(approval_id) = approval_id else {
+    items.extend(build_permission_denied_items(
+      &snapshot.permission_sources,
+      "shell.exec",
+      "run a shell command",
+      &workspace.display_name,
+      HashMap::from([("command".to_string(), command.to_string())]),
+    ));
+    return;
+  };
+
+  let sandbox = shell_sandbox_summary(Path::new(&workspace.root_path));
+  let approval = PendingApproval {
+    id: approval_id.clone(),
+    thread_id: snapshot.thread_id.clone(),
+    action: "run_shell".to_string(),
+    title: "Run Shell Command".to_string(),
+    relative_path: ".".to_string(),
+    content: None,
+    command: Some(command.to_string()),
+  };
+  *pending_approval = Some(approval.clone());
+
+  items.push(TimelineItem {
+    kind: "approvalRequested".to_string(),
+    title: "Approval Requested".to_string(),
+    content: format!(
+      "Pith wants to run this shell command in {}:\n{}\n\n{}",
+      workspace.display_name,
+      command,
+      sandbox.display_line()
+    ),
+    attributes: Some({
+      let mut attributes = sandbox.attributes();
+      attributes.extend(HashMap::from([
+        ("approvalId".to_string(), approval.id.clone()),
+        ("action".to_string(), approval.action.clone()),
+        ("command".to_string(), command.to_string()),
+      ]));
+      attributes
+    }),
+  });
+  items.push(TimelineItem {
+    kind: "assistantMessage".to_string(),
+    title: "Assistant".to_string(),
+    content: "Pith is waiting for your approval before running the shell command.".to_string(),
+    attributes: None,
+  });
+}
+
+fn execute_read_turn(
+  snapshot: &PreparedTurnSnapshot,
+  workspace: &WorkspaceSummary,
+  relative_path: &str,
+  items: &mut Vec<TimelineItem>,
+  pending_active_turn: &mut Option<ActiveTurn>,
+) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    Some(workspace),
+    if permission_is_granted(&snapshot.permission_sources, "file.read") {
+      format!(
+        "Inspect {} in {} with the built-in read_file tool.",
+        relative_path, workspace.display_name
+      )
+    } else {
+      format!(
+        "Check plugin permissions before inspecting {} in {}.",
+        relative_path, workspace.display_name
+      )
+    },
+  ));
+  if !permission_is_granted(&snapshot.permission_sources, "file.read") {
+    items.extend(build_permission_denied_items(
+      &snapshot.permission_sources,
+      "file.read",
+      "inspect a file",
+      &workspace.display_name,
+      HashMap::from([("relativePath".to_string(), relative_path.to_string())]),
+    ));
+    return;
+  }
+
+  items.push(TimelineItem {
+    kind: "toolStart".to_string(),
+    title: "read_file".to_string(),
+    content: relative_path.to_string(),
+    attributes: None,
+  });
+
+  match read_file(Path::new(&workspace.root_path), relative_path, 4096) {
+    Ok(result) => {
+      items.push(TimelineItem {
+        kind: "toolResult".to_string(),
+        title: "read_file result".to_string(),
+        content: format_file_result(&result),
+        attributes: None,
+      });
+      let (summary, summary_attributes) = summarize_file_result(
+        &snapshot.model_runtime,
+        &snapshot.memory_notes,
+        &snapshot.thread_title,
+        &workspace.display_name,
+        &result,
+      );
+      *pending_active_turn = start_streaming_assistant_turn(
+        &snapshot.thread_id,
+        &snapshot.turn_id,
+        items,
+        summary,
+        summary_attributes,
+      );
+    }
+    Err(error) => {
+      items.push(TimelineItem {
+        kind: "warning".to_string(),
+        title: "read_file failed".to_string(),
+        content: error.to_string(),
+        attributes: None,
+      });
+      items.push(TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: format!(
+          "Pith could not inspect that file in {}. Try another path inside the workspace.",
+          workspace.display_name
+        ),
+        attributes: None,
+      });
+    }
+  }
+}
+
+fn execute_search_turn(
+  snapshot: &PreparedTurnSnapshot,
+  workspace: &WorkspaceSummary,
+  query: &str,
+  items: &mut Vec<TimelineItem>,
+  pending_active_turn: &mut Option<ActiveTurn>,
+) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    Some(workspace),
+    if permission_is_granted(&snapshot.permission_sources, "file.read") {
+      format!(
+        "Search {} for matches to \"{}\" with the built-in search_files tool.",
+        workspace.display_name, query
+      )
+    } else {
+      format!(
+        "Check plugin permissions before searching {} for \"{}\".",
+        workspace.display_name, query
+      )
+    },
+  ));
+  if !permission_is_granted(&snapshot.permission_sources, "file.read") {
+    items.extend(build_permission_denied_items(
+      &snapshot.permission_sources,
+      "file.read",
+      "search files",
+      &workspace.display_name,
+      HashMap::from([("query".to_string(), query.to_string())]),
+    ));
+    return;
+  }
+
+  items.push(TimelineItem {
+    kind: "toolStart".to_string(),
+    title: "search_files".to_string(),
+    content: query.to_string(),
+    attributes: None,
+  });
+
+  match search_files(Path::new(&workspace.root_path), query, 12) {
+    Ok(matches) => {
+      items.push(TimelineItem {
+        kind: "toolResult".to_string(),
+        title: "search_files result".to_string(),
+        content: format_search_result(query, &matches),
+        attributes: None,
+      });
+      let (summary, summary_attributes) = summarize_search_result(
+        &snapshot.model_runtime,
+        &snapshot.memory_notes,
+        &snapshot.thread_title,
+        &workspace.display_name,
+        query,
+        &matches,
+      );
+      *pending_active_turn = start_streaming_assistant_turn(
+        &snapshot.thread_id,
+        &snapshot.turn_id,
+        items,
+        summary,
+        summary_attributes,
+      );
+    }
+    Err(error) => {
+      items.push(TimelineItem {
+        kind: "warning".to_string(),
+        title: "search_files failed".to_string(),
+        content: error.to_string(),
+        attributes: None,
+      });
+      items.push(TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: format!(
+          "Pith could not search {} yet. Try a shorter query or re-open the workspace.",
+          workspace.display_name
+        ),
+        attributes: None,
+      });
+    }
+  }
+}
+
+fn execute_list_turn(
+  snapshot: &PreparedTurnSnapshot,
+  workspace: &WorkspaceSummary,
+  items: &mut Vec<TimelineItem>,
+  pending_active_turn: &mut Option<ActiveTurn>,
+) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    Some(workspace),
+    if permission_is_granted(&snapshot.permission_sources, "file.read") {
+      format!(
+        "Inspect the root of {} with the built-in list_directory tool.",
+        workspace.display_name
+      )
+    } else {
+      format!(
+        "Check plugin permissions before inspecting the root of {}.",
+        workspace.display_name
+      )
+    },
+  ));
+  if !permission_is_granted(&snapshot.permission_sources, "file.read") {
+    items.extend(build_permission_denied_items(
+      &snapshot.permission_sources,
+      "file.read",
+      "inspect the workspace",
+      &workspace.display_name,
+      HashMap::new(),
+    ));
+    return;
+  }
+
+  items.push(TimelineItem {
+    kind: "toolStart".to_string(),
+    title: "list_directory".to_string(),
+    content: ".".to_string(),
+    attributes: None,
+  });
+
+  match list_directory(Path::new(&workspace.root_path), None, 24) {
+    Ok(entries) => {
+      items.push(TimelineItem {
+        kind: "toolResult".to_string(),
+        title: "list_directory result".to_string(),
+        content: format_directory_result(&entries),
+        attributes: None,
+      });
+      let (summary, summary_attributes) = summarize_directory_result(
+        &snapshot.model_runtime,
+        &snapshot.memory_notes,
+        &snapshot.thread_title,
+        &workspace.display_name,
+        &entries,
+      );
+      *pending_active_turn = start_streaming_assistant_turn(
+        &snapshot.thread_id,
+        &snapshot.turn_id,
+        items,
+        summary,
+        summary_attributes,
+      );
+    }
+    Err(error) => {
+      items.push(TimelineItem {
+        kind: "warning".to_string(),
+        title: "list_directory failed".to_string(),
+        content: error.to_string(),
+        attributes: None,
+      });
+      items.push(TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: format!(
+          "Pith could not inspect the root of {} yet. Re-open the workspace and try again.",
+          workspace.display_name
+        ),
+        attributes: None,
+      });
+    }
+  }
+}
+
+fn execute_no_workspace_turn(snapshot: &PreparedTurnSnapshot, items: &mut Vec<TimelineItem>) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    None,
+    "Wait for a workspace before running filesystem tools.".to_string(),
+  ));
+  items.push(TimelineItem {
+    kind: "warning".to_string(),
+    title: "Workspace Required".to_string(),
+    content: "Open a workspace before asking Pith to inspect files.".to_string(),
+    attributes: None,
+  });
+  items.push(TimelineItem {
+    kind: "assistantMessage".to_string(),
+    title: "Assistant".to_string(),
+    content: format!(
+      "Pith received your message in {}, but project tools need an opened workspace first.",
+      snapshot.thread_title
+    ),
+    attributes: None,
+  });
 }
 
 fn handle_approval_respond(
