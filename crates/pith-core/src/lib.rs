@@ -17,6 +17,8 @@ use local_responses::{
 };
 use pith_memory::MemoryEvent;
 use pith_model_runtime::LocalModelRuntime;
+#[cfg(test)]
+use pith_plugin_host::PluginCatalogEntry;
 use pith_plugin_host::{inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle};
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
@@ -30,13 +32,13 @@ use pith_protocol::{
   WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::StoredApprovalRecord;
+#[cfg(test)]
+use pith_storage::FileThreadStore;
 use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, shell_sandbox_summary,
   write_file,
 };
-use plugin_hooks::{
-  build_shell_completed_hook_items, capture_plugin_hook_memory, PluginHookMemoryCapture,
-};
+use plugin_hooks::{build_shell_completed_hook_items, capture_plugin_hook_memory};
 use plugin_permissions::{
   build_permission_denied_items, granted_permission_sources, permission_is_granted,
 };
