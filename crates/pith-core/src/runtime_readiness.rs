@@ -361,12 +361,8 @@ fn count_workspace_threads(context: &RuntimeContext) -> usize {
 }
 
 fn has_first_request(context: &RuntimeContext) -> bool {
-  current_workspace_threads(context).any(|thread| {
-    thread
-      .items
-      .iter()
-      .any(|item| item.kind == "userMessage")
-  })
+  current_workspace_threads(context)
+    .any(|thread| thread.items.iter().any(|item| item.kind == "userMessage"))
 }
 
 fn current_workspace_threads(
