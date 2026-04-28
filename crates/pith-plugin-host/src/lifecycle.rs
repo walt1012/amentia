@@ -32,7 +32,9 @@ pub fn install_plugin_bundle(
   }
 
   copy_directory(&source_root, &destination_root)?;
-  Ok(crate::catalog::load_plugin_entry(destination_root.join("pith-plugin.json")))
+  Ok(crate::catalog::load_plugin_entry(
+    destination_root.join("pith-plugin.json"),
+  ))
 }
 
 pub fn inspect_plugin_bundle(source_path: &Path) -> Result<PluginCatalogEntry> {
