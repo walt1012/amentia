@@ -656,10 +656,7 @@ pub fn prepare_turn_start(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> std::result::Result<PreparedTurnStart, JsonRpcResponse> {
-  let params = match parse_required_params::<TurnStartParams>(&request, "turn/start") {
-    Ok(params) => params,
-    Err(response) => return Err(response),
-  };
+  let params = parse_required_params::<TurnStartParams>(&request, "turn/start")?;
 
   if let Err(message) = ensure_turn_model_ready(context) {
     return Err(JsonRpcResponse::error(request.id, -32060, message));
