@@ -1265,14 +1265,13 @@ final class AppViewModel: ObservableObject {
   }
 
   func runPluginCommand(commandID: String) {
-    guard let command = pluginCommands.first(where: { $0.id == commandID }),
-          command.executionKind != nil
-    else {
+    let snapshot = pluginActionSnapshot()
+    if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
       runtimeDetail = "Plugin command needs an execution contract before it can run."
       return
     }
 
-    guard canRunPluginCommand(commandID: commandID),
+    guard PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot),
           let threadID = selectedThreadID
     else {
       return
@@ -1328,17 +1327,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {
-    guard let command = pluginCommands.first(where: { $0.id == commandID }),
-          command.executionKind != nil
-    else {
-      return false
-    }
-
-    return runtimeState == .ready
-      && isLocalModelReady()
-      && hasRuntimeThreadSelection()
-      && selectedThreadID != nil
-      && !hasActiveOrPendingTurn()
+    PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: pluginActionSnapshot())
   }
 
   func selectThread(id: String?) {
@@ -2001,23 +1990,15 @@ final class AppViewModel: ObservableObject {
   }
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
-    plugin.provenance == "local"
+    PluginActionPlanner.isRemovable(plugin)
   }
 
   func canSetPluginEnabled(pluginID: String) -> Bool {
-    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
-      return false
-    }
-
-    return runtimeState == .ready && plugin.status == "ready"
+    PluginActionPlanner.canSetEnabled(pluginID: pluginID, snapshot: pluginActionSnapshot())
   }
 
   func canRemovePlugin(pluginID: String) -> Bool {
-    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
-      return false
-    }
-
-    return runtimeState == .ready && isRemovablePlugin(plugin)
+    PluginActionPlanner.canRemove(pluginID: pluginID, snapshot: pluginActionSnapshot())
   }
 
   func revealPluginManifest(pluginID: String) {
@@ -2505,6 +2486,18 @@ final class AppViewModel: ObservableObject {
     return MemorySnapshot(
       status: memoryStatus,
       notes: memoryNotes
+    )
+  }
+
+  private func pluginActionSnapshot() -> PluginActionSnapshot {
+    PluginActionSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      selectedThreadID: selectedThreadID,
+      hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
+      plugins: plugins,
+      commands: pluginCommands
     )
   }
 
