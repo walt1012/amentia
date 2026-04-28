@@ -2900,35 +2900,19 @@ final class AppViewModel: ObservableObject {
 
   private func clearPausedModelDownload() {
     pausedModelDownloadID = nil
-    modelDownloadCoordinator.clearResumeData()
-    LocalModelCatalog.clearPausedDownload()
+    LocalModelDownloadStateStore.clearPausedDownload(coordinator: modelDownloadCoordinator)
   }
 
   private func persistPausedModelDownload(modelID: String, resumeData: Data) {
-    guard !resumeData.isEmpty else {
-      return
-    }
-
-    let progress = modelDownloadProgress
-    LocalModelCatalog.savePausedDownload(
+    LocalModelDownloadStateStore.persistPausedDownload(
       modelID: modelID,
       resumeData: resumeData,
-      bytesReceived: progress?.bytesReceived ?? 0,
-      totalBytes: progress?.totalBytes ?? 0,
-      updatedAt: progress?.updatedAt ?? Date()
+      progress: modelDownloadProgress
     )
   }
 
   private func removeIncompleteModelFile(modelID: String) {
-    guard let model = localModels.first(where: { $0.id == modelID }) else {
-      return
-    }
-
-    let targetURL = URL(fileURLWithPath: model.installPath)
-    let manager = FileManager.default
-    if manager.fileExists(atPath: targetURL.path) {
-      try? manager.removeItem(at: targetURL)
-    }
+    LocalModelDownloadStateStore.removeIncompleteModelFile(modelID: modelID, models: localModels)
   }
 
   private func resetWorkspaceSearch() {
