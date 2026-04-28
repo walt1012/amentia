@@ -1,46 +1,29 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
+mod io;
 mod manifest;
 mod paths;
+mod registry;
 mod types;
+mod validation;
 
+use io::read_manifest;
 pub use manifest::{
   PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor, PluginManifest,
   PluginMcpServerManifest, PluginSkillManifest,
 };
-use manifest::{PluginCommandManifest, PluginHookManifest};
 pub use paths::{configured_plugin_install_root, configured_plugin_roots, default_plugin_root};
+pub use registry::{
+  build_capability_registry, build_command_registry, build_connector_registry, build_hook_registry,
+};
 pub use types::{
   PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginConnectorEntry,
   PluginHookEntry, PluginRemovalRecord,
 };
-
-const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
-  "command",
-  "agent",
-  "prompt_pack",
-  "hook",
-  "tool",
-  "mcp_server",
-  "skill",
-  "connector",
-  "settings",
-];
-const KNOWN_PERMISSIONS: [&str; 7] = [
-  "file.read",
-  "file.write",
-  "shell.exec",
-  "network.outbound",
-  "workspace.background",
-  "model.invoke",
-  "mcp.connect",
-];
-const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
-const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "keychain"];
+use validation::{manifest_capabilities, validate_manifest, validation_hint_for_error};
 
 pub fn discover_plugins(root: &Path) -> Result<Vec<PluginCatalogEntry>> {
   if !root.exists() {
@@ -250,479 +233,6 @@ fn invalid_plugin_entry(
     validation_error: Some(validation_error),
     validation_hint: Some(validation_hint),
   }
-}
-
-fn validation_hint_for_error(validation_error: &str) -> String {
-  if validation_error.contains("failed to parse plugin manifest") {
-    return "Check that pith-plugin.json is valid JSON and uses camelCase field names such as `displayName` and `defaultEnabled`."
-      .to_string();
-  }
-
-  if validation_error.contains("must use the `<kind>:<identifier>` format") {
-    return format!(
-      "Rewrite each capability as `<kind>:<identifier>`. Supported kinds: {}.",
-      KNOWN_CAPABILITY_KINDS.join(", ")
-    );
-  }
-
-  if validation_error.contains("capability kind") && validation_error.contains("is not supported") {
-    return format!(
-      "Use one of the supported capability kinds: {}.",
-      KNOWN_CAPABILITY_KINDS.join(", ")
-    );
-  }
-
-  if validation_error.contains("must include a non-empty identifier") {
-    return "Add a non-empty identifier after the capability kind, for example `command:workspace.capture-note`."
-      .to_string();
-  }
-
-  if validation_error.contains("relative path segment")
-    || validation_error.contains("path separators")
-  {
-    return "Use stable plugin identifiers without path separators, for example `notion-connector`."
-      .to_string();
-  }
-
-  if validation_error.contains("plugin permission") && validation_error.contains("is not supported")
-  {
-    return format!(
-      "Use one of the supported permissions: {}.",
-      KNOWN_PERMISSIONS.join(", ")
-    );
-  }
-
-  "Review the manifest schema, then fix the reported field or value and reload the plugin catalog."
-    .to_string()
-}
-
-fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
-  validate_manifest_identifier("name", &manifest.name)?;
-
-  for capability in manifest_capabilities(manifest) {
-    let Some((kind, identifier)) = capability.split_once(':') else {
-      anyhow::bail!(
-        "plugin capability `{}` must use the `<kind>:<identifier>` format",
-        capability
-      );
-    };
-    if !KNOWN_CAPABILITY_KINDS.contains(&kind) {
-      anyhow::bail!("plugin capability kind `{}` is not supported", kind);
-    }
-    if identifier.trim().is_empty() {
-      anyhow::bail!(
-        "plugin capability `{}` must include a non-empty identifier",
-        capability
-      );
-    }
-  }
-
-  for skill in &manifest.skills {
-    validate_manifest_identifier("skill", &skill.id)?;
-    if skill.path.trim().is_empty() {
-      anyhow::bail!("plugin skill `{}` must include a non-empty path", skill.id);
-    }
-  }
-
-  for server in &manifest.mcp_servers {
-    validate_manifest_identifier("mcp server", &server.id)?;
-    if let Some(command) = server.command.as_ref() {
-      if command.trim().is_empty() {
-        anyhow::bail!(
-          "plugin MCP server `{}` command must not be empty",
-          server.id
-        );
-      }
-    }
-  }
-
-  for connector in &manifest.app_connectors {
-    validate_manifest_identifier("connector", &connector.id)?;
-    if connector.service.trim().is_empty() {
-      anyhow::bail!(
-        "plugin connector `{}` must include a non-empty service",
-        connector.id
-      );
-    }
-  }
-
-  if let Some(auth_policy) = manifest.auth_policy.as_ref() {
-    if !KNOWN_AUTH_TYPES.contains(&auth_policy.auth_type.as_str()) {
-      anyhow::bail!(
-        "plugin auth policy type `{}` is not supported",
-        auth_policy.auth_type
-      );
-    }
-    if let Some(credential_store) = auth_policy.credential_store.as_ref() {
-      if !KNOWN_CREDENTIAL_STORES.contains(&credential_store.as_str()) {
-        anyhow::bail!(
-          "plugin credential store `{}` is not supported",
-          credential_store
-        );
-      }
-    }
-  }
-
-  for permission in &manifest.permissions {
-    if !KNOWN_PERMISSIONS.contains(&permission.as_str()) {
-      anyhow::bail!("plugin permission `{}` is not supported", permission);
-    }
-  }
-
-  Ok(())
-}
-
-fn validate_manifest_identifier(kind: &str, identifier: &str) -> Result<()> {
-  if identifier.trim().is_empty() {
-    anyhow::bail!("plugin {kind} identifier must not be empty");
-  }
-  if identifier == "." || identifier == ".." {
-    anyhow::bail!("plugin {kind} identifier `{identifier}` must not be a relative path segment");
-  }
-  if identifier.contains('/') || identifier.contains('\\') {
-    anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain path separators");
-  }
-  if identifier.contains(':') {
-    anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain `:`");
-  }
-  Ok(())
-}
-
-fn manifest_capabilities(manifest: &PluginManifest) -> Vec<String> {
-  let mut capabilities = manifest.capabilities.clone();
-  for skill in &manifest.skills {
-    push_unique_capability(&mut capabilities, "skill", &skill.id);
-  }
-  for server in &manifest.mcp_servers {
-    push_unique_capability(&mut capabilities, "mcp_server", &server.id);
-  }
-  for connector in &manifest.app_connectors {
-    push_unique_capability(&mut capabilities, "connector", &connector.id);
-  }
-  capabilities
-}
-
-fn push_unique_capability(capabilities: &mut Vec<String>, kind: &str, identifier: &str) {
-  let capability = format!("{kind}:{identifier}");
-  if !capabilities.iter().any(|existing| existing == &capability) {
-    capabilities.push(capability);
-  }
-}
-
-pub fn build_capability_registry(
-  plugins: &[PluginCatalogEntry],
-) -> Vec<PluginCapabilityRegistration> {
-  let mut registrations = plugins
-    .iter()
-    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
-    .flat_map(|plugin| {
-      let metadata_by_capability = plugin_capability_metadata(plugin);
-      plugin
-        .capabilities
-        .iter()
-        .filter_map(|capability| {
-          let (kind, identifier) = capability.split_once(':')?;
-          Some(PluginCapabilityRegistration {
-            capability_id: format!("{}::{}", plugin.id, capability),
-            kind: kind.to_string(),
-            identifier: identifier.to_string(),
-            plugin_id: plugin.id.clone(),
-            plugin_display_name: plugin.display_name.clone(),
-            permissions: plugin.permissions.clone(),
-            manifest_path: plugin.manifest_path.clone(),
-            metadata: metadata_by_capability
-              .get(capability)
-              .cloned()
-              .unwrap_or_default(),
-          })
-        })
-        .collect::<Vec<_>>()
-    })
-    .collect::<Vec<_>>();
-
-  registrations.sort_by(|left, right| {
-    left
-      .kind
-      .cmp(&right.kind)
-      .then_with(|| left.identifier.cmp(&right.identifier))
-      .then_with(|| left.plugin_id.cmp(&right.plugin_id))
-  });
-  registrations
-}
-
-pub fn build_connector_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginConnectorEntry> {
-  let mut connectors = vec![];
-
-  for plugin in plugins.iter().filter(|plugin| plugin.status == "ready") {
-    let Ok(manifest) = read_manifest(Path::new(&plugin.manifest_path)) else {
-      continue;
-    };
-
-    let auth_type = manifest
-      .auth_policy
-      .as_ref()
-      .map(|policy| policy.auth_type.clone());
-    let auth_required = manifest
-      .auth_policy
-      .as_ref()
-      .map(|policy| policy.required)
-      .unwrap_or(false);
-    let auth_scopes = manifest
-      .auth_policy
-      .as_ref()
-      .map(|policy| policy.scopes.clone())
-      .unwrap_or_default();
-    let credential_store = manifest
-      .auth_policy
-      .as_ref()
-      .and_then(|policy| policy.credential_store.clone());
-    let status = if !plugin.enabled {
-      "disabled"
-    } else if auth_required {
-      "needsAuth"
-    } else {
-      "ready"
-    };
-
-    for connector in manifest.app_connectors {
-      connectors.push(PluginConnectorEntry {
-        connector_id: format!("{}::{}", plugin.id, connector.id),
-        display_name: connector.display_name,
-        service: connector.service,
-        plugin_id: plugin.id.clone(),
-        plugin_display_name: plugin.display_name.clone(),
-        enabled: plugin.enabled,
-        status: status.to_string(),
-        permissions: plugin.permissions.clone(),
-        manifest_path: plugin.manifest_path.clone(),
-        homepage: connector.homepage,
-        auth_type: auth_type.clone(),
-        auth_required,
-        auth_scopes: auth_scopes.clone(),
-        credential_store: credential_store.clone(),
-      });
-    }
-  }
-
-  connectors.sort_by(|left, right| {
-    left
-      .service
-      .cmp(&right.service)
-      .then_with(|| left.display_name.cmp(&right.display_name))
-      .then_with(|| left.connector_id.cmp(&right.connector_id))
-  });
-  connectors
-}
-
-fn plugin_capability_metadata(
-  plugin: &PluginCatalogEntry,
-) -> HashMap<String, HashMap<String, String>> {
-  let Ok(manifest) = read_manifest(Path::new(&plugin.manifest_path)) else {
-    return HashMap::new();
-  };
-
-  let mut metadata_by_capability = HashMap::new();
-  for skill in manifest.skills {
-    let mut metadata = HashMap::from([
-      ("description".to_string(), skill.description),
-      ("path".to_string(), skill.path),
-    ]);
-    metadata.insert("surface".to_string(), "skill".to_string());
-    metadata_by_capability.insert(format!("skill:{}", skill.id), metadata);
-  }
-
-  for server in manifest.mcp_servers {
-    let mut metadata = HashMap::from([(
-      "transport".to_string(),
-      server.transport.unwrap_or_else(|| "stdio".to_string()),
-    )]);
-    metadata.insert("surface".to_string(), "mcp".to_string());
-    if let Some(command) = server.command {
-      metadata.insert("command".to_string(), command);
-    }
-    if !server.args.is_empty() {
-      metadata.insert("args".to_string(), server.args.join(" "));
-    }
-    metadata_by_capability.insert(format!("mcp_server:{}", server.id), metadata);
-  }
-
-  let auth_policy = manifest.auth_policy;
-  for connector in manifest.app_connectors {
-    let mut metadata = HashMap::from([
-      ("surface".to_string(), "connector".to_string()),
-      ("displayName".to_string(), connector.display_name),
-      ("service".to_string(), connector.service),
-    ]);
-    if let Some(homepage) = connector.homepage {
-      metadata.insert("homepage".to_string(), homepage);
-    }
-    if let Some(auth_policy) = auth_policy.as_ref() {
-      metadata.insert("authType".to_string(), auth_policy.auth_type.clone());
-      metadata.insert("authRequired".to_string(), auth_policy.required.to_string());
-      if !auth_policy.scopes.is_empty() {
-        metadata.insert("authScopes".to_string(), auth_policy.scopes.join(", "));
-      }
-      if let Some(credential_store) = auth_policy.credential_store.as_ref() {
-        metadata.insert("credentialStore".to_string(), credential_store.clone());
-      }
-    }
-    metadata_by_capability.insert(format!("connector:{}", connector.id), metadata);
-  }
-
-  metadata_by_capability
-}
-
-pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginCommandEntry> {
-  let mut commands = vec![];
-
-  for plugin in plugins
-    .iter()
-    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
-  {
-    let Some(plugin_root) = Path::new(&plugin.manifest_path).parent() else {
-      continue;
-    };
-
-    for capability in &plugin.capabilities {
-      let Some((kind, identifier)) = capability.split_once(':') else {
-        continue;
-      };
-      if kind != "command" {
-        continue;
-      }
-
-      let command_path = plugin_root
-        .join("commands")
-        .join(format!("{identifier}.json"));
-      let Ok(command) = read_command_manifest(&command_path) else {
-        continue;
-      };
-      let memory_note_title = command
-        .memory
-        .as_ref()
-        .map(|memory| memory.note_title.clone());
-      let execution_kind = command
-        .execution
-        .as_ref()
-        .map(|execution| execution.kind.clone());
-      let memory_note_source = command
-        .memory
-        .as_ref()
-        .and_then(|memory| memory.note_source.clone());
-      let memory_note_tags = command
-        .memory
-        .as_ref()
-        .map(|memory| memory.note_tags.clone())
-        .unwrap_or_default();
-
-      commands.push(PluginCommandEntry {
-        command_id: format!("{}::{}", plugin.id, identifier),
-        title: command.title,
-        description: command.description,
-        prompt: command.prompt,
-        plugin_id: plugin.id.clone(),
-        plugin_display_name: plugin.display_name.clone(),
-        permissions: plugin.permissions.clone(),
-        source_path: command_path.display().to_string(),
-        execution_kind,
-        memory_note_title,
-        memory_note_source,
-        memory_note_tags,
-      });
-    }
-  }
-
-  commands.sort_by(|left, right| {
-    left
-      .plugin_display_name
-      .cmp(&right.plugin_display_name)
-      .then_with(|| left.title.cmp(&right.title))
-      .then_with(|| left.command_id.cmp(&right.command_id))
-  });
-  commands
-}
-
-pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntry> {
-  let mut hooks = vec![];
-
-  for plugin in plugins
-    .iter()
-    .filter(|plugin| plugin.status == "ready" && plugin.enabled)
-  {
-    let Some(plugin_root) = Path::new(&plugin.manifest_path).parent() else {
-      continue;
-    };
-
-    for capability in &plugin.capabilities {
-      let Some((kind, identifier)) = capability.split_once(':') else {
-        continue;
-      };
-      if kind != "hook" {
-        continue;
-      }
-
-      let hook_path = plugin_root.join("hooks").join(format!("{identifier}.json"));
-      let Ok(hook) = read_hook_manifest(&hook_path) else {
-        continue;
-      };
-      let memory_note_title = hook.memory.as_ref().map(|memory| memory.note_title.clone());
-      let memory_note_source = hook
-        .memory
-        .as_ref()
-        .and_then(|memory| memory.note_source.clone());
-      let memory_note_tags = hook
-        .memory
-        .as_ref()
-        .map(|memory| memory.note_tags.clone())
-        .unwrap_or_default();
-
-      hooks.push(PluginHookEntry {
-        hook_id: format!("{}::{}", plugin.id, identifier),
-        title: hook.title,
-        description: hook.description,
-        event: hook.event,
-        message_template: hook.message_template,
-        plugin_id: plugin.id.clone(),
-        plugin_display_name: plugin.display_name.clone(),
-        permissions: plugin.permissions.clone(),
-        source_path: hook_path.display().to_string(),
-        memory_note_title,
-        memory_note_source,
-        memory_note_tags,
-      });
-    }
-  }
-
-  hooks.sort_by(|left, right| {
-    left
-      .event
-      .cmp(&right.event)
-      .then_with(|| left.plugin_display_name.cmp(&right.plugin_display_name))
-      .then_with(|| left.title.cmp(&right.title))
-      .then_with(|| left.hook_id.cmp(&right.hook_id))
-  });
-  hooks
-}
-
-fn read_manifest(path: &Path) -> Result<PluginManifest> {
-  let content =
-    fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
-  serde_json::from_str(&content)
-    .with_context(|| format!("failed to parse plugin manifest {}", path.display()))
-}
-
-fn read_command_manifest(path: &Path) -> Result<PluginCommandManifest> {
-  let content =
-    fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
-  serde_json::from_str(&content)
-    .with_context(|| format!("failed to parse plugin command {}", path.display()))
-}
-
-fn read_hook_manifest(path: &Path) -> Result<PluginHookManifest> {
-  let content =
-    fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
-  serde_json::from_str(&content)
-    .with_context(|| format!("failed to parse plugin hook {}", path.display()))
 }
 
 fn resolve_plugin_source_root(path: &Path) -> Result<PathBuf> {
@@ -1330,7 +840,7 @@ mod tests {
       assert!(!manifest.display_name.trim().is_empty());
     }
 
-    let workspace_command = read_command_manifest(
+    let workspace_command = super::io::read_command_manifest(
       &bundled_root.join("workspace-notes/commands/workspace.capture-note.json"),
     )
     .expect("parse workspace command manifest");
@@ -1350,7 +860,7 @@ mod tests {
       Some("Workspace Capture")
     );
 
-    let shell_command = read_command_manifest(
+    let shell_command = super::io::read_command_manifest(
       &bundled_root.join("shell-recorder/commands/shell.summarize-session.json"),
     )
     .expect("parse shell command manifest");
@@ -1363,7 +873,7 @@ mod tests {
       Some("builtin.shellSessionSummary")
     );
 
-    let review_command = read_command_manifest(
+    let review_command = super::io::read_command_manifest(
       &bundled_root.join("review-assistant/commands/review.inspect-diff.json"),
     )
     .expect("parse review command manifest");
@@ -1377,7 +887,9 @@ mod tests {
     );
 
     let hook_manifest =
-      read_hook_manifest(&bundled_root.join("shell-recorder/hooks/shell.recorder.json"))
+      super::io::read_hook_manifest(
+        &bundled_root.join("shell-recorder/hooks/shell.recorder.json"),
+      )
         .expect("parse bundled hook manifest");
     assert_eq!(hook_manifest.event, "shell.completed");
     assert!(!hook_manifest.message_template.trim().is_empty());
