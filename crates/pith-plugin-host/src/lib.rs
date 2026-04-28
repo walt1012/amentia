@@ -6,6 +6,14 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+mod manifest;
+
+pub use manifest::{
+  PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor, PluginManifest,
+  PluginMcpServerManifest, PluginSkillManifest,
+};
+use manifest::{PluginCommandManifest, PluginHookManifest};
+
 const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
   "command",
   "agent",
@@ -28,79 +36,6 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
 ];
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
 const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "keychain"];
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginAuthor {
-  pub name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginManifest {
-  pub name: String,
-  pub version: String,
-  pub display_name: String,
-  pub description: String,
-  #[serde(default)]
-  pub author: Option<PluginAuthor>,
-  #[serde(default)]
-  pub capabilities: Vec<String>,
-  #[serde(default)]
-  pub permissions: Vec<String>,
-  #[serde(default)]
-  pub skills: Vec<PluginSkillManifest>,
-  #[serde(default)]
-  pub mcp_servers: Vec<PluginMcpServerManifest>,
-  #[serde(default)]
-  pub app_connectors: Vec<PluginAppConnectorManifest>,
-  #[serde(default)]
-  pub auth_policy: Option<PluginAuthPolicyManifest>,
-  pub default_enabled: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginSkillManifest {
-  pub id: String,
-  pub description: String,
-  pub path: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginMcpServerManifest {
-  pub id: String,
-  #[serde(default)]
-  pub command: Option<String>,
-  #[serde(default)]
-  pub args: Vec<String>,
-  #[serde(default)]
-  pub transport: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginAppConnectorManifest {
-  pub id: String,
-  pub display_name: String,
-  pub service: String,
-  #[serde(default)]
-  pub homepage: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginAuthPolicyManifest {
-  #[serde(rename = "type")]
-  pub auth_type: String,
-  #[serde(default)]
-  pub required: bool,
-  #[serde(default)]
-  pub scopes: Vec<String>,
-  #[serde(default)]
-  pub credential_store: Option<String>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -152,45 +87,6 @@ pub struct PluginConnectorEntry {
   pub auth_required: bool,
   pub auth_scopes: Vec<String>,
   pub credential_store: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginCommandManifest {
-  pub title: String,
-  pub description: String,
-  pub prompt: String,
-  #[serde(default)]
-  pub execution: Option<PluginCommandExecutionManifest>,
-  #[serde(default)]
-  pub memory: Option<PluginMemoryManifest>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginCommandExecutionManifest {
-  pub kind: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginMemoryManifest {
-  pub note_title: String,
-  #[serde(default)]
-  pub note_source: Option<String>,
-  #[serde(default)]
-  pub note_tags: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginHookManifest {
-  pub title: String,
-  pub description: String,
-  pub event: String,
-  pub message_template: String,
-  #[serde(default)]
-  pub memory: Option<PluginMemoryManifest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

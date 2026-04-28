@@ -91,5 +91,7 @@ with app, runtime, local model, plugin, memory, timeline, workspace, and setup d
 `pith-memory` owns memory semantics such as notes, events, summaries, and retrieval. `pith-storage`
 owns durable runtime persistence for threads, workspace state, approvals, memory notes, and plugin
 state.
+`pith-plugin-host` owns plugin manifests, discovery, capability registries, connector metadata, and
+plugin bundle lifecycle boundaries.
 
 See [docs/development-environment.md](docs/development-environment.md) for local setup and CI notes.
