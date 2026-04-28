@@ -24,6 +24,7 @@ pub use types::{
 
 #[cfg(test)]
 mod tests {
+  use super::io::read_manifest;
   use super::validation::{manifest_capabilities, validate_manifest, validation_hint_for_error};
   use super::*;
   use std::env;
