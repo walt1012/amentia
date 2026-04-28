@@ -1,16 +1,21 @@
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 
 mod manifest;
+mod paths;
+mod types;
 
 pub use manifest::{
   PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor, PluginManifest,
   PluginMcpServerManifest, PluginSkillManifest,
+};
+pub use paths::{configured_plugin_install_root, configured_plugin_roots, default_plugin_root};
+pub use types::{
+  PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginConnectorEntry,
+  PluginHookEntry, PluginRemovalRecord,
 };
 use manifest::{PluginCommandManifest, PluginHookManifest};
 
@@ -36,155 +41,6 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
 ];
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
 const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "keychain"];
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginCatalogEntry {
-  pub id: String,
-  pub name: String,
-  pub version: String,
-  pub display_name: String,
-  pub status: String,
-  pub description: String,
-  pub author_name: Option<String>,
-  pub enabled: bool,
-  pub default_enabled: bool,
-  pub capabilities: Vec<String>,
-  pub permissions: Vec<String>,
-  pub manifest_path: String,
-  pub provenance: String,
-  pub validation_error: Option<String>,
-  pub validation_hint: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginCapabilityRegistration {
-  pub capability_id: String,
-  pub kind: String,
-  pub identifier: String,
-  pub plugin_id: String,
-  pub plugin_display_name: String,
-  pub permissions: Vec<String>,
-  pub manifest_path: String,
-  pub metadata: HashMap<String, String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginConnectorEntry {
-  pub connector_id: String,
-  pub display_name: String,
-  pub service: String,
-  pub plugin_id: String,
-  pub plugin_display_name: String,
-  pub enabled: bool,
-  pub status: String,
-  pub permissions: Vec<String>,
-  pub manifest_path: String,
-  pub homepage: Option<String>,
-  pub auth_type: Option<String>,
-  pub auth_required: bool,
-  pub auth_scopes: Vec<String>,
-  pub credential_store: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginCommandEntry {
-  pub command_id: String,
-  pub title: String,
-  pub description: String,
-  pub prompt: String,
-  pub plugin_id: String,
-  pub plugin_display_name: String,
-  pub permissions: Vec<String>,
-  pub source_path: String,
-  pub execution_kind: Option<String>,
-  pub memory_note_title: Option<String>,
-  pub memory_note_source: Option<String>,
-  pub memory_note_tags: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginHookEntry {
-  pub hook_id: String,
-  pub title: String,
-  pub description: String,
-  pub event: String,
-  pub message_template: String,
-  pub plugin_id: String,
-  pub plugin_display_name: String,
-  pub permissions: Vec<String>,
-  pub source_path: String,
-  pub memory_note_title: Option<String>,
-  pub memory_note_source: Option<String>,
-  pub memory_note_tags: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginRemovalRecord {
-  pub plugin_id: String,
-  pub display_name: String,
-  pub removed_path: String,
-}
-
-pub fn default_plugin_root() -> Option<PathBuf> {
-  if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
-    return Some(PathBuf::from(path));
-  }
-
-  let roots = discovery_roots();
-  for root in &roots {
-    let candidate = root.join("plugins");
-    if candidate.exists() {
-      return Some(candidate);
-    }
-  }
-
-  roots.into_iter().next().map(|root| root.join("plugins"))
-}
-
-pub fn configured_plugin_roots() -> Vec<PathBuf> {
-  let mut roots = vec![];
-
-  if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
-    roots.push(PathBuf::from(path));
-    if let Ok(local_path) = env::var("PITH_LOCAL_PLUGIN_DIR") {
-      let local_root = PathBuf::from(local_path);
-      if !roots.contains(&local_root) {
-        roots.push(local_root);
-      }
-    }
-    return roots;
-  }
-
-  if let Ok(path) = env::var("PITH_LOCAL_PLUGIN_DIR") {
-    roots.push(PathBuf::from(path));
-  }
-
-  if let Some(default_root) = default_plugin_root() {
-    if !roots.contains(&default_root) {
-      roots.push(default_root);
-    }
-  }
-
-  roots
-}
-
-pub fn configured_plugin_install_root() -> PathBuf {
-  if let Ok(path) = env::var("PITH_LOCAL_PLUGIN_DIR") {
-    return PathBuf::from(path);
-  }
-  if let Ok(path) = env::var("PITH_PLUGIN_DIR") {
-    return PathBuf::from(path);
-  }
-  default_plugin_root()
-    .map(|root| root.join("local"))
-    .unwrap_or_else(|| PathBuf::from("plugins").join("local"))
-}
 
 pub fn discover_plugins(root: &Path) -> Result<Vec<PluginCatalogEntry>> {
   if !root.exists() {
@@ -937,32 +793,10 @@ fn canonicalize_or_prepare(path: &Path) -> Result<PathBuf> {
   }
 }
 
-fn discovery_roots() -> Vec<PathBuf> {
-  let mut roots = vec![];
-
-  if let Ok(current_executable) = env::current_exe() {
-    if let Some(parent) = current_executable.parent() {
-      roots.push(parent.to_path_buf());
-    }
-  }
-
-  if let Ok(current_directory) = env::current_dir() {
-    roots.push(current_directory);
-  }
-
-  let mut unique_roots = vec![];
-  for root in roots {
-    if !unique_roots.contains(&root) {
-      unique_roots.push(root);
-    }
-  }
-
-  unique_roots
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::env;
   use std::time::{SystemTime, UNIX_EPOCH};
 
   fn create_temp_plugin_root(label: &str) -> PathBuf {
