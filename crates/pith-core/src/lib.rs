@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use active_turns::{
@@ -23,10 +22,8 @@ use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, JsonRpcNotification,
   JsonRpcRequest, JsonRpcResponse, PluginInstallParams, PluginInstallResult, PluginListResult,
   PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSetEnabledResult,
-  ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult,
-  ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceSummary,
 };
 #[cfg(test)]
 use pith_storage::FileThreadStore;
@@ -71,7 +68,9 @@ mod request_params;
 mod runtime_context;
 mod runtime_readiness;
 mod server_requests;
+mod thread_requests;
 mod text_utils;
+mod workspace_requests;
 mod workspace_search;
 
 pub use plugin_commands::{CompletedPluginCommandRun, PreparedPluginCommandRun};
@@ -120,27 +119,13 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::RUNTIME_READINESS => {
       JsonRpcResponse::success(request.id, &build_runtime_readiness(context))
     }
-    methods::WORKSPACE_CURRENT => JsonRpcResponse::success(
-      request.id,
-      &WorkspaceCurrentResult {
-        workspace: context.workspace.clone(),
-      },
-    ),
-    methods::WORKSPACE_OPEN => handle_workspace_open(context, request),
+    methods::WORKSPACE_CURRENT => workspace_requests::handle_workspace_current(context, request),
+    methods::WORKSPACE_OPEN => workspace_requests::handle_workspace_open(context, request),
     methods::WORKSPACE_SEARCH => workspace_search::handle_workspace_search(context, request),
     methods::TURN_CANCEL => handle_turn_cancel(context, request),
-    methods::THREAD_READ => handle_thread_read(context, request),
-    methods::THREAD_START => handle_thread_start(context, request),
-    methods::THREAD_LIST => JsonRpcResponse::success(
-      request.id,
-      &ThreadListResult {
-        threads: context
-          .threads
-          .iter()
-          .map(|thread| thread.summary.clone())
-          .collect(),
-      },
-    ),
+    methods::THREAD_READ => thread_requests::handle_thread_read(context, request),
+    methods::THREAD_START => thread_requests::handle_thread_start(context, request),
+    methods::THREAD_LIST => thread_requests::handle_thread_list(context, request),
     methods::TURN_START => handle_turn_start(context, request),
     _ => JsonRpcResponse::error(request.id, -32601, "Method not found"),
   }
@@ -290,130 +275,6 @@ fn handle_plugin_remove(context: &mut RuntimeContext, request: JsonRpcRequest) -
       removed_path: removed_plugin.removed_path,
     },
   )
-}
-
-fn handle_workspace_open(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<WorkspaceOpenParams>(&request, "workspace/open") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let workspace_path = PathBuf::from(params.path);
-  if !workspace_path.is_dir() {
-    return JsonRpcResponse::error(request.id, -32020, "Workspace path is not a directory");
-  }
-
-  let resolved_path = match fs::canonicalize(&workspace_path) {
-    Ok(path) => path,
-    Err(error) => {
-      return JsonRpcResponse::error(
-        request.id,
-        -32021,
-        format!("Failed to resolve workspace path: {error}"),
-      )
-    }
-  };
-
-  let workspace = WorkspaceSummary {
-    root_path: resolved_path.display().to_string(),
-    display_name: resolved_path
-      .file_name()
-      .map(|name| name.to_string_lossy().into_owned())
-      .filter(|name| !name.is_empty())
-      .unwrap_or_else(|| resolved_path.display().to_string()),
-  };
-  context.workspace = Some(workspace.clone());
-
-  if let Err(error) = context.persist_workspace() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-
-  if let Err(error) = context.remember(MemoryEvent::WorkspaceOpened {
-    display_name: workspace.display_name.clone(),
-    root_path: workspace.root_path.clone(),
-  }) {
-    return JsonRpcResponse::error(request.id, -32011, error.to_string());
-  }
-
-  JsonRpcResponse::success(
-    request.id,
-    &WorkspaceOpenResult {
-      workspace,
-      thread_count: context.threads.len(),
-    },
-  )
-}
-
-fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<ThreadReadParams>(&request, "thread/read") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let did_refresh = match refresh_active_turn_for_thread(context, &params.thread_id) {
-    Ok(did_refresh) => did_refresh,
-    Err(error) => {
-      return JsonRpcResponse::error(request.id, -32010, error.to_string());
-    }
-  };
-
-  if did_refresh {
-    if let Err(error) = context.persist_runtime_state() {
-      return JsonRpcResponse::error(request.id, -32010, error.to_string());
-    }
-  }
-
-  let Some(thread) = context
-    .threads
-    .iter()
-    .find(|thread| thread.summary.id == params.thread_id)
-  else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
-  };
-
-  JsonRpcResponse::success(
-    request.id,
-    &ThreadReadResult {
-      thread: thread.summary.clone(),
-      items: thread.items.clone(),
-      pending_approvals: approvals_for_thread(context, &thread.summary.id),
-      active_turn_id: active_turn_id_for_thread(&context.active_turns, &thread.summary.id),
-    },
-  )
-}
-
-fn handle_thread_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<ThreadStartParams>(&request, "thread/start") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let workspace = context.workspace.clone();
-  let thread = ThreadSummary {
-    id: format!("thread-{}", context.next_thread_number),
-    title: params.title,
-    status: "ready".to_string(),
-    workspace: workspace.clone(),
-  };
-  context.next_thread_number += 1;
-  let items = vec![TimelineItem {
-    kind: "system".to_string(),
-    title: "Thread Ready".to_string(),
-    content: format!("{} is ready for local runtime messages.", thread.title),
-    attributes: None,
-  }];
-  context.threads.push(StoredThread {
-    summary: thread.clone(),
-    turn_count: 0,
-    items: items.clone(),
-    workspace,
-  });
-
-  if let Err(error) = context.persist_runtime_state() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-
-  JsonRpcResponse::success(request.id, &ThreadStartResult { thread })
 }
 
 fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -1713,7 +1574,10 @@ fn build_thread_summary_body(
   )
 }
 
-fn refresh_active_turn_for_thread(context: &mut RuntimeContext, thread_id: &str) -> Result<bool> {
+pub(crate) fn refresh_active_turn_for_thread(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+) -> Result<bool> {
   let active_turn_ids = context
     .active_turns
     .values()
@@ -1810,7 +1674,10 @@ fn stored_approval_record(approval: PendingApproval) -> StoredApprovalRecord {
   }
 }
 
-fn approvals_for_thread(context: &RuntimeContext, thread_id: &str) -> Vec<ApprovalRequest> {
+pub(crate) fn approvals_for_thread(
+  context: &RuntimeContext,
+  thread_id: &str,
+) -> Vec<ApprovalRequest> {
   let mut approvals = context
     .pending_approvals
     .values()
