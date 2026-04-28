@@ -1757,32 +1757,31 @@ final class AppViewModel: ObservableObject {
           expectedBytes: model.sizeBytes,
           to: URL(fileURLWithPath: model.installPath)
         )
+        let finalizationPlan: LocalModelDownloadFinalizationPlan
         do {
-          try LocalModelActivationPreparer.validateDownloadedModel(model)
-        } catch {
+          finalizationPlan = try LocalModelDownloadFinalizer.prepare(
+            model: model,
+            activationRequested: shouldActivateAfterDownload,
+            hasActiveOrPendingTurn: hasActiveOrPendingTurn()
+          )
+        } catch LocalModelActivationPreparationError.integrityCheckFailed(let error) {
           removeIncompleteModelFile(modelID: model.id)
-          throw error
+          throw LocalModelActivationPreparationError.integrityCheckFailed(error)
         }
 
-        let canActivateDownloadedModel = !hasActiveOrPendingTurn()
-        let manifestPath: String?
-        if shouldActivateAfterDownload && canActivateDownloadedModel {
-          let modelManifestPath = try LocalModelActivationPreparer.writeManifest(for: model)
+        if let preparedActivation = finalizationPlan.preparedActivation {
           runtimeBridge.configureActiveLocalModel(
-            manifestPath: modelManifestPath,
+            manifestPath: preparedActivation.manifestPath,
             modelPath: model.installPath
           )
-          manifestPath = modelManifestPath
-        } else {
-          manifestPath = nil
         }
 
         let completionPlan = LocalModelDownloadCompletionPlanner.plan(
           model: model,
           sourceURL: downloadURL,
           activationRequested: shouldActivateAfterDownload,
-          canActivateNow: canActivateDownloadedModel,
-          manifestPath: manifestPath
+          canActivateNow: finalizationPlan.canActivateNow,
+          manifestPath: finalizationPlan.manifestPath
         )
 
         applyModelDownloadCompletionPlan(completionPlan, model: model)
