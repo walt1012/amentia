@@ -1670,45 +1670,42 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let displayName = modelDownloadID
-      .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
-      ?? "local model"
-    runtimeDetail = "Pausing \(displayName) download..."
+    runtimeDetail = LocalModelDownloadControlPlanner.pauseDetail(
+      activeModelID: modelDownloadID,
+      models: localModels
+    )
     modelDownloadCoordinator.pauseActiveTransfer()
   }
 
   func cancelModelDownload() {
-    guard canCancelModelDownload() else {
+    guard canCancelModelDownload(),
+          let cancelPlan = LocalModelDownloadControlPlanner.cancelPlan(
+            isDownloading: modelDownloadCoordinator.isDownloading,
+            activeModelID: modelDownloadID,
+            pausedModelID: pausedModelDownloadID,
+            models: localModels
+          )
+    else {
       return
     }
 
-    if modelDownloadCoordinator.isDownloading {
-      let displayName = modelDownloadID
-        .flatMap { id in localModels.first(where: { $0.id == id })?.displayName }
-        ?? "local model"
-      runtimeDetail = "Cancelling \(displayName) download..."
+    switch cancelPlan.mode {
+    case .running:
+      runtimeDetail = cancelPlan.runtimeDetail
       modelDownloadCoordinator.cancelActiveDownload()
-      return
-    }
-
-    guard let pausedModelDownloadID else {
-      return
-    }
-
-    guard let model = localModels.first(where: { $0.id == pausedModelDownloadID }) else {
+    case .orphanedPaused(let modelID):
       clearPausedModelDownload()
-      removeIncompleteModelFile(modelID: pausedModelDownloadID)
+      removeIncompleteModelFile(modelID: modelID)
       modelDownloadProgress = nil
-      runtimeDetail = "Cancelled local model download and cleared partial state."
+      runtimeDetail = cancelPlan.runtimeDetail
       refreshLocalModelCatalog()
-      return
+    case .paused(let model):
+      applyModelDownloadInterruptionPlan(
+        LocalModelDownloadInterruptionPlanner.cancellationPlan(model: model),
+        model: model
+      )
+      refreshLocalModelCatalog()
     }
-
-    applyModelDownloadInterruptionPlan(
-      LocalModelDownloadInterruptionPlanner.cancellationPlan(model: model),
-      model: model
-    )
-    refreshLocalModelCatalog()
   }
 
   func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
