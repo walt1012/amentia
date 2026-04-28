@@ -58,9 +58,7 @@ pub(crate) fn prepare_turn_action(
 }
 
 fn reserve_approval_id(context: &mut RuntimeContext) -> String {
-  let approval_id = format!("approval-{}", context.next_approval_number);
-  context.next_approval_number += 1;
-  approval_id
+  context.sequences.next_approval_id()
 }
 
 pub(crate) fn execute_prepared_turn_snapshot(

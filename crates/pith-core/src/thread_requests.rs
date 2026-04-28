@@ -78,12 +78,11 @@ pub(crate) fn handle_thread_start(
 
   let workspace = context.workspace.clone();
   let thread = ThreadSummary {
-    id: format!("thread-{}", context.next_thread_number),
+    id: context.sequences.next_thread_id(),
     title: params.title,
     status: "ready".to_string(),
     workspace: workspace.clone(),
   };
-  context.next_thread_number += 1;
   let items = vec![TimelineItem {
     kind: "system".to_string(),
     title: "Thread Ready".to_string(),

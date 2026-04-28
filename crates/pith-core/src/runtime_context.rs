@@ -9,6 +9,7 @@ use pith_storage::FileThreadStore;
 
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
+use crate::runtime_sequences::RuntimeSequenceState;
 use crate::thread_state::StoredThread;
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,5 @@ pub struct RuntimeContext {
   pub(crate) pending_approvals: HashMap<String, PendingApproval>,
   pub(crate) active_turns: HashMap<String, ActiveTurn>,
   pub(crate) enforce_model_readiness: bool,
-  pub(crate) next_thread_number: usize,
-  pub(crate) next_approval_number: usize,
+  pub(crate) sequences: RuntimeSequenceState,
 }

@@ -10,6 +10,7 @@ use super::approval_state::stored_approval_record;
 use super::approval_types::PendingApproval;
 use super::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use super::runtime_context::RuntimeContext;
+use super::runtime_sequences::RuntimeSequenceState;
 use super::thread_state::StoredThread;
 
 impl RuntimeContext {
@@ -69,8 +70,7 @@ impl RuntimeContext {
         .collect(),
       active_turns: HashMap::new(),
       enforce_model_readiness: true,
-      next_thread_number,
-      next_approval_number,
+      sequences: RuntimeSequenceState::new(next_thread_number, next_approval_number),
     })
   }
 
@@ -92,8 +92,7 @@ impl RuntimeContext {
       pending_approvals: HashMap::new(),
       active_turns: HashMap::new(),
       enforce_model_readiness: false,
-      next_thread_number: 1,
-      next_approval_number: 1,
+      sequences: RuntimeSequenceState::new(1, 1),
     }
   }
 
