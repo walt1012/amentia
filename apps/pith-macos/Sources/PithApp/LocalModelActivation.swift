@@ -8,6 +8,45 @@ struct LocalModelActivationPlan {
   let relaunchIdleDetail: String
 }
 
+struct PreparedLocalModelActivation {
+  let manifestPath: String
+}
+
+enum LocalModelActivationPreparationError: LocalizedError {
+  case integrityCheckFailed(Error)
+  case manifestWriteFailed(Error)
+
+  var errorDescription: String? {
+    switch self {
+    case .integrityCheckFailed(let error), .manifestWriteFailed(let error):
+      return error.localizedDescription
+    }
+  }
+}
+
+enum LocalModelActivationPreparer {
+  static func prepare(model: LocalModelSummary) throws -> PreparedLocalModelActivation {
+    try validateDownloadedModel(model)
+    return PreparedLocalModelActivation(manifestPath: try writeManifest(for: model))
+  }
+
+  static func validateDownloadedModel(_ model: LocalModelSummary) throws {
+    do {
+      try LocalModelCatalog.validateDownloadedModel(model)
+    } catch {
+      throw LocalModelActivationPreparationError.integrityCheckFailed(error)
+    }
+  }
+
+  static func writeManifest(for model: LocalModelSummary) throws -> String {
+    do {
+      return try LocalModelCatalog.writePackManifest(for: model)
+    } catch {
+      throw LocalModelActivationPreparationError.manifestWriteFailed(error)
+    }
+  }
+}
+
 enum LocalModelActivationPlanner {
   static func selectionPlan(model: LocalModelSummary, manifestPath: String) -> LocalModelActivationPlan {
     LocalModelActivationPlan(

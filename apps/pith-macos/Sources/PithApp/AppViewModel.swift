@@ -1758,7 +1758,7 @@ final class AppViewModel: ObservableObject {
           to: URL(fileURLWithPath: model.installPath)
         )
         do {
-          try LocalModelCatalog.validateDownloadedModel(model)
+          try LocalModelActivationPreparer.validateDownloadedModel(model)
         } catch {
           removeIncompleteModelFile(modelID: model.id)
           throw error
@@ -1767,7 +1767,7 @@ final class AppViewModel: ObservableObject {
         let canActivateDownloadedModel = !hasActiveOrPendingTurn()
         let manifestPath: String?
         if shouldActivateAfterDownload && canActivateDownloadedModel {
-          let modelManifestPath = try LocalModelCatalog.writePackManifest(for: model)
+          let modelManifestPath = try LocalModelActivationPreparer.writeManifest(for: model)
           runtimeBridge.configureActiveLocalModel(
             manifestPath: modelManifestPath,
             modelPath: model.installPath
@@ -1811,25 +1811,25 @@ final class AppViewModel: ObservableObject {
     }
 
     do {
-      try LocalModelCatalog.validateDownloadedModel(model)
-    } catch {
-      removeIncompleteModelFile(modelID: model.id)
-      refreshLocalModelCatalog()
-      runtimeDetail = "Model integrity check failed: \(error.localizedDescription)"
-      return
-    }
-
-    do {
-      let manifestPath = try LocalModelCatalog.writePackManifest(for: model)
+      let preparedActivation = try LocalModelActivationPreparer.prepare(model: model)
       runtimeBridge.configureActiveLocalModel(
-        manifestPath: manifestPath,
+        manifestPath: preparedActivation.manifestPath,
         modelPath: model.installPath
       )
       selectedSetupModelID = model.id
       refreshLocalModelCatalog()
       applyLocalModelActivationPlan(
-        LocalModelActivationPlanner.selectionPlan(model: model, manifestPath: manifestPath)
+        LocalModelActivationPlanner.selectionPlan(
+          model: model,
+          manifestPath: preparedActivation.manifestPath
+        )
       )
+    } catch LocalModelActivationPreparationError.integrityCheckFailed(let error) {
+      removeIncompleteModelFile(modelID: model.id)
+      refreshLocalModelCatalog()
+      runtimeDetail = "Model integrity check failed: \(error.localizedDescription)"
+    } catch LocalModelActivationPreparationError.manifestWriteFailed(let error) {
+      runtimeDetail = LocalModelActivationPlanner.selectionFailureDetail(error: error)
     } catch {
       runtimeDetail = LocalModelActivationPlanner.selectionFailureDetail(error: error)
     }
