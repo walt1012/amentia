@@ -47,7 +47,10 @@ pub(crate) fn handle_plugin_hook_registry(
   context: &RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  JsonRpcResponse::success(request.id, &build_protocol_hook_registry(&context.plugin_state.catalog))
+  JsonRpcResponse::success(
+    request.id,
+    &build_protocol_hook_registry(&context.plugin_state.catalog),
+  )
 }
 
 pub(crate) fn handle_plugin_list(
@@ -145,9 +148,9 @@ pub(crate) fn handle_plugin_install(
   }
   let installed_plugin =
     match install_plugin_bundle(&source_path, &context.plugin_state.install_root) {
-    Ok(plugin) => plugin,
-    Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
-  };
+      Ok(plugin) => plugin,
+      Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
+    };
 
   if let Err(error) = context.refresh_plugins() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
