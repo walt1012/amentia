@@ -887,9 +887,7 @@ mod tests {
     );
 
     let hook_manifest =
-      super::io::read_hook_manifest(
-        &bundled_root.join("shell-recorder/hooks/shell.recorder.json"),
-      )
+      super::io::read_hook_manifest(&bundled_root.join("shell-recorder/hooks/shell.recorder.json"))
         .expect("parse bundled hook manifest");
     assert_eq!(hook_manifest.event, "shell.completed");
     assert!(!hook_manifest.message_template.trim().is_empty());
