@@ -1,6 +1,7 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
+use pith_protocol::{methods, JsonRpcRequest};
 use pith_storage::RuntimeStore;
 use serde_json::{json, Value};
 use std::env;
