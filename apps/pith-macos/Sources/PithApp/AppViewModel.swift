@@ -677,73 +677,43 @@ final class AppViewModel: ObservableObject {
   }
 
   func modelSetupCalloutActionTitle() -> String? {
-    if modelDownloadID != nil {
-      return "Pause Download"
-    }
-    if pausedModelDownloadID != nil {
-      return "Continue Download"
-    }
-    if canDownloadLocalModel() {
-      return defaultModelDownloadButtonTitle()
-    }
-    if selectedSetupModelDownloadBlockedDetail() != nil {
-      return "Download Blocked"
-    }
-    if canBootstrapModelPackMetadata() {
-      return "Install Metadata"
-    }
-
-    return nil
+    let snapshot = localModelActionSnapshot()
+    return LocalModelActionPlanner.primaryTitle(
+      for: LocalModelActionPlanner.setupPrimaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func canRunModelSetupCalloutAction() -> Bool {
-    if modelDownloadID != nil {
-      return canPauseModelDownload()
-    }
-    if let pausedModelDownloadID {
-      return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
-    }
-    if selectedSetupModelDownloadBlockedDetail() != nil {
-      return false
-    }
-
-    return canDownloadLocalModel() || canBootstrapModelPackMetadata()
+    let snapshot = localModelActionSnapshot()
+    return LocalModelActionPlanner.canRun(
+      LocalModelActionPlanner.setupPrimaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runModelSetupCalloutAction() {
-    guard canRunModelSetupCalloutAction() else {
+    let snapshot = localModelActionSnapshot()
+    let action = LocalModelActionPlanner.setupPrimaryAction(snapshot)
+    guard LocalModelActionPlanner.canRun(action, snapshot: snapshot) else {
       return
     }
 
-    if modelDownloadID != nil {
-      pauseModelDownload()
-      return
-    }
-    if let pausedModelDownloadID,
-       canDownloadRecommendedModel(modelID: pausedModelDownloadID)
-    {
-      downloadRecommendedModel(modelID: pausedModelDownloadID, activateAfterDownload: !isLocalModelReady())
-      return
-    }
-    if canDownloadLocalModel() {
-      downloadLocalModel()
-      return
-    }
-    if canBootstrapModelPackMetadata() {
-      bootstrapModelPackMetadata()
-    }
+    runLocalModelPrimaryAction(action)
   }
 
   func modelSetupCalloutSecondaryActionTitle() -> String? {
-    guard modelDownloadID != nil || pausedModelDownloadID != nil else {
-      return nil
-    }
-
-    return "Cancel Download"
+    LocalModelActionPlanner.secondaryTitle(
+      for: LocalModelActionPlanner.setupSecondaryAction(localModelActionSnapshot())
+    )
   }
 
   func canRunModelSetupCalloutSecondaryAction() -> Bool {
-    canCancelModelDownload()
+    let snapshot = localModelActionSnapshot()
+    return LocalModelActionPlanner.canRun(
+      LocalModelActionPlanner.setupSecondaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runModelSetupCalloutSecondaryAction() {
@@ -1582,82 +1552,43 @@ final class AppViewModel: ObservableObject {
   }
 
   func localModelPrimaryActionTitle() -> String? {
-    guard runtimeState == .ready else {
-      return nil
-    }
-    if modelDownloadID != nil {
-      return "Pause Download"
-    }
-    if pausedModelDownloadID != nil {
-      return "Continue Download"
-    }
-    if !isLocalModelReady() {
-      if canDownloadLocalModel() {
-        return defaultModelDownloadButtonTitle()
-      }
-      if selectedSetupModelDownloadBlockedDetail() != nil {
-        return "Download Blocked"
-      }
-      if canBootstrapModelPackMetadata() {
-        return "Install Metadata"
-      }
-    }
-
-    return nil
+    let snapshot = localModelActionSnapshot()
+    return LocalModelActionPlanner.primaryTitle(
+      for: LocalModelActionPlanner.managerPrimaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func canRunLocalModelPrimaryAction() -> Bool {
-    guard runtimeState == .ready else {
-      return false
-    }
-    if modelDownloadID != nil {
-      return canPauseModelDownload()
-    }
-    if let pausedModelDownloadID {
-      return canDownloadRecommendedModel(modelID: pausedModelDownloadID)
-    }
-    if selectedSetupModelDownloadBlockedDetail() != nil {
-      return false
-    }
-    if !isLocalModelReady() {
-      return canDownloadLocalModel() || canBootstrapModelPackMetadata()
-    }
-
-    return false
+    let snapshot = localModelActionSnapshot()
+    return LocalModelActionPlanner.canRun(
+      LocalModelActionPlanner.managerPrimaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runLocalModelPrimaryAction() {
-    guard canRunLocalModelPrimaryAction() else {
+    let snapshot = localModelActionSnapshot()
+    let action = LocalModelActionPlanner.managerPrimaryAction(snapshot)
+    guard LocalModelActionPlanner.canRun(action, snapshot: snapshot) else {
       return
     }
 
-    if modelDownloadID != nil {
-      pauseModelDownload()
-      return
-    }
-    if let pausedModelDownloadID,
-       canDownloadRecommendedModel(modelID: pausedModelDownloadID)
-    {
-      downloadRecommendedModel(modelID: pausedModelDownloadID, activateAfterDownload: !isLocalModelReady())
-      return
-    }
-    if !isLocalModelReady() {
-      if canDownloadLocalModel() {
-        downloadLocalModel()
-        return
-      }
-      if canBootstrapModelPackMetadata() {
-        bootstrapModelPackMetadata()
-      }
-    }
+    runLocalModelPrimaryAction(action)
   }
 
   func localModelSecondaryActionTitle() -> String? {
-    canCancelModelDownload() ? "Cancel Download" : nil
+    LocalModelActionPlanner.secondaryTitle(
+      for: LocalModelActionPlanner.managerSecondaryAction(localModelActionSnapshot())
+    )
   }
 
   func canRunLocalModelSecondaryAction() -> Bool {
-    canCancelModelDownload()
+    let snapshot = localModelActionSnapshot()
+    return LocalModelActionPlanner.canRun(
+      LocalModelActionPlanner.managerSecondaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runLocalModelSecondaryAction() {
@@ -2748,6 +2679,45 @@ final class AppViewModel: ObservableObject {
       activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,
       downloadedLocalSizeBytes: downloadedLocalSize
     )
+  }
+
+  private func localModelActionSnapshot() -> LocalModelActionSnapshot {
+    let canDownloadPausedModel = pausedModelDownloadID
+      .map { canDownloadRecommendedModel(modelID: $0) }
+      ?? false
+
+    return LocalModelActionSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasModelDownload: modelDownloadID != nil,
+      pausedModelDownloadID: pausedModelDownloadID,
+      selectedDownloadBlockedDetail: selectedSetupModelDownloadBlockedDetail(),
+      canPauseDownload: canPauseModelDownload(),
+      canDownloadPausedModel: canDownloadPausedModel,
+      canDownloadSelectedModel: canDownloadLocalModel(),
+      canBootstrapModelPackMetadata: canBootstrapModelPackMetadata(),
+      canCancelDownload: canCancelModelDownload(),
+      defaultDownloadTitle: defaultModelDownloadButtonTitle()
+    )
+  }
+
+  private func runLocalModelPrimaryAction(_ action: LocalModelPrimaryAction?) {
+    guard let action else {
+      return
+    }
+
+    switch action {
+    case .pauseDownload:
+      pauseModelDownload()
+    case .continueDownload(let modelID):
+      downloadRecommendedModel(modelID: modelID, activateAfterDownload: !isLocalModelReady())
+    case .downloadSelectedModel:
+      downloadLocalModel()
+    case .blockedDownload:
+      break
+    case .bootstrapModelPackMetadata:
+      bootstrapModelPackMetadata()
+    }
   }
 
   private func localModelDownloadRequestPlan(
