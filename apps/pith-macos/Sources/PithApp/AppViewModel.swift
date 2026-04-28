@@ -1348,20 +1348,13 @@ final class AppViewModel: ObservableObject {
   }
 
   func saveWorkspaceMemoryNote() {
-    let title = memoryNoteTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-    let body = memoryNoteBody.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard runtimeState == .ready,
-          workspace != nil,
-          !title.isEmpty,
-          !body.isEmpty
-    else {
+    guard let draft = MemoryActionPlanner.preparedDraft(memoryActionSnapshot()) else {
       return
     }
 
     Task {
       do {
-        let note = try await runtimeBridge.createMemoryNote(title: title, body: body)
+        let note = try await runtimeBridge.createMemoryNote(title: draft.title, body: draft.body)
         memoryNoteTitle = ""
         memoryNoteBody = ""
         await refreshMemoryState()
@@ -2066,10 +2059,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canSaveWorkspaceMemoryNote() -> Bool {
-    runtimeState == .ready
-      && workspace != nil
-      && !memoryNoteTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      && !memoryNoteBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    MemoryActionPlanner.canSave(memoryActionSnapshot())
   }
 
   func isLocalModelReady() -> Bool {
@@ -2977,15 +2967,23 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshMemoryState() async {
-    let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
-    let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
+    let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
 
-    if let runtimeMemoryStatus {
-      memoryStatus = RuntimeSummaryMapper.memoryStatusSummary(from: runtimeMemoryStatus)
+    if let status = memoryRefresh.status {
+      memoryStatus = status
     }
-    if let runtimeMemoryNotes {
-      memoryNotes = runtimeMemoryNotes.map { RuntimeSummaryMapper.memoryNoteSummary(from: $0) }
+    if let notes = memoryRefresh.notes {
+      memoryNotes = notes
     }
+  }
+
+  private func memoryActionSnapshot() -> MemoryActionSnapshot {
+    MemoryActionSnapshot(
+      runtimeState: runtimeState,
+      hasWorkspace: workspace != nil,
+      title: memoryNoteTitle,
+      body: memoryNoteBody
+    )
   }
 
   private func refreshPluginState() async {
