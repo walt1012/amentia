@@ -7,8 +7,8 @@ use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
 use pith_storage::{FileThreadStore, StoredThreadRecord};
 
 use super::approval_state::stored_approval_record;
-use super::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use super::approval_types::PendingApproval;
+use super::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use super::runtime_context::RuntimeContext;
 use super::thread_state::StoredThread;
 

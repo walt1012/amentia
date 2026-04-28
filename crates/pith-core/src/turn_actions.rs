@@ -5,6 +5,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::{generate_diff, list_directory, read_file, search_files, shell_sandbox_summary};
 
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
+use crate::approval_types::PendingApproval;
 use crate::intent_inference::{
   self, infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
 };
@@ -14,7 +15,6 @@ use crate::local_responses::{
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
-use crate::approval_types::PendingApproval;
 use crate::runtime_context::RuntimeContext;
 
 pub(crate) fn prepare_turn_action(

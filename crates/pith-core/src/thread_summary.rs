@@ -3,8 +3,8 @@ use pith_protocol::{ApprovalRequest, WorkspaceSummary};
 
 use crate::approval_state::approvals_for_thread;
 use crate::runtime_context::RuntimeContext;
-use crate::thread_state::StoredThread;
 use crate::text_utils::truncate_text;
+use crate::thread_state::StoredThread;
 
 pub(crate) fn refresh_thread_summary_note(
   context: &mut RuntimeContext,
