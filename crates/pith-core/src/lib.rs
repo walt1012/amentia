@@ -25,12 +25,12 @@ use pith_protocol::{
   InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
   MemoryCreateParams, MemoryCreateResult, MemoryListResult, PluginInstallParams,
   PluginInstallResult, PluginListResult, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSetEnabledResult, ServerCapabilities, ServerInfo,
-  ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams,
-  ThreadStartResult, ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem,
-  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSearchMatch, WorkspaceSearchParams,
-  WorkspaceSearchResult, WorkspaceSummary,
+  PluginSetEnabledParams, PluginSetEnabledResult, ServerCapabilities, ServerInfo, ThreadListResult,
+  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSearchMatch, WorkspaceSearchParams, WorkspaceSearchResult,
+  WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord};
 use pith_tools::{
