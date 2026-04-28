@@ -2553,14 +2553,19 @@ final class AppViewModel: ObservableObject {
   }
 
   private func relaunchRuntimeIfNeeded(runningDetail: String, idleDetail: String) {
-    switch runtimeState {
-    case .ready:
-      runtimeDetail = runningDetail
-      runtimeBridge.stopRuntime(detail: runningDetail)
-      launchRuntime(launchDetail: runningDetail)
-    case .launching:
-      runtimeDetail = runningDetail
-      runtimeBridge.stopRuntime(detail: runningDetail)
+    let plan = RuntimeRelaunchPlanner.plan(
+      runtimeState: runtimeState,
+      runningDetail: runningDetail,
+      idleDetail: idleDetail
+    )
+    runtimeDetail = plan.runtimeDetail
+
+    switch plan.action {
+    case .stopAndLaunch:
+      runtimeBridge.stopRuntime(detail: plan.stopDetail ?? runningDetail)
+      launchRuntime(launchDetail: plan.launchDetail ?? runningDetail)
+    case .stopAndLaunchAfterCurrentLaunchSettles:
+      runtimeBridge.stopRuntime(detail: plan.stopDetail ?? runningDetail)
       Task {
         for _ in 0..<10 {
           if runtimeState != .launching {
@@ -2569,13 +2574,13 @@ final class AppViewModel: ObservableObject {
           try? await Task.sleep(nanoseconds: 200_000_000)
         }
         if runtimeState == .launching {
-          runtimeDetail = "Runtime is still launching. Relaunch it after model setup finishes."
+          runtimeDetail = plan.launchTimeoutDetail ?? idleDetail
           return
         }
-        launchRuntime(launchDetail: runningDetail)
+        launchRuntime(launchDetail: plan.launchDetail ?? runningDetail)
       }
-    case .disconnected, .failed:
-      runtimeDetail = idleDetail
+    case .updateIdleDetail:
+      break
     }
   }
 
