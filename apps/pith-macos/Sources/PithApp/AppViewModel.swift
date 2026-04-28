@@ -1526,14 +1526,11 @@ final class AppViewModel: ObservableObject {
           manifestPath: preparedActivation.manifestPath
         )
       )
-    } catch LocalModelActivationPreparationError.integrityCheckFailed(let error) {
-      removeIncompleteModelFile(modelID: model.id)
-      refreshLocalModelCatalog()
-      runtimeDetail = "Model integrity check failed: \(error.localizedDescription)"
-    } catch LocalModelActivationPreparationError.manifestWriteFailed(let error) {
-      runtimeDetail = LocalModelActivationPlanner.selectionFailureDetail(error: error)
     } catch {
-      runtimeDetail = LocalModelActivationPlanner.selectionFailureDetail(error: error)
+      applyLocalModelActivationFailure(
+        LocalModelActivationPlanner.failurePlan(error: error),
+        model: model
+      )
     }
   }
 
@@ -2567,6 +2564,19 @@ final class AppViewModel: ObservableObject {
       runningDetail: plan.relaunchRunningDetail,
       idleDetail: plan.relaunchIdleDetail
     )
+  }
+
+  private func applyLocalModelActivationFailure(
+    _ plan: LocalModelActivationFailurePlan,
+    model: LocalModelSummary
+  ) {
+    if plan.removesModelFile {
+      removeIncompleteModelFile(modelID: model.id)
+    }
+    if plan.refreshesCatalog {
+      refreshLocalModelCatalog()
+    }
+    runtimeDetail = plan.runtimeDetail
   }
 
   private func relaunchRuntimeIfNeeded(runningDetail: String, idleDetail: String) {

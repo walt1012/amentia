@@ -8,6 +8,12 @@ struct LocalModelActivationPlan {
   let relaunchIdleDetail: String
 }
 
+struct LocalModelActivationFailurePlan {
+  let runtimeDetail: String
+  let removesModelFile: Bool
+  let refreshesCatalog: Bool
+}
+
 struct PreparedLocalModelActivation {
   let manifestPath: String
 }
@@ -77,5 +83,30 @@ enum LocalModelActivationPlanner {
 
   static func selectionFailureDetail(error: Error) -> String {
     "Model selection failed: \(error.localizedDescription)"
+  }
+
+  static func failurePlan(error: Error) -> LocalModelActivationFailurePlan {
+    if let activationError = error as? LocalModelActivationPreparationError {
+      switch activationError {
+      case .integrityCheckFailed(let underlyingError):
+        return LocalModelActivationFailurePlan(
+          runtimeDetail: "Model integrity check failed: \(underlyingError.localizedDescription)",
+          removesModelFile: true,
+          refreshesCatalog: true
+        )
+      case .manifestWriteFailed(let underlyingError):
+        return LocalModelActivationFailurePlan(
+          runtimeDetail: selectionFailureDetail(error: underlyingError),
+          removesModelFile: false,
+          refreshesCatalog: false
+        )
+      }
+    }
+
+    return LocalModelActivationFailurePlan(
+      runtimeDetail: selectionFailureDetail(error: error),
+      removesModelFile: false,
+      refreshesCatalog: false
+    )
   }
 }
