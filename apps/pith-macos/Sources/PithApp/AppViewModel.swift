@@ -2315,32 +2315,21 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshModelHealthState(serverLabel: String? = nil) async {
-    let runtimeModel = try? await runtimeBridge.modelHealth()
-    if let runtimeModel {
-      modelHealth = RuntimeSummaryMapper.modelHealthSummary(from: runtimeModel)
-      if let serverLabel {
-        runtimeDetail = "\(serverLabel) | \(runtimeModel.displayName)"
-      }
-      refreshLocalModelCatalog()
-    } else {
-      modelHealth = nil
-      refreshLocalModelCatalog()
-      if let serverLabel {
-        runtimeDetail = serverLabel
-      }
+    let modelRefresh = await RuntimeStateLoader.refreshModelHealth(
+      using: runtimeBridge,
+      serverLabel: serverLabel
+    )
+    modelHealth = modelRefresh.modelHealth
+    if let runtimeDetail = modelRefresh.runtimeDetail {
+      self.runtimeDetail = runtimeDetail
     }
+    refreshLocalModelCatalog()
     await refreshRuntimeReadiness()
     announceFirstRequestReadyIfNeeded()
   }
 
   private func refreshRuntimeReadiness() async {
-    let readiness = try? await runtimeBridge.runtimeReadiness()
-    guard let readiness else {
-      runtimeReadiness = nil
-      return
-    }
-
-    runtimeReadiness = RuntimeSummaryMapper.readinessSummary(from: readiness)
+    runtimeReadiness = await RuntimeStateLoader.refreshRuntimeReadiness(using: runtimeBridge)
   }
 
   private func refreshLocalModelCatalog() {
