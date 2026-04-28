@@ -12,9 +12,7 @@ use crate::local_responses::{
   build_plan_item, format_directory_result, format_file_result, format_search_result,
   summarize_directory_result, summarize_file_result, summarize_search_result,
 };
-use crate::plugin_permissions::{
-  build_permission_denied_items, permission_is_granted,
-};
+use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::runtime_context::{
   PendingApproval, PreparedTurnAction, PreparedTurnSnapshot, RuntimeContext,
   TurnStartExecutionOutput,
