@@ -3,75 +3,35 @@ pub use request_state::{
 };
 pub use runtime_context::RuntimeContext;
 
-mod turn {
-  pub(crate) mod active_turns;
-  pub(crate) mod approval_state;
-  pub(crate) mod approval_types;
-  pub(crate) mod turn_actions;
-  pub(crate) mod turn_streaming;
-}
+mod turn;
 pub(crate) use turn::{active_turns, approval_state, approval_types, turn_actions, turn_streaming};
 
-mod threads {
-  pub(crate) mod thread_state;
-  pub(crate) mod thread_summary;
-}
+mod threads;
 pub(crate) use threads::{thread_state, thread_summary};
 
-mod context {
-  pub(crate) mod context_compaction;
-  pub(crate) mod context_state;
-  pub(crate) mod intent_inference;
-  pub(crate) mod local_responses;
-}
+mod context;
 pub(crate) use context::{context_compaction, intent_inference, local_responses};
 
-mod plugins {
-  pub(crate) mod plugin_catalog_state;
-  pub(crate) mod plugin_commands;
-  pub(crate) mod plugin_hooks;
-  pub(crate) mod plugin_permissions;
-  pub(crate) mod plugin_requests;
-}
+mod plugins;
 pub(crate) use plugins::{
   plugin_catalog_state, plugin_commands, plugin_hooks, plugin_permissions, plugin_requests,
 };
 
-mod requests {
-  pub(crate) mod approval_requests;
-  pub(crate) mod memory_requests;
-  pub(crate) mod model_requests;
-  pub(crate) mod request_dispatch;
-  pub(crate) mod request_params;
-  pub(crate) mod request_state;
-  pub(crate) mod server_requests;
-  pub(crate) mod thread_requests;
-  pub(crate) mod turn_requests;
-  pub(crate) mod workspace_requests;
-}
+mod requests;
 pub(crate) use requests::{
   approval_requests, memory_requests, model_requests, request_dispatch, request_params,
   request_state, server_requests, thread_requests, turn_requests, workspace_requests,
 };
 
-mod runtime {
-  pub(crate) mod protocol_adapters;
-  pub(crate) mod runtime_context;
-  pub(crate) mod runtime_readiness;
-  pub(crate) mod runtime_sequences;
-}
+mod runtime;
 pub(crate) use runtime::{
   protocol_adapters, runtime_context, runtime_readiness, runtime_sequences,
 };
 
-mod support {
-  pub(crate) mod text_utils;
-}
+mod support;
 pub(crate) use support::text_utils;
 
-mod workspace {
-  pub(crate) mod workspace_search;
-}
+mod workspace;
 pub(crate) use workspace::workspace_search;
 
 pub use approval_requests::{
