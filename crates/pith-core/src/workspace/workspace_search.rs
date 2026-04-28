@@ -23,7 +23,7 @@ pub struct CompletedWorkspaceSearch {
   output: std::result::Result<WorkspaceSearchResult, (i32, String)>,
 }
 
-pub(super) fn handle_workspace_search(
+pub(crate) fn handle_workspace_search(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {

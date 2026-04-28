@@ -60,7 +60,7 @@ struct GitCommandOutput {
   timed_out: bool,
 }
 
-pub(super) fn handle_plugin_command_run(
+pub(crate) fn handle_plugin_command_run(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {

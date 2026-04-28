@@ -96,7 +96,7 @@ impl RuntimeContext {
     }
   }
 
-  pub(super) fn persist_threads(&self) -> Result<()> {
+  pub(crate) fn persist_threads(&self) -> Result<()> {
     let Some(store) = &self.store else {
       return Ok(());
     };
@@ -130,7 +130,7 @@ impl RuntimeContext {
     store.save_pending_approvals(&approvals)
   }
 
-  pub(super) fn persist_runtime_state(&self) -> Result<()> {
+  pub(crate) fn persist_runtime_state(&self) -> Result<()> {
     self.persist_threads()?;
     self.persist_pending_approvals()
   }
@@ -143,7 +143,7 @@ impl RuntimeContext {
     store.save_memory_note(note)
   }
 
-  pub(super) fn persist_workspace(&self) -> Result<()> {
+  pub(crate) fn persist_workspace(&self) -> Result<()> {
     let Some(store) = &self.store else {
       return Ok(());
     };
@@ -154,7 +154,7 @@ impl RuntimeContext {
     store.save_workspace(workspace)
   }
 
-  pub(super) fn persist_resolved_approval(
+  pub(crate) fn persist_resolved_approval(
     &self,
     approval: &PendingApproval,
     decision: &str,
@@ -166,7 +166,7 @@ impl RuntimeContext {
     store.resolve_approval(&stored_approval_record(approval.clone()), decision)
   }
 
-  pub(super) fn remember(&mut self, event: MemoryEvent) -> Result<MemoryNote> {
+  pub(crate) fn remember(&mut self, event: MemoryEvent) -> Result<MemoryNote> {
     let note = self
       .memory_manager
       .record_event(&mut self.memory_notes, event);
@@ -190,7 +190,7 @@ impl RuntimeContext {
     Ok(note)
   }
 
-  pub(super) fn upsert_memory_note(
+  pub(crate) fn upsert_memory_note(
     &mut self,
     id: String,
     title: String,
@@ -207,7 +207,7 @@ impl RuntimeContext {
     Ok(note)
   }
 
-  pub(super) fn persist_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
+  pub(crate) fn persist_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
     let Some(store) = &self.store else {
       return Ok(());
     };
@@ -215,7 +215,7 @@ impl RuntimeContext {
     store.save_plugin_enabled(plugin_id, enabled)
   }
 
-  pub(super) fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
+  pub(crate) fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
     let Some(store) = &self.store else {
       return Ok(());
     };
@@ -231,7 +231,7 @@ impl RuntimeContext {
     store.load_plugin_states()
   }
 
-  pub(super) fn refresh_plugins(&mut self) -> Result<()> {
+  pub(crate) fn refresh_plugins(&mut self) -> Result<()> {
     let plugin_states = self.persisted_plugin_states()?;
     self.plugins = apply_plugin_states(load_plugin_catalog(&self.plugin_roots)?, &plugin_states);
     Ok(())
