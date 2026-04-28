@@ -29,8 +29,7 @@ use pith_protocol::{
   ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
   ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
   TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSearchMatch, WorkspaceSearchParams, WorkspaceSearchResult,
-  WorkspaceSummary,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use pith_storage::{FileThreadStore, StoredApprovalRecord};
 use pith_tools::{
@@ -66,8 +65,10 @@ mod protocol_adapters;
 mod request_params;
 mod runtime_readiness;
 mod text_utils;
+mod workspace_search;
 
 pub use plugin_commands::{CompletedPluginCommandRun, PreparedPluginCommandRun};
+pub use workspace_search::{CompletedWorkspaceSearch, PreparedWorkspaceSearch};
 
 #[derive(Debug, Clone)]
 struct StoredThread {
@@ -268,7 +269,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       },
     ),
     methods::WORKSPACE_OPEN => handle_workspace_open(context, request),
-    methods::WORKSPACE_SEARCH => handle_workspace_search(context, request),
+    methods::WORKSPACE_SEARCH => workspace_search::handle_workspace_search(context, request),
     methods::TURN_CANCEL => handle_turn_cancel(context, request),
     methods::THREAD_READ => handle_thread_read(context, request),
     methods::THREAD_START => handle_thread_start(context, request),
@@ -604,44 +605,6 @@ fn handle_thread_read(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       items: thread.items.clone(),
       pending_approvals: approvals_for_thread(context, &thread.summary.id),
       active_turn_id: active_turn_id_for_thread(&context.active_turns, &thread.summary.id),
-    },
-  )
-}
-
-fn handle_workspace_search(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> JsonRpcResponse {
-  let params = match parse_required_params::<WorkspaceSearchParams>(&request, "workspace/search") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let Some(workspace) = context.workspace.clone() else {
-    return JsonRpcResponse::error(request.id, -32040, "Open a workspace before searching");
-  };
-
-  let max_results = params.max_results.unwrap_or(24).clamp(1, 100);
-  let matches = match search_files(Path::new(&workspace.root_path), &params.query, max_results) {
-    Ok(matches) => matches
-      .into_iter()
-      .map(|entry| WorkspaceSearchMatch {
-        relative_path: entry.relative_path,
-        line_number: entry.line_number,
-        line: entry.line,
-      })
-      .collect::<Vec<_>>(),
-    Err(error) => {
-      return JsonRpcResponse::error(request.id, -32041, error.to_string());
-    }
-  };
-
-  JsonRpcResponse::success(
-    request.id,
-    &WorkspaceSearchResult {
-      query: params.query,
-      workspace,
-      matches,
     },
   )
 }
@@ -1505,6 +1468,25 @@ pub fn execute_prepared_approval_respond(
     request_id: prepared.request_id,
     output: execute_approval_snapshot(prepared.snapshot),
   }
+}
+
+pub fn prepare_workspace_search(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> std::result::Result<PreparedWorkspaceSearch, JsonRpcResponse> {
+  workspace_search::prepare_workspace_search(context, request)
+}
+
+pub fn execute_prepared_workspace_search(
+  prepared: PreparedWorkspaceSearch,
+) -> CompletedWorkspaceSearch {
+  workspace_search::execute_prepared_workspace_search(prepared)
+}
+
+pub fn complete_prepared_workspace_search(
+  completed: CompletedWorkspaceSearch,
+) -> JsonRpcResponse {
+  workspace_search::complete_prepared_workspace_search(completed)
 }
 
 pub fn prepare_plugin_command_run(

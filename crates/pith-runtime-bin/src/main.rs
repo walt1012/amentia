@@ -9,9 +9,11 @@ use std::time::Duration;
 use anyhow::Result;
 use pith_core::{
   collect_notifications, complete_prepared_approval_respond, complete_prepared_plugin_command_run,
-  complete_prepared_turn_start, execute_prepared_approval_respond,
-  execute_prepared_plugin_command_run, execute_prepared_turn_start, handle_request,
-  prepare_approval_respond, prepare_plugin_command_run, prepare_turn_start, RuntimeContext,
+  complete_prepared_turn_start, complete_prepared_workspace_search,
+  execute_prepared_approval_respond, execute_prepared_plugin_command_run,
+  execute_prepared_turn_start, execute_prepared_workspace_search, handle_request,
+  prepare_approval_respond, prepare_plugin_command_run, prepare_turn_start,
+  prepare_workspace_search, RuntimeContext,
 };
 use pith_protocol::{methods, JsonRpcRequest, JsonRpcResponse};
 
@@ -46,31 +48,53 @@ fn main() -> Result<()> {
     };
 
     if request.method == methods::TURN_START {
-      request_threads.push(start_turn_request(
+      request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
         Arc::clone(&local_execution_lane),
         request,
+        prepare_turn_start,
+        execute_prepared_turn_start,
+        complete_prepared_turn_start,
       ));
       continue;
     }
 
     if request.method == methods::APPROVAL_RESPOND {
-      request_threads.push(start_approval_request(
+      request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
         Arc::clone(&local_execution_lane),
         request,
+        prepare_approval_respond,
+        execute_prepared_approval_respond,
+        complete_prepared_approval_respond,
       ));
       continue;
     }
 
     if request.method == methods::PLUGIN_COMMAND_RUN {
-      request_threads.push(start_plugin_command_request(
+      request_threads.push(start_prepared_request(
         Arc::clone(&context),
         Arc::clone(&stdout),
         Arc::clone(&local_execution_lane),
         request,
+        prepare_plugin_command_run,
+        execute_prepared_plugin_command_run,
+        complete_prepared_plugin_command_run,
+      ));
+      continue;
+    }
+
+    if request.method == methods::WORKSPACE_SEARCH {
+      request_threads.push(start_prepared_request(
+        Arc::clone(&context),
+        Arc::clone(&stdout),
+        Arc::clone(&local_execution_lane),
+        request,
+        prepare_workspace_search,
+        execute_prepared_workspace_search,
+        |_context, completed| complete_prepared_workspace_search(completed),
       ));
       continue;
     }
@@ -92,16 +116,29 @@ fn main() -> Result<()> {
   Ok(())
 }
 
-fn start_turn_request(
+fn start_prepared_request<Prepared, Completed, Prepare, Execute, Complete>(
   context: Arc<Mutex<RuntimeContext>>,
   stdout: Arc<Mutex<io::Stdout>>,
   local_execution_lane: Arc<Mutex<()>>,
   request: JsonRpcRequest,
-) -> thread::JoinHandle<()> {
+  prepare: Prepare,
+  execute: Execute,
+  complete: Complete,
+) -> thread::JoinHandle<()>
+where
+  Prepared: Send + 'static,
+  Completed: Send + 'static,
+  Prepare:
+    FnOnce(&mut RuntimeContext, JsonRpcRequest) -> std::result::Result<Prepared, JsonRpcResponse>
+    + Send
+    + 'static,
+  Execute: FnOnce(Prepared) -> Completed + Send + 'static,
+  Complete: FnOnce(&mut RuntimeContext, Completed) -> JsonRpcResponse + Send + 'static,
+{
   thread::spawn(move || {
     let prepared = {
       let mut locked_context = context.lock().expect("runtime context lock");
-      prepare_turn_start(&mut locked_context, request)
+      prepare(&mut locked_context, request)
     };
 
     let response = match prepared {
@@ -109,65 +146,9 @@ fn start_turn_request(
         let _lane = local_execution_lane
           .lock()
           .expect("local execution lane lock");
-        let completed = execute_prepared_turn_start(prepared);
+        let completed = execute(prepared);
         let mut locked_context = context.lock().expect("runtime context lock");
-        complete_prepared_turn_start(&mut locked_context, completed)
-      }
-      Err(response) => response,
-    };
-
-    let _ = write_json_line(&stdout, &response);
-  })
-}
-
-fn start_approval_request(
-  context: Arc<Mutex<RuntimeContext>>,
-  stdout: Arc<Mutex<io::Stdout>>,
-  local_execution_lane: Arc<Mutex<()>>,
-  request: JsonRpcRequest,
-) -> thread::JoinHandle<()> {
-  thread::spawn(move || {
-    let prepared = {
-      let mut locked_context = context.lock().expect("runtime context lock");
-      prepare_approval_respond(&mut locked_context, request)
-    };
-
-    let response = match prepared {
-      Ok(prepared) => {
-        let _lane = local_execution_lane
-          .lock()
-          .expect("local execution lane lock");
-        let completed = execute_prepared_approval_respond(prepared);
-        let mut locked_context = context.lock().expect("runtime context lock");
-        complete_prepared_approval_respond(&mut locked_context, completed)
-      }
-      Err(response) => response,
-    };
-
-    let _ = write_json_line(&stdout, &response);
-  })
-}
-
-fn start_plugin_command_request(
-  context: Arc<Mutex<RuntimeContext>>,
-  stdout: Arc<Mutex<io::Stdout>>,
-  local_execution_lane: Arc<Mutex<()>>,
-  request: JsonRpcRequest,
-) -> thread::JoinHandle<()> {
-  thread::spawn(move || {
-    let prepared = {
-      let mut locked_context = context.lock().expect("runtime context lock");
-      prepare_plugin_command_run(&mut locked_context, request)
-    };
-
-    let response = match prepared {
-      Ok(prepared) => {
-        let _lane = local_execution_lane
-          .lock()
-          .expect("local execution lane lock");
-        let completed = execute_prepared_plugin_command_run(prepared);
-        let mut locked_context = context.lock().expect("runtime context lock");
-        complete_prepared_plugin_command_run(&mut locked_context, completed)
+        complete(&mut locked_context, completed)
       }
       Err(response) => response,
     };
