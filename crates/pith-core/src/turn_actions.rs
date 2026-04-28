@@ -14,7 +14,8 @@ use crate::local_responses::{
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
-use crate::runtime_context::{PendingApproval, RuntimeContext};
+use crate::approval_types::PendingApproval;
+use crate::runtime_context::RuntimeContext;
 
 pub(crate) fn prepare_turn_action(
   context: &mut RuntimeContext,

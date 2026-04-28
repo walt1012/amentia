@@ -4,29 +4,12 @@ use std::path::PathBuf;
 use pith_memory::{MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::PluginCatalogEntry;
-use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+use pith_protocol::WorkspaceSummary;
 use pith_storage::FileThreadStore;
 
 use crate::active_turns::ActiveTurn;
-
-#[derive(Debug, Clone)]
-pub(crate) struct StoredThread {
-  pub(crate) summary: ThreadSummary,
-  pub(crate) turn_count: usize,
-  pub(crate) items: Vec<TimelineItem>,
-  pub(crate) workspace: Option<WorkspaceSummary>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct PendingApproval {
-  pub(crate) id: String,
-  pub(crate) thread_id: String,
-  pub(crate) action: String,
-  pub(crate) title: String,
-  pub(crate) relative_path: String,
-  pub(crate) content: Option<String>,
-  pub(crate) command: Option<String>,
-}
+use crate::approval_types::PendingApproval;
+use crate::thread_state::StoredThread;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeContext {

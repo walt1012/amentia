@@ -6,7 +6,8 @@ use pith_protocol::{RuntimeReadinessCheck, RuntimeReadinessResult};
 use pith_sandbox::workspace_required_status;
 use pith_tools::{shell_command_timeout_seconds, shell_sandbox_status};
 
-use crate::runtime_context::{RuntimeContext, StoredThread};
+use crate::runtime_context::RuntimeContext;
+use crate::thread_state::StoredThread;
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_runtime.health();

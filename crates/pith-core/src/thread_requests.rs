@@ -6,7 +6,7 @@ use pith_protocol::{
 use crate::active_turns::active_turn_id_for_thread;
 use crate::approval_state::approvals_for_thread;
 use crate::request_params::parse_required_params;
-use crate::runtime_context::StoredThread;
+use crate::thread_state::StoredThread;
 use crate::turn_streaming::refresh_active_turn_for_thread;
 use crate::RuntimeContext;
 

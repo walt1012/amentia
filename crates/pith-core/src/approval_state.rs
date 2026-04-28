@@ -1,7 +1,8 @@
 use pith_protocol::ApprovalRequest;
 use pith_storage::StoredApprovalRecord;
 
-use crate::runtime_context::{PendingApproval, RuntimeContext};
+use crate::approval_types::PendingApproval;
+use crate::runtime_context::RuntimeContext;
 
 pub(crate) fn stored_approval_record(approval: PendingApproval) -> StoredApprovalRecord {
   StoredApprovalRecord {

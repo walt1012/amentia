@@ -8,7 +8,9 @@ use pith_storage::{FileThreadStore, StoredThreadRecord};
 
 use super::approval_state::stored_approval_record;
 use super::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
-use super::runtime_context::{PendingApproval, RuntimeContext, StoredThread};
+use super::approval_types::PendingApproval;
+use super::runtime_context::RuntimeContext;
+use super::thread_state::StoredThread;
 
 impl RuntimeContext {
   pub fn new() -> Result<Self> {

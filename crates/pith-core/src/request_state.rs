@@ -8,7 +8,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use crate::active_turns::ActiveTurn;
 use crate::intent_inference;
 use crate::plugin_hooks::PluginHookMemoryCapture;
-use crate::runtime_context::PendingApproval;
+use crate::approval_types::PendingApproval;
 
 #[derive(Debug)]
 pub struct PreparedTurnStart {
