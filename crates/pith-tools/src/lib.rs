@@ -530,8 +530,12 @@ fn validate_workspace_write_target(workspace_root: &Path, target: &Path) -> Resu
 }
 
 fn validate_workspace_write_parent(workspace_root: &Path, parent: &Path) -> Result<()> {
-  let existing_parent = nearest_existing_ancestor(parent)
-    .with_context(|| format!("failed to locate an existing parent for {}", parent.display()))?;
+  let existing_parent = nearest_existing_ancestor(parent).with_context(|| {
+    format!(
+      "failed to locate an existing parent for {}",
+      parent.display()
+    )
+  })?;
   validate_existing_workspace_path(workspace_root, &existing_parent)
 }
 
@@ -849,7 +853,9 @@ mod tests {
     let error = write_file(&workspace, "linked-target.txt", "inside")
       .expect_err("target symlink should fail");
 
-    assert!(error.to_string().contains("workspace path points to a symlink"));
+    assert!(error
+      .to_string()
+      .contains("workspace path points to a symlink"));
     assert_eq!(
       fs::read_to_string(outside.join("target.txt")).expect("outside file"),
       "outside"
@@ -878,7 +884,9 @@ mod tests {
     let error = generate_diff(&workspace, "linked-target.txt", "inside")
       .expect_err("symlink diff should fail");
 
-    assert!(error.to_string().contains("workspace path points to a symlink"));
+    assert!(error
+      .to_string()
+      .contains("workspace path points to a symlink"));
 
     let _ = fs::remove_dir_all(workspace);
     let _ = fs::remove_dir_all(outside);
