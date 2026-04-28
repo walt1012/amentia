@@ -6,8 +6,9 @@ use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
 use pith_storage::{FileThreadStore, StoredThreadRecord};
 
+use super::approval_state::stored_approval_record;
 use super::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
-use super::{stored_approval_record, PendingApproval, RuntimeContext, StoredThread};
+use super::runtime_context::{PendingApproval, RuntimeContext, StoredThread};
 
 impl RuntimeContext {
   pub fn new() -> Result<Self> {

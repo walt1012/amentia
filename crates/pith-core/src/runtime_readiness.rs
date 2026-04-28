@@ -6,7 +6,7 @@ use pith_protocol::{RuntimeReadinessCheck, RuntimeReadinessResult};
 use pith_sandbox::workspace_required_status;
 use pith_tools::{shell_command_timeout_seconds, shell_sandbox_status};
 
-use crate::RuntimeContext;
+use crate::runtime_context::{RuntimeContext, StoredThread};
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_runtime.health();
@@ -367,7 +367,7 @@ fn has_first_request(context: &RuntimeContext) -> bool {
 
 fn current_workspace_threads(
   context: &RuntimeContext,
-) -> impl Iterator<Item = &crate::StoredThread> + '_ {
+) -> impl Iterator<Item = &StoredThread> + '_ {
   context.threads.iter().filter(move |thread| {
     let Some(workspace) = &context.workspace else {
       return false;

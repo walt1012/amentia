@@ -7,6 +7,7 @@ use pith_protocol::{
 };
 use pith_tools::{run_shell, write_file};
 
+use crate::approval_state::approvals_for_thread;
 use crate::local_responses::{
   format_shell_result, summarize_denied_approval, summarize_shell_result,
 };
@@ -19,7 +20,7 @@ use crate::runtime_context::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
   PreparedApprovalSnapshot, RuntimeContext,
 };
-use crate::{approvals_for_thread, refresh_thread_summary_note};
+use crate::thread_summary::refresh_thread_summary_note;
 
 pub(crate) fn handle_approval_respond(
   context: &mut RuntimeContext,

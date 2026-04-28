@@ -4,8 +4,10 @@ use pith_protocol::{
 };
 
 use crate::active_turns::active_turn_id_for_thread;
+use crate::approval_state::approvals_for_thread;
 use crate::request_params::parse_required_params;
-use crate::{approvals_for_thread, refresh_active_turn_for_thread, RuntimeContext, StoredThread};
+use crate::runtime_context::StoredThread;
+use crate::{refresh_active_turn_for_thread, RuntimeContext};
 
 pub(crate) fn handle_thread_list(
   context: &RuntimeContext,
