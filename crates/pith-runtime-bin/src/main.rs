@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 use pith_core::{
-  collect_notifications, complete_prepared_turn_start, execute_prepared_turn_start,
-  handle_request, prepare_turn_start, RuntimeContext,
+  collect_notifications, complete_prepared_turn_start, execute_prepared_turn_start, handle_request,
+  prepare_turn_start, RuntimeContext,
 };
 use pith_protocol::{methods, JsonRpcRequest, JsonRpcResponse};
 
@@ -37,11 +37,7 @@ fn main() -> Result<()> {
     let request = match serde_json::from_str::<JsonRpcRequest>(trimmed) {
       Ok(request) => request,
       Err(error) => {
-        let response = JsonRpcResponse::error(
-          serde_json::Value::Null,
-          -32700,
-          error.to_string(),
-        );
+        let response = JsonRpcResponse::error(serde_json::Value::Null, -32700, error.to_string());
         write_json_line(&stdout, &response)?;
         continue;
       }
@@ -88,7 +84,9 @@ fn start_turn_request(
 
     let response = match prepared {
       Ok(prepared) => {
-        let _lane = turn_execution_lane.lock().expect("turn execution lane lock");
+        let _lane = turn_execution_lane
+          .lock()
+          .expect("turn execution lane lock");
         let completed = execute_prepared_turn_start(prepared);
         let mut locked_context = context.lock().expect("runtime context lock");
         complete_prepared_turn_start(&mut locked_context, completed)

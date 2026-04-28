@@ -753,8 +753,8 @@ fn prepare_turn_action(
   let workspace_root = Path::new(&workspace.root_path);
 
   if let Some(intent) = infer_write_intent(message) {
-    let approval_id = permission_is_granted(permission_sources, "file.write")
-      .then(|| reserve_approval_id(context));
+    let approval_id =
+      permission_is_granted(permission_sources, "file.write").then(|| reserve_approval_id(context));
     return PreparedTurnAction::Write {
       intent,
       approval_id,
@@ -762,8 +762,8 @@ fn prepare_turn_action(
   }
 
   if let Some(command) = infer_shell_command(message) {
-    let approval_id = permission_is_granted(permission_sources, "shell.exec")
-      .then(|| reserve_approval_id(context));
+    let approval_id =
+      permission_is_granted(permission_sources, "shell.exec").then(|| reserve_approval_id(context));
     return PreparedTurnAction::Shell {
       command,
       approval_id,
@@ -805,7 +805,13 @@ fn execute_prepared_turn_snapshot(snapshot: PreparedTurnSnapshot) -> TurnStartEx
   let mut pending_approval = None;
 
   match (&snapshot.workspace, &snapshot.action) {
-    (Some(workspace), PreparedTurnAction::Write { intent, approval_id }) => {
+    (
+      Some(workspace),
+      PreparedTurnAction::Write {
+        intent,
+        approval_id,
+      },
+    ) => {
       execute_write_turn(
         &snapshot,
         workspace,
@@ -815,7 +821,13 @@ fn execute_prepared_turn_snapshot(snapshot: PreparedTurnSnapshot) -> TurnStartEx
         &mut pending_approval,
       );
     }
-    (Some(workspace), PreparedTurnAction::Shell { command, approval_id }) => {
+    (
+      Some(workspace),
+      PreparedTurnAction::Shell {
+        command,
+        approval_id,
+      },
+    ) => {
       execute_shell_turn(
         &snapshot,
         workspace,
@@ -835,7 +847,13 @@ fn execute_prepared_turn_snapshot(snapshot: PreparedTurnSnapshot) -> TurnStartEx
       );
     }
     (Some(workspace), PreparedTurnAction::Search { query }) => {
-      execute_search_turn(&snapshot, workspace, query, &mut items, &mut pending_active_turn);
+      execute_search_turn(
+        &snapshot,
+        workspace,
+        query,
+        &mut items,
+        &mut pending_active_turn,
+      );
     }
     (Some(workspace), PreparedTurnAction::ListWorkspace) => {
       execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);
@@ -942,10 +960,7 @@ fn execute_write_turn(
       "file.write",
       "prepare a file write",
       &workspace.display_name,
-      HashMap::from([(
-        "relativePath".to_string(),
-        intent.relative_path.clone(),
-      )]),
+      HashMap::from([("relativePath".to_string(), intent.relative_path.clone())]),
     ));
     return;
   };
