@@ -12,12 +12,12 @@ pub use manifest::{
   PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor, PluginManifest,
   PluginMcpServerManifest, PluginSkillManifest,
 };
+use manifest::{PluginCommandManifest, PluginHookManifest};
 pub use paths::{configured_plugin_install_root, configured_plugin_roots, default_plugin_root};
 pub use types::{
   PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginConnectorEntry,
   PluginHookEntry, PluginRemovalRecord,
 };
-use manifest::{PluginCommandManifest, PluginHookManifest};
 
 const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
   "command",
