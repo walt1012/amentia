@@ -59,8 +59,8 @@ pub fn prepare_approval_respond(
   let current_workspace = context.workspace.clone();
   let model_runtime = context.model_runtime.clone();
   let memory_notes = context.memory_notes.clone();
-  let permission_sources = granted_permission_sources(&context.plugins);
-  let plugins = context.plugins.clone();
+  let permission_sources = granted_permission_sources(&context.plugin_state.catalog);
+  let plugins = context.plugin_state.catalog.clone();
 
   let Some(thread) = context
     .threads

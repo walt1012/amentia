@@ -63,7 +63,7 @@ fn create_temp_plugin_bundle(label: &str, plugin_name: &str, display_name: &str)
 }
 
 fn enable_full_access_plugin(context: &mut RuntimeContext) {
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "test-full-access".to_string(),
     name: "test-full-access".to_string(),
     version: "0.1.0".to_string(),
@@ -778,7 +778,7 @@ fn approval_respond_writes_file_after_approval() {
 fn approval_respond_runs_shell_after_approval() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("approval-shell");
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "shell-recorder".to_string(),
     name: "shell-recorder".to_string(),
     version: "0.1.0".to_string(),
@@ -1112,7 +1112,7 @@ fn thread_turns_stay_bound_to_the_thread_workspace() {
 #[test]
 fn plugin_set_enabled_updates_runtime_catalog() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1142,7 +1142,7 @@ fn plugin_set_enabled_updates_runtime_catalog() {
   );
 
   assert!(response.error.is_none());
-  assert!(context.plugins[0].enabled);
+  assert!(context.plugin_state.catalog[0].enabled);
   assert_eq!(
     response.result.expect("plugin set result")["plugin"]["enabled"],
     true
@@ -1155,9 +1155,9 @@ fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   let source_root =
     create_temp_plugin_bundle("plugin-install-source", "focus-review", "Focus Review");
   let install_root = create_temp_workspace("plugin-install-root");
-  context.plugin_roots = vec![install_root.clone()];
-  context.plugin_install_root = install_root.clone();
-  context.plugins = vec![];
+  context.plugin_state.roots = vec![install_root.clone()];
+  context.plugin_state.install_root = install_root.clone();
+  context.plugin_state.catalog = vec![];
 
   let response = handle_request(
     &mut context,
@@ -1178,7 +1178,8 @@ fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   assert_eq!(result["plugin"]["id"], "focus-review");
   assert_eq!(result["plugin"]["provenance"], "local");
   assert!(context
-    .plugins
+    .plugin_state
+    .catalog
     .iter()
     .any(|plugin| plugin.id == "focus-review"));
 }
@@ -1191,7 +1192,7 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
     "workspace-notes",
     "Workspace Notes",
   );
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1242,9 +1243,9 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
     .save_plugin_enabled("focus-review", true)
     .expect("save persisted plugin state");
   context.store = Some(store);
-  context.plugin_roots = vec![install_root.clone()];
-  context.plugin_install_root = install_root.clone();
-  context.plugins = vec![];
+  context.plugin_state.roots = vec![install_root.clone()];
+  context.plugin_state.install_root = install_root.clone();
+  context.plugin_state.catalog = vec![];
 
   let install_response = handle_request(
     &mut context,
@@ -1257,7 +1258,7 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   );
   assert!(install_response.error.is_none());
 
-  let manifest_path = context.plugins[0].manifest_path.clone();
+  let manifest_path = context.plugin_state.catalog[0].manifest_path.clone();
   let remove_response = handle_request(
     &mut context,
     request(
@@ -1283,14 +1284,14 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   assert!(remove_response.error.is_none());
   let result = remove_response.result.expect("plugin remove result");
   assert_eq!(result["pluginId"], "focus-review");
-  assert!(context.plugins.is_empty());
+  assert!(context.plugin_state.catalog.is_empty());
   assert!(!persisted_states.contains_key("focus-review"));
 }
 
 #[test]
 fn plugin_command_registry_lists_enabled_command_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1331,7 +1332,7 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
 #[test]
 fn plugin_hook_registry_lists_enabled_hook_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "shell-recorder".to_string(),
     name: "shell-recorder".to_string(),
     version: "0.1.0".to_string(),
@@ -1369,7 +1370,7 @@ fn plugin_hook_registry_lists_enabled_hook_plugins() {
 #[test]
 fn plugin_connector_registry_lists_disabled_connector_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "notion-connector".to_string(),
     name: "notion-connector".to_string(),
     version: "0.1.0".to_string(),
@@ -1412,7 +1413,7 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
 fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("plugin-command-run");
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1507,7 +1508,7 @@ fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("bundled-plugin-results");
   fs::write(workspace.join("README.md"), "# Bundled Plugin Results\n").expect("write readme");
-  context.plugins = vec![
+  context.plugin_state.catalog = vec![
     PluginCatalogEntry {
       id: "review-assistant".to_string(),
       name: "review-assistant".to_string(),
@@ -1626,7 +1627,7 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
     create_temp_plugin_bundle("plugin-command-contract", "prompt-only", "Prompt Only");
   let workspace = create_temp_workspace("plugin-command-contract-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "prompt-only".to_string(),
     name: "prompt-only".to_string(),
     version: "0.1.0".to_string(),
@@ -1689,7 +1690,7 @@ fn file_reads_require_plugin_permission() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("permission-read");
   fs::write(workspace.join("README.md"), "# Permission Gate\n").expect("write readme");
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "shell-recorder".to_string(),
     name: "shell-recorder".to_string(),
     version: "0.1.0".to_string(),
@@ -1751,7 +1752,7 @@ fn file_reads_require_plugin_permission() {
 fn shell_requests_require_plugin_permission_before_approval() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("permission-shell");
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1816,7 +1817,7 @@ fn shell_requests_require_plugin_permission_before_approval() {
 fn approval_resolution_rechecks_plugin_permissions() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("approval-permission-recheck");
-  context.plugins = vec![PluginCatalogEntry {
+  context.plugin_state.catalog = vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1868,7 +1869,7 @@ fn approval_resolution_rechecks_plugin_permissions() {
     .expect("approval id")
     .to_string();
 
-  context.plugins[0].enabled = false;
+  context.plugin_state.catalog[0].enabled = false;
 
   let approval_response = handle_request(
     &mut context,

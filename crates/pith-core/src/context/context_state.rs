@@ -10,6 +10,7 @@ use crate::approval_state::stored_approval_record;
 use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
+use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::thread_state::StoredThread;
 
@@ -48,9 +49,7 @@ impl RuntimeContext {
         })
         .collect(),
       workspace: persisted_workspace,
-      plugin_roots,
-      plugin_install_root,
-      plugins,
+      plugin_state: RuntimePluginState::new(plugin_roots, plugin_install_root, plugins),
       pending_approvals: persisted_pending_approvals
         .into_iter()
         .map(|approval| {
@@ -86,9 +85,11 @@ impl RuntimeContext {
       memory_notes: vec![],
       threads: vec![],
       workspace: None,
-      plugin_roots: plugin_roots.clone(),
-      plugin_install_root,
-      plugins: load_plugin_catalog(&plugin_roots).unwrap_or_default(),
+      plugin_state: RuntimePluginState::new(
+        plugin_roots.clone(),
+        plugin_install_root,
+        load_plugin_catalog(&plugin_roots).unwrap_or_default(),
+      ),
       pending_approvals: HashMap::new(),
       active_turns: HashMap::new(),
       enforce_model_readiness: false,
@@ -233,7 +234,8 @@ impl RuntimeContext {
 
   pub(crate) fn refresh_plugins(&mut self) -> Result<()> {
     let plugin_states = self.persisted_plugin_states()?;
-    self.plugins = apply_plugin_states(load_plugin_catalog(&self.plugin_roots)?, &plugin_states);
+    self.plugin_state.catalog =
+      apply_plugin_states(load_plugin_catalog(&self.plugin_state.roots)?, &plugin_states);
     Ok(())
   }
 }

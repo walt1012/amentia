@@ -24,7 +24,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .map(|workspace| shell_sandbox_status(Path::new(&workspace.root_path)))
     .unwrap_or_else(workspace_required_status);
   let enabled_plugin_count = context
-    .plugins
+    .plugin_state
+    .catalog
     .iter()
     .filter(|plugin| plugin.enabled && plugin.status == "ready")
     .count();
@@ -72,7 +73,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       context_check(&context_window, &output_cap),
       execution_control_check(pending_approval_count, active_turn_count),
       native_sandbox_check(&sandbox_status),
-      plugin_check(enabled_plugin_count, context.plugins.len()),
+      plugin_check(enabled_plugin_count, context.plugin_state.catalog.len()),
       bounded_runtime_check(),
     ],
     metrics: readiness_metrics(
@@ -323,7 +324,7 @@ fn readiness_metrics(
       "memoryNoteCount".to_string(),
       context.memory_notes.len().to_string(),
     ),
-    ("pluginCount".to_string(), context.plugins.len().to_string()),
+    ("pluginCount".to_string(), context.plugin_state.catalog.len().to_string()),
     (
       "enabledPluginCount".to_string(),
       enabled_plugin_count.to_string(),
