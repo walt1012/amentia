@@ -85,9 +85,7 @@ pub fn execute_prepared_workspace_search(
   CompletedWorkspaceSearch { request_id, output }
 }
 
-pub fn complete_prepared_workspace_search(
-  completed: CompletedWorkspaceSearch,
-) -> JsonRpcResponse {
+pub fn complete_prepared_workspace_search(completed: CompletedWorkspaceSearch) -> JsonRpcResponse {
   match completed.output {
     Ok(result) => JsonRpcResponse::success(completed.request_id, &result),
     Err((code, message)) => JsonRpcResponse::error(completed.request_id, code, message),

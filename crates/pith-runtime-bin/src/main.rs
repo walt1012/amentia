@@ -128,8 +128,7 @@ fn start_prepared_request<Prepared, Completed, Prepare, Execute, Complete>(
 where
   Prepared: Send + 'static,
   Completed: Send + 'static,
-  Prepare:
-    FnOnce(&mut RuntimeContext, JsonRpcRequest) -> std::result::Result<Prepared, JsonRpcResponse>
+  Prepare: FnOnce(&mut RuntimeContext, JsonRpcRequest) -> std::result::Result<Prepared, JsonRpcResponse>
     + Send
     + 'static,
   Execute: FnOnce(Prepared) -> Completed + Send + 'static,

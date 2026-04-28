@@ -1483,9 +1483,7 @@ pub fn execute_prepared_workspace_search(
   workspace_search::execute_prepared_workspace_search(prepared)
 }
 
-pub fn complete_prepared_workspace_search(
-  completed: CompletedWorkspaceSearch,
-) -> JsonRpcResponse {
+pub fn complete_prepared_workspace_search(completed: CompletedWorkspaceSearch) -> JsonRpcResponse {
   workspace_search::complete_prepared_workspace_search(completed)
 }
 
