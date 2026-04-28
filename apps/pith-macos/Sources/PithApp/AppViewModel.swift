@@ -2987,44 +2987,25 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshPluginState() async {
-    let runtimePlugins = try? await runtimeBridge.listPlugins()
-    let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
-    let runtimeCommands = try? await runtimeBridge.listPluginCommands()
-    let runtimeConnectors = try? await runtimeBridge.listPluginConnectors()
-    let runtimeHooks = try? await runtimeBridge.listPluginHooks()
+    let pluginRefresh = await PluginStateLoader.refresh(using: runtimeBridge)
 
-    if let runtimePlugins {
-      plugins = runtimePlugins.map { RuntimeSummaryMapper.pluginSummary(from: $0) }
+    if let refreshedPlugins = pluginRefresh.plugins {
+      plugins = refreshedPlugins
     }
-    if let runtimeRegistry {
-      pluginCapabilityRegistrySummary =
-        RuntimeSummaryMapper.pluginRegistrySummary(from: runtimeRegistry.summary)
-      pluginCapabilities =
-        runtimeRegistry.capabilities.map { RuntimeSummaryMapper.pluginCapabilitySummary(from: $0) }
-    } else if runtimePlugins != nil {
-      pluginCapabilityRegistrySummary = PluginCapabilityRegistrySummary(
-        enabledPluginCount: plugins.filter { $0.status == "ready" && $0.enabled }.count,
-        totalCapabilityCount: 0,
-        capabilityCountsByKind: [:]
-      )
-      pluginCapabilities = []
+    if let registrySummary = pluginRefresh.registrySummary {
+      pluginCapabilityRegistrySummary = registrySummary
     }
-    if let runtimeCommands {
-      pluginCommands = runtimeCommands.map { RuntimeSummaryMapper.pluginCommandSummary(from: $0) }
-    } else if runtimePlugins != nil {
-      pluginCommands = []
+    if let capabilities = pluginRefresh.capabilities {
+      pluginCapabilities = capabilities
     }
-    if let runtimeConnectors {
-      pluginConnectors = runtimeConnectors.map {
-        RuntimeSummaryMapper.pluginConnectorSummary(from: $0)
-      }
-    } else if runtimePlugins != nil {
-      pluginConnectors = []
+    if let commands = pluginRefresh.commands {
+      pluginCommands = commands
     }
-    if let runtimeHooks {
-      pluginHooks = runtimeHooks.map { RuntimeSummaryMapper.pluginHookSummary(from: $0) }
-    } else if runtimePlugins != nil {
-      pluginHooks = []
+    if let connectors = pluginRefresh.connectors {
+      pluginConnectors = connectors
+    }
+    if let hooks = pluginRefresh.hooks {
+      pluginHooks = hooks
     }
     await refreshRuntimeReadiness()
   }
