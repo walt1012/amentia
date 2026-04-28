@@ -792,8 +792,8 @@ final class RuntimeBridge {
     return RuntimeTurnResult(
       turnID: result.turnId,
       threadID: result.threadId,
-      items: result.items.map(runtimeTimelineItem(from:)),
-      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
+      pendingApprovals: result.pendingApprovals.map(RuntimeBridgePayloadMapper.approval(from:)),
       activeTurnID: result.activeTurnId
     )
   }
@@ -886,8 +886,8 @@ final class RuntimeBridge {
     return RuntimeTurnResult(
       turnID: result.turnId,
       threadID: result.threadId,
-      items: result.items.map(runtimeTimelineItem(from:)),
-      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:)),
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
+      pendingApprovals: result.pendingApprovals.map(RuntimeBridgePayloadMapper.approval(from:)),
       activeTurnID: result.activeTurnId
     )
   }
@@ -906,7 +906,7 @@ final class RuntimeBridge {
       throw RuntimeError.invalidResponse
     }
 
-    return runtimeThreadState(
+    return RuntimeBridgePayloadMapper.threadState(
       id: result.thread.id,
       title: result.thread.title,
       status: result.thread.status,
@@ -933,8 +933,8 @@ final class RuntimeBridge {
     return RuntimeApprovalResponse(
       approvalID: result.approvalId,
       threadID: result.threadId,
-      items: result.items.map(runtimeTimelineItem(from:)),
-      pendingApprovals: result.pendingApprovals.map(runtimeApproval(from:))
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
+      pendingApprovals: result.pendingApprovals.map(RuntimeBridgePayloadMapper.approval(from:))
     )
   }
 
@@ -955,7 +955,7 @@ final class RuntimeBridge {
     return RuntimeTurnCancellation(
       turnID: result.turnId,
       threadID: result.threadId,
-      items: result.items.map(runtimeTimelineItem(from:)),
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
       activeTurnID: result.activeTurnId
     )
   }
@@ -1045,7 +1045,7 @@ final class RuntimeBridge {
          from: data
        )
     {
-      let state = runtimeThreadState(
+      let state = RuntimeBridgePayloadMapper.threadState(
         id: notification.params.thread.id,
         title: notification.params.thread.title,
         status: notification.params.thread.status,
@@ -1337,43 +1337,6 @@ final class RuntimeBridge {
 
     let decoder = JSONDecoder()
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
-  }
-
-  private func runtimeThreadState(
-    id: String,
-    title: String,
-    status: String,
-    items: [RuntimeTimelineItem],
-    pendingApprovals: [RuntimeApprovalPayload],
-    activeTurnID: String?
-  ) -> RuntimeThreadState {
-    RuntimeThreadState(
-      id: id,
-      title: title,
-      status: status,
-      items: items.map(runtimeTimelineItem(from:)),
-      pendingApprovals: pendingApprovals.map(runtimeApproval(from:)),
-      activeTurnID: activeTurnID
-    )
-  }
-
-  private func runtimeTimelineItem(from payload: RuntimeTimelineItem) -> RuntimeTimelineItemResult {
-    RuntimeTimelineItemResult(
-      kind: payload.kind,
-      title: payload.title,
-      content: payload.content,
-      attributes: payload.attributes ?? [:]
-    )
-  }
-
-  private func runtimeApproval(from payload: RuntimeApprovalPayload) -> RuntimeApproval {
-    RuntimeApproval(
-      id: payload.id,
-      threadID: payload.threadId,
-      action: payload.action,
-      title: payload.title,
-      relativePath: payload.relativePath
-    )
   }
 
   private static func readLine(from handle: FileHandle) throws -> String {
