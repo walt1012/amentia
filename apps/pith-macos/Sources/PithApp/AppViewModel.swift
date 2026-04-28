@@ -186,94 +186,25 @@ final class AppViewModel: ObservableObject {
         }
         await refreshRuntimeReadiness()
         let shouldAnnotateSetupLaunch = shouldAnnotateLaunchWithSetupEvents()
-        if shouldAnnotateSetupLaunch {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntryFactory.system(
-              title: "Runtime Connected",
-              body: "Connected to \(session.serverName) \(session.serverVersion) over stdio.",
-              attributes: [:]
-            )
-          )
-        }
-        if restoredWorkspace, let currentWorkspace {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntryFactory.system(
-              title: "Workspace Restored",
-              body: "Restored \(currentWorkspace.displayName) at \(currentWorkspace.rootPath).",
-              attributes: [
-                "workspacePath": currentWorkspace.rootPath
-              ]
-            )
-          )
-        }
-        if let skippedWorkspaceRestorePath {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntryFactory.warning(
-              title: "Workspace Restore Skipped",
-              body: "The last workspace no longer exists. Open a workspace to continue.",
-              attributes: [
-                "workspacePath": skippedWorkspaceRestorePath
-              ]
-            )
-          )
-        }
-        if let workspaceRestoreError {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntryFactory.warning(
-              title: "Workspace Restore Failed",
-              body: workspaceRestoreError.localizedDescription,
-              attributes: [:]
-            )
-          )
-        }
-        if let runtimeModel = modelHealth {
-          if isLocalModelReady() {
-            if shouldAnnotateSetupLaunch {
-              appendEntry(
-                to: selectedThreadID,
-                TimelineEntryFactory.system(
-                  title: "Local Model Ready",
-                  body:
-                    "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
-                  attributes: [
-                    "modelId": runtimeModel.packID,
-                    "modelBackend": runtimeModel.backend,
-                    "modelStatus": runtimeModel.status,
-                    "modelSource": runtimeModel.source,
-                  ]
-                )
-              )
-            }
-          } else {
-            appendEntry(
-              to: selectedThreadID,
-              TimelineEntryFactory.warning(
-                title: "Local Model Required",
-                body: localModelRequiredTimelineSummary(),
-                attributes: [
-                  "modelId": runtimeModel.packID,
-                  "modelBackend": runtimeModel.backend,
-                  "modelStatus": runtimeModel.status,
-                  "modelSource": runtimeModel.source,
-                ]
-              )
-            )
+        let restoredWorkspaceSummary = restoredWorkspace
+          ? currentWorkspace.map {
+            WorkspaceSummary(rootPath: $0.rootPath, displayName: $0.displayName)
           }
-        } else {
-          appendEntry(
-            to: selectedThreadID,
-            TimelineEntryFactory.warning(
-              title: "Local Model Required",
-              body: localModelRequiredTimelineSummary(),
-              attributes: [
-                "modelStatus": "unavailable"
-              ]
-            )
+          : nil
+        RuntimeLaunchAnnotationFactory.entries(
+          RuntimeLaunchAnnotationSnapshot(
+            serverName: session.serverName,
+            serverVersion: session.serverVersion,
+            shouldAnnotateSetupLaunch: shouldAnnotateSetupLaunch,
+            restoredWorkspace: restoredWorkspaceSummary,
+            skippedWorkspaceRestorePath: skippedWorkspaceRestorePath,
+            workspaceRestoreErrorDetail: workspaceRestoreError?.localizedDescription,
+            modelHealth: modelHealth,
+            isLocalModelReady: isLocalModelReady(),
+            localModelRequiredSummary: localModelRequiredTimelineSummary()
           )
+        ).forEach { entry in
+          appendEntry(to: selectedThreadID, entry)
         }
         announceFirstRequestReadyIfNeeded()
       } catch {
