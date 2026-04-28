@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use active_turns::{
   active_turn_id_for_thread, compute_streamed_char_count, start_streaming_assistant_turn,
@@ -15,18 +15,11 @@ use local_responses::{
   summarize_file_result, summarize_search_result, summarize_shell_result,
 };
 use pith_memory::MemoryEvent;
-#[cfg(test)]
-use pith_plugin_host::PluginCatalogEntry;
-use pith_plugin_host::{inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle};
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, JsonRpcNotification,
-  JsonRpcRequest, JsonRpcResponse, PluginInstallParams, PluginInstallResult, PluginListResult,
-  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSetEnabledResult,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceSummary,
+  JsonRpcRequest, JsonRpcResponse, ThreadUpdatedNotificationParams, TimelineItem,
+  TurnCancelParams, TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceSummary,
 };
-#[cfg(test)]
-use pith_storage::FileThreadStore;
 use pith_storage::StoredApprovalRecord;
 use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, shell_sandbox_summary,
@@ -35,10 +28,6 @@ use pith_tools::{
 use plugin_hooks::{build_shell_completed_hook_items, capture_plugin_hook_memory};
 use plugin_permissions::{
   build_permission_denied_items, granted_permission_sources, permission_is_granted,
-};
-use protocol_adapters::{
-  build_protocol_capability_registry, build_protocol_command_registry,
-  build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_plugin,
 };
 use request_params::parse_required_params;
 pub(crate) use runtime_context::{
@@ -63,6 +52,7 @@ mod plugin_catalog_state;
 mod plugin_commands;
 mod plugin_hooks;
 mod plugin_permissions;
+mod plugin_requests;
 mod protocol_adapters;
 mod request_params;
 mod runtime_context;
@@ -86,36 +76,21 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::MEMORY_STATUS => memory_requests::handle_memory_status(context, request),
     methods::MODEL_BOOTSTRAP => model_requests::handle_model_bootstrap(context, request),
     methods::MODEL_HEALTH => model_requests::handle_model_health(context, request),
-    methods::PLUGIN_CAPABILITY_REGISTRY => JsonRpcResponse::success(
-      request.id,
-      &build_protocol_capability_registry(&context.plugins),
-    ),
-    methods::PLUGIN_COMMAND_REGISTRY => JsonRpcResponse::success(
-      request.id,
-      &build_protocol_command_registry(&context.plugins),
-    ),
-    methods::PLUGIN_COMMAND_RUN => plugin_commands::handle_plugin_command_run(context, request),
-    methods::PLUGIN_CONNECTOR_REGISTRY => JsonRpcResponse::success(
-      request.id,
-      &build_protocol_connector_registry(&context.plugins),
-    ),
-    methods::PLUGIN_HOOK_REGISTRY => {
-      JsonRpcResponse::success(request.id, &build_protocol_hook_registry(&context.plugins))
+    methods::PLUGIN_CAPABILITY_REGISTRY => {
+      plugin_requests::handle_plugin_capability_registry(context, request)
     }
-    methods::PLUGIN_INSTALL => handle_plugin_install(context, request),
-    methods::PLUGIN_LIST => JsonRpcResponse::success(
-      request.id,
-      &PluginListResult {
-        plugins: context
-          .plugins
-          .iter()
-          .cloned()
-          .map(to_protocol_plugin)
-          .collect(),
-      },
-    ),
-    methods::PLUGIN_REMOVE => handle_plugin_remove(context, request),
-    methods::PLUGIN_SET_ENABLED => handle_plugin_set_enabled(context, request),
+    methods::PLUGIN_COMMAND_REGISTRY => {
+      plugin_requests::handle_plugin_command_registry(context, request)
+    }
+    methods::PLUGIN_COMMAND_RUN => plugin_commands::handle_plugin_command_run(context, request),
+    methods::PLUGIN_CONNECTOR_REGISTRY => {
+      plugin_requests::handle_plugin_connector_registry(context, request)
+    }
+    methods::PLUGIN_HOOK_REGISTRY => plugin_requests::handle_plugin_hook_registry(context, request),
+    methods::PLUGIN_INSTALL => plugin_requests::handle_plugin_install(context, request),
+    methods::PLUGIN_LIST => plugin_requests::handle_plugin_list(context, request),
+    methods::PLUGIN_REMOVE => plugin_requests::handle_plugin_remove(context, request),
+    methods::PLUGIN_SET_ENABLED => plugin_requests::handle_plugin_set_enabled(context, request),
     methods::RUNTIME_READINESS => {
       JsonRpcResponse::success(request.id, &build_runtime_readiness(context))
     }
@@ -151,130 +126,6 @@ pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpc
   }
 
   Ok(notifications)
-}
-
-fn handle_plugin_set_enabled(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> JsonRpcResponse {
-  let params = match parse_required_params::<PluginSetEnabledParams>(&request, "plugin/setEnabled")
-  {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let Some(plugin_index) = context
-    .plugins
-    .iter()
-    .position(|plugin| plugin.id == params.plugin_id)
-  else {
-    return JsonRpcResponse::error(request.id, -32050, "Plugin not found");
-  };
-  if context.plugins[plugin_index].status != "ready" {
-    return JsonRpcResponse::error(
-      request.id,
-      -32051,
-      context.plugins[plugin_index]
-        .validation_error
-        .clone()
-        .unwrap_or_else(|| "Plugin manifest is invalid".to_string()),
-    );
-  }
-
-  context.plugins[plugin_index].enabled = params.enabled;
-  let plugin_id = context.plugins[plugin_index].id.clone();
-  let plugin_enabled = context.plugins[plugin_index].enabled;
-  let updated_plugin = context.plugins[plugin_index].clone();
-
-  if let Err(error) = context.persist_plugin_enabled(&plugin_id, plugin_enabled) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-
-  JsonRpcResponse::success(
-    request.id,
-    &PluginSetEnabledResult {
-      plugin: to_protocol_plugin(updated_plugin),
-    },
-  )
-}
-
-fn handle_plugin_install(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<PluginInstallParams>(&request, "plugin/install") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let source_path = PathBuf::from(&params.source_path);
-  let candidate_plugin = match inspect_plugin_bundle(&source_path) {
-    Ok(plugin) => plugin,
-    Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
-  };
-  if context
-    .plugins
-    .iter()
-    .any(|plugin| plugin.id == candidate_plugin.id)
-  {
-    return JsonRpcResponse::error(
-      request.id,
-      -32053,
-      format!(
-        "Plugin `{}` is already installed",
-        candidate_plugin.display_name
-      ),
-    );
-  }
-  let installed_plugin = match install_plugin_bundle(&source_path, &context.plugin_install_root) {
-    Ok(plugin) => plugin,
-    Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
-  };
-
-  if let Err(error) = context.refresh_plugins() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-
-  let refreshed_plugin = context
-    .plugins
-    .iter()
-    .find(|plugin| plugin.id == installed_plugin.id)
-    .cloned()
-    .unwrap_or(installed_plugin);
-
-  JsonRpcResponse::success(
-    request.id,
-    &PluginInstallResult {
-      plugin: to_protocol_plugin(refreshed_plugin),
-    },
-  )
-}
-
-fn handle_plugin_remove(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<PluginRemoveParams>(&request, "plugin/remove") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let manifest_path = PathBuf::from(&params.manifest_path);
-  let removed_plugin =
-    match remove_local_plugin_bundle(&manifest_path, &context.plugin_install_root) {
-      Ok(plugin) => plugin,
-      Err(error) => return JsonRpcResponse::error(request.id, -32054, error.to_string()),
-    };
-
-  if let Err(error) = context.delete_plugin_state(&removed_plugin.plugin_id) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-  if let Err(error) = context.refresh_plugins() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-
-  JsonRpcResponse::success(
-    request.id,
-    &PluginRemoveResult {
-      plugin_id: removed_plugin.plugin_id,
-      display_name: removed_plugin.display_name,
-      removed_path: removed_plugin.removed_path,
-    },
-  )
 }
 
 fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {

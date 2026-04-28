@@ -1,7 +1,11 @@
 use super::*;
+use super::protocol_adapters::build_protocol_capability_registry;
+use pith_plugin_host::PluginCatalogEntry;
+use pith_storage::FileThreadStore;
 use serde_json::{json, Value};
 use std::env;
 use std::fs;
+use std::path::PathBuf;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
