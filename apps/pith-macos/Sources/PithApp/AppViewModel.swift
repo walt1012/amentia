@@ -208,26 +208,7 @@ final class AppViewModel: ObservableObject {
         }
         announceFirstRequestReadyIfNeeded()
       } catch {
-        runtimeState = .failed
-        runtimeDetail = error.localizedDescription
-        modelHealth = nil
-        runtimeReadiness = nil
-        memoryStatus = nil
-        memoryNotes = []
-        plugins = []
-        pluginCapabilityRegistrySummary = nil
-        pluginCapabilities = []
-        pluginConnectors = []
-        pluginCommands = []
-        pluginHooks = []
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntryFactory.warning(
-            title: "Runtime Launch Failed",
-            body: error.localizedDescription,
-            attributes: [:]
-          )
-        )
+        applyRuntimeLaunchFailure(error)
       }
     }
   }
@@ -2648,6 +2629,29 @@ final class AppViewModel: ObservableObject {
     if let updatedLastFailureDetail = plan.updatedLastFailureDetail {
       lastRuntimeFailureDetail = updatedLastFailureDetail
     }
+  }
+
+  private func applyRuntimeLaunchFailure(_ error: Error) {
+    runtimeState = .failed
+    runtimeDetail = error.localizedDescription
+    modelHealth = nil
+    runtimeReadiness = nil
+    memoryStatus = nil
+    memoryNotes = []
+    plugins = []
+    pluginCapabilityRegistrySummary = nil
+    pluginCapabilities = []
+    pluginConnectors = []
+    pluginCommands = []
+    pluginHooks = []
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntryFactory.warning(
+        title: "Runtime Launch Failed",
+        body: error.localizedDescription,
+        attributes: [:]
+      )
+    )
   }
 
   private func downloadModelFile(
