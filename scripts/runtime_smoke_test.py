@@ -485,6 +485,8 @@ def main() -> int:
     assert {
       "localModel",
       "workspace",
+      "thread",
+      "firstRequest",
       "context",
       "executionControls",
       "nativeSandbox",
@@ -492,6 +494,8 @@ def main() -> int:
       "boundedRuntime",
     }.issubset(readiness_check_ids)
     assert runtime_readiness["result"]["metrics"]["contextWindowTokens"] == "4096"
+    assert "workspaceThreadCount" in runtime_readiness["result"]["metrics"]
+    assert runtime_readiness["result"]["metrics"]["firstRequestSent"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["shellTimeoutSeconds"] == "120"
     assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
     assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"

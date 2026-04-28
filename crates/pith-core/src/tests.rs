@@ -134,8 +134,12 @@ fn runtime_readiness_reports_agent_control_surface() {
     .collect::<Vec<_>>();
   assert!(check_ids.contains(&"localModel"));
   assert!(check_ids.contains(&"workspace"));
+  assert!(check_ids.contains(&"thread"));
+  assert!(check_ids.contains(&"firstRequest"));
   assert!(check_ids.contains(&"boundedRuntime"));
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
+  assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
+  assert_eq!(result["metrics"]["firstRequestSent"], "false");
 }
 
 #[test]
@@ -203,6 +207,50 @@ fn workspace_open_sets_runtime_workspace() {
     result["workspace"]["displayName"].as_str().unwrap(),
     workspace.file_name().unwrap().to_string_lossy()
   );
+}
+
+#[test]
+fn runtime_readiness_tracks_workspace_thread_setup() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("thread-readiness");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Local Thread"
+      })),
+    ),
+  );
+  let response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("runtime readiness result");
+  let checks = result["checks"].as_array().expect("checks");
+  let thread_check = checks
+    .iter()
+    .find(|check| check["id"] == "thread")
+    .expect("thread check");
+  let first_request_check = checks
+    .iter()
+    .find(|check| check["id"] == "firstRequest")
+    .expect("first request check");
+  assert_eq!(thread_check["status"], "ready");
+  assert_eq!(first_request_check["status"], "ready_to_send");
+  assert_eq!(result["metrics"]["workspaceThreadCount"], "1");
+  assert_eq!(result["metrics"]["firstRequestSent"], "false");
 }
 
 #[test]

@@ -12,6 +12,9 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let model_health = context.model_runtime.health();
   let model_ready = model_health.status == "ready";
   let workspace_ready = context.workspace.is_some();
+  let workspace_thread_count = count_workspace_threads(context);
+  let thread_ready = workspace_thread_count > 0;
+  let first_request_sent = has_first_request(context);
   let pending_approval_count = context.pending_approvals.len();
   let active_turn_count = context.active_turns.len();
   let sandbox_status = context
@@ -25,7 +28,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .filter(|plugin| plugin.enabled && plugin.status == "ready")
     .count();
 
-  let status = if !model_ready || !workspace_ready {
+  let status = if !model_ready || !workspace_ready || !thread_ready {
     "setup_required"
   } else if pending_approval_count > 0 {
     "needs_approval"
@@ -51,6 +54,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       status,
       model_ready,
       workspace_ready,
+      thread_ready,
+      first_request_sent,
       pending_approval_count,
       active_turn_count,
     ),
@@ -61,6 +66,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
         &model_health.backend,
       ),
       workspace_check(context),
+      thread_check(thread_ready, workspace_thread_count),
+      first_request_check(first_request_sent, thread_ready),
       context_check(&context_window, &output_cap),
       execution_control_check(pending_approval_count, active_turn_count),
       native_sandbox_check(&sandbox_status),
@@ -74,6 +81,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       &context_window,
       enabled_plugin_count,
       &sandbox_status,
+      workspace_thread_count,
+      first_request_sent,
     ),
   }
 }
@@ -119,6 +128,44 @@ fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck {
       .unwrap_or_else(|| {
         "Open a workspace to bind file, shell, memory, and approvals.".to_string()
       }),
+  }
+}
+
+fn thread_check(thread_ready: bool, workspace_thread_count: usize) -> RuntimeReadinessCheck {
+  RuntimeReadinessCheck {
+    id: "thread".to_string(),
+    title: "Thread".to_string(),
+    status: if thread_ready {
+      "ready".to_string()
+    } else {
+      "setup_required".to_string()
+    },
+    detail: if thread_ready {
+      format!("{workspace_thread_count} thread(s) are bound to the current workspace.")
+    } else {
+      "Create or resume a thread bound to the current workspace.".to_string()
+    },
+  }
+}
+
+fn first_request_check(first_request_sent: bool, thread_ready: bool) -> RuntimeReadinessCheck {
+  RuntimeReadinessCheck {
+    id: "firstRequest".to_string(),
+    title: "First Request".to_string(),
+    status: if first_request_sent {
+      "ready".to_string()
+    } else if thread_ready {
+      "ready_to_send".to_string()
+    } else {
+      "waiting".to_string()
+    },
+    detail: if first_request_sent {
+      "At least one local request has been sent in the current workspace.".to_string()
+    } else if thread_ready {
+      "Send one short local request to complete first-use setup.".to_string()
+    } else {
+      "Create or resume a workspace-bound thread before sending the first request.".to_string()
+    },
   }
 }
 
@@ -190,6 +237,8 @@ fn readiness_summary(
   status: &str,
   model_ready: bool,
   workspace_ready: bool,
+  thread_ready: bool,
+  first_request_sent: bool,
   pending_approval_count: usize,
   active_turn_count: usize,
 ) -> String {
@@ -200,10 +249,14 @@ fn readiness_summary(
     "setup_required" if !workspace_ready => {
       "Open a workspace so tools, memory, and approvals are scoped safely.".to_string()
     }
+    "setup_required" if !thread_ready => {
+      "Create or resume a workspace-bound thread before local agent work.".to_string()
+    }
     "needs_approval" => {
       format!("Runtime is waiting on {pending_approval_count} approval(s) before continuing.")
     }
     "running" => format!("Runtime is running {active_turn_count} active turn(s)."),
+    "ready" if !first_request_sent => "Runtime ready for the first local request.".to_string(),
     _ => "Runtime ready: model, workspace, tools, context, and plugins are controlled.".to_string(),
   }
 }
@@ -239,6 +292,8 @@ fn readiness_metrics(
   context_window: &str,
   enabled_plugin_count: usize,
   sandbox_status: &pith_sandbox::NativeSandboxStatus,
+  workspace_thread_count: usize,
+  first_request_sent: bool,
 ) -> HashMap<String, String> {
   let mut metrics = HashMap::from([
     ("modelStatus".to_string(), model_status.to_string()),
@@ -254,6 +309,14 @@ fn readiness_metrics(
     (
       "activeTurnCount".to_string(),
       context.active_turns.len().to_string(),
+    ),
+    (
+      "workspaceThreadCount".to_string(),
+      workspace_thread_count.to_string(),
+    ),
+    (
+      "firstRequestSent".to_string(),
+      first_request_sent.to_string(),
     ),
     (
       "memoryNoteCount".to_string(),
@@ -291,4 +354,34 @@ fn readiness_metrics(
     metrics.insert("sandboxTempRoot".to_string(), temporary_root.clone());
   }
   metrics
+}
+
+fn count_workspace_threads(context: &RuntimeContext) -> usize {
+  current_workspace_threads(context).count()
+}
+
+fn has_first_request(context: &RuntimeContext) -> bool {
+  current_workspace_threads(context).any(|thread| {
+    thread
+      .items
+      .iter()
+      .any(|item| item.kind == "userMessage")
+  })
+}
+
+fn current_workspace_threads(
+  context: &RuntimeContext,
+) -> impl Iterator<Item = &crate::StoredThread> + '_ {
+  context.threads.iter().filter(move |thread| {
+    let Some(workspace) = &context.workspace else {
+      return false;
+    };
+
+    thread
+      .workspace
+      .as_ref()
+      .or(thread.summary.workspace.as_ref())
+      .map(|thread_workspace| thread_workspace.root_path == workspace.root_path)
+      .unwrap_or(false)
+  })
 }

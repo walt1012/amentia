@@ -1108,8 +1108,8 @@ Mitigation:
 
 Milestone 3 is in closeout. The current codebase has the core daily-driver path in place: guided
 local model setup, strict model readiness, bounded model and shell subprocesses, runtime request
-unblocking for heavy work, workspace-bound threads, native sandbox diagnostics, compact context
-packing, and progressive disclosure for secondary controls.
+unblocking for heavy work, workspace-bound threads, first-request readiness diagnostics, native
+sandbox diagnostics, compact context packing, and progressive disclosure for secondary controls.
 
 The next product step is a broad review and refactor gate, not another feature expansion. Review the
 Swift app, Rust runtime, protocol boundary, model catalog, plugin metadata, sandbox layer, and docs
@@ -1120,7 +1120,8 @@ Refactor priorities:
 1. shrink large files and move cohesive responsibilities into small modules
 2. keep the main timeline and local model flow as the primary product surface
 3. preserve bounded execution, cancellation, integrity checks, and workspace scoping as non-negotiable runtime contracts
-4. defer broad connector execution, third-party auth, multi-agent workflows, and platform expansion to Milestone 4
-5. keep this plan outcome-based so implementation detail lives in code, commits, tests, and review notes
+4. preserve the machine-readable setup contract from runtime launch through model, workspace, thread, and first request
+5. defer broad connector execution, third-party auth, multi-agent workflows, and platform expansion to Milestone 4
+6. keep this plan outcome-based so implementation detail lives in code, commits, tests, and review notes
 
 Remote CI verification remains routine for every pushed change, not a product milestone.
