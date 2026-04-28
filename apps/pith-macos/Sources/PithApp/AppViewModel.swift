@@ -135,8 +135,7 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let session = try await runtimeBridge.launchAndInitialize(launchDetail: launchDetail)
-        let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
-        let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
+        let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
         let workspaceRestore = await RuntimeWorkspaceRestorer.restore(
           currentWorkspace: try? await runtimeBridge.currentWorkspace(),
           lastWorkspacePath: AppPreferences.storedLastWorkspacePath(),
@@ -151,16 +150,7 @@ final class AppViewModel: ObservableObject {
 
         runtimeState = .ready
         await refreshModelHealthState(serverLabel: "\(session.serverName) \(session.serverVersion)")
-
-        if let runtimeMemoryStatus {
-          memoryStatus = RuntimeSummaryMapper.memoryStatusSummary(from: runtimeMemoryStatus)
-        } else {
-          memoryStatus = nil
-        }
-        memoryNotes = (runtimeMemoryNotes ?? []).map {
-          RuntimeSummaryMapper.memoryNoteSummary(from: $0)
-        }
-
+        applyRuntimeLaunchMemoryState(memoryRefresh)
         await refreshPluginState()
 
         if let currentWorkspace {
@@ -2769,6 +2759,11 @@ final class AppViewModel: ObservableObject {
     if let notes = memoryRefresh.notes {
       memoryNotes = notes
     }
+  }
+
+  private func applyRuntimeLaunchMemoryState(_ memoryRefresh: MemoryStateRefresh) {
+    memoryStatus = memoryRefresh.status
+    memoryNotes = memoryRefresh.notes ?? []
   }
 
   private func memoryActionSnapshot() -> MemoryActionSnapshot {
