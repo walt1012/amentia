@@ -1387,6 +1387,10 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    applyModelDownloadCancelPlan(cancelPlan)
+  }
+
+  private func applyModelDownloadCancelPlan(_ cancelPlan: LocalModelDownloadCancelPlan) {
     switch cancelPlan.mode {
     case .running:
       runtimeDetail = cancelPlan.runtimeDetail
