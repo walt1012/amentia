@@ -172,7 +172,7 @@ impl RuntimeContext {
     Ok(note)
   }
 
-  pub(super) fn create_memory_note(
+  pub(crate) fn create_memory_note(
     &mut self,
     title: String,
     body: String,

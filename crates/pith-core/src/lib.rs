@@ -16,20 +16,17 @@ use local_responses::{
   summarize_file_result, summarize_search_result, summarize_shell_result,
 };
 use pith_memory::MemoryEvent;
-use pith_model_runtime::LocalModelRuntime;
 #[cfg(test)]
 use pith_plugin_host::PluginCatalogEntry;
 use pith_plugin_host::{inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle};
 use pith_protocol::{
-  methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
-  InitializeParams, InitializeResult, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
-  MemoryCreateParams, MemoryCreateResult, MemoryListResult, PluginInstallParams,
-  PluginInstallResult, PluginListResult, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSetEnabledResult, ServerCapabilities, ServerInfo, ThreadListResult,
-  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
-  ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams, TurnCancelResult,
-  TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
-  WorkspaceOpenResult, WorkspaceSummary,
+  methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, JsonRpcNotification,
+  JsonRpcRequest, JsonRpcResponse, PluginInstallParams, PluginInstallResult, PluginListResult,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSetEnabledResult,
+  ThreadListResult, ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult,
+  ThreadSummary, ThreadUpdatedNotificationParams, TimelineItem, TurnCancelParams,
+  TurnCancelResult, TurnStartParams, TurnStartResult, WorkspaceCurrentResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 #[cfg(test)]
 use pith_storage::FileThreadStore;
@@ -44,9 +41,7 @@ use plugin_permissions::{
 };
 use protocol_adapters::{
   build_protocol_capability_registry, build_protocol_command_registry,
-  build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_memory_note,
-  to_protocol_memory_status, to_protocol_model_bootstrap, to_protocol_model_health,
-  to_protocol_plugin,
+  build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_plugin,
 };
 use request_params::parse_required_params;
 pub(crate) use runtime_context::{
@@ -65,6 +60,8 @@ mod context_compaction;
 mod context_state;
 mod intent_inference;
 mod local_responses;
+mod memory_requests;
+mod model_requests;
 mod plugin_catalog_state;
 mod plugin_commands;
 mod plugin_hooks;
@@ -73,6 +70,7 @@ mod protocol_adapters;
 mod request_params;
 mod runtime_context;
 mod runtime_readiness;
+mod server_requests;
 mod text_utils;
 mod workspace_search;
 
@@ -82,35 +80,13 @@ pub use workspace_search::{CompletedWorkspaceSearch, PreparedWorkspaceSearch};
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   match request.method.as_str() {
     methods::APPROVAL_RESPOND => handle_approval_respond(context, request),
-    methods::INITIALIZE => handle_initialize(context, request),
-    methods::HEALTH_PING => JsonRpcResponse::success(
-      request.id,
-      &HealthPingResult {
-        status: "ok".to_string(),
-      },
-    ),
-    methods::MEMORY_CREATE => handle_memory_create(context, request),
-    methods::MEMORY_LIST => JsonRpcResponse::success(
-      request.id,
-      &MemoryListResult {
-        notes: context
-          .memory_notes
-          .iter()
-          .take(16)
-          .cloned()
-          .map(to_protocol_memory_note)
-          .collect(),
-      },
-    ),
-    methods::MEMORY_STATUS => JsonRpcResponse::success(
-      request.id,
-      &to_protocol_memory_status(context.memory_manager.status(&context.memory_notes)),
-    ),
-    methods::MODEL_BOOTSTRAP => handle_model_bootstrap(context, request),
-    methods::MODEL_HEALTH => JsonRpcResponse::success(
-      request.id,
-      &to_protocol_model_health(context.model_runtime.health()),
-    ),
+    methods::INITIALIZE => server_requests::handle_initialize(context, request),
+    methods::HEALTH_PING => server_requests::handle_health_ping(request),
+    methods::MEMORY_CREATE => memory_requests::handle_memory_create(context, request),
+    methods::MEMORY_LIST => memory_requests::handle_memory_list(context, request),
+    methods::MEMORY_STATUS => memory_requests::handle_memory_status(context, request),
+    methods::MODEL_BOOTSTRAP => model_requests::handle_model_bootstrap(context, request),
+    methods::MODEL_HEALTH => model_requests::handle_model_health(context, request),
     methods::PLUGIN_CAPABILITY_REGISTRY => JsonRpcResponse::success(
       request.id,
       &build_protocol_capability_registry(&context.plugins),
@@ -190,91 +166,6 @@ pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpc
   }
 
   Ok(notifications)
-}
-
-fn handle_initialize(context: &RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<InitializeParams>(&request, "initialize") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let _client = params.client_info;
-
-  JsonRpcResponse::success(
-    request.id,
-    &InitializeResult {
-      server_info: ServerInfo {
-        name: context.server_name.clone(),
-        version: context.server_version.clone(),
-      },
-      protocol_version: "0.1.0".to_string(),
-      capabilities: ServerCapabilities {
-        supports_memory: true,
-        supports_threads: true,
-        supports_tools: true,
-        supports_plugins: !context.plugins.is_empty(),
-        supports_runtime_readiness: true,
-      },
-    },
-  )
-}
-
-fn handle_memory_create(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
-  let params = match parse_required_params::<MemoryCreateParams>(&request, "memory/create") {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
-
-  let Some(workspace) = context.workspace.clone() else {
-    return JsonRpcResponse::error(
-      request.id,
-      -32040,
-      "Open a workspace before creating memory notes",
-    );
-  };
-
-  let title = params.title.trim();
-  let body = params.body.trim();
-  if title.is_empty() || body.is_empty() {
-    return JsonRpcResponse::error(
-      request.id,
-      -32602,
-      "memory/create title and body must be non-empty",
-    );
-  }
-
-  match context.create_memory_note(
-    title.to_string(),
-    body.to_string(),
-    workspace.display_name,
-    "user".to_string(),
-    vec![
-      "workspace".to_string(),
-      "user".to_string(),
-      "manual".to_string(),
-    ],
-  ) {
-    Ok(note) => JsonRpcResponse::success(
-      request.id,
-      &MemoryCreateResult {
-        note: to_protocol_memory_note(note),
-      },
-    ),
-    Err(error) => JsonRpcResponse::error(request.id, -32041, error.to_string()),
-  }
-}
-
-fn handle_model_bootstrap(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> JsonRpcResponse {
-  match context.model_runtime.bootstrap_pack_metadata() {
-    Ok(result) => {
-      context.model_runtime = LocalModelRuntime::new_default();
-      JsonRpcResponse::success(request.id, &to_protocol_model_bootstrap(result))
-    }
-    Err(error) => JsonRpcResponse::error(request.id, -32042, error.to_string()),
-  }
 }
 
 fn handle_plugin_set_enabled(
