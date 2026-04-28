@@ -61,7 +61,9 @@ mod runtime {
   pub(crate) mod runtime_readiness;
   pub(crate) mod runtime_sequences;
 }
-pub(crate) use runtime::{protocol_adapters, runtime_context, runtime_readiness, runtime_sequences};
+pub(crate) use runtime::{
+  protocol_adapters, runtime_context, runtime_readiness, runtime_sequences,
+};
 
 mod support {
   pub(crate) mod text_utils;
