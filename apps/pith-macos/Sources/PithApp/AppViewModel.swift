@@ -50,17 +50,9 @@ final class AppViewModel: ObservableObject {
   private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
-    let initialTimeline = TimelineEntryFactory.welcomeTimeline()
-
-    let initialThreads = [
-      ThreadSummary(
-        id: "local-welcome",
-        title: "Welcome to Pith",
-        preview: "Open a workspace to begin the local agent loop.",
-        workspaceRootPath: nil,
-        workspaceDisplayName: nil
-      ),
-    ]
+    let welcomeState = TimelineSessionState.welcomeState()
+    let initialTimeline = welcomeState.timeline
+    let initialThreads = [welcomeState.thread]
 
     let initialLocalModels = LocalModelCatalog.summaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
@@ -109,7 +101,7 @@ final class AppViewModel: ObservableObject {
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
     self.activeTurnID = nil
-    self.threadTimelines = ["local-welcome": initialTimeline]
+    self.threadTimelines = [welcomeState.thread.id: initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.lastRuntimeFailureDetail = nil
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(resumeData: pausedDownload?.resumeData)
@@ -2054,14 +2046,9 @@ final class AppViewModel: ObservableObject {
   }
 
   private func resetToWelcomeThread() {
-    let welcomeThread = ThreadSummary(
-      id: "local-welcome",
-      title: "Welcome to Pith",
-      preview: "Open a workspace to begin the local agent loop.",
-      workspaceRootPath: nil,
-      workspaceDisplayName: nil
-    )
-    let welcomeTimeline = TimelineEntryFactory.welcomeTimeline()
+    let welcomeState = TimelineSessionState.welcomeState()
+    let welcomeThread = welcomeState.thread
+    let welcomeTimeline = welcomeState.timeline
 
     threads = [welcomeThread]
     threadTimelines = [welcomeThread.id: welcomeTimeline]
@@ -2113,7 +2100,7 @@ final class AppViewModel: ObservableObject {
   }
 
   private func threadTitle(for threadID: String) -> String {
-    threads.first(where: { $0.id == threadID })?.title ?? "Thread"
+    TimelineSessionState.threadTitle(for: threadID, threads: threads)
   }
 
   private func loadThreadHistory(threadID: String) async {
@@ -2152,11 +2139,10 @@ final class AppViewModel: ObservableObject {
   }
 
   private func selectedEntry() -> TimelineEntry? {
-    guard let selectedEntryID else {
-      return nil
-    }
-
-    return timeline.first(where: { $0.id == selectedEntryID })
+    TimelineSessionState.selectedEntry(
+      selectedEntryID: selectedEntryID,
+      timeline: timeline
+    )
   }
 
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {
@@ -2393,15 +2379,11 @@ final class AppViewModel: ObservableObject {
   }
 
   private func hasRuntimeThreadSelection() -> Bool {
-    guard let selectedThreadID,
-          !selectedThreadID.hasPrefix("local-"),
-          let selectedThread = threads.first(where: { $0.id == selectedThreadID }),
-          let workspace
-    else {
-      return false
-    }
-
-    return selectedThread.workspaceRootPath == workspace.rootPath
+    TimelineSessionState.hasRuntimeThreadSelection(
+      selectedThreadID: selectedThreadID,
+      threads: threads,
+      workspace: workspace
+    )
   }
 
   private func sessionActionSnapshot() -> SessionActionSnapshot {
@@ -2467,23 +2449,11 @@ final class AppViewModel: ObservableObject {
   }
 
   private func selectedThreadIsWaitingForFirstMessage() -> Bool {
-    guard let selectedThreadID,
-          !selectedThreadID.hasPrefix("local-")
-    else {
-      return false
-    }
-
-    let entries = threadTimelines[selectedThreadID] ?? timeline
-    return !entries.contains(where: isUserStartedTimelineEntry)
-  }
-
-  private func isUserStartedTimelineEntry(_ entry: TimelineEntry) -> Bool {
-    switch entry.kind {
-    case .userMessage, .assistantMessage, .plan, .tool, .diff, .approval:
-      return true
-    case .system, .warning:
-      return false
-    }
+    TimelineSessionState.isWaitingForFirstMessage(
+      selectedThreadID: selectedThreadID,
+      threadTimelines: threadTimelines,
+      visibleTimeline: timeline
+    )
   }
 
   private func shouldAnnotateLaunchWithSetupEvents() -> Bool {
