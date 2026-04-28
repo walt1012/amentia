@@ -2,14 +2,30 @@
 
 This package contains the native macOS shell for `Pith`.
 
-Initial goals:
+Primary goals:
 
 - native Intel Mac experience
 - workspace and thread navigation
 - timeline-centered task execution UI
 - runtime bridge over `stdio`
+- local model setup and recovery without external model APIs
 
-The current package provides the application shell and view structure for Milestone 0.
+## Source Layout
+
+The app target is intentionally organized by product domain, not by helper type:
+
+- `App`: application shell, top-level view model, shared app models, and platform services.
+- `Runtime`: stdio bridge, JSON-RPC protocol payloads, runtime launch, readiness, and state mapping.
+- `LocalModels`: first-use model setup, catalog, download, verification, activation, and model panel UI.
+- `Plugins`: plugin discovery, install state, manager UI, and action planning.
+- `Memory`: memory status, note presentation, and memory panel UI.
+- `Timeline`: thread timeline presentation, inspector state, composer status, and session actions.
+- `Workspace`: workspace search state and UI.
+- `Setup`: first-run setup callouts and progress presentation.
+
+New macOS app code should land in the domain that owns the product behavior. Avoid creating one-off
+helper files at the target root; if a boundary is unclear, prefer tightening the owning domain model
+before extracting another file.
 
 ## Local Runtime Bridge
 
