@@ -36,12 +36,18 @@ mod workspace_search;
 pub use approval_requests::{
   complete_prepared_approval_respond, execute_prepared_approval_respond, prepare_approval_respond,
 };
-pub use plugin_commands::{CompletedPluginCommandRun, PreparedPluginCommandRun};
+pub use plugin_commands::{
+  complete_prepared_plugin_command_run, execute_prepared_plugin_command_run,
+  prepare_plugin_command_run, CompletedPluginCommandRun, PreparedPluginCommandRun,
+};
 pub use turn_requests::{
   complete_prepared_turn_start, execute_prepared_turn_start, prepare_turn_start,
 };
 pub use turn_streaming::collect_notifications;
-pub use workspace_search::{CompletedWorkspaceSearch, PreparedWorkspaceSearch};
+pub use workspace_search::{
+  complete_prepared_workspace_search, execute_prepared_workspace_search, prepare_workspace_search,
+  CompletedWorkspaceSearch, PreparedWorkspaceSearch,
+};
 
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   match request.method.as_str() {
@@ -81,43 +87,6 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::TURN_START => turn_requests::handle_turn_start(context, request),
     _ => JsonRpcResponse::error(request.id, -32601, "Method not found"),
   }
-}
-
-pub fn prepare_workspace_search(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> std::result::Result<PreparedWorkspaceSearch, JsonRpcResponse> {
-  workspace_search::prepare_workspace_search(context, request)
-}
-
-pub fn execute_prepared_workspace_search(
-  prepared: PreparedWorkspaceSearch,
-) -> CompletedWorkspaceSearch {
-  workspace_search::execute_prepared_workspace_search(prepared)
-}
-
-pub fn complete_prepared_workspace_search(completed: CompletedWorkspaceSearch) -> JsonRpcResponse {
-  workspace_search::complete_prepared_workspace_search(completed)
-}
-
-pub fn prepare_plugin_command_run(
-  context: &mut RuntimeContext,
-  request: JsonRpcRequest,
-) -> std::result::Result<PreparedPluginCommandRun, JsonRpcResponse> {
-  plugin_commands::prepare_plugin_command_run(context, request)
-}
-
-pub fn execute_prepared_plugin_command_run(
-  prepared: PreparedPluginCommandRun,
-) -> CompletedPluginCommandRun {
-  plugin_commands::execute_prepared_plugin_command_run(prepared)
-}
-
-pub fn complete_prepared_plugin_command_run(
-  context: &mut RuntimeContext,
-  completed: CompletedPluginCommandRun,
-) -> JsonRpcResponse {
-  plugin_commands::complete_prepared_plugin_command_run(context, completed)
 }
 
 #[cfg(test)]
