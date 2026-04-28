@@ -286,14 +286,7 @@ final class RuntimeBridge {
       method: "initialize",
       params: initializeParams
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     updateConnectionState(.ready, detail: "\(result.serverInfo.name) \(result.serverInfo.version)")
 
@@ -308,14 +301,7 @@ final class RuntimeBridge {
       method: "thread/list",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.threads.map {
       RuntimeThreadSummary(
@@ -333,14 +319,7 @@ final class RuntimeBridge {
       method: "model/health",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeModelHealth(
       packID: result.packId,
@@ -361,14 +340,7 @@ final class RuntimeBridge {
       method: "runtime/readiness",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeReadiness(
       status: result.status,
@@ -390,14 +362,7 @@ final class RuntimeBridge {
       method: "model/bootstrap",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeModelBootstrap(
       manifestPath: result.manifestPath,
@@ -411,14 +376,7 @@ final class RuntimeBridge {
       method: "memory/status",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeMemoryStatus(
       noteCount: result.noteCount,
@@ -432,14 +390,7 @@ final class RuntimeBridge {
       method: "memory/list",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.notes.map { note in
       RuntimeMemoryNote(
@@ -459,14 +410,7 @@ final class RuntimeBridge {
       method: "memory/create",
       params: MemoryCreateParams(title: title, body: body)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeMemoryNote(
       id: result.note.id,
@@ -484,14 +428,7 @@ final class RuntimeBridge {
       method: "workspace/open",
       params: WorkspaceOpenParams(path: path)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeWorkspace(
       rootPath: result.workspace.rootPath,
@@ -505,14 +442,7 @@ final class RuntimeBridge {
       method: "plugin/list",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.plugins.map { plugin in
       RuntimePlugin(
@@ -540,14 +470,7 @@ final class RuntimeBridge {
       method: "plugin/install",
       params: PluginInstallParams(sourcePath: sourcePath)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimePlugin(
       id: result.plugin.id,
@@ -573,14 +496,7 @@ final class RuntimeBridge {
       method: "plugin/capabilityRegistry",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimePluginCapabilityRegistry(
       capabilities: result.capabilities.map { capability in
@@ -608,14 +524,7 @@ final class RuntimeBridge {
       method: "plugin/commandRegistry",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.commands.map { command in
       RuntimePluginCommand(
@@ -637,14 +546,7 @@ final class RuntimeBridge {
       method: "plugin/connectorRegistry",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.connectors.map { connector in
       RuntimePluginConnector(
@@ -671,14 +573,7 @@ final class RuntimeBridge {
       method: "plugin/hookRegistry",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.hooks.map { hook in
       RuntimePluginHook(
@@ -700,14 +595,7 @@ final class RuntimeBridge {
       method: "plugin/setEnabled",
       params: PluginSetEnabledParams(pluginId: pluginID, enabled: enabled)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimePlugin(
       id: result.plugin.id,
@@ -733,14 +621,7 @@ final class RuntimeBridge {
       method: "plugin/remove",
       params: PluginRemoveParams(manifestPath: manifestPath)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimePluginRemoval(
       pluginID: result.pluginId,
@@ -780,14 +661,7 @@ final class RuntimeBridge {
       method: "plugin/commandRun",
       params: PluginCommandRunParams(threadId: threadID, commandId: commandID, input: input)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeTurnResult(
       turnID: result.turnId,
@@ -803,14 +677,7 @@ final class RuntimeBridge {
       method: "workspace/current",
       params: OptionalRequestParams.none
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     guard let workspace = result.workspace else {
       return nil
@@ -828,14 +695,7 @@ final class RuntimeBridge {
       method: "workspace/search",
       params: WorkspaceSearchParams(query: query, maxResults: maxResults)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return result.matches.map { match in
       RuntimeWorkspaceSearchMatch(
@@ -851,14 +711,7 @@ final class RuntimeBridge {
       method: "thread/start",
       params: ThreadStartParams(title: title)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return ThreadSummary(
       id: result.thread.id,
@@ -874,14 +727,7 @@ final class RuntimeBridge {
       method: "turn/start",
       params: TurnStartParams(threadId: threadID, message: message)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeTurnResult(
       turnID: result.turnId,
@@ -897,14 +743,7 @@ final class RuntimeBridge {
       method: "thread/read",
       params: ThreadReadParams(threadId: threadID)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeBridgePayloadMapper.threadState(
       id: result.thread.id,
@@ -921,14 +760,7 @@ final class RuntimeBridge {
       method: "approval/respond",
       params: ApprovalRespondParams(approvalId: approvalID, decision: decision)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeApprovalResponse(
       approvalID: result.approvalId,
@@ -943,14 +775,7 @@ final class RuntimeBridge {
       method: "turn/cancel",
       params: TurnCancelParams(turnId: turnID)
     )
-
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
+    let result = try responseResult(from: response)
 
     return RuntimeTurnCancellation(
       turnID: result.turnId,
@@ -1337,6 +1162,20 @@ final class RuntimeBridge {
 
     let decoder = JSONDecoder()
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
+  }
+
+  private func responseResult<ResultType: Decodable>(
+    from response: JSONRPCResponse<ResultType>
+  ) throws -> ResultType {
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result
   }
 
   private static func readLine(from handle: FileHandle) throws -> String {
