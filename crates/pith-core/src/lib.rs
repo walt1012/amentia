@@ -31,9 +31,9 @@ use pith_protocol::{
   TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
   WorkspaceOpenResult, WorkspaceSummary,
 };
-use pith_storage::StoredApprovalRecord;
 #[cfg(test)]
 use pith_storage::FileThreadStore;
+use pith_storage::StoredApprovalRecord;
 use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, shell_sandbox_summary,
   write_file,
