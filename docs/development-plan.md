@@ -1106,20 +1106,21 @@ Mitigation:
 
 ## 24. Immediate Next Actions
 
-The project is currently in Milestone 3. The highest-leverage next step is to keep tightening the
-daily-driver loop without expanding the visible surface area. The current product review says the
-code is still aligned with the main line, but this plan had started to accumulate implementation
-notes. Going forward, this document should stay outcome-based instead of mirroring every commit.
+Milestone 3 is in closeout. The current codebase has the core daily-driver path in place: guided
+local model setup, strict model readiness, bounded model and shell subprocesses, runtime request
+unblocking for heavy work, workspace-bound threads, native sandbox diagnostics, compact context
+packing, and progressive disclosure for secondary controls.
 
-Recommended current implementation sequence:
+The next product step is a broad review and refactor gate, not another feature expansion. Review the
+Swift app, Rust runtime, protocol boundary, model catalog, plugin metadata, sandbox layer, and docs
+as one system. Keep only the structures that directly support a small, strong local desktop agent.
 
-1. make bounded local inference a first-class daily-driver requirement: timeout, cancellation, subprocess cleanup, and runtime recovery must be visible and reliable
-2. close remaining fresh-install gaps from runtime launch to model download, activation, workspace, first thread, and first message
-3. refine context compaction for small local models through concise prompts, memory packing, and short tool observations
-4. reduce always-visible UI noise whenever setup, model, workspace, plugin, or diagnostic controls compete with the timeline
-5. refine first-message, empty-state, review, and recovery prompts around the main timeline instead of adding new panels
-6. defer broad third-party plugin execution, connector auth, and multi-agent platform work until the local daily-driver loop feels stable and compact
+Refactor priorities:
 
-Remote CI verification is a routine engineering practice for every pushed change, not a product
-milestone. Each product step should stay small and reviewable so the app continues moving toward a
-premium, local-first, small-but-strong desktop experience.
+1. shrink large files and move cohesive responsibilities into small modules
+2. keep the main timeline and local model flow as the primary product surface
+3. preserve bounded execution, cancellation, integrity checks, and workspace scoping as non-negotiable runtime contracts
+4. defer broad connector execution, third-party auth, multi-agent workflows, and platform expansion to Milestone 4
+5. keep this plan outcome-based so implementation detail lives in code, commits, tests, and review notes
+
+Remote CI verification remains routine for every pushed change, not a product milestone.
