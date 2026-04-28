@@ -1987,15 +1987,15 @@ final class AppViewModel: ObservableObject {
     threadID: String,
     approvals: [RuntimeBridge.RuntimeApproval]
   ) {
-    threadPendingApprovalIDs[threadID] = Set(approvals.map(\.id))
+    threadPendingApprovalIDs[threadID] = TimelineMutationState.pendingApprovalIDs(from: approvals)
   }
 
   private func refreshThreadPreview(threadID: String, preview: String) {
-    guard let index = threads.firstIndex(where: { $0.id == threadID }) else {
-      return
-    }
-
-    threads[index].preview = preview
+    threads = TimelineMutationState.threadsByRefreshingPreview(
+      threads,
+      threadID: threadID,
+      preview: preview
+    )
   }
 
   private func refreshWorkspaceThreadSelection(
@@ -2022,21 +2022,19 @@ final class AppViewModel: ObservableObject {
     }
 
     threads = workspaceThreads
-    threadTimelines = Dictionary(
-      uniqueKeysWithValues: workspaceThreads.map { thread in
-        (
-          thread.id,
-          threadTimelines[thread.id]
-            ?? TimelineEntryFactory.defaultTimeline(for: thread.title)
-        )
-      }
+    threadTimelines = TimelineMutationState.threadTimelines(
+      for: workspaceThreads,
+      existingTimelines: threadTimelines
     )
-    threadPendingApprovalIDs = threadPendingApprovalIDs.filter { entry in
-      workspaceThreads.contains(where: { $0.id == entry.key })
-    }
+    threadPendingApprovalIDs = TimelineMutationState.pendingApprovalIDsByRetainingWorkspaceThreads(
+      threadPendingApprovalIDs,
+      workspaceThreads: workspaceThreads
+    )
 
-    let selectedThread = workspaceThreads.first(where: { $0.id == selectedThreadID }) ?? workspaceThreads.first
-    selectedThreadID = selectedThread?.id
+    selectedThreadID = TimelineMutationState.selectedThreadID(
+      workspaceThreads: workspaceThreads,
+      currentSelectionID: selectedThreadID
+    )
     syncVisibleTimeline()
 
     if let selectedThreadID {
@@ -2066,37 +2064,41 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    var entries = threadTimelines[threadID]
-      ?? TimelineEntryFactory.defaultTimeline(for: threadTitle(for: threadID))
-    entries.insert(entry, at: 0)
+    let entries = TimelineMutationState.entriesByAppending(
+      entry: entry,
+      existingEntries: threadTimelines[threadID],
+      fallbackTitle: threadTitle(for: threadID)
+    )
+    applyThreadEntries(threadID: threadID, entries: entries)
+  }
+
+  private func applyThreadEntries(threadID: String, entries: [TimelineEntry]) {
     threadTimelines[threadID] = entries
 
-    if selectedThreadID == threadID {
-      let previousSelectionID = selectedEntryID
-      timeline = entries
-      selectedEntryID = TimelineEntryFactory.bestSelectionID(
-        previousSelectionID: previousSelectionID,
-        entries: entries
-      )
+    if let visibleState = TimelineMutationState.visibleTimelineUpdate(
+      updatedThreadID: threadID,
+      selectedThreadID: selectedThreadID,
+      entries: entries,
+      previousSelectionID: selectedEntryID
+    ) {
+      timeline = visibleState.timeline
+      selectedEntryID = visibleState.selectedEntryID
     }
   }
 
   private func syncVisibleTimeline() {
-    guard let selectedThreadID else {
-      timeline = []
-      selectedEntryID = nil
-      return
-    }
-
-    let previousSelectionID = selectedEntryID
-    timeline =
-      threadTimelines[selectedThreadID]
-      ?? TimelineEntryFactory.defaultTimeline(for: threadTitle(for: selectedThreadID))
-    threadTimelines[selectedThreadID] = timeline
-    selectedEntryID = TimelineEntryFactory.bestSelectionID(
-      previousSelectionID: previousSelectionID,
-      entries: timeline
+    let visibleState = TimelineMutationState.visibleTimeline(
+      selectedThreadID: selectedThreadID,
+      threadTimelines: threadTimelines,
+      threads: threads,
+      previousSelectionID: selectedEntryID
     )
+    timeline = visibleState.timeline
+    selectedEntryID = visibleState.selectedEntryID
+
+    if let selectedThreadID {
+      threadTimelines[selectedThreadID] = visibleState.timeline
+    }
   }
 
   private func threadTitle(for threadID: String) -> String {
@@ -2106,24 +2108,15 @@ final class AppViewModel: ObservableObject {
   private func loadThreadHistory(threadID: String) async {
     do {
       let result = try await runtimeBridge.readThread(threadID: threadID)
-      let previousSelectionID = selectedThreadID == threadID ? selectedEntryID : nil
       let entries = TimelineEntryFactory.runtimeEntries(
         from: result.items,
         existingEntries: threadTimelines[threadID],
         fallbackTitle: threadTitle(for: threadID)
       )
-      threadTimelines[threadID] = entries
+      applyThreadEntries(threadID: threadID, entries: entries)
       updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
       updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
       refreshThreadPreview(threadID: threadID, preview: result.status)
-
-      if selectedThreadID == threadID {
-        timeline = entries
-        selectedEntryID = TimelineEntryFactory.bestSelectionID(
-          previousSelectionID: previousSelectionID,
-          entries: entries
-        )
-      }
     } catch {
       appendEntry(
         to: threadID,
@@ -2146,20 +2139,14 @@ final class AppViewModel: ObservableObject {
   }
 
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {
-    if activeTurnID == nil {
-      if activeTurnThreadID == threadID {
-        activeTurnThreadID = nil
-      }
-      self.activeTurnID = nil
-      return
-    }
-
-    if self.activeTurnID == activeTurnID, activeTurnThreadID == threadID {
-      return
-    }
-
-    self.activeTurnID = activeTurnID
-    activeTurnThreadID = threadID
+    let activeTurnSelection = TimelineMutationState.activeTurnSelection(
+      currentActiveTurnID: self.activeTurnID,
+      currentActiveTurnThreadID: activeTurnThreadID,
+      threadID: threadID,
+      runtimeActiveTurnID: activeTurnID
+    )
+    self.activeTurnID = activeTurnSelection.activeTurnID
+    activeTurnThreadID = activeTurnSelection.activeTurnThreadID
   }
 
   private func cancelPendingTurnRequest() -> Bool {
@@ -2882,25 +2869,16 @@ final class AppViewModel: ObservableObject {
   }
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
-    let previousSelectionID = selectedThreadID == state.id ? selectedEntryID : nil
     let entries = TimelineEntryFactory.runtimeEntries(
       from: state.items,
       existingEntries: threadTimelines[state.id],
       fallbackTitle: threadTitle(for: state.id)
     )
 
-    threadTimelines[state.id] = entries
+    applyThreadEntries(threadID: state.id, entries: entries)
     updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
     updateActiveTurn(threadID: state.id, activeTurnID: state.activeTurnID)
     refreshThreadPreview(threadID: state.id, preview: state.status)
-
-    if selectedThreadID == state.id {
-      timeline = entries
-      selectedEntryID = TimelineEntryFactory.bestSelectionID(
-        previousSelectionID: previousSelectionID,
-        entries: entries
-      )
-    }
   }
 
 }
