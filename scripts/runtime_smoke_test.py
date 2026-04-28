@@ -43,6 +43,123 @@ def send_request(process: subprocess.Popen[str], payload: dict) -> tuple[dict, l
     if "method" in message:
       notifications.append(message)
 
+def assert_plugin_install_remove(
+  process: subprocess.Popen[str],
+  plugin_import_dir: Path,
+  request_id_start: int,
+) -> None:
+  plugin_install, _ = send_request(
+    process,
+    {
+      "id": request_id_start,
+      "method": "plugin/install",
+      "params": {
+        "sourcePath": str(plugin_import_dir / "focus-review"),
+      },
+    },
+  )
+  assert plugin_install["result"]["plugin"]["id"] == "focus-review"
+  assert plugin_install["result"]["plugin"]["provenance"] == "local"
+
+  plugin_list_after_install, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 1,
+      "method": "plugin/list",
+    },
+  )
+  installed_plugin = next(
+    plugin
+    for plugin in plugin_list_after_install["result"]["plugins"]
+    if plugin["id"] == "focus-review"
+  )
+  assert installed_plugin["enabled"] is True
+  assert Path(installed_plugin["manifestPath"]).is_file()
+
+  plugin_remove, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 2,
+      "method": "plugin/remove",
+      "params": {
+        "manifestPath": installed_plugin["manifestPath"],
+      },
+    },
+  )
+  assert plugin_remove["result"]["pluginId"] == "focus-review"
+  assert Path(plugin_remove["result"]["removedPath"]).exists() is False
+
+  plugin_list_after_remove, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 3,
+      "method": "plugin/list",
+    },
+  )
+  assert not any(
+    plugin["id"] == "focus-review"
+    for plugin in plugin_list_after_remove["result"]["plugins"]
+  )
+
+def assert_builtin_plugin_commands(
+  process: subprocess.Popen[str],
+  request_id_start: int,
+) -> None:
+  review_command_turn, _ = send_request(
+    process,
+    {
+      "id": request_id_start,
+      "method": "plugin/commandRun",
+      "params": {
+        "threadId": "thread-1",
+        "commandId": "review-assistant::review.inspect-diff",
+      },
+    },
+  )
+  assert review_command_turn["result"]["items"][0]["kind"] == "pluginCommand"
+  assert review_command_turn["result"]["items"][0]["attributes"]["pluginId"] == "review-assistant"
+  assert review_command_turn["result"]["items"][1]["kind"] == "pluginResult"
+  assert (
+    review_command_turn["result"]["items"][1]["attributes"]["executionKind"]
+    == "builtin.reviewDiffSummary"
+  )
+
+  command_turn, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 1,
+      "method": "plugin/commandRun",
+      "params": {
+        "threadId": "thread-1",
+        "commandId": "workspace-notes::workspace.capture-note",
+      },
+    },
+  )
+  assert command_turn["result"]["items"][0]["kind"] == "pluginCommand"
+  assert command_turn["result"]["items"][0]["attributes"]["pluginId"] == "workspace-notes"
+  assert command_turn["result"]["items"][1]["kind"] == "pluginResult"
+  assert (
+    command_turn["result"]["items"][1]["attributes"]["executionKind"]
+    == "builtin.workspaceReadmeNote"
+  )
+  memory_item = next(
+    item
+    for item in command_turn["result"]["items"]
+    if item["title"] == "Memory Note Saved"
+  )
+  assert memory_item["attributes"]["memoryNoteTitle"] == "Workspace Capture"
+  memory_list_after_plugin, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 2,
+      "method": "memory/list",
+    },
+  )
+  assert any(
+    note["title"] == "Workspace Capture" and note["source"] == "plugin.workspace-notes"
+    for note in memory_list_after_plugin["result"]["notes"]
+  )
+
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
   state_dir = repo_root / ".tmp-runtime-state"
@@ -326,6 +443,7 @@ def main() -> int:
     assert model_health["result"]["displayName"] == "LFM2.5-350M Q4_K_M"
     assert model_health["result"]["backend"] in {"unconfigured", "llama.cpp"}
     assert model_health["result"]["status"] in {"unavailable", "ready"}
+    model_is_ready = model_health["result"]["status"] == "ready"
     assert model_health["result"]["source"] in {"default-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
     assert model_health["result"]["metrics"]["modelContextSize"] == "32768"
@@ -614,6 +732,13 @@ def main() -> int:
         },
       },
     )
+    if not model_is_ready:
+      assert turn["error"]["code"] == -32060
+      assert "Local model is not ready" in turn["error"]["message"]
+      assert_plugin_install_remove(process, plugin_import_dir, 60)
+      assert_builtin_plugin_commands(process, 70)
+      return 0
+
     assert turn["result"]["items"][0]["kind"] == "userMessage"
     assert turn["result"]["items"][1]["kind"] == "plan"
     assert turn["result"]["items"][1]["attributes"]["responseRole"] == "planner"
@@ -872,113 +997,8 @@ def main() -> int:
       for note in memory_list_after_shell["result"]["notes"]
     )
 
-    plugin_install, _ = send_request(
-      process,
-      {
-        "id": 42,
-        "method": "plugin/install",
-        "params": {
-          "sourcePath": str(plugin_import_dir / "focus-review"),
-        },
-      },
-    )
-    assert plugin_install["result"]["plugin"]["id"] == "focus-review"
-    assert plugin_install["result"]["plugin"]["provenance"] == "local"
-
-    plugin_list_after_install, _ = send_request(
-      process,
-      {
-        "id": 43,
-        "method": "plugin/list",
-      },
-    )
-    installed_plugin = next(
-      plugin
-      for plugin in plugin_list_after_install["result"]["plugins"]
-      if plugin["id"] == "focus-review"
-    )
-    assert installed_plugin["enabled"] is True
-    assert Path(installed_plugin["manifestPath"]).is_file()
-
-    plugin_remove, _ = send_request(
-      process,
-      {
-        "id": 44,
-        "method": "plugin/remove",
-        "params": {
-          "manifestPath": installed_plugin["manifestPath"],
-        },
-      },
-    )
-    assert plugin_remove["result"]["pluginId"] == "focus-review"
-    assert Path(plugin_remove["result"]["removedPath"]).exists() is False
-
-    plugin_list_after_remove, _ = send_request(
-      process,
-      {
-        "id": 45,
-        "method": "plugin/list",
-      },
-    )
-    assert not any(
-      plugin["id"] == "focus-review"
-      for plugin in plugin_list_after_remove["result"]["plugins"]
-    )
-
-    review_command_turn, _ = send_request(
-      process,
-      {
-        "id": 48,
-        "method": "plugin/commandRun",
-        "params": {
-          "threadId": "thread-1",
-          "commandId": "review-assistant::review.inspect-diff",
-        },
-      },
-    )
-    assert review_command_turn["result"]["items"][0]["kind"] == "pluginCommand"
-    assert review_command_turn["result"]["items"][0]["attributes"]["pluginId"] == "review-assistant"
-    assert review_command_turn["result"]["items"][1]["kind"] == "pluginResult"
-    assert (
-      review_command_turn["result"]["items"][1]["attributes"]["executionKind"]
-      == "builtin.reviewDiffSummary"
-    )
-
-    command_turn, _ = send_request(
-      process,
-      {
-        "id": 41,
-        "method": "plugin/commandRun",
-        "params": {
-          "threadId": "thread-1",
-          "commandId": "workspace-notes::workspace.capture-note",
-        },
-      },
-    )
-    assert command_turn["result"]["items"][0]["kind"] == "pluginCommand"
-    assert command_turn["result"]["items"][0]["attributes"]["pluginId"] == "workspace-notes"
-    assert command_turn["result"]["items"][1]["kind"] == "pluginResult"
-    assert (
-      command_turn["result"]["items"][1]["attributes"]["executionKind"]
-      == "builtin.workspaceReadmeNote"
-    )
-    memory_item = next(
-      item
-      for item in command_turn["result"]["items"]
-      if item["title"] == "Memory Note Saved"
-    )
-    assert memory_item["attributes"]["memoryNoteTitle"] == "Workspace Capture"
-    memory_list_after_plugin, _ = send_request(
-      process,
-      {
-        "id": 46,
-        "method": "memory/list",
-      },
-    )
-    assert any(
-      note["title"] == "Workspace Capture" and note["source"] == "plugin.workspace-notes"
-      for note in memory_list_after_plugin["result"]["notes"]
-    )
+    assert_plugin_install_remove(process, plugin_import_dir, 42)
+    assert_builtin_plugin_commands(process, 48)
     return 0
   finally:
     process.terminate()
