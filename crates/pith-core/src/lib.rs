@@ -99,6 +99,7 @@ pub struct RuntimeContext {
   plugins: Vec<PluginCatalogEntry>,
   pending_approvals: HashMap<String, PendingApproval>,
   active_turns: HashMap<String, ActiveTurn>,
+  enforce_model_readiness: bool,
   next_thread_number: usize,
   next_approval_number: usize,
 }
@@ -593,6 +594,10 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     Err(response) => return response,
   };
 
+  if let Err(message) = ensure_turn_model_ready(context) {
+    return JsonRpcResponse::error(request.id, -32060, message);
+  }
+
   match execute_turn_request(
     context,
     &params.thread_id,
@@ -603,6 +608,22 @@ fn handle_turn_start(context: &mut RuntimeContext, request: JsonRpcRequest) -> J
     Ok(result) => JsonRpcResponse::success(request.id, &result),
     Err((code, message)) => JsonRpcResponse::error(request.id, code, message),
   }
+}
+
+fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), String> {
+  if !context.enforce_model_readiness {
+    return Ok(());
+  }
+
+  let health = context.model_runtime.health();
+  if health.status == "ready" {
+    return Ok(());
+  }
+
+  Err(format!(
+    "Local model is not ready for turn/start. Download and activate a local model first. {}",
+    health.detail
+  ))
 }
 
 fn execute_turn_request(

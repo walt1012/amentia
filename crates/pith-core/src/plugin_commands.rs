@@ -1,8 +1,11 @@
 use std::collections::HashMap;
+use std::io::Read;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, TimelineItem, TurnStartResult,
@@ -13,6 +16,15 @@ use pith_tools::read_file;
 use super::context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
 use super::request_params::parse_required_params;
 use super::{approvals_for_thread, refresh_thread_summary_note, RuntimeContext};
+
+const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
+const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+struct GitCommandOutput {
+  stdout: Vec<u8>,
+  success: bool,
+  timed_out: bool,
+}
 
 pub(super) fn handle_plugin_command_run(
   context: &mut RuntimeContext,
@@ -394,16 +406,51 @@ fn build_review_diff_summary_result(
 }
 
 fn git_workspace_output(workspace_root: &Path, args: &[&str]) -> Option<String> {
-  let output = Command::new("git")
-    .arg("-C")
-    .arg(workspace_root)
-    .args(args)
-    .output()
-    .ok()?;
-  if !output.status.success() {
+  let output = run_git_workspace_command(workspace_root, args).ok()?;
+  if output.timed_out || !output.success {
     return None;
   }
   Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<GitCommandOutput> {
+  let mut child = Command::new("git")
+    .arg("-C")
+    .arg(workspace_root)
+    .args(args)
+    .stdout(Stdio::piped())
+    .stderr(Stdio::null())
+    .spawn()?;
+  let Some(mut stdout) = child.stdout.take() else {
+    bail!("git stdout pipe was unavailable");
+  };
+  let stdout_reader = thread::spawn(move || {
+    let mut buffer = vec![];
+    let _ = stdout.read_to_end(&mut buffer);
+    buffer
+  });
+
+  let started_at = Instant::now();
+  let (success, timed_out) = loop {
+    if let Some(status) = child.try_wait()? {
+      break (status.success(), false);
+    }
+
+    if started_at.elapsed() >= GIT_COMMAND_TIMEOUT {
+      let _ = child.kill();
+      let _ = child.wait();
+      break (false, true);
+    }
+
+    thread::sleep(GIT_COMMAND_POLL_INTERVAL);
+  };
+
+  let stdout = stdout_reader.join().unwrap_or_default();
+  Ok(GitCommandOutput {
+    stdout,
+    success,
+    timed_out,
+  })
 }
 
 fn compact_text_preview(content: &str, max_lines: usize, max_chars: usize) -> String {

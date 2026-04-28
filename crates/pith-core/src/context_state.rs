@@ -65,6 +65,7 @@ impl RuntimeContext {
         })
         .collect(),
       active_turns: HashMap::new(),
+      enforce_model_readiness: true,
       next_thread_number,
       next_approval_number,
     })
@@ -87,6 +88,7 @@ impl RuntimeContext {
       plugins: load_plugin_catalog(&plugin_roots).unwrap_or_default(),
       pending_approvals: HashMap::new(),
       active_turns: HashMap::new(),
+      enforce_model_readiness: false,
       next_thread_number: 1,
       next_approval_number: 1,
     }

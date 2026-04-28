@@ -123,6 +123,20 @@ enum LocalModelCatalog {
     )
   }
 
+  static func isVerifiedInstalledModel(
+    storageRootPath: String,
+    modelPath: String
+  ) -> Bool {
+    let normalizedModelPath = normalizedPath(modelPath)
+    return summaries(
+      storageRootPath: storageRootPath,
+      activeModelPath: modelPath
+    )
+    .contains { model in
+      model.downloaded && normalizedPath(model.installPath) == normalizedModelPath
+    }
+  }
+
   static func loadPausedDownload(matching localModels: [LocalModelSummary]) -> PersistedModelDownload? {
     let defaults = UserDefaults.standard
     guard let modelID = defaults.string(forKey: pausedDownloadIDKey),

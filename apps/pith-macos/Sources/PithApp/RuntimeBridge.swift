@@ -1242,6 +1242,14 @@ final class RuntimeBridge {
       return nil
     }
 
+    guard LocalModelCatalog.isVerifiedInstalledModel(
+      storageRootPath: localModelStorageRootPath(),
+      modelPath: modelPath
+    ) else {
+      clearActiveLocalModel()
+      return nil
+    }
+
     return ActiveLocalModelSelection(manifestPath: manifestPath, modelPath: modelPath)
   }
 

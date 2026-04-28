@@ -151,6 +151,26 @@ fn model_health_returns_local_model_status() {
 }
 
 #[test]
+fn turn_start_requires_ready_model_when_runtime_enforces_readiness() {
+  let mut context = RuntimeContext::new_in_memory();
+  context.enforce_model_readiness = true;
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "local-welcome",
+        "message": "Inspect the workspace"
+      })),
+    ),
+  );
+
+  let error = response.error.expect("model readiness error");
+  assert_eq!(error.code, -32060);
+  assert!(error.message.contains("Local model is not ready"));
+}
+
+#[test]
 fn unknown_method_returns_json_rpc_error() {
   let mut context = RuntimeContext::new_in_memory();
   let response = handle_request(&mut context, request("unknown/method", None));
