@@ -2333,25 +2333,19 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshLocalModelCatalog() {
-    let activeModelPath = runtimeBridge.activeLocalModelPath() ?? modelHealth?.modelPath
-    var refreshedModels = LocalModelCatalog.summaries(
-      storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: activeModelPath
-    )
-    if runtimeBridge.activeLocalModelPath() != nil,
-       activeModelPath != nil,
-       !refreshedModels.contains(where: { $0.active })
-    {
-      runtimeBridge.clearActiveLocalModel()
-      refreshedModels = LocalModelCatalog.summaries(
+    let refreshPlan = LocalModelCatalogRefreshPlanner.plan(
+      LocalModelCatalogRefreshSnapshot(
         storageRootPath: runtimeBridge.localModelStorageRootPath(),
-        activeModelPath: modelHealth?.modelPath
+        configuredActiveModelPath: runtimeBridge.activeLocalModelPath(),
+        runtimeModelPath: modelHealth?.modelPath,
+        selectedSetupModelID: selectedSetupModelID
       )
+    )
+    if refreshPlan.shouldClearConfiguredActiveModel {
+      runtimeBridge.clearActiveLocalModel()
     }
-    localModels = refreshedModels
-    if !localModels.contains(where: { $0.id == selectedSetupModelID }) {
-      selectedSetupModelID = LocalModelCatalog.defaultFirstUseModelID
-    }
+    localModels = refreshPlan.models
+    selectedSetupModelID = refreshPlan.selectedSetupModelID
   }
 
   private func runtimeHeaderSnapshot() -> RuntimeHeaderSnapshot {
