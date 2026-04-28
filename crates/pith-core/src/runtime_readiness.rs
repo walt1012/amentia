@@ -365,9 +365,7 @@ fn has_first_request(context: &RuntimeContext) -> bool {
     .any(|thread| thread.items.iter().any(|item| item.kind == "userMessage"))
 }
 
-fn current_workspace_threads(
-  context: &RuntimeContext,
-) -> impl Iterator<Item = &StoredThread> + '_ {
+fn current_workspace_threads(context: &RuntimeContext) -> impl Iterator<Item = &StoredThread> + '_ {
   context.threads.iter().filter(move |thread| {
     let Some(workspace) = &context.workspace else {
       return false;

@@ -5,8 +5,8 @@ use active_turns::{
   active_turn_id_for_thread, compute_streamed_char_count, start_streaming_assistant_turn,
   streaming_progress_label, update_streaming_item, ActiveTurn,
 };
-use approval_state::approvals_for_thread;
 use anyhow::Result;
+use approval_state::approvals_for_thread;
 use intent_inference::{
   infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
 };
