@@ -354,92 +354,42 @@ final class AppViewModel: ObservableObject {
   }
 
   func readinessStepActionTitle(_ step: ReadinessStepSummary) -> String? {
-    switch step.id {
-    case "runtime":
-      if runtimeState == .disconnected || runtimeState == .failed {
-        return runtimeLaunchButtonTitle()
-      }
-    case "model":
-      if runtimeState == .ready && !isLocalModelReady() {
-        return modelSetupCalloutActionTitle()
-      }
-    case "workspace":
-      if runtimeState == .ready && workspace == nil {
-        return "Open"
-      }
-    case "thread":
-      if runtimeState == .ready
-        && isLocalModelReady()
-        && workspace != nil
-        && !hasRuntimeThreadSelection()
-      {
-        return "New"
-      }
-    case "first-request":
-      if runtimeState == .ready,
-         canUseComposer(),
-         selectedThreadIsWaitingForFirstMessage()
-      {
-        return trimmedDraftMessage.isEmpty ? "Use Prompt" : "Send"
-      }
-    default:
-      return nil
-    }
-
-    return nil
+    let snapshot = runtimeReadinessActionSnapshot()
+    return RuntimeReadinessActionPlanner.title(
+      for: RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot),
+      snapshot: snapshot
+    )
   }
 
   func canRunReadinessStepAction(_ step: ReadinessStepSummary) -> Bool {
-    switch step.id {
-    case "runtime":
-      return (runtimeState == .disconnected || runtimeState == .failed) && canLaunchRuntime()
-    case "model":
-      return runtimeState == .ready && !isLocalModelReady() && canRunModelSetupCalloutAction()
-    case "workspace":
-      return runtimeState == .ready && workspace == nil && canOpenWorkspace()
-    case "thread":
-      return runtimeState == .ready
-        && isLocalModelReady()
-        && workspace != nil
-        && !hasRuntimeThreadSelection()
-        && canCreateThread()
-    case "first-request":
-      guard runtimeState == .ready,
-            canUseComposer(),
-            selectedThreadIsWaitingForFirstMessage()
-      else {
-        return false
-      }
-
-      return !trimmedDraftMessage.isEmpty
-        || firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil
-    default:
-      return false
-    }
+    let snapshot = runtimeReadinessActionSnapshot()
+    return RuntimeReadinessActionPlanner.canRun(
+      RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runReadinessStepAction(_ step: ReadinessStepSummary) {
-    guard canRunReadinessStepAction(step) else {
+    let snapshot = runtimeReadinessActionSnapshot()
+    guard let action = RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot),
+          RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot)
+    else {
       return
     }
 
-    switch step.id {
-    case "runtime":
+    switch action {
+    case .launchRuntime:
       launchRuntime()
-    case "model":
+    case .setupModel:
       runModelSetupCalloutAction()
-    case "workspace":
+    case .openWorkspace:
       openWorkspace()
-    case "thread":
+    case .createThread:
       createThread()
-    case "first-request":
-      if trimmedDraftMessage.isEmpty {
-        useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
-      } else {
-        sendDraftMessage()
-      }
-    default:
-      return
+    case .useFirstRequestPrompt:
+      useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
+    case .sendFirstRequest:
+      sendDraftMessage()
     }
   }
 
@@ -2504,6 +2454,25 @@ final class AppViewModel: ObservableObject {
       hasWorkspace: workspace != nil,
       isSearching: isWorkspaceSearching,
       query: workspaceSearchQuery
+    )
+  }
+
+  private func runtimeReadinessActionSnapshot() -> RuntimeReadinessActionSnapshot {
+    RuntimeReadinessActionSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasWorkspace: workspace != nil,
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      canLaunchRuntime: canLaunchRuntime(),
+      canRunModelSetupAction: canRunModelSetupCalloutAction(),
+      canOpenWorkspace: canOpenWorkspace(),
+      canCreateThread: canCreateThread(),
+      canUseComposer: canUseComposer(),
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      hasDraftMessage: !trimmedDraftMessage.isEmpty,
+      hasFirstRequestSuggestion: firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil,
+      runtimeLaunchButtonTitle: runtimeLaunchButtonTitle(),
+      modelSetupActionTitle: modelSetupCalloutActionTitle()
     )
   }
 
