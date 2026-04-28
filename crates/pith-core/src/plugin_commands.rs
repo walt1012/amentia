@@ -185,9 +185,7 @@ fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
   matches!(
     execution_kind,
     Some(
-      "builtin.workspaceReadmeNote"
-        | "builtin.shellSessionSummary"
-        | "builtin.reviewDiffSummary"
+      "builtin.workspaceReadmeNote" | "builtin.shellSessionSummary" | "builtin.reviewDiffSummary"
     )
   )
 }
@@ -243,19 +241,15 @@ fn build_plugin_command_timeline_item(
 fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
-  let execution_kind = snapshot
-    .command
-    .execution_kind
-    .as_deref()
-    .ok_or_else(|| {
-      (
-        -32053,
-        format!(
-          "Plugin command `{}` requires an explicit execution contract.",
-          snapshot.command.command_id
-        ),
-      )
-    })?;
+  let execution_kind = snapshot.command.execution_kind.as_deref().ok_or_else(|| {
+    (
+      -32053,
+      format!(
+        "Plugin command `{}` requires an explicit execution contract.",
+        snapshot.command.command_id
+      ),
+    )
+  })?;
   let result_content = match execution_kind {
     "builtin.workspaceReadmeNote" => build_workspace_readme_note_result(
       &snapshot.command,
