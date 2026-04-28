@@ -1,5 +1,12 @@
 import Foundation
 
+struct WorkspaceSearchSnapshot {
+  let runtimeState: RuntimeBridge.ConnectionState
+  let hasWorkspace: Bool
+  let isSearching: Bool
+  let query: String
+}
+
 struct WorkspaceSearchRequestToken {
   let id: UUID
   let query: String
@@ -8,6 +15,34 @@ struct WorkspaceSearchRequestToken {
 
 final class WorkspaceSearchSession {
   private var activeRequestID: UUID?
+
+  static func trimmedQuery(_ query: String) -> String {
+    query.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  static func canSearch(_ snapshot: WorkspaceSearchSnapshot) -> Bool {
+    snapshot.runtimeState == .ready
+      && snapshot.hasWorkspace
+      && !snapshot.isSearching
+      && !trimmedQuery(snapshot.query).isEmpty
+  }
+
+  static func queryChanged(currentQuery: String, token: WorkspaceSearchRequestToken) -> Bool {
+    trimmedQuery(currentQuery) != token.query
+  }
+
+  static func matchSummaries(
+    from matches: [RuntimeBridge.RuntimeWorkspaceSearchMatch]
+  ) -> [WorkspaceSearchMatchSummary] {
+    matches.enumerated().map { index, match in
+      WorkspaceSearchMatchSummary(
+        id: "\(match.relativePath):\(match.lineNumber):\(index)",
+        relativePath: match.relativePath,
+        lineNumber: match.lineNumber,
+        line: match.line
+      )
+    }
+  }
 
   func begin(query: String) -> WorkspaceSearchRequestToken {
     let requestID = UUID()

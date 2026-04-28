@@ -326,20 +326,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func runtimeLaunchButtonTitle() -> String {
-    switch runtimeState {
-    case .ready:
-      return "Relaunch Runtime"
-    case .failed:
-      return "Relaunch Runtime"
-    case .launching:
-      return "Launching Runtime"
-    case .disconnected:
-      return "Launch Runtime"
-    }
+    SessionActionPlanner.runtimeLaunchButtonTitle(sessionActionSnapshot())
   }
 
   func shouldShowRuntimeToolbarAction() -> Bool {
-    runtimeState == .disconnected || runtimeState == .failed
+    SessionActionPlanner.shouldShowRuntimeToolbarAction(sessionActionSnapshot())
   }
 
   func runtimeStatusSummary() -> String {
@@ -720,96 +711,70 @@ final class AppViewModel: ObservableObject {
   }
 
   func runtimePrimaryActionTitle() -> String? {
-    switch runtimeState {
-    case .disconnected, .failed, .launching:
-      return runtimeLaunchButtonTitle()
-    case .ready:
-      if canCancelActiveTurn() {
-        return "Cancel Turn"
-      }
-      return nil
-    }
+    let snapshot = sessionActionSnapshot()
+    return SessionActionPlanner.runtimePrimaryActionTitle(
+      for: SessionActionPlanner.runtimePrimaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func canRunRuntimePrimaryAction() -> Bool {
-    switch runtimeState {
-    case .disconnected, .failed:
-      return canLaunchRuntime()
-    case .launching:
-      return false
-    case .ready:
-      if canCancelActiveTurn() {
-        return true
-      }
-      return false
-    }
+    let snapshot = sessionActionSnapshot()
+    return SessionActionPlanner.canRunRuntimePrimaryAction(
+      SessionActionPlanner.runtimePrimaryAction(snapshot),
+      snapshot: snapshot
+    )
   }
 
   func runRuntimePrimaryAction() {
-    switch runtimeState {
-    case .disconnected, .failed:
-      launchRuntime()
-    case .launching:
+    let snapshot = sessionActionSnapshot()
+    guard let action = SessionActionPlanner.runtimePrimaryAction(snapshot),
+          SessionActionPlanner.canRunRuntimePrimaryAction(action, snapshot: snapshot)
+    else {
       return
-    case .ready:
-      if canCancelActiveTurn() {
-        cancelActiveTurn()
-      }
+    }
+
+    switch action {
+    case .launchRuntime:
+      launchRuntime()
+    case .cancelTurn:
+      cancelActiveTurn()
     }
   }
 
   func canLaunchRuntime() -> Bool {
-    runtimeState != .launching
+    SessionActionPlanner.canLaunchRuntime(sessionActionSnapshot())
   }
 
   func canOpenWorkspace() -> Bool {
-    runtimeState == .ready && !hasActiveOrPendingTurn()
+    SessionActionPlanner.canOpenWorkspace(sessionActionSnapshot())
   }
 
   func canCreateThread() -> Bool {
-    runtimeState == .ready
-      && workspace != nil
-      && isLocalModelReady()
-      && !hasActiveOrPendingTurn()
+    SessionActionPlanner.canCreateThread(sessionActionSnapshot())
   }
 
   func canInstallPlugin() -> Bool {
-    runtimeState == .ready && !hasActiveOrPendingTurn()
+    SessionActionPlanner.canInstallPlugin(sessionActionSnapshot())
   }
 
   func canSendDraftMessage() -> Bool {
-    runtimeState == .ready
-      && workspace != nil
-      && isLocalModelReady()
-      && hasRuntimeThreadSelection()
-      && !isTurnStreaming()
-      && !trimmedDraftMessage.isEmpty
+    SessionActionPlanner.canSendDraftMessage(sessionActionSnapshot())
   }
 
   func canCancelActiveTurn() -> Bool {
-    runtimeState == .ready
-      && (
-        (activeTurnID != nil && activeTurnThreadID != nil)
-          || pendingTurnRequest.canCancel
-      )
+    SessionActionPlanner.canCancelActiveTurn(sessionActionSnapshot())
   }
 
   func canRespondToApproval(approvalID: String) -> Bool {
-    guard let selectedThreadID else {
-      return false
-    }
-
-    return runtimeState == .ready
-      && hasRuntimeThreadSelection()
-      && threadPendingApprovalIDs[selectedThreadID, default: Set<String>()].contains(approvalID)
+    SessionActionPlanner.canRespondToApproval(
+      approvalID: approvalID,
+      snapshot: sessionActionSnapshot()
+    )
   }
 
   func canUseComposer() -> Bool {
-    runtimeState == .ready
-      && workspace != nil
-      && isLocalModelReady()
-      && hasRuntimeThreadSelection()
-      && !hasActiveOrPendingTurn()
+    SessionActionPlanner.canUseComposer(sessionActionSnapshot())
   }
 
   private func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {
@@ -832,10 +797,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canSearchWorkspace() -> Bool {
-    runtimeState == .ready
-      && workspace != nil
-      && !isWorkspaceSearching
-      && !workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    WorkspaceSearchSession.canSearch(workspaceSearchSnapshot())
   }
 
   func searchWorkspace() {
@@ -843,7 +805,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let query = workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
     let requestToken = workspaceSearchSession.begin(query: query)
 
     isWorkspaceSearching = true
@@ -854,18 +816,14 @@ final class AppViewModel: ObservableObject {
         guard workspaceSearchSession.isCurrent(requestToken) else {
           return
         }
-        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == requestToken.query else {
+        guard !WorkspaceSearchSession.queryChanged(
+          currentQuery: workspaceSearchQuery,
+          token: requestToken
+        ) else {
           finishChangedWorkspaceSearch()
           return
         }
-        workspaceSearchResults = matches.enumerated().map { index, match in
-          WorkspaceSearchMatchSummary(
-            id: "\(match.relativePath):\(match.lineNumber):\(index)",
-            relativePath: match.relativePath,
-            lineNumber: match.lineNumber,
-            line: match.line
-          )
-        }
+        workspaceSearchResults = WorkspaceSearchSession.matchSummaries(from: matches)
         workspaceSearchStatus = WorkspaceSearchSession.successStatus(
           query: requestToken.query,
           matchCount: matches.count
@@ -874,7 +832,10 @@ final class AppViewModel: ObservableObject {
         guard workspaceSearchSession.isCurrent(requestToken) else {
           return
         }
-        guard workspaceSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == requestToken.query else {
+        guard !WorkspaceSearchSession.queryChanged(
+          currentQuery: workspaceSearchQuery,
+          token: requestToken
+        ) else {
           finishChangedWorkspaceSearch()
           return
         }
@@ -1425,23 +1386,11 @@ final class AppViewModel: ObservableObject {
   }
 
   func selectedThreadTitle() -> String {
-    guard let selectedThreadID,
-          let thread = threads.first(where: { $0.id == selectedThreadID })
-    else {
-      return "No Thread Selected"
-    }
-
-    return thread.title
+    SessionOverviewPresenter.selectedThreadTitle(sessionOverviewSnapshot())
   }
 
   func selectedThreadPreview() -> String {
-    guard let selectedThreadID,
-          let thread = threads.first(where: { $0.id == selectedThreadID })
-    else {
-      return "Select a thread to inspect its runtime state."
-    }
-
-    return thread.preview
+    SessionOverviewPresenter.selectedThreadPreview(sessionOverviewSnapshot())
   }
 
   func selectTimelineEntry(id: TimelineEntry.ID) {
@@ -1473,24 +1422,15 @@ final class AppViewModel: ObservableObject {
   }
 
   func shouldShowSelectedEntryInspector() -> Bool {
-    guard let entry = selectedEntry() else {
-      return false
-    }
-
-    if entry.kind != .system {
-      return true
-    }
-
-    return !entry.id.hasPrefix("welcome-")
-      && !entry.id.hasPrefix("default-thread-ready:")
+    SessionOverviewPresenter.shouldShowSelectedEntryInspector(sessionOverviewSnapshot())
   }
 
   func workspaceDisplayName() -> String {
-    workspace?.displayName ?? "No Workspace"
+    SessionOverviewPresenter.workspaceDisplayName(sessionOverviewSnapshot())
   }
 
   func workspacePath() -> String {
-    workspace?.rootPath ?? "Open a local workspace to enable project-scoped tools."
+    SessionOverviewPresenter.workspacePath(sessionOverviewSnapshot())
   }
 
   func modelDisplayName() -> String {
@@ -2526,6 +2466,45 @@ final class AppViewModel: ObservableObject {
     }
 
     return selectedThread.workspaceRootPath == workspace.rootPath
+  }
+
+  private func sessionActionSnapshot() -> SessionActionSnapshot {
+    let pendingApprovalIDs = selectedThreadID.map {
+      threadPendingApprovalIDs[$0, default: Set<String>()]
+    } ?? Set<String>()
+
+    return SessionActionSnapshot(
+      runtimeState: runtimeState,
+      hasWorkspace: workspace != nil,
+      isLocalModelReady: isLocalModelReady(),
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
+      hasCancelableTurn: (activeTurnID != nil && activeTurnThreadID != nil)
+        || pendingTurnRequest.canCancel,
+      hasDraftMessage: !trimmedDraftMessage.isEmpty,
+      pendingApprovalIDs: pendingApprovalIDs
+    )
+  }
+
+  private func sessionOverviewSnapshot() -> SessionOverviewSnapshot {
+    let selectedThread = selectedThreadID.flatMap { threadID in
+      threads.first(where: { $0.id == threadID })
+    }
+
+    return SessionOverviewSnapshot(
+      selectedThread: selectedThread,
+      workspace: workspace,
+      selectedEntry: selectedEntry()
+    )
+  }
+
+  private func workspaceSearchSnapshot() -> WorkspaceSearchSnapshot {
+    WorkspaceSearchSnapshot(
+      runtimeState: runtimeState,
+      hasWorkspace: workspace != nil,
+      isSearching: isWorkspaceSearching,
+      query: workspaceSearchQuery
+    )
   }
 
   private var trimmedDraftMessage: String {
