@@ -7,14 +7,14 @@ use pith_storage::RuntimeStore;
 
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
+use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::thread_state::StoredThread;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeContext {
-  pub(crate) server_name: String,
-  pub(crate) server_version: String,
+  pub(crate) identity: RuntimeIdentity,
   pub(crate) model_runtime: LocalModelRuntime,
   pub(crate) memory_manager: MemoryManager,
   pub(crate) store: Option<RuntimeStore>,

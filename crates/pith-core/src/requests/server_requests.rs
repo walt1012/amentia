@@ -21,8 +21,8 @@ pub(crate) fn handle_initialize(
     request.id,
     &InitializeResult {
       server_info: ServerInfo {
-        name: context.server_name.clone(),
-        version: context.server_version.clone(),
+        name: context.identity.server_name.clone(),
+        version: context.identity.server_version.clone(),
       },
       protocol_version: "0.1.0".to_string(),
       capabilities: ServerCapabilities {

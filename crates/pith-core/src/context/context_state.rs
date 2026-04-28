@@ -10,6 +10,7 @@ use crate::approval_state::stored_approval_record;
 use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
+use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::thread_state::StoredThread;
@@ -33,8 +34,7 @@ impl RuntimeContext {
     let next_memory_number = store.next_memory_sequence()?;
 
     Ok(Self {
-      server_name: "pith-runtime".to_string(),
-      server_version: env!("CARGO_PKG_VERSION").to_string(),
+      identity: RuntimeIdentity::pith_runtime(),
       model_runtime: LocalModelRuntime::new_default(),
       memory_manager: MemoryManager::new(next_memory_number),
       store: Some(store),
@@ -77,8 +77,7 @@ impl RuntimeContext {
     let plugin_roots = configured_plugin_roots();
     let plugin_install_root = configured_plugin_install_root();
     Self {
-      server_name: "pith-runtime".to_string(),
-      server_version: env!("CARGO_PKG_VERSION").to_string(),
+      identity: RuntimeIdentity::pith_runtime(),
       model_runtime: LocalModelRuntime::new_default(),
       memory_manager: MemoryManager::new(1),
       store: None,
