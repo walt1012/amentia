@@ -1727,12 +1727,19 @@ final class AppViewModel: ObservableObject {
       resumeData: modelDownloadCoordinator.resumeData,
       currentProgress: modelDownloadProgress
     )
-    modelDownloadID = model.id
-    pausedModelDownloadID = nil
-    modelDownloadCoordinator.clearResumeData()
-    LocalModelCatalog.clearPausedDownload()
-    modelDownloadProgress = startPlan.progress
-    let shouldActivateAfterDownload = activateAfterDownload || !isLocalModelReady()
+    let sessionState = LocalModelDownloadSessionPlanner.startState(
+      model: model,
+      startPlan: startPlan,
+      activateAfterDownload: activateAfterDownload,
+      isLocalModelReady: isLocalModelReady()
+    )
+    modelDownloadID = sessionState.activeModelID
+    pausedModelDownloadID = sessionState.pausedModelID
+    if sessionState.clearsPausedState {
+      LocalModelDownloadStateStore.clearPausedDownload(coordinator: modelDownloadCoordinator)
+    }
+    modelDownloadProgress = sessionState.progress
+    let shouldActivateAfterDownload = sessionState.shouldActivateAfterDownload
     appendModelEvent(
       title: startPlan.timelineTitle,
       body: startPlan.timelineBody,
