@@ -37,7 +37,9 @@ use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, shell_sandbox_summary,
   write_file,
 };
-use plugin_hooks::{build_shell_completed_hook_items, capture_plugin_hook_memory};
+use plugin_hooks::{
+  build_shell_completed_hook_items, capture_plugin_hook_memory, PluginHookMemoryCapture,
+};
 use plugin_permissions::{
   build_permission_denied_items, granted_permission_sources, permission_is_granted,
 };
@@ -117,6 +119,18 @@ pub struct CompletedTurnStart {
 }
 
 #[derive(Debug)]
+pub struct PreparedApprovalRespond {
+  request_id: serde_json::Value,
+  snapshot: PreparedApprovalSnapshot,
+}
+
+#[derive(Debug)]
+pub struct CompletedApprovalRespond {
+  request_id: serde_json::Value,
+  output: ApprovalExecutionOutput,
+}
+
+#[derive(Debug)]
 struct PreparedTurnSnapshot {
   thread_id: String,
   turn_id: String,
@@ -157,6 +171,27 @@ struct TurnStartExecutionOutput {
   items: Vec<TimelineItem>,
   pending_approval: Option<PendingApproval>,
   pending_active_turn: Option<ActiveTurn>,
+}
+
+#[derive(Debug)]
+struct PreparedApprovalSnapshot {
+  approval: PendingApproval,
+  decision: String,
+  workspace: WorkspaceSummary,
+  model_runtime: LocalModelRuntime,
+  memory_notes: Vec<MemoryNote>,
+  permission_sources: HashMap<String, Vec<String>>,
+  plugins: Vec<PluginCatalogEntry>,
+}
+
+#[derive(Debug)]
+struct ApprovalExecutionOutput {
+  approval: PendingApproval,
+  decision: String,
+  workspace: WorkspaceSummary,
+  items: Vec<TimelineItem>,
+  memory_event: Option<MemoryEvent>,
+  hook_memory_captures: Vec<PluginHookMemoryCapture>,
 }
 
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -1387,53 +1422,99 @@ fn handle_approval_respond(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match parse_required_params::<ApprovalRespondParams>(&request, "approval/respond") {
-    Ok(params) => params,
+  let prepared = match prepare_approval_respond(context, request) {
+    Ok(prepared) => prepared,
     Err(response) => return response,
   };
+  let completed = execute_prepared_approval_respond(prepared);
+  complete_prepared_approval_respond(context, completed)
+}
 
+pub fn prepare_approval_respond(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> std::result::Result<PreparedApprovalRespond, JsonRpcResponse> {
+  let params = parse_required_params::<ApprovalRespondParams>(&request, "approval/respond")?;
   let decision = params.decision.to_lowercase();
   if decision != "approved" && decision != "denied" {
-    return JsonRpcResponse::error(
+    return Err(JsonRpcResponse::error(
       request.id,
       -32602,
       "approval/respond decision must be approved or denied",
-    );
+    ));
   }
 
   let Some(approval) = context.pending_approvals.get(&params.approval_id).cloned() else {
-    return JsonRpcResponse::error(request.id, -32030, "Approval request not found");
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32030,
+      "Approval request not found",
+    ));
   };
-
   let current_workspace = context.workspace.clone();
   let model_runtime = context.model_runtime.clone();
   let memory_notes = context.memory_notes.clone();
   let permission_sources = granted_permission_sources(&context.plugins);
+  let plugins = context.plugins.clone();
 
   let Some(thread) = context
     .threads
     .iter_mut()
     .find(|thread| thread.summary.id == approval.thread_id)
   else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32004,
+      "Thread not found",
+    ));
   };
   if thread.workspace.is_none() {
     thread.workspace = current_workspace;
     thread.summary.workspace = thread.workspace.clone();
   }
-  let workspace = match thread.workspace.clone() {
-    Some(workspace) => workspace,
-    None => {
-      return JsonRpcResponse::error(
-        request.id,
-        -32031,
-        "Open a workspace for this thread before resolving approvals",
-      )
-    }
+  let Some(workspace) = thread.workspace.clone() else {
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32031,
+      "Open a workspace for this thread before resolving approvals",
+    ));
   };
-
+  thread.summary.status = format!("Resolving approval {}", approval.id);
   context.pending_approvals.remove(&params.approval_id);
 
+  Ok(PreparedApprovalRespond {
+    request_id: request.id,
+    snapshot: PreparedApprovalSnapshot {
+      approval,
+      decision,
+      workspace,
+      model_runtime,
+      memory_notes,
+      permission_sources,
+      plugins,
+    },
+  })
+}
+
+pub fn execute_prepared_approval_respond(
+  prepared: PreparedApprovalRespond,
+) -> CompletedApprovalRespond {
+  CompletedApprovalRespond {
+    request_id: prepared.request_id,
+    output: execute_approval_snapshot(prepared.snapshot),
+  }
+}
+
+fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExecutionOutput {
+  let PreparedApprovalSnapshot {
+    approval,
+    decision,
+    workspace,
+    model_runtime,
+    memory_notes,
+    permission_sources,
+    plugins,
+  } = snapshot;
   let mut items = vec![];
   let mut memory_event = None;
   let mut hook_memory_captures = vec![];
@@ -1471,11 +1552,7 @@ fn handle_approval_respond(
           attributes: None,
         });
 
-        match write_file(
-          Path::new(&workspace.root_path),
-          &approval.relative_path,
-          &content,
-        ) {
+        match write_file(Path::new(&workspace.root_path), &approval.relative_path, &content) {
           Ok(relative_path) => {
             memory_event = Some(MemoryEvent::FileWritten {
               workspace_display_name: workspace.display_name.clone(),
@@ -1556,7 +1633,7 @@ fn handle_approval_respond(
               attributes: Some(summary_attributes),
             });
             let (hook_items, memory_captures) =
-              build_shell_completed_hook_items(&context.plugins, &workspace, &command, &result);
+              build_shell_completed_hook_items(&plugins, &workspace, &command, &result);
             hook_memory_captures.extend(memory_captures);
             items.extend(hook_items);
           }
@@ -1601,19 +1678,50 @@ fn handle_approval_respond(
     });
   }
 
+  ApprovalExecutionOutput {
+    approval,
+    decision,
+    workspace,
+    items,
+    memory_event,
+    hook_memory_captures,
+  }
+}
+
+pub fn complete_prepared_approval_respond(
+  context: &mut RuntimeContext,
+  completed: CompletedApprovalRespond,
+) -> JsonRpcResponse {
+  let ApprovalExecutionOutput {
+    approval,
+    decision,
+    workspace,
+    mut items,
+    memory_event,
+    hook_memory_captures,
+  } = completed.output;
+
+  let Some(thread) = context
+    .threads
+    .iter_mut()
+    .find(|thread| thread.summary.id == approval.thread_id)
+  else {
+    return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
+  };
   thread.items.extend(items.clone());
+  thread.summary.status = "Ready".to_string();
 
   if let Err(error) = context.persist_resolved_approval(&approval, &decision) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
   }
 
   if let Err(error) = context.persist_runtime_state() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
   }
 
   if let Some(memory_event) = memory_event {
     if let Err(error) = context.remember(memory_event) {
-      return JsonRpcResponse::error(request.id, -32012, error.to_string());
+      return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
     }
   }
 
@@ -1646,18 +1754,18 @@ fn handle_approval_respond(
     items.extend(hook_memory_items);
 
     if let Err(error) = context.persist_runtime_state() {
-      return JsonRpcResponse::error(request.id, -32010, error.to_string());
+      return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
     }
   }
 
   if let Err(error) = refresh_thread_summary_note(context, &approval.thread_id) {
-    return JsonRpcResponse::error(request.id, -32012, error.to_string());
+    return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
   }
 
   let pending_approvals = approvals_for_thread(context, &approval.thread_id);
 
   JsonRpcResponse::success(
-    request.id,
+    completed.request_id,
     &ApprovalRespondResult {
       approval_id: approval.id,
       thread_id: approval.thread_id.clone(),
