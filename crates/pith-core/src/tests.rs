@@ -1,7 +1,7 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
-use pith_storage::FileThreadStore;
+use pith_storage::RuntimeStore;
 use serde_json::{json, Value};
 use std::env;
 use std::fs;
@@ -1233,7 +1233,7 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   let source_root =
     create_temp_plugin_bundle("plugin-remove-source", "focus-review", "Focus Review");
   let install_root = create_temp_workspace("plugin-remove-root");
-  let store = FileThreadStore::new(
+  let store = RuntimeStore::new(
     storage_root.join("pith.db"),
     storage_root.join("threads.json"),
   );

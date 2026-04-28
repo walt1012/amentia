@@ -5,7 +5,7 @@ use pith_memory::{MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::WorkspaceSummary;
-use pith_storage::FileThreadStore;
+use pith_storage::RuntimeStore;
 
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
@@ -18,7 +18,7 @@ pub struct RuntimeContext {
   pub(crate) server_version: String,
   pub(crate) model_runtime: LocalModelRuntime,
   pub(crate) memory_manager: MemoryManager,
-  pub(crate) store: Option<FileThreadStore>,
+  pub(crate) store: Option<RuntimeStore>,
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) threads: Vec<StoredThread>,
   pub(crate) workspace: Option<WorkspaceSummary>,

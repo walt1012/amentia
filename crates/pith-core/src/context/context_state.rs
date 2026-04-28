@@ -4,7 +4,7 @@ use anyhow::Result;
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
-use pith_storage::{FileThreadStore, StoredThreadRecord};
+use pith_storage::{RuntimeStore, StoredThreadRecord};
 
 use crate::approval_state::stored_approval_record;
 use crate::approval_types::PendingApproval;
@@ -15,7 +15,7 @@ use crate::thread_state::StoredThread;
 
 impl RuntimeContext {
   pub fn new() -> Result<Self> {
-    let store = FileThreadStore::new_default()?;
+    let store = RuntimeStore::new_default()?;
     let persisted_threads = store.load_threads()?;
     let persisted_workspace = store.load_workspace()?;
     let persisted_pending_approvals = store.load_pending_approvals()?;

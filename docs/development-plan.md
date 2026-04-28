@@ -340,11 +340,11 @@ The Rust side should use a multi-crate workspace.
 
 `pith-storage`
 
-- SQLite access
-- thread persistence
-- settings persistence
+- SQLite-backed runtime store
+- thread, workspace, and approval persistence
+- memory note persistence
 - plugin state persistence
-- artifact indexing
+- storage migrations and legacy state import
 
 `pith-model-runtime`
 
@@ -477,6 +477,7 @@ Use SQLite for:
 - plugin registrations
 - approval records
 - workspace metadata
+- memory notes
 
 Use the filesystem for:
 
@@ -978,7 +979,7 @@ Recommended implementation order:
 3. scaffold the Rust workspace
 4. define protocol types and fixtures
 5. establish `stdio` runtime communication
-6. implement thread persistence
+6. implement runtime persistence
 7. render the thread list and timeline shell
 8. integrate `LFM2.5-350M`
 9. implement streaming output and cancellation

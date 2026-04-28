@@ -87,4 +87,9 @@ The repository should stay organized by product and runtime ownership rather tha
 shape. `pith-core` is the Rust orchestration layer, and its source tree is grouped by runtime, request,
 turn, plugin, context, workspace, thread, and support domains. The macOS target follows the same rule
 with app, runtime, local model, plugin, memory, timeline, workspace, and setup domains.
+
+`pith-memory` owns memory semantics such as notes, events, summaries, and retrieval. `pith-storage`
+owns durable runtime persistence for threads, workspace state, approvals, memory notes, and plugin
+state.
+
 See [docs/development-environment.md](docs/development-environment.md) for local setup and CI notes.
