@@ -11,14 +11,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = REPO_ROOT / "models" / "builtin" / "lfm2.5-350m" / "model-pack.json"
 README_PATH = REPO_ROOT / "models" / "builtin" / "lfm2.5-350m" / "README.md"
-SWIFT_CATALOG_PATH = (
+SWIFT_SOURCE_ROOT = (
   REPO_ROOT
   / "apps"
   / "pith-macos"
   / "Sources"
   / "PithApp"
-  / "LocalModelCatalog.swift"
 )
+SWIFT_CATALOG_NAME = "LocalModelCatalog.swift"
 REQUIRED_KEYS = {
   "id",
   "display_name",
@@ -117,10 +117,9 @@ def main() -> int:
 
 
 def load_swift_catalog_entries() -> list[dict[str, object]]:
-  if not SWIFT_CATALOG_PATH.is_file():
-    raise SystemExit(f"Swift model catalog missing: {SWIFT_CATALOG_PATH}")
+  swift_catalog_path = resolve_swift_catalog_path()
 
-  text = SWIFT_CATALOG_PATH.read_text(encoding="utf-8")
+  text = swift_catalog_path.read_text(encoding="utf-8")
   default_id = extract_swift_string_constant(text, "defaultFirstUseModelID")
   blocks = re.findall(
     r"LocalModelCatalogItem\((.*?)\n\s*\)",
@@ -135,6 +134,22 @@ def load_swift_catalog_entries() -> list[dict[str, object]]:
     raise SystemExit("default Swift model catalog entry was not found")
 
   return entries
+
+
+def resolve_swift_catalog_path() -> Path:
+  if not SWIFT_SOURCE_ROOT.is_dir():
+    raise SystemExit(f"Swift source root missing: {SWIFT_SOURCE_ROOT}")
+
+  matches = sorted(SWIFT_SOURCE_ROOT.rglob(SWIFT_CATALOG_NAME))
+  if not matches:
+    raise SystemExit(f"Swift model catalog missing under: {SWIFT_SOURCE_ROOT}")
+  if len(matches) > 1:
+    relative_matches = [str(path.relative_to(REPO_ROOT)) for path in matches]
+    raise SystemExit(
+      "Swift model catalog path is ambiguous: " + ", ".join(relative_matches)
+    )
+
+  return matches[0]
 
 
 def parse_swift_catalog_entry(block: str, default_id: str) -> dict[str, object]:
