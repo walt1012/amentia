@@ -1,6 +1,37 @@
 import Foundation
 
 enum TimelineEntryFactory {
+  static func entry(
+    kind: TimelineEntry.Kind,
+    title: String,
+    body: String,
+    attributes: [String: String] = [:]
+  ) -> TimelineEntry {
+    TimelineEntry(
+      id: UUID().uuidString,
+      kind: kind,
+      title: title,
+      body: body,
+      attributes: attributes
+    )
+  }
+
+  static func system(
+    title: String,
+    body: String,
+    attributes: [String: String] = [:]
+  ) -> TimelineEntry {
+    entry(kind: .system, title: title, body: body, attributes: attributes)
+  }
+
+  static func warning(
+    title: String,
+    body: String,
+    attributes: [String: String] = [:]
+  ) -> TimelineEntry {
+    entry(kind: .warning, title: title, body: body, attributes: attributes)
+  }
+
   static func welcomeTimeline() -> [TimelineEntry] {
     [
       TimelineEntry(

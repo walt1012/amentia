@@ -189,9 +189,7 @@ final class AppViewModel: ObservableObject {
         if shouldAnnotateSetupLaunch {
           appendEntry(
             to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
+            TimelineEntryFactory.system(
               title: "Runtime Connected",
               body: "Connected to \(session.serverName) \(session.serverVersion) over stdio.",
               attributes: [:]
@@ -201,9 +199,7 @@ final class AppViewModel: ObservableObject {
         if restoredWorkspace, let currentWorkspace {
           appendEntry(
             to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .system,
+            TimelineEntryFactory.system(
               title: "Workspace Restored",
               body: "Restored \(currentWorkspace.displayName) at \(currentWorkspace.rootPath).",
               attributes: [
@@ -215,9 +211,7 @@ final class AppViewModel: ObservableObject {
         if let skippedWorkspaceRestorePath {
           appendEntry(
             to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .warning,
+            TimelineEntryFactory.warning(
               title: "Workspace Restore Skipped",
               body: "The last workspace no longer exists. Open a workspace to continue.",
               attributes: [
@@ -229,9 +223,7 @@ final class AppViewModel: ObservableObject {
         if let workspaceRestoreError {
           appendEntry(
             to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .warning,
+            TimelineEntryFactory.warning(
               title: "Workspace Restore Failed",
               body: workspaceRestoreError.localizedDescription,
               attributes: [:]
@@ -243,9 +235,7 @@ final class AppViewModel: ObservableObject {
             if shouldAnnotateSetupLaunch {
               appendEntry(
                 to: selectedThreadID,
-                TimelineEntry(
-                  id: UUID().uuidString,
-                  kind: .system,
+                TimelineEntryFactory.system(
                   title: "Local Model Ready",
                   body:
                     "\(runtimeModel.displayName) is running in \(runtimeModel.backend) mode with status \(runtimeModel.status).",
@@ -261,9 +251,7 @@ final class AppViewModel: ObservableObject {
           } else {
             appendEntry(
               to: selectedThreadID,
-              TimelineEntry(
-                id: UUID().uuidString,
-                kind: .warning,
+              TimelineEntryFactory.warning(
                 title: "Local Model Required",
                 body: localModelRequiredTimelineSummary(),
                 attributes: [
@@ -278,9 +266,7 @@ final class AppViewModel: ObservableObject {
         } else {
           appendEntry(
             to: selectedThreadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .warning,
+            TimelineEntryFactory.warning(
               title: "Local Model Required",
               body: localModelRequiredTimelineSummary(),
               attributes: [
@@ -305,9 +291,7 @@ final class AppViewModel: ObservableObject {
         pluginHooks = []
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Runtime Launch Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -833,9 +817,7 @@ final class AppViewModel: ObservableObject {
         await refreshRuntimeReadiness()
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
+          TimelineEntryFactory.system(
             title: "Workspace Opened",
             body: "Opened \(openedWorkspace.displayName) at \(openedWorkspace.rootPath).",
             attributes: [:]
@@ -845,9 +827,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Workspace Open Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -877,9 +857,7 @@ final class AppViewModel: ObservableObject {
       let body = repairHint.isEmpty ? error.localizedDescription : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
       appendEntry(
         to: selectedThreadID,
-        TimelineEntry(
-          id: UUID().uuidString,
-          kind: .warning,
+        TimelineEntryFactory.warning(
           title: "Plugin Install Preview Failed",
           body: body,
           attributes: [:]
@@ -899,9 +877,7 @@ final class AppViewModel: ObservableObject {
         await refreshPluginState()
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
+          TimelineEntryFactory.system(
             title: "Plugin Installed",
             body:
               "\(installedPlugin.displayName) is now available in the local plugin manager.\nSource: \(preview.sourcePath)\nInstalled To: \(preview.installPath)",
@@ -917,9 +893,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Plugin Install Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -944,9 +918,7 @@ final class AppViewModel: ObservableObject {
         await loadThreadHistory(threadID: thread.id)
         appendEntry(
           to: thread.id,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
+          TimelineEntryFactory.system(
             title: "Thread Created",
             body: "Created \(thread.title) in the local runtime.",
             attributes: [:]
@@ -956,9 +928,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Thread Creation Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -1000,9 +970,7 @@ final class AppViewModel: ObservableObject {
           refreshThreadPreview(threadID: threadID, preview: "Cancelled response")
           appendEntry(
             to: threadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .warning,
+            TimelineEntryFactory.warning(
               title: "Turn Cancelled",
               body: "The pending local turn request was cancelled before streaming started.",
               attributes: [:]
@@ -1016,9 +984,7 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = error.localizedDescription
         appendEntry(
           to: threadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Turn Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -1046,9 +1012,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Approval Response Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -1069,9 +1033,7 @@ final class AppViewModel: ObservableObject {
         await refreshPluginState()
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
+          TimelineEntryFactory.system(
             title: enabled ? "Plugin Enabled" : "Plugin Disabled",
             body: "\(updatedPlugin.displayName) is now \(enabled ? "enabled" : "disabled").",
             attributes: [
@@ -1083,9 +1045,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Plugin Update Failed",
             body: error.localizedDescription,
             attributes: [
@@ -1115,9 +1075,7 @@ final class AppViewModel: ObservableObject {
         await refreshPluginState()
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
+          TimelineEntryFactory.system(
             title: "Plugin Removed",
             body:
               "\(removedPlugin.displayName) was removed from the local plugin catalog.\nRemoved Path: \(removedPlugin.removedPath)",
@@ -1130,9 +1088,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Plugin Removal Failed",
             body: error.localizedDescription,
             attributes: [
@@ -1173,9 +1129,7 @@ final class AppViewModel: ObservableObject {
           refreshThreadPreview(threadID: threadID, preview: "Cancelled plugin command")
           appendEntry(
             to: threadID,
-            TimelineEntry(
-              id: UUID().uuidString,
-              kind: .warning,
+            TimelineEntryFactory.warning(
               title: "Plugin Command Cancelled",
               body: "The pending local plugin command was cancelled before streaming started.",
               attributes: [:]
@@ -1186,9 +1140,7 @@ final class AppViewModel: ObservableObject {
         runtimeDetail = error.localizedDescription
         appendEntry(
           to: threadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Plugin Command Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -1233,9 +1185,7 @@ final class AppViewModel: ObservableObject {
         await refreshMemoryState()
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .system,
+          TimelineEntryFactory.system(
             title: "Memory Note Saved",
             body: "Saved built-in workspace note \(note.title).",
             attributes: [
@@ -1248,9 +1198,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Memory Note Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -1282,9 +1230,7 @@ final class AppViewModel: ObservableObject {
       } catch {
         appendEntry(
           to: activeTurnThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Turn Cancel Failed",
             body: error.localizedDescription,
             attributes: [:]
@@ -2135,9 +2081,7 @@ final class AppViewModel: ObservableObject {
     } catch {
       appendEntry(
         to: threadID,
-        TimelineEntry(
-          id: UUID().uuidString,
-          kind: .warning,
+        TimelineEntryFactory.warning(
           title: "Thread Load Failed",
           body: error.localizedDescription,
           attributes: [:]
@@ -2493,9 +2437,7 @@ final class AppViewModel: ObservableObject {
     announcedSetupCompleteThreadIDs.insert(threadID)
     appendEntry(
       to: threadID,
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
+      TimelineEntryFactory.system(
         title: "First Request Ready",
         body: "Runtime, local model, workspace, and thread are ready. Send one short local request to finish first-use setup.",
         attributes: [
@@ -2602,8 +2544,7 @@ final class AppViewModel: ObservableObject {
     eventAttributes["modelLicense"] = model.license
     appendEntry(
       to: selectedThreadID,
-      TimelineEntry(
-        id: UUID().uuidString,
+      TimelineEntryFactory.entry(
         kind: kind,
         title: title,
         body: body,
@@ -2628,9 +2569,7 @@ final class AppViewModel: ObservableObject {
     refreshLocalModelCatalog()
     appendEntry(
       to: selectedThreadID,
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
+      TimelineEntryFactory.system(
         title: "Local Model Downloaded",
         body: plan.timelineBody,
         attributes: plan.attributes
@@ -2681,9 +2620,7 @@ final class AppViewModel: ObservableObject {
   private func applyLocalModelActivationPlan(_ plan: LocalModelActivationPlan) {
     appendEntry(
       to: selectedThreadID,
-      TimelineEntry(
-        id: UUID().uuidString,
-        kind: .system,
+      TimelineEntryFactory.system(
         title: plan.timelineTitle,
         body: plan.timelineBody,
         attributes: plan.attributes
@@ -2739,9 +2676,7 @@ final class AppViewModel: ObservableObject {
       if previousState != .failed || lastRuntimeFailureDetail != detail {
         appendEntry(
           to: selectedThreadID,
-          TimelineEntry(
-            id: UUID().uuidString,
-            kind: .warning,
+          TimelineEntryFactory.warning(
             title: "Runtime Disconnected",
             body: "\(detail) Use Relaunch Runtime to recover the local session.",
             attributes: [
