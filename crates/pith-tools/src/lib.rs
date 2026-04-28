@@ -118,10 +118,11 @@ pub fn list_directory(
     .filter_map(|entry| entry.ok())
     .map(|entry| {
       let path = entry.path();
-      let metadata = entry
-        .metadata()
+      let metadata = fs::symlink_metadata(&path)
         .with_context(|| format!("failed to read metadata for {}", path.display()))?;
-      let entry_type = if metadata.is_dir() {
+      let entry_type = if metadata.file_type().is_symlink() {
+        "symlink"
+      } else if metadata.is_dir() {
         "directory"
       } else {
         "file"
@@ -514,6 +515,7 @@ fn validate_workspace_write_target(workspace_root: &Path, target: &Path) -> Resu
         bail!("workspace path points to a symlink");
       }
       validate_existing_workspace_path(workspace_root, target)?;
+      validate_no_symlink_components(workspace_root, target)?;
     }
     Err(error) if error.kind() == ErrorKind::NotFound => {
       if let Some(parent) = target.parent() {
@@ -536,7 +538,8 @@ fn validate_workspace_write_parent(workspace_root: &Path, parent: &Path) -> Resu
       parent.display()
     )
   })?;
-  validate_existing_workspace_path(workspace_root, &existing_parent)
+  validate_existing_workspace_path(workspace_root, &existing_parent)?;
+  validate_no_symlink_components(workspace_root, &existing_parent)
 }
 
 fn validate_existing_workspace_path(workspace_root: &Path, path: &Path) -> Result<()> {
@@ -544,6 +547,33 @@ fn validate_existing_workspace_path(workspace_root: &Path, path: &Path) -> Resul
     .with_context(|| format!("failed to resolve workspace path {}", path.display()))?;
   if !resolved.starts_with(workspace_root) {
     bail!("workspace path escapes the selected workspace");
+  }
+
+  Ok(())
+}
+
+fn validate_no_symlink_components(workspace_root: &Path, path: &Path) -> Result<()> {
+  let relative = path
+    .strip_prefix(workspace_root)
+    .with_context(|| format!("failed to relativize {}", path.display()))?;
+  let mut candidate = workspace_root.to_path_buf();
+
+  for component in relative.components() {
+    let std::path::Component::Normal(segment) = component else {
+      continue;
+    };
+    candidate.push(segment);
+    match fs::symlink_metadata(&candidate) {
+      Ok(metadata) if metadata.file_type().is_symlink() => {
+        bail!("workspace path crosses a symlink");
+      }
+      Ok(_) => {}
+      Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
+      Err(error) => {
+        return Err(error)
+          .with_context(|| format!("failed to read metadata for {}", candidate.display()));
+      }
+    }
   }
 
   Ok(())
@@ -867,6 +897,26 @@ mod tests {
 
   #[cfg(unix)]
   #[test]
+  fn write_file_rejects_parent_symlink() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("write-parent-symlink");
+    fs::create_dir_all(workspace.join("real")).expect("workspace real dir");
+    symlink(workspace.join("real"), workspace.join("alias")).expect("symlink");
+
+    let error = write_file(&workspace, "alias/created.txt", "inside")
+      .expect_err("parent symlink should fail");
+
+    assert!(error
+      .to_string()
+      .contains("workspace path crosses a symlink"));
+    assert!(!workspace.join("real/created.txt").exists());
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[cfg(unix)]
+  #[test]
   fn generate_diff_rejects_symlink_escape() {
     use std::os::unix::fs::symlink;
 
@@ -887,6 +937,50 @@ mod tests {
     assert!(error
       .to_string()
       .contains("workspace path points to a symlink"));
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn generate_diff_rejects_parent_symlink() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("diff-parent-symlink");
+    fs::create_dir_all(workspace.join("real")).expect("workspace real dir");
+    fs::write(workspace.join("real/target.txt"), "inside").expect("inside file");
+    symlink(workspace.join("real"), workspace.join("alias")).expect("symlink");
+
+    let error = generate_diff(&workspace, "alias/target.txt", "next")
+      .expect_err("parent symlink diff should fail");
+
+    assert!(error
+      .to_string()
+      .contains("workspace path crosses a symlink"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn list_directory_reports_symlinks_without_following() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("list-symlink");
+    let outside = unique_temp_workspace("list-outside");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(outside.join("secret.txt"), "hidden").expect("outside file");
+    symlink(&outside, workspace.join("outside-link")).expect("symlink");
+
+    let entries = list_directory(&workspace, None, 10).expect("directory entries");
+
+    let symlink_entry = entries
+      .iter()
+      .find(|entry| entry.relative_path == "outside-link")
+      .expect("symlink entry");
+    assert_eq!(symlink_entry.entry_type, "symlink");
 
     let _ = fs::remove_dir_all(workspace);
     let _ = fs::remove_dir_all(outside);
