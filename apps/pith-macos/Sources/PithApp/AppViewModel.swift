@@ -2665,40 +2665,47 @@ final class AppViewModel: ObservableObject {
   }
 
   private func handleRuntimeConnectionStateChange(_ state: RuntimeBridge.ConnectionState, detail: String) {
-    let previousState = runtimeState
+    let plan = RuntimeConnectionStateReducer.plan(
+      RuntimeConnectionStateSnapshot(
+        previousState: runtimeState,
+        nextState: state,
+        detail: detail,
+        lastFailureDetail: lastRuntimeFailureDetail
+      )
+    )
     runtimeState = state
     runtimeDetail = detail
 
-    switch state {
-    case .ready:
+    if plan.clearsActiveTurnState {
+      activeTurnID = nil
+      activeTurnThreadID = nil
+      pendingTurnRequest.clear()
+    }
+
+    if plan.clearsModelReadinessState {
+      modelHealth = nil
+      runtimeReadiness = nil
+    }
+
+    if plan.resetsLastFailureDetail {
       lastRuntimeFailureDetail = nil
-    case .failed:
-      activeTurnID = nil
-      activeTurnThreadID = nil
-      pendingTurnRequest.clear()
-      modelHealth = nil
-      runtimeReadiness = nil
-      if previousState != .failed || lastRuntimeFailureDetail != detail {
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntryFactory.warning(
-            title: "Runtime Disconnected",
-            body: "\(detail) Use Relaunch Runtime to recover the local session.",
-            attributes: [
-              "recovery": "relaunch-runtime"
-            ]
-          )
+    }
+
+    if plan.shouldAppendFailureNotice {
+      appendEntry(
+        to: selectedThreadID,
+        TimelineEntryFactory.warning(
+          title: "Runtime Disconnected",
+          body: "\(detail) Use Relaunch Runtime to recover the local session.",
+          attributes: [
+            "recovery": "relaunch-runtime"
+          ]
         )
-      }
-      lastRuntimeFailureDetail = detail
-    case .disconnected:
-      activeTurnID = nil
-      activeTurnThreadID = nil
-      pendingTurnRequest.clear()
-      modelHealth = nil
-      runtimeReadiness = nil
-    case .launching:
-      break
+      )
+    }
+
+    if let updatedLastFailureDetail = plan.updatedLastFailureDetail {
+      lastRuntimeFailureDetail = updatedLastFailureDetail
     }
   }
 
