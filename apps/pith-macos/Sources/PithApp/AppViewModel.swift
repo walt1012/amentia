@@ -137,23 +137,16 @@ final class AppViewModel: ObservableObject {
         let session = try await runtimeBridge.launchAndInitialize(launchDetail: launchDetail)
         let runtimeMemoryStatus = try? await runtimeBridge.memoryStatus()
         let runtimeMemoryNotes = try? await runtimeBridge.listMemoryNotes()
-        var currentWorkspace = try? await runtimeBridge.currentWorkspace()
-        var restoredWorkspace = false
-        var workspaceRestoreError: Error?
-        var skippedWorkspaceRestorePath: String?
-        if currentWorkspace == nil, let lastWorkspacePath = AppPreferences.storedLastWorkspacePath() {
-          if isRestorableWorkspacePath(lastWorkspacePath) {
-            do {
-              currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
-              restoredWorkspace = true
-            } catch {
-              workspaceRestoreError = error
-            }
-          } else {
-            skippedWorkspaceRestorePath = lastWorkspacePath
-            AppPreferences.clearLastWorkspacePath()
-          }
-        }
+        let workspaceRestore = await RuntimeWorkspaceRestorer.restore(
+          currentWorkspace: try? await runtimeBridge.currentWorkspace(),
+          lastWorkspacePath: AppPreferences.storedLastWorkspacePath(),
+          isRestorablePath: isRestorableWorkspacePath,
+          openWorkspace: { [runtimeBridge] path in
+            try await runtimeBridge.openWorkspace(path: path)
+          },
+          clearStoredWorkspace: AppPreferences.clearLastWorkspacePath
+        )
+        let currentWorkspace = workspaceRestore.workspace
         let threadList = try await runtimeBridge.listThreads()
 
         runtimeState = .ready
@@ -186,7 +179,7 @@ final class AppViewModel: ObservableObject {
         }
         await refreshRuntimeReadiness()
         let shouldAnnotateSetupLaunch = shouldAnnotateLaunchWithSetupEvents()
-        let restoredWorkspaceSummary = restoredWorkspace
+        let restoredWorkspaceSummary = workspaceRestore.restoredWorkspace
           ? currentWorkspace.map {
             WorkspaceSummary(rootPath: $0.rootPath, displayName: $0.displayName)
           }
@@ -197,8 +190,8 @@ final class AppViewModel: ObservableObject {
             serverVersion: session.serverVersion,
             shouldAnnotateSetupLaunch: shouldAnnotateSetupLaunch,
             restoredWorkspace: restoredWorkspaceSummary,
-            skippedWorkspaceRestorePath: skippedWorkspaceRestorePath,
-            workspaceRestoreErrorDetail: workspaceRestoreError?.localizedDescription,
+            skippedWorkspaceRestorePath: workspaceRestore.skippedWorkspaceRestorePath,
+            workspaceRestoreErrorDetail: workspaceRestore.restoreErrorDetail,
             modelHealth: modelHealth,
             isLocalModelReady: isLocalModelReady(),
             localModelRequiredSummary: localModelRequiredTimelineSummary()
