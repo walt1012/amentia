@@ -1879,6 +1879,14 @@ final class AppViewModel: ObservableObject {
       return
     }
 
+    applyWorkspaceThreadSelection(workspaceThreads)
+    if let selectedThreadID {
+      await loadThreadHistory(threadID: selectedThreadID)
+      announceFirstRequestReadyIfNeeded()
+    }
+  }
+
+  private func applyWorkspaceThreadSelection(_ workspaceThreads: [ThreadSummary]) {
     threads = workspaceThreads
     threadTimelines = TimelineMutationState.threadTimelines(
       for: workspaceThreads,
@@ -1894,11 +1902,6 @@ final class AppViewModel: ObservableObject {
       currentSelectionID: selectedThreadID
     )
     syncVisibleTimeline()
-
-    if let selectedThreadID {
-      await loadThreadHistory(threadID: selectedThreadID)
-      announceFirstRequestReadyIfNeeded()
-    }
   }
 
   private func resetToWelcomeThread() {
