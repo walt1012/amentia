@@ -1761,10 +1761,11 @@ final class AppViewModel: ObservableObject {
           expectedBytes: model.sizeBytes,
           to: URL(fileURLWithPath: model.installPath)
         )
-        let finalizationPlan: LocalModelDownloadFinalizationPlan
+        let completionState: LocalModelDownloadSessionCompletionState
         do {
-          finalizationPlan = try LocalModelDownloadFinalizer.prepare(
+          completionState = try LocalModelDownloadSessionPlanner.completionState(
             model: model,
+            sourceURL: downloadURL,
             activationRequested: shouldActivateAfterDownload,
             hasActiveOrPendingTurn: hasActiveOrPendingTurn()
           )
@@ -1773,22 +1774,14 @@ final class AppViewModel: ObservableObject {
           throw LocalModelActivationPreparationError.integrityCheckFailed(error)
         }
 
-        if let preparedActivation = finalizationPlan.preparedActivation {
+        if let preparedActivation = completionState.preparedActivation {
           runtimeBridge.configureActiveLocalModel(
             manifestPath: preparedActivation.manifestPath,
             modelPath: model.installPath
           )
         }
 
-        let completionPlan = LocalModelDownloadCompletionPlanner.plan(
-          model: model,
-          sourceURL: downloadURL,
-          activationRequested: shouldActivateAfterDownload,
-          canActivateNow: finalizationPlan.canActivateNow,
-          manifestPath: finalizationPlan.manifestPath
-        )
-
-        applyModelDownloadCompletionPlan(completionPlan, model: model)
+        applyModelDownloadCompletionPlan(completionState.completionPlan, model: model)
       } catch {
         let interruptionPlan = LocalModelDownloadInterruptionPlanner.plan(model: model, error: error)
         applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
