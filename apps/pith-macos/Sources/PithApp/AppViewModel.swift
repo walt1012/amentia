@@ -3,8 +3,6 @@ import Foundation
 
 @MainActor
 final class AppViewModel: ObservableObject {
-  private let localModelDownloadRequestCacheLifetime: TimeInterval = 2
-
   @Published var threads: [ThreadSummary]
   @Published var selectedThreadID: ThreadSummary.ID?
   @Published var timeline: [TimelineEntry]
@@ -50,7 +48,7 @@ final class AppViewModel: ObservableObject {
   private var modelDownloadTask: Task<Void, Never>?
   private var modelDownloadTransfer: ModelDownloadTransfer?
   private var modelDownloadResumeData: Data?
-  private var localModelDownloadRequestCache: LocalModelDownloadRequestCache?
+  private let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
   private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
@@ -120,7 +118,6 @@ final class AppViewModel: ObservableObject {
     self.modelDownloadTask = nil
     self.modelDownloadTransfer = nil
     self.modelDownloadResumeData = pausedDownload?.resumeData
-    self.localModelDownloadRequestCache = nil
     self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
@@ -2756,47 +2753,13 @@ final class AppViewModel: ObservableObject {
   private func localModelDownloadRequestPlan(
     for model: LocalModelSummary
   ) -> LocalModelDownloadRequestPlan {
-    let key = LocalModelDownloadRequestCacheKey(
-      modelID: model.id,
-      modelDownloaded: model.downloaded,
-      modelSizeBytes: model.sizeBytes,
-      modelInstallPath: model.installPath,
+    localModelDownloadRequestPlanCache.plan(
+      model: model,
       isDownloadRunning: modelDownloadTask != nil,
       pausedModelID: pausedModelDownloadID,
-      hasResumeData: modelDownloadResumeData != nil,
-      resumeBytesReceived: resumeBytesReceived(for: model.id)
+      resumeData: modelDownloadResumeData,
+      currentProgress: modelDownloadProgress
     )
-    if let cache = localModelDownloadRequestCache,
-       cache.key == key,
-       Date().timeIntervalSince(cache.createdAt) < localModelDownloadRequestCacheLifetime
-    {
-      return cache.plan
-    }
-
-    let plan = LocalModelDownloadRequestPlanner.plan(
-      model: model,
-      isDownloadRunning: key.isDownloadRunning,
-      pausedModelID: key.pausedModelID,
-      hasResumeData: key.hasResumeData,
-      resumeBytesReceived: key.resumeBytesReceived
-    )
-    localModelDownloadRequestCache = LocalModelDownloadRequestCache(
-      key: key,
-      createdAt: Date(),
-      plan: plan
-    )
-    return plan
-  }
-
-  private func resumeBytesReceived(for modelID: String) -> Int64? {
-    guard pausedModelDownloadID == modelID,
-          let progress = modelDownloadProgress,
-          progress.modelID == modelID
-    else {
-      return nil
-    }
-
-    return progress.bytesReceived
   }
 
   private func selectedSetupModelDownloadBlockedDetail() -> String? {
