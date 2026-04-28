@@ -16,10 +16,11 @@ use crate::plugin_permissions::{
   build_permission_denied_items, granted_permission_sources, permission_is_granted,
 };
 use crate::request_params::parse_required_params;
-use crate::runtime_context::{
+use crate::request_state::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
-  PreparedApprovalSnapshot, RuntimeContext,
+  PreparedApprovalSnapshot,
 };
+use crate::runtime_context::RuntimeContext;
 use crate::thread_summary::refresh_thread_summary_note;
 
 pub(crate) fn handle_approval_respond(

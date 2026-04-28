@@ -13,10 +13,8 @@ use crate::local_responses::{
   summarize_directory_result, summarize_file_result, summarize_search_result,
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
-use crate::runtime_context::{
-  PendingApproval, PreparedTurnAction, PreparedTurnSnapshot, RuntimeContext,
-  TurnStartExecutionOutput,
-};
+use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
+use crate::runtime_context::{PendingApproval, RuntimeContext};
 
 pub(crate) fn prepare_turn_action(
   context: &mut RuntimeContext,
