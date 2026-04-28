@@ -1683,34 +1683,29 @@ final class AppViewModel: ObservableObject {
   }
 
   func downloadLocalModel() {
-    guard let modelID = selectedSetupModel()?.id else {
+    guard let model = selectedSetupModel() else {
       runtimeDetail = "Choose a local model before downloading."
       return
     }
 
-    if let model = localModel(for: modelID),
-       model.active
-    {
+    if model.active {
       runtimeDetail = "\(model.displayName) is already the active local model."
       return
     }
 
-    if localModel(for: modelID)?.downloaded == true {
-      activateRecommendedModel(modelID: modelID)
+    if model.downloaded {
+      activateRecommendedModel(modelID: model.id)
       return
     }
 
-    guard canDownloadRecommendedModel(modelID: modelID) else {
-      if let model = localModel(for: modelID) {
-        runtimeDetail = localModelDownloadRequestPlan(for: model).blockedDetail
-          ?? "The selected local model is not ready to download."
-      } else {
-        runtimeDetail = "The selected local model is not ready to download."
-      }
+    let requestPlan = localModelDownloadRequestPlan(for: model)
+    guard requestPlan.canStart else {
+      runtimeDetail = requestPlan.blockedDetail
+        ?? "The selected local model is not ready to download."
       return
     }
 
-    downloadRecommendedModel(modelID: modelID, activateAfterDownload: true)
+    downloadRecommendedModel(modelID: model.id, activateAfterDownload: true)
   }
 
   func canBootstrapModelPackMetadata() -> Bool {
