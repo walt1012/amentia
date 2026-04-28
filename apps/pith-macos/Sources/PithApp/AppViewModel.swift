@@ -2884,15 +2884,19 @@ final class AppViewModel: ObservableObject {
     bytesReceived: Int64,
     totalBytes: Int64
   ) {
-    guard modelDownloadID == modelID,
-          var progress = modelDownloadProgress
-    else {
+    guard let progress = LocalModelDownloadProgressUpdater.updatedProgress(
+      LocalModelDownloadProgressUpdate(
+        modelID: modelID,
+        activeModelID: modelDownloadID,
+        currentProgress: modelDownloadProgress,
+        bytesReceived: bytesReceived,
+        totalBytes: totalBytes,
+        updatedAt: Date()
+      )
+    ) else {
       return
     }
 
-    progress.bytesReceived = max(bytesReceived, progress.bytesReceived)
-    progress.totalBytes = totalBytes > 0 ? totalBytes : progress.totalBytes
-    progress.updatedAt = Date()
     modelDownloadProgress = progress
     runtimeDetail = modelDownloadProgressSummary()
   }
