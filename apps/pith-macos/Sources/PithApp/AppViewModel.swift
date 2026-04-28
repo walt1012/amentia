@@ -3,8 +3,6 @@ import Foundation
 
 @MainActor
 final class AppViewModel: ObservableObject {
-  private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
-  private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
   private let localModelDownloadRequestCacheLifetime: TimeInterval = 2
 
   @Published var threads: [ThreadSummary]
@@ -25,7 +23,7 @@ final class AppViewModel: ObservableObject {
   @Published var localModels: [LocalModelSummary]
   @Published var selectedSetupModelID: String {
     didSet {
-      Self.storeSelectedSetupModelID(selectedSetupModelID)
+      AppPreferences.storeSelectedSetupModelID(selectedSetupModelID)
     }
   }
   @Published var modelDownloadID: String?
@@ -75,7 +73,7 @@ final class AppViewModel: ObservableObject {
     let pausedDownload = LocalModelCatalog.loadPausedDownload(matching: initialLocalModels)
     let initialSelectedSetupModelID =
       pausedDownload?.modelID
-      ?? Self.storedSelectedSetupModelID(matching: initialLocalModels)
+      ?? AppPreferences.storedSelectedSetupModelID(matching: initialLocalModels)
       ?? LocalModelCatalog.defaultFirstUseModelID
 
     self.runtimeBridge = runtimeBridge
@@ -159,7 +157,7 @@ final class AppViewModel: ObservableObject {
         var restoredWorkspace = false
         var workspaceRestoreError: Error?
         var skippedWorkspaceRestorePath: String?
-        if currentWorkspace == nil, let lastWorkspacePath = storedLastWorkspacePath() {
+        if currentWorkspace == nil, let lastWorkspacePath = AppPreferences.storedLastWorkspacePath() {
           if isRestorableWorkspacePath(lastWorkspacePath) {
             do {
               currentWorkspace = try await runtimeBridge.openWorkspace(path: lastWorkspacePath)
@@ -169,7 +167,7 @@ final class AppViewModel: ObservableObject {
             }
           } else {
             skippedWorkspaceRestorePath = lastWorkspacePath
-            clearLastWorkspacePath()
+            AppPreferences.clearLastWorkspacePath()
           }
         }
         let threadList = try await runtimeBridge.listThreads()
@@ -194,7 +192,7 @@ final class AppViewModel: ObservableObject {
             displayName: currentWorkspace.displayName
           )
           resetWorkspaceSearch()
-          storeLastWorkspacePath(currentWorkspace.rootPath)
+          AppPreferences.storeLastWorkspacePath(currentWorkspace.rootPath)
         }
 
         if workspace != nil {
@@ -985,7 +983,7 @@ final class AppViewModel: ObservableObject {
           displayName: openedWorkspace.displayName
         )
         resetWorkspaceSearch()
-        storeLastWorkspacePath(openedWorkspace.rootPath)
+        AppPreferences.storeLastWorkspacePath(openedWorkspace.rootPath)
         await refreshMemoryState()
         let threadList = try await runtimeBridge.listThreads()
         try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
@@ -1965,29 +1963,34 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    revealFilePath(model.installPath, successDetail: "Revealed \(model.displayName).")
+    runtimeDetail = FileRevealService.revealFilePath(
+      model.installPath,
+      successDetail: "Revealed \(model.displayName)."
+    )
   }
 
   func revealSuggestedModelDirectory() {
-    revealSuggestedPath(
+    runtimeDetail = FileRevealService.revealSuggestedPath(
       metricKey: "suggestedModelPath",
+      modelHealth: modelHealth,
       successDetail: "Opened the suggested local model folder."
     )
   }
 
   func canRevealSuggestedModelDirectory() -> Bool {
-    hasSuggestedPath(metricKey: "suggestedModelPath")
+    FileRevealService.hasSuggestedPath(metricKey: "suggestedModelPath", modelHealth: modelHealth)
   }
 
   func revealSuggestedBinaryDirectory() {
-    revealSuggestedPath(
+    runtimeDetail = FileRevealService.revealSuggestedPath(
       metricKey: "suggestedBinaryPath",
+      modelHealth: modelHealth,
       successDetail: "Opened the suggested llama.cpp binary folder."
     )
   }
 
   func canRevealSuggestedBinaryDirectory() -> Bool {
-    hasSuggestedPath(metricKey: "suggestedBinaryPath")
+    FileRevealService.hasSuggestedPath(metricKey: "suggestedBinaryPath", modelHealth: modelHealth)
   }
 
   func canDownloadLocalModel() -> Bool {
@@ -2116,7 +2119,10 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    revealFilePath(plugin.manifestPath, successDetail: "Revealed \(plugin.displayName) manifest.")
+    runtimeDetail = FileRevealService.revealFilePath(
+      plugin.manifestPath,
+      successDetail: "Revealed \(plugin.displayName) manifest."
+    )
   }
 
   func pluginRegistryCountSummary() -> String {
@@ -2479,20 +2485,6 @@ final class AppViewModel: ObservableObject {
     if !localModels.contains(where: { $0.id == selectedSetupModelID }) {
       selectedSetupModelID = LocalModelCatalog.defaultFirstUseModelID
     }
-  }
-
-  private static func storedSelectedSetupModelID(matching models: [LocalModelSummary]) -> String? {
-    guard let modelID = UserDefaults.standard.string(forKey: selectedSetupModelIDKey),
-          models.contains(where: { $0.id == modelID })
-    else {
-      return nil
-    }
-
-    return modelID
-  }
-
-  private static func storeSelectedSetupModelID(_ modelID: String) {
-    UserDefaults.standard.set(modelID, forKey: selectedSetupModelIDKey)
   }
 
   private func runtimeHeaderSnapshot() -> RuntimeHeaderSnapshot {
@@ -2990,45 +2982,6 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func revealSuggestedPath(metricKey: String, successDetail: String) {
-    guard let value = modelHealth?.metrics[metricKey], !value.isEmpty else {
-      runtimeDetail = "Local model guidance is unavailable until the runtime reports model health."
-      return
-    }
-
-    let targetURL = URL(fileURLWithPath: value)
-    let directoryURL: URL
-    var isDirectory = ObjCBool(false)
-    if FileManager.default.fileExists(atPath: targetURL.path, isDirectory: &isDirectory) {
-      directoryURL = isDirectory.boolValue ? targetURL : targetURL.deletingLastPathComponent()
-    } else {
-      directoryURL = targetURL.deletingLastPathComponent()
-      do {
-        try FileManager.default.createDirectory(
-          at: directoryURL,
-          withIntermediateDirectories: true
-        )
-      } catch {
-        runtimeDetail = "Failed to prepare \(directoryURL.path): \(error.localizedDescription)"
-        return
-      }
-    }
-
-    if NSWorkspace.shared.open(directoryURL) {
-      runtimeDetail = successDetail
-    } else {
-      runtimeDetail = "Failed to open \(directoryURL.path)"
-    }
-  }
-
-  private func hasSuggestedPath(metricKey: String) -> Bool {
-    guard let value = modelHealth?.metrics[metricKey] else {
-      return false
-    }
-
-    return !value.isEmpty
-  }
-
   private func downloadModelFile(
     from sourceURL: URL,
     resumeData: Data?,
@@ -3098,51 +3051,6 @@ final class AppViewModel: ObservableObject {
     if manager.fileExists(atPath: targetURL.path) {
       try? manager.removeItem(at: targetURL)
     }
-  }
-
-  private func revealFilePath(_ path: String, successDetail: String) {
-    guard !path.isEmpty else {
-      runtimeDetail = "The requested file path is unavailable."
-      return
-    }
-
-    let fileURL = URL(fileURLWithPath: path)
-    let manager = FileManager.default
-    if manager.fileExists(atPath: fileURL.path) {
-      NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-      runtimeDetail = successDetail
-      return
-    }
-
-    let parentURL = fileURL.deletingLastPathComponent()
-    if manager.fileExists(atPath: parentURL.path) {
-      NSWorkspace.shared.activateFileViewerSelecting([parentURL])
-      runtimeDetail = "Revealed the closest available folder for \(path)."
-    } else {
-      runtimeDetail = "Failed to locate \(path)"
-    }
-  }
-
-  private func storedLastWorkspacePath() -> String? {
-    guard let path = UserDefaults.standard.string(forKey: Self.lastWorkspacePathKey),
-          !path.isEmpty
-    else {
-      return nil
-    }
-
-    return path
-  }
-
-  private func storeLastWorkspacePath(_ path: String) {
-    guard !path.isEmpty else {
-      return
-    }
-
-    UserDefaults.standard.set(path, forKey: Self.lastWorkspacePathKey)
-  }
-
-  private func clearLastWorkspacePath() {
-    UserDefaults.standard.removeObject(forKey: Self.lastWorkspacePathKey)
   }
 
   private func resetWorkspaceSearch() {

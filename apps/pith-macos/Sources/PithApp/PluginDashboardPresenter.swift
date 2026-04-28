@@ -12,7 +12,7 @@ struct PluginDashboardSnapshot {
 enum PluginDashboardPresenter {
   static func pluginCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     if snapshot.plugins.isEmpty {
-      return "No bundled plugins discovered yet."
+      return "No plugin manifests discovered yet."
     }
 
     let readyCount = readyPluginList(snapshot).count
@@ -36,7 +36,7 @@ enum PluginDashboardPresenter {
 
   static func pluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.plugins.isEmpty else {
-      return "Pith discovers plugin manifests from the bundled plugins directory."
+      return "Pith discovers plugin manifests from configured local and app plugin roots."
     }
 
     return snapshot.plugins

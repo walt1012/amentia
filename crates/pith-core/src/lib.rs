@@ -15,10 +15,10 @@ use local_responses::{
   format_shell_result, summarize_denied_approval, summarize_directory_result,
   summarize_file_result, summarize_search_result, summarize_shell_result,
 };
-use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
+use pith_memory::MemoryEvent;
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{
-  inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle, PluginCatalogEntry,
+  inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle,
 };
 use pith_protocol::{
   methods, ApprovalRequest, ApprovalRespondParams, ApprovalRespondResult, HealthPingResult,
@@ -31,7 +31,7 @@ use pith_protocol::{
   TurnStartParams, TurnStartResult, WorkspaceCurrentResult, WorkspaceOpenParams,
   WorkspaceOpenResult, WorkspaceSummary,
 };
-use pith_storage::{FileThreadStore, StoredApprovalRecord};
+use pith_storage::StoredApprovalRecord;
 use pith_tools::{
   generate_diff, list_directory, read_file, run_shell, search_files, shell_sandbox_summary,
   write_file,
@@ -50,6 +50,14 @@ use protocol_adapters::{
 };
 use request_params::parse_required_params;
 use runtime_readiness::build_runtime_readiness;
+pub use runtime_context::{
+  CompletedApprovalRespond, CompletedTurnStart, PreparedApprovalRespond, PreparedTurnStart,
+  RuntimeContext,
+};
+pub(crate) use runtime_context::{
+  ApprovalExecutionOutput, PendingApproval, PreparedApprovalSnapshot, PreparedTurnAction,
+  PreparedTurnSnapshot, StoredThread, TurnStartExecutionOutput,
+};
 use text_utils::{take_characters, truncate_text};
 
 mod active_turns;
@@ -63,139 +71,13 @@ mod plugin_hooks;
 mod plugin_permissions;
 mod protocol_adapters;
 mod request_params;
+mod runtime_context;
 mod runtime_readiness;
 mod text_utils;
 mod workspace_search;
 
 pub use plugin_commands::{CompletedPluginCommandRun, PreparedPluginCommandRun};
 pub use workspace_search::{CompletedWorkspaceSearch, PreparedWorkspaceSearch};
-
-#[derive(Debug, Clone)]
-struct StoredThread {
-  summary: ThreadSummary,
-  turn_count: usize,
-  items: Vec<TimelineItem>,
-  workspace: Option<WorkspaceSummary>,
-}
-
-#[derive(Debug, Clone)]
-struct PendingApproval {
-  id: String,
-  thread_id: String,
-  action: String,
-  title: String,
-  relative_path: String,
-  content: Option<String>,
-  command: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct RuntimeContext {
-  server_name: String,
-  server_version: String,
-  model_runtime: LocalModelRuntime,
-  memory_manager: MemoryManager,
-  store: Option<FileThreadStore>,
-  memory_notes: Vec<MemoryNote>,
-  threads: Vec<StoredThread>,
-  workspace: Option<WorkspaceSummary>,
-  plugin_roots: Vec<PathBuf>,
-  plugin_install_root: PathBuf,
-  plugins: Vec<PluginCatalogEntry>,
-  pending_approvals: HashMap<String, PendingApproval>,
-  active_turns: HashMap<String, ActiveTurn>,
-  enforce_model_readiness: bool,
-  next_thread_number: usize,
-  next_approval_number: usize,
-}
-
-#[derive(Debug)]
-pub struct PreparedTurnStart {
-  request_id: serde_json::Value,
-  snapshot: PreparedTurnSnapshot,
-}
-
-#[derive(Debug)]
-pub struct CompletedTurnStart {
-  request_id: serde_json::Value,
-  output: TurnStartExecutionOutput,
-}
-
-#[derive(Debug)]
-pub struct PreparedApprovalRespond {
-  request_id: serde_json::Value,
-  snapshot: PreparedApprovalSnapshot,
-}
-
-#[derive(Debug)]
-pub struct CompletedApprovalRespond {
-  request_id: serde_json::Value,
-  output: ApprovalExecutionOutput,
-}
-
-#[derive(Debug)]
-struct PreparedTurnSnapshot {
-  thread_id: String,
-  turn_id: String,
-  thread_title: String,
-  display_message: String,
-  message: String,
-  workspace: Option<WorkspaceSummary>,
-  model_runtime: LocalModelRuntime,
-  memory_notes: Vec<MemoryNote>,
-  permission_sources: HashMap<String, Vec<String>>,
-  action: PreparedTurnAction,
-}
-
-#[derive(Debug)]
-enum PreparedTurnAction {
-  NoWorkspace,
-  Write {
-    intent: intent_inference::WriteIntent,
-    approval_id: Option<String>,
-  },
-  Shell {
-    command: String,
-    approval_id: Option<String>,
-  },
-  ReadFile {
-    relative_path: String,
-  },
-  Search {
-    query: String,
-  },
-  ListWorkspace,
-}
-
-#[derive(Debug)]
-struct TurnStartExecutionOutput {
-  thread_id: String,
-  turn_id: String,
-  items: Vec<TimelineItem>,
-  pending_approval: Option<PendingApproval>,
-  pending_active_turn: Option<ActiveTurn>,
-}
-
-#[derive(Debug)]
-struct PreparedApprovalSnapshot {
-  approval: PendingApproval,
-  decision: String,
-  workspace: WorkspaceSummary,
-  model_runtime: LocalModelRuntime,
-  memory_notes: Vec<MemoryNote>,
-  permission_sources: HashMap<String, Vec<String>>,
-  plugins: Vec<PluginCatalogEntry>,
-}
-
-#[derive(Debug)]
-struct ApprovalExecutionOutput {
-  approval: PendingApproval,
-  decision: String,
-  workspace: WorkspaceSummary,
-  items: Vec<TimelineItem>,
-  memory_event: Option<MemoryEvent>,
-  hook_memory_captures: Vec<PluginHookMemoryCapture>,
-}
 
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
   match request.method.as_str() {
