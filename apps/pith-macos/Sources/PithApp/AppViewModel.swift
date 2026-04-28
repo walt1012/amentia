@@ -1421,7 +1421,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canDownloadRecommendedModel(modelID: String) -> Bool {
-    guard let model = localModels.first(where: { $0.id == modelID }),
+    guard let model = localModel(for: modelID),
           !model.downloaded
     else {
       return false
@@ -1438,7 +1438,7 @@ final class AppViewModel: ObservableObject {
     else {
       return false
     }
-    guard let model = localModels.first(where: { $0.id == modelID }) else {
+    guard let model = localModel(for: modelID) else {
       return false
     }
 
@@ -1504,7 +1504,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
-    guard let model = localModels.first(where: { $0.id == modelID }) else {
+    guard let model = localModel(for: modelID) else {
       runtimeDetail = "The selected local model is unavailable."
       return
     }
@@ -1591,7 +1591,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    guard let model = localModels.first(where: { $0.id == modelID }) else {
+    guard let model = localModel(for: modelID) else {
       runtimeDetail = "The selected local model is unavailable."
       return
     }
@@ -1638,7 +1638,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func revealRecommendedModel(modelID: String) {
-    guard let model = localModels.first(where: { $0.id == modelID }) else {
+    guard let model = localModel(for: modelID) else {
       runtimeDetail = "The selected local model is unavailable."
       return
     }
@@ -1688,20 +1688,20 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    if let model = localModels.first(where: { $0.id == modelID }),
+    if let model = localModel(for: modelID),
        model.active
     {
       runtimeDetail = "\(model.displayName) is already the active local model."
       return
     }
 
-    if localModels.first(where: { $0.id == modelID })?.downloaded == true {
+    if localModel(for: modelID)?.downloaded == true {
       activateRecommendedModel(modelID: modelID)
       return
     }
 
     guard canDownloadRecommendedModel(modelID: modelID) else {
-      if let model = localModels.first(where: { $0.id == modelID }) {
+      if let model = localModel(for: modelID) {
         runtimeDetail = localModelDownloadRequestPlan(for: model).blockedDetail
           ?? "The selected local model is not ready to download."
       } else {
@@ -2407,9 +2407,21 @@ final class AppViewModel: ObservableObject {
   }
 
   private func selectedSetupModel() -> LocalModelSummary? {
-    localModels.first(where: { $0.id == selectedSetupModelID })
-      ?? localModels.first(where: { $0.id == LocalModelCatalog.defaultFirstUseModelID })
+    localModel(for: selectedSetupModelID)
+      ?? localModel(for: LocalModelCatalog.defaultFirstUseModelID)
       ?? localModels.first
+  }
+
+  private func localModel(for modelID: String?) -> LocalModelSummary? {
+    guard let modelID else {
+      return nil
+    }
+
+    return localModels.first(where: { $0.id == modelID })
+  }
+
+  private func activeLocalModel() -> LocalModelSummary? {
+    localModels.first(where: { $0.active })
   }
 
   private func hasActiveCatalogModel() -> Bool {
@@ -2457,15 +2469,13 @@ final class AppViewModel: ObservableObject {
       runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
       hasActiveTurn: hasActiveOrPendingTurn(),
-      downloadingModel: modelDownloadID
-        .flatMap { id in localModels.first(where: { $0.id == id }) },
-      pausedModel: pausedModelDownloadID
-        .flatMap { id in localModels.first(where: { $0.id == id }) },
+      downloadingModel: localModel(for: modelDownloadID),
+      pausedModel: localModel(for: pausedModelDownloadID),
       selectedSetupModel: selectedSetupModel(),
       selectedDownloadBlockedDetail: selectedSetupModelDownloadBlockedDetail(),
       downloadedModelCount: downloadedModels.count,
       totalModelCount: localModels.count,
-      activeModelDisplayName: localModels.first(where: { $0.active })?.displayName,
+      activeModelDisplayName: activeLocalModel()?.displayName,
       downloadedLocalSizeBytes: downloadedLocalSize
     )
   }
