@@ -1431,20 +1431,28 @@ final class AppViewModel: ObservableObject {
       activateAfterDownload: activateAfterDownload,
       isLocalModelReady: isLocalModelReady()
     )
-    modelDownloadID = sessionState.activeModelID
-    pausedModelDownloadID = sessionState.pausedModelID
-    if sessionState.clearsPausedState {
-      LocalModelDownloadStateStore.clearPausedDownload(coordinator: modelDownloadCoordinator)
-    }
-    modelDownloadProgress = sessionState.progress
-    let shouldActivateAfterDownload = sessionState.shouldActivateAfterDownload
+    applyModelDownloadStartState(sessionState)
     appendModelEvent(
       title: startPlan.timelineTitle,
       body: startPlan.timelineBody,
       model: model,
       attributes: startPlan.attributes
     )
-    let downloadTask = Task {
+    startModelDownloadTask(
+      model: model,
+      downloadURL: downloadURL,
+      startPlan: startPlan,
+      shouldActivateAfterDownload: sessionState.shouldActivateAfterDownload
+    )
+  }
+
+  private func startModelDownloadTask(
+    model: LocalModelSummary,
+    downloadURL: URL,
+    startPlan: LocalModelDownloadStartPlan,
+    shouldActivateAfterDownload: Bool
+  ) {
+    let task = Task {
       defer {
         modelDownloadID = nil
         modelDownloadCoordinator.finishActiveDownload()
@@ -1485,7 +1493,7 @@ final class AppViewModel: ObservableObject {
         applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
       }
     }
-    modelDownloadCoordinator.start(downloadTask)
+    modelDownloadCoordinator.start(task)
   }
 
   func activateRecommendedModel(modelID: String) {
@@ -2471,6 +2479,15 @@ final class AppViewModel: ObservableObject {
         attributes: eventAttributes
       )
     )
+  }
+
+  private func applyModelDownloadStartState(_ sessionState: LocalModelDownloadSessionStartState) {
+    modelDownloadID = sessionState.activeModelID
+    pausedModelDownloadID = sessionState.pausedModelID
+    if sessionState.clearsPausedState {
+      LocalModelDownloadStateStore.clearPausedDownload(coordinator: modelDownloadCoordinator)
+    }
+    modelDownloadProgress = sessionState.progress
   }
 
   private func applyModelDownloadCompletionPlan(
