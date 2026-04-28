@@ -1552,7 +1552,11 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
           attributes: None,
         });
 
-        match write_file(Path::new(&workspace.root_path), &approval.relative_path, &content) {
+        match write_file(
+          Path::new(&workspace.root_path),
+          &approval.relative_path,
+          &content,
+        ) {
           Ok(relative_path) => {
             memory_event = Some(MemoryEvent::FileWritten {
               workspace_display_name: workspace.display_name.clone(),
