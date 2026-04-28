@@ -1,4 +1,4 @@
-import AppKit
+import Combine
 import Foundation
 
 @MainActor
@@ -822,14 +822,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let panel = NSOpenPanel()
-    panel.canChooseDirectories = true
-    panel.canChooseFiles = false
-    panel.allowsMultipleSelection = false
-    panel.prompt = "Open Workspace"
-    panel.message = "Choose a local workspace for Pith to inspect."
-
-    guard panel.runModal() == .OK, let url = panel.url else {
+    guard let url = AppFilePicker.chooseWorkspace() else {
       return
     }
 
@@ -877,14 +870,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    let panel = NSOpenPanel()
-    panel.canChooseDirectories = true
-    panel.canChooseFiles = true
-    panel.allowsMultipleSelection = false
-    panel.prompt = "Install Plugin"
-    panel.message = "Choose a plugin folder or a pith-plugin.json manifest."
-
-    guard panel.runModal() == .OK, let url = panel.url else {
+    guard let url = AppFilePicker.choosePluginSource() else {
       return
     }
 
@@ -895,7 +881,7 @@ final class AppViewModel: ObservableObject {
         installRootPath: runtimeBridge.localPluginInstallRootPath()
       )
     } catch {
-      let repairHint = pluginInstallRepairHint(for: error)
+      let repairHint = PluginInstallDialogPresenter.repairHint(for: error)
       let body = repairHint.isEmpty ? error.localizedDescription : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
       appendEntry(
         to: selectedThreadID,
@@ -910,7 +896,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    guard confirmPluginInstall(preview: preview) else {
+    guard PluginInstallDialogPresenter.confirmInstall(preview: preview) else {
       runtimeDetail = "Plugin install was cancelled."
       return
     }
@@ -1135,7 +1121,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    guard confirmPluginRemoval(plugin: plugin) else {
+    guard PluginInstallDialogPresenter.confirmRemoval(plugin: plugin) else {
       runtimeDetail = "Plugin removal was cancelled."
       return
     }
@@ -2947,89 +2933,4 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func confirmPluginInstall(preview: PluginInstallPreview) -> Bool {
-    let alert = NSAlert()
-    alert.alertStyle = .warning
-    alert.messageText = "Install Plugin?"
-    alert.informativeText = """
-      Plugin: \(preview.displayName) \(preview.version)
-      Provenance: Local import
-      Author: \(preview.authorName ?? "Unknown")
-      Source: \(preview.sourcePath)
-      Manifest: \(preview.manifestPath)
-      Install Path: \(preview.installPath)
-      Default Enabled: \(preview.defaultEnabled ? "Yes" : "No")
-      Permissions: \(summaryLine(preview.permissions, empty: "none"))
-      Capabilities: \(summaryLine(preview.capabilities, empty: "none"))
-
-      \(preview.description)
-      """
-    alert.addButton(withTitle: "Install")
-    alert.addButton(withTitle: "Cancel")
-    return alert.runModal() == .alertFirstButtonReturn
-  }
-
-  private func confirmPluginRemoval(plugin: PluginSummary) -> Bool {
-    let alert = NSAlert()
-    alert.alertStyle = .warning
-    alert.messageText = "Remove Local Plugin?"
-    alert.informativeText = """
-      Plugin: \(plugin.displayName) \(plugin.version)
-      Provenance: \(plugin.provenance)
-      Manifest: \(plugin.manifestPath)
-      Permissions: \(summaryLine(plugin.permissions, empty: "none"))
-      Capabilities: \(summaryLine(plugin.capabilities, empty: "none"))
-
-      Removing this plugin updates the local catalog and can disable related commands, hooks, and permissions.
-      """
-    alert.addButton(withTitle: "Remove")
-    alert.addButton(withTitle: "Cancel")
-    return alert.runModal() == .alertFirstButtonReturn
-  }
-
-  private func summaryLine(_ values: [String], empty: String) -> String {
-    if values.isEmpty {
-      return empty
-    }
-
-    return values.joined(separator: ", ")
-  }
-
-  private func formattedDownloadSize(_ value: String?) -> String {
-    guard let value, let byteCount = Int64(value) else {
-      return "size unavailable"
-    }
-
-    return formattedByteCount(byteCount)
-  }
-
-  private func formattedByteCount(_ byteCount: Int64) -> String {
-    let formatter = ByteCountFormatter()
-    formatter.countStyle = .file
-    return formatter.string(fromByteCount: byteCount)
-  }
-
-  private func pluginInstallRepairHint(for error: Error) -> String {
-    let message = error.localizedDescription
-
-    if message.contains("does not contain pith-plugin.json") {
-      return "Choose a plugin folder that contains pith-plugin.json, or select the manifest file directly."
-    }
-
-    if message.contains("Select a plugin folder or a pith-plugin.json manifest") {
-      return "Point the installer at a plugin directory or the manifest file itself."
-    }
-
-    if message.contains("Plugin manifest name") {
-      return "Use a stable plugin name without path separators or colons, for example notion-connector."
-    }
-
-    if message.contains("correct format")
-      || message.contains("is missing")
-    {
-      return "Check that pith-plugin.json is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
-    }
-
-    return ""
-  }
 }
