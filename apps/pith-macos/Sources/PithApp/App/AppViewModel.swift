@@ -1371,11 +1371,14 @@ final class AppViewModel: ObservableObject {
       isLocalModelReady: isLocalModelReady()
     )
     applyModelDownloadStartState(sessionState)
-    appendModelEvent(
-      title: startPlan.timelineTitle,
-      body: startPlan.timelineBody,
-      model: model,
-      attributes: startPlan.attributes
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEventPresenter.localModelEvent(
+        title: startPlan.timelineTitle,
+        body: startPlan.timelineBody,
+        model: model,
+        attributes: startPlan.attributes
+      )
     )
     startModelDownloadTask(
       model: model,
@@ -2413,28 +2416,6 @@ final class AppViewModel: ObservableObject {
     return localModelDownloadRequestPlan(for: model).blockedDetail
   }
 
-  private func appendModelEvent(
-    title: String,
-    body: String,
-    model: LocalModelSummary,
-    kind: TimelineEntry.Kind = .system,
-    attributes: [String: String] = [:]
-  ) {
-    var eventAttributes = attributes
-    eventAttributes["modelId"] = model.id
-    eventAttributes["modelPath"] = model.installPath
-    eventAttributes["modelLicense"] = model.license
-    appendEntry(
-      to: selectedThreadID,
-      TimelineEntryFactory.entry(
-        kind: kind,
-        title: title,
-        body: body,
-        attributes: eventAttributes
-      )
-    )
-  }
-
   private func applyModelDownloadStartState(_ sessionState: LocalModelDownloadSessionStartState) {
     modelDownloadState.applyStart(sessionState)
     if sessionState.clearsPausedState {
@@ -2493,12 +2474,15 @@ final class AppViewModel: ObservableObject {
       modelDownloadState.clearProgress()
     }
     runtimeDetail = plan.runtimeDetail
-    appendModelEvent(
-      title: plan.timelineTitle,
-      body: plan.timelineBody,
-      model: model,
-      kind: plan.timelineKind,
-      attributes: plan.attributes
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEventPresenter.localModelEvent(
+        title: plan.timelineTitle,
+        body: plan.timelineBody,
+        model: model,
+        kind: plan.timelineKind,
+        attributes: plan.attributes
+      )
     )
   }
 
