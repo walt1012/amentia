@@ -1100,7 +1100,10 @@ mod tests {
   use super::*;
   use std::io::ErrorKind;
   use std::path::PathBuf;
+  use std::sync::{Mutex, MutexGuard};
   use std::time::{SystemTime, UNIX_EPOCH};
+
+  static ENVIRONMENT_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn runtime_reports_unconfigured_backend_when_paths_are_missing() {
@@ -1173,6 +1176,7 @@ mod tests {
 
   #[test]
   fn discovery_roots_include_configured_model_directories() {
+    let _environment = lock_environment();
     let previous_model_pack_root = env::var("PITH_MODEL_PACK_ROOT").ok();
     let previous_data_dir = env::var("PITH_DATA_DIR").ok();
 
@@ -1197,6 +1201,7 @@ mod tests {
 
   #[test]
   fn bootstrap_pack_metadata_copies_manifest_and_readme_into_data_dir() {
+    let _environment = lock_environment();
     let temp_root = unique_temp_directory("model-bootstrap");
     let source_root = temp_root.join("source");
     let source_pack_root = source_root
@@ -1262,6 +1267,12 @@ mod tests {
       Some(value) => env::set_var(key, value),
       None => env::remove_var(key),
     }
+  }
+
+  fn lock_environment() -> MutexGuard<'static, ()> {
+    ENVIRONMENT_LOCK
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
   }
 
   fn unique_temp_directory(prefix: &str) -> PathBuf {
