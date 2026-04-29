@@ -372,6 +372,10 @@ fn has_first_request(context: &RuntimeContext) -> bool {
   context
     .workspace_state
     .current()
-    .map(|workspace| context.thread_state.has_user_message_for_workspace(workspace))
+    .map(|workspace| {
+      context
+        .thread_state
+        .has_user_message_for_workspace(workspace)
+    })
     .unwrap_or(false)
 }
