@@ -24,9 +24,7 @@ final class AppViewModel: ObservableObject {
       AppPreferences.storeSelectedSetupModelID(selectedSetupModelID)
     }
   }
-  @Published var modelDownloadID: String?
-  @Published var pausedModelDownloadID: String?
-  @Published private var modelDownloadProgress: ModelDownloadProgress?
+  @Published private var modelDownloadState: LocalModelDownloadRuntimeState
   @Published var memoryStatus: MemoryStatusSummary?
   @Published var memoryNotes: [MemoryNoteSummary]
   @Published var memoryNoteTitle: String
@@ -67,9 +65,11 @@ final class AppViewModel: ObservableObject {
     self.runtimeReadiness = nil
     self.localModels = launchState.localModels
     self.selectedSetupModelID = launchState.selectedSetupModelID
-    self.modelDownloadID = nil
-    self.pausedModelDownloadID = launchState.pausedDownload?.modelID
-    self.modelDownloadProgress = launchState.modelDownloadProgress
+    self.modelDownloadState = LocalModelDownloadRuntimeState(
+      activeModelID: nil,
+      pausedModelID: launchState.pausedDownload?.modelID,
+      progress: launchState.modelDownloadProgress
+    )
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -280,8 +280,7 @@ final class AppViewModel: ObservableObject {
     let snapshot = setupProgressSnapshot()
     return snapshot.readyStepCount < snapshot.stepCount
       || snapshot.runtimeState == .launching
-      || modelDownloadID != nil
-      || pausedModelDownloadID != nil
+      || modelDownloadState.hasAnyDownloadState
   }
 
   func shouldShowReadinessSteps() -> Bool {
@@ -434,8 +433,7 @@ final class AppViewModel: ObservableObject {
   func shouldShowSetupModelChoice() -> Bool {
     runtimeState == .ready
       && !isLocalModelReady()
-      && modelDownloadID == nil
-      && pausedModelDownloadID == nil
+      && !modelDownloadState.hasAnyDownloadState
       && !localModels.isEmpty
   }
 
@@ -1274,7 +1272,7 @@ final class AppViewModel: ObservableObject {
     guard runtimeState != .launching,
           !hasActiveOrPendingTurn(),
           !modelDownloadCoordinator.isDownloading,
-          pausedModelDownloadID == nil
+          !modelDownloadState.hasPausedDownload
     else {
       return false
     }
@@ -1293,7 +1291,7 @@ final class AppViewModel: ObservableObject {
   }
 
   func canCancelModelDownload() -> Bool {
-    modelDownloadCoordinator.isDownloading || pausedModelDownloadID != nil
+    modelDownloadCoordinator.isDownloading || modelDownloadState.hasPausedDownload
   }
 
   func canPauseModelDownload() -> Bool {
@@ -1306,7 +1304,7 @@ final class AppViewModel: ObservableObject {
     }
 
     runtimeDetail = LocalModelDownloadControlPlanner.pauseDetail(
-      activeModelID: modelDownloadID,
+      activeModelID: modelDownloadState.activeModelID,
       models: localModels
     )
     modelDownloadCoordinator.pauseActiveTransfer()
@@ -1316,8 +1314,8 @@ final class AppViewModel: ObservableObject {
     guard canCancelModelDownload(),
           let cancelPlan = LocalModelDownloadControlPlanner.cancelPlan(
             isDownloading: modelDownloadCoordinator.isDownloading,
-            activeModelID: modelDownloadID,
-            pausedModelID: pausedModelDownloadID,
+            activeModelID: modelDownloadState.activeModelID,
+            pausedModelID: modelDownloadState.pausedModelID,
             models: localModels
           )
     else {
@@ -1335,7 +1333,7 @@ final class AppViewModel: ObservableObject {
     case .orphanedPaused(let modelID):
       clearPausedModelDownload()
       removeIncompleteModelFile(modelID: modelID)
-      modelDownloadProgress = nil
+      modelDownloadState.clearProgress()
       runtimeDetail = cancelPlan.runtimeDetail
       refreshLocalModelCatalog()
     case .paused(let model):
@@ -1362,9 +1360,9 @@ final class AppViewModel: ObservableObject {
     let startPlan = LocalModelDownloadStartPlanner.plan(
       model: model,
       sourceURL: downloadURL,
-      pausedModelID: pausedModelDownloadID,
+      pausedModelID: modelDownloadState.pausedModelID,
       resumeData: modelDownloadCoordinator.resumeData,
-      currentProgress: modelDownloadProgress
+      currentProgress: modelDownloadState.progress
     )
     let sessionState = LocalModelDownloadSessionPlanner.startState(
       model: model,
@@ -1395,7 +1393,7 @@ final class AppViewModel: ObservableObject {
   ) {
     let task = Task {
       defer {
-        modelDownloadID = nil
+        modelDownloadState.clearActiveDownload()
         modelDownloadCoordinator.finishActiveDownload()
         refreshLocalModelCatalog()
       }
@@ -2000,8 +1998,8 @@ final class AppViewModel: ObservableObject {
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
       isWorkspaceSearching: isWorkspaceSearching,
-      hasModelDownload: modelDownloadID != nil,
-      hasPausedModelDownload: pausedModelDownloadID != nil
+      hasModelDownload: modelDownloadState.hasActiveDownload,
+      hasPausedModelDownload: modelDownloadState.hasPausedDownload
     )
   }
 
@@ -2145,9 +2143,9 @@ final class AppViewModel: ObservableObject {
     return LocalModelStatusSnapshot(
       runtimeState: runtimeState,
       modelHealth: modelHealth,
-      modelDownloadID: modelDownloadID,
-      pausedModelDownloadID: pausedModelDownloadID,
-      modelDownloadProgress: modelDownloadProgress,
+      modelDownloadID: modelDownloadState.activeModelID,
+      pausedModelDownloadID: modelDownloadState.pausedModelID,
+      modelDownloadProgress: modelDownloadState.progress,
       selectedSetupModelID: selectedSetupModelID,
       selectedSetupModel: selectedSetupModel(),
       hasActiveCatalogModel: hasActiveCatalogModel()
@@ -2307,8 +2305,8 @@ final class AppViewModel: ObservableObject {
       runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
       hasActiveTurn: hasActiveOrPendingTurn(),
-      downloadingModel: localModel(for: modelDownloadID),
-      pausedModel: localModel(for: pausedModelDownloadID),
+      downloadingModel: localModel(for: modelDownloadState.activeModelID),
+      pausedModel: localModel(for: modelDownloadState.pausedModelID),
       selectedSetupModel: selectedSetupModel(),
       selectedDownloadBlockedDetail: selectedSetupModelDownloadBlockedDetail(),
       downloadedModelCount: downloadedModels.count,
@@ -2319,15 +2317,15 @@ final class AppViewModel: ObservableObject {
   }
 
   private func localModelActionSnapshot() -> LocalModelActionSnapshot {
-    let canDownloadPausedModel = pausedModelDownloadID
+    let canDownloadPausedModel = modelDownloadState.pausedModelID
       .map { canDownloadRecommendedModel(modelID: $0) }
       ?? false
 
     return LocalModelActionSnapshot(
       runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
-      hasModelDownload: modelDownloadID != nil,
-      pausedModelDownloadID: pausedModelDownloadID,
+      hasModelDownload: modelDownloadState.hasActiveDownload,
+      pausedModelDownloadID: modelDownloadState.pausedModelID,
       selectedDownloadBlockedDetail: selectedSetupModelDownloadBlockedDetail(),
       canPauseDownload: canPauseModelDownload(),
       canDownloadPausedModel: canDownloadPausedModel,
@@ -2386,7 +2384,7 @@ final class AppViewModel: ObservableObject {
     if modelDownloadCoordinator.isDownloading {
       return "Finish, pause, or cancel the current model download before switching models."
     }
-    if pausedModelDownloadID != nil {
+    if modelDownloadState.hasPausedDownload {
       return "Continue or cancel the paused model download before switching models."
     }
 
@@ -2399,9 +2397,9 @@ final class AppViewModel: ObservableObject {
     localModelDownloadRequestPlanCache.plan(
       for: model,
       isDownloadRunning: modelDownloadCoordinator.isDownloading,
-      pausedModelID: pausedModelDownloadID,
+      pausedModelID: modelDownloadState.pausedModelID,
       resumeData: modelDownloadCoordinator.resumeData,
-      currentProgress: modelDownloadProgress
+      currentProgress: modelDownloadState.progress
     )
   }
 
@@ -2438,12 +2436,10 @@ final class AppViewModel: ObservableObject {
   }
 
   private func applyModelDownloadStartState(_ sessionState: LocalModelDownloadSessionStartState) {
-    modelDownloadID = sessionState.activeModelID
-    pausedModelDownloadID = sessionState.pausedModelID
+    modelDownloadState.applyStart(sessionState)
     if sessionState.clearsPausedState {
       LocalModelDownloadStateStore.clearPausedDownload(coordinator: modelDownloadCoordinator)
     }
-    modelDownloadProgress = sessionState.progress
   }
 
   private func applyModelDownloadCompletionPlan(
@@ -2458,7 +2454,7 @@ final class AppViewModel: ObservableObject {
     }
 
     runtimeDetail = plan.runtimeDetail
-    modelDownloadProgress = nil
+    modelDownloadState.clearProgress()
     refreshLocalModelCatalog()
     appendEntry(
       to: selectedThreadID,
@@ -2482,7 +2478,7 @@ final class AppViewModel: ObservableObject {
     switch plan.mode {
     case .paused(let resumeData):
       modelDownloadCoordinator.resumeData = resumeData
-      pausedModelDownloadID = model.id
+      modelDownloadState.markPaused(modelID: model.id)
       persistPausedModelDownload(modelID: model.id, resumeData: resumeData)
     case .cancelled, .failed:
       if plan.clearsPausedState {
@@ -2494,7 +2490,7 @@ final class AppViewModel: ObservableObject {
     }
 
     if plan.clearsProgress {
-      modelDownloadProgress = nil
+      modelDownloadState.clearProgress()
     }
     runtimeDetail = plan.runtimeDetail
     appendModelEvent(
@@ -2648,8 +2644,8 @@ final class AppViewModel: ObservableObject {
     guard let progress = LocalModelDownloadProgressUpdater.updatedProgress(
       LocalModelDownloadProgressUpdate(
         modelID: modelID,
-        activeModelID: modelDownloadID,
-        currentProgress: modelDownloadProgress,
+        activeModelID: modelDownloadState.activeModelID,
+        currentProgress: modelDownloadState.progress,
         bytesReceived: bytesReceived,
         totalBytes: totalBytes,
         updatedAt: Date()
@@ -2658,12 +2654,12 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    modelDownloadProgress = progress
+    modelDownloadState.updateProgress(progress)
     runtimeDetail = modelDownloadProgressSummary()
   }
 
   private func clearPausedModelDownload() {
-    pausedModelDownloadID = nil
+    modelDownloadState.clearPausedDownload()
     LocalModelDownloadStateStore.clearPausedDownload(coordinator: modelDownloadCoordinator)
   }
 
@@ -2671,7 +2667,7 @@ final class AppViewModel: ObservableObject {
     LocalModelDownloadStateStore.persistPausedDownload(
       modelID: modelID,
       resumeData: resumeData,
-      progress: modelDownloadProgress
+      progress: modelDownloadState.progress
     )
   }
 
