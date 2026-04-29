@@ -900,8 +900,8 @@ fn approval_respond_runs_shell_after_approval() {
   }));
   assert!(context
     .memory_state
-    .notes()
-    .iter()
+    .recent_notes(16)
+    .into_iter()
     .any(|note| note.title == "Shell Completion" && note.source == "plugin.shell-recorder"));
 }
 
@@ -961,8 +961,8 @@ fn thread_summary_memory_note_is_updated_after_approval_resolution() {
   assert!(approval_response.error.is_none());
   let summary_note = context
     .memory_state
-    .notes()
-    .iter()
+    .recent_notes(16)
+    .into_iter()
     .find(|note| note.id == "memory-thread-summary-thread-1")
     .expect("thread summary note");
   assert_eq!(summary_note.source, "thread");
