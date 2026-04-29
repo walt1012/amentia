@@ -163,7 +163,7 @@ fn model_health_returns_local_model_status() {
 #[test]
 fn turn_start_requires_ready_model_when_runtime_enforces_readiness() {
   let mut context = RuntimeContext::new_in_memory();
-  context.enforce_model_readiness = true;
+  context.model_state.set_enforce_readiness(true);
   let response = handle_request(
     &mut context,
     request(

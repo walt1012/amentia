@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use pith_memory::{MemoryEvent, MemoryNote};
-use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
 use pith_storage::{RuntimeStore, StoredThreadRecord};
 
@@ -13,6 +12,7 @@ use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_memory::RuntimeMemoryState;
+use crate::runtime_model::RuntimeModelState;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_workspace::RuntimeWorkspaceState;
@@ -38,7 +38,7 @@ impl RuntimeContext {
 
     Ok(Self {
       identity: RuntimeIdentity::pith_runtime(),
-      model_runtime: LocalModelRuntime::new_default(),
+      model_state: RuntimeModelState::new_default(true),
       store: Some(store),
       memory_state: RuntimeMemoryState::new(next_memory_number, persisted_memory_notes),
       threads: persisted_threads
@@ -72,7 +72,6 @@ impl RuntimeContext {
           .collect(),
         HashMap::new(),
       ),
-      enforce_model_readiness: true,
       sequences: RuntimeSequenceState::new(next_thread_number, next_approval_number),
     })
   }
@@ -82,7 +81,7 @@ impl RuntimeContext {
     let plugin_install_root = configured_plugin_install_root();
     Self {
       identity: RuntimeIdentity::pith_runtime(),
-      model_runtime: LocalModelRuntime::new_default(),
+      model_state: RuntimeModelState::new_default(false),
       store: None,
       memory_state: RuntimeMemoryState::new(1, vec![]),
       threads: vec![],
@@ -93,7 +92,6 @@ impl RuntimeContext {
         load_plugin_catalog(&plugin_roots).unwrap_or_default(),
       ),
       execution_state: RuntimeExecutionState::empty(),
-      enforce_model_readiness: false,
       sequences: RuntimeSequenceState::new(1, 1),
     }
   }

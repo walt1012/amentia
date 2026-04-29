@@ -136,7 +136,7 @@ pub fn prepare_plugin_command_run(
       )
     });
   let context_pack = pack_memory_context(
-    &context.model_runtime,
+    context.model_state.runtime(),
     context.memory_state.notes(),
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,

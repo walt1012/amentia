@@ -31,7 +31,7 @@ pub fn prepare_turn_start(
   }
 
   let current_workspace = context.workspace_state.current.clone();
-  let model_runtime = context.model_runtime.clone();
+  let model_runtime = context.model_state.snapshot();
   let memory_notes = context.memory_state.notes().to_vec();
   let permission_sources = granted_permission_sources(&context.plugin_state.catalog);
   let (thread_id, turn_id, thread_title, workspace) = {
@@ -91,19 +91,7 @@ pub fn prepare_turn_start(
 }
 
 fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), String> {
-  if !context.enforce_model_readiness {
-    return Ok(());
-  }
-
-  let health = context.model_runtime.health();
-  if health.status == "ready" {
-    return Ok(());
-  }
-
-  Err(format!(
-    "Local model is not ready for turn/start. Download and activate a local model first. {}",
-    health.detail
-  ))
+  context.model_state.ensure_ready_for_turn()
 }
 
 pub fn execute_prepared_turn_start(prepared: PreparedTurnStart) -> CompletedTurnStart {

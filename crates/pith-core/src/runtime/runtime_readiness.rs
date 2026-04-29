@@ -10,7 +10,7 @@ use crate::runtime_context::RuntimeContext;
 use crate::thread_state::StoredThread;
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
-  let model_health = context.model_runtime.health();
+  let model_health = context.model_state.health();
   let model_ready = model_health.status == "ready";
   let workspace_ready = context.workspace_state.current.is_some();
   let workspace_thread_count = count_workspace_threads(context);
