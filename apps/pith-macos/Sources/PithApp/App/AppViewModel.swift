@@ -50,27 +50,13 @@ final class AppViewModel: ObservableObject {
   private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
-    let welcomeState = TimelineSessionState.welcomeState()
-    let initialTimeline = welcomeState.timeline
-    let initialThreads = [welcomeState.thread]
-
-    let initialLocalModels = LocalModelCatalog.summaries(
-      storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: runtimeBridge.activeLocalModelPath()
-    )
-    let pausedDownload = LocalModelCatalog.loadPausedDownload(matching: initialLocalModels)
-    let initialSelectedSetupModelID =
-      pausedDownload?.modelID
-      ?? AppPreferences.storedSelectedSetupModelID(matching: initialLocalModels)
-      ?? LocalModelCatalog.defaultFirstUseModelID
+    let launchState = AppLaunchState.make(runtimeBridge: runtimeBridge)
+    let initialTimeline = launchState.welcomeState.timeline
+    let initialThreads = [launchState.welcomeState.thread]
 
     self.runtimeBridge = runtimeBridge
     self.runtimeState = runtimeBridge.connectionState
-    if pausedDownload == nil {
-      self.runtimeDetail = "Runtime not launched"
-    } else {
-      self.runtimeDetail = "Runtime not launched | paused model download available"
-    }
+    self.runtimeDetail = launchState.runtimeDetail
     self.draftMessage = ""
     self.workspace = nil
     self.workspaceSearchQuery = ""
@@ -79,14 +65,11 @@ final class AppViewModel: ObservableObject {
     self.isWorkspaceSearching = false
     self.modelHealth = nil
     self.runtimeReadiness = nil
-    self.localModels = initialLocalModels
-    self.selectedSetupModelID = initialSelectedSetupModelID
+    self.localModels = launchState.localModels
+    self.selectedSetupModelID = launchState.selectedSetupModelID
     self.modelDownloadID = nil
-    self.pausedModelDownloadID = pausedDownload?.modelID
-    self.modelDownloadProgress = LocalModelCatalog.restoredProgress(
-      from: pausedDownload,
-      localModels: initialLocalModels
-    )
+    self.pausedModelDownloadID = launchState.pausedDownload?.modelID
+    self.modelDownloadProgress = launchState.modelDownloadProgress
     self.memoryStatus = nil
     self.memoryNotes = []
     self.memoryNoteTitle = ""
@@ -101,10 +84,12 @@ final class AppViewModel: ObservableObject {
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
     self.activeTurnID = nil
-    self.threadTimelines = [welcomeState.thread.id: initialTimeline]
+    self.threadTimelines = [launchState.welcomeState.thread.id: initialTimeline]
     self.threadPendingApprovalIDs = [:]
     self.lastRuntimeFailureDetail = nil
-    self.modelDownloadCoordinator = LocalModelDownloadCoordinator(resumeData: pausedDownload?.resumeData)
+    self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
+      resumeData: launchState.pausedDownload?.resumeData
+    )
     self.announcedSetupCompleteThreadIDs = Set<String>()
     self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
