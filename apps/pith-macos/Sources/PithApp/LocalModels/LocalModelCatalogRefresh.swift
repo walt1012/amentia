@@ -13,6 +13,35 @@ struct LocalModelCatalogRefreshPlan {
   let shouldClearConfiguredActiveModel: Bool
 }
 
+struct LocalModelReadinessState {
+  var modelHealth: ModelHealthSummary?
+  var runtimeReadiness: RuntimeReadinessSummary?
+  var models: [LocalModelSummary]
+  var selectedSetupModelID: String
+
+  init(
+    modelHealth: ModelHealthSummary? = nil,
+    runtimeReadiness: RuntimeReadinessSummary? = nil,
+    models: [LocalModelSummary],
+    selectedSetupModelID: String
+  ) {
+    self.modelHealth = modelHealth
+    self.runtimeReadiness = runtimeReadiness
+    self.models = models
+    self.selectedSetupModelID = selectedSetupModelID
+  }
+
+  mutating func applyCatalogRefresh(_ refreshPlan: LocalModelCatalogRefreshPlan) {
+    models = refreshPlan.models
+    selectedSetupModelID = refreshPlan.selectedSetupModelID
+  }
+
+  mutating func clearRuntimeReadiness() {
+    modelHealth = nil
+    runtimeReadiness = nil
+  }
+}
+
 enum LocalModelCatalogRefreshPlanner {
   static func plan(_ snapshot: LocalModelCatalogRefreshSnapshot) -> LocalModelCatalogRefreshPlan {
     let activeModelPath = snapshot.configuredActiveModelPath ?? snapshot.runtimeModelPath

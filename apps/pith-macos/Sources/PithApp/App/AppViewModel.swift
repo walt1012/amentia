@@ -12,14 +12,7 @@ final class AppViewModel: ObservableObject {
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
   @Published private var workspaceSearchState: WorkspaceSearchRuntimeState
-  @Published var modelHealth: ModelHealthSummary?
-  @Published var runtimeReadiness: RuntimeReadinessSummary?
-  @Published var localModels: [LocalModelSummary]
-  @Published var selectedSetupModelID: String {
-    didSet {
-      AppPreferences.storeSelectedSetupModelID(selectedSetupModelID)
-    }
-  }
+  @Published private var localModelReadinessState: LocalModelReadinessState
   @Published private var modelDownloadState: LocalModelDownloadRuntimeState
   @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
@@ -47,10 +40,10 @@ final class AppViewModel: ObservableObject {
     self.draftMessage = ""
     self.workspace = nil
     self.workspaceSearchState = WorkspaceSearchRuntimeState()
-    self.modelHealth = nil
-    self.runtimeReadiness = nil
-    self.localModels = launchState.localModels
-    self.selectedSetupModelID = launchState.selectedSetupModelID
+    self.localModelReadinessState = LocalModelReadinessState(
+      models: launchState.localModels,
+      selectedSetupModelID: launchState.selectedSetupModelID
+    )
     self.modelDownloadState = LocalModelDownloadRuntimeState(
       activeModelID: nil,
       pausedModelID: launchState.pausedDownload?.modelID,
@@ -123,6 +116,51 @@ final class AppViewModel: ObservableObject {
       updateRuntimeConnectionState { state in
         state.detail = newValue
       }
+    }
+  }
+
+  var modelHealth: ModelHealthSummary? {
+    get {
+      localModelReadinessState.modelHealth
+    }
+    set {
+      updateLocalModelReadinessState { state in
+        state.modelHealth = newValue
+      }
+    }
+  }
+
+  var runtimeReadiness: RuntimeReadinessSummary? {
+    get {
+      localModelReadinessState.runtimeReadiness
+    }
+    set {
+      updateLocalModelReadinessState { state in
+        state.runtimeReadiness = newValue
+      }
+    }
+  }
+
+  var localModels: [LocalModelSummary] {
+    get {
+      localModelReadinessState.models
+    }
+    set {
+      updateLocalModelReadinessState { state in
+        state.models = newValue
+      }
+    }
+  }
+
+  var selectedSetupModelID: String {
+    get {
+      localModelReadinessState.selectedSetupModelID
+    }
+    set {
+      updateLocalModelReadinessState { state in
+        state.selectedSetupModelID = newValue
+      }
+      AppPreferences.storeSelectedSetupModelID(newValue)
     }
   }
 
@@ -2044,7 +2082,9 @@ final class AppViewModel: ObservableObject {
       using: runtimeBridge,
       serverLabel: serverLabel
     )
-    modelHealth = modelRefresh.modelHealth
+    updateLocalModelReadinessState { state in
+      state.modelHealth = modelRefresh.modelHealth
+    }
     if let runtimeDetail = modelRefresh.runtimeDetail {
       self.runtimeDetail = runtimeDetail
     }
@@ -2054,7 +2094,10 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshRuntimeReadiness() async {
-    runtimeReadiness = await RuntimeStateLoader.refreshRuntimeReadiness(using: runtimeBridge)
+    let readiness = await RuntimeStateLoader.refreshRuntimeReadiness(using: runtimeBridge)
+    updateLocalModelReadinessState { state in
+      state.runtimeReadiness = readiness
+    }
   }
 
   private func refreshLocalModelCatalog() {
@@ -2069,8 +2112,10 @@ final class AppViewModel: ObservableObject {
     if refreshPlan.shouldClearConfiguredActiveModel {
       runtimeBridge.clearActiveLocalModel()
     }
-    localModels = refreshPlan.models
-    selectedSetupModelID = refreshPlan.selectedSetupModelID
+    updateLocalModelReadinessState { state in
+      state.applyCatalogRefresh(refreshPlan)
+    }
+    AppPreferences.storeSelectedSetupModelID(refreshPlan.selectedSetupModelID)
   }
 
   private func runtimeHeaderSnapshot() -> RuntimeHeaderSnapshot {
@@ -2654,8 +2699,9 @@ final class AppViewModel: ObservableObject {
     }
 
     if plan.clearsModelReadinessState {
-      modelHealth = nil
-      runtimeReadiness = nil
+      updateLocalModelReadinessState { state in
+        state.clearRuntimeReadiness()
+      }
     }
 
     if plan.shouldAppendFailureNotice {
@@ -2669,8 +2715,9 @@ final class AppViewModel: ObservableObject {
   private func applyRuntimeLaunchFailure(_ error: Error) {
     runtimeState = .failed
     runtimeDetail = error.localizedDescription
-    modelHealth = nil
-    runtimeReadiness = nil
+    updateLocalModelReadinessState { state in
+      state.clearRuntimeReadiness()
+    }
     updateMemoryState { state in
       state.resetRuntimeData()
     }
@@ -2770,6 +2817,14 @@ final class AppViewModel: ObservableObject {
     var nextState = runtimeConnectionState
     update(&nextState)
     runtimeConnectionState = nextState
+  }
+
+  private func updateLocalModelReadinessState(
+    _ update: (inout LocalModelReadinessState) -> Void
+  ) {
+    var nextState = localModelReadinessState
+    update(&nextState)
+    localModelReadinessState = nextState
   }
 
   private func isRestorableWorkspacePath(_ path: String) -> Bool {
