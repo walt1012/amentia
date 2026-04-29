@@ -78,7 +78,7 @@ pub fn prepare_plugin_command_run(
 ) -> std::result::Result<PreparedPluginCommandRun, JsonRpcResponse> {
   let params = parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun")?;
 
-  let Some(command) = build_command_registry(&context.plugin_state.catalog)
+  let Some(command) = build_command_registry(context.plugin_state.catalog())
     .into_iter()
     .find(|command| command.command_id == params.command_id)
   else {

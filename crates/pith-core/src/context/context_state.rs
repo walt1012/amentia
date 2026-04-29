@@ -185,10 +185,10 @@ impl RuntimeContext {
 
   pub(crate) fn refresh_plugins(&mut self) -> Result<()> {
     let plugin_states = self.persisted_plugin_states()?;
-    self.plugin_state.catalog = apply_plugin_states(
-      load_plugin_catalog(&self.plugin_state.roots)?,
+    self.plugin_state.replace_catalog(apply_plugin_states(
+      load_plugin_catalog(self.plugin_state.roots())?,
       &plugin_states,
-    );
+    ));
     Ok(())
   }
 }

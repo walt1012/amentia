@@ -11,6 +11,7 @@ use crate::protocol_adapters::{
   build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_plugin,
 };
 use crate::request_params::parse_required_params;
+use crate::runtime_plugins::PluginEnableError;
 use crate::RuntimeContext;
 
 pub(crate) fn handle_plugin_capability_registry(
@@ -19,7 +20,7 @@ pub(crate) fn handle_plugin_capability_registry(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &build_protocol_capability_registry(&context.plugin_state.catalog),
+    &build_protocol_capability_registry(context.plugin_state.catalog()),
   )
 }
 
@@ -29,7 +30,7 @@ pub(crate) fn handle_plugin_command_registry(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &build_protocol_command_registry(&context.plugin_state.catalog),
+    &build_protocol_command_registry(context.plugin_state.catalog()),
   )
 }
 
@@ -39,7 +40,7 @@ pub(crate) fn handle_plugin_connector_registry(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &build_protocol_connector_registry(&context.plugin_state.catalog),
+    &build_protocol_connector_registry(context.plugin_state.catalog()),
   )
 }
 
@@ -49,7 +50,7 @@ pub(crate) fn handle_plugin_hook_registry(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &build_protocol_hook_registry(&context.plugin_state.catalog),
+    &build_protocol_hook_registry(context.plugin_state.catalog()),
   )
 }
 
@@ -62,7 +63,7 @@ pub(crate) fn handle_plugin_list(
     &PluginListResult {
       plugins: context
         .plugin_state
-        .catalog
+        .catalog()
         .iter()
         .cloned()
         .map(to_protocol_plugin)
@@ -81,29 +82,20 @@ pub(crate) fn handle_plugin_set_enabled(
     Err(response) => return response,
   };
 
-  let Some(plugin_index) = context
+  let updated_plugin = match context
     .plugin_state
-    .catalog
-    .iter()
-    .position(|plugin| plugin.id == params.plugin_id)
-  else {
-    return JsonRpcResponse::error(request.id, -32050, "Plugin not found");
+    .set_enabled(&params.plugin_id, params.enabled)
+  {
+    Ok(plugin) => plugin,
+    Err(PluginEnableError::NotFound) => {
+      return JsonRpcResponse::error(request.id, -32050, "Plugin not found");
+    }
+    Err(PluginEnableError::InvalidManifest(message)) => {
+      return JsonRpcResponse::error(request.id, -32051, message);
+    }
   };
-  if context.plugin_state.catalog[plugin_index].status != "ready" {
-    return JsonRpcResponse::error(
-      request.id,
-      -32051,
-      context.plugin_state.catalog[plugin_index]
-        .validation_error
-        .clone()
-        .unwrap_or_else(|| "Plugin manifest is invalid".to_string()),
-    );
-  }
-
-  context.plugin_state.catalog[plugin_index].enabled = params.enabled;
-  let plugin_id = context.plugin_state.catalog[plugin_index].id.clone();
-  let plugin_enabled = context.plugin_state.catalog[plugin_index].enabled;
-  let updated_plugin = context.plugin_state.catalog[plugin_index].clone();
+  let plugin_id = updated_plugin.id.clone();
+  let plugin_enabled = updated_plugin.enabled;
 
   if let Err(error) = context.persist_plugin_enabled(&plugin_id, plugin_enabled) {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
@@ -131,12 +123,7 @@ pub(crate) fn handle_plugin_install(
     Ok(plugin) => plugin,
     Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
   };
-  if context
-    .plugin_state
-    .catalog
-    .iter()
-    .any(|plugin| plugin.id == candidate_plugin.id)
-  {
+  if context.plugin_state.contains_plugin_id(&candidate_plugin.id) {
     return JsonRpcResponse::error(
       request.id,
       -32053,
@@ -147,7 +134,7 @@ pub(crate) fn handle_plugin_install(
     );
   }
   let installed_plugin =
-    match install_plugin_bundle(&source_path, &context.plugin_state.install_root) {
+    match install_plugin_bundle(&source_path, context.plugin_state.install_root()) {
       Ok(plugin) => plugin,
       Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
     };
@@ -158,9 +145,7 @@ pub(crate) fn handle_plugin_install(
 
   let refreshed_plugin = context
     .plugin_state
-    .catalog
-    .iter()
-    .find(|plugin| plugin.id == installed_plugin.id)
+    .find(&installed_plugin.id)
     .cloned()
     .unwrap_or(installed_plugin);
 
@@ -183,7 +168,7 @@ pub(crate) fn handle_plugin_remove(
 
   let manifest_path = PathBuf::from(&params.manifest_path);
   let removed_plugin =
-    match remove_local_plugin_bundle(&manifest_path, &context.plugin_state.install_root) {
+    match remove_local_plugin_bundle(&manifest_path, context.plugin_state.install_root()) {
       Ok(plugin) => plugin,
       Err(error) => return JsonRpcResponse::error(request.id, -32054, error.to_string()),
     };

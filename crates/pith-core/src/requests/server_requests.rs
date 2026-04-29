@@ -29,7 +29,7 @@ pub(crate) fn handle_initialize(
         supports_memory: true,
         supports_threads: true,
         supports_tools: true,
-        supports_plugins: !context.plugin_state.catalog.is_empty(),
+        supports_plugins: context.plugin_state.catalog_len() > 0,
         supports_runtime_readiness: true,
       },
     },

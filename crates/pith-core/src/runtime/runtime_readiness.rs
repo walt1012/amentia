@@ -22,12 +22,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .current()
     .map(|workspace| shell_sandbox_status(Path::new(&workspace.root_path)))
     .unwrap_or_else(workspace_required_status);
-  let enabled_plugin_count = context
-    .plugin_state
-    .catalog
-    .iter()
-    .filter(|plugin| plugin.enabled && plugin.status == "ready")
-    .count();
+  let enabled_plugin_count = context.plugin_state.enabled_ready_count();
 
   let status = if !model_ready || !workspace_ready || !thread_ready {
     "setup_required"
@@ -72,7 +67,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       context_check(&context_window, &output_cap),
       execution_control_check(pending_approval_count, active_turn_count),
       native_sandbox_check(&sandbox_status),
-      plugin_check(enabled_plugin_count, context.plugin_state.catalog.len()),
+      plugin_check(enabled_plugin_count, context.plugin_state.catalog_len()),
       bounded_runtime_check(),
     ],
     metrics: readiness_metrics(
@@ -325,7 +320,7 @@ fn readiness_metrics(
     ),
     (
       "pluginCount".to_string(),
-      context.plugin_state.catalog.len().to_string(),
+      context.plugin_state.catalog_len().to_string(),
     ),
     (
       "enabledPluginCount".to_string(),
