@@ -279,9 +279,7 @@ mod tests {
     };
 
     store.save_workspace(&workspace).expect("save workspace");
-    store
-      .save_threads(&[thread])
-      .expect("save thread records");
+    store.save_threads(&[thread]).expect("save thread records");
     store
       .save_pending_approvals(&[approval])
       .expect("save pending approval records");
