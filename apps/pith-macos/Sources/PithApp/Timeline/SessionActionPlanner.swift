@@ -11,6 +11,11 @@ struct SessionActionSnapshot {
   let pendingApprovalIDs: Set<String>
 }
 
+struct PreparedDraftTurn {
+  let threadID: String
+  let message: String
+}
+
 enum RuntimePrimaryAction {
   case launchRuntime
   case cancelTurn
@@ -99,6 +104,24 @@ enum SessionActionPlanner {
       && snapshot.hasRuntimeThreadSelection
       && !snapshot.hasActiveOrPendingTurn
       && snapshot.hasDraftMessage
+  }
+
+  static func preparedDraftTurn(
+    snapshot: SessionActionSnapshot,
+    selectedThreadID: ThreadSummary.ID?,
+    draftMessage: String
+  ) -> PreparedDraftTurn? {
+    let message = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard canSendDraftMessage(snapshot),
+          let threadID = selectedThreadID,
+          !threadID.hasPrefix("local-"),
+          !message.isEmpty
+    else {
+      return nil
+    }
+
+    return PreparedDraftTurn(threadID: threadID, message: message)
   }
 
   static func canCancelActiveTurn(_ snapshot: SessionActionSnapshot) -> Bool {

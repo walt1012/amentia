@@ -812,20 +812,16 @@ final class AppViewModel: ObservableObject {
   }
 
   func sendDraftMessage() {
-    let message = trimmedDraftMessage
-
-    guard runtimeState == .ready,
-          workspace != nil,
-          isLocalModelReady(),
-          hasRuntimeThreadSelection(),
-          !message.isEmpty,
-          let threadID = selectedThreadID,
-          !threadID.hasPrefix("local-"),
-          !hasActiveOrPendingTurn()
-    else {
+    guard let draftTurn = SessionActionPlanner.preparedDraftTurn(
+      snapshot: sessionActionSnapshot(),
+      selectedThreadID: selectedThreadID,
+      draftMessage: draftMessage
+    ) else {
       return
     }
 
+    let threadID = draftTurn.threadID
+    let message = draftTurn.message
     let requestID = beginPendingLocalTurn(threadID: threadID)
 
     let task = Task {
