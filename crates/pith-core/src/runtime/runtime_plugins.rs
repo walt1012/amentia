@@ -34,6 +34,10 @@ impl RuntimePluginState {
     &self.catalog
   }
 
+  pub(crate) fn snapshot_catalog(&self) -> Vec<PluginCatalogEntry> {
+    self.catalog.clone()
+  }
+
   pub(crate) fn catalog_len(&self) -> usize {
     self.catalog.len()
   }

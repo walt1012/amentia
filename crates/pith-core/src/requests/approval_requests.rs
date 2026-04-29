@@ -62,9 +62,9 @@ pub fn prepare_approval_respond(
   };
   let current_workspace = context.workspace_state.current_cloned();
   let model_runtime = context.model_state.snapshot();
-  let memory_notes = context.memory_state.notes().to_vec();
+  let memory_notes = context.memory_state.snapshot_notes();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
-  let plugins = context.plugin_state.catalog().to_vec();
+  let plugins = context.plugin_state.snapshot_catalog();
 
   let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
     return Err(JsonRpcResponse::error(

@@ -18,6 +18,10 @@ impl RuntimeMemoryState {
     &self.notes
   }
 
+  pub(crate) fn snapshot_notes(&self) -> Vec<MemoryNote> {
+    self.notes.clone()
+  }
+
   pub(crate) fn note_count(&self) -> usize {
     self.notes.len()
   }

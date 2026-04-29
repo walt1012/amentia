@@ -32,7 +32,7 @@ pub fn prepare_turn_start(
 
   let current_workspace = context.workspace_state.current_cloned();
   let model_runtime = context.model_state.snapshot();
-  let memory_notes = context.memory_state.notes().to_vec();
+  let memory_notes = context.memory_state.snapshot_notes();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
   let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&params.thread_id) else {

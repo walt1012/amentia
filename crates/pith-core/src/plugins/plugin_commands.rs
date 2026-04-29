@@ -151,7 +151,7 @@ pub fn prepare_plugin_command_run(
       workspace,
       input,
       command_item,
-      memory_notes: context.memory_state.notes().to_vec(),
+      memory_notes: context.memory_state.snapshot_notes(),
     },
   })
 }
