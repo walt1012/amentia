@@ -119,65 +119,76 @@ final class AppViewModel: ObservableObject {
 
     Task {
       do {
-        let session = try await runtimeBridge.launchAndInitialize(launchDetail: launchDetail)
-        let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
-        let workspaceRestore = await RuntimeWorkspaceRestorer.restore(
-          currentWorkspace: try? await runtimeBridge.currentWorkspace(),
+        let bootstrap = try await RuntimeLaunchBootstrapLoader.load(
+          runtimeBridge: runtimeBridge,
+          launchDetail: launchDetail,
           lastWorkspacePath: AppPreferences.storedLastWorkspacePath(),
           isRestorablePath: isRestorableWorkspacePath,
-          openWorkspace: { [runtimeBridge] path in
-            try await runtimeBridge.openWorkspace(path: path)
-          },
           clearStoredWorkspace: AppPreferences.clearLastWorkspacePath
         )
-        let currentWorkspace = workspaceRestore.workspace
-        let threadList = try await runtimeBridge.listThreads()
-
-        runtimeState = .ready
-        await refreshModelHealthState(serverLabel: "\(session.serverName) \(session.serverVersion)")
-        applyRuntimeLaunchMemoryState(memoryRefresh)
-        await refreshPluginState()
-
-        if let currentWorkspace {
-          workspace = WorkspaceSummary(
-            rootPath: currentWorkspace.rootPath,
-            displayName: currentWorkspace.displayName
-          )
-          resetWorkspaceSearch()
-          AppPreferences.storeLastWorkspacePath(currentWorkspace.rootPath)
-        }
-
-        if workspace != nil {
-          try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
-        } else {
-          resetToWelcomeThread()
-        }
-        await refreshRuntimeReadiness()
-        let shouldAnnotateSetupLaunch = shouldAnnotateLaunchWithSetupEvents()
-        let restoredWorkspaceSummary = workspaceRestore.restoredWorkspace
-          ? currentWorkspace.map {
-            WorkspaceSummary(rootPath: $0.rootPath, displayName: $0.displayName)
-          }
-          : nil
-        RuntimeLaunchAnnotationFactory.entries(
-          RuntimeLaunchAnnotationSnapshot(
-            serverName: session.serverName,
-            serverVersion: session.serverVersion,
-            shouldAnnotateSetupLaunch: shouldAnnotateSetupLaunch,
-            restoredWorkspace: restoredWorkspaceSummary,
-            skippedWorkspaceRestorePath: workspaceRestore.skippedWorkspaceRestorePath,
-            workspaceRestoreErrorDetail: workspaceRestore.restoreErrorDetail,
-            modelHealth: modelHealth,
-            isLocalModelReady: isLocalModelReady(),
-            localModelRequiredSummary: localModelRequiredTimelineSummary()
-          )
-        ).forEach { entry in
-          appendEntry(to: selectedThreadID, entry)
-        }
+        try await applyRuntimeLaunchBootstrap(bootstrap)
         announceFirstRequestReadyIfNeeded()
       } catch {
         applyRuntimeLaunchFailure(error)
       }
+    }
+  }
+
+  private func applyRuntimeLaunchBootstrap(_ bootstrap: RuntimeLaunchBootstrap) async throws {
+    let currentWorkspace = bootstrap.workspaceRestore.workspace
+
+    runtimeState = .ready
+    await refreshModelHealthState(
+      serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)"
+    )
+    applyRuntimeLaunchMemoryState(bootstrap.memoryRefresh)
+    await refreshPluginState()
+
+    if let currentWorkspace {
+      workspace = WorkspaceSummary(
+        rootPath: currentWorkspace.rootPath,
+        displayName: currentWorkspace.displayName
+      )
+      resetWorkspaceSearch()
+      AppPreferences.storeLastWorkspacePath(currentWorkspace.rootPath)
+    }
+
+    if workspace != nil {
+      try await refreshWorkspaceThreadSelection(
+        from: bootstrap.threadList,
+        createIfEmpty: isLocalModelReady()
+      )
+    } else {
+      resetToWelcomeThread()
+    }
+    await refreshRuntimeReadiness()
+    appendRuntimeLaunchAnnotations(bootstrap, currentWorkspace: currentWorkspace)
+  }
+
+  private func appendRuntimeLaunchAnnotations(
+    _ bootstrap: RuntimeLaunchBootstrap,
+    currentWorkspace: RuntimeBridge.RuntimeWorkspace?
+  ) {
+    let restoredWorkspaceSummary = bootstrap.workspaceRestore.restoredWorkspace
+      ? currentWorkspace.map {
+        WorkspaceSummary(rootPath: $0.rootPath, displayName: $0.displayName)
+      }
+      : nil
+
+    RuntimeLaunchAnnotationFactory.entries(
+      RuntimeLaunchAnnotationSnapshot(
+        serverName: bootstrap.session.serverName,
+        serverVersion: bootstrap.session.serverVersion,
+        shouldAnnotateSetupLaunch: shouldAnnotateLaunchWithSetupEvents(),
+        restoredWorkspace: restoredWorkspaceSummary,
+        skippedWorkspaceRestorePath: bootstrap.workspaceRestore.skippedWorkspaceRestorePath,
+        workspaceRestoreErrorDetail: bootstrap.workspaceRestore.restoreErrorDetail,
+        modelHealth: modelHealth,
+        isLocalModelReady: isLocalModelReady(),
+        localModelRequiredSummary: localModelRequiredTimelineSummary()
+      )
+    ).forEach { entry in
+      appendEntry(to: selectedThreadID, entry)
     }
   }
 
