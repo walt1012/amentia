@@ -52,7 +52,9 @@ pub(crate) fn handle_thread_read(
     request.id,
     &ThreadReadResult {
       pending_approvals: approvals_for_thread(context, &thread_id),
-      active_turn_id: context.execution_state.active_turn_id_for_thread(&thread_id),
+      active_turn_id: context
+        .execution_state
+        .active_turn_id_for_thread(&thread_id),
       thread,
       items,
     },

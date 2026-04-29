@@ -32,10 +32,7 @@ impl RuntimeThreadState {
       .collect()
   }
 
-  pub(crate) fn snapshot(
-    &self,
-    thread_id: &str,
-  ) -> Option<(ThreadSummary, Vec<TimelineItem>)> {
+  pub(crate) fn snapshot(&self, thread_id: &str) -> Option<(ThreadSummary, Vec<TimelineItem>)> {
     self.find(thread_id).map(StoredThread::snapshot)
   }
 
