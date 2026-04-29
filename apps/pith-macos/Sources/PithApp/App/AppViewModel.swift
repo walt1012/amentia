@@ -1266,6 +1266,10 @@ final class AppViewModel: ObservableObject {
     LocalModelOperationPresenter.managerSummary(localModelOperationSnapshot())
   }
 
+  func localModelManagerRuleSummary() -> String {
+    LocalModelStatusPresenter.managerRuleSummary(localModelStatusSnapshot())
+  }
+
   func shouldShowModelDownloadProgress() -> Bool {
     LocalModelStatusPresenter.shouldShowDownloadProgress(localModelStatusSnapshot())
   }
@@ -1280,6 +1284,14 @@ final class AppViewModel: ObservableObject {
 
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {
     LocalModelStatusPresenter.localModelStatusSummary(model, snapshot: localModelStatusSnapshot())
+  }
+
+  func localModelChoiceSummary(_ model: LocalModelSummary) -> String {
+    LocalModelStatusPresenter.localModelChoiceSummary(
+      model,
+      snapshot: localModelStatusSnapshot(),
+      defaultModelID: LocalModelCatalog.defaultFirstUseModelID
+    )
   }
 
   func defaultModelDownloadButtonTitle() -> String {

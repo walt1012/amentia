@@ -73,6 +73,10 @@ struct LocalModelPanel: View {
         .disabled(!viewModel.canResetActiveLocalModel())
       }
 
+      Text(viewModel.localModelManagerRuleSummary())
+        .font(.caption2)
+        .foregroundColor(.secondary)
+
       ForEach(viewModel.localModels) { model in
         LocalModelRow(model: model, viewModel: viewModel)
       }
@@ -109,6 +113,10 @@ private struct LocalModelRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 5) {
+      Text(viewModel.localModelChoiceSummary(model))
+        .font(.caption2)
+        .fontWeight(.medium)
+        .foregroundColor(model.active ? .green : .secondary)
       Text(model.displayName)
         .font(.caption)
         .fontWeight(.semibold)

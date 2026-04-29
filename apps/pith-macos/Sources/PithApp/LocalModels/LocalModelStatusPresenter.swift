@@ -194,6 +194,51 @@ enum LocalModelStatusPresenter {
     return "\(status) | \(localSize) | \(model.license)"
   }
 
+  static func managerRuleSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
+    if snapshot.modelDownloadID != nil {
+      return "Downloads can be paused or cancelled. Pith will activate only one verified model."
+    }
+    if snapshot.pausedModelDownloadID != nil {
+      return "Continue the paused download or cancel it before starting another model."
+    }
+    if let model = snapshot.selectedSetupModel {
+      return "Selected setup model: \(model.displayName). Pith runs one active model at a time."
+    }
+
+    return "Choose one curated GGUF model. Pith verifies the file before it can run."
+  }
+
+  static func localModelChoiceSummary(
+    _ model: LocalModelSummary,
+    snapshot: LocalModelStatusSnapshot,
+    defaultModelID: String
+  ) -> String {
+    if model.active {
+      return "Currently active local model"
+    }
+    if snapshot.modelDownloadID == model.id {
+      return "Downloading for local setup"
+    }
+    if snapshot.pausedModelDownloadID == model.id {
+      return "Paused download"
+    }
+    if model.id == snapshot.selectedSetupModelID {
+      if model.id == defaultModelID {
+        return "Selected default for first setup"
+      }
+
+      return "Selected alternative for first setup"
+    }
+    if model.id == defaultModelID {
+      return "Default first-use choice"
+    }
+    if model.tags.contains("recommended") {
+      return "Curated stronger tiny alternative"
+    }
+
+    return "Optional curated local model"
+  }
+
   static func defaultDownloadButtonTitle(_ snapshot: LocalModelStatusSnapshot) -> String {
     let setupModelID = snapshot.selectedSetupModel?.id ?? snapshot.selectedSetupModelID
     if snapshot.modelDownloadID == setupModelID {
