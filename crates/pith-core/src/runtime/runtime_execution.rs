@@ -69,11 +69,7 @@ impl RuntimeExecutionState {
     self.active_turns.get(id).cloned()
   }
 
-  pub(crate) fn update_active_turn_emitted(
-    &mut self,
-    id: &str,
-    emitted_chars: usize,
-  ) -> bool {
+  pub(crate) fn update_active_turn_emitted(&mut self, id: &str, emitted_chars: usize) -> bool {
     let Some(active_turn) = self.active_turns.get_mut(id) else {
       return false;
     };
