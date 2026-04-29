@@ -15,6 +15,42 @@ struct RuntimeConnectionStatePlan {
   let shouldAppendFailureNotice: Bool
 }
 
+struct RuntimeConnectionStateStore {
+  var state: RuntimeBridge.ConnectionState
+  var detail: String
+  var lastFailureDetail: String?
+
+  init(
+    state: RuntimeBridge.ConnectionState,
+    detail: String,
+    lastFailureDetail: String? = nil
+  ) {
+    self.state = state
+    self.detail = detail
+    self.lastFailureDetail = lastFailureDetail
+  }
+
+  mutating func clearLastFailureDetail() {
+    lastFailureDetail = nil
+  }
+
+  mutating func applyConnectionUpdate(
+    state nextState: RuntimeBridge.ConnectionState,
+    detail nextDetail: String,
+    plan: RuntimeConnectionStatePlan
+  ) {
+    state = nextState
+    detail = nextDetail
+
+    if plan.resetsLastFailureDetail {
+      lastFailureDetail = nil
+    }
+    if let updatedLastFailureDetail = plan.updatedLastFailureDetail {
+      lastFailureDetail = updatedLastFailureDetail
+    }
+  }
+}
+
 enum RuntimeConnectionStateReducer {
   static func plan(_ snapshot: RuntimeConnectionStateSnapshot) -> RuntimeConnectionStatePlan {
     switch snapshot.nextState {

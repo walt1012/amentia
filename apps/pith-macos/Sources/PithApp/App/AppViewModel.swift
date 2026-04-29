@@ -8,8 +8,7 @@ final class AppViewModel: ObservableObject {
   @Published var timeline: [TimelineEntry]
   @Published var selectedEntryID: TimelineEntry.ID?
   @Published var activeTurnID: String?
-  @Published var runtimeState: RuntimeBridge.ConnectionState
-  @Published var runtimeDetail: String
+  @Published private var runtimeConnectionState: RuntimeConnectionStateStore
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
   @Published private var workspaceSearchState: WorkspaceSearchRuntimeState
@@ -30,7 +29,6 @@ final class AppViewModel: ObservableObject {
   private var threadPendingApprovalIDs: [String: Set<String>]
   private var activeTurnThreadID: String?
   private let pendingTurnRequest = PendingTurnRequestState()
-  private var lastRuntimeFailureDetail: String?
   private let workspaceSearchSession = WorkspaceSearchSession()
   private let modelDownloadCoordinator: LocalModelDownloadCoordinator
   private let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
@@ -42,8 +40,10 @@ final class AppViewModel: ObservableObject {
     let initialThreads = [launchState.welcomeState.thread]
 
     self.runtimeBridge = runtimeBridge
-    self.runtimeState = runtimeBridge.connectionState
-    self.runtimeDetail = launchState.runtimeDetail
+    self.runtimeConnectionState = RuntimeConnectionStateStore(
+      state: runtimeBridge.connectionState,
+      detail: launchState.runtimeDetail
+    )
     self.draftMessage = ""
     self.workspace = nil
     self.workspaceSearchState = WorkspaceSearchRuntimeState()
@@ -64,7 +64,6 @@ final class AppViewModel: ObservableObject {
     self.activeTurnID = nil
     self.threadTimelines = [launchState.welcomeState.thread.id: initialTimeline]
     self.threadPendingApprovalIDs = [:]
-    self.lastRuntimeFailureDetail = nil
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData
     )
@@ -103,6 +102,28 @@ final class AppViewModel: ObservableObject {
 
   var isWorkspaceSearching: Bool {
     workspaceSearchState.isSearching
+  }
+
+  var runtimeState: RuntimeBridge.ConnectionState {
+    get {
+      runtimeConnectionState.state
+    }
+    set {
+      updateRuntimeConnectionState { state in
+        state.state = newValue
+      }
+    }
+  }
+
+  var runtimeDetail: String {
+    get {
+      runtimeConnectionState.detail
+    }
+    set {
+      updateRuntimeConnectionState { state in
+        state.detail = newValue
+      }
+    }
   }
 
   var plugins: [PluginSummary] {
@@ -170,7 +191,9 @@ final class AppViewModel: ObservableObject {
 
     runtimeState = .launching
     runtimeDetail = launchDetail
-    lastRuntimeFailureDetail = nil
+    updateRuntimeConnectionState { state in
+      state.clearLastFailureDetail()
+    }
 
     Task {
       do {
@@ -2613,11 +2636,16 @@ final class AppViewModel: ObservableObject {
         previousState: runtimeState,
         nextState: state,
         detail: detail,
-        lastFailureDetail: lastRuntimeFailureDetail
+        lastFailureDetail: runtimeConnectionState.lastFailureDetail
       )
     )
-    runtimeState = state
-    runtimeDetail = detail
+    updateRuntimeConnectionState { runtimeConnectionState in
+      runtimeConnectionState.applyConnectionUpdate(
+        state: state,
+        detail: detail,
+        plan: plan
+      )
+    }
 
     if plan.clearsActiveTurnState {
       activeTurnID = nil
@@ -2630,19 +2658,11 @@ final class AppViewModel: ObservableObject {
       runtimeReadiness = nil
     }
 
-    if plan.resetsLastFailureDetail {
-      lastRuntimeFailureDetail = nil
-    }
-
     if plan.shouldAppendFailureNotice {
       appendEntry(
         to: selectedThreadID,
         TimelineEventPresenter.runtimeDisconnected(detail: detail)
       )
-    }
-
-    if let updatedLastFailureDetail = plan.updatedLastFailureDetail {
-      lastRuntimeFailureDetail = updatedLastFailureDetail
     }
   }
 
@@ -2742,6 +2762,14 @@ final class AppViewModel: ObservableObject {
     var nextState = workspaceSearchState
     update(&nextState)
     workspaceSearchState = nextState
+  }
+
+  private func updateRuntimeConnectionState(
+    _ update: (inout RuntimeConnectionStateStore) -> Void
+  ) {
+    var nextState = runtimeConnectionState
+    update(&nextState)
+    runtimeConnectionState = nextState
   }
 
   private func isRestorableWorkspacePath(_ path: String) -> Bool {
