@@ -1275,8 +1275,8 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   );
 
   let persisted_states = context
-    .store
-    .as_ref()
+    .persistence_state
+    .store()
     .expect("store")
     .load_plugin_states()
     .expect("load plugin states");
