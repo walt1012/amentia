@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use anyhow::Result;
 use pith_memory::{MemoryEvent, MemoryNote};
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
-use pith_storage::{RuntimeStore, StoredThreadRecord};
+use pith_storage::RuntimeStore;
 
-use crate::approval_state::stored_approval_record;
 use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
@@ -101,37 +100,13 @@ impl RuntimeContext {
   }
 
   pub(crate) fn persist_threads(&self) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-
-    let threads = self
-      .thread_state
-      .iter()
-      .map(|thread| StoredThreadRecord {
-        summary: thread.summary.clone(),
-        turn_count: thread.turn_count,
-        items: thread.items.clone(),
-        workspace: thread.workspace.clone(),
-      })
-      .collect::<Vec<_>>();
-
-    store.save_threads(&threads)
+    self.persistence_state.save_threads(&self.thread_state)
   }
 
   fn persist_pending_approvals(&self) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-
-    let approvals = self
-      .execution_state
-      .pending_approvals()
-      .cloned()
-      .map(stored_approval_record)
-      .collect::<Vec<_>>();
-
-    store.save_pending_approvals(&approvals)
+    self
+      .persistence_state
+      .save_pending_approvals(&self.execution_state)
   }
 
   pub(crate) fn persist_runtime_state(&self) -> Result<()> {
@@ -140,22 +115,13 @@ impl RuntimeContext {
   }
 
   fn persist_memory_note(&self, note: &MemoryNote) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-
-    store.save_memory_note(note)
+    self.persistence_state.save_memory_note(note)
   }
 
   pub(crate) fn persist_workspace(&self) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-    let Some(workspace) = &self.workspace_state.current else {
-      return Ok(());
-    };
-
-    store.save_workspace(workspace)
+    self
+      .persistence_state
+      .save_workspace(self.workspace_state.current.as_ref())
   }
 
   pub(crate) fn persist_resolved_approval(
@@ -163,11 +129,7 @@ impl RuntimeContext {
     approval: &PendingApproval,
     decision: &str,
   ) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-
-    store.resolve_approval(&stored_approval_record(approval.clone()), decision)
+    self.persistence_state.resolve_approval(approval, decision)
   }
 
   pub(crate) fn remember(&mut self, event: MemoryEvent) -> Result<MemoryNote> {
@@ -208,27 +170,17 @@ impl RuntimeContext {
   }
 
   pub(crate) fn persist_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-
-    store.save_plugin_enabled(plugin_id, enabled)
+    self
+      .persistence_state
+      .save_plugin_enabled(plugin_id, enabled)
   }
 
   pub(crate) fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(());
-    };
-
-    store.delete_plugin_state(plugin_id)
+    self.persistence_state.delete_plugin_state(plugin_id)
   }
 
   fn persisted_plugin_states(&self) -> Result<HashMap<String, bool>> {
-    let Some(store) = self.persistence_state.store() else {
-      return Ok(HashMap::new());
-    };
-
-    store.load_plugin_states()
+    self.persistence_state.load_plugin_states()
   }
 
   pub(crate) fn refresh_plugins(&mut self) -> Result<()> {
