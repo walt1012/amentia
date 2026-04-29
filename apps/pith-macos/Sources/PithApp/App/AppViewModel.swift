@@ -813,19 +813,7 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let thread = try await runtimeBridge.startThread(title: "Thread \(threads.count + 1)")
-        threads.insert(thread, at: 0)
-        threadTimelines[thread.id] = TimelineEntryFactory.defaultTimeline(for: thread.title)
-        threadPendingApprovalIDs[thread.id] = Set<String>()
-        selectThread(id: thread.id)
-        await loadThreadHistory(threadID: thread.id)
-        appendEntry(
-          to: thread.id,
-          TimelineEntryFactory.system(
-            title: "Thread Created",
-            body: "Created \(thread.title) in the local runtime.",
-            attributes: [:]
-          )
-        )
+        await applyCreatedThread(thread)
         announceFirstRequestReadyIfNeeded()
       } catch {
         appendEntry(
@@ -838,6 +826,22 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
+  }
+
+  private func applyCreatedThread(_ thread: ThreadSummary) async {
+    threads.insert(thread, at: 0)
+    threadTimelines[thread.id] = TimelineEntryFactory.defaultTimeline(for: thread.title)
+    threadPendingApprovalIDs[thread.id] = Set<String>()
+    selectThread(id: thread.id)
+    await loadThreadHistory(threadID: thread.id)
+    appendEntry(
+      to: thread.id,
+      TimelineEntryFactory.system(
+        title: "Thread Created",
+        body: "Created \(thread.title) in the local runtime.",
+        attributes: [:]
+      )
+    )
   }
 
   func sendDraftMessage() {
@@ -1866,14 +1870,14 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    var workspaceThreads = runtimeThreads
-      .filter { $0.workspaceRootPath == workspace.rootPath }
-      .map { RuntimeSummaryMapper.threadSummary(from: $0) }
-
-    if workspaceThreads.isEmpty && createIfEmpty {
-      let thread = try await runtimeBridge.startThread(title: "\(workspace.displayName) Thread")
-      workspaceThreads = [thread]
-    }
+    let workspaceThreads = try await WorkspaceThreadSelectionLoader.load(
+      workspace: workspace,
+      runtimeThreads: runtimeThreads,
+      createIfEmpty: createIfEmpty,
+      startThread: { [runtimeBridge] title in
+        try await runtimeBridge.startThread(title: title)
+      }
+    )
 
     if workspaceThreads.isEmpty {
       resetToWelcomeThread()
