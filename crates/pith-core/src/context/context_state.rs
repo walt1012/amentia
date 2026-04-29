@@ -121,7 +121,7 @@ impl RuntimeContext {
   pub(crate) fn persist_workspace(&self) -> Result<()> {
     self
       .persistence_state
-      .save_workspace(self.workspace_state.current.as_ref())
+      .save_workspace(self.workspace_state.current())
   }
 
   pub(crate) fn persist_resolved_approval(

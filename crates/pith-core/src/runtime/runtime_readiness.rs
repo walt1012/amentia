@@ -7,12 +7,11 @@ use pith_sandbox::workspace_required_status;
 use pith_tools::{shell_command_timeout_seconds, shell_sandbox_status};
 
 use crate::runtime_context::RuntimeContext;
-use crate::thread_state::StoredThread;
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_state.health();
   let model_ready = model_health.status == "ready";
-  let workspace_ready = context.workspace_state.current.is_some();
+  let workspace_ready = context.workspace_state.is_open();
   let workspace_thread_count = count_workspace_threads(context);
   let thread_ready = workspace_thread_count > 0;
   let first_request_sent = has_first_request(context);
@@ -20,8 +19,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let active_turn_count = context.execution_state.active_turn_count();
   let sandbox_status = context
     .workspace_state
-    .current
-    .as_ref()
+    .current()
     .map(|workspace| shell_sandbox_status(Path::new(&workspace.root_path)))
     .unwrap_or_else(workspace_required_status);
   let enabled_plugin_count = context
@@ -114,7 +112,7 @@ fn local_model_check(
 }
 
 fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck {
-  let status = if context.workspace_state.current.is_some() {
+  let status = if context.workspace_state.is_open() {
     "ready"
   } else {
     "setup_required"
@@ -126,8 +124,7 @@ fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck {
     status: status.to_string(),
     detail: context
       .workspace_state
-      .current
-      .as_ref()
+      .current()
       .map(|workspace| format!("Tools are bound to {}.", workspace.display_name))
       .unwrap_or_else(|| {
         "Open a workspace to bind file, shell, memory, and approvals.".to_string()
@@ -304,7 +301,7 @@ fn readiness_metrics(
     ("modelPackId".to_string(), model_pack_id.to_string()),
     (
       "workspaceBound".to_string(),
-      context.workspace_state.current.is_some().to_string(),
+      context.workspace_state.is_open().to_string(),
     ),
     (
       "pendingApprovalCount".to_string(),
@@ -364,25 +361,17 @@ fn readiness_metrics(
 }
 
 fn count_workspace_threads(context: &RuntimeContext) -> usize {
-  current_workspace_threads(context).count()
+  context
+    .workspace_state
+    .current()
+    .map(|workspace| context.thread_state.count_for_workspace(workspace))
+    .unwrap_or(0)
 }
 
 fn has_first_request(context: &RuntimeContext) -> bool {
-  current_workspace_threads(context)
-    .any(|thread| thread.items.iter().any(|item| item.kind == "userMessage"))
-}
-
-fn current_workspace_threads(context: &RuntimeContext) -> impl Iterator<Item = &StoredThread> + '_ {
-  context.thread_state.iter().filter(move |thread| {
-    let Some(workspace) = &context.workspace_state.current else {
-      return false;
-    };
-
-    thread
-      .workspace
-      .as_ref()
-      .or(thread.summary.workspace.as_ref())
-      .map(|thread_workspace| thread_workspace.root_path == workspace.root_path)
-      .unwrap_or(false)
-  })
+  context
+    .workspace_state
+    .current()
+    .map(|workspace| context.thread_state.has_user_message_for_workspace(workspace))
+    .unwrap_or(false)
 }

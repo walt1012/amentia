@@ -30,7 +30,7 @@ pub fn prepare_turn_start(
     return Err(JsonRpcResponse::error(request.id, -32060, message));
   }
 
-  let current_workspace = context.workspace_state.current.clone();
+  let current_workspace = context.workspace_state.current_cloned();
   let model_runtime = context.model_state.snapshot();
   let memory_notes = context.memory_state.notes().to_vec();
   let permission_sources = granted_permission_sources(&context.plugin_state.catalog);
