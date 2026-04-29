@@ -1247,7 +1247,7 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   store
     .save_plugin_enabled("focus-review", true)
     .expect("save persisted plugin state");
-  context.store = Some(store);
+  context.persistence_state.set_store_for_testing(store);
   context.plugin_state.roots = vec![install_root.clone()];
   context.plugin_state.install_root = install_root.clone();
   context.plugin_state.catalog = vec![];

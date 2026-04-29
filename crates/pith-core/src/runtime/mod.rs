@@ -4,6 +4,7 @@ pub(crate) mod runtime_execution;
 pub(crate) mod runtime_identity;
 pub(crate) mod runtime_memory;
 pub(crate) mod runtime_model;
+pub(crate) mod runtime_persistence;
 pub(crate) mod runtime_plugins;
 pub(crate) mod runtime_readiness;
 pub(crate) mod runtime_sequences;

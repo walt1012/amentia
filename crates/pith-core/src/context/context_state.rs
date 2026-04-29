@@ -13,6 +13,7 @@ use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_memory::RuntimeMemoryState;
 use crate::runtime_model::RuntimeModelState;
+use crate::runtime_persistence::RuntimePersistenceState;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_threads::RuntimeThreadState;
@@ -40,7 +41,7 @@ impl RuntimeContext {
     Ok(Self {
       identity: RuntimeIdentity::pith_runtime(),
       model_state: RuntimeModelState::new_default(true),
-      store: Some(store),
+      persistence_state: RuntimePersistenceState::persistent(store),
       memory_state: RuntimeMemoryState::new(next_memory_number, persisted_memory_notes),
       thread_state: RuntimeThreadState::new(
         persisted_threads
@@ -85,7 +86,7 @@ impl RuntimeContext {
     Self {
       identity: RuntimeIdentity::pith_runtime(),
       model_state: RuntimeModelState::new_default(false),
-      store: None,
+      persistence_state: RuntimePersistenceState::in_memory(),
       memory_state: RuntimeMemoryState::new(1, vec![]),
       thread_state: RuntimeThreadState::empty(),
       workspace_state: RuntimeWorkspaceState::new(None),
@@ -100,7 +101,7 @@ impl RuntimeContext {
   }
 
   pub(crate) fn persist_threads(&self) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
 
@@ -119,7 +120,7 @@ impl RuntimeContext {
   }
 
   fn persist_pending_approvals(&self) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
 
@@ -139,7 +140,7 @@ impl RuntimeContext {
   }
 
   fn persist_memory_note(&self, note: &MemoryNote) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
 
@@ -147,7 +148,7 @@ impl RuntimeContext {
   }
 
   pub(crate) fn persist_workspace(&self) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
     let Some(workspace) = &self.workspace_state.current else {
@@ -162,7 +163,7 @@ impl RuntimeContext {
     approval: &PendingApproval,
     decision: &str,
   ) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
 
@@ -207,7 +208,7 @@ impl RuntimeContext {
   }
 
   pub(crate) fn persist_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
 
@@ -215,7 +216,7 @@ impl RuntimeContext {
   }
 
   pub(crate) fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(());
     };
 
@@ -223,7 +224,7 @@ impl RuntimeContext {
   }
 
   fn persisted_plugin_states(&self) -> Result<HashMap<String, bool>> {
-    let Some(store) = &self.store else {
+    let Some(store) = self.persistence_state.store() else {
       return Ok(HashMap::new());
     };
 
