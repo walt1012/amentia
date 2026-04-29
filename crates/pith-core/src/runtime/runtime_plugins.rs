@@ -58,6 +58,7 @@ impl RuntimePluginState {
     self.catalog = catalog;
   }
 
+  #[cfg(test)]
   pub(crate) fn configure_roots(&mut self, roots: Vec<PathBuf>, install_root: PathBuf) {
     self.roots = roots;
     self.install_root = install_root;

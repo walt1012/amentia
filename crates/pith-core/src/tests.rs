@@ -1198,7 +1198,7 @@ fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   assert_eq!(result["plugin"]["provenance"], "local");
   assert!(context
     .plugin_state
-    .catalog
+    .catalog()
     .iter()
     .any(|plugin| plugin.id == "focus-review"));
 }
