@@ -56,6 +56,7 @@ pub(crate) fn handle_workspace_open(
       .unwrap_or_else(|| resolved_path.display().to_string()),
   };
   context.workspace_state.set_current(workspace.clone());
+  let workspace_thread_count = context.thread_state.count_for_workspace(&workspace);
 
   if let Err(error) = context.persist_workspace() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
@@ -72,7 +73,7 @@ pub(crate) fn handle_workspace_open(
     request.id,
     &WorkspaceOpenResult {
       workspace,
-      thread_count: context.thread_state.len(),
+      thread_count: workspace_thread_count,
     },
   )
 }

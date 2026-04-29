@@ -51,8 +51,7 @@ pub fn prepare_approval_respond(
 
   let Some(approval) = context
     .execution_state
-    .pending_approval(&params.approval_id)
-    .cloned()
+    .pending_approval_snapshot(&params.approval_id)
   else {
     return Err(JsonRpcResponse::error(
       request.id,

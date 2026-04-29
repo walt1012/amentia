@@ -7,6 +7,7 @@ use pith_sandbox::workspace_required_status;
 use pith_tools::{shell_command_timeout_seconds, shell_sandbox_status};
 
 use crate::runtime_context::RuntimeContext;
+use crate::runtime_execution::RuntimeExecutionCounts;
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_state.health();
@@ -15,8 +16,9 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let workspace_thread_count = count_workspace_threads(context);
   let thread_ready = workspace_thread_count > 0;
   let first_request_sent = has_first_request(context);
-  let pending_approval_count = context.execution_state.pending_approval_count();
-  let active_turn_count = context.execution_state.active_turn_count();
+  let execution_counts = context.execution_state.counts();
+  let pending_approval_count = execution_counts.pending_approval_count();
+  let active_turn_count = execution_counts.active_turn_count();
   let sandbox_status = context
     .workspace_state
     .current()
@@ -79,6 +81,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       &sandbox_status,
       workspace_thread_count,
       first_request_sent,
+      execution_counts,
     ),
   }
 }
@@ -290,6 +293,7 @@ fn readiness_metrics(
   sandbox_status: &pith_sandbox::NativeSandboxStatus,
   workspace_thread_count: usize,
   first_request_sent: bool,
+  execution_counts: RuntimeExecutionCounts,
 ) -> HashMap<String, String> {
   let mut metrics = HashMap::from([
     ("modelStatus".to_string(), model_status.to_string()),
@@ -300,11 +304,11 @@ fn readiness_metrics(
     ),
     (
       "pendingApprovalCount".to_string(),
-      context.execution_state.pending_approval_count().to_string(),
+      execution_counts.pending_approval_count().to_string(),
     ),
     (
       "activeTurnCount".to_string(),
-      context.execution_state.active_turn_count().to_string(),
+      execution_counts.active_turn_count().to_string(),
     ),
     (
       "workspaceThreadCount".to_string(),

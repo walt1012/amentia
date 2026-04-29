@@ -1,4 +1,4 @@
-use pith_protocol::WorkspaceSummary;
+use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
 
 use crate::thread_state::StoredThread;
 
@@ -24,8 +24,19 @@ impl RuntimeThreadState {
     self.threads.iter_mut()
   }
 
-  pub(crate) fn len(&self) -> usize {
-    self.threads.len()
+  pub(crate) fn summaries(&self) -> Vec<ThreadSummary> {
+    self
+      .threads
+      .iter()
+      .map(|thread| thread.summary().clone())
+      .collect()
+  }
+
+  pub(crate) fn snapshot(
+    &self,
+    thread_id: &str,
+  ) -> Option<(ThreadSummary, Vec<TimelineItem>)> {
+    self.find(thread_id).map(StoredThread::snapshot)
   }
 
   pub(crate) fn push(&mut self, thread: StoredThread) {

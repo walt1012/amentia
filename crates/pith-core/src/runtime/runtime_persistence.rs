@@ -58,8 +58,8 @@ impl RuntimePersistenceState {
     };
 
     let approvals = execution_state
-      .pending_approvals()
-      .cloned()
+      .pending_approval_snapshots()
+      .into_iter()
       .map(stored_approval_record)
       .collect::<Vec<_>>();
 

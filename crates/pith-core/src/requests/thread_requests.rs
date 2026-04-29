@@ -16,11 +16,7 @@ pub(crate) fn handle_thread_list(
   JsonRpcResponse::success(
     request.id,
     &ThreadListResult {
-      threads: context
-        .thread_state
-        .iter()
-        .map(|thread| thread.summary().clone())
-        .collect(),
+      threads: context.thread_state.summaries(),
     },
   )
 }
@@ -47,19 +43,18 @@ pub(crate) fn handle_thread_read(
     }
   }
 
-  let Some(thread) = context.thread_state.find(&params.thread_id) else {
+  let Some((thread, items)) = context.thread_state.snapshot(&params.thread_id) else {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
+  let thread_id = thread.id.clone();
 
   JsonRpcResponse::success(
     request.id,
     &ThreadReadResult {
-      thread: thread.summary().clone(),
-      items: thread.items().to_vec(),
-      pending_approvals: approvals_for_thread(context, thread.id()),
-      active_turn_id: context
-        .execution_state
-        .active_turn_id_for_thread(thread.id()),
+      pending_approvals: approvals_for_thread(context, &thread_id),
+      active_turn_id: context.execution_state.active_turn_id_for_thread(&thread_id),
+      thread,
+      items,
     },
   )
 }
