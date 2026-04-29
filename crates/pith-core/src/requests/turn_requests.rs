@@ -35,11 +35,7 @@ pub fn prepare_turn_start(
   let memory_notes = context.memory_state.notes().to_vec();
   let permission_sources = granted_permission_sources(&context.plugin_state.catalog);
   let (thread_id, turn_id, thread_title, workspace) = {
-    let Some(thread) = context
-      .threads
-      .iter_mut()
-      .find(|thread| thread.summary.id == params.thread_id)
-    else {
+    let Some(thread) = context.thread_state.find_mut(&params.thread_id) else {
       return Err(JsonRpcResponse::error(
         request.id,
         -32004,
@@ -115,11 +111,7 @@ pub fn complete_prepared_turn_start(
     context.execution_state.insert_pending_approval(approval);
   }
 
-  let Some(thread) = context
-    .threads
-    .iter_mut()
-    .find(|thread| thread.summary.id == output.thread_id)
-  else {
+  let Some(thread) = context.thread_state.find_mut(&output.thread_id) else {
     return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
   };
 

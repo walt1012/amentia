@@ -15,6 +15,7 @@ use crate::runtime_memory::RuntimeMemoryState;
 use crate::runtime_model::RuntimeModelState;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
+use crate::runtime_threads::RuntimeThreadState;
 use crate::runtime_workspace::RuntimeWorkspaceState;
 use crate::thread_state::StoredThread;
 
@@ -41,15 +42,17 @@ impl RuntimeContext {
       model_state: RuntimeModelState::new_default(true),
       store: Some(store),
       memory_state: RuntimeMemoryState::new(next_memory_number, persisted_memory_notes),
-      threads: persisted_threads
-        .into_iter()
-        .map(|thread| StoredThread {
-          summary: thread.summary,
-          turn_count: thread.turn_count,
-          items: thread.items,
-          workspace: thread.workspace,
-        })
-        .collect(),
+      thread_state: RuntimeThreadState::new(
+        persisted_threads
+          .into_iter()
+          .map(|thread| StoredThread {
+            summary: thread.summary,
+            turn_count: thread.turn_count,
+            items: thread.items,
+            workspace: thread.workspace,
+          })
+          .collect(),
+      ),
       workspace_state: RuntimeWorkspaceState::new(persisted_workspace),
       plugin_state: RuntimePluginState::new(plugin_roots, plugin_install_root, plugins),
       execution_state: RuntimeExecutionState::new(
@@ -84,7 +87,7 @@ impl RuntimeContext {
       model_state: RuntimeModelState::new_default(false),
       store: None,
       memory_state: RuntimeMemoryState::new(1, vec![]),
-      threads: vec![],
+      thread_state: RuntimeThreadState::empty(),
       workspace_state: RuntimeWorkspaceState::new(None),
       plugin_state: RuntimePluginState::new(
         plugin_roots.clone(),
@@ -102,7 +105,7 @@ impl RuntimeContext {
     };
 
     let threads = self
-      .threads
+      .thread_state
       .iter()
       .map(|thread| StoredThreadRecord {
         summary: thread.summary.clone(),

@@ -72,7 +72,7 @@ pub(crate) fn handle_workspace_open(
     request.id,
     &WorkspaceOpenResult {
       workspace,
-      thread_count: context.threads.len(),
+      thread_count: context.thread_state.len(),
     },
   )
 }

@@ -55,9 +55,8 @@ pub(crate) fn handle_turn_cancel(
   };
 
   let Some(thread) = context
-    .threads
-    .iter_mut()
-    .find(|thread| thread.summary.id == active_turn_snapshot.thread_id)
+    .thread_state
+    .find_mut(&active_turn_snapshot.thread_id)
   else {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
@@ -166,11 +165,7 @@ fn advance_active_turn(
   };
 
   let thread_snapshot = {
-    let Some(thread) = context
-      .threads
-      .iter_mut()
-      .find(|thread| thread.summary.id == snapshot.thread_id)
-    else {
+    let Some(thread) = context.thread_state.find_mut(&snapshot.thread_id) else {
       return Ok(None);
     };
 

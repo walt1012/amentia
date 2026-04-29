@@ -11,9 +11,8 @@ pub(crate) fn refresh_thread_summary_note(
   thread_id: &str,
 ) -> Result<()> {
   let Some(thread) = context
-    .threads
-    .iter()
-    .find(|thread| thread.summary.id == thread_id)
+    .thread_state
+    .find(thread_id)
     .cloned()
   else {
     return Ok(());

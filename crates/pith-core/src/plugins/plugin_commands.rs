@@ -99,10 +99,7 @@ pub fn prepare_plugin_command_run(
     ));
   }
 
-  let Some(thread) = context
-    .threads
-    .iter()
-    .find(|thread| thread.summary.id == params.thread_id)
+  let Some(thread) = context.thread_state.find(&params.thread_id)
   else {
     return Err(JsonRpcResponse::error(
       request.id,
@@ -311,10 +308,7 @@ fn complete_plugin_command_items(
     mut items,
   } = output;
   let (thread_id, turn_id) = {
-    let Some(thread) = context
-      .threads
-      .iter_mut()
-      .find(|thread| thread.summary.id == requested_thread_id)
+    let Some(thread) = context.thread_state.find_mut(&requested_thread_id)
     else {
       return Err((-32004, "Thread not found".to_string()));
     };
@@ -350,11 +344,7 @@ fn complete_plugin_command_items(
     &items,
   ) {
     Ok(Some(memory_item)) => {
-      if let Some(thread) = context
-        .threads
-        .iter_mut()
-        .find(|thread| thread.summary.id == thread_id)
-      {
+      if let Some(thread) = context.thread_state.find_mut(&thread_id) {
         thread.items.push(memory_item.clone());
       }
       items.push(memory_item);
@@ -367,11 +357,7 @@ fn complete_plugin_command_items(
     Ok(None) => {}
     Err(error) => {
       let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
-      if let Some(thread) = context
-        .threads
-        .iter_mut()
-        .find(|thread| thread.summary.id == thread_id)
-      {
+      if let Some(thread) = context.thread_state.find_mut(&thread_id) {
         thread.items.push(warning_item.clone());
       }
       items.push(warning_item);
@@ -608,9 +594,8 @@ fn maybe_capture_plugin_command_memory(
     .cloned()
     .or_else(|| {
       context
-        .threads
-        .iter()
-        .find(|thread| thread.summary.id == thread_id)
+        .thread_state
+        .find(thread_id)
         .and_then(|thread| thread.workspace.clone())
     })
     .or_else(|| context.workspace_state.current.clone());

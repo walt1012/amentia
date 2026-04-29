@@ -17,7 +17,7 @@ pub(crate) fn handle_thread_list(
     request.id,
     &ThreadListResult {
       threads: context
-        .threads
+        .thread_state
         .iter()
         .map(|thread| thread.summary.clone())
         .collect(),
@@ -47,11 +47,7 @@ pub(crate) fn handle_thread_read(
     }
   }
 
-  let Some(thread) = context
-    .threads
-    .iter()
-    .find(|thread| thread.summary.id == params.thread_id)
-  else {
+  let Some(thread) = context.thread_state.find(&params.thread_id) else {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
 
@@ -90,7 +86,7 @@ pub(crate) fn handle_thread_start(
     content: format!("{} is ready for local runtime messages.", thread.title),
     attributes: None,
   }];
-  context.threads.push(StoredThread {
+  context.thread_state.push(StoredThread {
     summary: thread.clone(),
     turn_count: 0,
     items,

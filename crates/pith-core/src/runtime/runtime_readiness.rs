@@ -373,7 +373,7 @@ fn has_first_request(context: &RuntimeContext) -> bool {
 }
 
 fn current_workspace_threads(context: &RuntimeContext) -> impl Iterator<Item = &StoredThread> + '_ {
-  context.threads.iter().filter(move |thread| {
+  context.thread_state.iter().filter(move |thread| {
     let Some(workspace) = &context.workspace_state.current else {
       return false;
     };
