@@ -85,11 +85,7 @@ impl RuntimePersistenceState {
     store.save_workspace(workspace)
   }
 
-  pub(crate) fn resolve_approval(
-    &self,
-    approval: &PendingApproval,
-    decision: &str,
-  ) -> Result<()> {
+  pub(crate) fn resolve_approval(&self, approval: &PendingApproval, decision: &str) -> Result<()> {
     let Some(store) = self.store() else {
       return Ok(());
     };
