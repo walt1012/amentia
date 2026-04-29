@@ -3,11 +3,7 @@ import Foundation
 
 @MainActor
 final class AppViewModel: ObservableObject {
-  @Published var threads: [ThreadSummary]
-  @Published var selectedThreadID: ThreadSummary.ID?
-  @Published var timeline: [TimelineEntry]
-  @Published var selectedEntryID: TimelineEntry.ID?
-  @Published var activeTurnID: String?
+  @Published private var timelineState: TimelineRuntimeState
   @Published private var runtimeConnectionState: RuntimeConnectionStateStore
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
@@ -18,21 +14,16 @@ final class AppViewModel: ObservableObject {
   @Published private var pluginState: PluginRuntimeState
 
   private let runtimeBridge: RuntimeBridge
-  private var threadTimelines: [String: [TimelineEntry]]
-  private var threadPendingApprovalIDs: [String: Set<String>]
-  private var activeTurnThreadID: String?
   private let pendingTurnRequest = PendingTurnRequestState()
   private let workspaceSearchSession = WorkspaceSearchSession()
   private let modelDownloadCoordinator: LocalModelDownloadCoordinator
   private let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
-  private var announcedSetupCompleteThreadIDs: Set<String>
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let launchState = AppLaunchState.make(runtimeBridge: runtimeBridge)
-    let initialTimeline = launchState.welcomeState.timeline
-    let initialThreads = [launchState.welcomeState.thread]
 
     self.runtimeBridge = runtimeBridge
+    self.timelineState = TimelineRuntimeState(welcomeState: launchState.welcomeState)
     self.runtimeConnectionState = RuntimeConnectionStateStore(
       state: runtimeBridge.connectionState,
       detail: launchState.runtimeDetail
@@ -51,17 +42,9 @@ final class AppViewModel: ObservableObject {
     )
     self.memoryState = MemoryRuntimeState()
     self.pluginState = PluginRuntimeState()
-    self.threads = initialThreads
-    self.timeline = initialTimeline
-    self.selectedEntryID = initialTimeline.first?.id
-    self.activeTurnID = nil
-    self.threadTimelines = [launchState.welcomeState.thread.id: initialTimeline]
-    self.threadPendingApprovalIDs = [:]
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData
     )
-    self.announcedSetupCompleteThreadIDs = Set<String>()
-    self.selectedThreadID = initialThreads.first?.id
     self.runtimeBridge.onThreadUpdated = { [weak self] state in
       Task { @MainActor in
         self?.applyRuntimeThreadUpdate(state)
@@ -70,6 +53,61 @@ final class AppViewModel: ObservableObject {
     self.runtimeBridge.onConnectionStateChanged = { [weak self] state, detail in
       Task { @MainActor in
         self?.handleRuntimeConnectionStateChange(state, detail: detail)
+      }
+    }
+  }
+
+  var threads: [ThreadSummary] {
+    get {
+      timelineState.threads
+    }
+    set {
+      updateTimelineState { state in
+        state.threads = newValue
+      }
+    }
+  }
+
+  var selectedThreadID: ThreadSummary.ID? {
+    get {
+      timelineState.selectedThreadID
+    }
+    set {
+      updateTimelineState { state in
+        state.selectedThreadID = newValue
+      }
+    }
+  }
+
+  var timeline: [TimelineEntry] {
+    get {
+      timelineState.timeline
+    }
+    set {
+      updateTimelineState { state in
+        state.timeline = newValue
+      }
+    }
+  }
+
+  var selectedEntryID: TimelineEntry.ID? {
+    get {
+      timelineState.selectedEntryID
+    }
+    set {
+      updateTimelineState { state in
+        state.selectedEntryID = newValue
+      }
+    }
+  }
+
+  var activeTurnID: String? {
+    get {
+      timelineState.activeTurnID
+    }
+    set {
+      updateTimelineState { state in
+        state.activeTurnID = newValue
       }
     }
   }
@@ -923,10 +961,9 @@ final class AppViewModel: ObservableObject {
   }
 
   private func applyCreatedThread(_ thread: ThreadSummary) async {
-    threads.insert(thread, at: 0)
-    threadTimelines[thread.id] = TimelineEntryFactory.defaultTimeline(for: thread.title)
-    threadPendingApprovalIDs[thread.id] = Set<String>()
-    selectThread(id: thread.id)
+    updateTimelineState { state in
+      state.applyCreatedThread(thread)
+    }
     await loadThreadHistory(threadID: thread.id)
     appendEntry(
       to: thread.id,
@@ -1123,8 +1160,10 @@ final class AppViewModel: ObservableObject {
   }
 
   func selectThread(id: String?) {
-    selectedThreadID = id
-    syncVisibleTimeline()
+    updateTimelineState { state in
+      state.selectedThreadID = id
+      state.syncVisibleTimeline()
+    }
 
     guard runtimeState == .ready,
           let threadID = id,
@@ -1174,7 +1213,7 @@ final class AppViewModel: ObservableObject {
     }
 
     guard let activeTurnID,
-          let activeTurnThreadID
+          let activeTurnThreadID = timelineState.activeTurnThreadID
     else {
       return
     }
@@ -1865,7 +1904,9 @@ final class AppViewModel: ObservableObject {
     threadID: String,
     approvals: [RuntimeBridge.RuntimeApproval]
   ) {
-    threadPendingApprovalIDs[threadID] = TimelineMutationState.pendingApprovalIDs(from: approvals)
+    updateTimelineState { state in
+      state.updatePendingApprovals(threadID: threadID, approvals: approvals)
+    }
   }
 
   private func applyRuntimeTurnResult(
@@ -1909,11 +1950,9 @@ final class AppViewModel: ObservableObject {
   }
 
   private func refreshThreadPreview(threadID: String, preview: String) {
-    threads = TimelineMutationState.threadsByRefreshingPreview(
-      threads,
-      threadID: threadID,
-      preview: preview
-    )
+    updateTimelineState { state in
+      state.refreshThreadPreview(threadID: threadID, preview: preview)
+    }
   }
 
   private func refreshWorkspaceThreadSelection(
@@ -1947,83 +1986,31 @@ final class AppViewModel: ObservableObject {
   }
 
   private func applyWorkspaceThreadSelection(_ workspaceThreads: [ThreadSummary]) {
-    threads = workspaceThreads
-    threadTimelines = TimelineMutationState.threadTimelines(
-      for: workspaceThreads,
-      existingTimelines: threadTimelines
-    )
-    threadPendingApprovalIDs = TimelineMutationState.pendingApprovalIDsByRetainingWorkspaceThreads(
-      threadPendingApprovalIDs,
-      workspaceThreads: workspaceThreads
-    )
-
-    selectedThreadID = TimelineMutationState.selectedThreadID(
-      workspaceThreads: workspaceThreads,
-      currentSelectionID: selectedThreadID
-    )
-    syncVisibleTimeline()
+    updateTimelineState { state in
+      state.applyWorkspaceThreads(workspaceThreads)
+    }
   }
 
   private func resetToWelcomeThread() {
-    let welcomeState = TimelineSessionState.welcomeState()
-    let welcomeThread = welcomeState.thread
-    let welcomeTimeline = welcomeState.timeline
-
-    threads = [welcomeThread]
-    threadTimelines = [welcomeThread.id: welcomeTimeline]
-    selectedThreadID = welcomeThread.id
-    timeline = welcomeTimeline
-    selectedEntryID = welcomeTimeline.first?.id
+    updateTimelineState { state in
+      state.resetToWelcomeState(TimelineSessionState.welcomeState())
+    }
   }
 
   private func appendEntry(to threadID: String?, _ entry: TimelineEntry) {
-    guard let threadID else {
-      timeline.insert(entry, at: 0)
-      if selectedEntryID == nil {
-        selectedEntryID = entry.id
-      }
-      return
+    updateTimelineState { state in
+      state.appendEntry(to: threadID, entry)
     }
-
-    let entries = TimelineMutationState.entriesByAppending(
-      entry: entry,
-      existingEntries: threadTimelines[threadID],
-      fallbackTitle: threadTitle(for: threadID)
-    )
-    applyThreadEntries(threadID: threadID, entries: entries)
   }
 
   private func applyThreadEntries(threadID: String, entries: [TimelineEntry]) {
-    threadTimelines[threadID] = entries
-
-    if let visibleState = TimelineMutationState.visibleTimelineUpdate(
-      updatedThreadID: threadID,
-      selectedThreadID: selectedThreadID,
-      entries: entries,
-      previousSelectionID: selectedEntryID
-    ) {
-      timeline = visibleState.timeline
-      selectedEntryID = visibleState.selectedEntryID
-    }
-  }
-
-  private func syncVisibleTimeline() {
-    let visibleState = TimelineMutationState.visibleTimeline(
-      selectedThreadID: selectedThreadID,
-      threadTimelines: threadTimelines,
-      threads: threads,
-      previousSelectionID: selectedEntryID
-    )
-    timeline = visibleState.timeline
-    selectedEntryID = visibleState.selectedEntryID
-
-    if let selectedThreadID {
-      threadTimelines[selectedThreadID] = visibleState.timeline
+    updateTimelineState { state in
+      state.applyThreadEntries(threadID: threadID, entries: entries)
     }
   }
 
   private func threadTitle(for threadID: String) -> String {
-    TimelineSessionState.threadTitle(for: threadID, threads: threads)
+    timelineState.threadTitle(for: threadID)
   }
 
   private func loadThreadHistory(threadID: String) async {
@@ -2031,7 +2018,7 @@ final class AppViewModel: ObservableObject {
       let result = try await runtimeBridge.readThread(threadID: threadID)
       let entries = TimelineEntryFactory.runtimeEntries(
         from: result.items,
-        existingEntries: threadTimelines[threadID],
+        existingEntries: timelineState.threadTimelines[threadID],
         fallbackTitle: threadTitle(for: threadID)
       )
       applyThreadEntries(threadID: threadID, entries: entries)
@@ -2047,21 +2034,13 @@ final class AppViewModel: ObservableObject {
   }
 
   private func selectedEntry() -> TimelineEntry? {
-    TimelineSessionState.selectedEntry(
-      selectedEntryID: selectedEntryID,
-      timeline: timeline
-    )
+    timelineState.selectedEntry()
   }
 
   private func updateActiveTurn(threadID: String, activeTurnID: String?) {
-    let activeTurnSelection = TimelineMutationState.activeTurnSelection(
-      currentActiveTurnID: self.activeTurnID,
-      currentActiveTurnThreadID: activeTurnThreadID,
-      threadID: threadID,
-      runtimeActiveTurnID: activeTurnID
-    )
-    self.activeTurnID = activeTurnSelection.activeTurnID
-    activeTurnThreadID = activeTurnSelection.activeTurnThreadID
+    updateTimelineState { state in
+      state.updateActiveTurn(threadID: threadID, activeTurnID: activeTurnID)
+    }
   }
 
   private func cancelPendingTurnRequest() -> Bool {
@@ -2303,28 +2282,19 @@ final class AppViewModel: ObservableObject {
   }
 
   private func hasRuntimeThreadSelection() -> Bool {
-    TimelineSessionState.hasRuntimeThreadSelection(
-      selectedThreadID: selectedThreadID,
-      threads: threads,
-      workspace: workspace
-    )
+    timelineState.hasRuntimeThreadSelection(workspace: workspace)
   }
 
   private func sessionActionSnapshot() -> SessionActionSnapshot {
-    let pendingApprovalIDs = selectedThreadID.map {
-      threadPendingApprovalIDs[$0, default: Set<String>()]
-    } ?? Set<String>()
-
     return SessionActionSnapshot(
       runtimeState: runtimeState,
       hasWorkspace: workspace != nil,
       isLocalModelReady: isLocalModelReady(),
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
-      hasCancelableTurn: (activeTurnID != nil && activeTurnThreadID != nil)
-        || pendingTurnRequest.canCancel,
+      hasCancelableTurn: timelineState.hasCancelableRuntimeTurn || pendingTurnRequest.canCancel,
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
-      pendingApprovalIDs: pendingApprovalIDs
+      pendingApprovalIDs: timelineState.selectedPendingApprovalIDs
     )
   }
 
@@ -2373,11 +2343,7 @@ final class AppViewModel: ObservableObject {
   }
 
   private func selectedThreadIsWaitingForFirstMessage() -> Bool {
-    TimelineSessionState.isWaitingForFirstMessage(
-      selectedThreadID: selectedThreadID,
-      threadTimelines: threadTimelines,
-      visibleTimeline: timeline
-    )
+    timelineState.isWaitingForFirstMessage()
   }
 
   private func shouldAnnotateLaunchWithSetupEvents() -> Bool {
@@ -2419,12 +2385,14 @@ final class AppViewModel: ObservableObject {
           let threadID = selectedThreadID,
           !threadID.hasPrefix("local-"),
           selectedThreadIsWaitingForFirstMessage(),
-          !announcedSetupCompleteThreadIDs.contains(threadID)
+          !timelineState.hasAnnouncedSetupComplete(for: threadID)
     else {
       return
     }
 
-    announcedSetupCompleteThreadIDs.insert(threadID)
+    updateTimelineState { state in
+      state.markSetupCompleteAnnounced(threadID: threadID)
+    }
     appendEntry(
       to: threadID,
       TimelineEventPresenter.firstRequestReady()
@@ -2693,8 +2661,10 @@ final class AppViewModel: ObservableObject {
     }
 
     if plan.clearsActiveTurnState {
-      activeTurnID = nil
-      activeTurnThreadID = nil
+      updateTimelineState { state in
+        state.activeTurnID = nil
+        state.activeTurnThreadID = nil
+      }
       pendingTurnRequest.clear()
     }
 
@@ -2811,6 +2781,12 @@ final class AppViewModel: ObservableObject {
     workspaceSearchState = nextState
   }
 
+  private func updateTimelineState(_ update: (inout TimelineRuntimeState) -> Void) {
+    var nextState = timelineState
+    update(&nextState)
+    timelineState = nextState
+  }
+
   private func updateRuntimeConnectionState(
     _ update: (inout RuntimeConnectionStateStore) -> Void
   ) {
@@ -2879,7 +2855,7 @@ final class AppViewModel: ObservableObject {
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
     let entries = TimelineEntryFactory.runtimeEntries(
       from: state.items,
-      existingEntries: threadTimelines[state.id],
+      existingEntries: timelineState.threadTimelines[state.id],
       fallbackTitle: threadTitle(for: state.id)
     )
 
