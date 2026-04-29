@@ -77,11 +77,7 @@ impl RuntimeMemoryState {
     )
   }
 
-  pub(crate) fn upsert_note(
-    &mut self,
-    id: String,
-    draft: RuntimeMemoryNoteDraft,
-  ) -> MemoryNote {
+  pub(crate) fn upsert_note(&mut self, id: String, draft: RuntimeMemoryNoteDraft) -> MemoryNote {
     self.manager.upsert_note(
       &mut self.notes,
       id,

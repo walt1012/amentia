@@ -341,7 +341,11 @@ fn memory_create_adds_manual_workspace_note() {
   assert_eq!(result["note"]["source"], "user");
   assert_eq!(context.memory_state.note_count(), 2);
   assert_eq!(
-    context.memory_state.latest_note().expect("latest note").title,
+    context
+      .memory_state
+      .latest_note()
+      .expect("latest note")
+      .title,
     "Repository preference"
   );
 }
