@@ -108,8 +108,7 @@ pub fn prepare_plugin_command_run(
   };
 
   let workspace = thread
-    .workspace
-    .clone()
+    .workspace_cloned()
     .or_else(|| context.workspace_state.current_cloned());
   let input = params
     .input
