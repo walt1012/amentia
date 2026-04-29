@@ -26,12 +26,7 @@ final class AppViewModel: ObservableObject {
   @Published var memoryNotes: [MemoryNoteSummary]
   @Published var memoryNoteTitle: String
   @Published var memoryNoteBody: String
-  @Published var plugins: [PluginSummary]
-  @Published var pluginCapabilityRegistrySummary: PluginCapabilityRegistrySummary?
-  @Published var pluginCapabilities: [PluginCapabilitySummary]
-  @Published var pluginConnectors: [PluginConnectorSummary]
-  @Published var pluginCommands: [PluginCommandSummary]
-  @Published var pluginHooks: [PluginHookSummary]
+  @Published private var pluginState: PluginRuntimeState
 
   private let runtimeBridge: RuntimeBridge
   private var threadTimelines: [String: [TimelineEntry]]
@@ -68,12 +63,7 @@ final class AppViewModel: ObservableObject {
     self.memoryNotes = []
     self.memoryNoteTitle = ""
     self.memoryNoteBody = ""
-    self.plugins = []
-    self.pluginCapabilityRegistrySummary = nil
-    self.pluginCapabilities = []
-    self.pluginConnectors = []
-    self.pluginCommands = []
-    self.pluginHooks = []
+    self.pluginState = PluginRuntimeState()
     self.threads = initialThreads
     self.timeline = initialTimeline
     self.selectedEntryID = initialTimeline.first?.id
@@ -119,6 +109,30 @@ final class AppViewModel: ObservableObject {
 
   var isWorkspaceSearching: Bool {
     workspaceSearchState.isSearching
+  }
+
+  var plugins: [PluginSummary] {
+    pluginState.plugins
+  }
+
+  var pluginCapabilityRegistrySummary: PluginCapabilityRegistrySummary? {
+    pluginState.registrySummary
+  }
+
+  var pluginCapabilities: [PluginCapabilitySummary] {
+    pluginState.capabilities
+  }
+
+  var pluginConnectors: [PluginConnectorSummary] {
+    pluginState.connectors
+  }
+
+  var pluginCommands: [PluginCommandSummary] {
+    pluginState.commands
+  }
+
+  var pluginHooks: [PluginHookSummary] {
+    pluginState.hooks
   }
 
   func launchRuntime(launchDetail: String = "Launching local runtime") {
@@ -2614,12 +2628,9 @@ final class AppViewModel: ObservableObject {
     runtimeReadiness = nil
     memoryStatus = nil
     memoryNotes = []
-    plugins = []
-    pluginCapabilityRegistrySummary = nil
-    pluginCapabilities = []
-    pluginConnectors = []
-    pluginCommands = []
-    pluginHooks = []
+    updatePluginState { state in
+      state.reset()
+    }
     appendEntry(
       to: selectedThreadID,
       TimelineEventPresenter.runtimeLaunchFailed(error: error)
@@ -2741,26 +2752,16 @@ final class AppViewModel: ObservableObject {
 
   private func refreshPluginState() async {
     let pluginRefresh = await PluginStateLoader.refresh(using: runtimeBridge)
-
-    if let refreshedPlugins = pluginRefresh.plugins {
-      plugins = refreshedPlugins
-    }
-    if let registrySummary = pluginRefresh.registrySummary {
-      pluginCapabilityRegistrySummary = registrySummary
-    }
-    if let capabilities = pluginRefresh.capabilities {
-      pluginCapabilities = capabilities
-    }
-    if let commands = pluginRefresh.commands {
-      pluginCommands = commands
-    }
-    if let connectors = pluginRefresh.connectors {
-      pluginConnectors = connectors
-    }
-    if let hooks = pluginRefresh.hooks {
-      pluginHooks = hooks
+    updatePluginState { state in
+      state.apply(pluginRefresh)
     }
     await refreshRuntimeReadiness()
+  }
+
+  private func updatePluginState(_ update: (inout PluginRuntimeState) -> Void) {
+    var nextState = pluginState
+    update(&nextState)
+    pluginState = nextState
   }
 
   private func applyRuntimeThreadUpdate(_ state: RuntimeBridge.RuntimeThreadState) {
