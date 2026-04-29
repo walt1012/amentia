@@ -6,9 +6,7 @@ use pith_protocol::{
   TimelineItem, TurnCancelParams, TurnCancelResult,
 };
 
-use crate::active_turns::{
-  compute_streamed_char_count, streaming_progress_label, update_streaming_item,
-};
+use crate::active_turns::{streaming_progress_label, update_streaming_item};
 use crate::approval_state::approvals_for_thread;
 use crate::request_params::parse_required_params;
 use crate::runtime_context::RuntimeContext;
@@ -56,7 +54,7 @@ pub(crate) fn handle_turn_cancel(
 
   let Some(thread) = context
     .thread_state
-    .find_mut(&active_turn_snapshot.thread_id)
+    .find_mut(active_turn_snapshot.thread_id())
   else {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
@@ -64,9 +62,8 @@ pub(crate) fn handle_turn_cancel(
 
   context.execution_state.remove_active_turn(&params.turn_id);
   let partial_content = take_characters(
-    &active_turn_snapshot.full_content,
-    compute_streamed_char_count(&active_turn_snapshot)
-      .min(active_turn_snapshot.full_content.chars().count()),
+    active_turn_snapshot.full_content(),
+    active_turn_snapshot.streamed_char_count(),
   );
   update_streaming_item(
     thread.items_mut(),
@@ -74,7 +71,7 @@ pub(crate) fn handle_turn_cancel(
     &partial_content,
     "cancelled",
     partial_content.chars().count(),
-    active_turn_snapshot.total_chars,
+    active_turn_snapshot.total_chars(),
   );
   thread.mark_cancelled();
 
@@ -115,7 +112,7 @@ pub(crate) fn handle_turn_cancel(
     request.id,
     &TurnCancelResult {
       turn_id: params.turn_id,
-      thread_id: active_turn_snapshot.thread_id,
+      thread_id: active_turn_snapshot.thread_id().to_string(),
       items,
       active_turn_id: context
         .execution_state
@@ -149,15 +146,15 @@ fn advance_active_turn(
   let Some(snapshot) = context.execution_state.active_turn(turn_id).cloned() else {
     return Ok(None);
   };
-  let target_chars = compute_streamed_char_count(&snapshot).min(snapshot.total_chars);
+  let target_chars = snapshot.streamed_char_count();
 
-  if target_chars <= snapshot.emitted_chars {
+  if target_chars <= snapshot.emitted_chars() {
     return Ok(None);
   }
 
-  let thread_id = snapshot.thread_id.clone();
-  let streamed_content = take_characters(&snapshot.full_content, target_chars);
-  let is_complete = target_chars >= snapshot.total_chars;
+  let thread_id = snapshot.thread_id().to_string();
+  let streamed_content = take_characters(snapshot.full_content(), target_chars);
+  let is_complete = target_chars >= snapshot.total_chars();
   let streaming_status = if is_complete {
     "completed"
   } else {
@@ -165,7 +162,7 @@ fn advance_active_turn(
   };
 
   let thread_snapshot = {
-    let Some(thread) = context.thread_state.find_mut(&snapshot.thread_id) else {
+    let Some(thread) = context.thread_state.find_mut(snapshot.thread_id()) else {
       return Ok(None);
     };
 
@@ -175,13 +172,16 @@ fn advance_active_turn(
       &streamed_content,
       streaming_status,
       target_chars,
-      snapshot.total_chars,
+      snapshot.total_chars(),
     );
 
     if is_complete {
       thread.mark_ready();
     } else {
-      thread.mark_streaming_progress(streaming_progress_label(target_chars, snapshot.total_chars));
+      thread.mark_streaming_progress(streaming_progress_label(
+        target_chars,
+        snapshot.total_chars(),
+      ));
     }
 
     thread.snapshot()
@@ -191,7 +191,7 @@ fn advance_active_turn(
     context.execution_state.remove_active_turn(turn_id);
     refresh_thread_summary_note(context, &thread_id)?;
   } else if let Some(active_turn) = context.execution_state.active_turn_mut(turn_id) {
-    active_turn.emitted_chars = target_chars;
+    active_turn.update_emitted_chars(target_chars);
   }
 
   Ok(Some(ThreadUpdatedNotificationParams {

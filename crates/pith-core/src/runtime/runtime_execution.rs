@@ -56,8 +56,8 @@ impl RuntimeExecutionState {
     self
       .active_turns
       .values()
-      .filter(|turn| turn.thread_id == thread_id)
-      .map(|turn| turn.id.clone())
+      .filter(|turn| turn.thread_id() == thread_id)
+      .map(|turn| turn.id().to_string())
       .collect()
   }
 
@@ -74,7 +74,7 @@ impl RuntimeExecutionState {
   }
 
   pub(crate) fn insert_active_turn(&mut self, turn: ActiveTurn) {
-    self.active_turns.insert(turn.id.clone(), turn);
+    self.active_turns.insert(turn.id().to_string(), turn);
   }
 
   pub(crate) fn remove_active_turn(&mut self, id: &str) -> Option<ActiveTurn> {

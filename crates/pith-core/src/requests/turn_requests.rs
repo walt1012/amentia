@@ -88,7 +88,7 @@ pub fn complete_prepared_turn_start(
   let active_turn_id = output
     .pending_active_turn
     .as_ref()
-    .map(|turn| turn.id.clone());
+    .map(|turn| turn.id().to_string());
 
   if let Some(approval) = output.pending_approval.clone() {
     context.execution_state.insert_pending_approval(approval);
