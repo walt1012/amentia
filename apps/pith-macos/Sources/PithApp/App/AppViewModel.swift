@@ -22,10 +22,7 @@ final class AppViewModel: ObservableObject {
     }
   }
   @Published private var modelDownloadState: LocalModelDownloadRuntimeState
-  @Published var memoryStatus: MemoryStatusSummary?
-  @Published var memoryNotes: [MemoryNoteSummary]
-  @Published var memoryNoteTitle: String
-  @Published var memoryNoteBody: String
+  @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
 
   private let runtimeBridge: RuntimeBridge
@@ -59,10 +56,7 @@ final class AppViewModel: ObservableObject {
       pausedModelID: launchState.pausedDownload?.modelID,
       progress: launchState.modelDownloadProgress
     )
-    self.memoryStatus = nil
-    self.memoryNotes = []
-    self.memoryNoteTitle = ""
-    self.memoryNoteBody = ""
+    self.memoryState = MemoryRuntimeState()
     self.pluginState = PluginRuntimeState()
     self.threads = initialThreads
     self.timeline = initialTimeline
@@ -133,6 +127,36 @@ final class AppViewModel: ObservableObject {
 
   var pluginHooks: [PluginHookSummary] {
     pluginState.hooks
+  }
+
+  var memoryStatus: MemoryStatusSummary? {
+    memoryState.status
+  }
+
+  var memoryNotes: [MemoryNoteSummary] {
+    memoryState.notes
+  }
+
+  var memoryNoteTitle: String {
+    get {
+      memoryState.noteTitle
+    }
+    set {
+      updateMemoryState { state in
+        state.noteTitle = newValue
+      }
+    }
+  }
+
+  var memoryNoteBody: String {
+    get {
+      memoryState.noteBody
+    }
+    set {
+      updateMemoryState { state in
+        state.noteBody = newValue
+      }
+    }
   }
 
   func launchRuntime(launchDetail: String = "Launching local runtime") {
@@ -1062,8 +1086,9 @@ final class AppViewModel: ObservableObject {
     Task {
       do {
         let note = try await runtimeBridge.createMemoryNote(title: draft.title, body: draft.body)
-        memoryNoteTitle = ""
-        memoryNoteBody = ""
+        updateMemoryState { state in
+          state.clearDraft()
+        }
         await refreshMemoryState()
         appendEntry(
           to: selectedThreadID,
@@ -2626,8 +2651,9 @@ final class AppViewModel: ObservableObject {
     runtimeDetail = error.localizedDescription
     modelHealth = nil
     runtimeReadiness = nil
-    memoryStatus = nil
-    memoryNotes = []
+    updateMemoryState { state in
+      state.resetRuntimeData()
+    }
     updatePluginState { state in
       state.reset()
     }
@@ -2733,12 +2759,15 @@ final class AppViewModel: ObservableObject {
     _ memoryRefresh: MemoryStateRefresh,
     clearsMissing: Bool
   ) {
-    if clearsMissing || memoryRefresh.status != nil {
-      memoryStatus = memoryRefresh.status
+    updateMemoryState { state in
+      state.apply(memoryRefresh, clearsMissing: clearsMissing)
     }
-    if clearsMissing || memoryRefresh.notes != nil {
-      memoryNotes = memoryRefresh.notes ?? []
-    }
+  }
+
+  private func updateMemoryState(_ update: (inout MemoryRuntimeState) -> Void) {
+    var nextState = memoryState
+    update(&nextState)
+    memoryState = nextState
   }
 
   private func memoryActionSnapshot() -> MemoryActionSnapshot {
