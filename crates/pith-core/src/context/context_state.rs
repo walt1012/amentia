@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use anyhow::Result;
 use pith_memory::{MemoryEvent, MemoryNote};
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
-use pith_storage::RuntimeStore;
 
 use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
@@ -17,67 +16,27 @@ use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_threads::RuntimeThreadState;
 use crate::runtime_workspace::RuntimeWorkspaceState;
-use crate::thread_state::StoredThread;
 
 impl RuntimeContext {
   pub fn new() -> Result<Self> {
-    let store = RuntimeStore::new_default()?;
-    let persisted_threads = store.load_threads()?;
-    let persisted_workspace = store.load_workspace()?;
-    let persisted_pending_approvals = store.load_pending_approvals()?;
-    let persisted_memory_notes = store.load_memory_notes(128)?;
-    let persisted_plugin_states = store.load_plugin_states()?;
+    let bootstrap = RuntimePersistenceState::load_default_bootstrap()?;
     let plugin_roots = configured_plugin_roots();
     let plugin_install_root = configured_plugin_install_root();
     let plugins = apply_plugin_states(
       load_plugin_catalog(&plugin_roots)?,
-      &persisted_plugin_states,
+      &bootstrap.plugin_states,
     );
-    let next_thread_number = persisted_threads.len() + 1;
-    let next_approval_number = store.next_approval_sequence()?;
-    let next_memory_number = store.next_memory_sequence()?;
 
     Ok(Self {
       identity: RuntimeIdentity::pith_runtime(),
       model_state: RuntimeModelState::new_default(true),
-      persistence_state: RuntimePersistenceState::persistent(store),
-      memory_state: RuntimeMemoryState::new(next_memory_number, persisted_memory_notes),
-      thread_state: RuntimeThreadState::new(
-        persisted_threads
-          .into_iter()
-          .map(|thread| {
-            StoredThread::new(
-              thread.summary,
-              thread.turn_count,
-              thread.items,
-              thread.workspace,
-            )
-          })
-          .collect(),
-      ),
-      workspace_state: RuntimeWorkspaceState::new(persisted_workspace),
+      persistence_state: bootstrap.persistence_state,
+      memory_state: bootstrap.memory_state,
+      thread_state: bootstrap.thread_state,
+      workspace_state: bootstrap.workspace_state,
       plugin_state: RuntimePluginState::new(plugin_roots, plugin_install_root, plugins),
-      execution_state: RuntimeExecutionState::new(
-        persisted_pending_approvals
-          .into_iter()
-          .map(|approval| {
-            (
-              approval.id.clone(),
-              PendingApproval {
-                id: approval.id,
-                thread_id: approval.thread_id,
-                action: approval.action,
-                title: approval.title,
-                relative_path: approval.relative_path,
-                content: approval.content,
-                command: approval.command,
-              },
-            )
-          })
-          .collect(),
-        HashMap::new(),
-      ),
-      sequence_state: RuntimeSequenceState::new(next_thread_number, next_approval_number),
+      execution_state: bootstrap.execution_state,
+      sequence_state: bootstrap.sequence_state,
     })
   }
 
@@ -105,15 +64,10 @@ impl RuntimeContext {
     self.persistence_state.save_threads(&self.thread_state)
   }
 
-  fn persist_pending_approvals(&self) -> Result<()> {
+  pub(crate) fn persist_runtime_state(&self) -> Result<()> {
     self
       .persistence_state
-      .save_pending_approvals(&self.execution_state)
-  }
-
-  pub(crate) fn persist_runtime_state(&self) -> Result<()> {
-    self.persist_threads()?;
-    self.persist_pending_approvals()
+      .save_runtime_state(&self.thread_state, &self.execution_state)
   }
 
   fn persist_memory_note(&self, note: &MemoryNote) -> Result<()> {
