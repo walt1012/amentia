@@ -41,7 +41,7 @@ pub fn prepare_workspace_search(
 ) -> std::result::Result<PreparedWorkspaceSearch, JsonRpcResponse> {
   let params = parse_required_params::<WorkspaceSearchParams>(&request, "workspace/search")?;
 
-  let Some(workspace) = context.workspace.clone() else {
+  let Some(workspace) = context.workspace_state.current.clone() else {
     return Err(JsonRpcResponse::error(
       request.id,
       -32040,

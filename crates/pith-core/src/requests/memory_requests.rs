@@ -15,7 +15,7 @@ pub(crate) fn handle_memory_create(
     Err(response) => return response,
   };
 
-  let Some(workspace) = context.workspace.clone() else {
+  let Some(workspace) = context.workspace_state.current.clone() else {
     return JsonRpcResponse::error(
       request.id,
       -32040,

@@ -26,7 +26,7 @@ pub(crate) use requests::{
 mod runtime;
 pub(crate) use runtime::{
   protocol_adapters, runtime_context, runtime_identity, runtime_plugins, runtime_readiness,
-  runtime_sequences,
+  runtime_sequences, runtime_workspace,
 };
 
 mod support;

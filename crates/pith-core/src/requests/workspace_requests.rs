@@ -17,7 +17,7 @@ pub(crate) fn handle_workspace_current(
   JsonRpcResponse::success(
     request.id,
     &WorkspaceCurrentResult {
-      workspace: context.workspace.clone(),
+      workspace: context.workspace_state.current.clone(),
     },
   )
 }
@@ -55,7 +55,7 @@ pub(crate) fn handle_workspace_open(
       .filter(|name| !name.is_empty())
       .unwrap_or_else(|| resolved_path.display().to_string()),
   };
-  context.workspace = Some(workspace.clone());
+  context.workspace_state.current = Some(workspace.clone());
 
   if let Err(error) = context.persist_workspace() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());

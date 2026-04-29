@@ -12,14 +12,15 @@ use crate::thread_state::StoredThread;
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_runtime.health();
   let model_ready = model_health.status == "ready";
-  let workspace_ready = context.workspace.is_some();
+  let workspace_ready = context.workspace_state.current.is_some();
   let workspace_thread_count = count_workspace_threads(context);
   let thread_ready = workspace_thread_count > 0;
   let first_request_sent = has_first_request(context);
   let pending_approval_count = context.pending_approvals.len();
   let active_turn_count = context.active_turns.len();
   let sandbox_status = context
-    .workspace
+    .workspace_state
+    .current
     .as_ref()
     .map(|workspace| shell_sandbox_status(Path::new(&workspace.root_path)))
     .unwrap_or_else(workspace_required_status);
@@ -113,7 +114,7 @@ fn local_model_check(
 }
 
 fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck {
-  let status = if context.workspace.is_some() {
+  let status = if context.workspace_state.current.is_some() {
     "ready"
   } else {
     "setup_required"
@@ -124,7 +125,8 @@ fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck {
     title: "Workspace".to_string(),
     status: status.to_string(),
     detail: context
-      .workspace
+      .workspace_state
+      .current
       .as_ref()
       .map(|workspace| format!("Tools are bound to {}.", workspace.display_name))
       .unwrap_or_else(|| {
@@ -302,7 +304,7 @@ fn readiness_metrics(
     ("modelPackId".to_string(), model_pack_id.to_string()),
     (
       "workspaceBound".to_string(),
-      context.workspace.is_some().to_string(),
+      context.workspace_state.current.is_some().to_string(),
     ),
     (
       "pendingApprovalCount".to_string(),
@@ -372,7 +374,7 @@ fn has_first_request(context: &RuntimeContext) -> bool {
 
 fn current_workspace_threads(context: &RuntimeContext) -> impl Iterator<Item = &StoredThread> + '_ {
   context.threads.iter().filter(move |thread| {
-    let Some(workspace) = &context.workspace else {
+    let Some(workspace) = &context.workspace_state.current else {
       return false;
     };
 

@@ -13,6 +13,7 @@ use crate::runtime_context::RuntimeContext;
 use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
+use crate::runtime_workspace::RuntimeWorkspaceState;
 use crate::thread_state::StoredThread;
 
 impl RuntimeContext {
@@ -48,7 +49,7 @@ impl RuntimeContext {
           workspace: thread.workspace,
         })
         .collect(),
-      workspace: persisted_workspace,
+      workspace_state: RuntimeWorkspaceState::new(persisted_workspace),
       plugin_state: RuntimePluginState::new(plugin_roots, plugin_install_root, plugins),
       pending_approvals: persisted_pending_approvals
         .into_iter()
@@ -83,7 +84,7 @@ impl RuntimeContext {
       store: None,
       memory_notes: vec![],
       threads: vec![],
-      workspace: None,
+      workspace_state: RuntimeWorkspaceState::new(None),
       plugin_state: RuntimePluginState::new(
         plugin_roots.clone(),
         plugin_install_root,
@@ -147,7 +148,7 @@ impl RuntimeContext {
     let Some(store) = &self.store else {
       return Ok(());
     };
-    let Some(workspace) = &self.workspace else {
+    let Some(workspace) = &self.workspace_state.current else {
       return Ok(());
     };
 

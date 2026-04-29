@@ -76,7 +76,7 @@ pub(crate) fn handle_thread_start(
     Err(response) => return response,
   };
 
-  let workspace = context.workspace.clone();
+  let workspace = context.workspace_state.current.clone();
   let thread = ThreadSummary {
     id: context.sequences.next_thread_id(),
     title: params.title,

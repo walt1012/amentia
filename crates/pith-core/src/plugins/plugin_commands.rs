@@ -114,7 +114,7 @@ pub fn prepare_plugin_command_run(
   let workspace = thread
     .workspace
     .clone()
-    .or_else(|| context.workspace.clone());
+    .or_else(|| context.workspace_state.current.clone());
   let input = params
     .input
     .as_deref()
@@ -613,7 +613,7 @@ fn maybe_capture_plugin_command_memory(
         .find(|thread| thread.summary.id == thread_id)
         .and_then(|thread| thread.workspace.clone())
     })
-    .or_else(|| context.workspace.clone());
+    .or_else(|| context.workspace_state.current.clone());
   let Some(workspace) = workspace else {
     return Ok(None);
   };
