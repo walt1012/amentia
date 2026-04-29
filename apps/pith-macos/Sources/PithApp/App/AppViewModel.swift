@@ -859,9 +859,7 @@ final class AppViewModel: ObservableObject {
       return
     }
 
-    draftMessage = ""
-    runtimeDetail = "Generating local response..."
-    let requestID = pendingTurnRequest.begin(threadID: threadID)
+    let requestID = beginPendingLocalTurn(threadID: threadID)
 
     let task = Task {
       defer {
@@ -872,33 +870,51 @@ final class AppViewModel: ObservableObject {
         await applyRuntimeTurnResult(result)
       } catch {
         if Task.isCancelled {
-          runtimeDetail = "Local turn request cancelled."
-          refreshThreadPreview(threadID: threadID, preview: "Cancelled response")
-          appendEntry(
-            to: threadID,
-            TimelineEntryFactory.warning(
-              title: "Turn Cancelled",
-              body: "The pending local turn request was cancelled before streaming started.",
-              attributes: [:]
-            )
-          )
+          applyPendingTurnCancellation(threadID: threadID)
           return
         }
-        if draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-          draftMessage = message
-        }
-        runtimeDetail = error.localizedDescription
-        appendEntry(
-          to: threadID,
-          TimelineEntryFactory.warning(
-            title: "Turn Failed",
-            body: error.localizedDescription,
-            attributes: [:]
-          )
-        )
+        applyPendingTurnFailure(threadID: threadID, message: message, error: error)
       }
     }
     pendingTurnRequest.bind(task: task, requestID: requestID)
+  }
+
+  private func beginPendingLocalTurn(threadID: String) -> String {
+    draftMessage = ""
+    runtimeDetail = "Generating local response..."
+    return pendingTurnRequest.begin(threadID: threadID)
+  }
+
+  private func applyPendingTurnCancellation(threadID: String) {
+    runtimeDetail = "Local turn request cancelled."
+    refreshThreadPreview(threadID: threadID, preview: "Cancelled response")
+    appendEntry(
+      to: threadID,
+      TimelineEntryFactory.warning(
+        title: "Turn Cancelled",
+        body: "The pending local turn request was cancelled before streaming started.",
+        attributes: [:]
+      )
+    )
+  }
+
+  private func applyPendingTurnFailure(
+    threadID: String,
+    message: String,
+    error: Error
+  ) {
+    if draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      draftMessage = message
+    }
+    runtimeDetail = error.localizedDescription
+    appendEntry(
+      to: threadID,
+      TimelineEntryFactory.warning(
+        title: "Turn Failed",
+        body: error.localizedDescription,
+        attributes: [:]
+      )
+    )
   }
 
   func respondToApproval(approvalID: String, decision: String) {
