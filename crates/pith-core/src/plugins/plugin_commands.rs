@@ -17,6 +17,7 @@ use pith_tools::read_file;
 use crate::approval_state::approvals_for_thread;
 use crate::context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
 use crate::request_params::parse_required_params;
+use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::thread_summary::refresh_thread_summary_note;
 use crate::RuntimeContext;
 
@@ -130,9 +131,10 @@ pub fn prepare_plugin_command_run(
         command.title, command.description, command.prompt
       )
     });
+  let memory_notes = context.memory_state.snapshot_notes();
   let context_pack = pack_memory_context(
     context.model_state.runtime(),
-    context.memory_state.notes(),
+    &memory_notes,
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
   );
@@ -151,7 +153,7 @@ pub fn prepare_plugin_command_run(
       workspace,
       input,
       command_item,
-      memory_notes: context.memory_state.snapshot_notes(),
+      memory_notes,
     },
   })
 }
@@ -598,13 +600,13 @@ fn maybe_capture_plugin_command_memory(
     .clone()
     .unwrap_or_else(|| format!("plugin.{}", command.plugin_id));
   let note_tags = plugin_command_memory_tags(command);
-  let note = context.create_memory_note(
+  let note = context.create_memory_note(RuntimeMemoryNoteDraft::new(
     note_title.clone(),
     note_body,
     workspace.display_name.clone(),
     note_source,
     note_tags,
-  )?;
+  ))?;
 
   Ok(Some(TimelineItem {
     kind: "system".to_string(),

@@ -9,7 +9,7 @@ use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_identity::RuntimeIdentity;
-use crate::runtime_memory::RuntimeMemoryState;
+use crate::runtime_memory::{RuntimeMemoryNoteDraft, RuntimeMemoryState};
 use crate::runtime_model::RuntimeModelState;
 use crate::runtime_persistence::RuntimePersistenceState;
 use crate::runtime_plugins::RuntimePluginState;
@@ -94,17 +94,8 @@ impl RuntimeContext {
     Ok(note)
   }
 
-  pub(crate) fn create_memory_note(
-    &mut self,
-    title: String,
-    body: String,
-    scope: String,
-    source: String,
-    tags: Vec<String>,
-  ) -> Result<MemoryNote> {
-    let note = self
-      .memory_state
-      .create_note(title, body, scope, source, tags);
+  pub(crate) fn create_memory_note(&mut self, draft: RuntimeMemoryNoteDraft) -> Result<MemoryNote> {
+    let note = self.memory_state.create_note(draft);
     self.persist_memory_note(&note)?;
     Ok(note)
   }
@@ -112,15 +103,9 @@ impl RuntimeContext {
   pub(crate) fn upsert_memory_note(
     &mut self,
     id: String,
-    title: String,
-    body: String,
-    scope: String,
-    source: String,
-    tags: Vec<String>,
+    draft: RuntimeMemoryNoteDraft,
   ) -> Result<MemoryNote> {
-    let note = self
-      .memory_state
-      .upsert_note(id, title, body, scope, source, tags);
+    let note = self.memory_state.upsert_note(id, draft);
     self.persist_memory_note(&note)?;
     Ok(note)
   }

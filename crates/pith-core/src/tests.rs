@@ -341,7 +341,7 @@ fn memory_create_adds_manual_workspace_note() {
   assert_eq!(result["note"]["source"], "user");
   assert_eq!(context.memory_state.note_count(), 2);
   assert_eq!(
-    context.memory_state.notes()[0].title,
+    context.memory_state.latest_note().expect("latest note").title,
     "Repository preference"
   );
 }
@@ -1534,8 +1534,8 @@ fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   assert_eq!(context.memory_state.note_count(), 3);
   assert!(context
     .memory_state
-    .notes()
-    .iter()
+    .recent_notes(16)
+    .into_iter()
     .any(|note| note.title == "Workspace Capture" && note.source == "plugin.workspace-notes"));
 }
 

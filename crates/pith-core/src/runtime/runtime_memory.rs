@@ -1,6 +1,33 @@
 use pith_memory::{MemoryEvent, MemoryManager, MemoryNote, MemoryStatus};
 
 #[derive(Debug, Clone)]
+pub(crate) struct RuntimeMemoryNoteDraft {
+  pub(crate) title: String,
+  pub(crate) body: String,
+  pub(crate) scope: String,
+  pub(crate) source: String,
+  pub(crate) tags: Vec<String>,
+}
+
+impl RuntimeMemoryNoteDraft {
+  pub(crate) fn new(
+    title: String,
+    body: String,
+    scope: String,
+    source: String,
+    tags: Vec<String>,
+  ) -> Self {
+    Self {
+      title,
+      body,
+      scope,
+      source,
+      tags,
+    }
+  }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct RuntimeMemoryState {
   manager: MemoryManager,
   notes: Vec<MemoryNote>,
@@ -14,12 +41,17 @@ impl RuntimeMemoryState {
     }
   }
 
-  pub(crate) fn notes(&self) -> &[MemoryNote] {
-    &self.notes
-  }
-
   pub(crate) fn snapshot_notes(&self) -> Vec<MemoryNote> {
     self.notes.clone()
+  }
+
+  pub(crate) fn recent_notes(&self, limit: usize) -> Vec<MemoryNote> {
+    self.notes.iter().take(limit).cloned().collect()
+  }
+
+  #[cfg(test)]
+  pub(crate) fn latest_note(&self) -> Option<&MemoryNote> {
+    self.notes.first()
   }
 
   pub(crate) fn note_count(&self) -> usize {
@@ -34,30 +66,30 @@ impl RuntimeMemoryState {
     self.manager.record_event(&mut self.notes, event)
   }
 
-  pub(crate) fn create_note(
-    &mut self,
-    title: String,
-    body: String,
-    scope: String,
-    source: String,
-    tags: Vec<String>,
-  ) -> MemoryNote {
-    self
-      .manager
-      .create_note(&mut self.notes, title, body, scope, source, tags)
+  pub(crate) fn create_note(&mut self, draft: RuntimeMemoryNoteDraft) -> MemoryNote {
+    self.manager.create_note(
+      &mut self.notes,
+      draft.title,
+      draft.body,
+      draft.scope,
+      draft.source,
+      draft.tags,
+    )
   }
 
   pub(crate) fn upsert_note(
     &mut self,
     id: String,
-    title: String,
-    body: String,
-    scope: String,
-    source: String,
-    tags: Vec<String>,
+    draft: RuntimeMemoryNoteDraft,
   ) -> MemoryNote {
-    self
-      .manager
-      .upsert_note(&mut self.notes, id, title, body, scope, source, tags)
+    self.manager.upsert_note(
+      &mut self.notes,
+      id,
+      draft.title,
+      draft.body,
+      draft.scope,
+      draft.source,
+      draft.tags,
+    )
   }
 }

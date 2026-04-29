@@ -7,6 +7,7 @@ use pith_plugin_host::{
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::{ShellCommandResult, ShellSandboxSummary};
 
+use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::RuntimeContext;
 
 #[derive(Debug, Clone)]
@@ -140,13 +141,13 @@ pub(crate) fn capture_plugin_hook_memory(
     .memory_note_source
     .clone()
     .unwrap_or_else(|| format!("plugin.{}", capture.hook.plugin_id));
-  let note = context.create_memory_note(
+  let note = context.create_memory_note(RuntimeMemoryNoteDraft::new(
     note_title.clone(),
     build_plugin_hook_memory_body(workspace, capture),
     workspace.display_name.clone(),
     note_source,
     plugin_hook_memory_tags(&capture.hook),
-  )?;
+  ))?;
 
   Ok(TimelineItem {
     kind: "system".to_string(),

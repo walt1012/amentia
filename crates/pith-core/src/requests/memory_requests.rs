@@ -4,6 +4,7 @@ use pith_protocol::{
 
 use crate::protocol_adapters::{to_protocol_memory_note, to_protocol_memory_status};
 use crate::request_params::parse_required_params;
+use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::RuntimeContext;
 
 pub(crate) fn handle_memory_create(
@@ -33,7 +34,7 @@ pub(crate) fn handle_memory_create(
     );
   }
 
-  match context.create_memory_note(
+  match context.create_memory_note(RuntimeMemoryNoteDraft::new(
     title.to_string(),
     body.to_string(),
     workspace.display_name,
@@ -43,7 +44,7 @@ pub(crate) fn handle_memory_create(
       "user".to_string(),
       "manual".to_string(),
     ],
-  ) {
+  )) {
     Ok(note) => JsonRpcResponse::success(
       request.id,
       &MemoryCreateResult {
@@ -63,10 +64,8 @@ pub(crate) fn handle_memory_list(
     &MemoryListResult {
       notes: context
         .memory_state
-        .notes()
-        .iter()
-        .take(16)
-        .cloned()
+        .recent_notes(16)
+        .into_iter()
         .map(to_protocol_memory_note)
         .collect(),
     },

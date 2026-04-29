@@ -3,6 +3,7 @@ use pith_protocol::{ApprovalRequest, WorkspaceSummary};
 
 use crate::approval_state::approvals_for_thread;
 use crate::runtime_context::RuntimeContext;
+use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::text_utils::truncate_text;
 use crate::thread_state::StoredThread;
 
@@ -23,15 +24,17 @@ pub(crate) fn refresh_thread_summary_note(
 
   context.upsert_memory_note(
     format!("memory-thread-summary-{thread_id}"),
-    format!("Thread summary: {}", thread.title()),
-    build_thread_summary_body(&thread, workspace_snapshot.as_ref(), &pending_approvals),
-    scope,
-    "thread".to_string(),
-    vec![
+    RuntimeMemoryNoteDraft::new(
+      format!("Thread summary: {}", thread.title()),
+      build_thread_summary_body(&thread, workspace_snapshot.as_ref(), &pending_approvals),
+      scope,
       "thread".to_string(),
-      "summary".to_string(),
-      thread_id.to_string(),
-    ],
+      vec![
+        "thread".to_string(),
+        "summary".to_string(),
+        thread_id.to_string(),
+      ],
+    ),
   )?;
 
   Ok(())
