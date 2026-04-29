@@ -129,7 +129,9 @@ pub(crate) fn refresh_active_turn_for_thread(
   context: &mut RuntimeContext,
   thread_id: &str,
 ) -> Result<bool> {
-  let active_turn_ids = context.execution_state.active_turn_ids_for_thread(thread_id);
+  let active_turn_ids = context
+    .execution_state
+    .active_turn_ids_for_thread(thread_id);
   let mut did_update = false;
 
   for turn_id in active_turn_ids {
@@ -145,11 +147,7 @@ fn advance_active_turn(
   context: &mut RuntimeContext,
   turn_id: &str,
 ) -> Result<Option<ThreadUpdatedNotificationParams>> {
-  let Some(snapshot) = context
-    .execution_state
-    .active_turn(turn_id)
-    .cloned()
-  else {
+  let Some(snapshot) = context.execution_state.active_turn(turn_id).cloned() else {
     return Ok(None);
   };
   let target_chars = compute_streamed_char_count(&snapshot).min(snapshot.total_chars);
@@ -208,6 +206,8 @@ fn advance_active_turn(
     thread: thread_snapshot.0,
     items: thread_snapshot.1,
     pending_approvals: approvals_for_thread(context, &thread_id),
-    active_turn_id: context.execution_state.active_turn_id_for_thread(&thread_id),
+    active_turn_id: context
+      .execution_state
+      .active_turn_id_for_thread(&thread_id),
   }))
 }
