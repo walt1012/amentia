@@ -62,8 +62,12 @@ fn create_temp_plugin_bundle(label: &str, plugin_name: &str, display_name: &str)
   plugin_dir
 }
 
+fn replace_plugin_catalog(context: &mut RuntimeContext, catalog: Vec<PluginCatalogEntry>) {
+  context.plugin_state.replace_catalog(catalog);
+}
+
 fn enable_full_access_plugin(context: &mut RuntimeContext) {
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(context, vec![PluginCatalogEntry {
     id: "test-full-access".to_string(),
     name: "test-full-access".to_string(),
     version: "0.1.0".to_string(),
@@ -781,7 +785,7 @@ fn approval_respond_writes_file_after_approval() {
 fn approval_respond_runs_shell_after_approval() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("approval-shell");
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "shell-recorder".to_string(),
     name: "shell-recorder".to_string(),
     version: "0.1.0".to_string(),
@@ -1117,7 +1121,7 @@ fn thread_turns_stay_bound_to_the_thread_workspace() {
 #[test]
 fn plugin_set_enabled_updates_runtime_catalog() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1163,7 +1167,7 @@ fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   context
     .plugin_state
     .configure_roots(vec![install_root.clone()], install_root.clone());
-  context.plugin_state.replace_catalog(vec![]);
+  replace_plugin_catalog(&mut context, vec![]);
 
   let response = handle_request(
     &mut context,
@@ -1198,7 +1202,7 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
     "workspace-notes",
     "Workspace Notes",
   );
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1252,7 +1256,7 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   context
     .plugin_state
     .configure_roots(vec![install_root.clone()], install_root.clone());
-  context.plugin_state.replace_catalog(vec![]);
+  replace_plugin_catalog(&mut context, vec![]);
 
   let install_response = handle_request(
     &mut context,
@@ -1298,7 +1302,7 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
 #[test]
 fn plugin_command_registry_lists_enabled_command_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1339,7 +1343,7 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
 #[test]
 fn plugin_hook_registry_lists_enabled_hook_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "shell-recorder".to_string(),
     name: "shell-recorder".to_string(),
     version: "0.1.0".to_string(),
@@ -1377,7 +1381,7 @@ fn plugin_hook_registry_lists_enabled_hook_plugins() {
 #[test]
 fn plugin_connector_registry_lists_disabled_connector_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "notion-connector".to_string(),
     name: "notion-connector".to_string(),
     version: "0.1.0".to_string(),
@@ -1420,7 +1424,7 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
 fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("plugin-command-run");
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1516,7 +1520,7 @@ fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("bundled-plugin-results");
   fs::write(workspace.join("README.md"), "# Bundled Plugin Results\n").expect("write readme");
-  context.plugin_state.replace_catalog(vec![
+  replace_plugin_catalog(&mut context, vec![
     PluginCatalogEntry {
       id: "review-assistant".to_string(),
       name: "review-assistant".to_string(),
@@ -1635,7 +1639,7 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
     create_temp_plugin_bundle("plugin-command-contract", "prompt-only", "Prompt Only");
   let workspace = create_temp_workspace("plugin-command-contract-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "prompt-only".to_string(),
     name: "prompt-only".to_string(),
     version: "0.1.0".to_string(),
@@ -1698,7 +1702,7 @@ fn file_reads_require_plugin_permission() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("permission-read");
   fs::write(workspace.join("README.md"), "# Permission Gate\n").expect("write readme");
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "shell-recorder".to_string(),
     name: "shell-recorder".to_string(),
     version: "0.1.0".to_string(),
@@ -1760,7 +1764,7 @@ fn file_reads_require_plugin_permission() {
 fn shell_requests_require_plugin_permission_before_approval() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("permission-shell");
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),
@@ -1825,7 +1829,7 @@ fn shell_requests_require_plugin_permission_before_approval() {
 fn approval_resolution_rechecks_plugin_permissions() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("approval-permission-recheck");
-  context.plugin_state.replace_catalog(vec![PluginCatalogEntry {
+  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
     id: "workspace-notes".to_string(),
     name: "workspace-notes".to_string(),
     version: "0.1.0".to_string(),

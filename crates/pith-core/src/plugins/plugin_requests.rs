@@ -123,7 +123,10 @@ pub(crate) fn handle_plugin_install(
     Ok(plugin) => plugin,
     Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
   };
-  if context.plugin_state.contains_plugin_id(&candidate_plugin.id) {
+  if context
+    .plugin_state
+    .contains_plugin_id(&candidate_plugin.id)
+  {
     return JsonRpcResponse::error(
       request.id,
       -32053,

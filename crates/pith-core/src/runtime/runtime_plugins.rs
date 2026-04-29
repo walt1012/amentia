@@ -68,7 +68,11 @@ impl RuntimePluginState {
     plugin_id: &str,
     enabled: bool,
   ) -> Result<PluginCatalogEntry, PluginEnableError> {
-    let Some(plugin) = self.catalog.iter_mut().find(|plugin| plugin.id == plugin_id) else {
+    let Some(plugin) = self
+      .catalog
+      .iter_mut()
+      .find(|plugin| plugin.id == plugin_id)
+    else {
       return Err(PluginEnableError::NotFound);
     };
     if plugin.status != "ready" {
