@@ -108,7 +108,10 @@ impl StoredThread {
     self.bind_workspace_if_missing(workspace);
     let workspace = self.workspace.clone();
     self.summary.status = match &workspace {
-      Some(workspace) => format!("{turn_count} plugin command(s) in {}", workspace.display_name),
+      Some(workspace) => format!(
+        "{turn_count} plugin command(s) in {}",
+        workspace.display_name
+      ),
       None => format!("{turn_count} plugin command(s)"),
     };
 

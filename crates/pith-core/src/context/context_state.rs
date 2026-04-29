@@ -46,7 +46,12 @@ impl RuntimeContext {
         persisted_threads
           .into_iter()
           .map(|thread| {
-            StoredThread::new(thread.summary, thread.turn_count, thread.items, thread.workspace)
+            StoredThread::new(
+              thread.summary,
+              thread.turn_count,
+              thread.items,
+              thread.workspace,
+            )
           })
           .collect(),
       ),
