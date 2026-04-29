@@ -58,7 +58,7 @@ pub fn prepare_approval_respond(
   };
   let current_workspace = context.workspace_state.current.clone();
   let model_runtime = context.model_runtime.clone();
-  let memory_notes = context.memory_notes.clone();
+  let memory_notes = context.memory_state.notes().to_vec();
   let permission_sources = granted_permission_sources(&context.plugin_state.catalog);
   let plugins = context.plugin_state.catalog.clone();
 

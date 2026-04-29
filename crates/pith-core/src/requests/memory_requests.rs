@@ -62,7 +62,8 @@ pub(crate) fn handle_memory_list(
     request.id,
     &MemoryListResult {
       notes: context
-        .memory_notes
+        .memory_state
+        .notes()
         .iter()
         .take(16)
         .cloned()
@@ -78,6 +79,6 @@ pub(crate) fn handle_memory_status(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &to_protocol_memory_status(context.memory_manager.status(&context.memory_notes)),
+    &to_protocol_memory_status(context.memory_state.status()),
   )
 }

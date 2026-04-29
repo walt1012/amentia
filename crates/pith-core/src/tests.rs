@@ -332,8 +332,8 @@ fn memory_create_adds_manual_workspace_note() {
   let result = create_response.result.expect("memory create result");
   assert_eq!(result["note"]["title"], "Repository preference");
   assert_eq!(result["note"]["source"], "user");
-  assert_eq!(context.memory_notes.len(), 2);
-  assert_eq!(context.memory_notes[0].title, "Repository preference");
+  assert_eq!(context.memory_state.note_count(), 2);
+  assert_eq!(context.memory_state.notes()[0].title, "Repository preference");
 }
 
 #[test]
@@ -882,7 +882,8 @@ fn approval_respond_runs_shell_after_approval() {
       && item["attributes"]["memoryNoteTitle"] == "Shell Completion"
   }));
   assert!(context
-    .memory_notes
+    .memory_state
+    .notes()
     .iter()
     .any(|note| note.title == "Shell Completion" && note.source == "plugin.shell-recorder"));
 }
@@ -942,7 +943,8 @@ fn thread_summary_memory_note_is_updated_after_approval_resolution() {
 
   assert!(approval_response.error.is_none());
   let summary_note = context
-    .memory_notes
+    .memory_state
+    .notes()
     .iter()
     .find(|note| note.id == "memory-thread-summary-thread-1")
     .expect("thread summary note");
@@ -1496,9 +1498,10 @@ fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   assert_eq!(memory_item["kind"], "system");
   assert_eq!(memory_item["attributes"]["pluginId"], "workspace-notes");
   assert_eq!(result["threadId"], "thread-1");
-  assert_eq!(context.memory_notes.len(), 3);
+  assert_eq!(context.memory_state.note_count(), 3);
   assert!(context
-    .memory_notes
+    .memory_state
+    .notes()
     .iter()
     .any(|note| note.title == "Workspace Capture" && note.source == "plugin.workspace-notes"));
 }

@@ -324,7 +324,7 @@ fn readiness_metrics(
     ),
     (
       "memoryNoteCount".to_string(),
-      context.memory_notes.len().to_string(),
+      context.memory_state.note_count().to_string(),
     ),
     (
       "pluginCount".to_string(),

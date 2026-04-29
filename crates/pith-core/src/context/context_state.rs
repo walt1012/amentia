@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use pith_memory::{MemoryEvent, MemoryManager, MemoryNote};
+use pith_memory::{MemoryEvent, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
 use pith_storage::{RuntimeStore, StoredThreadRecord};
@@ -11,6 +11,7 @@ use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_identity::RuntimeIdentity;
+use crate::runtime_memory::RuntimeMemoryState;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_workspace::RuntimeWorkspaceState;
@@ -37,9 +38,8 @@ impl RuntimeContext {
     Ok(Self {
       identity: RuntimeIdentity::pith_runtime(),
       model_runtime: LocalModelRuntime::new_default(),
-      memory_manager: MemoryManager::new(next_memory_number),
       store: Some(store),
-      memory_notes: persisted_memory_notes,
+      memory_state: RuntimeMemoryState::new(next_memory_number, persisted_memory_notes),
       threads: persisted_threads
         .into_iter()
         .map(|thread| StoredThread {
@@ -80,9 +80,8 @@ impl RuntimeContext {
     Self {
       identity: RuntimeIdentity::pith_runtime(),
       model_runtime: LocalModelRuntime::new_default(),
-      memory_manager: MemoryManager::new(1),
       store: None,
-      memory_notes: vec![],
+      memory_state: RuntimeMemoryState::new(1, vec![]),
       threads: vec![],
       workspace_state: RuntimeWorkspaceState::new(None),
       plugin_state: RuntimePluginState::new(
@@ -168,9 +167,7 @@ impl RuntimeContext {
   }
 
   pub(crate) fn remember(&mut self, event: MemoryEvent) -> Result<MemoryNote> {
-    let note = self
-      .memory_manager
-      .record_event(&mut self.memory_notes, event);
+    let note = self.memory_state.record_event(event);
     self.persist_memory_note(&note)?;
     Ok(note)
   }
@@ -183,10 +180,9 @@ impl RuntimeContext {
     source: String,
     tags: Vec<String>,
   ) -> Result<MemoryNote> {
-    let note =
-      self
-        .memory_manager
-        .create_note(&mut self.memory_notes, title, body, scope, source, tags);
+    let note = self
+      .memory_state
+      .create_note(title, body, scope, source, tags);
     self.persist_memory_note(&note)?;
     Ok(note)
   }
@@ -200,10 +196,9 @@ impl RuntimeContext {
     source: String,
     tags: Vec<String>,
   ) -> Result<MemoryNote> {
-    let note =
-      self
-        .memory_manager
-        .upsert_note(&mut self.memory_notes, id, title, body, scope, source, tags);
+    let note = self
+      .memory_state
+      .upsert_note(id, title, body, scope, source, tags);
     self.persist_memory_note(&note)?;
     Ok(note)
   }

@@ -137,7 +137,7 @@ pub fn prepare_plugin_command_run(
     });
   let context_pack = pack_memory_context(
     &context.model_runtime,
-    &context.memory_notes,
+    context.memory_state.notes(),
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
   );
@@ -156,7 +156,7 @@ pub fn prepare_plugin_command_run(
       workspace,
       input,
       command_item,
-      memory_notes: context.memory_notes.clone(),
+      memory_notes: context.memory_state.notes().to_vec(),
     },
   })
 }
