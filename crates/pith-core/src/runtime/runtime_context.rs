@@ -18,5 +18,5 @@ pub struct RuntimeContext {
   pub(crate) workspace_state: RuntimeWorkspaceState,
   pub(crate) plugin_state: RuntimePluginState,
   pub(crate) execution_state: RuntimeExecutionState,
-  pub(crate) sequences: RuntimeSequenceState,
+  pub(crate) sequence_state: RuntimeSequenceState,
 }

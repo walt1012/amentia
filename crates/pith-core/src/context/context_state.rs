@@ -76,7 +76,7 @@ impl RuntimeContext {
           .collect(),
         HashMap::new(),
       ),
-      sequences: RuntimeSequenceState::new(next_thread_number, next_approval_number),
+      sequence_state: RuntimeSequenceState::new(next_thread_number, next_approval_number),
     })
   }
 
@@ -96,7 +96,7 @@ impl RuntimeContext {
         load_plugin_catalog(&plugin_roots).unwrap_or_default(),
       ),
       execution_state: RuntimeExecutionState::empty(),
-      sequences: RuntimeSequenceState::new(1, 1),
+      sequence_state: RuntimeSequenceState::new(1, 1),
     }
   }
 
