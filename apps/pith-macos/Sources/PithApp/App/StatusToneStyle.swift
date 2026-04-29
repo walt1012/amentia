@@ -16,3 +16,18 @@ extension StatusTone {
     }
   }
 }
+
+struct StatusPill: View {
+  let label: String
+  let tone: StatusTone
+
+  var body: some View {
+    Text(label)
+      .font(.caption.weight(.medium))
+      .foregroundColor(tone.color)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(tone.color.opacity(0.12))
+      .clipShape(Capsule())
+  }
+}
