@@ -13,6 +13,57 @@ struct WorkspaceSearchRequestToken {
   let status: String
 }
 
+struct WorkspaceSearchRuntimeState {
+  var query: String
+  var results: [WorkspaceSearchMatchSummary]
+  var status: String
+  var isSearching: Bool
+
+  init(
+    query: String = "",
+    results: [WorkspaceSearchMatchSummary] = [],
+    status: String = "Search the open workspace by text.",
+    isSearching: Bool = false
+  ) {
+    self.query = query
+    self.results = results
+    self.status = status
+    self.isSearching = isSearching
+  }
+
+  mutating func begin(_ token: WorkspaceSearchRequestToken) {
+    isSearching = true
+    status = token.status
+  }
+
+  mutating func finishWithChangedQuery(status: String) {
+    results = []
+    self.status = status
+    isSearching = false
+  }
+
+  mutating func finishWithMatches(
+    _ matches: [WorkspaceSearchMatchSummary],
+    status: String
+  ) {
+    results = matches
+    self.status = status
+    isSearching = false
+  }
+
+  mutating func finishWithFailure(status: String) {
+    results = []
+    self.status = status
+    isSearching = false
+  }
+
+  mutating func reset(status: String) {
+    results = []
+    self.status = status
+    isSearching = false
+  }
+}
+
 final class WorkspaceSearchSession {
   private var activeRequestID: UUID?
 

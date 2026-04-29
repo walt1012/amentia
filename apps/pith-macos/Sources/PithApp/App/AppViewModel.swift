@@ -12,10 +12,7 @@ final class AppViewModel: ObservableObject {
   @Published var runtimeDetail: String
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
-  @Published var workspaceSearchQuery: String
-  @Published var workspaceSearchResults: [WorkspaceSearchMatchSummary]
-  @Published var workspaceSearchStatus: String
-  @Published var isWorkspaceSearching: Bool
+  @Published private var workspaceSearchState: WorkspaceSearchRuntimeState
   @Published var modelHealth: ModelHealthSummary?
   @Published var runtimeReadiness: RuntimeReadinessSummary?
   @Published var localModels: [LocalModelSummary]
@@ -57,10 +54,7 @@ final class AppViewModel: ObservableObject {
     self.runtimeDetail = launchState.runtimeDetail
     self.draftMessage = ""
     self.workspace = nil
-    self.workspaceSearchQuery = ""
-    self.workspaceSearchResults = []
-    self.workspaceSearchStatus = "Search the open workspace by text."
-    self.isWorkspaceSearching = false
+    self.workspaceSearchState = WorkspaceSearchRuntimeState()
     self.modelHealth = nil
     self.runtimeReadiness = nil
     self.localModels = launchState.localModels
@@ -102,6 +96,29 @@ final class AppViewModel: ObservableObject {
         self?.handleRuntimeConnectionStateChange(state, detail: detail)
       }
     }
+  }
+
+  var workspaceSearchQuery: String {
+    get {
+      workspaceSearchState.query
+    }
+    set {
+      updateWorkspaceSearchState { state in
+        state.query = newValue
+      }
+    }
+  }
+
+  var workspaceSearchResults: [WorkspaceSearchMatchSummary] {
+    workspaceSearchState.results
+  }
+
+  var workspaceSearchStatus: String {
+    workspaceSearchState.status
+  }
+
+  var isWorkspaceSearching: Bool {
+    workspaceSearchState.isSearching
   }
 
   func launchRuntime(launchDetail: String = "Launching local runtime") {
@@ -621,8 +638,9 @@ final class AppViewModel: ObservableObject {
     let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
     let requestToken = workspaceSearchSession.begin(query: query)
 
-    isWorkspaceSearching = true
-    workspaceSearchStatus = requestToken.status
+    updateWorkspaceSearchState { state in
+      state.begin(requestToken)
+    }
     Task {
       do {
         let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
@@ -636,11 +654,15 @@ final class AppViewModel: ObservableObject {
           finishChangedWorkspaceSearch()
           return
         }
-        workspaceSearchResults = WorkspaceSearchSession.matchSummaries(from: matches)
-        workspaceSearchStatus = WorkspaceSearchSession.successStatus(
-          query: requestToken.query,
-          matchCount: matches.count
-        )
+        updateWorkspaceSearchState { state in
+          state.finishWithMatches(
+            WorkspaceSearchSession.matchSummaries(from: matches),
+            status: WorkspaceSearchSession.successStatus(
+              query: requestToken.query,
+              matchCount: matches.count
+            )
+          )
+        }
       } catch {
         guard workspaceSearchSession.isCurrent(requestToken) else {
           return
@@ -652,16 +674,20 @@ final class AppViewModel: ObservableObject {
           finishChangedWorkspaceSearch()
           return
         }
-        workspaceSearchResults = []
-        workspaceSearchStatus = WorkspaceSearchSession.failureStatus(error: error)
+        updateWorkspaceSearchState { state in
+          state.finishWithFailure(
+            status: WorkspaceSearchSession.failureStatus(error: error)
+          )
+        }
       }
       workspaceSearchSession.finish()
-      isWorkspaceSearching = false
     }
   }
 
   func clearWorkspaceSearch() {
-    workspaceSearchQuery = ""
+    updateWorkspaceSearchState { state in
+      state.query = ""
+    }
     resetWorkspaceSearch()
   }
 
@@ -2660,15 +2686,25 @@ final class AppViewModel: ObservableObject {
   }
 
   private func resetWorkspaceSearch() {
-    workspaceSearchResults = []
-    workspaceSearchStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
-    isWorkspaceSearching = false
+    let resetStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
+    updateWorkspaceSearchState { state in
+      state.reset(status: resetStatus)
+    }
   }
 
   private func finishChangedWorkspaceSearch() {
-    workspaceSearchResults = []
-    workspaceSearchStatus = workspaceSearchSession.changedQueryStatus()
-    isWorkspaceSearching = false
+    let changedStatus = workspaceSearchSession.changedQueryStatus()
+    updateWorkspaceSearchState { state in
+      state.finishWithChangedQuery(status: changedStatus)
+    }
+  }
+
+  private func updateWorkspaceSearchState(
+    _ update: (inout WorkspaceSearchRuntimeState) -> Void
+  ) {
+    var nextState = workspaceSearchState
+    update(&nextState)
+    workspaceSearchState = nextState
   }
 
   private func isRestorableWorkspacePath(_ path: String) -> Bool {
