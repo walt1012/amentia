@@ -141,7 +141,7 @@ final class AppViewModel: ObservableObject {
     await refreshModelHealthState(
       serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)"
     )
-    applyRuntimeLaunchMemoryState(bootstrap.memoryRefresh)
+    applyMemoryStateRefresh(bootstrap.memoryRefresh, clearsMissing: true)
     await refreshPluginState()
 
     if let currentWorkspace {
@@ -693,25 +693,11 @@ final class AppViewModel: ObservableObject {
 
     Task {
       do {
-        let openedWorkspace = try await runtimeBridge.openWorkspace(path: url.path)
-        workspace = WorkspaceSummary(
-          rootPath: openedWorkspace.rootPath,
-          displayName: openedWorkspace.displayName
+        let bootstrap = try await WorkspaceOpenBootstrapLoader.load(
+          runtimeBridge: runtimeBridge,
+          path: url.path
         )
-        resetWorkspaceSearch()
-        AppPreferences.storeLastWorkspacePath(openedWorkspace.rootPath)
-        await refreshMemoryState()
-        let threadList = try await runtimeBridge.listThreads()
-        try await refreshWorkspaceThreadSelection(from: threadList, createIfEmpty: isLocalModelReady())
-        await refreshRuntimeReadiness()
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEntryFactory.system(
-            title: "Workspace Opened",
-            body: "Opened \(openedWorkspace.displayName) at \(openedWorkspace.rootPath).",
-            attributes: [:]
-          )
-        )
+        try await applyWorkspaceOpenBootstrap(bootstrap)
         announceFirstRequestReadyIfNeeded()
       } catch {
         appendEntry(
@@ -724,6 +710,33 @@ final class AppViewModel: ObservableObject {
         )
       }
     }
+  }
+
+  private func applyWorkspaceOpenBootstrap(_ bootstrap: WorkspaceOpenBootstrap) async throws {
+    workspace = WorkspaceSummary(
+      rootPath: bootstrap.workspace.rootPath,
+      displayName: bootstrap.workspace.displayName
+    )
+    resetWorkspaceSearch()
+    AppPreferences.storeLastWorkspacePath(bootstrap.workspace.rootPath)
+    applyMemoryStateRefresh(bootstrap.memoryRefresh, clearsMissing: false)
+    try await refreshWorkspaceThreadSelection(
+      from: bootstrap.threadList,
+      createIfEmpty: isLocalModelReady()
+    )
+    await refreshRuntimeReadiness()
+    appendWorkspaceOpenedEvent(bootstrap.workspace)
+  }
+
+  private func appendWorkspaceOpenedEvent(_ workspace: RuntimeBridge.RuntimeWorkspace) {
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntryFactory.system(
+        title: "Workspace Opened",
+        body: "Opened \(workspace.displayName) at \(workspace.rootPath).",
+        attributes: [:]
+      )
+    )
   }
 
   func installPlugin() {
@@ -2779,18 +2792,19 @@ final class AppViewModel: ObservableObject {
 
   private func refreshMemoryState() async {
     let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
-
-    if let status = memoryRefresh.status {
-      memoryStatus = status
-    }
-    if let notes = memoryRefresh.notes {
-      memoryNotes = notes
-    }
+    applyMemoryStateRefresh(memoryRefresh, clearsMissing: false)
   }
 
-  private func applyRuntimeLaunchMemoryState(_ memoryRefresh: MemoryStateRefresh) {
-    memoryStatus = memoryRefresh.status
-    memoryNotes = memoryRefresh.notes ?? []
+  private func applyMemoryStateRefresh(
+    _ memoryRefresh: MemoryStateRefresh,
+    clearsMissing: Bool
+  ) {
+    if clearsMissing || memoryRefresh.status != nil {
+      memoryStatus = memoryRefresh.status
+    }
+    if clearsMissing || memoryRefresh.notes != nil {
+      memoryNotes = memoryRefresh.notes ?? []
+    }
   }
 
   private func memoryActionSnapshot() -> MemoryActionSnapshot {
