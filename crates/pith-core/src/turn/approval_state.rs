@@ -21,8 +21,8 @@ pub(crate) fn approvals_for_thread(
   thread_id: &str,
 ) -> Vec<ApprovalRequest> {
   let mut approvals = context
-    .pending_approvals
-    .values()
+    .execution_state
+    .pending_approvals()
     .filter(|approval| approval.thread_id == thread_id)
     .map(|approval| ApprovalRequest {
       id: approval.id.clone(),

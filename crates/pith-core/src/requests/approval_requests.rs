@@ -49,7 +49,11 @@ pub fn prepare_approval_respond(
     ));
   }
 
-  let Some(approval) = context.pending_approvals.get(&params.approval_id).cloned() else {
+  let Some(approval) = context
+    .execution_state
+    .pending_approval(&params.approval_id)
+    .cloned()
+  else {
     return Err(JsonRpcResponse::error(
       request.id,
       -32030,
@@ -85,7 +89,9 @@ pub fn prepare_approval_respond(
     ));
   };
   thread.summary.status = format!("Resolving approval {}", approval.id);
-  context.pending_approvals.remove(&params.approval_id);
+  context
+    .execution_state
+    .remove_pending_approval(&params.approval_id);
 
   Ok(PreparedApprovalRespond {
     request_id: request.id,

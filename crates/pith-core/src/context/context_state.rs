@@ -10,6 +10,7 @@ use crate::approval_state::stored_approval_record;
 use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
+use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_memory::RuntimeMemoryState;
 use crate::runtime_plugins::RuntimePluginState;
@@ -51,24 +52,26 @@ impl RuntimeContext {
         .collect(),
       workspace_state: RuntimeWorkspaceState::new(persisted_workspace),
       plugin_state: RuntimePluginState::new(plugin_roots, plugin_install_root, plugins),
-      pending_approvals: persisted_pending_approvals
-        .into_iter()
-        .map(|approval| {
-          (
-            approval.id.clone(),
-            PendingApproval {
-              id: approval.id,
-              thread_id: approval.thread_id,
-              action: approval.action,
-              title: approval.title,
-              relative_path: approval.relative_path,
-              content: approval.content,
-              command: approval.command,
-            },
-          )
-        })
-        .collect(),
-      active_turns: HashMap::new(),
+      execution_state: RuntimeExecutionState::new(
+        persisted_pending_approvals
+          .into_iter()
+          .map(|approval| {
+            (
+              approval.id.clone(),
+              PendingApproval {
+                id: approval.id,
+                thread_id: approval.thread_id,
+                action: approval.action,
+                title: approval.title,
+                relative_path: approval.relative_path,
+                content: approval.content,
+                command: approval.command,
+              },
+            )
+          })
+          .collect(),
+        HashMap::new(),
+      ),
       enforce_model_readiness: true,
       sequences: RuntimeSequenceState::new(next_thread_number, next_approval_number),
     })
@@ -89,8 +92,7 @@ impl RuntimeContext {
         plugin_install_root,
         load_plugin_catalog(&plugin_roots).unwrap_or_default(),
       ),
-      pending_approvals: HashMap::new(),
-      active_turns: HashMap::new(),
+      execution_state: RuntimeExecutionState::empty(),
       enforce_model_readiness: false,
       sequences: RuntimeSequenceState::new(1, 1),
     }
@@ -121,8 +123,8 @@ impl RuntimeContext {
     };
 
     let approvals = self
-      .pending_approvals
-      .values()
+      .execution_state
+      .pending_approvals()
       .cloned()
       .map(stored_approval_record)
       .collect::<Vec<_>>();

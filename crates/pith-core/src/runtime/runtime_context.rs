@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
 use pith_model_runtime::LocalModelRuntime;
 use pith_storage::RuntimeStore;
 
-use crate::active_turns::ActiveTurn;
-use crate::approval_types::PendingApproval;
+use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_identity::RuntimeIdentity;
 use crate::runtime_memory::RuntimeMemoryState;
 use crate::runtime_plugins::RuntimePluginState;
@@ -21,8 +18,7 @@ pub struct RuntimeContext {
   pub(crate) threads: Vec<StoredThread>,
   pub(crate) workspace_state: RuntimeWorkspaceState,
   pub(crate) plugin_state: RuntimePluginState,
-  pub(crate) pending_approvals: HashMap<String, PendingApproval>,
-  pub(crate) active_turns: HashMap<String, ActiveTurn>,
+  pub(crate) execution_state: RuntimeExecutionState,
   pub(crate) enforce_model_readiness: bool,
   pub(crate) sequences: RuntimeSequenceState,
 }

@@ -1,5 +1,6 @@
 pub(crate) mod protocol_adapters;
 pub(crate) mod runtime_context;
+pub(crate) mod runtime_execution;
 pub(crate) mod runtime_identity;
 pub(crate) mod runtime_memory;
 pub(crate) mod runtime_plugins;

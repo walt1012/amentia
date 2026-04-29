@@ -124,9 +124,7 @@ pub fn complete_prepared_turn_start(
     .map(|turn| turn.id.clone());
 
   if let Some(approval) = output.pending_approval.clone() {
-    context
-      .pending_approvals
-      .insert(approval.id.clone(), approval);
+    context.execution_state.insert_pending_approval(approval);
   }
 
   let Some(thread) = context
@@ -145,9 +143,7 @@ pub fn complete_prepared_turn_start(
   thread.items.extend(output.items.clone());
 
   if let Some(active_turn) = output.pending_active_turn {
-    context
-      .active_turns
-      .insert(active_turn.id.clone(), active_turn);
+    context.execution_state.insert_active_turn(active_turn);
   }
 
   if let Err(error) = context.persist_runtime_state() {

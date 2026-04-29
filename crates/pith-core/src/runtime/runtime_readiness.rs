@@ -16,8 +16,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let workspace_thread_count = count_workspace_threads(context);
   let thread_ready = workspace_thread_count > 0;
   let first_request_sent = has_first_request(context);
-  let pending_approval_count = context.pending_approvals.len();
-  let active_turn_count = context.active_turns.len();
+  let pending_approval_count = context.execution_state.pending_approval_count();
+  let active_turn_count = context.execution_state.active_turn_count();
   let sandbox_status = context
     .workspace_state
     .current
@@ -308,11 +308,11 @@ fn readiness_metrics(
     ),
     (
       "pendingApprovalCount".to_string(),
-      context.pending_approvals.len().to_string(),
+      context.execution_state.pending_approval_count().to_string(),
     ),
     (
       "activeTurnCount".to_string(),
-      context.active_turns.len().to_string(),
+      context.execution_state.active_turn_count().to_string(),
     ),
     (
       "workspaceThreadCount".to_string(),

@@ -3,7 +3,6 @@ use pith_protocol::{
   ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem,
 };
 
-use crate::active_turns::active_turn_id_for_thread;
 use crate::approval_state::approvals_for_thread;
 use crate::request_params::parse_required_params;
 use crate::thread_state::StoredThread;
@@ -62,7 +61,9 @@ pub(crate) fn handle_thread_read(
       thread: thread.summary.clone(),
       items: thread.items.clone(),
       pending_approvals: approvals_for_thread(context, &thread.summary.id),
-      active_turn_id: active_turn_id_for_thread(&context.active_turns, &thread.summary.id),
+      active_turn_id: context
+        .execution_state
+        .active_turn_id_for_thread(&thread.summary.id),
     },
   )
 }

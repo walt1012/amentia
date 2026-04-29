@@ -7,8 +7,7 @@ use pith_protocol::{
 };
 
 use crate::active_turns::{
-  active_turn_id_for_thread, compute_streamed_char_count, streaming_progress_label,
-  update_streaming_item,
+  compute_streamed_char_count, streaming_progress_label, update_streaming_item,
 };
 use crate::approval_state::approvals_for_thread;
 use crate::request_params::parse_required_params;
@@ -17,7 +16,7 @@ use crate::text_utils::take_characters;
 use crate::thread_summary::refresh_thread_summary_note;
 
 pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpcNotification>> {
-  let active_turn_ids = context.active_turns.keys().cloned().collect::<Vec<_>>();
+  let active_turn_ids = context.execution_state.active_turn_ids();
   let mut notifications = vec![];
   let mut did_update = false;
 
@@ -47,7 +46,11 @@ pub(crate) fn handle_turn_cancel(
     Err(response) => return response,
   };
 
-  let Some(active_turn_snapshot) = context.active_turns.get(&params.turn_id).cloned() else {
+  let Some(active_turn_snapshot) = context
+    .execution_state
+    .active_turn(&params.turn_id)
+    .cloned()
+  else {
     return JsonRpcResponse::error(request.id, -32040, "Turn is not active");
   };
 
@@ -60,7 +63,7 @@ pub(crate) fn handle_turn_cancel(
   };
   let cancelled_thread_id = thread.summary.id.clone();
 
-  context.active_turns.remove(&params.turn_id);
+  context.execution_state.remove_active_turn(&params.turn_id);
   let partial_content = take_characters(
     &active_turn_snapshot.full_content,
     compute_streamed_char_count(&active_turn_snapshot)
@@ -115,7 +118,9 @@ pub(crate) fn handle_turn_cancel(
       turn_id: params.turn_id,
       thread_id: active_turn_snapshot.thread_id,
       items,
-      active_turn_id: active_turn_id_for_thread(&context.active_turns, &cancelled_thread_id),
+      active_turn_id: context
+        .execution_state
+        .active_turn_id_for_thread(&cancelled_thread_id),
     },
   )
 }
@@ -124,12 +129,7 @@ pub(crate) fn refresh_active_turn_for_thread(
   context: &mut RuntimeContext,
   thread_id: &str,
 ) -> Result<bool> {
-  let active_turn_ids = context
-    .active_turns
-    .values()
-    .filter(|turn| turn.thread_id == thread_id)
-    .map(|turn| turn.id.clone())
-    .collect::<Vec<_>>();
+  let active_turn_ids = context.execution_state.active_turn_ids_for_thread(thread_id);
   let mut did_update = false;
 
   for turn_id in active_turn_ids {
@@ -145,7 +145,11 @@ fn advance_active_turn(
   context: &mut RuntimeContext,
   turn_id: &str,
 ) -> Result<Option<ThreadUpdatedNotificationParams>> {
-  let Some(snapshot) = context.active_turns.get(turn_id).cloned() else {
+  let Some(snapshot) = context
+    .execution_state
+    .active_turn(turn_id)
+    .cloned()
+  else {
     return Ok(None);
   };
   let target_chars = compute_streamed_char_count(&snapshot).min(snapshot.total_chars);
@@ -194,9 +198,9 @@ fn advance_active_turn(
   };
 
   if is_complete {
-    context.active_turns.remove(turn_id);
+    context.execution_state.remove_active_turn(turn_id);
     refresh_thread_summary_note(context, &thread_id)?;
-  } else if let Some(active_turn) = context.active_turns.get_mut(turn_id) {
+  } else if let Some(active_turn) = context.execution_state.active_turn_mut(turn_id) {
     active_turn.emitted_chars = target_chars;
   }
 
@@ -204,6 +208,6 @@ fn advance_active_turn(
     thread: thread_snapshot.0,
     items: thread_snapshot.1,
     pending_approvals: approvals_for_thread(context, &thread_id),
-    active_turn_id: active_turn_id_for_thread(&context.active_turns, &thread_id),
+    active_turn_id: context.execution_state.active_turn_id_for_thread(&thread_id),
   }))
 }
