@@ -34,6 +34,7 @@ impl RuntimeModelState {
     self.runtime = LocalModelRuntime::new_default();
   }
 
+  #[cfg(test)]
   pub(crate) fn set_enforce_readiness(&mut self, enforce_readiness: bool) {
     self.enforce_readiness = enforce_readiness;
   }
