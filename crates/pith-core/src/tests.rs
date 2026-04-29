@@ -67,27 +67,30 @@ fn replace_plugin_catalog(context: &mut RuntimeContext, catalog: Vec<PluginCatal
 }
 
 fn enable_full_access_plugin(context: &mut RuntimeContext) {
-  replace_plugin_catalog(context, vec![PluginCatalogEntry {
-    id: "test-full-access".to_string(),
-    name: "test-full-access".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Test Full Access".to_string(),
-    status: "ready".to_string(),
-    description: "Grants built-in workspace and shell permissions for tests".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec!["prompt_pack:test.full_access".to_string()],
-    permissions: vec![
-      "file.read".to_string(),
-      "file.write".to_string(),
-      "shell.exec".to_string(),
-    ],
-    manifest_path: "tests/test-full-access/pith-plugin.json".to_string(),
-    provenance: "test".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    context,
+    vec![PluginCatalogEntry {
+      id: "test-full-access".to_string(),
+      name: "test-full-access".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Test Full Access".to_string(),
+      status: "ready".to_string(),
+      description: "Grants built-in workspace and shell permissions for tests".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:test.full_access".to_string()],
+      permissions: vec![
+        "file.read".to_string(),
+        "file.write".to_string(),
+        "shell.exec".to_string(),
+      ],
+      manifest_path: "tests/test-full-access/pith-plugin.json".to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 }
 
 #[test]
@@ -785,29 +788,32 @@ fn approval_respond_writes_file_after_approval() {
 fn approval_respond_runs_shell_after_approval() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("approval-shell");
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "shell-recorder".to_string(),
-    name: "shell-recorder".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Shell Recorder".to_string(),
-    status: "ready".to_string(),
-    description: "Shell access plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: false,
-    capabilities: vec![
-      "hook:shell.recorder".to_string(),
-      "tool:shell.timeline".to_string(),
-    ],
-    permissions: vec!["shell.exec".to_string()],
-    manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-      .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
-      .display()
-      .to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "shell-recorder".to_string(),
+      name: "shell-recorder".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Shell Recorder".to_string(),
+      status: "ready".to_string(),
+      description: "Shell access plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: false,
+      capabilities: vec![
+        "hook:shell.recorder".to_string(),
+        "tool:shell.timeline".to_string(),
+      ],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
   fs::write(workspace.join("marker.txt"), "shell target\n").expect("write shell marker");
 
   let _ = handle_request(
@@ -1121,23 +1127,26 @@ fn thread_turns_stay_bound_to_the_thread_workspace() {
 #[test]
 fn plugin_set_enabled_updates_runtime_catalog() {
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "workspace-notes".to_string(),
-    name: "workspace-notes".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Workspace Notes".to_string(),
-    status: "ready".to_string(),
-    description: "Test plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: false,
-    default_enabled: false,
-    capabilities: vec!["prompt_pack:workspace.notes".to_string()],
-    permissions: vec!["file.read".to_string()],
-    manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Test plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: false,
+      default_enabled: false,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let response = handle_request(
     &mut context,
@@ -1202,23 +1211,26 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
     "workspace-notes",
     "Workspace Notes",
   );
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "workspace-notes".to_string(),
-    name: "workspace-notes".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Workspace Notes".to_string(),
-    status: "ready".to_string(),
-    description: "bundled plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec!["prompt_pack:workspace.notes".to_string()],
-    permissions: vec!["file.read".to_string()],
-    manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "bundled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let response = handle_request(
     &mut context,
@@ -1302,29 +1314,32 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
 #[test]
 fn plugin_command_registry_lists_enabled_command_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "workspace-notes".to_string(),
-    name: "workspace-notes".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Workspace Notes".to_string(),
-    status: "ready".to_string(),
-    description: "Command-enabled plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec![
-      "command:workspace.capture-note".to_string(),
-      "prompt_pack:workspace.notes".to_string(),
-    ],
-    permissions: vec!["file.read".to_string(), "file.write".to_string()],
-    manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-      .join("../../plugins/bundled/workspace-notes/pith-plugin.json")
-      .display()
-      .to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Command-enabled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:workspace.capture-note".to_string(),
+        "prompt_pack:workspace.notes".to_string(),
+      ],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/bundled/workspace-notes/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let response = handle_request(
     &mut context,
@@ -1343,29 +1358,32 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
 #[test]
 fn plugin_hook_registry_lists_enabled_hook_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "shell-recorder".to_string(),
-    name: "shell-recorder".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Shell Recorder".to_string(),
-    status: "ready".to_string(),
-    description: "Hook-enabled plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: false,
-    capabilities: vec![
-      "hook:shell.recorder".to_string(),
-      "tool:shell.timeline".to_string(),
-    ],
-    permissions: vec!["shell.exec".to_string()],
-    manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-      .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
-      .display()
-      .to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "shell-recorder".to_string(),
+      name: "shell-recorder".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Shell Recorder".to_string(),
+      status: "ready".to_string(),
+      description: "Hook-enabled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: false,
+      capabilities: vec![
+        "hook:shell.recorder".to_string(),
+        "tool:shell.timeline".to_string(),
+      ],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let response = handle_request(&mut context, request(methods::PLUGIN_HOOK_REGISTRY, None));
 
@@ -1381,29 +1399,32 @@ fn plugin_hook_registry_lists_enabled_hook_plugins() {
 #[test]
 fn plugin_connector_registry_lists_disabled_connector_plugins() {
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "notion-connector".to_string(),
-    name: "notion-connector".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Notion Connector".to_string(),
-    status: "ready".to_string(),
-    description: "Connector plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: false,
-    default_enabled: false,
-    capabilities: vec![
-      "mcp_server:notion".to_string(),
-      "connector:notion".to_string(),
-    ],
-    permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-    manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-      .join("../../plugins/bundled/notion-connector/pith-plugin.json")
-      .display()
-      .to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-connector".to_string(),
+      name: "notion-connector".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Connector".to_string(),
+      status: "ready".to_string(),
+      description: "Connector plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: false,
+      default_enabled: false,
+      capabilities: vec![
+        "mcp_server:notion".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/bundled/notion-connector/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let response = handle_request(
     &mut context,
@@ -1424,29 +1445,32 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
 fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("plugin-command-run");
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "workspace-notes".to_string(),
-    name: "workspace-notes".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Workspace Notes".to_string(),
-    status: "ready".to_string(),
-    description: "Command-enabled plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec![
-      "command:workspace.capture-note".to_string(),
-      "prompt_pack:workspace.notes".to_string(),
-    ],
-    permissions: vec!["file.read".to_string(), "file.write".to_string()],
-    manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-      .join("../../plugins/bundled/workspace-notes/pith-plugin.json")
-      .display()
-      .to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Command-enabled plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:workspace.capture-note".to_string(),
+        "prompt_pack:workspace.notes".to_string(),
+      ],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../plugins/bundled/workspace-notes/pith-plugin.json")
+        .display()
+        .to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
   fs::write(
     workspace.join("README.md"),
     "Workspace A\nCommand registry path\n",
@@ -1520,51 +1544,54 @@ fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("bundled-plugin-results");
   fs::write(workspace.join("README.md"), "# Bundled Plugin Results\n").expect("write readme");
-  replace_plugin_catalog(&mut context, vec![
-    PluginCatalogEntry {
-      id: "review-assistant".to_string(),
-      name: "review-assistant".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Review Assistant".to_string(),
-      status: "ready".to_string(),
-      description: "Review plugin".to_string(),
-      author_name: Some("Pith".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:review.inspect-diff".to_string()],
-      permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
-      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/bundled/review-assistant/pith-plugin.json")
-        .display()
-        .to_string(),
-      provenance: "bundled".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    },
-    PluginCatalogEntry {
-      id: "shell-recorder".to_string(),
-      name: "shell-recorder".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Shell Recorder".to_string(),
-      status: "ready".to_string(),
-      description: "Shell plugin".to_string(),
-      author_name: Some("Pith".to_string()),
-      enabled: true,
-      default_enabled: false,
-      capabilities: vec![
-        "command:shell.summarize-session".to_string(),
-        "hook:shell.recorder".to_string(),
-      ],
-      permissions: vec!["shell.exec".to_string()],
-      manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
-        .display()
-        .to_string(),
-      provenance: "bundled".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    },
-  ]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![
+      PluginCatalogEntry {
+        id: "review-assistant".to_string(),
+        name: "review-assistant".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Review Assistant".to_string(),
+        status: "ready".to_string(),
+        description: "Review plugin".to_string(),
+        author_name: Some("Pith".to_string()),
+        enabled: true,
+        default_enabled: true,
+        capabilities: vec!["command:review.inspect-diff".to_string()],
+        permissions: vec!["file.read".to_string(), "model.invoke".to_string()],
+        manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+          .join("../../plugins/bundled/review-assistant/pith-plugin.json")
+          .display()
+          .to_string(),
+        provenance: "bundled".to_string(),
+        validation_error: None,
+        validation_hint: None,
+      },
+      PluginCatalogEntry {
+        id: "shell-recorder".to_string(),
+        name: "shell-recorder".to_string(),
+        version: "0.1.0".to_string(),
+        display_name: "Shell Recorder".to_string(),
+        status: "ready".to_string(),
+        description: "Shell plugin".to_string(),
+        author_name: Some("Pith".to_string()),
+        enabled: true,
+        default_enabled: false,
+        capabilities: vec![
+          "command:shell.summarize-session".to_string(),
+          "hook:shell.recorder".to_string(),
+        ],
+        permissions: vec!["shell.exec".to_string()],
+        manifest_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+          .join("../../plugins/bundled/shell-recorder/pith-plugin.json")
+          .display()
+          .to_string(),
+        provenance: "bundled".to_string(),
+        validation_error: None,
+        validation_hint: None,
+      },
+    ],
+  );
 
   let _ = handle_request(
     &mut context,
@@ -1639,23 +1666,26 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
     create_temp_plugin_bundle("plugin-command-contract", "prompt-only", "Prompt Only");
   let workspace = create_temp_workspace("plugin-command-contract-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "prompt-only".to_string(),
-    name: "prompt-only".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Prompt Only".to_string(),
-    status: "ready".to_string(),
-    description: "Prompt-only command plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec!["command:prompt-only.run".to_string()],
-    permissions: vec!["file.read".to_string()],
-    manifest_path: plugin_manifest.display().to_string(),
-    provenance: "test".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "prompt-only".to_string(),
+      name: "prompt-only".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Prompt Only".to_string(),
+      status: "ready".to_string(),
+      description: "Prompt-only command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:prompt-only.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let _ = handle_request(
     &mut context,
@@ -1702,23 +1732,26 @@ fn file_reads_require_plugin_permission() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("permission-read");
   fs::write(workspace.join("README.md"), "# Permission Gate\n").expect("write readme");
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "shell-recorder".to_string(),
-    name: "shell-recorder".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Shell Recorder".to_string(),
-    status: "ready".to_string(),
-    description: "No file access".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: false,
-    default_enabled: false,
-    capabilities: vec!["hook:shell.recorder".to_string()],
-    permissions: vec!["shell.exec".to_string()],
-    manifest_path: "plugins/bundled/shell-recorder/pith-plugin.json".to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "shell-recorder".to_string(),
+      name: "shell-recorder".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Shell Recorder".to_string(),
+      status: "ready".to_string(),
+      description: "No file access".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: false,
+      default_enabled: false,
+      capabilities: vec!["hook:shell.recorder".to_string()],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: "plugins/bundled/shell-recorder/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let _ = handle_request(
     &mut context,
@@ -1764,23 +1797,26 @@ fn file_reads_require_plugin_permission() {
 fn shell_requests_require_plugin_permission_before_approval() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("permission-shell");
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "workspace-notes".to_string(),
-    name: "workspace-notes".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Workspace Notes".to_string(),
-    status: "ready".to_string(),
-    description: "No shell access".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec!["prompt_pack:workspace.notes".to_string()],
-    permissions: vec!["file.read".to_string(), "file.write".to_string()],
-    manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "No shell access".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let _ = handle_request(
     &mut context,
@@ -1829,23 +1865,26 @@ fn shell_requests_require_plugin_permission_before_approval() {
 fn approval_resolution_rechecks_plugin_permissions() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("approval-permission-recheck");
-  replace_plugin_catalog(&mut context, vec![PluginCatalogEntry {
-    id: "workspace-notes".to_string(),
-    name: "workspace-notes".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Workspace Notes".to_string(),
-    status: "ready".to_string(),
-    description: "Write access plugin".to_string(),
-    author_name: Some("Pith".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec!["prompt_pack:workspace.notes".to_string()],
-    permissions: vec!["file.read".to_string(), "file.write".to_string()],
-    manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
-    provenance: "bundled".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  }]);
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "workspace-notes".to_string(),
+      name: "workspace-notes".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Workspace Notes".to_string(),
+      status: "ready".to_string(),
+      description: "Write access plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["prompt_pack:workspace.notes".to_string()],
+      permissions: vec!["file.read".to_string(), "file.write".to_string()],
+      manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
+      provenance: "bundled".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
 
   let _ = handle_request(
     &mut context,
