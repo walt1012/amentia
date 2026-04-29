@@ -60,7 +60,7 @@ pub(crate) fn handle_turn_cancel(
   else {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   };
-  let cancelled_thread_id = thread.summary.id.clone();
+  let cancelled_thread_id = thread.id().to_string();
 
   context.execution_state.remove_active_turn(&params.turn_id);
   let partial_content = take_characters(
@@ -69,14 +69,14 @@ pub(crate) fn handle_turn_cancel(
       .min(active_turn_snapshot.full_content.chars().count()),
   );
   update_streaming_item(
-    &mut thread.items,
+    thread.items_mut(),
     &params.turn_id,
     &partial_content,
     "cancelled",
     partial_content.chars().count(),
     active_turn_snapshot.total_chars,
   );
-  thread.summary.status = "Turn cancelled".to_string();
+  thread.mark_cancelled();
 
   let items = vec![
     TimelineItem {
@@ -101,7 +101,7 @@ pub(crate) fn handle_turn_cancel(
       ])),
     },
   ];
-  thread.items.extend(items.clone());
+  thread.append_items(items.clone());
 
   if let Err(error) = context.persist_threads() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
@@ -170,7 +170,7 @@ fn advance_active_turn(
     };
 
     update_streaming_item(
-      &mut thread.items,
+      thread.items_mut(),
       turn_id,
       &streamed_content,
       streaming_status,
@@ -179,15 +179,12 @@ fn advance_active_turn(
     );
 
     if is_complete {
-      thread.summary.status = "Ready".to_string();
+      thread.mark_ready();
     } else {
-      thread.summary.status = format!(
-        "Streaming assistant response ({})",
-        streaming_progress_label(target_chars, snapshot.total_chars)
-      );
+      thread.mark_streaming_progress(streaming_progress_label(target_chars, snapshot.total_chars));
     }
 
-    (thread.summary.clone(), thread.items.clone())
+    thread.snapshot()
   };
 
   if is_complete {

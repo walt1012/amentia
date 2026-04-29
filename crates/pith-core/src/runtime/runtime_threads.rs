@@ -33,13 +33,11 @@ impl RuntimeThreadState {
   }
 
   pub(crate) fn find(&self, thread_id: &str) -> Option<&StoredThread> {
-    self.iter().find(|thread| thread.summary.id == thread_id)
+    self.iter().find(|thread| thread.id() == thread_id)
   }
 
   pub(crate) fn find_mut(&mut self, thread_id: &str) -> Option<&mut StoredThread> {
-    self
-      .iter_mut()
-      .find(|thread| thread.summary.id == thread_id)
+    self.iter_mut().find(|thread| thread.id() == thread_id)
   }
 
   pub(crate) fn count_for_workspace(&self, workspace: &WorkspaceSummary) -> usize {
@@ -49,7 +47,7 @@ impl RuntimeThreadState {
   pub(crate) fn has_user_message_for_workspace(&self, workspace: &WorkspaceSummary) -> bool {
     self
       .iter_for_workspace(workspace)
-      .any(|thread| thread.items.iter().any(|item| item.kind == "userMessage"))
+      .any(|thread| thread.items().iter().any(|item| item.kind == "userMessage"))
   }
 
   fn iter_for_workspace<'a>(
@@ -67,8 +65,7 @@ impl RuntimeThreadState {
 
 fn thread_workspace_root(thread: &StoredThread) -> Option<&str> {
   thread
-    .workspace
-    .as_ref()
-    .or(thread.summary.workspace.as_ref())
+    .workspace()
+    .or(thread.summary().workspace.as_ref())
     .map(|workspace| workspace.root_path.as_str())
 }

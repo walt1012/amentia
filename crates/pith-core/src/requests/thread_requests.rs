@@ -19,7 +19,7 @@ pub(crate) fn handle_thread_list(
       threads: context
         .thread_state
         .iter()
-        .map(|thread| thread.summary.clone())
+        .map(|thread| thread.summary().clone())
         .collect(),
     },
   )
@@ -54,12 +54,12 @@ pub(crate) fn handle_thread_read(
   JsonRpcResponse::success(
     request.id,
     &ThreadReadResult {
-      thread: thread.summary.clone(),
-      items: thread.items.clone(),
-      pending_approvals: approvals_for_thread(context, &thread.summary.id),
+      thread: thread.summary().clone(),
+      items: thread.items().to_vec(),
+      pending_approvals: approvals_for_thread(context, thread.id()),
       active_turn_id: context
         .execution_state
-        .active_turn_id_for_thread(&thread.summary.id),
+        .active_turn_id_for_thread(thread.id()),
     },
   )
 }
@@ -86,12 +86,9 @@ pub(crate) fn handle_thread_start(
     content: format!("{} is ready for local runtime messages.", thread.title),
     attributes: None,
   }];
-  context.thread_state.push(StoredThread {
-    summary: thread.clone(),
-    turn_count: 0,
-    items,
-    workspace,
-  });
+  context
+    .thread_state
+    .push(StoredThread::new(thread.clone(), 0, items, workspace));
 
   if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());

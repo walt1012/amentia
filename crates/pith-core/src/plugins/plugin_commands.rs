@@ -306,27 +306,18 @@ fn complete_plugin_command_items(
     input,
     mut items,
   } = output;
-  let (thread_id, turn_id) = {
+  let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&requested_thread_id) else {
       return Err((-32004, "Thread not found".to_string()));
     };
 
-    if thread.workspace.is_none() {
-      thread.workspace = workspace.clone();
-    }
-    thread.turn_count += 1;
-    let turn_id = format!("{}-turn-{}", thread.summary.id, thread.turn_count);
-    thread.summary.status = match &thread.workspace {
-      Some(workspace) => format!(
-        "{} plugin command(s) in {}",
-        thread.turn_count, workspace.display_name
-      ),
-      None => format!("{} plugin command(s)", thread.turn_count),
-    };
-    thread.items.extend(items.clone());
-    thread.summary.status = "Ready".to_string();
-    (thread.summary.id.clone(), turn_id)
+    let prepared_thread = thread.begin_plugin_command(workspace.clone());
+    thread.append_items(items.clone());
+    thread.mark_ready();
+    prepared_thread
   };
+  let thread_id = prepared_thread.thread_id;
+  let turn_id = prepared_thread.turn_id;
 
   context
     .persist_runtime_state()
@@ -343,7 +334,7 @@ fn complete_plugin_command_items(
   ) {
     Ok(Some(memory_item)) => {
       if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-        thread.items.push(memory_item.clone());
+        thread.push_item(memory_item.clone());
       }
       items.push(memory_item);
       context
@@ -356,7 +347,7 @@ fn complete_plugin_command_items(
     Err(error) => {
       let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
       if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-        thread.items.push(warning_item.clone());
+        thread.push_item(warning_item.clone());
       }
       items.push(warning_item);
       context
@@ -594,7 +585,7 @@ fn maybe_capture_plugin_command_memory(
       context
         .thread_state
         .find(thread_id)
-        .and_then(|thread| thread.workspace.clone())
+        .and_then(|thread| thread.workspace_cloned())
     })
     .or_else(|| context.workspace_state.current_cloned());
   let Some(workspace) = workspace else {

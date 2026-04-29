@@ -39,10 +39,10 @@ impl RuntimePersistenceState {
     let threads = thread_state
       .iter()
       .map(|thread| StoredThreadRecord {
-        summary: thread.summary.clone(),
-        turn_count: thread.turn_count,
-        items: thread.items.clone(),
-        workspace: thread.workspace.clone(),
+        summary: thread.summary().clone(),
+        turn_count: thread.turn_count(),
+        items: thread.items().to_vec(),
+        workspace: thread.workspace_cloned(),
       })
       .collect::<Vec<_>>();
 

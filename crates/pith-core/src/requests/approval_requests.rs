@@ -73,18 +73,15 @@ pub fn prepare_approval_respond(
       "Thread not found",
     ));
   };
-  if thread.workspace.is_none() {
-    thread.workspace = current_workspace;
-    thread.summary.workspace = thread.workspace.clone();
-  }
-  let Some(workspace) = thread.workspace.clone() else {
+  thread.bind_workspace_if_missing(current_workspace);
+  let Some(workspace) = thread.workspace_cloned() else {
     return Err(JsonRpcResponse::error(
       request.id,
       -32031,
       "Open a workspace for this thread before resolving approvals",
     ));
   };
-  thread.summary.status = format!("Resolving approval {}", approval.id);
+  thread.mark_resolving_approval(&approval.id);
   context
     .execution_state
     .remove_pending_approval(&params.approval_id);
@@ -315,8 +312,8 @@ pub fn complete_prepared_approval_respond(
   let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
     return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
   };
-  thread.items.extend(items.clone());
-  thread.summary.status = "Ready".to_string();
+  thread.append_items(items.clone());
+  thread.mark_ready();
 
   if let Err(error) = context.persist_resolved_approval(&approval, &decision) {
     return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
@@ -352,7 +349,7 @@ pub fn complete_prepared_approval_respond(
       }
     }
     if let Some(thread) = context.thread_state.find_mut(&approval.thread_id) {
-      thread.items.extend(hook_memory_items.clone());
+      thread.append_items(hook_memory_items.clone());
     }
     items.extend(hook_memory_items);
 

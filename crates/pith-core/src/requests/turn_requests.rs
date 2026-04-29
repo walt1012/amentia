@@ -34,7 +34,7 @@ pub fn prepare_turn_start(
   let model_runtime = context.model_state.snapshot();
   let memory_notes = context.memory_state.notes().to_vec();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
-  let (thread_id, turn_id, thread_title, workspace) = {
+  let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&params.thread_id) else {
       return Err(JsonRpcResponse::error(
         request.id,
@@ -43,41 +43,24 @@ pub fn prepare_turn_start(
       ));
     };
 
-    thread.turn_count += 1;
-    let turn_count = thread.turn_count;
-    if thread.workspace.is_none() {
-      thread.workspace = current_workspace.clone();
-      thread.summary.workspace = thread.workspace.clone();
-    }
-    let workspace = thread.workspace.clone();
-    thread.summary.status = match &workspace {
-      Some(workspace) => format!("{turn_count} turn(s) in {}", workspace.display_name),
-      None => format!("{turn_count} turn(s)"),
-    };
-
-    (
-      thread.summary.id.clone(),
-      format!("{}-turn-{turn_count}", thread.summary.id),
-      thread.summary.title.clone(),
-      workspace,
-    )
+    thread.begin_turn(current_workspace)
   };
   let action = turn_actions::prepare_turn_action(
     context,
     &params.message,
-    workspace.as_ref(),
+    prepared_thread.workspace.as_ref(),
     &permission_sources,
   );
 
   Ok(PreparedTurnStart {
     request_id: request.id,
     snapshot: PreparedTurnSnapshot {
-      thread_id,
-      turn_id,
-      thread_title,
+      thread_id: prepared_thread.thread_id,
+      turn_id: prepared_thread.turn_id,
+      thread_title: prepared_thread.thread_title,
       display_message: params.message.clone(),
       message: params.message,
-      workspace,
+      workspace: prepared_thread.workspace,
       model_runtime,
       memory_notes,
       permission_sources,
@@ -116,11 +99,11 @@ pub fn complete_prepared_turn_start(
   };
 
   if active_turn_id.is_some() {
-    thread.summary.status = "Streaming assistant response".to_string();
-  } else if !thread.summary.status.contains("approval") {
-    thread.summary.status = "Ready".to_string();
+    thread.mark_streaming();
+  } else if !thread.status_contains("approval") {
+    thread.mark_ready();
   }
-  thread.items.extend(output.items.clone());
+  thread.append_items(output.items.clone());
 
   if let Some(active_turn) = output.pending_active_turn {
     context.execution_state.insert_active_turn(active_turn);

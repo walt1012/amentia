@@ -15,16 +15,15 @@ pub(crate) fn refresh_thread_summary_note(
   };
 
   let pending_approvals = approvals_for_thread(context, thread_id);
-  let workspace_snapshot = thread.workspace.clone();
+  let workspace_snapshot = thread.workspace_cloned();
   let scope = thread
-    .workspace
-    .as_ref()
+    .workspace()
     .map(|workspace| workspace.display_name.clone())
     .unwrap_or_else(|| "global".to_string());
 
   context.upsert_memory_note(
     format!("memory-thread-summary-{thread_id}"),
-    format!("Thread summary: {}", thread.summary.title),
+    format!("Thread summary: {}", thread.title()),
     build_thread_summary_body(&thread, workspace_snapshot.as_ref(), &pending_approvals),
     scope,
     "thread".to_string(),
@@ -47,21 +46,21 @@ fn build_thread_summary_body(
     .map(|workspace| format!("Workspace: {}.", workspace.display_name))
     .unwrap_or_else(|| "Workspace: unavailable.".to_string());
   let latest_user = thread
-    .items
+    .items()
     .iter()
     .rev()
     .find(|item| item.kind == "userMessage")
     .map(|item| truncate_text(&item.content, 180))
     .unwrap_or_else(|| "No user request captured yet.".to_string());
   let latest_assistant = thread
-    .items
+    .items()
     .iter()
     .rev()
     .find(|item| item.kind == "assistantMessage")
     .map(|item| truncate_text(&item.content, 180))
     .unwrap_or_else(|| "No assistant update captured yet.".to_string());
   let recent_activity = thread
-    .items
+    .items()
     .iter()
     .rev()
     .filter(|item| item.kind != "system")
@@ -76,7 +75,7 @@ fn build_thread_summary_body(
 
   format!(
     "{workspace_line}\nStatus: {}.\nLast user request: {}.\nLatest assistant update: {}.\nPending approvals: {}.\n{}",
-    thread.summary.status,
+    thread.status(),
     latest_user,
     latest_assistant,
     pending_approvals.len(),
