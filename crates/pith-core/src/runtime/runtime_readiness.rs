@@ -3,11 +3,23 @@ use std::path::Path;
 
 use pith_model_runtime::llama_cpp_timeout_seconds;
 use pith_protocol::{RuntimeReadinessCheck, RuntimeReadinessResult};
-use pith_sandbox::workspace_required_status;
+use pith_sandbox::{workspace_required_status, NativeSandboxStatus};
 use pith_tools::{shell_command_timeout_seconds, shell_sandbox_status};
 
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionCounts;
+
+struct ReadinessMetricsInput<'a> {
+  context: &'a RuntimeContext,
+  model_status: &'a str,
+  model_pack_id: &'a str,
+  context_window: &'a str,
+  enabled_plugin_count: usize,
+  sandbox_status: &'a NativeSandboxStatus,
+  workspace_thread_count: usize,
+  first_request_sent: bool,
+  execution_counts: RuntimeExecutionCounts,
+}
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
   let model_health = context.model_state.health();
@@ -72,17 +84,17 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       plugin_check(enabled_plugin_count, context.plugin_state.catalog_len()),
       bounded_runtime_check(),
     ],
-    metrics: readiness_metrics(
+    metrics: readiness_metrics(ReadinessMetricsInput {
       context,
-      &model_health.status,
-      &model_health.pack_id,
-      &context_window,
+      model_status: &model_health.status,
+      model_pack_id: &model_health.pack_id,
+      context_window: &context_window,
       enabled_plugin_count,
-      &sandbox_status,
+      sandbox_status: &sandbox_status,
       workspace_thread_count,
       first_request_sent,
       execution_counts,
-    ),
+    }),
   }
 }
 
@@ -206,7 +218,7 @@ fn plugin_check(enabled_plugin_count: usize, plugin_count: usize) -> RuntimeRead
   }
 }
 
-fn native_sandbox_check(status: &pith_sandbox::NativeSandboxStatus) -> RuntimeReadinessCheck {
+fn native_sandbox_check(status: &NativeSandboxStatus) -> RuntimeReadinessCheck {
   let check_status = if status.active {
     "ready"
   } else if status.available {
@@ -284,17 +296,19 @@ fn execution_control_detail(pending_approval_count: usize, active_turn_count: us
   "Risky actions require approval, and turns can be cancelled.".to_string()
 }
 
-fn readiness_metrics(
-  context: &RuntimeContext,
-  model_status: &str,
-  model_pack_id: &str,
-  context_window: &str,
-  enabled_plugin_count: usize,
-  sandbox_status: &pith_sandbox::NativeSandboxStatus,
-  workspace_thread_count: usize,
-  first_request_sent: bool,
-  execution_counts: RuntimeExecutionCounts,
-) -> HashMap<String, String> {
+fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<String, String> {
+  let ReadinessMetricsInput {
+    context,
+    model_status,
+    model_pack_id,
+    context_window,
+    enabled_plugin_count,
+    sandbox_status,
+    workspace_thread_count,
+    first_request_sent,
+    execution_counts,
+  } = input;
+
   let mut metrics = HashMap::from([
     ("modelStatus".to_string(), model_status.to_string()),
     ("modelPackId".to_string(), model_pack_id.to_string()),
