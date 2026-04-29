@@ -46,8 +46,7 @@ pub(crate) fn handle_turn_cancel(
 
   let Some(active_turn_snapshot) = context
     .execution_state
-    .active_turn(&params.turn_id)
-    .cloned()
+    .active_turn_snapshot(&params.turn_id)
   else {
     return JsonRpcResponse::error(request.id, -32040, "Turn is not active");
   };
@@ -143,7 +142,7 @@ fn advance_active_turn(
   context: &mut RuntimeContext,
   turn_id: &str,
 ) -> Result<Option<ThreadUpdatedNotificationParams>> {
-  let Some(snapshot) = context.execution_state.active_turn(turn_id).cloned() else {
+  let Some(snapshot) = context.execution_state.active_turn_snapshot(turn_id) else {
     return Ok(None);
   };
   let target_chars = snapshot.streamed_char_count();
@@ -190,8 +189,10 @@ fn advance_active_turn(
   if is_complete {
     context.execution_state.remove_active_turn(turn_id);
     refresh_thread_summary_note(context, &thread_id)?;
-  } else if let Some(active_turn) = context.execution_state.active_turn_mut(turn_id) {
-    active_turn.update_emitted_chars(target_chars);
+  } else {
+    context
+      .execution_state
+      .update_active_turn_emitted(turn_id, target_chars);
   }
 
   Ok(Some(ThreadUpdatedNotificationParams {

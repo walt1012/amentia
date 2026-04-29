@@ -65,12 +65,20 @@ impl RuntimeExecutionState {
     active_turn_id_for_thread(&self.active_turns, thread_id)
   }
 
-  pub(crate) fn active_turn(&self, id: &str) -> Option<&ActiveTurn> {
-    self.active_turns.get(id)
+  pub(crate) fn active_turn_snapshot(&self, id: &str) -> Option<ActiveTurn> {
+    self.active_turns.get(id).cloned()
   }
 
-  pub(crate) fn active_turn_mut(&mut self, id: &str) -> Option<&mut ActiveTurn> {
-    self.active_turns.get_mut(id)
+  pub(crate) fn update_active_turn_emitted(
+    &mut self,
+    id: &str,
+    emitted_chars: usize,
+  ) -> bool {
+    let Some(active_turn) = self.active_turns.get_mut(id) else {
+      return false;
+    };
+    active_turn.update_emitted_chars(emitted_chars);
+    true
   }
 
   pub(crate) fn insert_active_turn(&mut self, turn: ActiveTurn) {
