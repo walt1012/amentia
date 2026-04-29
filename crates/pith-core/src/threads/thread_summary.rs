@@ -10,11 +10,7 @@ pub(crate) fn refresh_thread_summary_note(
   context: &mut RuntimeContext,
   thread_id: &str,
 ) -> Result<()> {
-  let Some(thread) = context
-    .thread_state
-    .find(thread_id)
-    .cloned()
-  else {
+  let Some(thread) = context.thread_state.find(thread_id).cloned() else {
     return Ok(());
   };
 

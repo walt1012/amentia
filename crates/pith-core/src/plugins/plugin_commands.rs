@@ -99,8 +99,7 @@ pub fn prepare_plugin_command_run(
     ));
   }
 
-  let Some(thread) = context.thread_state.find(&params.thread_id)
-  else {
+  let Some(thread) = context.thread_state.find(&params.thread_id) else {
     return Err(JsonRpcResponse::error(
       request.id,
       -32004,
@@ -308,8 +307,7 @@ fn complete_plugin_command_items(
     mut items,
   } = output;
   let (thread_id, turn_id) = {
-    let Some(thread) = context.thread_state.find_mut(&requested_thread_id)
-    else {
+    let Some(thread) = context.thread_state.find_mut(&requested_thread_id) else {
       return Err((-32004, "Thread not found".to_string()));
     };
 

@@ -66,8 +66,7 @@ pub fn prepare_approval_respond(
   let permission_sources = granted_permission_sources(&context.plugin_state.catalog);
   let plugins = context.plugin_state.catalog.clone();
 
-  let Some(thread) = context.thread_state.find_mut(&approval.thread_id)
-  else {
+  let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
     return Err(JsonRpcResponse::error(
       request.id,
       -32004,
@@ -313,8 +312,7 @@ pub fn complete_prepared_approval_respond(
     hook_memory_captures,
   } = completed.output;
 
-  let Some(thread) = context.thread_state.find_mut(&approval.thread_id)
-  else {
+  let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
     return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
   };
   thread.items.extend(items.clone());
