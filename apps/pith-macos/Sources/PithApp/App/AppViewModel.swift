@@ -879,7 +879,7 @@ final class AppViewModel: ObservableObject {
     pendingTurnRequest.bind(task: task, requestID: requestID)
   }
 
-  private func beginPendingLocalTurn(threadID: String) -> String {
+  private func beginPendingLocalTurn(threadID: String) -> UUID {
     draftMessage = ""
     runtimeDetail = "Generating local response..."
     return pendingTurnRequest.begin(threadID: threadID)
