@@ -43,6 +43,20 @@ extension AppViewModel {
     MemoryActionPlanner.canSave(memoryActionSnapshot())
   }
 
+  func refreshMemoryState() async {
+    let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
+    applyMemoryStateRefresh(memoryRefresh, clearsMissing: false)
+  }
+
+  func applyMemoryStateRefresh(
+    _ memoryRefresh: MemoryStateRefresh,
+    clearsMissing: Bool
+  ) {
+    updateMemoryState { state in
+      state.apply(memoryRefresh, clearsMissing: clearsMissing)
+    }
+  }
+
   private func memorySnapshot() -> MemorySnapshot {
     MemorySnapshot(
       status: memoryStatus,

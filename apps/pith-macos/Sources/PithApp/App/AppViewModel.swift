@@ -286,20 +286,6 @@ final class AppViewModel: ObservableObject {
     localModelReadinessState = nextState
   }
 
-  func refreshMemoryState() async {
-    let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
-    applyMemoryStateRefresh(memoryRefresh, clearsMissing: false)
-  }
-
-  func applyMemoryStateRefresh(
-    _ memoryRefresh: MemoryStateRefresh,
-    clearsMissing: Bool
-  ) {
-    updateMemoryState { state in
-      state.apply(memoryRefresh, clearsMissing: clearsMissing)
-    }
-  }
-
   func updateMemoryState(_ update: (inout MemoryRuntimeState) -> Void) {
     var nextState = memoryState
     update(&nextState)
