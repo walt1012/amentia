@@ -4,8 +4,6 @@ use super::turn_approval_execution::{execute_shell_turn, execute_write_turn};
 use super::turn_workspace_execution::{
   execute_list_turn, execute_no_workspace_turn, execute_read_turn, execute_search_turn,
 };
-use crate::active_turns::ActiveTurn;
-use crate::approval_types::PendingApproval;
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
 
 pub(crate) fn execute_prepared_turn_snapshot(
