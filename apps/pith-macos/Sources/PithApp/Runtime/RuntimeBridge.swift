@@ -15,8 +15,6 @@ final class RuntimeBridge {
   private var errorReaderTask: Task<Void, Never>?
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
-  private static let defaultRequestTimeoutNanoseconds: UInt64 = 30_000_000_000
-  private static let turnRequestTimeoutNanoseconds: UInt64 = 210_000_000_000
 
   private struct ActiveLocalModelSelection {
     let manifestPath: String
@@ -124,7 +122,7 @@ final class RuntimeBridge {
       while !Task.isCancelled {
         let line: String
         do {
-          line = try Self.readLine(from: handle)
+          line = try RuntimeBridgeLineReader.readLine(from: handle)
         } catch {
           self.failPendingResponses(with: error)
           self.handleProcessTermination(
@@ -199,19 +197,6 @@ final class RuntimeBridge {
     }
   }
 
-  private func requestTimeoutNanoseconds(for method: String) -> UInt64 {
-    switch method {
-    case "turn/start", "plugin/commandRun":
-      return Self.turnRequestTimeoutNanoseconds
-    default:
-      return Self.defaultRequestTimeoutNanoseconds
-    }
-  }
-
-  private func requestTimeoutSeconds(from timeoutNanoseconds: UInt64) -> Int {
-    max(Int(timeoutNanoseconds / 1_000_000_000), 1)
-  }
-
   private func takePendingResponse(requestID: Int) -> CheckedContinuation<Data, Error>? {
     stateQueue.sync {
       pendingResponses.removeValue(forKey: requestID)
@@ -223,7 +208,7 @@ final class RuntimeBridge {
       return
     }
 
-    let seconds = requestTimeoutSeconds(from: timeoutNanoseconds)
+    let seconds = RuntimeBridgeRequestPolicy.timeoutSeconds(from: timeoutNanoseconds)
     let error = RuntimeError.requestTimedOut(method: method, seconds: seconds)
     continuation.resume(throwing: error)
     stopRuntimeAfterRequestTimeout(method: method, seconds: seconds)
@@ -236,13 +221,9 @@ final class RuntimeBridge {
 
     let detail = "Runtime request \(method) was cancelled."
     continuation.resume(throwing: RuntimeError.rpc(detail))
-    if shouldStopRuntimeAfterCancelledRequest(method: method) {
+    if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterCancelledRequest(method: method) {
       stopRuntimeAfterRequestCancellation(method: method)
     }
-  }
-
-  private func shouldStopRuntimeAfterCancelledRequest(method: String) -> Bool {
-    method == "turn/start" || method == "plugin/commandRun"
   }
 
   private func stopRuntimeAfterRequestCancellation(method: String) {
@@ -402,7 +383,7 @@ final class RuntimeBridge {
       nextRequestID += 1
       return id
     }
-    let timeoutNanoseconds = requestTimeoutNanoseconds(for: method)
+    let timeoutNanoseconds = RuntimeBridgeRequestPolicy.timeoutNanoseconds(for: method)
     let timeoutTask = Task { [weak self] in
       do {
         try await Task.sleep(nanoseconds: timeoutNanoseconds)
@@ -469,27 +450,4 @@ final class RuntimeBridge {
     return result
   }
 
-  private static func readLine(from handle: FileHandle) throws -> String {
-    var data = Data()
-
-    while true {
-      let chunk = try handle.read(upToCount: 1) ?? Data()
-
-      if chunk.isEmpty {
-        break
-      }
-
-      if chunk == Data([0x0A]) {
-        break
-      }
-
-      data.append(chunk)
-    }
-
-    guard !data.isEmpty else {
-      throw RuntimeError.invalidResponse
-    }
-
-    return String(decoding: data, as: UTF8.self)
-  }
 }
