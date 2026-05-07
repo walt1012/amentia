@@ -11,7 +11,6 @@ use super::runtime_persistence_environment::{
 };
 use super::runtime_persistence_execution::{
   resolve_approval as resolve_approval_in_store,
-  save_pending_approvals as save_pending_approvals_to_store,
   save_runtime_state as save_runtime_state_to_store,
 };
 use super::runtime_persistence_plugins::{
@@ -56,13 +55,6 @@ impl RuntimePersistenceState {
 
   pub(crate) fn save_threads(&self, thread_state: &RuntimeThreadState) -> Result<()> {
     save_threads_to_store(self.store(), thread_state)
-  }
-
-  pub(crate) fn save_pending_approvals(
-    &self,
-    execution_state: &RuntimeExecutionState,
-  ) -> Result<()> {
-    save_pending_approvals_to_store(self.store(), execution_state)
   }
 
   pub(crate) fn save_runtime_state(

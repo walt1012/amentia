@@ -125,7 +125,7 @@ mod tests {
       .save_plugin_enabled("notion", true)
       .expect("save plugin state");
 
-    let bootstrap = RuntimePersistenceState::load_bootstrap(store).expect("load bootstrap");
+    let mut bootstrap = RuntimePersistenceState::load_bootstrap(store).expect("load bootstrap");
 
     assert_eq!(bootstrap.thread_state.count_for_workspace(&workspace), 1);
     assert_eq!(
