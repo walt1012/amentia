@@ -49,3 +49,103 @@ pub(super) fn load_bootstrap(store: RuntimeStore) -> Result<RuntimePersistenceBo
     plugin_states: persisted_plugin_states,
   })
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use std::env;
+  use std::fs;
+  use std::time::{SystemTime, UNIX_EPOCH};
+
+  use pith_memory::MemoryNote;
+  use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+  use pith_storage::{StoredApprovalRecord, StoredThreadRecord};
+
+  fn create_temp_directory(label: &str) -> std::path::PathBuf {
+    let unique = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("system time")
+      .as_nanos();
+    let path = env::temp_dir().join(format!("pith-core-persistence-{label}-{unique}"));
+    fs::create_dir_all(&path).expect("create temp directory");
+    path
+  }
+
+  #[test]
+  fn bootstrap_maps_storage_records_into_runtime_state() {
+    let root = create_temp_directory("bootstrap");
+    let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+    let workspace = WorkspaceSummary {
+      root_path: "/tmp/pith".to_string(),
+      display_name: "pith".to_string(),
+    };
+    let thread = StoredThreadRecord {
+      summary: ThreadSummary {
+        id: "thread-1".to_string(),
+        title: "Thread".to_string(),
+        status: "ready".to_string(),
+        workspace: Some(workspace.clone()),
+      },
+      turn_count: 2,
+      items: vec![TimelineItem {
+        kind: "system".to_string(),
+        title: "Thread Ready".to_string(),
+        content: "Ready".to_string(),
+        attributes: None,
+      }],
+      workspace: Some(workspace.clone()),
+    };
+    let approval = StoredApprovalRecord {
+      id: "approval-3".to_string(),
+      thread_id: "thread-1".to_string(),
+      action: "write_file".to_string(),
+      title: "Write docs/output.txt".to_string(),
+      relative_path: "docs/output.txt".to_string(),
+      content: Some("hello".to_string()),
+      command: None,
+    };
+    let note = MemoryNote {
+      id: "memory-4".to_string(),
+      title: "Opened workspace pith".to_string(),
+      body: "Pith opened the workspace at /tmp/pith.".to_string(),
+      scope: "pith".to_string(),
+      source: "workspace".to_string(),
+      created_at: 4,
+      tags: vec!["workspace".to_string()],
+    };
+
+    store.save_workspace(&workspace).expect("save workspace");
+    store.save_threads(&[thread]).expect("save thread records");
+    store
+      .save_pending_approvals(&[approval])
+      .expect("save pending approval records");
+    store.save_memory_note(&note).expect("save memory note");
+    store
+      .save_plugin_enabled("notion", true)
+      .expect("save plugin state");
+
+    let bootstrap = RuntimePersistenceState::load_bootstrap(store).expect("load bootstrap");
+
+    assert_eq!(bootstrap.thread_state.count_for_workspace(&workspace), 1);
+    assert_eq!(
+      bootstrap
+        .workspace_state
+        .current()
+        .map(|workspace| workspace.display_name.as_str()),
+      Some("pith")
+    );
+    assert_eq!(
+      bootstrap
+        .execution_state
+        .approval_requests_for_thread("thread-1")
+        .len(),
+      1
+    );
+    assert_eq!(bootstrap.memory_state.note_count(), 1);
+    assert_eq!(bootstrap.plugin_states.get("notion"), Some(&true));
+    assert_eq!(bootstrap.sequence_state.next_approval_id(), "approval-4");
+
+    fs::remove_dir_all(root).expect("cleanup temp directory");
+  }
+}
