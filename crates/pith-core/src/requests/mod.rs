@@ -1,3 +1,5 @@
+pub(crate) mod approval_completion;
+pub(crate) mod approval_execution;
 pub(crate) mod approval_requests;
 pub(crate) mod memory_requests;
 pub(crate) mod model_requests;
