@@ -1,4 +1,4 @@
-use pith_memory::{retrieve_relevant_notes, MemoryNote};
+use pith_memory::{retrieve_ranked_notes, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 
 use super::context_memory_budget::context_budget_for_model;
@@ -33,20 +33,23 @@ pub fn pack_relevant_memory_notes(
   context_window_tokens: usize,
 ) -> ContextPack {
   let budget_char_count = budget_char_count.max(MIN_NOTE_BODY_CHARS);
-  let candidates = retrieve_relevant_notes(
+  let candidates = retrieve_ranked_notes(
     memory_notes,
     workspace_scope,
     query,
     CONTEXT_MEMORY_CANDIDATE_LIMIT,
   );
   let mut notes = Vec::new();
+  let mut retrieval_scores = Vec::new();
   let mut estimated_char_count = 0;
   let mut truncated_note_count = 0;
 
-  for note in candidates.iter().take(CONTEXT_MEMORY_NOTE_LIMIT) {
+  for candidate in candidates.iter().take(CONTEXT_MEMORY_NOTE_LIMIT) {
+    let note = &candidate.note;
     let full_note_size = estimated_note_char_count(note);
     if estimated_char_count + full_note_size <= budget_char_count {
       notes.push(note.clone());
+      retrieval_scores.push(candidate.score);
       estimated_char_count += full_note_size;
       continue;
     }
@@ -58,6 +61,7 @@ pub fn pack_relevant_memory_notes(
     estimated_char_count += estimated_note_char_count(&compacted_note);
     truncated_note_count += 1;
     notes.push(compacted_note);
+    retrieval_scores.push(candidate.score);
     break;
   }
 
@@ -65,6 +69,7 @@ pub fn pack_relevant_memory_notes(
 
   ContextPack {
     notes,
+    retrieval_scores,
     context_window_tokens,
     source_note_count: memory_notes.len(),
     candidate_note_count: candidates.len(),
@@ -132,6 +137,7 @@ mod tests {
     assert_eq!(pack.mode(), "compacted");
     assert_eq!(pack.context_window_tokens, 4096);
     assert_eq!(pack.candidate_note_count, 6);
+    assert_eq!(pack.retrieval_scores.len(), pack.notes.len());
   }
 
   #[test]

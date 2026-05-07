@@ -87,6 +87,7 @@ mod tests {
   fn prompt_observation_compacts_large_tool_output_for_small_models() {
     let context_pack = ContextPack {
       notes: vec![],
+      retrieval_scores: vec![],
       context_window_tokens: 4096,
       source_note_count: 0,
       candidate_note_count: 0,

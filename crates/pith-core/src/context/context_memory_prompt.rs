@@ -57,6 +57,17 @@ pub fn merge_context_pack_attributes(
     "contextBudgetChars".to_string(),
     context_pack.budget_char_count.to_string(),
   );
+  if !context_pack.retrieval_scores.is_empty() {
+    attributes.insert(
+      "contextRetrievalScores".to_string(),
+      context_pack
+        .retrieval_scores
+        .iter()
+        .map(|score| score.to_string())
+        .collect::<Vec<_>>()
+        .join(", "),
+    );
+  }
 }
 
 fn format_memory_prompt(memory_notes: &[MemoryNote]) -> String {
@@ -114,6 +125,7 @@ mod tests {
   fn context_prompt_uses_compact_local_model_header() {
     let context_pack = ContextPack {
       notes: vec![],
+      retrieval_scores: vec![],
       context_window_tokens: 4096,
       source_note_count: 0,
       candidate_note_count: 0,
@@ -142,6 +154,7 @@ mod tests {
         created_at: 1,
         tags: vec!["user".to_string()],
       }],
+      retrieval_scores: vec![42],
       context_window_tokens: 4096,
       source_note_count: 1,
       candidate_note_count: 1,
@@ -160,5 +173,12 @@ mod tests {
     assert!(note_line.contains("[pith/user]"));
     assert!(note_line.ends_with("..."));
     assert!(note_line.chars().count() < 430);
+
+    let mut attributes = HashMap::new();
+    merge_context_pack_attributes(&mut attributes, &context_pack);
+    assert_eq!(
+      attributes.get("contextRetrievalScores"),
+      Some(&"42".to_string())
+    );
   }
 }

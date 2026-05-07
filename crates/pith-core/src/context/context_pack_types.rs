@@ -3,6 +3,7 @@ use pith_memory::MemoryNote;
 #[derive(Debug, Clone)]
 pub struct ContextPack {
   pub notes: Vec<MemoryNote>,
+  pub retrieval_scores: Vec<usize>,
   pub context_window_tokens: usize,
   pub source_note_count: usize,
   pub candidate_note_count: usize,
