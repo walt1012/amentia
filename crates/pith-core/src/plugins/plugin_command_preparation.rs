@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-
-use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
-use pith_protocol::{
-  JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, TimelineItem, WorkspaceSummary,
-};
+use pith_plugin_host::build_command_registry;
+use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams};
 
 use super::plugin_command_builtins::is_supported_builtin_execution;
+use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{PluginCommandSnapshot, PreparedPluginCommandRun};
-use crate::context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
+use crate::context_compaction::pack_memory_context;
 use crate::request_params::parse_required_params;
 use crate::RuntimeContext;
 
@@ -94,52 +91,4 @@ pub fn prepare_plugin_command_run(
       memory_notes,
     },
   })
-}
-
-fn build_plugin_command_timeline_item(
-  command: &HostPluginCommandEntry,
-  workspace: Option<&WorkspaceSummary>,
-  input: Option<&str>,
-  context_pack: &ContextPack,
-) -> TimelineItem {
-  let mut attributes = HashMap::from([
-    ("commandId".to_string(), command.command_id.clone()),
-    ("pluginId".to_string(), command.plugin_id.clone()),
-    (
-      "pluginDisplayName".to_string(),
-      command.plugin_display_name.clone(),
-    ),
-    ("sourcePath".to_string(), command.source_path.clone()),
-  ]);
-  if let Some(workspace) = workspace {
-    attributes.insert(
-      "workspaceDisplayName".to_string(),
-      workspace.display_name.clone(),
-    );
-  }
-  if let Some(input) = input {
-    attributes.insert("commandInput".to_string(), input.to_string());
-  }
-  if let Some(execution_kind) = command.execution_kind.as_ref() {
-    attributes.insert("executionKind".to_string(), execution_kind.clone());
-  }
-  merge_context_pack_attributes(&mut attributes, context_pack);
-
-  let workspace_label = workspace
-    .map(|entry| entry.display_name.clone())
-    .unwrap_or_else(|| "No Workspace".to_string());
-  let mut content = format!(
-    "Run {} from {} in {}.\n{}",
-    command.title, command.plugin_display_name, workspace_label, command.description
-  );
-  if let Some(input) = input {
-    content.push_str(&format!("\nCommand input: {input}"));
-  }
-
-  TimelineItem {
-    kind: "pluginCommand".to_string(),
-    title: command.title.clone(),
-    content,
-    attributes: Some(attributes),
-  }
 }

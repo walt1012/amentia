@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
-use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
-use pith_protocol::TimelineItem;
-
 use super::plugin_command_builtins::execute_builtin_plugin_command;
+use super::plugin_command_timeline::{
+  build_plugin_assistant_timeline_item, build_plugin_result_timeline_item,
+};
 use super::plugin_command_types::{
   CompletedPluginCommandRun, PluginCommandOutput, PluginCommandSnapshot, PreparedPluginCommandRun,
 };
@@ -32,22 +30,11 @@ fn execute_plugin_command_snapshot(
     &builtin_result.execution_kind,
     builtin_result.content.clone(),
   );
-  let assistant_item = TimelineItem {
-    kind: "assistantMessage".to_string(),
-    title: "Assistant".to_string(),
-    content: format!(
-      "{} completed through {}.\n\n{}",
-      snapshot.command.title, snapshot.command.plugin_display_name, builtin_result.content
-    ),
-    attributes: Some(HashMap::from([
-      ("pluginId".to_string(), snapshot.command.plugin_id.clone()),
-      ("commandId".to_string(), snapshot.command.command_id.clone()),
-      (
-        "executionKind".to_string(),
-        builtin_result.execution_kind.clone(),
-      ),
-    ])),
-  };
+  let assistant_item = build_plugin_assistant_timeline_item(
+    &snapshot.command,
+    &builtin_result.execution_kind,
+    &builtin_result.content,
+  );
   Ok(PluginCommandOutput {
     thread_id: snapshot.thread_id,
     command: snapshot.command,
@@ -55,22 +42,4 @@ fn execute_plugin_command_snapshot(
     input: snapshot.input,
     items: vec![snapshot.command_item, result_item, assistant_item],
   })
-}
-
-fn build_plugin_result_timeline_item(
-  command: &HostPluginCommandEntry,
-  execution_kind: &str,
-  content: String,
-) -> TimelineItem {
-  TimelineItem {
-    kind: "pluginResult".to_string(),
-    title: format!("{} Result", command.title),
-    content,
-    attributes: Some(HashMap::from([
-      ("pluginId".to_string(), command.plugin_id.clone()),
-      ("commandId".to_string(), command.command_id.clone()),
-      ("executionKind".to_string(), execution_kind.to_string()),
-      ("sourcePath".to_string(), command.source_path.clone()),
-    ])),
-  }
 }

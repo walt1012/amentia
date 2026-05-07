@@ -9,6 +9,7 @@ pub(crate) mod plugin_command_git;
 pub(crate) mod plugin_command_memory;
 pub(crate) mod plugin_command_preparation;
 pub(crate) mod plugin_command_text;
+pub(crate) mod plugin_command_timeline;
 pub(crate) mod plugin_command_types;
 pub(crate) mod plugin_commands;
 pub(crate) mod plugin_hook_memory;
