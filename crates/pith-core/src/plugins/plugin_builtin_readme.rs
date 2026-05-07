@@ -1,0 +1,42 @@
+use std::path::Path;
+
+use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+use pith_protocol::WorkspaceSummary;
+use pith_tools::read_file;
+
+use super::plugin_command_text::compact_text_preview;
+
+pub(super) fn build_workspace_readme_note_result(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+) -> String {
+  if !command
+    .permissions
+    .iter()
+    .any(|permission| permission == "file.read")
+  {
+    return "This command cannot read workspace files because its plugin does not declare `file.read`."
+      .to_string();
+  }
+  let Some(workspace) = workspace else {
+    return "Open a workspace before capturing a workspace note.".to_string();
+  };
+
+  match read_file(Path::new(&workspace.root_path), "README.md", 4096) {
+    Ok(result) => {
+      let summary = compact_text_preview(&result.content, 10, 900);
+      let input_summary = input
+        .map(|value| format!("\nOperator input: {}", value.trim()))
+        .unwrap_or_default();
+      format!(
+        "Workspace note candidate from README.md in {}.{}\n\n{}",
+        workspace.display_name, input_summary, summary
+      )
+    }
+    Err(error) => format!(
+      "Could not capture a README-based note in {}: {}",
+      workspace.display_name, error
+    ),
+  }
+}
