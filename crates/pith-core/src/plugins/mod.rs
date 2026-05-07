@@ -13,6 +13,8 @@ pub(crate) mod plugin_command_timeline;
 pub(crate) mod plugin_command_types;
 pub(crate) mod plugin_commands;
 pub(crate) mod plugin_hook_memory;
+pub(crate) mod plugin_hook_memory_body;
+pub(crate) mod plugin_hook_memory_tags;
 pub(crate) mod plugin_hook_shell;
 pub(crate) mod plugin_hook_types;
 pub(crate) mod plugin_hooks;
