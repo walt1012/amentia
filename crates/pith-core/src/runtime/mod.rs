@@ -4,6 +4,8 @@ pub(crate) mod protocol_model_adapters;
 pub(crate) mod protocol_plugin_adapters;
 pub(crate) mod runtime_context;
 pub(crate) mod runtime_execution;
+pub(crate) mod runtime_execution_approvals;
+pub(crate) mod runtime_execution_turns;
 pub(crate) mod runtime_identity;
 pub(crate) mod runtime_memory;
 pub(crate) mod runtime_model;
