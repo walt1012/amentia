@@ -18,7 +18,7 @@ SWIFT_SOURCE_ROOT = (
   / "Sources"
   / "PithApp"
 )
-SWIFT_CATALOG_NAME = "LocalModelCatalog.swift"
+SWIFT_LOCAL_MODELS_DIR = SWIFT_SOURCE_ROOT / "LocalModels"
 REQUIRED_KEYS = {
   "id",
   "display_name",
@@ -117,9 +117,7 @@ def main() -> int:
 
 
 def load_swift_catalog_entries() -> list[dict[str, object]]:
-  swift_catalog_path = resolve_swift_catalog_path()
-
-  text = swift_catalog_path.read_text(encoding="utf-8")
+  text = load_swift_local_model_sources()
   default_id = extract_swift_string_constant(text, "defaultFirstUseModelID")
   blocks = re.findall(
     r"LocalModelCatalogItem\((.*?)\n\s*\)",
@@ -136,20 +134,15 @@ def load_swift_catalog_entries() -> list[dict[str, object]]:
   return entries
 
 
-def resolve_swift_catalog_path() -> Path:
-  if not SWIFT_SOURCE_ROOT.is_dir():
-    raise SystemExit(f"Swift source root missing: {SWIFT_SOURCE_ROOT}")
+def load_swift_local_model_sources() -> str:
+  if not SWIFT_LOCAL_MODELS_DIR.is_dir():
+    raise SystemExit(f"Swift local model source root missing: {SWIFT_LOCAL_MODELS_DIR}")
 
-  matches = sorted(SWIFT_SOURCE_ROOT.rglob(SWIFT_CATALOG_NAME))
+  matches = sorted(SWIFT_LOCAL_MODELS_DIR.glob("*.swift"))
   if not matches:
-    raise SystemExit(f"Swift model catalog missing under: {SWIFT_SOURCE_ROOT}")
-  if len(matches) > 1:
-    relative_matches = [str(path.relative_to(REPO_ROOT)) for path in matches]
-    raise SystemExit(
-      "Swift model catalog path is ambiguous: " + ", ".join(relative_matches)
-    )
+    raise SystemExit(f"Swift local model sources missing under: {SWIFT_LOCAL_MODELS_DIR}")
 
-  return matches[0]
+  return "\n".join(path.read_text(encoding="utf-8") for path in matches)
 
 
 def parse_swift_catalog_entry(block: str, default_id: str) -> dict[str, object]:
