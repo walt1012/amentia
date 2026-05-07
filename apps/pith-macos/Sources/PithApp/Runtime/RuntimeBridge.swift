@@ -5,18 +5,12 @@ final class RuntimeBridge {
   var onThreadUpdated: ThreadUpdatedHandler?
   var onConnectionStateChanged: ConnectionStateHandler?
 
-  private var process: Process?
-  private var inputHandle: FileHandle?
-  private var outputHandle: FileHandle?
-  private var nextRequestID: Int = 1
-  private let stateQueue = DispatchQueue(label: "pith.runtime.bridge.state")
-  private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
-  private var readerTask: Task<Void, Never>?
-  private var errorReaderTask: Task<Void, Never>?
+  private var processSession: RuntimeBridgeProcessSession?
   private let messageDispatcher = RuntimeBridgeMessageDispatcher()
+  private let pendingResponses = RuntimeBridgePendingResponses()
 
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
-    if process == nil || process?.isRunning != true {
+    if processSession?.isRunning != true {
       resetProcessState()
       try launchProcess()
     }
@@ -69,66 +63,29 @@ final class RuntimeBridge {
 
   func stopRuntime(detail: String = "Runtime stopped.") {
     failPendingResponses(with: RuntimeError.rpc(detail))
-    if let process, process.isRunning {
-      process.terminationHandler = nil
-      process.terminate()
-    }
     resetProcessState()
     updateConnectionState(.disconnected, detail: detail)
   }
 
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
-    let process = Process()
-    let stdinPipe = Pipe()
-    let stdoutPipe = Pipe()
-    let stderrPipe = Pipe()
-
-    process.executableURL = executableURL
-    process.arguments = []
-    process.environment = runtimeEnvironment()
-    process.standardInput = stdinPipe
-    process.standardOutput = stdoutPipe
-    process.standardError = stderrPipe
-    let processIdentifier = ObjectIdentifier(process)
-    process.terminationHandler = { [weak self] process in
-      let detail = "Runtime exited with status \(process.terminationStatus)."
-      self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
-    }
-
-    try process.run()
-
-    self.process = process
-    inputHandle = stdinPipe.fileHandleForWriting
-    outputHandle = stdoutPipe.fileHandleForReading
-    startReaderLoop(with: stdoutPipe.fileHandleForReading, processIdentifier: processIdentifier)
-    startErrorReaderLoop(with: stderrPipe.fileHandleForReading)
-  }
-
-  private func startReaderLoop(with handle: FileHandle, processIdentifier: ObjectIdentifier) {
-    readerTask?.cancel()
-    readerTask = Task.detached(priority: .userInitiated) { [weak self] in
-      guard let self else {
-        return
+    processSession = try RuntimeBridgeProcessSession(
+      executableURL: executableURL,
+      environment: runtimeEnvironment(),
+      onLine: { [weak self] data in
+        self?.handleIncomingMessage(data)
+      },
+      onReadError: { [weak self] processIdentifier, error in
+        self?.failPendingResponses(with: error)
+        self?.handleProcessTermination(
+          processIdentifier: processIdentifier,
+          detail: "Runtime disconnected."
+        )
+      },
+      onTermination: { [weak self] processIdentifier, detail in
+        self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
       }
-
-      while !Task.isCancelled {
-        let line: String
-        do {
-          line = try RuntimeBridgeLineReader.readLine(from: handle)
-        } catch {
-          self.failPendingResponses(with: error)
-          self.handleProcessTermination(
-            processIdentifier: processIdentifier,
-            detail: "Runtime disconnected."
-          )
-          return
-        }
-
-        let data = Data(line.utf8)
-        self.handleIncomingMessage(data)
-      }
-    }
+    )
   }
 
   private func handleIncomingMessage(_ data: Data) {
@@ -143,36 +100,8 @@ final class RuntimeBridge {
     }
   }
 
-  private func startErrorReaderLoop(with handle: FileHandle) {
-    errorReaderTask?.cancel()
-    errorReaderTask = Task.detached(priority: .utility) {
-      while !Task.isCancelled {
-        do {
-          let chunk = try handle.read(upToCount: 4096) ?? Data()
-          if chunk.isEmpty {
-            return
-          }
-
-          #if DEBUG
-            if let rawMessage = String(data: chunk, encoding: .utf8) {
-              let message = rawMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-              guard !message.isEmpty else {
-                continue
-              }
-              print("[pith-runtime stderr] \(message)")
-            }
-          #endif
-        } catch {
-          return
-        }
-      }
-    }
-  }
-
   private func takePendingResponse(requestID: Int) -> CheckedContinuation<Data, Error>? {
-    stateQueue.sync {
-      pendingResponses.removeValue(forKey: requestID)
-    }
+    pendingResponses.take(requestID: requestID)
   }
 
   private func handleRequestTimeout(requestID: Int, method: String, timeoutNanoseconds: UInt64) {
@@ -214,27 +143,16 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestBoundary(detail: String) {
     failPendingResponses(with: RuntimeError.rpc(detail))
-    if let process, process.isRunning {
-      process.terminationHandler = nil
-      process.terminate()
-    }
     resetProcessState()
     updateConnectionState(.failed, detail: detail)
   }
 
   private func failPendingResponses(with error: Error) {
-    let continuations = stateQueue.sync {
-      let continuations = Array(pendingResponses.values)
-      pendingResponses.removeAll()
-      return continuations
-    }
-    for continuation in continuations {
-      continuation.resume(throwing: error)
-    }
+    pendingResponses.failAll(with: error)
   }
 
   private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
-    guard let process, ObjectIdentifier(process) == processIdentifier else {
+    guard processSession?.identifier == processIdentifier else {
       return
     }
 
@@ -244,18 +162,8 @@ final class RuntimeBridge {
   }
 
   private func resetProcessState() {
-    readerTask?.cancel()
-    readerTask = nil
-    errorReaderTask?.cancel()
-    errorReaderTask = nil
-
-    if let process, process.isRunning {
-      process.terminationHandler = nil
-    }
-
-    process = nil
-    inputHandle = nil
-    outputHandle = nil
+    processSession?.stop()
+    processSession = nil
   }
 
   private func updateConnectionState(_ state: ConnectionState, detail: String) {
@@ -289,15 +197,11 @@ final class RuntimeBridge {
     method: String,
     params: Params
   ) async throws -> JSONRPCResponse<ResultType> {
-    guard let inputHandle else {
+    guard let inputHandle = processSession?.inputHandle else {
       throw RuntimeError.runtimePipeUnavailable
     }
 
-    let requestID = stateQueue.sync { () -> Int in
-      let id = nextRequestID
-      nextRequestID += 1
-      return id
-    }
+    let requestID = pendingResponses.reserveRequestID()
     let timeoutNanoseconds = RuntimeBridgeRequestPolicy.timeoutNanoseconds(for: method)
     let timeoutTask = Task { [weak self] in
       do {
@@ -319,9 +223,7 @@ final class RuntimeBridge {
     do {
       data = try await withTaskCancellationHandler(operation: {
         try await withCheckedThrowingContinuation { continuation in
-          stateQueue.sync {
-            self.pendingResponses[requestID] = continuation
-          }
+          pendingResponses.store(continuation, requestID: requestID)
 
           do {
             let request = JSONRPCRequest(
