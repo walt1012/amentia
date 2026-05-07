@@ -1,15 +1,11 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
-use pith_memory::{MemoryEvent, MemoryNote};
 use pith_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
 
-use crate::approval_types::PendingApproval;
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_identity::RuntimeIdentity;
-use crate::runtime_memory::{RuntimeMemoryNoteDraft, RuntimeMemoryState};
+use crate::runtime_memory::RuntimeMemoryState;
 use crate::runtime_model::RuntimeModelState;
 use crate::runtime_persistence::RuntimePersistenceState;
 use crate::runtime_plugins::RuntimePluginState;
@@ -58,79 +54,6 @@ impl RuntimeContext {
       execution_state: RuntimeExecutionState::empty(),
       sequence_state: RuntimeSequenceState::new(1, 1),
     }
-  }
-
-  pub(crate) fn persist_threads(&self) -> Result<()> {
-    self.persistence_state.save_threads(&self.thread_state)
-  }
-
-  pub(crate) fn persist_runtime_state(&self) -> Result<()> {
-    self
-      .persistence_state
-      .save_runtime_state(&self.thread_state, &self.execution_state)
-  }
-
-  fn persist_memory_note(&self, note: &MemoryNote) -> Result<()> {
-    self.persistence_state.save_memory_note(note)
-  }
-
-  pub(crate) fn persist_workspace(&self) -> Result<()> {
-    self
-      .persistence_state
-      .save_workspace(self.workspace_state.current())
-  }
-
-  pub(crate) fn persist_resolved_approval(
-    &self,
-    approval: &PendingApproval,
-    decision: &str,
-  ) -> Result<()> {
-    self.persistence_state.resolve_approval(approval, decision)
-  }
-
-  pub(crate) fn remember(&mut self, event: MemoryEvent) -> Result<MemoryNote> {
-    let note = self.memory_state.record_event(event);
-    self.persist_memory_note(&note)?;
-    Ok(note)
-  }
-
-  pub(crate) fn create_memory_note(&mut self, draft: RuntimeMemoryNoteDraft) -> Result<MemoryNote> {
-    let note = self.memory_state.create_note(draft);
-    self.persist_memory_note(&note)?;
-    Ok(note)
-  }
-
-  pub(crate) fn upsert_memory_note(
-    &mut self,
-    id: String,
-    draft: RuntimeMemoryNoteDraft,
-  ) -> Result<MemoryNote> {
-    let note = self.memory_state.upsert_note(id, draft);
-    self.persist_memory_note(&note)?;
-    Ok(note)
-  }
-
-  pub(crate) fn persist_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
-    self
-      .persistence_state
-      .save_plugin_enabled(plugin_id, enabled)
-  }
-
-  pub(crate) fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
-    self.persistence_state.delete_plugin_state(plugin_id)
-  }
-
-  fn persisted_plugin_states(&self) -> Result<HashMap<String, bool>> {
-    self.persistence_state.load_plugin_states()
-  }
-
-  pub(crate) fn refresh_plugins(&mut self) -> Result<()> {
-    let plugin_states = self.persisted_plugin_states()?;
-    self.plugin_state.replace_catalog(apply_plugin_states(
-      load_plugin_catalog(self.plugin_state.roots())?,
-      &plugin_states,
-    ));
-    Ok(())
   }
 }
 

@@ -1,11 +1,14 @@
 pub(crate) mod context_compaction;
+pub(crate) mod context_lifecycle;
+pub(crate) mod context_memory;
 pub(crate) mod context_memory_budget;
 pub(crate) mod context_memory_pack;
 pub(crate) mod context_memory_prompt;
 pub(crate) mod context_memory_selection;
 pub(crate) mod context_observation;
 pub(crate) mod context_pack_types;
-pub(crate) mod context_state;
+pub(crate) mod context_persistence;
+pub(crate) mod context_plugins;
 pub(crate) mod intent_file;
 pub(crate) mod intent_inference;
 pub(crate) mod intent_search;
