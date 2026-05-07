@@ -102,6 +102,56 @@ extension AppViewModel {
     }
   }
 
+  func runPluginCommand(commandID: String) {
+    let snapshot = pluginActionSnapshot()
+    if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
+      runtimeDetail = TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
+      return
+    }
+
+    guard PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot),
+          let threadID = selectedThreadID
+    else {
+      return
+    }
+
+    runtimeDetail = TimelineEventPresenter.runningPluginCommandDetail
+    let requestID = pendingTurnRequest.begin(threadID: threadID)
+
+    let task = Task {
+      defer {
+        pendingTurnRequest.clear(requestID: requestID)
+      }
+      do {
+        let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
+        await applyRuntimeTurnResult(result, refreshMemory: true)
+      } catch {
+        if Task.isCancelled {
+          runtimeDetail = TimelineEventPresenter.pendingPluginCommandCancelledDetail
+          refreshThreadPreview(
+            threadID: threadID,
+            preview: TimelineEventPresenter.cancelledPluginCommandPreview
+          )
+          appendEntry(
+            to: threadID,
+            TimelineEventPresenter.pluginCommandCancelled()
+          )
+          return
+        }
+        runtimeDetail = error.localizedDescription
+        appendEntry(
+          to: threadID,
+          TimelineEventPresenter.pluginCommandFailed(error: error)
+        )
+      }
+    }
+    pendingTurnRequest.bind(task: task, requestID: requestID)
+  }
+
+  func canRunPluginCommand(commandID: String) -> Bool {
+    PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: pluginActionSnapshot())
+  }
+
   func pluginCountSummary() -> String {
     PluginDashboardPresenter.pluginCountSummary(pluginDashboardSnapshot())
   }
