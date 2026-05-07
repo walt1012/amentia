@@ -10,8 +10,7 @@ use super::runtime_persistence_environment::{
   save_memory_note as save_memory_note_to_store, save_workspace as save_workspace_to_store,
 };
 use super::runtime_persistence_execution::{
-  resolve_approval as resolve_approval_in_store,
-  save_runtime_state as save_runtime_state_to_store,
+  resolve_approval as resolve_approval_in_store, save_runtime_state as save_runtime_state_to_store,
 };
 use super::runtime_persistence_plugins::{
   delete_plugin_state as delete_plugin_state_from_store,
