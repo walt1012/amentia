@@ -3,25 +3,13 @@ use std::collections::HashMap;
 use anyhow::Result;
 use pith_memory::MemoryNote;
 use pith_protocol::WorkspaceSummary;
-use pith_storage::{RuntimeStore, StoredApprovalRecord, StoredThreadRecord};
+use pith_storage::RuntimeStore;
 
+use super::runtime_persistence_bootstrap::{load_bootstrap, RuntimePersistenceBootstrap};
+use super::runtime_persistence_records::{stored_approval_record, stored_thread_record};
 use crate::approval_types::PendingApproval;
 use crate::runtime_execution::RuntimeExecutionState;
-use crate::runtime_memory::RuntimeMemoryState;
-use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_threads::RuntimeThreadState;
-use crate::runtime_workspace::RuntimeWorkspaceState;
-use crate::thread_state::StoredThread;
-
-pub(crate) struct RuntimePersistenceBootstrap {
-  pub(crate) persistence_state: RuntimePersistenceState,
-  pub(crate) memory_state: RuntimeMemoryState,
-  pub(crate) thread_state: RuntimeThreadState,
-  pub(crate) workspace_state: RuntimeWorkspaceState,
-  pub(crate) execution_state: RuntimeExecutionState,
-  pub(crate) sequence_state: RuntimeSequenceState,
-  pub(crate) plugin_states: HashMap<String, bool>,
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct RuntimePersistenceState {
@@ -46,35 +34,7 @@ impl RuntimePersistenceState {
   }
 
   pub(crate) fn load_bootstrap(store: RuntimeStore) -> Result<RuntimePersistenceBootstrap> {
-    let persisted_threads = store.load_threads()?;
-    let persisted_workspace = store.load_workspace()?;
-    let persisted_pending_approvals = store.load_pending_approvals()?;
-    let persisted_memory_notes = store.load_memory_notes(128)?;
-    let persisted_plugin_states = store.load_plugin_states()?;
-    let next_thread_number = persisted_threads.len() + 1;
-    let next_approval_number = store.next_approval_sequence()?;
-    let next_memory_number = store.next_memory_sequence()?;
-
-    Ok(RuntimePersistenceBootstrap {
-      persistence_state: RuntimePersistenceState::persistent(store),
-      memory_state: RuntimeMemoryState::new(next_memory_number, persisted_memory_notes),
-      thread_state: RuntimeThreadState::new(
-        persisted_threads
-          .into_iter()
-          .map(stored_thread_record)
-          .collect(),
-      ),
-      workspace_state: RuntimeWorkspaceState::new(persisted_workspace),
-      execution_state: RuntimeExecutionState::new(
-        persisted_pending_approvals
-          .into_iter()
-          .map(|approval| (approval.id.clone(), pending_approval(approval)))
-          .collect(),
-        HashMap::new(),
-      ),
-      sequence_state: RuntimeSequenceState::new(next_thread_number, next_approval_number),
-      plugin_states: persisted_plugin_states,
-    })
+    load_bootstrap(store)
   }
 
   pub(crate) fn store(&self) -> Option<&RuntimeStore> {
@@ -88,12 +48,7 @@ impl RuntimePersistenceState {
 
     let threads = thread_state
       .iter()
-      .map(|thread| StoredThreadRecord {
-        summary: thread.summary().clone(),
-        turn_count: thread.turn_count(),
-        items: thread.items().to_vec(),
-        workspace: thread.workspace_cloned(),
-      })
+      .map(stored_thread_record)
       .collect::<Vec<_>>();
 
     store.save_threads(&threads)
@@ -182,39 +137,6 @@ impl RuntimePersistenceState {
   }
 }
 
-fn stored_approval_record(approval: PendingApproval) -> StoredApprovalRecord {
-  StoredApprovalRecord {
-    id: approval.id,
-    thread_id: approval.thread_id,
-    action: approval.action,
-    title: approval.title,
-    relative_path: approval.relative_path,
-    content: approval.content,
-    command: approval.command,
-  }
-}
-
-fn stored_thread_record(thread: StoredThreadRecord) -> StoredThread {
-  StoredThread::new(
-    thread.summary,
-    thread.turn_count,
-    thread.items,
-    thread.workspace,
-  )
-}
-
-fn pending_approval(approval: StoredApprovalRecord) -> PendingApproval {
-  PendingApproval {
-    id: approval.id,
-    thread_id: approval.thread_id,
-    action: approval.action,
-    title: approval.title,
-    relative_path: approval.relative_path,
-    content: approval.content,
-    command: approval.command,
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -224,6 +146,7 @@ mod tests {
   use std::time::{SystemTime, UNIX_EPOCH};
 
   use pith_protocol::{ThreadSummary, TimelineItem};
+  use pith_storage::{StoredApprovalRecord, StoredThreadRecord};
 
   fn create_temp_directory(label: &str) -> std::path::PathBuf {
     let unique = SystemTime::now()
