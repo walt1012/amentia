@@ -5,8 +5,8 @@ use anyhow::{bail, Context, Result};
 use crate::paths::canonical_workspace_root;
 use crate::shell_execution::{run_shell_with_timeout, shell_command_timeout};
 use crate::shell_sandbox::{
-  prepare_shell_sandbox_environment, shell_sandbox_summary as build_shell_sandbox_summary,
-  shell_sandbox_status as build_shell_sandbox_status,
+  prepare_shell_sandbox_environment, shell_sandbox_status as build_shell_sandbox_status,
+  shell_sandbox_summary as build_shell_sandbox_summary,
 };
 use crate::types::{ShellCommandResult, ShellSandboxSummary};
 
