@@ -36,12 +36,7 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
       &plugins,
     )
   } else {
-    execute_denied_approval(
-      &approval,
-      &workspace,
-      &model_runtime,
-      &memory_notes,
-    )
+    execute_denied_approval(&approval, &workspace, &model_runtime, &memory_notes)
   };
 
   events.into_output(approval, decision, workspace)

@@ -50,8 +50,12 @@ pub(super) fn append_approved_shell_execution(
         workspace_display_name: workspace.display_name.clone(),
         command: command.clone(),
       });
-      let (summary, summary_attributes) =
-        summarize_shell_result(model_runtime, memory_notes, &workspace.display_name, &result);
+      let (summary, summary_attributes) = summarize_shell_result(
+        model_runtime,
+        memory_notes,
+        &workspace.display_name,
+        &result,
+      );
       events.push_item(TimelineItem {
         kind: "toolResult".to_string(),
         title: "run_shell result".to_string(),

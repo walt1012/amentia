@@ -32,7 +32,10 @@ pub(super) fn append_approved_write_execution(
   }
 
   let content = approval.content.clone().unwrap_or_default();
-  events.push_item(tool_start_item("write_file", approval.relative_path.clone()));
+  events.push_item(tool_start_item(
+    "write_file",
+    approval.relative_path.clone(),
+  ));
 
   match write_file(
     Path::new(&workspace.root_path),
