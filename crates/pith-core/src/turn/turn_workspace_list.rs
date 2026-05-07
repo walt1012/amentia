@@ -5,7 +5,9 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::list_directory;
 
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
-use crate::local_responses::{build_plan_item, format_directory_result, summarize_directory_result};
+use crate::local_responses::{
+  build_plan_item, format_directory_result, summarize_directory_result,
+};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
 
