@@ -13,13 +13,6 @@ final class RuntimeBridge {
   private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
   private var readerTask: Task<Void, Never>?
   private var errorReaderTask: Task<Void, Never>?
-  private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
-  private static let activeModelPathKey = "pith.activeModelPath"
-
-  private struct ActiveLocalModelSelection {
-    let manifestPath: String
-    let modelPath: String
-  }
 
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
     if process == nil || process?.isRunning != true {
@@ -51,27 +44,26 @@ final class RuntimeBridge {
   }
 
   func localPluginInstallRootPath() -> String {
-    appSupportPluginDirectory().path
+    RuntimeBridgeLocalEnvironment.localPluginInstallRootPath()
   }
 
   func localModelStorageRootPath() -> String {
-    appSupportStorageDirectory()
-      .appendingPathComponent("models", isDirectory: true)
-      .path
+    RuntimeBridgeLocalEnvironment.localModelStorageRootPath()
   }
 
   func activeLocalModelPath() -> String? {
-    activeLocalModelSelection()?.modelPath
+    RuntimeBridgeLocalEnvironment.activeLocalModelPath()
   }
 
   func configureActiveLocalModel(manifestPath: String, modelPath: String) {
-    UserDefaults.standard.set(manifestPath, forKey: Self.activeModelManifestPathKey)
-    UserDefaults.standard.set(modelPath, forKey: Self.activeModelPathKey)
+    RuntimeBridgeLocalEnvironment.configureActiveLocalModel(
+      manifestPath: manifestPath,
+      modelPath: modelPath
+    )
   }
 
   func clearActiveLocalModel() {
-    UserDefaults.standard.removeObject(forKey: Self.activeModelManifestPathKey)
-    UserDefaults.standard.removeObject(forKey: Self.activeModelPathKey)
+    RuntimeBridgeLocalEnvironment.clearActiveLocalModel()
   }
 
   func stopRuntime(detail: String = "Runtime stopped.") {
@@ -310,64 +302,7 @@ final class RuntimeBridge {
   }
 
   private func runtimeEnvironment() -> [String: String] {
-    var environment = ProcessInfo.processInfo.environment
-    environment["PITH_DATA_DIR"] = appSupportStorageDirectory().path
-    environment["PITH_LOCAL_PLUGIN_DIR"] = appSupportPluginDirectory().path
-    if let activeModel = activeLocalModelSelection() {
-      environment["PITH_MODEL_PACK_MANIFEST"] = activeModel.manifestPath
-      environment["PITH_MODEL_PATH"] = activeModel.modelPath
-      environment["PITH_LFM_MODEL_PATH"] = activeModel.modelPath
-    }
-    return environment
-  }
-
-  private func activeLocalModelSelection() -> ActiveLocalModelSelection? {
-    let defaults = UserDefaults.standard
-    guard let manifestPath = defaults.string(forKey: Self.activeModelManifestPathKey),
-          !manifestPath.isEmpty,
-          let modelPath = defaults.string(forKey: Self.activeModelPathKey),
-          !modelPath.isEmpty
-    else {
-      return nil
-    }
-
-    let manager = FileManager.default
-    guard manager.fileExists(atPath: manifestPath),
-          manager.fileExists(atPath: modelPath)
-    else {
-      clearActiveLocalModel()
-      return nil
-    }
-
-    guard LocalModelCatalog.isVerifiedInstalledModel(
-      storageRootPath: localModelStorageRootPath(),
-      modelPath: modelPath
-    ) else {
-      clearActiveLocalModel()
-      return nil
-    }
-
-    return ActiveLocalModelSelection(manifestPath: manifestPath, modelPath: modelPath)
-  }
-
-  private func appSupportStorageDirectory() -> URL {
-    let baseDirectory =
-      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-
-    return baseDirectory
-      .appendingPathComponent("Pith", isDirectory: true)
-      .appendingPathComponent("storage", isDirectory: true)
-  }
-
-  private func appSupportPluginDirectory() -> URL {
-    let baseDirectory =
-      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-
-    return baseDirectory
-      .appendingPathComponent("Pith", isDirectory: true)
-      .appendingPathComponent("plugins", isDirectory: true)
+    RuntimeBridgeLocalEnvironment.runtimeEnvironment()
   }
 
   func sendRequest<Params: Encodable, ResultType: Decodable>(
