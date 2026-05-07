@@ -4,6 +4,8 @@ use pith_plugin_host::{build_hook_registry, PluginCatalogEntry};
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::ShellCommandResult;
 
+use super::plugin_hook_shell_preview::shell_output_preview;
+use super::plugin_hook_template::render_hook_message;
 use super::plugin_hook_types::PluginHookMemoryCapture;
 
 pub(crate) fn build_shell_completed_hook_items(
@@ -60,53 +62,4 @@ pub(crate) fn build_shell_completed_hook_items(
   }
 
   (items, memory_captures)
-}
-
-fn shell_output_preview(output: &str) -> String {
-  let preview = output
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .unwrap_or(output)
-    .trim();
-
-  if preview.is_empty() {
-    "none".to_string()
-  } else {
-    preview.chars().take(120).collect()
-  }
-}
-
-fn render_hook_message(template: &str, replacements: &[(&str, String)]) -> String {
-  let mut rendered = template.to_string();
-  for (key, value) in replacements {
-    rendered = rendered.replace(&format!("{{{{{key}}}}}"), value);
-  }
-  rendered
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn shell_output_preview_uses_first_non_empty_line() {
-    assert_eq!(
-      shell_output_preview("\n\n  first line\nsecond line"),
-      "first line"
-    );
-    assert_eq!(shell_output_preview("   \n\t"), "none");
-  }
-
-  #[test]
-  fn hook_message_renderer_replaces_declared_tokens() {
-    let rendered = render_hook_message(
-      "{{workspaceName}} ran {{command}}",
-      &[
-        ("workspaceName", "pith".to_string()),
-        ("command", "git status".to_string()),
-      ],
-    );
-
-    assert_eq!(rendered, "pith ran git status");
-  }
 }

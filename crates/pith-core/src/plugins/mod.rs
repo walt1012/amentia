@@ -18,6 +18,8 @@ pub(crate) mod plugin_hook_memory;
 pub(crate) mod plugin_hook_memory_body;
 pub(crate) mod plugin_hook_memory_tags;
 pub(crate) mod plugin_hook_shell;
+pub(crate) mod plugin_hook_shell_preview;
+pub(crate) mod plugin_hook_template;
 pub(crate) mod plugin_hook_types;
 pub(crate) mod plugin_hooks;
 pub(crate) mod plugin_lifecycle_enable;
