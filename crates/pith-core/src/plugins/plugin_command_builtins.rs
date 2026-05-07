@@ -1,29 +1,16 @@
-use std::io::Read;
 use std::path::Path;
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
 
-use anyhow::{bail, Result};
 use pith_memory::MemoryNote;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::WorkspaceSummary;
 use pith_tools::read_file;
 
+use super::plugin_command_git::read_git_diff_snapshot;
 use super::plugin_command_text::compact_text_preview;
-
-const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
-const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub(super) struct BuiltinPluginCommandResult {
   pub(super) execution_kind: String,
   pub(super) content: String,
-}
-
-struct GitCommandOutput {
-  stdout: Vec<u8>,
-  success: bool,
-  timed_out: bool,
 }
 
 pub(super) fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
@@ -160,19 +147,17 @@ fn build_review_diff_summary_result(
     return "Open a workspace before inspecting the current diff.".to_string();
   };
   let workspace_root = Path::new(&workspace.root_path);
-  let stat = git_workspace_output(workspace_root, &["diff", "--stat"]);
-  let names = git_workspace_output(workspace_root, &["diff", "--name-only"]);
 
-  match (stat, names) {
-    (Some(stat), Some(names)) if !stat.trim().is_empty() || !names.trim().is_empty() => {
+  match read_git_diff_snapshot(workspace_root) {
+    Some(snapshot) if !snapshot.stat.trim().is_empty() || !snapshot.names.trim().is_empty() => {
       format!(
         "Current diff snapshot for {}.\n\nChanged files:\n{}\n\nDiff stat:\n{}\n\nReview focus:\n- Check behavioral regressions first.\n- Verify missing tests around changed paths.\n- Inspect risky file writes before approving follow-up changes.",
         workspace.display_name,
-        compact_text_preview(&names, 20, 900),
-        compact_text_preview(&stat, 20, 1200)
+        compact_text_preview(&snapshot.names, 20, 900),
+        compact_text_preview(&snapshot.stat, 20, 1200)
       )
     }
-    (Some(_), Some(_)) => format!(
+    Some(_) => format!(
       "No active git diff was detected in {}. The review command is ready once files change.",
       workspace.display_name
     ),
@@ -181,52 +166,4 @@ fn build_review_diff_summary_result(
       workspace.display_name
     ),
   }
-}
-
-fn git_workspace_output(workspace_root: &Path, args: &[&str]) -> Option<String> {
-  let output = run_git_workspace_command(workspace_root, args).ok()?;
-  if output.timed_out || !output.success {
-    return None;
-  }
-  Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
-}
-
-fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<GitCommandOutput> {
-  let mut child = Command::new("git")
-    .arg("-C")
-    .arg(workspace_root)
-    .args(args)
-    .stdout(Stdio::piped())
-    .stderr(Stdio::null())
-    .spawn()?;
-  let Some(mut stdout) = child.stdout.take() else {
-    bail!("git stdout pipe was unavailable");
-  };
-  let stdout_reader = thread::spawn(move || {
-    let mut buffer = vec![];
-    let _ = stdout.read_to_end(&mut buffer);
-    buffer
-  });
-
-  let started_at = Instant::now();
-  let (success, timed_out) = loop {
-    if let Some(status) = child.try_wait()? {
-      break (status.success(), false);
-    }
-
-    if started_at.elapsed() >= GIT_COMMAND_TIMEOUT {
-      let _ = child.kill();
-      let _ = child.wait();
-      break (false, true);
-    }
-
-    thread::sleep(GIT_COMMAND_POLL_INTERVAL);
-  };
-
-  let stdout = stdout_reader.join().unwrap_or_default();
-  Ok(GitCommandOutput {
-    stdout,
-    success,
-    timed_out,
-  })
 }
