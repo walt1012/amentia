@@ -12,5 +12,7 @@ pub(crate) mod plugin_hook_memory;
 pub(crate) mod plugin_hook_shell;
 pub(crate) mod plugin_hook_types;
 pub(crate) mod plugin_hooks;
+pub(crate) mod plugin_lifecycle_requests;
 pub(crate) mod plugin_permissions;
+pub(crate) mod plugin_registry_requests;
 pub(crate) mod plugin_requests;
