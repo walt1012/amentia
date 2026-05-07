@@ -7,15 +7,15 @@ final class AppViewModel: ObservableObject {
   @Published private var runtimeConnectionState: RuntimeConnectionStateStore
   @Published var draftMessage: String
   @Published var workspace: WorkspaceSummary?
-  @Published private var workspaceSearchState: WorkspaceSearchRuntimeState
+  @Published var workspaceSearchState: WorkspaceSearchRuntimeState
   @Published private var localModelReadinessState: LocalModelReadinessState
   @Published private var modelDownloadState: LocalModelDownloadRuntimeState
   @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
 
-  private let runtimeBridge: RuntimeBridge
+  let runtimeBridge: RuntimeBridge
   private let pendingTurnRequest = PendingTurnRequestState()
-  private let workspaceSearchSession = WorkspaceSearchSession()
+  let workspaceSearchSession = WorkspaceSearchSession()
   private let modelDownloadCoordinator: LocalModelDownloadCoordinator
   private let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
 
@@ -761,86 +761,6 @@ final class AppViewModel: ObservableObject {
     }
 
     draftMessage = suggestion.message
-  }
-
-  func canSearchWorkspace() -> Bool {
-    WorkspaceSearchSession.canSearch(workspaceSearchSnapshot())
-  }
-
-  func searchWorkspace() {
-    guard canSearchWorkspace() else {
-      return
-    }
-
-    let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
-    let requestToken = workspaceSearchSession.begin(query: query)
-
-    updateWorkspaceSearchState { state in
-      state.begin(requestToken)
-    }
-    Task {
-      do {
-        let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
-        guard workspaceSearchSession.isCurrent(requestToken) else {
-          return
-        }
-        guard !WorkspaceSearchSession.queryChanged(
-          currentQuery: workspaceSearchQuery,
-          token: requestToken
-        ) else {
-          finishChangedWorkspaceSearch()
-          return
-        }
-        updateWorkspaceSearchState { state in
-          state.finishWithMatches(
-            WorkspaceSearchSession.matchSummaries(from: matches),
-            status: WorkspaceSearchSession.successStatus(
-              query: requestToken.query,
-              matchCount: matches.count
-            )
-          )
-        }
-      } catch {
-        guard workspaceSearchSession.isCurrent(requestToken) else {
-          return
-        }
-        guard !WorkspaceSearchSession.queryChanged(
-          currentQuery: workspaceSearchQuery,
-          token: requestToken
-        ) else {
-          finishChangedWorkspaceSearch()
-          return
-        }
-        updateWorkspaceSearchState { state in
-          state.finishWithFailure(
-            status: WorkspaceSearchSession.failureStatus(error: error)
-          )
-        }
-      }
-      workspaceSearchSession.finish()
-    }
-  }
-
-  func clearWorkspaceSearch() {
-    updateWorkspaceSearchState { state in
-      state.query = ""
-    }
-    resetWorkspaceSearch()
-  }
-
-  func workspaceSearchEmptyStateSummary() -> String? {
-    WorkspaceSearchSession.emptyStateSummary(
-      runtimeState: runtimeState,
-      hasWorkspace: workspace != nil,
-      query: workspaceSearchQuery,
-      status: workspaceSearchStatus,
-      isSearching: isWorkspaceSearching,
-      hasResults: !workspaceSearchResults.isEmpty
-    )
-  }
-
-  func workspaceSearchOverflowSummary() -> String? {
-    WorkspaceSearchSession.overflowSummary(resultCount: workspaceSearchResults.count)
   }
 
   func openWorkspace() {
@@ -2310,15 +2230,6 @@ final class AppViewModel: ObservableObject {
     )
   }
 
-  private func workspaceSearchSnapshot() -> WorkspaceSearchSnapshot {
-    WorkspaceSearchSnapshot(
-      runtimeState: runtimeState,
-      hasWorkspace: workspace != nil,
-      isSearching: isWorkspaceSearching,
-      query: workspaceSearchQuery
-    )
-  }
-
   private func runtimeReadinessActionSnapshot() -> RuntimeReadinessActionSnapshot {
     RuntimeReadinessActionSnapshot(
       runtimeState: runtimeState,
@@ -2759,21 +2670,7 @@ final class AppViewModel: ObservableObject {
     LocalModelDownloadStateStore.removeIncompleteModelFile(modelID: modelID, models: localModels)
   }
 
-  private func resetWorkspaceSearch() {
-    let resetStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
-    updateWorkspaceSearchState { state in
-      state.reset(status: resetStatus)
-    }
-  }
-
-  private func finishChangedWorkspaceSearch() {
-    let changedStatus = workspaceSearchSession.changedQueryStatus()
-    updateWorkspaceSearchState { state in
-      state.finishWithChangedQuery(status: changedStatus)
-    }
-  }
-
-  private func updateWorkspaceSearchState(
+  func updateWorkspaceSearchState(
     _ update: (inout WorkspaceSearchRuntimeState) -> Void
   ) {
     var nextState = workspaceSearchState
