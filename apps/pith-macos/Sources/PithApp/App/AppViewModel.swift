@@ -1026,54 +1026,6 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  func selectedThreadTitle() -> String {
-    SessionOverviewPresenter.selectedThreadTitle(sessionOverviewSnapshot())
-  }
-
-  func selectedThreadPreview() -> String {
-    SessionOverviewPresenter.selectedThreadPreview(sessionOverviewSnapshot())
-  }
-
-  func selectTimelineEntry(id: TimelineEntry.ID) {
-    selectedEntryID = id
-  }
-
-  func selectedEntryTitle() -> String {
-    TimelineInspectorPresenter.selectedEntryTitle(timelineInspectorSnapshot())
-  }
-
-  func selectedEntryBody() -> String {
-    TimelineInspectorPresenter.selectedEntryBody(timelineInspectorSnapshot())
-  }
-
-  func selectedEntryMetadata() -> String {
-    TimelineInspectorPresenter.selectedEntryMetadata(timelineInspectorSnapshot())
-  }
-
-  func selectedDiffSummary() -> String? {
-    TimelineInspectorPresenter.selectedDiffSummary(timelineInspectorSnapshot())
-  }
-
-  func selectedDiffLines() -> [DiffLineSummary] {
-    TimelineInspectorPresenter.selectedDiffLines(timelineInspectorSnapshot())
-  }
-
-  func selectedEntryMemorySummary() -> String? {
-    TimelineInspectorPresenter.selectedEntryMemorySummary(timelineInspectorSnapshot())
-  }
-
-  func shouldShowSelectedEntryInspector() -> Bool {
-    SessionOverviewPresenter.shouldShowSelectedEntryInspector(sessionOverviewSnapshot())
-  }
-
-  func workspaceDisplayName() -> String {
-    SessionOverviewPresenter.workspaceDisplayName(sessionOverviewSnapshot())
-  }
-
-  func workspacePath() -> String {
-    SessionOverviewPresenter.workspacePath(sessionOverviewSnapshot())
-  }
-
   func modelDisplayName() -> String {
     LocalModelStatusPresenter.displayName(localModelStatusSnapshot())
   }
@@ -1554,20 +1506,6 @@ final class AppViewModel: ObservableObject {
     activeTurnID != nil || pendingTurnRequest.isPending
   }
 
-  func isPendingApproval(_ entry: TimelineEntry) -> Bool {
-    guard entry.kind == .approval,
-          let approvalID = entry.attributes["approvalId"]
-    else {
-      return false
-    }
-
-    return canRespondToApproval(approvalID: approvalID)
-  }
-
-  func approvalID(for entry: TimelineEntry) -> String? {
-    entry.attributes["approvalId"]
-  }
-
   private func appendItemsToTimeline(
     threadID: String,
     items: [RuntimeBridge.RuntimeTimelineItemResult]
@@ -1712,7 +1650,7 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func selectedEntry() -> TimelineEntry? {
+  func selectedEntry() -> TimelineEntry? {
     timelineState.selectedEntry()
   }
 
@@ -1911,10 +1849,6 @@ final class AppViewModel: ObservableObject {
     )
   }
 
-  private func timelineInspectorSnapshot() -> TimelineInspectorSnapshot {
-    return TimelineInspectorSnapshot(selectedEntry: selectedEntry())
-  }
-
   private func localModelStatusSnapshot() -> LocalModelStatusSnapshot {
     return LocalModelStatusSnapshot(
       runtimeState: runtimeState,
@@ -1956,18 +1890,6 @@ final class AppViewModel: ObservableObject {
       hasCancelableTurn: timelineState.hasCancelableRuntimeTurn || pendingTurnRequest.canCancel,
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
       pendingApprovalIDs: timelineState.selectedPendingApprovalIDs
-    )
-  }
-
-  private func sessionOverviewSnapshot() -> SessionOverviewSnapshot {
-    let selectedThread = selectedThreadID.flatMap { threadID in
-      threads.first(where: { $0.id == threadID })
-    }
-
-    return SessionOverviewSnapshot(
-      selectedThread: selectedThread,
-      workspace: workspace,
-      selectedEntry: selectedEntry()
     )
   }
 
