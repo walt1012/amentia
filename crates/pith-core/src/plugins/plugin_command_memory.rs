@@ -4,7 +4,6 @@ use anyhow::Result;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
-use super::plugin_command_text::compact_text_preview;
 use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::RuntimeContext;
 
