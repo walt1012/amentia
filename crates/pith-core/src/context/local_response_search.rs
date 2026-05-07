@@ -50,7 +50,8 @@ pub(crate) fn summarize_search_result(
     query,
     preview
   );
-  let observation = compact_prompt_observation(&format_search_result(query, matches), &context_pack);
+  let observation =
+    compact_prompt_observation(&format_search_result(query, matches), &context_pack);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
     format_context_prompt(&context_pack),
