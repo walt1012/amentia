@@ -4,6 +4,8 @@ use anyhow::Result;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
+use super::plugin_command_memory_body::build_plugin_command_memory_body;
+use super::plugin_command_memory_tags::plugin_command_memory_tags;
 use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::RuntimeContext;
 
@@ -68,44 +70,6 @@ pub(super) fn maybe_capture_plugin_command_memory(
       ("commandId".to_string(), command.command_id.clone()),
     ])),
   }))
-}
-
-fn build_plugin_command_memory_body(
-  command: &HostPluginCommandEntry,
-  workspace: &WorkspaceSummary,
-  input: Option<&str>,
-  assistant_content: &str,
-) -> String {
-  let mut body = format!(
-    "Plugin: {} ({})\nCommand: {} ({})\nWorkspace: {} at {}.",
-    command.plugin_display_name,
-    command.plugin_id,
-    command.title,
-    command.command_id,
-    workspace.display_name,
-    workspace.root_path
-  );
-  if let Some(input) = input {
-    body.push_str(&format!("\nCommand input: {input}"));
-  }
-  body.push_str("\n\nCommand result:\n");
-  body.push_str(assistant_content.trim());
-  body
-}
-
-fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Vec<String> {
-  let mut tags = vec![
-    "plugin".to_string(),
-    "command".to_string(),
-    command.plugin_id.clone(),
-    command.command_id.clone(),
-  ];
-  for tag in &command.memory_note_tags {
-    if !tags.iter().any(|existing| existing == tag) {
-      tags.push(tag.clone());
-    }
-  }
-  tags
 }
 
 pub(super) fn build_plugin_command_memory_warning_item(
