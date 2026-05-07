@@ -13,8 +13,7 @@ use super::plugin_command_memory::{
   build_plugin_command_memory_warning_item, maybe_capture_plugin_command_memory,
 };
 use super::plugin_command_types::{
-  CompletedPluginCommandRun, PluginCommandOutput, PluginCommandSnapshot,
-  PreparedPluginCommandRun,
+  CompletedPluginCommandRun, PluginCommandOutput, PluginCommandSnapshot, PreparedPluginCommandRun,
 };
 use crate::approval_state::approvals_for_thread;
 use crate::context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};

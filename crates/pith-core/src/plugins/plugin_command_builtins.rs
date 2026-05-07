@@ -51,9 +51,7 @@ pub(super) fn execute_builtin_plugin_command(
     )
   })?;
   let content = match execution_kind {
-    "builtin.workspaceReadmeNote" => {
-      build_workspace_readme_note_result(command, workspace, input)
-    }
+    "builtin.workspaceReadmeNote" => build_workspace_readme_note_result(command, workspace, input),
     "builtin.shellSessionSummary" => build_shell_session_summary_result(memory_notes, workspace),
     "builtin.reviewDiffSummary" => build_review_diff_summary_result(command, workspace),
     _ => {
