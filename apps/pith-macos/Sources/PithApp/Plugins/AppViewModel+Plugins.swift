@@ -210,6 +210,18 @@ extension AppViewModel {
     await refreshRuntimeReadiness()
   }
 
+  func pluginActionSnapshot() -> PluginActionSnapshot {
+    PluginActionSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady(),
+      hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      selectedThreadID: selectedThreadID,
+      hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
+      plugins: plugins,
+      commands: pluginCommands
+    )
+  }
+
   private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
     PluginDashboardSnapshot(
       plugins: plugins,
