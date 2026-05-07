@@ -1,19 +1,10 @@
-use std::collections::HashMap;
-use std::path::Path;
-
-use pith_memory::MemoryEvent;
-use pith_protocol::TimelineItem;
-use pith_tools::{run_shell, write_file};
-
-use crate::local_responses::{
-  format_shell_result, summarize_denied_approval, summarize_shell_result,
-};
-use crate::plugin_hooks::build_shell_completed_hook_items;
-use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
   PreparedApprovalSnapshot,
 };
+
+use super::approval_execution_approved::execute_approved_approval;
+use super::approval_execution_denied::execute_denied_approval;
 
 pub fn execute_prepared_approval_respond(
   prepared: PreparedApprovalRespond,
@@ -34,179 +25,24 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
     permission_sources,
     plugins,
   } = snapshot;
-  let mut items = vec![];
-  let mut memory_event = None;
-  let mut hook_memory_captures = vec![];
-  if decision == "approved" {
-    items.push(TimelineItem {
-      kind: "approvalResolved".to_string(),
-      title: "Approval Granted".to_string(),
-      content: format!(
-        "Approved {} for {}.",
-        approval.action, approval.relative_path
-      ),
-      attributes: Some(HashMap::from([
-        ("approvalId".to_string(), approval.id.clone()),
-        ("decision".to_string(), "approved".to_string()),
-      ])),
-    });
-    if approval.action == "write_file" {
-      if !permission_is_granted(&permission_sources, "file.write") {
-        items.extend(build_permission_denied_items(
-          &permission_sources,
-          "file.write",
-          "complete the approved file write",
-          &workspace.display_name,
-          HashMap::from([
-            ("approvalId".to_string(), approval.id.clone()),
-            ("relativePath".to_string(), approval.relative_path.clone()),
-          ]),
-        ));
-      } else {
-        let content = approval.content.clone().unwrap_or_default();
-        items.push(TimelineItem {
-          kind: "toolStart".to_string(),
-          title: "write_file".to_string(),
-          content: approval.relative_path.clone(),
-          attributes: None,
-        });
 
-        match write_file(
-          Path::new(&workspace.root_path),
-          &approval.relative_path,
-          &content,
-        ) {
-          Ok(relative_path) => {
-            memory_event = Some(MemoryEvent::FileWritten {
-              workspace_display_name: workspace.display_name.clone(),
-              relative_path: relative_path.clone(),
-            });
-            items.push(TimelineItem {
-              kind: "toolResult".to_string(),
-              title: "write_file result".to_string(),
-              content: format!("Wrote {} bytes to {}.", content.len(), relative_path),
-              attributes: None,
-            });
-            items.push(TimelineItem {
-              kind: "assistantMessage".to_string(),
-              title: "Assistant".to_string(),
-              content: format!(
-                "Pith wrote {} in {} after your approval.",
-                relative_path, workspace.display_name
-              ),
-              attributes: None,
-            });
-          }
-          Err(error) => {
-            items.push(TimelineItem {
-              kind: "warning".to_string(),
-              title: "write_file failed".to_string(),
-              content: error.to_string(),
-              attributes: None,
-            });
-          }
-        }
-      }
-    } else if approval.action == "run_shell" {
-      if !permission_is_granted(&permission_sources, "shell.exec") {
-        items.extend(build_permission_denied_items(
-          &permission_sources,
-          "shell.exec",
-          "complete the approved shell command",
-          &workspace.display_name,
-          HashMap::from([
-            ("approvalId".to_string(), approval.id.clone()),
-            (
-              "command".to_string(),
-              approval.command.clone().unwrap_or_default(),
-            ),
-          ]),
-        ));
-      } else {
-        let command = approval.command.clone().unwrap_or_default();
-        items.push(TimelineItem {
-          kind: "toolStart".to_string(),
-          title: "run_shell".to_string(),
-          content: command.clone(),
-          attributes: None,
-        });
-
-        match run_shell(Path::new(&workspace.root_path), &command, 4096) {
-          Ok(result) => {
-            memory_event = Some(MemoryEvent::ShellCommandRan {
-              workspace_display_name: workspace.display_name.clone(),
-              command: command.clone(),
-            });
-            let (summary, summary_attributes) = summarize_shell_result(
-              &model_runtime,
-              &memory_notes,
-              &workspace.display_name,
-              &result,
-            );
-            items.push(TimelineItem {
-              kind: "toolResult".to_string(),
-              title: "run_shell result".to_string(),
-              content: format_shell_result(&result),
-              attributes: Some(result.sandbox.attributes()),
-            });
-            items.push(TimelineItem {
-              kind: "assistantMessage".to_string(),
-              title: "Assistant".to_string(),
-              content: summary,
-              attributes: Some(summary_attributes),
-            });
-            let (hook_items, memory_captures) =
-              build_shell_completed_hook_items(&plugins, &workspace, &command, &result);
-            hook_memory_captures.extend(memory_captures);
-            items.extend(hook_items);
-          }
-          Err(error) => {
-            items.push(TimelineItem {
-              kind: "warning".to_string(),
-              title: "run_shell failed".to_string(),
-              content: error.to_string(),
-              attributes: None,
-            });
-          }
-        }
-      }
-    }
-  } else {
-    memory_event = Some(MemoryEvent::ApprovalDenied {
-      title: approval.title.clone(),
-      action: approval.action.clone(),
-    });
-    let (summary, summary_attributes) = summarize_denied_approval(
+  let events = if decision == "approved" {
+    execute_approved_approval(
+      &approval,
+      &workspace,
       &model_runtime,
       &memory_notes,
-      &workspace.display_name,
-      &approval.action,
-      &approval.relative_path,
-      approval.command.as_deref(),
-    );
-    items.push(TimelineItem {
-      kind: "approvalResolved".to_string(),
-      title: "Approval Denied".to_string(),
-      content: format!("Denied {} for {}.", approval.action, approval.relative_path),
-      attributes: Some(HashMap::from([
-        ("approvalId".to_string(), approval.id.clone()),
-        ("decision".to_string(), "denied".to_string()),
-      ])),
-    });
-    items.push(TimelineItem {
-      kind: "assistantMessage".to_string(),
-      title: "Assistant".to_string(),
-      content: summary,
-      attributes: Some(summary_attributes),
-    });
-  }
+      &permission_sources,
+      &plugins,
+    )
+  } else {
+    execute_denied_approval(
+      &approval,
+      &workspace,
+      &model_runtime,
+      &memory_notes,
+    )
+  };
 
-  ApprovalExecutionOutput {
-    approval,
-    decision,
-    workspace,
-    items,
-    memory_event,
-    hook_memory_captures,
-  }
+  events.into_output(approval, decision, workspace)
 }
