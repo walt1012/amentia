@@ -2,4 +2,8 @@ pub(crate) mod active_turns;
 pub(crate) mod approval_state;
 pub(crate) mod approval_types;
 pub(crate) mod turn_actions;
+pub(crate) mod turn_approval_execution;
+pub(crate) mod turn_execution;
+pub(crate) mod turn_preparation;
 pub(crate) mod turn_streaming;
+pub(crate) mod turn_workspace_execution;
