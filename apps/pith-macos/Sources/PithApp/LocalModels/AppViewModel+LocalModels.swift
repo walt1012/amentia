@@ -4,7 +4,7 @@ import Foundation
 extension AppViewModel {
   func shouldShowSetupModelChoice() -> Bool {
     let actionSnapshot = localModelActionSnapshot()
-    runtimeState == .ready
+    return runtimeState == .ready
       && !isLocalModelReady()
       && !actionSnapshot.hasModelDownload
       && actionSnapshot.pausedModelDownloadID == nil
