@@ -3,6 +3,7 @@ pub(crate) mod protocol_memory_adapters;
 pub(crate) mod protocol_model_adapters;
 pub(crate) mod protocol_plugin_adapters;
 pub(crate) mod protocol_plugin_registry_adapters;
+pub(crate) mod protocol_plugin_registry_mappers;
 pub(crate) mod protocol_plugin_summary_adapters;
 pub(crate) mod runtime_context;
 pub(crate) mod runtime_execution;
