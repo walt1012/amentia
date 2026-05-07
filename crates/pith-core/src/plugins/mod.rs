@@ -24,6 +24,8 @@ pub(crate) mod plugin_lifecycle_enable;
 pub(crate) mod plugin_lifecycle_install;
 pub(crate) mod plugin_lifecycle_remove;
 pub(crate) mod plugin_lifecycle_requests;
+pub(crate) mod plugin_permission_denied;
+pub(crate) mod plugin_permission_sources;
 pub(crate) mod plugin_permissions;
 pub(crate) mod plugin_registry_requests;
 pub(crate) mod plugin_requests;
