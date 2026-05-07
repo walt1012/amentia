@@ -713,13 +713,15 @@ Initial built-in memory responsibilities:
 - workspace facts store
 - thread summaries
 - user notes attached to workspaces
-- lightweight retrieval into prompts
+- lightweight ranked retrieval into prompts, with retrieval scores exposed for context attribution
 
 Phase 2 memory responsibilities:
 
 - cross-thread memory references
 - plugin-provided retrieval policies
 - background memory compaction
+- workspace chunk indexing for local RAG, starting with token/BM25-style scoring before any embedding dependency
+- optional local embedding and rerank path only after the lightweight retrieval loop proves useful
 
 ## 15. Security And Approval Model
 
@@ -937,7 +939,7 @@ Deliverables:
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
 - inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
 - workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
-- local context management for small models through compact prompts, memory note packing, budget-aware context headers, and short tool observation previews
+- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, retrieval score attribution, and short tool observation previews
 - native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
 - plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 
@@ -961,7 +963,7 @@ Deliverables:
 - multi-agent workflows
 - automation
 - background tasks
-- richer memory retrieval
+- richer memory retrieval through workspace chunk indexing, local RAG, and optional local embedding/rerank components
 - plugin-defined agents
 - third-party connector execution and auth flows, with Notion as the first reference connector
 - MCP client support
