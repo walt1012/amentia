@@ -535,7 +535,7 @@ support, but the selected GGUF is downloaded, verified, activated, and then reus
 The app should not feel like a model zoo. Keep the first-use catalog compact, current, and easy to understand:
 
 - `LFM2.5-350M Q4_K_M` remains the default fastest first-use download
-- `Granite 4.0-H-350M Q4_K_M` is the preferred Apache-2.0 tiny model for tool, code, and RAG workflows
+- `Granite 4.0-H-350M Q4_K_M` is the preferred Apache-2.0 tiny model for tool, code, and retrieval-assisted workflows
 
 Retire older, redundant, or awkward-fit entries when they do not clearly beat the active set. Every built-in catalog entry must include verified file size and SHA-256 metadata before activation is allowed.
 
@@ -720,8 +720,26 @@ Phase 2 memory responsibilities:
 - cross-thread memory references
 - plugin-provided retrieval policies
 - background memory compaction
-- workspace chunk indexing for local RAG, starting with token/BM25-style scoring before any embedding dependency
-- optional local embedding and rerank path only after the lightweight retrieval loop proves useful
+- workspace context retrieval only after the context ledger and thread compaction paths are stable
+- optional local embedding and rerank path only after lexical retrieval proves useful
+
+### 14.9 Context Engineering Direction
+
+Pith should not treat the current memory retrieval path as Codex-style RAG. The current implementation
+is retrieval-assisted memory context: it ranks explicit user and workspace notes, fits them into a small
+model budget, and exposes attribution so the UI and runtime can explain why context was included.
+
+The Codex-inspired direction is context engineering, not a generic document RAG layer:
+
+- context ledger for file reads, diffs, approvals, shell output, plugin output, and model observations
+- thread compaction that preserves decisions, touched paths, unresolved tasks, and evidence references
+- budget-aware prompt assembly that can explain what was kept, compressed, or dropped
+- workspace retrieval after ledger and compaction are reliable, starting with lexical scoring before embeddings
+- optional local embeddings or reranking only when they improve the local daily loop without adding weight
+
+Milestone 3 should close with retrieval-assisted memory, compact prompts, attribution, and bounded execution.
+Milestone 4 may expand into workspace retrieval, but only as a continuation of the ledger and compaction
+architecture rather than a separate search product.
 
 ## 15. Security And Approval Model
 
@@ -939,7 +957,7 @@ Deliverables:
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
 - inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
 - workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
-- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, retrieval score attribution, and short tool observation previews
+- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, retrieval score attribution, short tool observation previews, and a clear path toward context ledger design
 - native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
 - plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 
@@ -963,7 +981,7 @@ Deliverables:
 - multi-agent workflows
 - automation
 - background tasks
-- richer memory retrieval through workspace chunk indexing, local RAG, and optional local embedding/rerank components
+- context engineering expansion through context ledger, thread compaction, workspace retrieval, and optional local embedding/rerank components
 - plugin-defined agents
 - third-party connector execution and auth flows, with Notion as the first reference connector
 - MCP client support
@@ -1112,7 +1130,8 @@ Mitigation:
 Milestone 3 is in closeout. The current codebase has the core daily-driver path in place: guided
 local model setup, strict model readiness, bounded model and shell subprocesses, runtime request
 unblocking for heavy work, workspace-bound threads, first-request readiness diagnostics, native
-sandbox diagnostics, compact context packing, and progressive disclosure for secondary controls.
+sandbox diagnostics, compact context packing, retrieval-assisted memory attribution, and progressive disclosure
+for secondary controls.
 
 The next product step is a broad review and refactor gate, not another feature expansion. Review the
 Swift app, Rust runtime, protocol boundary, model catalog, plugin metadata, sandbox layer, and docs
@@ -1124,7 +1143,8 @@ Refactor priorities:
 2. keep the main timeline and local model flow as the primary product surface
 3. preserve bounded execution, cancellation, integrity checks, and workspace scoping as non-negotiable runtime contracts
 4. preserve the machine-readable setup contract from runtime launch through model, workspace, thread, and first request
-5. defer broad connector execution, third-party auth, multi-agent workflows, and platform expansion to Milestone 4
-6. keep this plan outcome-based so implementation detail lives in code, commits, tests, and review notes
+5. keep memory retrieval scoped as attribution-backed context packing until the context ledger and compaction design is ready
+6. defer broad connector execution, third-party auth, multi-agent workflows, generic RAG, and platform expansion to Milestone 4
+7. keep this plan outcome-based so implementation detail lives in code, commits, tests, and review notes
 
 Remote CI verification remains routine for every pushed change, not a product milestone.
