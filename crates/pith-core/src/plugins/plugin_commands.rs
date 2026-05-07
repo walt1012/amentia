@@ -1,65 +1,26 @@
 use std::collections::HashMap;
-use std::io::Read;
-use std::path::Path;
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
 
-use anyhow::{bail, Result};
-use pith_memory::MemoryNote;
 use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, TimelineItem, TurnStartResult,
   WorkspaceSummary,
 };
-use pith_tools::read_file;
 
+use super::plugin_command_builtins::{
+  execute_builtin_plugin_command, is_supported_builtin_execution,
+};
+use super::plugin_command_memory::{
+  build_plugin_command_memory_warning_item, maybe_capture_plugin_command_memory,
+};
+use super::plugin_command_types::{
+  CompletedPluginCommandRun, PluginCommandOutput, PluginCommandSnapshot,
+  PreparedPluginCommandRun,
+};
 use crate::approval_state::approvals_for_thread;
 use crate::context_compaction::{merge_context_pack_attributes, pack_memory_context, ContextPack};
 use crate::request_params::parse_required_params;
-use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::thread_summary::refresh_thread_summary_note;
 use crate::RuntimeContext;
-
-const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
-const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
-
-#[derive(Debug)]
-pub struct PreparedPluginCommandRun {
-  request_id: serde_json::Value,
-  snapshot: PluginCommandSnapshot,
-}
-
-#[derive(Debug)]
-pub struct CompletedPluginCommandRun {
-  request_id: serde_json::Value,
-  output: std::result::Result<PluginCommandOutput, (i32, String)>,
-}
-
-#[derive(Debug)]
-struct PluginCommandSnapshot {
-  thread_id: String,
-  command: HostPluginCommandEntry,
-  workspace: Option<WorkspaceSummary>,
-  input: Option<String>,
-  command_item: TimelineItem,
-  memory_notes: Vec<MemoryNote>,
-}
-
-#[derive(Debug)]
-struct PluginCommandOutput {
-  thread_id: String,
-  command: HostPluginCommandEntry,
-  workspace: Option<WorkspaceSummary>,
-  input: Option<String>,
-  items: Vec<TimelineItem>,
-}
-
-struct GitCommandOutput {
-  stdout: Vec<u8>,
-  success: bool,
-  timed_out: bool,
-}
 
 pub(crate) fn handle_plugin_command_run(
   context: &mut RuntimeContext,
@@ -180,15 +141,6 @@ pub fn complete_prepared_plugin_command_run(
   }
 }
 
-fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
-  matches!(
-    execution_kind,
-    Some(
-      "builtin.workspaceReadmeNote" | "builtin.shellSessionSummary" | "builtin.reviewDiffSummary"
-    )
-  )
-}
-
 fn build_plugin_command_timeline_item(
   command: &HostPluginCommandEntry,
   workspace: Option<&WorkspaceSummary>,
@@ -240,51 +192,32 @@ fn build_plugin_command_timeline_item(
 fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
-  let execution_kind = snapshot.command.execution_kind.as_deref().ok_or_else(|| {
-    (
-      -32053,
-      format!(
-        "Plugin command `{}` requires an explicit execution contract.",
-        snapshot.command.command_id
-      ),
-    )
-  })?;
-  let result_content = match execution_kind {
-    "builtin.workspaceReadmeNote" => build_workspace_readme_note_result(
-      &snapshot.command,
-      snapshot.workspace.as_ref(),
-      snapshot.input.as_deref(),
-    ),
-    "builtin.shellSessionSummary" => {
-      build_shell_session_summary_result(&snapshot.memory_notes, snapshot.workspace.as_ref())
-    }
-    "builtin.reviewDiffSummary" => {
-      build_review_diff_summary_result(&snapshot.command, snapshot.workspace.as_ref())
-    }
-    _ => {
-      return Err((
-        -32053,
-        format!(
-          "Plugin command `{}` requires an explicit execution contract.",
-          snapshot.command.command_id
-        ),
-      ))
-    }
-  };
+  let builtin_result = execute_builtin_plugin_command(
+    &snapshot.command,
+    snapshot.workspace.as_ref(),
+    snapshot.input.as_deref(),
+    &snapshot.memory_notes,
+  )?;
 
-  let result_item =
-    build_plugin_result_timeline_item(&snapshot.command, execution_kind, result_content.clone());
+  let result_item = build_plugin_result_timeline_item(
+    &snapshot.command,
+    &builtin_result.execution_kind,
+    builtin_result.content.clone(),
+  );
   let assistant_item = TimelineItem {
     kind: "assistantMessage".to_string(),
     title: "Assistant".to_string(),
     content: format!(
       "{} completed through {}.\n\n{}",
-      snapshot.command.title, snapshot.command.plugin_display_name, result_content
+      snapshot.command.title, snapshot.command.plugin_display_name, builtin_result.content
     ),
     attributes: Some(HashMap::from([
       ("pluginId".to_string(), snapshot.command.plugin_id.clone()),
       ("commandId".to_string(), snapshot.command.command_id.clone()),
-      ("executionKind".to_string(), execution_kind.to_string()),
+      (
+        "executionKind".to_string(),
+        builtin_result.execution_kind.clone(),
+      ),
     ])),
   };
   Ok(PluginCommandOutput {
@@ -380,303 +313,6 @@ fn build_plugin_result_timeline_item(
       ("commandId".to_string(), command.command_id.clone()),
       ("executionKind".to_string(), execution_kind.to_string()),
       ("sourcePath".to_string(), command.source_path.clone()),
-    ])),
-  }
-}
-
-fn build_workspace_readme_note_result(
-  command: &HostPluginCommandEntry,
-  workspace: Option<&WorkspaceSummary>,
-  input: Option<&str>,
-) -> String {
-  if !command
-    .permissions
-    .iter()
-    .any(|permission| permission == "file.read")
-  {
-    return "This command cannot read workspace files because its plugin does not declare `file.read`."
-      .to_string();
-  }
-  let Some(workspace) = workspace else {
-    return "Open a workspace before capturing a workspace note.".to_string();
-  };
-
-  match read_file(Path::new(&workspace.root_path), "README.md", 4096) {
-    Ok(result) => {
-      let summary = compact_text_preview(&result.content, 10, 900);
-      let input_summary = input
-        .map(|value| format!("\nOperator input: {}", value.trim()))
-        .unwrap_or_default();
-      format!(
-        "Workspace note candidate from README.md in {}.{}\n\n{}",
-        workspace.display_name, input_summary, summary
-      )
-    }
-    Err(error) => format!(
-      "Could not capture a README-based note in {}: {}",
-      workspace.display_name, error
-    ),
-  }
-}
-
-fn build_shell_session_summary_result(
-  memory_notes: &[MemoryNote],
-  workspace: Option<&WorkspaceSummary>,
-) -> String {
-  let workspace_label = workspace
-    .map(|workspace| workspace.display_name.as_str())
-    .unwrap_or("the current workspace");
-  let shell_notes = memory_notes
-    .iter()
-    .filter(|note| {
-      note.source == "plugin.shell-recorder"
-        || note.tags.iter().any(|tag| tag == "shell" || tag == "hook")
-    })
-    .rev()
-    .take(5)
-    .map(|note| {
-      format!(
-        "- {}: {}",
-        note.title,
-        compact_text_preview(&note.body, 2, 220)
-      )
-    })
-    .collect::<Vec<_>>();
-
-  if shell_notes.is_empty() {
-    return format!(
-      "No shell completion notes are recorded for {} yet. Enable Shell Recorder and approve shell commands to build this timeline.",
-      workspace_label
-    );
-  }
-
-  format!(
-    "Recent shell activity for {}:\n{}",
-    workspace_label,
-    shell_notes.join("\n")
-  )
-}
-
-fn build_review_diff_summary_result(
-  command: &HostPluginCommandEntry,
-  workspace: Option<&WorkspaceSummary>,
-) -> String {
-  if !command
-    .permissions
-    .iter()
-    .any(|permission| permission == "file.read")
-  {
-    return "This command cannot inspect the workspace because its plugin does not declare `file.read`."
-      .to_string();
-  }
-  let Some(workspace) = workspace else {
-    return "Open a workspace before inspecting the current diff.".to_string();
-  };
-  let workspace_root = Path::new(&workspace.root_path);
-  let stat = git_workspace_output(workspace_root, &["diff", "--stat"]);
-  let names = git_workspace_output(workspace_root, &["diff", "--name-only"]);
-
-  match (stat, names) {
-    (Some(stat), Some(names)) if !stat.trim().is_empty() || !names.trim().is_empty() => {
-      format!(
-        "Current diff snapshot for {}.\n\nChanged files:\n{}\n\nDiff stat:\n{}\n\nReview focus:\n- Check behavioral regressions first.\n- Verify missing tests around changed paths.\n- Inspect risky file writes before approving follow-up changes.",
-        workspace.display_name,
-        compact_text_preview(&names, 20, 900),
-        compact_text_preview(&stat, 20, 1200)
-      )
-    }
-    (Some(_), Some(_)) => format!(
-      "No active git diff was detected in {}. The review command is ready once files change.",
-      workspace.display_name
-    ),
-    _ => format!(
-      "Could not read a git diff in {}. Ensure the workspace is a git repository and git is available.",
-      workspace.display_name
-    ),
-  }
-}
-
-fn git_workspace_output(workspace_root: &Path, args: &[&str]) -> Option<String> {
-  let output = run_git_workspace_command(workspace_root, args).ok()?;
-  if output.timed_out || !output.success {
-    return None;
-  }
-  Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
-}
-
-fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<GitCommandOutput> {
-  let mut child = Command::new("git")
-    .arg("-C")
-    .arg(workspace_root)
-    .args(args)
-    .stdout(Stdio::piped())
-    .stderr(Stdio::null())
-    .spawn()?;
-  let Some(mut stdout) = child.stdout.take() else {
-    bail!("git stdout pipe was unavailable");
-  };
-  let stdout_reader = thread::spawn(move || {
-    let mut buffer = vec![];
-    let _ = stdout.read_to_end(&mut buffer);
-    buffer
-  });
-
-  let started_at = Instant::now();
-  let (success, timed_out) = loop {
-    if let Some(status) = child.try_wait()? {
-      break (status.success(), false);
-    }
-
-    if started_at.elapsed() >= GIT_COMMAND_TIMEOUT {
-      let _ = child.kill();
-      let _ = child.wait();
-      break (false, true);
-    }
-
-    thread::sleep(GIT_COMMAND_POLL_INTERVAL);
-  };
-
-  let stdout = stdout_reader.join().unwrap_or_default();
-  Ok(GitCommandOutput {
-    stdout,
-    success,
-    timed_out,
-  })
-}
-
-fn compact_text_preview(content: &str, max_lines: usize, max_chars: usize) -> String {
-  let mut preview = content
-    .lines()
-    .map(str::trim)
-    .filter(|line| !line.is_empty())
-    .take(max_lines)
-    .collect::<Vec<_>>()
-    .join("\n");
-  if preview.is_empty() {
-    preview = "No content available.".to_string();
-  }
-  if preview.chars().count() > max_chars {
-    preview = preview.chars().take(max_chars).collect::<String>();
-    preview.push_str("...");
-  }
-  preview
-}
-
-fn maybe_capture_plugin_command_memory(
-  context: &mut RuntimeContext,
-  thread_id: &str,
-  command: &HostPluginCommandEntry,
-  input: Option<&str>,
-  workspace: Option<&WorkspaceSummary>,
-  items: &[TimelineItem],
-) -> Result<Option<TimelineItem>> {
-  let Some(note_title) = command.memory_note_title.as_ref() else {
-    return Ok(None);
-  };
-  let Some(assistant_message) = items
-    .iter()
-    .rev()
-    .find(|item| item.kind == "assistantMessage")
-  else {
-    return Ok(None);
-  };
-  let workspace = workspace
-    .cloned()
-    .or_else(|| {
-      context
-        .thread_state
-        .find(thread_id)
-        .and_then(|thread| thread.workspace_cloned())
-    })
-    .or_else(|| context.workspace_state.current_cloned());
-  let Some(workspace) = workspace else {
-    return Ok(None);
-  };
-
-  let note_body =
-    build_plugin_command_memory_body(command, &workspace, input, &assistant_message.content);
-  let note_source = command
-    .memory_note_source
-    .clone()
-    .unwrap_or_else(|| format!("plugin.{}", command.plugin_id));
-  let note_tags = plugin_command_memory_tags(command);
-  let note = context.create_memory_note(RuntimeMemoryNoteDraft::new(
-    note_title.clone(),
-    note_body,
-    workspace.display_name.clone(),
-    note_source,
-    note_tags,
-  ))?;
-
-  Ok(Some(TimelineItem {
-    kind: "system".to_string(),
-    title: "Memory Note Saved".to_string(),
-    content: format!(
-      "Saved workspace memory note \"{}\" from {}.",
-      note.title, command.title
-    ),
-    attributes: Some(HashMap::from([
-      ("memoryNoteId".to_string(), note.id),
-      ("memoryNoteTitle".to_string(), note.title),
-      ("memoryScope".to_string(), note.scope),
-      ("pluginId".to_string(), command.plugin_id.clone()),
-      ("commandId".to_string(), command.command_id.clone()),
-    ])),
-  }))
-}
-
-fn build_plugin_command_memory_body(
-  command: &HostPluginCommandEntry,
-  workspace: &WorkspaceSummary,
-  input: Option<&str>,
-  assistant_content: &str,
-) -> String {
-  let mut body = format!(
-    "Plugin: {} ({})\nCommand: {} ({})\nWorkspace: {} at {}.",
-    command.plugin_display_name,
-    command.plugin_id,
-    command.title,
-    command.command_id,
-    workspace.display_name,
-    workspace.root_path
-  );
-  if let Some(input) = input {
-    body.push_str(&format!("\nCommand input: {input}"));
-  }
-  body.push_str("\n\nCommand result:\n");
-  body.push_str(assistant_content.trim());
-  body
-}
-
-fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Vec<String> {
-  let mut tags = vec![
-    "plugin".to_string(),
-    "command".to_string(),
-    command.plugin_id.clone(),
-    command.command_id.clone(),
-  ];
-  for tag in &command.memory_note_tags {
-    if !tags.iter().any(|existing| existing == tag) {
-      tags.push(tag.clone());
-    }
-  }
-  tags
-}
-
-fn build_plugin_command_memory_warning_item(
-  command: &HostPluginCommandEntry,
-  error_message: String,
-) -> TimelineItem {
-  TimelineItem {
-    kind: "warning".to_string(),
-    title: "Plugin Memory Capture Failed".to_string(),
-    content: format!(
-      "{} could not save its workspace memory note. {}",
-      command.title, error_message
-    ),
-    attributes: Some(HashMap::from([
-      ("pluginId".to_string(), command.plugin_id.clone()),
-      ("commandId".to_string(), command.command_id.clone()),
     ])),
   }
 }

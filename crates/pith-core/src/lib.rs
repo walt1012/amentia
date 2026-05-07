@@ -41,8 +41,9 @@ pub use approval_requests::{
 };
 pub use plugin_commands::{
   complete_prepared_plugin_command_run, execute_prepared_plugin_command_run,
-  prepare_plugin_command_run, CompletedPluginCommandRun, PreparedPluginCommandRun,
+  prepare_plugin_command_run,
 };
+pub use plugins::plugin_command_types::{CompletedPluginCommandRun, PreparedPluginCommandRun};
 pub use request_dispatch::handle_request;
 pub use turn_requests::{
   complete_prepared_turn_start, execute_prepared_turn_start, prepare_turn_start,

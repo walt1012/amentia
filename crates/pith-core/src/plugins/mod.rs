@@ -1,4 +1,8 @@
 pub(crate) mod plugin_catalog_state;
+pub(crate) mod plugin_command_builtins;
+pub(crate) mod plugin_command_memory;
+pub(crate) mod plugin_command_text;
+pub(crate) mod plugin_command_types;
 pub(crate) mod plugin_commands;
 pub(crate) mod plugin_hooks;
 pub(crate) mod plugin_permissions;
