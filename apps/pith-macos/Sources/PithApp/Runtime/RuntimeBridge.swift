@@ -13,6 +13,7 @@ final class RuntimeBridge {
   private var pendingResponses: [Int: CheckedContinuation<Data, Error>] = [:]
   private var readerTask: Task<Void, Never>?
   private var errorReaderTask: Task<Void, Never>?
+  private let messageDispatcher = RuntimeBridgeMessageDispatcher()
 
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
     if process == nil || process?.isRunning != true {
@@ -131,35 +132,14 @@ final class RuntimeBridge {
   }
 
   private func handleIncomingMessage(_ data: Data) {
-    let decoder = JSONDecoder()
-
-    if let response = try? decoder.decode(JSONRPCAnyResponse.self, from: data),
-       let responseID = response.id
-    {
+    switch messageDispatcher.decode(data) {
+    case .response(let responseID, let data):
       let continuation = takePendingResponse(requestID: responseID)
       continuation?.resume(returning: data)
-      return
-    }
-
-    guard let envelope = try? decoder.decode(JSONRPCNotificationEnvelope.self, from: data) else {
-      return
-    }
-
-    if envelope.method == "thread/updated",
-       let notification = try? decoder.decode(
-         JSONRPCNotification<ThreadUpdatedNotificationParams>.self,
-         from: data
-       )
-    {
-      let state = RuntimeBridgePayloadMapper.threadState(
-        id: notification.params.thread.id,
-        title: notification.params.thread.title,
-        status: notification.params.thread.status,
-        items: notification.params.items,
-        pendingApprovals: notification.params.pendingApprovals,
-        activeTurnID: notification.params.activeTurnId
-      )
+    case .threadUpdated(let state):
       onThreadUpdated?(state)
+    case .ignored:
+      return
     }
   }
 
