@@ -91,10 +91,7 @@ pub(super) fn first_request_check(
   }
 }
 
-pub(super) fn context_check(
-  context_window: &str,
-  output_cap: &str,
-) -> RuntimeReadinessCheck {
+pub(super) fn context_check(context_window: &str, output_cap: &str) -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "context".to_string(),
     title: "Context".to_string(),
@@ -202,10 +199,7 @@ fn execution_control_status(
   }
 }
 
-fn execution_control_detail(
-  pending_approval_count: usize,
-  active_turn_count: usize,
-) -> String {
+fn execution_control_detail(pending_approval_count: usize, active_turn_count: usize) -> String {
   if pending_approval_count > 0 {
     return format!("{pending_approval_count} approval request(s) are pending.");
   }

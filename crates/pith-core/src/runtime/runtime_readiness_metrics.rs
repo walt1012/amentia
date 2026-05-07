@@ -19,9 +19,7 @@ pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) execution_counts: RuntimeExecutionCounts,
 }
 
-pub(super) fn readiness_metrics(
-  input: ReadinessMetricsInput<'_>,
-) -> HashMap<String, String> {
+pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<String, String> {
   let ReadinessMetricsInput {
     context,
     model_status,
