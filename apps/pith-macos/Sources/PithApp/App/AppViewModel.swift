@@ -998,31 +998,6 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  func saveWorkspaceMemoryNote() {
-    guard let draft = MemoryActionPlanner.preparedDraft(memoryActionSnapshot()) else {
-      return
-    }
-
-    Task {
-      do {
-        let note = try await runtimeBridge.createMemoryNote(title: draft.title, body: draft.body)
-        updateMemoryState { state in
-          state.clearDraft()
-        }
-        await refreshMemoryState()
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.memoryNoteSaved(note)
-        )
-      } catch {
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.memoryNoteFailed(error: error)
-        )
-      }
-    }
-  }
-
   func cancelActiveTurn() {
     guard canCancelActiveTurn() else {
       return
@@ -1547,22 +1522,6 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  func memoryCountSummary() -> String {
-    MemoryPresenter.countSummary(memorySnapshot())
-  }
-
-  func memoryDetailSummary() -> String {
-    MemoryPresenter.detailSummary(memorySnapshot())
-  }
-
-  func memoryLatestSummary() -> String {
-    MemoryPresenter.latestSummary(memorySnapshot())
-  }
-
-  func canSaveWorkspaceMemoryNote() -> Bool {
-    MemoryActionPlanner.canSave(memoryActionSnapshot())
-  }
-
   func isLocalModelReady() -> Bool {
     guard runtimeState == .ready,
           let modelHealth,
@@ -1922,13 +1881,6 @@ final class AppViewModel: ObservableObject {
       canRunModelSetupSecondaryAction: canRunModelSetupCalloutSecondaryAction(),
       canOpenWorkspace: canOpenWorkspace(),
       canCreateThread: canCreateThread()
-    )
-  }
-
-  private func memorySnapshot() -> MemorySnapshot {
-    return MemorySnapshot(
-      status: memoryStatus,
-      notes: memoryNotes
     )
   }
 
@@ -2495,7 +2447,7 @@ final class AppViewModel: ObservableObject {
       && isDirectory.boolValue
   }
 
-  private func refreshMemoryState() async {
+  func refreshMemoryState() async {
     let memoryRefresh = await MemoryStateLoader.refresh(using: runtimeBridge)
     applyMemoryStateRefresh(memoryRefresh, clearsMissing: false)
   }
@@ -2509,19 +2461,10 @@ final class AppViewModel: ObservableObject {
     }
   }
 
-  private func updateMemoryState(_ update: (inout MemoryRuntimeState) -> Void) {
+  func updateMemoryState(_ update: (inout MemoryRuntimeState) -> Void) {
     var nextState = memoryState
     update(&nextState)
     memoryState = nextState
-  }
-
-  private func memoryActionSnapshot() -> MemoryActionSnapshot {
-    MemoryActionSnapshot(
-      runtimeState: runtimeState,
-      hasWorkspace: workspace != nil,
-      title: memoryNoteTitle,
-      body: memoryNoteBody
-    )
   }
 
   func updatePluginState(_ update: (inout PluginRuntimeState) -> Void) {
