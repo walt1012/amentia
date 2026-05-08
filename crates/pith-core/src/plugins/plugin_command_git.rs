@@ -9,6 +9,7 @@ use anyhow::{bail, Result};
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
 const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const GIT_COMMAND_OUTPUT_LIMIT: usize = 256 * 1024;
+const GIT_DIFF_SAFE_FLAGS: [&str; 2] = ["--no-ext-diff", "--no-textconv"];
 
 pub(super) struct GitDiffSnapshot {
   pub(super) stat: String,
@@ -22,10 +23,19 @@ struct GitCommandOutput {
 }
 
 pub(super) fn read_git_diff_snapshot(workspace_root: &Path) -> Option<GitDiffSnapshot> {
-  let stat = git_workspace_output(workspace_root, &["diff", "--stat"])?;
-  let names = git_workspace_output(workspace_root, &["diff", "--name-only"])?;
+  let stat_args = git_diff_args("--stat");
+  let names_args = git_diff_args("--name-only");
+  let stat = git_workspace_output(workspace_root, &stat_args)?;
+  let names = git_workspace_output(workspace_root, &names_args)?;
 
   Some(GitDiffSnapshot { stat, names })
+}
+
+fn git_diff_args(mode: &'static str) -> Vec<&'static str> {
+  let mut args = vec!["diff"];
+  args.extend(GIT_DIFF_SAFE_FLAGS);
+  args.push(mode);
+  args
 }
 
 fn git_workspace_output(workspace_root: &Path, args: &[&str]) -> Option<String> {
@@ -41,6 +51,7 @@ fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<Git
     .arg("-C")
     .arg(workspace_root)
     .args(args)
+    .stdin(Stdio::null())
     .stdout(Stdio::piped())
     .stderr(Stdio::null())
     .spawn()?;
@@ -105,5 +116,14 @@ mod tests {
     let output = read_pipe_in_background(input).join().expect("pipe reader");
 
     assert_eq!(output.len(), GIT_COMMAND_OUTPUT_LIMIT);
+  }
+
+  #[test]
+  fn git_diff_args_disable_external_helpers() {
+    let args = git_diff_args("--stat");
+
+    assert!(args.contains(&"--no-ext-diff"));
+    assert!(args.contains(&"--no-textconv"));
+    assert_eq!(args.last(), Some(&"--stat"));
   }
 }
