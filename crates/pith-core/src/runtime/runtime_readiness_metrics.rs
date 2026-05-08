@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use pith_model_runtime::llama_cpp_timeout_seconds;
 use pith_sandbox::NativeSandboxStatus;
-use pith_tools::{shell_command_timeout_seconds, web_search_timeout_seconds};
+use pith_tools::{
+  shell_command_timeout_seconds, web_search_timeout_seconds, WebSearchStatus,
+};
 
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionCounts;
@@ -14,6 +16,7 @@ pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) context_window: &'a str,
   pub(super) enabled_plugin_count: usize,
   pub(super) sandbox_status: &'a NativeSandboxStatus,
+  pub(super) web_search_status: &'a WebSearchStatus,
   pub(super) workspace_thread_count: usize,
   pub(super) first_request_sent: bool,
   pub(super) execution_counts: RuntimeExecutionCounts,
@@ -27,6 +30,7 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     context_window,
     enabled_plugin_count,
     sandbox_status,
+    web_search_status,
     workspace_thread_count,
     first_request_sent,
     execution_counts,
@@ -92,6 +96,18 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     (
       "webSearchTimeoutSeconds".to_string(),
       web_search_timeout_seconds().to_string(),
+    ),
+    (
+      "webSearchProvider".to_string(),
+      web_search_status.provider.clone(),
+    ),
+    (
+      "webSearchClient".to_string(),
+      web_search_status.client.clone(),
+    ),
+    (
+      "webSearchAvailable".to_string(),
+      web_search_status.available.to_string(),
     ),
     (
       "llamaTimeoutSeconds".to_string(),

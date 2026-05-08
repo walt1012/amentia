@@ -28,6 +28,7 @@ pub(crate) mod runtime_readiness_model;
 pub(crate) mod runtime_readiness_plugins;
 pub(crate) mod runtime_readiness_sandbox;
 pub(crate) mod runtime_readiness_summary;
+pub(crate) mod runtime_readiness_web_search;
 pub(crate) mod runtime_readiness_workspace;
 pub(crate) mod runtime_sequences;
 pub(crate) mod runtime_threads;

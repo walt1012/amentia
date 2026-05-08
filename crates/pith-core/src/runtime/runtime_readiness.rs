@@ -2,12 +2,12 @@ use std::path::Path;
 
 use pith_protocol::RuntimeReadinessResult;
 use pith_sandbox::workspace_required_status;
-use pith_tools::shell_sandbox_status;
+use pith_tools::{shell_sandbox_status, web_search_status};
 
 use super::runtime_readiness_checks::{
   bounded_runtime_check, context_check, execution_control_check, first_request_check,
   local_model_check, native_sandbox_check, plugin_check, readiness_summary, thread_check,
-  workspace_check,
+  web_search_check, workspace_check,
 };
 use super::runtime_readiness_metrics::{readiness_metrics, ReadinessMetricsInput};
 use crate::runtime_context::RuntimeContext;
@@ -27,6 +27,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .current()
     .map(|workspace| shell_sandbox_status(Path::new(&workspace.root_path)))
     .unwrap_or_else(workspace_required_status);
+  let web_search_status = web_search_status();
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
 
   let status = if !model_ready || !workspace_ready || !thread_ready {
@@ -73,6 +74,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       context_check(&context_window, &output_cap),
       execution_control_check(pending_approval_count, active_turn_count),
       native_sandbox_check(&sandbox_status),
+      web_search_check(&web_search_status),
       plugin_check(enabled_plugin_count, context.plugin_state.catalog_len()),
       bounded_runtime_check(),
     ],
@@ -83,6 +85,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       context_window: &context_window,
       enabled_plugin_count,
       sandbox_status: &sandbox_status,
+      web_search_status: &web_search_status,
       workspace_thread_count,
       first_request_sent,
       execution_counts,

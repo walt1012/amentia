@@ -1,3 +1,5 @@
+use std::env;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::time::Duration;
 
@@ -18,12 +20,38 @@ const WEB_SEARCH_OUTPUT_LIMIT: usize = 1_048_576;
 const WEB_SEARCH_PROCESS_TIMEOUT: Duration = Duration::from_secs(20);
 const WEB_SEARCH_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WebSearchStatus {
+  pub provider: String,
+  pub client: String,
+  pub available: bool,
+  pub detail: String,
+}
+
 pub fn web_search(query: &str, max_results: usize) -> Result<Vec<WebSearchResult>> {
   web_search_with_cancellation(query, max_results, || false)
 }
 
 pub fn web_search_timeout_seconds() -> u64 {
   WEB_SEARCH_PROCESS_TIMEOUT.as_secs()
+}
+
+pub fn web_search_status() -> WebSearchStatus {
+  let available = command_available("curl");
+  WebSearchStatus {
+    provider: WEB_SEARCH_PROVIDER.to_string(),
+    client: "curl".to_string(),
+    available,
+    detail: if available {
+      format!(
+        "Built-in web search uses {} through curl with a {} second process timeout.",
+        WEB_SEARCH_PROVIDER,
+        WEB_SEARCH_PROCESS_TIMEOUT.as_secs()
+      )
+    } else {
+      "Built-in web search is enabled, but curl was not found on PATH.".to_string()
+    },
+  }
 }
 
 pub fn web_search_with_cancellation<F>(
@@ -130,6 +158,45 @@ fn build_curl_command(url: &str) -> Command {
     .stdin(Stdio::null());
   configure_process_group(&mut process);
   process
+}
+
+fn command_available(command: &str) -> bool {
+  let command_path = Path::new(command);
+  if command_path.components().count() > 1 {
+    return command_path.is_file();
+  }
+
+  env::var_os("PATH")
+    .map(|paths| {
+      env::split_paths(&paths).any(|directory| {
+        command_candidates(&directory, command)
+          .into_iter()
+          .any(|candidate| candidate.is_file())
+      })
+    })
+    .unwrap_or(false)
+}
+
+#[cfg(windows)]
+fn command_candidates(directory: &Path, command: &str) -> Vec<PathBuf> {
+  if Path::new(command).extension().is_some() {
+    return vec![directory.join(command)];
+  }
+
+  let mut candidates = vec![directory.join(command)];
+  for extension in env::var("PATHEXT")
+    .unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string())
+    .split(';')
+    .filter(|extension| !extension.is_empty())
+  {
+    candidates.push(directory.join(format!("{command}{extension}")));
+  }
+  candidates
+}
+
+#[cfg(not(windows))]
+fn command_candidates(directory: &Path, command: &str) -> Vec<PathBuf> {
+  vec![directory.join(command)]
 }
 
 fn parse_duckduckgo_lite_results(html: &str, max_results: usize) -> Vec<WebSearchResult> {
@@ -353,5 +420,14 @@ mod tests {
 
     assert_eq!(output.bytes.len(), WEB_SEARCH_OUTPUT_LIMIT);
     assert_eq!(output.source_byte_count, WEB_SEARCH_OUTPUT_LIMIT + 512);
+  }
+
+  #[test]
+  fn web_search_status_reports_provider_and_client() {
+    let status = web_search_status();
+
+    assert_eq!(status.provider, WEB_SEARCH_PROVIDER);
+    assert_eq!(status.client, "curl");
+    assert!(!status.detail.is_empty());
   }
 }

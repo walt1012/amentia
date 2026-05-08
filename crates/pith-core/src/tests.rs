@@ -68,6 +68,7 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert!(check_ids.contains(&"thread"));
   assert!(check_ids.contains(&"firstRequest"));
   assert!(check_ids.contains(&"nativeSandbox"));
+  assert!(check_ids.contains(&"webSearch"));
   assert!(check_ids.contains(&"boundedRuntime"));
   assert_eq!(result["metrics"]["sandboxMode"], "workspaceReadWrite");
   assert!(result["metrics"]["sandboxBackend"].is_string());
@@ -76,6 +77,9 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
   assert_eq!(result["metrics"]["webSearchTimeoutSeconds"], "20");
+  assert_eq!(result["metrics"]["webSearchProvider"], "DuckDuckGo Lite");
+  assert_eq!(result["metrics"]["webSearchClient"], "curl");
+  assert!(result["metrics"]["webSearchAvailable"].is_string());
   let local_model = checks
     .iter()
     .find(|check| check["id"] == "localModel")
