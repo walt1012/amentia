@@ -81,12 +81,10 @@ fn runtime_readiness_reports_agent_control_surface() {
     .find(|check| check["id"] == "localModel")
     .expect("local model check");
   if local_model["status"].as_str() != Some("ready") {
-    assert!(
-      local_model["detail"]
-        .as_str()
-        .expect("local model detail")
-        .contains("Local model runtime is unavailable")
-    );
+    assert!(local_model["detail"]
+      .as_str()
+      .expect("local model detail")
+      .contains("Local model runtime is unavailable"));
   }
 }
 
