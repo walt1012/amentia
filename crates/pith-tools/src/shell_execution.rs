@@ -1,12 +1,12 @@
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Result;
-use pith_process::{configure_process_group, terminate_process_group_or_child};
+use pith_process::{configure_process_group, wait_for_child, ChildExitReason};
 
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -46,22 +46,14 @@ pub(crate) fn run_shell_with_timeout(
       max_output_bytes,
     )
   });
-  let started_at = Instant::now();
-  let mut timed_out = false;
-
-  let status = loop {
-    if let Some(status) = child.try_wait()? {
-      break status;
-    }
-
-    if started_at.elapsed() >= timeout {
-      timed_out = true;
-      terminate_shell_child(&mut child);
-      break child.wait()?;
-    }
-
-    thread::sleep(SHELL_POLL_INTERVAL);
-  };
+  let wait = wait_for_child(
+    &mut child,
+    timeout,
+    SHELL_POLL_INTERVAL,
+    Duration::from_millis(200),
+    || false,
+  )?;
+  let timed_out = wait.reason == ChildExitReason::TimedOut;
 
   let stdout = join_pipe_reader(stdout_reader)?;
   let stderr = join_pipe_reader(stderr_reader)?;
@@ -77,7 +69,7 @@ pub(crate) fn run_shell_with_timeout(
     exit_code: if timed_out {
       -1
     } else {
-      status.code().unwrap_or(-1)
+      wait.status.code().unwrap_or(-1)
     },
     stdout: stdout.preview,
     stderr: stderr.preview,
@@ -174,10 +166,6 @@ fn remove_artifact_directory(artifact_directory: &Path) {
   }
 
   let _ = fs::remove_dir_all(artifact_directory);
-}
-
-fn terminate_shell_child(child: &mut Child) {
-  terminate_process_group_or_child(child, Duration::from_millis(200));
 }
 
 #[cfg(target_family = "windows")]
