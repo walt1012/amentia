@@ -93,7 +93,7 @@ Context direction:
 - compact prompt assembly for small local models
 - ranked memory notes with attribution
 - compact tool observations and artifact references
-- web search as a separate permissioned network retrieval tool for current public information
+- built-in web search as a separate permissioned network retrieval tool for current public information
 
 Web search is not sandbox behavior. Current memory ranking is not generic RAG.
 
