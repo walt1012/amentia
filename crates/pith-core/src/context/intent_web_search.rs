@@ -100,8 +100,8 @@ mod tests {
       infer_explicit_web_search_intent("web search for `Pith local model`?").expect("intent");
     assert_eq!(local_model.query, "Pith local model");
 
-    let lfm = infer_explicit_web_search_intent("search the web for Liquid AI LFM2.5")
-      .expect("intent");
+    let lfm =
+      infer_explicit_web_search_intent("search the web for Liquid AI LFM2.5").expect("intent");
     assert_eq!(lfm.query, "Liquid AI LFM2.5");
 
     let plugins = infer_explicit_web_search_intent("websearch pith plugins").expect("intent");
