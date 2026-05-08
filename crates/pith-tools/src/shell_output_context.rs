@@ -1,13 +1,10 @@
 use std::collections::HashSet;
-use std::fs::{create_dir_all, write};
+use std::env;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::Result;
-
 use crate::types::ShellOutputContext;
 
-const SHELL_OUTPUT_ARTIFACT_DIR: &str = ".pith/sandbox-output";
 const SHELL_OUTPUT_CONTEXT_MODE: &str = "sandboxOutputPreview";
 const OUTPUT_CONTEXT_MARKERS: [&str; 9] = [
   "error",
@@ -28,43 +25,60 @@ pub(crate) struct ShellOutputContextResult {
 }
 
 pub(crate) fn build_shell_output_context(
-  workspace_root: &Path,
   stdout: &str,
   stderr: &str,
+  source_stdout_bytes: usize,
+  source_stderr_bytes: usize,
   budget_bytes: usize,
+  artifact_directory: Option<&Path>,
   command: &str,
 ) -> ShellOutputContextResult {
-  let artifact_directory =
-    shell_output_artifact_directory(workspace_root, stdout, stderr, budget_bytes);
-  let stdout_preview = compact_output_for_context(stdout, budget_bytes, command);
-  let stderr_preview = compact_output_for_context(stderr, budget_bytes, command);
-  let was_compacted = stdout_preview.len() < stdout.len() || stderr_preview.len() < stderr.len();
+  let stdout_preview =
+    compact_output_for_context(stdout, source_stdout_bytes, budget_bytes, command);
+  let stderr_preview =
+    compact_output_for_context(stderr, source_stderr_bytes, budget_bytes, command);
+  let was_compacted =
+    source_stdout_bytes > stdout_preview.len() || source_stderr_bytes > stderr_preview.len();
 
   ShellOutputContextResult {
     context: ShellOutputContext {
       mode: SHELL_OUTPUT_CONTEXT_MODE.to_string(),
-      source_stdout_bytes: stdout.len(),
-      source_stderr_bytes: stderr.len(),
+      source_stdout_bytes,
+      source_stderr_bytes,
       retained_stdout_bytes: stdout_preview.len(),
       retained_stderr_bytes: stderr_preview.len(),
       budget_bytes,
       was_compacted,
-      artifact_directory,
+      artifact_directory: artifact_directory.map(|path| path.display().to_string()),
     },
     stdout_preview,
     stderr_preview,
   }
 }
 
-fn compact_output_for_context(output: &str, budget_bytes: usize, command: &str) -> String {
-  if output.len() <= budget_bytes {
+pub(crate) fn shell_output_artifact_directory() -> PathBuf {
+  shell_output_artifact_root().join(shell_output_artifact_run_name())
+}
+
+fn compact_output_for_context(
+  output: &str,
+  source_bytes: usize,
+  budget_bytes: usize,
+  command: &str,
+) -> String {
+  if source_bytes <= output.len() && output.len() <= budget_bytes {
     return output.to_string();
   }
 
   let important_lines = select_important_output_lines(output, command, budget_bytes / 2);
+  let omitted_bytes = if source_bytes > output.len() {
+    source_bytes.saturating_sub(output.len())
+  } else {
+    output.len().saturating_sub(budget_bytes)
+  };
   let marker = format!(
     "\n[{} bytes omitted from sandbox output]\n",
-    output.len().saturating_sub(budget_bytes)
+    omitted_bytes
   );
   let marker_len = marker.len();
   if budget_bytes <= marker_len {
@@ -80,6 +94,10 @@ fn compact_output_for_context(output: &str, budget_bytes: usize, command: &str) 
   }
 
   let remaining_budget = budget_bytes.saturating_sub(marker_len);
+  if output.len() <= remaining_budget {
+    return format!("{output}{marker}");
+  }
+
   let head_budget = (remaining_budget * 2) / 3;
   let tail_budget = remaining_budget.saturating_sub(head_budget);
   format!(
@@ -167,45 +185,43 @@ fn take_last_output(output: &str, max_output_bytes: usize) -> String {
   collected
 }
 
-fn shell_output_artifact_directory(
-  workspace_root: &Path,
-  stdout: &str,
-  stderr: &str,
-  budget_bytes: usize,
-) -> Option<String> {
-  if stdout.len() <= budget_bytes && stderr.len() <= budget_bytes {
-    return None;
+fn shell_output_artifact_root() -> PathBuf {
+  if let Ok(data_dir) = env::var("PITH_DATA_DIR") {
+    return PathBuf::from(data_dir)
+      .join("artifacts")
+      .join("sandbox-output");
   }
 
-  write_shell_output_artifact(workspace_root, stdout, stderr).ok()
+  if let Ok(home_dir) = env::var("HOME") {
+    return PathBuf::from(home_dir)
+      .join(".pith")
+      .join("artifacts")
+      .join("sandbox-output");
+  }
+
+  if let Ok(home_dir) = env::var("USERPROFILE") {
+    return PathBuf::from(home_dir)
+      .join(".pith")
+      .join("artifacts")
+      .join("sandbox-output");
+  }
+
+  PathBuf::from(".pith")
+    .join("artifacts")
+    .join("sandbox-output")
 }
 
-fn write_shell_output_artifact(
-  workspace_root: &Path,
-  stdout: &str,
-  stderr: &str,
-) -> Result<String> {
-  let relative_directory = shell_output_artifact_relative_directory();
-  let artifact_directory = workspace_root.join(&relative_directory);
-  create_dir_all(&artifact_directory)?;
-  write(artifact_directory.join("stdout.txt"), stdout)?;
-  write(artifact_directory.join("stderr.txt"), stderr)?;
-  Ok(relative_directory.to_string_lossy().replace('\\', "/"))
-}
-
-fn shell_output_artifact_relative_directory() -> PathBuf {
+fn shell_output_artifact_run_name() -> String {
   let nonce = SystemTime::now()
     .duration_since(UNIX_EPOCH)
     .expect("system time")
     .as_nanos();
-  PathBuf::from(SHELL_OUTPUT_ARTIFACT_DIR).join(format!("run-{nonce}"))
+  format!("run-{nonce}")
 }
 
 #[cfg(test)]
 mod tests {
-  use std::fs;
   use std::path::PathBuf;
-  use std::time::{SystemTime, UNIX_EPOCH};
 
   use super::*;
 
@@ -213,7 +229,7 @@ mod tests {
   fn shell_output_context_compacts_large_output_and_keeps_tail() {
     let output = format!("{}tail marker", "A".repeat(900));
 
-    let preview = compact_output_for_context(&output, 120, "cat artifact.log");
+    let preview = compact_output_for_context(&output, output.len(), 120, "cat artifact.log");
 
     assert!(preview.contains("bytes omitted from sandbox output"));
     assert!(preview.ends_with("tail marker"));
@@ -228,7 +244,7 @@ mod tests {
       "tail\n".repeat(80)
     );
 
-    let preview = compact_output_for_context(&output, 180, "cat package.json");
+    let preview = compact_output_for_context(&output, output.len(), 180, "cat package.json");
 
     assert!(preview.contains("[selected sandbox output]"));
     assert!(preview.contains("error: failed to open package.json"));
@@ -236,32 +252,35 @@ mod tests {
   }
 
   #[test]
-  fn shell_output_artifact_stores_full_output_inside_workspace() {
-    let workspace = unique_temp_workspace("shell-output-artifact");
-    fs::create_dir_all(&workspace).expect("workspace");
+  fn shell_output_context_reports_app_owned_artifact_path() {
+    let artifact_directory = PathBuf::from("/tmp/pith-artifacts/run-1");
 
-    let relative_directory =
-      write_shell_output_artifact(&workspace, "full stdout", "full stderr").expect("artifact");
-    let artifact_directory = workspace.join(&relative_directory);
+    let context = build_shell_output_context(
+      "preview",
+      "",
+      4096,
+      0,
+      1024,
+      Some(&artifact_directory),
+      "cat package.json",
+    )
+    .context;
 
-    assert!(relative_directory.starts_with(".pith/sandbox-output/run-"));
+    assert!(context.was_compacted);
     assert_eq!(
-      fs::read_to_string(artifact_directory.join("stdout.txt")).expect("stdout"),
-      "full stdout"
+      context.artifact_directory.as_deref(),
+      Some("/tmp/pith-artifacts/run-1")
     );
-    assert_eq!(
-      fs::read_to_string(artifact_directory.join("stderr.txt")).expect("stderr"),
-      "full stderr"
-    );
-
-    let _ = fs::remove_dir_all(workspace);
   }
 
-  fn unique_temp_workspace(prefix: &str) -> PathBuf {
-    let nonce = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .expect("clock")
-      .as_nanos();
-    std::env::temp_dir().join(format!("pith-tools-{prefix}-{nonce}"))
+  #[test]
+  fn shell_output_context_marks_stream_omissions_when_preview_was_bounded() {
+    let context =
+      build_shell_output_context("head preview", "", 4096, 0, 128, None, "cat log").context;
+
+    assert!(context.was_compacted);
+    assert_eq!(context.source_stdout_bytes, 4096);
+    assert!(context.retained_stdout_bytes > "head preview".len());
+    assert!(context.retained_stdout_bytes <= 128);
   }
 }

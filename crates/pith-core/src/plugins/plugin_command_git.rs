@@ -8,6 +8,7 @@ use anyhow::{bail, Result};
 
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
 const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const GIT_COMMAND_OUTPUT_LIMIT: usize = 256 * 1024;
 
 pub(super) struct GitDiffSnapshot {
   pub(super) stat: String,
@@ -43,14 +44,10 @@ fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<Git
     .stdout(Stdio::piped())
     .stderr(Stdio::null())
     .spawn()?;
-  let Some(mut stdout) = child.stdout.take() else {
+  let Some(stdout) = child.stdout.take() else {
     bail!("git stdout pipe was unavailable");
   };
-  let stdout_reader = thread::spawn(move || {
-    let mut buffer = vec![];
-    let _ = stdout.read_to_end(&mut buffer);
-    buffer
-  });
+  let stdout_reader = read_pipe_in_background(stdout);
 
   let started_at = Instant::now();
   let (success, timed_out) = loop {
@@ -73,4 +70,43 @@ fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<Git
     success,
     timed_out,
   })
+}
+
+fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
+where
+  R: Read + Send + 'static,
+{
+  thread::spawn(move || {
+    let mut output = Vec::with_capacity(GIT_COMMAND_OUTPUT_LIMIT.min(64 * 1024));
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+      let Ok(bytes_read) = reader.read(&mut buffer) else {
+        break;
+      };
+      if bytes_read == 0 {
+        break;
+      }
+
+      let remaining_limit = GIT_COMMAND_OUTPUT_LIMIT.saturating_sub(output.len());
+      if remaining_limit > 0 {
+        output.extend_from_slice(&buffer[..bytes_read.min(remaining_limit)]);
+      }
+    }
+
+    output
+  })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn git_pipe_reader_bounds_retained_output() {
+    let input = std::io::Cursor::new(vec![b'x'; GIT_COMMAND_OUTPUT_LIMIT + 512]);
+    let output = read_pipe_in_background(input).join().expect("pipe reader");
+
+    assert_eq!(output.len(), GIT_COMMAND_OUTPUT_LIMIT);
+  }
 }

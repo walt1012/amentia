@@ -1,5 +1,6 @@
-use std::io::Read;
-use std::path::Path;
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -24,14 +25,28 @@ pub(crate) fn run_shell_with_timeout(
   command: &str,
   workspace_root: &Path,
   timeout: Duration,
+  max_output_bytes: usize,
+  artifact_directory: PathBuf,
 ) -> Result<ShellOutput> {
   let mut child = build_shell_command(command, workspace_root)
     .current_dir(workspace_root)
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()?;
-  let stdout_reader = child.stdout.take().map(read_pipe_in_background);
-  let stderr_reader = child.stderr.take().map(read_pipe_in_background);
+  let stdout_reader = child.stdout.take().map(|reader| {
+    read_pipe_in_background(
+      reader,
+      artifact_directory.join("stdout.txt"),
+      max_output_bytes,
+    )
+  });
+  let stderr_reader = child.stderr.take().map(|reader| {
+    read_pipe_in_background(
+      reader,
+      artifact_directory.join("stderr.txt"),
+      max_output_bytes,
+    )
+  });
   let started_at = Instant::now();
   let mut timed_out = false;
 
@@ -49,14 +64,28 @@ pub(crate) fn run_shell_with_timeout(
     thread::sleep(SHELL_POLL_INTERVAL);
   };
 
+  let stdout = join_pipe_reader(stdout_reader)?;
+  let stderr = join_pipe_reader(stderr_reader)?;
+  let artifact_directory = if stdout.source_byte_count > max_output_bytes
+    || stderr.source_byte_count > max_output_bytes
+  {
+    Some(artifact_directory)
+  } else {
+    let _ = fs::remove_dir_all(&artifact_directory);
+    None
+  };
+
   Ok(ShellOutput {
     exit_code: if timed_out {
       -1
     } else {
       status.code().unwrap_or(-1)
     },
-    stdout: join_pipe_reader(stdout_reader),
-    stderr: join_pipe_reader(stderr_reader),
+    stdout: stdout.preview,
+    stderr: stderr.preview,
+    stdout_source_bytes: stdout.source_byte_count,
+    stderr_source_bytes: stderr.source_byte_count,
+    artifact_directory,
     timed_out,
   })
 }
@@ -65,24 +94,72 @@ pub(crate) struct ShellOutput {
   pub(crate) exit_code: i32,
   pub(crate) stdout: Vec<u8>,
   pub(crate) stderr: Vec<u8>,
+  pub(crate) stdout_source_bytes: usize,
+  pub(crate) stderr_source_bytes: usize,
+  pub(crate) artifact_directory: Option<PathBuf>,
   pub(crate) timed_out: bool,
 }
 
-fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
+struct PipeCapture {
+  preview: Vec<u8>,
+  source_byte_count: usize,
+}
+
+fn read_pipe_in_background<R>(
+  mut reader: R,
+  artifact_path: PathBuf,
+  max_preview_bytes: usize,
+) -> thread::JoinHandle<Result<PipeCapture>>
 where
   R: Read + Send + 'static,
 {
   thread::spawn(move || {
-    let mut bytes = vec![];
-    let _ = reader.read_to_end(&mut bytes);
-    bytes
+    if let Some(parent) = artifact_path.parent() {
+      fs::create_dir_all(parent)?;
+    }
+    let mut artifact = File::create(artifact_path)?;
+    let mut preview = Vec::with_capacity(max_preview_bytes.min(64 * 1024));
+    let mut source_byte_count = 0;
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+      let bytes_read = reader.read(&mut buffer)?;
+      if bytes_read == 0 {
+        break;
+      }
+
+      artifact.write_all(&buffer[..bytes_read])?;
+      source_byte_count += bytes_read;
+      let remaining_preview = max_preview_bytes.saturating_sub(preview.len());
+      if remaining_preview > 0 {
+        preview.extend_from_slice(&buffer[..bytes_read.min(remaining_preview)]);
+      }
+    }
+
+    Ok(PipeCapture {
+      preview,
+      source_byte_count,
+    })
   })
 }
 
-fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
+fn join_pipe_reader(
+  reader: Option<thread::JoinHandle<Result<PipeCapture>>>,
+) -> Result<PipeCapture> {
   reader
-    .and_then(|handle| handle.join().ok())
-    .unwrap_or_default()
+    .map(|handle| match handle.join() {
+      Ok(result) => result,
+      Err(_) => Ok(PipeCapture {
+        preview: vec![],
+        source_byte_count: 0,
+      }),
+    })
+    .unwrap_or_else(|| {
+      Ok(PipeCapture {
+        preview: vec![],
+        source_byte_count: 0,
+      })
+    })
 }
 
 fn terminate_shell_child(child: &mut Child) {
@@ -194,11 +271,39 @@ mod tests {
     let workspace = unique_temp_workspace("shell-timeout");
     fs::create_dir_all(&workspace).expect("workspace");
 
-    let result = run_shell_with_timeout("sleep 5", &workspace, Duration::from_millis(100))
-      .expect("shell result");
+    let artifact_directory = workspace.join("artifacts");
+    let result = run_shell_with_timeout(
+      "sleep 5",
+      &workspace,
+      Duration::from_millis(100),
+      1024,
+      artifact_directory,
+    )
+    .expect("shell result");
 
     assert!(result.timed_out);
     assert_eq!(result.exit_code, -1);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn pipe_reader_spools_full_output_while_bounding_preview() {
+    let workspace = unique_temp_workspace("pipe-spool");
+    fs::create_dir_all(&workspace).expect("workspace");
+    let artifact_path = workspace.join("stdout.txt");
+    let input = std::io::Cursor::new(vec![b'x'; 4096]);
+
+    let capture = join_pipe_reader(Some(read_pipe_in_background(
+      input,
+      artifact_path.clone(),
+      128,
+    )))
+    .expect("pipe capture");
+
+    assert_eq!(capture.source_byte_count, 4096);
+    assert_eq!(capture.preview.len(), 128);
+    assert_eq!(fs::read(artifact_path).expect("artifact").len(), 4096);
 
     let _ = fs::remove_dir_all(workspace);
   }

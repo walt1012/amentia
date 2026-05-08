@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
 const LLAMA_CPP_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const LLAMA_CPP_PIPE_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelRole {
@@ -1073,8 +1074,23 @@ where
   R: Read + Send + 'static,
 {
   thread::spawn(move || {
-    let mut bytes = vec![];
-    let _ = reader.read_to_end(&mut bytes);
+    let mut bytes = Vec::with_capacity(LLAMA_CPP_PIPE_OUTPUT_LIMIT.min(64 * 1024));
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+      let Ok(bytes_read) = reader.read(&mut buffer) else {
+        break;
+      };
+      if bytes_read == 0 {
+        break;
+      }
+
+      let remaining_limit = LLAMA_CPP_PIPE_OUTPUT_LIMIT.saturating_sub(bytes.len());
+      if remaining_limit > 0 {
+        bytes.extend_from_slice(&buffer[..bytes_read.min(remaining_limit)]);
+      }
+    }
+
     bytes
   })
 }
@@ -1333,6 +1349,14 @@ mod tests {
     assert_eq!(bootstrap.copied_files.len(), 2);
 
     remove_temp_directory(&temp_root);
+  }
+
+  #[test]
+  fn llama_pipe_reader_bounds_retained_output() {
+    let input = std::io::Cursor::new(vec![b'x'; LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512]);
+    let output = join_pipe_reader(Some(read_pipe_in_background(input)));
+
+    assert_eq!(output.len(), LLAMA_CPP_PIPE_OUTPUT_LIMIT);
   }
 
   fn restore_env_var(key: &str, value: Option<String>) {

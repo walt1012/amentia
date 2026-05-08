@@ -773,7 +773,7 @@ Phase 1:
 - bounded subprocess execution with timeout and cleanup
 - native macOS workspace sandbox for shell actions when the platform backend is available
 - workspace-local temporary files for sandboxed commands instead of broad host temp writes
-- workspace-local shell output artifacts with compact preview attributes for model context
+- app-owned shell output artifacts with compact preview attributes for model context
 - no required Docker, VM, or third-party container runtime
 
 Phase 2:
@@ -955,7 +955,7 @@ Deliverables:
 - guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
 - strict local model readiness with verified model integrity, no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
 - bounded local inference with generation timeouts, cancellation, subprocess cleanup, and runtime unblocking after model failure
-- native local sandbox foundation for shell execution, with workspace-scoped policy, workspace-local temp routing, compact output previews, workspace-local output artifacts, and readiness diagnostics
+- native local sandbox foundation for shell execution, with workspace-scoped policy, workspace-local temp routing, compact output previews, app-owned output artifacts, and readiness diagnostics
 - fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
 - compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery

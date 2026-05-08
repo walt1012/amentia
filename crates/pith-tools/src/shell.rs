@@ -4,7 +4,9 @@ use anyhow::{bail, Context, Result};
 
 use crate::paths::canonical_workspace_root;
 use crate::shell_execution::{run_shell_with_timeout, shell_command_timeout};
-use crate::shell_output_context::build_shell_output_context;
+use crate::shell_output_context::{
+  build_shell_output_context, shell_output_artifact_directory,
+};
 use crate::shell_sandbox::{
   prepare_shell_sandbox_environment, shell_sandbox_status as build_shell_sandbox_status,
   shell_sandbox_summary as build_shell_sandbox_summary,
@@ -28,13 +30,19 @@ pub fn run_shell(
   let sandbox = shell_sandbox_summary(&workspace_root);
   prepare_shell_sandbox_environment(&workspace_root, &sandbox)?;
 
-  let output = run_shell_with_timeout(trimmed_command, &workspace_root, shell_command_timeout())
-    .with_context(|| {
-      format!(
-        "failed to run shell command in {}",
-        workspace_root.display()
-      )
-    })?;
+  let output = run_shell_with_timeout(
+    trimmed_command,
+    &workspace_root,
+    shell_command_timeout(),
+    max_output_bytes,
+    shell_output_artifact_directory(),
+  )
+  .with_context(|| {
+    format!(
+      "failed to run shell command in {}",
+      workspace_root.display()
+    )
+  })?;
 
   let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
   let mut stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -49,11 +57,15 @@ pub fn run_shell(
       stderr = format!("{stderr}\n{timeout_message}");
     }
   }
+  let stdout_source_bytes = output.stdout_source_bytes.max(stdout.len());
+  let stderr_source_bytes = output.stderr_source_bytes.max(stderr.len());
   let output_context = build_shell_output_context(
-    &workspace_root,
     &stdout,
     &stderr,
+    stdout_source_bytes,
+    stderr_source_bytes,
     max_output_bytes,
+    output.artifact_directory.as_deref(),
     trimmed_command,
   );
 
