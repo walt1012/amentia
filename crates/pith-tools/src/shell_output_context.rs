@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::ShellOutputContext;
 
 const SHELL_OUTPUT_CONTEXT_MODE: &str = "sandboxOutputPreview";
+const SHELL_OUTPUT_ARTIFACT_RETAINED_RUNS: usize = 20;
 const OUTPUT_CONTEXT_MARKERS: [&str; 9] = [
   "error",
   "failed",
@@ -57,7 +59,9 @@ pub(crate) fn build_shell_output_context(
 }
 
 pub(crate) fn shell_output_artifact_directory() -> PathBuf {
-  shell_output_artifact_root().join(shell_output_artifact_run_name())
+  let root = shell_output_artifact_root();
+  prune_shell_output_artifact_root(&root, SHELL_OUTPUT_ARTIFACT_RETAINED_RUNS);
+  root.join(shell_output_artifact_run_name())
 }
 
 fn compact_output_for_context(
@@ -203,9 +207,57 @@ fn shell_output_artifact_root() -> PathBuf {
       .join("sandbox-output");
   }
 
-  PathBuf::from(".pith")
+  env::temp_dir()
+    .join("Pith")
     .join("artifacts")
     .join("sandbox-output")
+}
+
+#[derive(Debug)]
+struct ShellOutputArtifactRun {
+  path: PathBuf,
+  modified_at: SystemTime,
+}
+
+fn prune_shell_output_artifact_root(root: &Path, retained_runs: usize) {
+  let Ok(entries) = fs::read_dir(root) else {
+    return;
+  };
+  let mut runs = entries
+    .filter_map(|entry| entry.ok())
+    .filter_map(|entry| shell_output_artifact_run(entry.path()))
+    .collect::<Vec<_>>();
+  if runs.len() <= retained_runs {
+    return;
+  }
+
+  runs.sort_by(|left, right| {
+    left
+      .modified_at
+      .cmp(&right.modified_at)
+      .then_with(|| left.path.cmp(&right.path))
+  });
+  let removable_count = runs.len().saturating_sub(retained_runs);
+  for run in runs.into_iter().take(removable_count) {
+    let _ = fs::remove_dir_all(run.path);
+  }
+}
+
+fn shell_output_artifact_run(path: PathBuf) -> Option<ShellOutputArtifactRun> {
+  let file_name = path.file_name()?.to_string_lossy();
+  if !file_name.starts_with("run-") {
+    return None;
+  }
+
+  let metadata = fs::metadata(&path).ok()?;
+  if !metadata.is_dir() {
+    return None;
+  }
+
+  Some(ShellOutputArtifactRun {
+    path,
+    modified_at: metadata.modified().unwrap_or(UNIX_EPOCH),
+  })
 }
 
 fn shell_output_artifact_run_name() -> String {
@@ -218,7 +270,9 @@ fn shell_output_artifact_run_name() -> String {
 
 #[cfg(test)]
 mod tests {
+  use std::fs;
   use std::path::PathBuf;
+  use std::time::{SystemTime, UNIX_EPOCH};
 
   use super::*;
 
@@ -279,5 +333,34 @@ mod tests {
     assert_eq!(context.source_stdout_bytes, 4096);
     assert!(context.retained_stdout_bytes > "head preview".len());
     assert!(context.retained_stdout_bytes <= 128);
+  }
+
+  #[test]
+  fn shell_output_artifact_pruning_keeps_recent_runs() {
+    let root = unique_temp_directory("artifact-prune");
+    fs::create_dir_all(&root).expect("artifact root");
+    for index in 0..5 {
+      fs::create_dir_all(root.join(format!("run-{index:02}"))).expect("artifact run");
+    }
+    fs::create_dir_all(root.join("manual-note")).expect("manual directory");
+
+    prune_shell_output_artifact_root(&root, 2);
+
+    assert!(!root.join("run-00").exists());
+    assert!(!root.join("run-01").exists());
+    assert!(!root.join("run-02").exists());
+    assert!(root.join("run-03").exists());
+    assert!(root.join("run-04").exists());
+    assert!(root.join("manual-note").exists());
+
+    let _ = fs::remove_dir_all(root);
+  }
+
+  fn unique_temp_directory(prefix: &str) -> PathBuf {
+    let nonce = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("clock")
+      .as_nanos();
+    std::env::temp_dir().join(format!("pith-tools-{prefix}-{nonce}"))
   }
 }
