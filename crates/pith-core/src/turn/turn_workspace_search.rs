@@ -8,6 +8,7 @@ use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{build_plan_item, format_search_result, summarize_search_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
+use crate::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_search_turn(
   snapshot: &PreparedTurnSnapshot,
@@ -55,7 +56,11 @@ pub(super) fn execute_search_turn(
     kind: "toolStart".to_string(),
     title: "search_files".to_string(),
     content: query.to_string(),
-    attributes: None,
+    attributes: Some(workspace_tool_attributes(
+      "search_files",
+      workspace,
+      [("query".to_string(), query.to_string())],
+    )),
   });
 
   match search_files(Path::new(&workspace.root_path), query, 12) {
@@ -64,7 +69,14 @@ pub(super) fn execute_search_turn(
         kind: "toolResult".to_string(),
         title: "search_files result".to_string(),
         content: format_search_result(query, &matches),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "search_files",
+          workspace,
+          [
+            ("query".to_string(), query.to_string()),
+            ("resultCount".to_string(), matches.len().to_string()),
+          ],
+        )),
       });
       let (summary, summary_attributes) = summarize_search_result(
         &snapshot.model_runtime,

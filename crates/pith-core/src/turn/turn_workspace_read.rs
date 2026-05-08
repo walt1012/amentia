@@ -8,6 +8,7 @@ use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{build_plan_item, format_file_result, summarize_file_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
+use crate::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_read_turn(
   snapshot: &PreparedTurnSnapshot,
@@ -55,7 +56,11 @@ pub(super) fn execute_read_turn(
     kind: "toolStart".to_string(),
     title: "read_file".to_string(),
     content: relative_path.to_string(),
-    attributes: None,
+    attributes: Some(workspace_tool_attributes(
+      "read_file",
+      workspace,
+      [("relativePath".to_string(), relative_path.to_string())],
+    )),
   });
 
   match read_file(Path::new(&workspace.root_path), relative_path, 4096) {
@@ -64,7 +69,11 @@ pub(super) fn execute_read_turn(
         kind: "toolResult".to_string(),
         title: "read_file result".to_string(),
         content: format_file_result(&result),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "read_file",
+          workspace,
+          [("relativePath".to_string(), relative_path.to_string())],
+        )),
       });
       let (summary, summary_attributes) = summarize_file_result(
         &snapshot.model_runtime,

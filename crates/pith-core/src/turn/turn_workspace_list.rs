@@ -10,6 +10,7 @@ use crate::local_responses::{
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
+use crate::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_list_turn(
   snapshot: &PreparedTurnSnapshot,
@@ -56,7 +57,11 @@ pub(super) fn execute_list_turn(
     kind: "toolStart".to_string(),
     title: "list_directory".to_string(),
     content: ".".to_string(),
-    attributes: None,
+    attributes: Some(workspace_tool_attributes(
+      "list_directory",
+      workspace,
+      [("relativePath".to_string(), ".".to_string())],
+    )),
   });
 
   match list_directory(Path::new(&workspace.root_path), None, 24) {
@@ -65,7 +70,14 @@ pub(super) fn execute_list_turn(
         kind: "toolResult".to_string(),
         title: "list_directory result".to_string(),
         content: format_directory_result(&entries),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "list_directory",
+          workspace,
+          [
+            ("relativePath".to_string(), ".".to_string()),
+            ("entryCount".to_string(), entries.len().to_string()),
+          ],
+        )),
       });
       let (summary, summary_attributes) = summarize_directory_result(
         &snapshot.model_runtime,

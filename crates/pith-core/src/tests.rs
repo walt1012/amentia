@@ -509,7 +509,14 @@ fn turn_start_reads_a_requested_workspace_file() {
   assert_eq!(items[1]["attributes"]["memoryNoteCount"], "1");
   assert_eq!(items[1]["attributes"]["memoryNoteIds"], "memory-1");
   assert_eq!(items[2]["kind"], "toolStart");
+  assert_eq!(items[2]["attributes"]["tool"], "read_file");
+  assert_eq!(items[2]["attributes"]["relativePath"], "README.md");
+  assert_eq!(
+    items[2]["attributes"]["workspaceDisplayName"],
+    workspace.file_name().unwrap().to_str().unwrap()
+  );
   assert_eq!(items[3]["kind"], "toolResult");
+  assert_eq!(items[3]["attributes"]["tool"], "read_file");
   assert_eq!(items[4]["kind"], "assistantMessage");
   assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
   assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
@@ -720,7 +727,10 @@ fn turn_start_searches_workspace_content() {
 
   assert_eq!(items[2]["kind"], "toolStart");
   assert_eq!(items[2]["title"], "search_files");
+  assert_eq!(items[2]["attributes"]["tool"], "search_files");
+  assert_eq!(items[2]["attributes"]["query"], "Search target");
   assert_eq!(items[3]["kind"], "toolResult");
+  assert_eq!(items[3]["attributes"]["resultCount"], "2");
   assert!(items[3]["content"]
     .as_str()
     .unwrap()
@@ -771,7 +781,10 @@ fn approval_respond_writes_file_after_approval() {
   let turn_result = turn_response.result.expect("turn result");
   let turn_items = turn_result["items"].as_array().expect("turn items");
   assert_eq!(turn_items[2]["title"], "generate_diff");
+  assert_eq!(turn_items[2]["attributes"]["tool"], "generate_diff");
+  assert_eq!(turn_items[2]["attributes"]["relativePath"], "docs/output.txt");
   assert_eq!(turn_items[3]["kind"], "diffArtifact");
+  assert_eq!(turn_items[3]["attributes"]["tool"], "generate_diff");
   assert!(turn_items[3]["content"]
     .as_str()
     .unwrap()

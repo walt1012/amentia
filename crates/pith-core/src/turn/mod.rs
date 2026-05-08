@@ -12,6 +12,7 @@ pub(crate) mod turn_execution;
 pub(crate) mod turn_preparation;
 pub(crate) mod turn_streaming;
 pub(crate) mod turn_streaming_progress;
+pub(crate) mod turn_tool_provenance;
 pub(crate) mod turn_web_search;
 pub(crate) mod turn_workspace_execution;
 pub(crate) mod turn_workspace_fallback;

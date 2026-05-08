@@ -9,6 +9,7 @@ use crate::intent_inference;
 use crate::local_responses::build_plan_item;
 use crate::plugin_permissions::build_permission_denied_items;
 use crate::request_state::PreparedTurnSnapshot;
+use crate::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_write_turn(
   snapshot: &PreparedTurnSnapshot,
@@ -68,7 +69,11 @@ pub(super) fn execute_write_turn(
     kind: "toolStart".to_string(),
     title: "generate_diff".to_string(),
     content: intent.relative_path.clone(),
-    attributes: None,
+    attributes: Some(workspace_tool_attributes(
+      "generate_diff",
+      workspace,
+      [("relativePath".to_string(), intent.relative_path.clone())],
+    )),
   });
   match generate_diff(
     Path::new(&workspace.root_path),
@@ -80,10 +85,14 @@ pub(super) fn execute_write_turn(
         kind: "diffArtifact".to_string(),
         title: "Diff Preview".to_string(),
         content: diff,
-        attributes: Some(HashMap::from([
-          ("action".to_string(), "write_file".to_string()),
-          ("relativePath".to_string(), intent.relative_path.clone()),
-        ])),
+        attributes: Some(workspace_tool_attributes(
+          "generate_diff",
+          workspace,
+          [
+            ("action".to_string(), "write_file".to_string()),
+            ("relativePath".to_string(), intent.relative_path.clone()),
+          ],
+        )),
       });
     }
     Err(error) => {
