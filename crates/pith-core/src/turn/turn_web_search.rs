@@ -198,7 +198,10 @@ mod tests {
 
     let attributes = web_search_attributes(&intent, &status);
 
-    assert_eq!(attributes.get("tool").map(String::as_str), Some("web_search"));
+    assert_eq!(
+      attributes.get("tool").map(String::as_str),
+      Some("web_search")
+    );
     assert_eq!(
       attributes.get("provider").map(String::as_str),
       Some("Example Search")
