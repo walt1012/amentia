@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::{
@@ -12,7 +11,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
-use pith_process::{configure_process_group, terminate_process_group_or_child};
+use pith_process::{
+  configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
+  terminate_process_group_or_child,
+};
 use serde::{Deserialize, Serialize};
 
 const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
@@ -999,8 +1001,14 @@ fn run_llama_cpp_with_timeout(
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()?;
-  let stdout_reader = child.stdout.take().map(read_pipe_in_background);
-  let stderr_reader = child.stderr.take().map(read_pipe_in_background);
+  let stdout_reader = child
+    .stdout
+    .take()
+    .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
+  let stderr_reader = child
+    .stderr
+    .take()
+    .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
   let started_at = Instant::now();
   let mut timed_out = false;
 
@@ -1026,8 +1034,8 @@ fn run_llama_cpp_with_timeout(
     thread::sleep(LLAMA_CPP_POLL_INTERVAL);
   };
 
-  let stdout = join_pipe_reader(stdout_reader);
-  let stderr = join_pipe_reader(stderr_reader);
+  let stdout = join_bounded_pipe_reader(stdout_reader).bytes;
+  let stderr = join_bounded_pipe_reader(stderr_reader).bytes;
 
   if timed_out {
     let stderr_text = String::from_utf8_lossy(&stderr).trim().to_string();
@@ -1068,35 +1076,6 @@ fn llama_cpp_timeout() -> Duration {
 
 pub fn llama_cpp_timeout_seconds() -> u64 {
   llama_cpp_timeout().as_secs()
-}
-
-fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
-where
-  R: Read + Send + 'static,
-{
-  thread::spawn(move || {
-    let mut bytes = Vec::with_capacity(LLAMA_CPP_PIPE_OUTPUT_LIMIT.min(64 * 1024));
-    let mut buffer = [0_u8; 8192];
-
-    while let Ok(bytes_read) = reader.read(&mut buffer) {
-      if bytes_read == 0 {
-        break;
-      }
-
-      let remaining_limit = LLAMA_CPP_PIPE_OUTPUT_LIMIT.saturating_sub(bytes.len());
-      if remaining_limit > 0 {
-        bytes.extend_from_slice(&buffer[..bytes_read.min(remaining_limit)]);
-      }
-    }
-
-    bytes
-  })
-}
-
-fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
-  reader
-    .and_then(|handle| handle.join().ok())
-    .unwrap_or_default()
 }
 
 fn terminate_llama_child(child: &mut Child) {
@@ -1306,9 +1285,13 @@ mod tests {
   #[test]
   fn llama_pipe_reader_bounds_retained_output() {
     let input = std::io::Cursor::new(vec![b'x'; LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512]);
-    let output = join_pipe_reader(Some(read_pipe_in_background(input)));
+    let output = join_bounded_pipe_reader(Some(read_bounded_pipe_in_background(
+      input,
+      LLAMA_CPP_PIPE_OUTPUT_LIMIT,
+    )));
 
-    assert_eq!(output.len(), LLAMA_CPP_PIPE_OUTPUT_LIMIT);
+    assert_eq!(output.bytes.len(), LLAMA_CPP_PIPE_OUTPUT_LIMIT);
+    assert_eq!(output.source_byte_count, LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512);
   }
 
   fn restore_env_var(key: &str, value: Option<String>) {

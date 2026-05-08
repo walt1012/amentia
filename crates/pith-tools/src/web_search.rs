@@ -1,10 +1,12 @@
-use std::io::Read;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
-use pith_process::{configure_process_group, terminate_process_group_or_child};
+use pith_process::{
+  configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
+  terminate_process_group_or_child,
+};
 
 use crate::types::WebSearchResult;
 
@@ -82,11 +84,11 @@ where
   let stdout_reader = child
     .stdout
     .take()
-    .map(|reader| read_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
+    .map(|reader| read_bounded_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
   let stderr_reader = child
     .stderr
     .take()
-    .map(|reader| read_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
+    .map(|reader| read_bounded_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
   let started_at = Instant::now();
   let mut timed_out = false;
   let mut cancelled = false;
@@ -113,8 +115,8 @@ where
 
   Ok(WebSearchHttpOutput {
     status,
-    stdout: join_pipe_reader(stdout_reader),
-    stderr: join_pipe_reader(stderr_reader),
+    stdout: join_bounded_pipe_reader(stdout_reader).bytes,
+    stderr: join_bounded_pipe_reader(stderr_reader).bytes,
     timed_out,
     cancelled,
   })
@@ -141,35 +143,6 @@ fn build_curl_command(url: &str) -> Command {
     .stdin(Stdio::null());
   configure_process_group(&mut process);
   process
-}
-
-fn read_pipe_in_background<R>(mut reader: R, max_output_bytes: usize) -> thread::JoinHandle<Vec<u8>>
-where
-  R: Read + Send + 'static,
-{
-  thread::spawn(move || {
-    let mut output = Vec::with_capacity(max_output_bytes.min(64 * 1024));
-    let mut buffer = [0_u8; 8192];
-
-    while let Ok(bytes_read) = reader.read(&mut buffer) {
-      if bytes_read == 0 {
-        break;
-      }
-
-      let remaining_output = max_output_bytes.saturating_sub(output.len());
-      if remaining_output > 0 {
-        output.extend_from_slice(&buffer[..bytes_read.min(remaining_output)]);
-      }
-    }
-
-    output
-  })
-}
-
-fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
-  reader
-    .and_then(|handle| handle.join().ok())
-    .unwrap_or_default()
 }
 
 fn terminate_web_search_child(child: &mut Child) {
@@ -390,10 +363,12 @@ mod tests {
   #[test]
   fn web_search_pipe_reader_bounds_retained_output() {
     let input = std::io::Cursor::new(vec![b'x'; WEB_SEARCH_OUTPUT_LIMIT + 512]);
-    let output = read_pipe_in_background(input, WEB_SEARCH_OUTPUT_LIMIT)
-      .join()
-      .expect("pipe reader");
+    let output = join_bounded_pipe_reader(Some(read_bounded_pipe_in_background(
+      input,
+      WEB_SEARCH_OUTPUT_LIMIT,
+    )));
 
-    assert_eq!(output.len(), WEB_SEARCH_OUTPUT_LIMIT);
+    assert_eq!(output.bytes.len(), WEB_SEARCH_OUTPUT_LIMIT);
+    assert_eq!(output.source_byte_count, WEB_SEARCH_OUTPUT_LIMIT + 512);
   }
 }

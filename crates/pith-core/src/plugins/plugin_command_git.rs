@@ -1,11 +1,13 @@
-use std::io::Read;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
-use pith_process::{configure_process_group, terminate_process_group_or_child};
+use pith_process::{
+  configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
+  terminate_process_group_or_child,
+};
 
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
 const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -56,7 +58,7 @@ fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<Git
   let Some(stdout) = child.stdout.take() else {
     bail!("git stdout pipe was unavailable");
   };
-  let stdout_reader = read_pipe_in_background(stdout);
+  let stdout_reader = read_bounded_pipe_in_background(stdout, GIT_COMMAND_OUTPUT_LIMIT);
 
   let started_at = Instant::now();
   let (success, timed_out) = loop {
@@ -72,34 +74,11 @@ fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<Git
     thread::sleep(GIT_COMMAND_POLL_INTERVAL);
   };
 
-  let stdout = stdout_reader.join().unwrap_or_default();
+  let stdout = join_bounded_pipe_reader(Some(stdout_reader)).bytes;
   Ok(GitCommandOutput {
     stdout,
     success,
     timed_out,
-  })
-}
-
-fn read_pipe_in_background<R>(mut reader: R) -> thread::JoinHandle<Vec<u8>>
-where
-  R: Read + Send + 'static,
-{
-  thread::spawn(move || {
-    let mut output = Vec::with_capacity(GIT_COMMAND_OUTPUT_LIMIT.min(64 * 1024));
-    let mut buffer = [0_u8; 8192];
-
-    while let Ok(bytes_read) = reader.read(&mut buffer) {
-      if bytes_read == 0 {
-        break;
-      }
-
-      let remaining_limit = GIT_COMMAND_OUTPUT_LIMIT.saturating_sub(output.len());
-      if remaining_limit > 0 {
-        output.extend_from_slice(&buffer[..bytes_read.min(remaining_limit)]);
-      }
-    }
-
-    output
   })
 }
 
@@ -124,9 +103,13 @@ mod tests {
   #[test]
   fn git_pipe_reader_bounds_retained_output() {
     let input = std::io::Cursor::new(vec![b'x'; GIT_COMMAND_OUTPUT_LIMIT + 512]);
-    let output = read_pipe_in_background(input).join().expect("pipe reader");
+    let output = join_bounded_pipe_reader(Some(read_bounded_pipe_in_background(
+      input,
+      GIT_COMMAND_OUTPUT_LIMIT,
+    )));
 
-    assert_eq!(output.len(), GIT_COMMAND_OUTPUT_LIMIT);
+    assert_eq!(output.bytes.len(), GIT_COMMAND_OUTPUT_LIMIT);
+    assert_eq!(output.source_byte_count, GIT_COMMAND_OUTPUT_LIMIT + 512);
   }
 
   #[test]
