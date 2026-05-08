@@ -13,6 +13,7 @@ struct InspectorSessionSnapshot {
   let setupProgressDetail: String
   let isWaitingForFirstMessage: Bool
   let runtimeReadinessStatus: String?
+  let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
 }
 
 enum InspectorSessionPresenter {
@@ -83,9 +84,12 @@ enum InspectorSessionPresenter {
     let modelSummary = snapshot.isLocalModelReady ? "Model ready" : "Model pending"
     let readinessSummary =
       snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
+    let toolSummary = webSearchReadinessSummary(snapshot.runtimeReadinessChecks)
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
-    return "\(readinessSummary) | \(workspaceSummary) | \(threadSummary)"
+    return [readinessSummary, toolSummary, workspaceSummary, threadSummary]
+      .compactMap { $0 }
+      .joined(separator: " | ")
   }
 
   private static func runtimeReadinessSummary(_ status: String) -> String {
@@ -100,6 +104,23 @@ enum InspectorSessionPresenter {
       return "Runtime setup"
     default:
       return "Runtime \(status)"
+    }
+  }
+
+  private static func webSearchReadinessSummary(_ checks: [RuntimeReadinessCheckSummary]) -> String? {
+    guard let check = checks.first(where: { $0.id == "webSearch" }) else {
+      return nil
+    }
+
+    switch check.status {
+    case "ready":
+      return nil
+    case "limited":
+      return "Web search limited"
+    case "setup_required":
+      return "Web search setup"
+    default:
+      return "Web search \(check.status)"
     }
   }
 }

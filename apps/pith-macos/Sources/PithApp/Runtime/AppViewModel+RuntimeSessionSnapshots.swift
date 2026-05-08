@@ -75,7 +75,8 @@ extension AppViewModel {
       setupStepCount: SetupFlowState.stepCount,
       setupProgressDetail: setupProgressDetail(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
-      runtimeReadinessStatus: runtimeReadiness?.status
+      runtimeReadinessStatus: runtimeReadiness?.status,
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
     )
   }
 
