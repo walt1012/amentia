@@ -137,6 +137,12 @@ enum TimelineInspectorPresenter {
     if let artifactDirectory = entry.attributes["sandboxOutputArtifactDirectory"] {
       lines.append("Artifact: \(artifactDirectory)")
     }
+    if let stdoutArtifact = entry.attributes["sandboxOutputStdoutArtifactPath"] {
+      lines.append("Full stdout: \(stdoutArtifact)")
+    }
+    if let stderrArtifact = entry.attributes["sandboxOutputStderrArtifactPath"] {
+      lines.append("Full stderr: \(stderrArtifact)")
+    }
 
     return lines.joined(separator: "\n")
   }

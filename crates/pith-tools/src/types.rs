@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
@@ -126,6 +127,20 @@ impl ShellSandboxSummary {
 }
 
 impl ShellOutputContext {
+  pub fn stdout_artifact_path(&self) -> Option<String> {
+    self
+      .artifact_directory
+      .as_deref()
+      .map(|directory| Path::new(directory).join("stdout.txt").display().to_string())
+  }
+
+  pub fn stderr_artifact_path(&self) -> Option<String> {
+    self
+      .artifact_directory
+      .as_deref()
+      .map(|directory| Path::new(directory).join("stderr.txt").display().to_string())
+  }
+
   pub fn source_total_bytes(&self) -> usize {
     self
       .source_stdout_bytes
@@ -154,9 +169,14 @@ impl ShellOutputContext {
   }
 
   pub fn display_line(&self) -> String {
-    let artifact = self.artifact_directory.as_deref().unwrap_or("not needed");
+    let artifact = match (self.stdout_artifact_path(), self.stderr_artifact_path()) {
+      (Some(stdout_path), Some(stderr_path)) => {
+        format!("stdout {stdout_path}, stderr {stderr_path}")
+      }
+      _ => "not needed".to_string(),
+    };
     format!(
-      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifact: {}",
+      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifacts: {}",
       self.mode,
       self.retained_stdout_bytes,
       self.source_stdout_bytes,
@@ -208,6 +228,12 @@ impl ShellOutputContext {
         "sandboxOutputArtifactDirectory".to_string(),
         artifact_directory.clone(),
       );
+      if let Some(stdout_path) = self.stdout_artifact_path() {
+        attributes.insert("sandboxOutputStdoutArtifactPath".to_string(), stdout_path);
+      }
+      if let Some(stderr_path) = self.stderr_artifact_path() {
+        attributes.insert("sandboxOutputStderrArtifactPath".to_string(), stderr_path);
+      }
     }
     attributes
   }
@@ -235,6 +261,19 @@ mod tests {
     assert_eq!(context.saved_bytes(), 850);
     assert_eq!(context.savings_percent(), 85);
     assert!(context.display_line().contains("saved 85%"));
+    assert!(context.display_line().contains("stdout /tmp/pith/run-1/stdout.txt"));
+    assert_eq!(
+      context.stdout_artifact_path().as_deref(),
+      Some("/tmp/pith/run-1/stdout.txt")
+    );
+    assert_eq!(
+      context.stderr_artifact_path().as_deref(),
+      Some("/tmp/pith/run-1/stderr.txt")
+    );
     assert_eq!(context.attributes()["sandboxOutputSavingsPercent"], "85");
+    assert_eq!(
+      context.attributes()["sandboxOutputStdoutArtifactPath"],
+      "/tmp/pith/run-1/stdout.txt"
+    );
   }
 }
