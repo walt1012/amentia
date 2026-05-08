@@ -1,6 +1,6 @@
-## Built-in Model Pack
+## Default Model Catalog Entry
 
-This directory tracks the `LFM2.5-350M` pack manifest for Pith.
+This directory tracks the default `LFM2.5-350M` catalog manifest for Pith.
 
 What belongs in git:
 
@@ -25,7 +25,13 @@ Recommended local layout:
             `-- LFM2.5-350M-Q4_K_M.gguf
 ```
 
-Pith can download the recommended Q4_K_M GGUF from the model pack manifest into the suggested app data path. The download target stays local and is never tracked in git.
+Pith can download the recommended Q4_K_M GGUF from the catalog manifest into the suggested app data path. The download target stays local and is never tracked in git.
+
+Manifest sizing metadata is intentionally split:
+
+- `model_context_size` is the published model context window from the upstream model documentation.
+- `context_size` is Pith's default llama.cpp runtime window for the lightweight first-use path.
+- `max_output_tokens` is Pith's conservative generation cap, not an intrinsic model limit.
 
 The runtime can also resolve:
 
@@ -34,4 +40,4 @@ The runtime can also resolve:
 - `PITH_LFM_MODEL_PATH` as a legacy alias
 - repo-local manifests for development
 
-The repository keeps the manifest so the product can describe the built-in pack without forcing the large GGUF file into source control.
+The repository keeps the manifest so the product can describe the default downloadable model without forcing the large GGUF file into source control.

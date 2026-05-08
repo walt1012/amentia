@@ -1,11 +1,27 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output, Stdio};
+use std::sync::{
+  atomic::{AtomicBool, Ordering},
+  Arc,
+};
+use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
+use pith_process::{
+  configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
+  wait_for_child, ChildExitReason,
+};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+
+const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
+const LLAMA_CPP_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const LLAMA_CPP_PIPE_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
+const GGUF_MAGIC: [u8; 4] = *b"GGUF";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelRole {
@@ -42,6 +58,8 @@ pub struct ModelPackManifest {
   pub display_name: String,
   pub file_name: String,
   pub context_size: usize,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub model_context_size: Option<usize>,
   pub max_output_tokens: usize,
   pub backend: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -61,6 +79,7 @@ pub struct GenerateRequest {
   pub role: ModelRole,
   pub prompt: String,
   pub max_tokens: usize,
+  pub cancellation: Option<GenerationCancellation>,
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +88,33 @@ pub struct GenerateResponse {
   pub backend: String,
   pub status: String,
   pub model_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct GenerationCancellation {
+  cancelled: Arc<AtomicBool>,
+}
+
+impl GenerationCancellation {
+  pub fn new() -> Self {
+    Self {
+      cancelled: Arc::new(AtomicBool::new(false)),
+    }
+  }
+
+  pub fn cancel(&self) {
+    self.cancelled.store(true, Ordering::SeqCst);
+  }
+
+  pub fn is_cancelled(&self) -> bool {
+    self.cancelled.load(Ordering::SeqCst)
+  }
+}
+
+impl Default for GenerationCancellation {
+  fn default() -> Self {
+    Self::new()
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -147,14 +193,29 @@ impl LocalModelRuntime {
 
     match (binary_path, model_path) {
       (Some(binary_path), Some(model_path)) if binary_path.is_file() && model_path.is_file() => {
-        Self {
-          pack,
-          manifest,
-          source,
-          backend: ModelBackend::LlamaCppCli {
-            binary_path,
-            model_path,
-            manifest_path,
+        match validate_runtime_model_file(&model_path, manifest.as_ref()) {
+          Ok(()) => Self {
+            pack,
+            manifest,
+            source,
+            backend: ModelBackend::LlamaCppCli {
+              binary_path,
+              model_path,
+              manifest_path,
+            },
+          },
+          Err(error) => Self {
+            pack,
+            manifest,
+            source,
+            backend: ModelBackend::Unconfigured {
+              detail: format!(
+                "Local model runtime is unavailable because model integrity verification failed: {error}"
+              ),
+              binary_path: Some(binary_path),
+              model_path: Some(model_path),
+              manifest_path,
+            },
           },
         }
       }
@@ -233,6 +294,10 @@ impl LocalModelRuntime {
   }
 
   pub fn generate(&self, request: GenerateRequest) -> GenerateResponse {
+    if request_is_cancelled(&request) {
+      return self.generate_cancelled(&request.role);
+    }
+
     match &self.backend {
       ModelBackend::Unconfigured { detail, .. } => {
         self.generate_failure("unconfigured", "unavailable", &request.role, detail)
@@ -249,13 +314,31 @@ impl LocalModelRuntime {
           status: "ready".to_string(),
           model_id: self.pack.id.clone(),
         },
-        Err(error) => self.generate_failure(
-          "llama.cpp",
-          "error",
-          &request.role,
-          &format!("Local llama.cpp inference failed: {error}"),
-        ),
+        Err(error) => {
+          if request_is_cancelled(&request) {
+            self.generate_cancelled(&request.role)
+          } else {
+            self.generate_failure(
+              "llama.cpp",
+              "error",
+              &request.role,
+              &format!("Local llama.cpp inference failed: {error}"),
+            )
+          }
+        }
       },
+    }
+  }
+
+  fn generate_cancelled(&self, role: &ModelRole) -> GenerateResponse {
+    GenerateResponse {
+      text: generation_failure_text(
+        role,
+        "local model generation was cancelled before completion.",
+      ),
+      backend: "local".to_string(),
+      status: "cancelled".to_string(),
+      model_id: self.pack.id.clone(),
     }
   }
 
@@ -277,7 +360,7 @@ impl LocalModelRuntime {
   pub fn bootstrap_pack_metadata(&self) -> Result<ModelBootstrap> {
     let target_manifest_path = suggested_manifest_install_path();
     let resolution = resolve_bootstrap_manifest(&target_manifest_path)
-      .context("failed to locate a bundled model-pack.json for bootstrap")?;
+      .context("failed to locate a default model-pack.json for bootstrap")?;
     let target_directory = target_manifest_path
       .parent()
       .context("suggested manifest path has no parent directory")?;
@@ -390,14 +473,14 @@ fn resolve_manifest() -> Option<ManifestResolution> {
         .join("builtin")
         .join("lfm2.5-350m")
         .join("model-pack.json"),
-      "bundle-manifest".to_string(),
+      "default-manifest".to_string(),
     ));
     candidates.push((
       current_dir
         .join("model-packs")
         .join("lfm2.5-350m")
         .join("model-pack.json"),
-      "bundle-manifest".to_string(),
+      "default-manifest".to_string(),
     ));
   }
 
@@ -446,7 +529,7 @@ fn resolve_bootstrap_manifest(target_manifest_path: &Path) -> Option<ManifestRes
         return Some(ManifestResolution {
           manifest,
           manifest_path: path,
-          source: "bundle-manifest".to_string(),
+          source: "default-manifest".to_string(),
         });
       }
     }
@@ -544,6 +627,91 @@ fn read_manifest(path: &Path) -> Result<ModelPackManifest> {
     .with_context(|| format!("failed to parse model pack manifest {}", path.display()))
 }
 
+fn validate_runtime_model_file(
+  model_path: &Path,
+  manifest: Option<&ModelPackManifest>,
+) -> Result<()> {
+  let Some(manifest) = manifest else {
+    bail!("model pack manifest is required for local model verification");
+  };
+
+  let actual_file_name = model_path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .unwrap_or_default();
+  if actual_file_name != manifest.file_name {
+    bail!(
+      "model file name mismatch: expected {}, found {}",
+      manifest.file_name,
+      actual_file_name
+    );
+  }
+
+  let metadata = fs::metadata(model_path)
+    .with_context(|| format!("failed to inspect model file {}", model_path.display()))?;
+  if let Some(expected_size_bytes) = manifest.size_bytes {
+    if metadata.len() != expected_size_bytes {
+      bail!(
+        "model size mismatch: expected {} bytes, found {} bytes",
+        expected_size_bytes,
+        metadata.len()
+      );
+    }
+  }
+
+  validate_gguf_magic(model_path)?;
+
+  let expected_sha256 = manifest
+    .sha256
+    .as_deref()
+    .map(str::trim)
+    .filter(|value| !value.is_empty())
+    .context("model manifest is missing SHA-256 metadata")?;
+  let actual_sha256 = sha256_hex(model_path)?;
+  if !expected_sha256.eq_ignore_ascii_case(&actual_sha256) {
+    bail!(
+      "model checksum mismatch: expected {}, found {}",
+      expected_sha256,
+      actual_sha256
+    );
+  }
+
+  Ok(())
+}
+
+fn validate_gguf_magic(model_path: &Path) -> Result<()> {
+  let mut file = fs::File::open(model_path)
+    .with_context(|| format!("failed to open model file {}", model_path.display()))?;
+  let mut magic = [0_u8; 4];
+  file
+    .read_exact(&mut magic)
+    .with_context(|| format!("failed to read GGUF header from {}", model_path.display()))?;
+  if magic != GGUF_MAGIC {
+    bail!("model file is not a GGUF file");
+  }
+
+  Ok(())
+}
+
+fn sha256_hex(path: &Path) -> Result<String> {
+  let mut file =
+    fs::File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
+  let mut hasher = Sha256::new();
+  let mut buffer = [0_u8; 1024 * 1024];
+
+  loop {
+    let bytes_read = file
+      .read(&mut buffer)
+      .with_context(|| format!("failed to read {}", path.display()))?;
+    if bytes_read == 0 {
+      break;
+    }
+    hasher.update(&buffer[..bytes_read]);
+  }
+
+  Ok(format!("{:x}", hasher.finalize()))
+}
+
 fn normalize_path(path: &Path) -> PathBuf {
   path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 }
@@ -591,6 +759,12 @@ fn model_metrics(
   if let Some(manifest) = manifest {
     metrics.insert("backend".to_string(), manifest.backend.clone());
     metrics.insert("contextSize".to_string(), manifest.context_size.to_string());
+    if let Some(model_context_size) = manifest.model_context_size {
+      metrics.insert(
+        "modelContextSize".to_string(),
+        model_context_size.to_string(),
+      );
+    }
     metrics.insert(
       "maxOutputTokens".to_string(),
       manifest.max_output_tokens.to_string(),
@@ -872,20 +1046,15 @@ fn generate_with_llama_cpp(
   let max_tokens = manifest
     .map(|item| item.max_output_tokens.min(request.max_tokens))
     .unwrap_or(request.max_tokens);
-  let output = Command::new(binary_path)
-    .arg("-m")
-    .arg(model_path)
-    .arg("--temp")
-    .arg("0.2")
-    .arg("--ctx-size")
-    .arg(context_size.to_string())
-    .arg("-n")
-    .arg(max_tokens.to_string())
-    .arg("--no-display-prompt")
-    .arg("-p")
-    .arg(&request.prompt)
-    .output()
-    .with_context(|| format!("failed to execute {}", binary_path.display()))?;
+  let output = run_llama_cpp_with_timeout(
+    binary_path,
+    model_path,
+    context_size,
+    max_tokens,
+    &request.prompt,
+    request.cancellation.as_ref(),
+  )
+  .with_context(|| format!("failed to execute {}", binary_path.display()))?;
 
   if !output.status.success() {
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -907,6 +1076,103 @@ fn generate_with_llama_cpp(
   }
 
   Ok(cleaned)
+}
+
+fn run_llama_cpp_with_timeout(
+  binary_path: &Path,
+  model_path: &Path,
+  context_size: usize,
+  max_tokens: usize,
+  prompt: &str,
+  cancellation: Option<&GenerationCancellation>,
+) -> Result<Output> {
+  let timeout = llama_cpp_timeout();
+  let mut child = build_llama_cpp_command(binary_path)
+    .arg("-m")
+    .arg(model_path)
+    .arg("--temp")
+    .arg("0.2")
+    .arg("--ctx-size")
+    .arg(context_size.to_string())
+    .arg("-n")
+    .arg(max_tokens.to_string())
+    .arg("--no-display-prompt")
+    .arg("-p")
+    .arg(prompt)
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?;
+  let stdout_reader = child
+    .stdout
+    .take()
+    .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
+  let stderr_reader = child
+    .stderr
+    .take()
+    .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
+  let wait = wait_for_child(
+    &mut child,
+    timeout,
+    LLAMA_CPP_POLL_INTERVAL,
+    Duration::from_millis(200),
+    || {
+      cancellation
+        .map(GenerationCancellation::is_cancelled)
+        .unwrap_or(false)
+    },
+  )?;
+
+  let stdout = join_bounded_pipe_reader(stdout_reader).bytes;
+  let stderr = join_bounded_pipe_reader(stderr_reader).bytes;
+
+  if wait.reason == ChildExitReason::TimedOut {
+    let stderr_text = String::from_utf8_lossy(&stderr).trim().to_string();
+    if stderr_text.is_empty() {
+      bail!("llama.cpp timed out after {} seconds", timeout.as_secs());
+    }
+
+    bail!(
+      "llama.cpp timed out after {} seconds: {}",
+      timeout.as_secs(),
+      stderr_text
+    );
+  }
+
+  Ok(Output {
+    status: wait.status,
+    stdout,
+    stderr,
+  })
+}
+
+fn request_is_cancelled(request: &GenerateRequest) -> bool {
+  request
+    .cancellation
+    .as_ref()
+    .map(GenerationCancellation::is_cancelled)
+    .unwrap_or(false)
+}
+
+fn llama_cpp_timeout() -> Duration {
+  env::var("PITH_LLAMA_CPP_TIMEOUT_SECONDS")
+    .ok()
+    .and_then(|value| value.parse::<u64>().ok())
+    .filter(|seconds| *seconds > 0)
+    .map(Duration::from_secs)
+    .unwrap_or(LLAMA_CPP_TIMEOUT)
+}
+
+pub fn llama_cpp_timeout_seconds() -> u64 {
+  llama_cpp_timeout().as_secs()
+}
+
+fn build_llama_cpp_command(binary_path: &Path) -> Command {
+  let mut process = Command::new(binary_path);
+
+  configure_process_group(&mut process);
+
+  process
 }
 
 fn clean_model_output(output: &str) -> String {
@@ -938,7 +1204,10 @@ mod tests {
   use super::*;
   use std::io::ErrorKind;
   use std::path::PathBuf;
+  use std::sync::{Mutex, MutexGuard};
   use std::time::{SystemTime, UNIX_EPOCH};
+
+  static ENVIRONMENT_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn runtime_reports_unconfigured_backend_when_paths_are_missing() {
@@ -966,6 +1235,7 @@ mod tests {
       role: ModelRole::Summarizer,
       prompt: "Summarize this test prompt.".to_string(),
       max_tokens: 96,
+      cancellation: None,
     });
 
     assert!(response
@@ -981,10 +1251,11 @@ mod tests {
     let runtime = LocalModelRuntime::from_resolution(
       Some(ManifestResolution {
         manifest: ModelPackManifest {
-          id: "qwen2.5-coder-0.5b-instruct".to_string(),
-          display_name: "Qwen2.5-Coder-0.5B Q4_K_M".to_string(),
-          file_name: "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf".to_string(),
+          id: "granite-4.0-h-350m".to_string(),
+          display_name: "Granite 4.0-H-350M Q4_K_M".to_string(),
+          file_name: "granite-4.0-h-350m-Q4_K_M.gguf".to_string(),
           context_size: 4096,
+          model_context_size: Some(32_768),
           max_output_tokens: 192,
           backend: "llama.cpp".to_string(),
           license: Some("apache-2.0".to_string()),
@@ -1001,13 +1272,78 @@ mod tests {
     );
     let health = runtime.health();
 
-    assert_eq!(health.pack_id, "qwen2.5-coder-0.5b-instruct");
-    assert_eq!(health.display_name, "Qwen2.5-Coder-0.5B Q4_K_M");
+    assert_eq!(health.pack_id, "granite-4.0-h-350m");
+    assert_eq!(health.display_name, "Granite 4.0-H-350M Q4_K_M");
+    assert_eq!(health.metrics["contextSize"], "4096");
+    assert_eq!(health.metrics["modelContextSize"], "32768");
     assert_eq!(health.metrics["maxOutputTokens"], "192");
   }
 
   #[test]
+  fn runtime_accepts_manifest_verified_model_file() {
+    let temp_root = unique_temp_directory("model-verified");
+    fs::create_dir_all(&temp_root).expect("temp root");
+    let binary_path = temp_root.join("llama-cli");
+    let model_path = temp_root.join("test-model.gguf");
+    let manifest_path = temp_root.join("model-pack.json");
+    fs::write(&binary_path, "fake binary").expect("binary");
+    fs::write(&model_path, b"GGUFmodel bytes").expect("model");
+    let manifest = test_manifest(
+      "test-model.gguf",
+      Some(sha256_hex(&model_path).expect("model sha256")),
+      Some(fs::metadata(&model_path).expect("model metadata").len()),
+    );
+
+    let runtime = LocalModelRuntime::from_resolution(
+      Some(ManifestResolution {
+        manifest,
+        manifest_path,
+        source: "test".to_string(),
+      }),
+      Some(binary_path),
+      Some(model_path),
+    );
+    let health = runtime.health();
+
+    assert_eq!(health.backend, "llama.cpp");
+    assert_eq!(health.status, "ready");
+    assert_eq!(health.metrics["readiness"], "ready");
+
+    remove_temp_directory(&temp_root);
+  }
+
+  #[test]
+  fn runtime_rejects_model_with_wrong_manifest_checksum() {
+    let temp_root = unique_temp_directory("model-bad-checksum");
+    fs::create_dir_all(&temp_root).expect("temp root");
+    let binary_path = temp_root.join("llama-cli");
+    let model_path = temp_root.join("test-model.gguf");
+    let manifest_path = temp_root.join("model-pack.json");
+    fs::write(&binary_path, "fake binary").expect("binary");
+    fs::write(&model_path, b"GGUFmodel bytes").expect("model");
+
+    let runtime = LocalModelRuntime::from_resolution(
+      Some(ManifestResolution {
+        manifest: test_manifest("test-model.gguf", Some("0".repeat(64)), Some(15)),
+        manifest_path,
+        source: "test".to_string(),
+      }),
+      Some(binary_path),
+      Some(model_path),
+    );
+    let health = runtime.health();
+
+    assert_eq!(health.backend, "unconfigured");
+    assert_eq!(health.status, "unavailable");
+    assert!(health.detail.contains("checksum mismatch"));
+    assert_eq!(health.metrics["readiness"], "misconfigured");
+
+    remove_temp_directory(&temp_root);
+  }
+
+  #[test]
   fn discovery_roots_include_configured_model_directories() {
+    let _environment = lock_environment();
     let previous_model_pack_root = env::var("PITH_MODEL_PACK_ROOT").ok();
     let previous_data_dir = env::var("PITH_DATA_DIR").ok();
 
@@ -1032,6 +1368,7 @@ mod tests {
 
   #[test]
   fn bootstrap_pack_metadata_copies_manifest_and_readme_into_data_dir() {
+    let _environment = lock_environment();
     let temp_root = unique_temp_directory("model-bootstrap");
     let source_root = temp_root.join("source");
     let source_pack_root = source_root
@@ -1043,19 +1380,22 @@ mod tests {
       source_pack_root.join("model-pack.json"),
       r#"{
   "id": "lfm2.5-350m",
-  "display_name": "LFM2.5-350M",
+  "display_name": "LFM2.5-350M Q4_K_M",
   "file_name": "LFM2.5-350M-Q4_K_M.gguf",
   "context_size": 4096,
+  "model_context_size": 32768,
   "max_output_tokens": 160,
   "backend": "llama.cpp",
+  "license": "lfm1.0",
   "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+  "sha256": "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
   "size_bytes": 229312224
 }"#,
     )
     .expect("manifest");
     fs::write(
       source_pack_root.join("README.md"),
-      "Built-in model pack metadata",
+      "Default model pack metadata",
     )
     .expect("readme");
 
@@ -1089,11 +1429,50 @@ mod tests {
     remove_temp_directory(&temp_root);
   }
 
+  #[test]
+  fn llama_pipe_reader_bounds_retained_output() {
+    let input = std::io::Cursor::new(vec![b'x'; LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512]);
+    let output = join_bounded_pipe_reader(Some(read_bounded_pipe_in_background(
+      input,
+      LLAMA_CPP_PIPE_OUTPUT_LIMIT,
+    )));
+
+    assert_eq!(output.bytes.len(), LLAMA_CPP_PIPE_OUTPUT_LIMIT);
+    assert_eq!(output.source_byte_count, LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512);
+  }
+
+  fn test_manifest(
+    file_name: &str,
+    sha256: Option<String>,
+    size_bytes: Option<u64>,
+  ) -> ModelPackManifest {
+    ModelPackManifest {
+      id: "test-model".to_string(),
+      display_name: "Test Model".to_string(),
+      file_name: file_name.to_string(),
+      context_size: 4096,
+      model_context_size: Some(4096),
+      max_output_tokens: 128,
+      backend: "llama.cpp".to_string(),
+      license: Some("apache-2.0".to_string()),
+      homepage: None,
+      download_url: None,
+      sha256,
+      size_bytes,
+    }
+  }
+
   fn restore_env_var(key: &str, value: Option<String>) {
     match value {
       Some(value) => env::set_var(key, value),
       None => env::remove_var(key),
     }
+  }
+
+  fn lock_environment() -> MutexGuard<'static, ()> {
+    ENVIRONMENT_LOCK
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
   }
 
   fn unique_temp_directory(prefix: &str) -> PathBuf {

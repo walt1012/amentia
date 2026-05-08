@@ -4,7 +4,9 @@ members = [
   "crates/pith-memory",
   "crates/pith-model-runtime",
   "crates/pith-plugin-host",
+  "crates/pith-process",
   "crates/pith-protocol",
+  "crates/pith-sandbox",
   "crates/pith-runtime-bin",
   "crates/pith-storage",
   "crates/pith-tools",
@@ -22,4 +24,5 @@ anyhow = "1.0"
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10"
 thiserror = "1.0"

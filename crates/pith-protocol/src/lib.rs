@@ -20,11 +20,13 @@ pub mod methods {
   pub const PLUGIN_LIST: &str = "plugin/list";
   pub const PLUGIN_REMOVE: &str = "plugin/remove";
   pub const PLUGIN_SET_ENABLED: &str = "plugin/setEnabled";
+  pub const RUNTIME_READINESS: &str = "runtime/readiness";
   pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
   pub const WORKSPACE_CURRENT: &str = "workspace/current";
   pub const WORKSPACE_OPEN: &str = "workspace/open";
   pub const WORKSPACE_SEARCH: &str = "workspace/search";
   pub const TURN_CANCEL: &str = "turn/cancel";
+  pub const TURN_CANCEL_RUNNING: &str = "turn/cancelRunning";
   pub const THREAD_READ: &str = "thread/read";
   pub const THREAD_START: &str = "thread/start";
   pub const THREAD_LIST: &str = "thread/list";
@@ -88,6 +90,7 @@ pub struct ServerCapabilities {
   pub supports_threads: bool,
   pub supports_tools: bool,
   pub supports_plugins: bool,
+  pub supports_runtime_readiness: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,6 +105,25 @@ pub struct InitializeResult {
 #[serde(rename_all = "camelCase")]
 pub struct HealthPingResult {
   pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeReadinessCheck {
+  pub id: String,
+  pub title: String,
+  pub status: String,
+  pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeReadinessResult {
+  pub status: String,
+  pub summary: String,
+  pub checks: Vec<RuntimeReadinessCheck>,
+  #[serde(default)]
+  pub metrics: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -504,6 +526,12 @@ pub struct TurnStartResult {
 #[serde(rename_all = "camelCase")]
 pub struct TurnCancelParams {
   pub turn_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnCancelRunningParams {
+  pub thread_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

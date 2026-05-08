@@ -30,10 +30,12 @@ The repository is intentionally English-only.
 |   `-- pith-macos/
 |-- crates/
 |   |-- pith-core/
+|   |-- pith-memory/
 |   |-- pith-model-runtime/
 |   |-- pith-plugin-host/
 |   |-- pith-protocol/
 |   |-- pith-runtime-bin/
+|   |-- pith-sandbox/
 |   |-- pith-storage/
 |   `-- pith-tools/
 |-- plugins/
@@ -60,14 +62,15 @@ Detailed milestone scope and implementation history live in [docs/development-pl
 Model packaging note:
 
 - the repository tracks model pack manifests and small metadata
-- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file should live in a local data directory or release bundle, not git history
+- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file is downloaded by the app into local data storage, not committed to git history
+- the in-app catalog stays intentionally small: default LFM plus modern tiny Granite, with new candidates added only after product-fit validation
 
 ## Planned Runtime Shape
 
 - Native macOS shell in `SwiftUI`
 - Local runtime in `Rust`
 - JSON-RPC style communication over `stdio`
-- Local model runtime with `LFM2.5-350M` as the default first-use model option
+- Local model runtime with `LFM2.5-350M` as the default downloadable first-use model option
 
 ## Development Notes
 
@@ -77,4 +80,18 @@ Model packaging note:
 - Repository artifacts should remain English-only
 
 See [docs/development-plan.md](docs/development-plan.md) for the execution roadmap.
+
+## Source Organization
+
+The repository should stay organized by product and runtime ownership rather than by incidental helper
+shape. `pith-core` is the Rust orchestration layer, and its source tree is grouped by runtime, request,
+turn, plugin, context, workspace, thread, and support domains. The macOS target follows the same rule
+with app, runtime, local model, plugin, memory, timeline, workspace, and setup domains.
+
+`pith-memory` owns memory semantics such as notes, events, summaries, and note ranking. `pith-storage`
+owns durable runtime persistence for threads, workspace state, approvals, memory notes, and plugin
+state.
+`pith-plugin-host` owns plugin manifests, discovery, capability registries, connector metadata, and
+plugin bundle lifecycle boundaries.
+
 See [docs/development-environment.md](docs/development-environment.md) for local setup and CI notes.

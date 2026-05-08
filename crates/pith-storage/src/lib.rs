@@ -146,12 +146,12 @@ pub struct StoredApprovalRecord {
 }
 
 #[derive(Debug, Clone)]
-pub struct FileThreadStore {
+pub struct RuntimeStore {
   database_path: PathBuf,
   legacy_runtime_state_path: PathBuf,
 }
 
-impl FileThreadStore {
+impl RuntimeStore {
   pub fn new_default() -> Result<Self> {
     Ok(Self {
       database_path: default_database_path()?,
@@ -792,7 +792,7 @@ mod tests {
   #[test]
   fn sqlite_store_round_trips_threads_and_workspace() {
     let root = create_temp_directory("sqlite-roundtrip");
-    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+    let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
 
     store
       .save_workspace(&WorkspaceSummary {
@@ -847,7 +847,7 @@ mod tests {
   #[test]
   fn sqlite_store_round_trips_pending_approvals_and_resolution_audit() {
     let root = create_temp_directory("approval-roundtrip");
-    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+    let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
     let approval = StoredApprovalRecord {
       id: "approval-4".to_string(),
       thread_id: "thread-2".to_string(),
@@ -909,7 +909,7 @@ mod tests {
     )
     .expect("write legacy threads");
 
-    let store = FileThreadStore::new(database_path, legacy_path);
+    let store = RuntimeStore::new(database_path, legacy_path);
     let threads = store.load_threads().expect("load migrated threads");
 
     fs::remove_dir_all(&root).expect("cleanup temp directory");
@@ -963,7 +963,7 @@ mod tests {
       .expect("seed version one schema");
     drop(connection);
 
-    let store = FileThreadStore::new(database_path.clone(), root.join("threads.json"));
+    let store = RuntimeStore::new(database_path.clone(), root.join("threads.json"));
     let threads = store.load_threads().expect("load migrated threads");
     let pending_approvals = store
       .load_pending_approvals()
@@ -1001,7 +1001,7 @@ mod tests {
   #[test]
   fn sqlite_store_round_trips_memory_notes() {
     let root = create_temp_directory("memory-roundtrip");
-    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+    let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
     let note = MemoryNote {
       id: "memory-7".to_string(),
       title: "Opened workspace pith".to_string(),
@@ -1027,7 +1027,7 @@ mod tests {
   #[test]
   fn sqlite_store_round_trips_plugin_states() {
     let root = create_temp_directory("plugin-state");
-    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+    let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
 
     store
       .save_plugin_enabled("workspace-notes", true)
@@ -1046,7 +1046,7 @@ mod tests {
   #[test]
   fn sqlite_store_deletes_plugin_state() {
     let root = create_temp_directory("plugin-state-delete");
-    let store = FileThreadStore::new(root.join("pith.db"), root.join("threads.json"));
+    let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
 
     store
       .save_plugin_enabled("workspace-notes", true)

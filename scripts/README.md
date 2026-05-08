@@ -10,6 +10,7 @@ Planned uses:
 
 Current scripts:
 
+- `check_english_policy.py`: rejects CJK text in tracked source, documentation, and automation files
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, plugin, command,
   hook, and connector protocol surfaces in GitHub Actions
 

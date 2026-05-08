@@ -1,0 +1,310 @@
+import AppKit
+import SwiftUI
+
+struct DiffDetailView: View {
+  let summary: String
+  let lines: [DiffLineSummary]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(summary)
+        .font(.caption.weight(.semibold))
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
+      ScrollView(.horizontal) {
+        VStack(alignment: .leading, spacing: 2) {
+          ForEach(lines) { line in
+            DiffLineRow(line: line)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+private struct DiffLineRow: View {
+  let line: DiffLineSummary
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 8) {
+      Text("\(line.lineNumber)")
+        .font(.system(.caption2, design: .monospaced))
+        .foregroundColor(.secondary)
+        .frame(width: 34, alignment: .trailing)
+
+      Text(line.text.isEmpty ? " " : line.text)
+        .font(.system(.caption, design: .monospaced))
+        .foregroundColor(foregroundColor)
+        .textSelection(.enabled)
+    }
+    .padding(.vertical, 2)
+    .padding(.horizontal, 6)
+    .background(backgroundColor)
+    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+  }
+
+  private var foregroundColor: Color {
+    switch line.kind {
+    case .addition:
+      return .green
+    case .deletion:
+      return .red
+    case .hunk:
+      return .blue
+    case .metadata:
+      return .secondary
+    case .context:
+      return .primary
+    }
+  }
+
+  private var backgroundColor: Color {
+    switch line.kind {
+    case .addition:
+      return Color.green.opacity(0.10)
+    case .deletion:
+      return Color.red.opacity(0.10)
+    case .hunk:
+      return Color.blue.opacity(0.10)
+    case .metadata:
+      return Color.secondary.opacity(0.08)
+    case .context:
+      return Color.clear
+    }
+  }
+}
+
+struct TimelineCard: View {
+  let entry: TimelineEntry
+  let isSelected: Bool
+  let showsApprovalActions: Bool
+  let onSelect: () -> Void
+  let onApprove: () -> Void
+  let onDeny: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(alignment: .center, spacing: 8) {
+        Text(kindLabel)
+          .font(.caption2.weight(.semibold))
+          .foregroundColor(kindColor)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(kindColor.opacity(0.12))
+          .clipShape(Capsule())
+
+        Text(entry.title)
+          .font(.headline)
+
+        Spacer()
+
+        if let streamingLabel {
+          Text(streamingLabel)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(streamingColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(streamingColor.opacity(0.12))
+            .clipShape(Capsule())
+        }
+
+        if let sandboxBadge {
+          Text(sandboxBadge.label)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(sandboxBadge.tone.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(sandboxBadge.tone.color.opacity(0.12))
+            .clipShape(Capsule())
+        }
+      }
+
+      if let streamingProgressValue {
+        ProgressView(value: streamingProgressValue)
+          .progressViewStyle(.linear)
+          .tint(streamingColor)
+      }
+
+      Text(displayBody)
+        .font(bodyFont)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
+      if showsApprovalActions {
+        HStack(spacing: 12) {
+          Button("Approve") {
+            onApprove()
+          }
+          .buttonStyle(.borderedProminent)
+
+          Button("Deny") {
+            onDeny()
+          }
+          .buttonStyle(.bordered)
+        }
+        .padding(.top, 4)
+      }
+    }
+    .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .onTapGesture {
+      onSelect()
+    }
+    .padding(16)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(backgroundColor)
+    .overlay(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .strokeBorder(isSelected ? Color.accentColor.opacity(0.45) : Color.clear, lineWidth: 1.5)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+
+  private var backgroundColor: Color {
+    switch entry.kind {
+    case .plan:
+      return Color.accentColor.opacity(0.12)
+    case .tool:
+      return Color.green.opacity(0.12)
+    case .diff:
+      return Color.blue.opacity(0.1)
+    case .approval:
+      return Color.yellow.opacity(0.16)
+    case .warning:
+      return Color.orange.opacity(0.16)
+    default:
+      return Color(NSColor.controlBackgroundColor)
+    }
+  }
+
+  private var kindLabel: String {
+    switch entry.kind {
+    case .userMessage:
+      return "User"
+    case .assistantMessage:
+      return "Assistant"
+    case .system:
+      return "System"
+    case .plan:
+      return "Plan"
+    case .tool:
+      return "Tool"
+    case .diff:
+      return "Diff"
+    case .approval:
+      return "Approval"
+    case .warning:
+      return "Warning"
+    }
+  }
+
+  private var kindColor: Color {
+    switch entry.kind {
+    case .userMessage:
+      return .accentColor
+    case .assistantMessage:
+      return .blue
+    case .system:
+      return .secondary
+    case .plan:
+      return .accentColor
+    case .tool:
+      return .green
+    case .diff:
+      return .blue
+    case .approval:
+      return .orange
+    case .warning:
+      return .orange
+    }
+  }
+
+  private var bodyFont: Font {
+    switch entry.kind {
+    case .diff:
+      return .system(.caption, design: .monospaced)
+    default:
+      return .body
+    }
+  }
+
+  private var displayBody: String {
+    guard entry.kind == .diff else {
+      return entry.body
+    }
+
+    let lines = entry.body.components(separatedBy: .newlines)
+    let previewLimit = 10
+    let preview = lines.prefix(previewLimit).joined(separator: "\n")
+    if lines.count <= previewLimit {
+      return preview
+    }
+
+    return "\(preview)\n... \(lines.count - previewLimit) more line(s). Select this diff to inspect the full highlighted change."
+  }
+
+  private var streamingLabel: String? {
+    guard entry.kind == .assistantMessage,
+          let streamingStatus = entry.attributes["streamingStatus"]
+    else {
+      return nil
+    }
+
+    switch streamingStatus {
+    case "in_progress":
+      return progressLabel().map { "Streaming \($0)" } ?? "Streaming"
+    case "completed":
+      return "Completed"
+    case "cancelled":
+      return "Cancelled"
+    default:
+      return nil
+    }
+  }
+
+  private var streamingProgressValue: Double? {
+    guard entry.kind == .assistantMessage,
+          entry.attributes["streamingStatus"] == "in_progress",
+          let streamedCharacters = entry.attributes["streamedCharacters"],
+          let totalCharacters = entry.attributes["totalCharacters"],
+          let streamedValue = Double(streamedCharacters),
+          let totalValue = Double(totalCharacters),
+          totalValue > 0
+    else {
+      return nil
+    }
+
+    return streamedValue / totalValue
+  }
+
+  private var streamingColor: Color {
+    switch entry.attributes["streamingStatus"] {
+    case "completed":
+      return .green
+    case "cancelled":
+      return .orange
+    default:
+      return .accentColor
+    }
+  }
+
+  private var sandboxBadge: TimelineSandboxBadgeSummary? {
+    TimelineSandboxBadgePresenter.badge(attributes: entry.attributes)
+  }
+
+  private func progressLabel() -> String? {
+    guard let streamedCharacters = entry.attributes["streamedCharacters"],
+          let totalCharacters = entry.attributes["totalCharacters"],
+          let streamedValue = Double(streamedCharacters),
+          let totalValue = Double(totalCharacters),
+          totalValue > 0
+    else {
+      return nil
+    }
+
+    let percentage = Int(((streamedValue / totalValue) * 100).rounded())
+    return "\(min(percentage, 100))%"
+  }
+}
