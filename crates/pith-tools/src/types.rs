@@ -118,15 +118,21 @@ impl ShellSandboxSummary {
 
 impl ShellOutputContext {
   pub fn source_total_bytes(&self) -> usize {
-    self.source_stdout_bytes.saturating_add(self.source_stderr_bytes)
+    self
+      .source_stdout_bytes
+      .saturating_add(self.source_stderr_bytes)
   }
 
   pub fn retained_total_bytes(&self) -> usize {
-    self.retained_stdout_bytes.saturating_add(self.retained_stderr_bytes)
+    self
+      .retained_stdout_bytes
+      .saturating_add(self.retained_stderr_bytes)
   }
 
   pub fn saved_bytes(&self) -> usize {
-    self.source_total_bytes().saturating_sub(self.retained_total_bytes())
+    self
+      .source_total_bytes()
+      .saturating_sub(self.retained_total_bytes())
   }
 
   pub fn savings_percent(&self) -> usize {
