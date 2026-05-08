@@ -54,6 +54,7 @@ pub(crate) fn summarize_shell_result(
     cancellation,
   );
   attributes.extend(result.sandbox.attributes());
+  attributes.extend(result.output_context.attributes());
 
   (summary, attributes)
 }

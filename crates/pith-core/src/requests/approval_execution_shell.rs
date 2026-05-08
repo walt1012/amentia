@@ -61,7 +61,11 @@ pub(super) fn append_approved_shell_execution(
         kind: "toolResult".to_string(),
         title: "run_shell result".to_string(),
         content: format_shell_result(&result),
-        attributes: Some(result.sandbox.attributes()),
+        attributes: Some({
+          let mut attributes = result.sandbox.attributes();
+          attributes.extend(result.output_context.attributes());
+          attributes
+        }),
       });
       events.push_item(assistant_item(summary, Some(summary_attributes)));
       let (hook_items, memory_captures) =

@@ -888,6 +888,14 @@ fn approval_respond_runs_shell_after_approval() {
   assert_eq!(items[2]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[2]["attributes"]["sandboxBackend"].is_string());
   assert!(items[2]["attributes"]["sandboxActive"].is_string());
+  assert_eq!(
+    items[2]["attributes"]["sandboxOutputContextMode"],
+    "sandboxOutputPreview"
+  );
+  assert_eq!(
+    items[3]["attributes"]["sandboxOutputContextMode"],
+    "sandboxOutputPreview"
+  );
   assert!(items.iter().any(|item| item["kind"] == "pluginHook"));
   assert!(items.iter().any(|item| {
     item["title"] == "Record Shell Completion"

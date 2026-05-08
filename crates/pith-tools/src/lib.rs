@@ -2,6 +2,7 @@ mod diff;
 mod paths;
 mod shell;
 mod shell_execution;
+mod shell_output_context;
 mod shell_sandbox;
 mod types;
 mod workspace_files;

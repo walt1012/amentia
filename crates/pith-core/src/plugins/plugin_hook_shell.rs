@@ -45,6 +45,7 @@ pub(crate) fn build_shell_completed_hook_items(
       });
     }
     let mut attributes = result.sandbox.attributes();
+    attributes.extend(result.output_context.attributes());
     attributes.extend(HashMap::from([
       ("hookId".to_string(), hook.hook_id),
       ("hookEvent".to_string(), hook.event),

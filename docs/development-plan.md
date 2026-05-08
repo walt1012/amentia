@@ -118,6 +118,8 @@ Based on those references, `Pith` should adopt:
 - typed plugin permissions
 - a local model runtime abstraction that allows future stronger local models
 - a native sandbox boundary for shell and plugin execution on macOS
+- sandbox output as a context boundary: commands may produce large local artifacts, but prompts should receive
+  only compact, budgeted, provenance-rich previews
 
 ## 5. Product Scope
 
@@ -734,6 +736,7 @@ The Codex-inspired direction is context engineering, not a generic document RAG 
 - context ledger for file reads, diffs, approvals, shell output, plugin output, and model observations
 - thread compaction that preserves decisions, touched paths, unresolved tasks, and evidence references
 - budget-aware prompt assembly that can explain what was kept, compressed, or dropped
+- sandbox-backed output previews that keep raw shell output local while passing only compact evidence into prompts
 - workspace context selection after ledger and compaction are reliable, starting with lexical scoring before embeddings
 - optional local embeddings or reranking only when they improve the local daily loop without adding weight
 
@@ -770,6 +773,7 @@ Phase 1:
 - bounded subprocess execution with timeout and cleanup
 - native macOS workspace sandbox for shell actions when the platform backend is available
 - workspace-local temporary files for sandboxed commands instead of broad host temp writes
+- workspace-local shell output artifacts with compact preview attributes for model context
 - no required Docker, VM, or third-party container runtime
 
 Phase 2:
@@ -951,13 +955,13 @@ Deliverables:
 - guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
 - strict local model readiness with verified model integrity, no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
 - bounded local inference with generation timeouts, cancellation, subprocess cleanup, and runtime unblocking after model failure
-- native local sandbox foundation for shell execution, with workspace-scoped policy, workspace-local temp routing, and readiness diagnostics
+- native local sandbox foundation for shell execution, with workspace-scoped policy, workspace-local temp routing, compact output previews, workspace-local output artifacts, and readiness diagnostics
 - fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
 - compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
 - inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
 - workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
-- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, ranking score attribution, short tool observation previews, and a clear path toward context ledger design
+- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, ranking score attribution, sandbox-backed tool observation previews, and a clear path toward context ledger design
 - native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
 - plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 
@@ -965,7 +969,7 @@ Exit criteria:
 
 - a fresh install can choose, download, activate, and run a selected small local model without hidden degraded-generation behavior
 - model generation timeout, cancellation, or backend failure does not require restarting the app to recover the runtime loop
-- shell execution is bounded by approvals, timeouts, cleanup, workspace-local temp routing, and native sandbox diagnostics without requiring third-party containers
+- shell execution is bounded by approvals, timeouts, cleanup, workspace-local temp routing, compact output artifacts, and native sandbox diagnostics without requiring third-party containers
 - a user can bind a workspace, create or resume a thread, send the first local request, and recover from common setup failures without reading external docs
 - the normal ready state feels quiet, stable, intentional, and distinctly native on Intel Mac hardware
 

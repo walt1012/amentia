@@ -62,10 +62,11 @@ pub(crate) fn format_shell_result(result: &ShellCommandResult) -> String {
     ""
   };
   format!(
-    "Command: {}\nExit Code: {}\n{}\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
+    "Command: {}\nExit Code: {}\n{}\n{}\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
     result.command,
     result.exit_code,
     result.sandbox.display_line(),
+    result.output_context.display_line(),
     stdout,
     stderr,
     truncation_note,

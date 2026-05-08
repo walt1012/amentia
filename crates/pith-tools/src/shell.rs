@@ -4,6 +4,7 @@ use anyhow::{bail, Context, Result};
 
 use crate::paths::canonical_workspace_root;
 use crate::shell_execution::{run_shell_with_timeout, shell_command_timeout};
+use crate::shell_output_context::build_shell_output_context;
 use crate::shell_sandbox::{
   prepare_shell_sandbox_environment, shell_sandbox_status as build_shell_sandbox_status,
   shell_sandbox_summary as build_shell_sandbox_summary,
@@ -48,17 +49,18 @@ pub fn run_shell(
       stderr = format!("{stderr}\n{timeout_message}");
     }
   }
-  let combined_len = stdout.len() + stderr.len();
-  let was_truncated = combined_len > max_output_bytes * 2;
+  let output_context =
+    build_shell_output_context(&workspace_root, &stdout, &stderr, max_output_bytes, trimmed_command);
 
   Ok(ShellCommandResult {
     command: trimmed_command.to_string(),
     exit_code: output.exit_code,
-    stdout: truncate_output(&stdout, max_output_bytes),
-    stderr: truncate_output(&stderr, max_output_bytes),
-    was_truncated,
+    stdout: output_context.stdout_preview,
+    stderr: output_context.stderr_preview,
+    was_truncated: output_context.context.was_compacted,
     timed_out: output.timed_out,
     sandbox,
+    output_context: output_context.context,
   })
 }
 
@@ -68,19 +70,6 @@ pub fn shell_sandbox_summary(workspace_root: &Path) -> ShellSandboxSummary {
 
 pub fn shell_sandbox_status(workspace_root: &Path) -> pith_sandbox::NativeSandboxStatus {
   build_shell_sandbox_status(workspace_root)
-}
-
-fn truncate_output(output: &str, max_output_bytes: usize) -> String {
-  let mut collected = String::new();
-
-  for character in output.chars() {
-    if collected.len() + character.len_utf8() > max_output_bytes {
-      break;
-    }
-    collected.push(character);
-  }
-
-  collected
 }
 
 #[cfg(test)]
@@ -114,6 +103,8 @@ mod tests {
       assert_eq!(result.sandbox.temporary_root, None);
     }
     assert!(!result.sandbox.detail.is_empty());
+    assert_eq!(result.output_context.mode, "sandboxOutputPreview");
+    assert!(!result.output_context.was_compacted);
 
     let _ = fs::remove_dir_all(workspace);
   }
