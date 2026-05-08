@@ -1,16 +1,17 @@
 use std::sync::{
   atomic::{AtomicBool, Ordering},
-  Arc, Mutex,
+  Arc,
 };
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use pith_core::{collect_notifications, RuntimeContext};
+use pith_core::collect_notifications;
 
 use crate::runtime_io::RuntimeOutput;
+use crate::runtime_lock::{try_lock_context, SharedRuntimeContext};
 
 pub(crate) fn start_notification_loop(
-  context: Arc<Mutex<RuntimeContext>>,
+  context: SharedRuntimeContext,
   output: RuntimeOutput,
   running: Arc<AtomicBool>,
 ) -> JoinHandle<()> {
@@ -19,7 +20,7 @@ pub(crate) fn start_notification_loop(
       thread::sleep(Duration::from_millis(180));
 
       let notifications = {
-        let Ok(mut locked_context) = context.try_lock() else {
+        let Some(mut locked_context) = try_lock_context(&context) else {
           continue;
         };
         collect_notifications(&mut locked_context)

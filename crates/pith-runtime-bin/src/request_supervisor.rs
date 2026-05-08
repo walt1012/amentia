@@ -5,8 +5,7 @@ use pith_core::RuntimeContext;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse};
 
 use crate::runtime_io::RuntimeOutput;
-
-type SharedRuntimeContext = Arc<Mutex<RuntimeContext>>;
+use crate::runtime_lock::{lock_context, SharedRuntimeContext};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum RequestLane {
@@ -56,7 +55,7 @@ impl RequestSupervisor {
 
     self.handles.push(thread::spawn(move || {
       let prepared = {
-        let mut locked_context = context.lock().expect("runtime context lock");
+        let mut locked_context = lock_context(&context);
         prepare(&mut locked_context, request)
       };
 
@@ -65,12 +64,12 @@ impl RequestSupervisor {
           let completed = if let Some(local_execution_lane) = local_execution_lane {
             let _lane = local_execution_lane
               .lock()
-              .expect("local execution lane lock");
+              .unwrap_or_else(|poisoned| poisoned.into_inner());
             execute(prepared)
           } else {
             execute(prepared)
           };
-          let mut locked_context = context.lock().expect("runtime context lock");
+          let mut locked_context = lock_context(&context);
           complete(&mut locked_context, completed)
         }
         Err(response) => response,

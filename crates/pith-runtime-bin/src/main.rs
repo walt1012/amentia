@@ -1,6 +1,7 @@
 mod notification_loop;
 mod request_supervisor;
 mod runtime_io;
+mod runtime_lock;
 
 use std::io::{self, BufRead};
 use std::sync::{
@@ -21,6 +22,7 @@ use pith_core::{
 use pith_protocol::{methods, JsonRpcRequest, JsonRpcResponse};
 use request_supervisor::{RequestLane, RequestSupervisor};
 use runtime_io::RuntimeOutput;
+use runtime_lock::lock_context;
 
 fn main() -> Result<()> {
   let context = Arc::new(Mutex::new(RuntimeContext::new()?));
@@ -94,7 +96,7 @@ fn main() -> Result<()> {
     }
 
     let response = {
-      let mut locked_context = context.lock().expect("runtime context lock");
+      let mut locked_context = lock_context(&context);
       handle_request(&mut locked_context, request)
     };
 
