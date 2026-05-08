@@ -49,6 +49,7 @@ This plan is informed by direct inspection of the following reference repositori
 - `openai/codex`
 - `anthropics/claude-code`
 - `OpenHands/OpenHands`
+- `mksglu/context-mode`
 
 ### 4.1 What To Learn From Codex
 
@@ -105,7 +106,23 @@ Relevant reference areas:
 - `openhands/app_server/sandbox/docker_sandbox_service.py`
 - `openhands/app_server/sandbox/process_sandbox_service.py`
 
-### 4.4 Source-Informed Direction For Pith
+### 4.4 What To Learn From Context Mode
+
+From `mksglu/context-mode`, especially the tool output sandboxing and diagnostic flow:
+
+- Large tool output should stay local by default; prompts should receive compact previews, provenance, and artifact references.
+- Runtime diagnostics should make context health, sandbox state, and routing decisions visible instead of relying on hidden prompt rules.
+- Session continuity should be explicit state, not accidental transcript length.
+- Pith should learn the context-boundary model, not the MCP dependency. The product direction remains a native runtime with first-party sandbox and context packing.
+
+Relevant reference areas:
+
+- `README.md`
+- `src/`
+- `hooks/`
+- `configs/`
+
+### 4.5 Source-Informed Direction For Pith
 
 Based on those references, `Pith` should adopt:
 
@@ -120,6 +137,7 @@ Based on those references, `Pith` should adopt:
 - a native sandbox boundary for shell and plugin execution on macOS
 - sandbox output as a context boundary: commands may produce large local artifacts, but prompts should receive
   only compact, budgeted, provenance-rich previews
+- sandbox diagnostics that expose active backend, writable roots, network policy, and temporary-root cleanup
 
 ## 5. Product Scope
 
@@ -772,8 +790,9 @@ Phase 1:
 - explicit approvals
 - bounded subprocess execution with timeout and cleanup
 - native macOS workspace sandbox for shell actions when the platform backend is available
-- workspace-local temporary files for sandboxed commands instead of broad host temp writes
+- workspace-local temporary files for sandboxed commands instead of broad host temp writes, with safe cleanup before each sandboxed run
 - app-owned shell output artifacts with compact preview attributes and retention for model context
+- machine-readable sandbox diagnostics for active backend, writable roots, network policy, and output context mode
 - no required Docker, VM, or third-party container runtime
 
 Phase 2:

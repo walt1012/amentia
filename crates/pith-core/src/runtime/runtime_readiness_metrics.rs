@@ -78,6 +78,10 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
       sandbox_status.active.to_string(),
     ),
     (
+      "sandboxNetworkAllowed".to_string(),
+      sandbox_status.network_allowed.to_string(),
+    ),
+    (
       "contextWindowTokens".to_string(),
       context_window.to_string(),
     ),
@@ -92,6 +96,12 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
   ]);
   if let Some(temporary_root) = &sandbox_status.temporary_root {
     metrics.insert("sandboxTempRoot".to_string(), temporary_root.clone());
+  }
+  if !sandbox_status.writable_roots.is_empty() {
+    metrics.insert(
+      "sandboxWritableRoots".to_string(),
+      sandbox_status.writable_roots.join("\n"),
+    );
   }
   metrics
 }

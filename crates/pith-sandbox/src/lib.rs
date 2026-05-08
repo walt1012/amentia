@@ -15,7 +15,9 @@ pub struct NativeSandboxStatus {
   pub backend: String,
   pub available: bool,
   pub active: bool,
+  pub network_allowed: bool,
   pub temporary_root: Option<String>,
+  pub writable_roots: Vec<String>,
   pub detail: String,
 }
 
@@ -44,6 +46,14 @@ impl SandboxPolicy {
   pub fn allow_network(&self) -> bool {
     self.allow_network
   }
+
+  pub fn writable_roots(&self) -> Vec<&Path> {
+    let mut roots = vec![self.workspace_root()];
+    if let Some(temporary_root) = self.temporary_root() {
+      roots.push(temporary_root);
+    }
+    roots
+  }
 }
 
 pub fn workspace_required_status() -> NativeSandboxStatus {
@@ -52,7 +62,9 @@ pub fn workspace_required_status() -> NativeSandboxStatus {
     backend: native_backend_name().to_string(),
     available: native_sandbox_available(),
     active: false,
+    network_allowed: false,
     temporary_root: None,
+    writable_roots: Vec::new(),
     detail: "Open a workspace before native sandbox policy can be applied.".to_string(),
   }
 }
@@ -64,22 +76,38 @@ pub fn native_sandbox_status(policy: &SandboxPolicy) -> NativeSandboxStatus {
   let configured_temporary_root = policy
     .temporary_root()
     .map(|path| path.display().to_string());
+  let writable_roots = if active {
+    policy
+      .writable_roots()
+      .into_iter()
+      .map(|path| path.display().to_string())
+      .collect()
+  } else {
+    Vec::new()
+  };
   let temporary_root = if active {
     configured_temporary_root
   } else {
     None
   };
+  let network_detail = if policy.allow_network() {
+    "Network access is allowed by policy."
+  } else {
+    "Network access is denied by default."
+  };
   let detail = if active {
     if let Some(temporary_root) = &temporary_root {
       format!(
-        "Shell actions run through macOS Seatbelt with read/write access limited to {} and temporary files routed to {}.",
+        "Shell actions run through macOS Seatbelt with write access limited to workspace {} and temporary files routed to {}. {}",
         policy.workspace_root().display(),
-        temporary_root
+        temporary_root,
+        network_detail
       )
     } else {
       format!(
-        "Shell actions run through macOS Seatbelt with read/write access limited to {}.",
-        policy.workspace_root().display()
+        "Shell actions run through macOS Seatbelt with write access limited to workspace {}. {}",
+        policy.workspace_root().display(),
+        network_detail
       )
     }
   } else if cfg!(target_os = "macos") {
@@ -93,7 +121,9 @@ pub fn native_sandbox_status(policy: &SandboxPolicy) -> NativeSandboxStatus {
     backend,
     available,
     active,
+    network_allowed: active && policy.allow_network(),
     temporary_root,
+    writable_roots,
     detail,
   }
 }
@@ -124,6 +154,17 @@ pub fn macos_sandbox_exec_path() -> &'static str {
 
 pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
   let workspace_root = seatbelt_string(policy.workspace_root());
+  let writable_roots = policy
+    .writable_roots()
+    .into_iter()
+    .map(seatbelt_string)
+    .collect::<Vec<_>>();
+  let mut readable_roots = vec![workspace_root];
+  for writable_root in &writable_roots {
+    if !readable_roots.contains(writable_root) {
+      readable_roots.push(writable_root.clone());
+    }
+  }
   let mut profile = vec![
     "(version 1)".to_string(),
     "(deny default)".to_string(),
@@ -139,12 +180,16 @@ pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
     "  (subpath \"/sbin\")".to_string(),
     "  (subpath \"/etc\")".to_string(),
     "  (subpath \"/dev\")".to_string(),
-    format!("  (subpath \"{workspace_root}\")"),
-    ")".to_string(),
-    "(allow file-write*".to_string(),
-    format!("  (subpath \"{workspace_root}\")"),
-    ")".to_string(),
   ];
+  for readable_root in &readable_roots {
+    profile.push(format!("  (subpath \"{readable_root}\")"));
+  }
+  profile.push(")".to_string());
+  profile.push("(allow file-write*".to_string());
+  for writable_root in &writable_roots {
+    profile.push(format!("  (subpath \"{writable_root}\")"));
+  }
+  profile.push(")".to_string());
 
   if policy.allow_network() {
     profile.push("(allow network*)".to_string());
@@ -185,6 +230,16 @@ mod tests {
     assert!(profile.contains("(subpath \"/tmp/Pith \\\"Demo\\\"\")"));
   }
 
+  #[test]
+  fn profile_allows_temporary_root_explicitly() {
+    let policy = SandboxPolicy::workspace_read_write("/Users/example/work")
+      .with_temporary_root("/tmp/pith");
+    let profile = macos_seatbelt_profile(&policy);
+
+    assert!(profile.contains("(subpath \"/Users/example/work\")"));
+    assert!(profile.contains("(subpath \"/tmp/pith\")"));
+  }
+
   #[cfg(target_os = "macos")]
   #[test]
   fn status_reports_workspace_temporary_root() {
@@ -211,6 +266,8 @@ mod tests {
     assert_eq!(status.backend, "processOnly");
     assert!(!status.available);
     assert!(!status.active);
+    assert!(!status.network_allowed);
     assert_eq!(status.temporary_root, None);
+    assert!(status.writable_roots.is_empty());
   }
 }

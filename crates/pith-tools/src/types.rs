@@ -50,7 +50,9 @@ pub struct ShellSandboxSummary {
   pub mode: String,
   pub backend: String,
   pub active: bool,
+  pub network_allowed: bool,
   pub temporary_root: Option<String>,
+  pub writable_roots: Vec<String>,
   pub detail: String,
 }
 
@@ -76,11 +78,17 @@ impl ShellSandboxSummary {
   }
 
   pub fn display_line(&self) -> String {
+    let network_state = if self.network_allowed {
+      "network allowed"
+    } else {
+      "network denied"
+    };
     format!(
-      "Sandbox: {} via {} ({})",
+      "Sandbox: {} via {} ({}, {})",
       self.mode,
       self.backend,
-      self.state()
+      self.state(),
+      network_state
     )
   }
 
@@ -89,10 +97,20 @@ impl ShellSandboxSummary {
       ("sandboxMode".to_string(), self.mode.clone()),
       ("sandboxBackend".to_string(), self.backend.clone()),
       ("sandboxActive".to_string(), self.active.to_string()),
+      (
+        "sandboxNetworkAllowed".to_string(),
+        self.network_allowed.to_string(),
+      ),
       ("sandboxDetail".to_string(), self.detail.clone()),
     ]);
     if let Some(temporary_root) = &self.temporary_root {
       attributes.insert("sandboxTempRoot".to_string(), temporary_root.clone());
+    }
+    if !self.writable_roots.is_empty() {
+      attributes.insert(
+        "sandboxWritableRoots".to_string(),
+        self.writable_roots.join("\n"),
+      );
     }
     attributes
   }
