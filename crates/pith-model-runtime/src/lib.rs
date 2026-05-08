@@ -311,9 +311,9 @@ impl LocalModelRuntime {
 
   fn generate_cancelled(&self, role: &ModelRole) -> GenerateResponse {
     GenerateResponse {
-      text: format!(
-        "{} Local model generation was cancelled before completion.",
-        role_prefix(role)
+      text: generation_failure_text(
+        role,
+        "local model generation was cancelled before completion.",
       ),
       backend: "local".to_string(),
       status: "cancelled".to_string(),
