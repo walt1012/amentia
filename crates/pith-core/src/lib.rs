@@ -57,4 +57,6 @@ pub use workspace_search::{
 };
 
 #[cfg(test)]
+mod test_support;
+#[cfg(test)]
 mod tests;
