@@ -73,7 +73,9 @@ mod tests {
       "the web",
       HashMap::new(),
     );
-    assert!(items[0].content.contains("could not search the web because"));
+    assert!(items[0]
+      .content
+      .contains("could not search the web because"));
     assert!(!items[0].content.contains("in the web"));
   }
 }
