@@ -63,9 +63,10 @@ enum RuntimeBridgeLocalEnvironment {
       return nil
     }
 
-    guard LocalModelCatalog.isVerifiedInstalledModel(
+    guard LocalModelCatalog.isVerifiedInstalledSelection(
       storageRootPath: localModelStorageRootPath(),
-      modelPath: modelPath
+      modelPath: modelPath,
+      manifestPath: manifestPath
     ) else {
       clearActiveLocalModel()
       return nil

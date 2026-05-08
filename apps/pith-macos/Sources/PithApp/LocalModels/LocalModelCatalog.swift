@@ -35,24 +35,8 @@ enum LocalModelCatalog {
   }
 
   static func writePackManifest(for model: LocalModelSummary) throws -> String {
-    let modelURL = URL(fileURLWithPath: model.installPath)
-    let manifestURL = modelURL
-      .deletingLastPathComponent()
-      .appendingPathComponent("model-pack.json")
-    let manifest = LocalModelPackManifest(
-      id: model.id,
-      displayName: model.displayName,
-      fileName: model.fileName,
-      contextSize: model.contextSize,
-      modelContextSize: model.modelContextSize,
-      maxOutputTokens: model.maxOutputTokens,
-      backend: "llama.cpp",
-      license: model.license,
-      homepage: model.homepage,
-      downloadURL: model.downloadURL,
-      sha256: model.sha256,
-      sizeBytes: model.sizeBytes
-    )
+    let manifestURL = packManifestURL(forModelPath: model.installPath)
+    let manifest = packManifest(for: model)
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     let data = try encoder.encode(manifest)
@@ -72,14 +56,75 @@ enum LocalModelCatalog {
     storageRootPath: String,
     modelPath: String
   ) -> Bool {
+    verifiedInstalledModel(storageRootPath: storageRootPath, modelPath: modelPath) != nil
+  }
+
+  static func isVerifiedInstalledSelection(
+    storageRootPath: String,
+    modelPath: String,
+    manifestPath: String
+  ) -> Bool {
+    guard let model = verifiedInstalledModel(
+      storageRootPath: storageRootPath,
+      modelPath: modelPath
+    ) else {
+      return false
+    }
+
+    let manifestURL = packManifestURL(forModelPath: model.installPath)
+    guard normalizedPath(manifestURL.path) == normalizedPath(manifestPath),
+          FileManager.default.fileExists(atPath: manifestURL.path)
+    else {
+      return false
+    }
+
+    guard let manifest = try? packManifest(at: manifestURL) else {
+      return false
+    }
+
+    return manifest == packManifest(for: model)
+  }
+
+  private static func verifiedInstalledModel(
+    storageRootPath: String,
+    modelPath: String
+  ) -> LocalModelSummary? {
     let normalizedModelPath = normalizedPath(modelPath)
     return summaries(
       storageRootPath: storageRootPath,
       activeModelPath: modelPath
     )
-    .contains { model in
+    .first { model in
       model.downloaded && normalizedPath(model.installPath) == normalizedModelPath
     }
+  }
+
+  private static func packManifestURL(forModelPath modelPath: String) -> URL {
+    URL(fileURLWithPath: modelPath)
+      .deletingLastPathComponent()
+      .appendingPathComponent("model-pack.json")
+  }
+
+  private static func packManifest(for model: LocalModelSummary) -> LocalModelPackManifest {
+    LocalModelPackManifest(
+      id: model.id,
+      displayName: model.displayName,
+      fileName: model.fileName,
+      contextSize: model.contextSize,
+      modelContextSize: model.modelContextSize,
+      maxOutputTokens: model.maxOutputTokens,
+      backend: "llama.cpp",
+      license: model.license,
+      homepage: model.homepage,
+      downloadURL: model.downloadURL,
+      sha256: model.sha256,
+      sizeBytes: model.sizeBytes
+    )
+  }
+
+  private static func packManifest(at manifestURL: URL) throws -> LocalModelPackManifest {
+    let data = try Data(contentsOf: manifestURL)
+    return try JSONDecoder().decode(LocalModelPackManifest.self, from: data)
   }
 
   private static func normalizedPath(_ path: String) -> String {
@@ -87,7 +132,7 @@ enum LocalModelCatalog {
   }
 }
 
-private struct LocalModelPackManifest: Encodable {
+private struct LocalModelPackManifest: Codable, Equatable {
   let id: String
   let displayName: String
   let fileName: String
