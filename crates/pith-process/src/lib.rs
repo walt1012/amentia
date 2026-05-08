@@ -176,4 +176,71 @@ mod tests {
     assert!(output.bytes.is_empty());
     assert_eq!(output.source_byte_count, 0);
   }
+
+  #[cfg(unix)]
+  #[test]
+  fn wait_for_child_reports_completed_exit() {
+    let mut command = Command::new("sh");
+    configure_process_group(&mut command);
+    let mut child = command
+      .args(["-c", "exit 7"])
+      .spawn()
+      .expect("spawn child");
+
+    let result = wait_for_child(
+      &mut child,
+      Duration::from_secs(5),
+      Duration::from_millis(10),
+      Duration::from_millis(10),
+      || false,
+    )
+    .expect("wait child");
+
+    assert_eq!(result.reason, ChildExitReason::Completed);
+    assert_eq!(result.status.code(), Some(7));
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn wait_for_child_reports_timeout() {
+    let mut command = Command::new("sh");
+    configure_process_group(&mut command);
+    let mut child = command
+      .args(["-c", "sleep 5"])
+      .spawn()
+      .expect("spawn child");
+
+    let result = wait_for_child(
+      &mut child,
+      Duration::from_millis(30),
+      Duration::from_millis(10),
+      Duration::from_millis(10),
+      || false,
+    )
+    .expect("wait child");
+
+    assert_eq!(result.reason, ChildExitReason::TimedOut);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn wait_for_child_reports_cancellation() {
+    let mut command = Command::new("sh");
+    configure_process_group(&mut command);
+    let mut child = command
+      .args(["-c", "sleep 5"])
+      .spawn()
+      .expect("spawn child");
+
+    let result = wait_for_child(
+      &mut child,
+      Duration::from_secs(5),
+      Duration::from_millis(10),
+      Duration::from_millis(10),
+      || true,
+    )
+    .expect("wait child");
+
+    assert_eq!(result.reason, ChildExitReason::Cancelled);
+  }
 }
