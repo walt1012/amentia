@@ -782,7 +782,10 @@ fn approval_respond_writes_file_after_approval() {
   let turn_items = turn_result["items"].as_array().expect("turn items");
   assert_eq!(turn_items[2]["title"], "generate_diff");
   assert_eq!(turn_items[2]["attributes"]["tool"], "generate_diff");
-  assert_eq!(turn_items[2]["attributes"]["relativePath"], "docs/output.txt");
+  assert_eq!(
+    turn_items[2]["attributes"]["relativePath"],
+    "docs/output.txt"
+  );
   assert_eq!(turn_items[3]["kind"], "diffArtifact");
   assert_eq!(turn_items[3]["attributes"]["tool"], "generate_diff");
   assert!(turn_items[3]["content"]
