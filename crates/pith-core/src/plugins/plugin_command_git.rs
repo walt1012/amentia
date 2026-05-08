@@ -1,12 +1,11 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::{bail, Result};
 use pith_process::{
   configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
-  terminate_process_group_or_child,
+  wait_for_child, ChildExitReason,
 };
 
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
@@ -60,25 +59,19 @@ fn run_git_workspace_command(workspace_root: &Path, args: &[&str]) -> Result<Git
   };
   let stdout_reader = read_bounded_pipe_in_background(stdout, GIT_COMMAND_OUTPUT_LIMIT);
 
-  let started_at = Instant::now();
-  let (success, timed_out) = loop {
-    if let Some(status) = child.try_wait()? {
-      break (status.success(), false);
-    }
-
-    if started_at.elapsed() >= GIT_COMMAND_TIMEOUT {
-      terminate_git_child(&mut child);
-      break (false, true);
-    }
-
-    thread::sleep(GIT_COMMAND_POLL_INTERVAL);
-  };
+  let wait = wait_for_child(
+    &mut child,
+    GIT_COMMAND_TIMEOUT,
+    GIT_COMMAND_POLL_INTERVAL,
+    Duration::from_millis(200),
+    || false,
+  )?;
 
   let stdout = join_bounded_pipe_reader(Some(stdout_reader)).bytes;
   Ok(GitCommandOutput {
     stdout,
-    success,
-    timed_out,
+    success: wait.reason == ChildExitReason::Completed && wait.status.success(),
+    timed_out: wait.reason == ChildExitReason::TimedOut,
   })
 }
 
@@ -89,11 +82,6 @@ fn build_git_command(workspace_root: &Path, args: &[&str]) -> Command {
   configure_process_group(&mut process);
 
   process
-}
-
-fn terminate_git_child(child: &mut std::process::Child) {
-  terminate_process_group_or_child(child, Duration::from_millis(200));
-  let _ = child.wait();
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use std::io::Read;
-use std::process::{Child, Command};
+use std::process::{Child, Command, ExitStatus};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Default)]
 pub struct BoundedPipeOutput {
@@ -46,6 +46,59 @@ pub fn join_bounded_pipe_reader(
   reader
     .and_then(|handle| handle.join().ok())
     .unwrap_or_default()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChildExitReason {
+  Completed,
+  TimedOut,
+  Cancelled,
+}
+
+#[derive(Debug)]
+pub struct ChildWaitResult {
+  pub status: ExitStatus,
+  pub reason: ChildExitReason,
+}
+
+pub fn wait_for_child<F>(
+  child: &mut Child,
+  timeout: Duration,
+  poll_interval: Duration,
+  termination_grace_period: Duration,
+  is_cancelled: F,
+) -> std::io::Result<ChildWaitResult>
+where
+  F: Fn() -> bool,
+{
+  let started_at = Instant::now();
+
+  loop {
+    if let Some(status) = child.try_wait()? {
+      return Ok(ChildWaitResult {
+        status,
+        reason: ChildExitReason::Completed,
+      });
+    }
+
+    if is_cancelled() {
+      terminate_process_group_or_child(child, termination_grace_period);
+      return Ok(ChildWaitResult {
+        status: child.wait()?,
+        reason: ChildExitReason::Cancelled,
+      });
+    }
+
+    if started_at.elapsed() >= timeout {
+      terminate_process_group_or_child(child, termination_grace_period);
+      return Ok(ChildWaitResult {
+        status: child.wait()?,
+        reason: ChildExitReason::TimedOut,
+      });
+    }
+
+    thread::sleep(poll_interval);
+  }
 }
 
 #[cfg(unix)]

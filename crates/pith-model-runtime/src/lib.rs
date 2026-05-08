@@ -2,18 +2,17 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Output, Stdio};
+use std::process::{Command, Output, Stdio};
 use std::sync::{
   atomic::{AtomicBool, Ordering},
   Arc,
 };
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use pith_process::{
   configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
-  terminate_process_group_or_child,
+  wait_for_child, ChildExitReason,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1009,35 +1008,22 @@ fn run_llama_cpp_with_timeout(
     .stderr
     .take()
     .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
-  let started_at = Instant::now();
-  let mut timed_out = false;
-
-  let status = loop {
-    if let Some(status) = child.try_wait()? {
-      break status;
-    }
-
-    if cancellation
-      .map(GenerationCancellation::is_cancelled)
-      .unwrap_or(false)
-    {
-      terminate_llama_child(&mut child);
-      break child.wait()?;
-    }
-
-    if started_at.elapsed() >= timeout {
-      timed_out = true;
-      terminate_llama_child(&mut child);
-      break child.wait()?;
-    }
-
-    thread::sleep(LLAMA_CPP_POLL_INTERVAL);
-  };
+  let wait = wait_for_child(
+    &mut child,
+    timeout,
+    LLAMA_CPP_POLL_INTERVAL,
+    Duration::from_millis(200),
+    || {
+      cancellation
+        .map(GenerationCancellation::is_cancelled)
+        .unwrap_or(false)
+    },
+  )?;
 
   let stdout = join_bounded_pipe_reader(stdout_reader).bytes;
   let stderr = join_bounded_pipe_reader(stderr_reader).bytes;
 
-  if timed_out {
+  if wait.reason == ChildExitReason::TimedOut {
     let stderr_text = String::from_utf8_lossy(&stderr).trim().to_string();
     if stderr_text.is_empty() {
       bail!("llama.cpp timed out after {} seconds", timeout.as_secs());
@@ -1051,7 +1037,7 @@ fn run_llama_cpp_with_timeout(
   }
 
   Ok(Output {
-    status,
+    status: wait.status,
     stdout,
     stderr,
   })
@@ -1076,10 +1062,6 @@ fn llama_cpp_timeout() -> Duration {
 
 pub fn llama_cpp_timeout_seconds() -> u64 {
   llama_cpp_timeout().as_secs()
-}
-
-fn terminate_llama_child(child: &mut Child) {
-  terminate_process_group_or_child(child, Duration::from_millis(200));
 }
 
 fn build_llama_cpp_command(binary_path: &Path) -> Command {

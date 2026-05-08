@@ -117,6 +117,12 @@ pub(super) fn execute_web_search_turn(
       );
     }
     Err(error) => {
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "web_search failed".to_string(),

@@ -1,11 +1,10 @@
-use std::process::{Child, Command, ExitStatus, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::process::{Command, ExitStatus, Stdio};
+use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use pith_process::{
   configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
-  terminate_process_group_or_child,
+  wait_for_child, ChildExitReason,
 };
 
 use crate::types::WebSearchResult;
@@ -89,36 +88,20 @@ where
     .stderr
     .take()
     .map(|reader| read_bounded_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
-  let started_at = Instant::now();
-  let mut timed_out = false;
-  let mut cancelled = false;
-
-  let status = loop {
-    if let Some(status) = child.try_wait()? {
-      break status;
-    }
-
-    if is_cancelled() {
-      cancelled = true;
-      terminate_web_search_child(&mut child);
-      break child.wait()?;
-    }
-
-    if started_at.elapsed() >= WEB_SEARCH_PROCESS_TIMEOUT {
-      timed_out = true;
-      terminate_web_search_child(&mut child);
-      break child.wait()?;
-    }
-
-    thread::sleep(WEB_SEARCH_POLL_INTERVAL);
-  };
+  let wait = wait_for_child(
+    &mut child,
+    WEB_SEARCH_PROCESS_TIMEOUT,
+    WEB_SEARCH_POLL_INTERVAL,
+    Duration::from_millis(200),
+    is_cancelled,
+  )?;
 
   Ok(WebSearchHttpOutput {
-    status,
+    status: wait.status,
     stdout: join_bounded_pipe_reader(stdout_reader).bytes,
     stderr: join_bounded_pipe_reader(stderr_reader).bytes,
-    timed_out,
-    cancelled,
+    timed_out: wait.reason == ChildExitReason::TimedOut,
+    cancelled: wait.reason == ChildExitReason::Cancelled,
   })
 }
 
@@ -143,10 +126,6 @@ fn build_curl_command(url: &str) -> Command {
     .stdin(Stdio::null());
   configure_process_group(&mut process);
   process
-}
-
-fn terminate_web_search_child(child: &mut Child) {
-  terminate_process_group_or_child(child, Duration::from_millis(200));
 }
 
 fn parse_duckduckgo_lite_results(html: &str, max_results: usize) -> Vec<WebSearchResult> {
