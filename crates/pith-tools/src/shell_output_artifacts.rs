@@ -15,6 +15,19 @@ pub(crate) fn shell_output_artifact_directory() -> Result<PathBuf> {
   create_shell_output_artifact_run_directory(&root)
 }
 
+pub(crate) fn discard_shell_output_artifact_directory(artifact_directory: &Path) {
+  let Ok(metadata) = fs::symlink_metadata(artifact_directory) else {
+    return;
+  };
+
+  if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    let _ = fs::remove_file(artifact_directory);
+    return;
+  }
+
+  let _ = fs::remove_dir_all(artifact_directory);
+}
+
 fn shell_output_artifact_root() -> PathBuf {
   if let Ok(data_dir) = env::var("PITH_DATA_DIR") {
     return PathBuf::from(data_dir)
@@ -169,6 +182,28 @@ mod tests {
     assert!(root.join("manual-note").exists());
 
     let _ = fs::remove_dir_all(root);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_output_artifact_cleanup_removes_symlink_without_following_it() {
+    use std::os::unix::fs::symlink;
+
+    let root = unique_temp_directory("artifact-cleanup-symlink");
+    let outside = unique_temp_directory("artifact-cleanup-outside");
+    let artifact_directory = root.join("run-linked");
+    fs::create_dir_all(&root).expect("artifact root");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(outside.join("keep.txt"), "keep").expect("outside file");
+    symlink(&outside, &artifact_directory).expect("run symlink");
+
+    discard_shell_output_artifact_directory(&artifact_directory);
+
+    assert!(!artifact_directory.exists());
+    assert!(outside.join("keep.txt").exists());
+
+    let _ = fs::remove_dir_all(root);
+    let _ = fs::remove_dir_all(outside);
   }
 
   #[cfg(unix)]

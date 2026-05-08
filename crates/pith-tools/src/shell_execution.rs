@@ -8,6 +8,8 @@ use std::time::Duration;
 use anyhow::Result;
 use pith_process::{configure_process_group, wait_for_child, ChildExitReason};
 
+use crate::shell_output_artifacts::discard_shell_output_artifact_directory;
+
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
@@ -27,11 +29,19 @@ pub(crate) fn run_shell_with_timeout(
   max_output_bytes: usize,
   artifact_directory: PathBuf,
 ) -> Result<ShellOutput> {
-  let mut child = build_shell_command(command, workspace_root, sandbox_policy)
+  let mut shell_command = build_shell_command(command, workspace_root, sandbox_policy);
+  let child_result = shell_command
     .current_dir(workspace_root)
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
-    .spawn()?;
+    .spawn();
+  let mut child = match child_result {
+    Ok(child) => child,
+    Err(error) => {
+      discard_shell_output_artifact_directory(&artifact_directory);
+      return Err(error.into());
+    }
+  };
   let stdout_reader = child.stdout.take().map(|reader| {
     read_pipe_in_background(
       reader,
@@ -61,7 +71,7 @@ pub(crate) fn run_shell_with_timeout(
     if stdout.source_byte_count > max_output_bytes || stderr.source_byte_count > max_output_bytes {
       Some(artifact_directory)
     } else {
-      remove_artifact_directory(&artifact_directory);
+      discard_shell_output_artifact_directory(&artifact_directory);
       None
     };
 
@@ -153,19 +163,6 @@ fn join_pipe_reader(
         source_byte_count: 0,
       })
     })
-}
-
-fn remove_artifact_directory(artifact_directory: &Path) {
-  let Ok(metadata) = fs::symlink_metadata(artifact_directory) else {
-    return;
-  };
-
-  if metadata.file_type().is_symlink() || !metadata.is_dir() {
-    let _ = fs::remove_file(artifact_directory);
-    return;
-  }
-
-  let _ = fs::remove_dir_all(artifact_directory);
 }
 
 #[cfg(target_family = "windows")]
@@ -276,26 +273,25 @@ mod tests {
     let _ = fs::remove_dir_all(workspace);
   }
 
-  #[cfg(unix)]
   #[test]
-  fn artifact_cleanup_removes_symlink_without_following_it() {
-    use std::os::unix::fs::symlink;
+  fn shell_spawn_failure_discards_empty_artifact_directory() {
+    let workspace = unique_temp_workspace("shell-spawn-missing");
+    let artifact_directory = unique_temp_workspace("shell-spawn-artifact");
+    fs::create_dir_all(&artifact_directory).expect("artifact directory");
 
-    let workspace = unique_temp_workspace("artifact-cleanup-symlink");
-    let outside = unique_temp_workspace("artifact-cleanup-outside");
-    let artifact_directory = workspace.join("artifact-link");
-    fs::create_dir_all(&workspace).expect("workspace");
-    fs::create_dir_all(&outside).expect("outside");
-    fs::write(outside.join("keep.txt"), "keep").expect("outside file");
-    symlink(&outside, &artifact_directory).expect("artifact symlink");
+    let result = run_shell_with_timeout(
+      "printf never-runs",
+      &workspace,
+      &pith_sandbox::SandboxPolicy::workspace_read_write(&workspace),
+      Duration::from_millis(100),
+      1024,
+      artifact_directory.clone(),
+    );
 
-    remove_artifact_directory(&artifact_directory);
-
+    assert!(result.is_err());
     assert!(!artifact_directory.exists());
-    assert!(outside.join("keep.txt").is_file());
 
-    let _ = fs::remove_dir_all(workspace);
-    let _ = fs::remove_dir_all(outside);
+    let _ = fs::remove_dir_all(artifact_directory);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {
