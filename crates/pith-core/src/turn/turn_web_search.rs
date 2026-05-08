@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
-use pith_tools::web_search_with_cancellation;
+use pith_tools::{
+  web_search_status, web_search_timeout_seconds, web_search_with_cancellation, WebSearchStatus,
+};
 
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::intent_inference::WebSearchIntent;
@@ -32,7 +34,7 @@ pub(super) fn execute_web_search_turn(
       )
     } else {
       format!(
-        "Check plugin permissions before searching the web for \"{}\".",
+        "Check network permission before searching the web for \"{}\".",
         query
       )
     },
@@ -61,19 +63,29 @@ pub(super) fn execute_web_search_turn(
     return;
   }
 
+  let search_status = web_search_status();
+  if !search_status.available {
+    items.push(TimelineItem {
+      kind: "warning".to_string(),
+      title: "web_search unavailable".to_string(),
+      content: search_status.detail.clone(),
+      attributes: Some(web_search_attributes(intent, &search_status)),
+    });
+    items.push(TimelineItem {
+      kind: "assistantMessage".to_string(),
+      title: "Assistant".to_string(),
+      content: "Pith could not search the web because the built-in search client is unavailable."
+        .to_string(),
+      attributes: None,
+    });
+    return;
+  }
+
   items.push(TimelineItem {
     kind: "toolStart".to_string(),
     title: "web_search".to_string(),
     content: query.to_string(),
-    attributes: Some(HashMap::from([
-      ("tool".to_string(), "web_search".to_string()),
-      ("provider".to_string(), "DuckDuckGo Lite".to_string()),
-      ("networkAccess".to_string(), "true".to_string()),
-      (
-        "routingReason".to_string(),
-        intent.routing_reason.to_string(),
-      ),
-    ])),
+    attributes: Some(web_search_attributes(intent, &search_status)),
   });
 
   match web_search_with_cancellation(query, WEB_SEARCH_MAX_RESULTS, || {
@@ -84,15 +96,10 @@ pub(super) fn execute_web_search_turn(
         kind: "toolResult".to_string(),
         title: "web_search result".to_string(),
         content: format_web_search_result(query, &results),
-        attributes: Some(HashMap::from([
-          ("tool".to_string(), "web_search".to_string()),
-          ("provider".to_string(), "DuckDuckGo Lite".to_string()),
-          ("resultCount".to_string(), results.len().to_string()),
-          (
-            "routingReason".to_string(),
-            intent.routing_reason.to_string(),
-          ),
-        ])),
+        attributes: Some(with_web_search_result_count(
+          web_search_attributes(intent, &search_status),
+          results.len(),
+        )),
       });
       let (summary, summary_attributes) = summarize_web_search_result(
         &snapshot.model_runtime,
@@ -127,14 +134,7 @@ pub(super) fn execute_web_search_turn(
         kind: "warning".to_string(),
         title: "web_search failed".to_string(),
         content: error.to_string(),
-        attributes: Some(HashMap::from([
-          ("tool".to_string(), "web_search".to_string()),
-          ("provider".to_string(), "DuckDuckGo Lite".to_string()),
-          (
-            "routingReason".to_string(),
-            intent.routing_reason.to_string(),
-          ),
-        ])),
+        attributes: Some(web_search_attributes(intent, &search_status)),
       });
       items.push(TimelineItem {
         kind: "assistantMessage".to_string(),
@@ -144,5 +144,85 @@ pub(super) fn execute_web_search_turn(
         attributes: None,
       });
     }
+  }
+}
+
+fn web_search_attributes(
+  intent: &WebSearchIntent,
+  status: &WebSearchStatus,
+) -> HashMap<String, String> {
+  HashMap::from([
+    ("tool".to_string(), "web_search".to_string()),
+    ("provider".to_string(), status.provider.clone()),
+    ("client".to_string(), status.client.clone()),
+    ("networkAccess".to_string(), "true".to_string()),
+    (
+      "routingReason".to_string(),
+      intent.routing_reason.to_string(),
+    ),
+    (
+      "timeoutSeconds".to_string(),
+      web_search_timeout_seconds().to_string(),
+    ),
+    (
+      "webSearchAvailable".to_string(),
+      status.available.to_string(),
+    ),
+  ])
+}
+
+fn with_web_search_result_count(
+  mut attributes: HashMap<String, String>,
+  result_count: usize,
+) -> HashMap<String, String> {
+  attributes.insert("resultCount".to_string(), result_count.to_string());
+  attributes
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn web_search_attributes_use_runtime_status() {
+    let intent = WebSearchIntent {
+      query: "latest pith release".to_string(),
+      routing_reason: "freshPublicInformation",
+    };
+    let status = WebSearchStatus {
+      provider: "Example Search".to_string(),
+      client: "example-client".to_string(),
+      available: true,
+      detail: "ready".to_string(),
+    };
+
+    let attributes = web_search_attributes(&intent, &status);
+
+    assert_eq!(attributes.get("tool").map(String::as_str), Some("web_search"));
+    assert_eq!(
+      attributes.get("provider").map(String::as_str),
+      Some("Example Search")
+    );
+    assert_eq!(
+      attributes.get("client").map(String::as_str),
+      Some("example-client")
+    );
+    assert_eq!(
+      attributes.get("routingReason").map(String::as_str),
+      Some("freshPublicInformation")
+    );
+    assert_eq!(
+      attributes.get("webSearchAvailable").map(String::as_str),
+      Some("true")
+    );
+    let timeout_seconds = web_search_timeout_seconds().to_string();
+    assert_eq!(attributes.get("timeoutSeconds"), Some(&timeout_seconds));
+  }
+
+  #[test]
+  fn web_search_result_count_extends_attributes() {
+    let attributes = with_web_search_result_count(HashMap::new(), 3);
+
+    assert_eq!(attributes.get("resultCount").map(String::as_str), Some("3"));
   }
 }
