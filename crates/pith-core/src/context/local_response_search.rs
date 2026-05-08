@@ -6,8 +6,9 @@ use pith_tools::SearchMatch;
 
 use super::local_response_formatting::format_search_result;
 use super::local_response_generation::generate_local_summary;
-use crate::context_compaction::{
-  compact_prompt_observation, format_context_prompt, pack_memory_context,
+use crate::context_compaction::compact_prompt_observation;
+use crate::context_memory_pack::{
+  format_memory_context_prompt, pack_memory_notes_for_context,
 };
 
 pub(crate) fn summarize_search_result(
@@ -18,19 +19,20 @@ pub(crate) fn summarize_search_result(
   query: &str,
   matches: &[SearchMatch],
 ) -> (String, HashMap<String, String>) {
-  let context_pack = pack_memory_context(model_runtime, memory_notes, Some(workspace_name), query);
+  let memory_context =
+    pack_memory_notes_for_context(model_runtime, memory_notes, Some(workspace_name), query);
   if matches.is_empty() {
     return generate_local_summary(
       model_runtime,
       format!(
         "You are Pith, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
-        format_context_prompt(&context_pack)
+        format_memory_context_prompt(&memory_context)
       ),
       format!(
         "Pith searched {} for {} and found no matches for \"{}\".",
         workspace_name, thread_title, query
       ),
-      &context_pack,
+      &memory_context,
       None,
     );
   }
@@ -51,10 +53,10 @@ pub(crate) fn summarize_search_result(
     preview
   );
   let observation =
-    compact_prompt_observation(&format_search_result(query, matches), &context_pack);
+    compact_prompt_observation(&format_search_result(query, matches), &memory_context);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
-    format_context_prompt(&context_pack),
+    format_memory_context_prompt(&memory_context),
     observation.text
   );
 
@@ -62,7 +64,7 @@ pub(crate) fn summarize_search_result(
     model_runtime,
     prompt,
     observation_summary,
-    &context_pack,
+    &memory_context,
     Some(&observation),
   )
 }

@@ -23,7 +23,7 @@ enum LocalModelDisplayPresenter {
     }
 
     if model.tags.contains("recommended") {
-      return "Recommended alternative: still tiny, stronger for tools, code, and RAG."
+      return "Recommended alternative: still tiny, stronger for tools, code, and memory-assisted context."
     }
 
     return "Catalog candidate: lightweight, local, and verified before activation."

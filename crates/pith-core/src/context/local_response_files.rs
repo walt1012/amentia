@@ -6,8 +6,9 @@ use pith_tools::{DirectoryEntry, ReadFileResult};
 
 use super::local_response_formatting::format_directory_result;
 use super::local_response_generation::generate_local_summary;
-use crate::context_compaction::{
-  compact_prompt_observation, format_context_prompt, pack_memory_context,
+use crate::context_compaction::compact_prompt_observation;
+use crate::context_memory_pack::{
+  format_memory_context_prompt, pack_memory_notes_for_context,
 };
 
 pub(crate) fn summarize_file_result(
@@ -17,7 +18,7 @@ pub(crate) fn summarize_file_result(
   workspace_name: &str,
   result: &ReadFileResult,
 ) -> (String, HashMap<String, String>) {
-  let context_pack = pack_memory_context(
+  let memory_context = pack_memory_notes_for_context(
     model_runtime,
     memory_notes,
     Some(workspace_name),
@@ -33,10 +34,10 @@ pub(crate) fn summarize_file_result(
     "Pith inspected {} for {} in {}. First useful line: {}",
     result.relative_path, thread_title, workspace_name, preview
   );
-  let observation = compact_prompt_observation(&result.content, &context_pack);
+  let observation = compact_prompt_observation(&result.content, &memory_context);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
-    format_context_prompt(&context_pack),
+    format_memory_context_prompt(&memory_context),
     result.relative_path,
     observation.text
   );
@@ -45,7 +46,7 @@ pub(crate) fn summarize_file_result(
     model_runtime,
     prompt,
     observation_summary,
-    &context_pack,
+    &memory_context,
     Some(&observation),
   )
 }
@@ -57,7 +58,7 @@ pub(crate) fn summarize_directory_result(
   workspace_name: &str,
   entries: &[DirectoryEntry],
 ) -> (String, HashMap<String, String>) {
-  let context_pack = pack_memory_context(
+  let memory_context = pack_memory_notes_for_context(
     model_runtime,
     memory_notes,
     Some(workspace_name),
@@ -68,13 +69,13 @@ pub(crate) fn summarize_directory_result(
       model_runtime,
       format!(
         "You are Pith, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
-        format_context_prompt(&context_pack)
+        format_memory_context_prompt(&memory_context)
       ),
       format!(
         "Pith inspected {} for {} and found an empty root directory.",
         workspace_name, thread_title
       ),
-      &context_pack,
+      &memory_context,
       None,
     );
   }
@@ -93,10 +94,10 @@ pub(crate) fn summarize_directory_result(
     entries.len(),
     preview
   );
-  let observation = compact_prompt_observation(&format_directory_result(entries), &context_pack);
+  let observation = compact_prompt_observation(&format_directory_result(entries), &memory_context);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
-    format_context_prompt(&context_pack),
+    format_memory_context_prompt(&memory_context),
     observation.text
   );
 
@@ -104,7 +105,7 @@ pub(crate) fn summarize_directory_result(
     model_runtime,
     prompt,
     observation_summary,
-    &context_pack,
+    &memory_context,
     Some(&observation),
   )
 }

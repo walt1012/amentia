@@ -1,20 +1,20 @@
-use pith_memory::{retrieve_ranked_notes, MemoryNote};
+use pith_memory::{rank_memory_notes, MemoryNote};
 use pith_model_runtime::LocalModelRuntime;
 
 use super::context_memory_budget::context_budget_for_model;
-use super::context_pack_types::ContextPack;
+use super::memory_context_types::MemoryContextPack;
 use crate::text_utils::truncate_text;
 
 pub const CONTEXT_MEMORY_NOTE_LIMIT: usize = 3;
 const CONTEXT_MEMORY_CANDIDATE_LIMIT: usize = 8;
 const MIN_NOTE_BODY_CHARS: usize = 160;
 
-pub fn pack_memory_context(
+pub fn pack_memory_notes_for_context(
   model_runtime: &LocalModelRuntime,
   memory_notes: &[MemoryNote],
   workspace_scope: Option<&str>,
   query: &str,
-) -> ContextPack {
+) -> MemoryContextPack {
   let (budget_char_count, context_window_tokens) = context_budget_for_model(model_runtime);
   pack_relevant_memory_notes(
     memory_notes,
@@ -31,16 +31,16 @@ pub fn pack_relevant_memory_notes(
   query: &str,
   budget_char_count: usize,
   context_window_tokens: usize,
-) -> ContextPack {
+) -> MemoryContextPack {
   let budget_char_count = budget_char_count.max(MIN_NOTE_BODY_CHARS);
-  let candidates = retrieve_ranked_notes(
+  let candidates = rank_memory_notes(
     memory_notes,
     workspace_scope,
     query,
     CONTEXT_MEMORY_CANDIDATE_LIMIT,
   );
   let mut notes = Vec::new();
-  let mut retrieval_scores = Vec::new();
+  let mut memory_ranking_scores = Vec::new();
   let mut estimated_char_count = 0;
   let mut truncated_note_count = 0;
 
@@ -49,7 +49,7 @@ pub fn pack_relevant_memory_notes(
     let full_note_size = estimated_note_char_count(note);
     if estimated_char_count + full_note_size <= budget_char_count {
       notes.push(note.clone());
-      retrieval_scores.push(candidate.score);
+      memory_ranking_scores.push(candidate.score);
       estimated_char_count += full_note_size;
       continue;
     }
@@ -61,15 +61,15 @@ pub fn pack_relevant_memory_notes(
     estimated_char_count += estimated_note_char_count(&compacted_note);
     truncated_note_count += 1;
     notes.push(compacted_note);
-    retrieval_scores.push(candidate.score);
+    memory_ranking_scores.push(candidate.score);
     break;
   }
 
   let omitted_note_count = candidates.len().saturating_sub(notes.len());
 
-  ContextPack {
+  MemoryContextPack {
     notes,
-    retrieval_scores,
+    memory_ranking_scores,
     context_window_tokens,
     source_note_count: memory_notes.len(),
     candidate_note_count: candidates.len(),
@@ -137,7 +137,7 @@ mod tests {
     assert_eq!(pack.mode(), "compacted");
     assert_eq!(pack.context_window_tokens, 4096);
     assert_eq!(pack.candidate_note_count, 6);
-    assert_eq!(pack.retrieval_scores.len(), pack.notes.len());
+    assert_eq!(pack.memory_ranking_scores.len(), pack.notes.len());
   }
 
   #[test]

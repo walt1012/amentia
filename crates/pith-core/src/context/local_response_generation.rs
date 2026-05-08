@@ -2,15 +2,14 @@ use std::collections::HashMap;
 
 use pith_model_runtime::{GenerateRequest, LocalModelRuntime, ModelRole};
 
-use crate::context_compaction::{
-  merge_context_pack_attributes, merge_observation_attributes, ContextPack, PromptObservation,
-};
+use crate::context_compaction::{merge_observation_attributes, PromptObservation};
+use crate::context_memory_pack::{merge_memory_context_attributes, MemoryContextPack};
 
 pub(super) fn generate_local_summary(
   model_runtime: &LocalModelRuntime,
   prompt: String,
   observation_summary: String,
-  context_pack: &ContextPack,
+  memory_context: &MemoryContextPack,
   observation: Option<&PromptObservation>,
 ) -> (String, HashMap<String, String>) {
   let result = model_runtime.generate(GenerateRequest {
@@ -24,7 +23,7 @@ pub(super) fn generate_local_summary(
     ("modelBackend".to_string(), result.backend),
     ("modelStatus".to_string(), result.status),
   ]);
-  merge_context_pack_attributes(&mut attributes, context_pack);
+  merge_memory_context_attributes(&mut attributes, memory_context);
   if let Some(observation) = observation {
     merge_observation_attributes(&mut attributes, observation);
   }

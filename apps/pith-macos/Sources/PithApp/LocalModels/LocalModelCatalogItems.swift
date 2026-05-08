@@ -22,7 +22,7 @@ extension LocalModelCatalog {
       LocalModelCatalogItem(
         id: "granite-4.0-h-350m",
         displayName: "Granite 4.0-H-350M Q4_K_M",
-        description: "Modern Apache-2.0 tiny model for local tool, code, and RAG workflows.",
+        description: "Modern Apache-2.0 tiny model for local tool, code, and memory-assisted workflows.",
         fileName: "granite-4.0-h-350m-Q4_K_M.gguf",
         downloadURL: "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/main/granite-4.0-h-350m-Q4_K_M.gguf",
         homepage: "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF",

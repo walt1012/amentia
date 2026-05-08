@@ -58,8 +58,8 @@ enum TimelineInspectorPresenter {
 
     let noteCount = entry.attributes["memoryNoteCount"] ?? "0"
     let hasMemoryNotes = noteCount != "0"
-    let hasContextPack = entry.attributes["contextMode"] != nil
-    if !hasMemoryNotes && !hasContextPack {
+    let hasMemoryContext = entry.attributes["memoryContextMode"] != nil
+    if !hasMemoryNotes && !hasMemoryContext {
       return nil
     }
 
@@ -71,16 +71,16 @@ enum TimelineInspectorPresenter {
       lines.append("IDs: \(memoryIDs)")
     }
 
-    if let contextMode = entry.attributes["contextMode"] {
-      let estimatedChars = entry.attributes["contextEstimatedChars"] ?? "unknown"
-      let budgetChars = entry.attributes["contextBudgetChars"] ?? "unknown"
-      let omittedCount = entry.attributes["contextOmittedNoteCount"] ?? "0"
-      let truncatedCount = entry.attributes["contextTruncatedNoteCount"] ?? "0"
-      let candidateCount = entry.attributes["contextCandidateNoteCount"] ?? noteCount
-      let sourceCount = entry.attributes["contextSourceNoteCount"] ?? candidateCount
-      let windowTokens = entry.attributes["contextWindowTokens"] ?? "unknown"
+    if let memoryContextMode = entry.attributes["memoryContextMode"] {
+      let estimatedChars = entry.attributes["memoryContextEstimatedChars"] ?? "unknown"
+      let budgetChars = entry.attributes["memoryContextBudgetChars"] ?? "unknown"
+      let omittedCount = entry.attributes["memoryContextOmittedNoteCount"] ?? "0"
+      let truncatedCount = entry.attributes["memoryContextTruncatedNoteCount"] ?? "0"
+      let candidateCount = entry.attributes["memoryContextCandidateNoteCount"] ?? noteCount
+      let sourceCount = entry.attributes["memoryContextSourceNoteCount"] ?? candidateCount
+      let windowTokens = entry.attributes["memoryContextWindowTokens"] ?? "unknown"
       lines.append(
-        "Context: \(contextMode) | \(noteCount)/\(candidateCount) relevant notes | "
+        "Memory context: \(memoryContextMode) | \(noteCount)/\(candidateCount) relevant notes | "
           + "\(sourceCount) stored | \(estimatedChars)/\(budgetChars) chars | "
           + "\(windowTokens) token window | "
           + "omitted \(omittedCount) | truncated \(truncatedCount)"

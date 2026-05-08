@@ -4,8 +4,8 @@ use pith_memory::MemoryNote;
 use pith_model_runtime::{GenerateRequest, LocalModelRuntime, ModelRole};
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
-use crate::context_compaction::{
-  format_context_prompt, merge_context_pack_attributes, pack_memory_context,
+use crate::context_memory_pack::{
+  format_memory_context_prompt, merge_memory_context_attributes, pack_memory_notes_for_context,
 };
 
 pub(crate) fn build_plan_item(
@@ -15,7 +15,7 @@ pub(crate) fn build_plan_item(
   workspace: Option<&WorkspaceSummary>,
   plan_hint: String,
 ) -> TimelineItem {
-  let context_pack = pack_memory_context(
+  let memory_context = pack_memory_notes_for_context(
     model_runtime,
     memory_notes,
     workspace.map(|entry| entry.display_name.as_str()),
@@ -34,7 +34,7 @@ pub(crate) fn build_plan_item(
     prompt: format!(
       "You are the local planner for Pith.\n{}\n{}\nUser request: {}\nCandidate local action: {}\nWrite one concise English sentence describing the next action Pith should take.",
       workspace_context,
-      format_context_prompt(&context_pack),
+      format_memory_context_prompt(&memory_context),
       message,
       plan_hint
     ),
@@ -52,7 +52,7 @@ pub(crate) fn build_plan_item(
       workspace.display_name.clone(),
     );
   }
-  merge_context_pack_attributes(&mut attributes, &context_pack);
+  merge_memory_context_attributes(&mut attributes, &memory_context);
 
   TimelineItem {
     kind: "plan".to_string(),

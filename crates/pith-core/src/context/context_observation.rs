@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::context_memory_pack::ContextPack;
+use super::context_memory_pack::MemoryContextPack;
 use crate::text_utils::{take_characters, take_last_characters};
 
 const CONTEXT_OBSERVATION_BUDGET_PERCENT: usize = 45;
@@ -15,8 +15,11 @@ pub struct PromptObservation {
   pub was_truncated: bool,
 }
 
-pub fn compact_prompt_observation(content: &str, context_pack: &ContextPack) -> PromptObservation {
-  let budget_char_count = observation_budget_for_context(context_pack);
+pub fn compact_prompt_observation(
+  content: &str,
+  memory_context: &MemoryContextPack,
+) -> PromptObservation {
+  let budget_char_count = observation_budget_for_context(memory_context);
   let source_char_count = content.chars().count();
   if source_char_count <= budget_char_count {
     return PromptObservation {
@@ -68,8 +71,8 @@ pub fn merge_observation_attributes(
   );
 }
 
-fn observation_budget_for_context(context_pack: &ContextPack) -> usize {
-  let raw_budget = context_pack
+fn observation_budget_for_context(memory_context: &MemoryContextPack) -> usize {
+  let raw_budget = memory_context
     .context_window_tokens
     .saturating_mul(CONTEXT_OBSERVATION_BUDGET_PERCENT)
     / 100;
@@ -85,9 +88,9 @@ mod tests {
 
   #[test]
   fn prompt_observation_compacts_large_tool_output_for_small_models() {
-    let context_pack = ContextPack {
+    let memory_context = MemoryContextPack {
       notes: vec![],
-      retrieval_scores: vec![],
+      memory_ranking_scores: vec![],
       context_window_tokens: 4096,
       source_note_count: 0,
       candidate_note_count: 0,
@@ -98,7 +101,7 @@ mod tests {
     };
     let content = format!("{}TAIL", "A".repeat(3000));
 
-    let observation = compact_prompt_observation(&content, &context_pack);
+    let observation = compact_prompt_observation(&content, &memory_context);
 
     assert!(observation.was_truncated);
     assert_eq!(observation.budget_char_count, 1843);

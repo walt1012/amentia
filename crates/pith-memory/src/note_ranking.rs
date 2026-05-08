@@ -1,47 +1,35 @@
-use crate::retrieval_scoring::memory_note_score;
-use crate::retrieval_text::{normalize_text, token_set};
+use crate::note_ranking_scoring::memory_note_score;
+use crate::note_ranking_text::{normalize_text, token_set};
 use crate::MemoryNote;
 
 #[derive(Debug, Clone)]
-pub struct RetrievedMemoryNote {
+pub struct RankedMemoryNote {
   pub score: usize,
   pub note: MemoryNote,
 }
 
-pub fn retrieve_relevant_notes(
+pub fn rank_memory_notes(
   notes: &[MemoryNote],
   workspace_scope: Option<&str>,
   query: &str,
   limit: usize,
-) -> Vec<MemoryNote> {
-  retrieve_ranked_notes(notes, workspace_scope, query, limit)
-    .into_iter()
-    .map(|match_result| match_result.note)
-    .collect()
-}
-
-pub fn retrieve_ranked_notes(
-  notes: &[MemoryNote],
-  workspace_scope: Option<&str>,
-  query: &str,
-  limit: usize,
-) -> Vec<RetrievedMemoryNote> {
+) -> Vec<RankedMemoryNote> {
   if limit == 0 || notes.is_empty() {
     return vec![];
   }
 
   let query_tokens = token_set(query);
   let normalized_workspace_scope = workspace_scope.map(normalize_text);
-  let mut scored_notes = notes
+  let mut ranked_notes = notes
     .iter()
     .cloned()
     .filter_map(|note| {
       let score = memory_note_score(&note, normalized_workspace_scope.as_deref(), &query_tokens);
-      (score > 0).then_some(RetrievedMemoryNote { score, note })
+      (score > 0).then_some(RankedMemoryNote { score, note })
     })
     .collect::<Vec<_>>();
 
-  scored_notes.sort_by(|left, right| {
+  ranked_notes.sort_by(|left, right| {
     right
       .score
       .cmp(&left.score)
@@ -49,7 +37,7 @@ pub fn retrieve_ranked_notes(
       .then_with(|| left.note.id.cmp(&right.note.id))
   });
 
-  scored_notes.into_iter().take(limit).collect()
+  ranked_notes.into_iter().take(limit).collect()
 }
 
 #[cfg(test)]
@@ -57,7 +45,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn retrieve_relevant_notes_prefers_workspace_and_query_matches() {
+  fn rank_memory_notes_prefers_workspace_and_query_matches() {
     let notes = vec![
       MemoryNote {
         id: "memory-3".to_string(),
@@ -88,15 +76,15 @@ mod tests {
       },
     ];
 
-    let retrieved = retrieve_relevant_notes(&notes, Some("pith"), "review docs/output.txt", 2);
+    let ranked = rank_memory_notes(&notes, Some("pith"), "review docs/output.txt", 2);
 
-    assert_eq!(retrieved.len(), 2);
-    assert_eq!(retrieved[0].id, "memory-3");
-    assert_eq!(retrieved[1].id, "memory-2");
+    assert_eq!(ranked.len(), 2);
+    assert_eq!(ranked[0].note.id, "memory-3");
+    assert_eq!(ranked[1].note.id, "memory-2");
   }
 
   #[test]
-  fn ranked_retrieval_exposes_scores_for_rag_context_tracing() {
+  fn ranked_memory_notes_expose_scores_for_memory_context_attribution() {
     let notes = vec![MemoryNote {
       id: "memory-1".to_string(),
       title: "Reviewed sandbox policy".to_string(),
@@ -107,10 +95,10 @@ mod tests {
       tags: vec!["sandbox".to_string()],
     }];
 
-    let retrieved = retrieve_ranked_notes(&notes, Some("pith"), "sandbox writes", 4);
+    let ranked = rank_memory_notes(&notes, Some("pith"), "sandbox writes", 4);
 
-    assert_eq!(retrieved.len(), 1);
-    assert_eq!(retrieved[0].note.id, "memory-1");
-    assert!(retrieved[0].score > 0);
+    assert_eq!(ranked.len(), 1);
+    assert_eq!(ranked[0].note.id, "memory-1");
+    assert!(ranked[0].score > 0);
   }
 }

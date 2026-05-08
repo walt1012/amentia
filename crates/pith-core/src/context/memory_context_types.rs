@@ -1,9 +1,9 @@
 use pith_memory::MemoryNote;
 
 #[derive(Debug, Clone)]
-pub struct ContextPack {
+pub struct MemoryContextPack {
   pub notes: Vec<MemoryNote>,
-  pub retrieval_scores: Vec<usize>,
+  pub memory_ranking_scores: Vec<usize>,
   pub context_window_tokens: usize,
   pub source_note_count: usize,
   pub candidate_note_count: usize,
@@ -13,7 +13,7 @@ pub struct ContextPack {
   pub budget_char_count: usize,
 }
 
-impl ContextPack {
+impl MemoryContextPack {
   pub fn mode(&self) -> &'static str {
     if self.notes.is_empty() {
       "empty"

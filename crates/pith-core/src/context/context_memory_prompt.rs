@@ -2,66 +2,69 @@ use std::collections::HashMap;
 
 use pith_memory::MemoryNote;
 
-use super::context_pack_types::ContextPack;
+use super::memory_context_types::MemoryContextPack;
 use crate::text_utils::truncate_text;
 
 const MEMORY_PROMPT_NOTE_BODY_CHARS: usize = 360;
 
-pub fn format_context_prompt(context_pack: &ContextPack) -> String {
+pub fn format_memory_context_prompt(memory_context: &MemoryContextPack) -> String {
   let header = format!(
-    "Context: mode={}, notes={}/{}, stored={}, omitted={}, truncated={}, chars={}/{}, window={}t.",
-    context_pack.mode(),
-    context_pack.notes.len(),
-    context_pack.candidate_note_count,
-    context_pack.source_note_count,
-    context_pack.omitted_note_count,
-    context_pack.truncated_note_count,
-    context_pack.estimated_char_count,
-    context_pack.budget_char_count,
-    context_pack.context_window_tokens
+    "Memory context: mode={}, notes={}/{}, stored={}, omitted={}, truncated={}, chars={}/{}, window={}t.",
+    memory_context.mode(),
+    memory_context.notes.len(),
+    memory_context.candidate_note_count,
+    memory_context.source_note_count,
+    memory_context.omitted_note_count,
+    memory_context.truncated_note_count,
+    memory_context.estimated_char_count,
+    memory_context.budget_char_count,
+    memory_context.context_window_tokens
   );
-  format!("{}\n{}", header, format_memory_prompt(&context_pack.notes))
+  format!("{}\n{}", header, format_memory_prompt(&memory_context.notes))
 }
 
-pub fn merge_context_pack_attributes(
+pub fn merge_memory_context_attributes(
   attributes: &mut HashMap<String, String>,
-  context_pack: &ContextPack,
+  memory_context: &MemoryContextPack,
 ) {
-  merge_memory_attributes(attributes, &context_pack.notes);
-  attributes.insert("contextMode".to_string(), context_pack.mode().to_string());
+  merge_memory_attributes(attributes, &memory_context.notes);
   attributes.insert(
-    "contextWindowTokens".to_string(),
-    context_pack.context_window_tokens.to_string(),
+    "memoryContextMode".to_string(),
+    memory_context.mode().to_string(),
   );
   attributes.insert(
-    "contextSourceNoteCount".to_string(),
-    context_pack.source_note_count.to_string(),
+    "memoryContextWindowTokens".to_string(),
+    memory_context.context_window_tokens.to_string(),
   );
   attributes.insert(
-    "contextCandidateNoteCount".to_string(),
-    context_pack.candidate_note_count.to_string(),
+    "memoryContextSourceNoteCount".to_string(),
+    memory_context.source_note_count.to_string(),
   );
   attributes.insert(
-    "contextOmittedNoteCount".to_string(),
-    context_pack.omitted_note_count.to_string(),
+    "memoryContextCandidateNoteCount".to_string(),
+    memory_context.candidate_note_count.to_string(),
   );
   attributes.insert(
-    "contextTruncatedNoteCount".to_string(),
-    context_pack.truncated_note_count.to_string(),
+    "memoryContextOmittedNoteCount".to_string(),
+    memory_context.omitted_note_count.to_string(),
   );
   attributes.insert(
-    "contextEstimatedChars".to_string(),
-    context_pack.estimated_char_count.to_string(),
+    "memoryContextTruncatedNoteCount".to_string(),
+    memory_context.truncated_note_count.to_string(),
   );
   attributes.insert(
-    "contextBudgetChars".to_string(),
-    context_pack.budget_char_count.to_string(),
+    "memoryContextEstimatedChars".to_string(),
+    memory_context.estimated_char_count.to_string(),
   );
-  if !context_pack.retrieval_scores.is_empty() {
+  attributes.insert(
+    "memoryContextBudgetChars".to_string(),
+    memory_context.budget_char_count.to_string(),
+  );
+  if !memory_context.memory_ranking_scores.is_empty() {
     attributes.insert(
-      "contextRetrievalScores".to_string(),
-      context_pack
-        .retrieval_scores
+      "memoryRankingScores".to_string(),
+      memory_context
+        .memory_ranking_scores
         .iter()
         .map(|score| score.to_string())
         .collect::<Vec<_>>()
@@ -122,10 +125,10 @@ mod tests {
   use super::*;
 
   #[test]
-  fn context_prompt_uses_compact_local_model_header() {
-    let context_pack = ContextPack {
+  fn memory_context_prompt_uses_compact_local_model_header() {
+    let memory_context = MemoryContextPack {
       notes: vec![],
-      retrieval_scores: vec![],
+      memory_ranking_scores: vec![],
       context_window_tokens: 4096,
       source_note_count: 0,
       candidate_note_count: 0,
@@ -135,16 +138,16 @@ mod tests {
       budget_char_count: 1228,
     };
 
-    let prompt = format_context_prompt(&context_pack);
+    let prompt = format_memory_context_prompt(&memory_context);
 
-    assert!(prompt.starts_with("Context: mode=empty"));
+    assert!(prompt.starts_with("Memory context: mode=empty"));
     assert!(prompt.contains("window=4096t"));
     assert!(!prompt.contains("stored note(s)"));
   }
 
   #[test]
-  fn context_prompt_keeps_memory_notes_single_line_and_short() {
-    let context_pack = ContextPack {
+  fn memory_context_prompt_keeps_memory_notes_single_line_and_short() {
+    let memory_context = MemoryContextPack {
       notes: vec![MemoryNote {
         id: "memory-1".to_string(),
         title: "Workspace convention".to_string(),
@@ -154,7 +157,7 @@ mod tests {
         created_at: 1,
         tags: vec!["user".to_string()],
       }],
-      retrieval_scores: vec![42],
+      memory_ranking_scores: vec![42],
       context_window_tokens: 4096,
       source_note_count: 1,
       candidate_note_count: 1,
@@ -164,7 +167,7 @@ mod tests {
       budget_char_count: 1228,
     };
 
-    let prompt = format_context_prompt(&context_pack);
+    let prompt = format_memory_context_prompt(&memory_context);
     let note_line = prompt
       .lines()
       .find(|line| line.starts_with("- Workspace convention"))
@@ -175,9 +178,9 @@ mod tests {
     assert!(note_line.chars().count() < 430);
 
     let mut attributes = HashMap::new();
-    merge_context_pack_attributes(&mut attributes, &context_pack);
+    merge_memory_context_attributes(&mut attributes, &memory_context);
     assert_eq!(
-      attributes.get("contextRetrievalScores"),
+      attributes.get("memoryRankingScores"),
       Some(&"42".to_string())
     );
   }

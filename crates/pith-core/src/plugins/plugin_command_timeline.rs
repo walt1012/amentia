@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
-use crate::context_compaction::{merge_context_pack_attributes, ContextPack};
+use crate::context_memory_pack::{merge_memory_context_attributes, MemoryContextPack};
 
 pub(super) fn build_plugin_command_timeline_item(
   command: &HostPluginCommandEntry,
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
-  context_pack: &ContextPack,
+  memory_context: &MemoryContextPack,
 ) -> TimelineItem {
   let mut attributes = HashMap::from([
     ("commandId".to_string(), command.command_id.clone()),
@@ -32,7 +32,7 @@ pub(super) fn build_plugin_command_timeline_item(
   if let Some(execution_kind) = command.execution_kind.as_ref() {
     attributes.insert("executionKind".to_string(), execution_kind.clone());
   }
-  merge_context_pack_attributes(&mut attributes, context_pack);
+  merge_memory_context_attributes(&mut attributes, memory_context);
 
   let workspace_label = workspace
     .map(|entry| entry.display_name.clone())

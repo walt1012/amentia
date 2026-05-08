@@ -4,7 +4,9 @@ use pith_memory::MemoryNote;
 use pith_model_runtime::LocalModelRuntime;
 
 use super::local_response_generation::generate_local_summary;
-use crate::context_compaction::{format_context_prompt, pack_memory_context};
+use crate::context_memory_pack::{
+  format_memory_context_prompt, pack_memory_notes_for_context,
+};
 
 pub(crate) fn summarize_denied_approval(
   model_runtime: &LocalModelRuntime,
@@ -17,7 +19,8 @@ pub(crate) fn summarize_denied_approval(
   let query = command
     .map(str::to_string)
     .unwrap_or_else(|| format!("{action} {relative_path}"));
-  let context_pack = pack_memory_context(model_runtime, memory_notes, Some(workspace_name), &query);
+  let memory_context =
+    pack_memory_notes_for_context(model_runtime, memory_notes, Some(workspace_name), &query);
   let observation_summary = if action == "run_shell" {
     let command = command.unwrap_or_default();
     format!(
@@ -32,7 +35,7 @@ pub(crate) fn summarize_denied_approval(
   };
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a denied approval in one sentence.\nWorkspace: {workspace_name}\n{}\nAction: {}\nTarget: {}\nCommand: {}",
-    format_context_prompt(&context_pack),
+    format_memory_context_prompt(&memory_context),
     action,
     relative_path,
     command.unwrap_or_default()
@@ -42,7 +45,7 @@ pub(crate) fn summarize_denied_approval(
     model_runtime,
     prompt,
     observation_summary,
-    &context_pack,
+    &memory_context,
     None,
   )
 }

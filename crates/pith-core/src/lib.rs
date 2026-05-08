@@ -10,7 +10,9 @@ mod threads;
 pub(crate) use threads::{thread_state, thread_summary};
 
 mod context;
-pub(crate) use context::{context_compaction, intent_inference, local_responses};
+pub(crate) use context::{
+  context_compaction, context_memory_pack, intent_inference, local_responses,
+};
 
 mod plugins;
 pub(crate) use plugins::{

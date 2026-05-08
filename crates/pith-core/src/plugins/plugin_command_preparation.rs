@@ -4,7 +4,7 @@ use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams};
 use super::plugin_command_builtins::is_supported_builtin_execution;
 use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{PluginCommandSnapshot, PreparedPluginCommandRun};
-use crate::context_compaction::pack_memory_context;
+use crate::context_memory_pack::pack_memory_notes_for_context;
 use crate::request_params::parse_required_params;
 use crate::RuntimeContext;
 
@@ -67,7 +67,7 @@ pub fn prepare_plugin_command_run(
       )
     });
   let memory_notes = context.memory_state.snapshot_notes();
-  let context_pack = pack_memory_context(
+  let memory_context = pack_memory_notes_for_context(
     context.model_state.runtime(),
     &memory_notes,
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
@@ -77,7 +77,7 @@ pub fn prepare_plugin_command_run(
     &command,
     workspace.as_ref(),
     input.as_deref(),
-    &context_pack,
+    &memory_context,
   );
 
   Ok(PreparedPluginCommandRun {

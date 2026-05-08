@@ -6,8 +6,9 @@ use pith_tools::ShellCommandResult;
 
 use super::local_response_formatting::format_shell_result;
 use super::local_response_generation::generate_local_summary;
-use crate::context_compaction::{
-  compact_prompt_observation, format_context_prompt, pack_memory_context,
+use crate::context_compaction::compact_prompt_observation;
+use crate::context_memory_pack::{
+  format_memory_context_prompt, pack_memory_notes_for_context,
 };
 
 pub(crate) fn summarize_shell_result(
@@ -16,7 +17,7 @@ pub(crate) fn summarize_shell_result(
   workspace_name: &str,
   result: &ShellCommandResult,
 ) -> (String, HashMap<String, String>) {
-  let context_pack = pack_memory_context(
+  let memory_context = pack_memory_notes_for_context(
     model_runtime,
     memory_notes,
     Some(workspace_name),
@@ -38,10 +39,10 @@ pub(crate) fn summarize_shell_result(
       result.command, workspace_name, sandbox_summary, result.exit_code
     )
   };
-  let observation = compact_prompt_observation(&format_shell_result(result), &context_pack);
+  let observation = compact_prompt_observation(&format_shell_result(result), &memory_context);
   let prompt = format!(
     "You are Pith, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nResult Preview:\n{}",
-    format_context_prompt(&context_pack),
+    format_memory_context_prompt(&memory_context),
     observation.text
   );
 
@@ -49,7 +50,7 @@ pub(crate) fn summarize_shell_result(
     model_runtime,
     prompt,
     observation_summary,
-    &context_pack,
+    &memory_context,
     Some(&observation),
   );
   attributes.extend(result.sandbox.attributes());
