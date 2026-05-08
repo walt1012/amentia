@@ -1,16 +1,34 @@
-use std::process::Command;
+use std::io::Read;
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use pith_process::{configure_process_group, terminate_process_group_or_child};
 
 use crate::types::WebSearchResult;
 
 const WEB_SEARCH_PROVIDER: &str = "DuckDuckGo Lite";
 const WEB_SEARCH_ENDPOINT: &str = "https://lite.duckduckgo.com/lite/";
-const WEB_SEARCH_TIMEOUT_SECONDS: &str = "15";
+const WEB_SEARCH_CURL_TIMEOUT_SECONDS: &str = "15";
 const WEB_SEARCH_CONNECT_TIMEOUT_SECONDS: &str = "8";
 const WEB_SEARCH_MAX_BYTES: &str = "1048576";
+const WEB_SEARCH_OUTPUT_LIMIT: usize = 1_048_576;
+const WEB_SEARCH_PROCESS_TIMEOUT: Duration = Duration::from_secs(20);
+const WEB_SEARCH_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub fn web_search(query: &str, max_results: usize) -> Result<Vec<WebSearchResult>> {
+  web_search_with_cancellation(query, max_results, || false)
+}
+
+pub fn web_search_with_cancellation<F>(
+  query: &str,
+  max_results: usize,
+  is_cancelled: F,
+) -> Result<Vec<WebSearchResult>>
+where
+  F: Fn() -> bool,
+{
   let trimmed_query = query.trim();
   if trimmed_query.is_empty() {
     bail!("web search query must not be empty");
@@ -24,24 +42,17 @@ pub fn web_search(query: &str, max_results: usize) -> Result<Vec<WebSearchResult
     WEB_SEARCH_ENDPOINT,
     percent_encode(trimmed_query)
   );
-  let output = Command::new("curl")
-    .args([
-      "--silent",
-      "--show-error",
-      "--location",
-      "--max-time",
-      WEB_SEARCH_TIMEOUT_SECONDS,
-      "--connect-timeout",
-      WEB_SEARCH_CONNECT_TIMEOUT_SECONDS,
-      "--max-filesize",
-      WEB_SEARCH_MAX_BYTES,
-      "--user-agent",
-      "Pith/0.1",
-      "--url",
-      &url,
-    ])
-    .output()
-    .with_context(|| "failed to start curl for web search")?;
+  let output = run_web_search_request(&url, is_cancelled)
+    .with_context(|| "failed to execute bounded web search request")?;
+  if output.cancelled {
+    bail!("web search cancelled");
+  }
+  if output.timed_out {
+    bail!(
+      "web search timed out after {} seconds",
+      WEB_SEARCH_PROCESS_TIMEOUT.as_secs()
+    );
+  }
   if !output.status.success() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     bail!("web search request failed: {}", stderr.trim());
@@ -49,6 +60,120 @@ pub fn web_search(query: &str, max_results: usize) -> Result<Vec<WebSearchResult
 
   let html = String::from_utf8_lossy(&output.stdout);
   Ok(parse_duckduckgo_lite_results(&html, max_results))
+}
+
+struct WebSearchHttpOutput {
+  status: ExitStatus,
+  stdout: Vec<u8>,
+  stderr: Vec<u8>,
+  timed_out: bool,
+  cancelled: bool,
+}
+
+fn run_web_search_request<F>(url: &str, is_cancelled: F) -> Result<WebSearchHttpOutput>
+where
+  F: Fn() -> bool,
+{
+  let mut child = build_curl_command(url)
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()
+    .with_context(|| "failed to start curl for web search")?;
+  let stdout_reader = child
+    .stdout
+    .take()
+    .map(|reader| read_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
+  let stderr_reader = child
+    .stderr
+    .take()
+    .map(|reader| read_pipe_in_background(reader, WEB_SEARCH_OUTPUT_LIMIT));
+  let started_at = Instant::now();
+  let mut timed_out = false;
+  let mut cancelled = false;
+
+  let status = loop {
+    if let Some(status) = child.try_wait()? {
+      break status;
+    }
+
+    if is_cancelled() {
+      cancelled = true;
+      terminate_web_search_child(&mut child);
+      break child.wait()?;
+    }
+
+    if started_at.elapsed() >= WEB_SEARCH_PROCESS_TIMEOUT {
+      timed_out = true;
+      terminate_web_search_child(&mut child);
+      break child.wait()?;
+    }
+
+    thread::sleep(WEB_SEARCH_POLL_INTERVAL);
+  };
+
+  Ok(WebSearchHttpOutput {
+    status,
+    stdout: join_pipe_reader(stdout_reader),
+    stderr: join_pipe_reader(stderr_reader),
+    timed_out,
+    cancelled,
+  })
+}
+
+fn build_curl_command(url: &str) -> Command {
+  let mut process = Command::new("curl");
+  process
+    .args([
+      "--silent",
+      "--show-error",
+      "--location",
+      "--max-time",
+      WEB_SEARCH_CURL_TIMEOUT_SECONDS,
+      "--connect-timeout",
+      WEB_SEARCH_CONNECT_TIMEOUT_SECONDS,
+      "--max-filesize",
+      WEB_SEARCH_MAX_BYTES,
+      "--user-agent",
+      "Pith/0.1",
+      "--url",
+      url,
+    ])
+    .stdin(Stdio::null());
+  configure_process_group(&mut process);
+  process
+}
+
+fn read_pipe_in_background<R>(mut reader: R, max_output_bytes: usize) -> thread::JoinHandle<Vec<u8>>
+where
+  R: Read + Send + 'static,
+{
+  thread::spawn(move || {
+    let mut output = Vec::with_capacity(max_output_bytes.min(64 * 1024));
+    let mut buffer = [0_u8; 8192];
+
+    while let Ok(bytes_read) = reader.read(&mut buffer) {
+      if bytes_read == 0 {
+        break;
+      }
+
+      let remaining_output = max_output_bytes.saturating_sub(output.len());
+      if remaining_output > 0 {
+        output.extend_from_slice(&buffer[..bytes_read.min(remaining_output)]);
+      }
+    }
+
+    output
+  })
+}
+
+fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
+  reader
+    .and_then(|handle| handle.join().ok())
+    .unwrap_or_default()
+}
+
+fn terminate_web_search_child(child: &mut Child) {
+  terminate_process_group_or_child(child, Duration::from_millis(200));
 }
 
 fn parse_duckduckgo_lite_results(html: &str, max_results: usize) -> Vec<WebSearchResult> {
@@ -260,5 +385,15 @@ mod tests {
       percent_decode("https%3A%2F%2Fexample.com%2Fa%3Fb%3D1"),
       "https://example.com/a?b=1"
     );
+  }
+
+  #[test]
+  fn web_search_pipe_reader_bounds_retained_output() {
+    let input = std::io::Cursor::new(vec![b'x'; WEB_SEARCH_OUTPUT_LIMIT + 512]);
+    let output = read_pipe_in_background(input, WEB_SEARCH_OUTPUT_LIMIT)
+      .join()
+      .expect("pipe reader");
+
+    assert_eq!(output.len(), WEB_SEARCH_OUTPUT_LIMIT);
   }
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
-use pith_tools::web_search;
+use pith_tools::web_search_with_cancellation;
 
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::intent_inference::WebSearchIntent;
@@ -76,7 +76,9 @@ pub(super) fn execute_web_search_turn(
     ])),
   });
 
-  match web_search(query, WEB_SEARCH_MAX_RESULTS) {
+  match web_search_with_cancellation(query, WEB_SEARCH_MAX_RESULTS, || {
+    snapshot.cancellation.is_cancelled()
+  }) {
     Ok(results) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),

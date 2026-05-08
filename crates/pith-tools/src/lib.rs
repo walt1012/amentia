@@ -19,6 +19,6 @@ pub use types::{
   BuiltInTool, DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult,
   ShellSandboxSummary, WebSearchResult,
 };
-pub use web_search::web_search;
+pub use web_search::{web_search, web_search_with_cancellation};
 pub use workspace_files::{list_directory, read_file, write_file};
 pub use workspace_search::search_files;
