@@ -1,4 +1,6 @@
-use pith_tools::{DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult};
+use pith_tools::{
+  DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult, WebSearchResult,
+};
 
 pub(crate) fn format_file_result(result: &ReadFileResult) -> String {
   if result.is_truncated {
@@ -38,6 +40,28 @@ pub(crate) fn format_search_result(query: &str, matches: &[SearchMatch]) -> Stri
     })
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+pub(crate) fn format_web_search_result(query: &str, results: &[WebSearchResult]) -> String {
+  if results.is_empty() {
+    return format!("No web results found for \"{}\".", query);
+  }
+
+  results
+    .iter()
+    .enumerate()
+    .map(|(index, entry)| {
+      format!(
+        "{}. {}\n{}\n{}\nSource: {}",
+        index + 1,
+        entry.title,
+        entry.url,
+        entry.snippet,
+        entry.source
+      )
+    })
+    .collect::<Vec<_>>()
+    .join("\n\n")
 }
 
 pub(crate) fn format_shell_result(result: &ShellCommandResult) -> String {

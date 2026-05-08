@@ -17,3 +17,4 @@ pub(crate) mod turn_workspace_fallback;
 pub(crate) mod turn_workspace_list;
 pub(crate) mod turn_workspace_read;
 pub(crate) mod turn_workspace_search;
+pub(crate) mod turn_web_search;

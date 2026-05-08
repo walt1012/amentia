@@ -3,6 +3,7 @@ use pith_protocol::TimelineItem;
 use super::turn_approval_execution::{execute_shell_turn, execute_write_turn};
 use super::turn_workspace_execution::{
   execute_list_turn, execute_no_workspace_turn, execute_read_turn, execute_search_turn,
+  execute_web_search_turn,
 };
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
 
@@ -68,6 +69,9 @@ pub(crate) fn execute_prepared_turn_snapshot(
         &mut items,
         &mut pending_active_turn,
       );
+    }
+    (_, PreparedTurnAction::WebSearch { query }) => {
+      execute_web_search_turn(&snapshot, query, &mut items, &mut pending_active_turn);
     }
     (Some(workspace), PreparedTurnAction::ListWorkspace) => {
       execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);

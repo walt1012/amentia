@@ -8,6 +8,7 @@ pub enum BuiltInTool {
   WriteFile,
   ListDirectory,
   SearchFiles,
+  WebSearch,
   RunShell,
   GenerateDiff,
 }
@@ -31,6 +32,14 @@ pub struct SearchMatch {
   pub relative_path: String,
   pub line_number: usize,
   pub line: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebSearchResult {
+  pub title: String,
+  pub url: String,
+  pub snippet: String,
+  pub source: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

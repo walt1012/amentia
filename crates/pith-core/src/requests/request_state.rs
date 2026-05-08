@@ -66,6 +66,9 @@ pub(crate) enum PreparedTurnAction {
   Search {
     query: String,
   },
+  WebSearch {
+    query: String,
+  },
   ListWorkspace,
 }
 

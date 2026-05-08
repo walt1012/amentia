@@ -363,6 +363,44 @@ fn turn_start_warns_when_workspace_is_missing() {
 }
 
 #[test]
+fn turn_start_web_search_requires_network_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Web Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "web search for Pith local model"
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(items[2]["kind"], "warning");
+  assert_eq!(items[2]["title"], "Plugin Permission Required");
+  assert_eq!(items[2]["attributes"]["requiredPermission"], "network.outbound");
+  assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
+  assert_eq!(items[2]["attributes"]["query"], "Pith local model");
+}
+
+#[test]
 fn turn_start_reads_a_requested_workspace_file() {
   let mut context = RuntimeContext::new_in_memory();
   enable_full_access_plugin(&mut context);
