@@ -9,7 +9,7 @@ use crate::intent_inference;
 use crate::local_responses::build_plan_item;
 use crate::plugin_permissions::build_permission_denied_items;
 use crate::request_state::PreparedTurnSnapshot;
-use crate::turn_tool_provenance::workspace_tool_attributes;
+use super::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_write_turn(
   snapshot: &PreparedTurnSnapshot,
