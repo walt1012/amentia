@@ -395,7 +395,10 @@ fn turn_start_web_search_requires_network_permission() {
   assert_eq!(items[1]["kind"], "plan");
   assert_eq!(items[2]["kind"], "warning");
   assert_eq!(items[2]["title"], "Plugin Permission Required");
-  assert_eq!(items[2]["attributes"]["requiredPermission"], "network.outbound");
+  assert_eq!(
+    items[2]["attributes"]["requiredPermission"],
+    "network.outbound"
+  );
   assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
   assert_eq!(items[2]["attributes"]["query"], "Pith local model");
 }

@@ -21,7 +21,7 @@ pub(crate) mod local_response_generation;
 pub(crate) mod local_response_plan;
 pub(crate) mod local_response_search;
 pub(crate) mod local_response_shell;
-pub(crate) mod local_response_web_search;
 pub(crate) mod local_response_summaries;
+pub(crate) mod local_response_web_search;
 pub(crate) mod local_responses;
 pub(crate) mod memory_context_types;

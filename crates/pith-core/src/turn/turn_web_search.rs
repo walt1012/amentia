@@ -24,9 +24,15 @@ pub(super) fn execute_web_search_turn(
     &snapshot.message,
     snapshot.workspace.as_ref(),
     if permission_is_granted(&snapshot.permission_sources, "network.outbound") {
-      format!("Search the web for \"{}\" with the built-in web_search tool.", query)
+      format!(
+        "Search the web for \"{}\" with the built-in web_search tool.",
+        query
+      )
     } else {
-      format!("Check plugin permissions before searching the web for \"{}\".", query)
+      format!(
+        "Check plugin permissions before searching the web for \"{}\".",
+        query
+      )
     },
     Some(&snapshot.cancellation),
   ));
