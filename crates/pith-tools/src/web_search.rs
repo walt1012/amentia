@@ -13,6 +13,7 @@ use crate::types::WebSearchResult;
 
 const WEB_SEARCH_PROVIDER: &str = "DuckDuckGo Lite";
 const WEB_SEARCH_ENDPOINT: &str = "https://lite.duckduckgo.com/lite/";
+const WEB_SEARCH_CLIENT: &str = "curl";
 const WEB_SEARCH_CURL_TIMEOUT_SECONDS: &str = "15";
 const WEB_SEARCH_CONNECT_TIMEOUT_SECONDS: &str = "8";
 const WEB_SEARCH_MAX_BYTES: &str = "1048576";
@@ -37,19 +38,22 @@ pub fn web_search_timeout_seconds() -> u64 {
 }
 
 pub fn web_search_status() -> WebSearchStatus {
-  let available = command_available("curl");
+  let command_path = curl_command_path();
+  let available = command_path.is_some();
   WebSearchStatus {
     provider: WEB_SEARCH_PROVIDER.to_string(),
-    client: "curl".to_string(),
+    client: WEB_SEARCH_CLIENT.to_string(),
     available,
-    detail: if available {
+    detail: if let Some(command_path) = command_path {
       format!(
-        "Built-in web search uses {} through curl with a {} second process timeout.",
+        "Built-in web search uses {} through {} with a {} second process timeout.",
         WEB_SEARCH_PROVIDER,
+        command_path,
         WEB_SEARCH_PROCESS_TIMEOUT.as_secs()
       )
     } else {
-      "Built-in web search is enabled, but curl was not found on PATH.".to_string()
+      "Built-in web search is enabled, but curl was not found on PATH or standard system paths."
+        .to_string()
     },
   }
 }
@@ -138,7 +142,8 @@ where
 }
 
 fn build_curl_command(url: &str) -> Command {
-  let mut process = Command::new("curl");
+  let command_path = curl_command_path().unwrap_or_else(|| WEB_SEARCH_CLIENT.to_string());
+  let mut process = Command::new(command_path);
   process
     .args([
       "--silent",
@@ -158,6 +163,25 @@ fn build_curl_command(url: &str) -> Command {
     .stdin(Stdio::null());
   configure_process_group(&mut process);
   process
+}
+
+fn curl_command_path() -> Option<String> {
+  if command_available(WEB_SEARCH_CLIENT) {
+    return Some(WEB_SEARCH_CLIENT.to_string());
+  }
+
+  fallback_curl_path().map(str::to_string)
+}
+
+#[cfg(target_os = "macos")]
+fn fallback_curl_path() -> Option<&'static str> {
+  let path = "/usr/bin/curl";
+  Path::new(path).is_file().then_some(path)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn fallback_curl_path() -> Option<&'static str> {
+  None
 }
 
 fn command_available(command: &str) -> bool {
@@ -427,7 +451,7 @@ mod tests {
     let status = web_search_status();
 
     assert_eq!(status.provider, WEB_SEARCH_PROVIDER);
-    assert_eq!(status.client, "curl");
+    assert_eq!(status.client, WEB_SEARCH_CLIENT);
     assert!(!status.detail.is_empty());
   }
 }
