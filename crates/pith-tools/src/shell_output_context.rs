@@ -76,10 +76,7 @@ fn compact_output_for_context(
   } else {
     output.len().saturating_sub(budget_bytes)
   };
-  let marker = format!(
-    "\n[{} bytes omitted from sandbox output]\n",
-    omitted_bytes
-  );
+  let marker = format!("\n[{} bytes omitted from sandbox output]\n", omitted_bytes);
   let marker_len = marker.len();
   if budget_bytes <= marker_len {
     return truncate_output(&marker, budget_bytes);

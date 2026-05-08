@@ -66,14 +66,13 @@ pub(crate) fn run_shell_with_timeout(
 
   let stdout = join_pipe_reader(stdout_reader)?;
   let stderr = join_pipe_reader(stderr_reader)?;
-  let artifact_directory = if stdout.source_byte_count > max_output_bytes
-    || stderr.source_byte_count > max_output_bytes
-  {
-    Some(artifact_directory)
-  } else {
-    let _ = fs::remove_dir_all(&artifact_directory);
-    None
-  };
+  let artifact_directory =
+    if stdout.source_byte_count > max_output_bytes || stderr.source_byte_count > max_output_bytes {
+      Some(artifact_directory)
+    } else {
+      let _ = fs::remove_dir_all(&artifact_directory);
+      None
+    };
 
   Ok(ShellOutput {
     exit_code: if timed_out {
