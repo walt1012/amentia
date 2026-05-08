@@ -98,6 +98,49 @@ enum TimelineInspectorPresenter {
     return lines.joined(separator: "\n")
   }
 
+  static func selectedEntrySandboxSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
+    guard let entry = snapshot.selectedEntry else {
+      return nil
+    }
+
+    let hasSandbox = entry.attributes["sandboxMode"] != nil
+    let hasOutputContext = entry.attributes["sandboxOutputContextMode"] != nil
+    if !hasSandbox && !hasOutputContext {
+      return nil
+    }
+
+    var lines: [String] = []
+    if hasSandbox {
+      let mode = entry.attributes["sandboxMode"] ?? "unknown"
+      let backend = entry.attributes["sandboxBackend"] ?? "unknown"
+      let active = entry.attributes["sandboxActive"] ?? "unknown"
+      let networkAllowed = entry.attributes["sandboxNetworkAllowed"] ?? "unknown"
+      lines.append(
+        "Sandbox: \(mode) | backend \(backend) | active \(active) | network \(networkAllowed)"
+      )
+    }
+
+    if let outputContextMode = entry.attributes["sandboxOutputContextMode"] {
+      let retainedStdout = entry.attributes["sandboxOutputRetainedStdoutBytes"] ?? "unknown"
+      let sourceStdout = entry.attributes["sandboxOutputSourceStdoutBytes"] ?? "unknown"
+      let retainedStderr = entry.attributes["sandboxOutputRetainedStderrBytes"] ?? "unknown"
+      let sourceStderr = entry.attributes["sandboxOutputSourceStderrBytes"] ?? "unknown"
+      let savedBytes = entry.attributes["sandboxOutputSavedBytes"] ?? "unknown"
+      let savingsPercent = entry.attributes["sandboxOutputSavingsPercent"] ?? "unknown"
+      lines.append(
+        "Output: \(outputContextMode) | stdout \(retainedStdout)/\(sourceStdout) bytes | "
+          + "stderr \(retainedStderr)/\(sourceStderr) bytes | "
+          + "saved \(savedBytes) bytes (\(savingsPercent)%)"
+      )
+    }
+
+    if let artifactDirectory = entry.attributes["sandboxOutputArtifactDirectory"] {
+      lines.append("Artifact: \(artifactDirectory)")
+    }
+
+    return lines.joined(separator: "\n")
+  }
+
   private static func diffLines(from body: String) -> [DiffLineSummary] {
     body
       .components(separatedBy: .newlines)

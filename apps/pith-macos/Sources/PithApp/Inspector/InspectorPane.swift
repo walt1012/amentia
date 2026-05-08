@@ -9,6 +9,7 @@ struct InspectorPane: View {
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
   @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = false
   @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
+  @AppStorage("pith.inspector.selectedSandboxExpanded") private var selectedSandboxExpanded = false
   @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
   var body: some View {
@@ -54,6 +55,7 @@ struct InspectorPane: View {
         selectedItemSection
         diffDetailSection
         selectedMemorySection
+        selectedSandboxSection
       }
       .padding(20)
     }
@@ -98,6 +100,19 @@ struct InspectorPane: View {
     if let memorySummary = viewModel.selectedEntryMemorySummary() {
       DisclosureGroup("Selected Memory Context", isExpanded: $selectedMemoryExpanded) {
         Text(memorySummary)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var selectedSandboxSection: some View {
+    if let sandboxSummary = viewModel.selectedEntrySandboxSummary() {
+      DisclosureGroup("Selected Sandbox Context", isExpanded: $selectedSandboxExpanded) {
+        Text(sandboxSummary)
           .font(.caption)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
