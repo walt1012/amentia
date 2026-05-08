@@ -1,3 +1,5 @@
+use std::panic::{catch_unwind, AssertUnwindSafe};
+
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnStartResult};
 
@@ -88,9 +90,21 @@ fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), 
 }
 
 pub fn execute_prepared_turn_start(prepared: PreparedTurnStart) -> CompletedTurnStart {
+  let request_id = prepared.request_id;
+  let snapshot = prepared.snapshot;
+  let thread_id = snapshot.thread_id.clone();
+  let turn_id = snapshot.turn_id.clone();
+  let display_message = snapshot.display_message.clone();
+  let output = catch_unwind(AssertUnwindSafe(|| {
+    turn_actions::execute_prepared_turn_snapshot(snapshot)
+  }))
+  .unwrap_or_else(|_| {
+    turn_actions::build_recovered_turn_output(thread_id, turn_id, display_message)
+  });
+
   CompletedTurnStart {
-    request_id: prepared.request_id,
-    output: turn_actions::execute_prepared_turn_snapshot(prepared.snapshot),
+    request_id,
+    output,
   }
 }
 

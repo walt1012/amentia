@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use pith_protocol::TimelineItem;
 
 use super::turn_approval_execution::{execute_shell_turn, execute_write_turn};
@@ -85,5 +87,45 @@ pub(crate) fn execute_prepared_turn_snapshot(
     items,
     pending_approval,
     pending_active_turn,
+  }
+}
+
+pub(crate) fn build_recovered_turn_output(
+  thread_id: String,
+  turn_id: String,
+  display_message: String,
+) -> TurnStartExecutionOutput {
+  TurnStartExecutionOutput {
+    thread_id,
+    turn_id: turn_id.clone(),
+    items: vec![
+      TimelineItem {
+        kind: "userMessage".to_string(),
+        title: "User".to_string(),
+        content: display_message,
+        attributes: None,
+      },
+      TimelineItem {
+        kind: "warning".to_string(),
+        title: "Turn Recovered".to_string(),
+        content: "Pith recovered this turn after an internal runtime error.".to_string(),
+        attributes: Some(HashMap::from([
+          ("turnId".to_string(), turn_id.clone()),
+          ("recovery".to_string(), "runtimePanic".to_string()),
+        ])),
+      },
+      TimelineItem {
+        kind: "assistantMessage".to_string(),
+        title: "Assistant".to_string(),
+        content: "The local turn stopped before Pith could finish. Try again when ready."
+          .to_string(),
+        attributes: Some(HashMap::from([
+          ("turnId".to_string(), turn_id),
+          ("runtimeRecovered".to_string(), "true".to_string()),
+        ])),
+      },
+    ],
+    pending_approval: None,
+    pending_active_turn: None,
   }
 }
