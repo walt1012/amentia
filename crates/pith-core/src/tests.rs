@@ -373,7 +373,7 @@ fn turn_start_warns_when_workspace_is_missing() {
 }
 
 #[test]
-fn turn_start_web_search_requires_network_permission() {
+fn turn_start_web_search_uses_builtin_network_permission() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(&mut context, vec![]);
 
@@ -383,6 +383,15 @@ fn turn_start_web_search_requires_network_permission() {
       methods::THREAD_START,
       Some(json!({
         "title": "Web Thread"
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::TURN_CANCEL_RUNNING,
+      Some(json!({
+        "threadId": "thread-1"
       })),
     ),
   );
@@ -405,21 +414,12 @@ fn turn_start_web_search_requires_network_permission() {
   assert_eq!(items[0]["kind"], "userMessage");
   assert_eq!(items[1]["kind"], "plan");
   assert_eq!(items[2]["kind"], "warning");
-  assert_eq!(items[2]["title"], "Plugin Permission Required");
-  assert_eq!(
-    items[2]["attributes"]["requiredPermission"],
-    "network.outbound"
-  );
-  assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
-  assert_eq!(items[2]["attributes"]["query"], "Pith local model");
-  assert_eq!(
-    items[2]["attributes"]["routingReason"],
-    "explicitWebSearchRequest"
-  );
+  assert_eq!(items[2]["title"], "Turn Cancelled");
+  assert!(items.iter().all(|item| item["title"] != "Plugin Permission Required"));
 }
 
 #[test]
-fn turn_start_routes_fresh_public_requests_to_web_search_permission_gate() {
+fn turn_start_routes_fresh_public_requests_to_builtin_web_search() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(&mut context, vec![]);
 
@@ -429,6 +429,15 @@ fn turn_start_routes_fresh_public_requests_to_web_search_permission_gate() {
       methods::THREAD_START,
       Some(json!({
         "title": "Fresh Info Thread"
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::TURN_CANCEL_RUNNING,
+      Some(json!({
+        "threadId": "thread-1"
       })),
     ),
   );
@@ -451,20 +460,8 @@ fn turn_start_routes_fresh_public_requests_to_web_search_permission_gate() {
   assert_eq!(items[0]["kind"], "userMessage");
   assert_eq!(items[1]["kind"], "plan");
   assert_eq!(items[2]["kind"], "warning");
-  assert_eq!(items[2]["title"], "Plugin Permission Required");
-  assert_eq!(
-    items[2]["attributes"]["requiredPermission"],
-    "network.outbound"
-  );
-  assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
-  assert_eq!(
-    items[2]["attributes"]["query"],
-    "What is the latest LFM2.5 release"
-  );
-  assert_eq!(
-    items[2]["attributes"]["routingReason"],
-    "freshPublicInformation"
-  );
+  assert_eq!(items[2]["title"], "Turn Cancelled");
+  assert!(items.iter().all(|item| item["title"] != "Plugin Permission Required"));
 }
 
 #[test]

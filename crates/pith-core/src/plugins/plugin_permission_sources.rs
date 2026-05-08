@@ -2,10 +2,19 @@ use std::collections::HashMap;
 
 use pith_plugin_host::PluginCatalogEntry;
 
+const BUILT_IN_PERMISSION_SOURCES: &[(&str, &str)] = &[("network.outbound", "Pith Web Search")];
+
 pub(crate) fn granted_permission_sources(
   plugins: &[PluginCatalogEntry],
 ) -> HashMap<String, Vec<String>> {
   let mut permissions = HashMap::new();
+
+  for (permission, source) in BUILT_IN_PERMISSION_SOURCES {
+    permissions
+      .entry((*permission).to_string())
+      .or_insert_with(Vec::new)
+      .push((*source).to_string());
+  }
 
   for plugin in plugins
     .iter()
@@ -69,6 +78,11 @@ mod tests {
     let expected = vec!["Enabled Plugin".to_string()];
     assert_eq!(sources.get("file.read"), Some(&expected));
     assert!(permission_is_granted(&sources, "file.read"));
+    assert_eq!(
+      sources.get("network.outbound"),
+      Some(&vec!["Pith Web Search".to_string()])
+    );
+    assert!(permission_is_granted(&sources, "network.outbound"));
     assert!(!permission_is_granted(&sources, "shell.exec"));
   }
 }
