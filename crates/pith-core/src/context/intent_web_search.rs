@@ -3,7 +3,12 @@ pub(crate) fn infer_web_search_query(message: &str) -> Option<String> {
   let lowercased_message = trimmed.to_lowercase();
 
   for keyword in [
+    "websearch for ",
+    "websearch ",
     "web search for ",
+    "web search ",
+    "internet search for ",
+    "search internet for ",
     "search web for ",
     "search the web for ",
     "search online for ",
@@ -36,6 +41,10 @@ mod tests {
     assert_eq!(
       infer_web_search_query("search the web for Liquid AI LFM2.5").as_deref(),
       Some("Liquid AI LFM2.5")
+    );
+    assert_eq!(
+      infer_web_search_query("websearch pith plugins").as_deref(),
+      Some("pith plugins")
     );
     assert_eq!(infer_web_search_query("search RuntimeContext"), None);
   }
