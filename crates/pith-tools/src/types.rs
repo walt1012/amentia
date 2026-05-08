@@ -128,17 +128,21 @@ impl ShellSandboxSummary {
 
 impl ShellOutputContext {
   pub fn stdout_artifact_path(&self) -> Option<String> {
-    self
-      .artifact_directory
-      .as_deref()
-      .map(|directory| Path::new(directory).join("stdout.txt").display().to_string())
+    self.artifact_directory.as_deref().map(|directory| {
+      Path::new(directory)
+        .join("stdout.txt")
+        .display()
+        .to_string()
+    })
   }
 
   pub fn stderr_artifact_path(&self) -> Option<String> {
-    self
-      .artifact_directory
-      .as_deref()
-      .map(|directory| Path::new(directory).join("stderr.txt").display().to_string())
+    self.artifact_directory.as_deref().map(|directory| {
+      Path::new(directory)
+        .join("stderr.txt")
+        .display()
+        .to_string()
+    })
   }
 
   pub fn source_total_bytes(&self) -> usize {
@@ -261,7 +265,9 @@ mod tests {
     assert_eq!(context.saved_bytes(), 850);
     assert_eq!(context.savings_percent(), 85);
     assert!(context.display_line().contains("saved 85%"));
-    assert!(context.display_line().contains("stdout /tmp/pith/run-1/stdout.txt"));
+    assert!(context
+      .display_line()
+      .contains("stdout /tmp/pith/run-1/stdout.txt"));
     assert_eq!(
       context.stdout_artifact_path().as_deref(),
       Some("/tmp/pith/run-1/stdout.txt")
