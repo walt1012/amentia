@@ -15,6 +15,9 @@ pub use diff::generate_diff;
 pub use shell::{
   run_shell, shell_command_timeout_seconds, shell_sandbox_status, shell_sandbox_summary,
 };
+pub use shell_output_artifacts::{
+  shell_output_artifact_retained_runs, shell_output_artifact_root_path,
+};
 pub use types::{
   BuiltInTool, DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult,
   ShellSandboxSummary, WebSearchResult,
