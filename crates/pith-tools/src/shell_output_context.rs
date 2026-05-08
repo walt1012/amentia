@@ -180,7 +180,11 @@ fn shell_output_artifact_directory(
   write_shell_output_artifact(workspace_root, stdout, stderr).ok()
 }
 
-fn write_shell_output_artifact(workspace_root: &Path, stdout: &str, stderr: &str) -> Result<String> {
+fn write_shell_output_artifact(
+  workspace_root: &Path,
+  stdout: &str,
+  stderr: &str,
+) -> Result<String> {
   let relative_directory = shell_output_artifact_relative_directory();
   let artifact_directory = workspace_root.join(&relative_directory);
   create_dir_all(&artifact_directory)?;

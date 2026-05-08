@@ -49,8 +49,13 @@ pub fn run_shell(
       stderr = format!("{stderr}\n{timeout_message}");
     }
   }
-  let output_context =
-    build_shell_output_context(&workspace_root, &stdout, &stderr, max_output_bytes, trimmed_command);
+  let output_context = build_shell_output_context(
+    &workspace_root,
+    &stdout,
+    &stderr,
+    max_output_bytes,
+    trimmed_command,
+  );
 
   Ok(ShellCommandResult {
     command: trimmed_command.to_string(),

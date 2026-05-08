@@ -100,10 +100,7 @@ impl ShellSandboxSummary {
 
 impl ShellOutputContext {
   pub fn display_line(&self) -> String {
-    let artifact = self
-      .artifact_directory
-      .as_deref()
-      .unwrap_or("not needed");
+    let artifact = self.artifact_directory.as_deref().unwrap_or("not needed");
     format!(
       "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; artifact: {}",
       self.mode,
