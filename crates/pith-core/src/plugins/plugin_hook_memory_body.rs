@@ -7,7 +7,7 @@ pub(crate) fn build_plugin_hook_memory_body(
   capture: &PluginHookMemoryCapture,
 ) -> String {
   format!(
-    "Plugin: {} ({})\nHook: {} ({})\nEvent: {}\nWorkspace: {} at {}.\nCommand: {}\nExit code: {}\nSandbox: {} via {} ({})\nstdout: {}\nstderr: {}\n\nHook result:\n{}",
+    "Plugin: {} ({})\nHook: {} ({})\nEvent: {}\nWorkspace: {} at {}.\nCommand: {}\nExit code: {}\n{}\nstdout: {}\nstderr: {}\n\nHook result:\n{}",
     capture.hook.plugin_display_name,
     capture.hook.plugin_id,
     capture.hook.title,
@@ -17,9 +17,7 @@ pub(crate) fn build_plugin_hook_memory_body(
     workspace.root_path,
     capture.command,
     capture.exit_code,
-    capture.sandbox.mode,
-    capture.sandbox.backend,
-    capture.sandbox.state(),
+    capture.sandbox.display_line(),
     capture.stdout_preview,
     capture.stderr_preview,
     capture.content

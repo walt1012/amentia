@@ -249,8 +249,8 @@ fn shell_output_artifact_run(path: PathBuf) -> Option<ShellOutputArtifactRun> {
     return None;
   }
 
-  let metadata = fs::metadata(&path).ok()?;
-  if !metadata.is_dir() {
+  let metadata = fs::symlink_metadata(&path).ok()?;
+  if metadata.file_type().is_symlink() || !metadata.is_dir() {
     return None;
   }
 
@@ -354,6 +354,30 @@ mod tests {
     assert!(root.join("manual-note").exists());
 
     let _ = fs::remove_dir_all(root);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_output_artifact_pruning_ignores_symlinked_runs() {
+    use std::os::unix::fs::symlink;
+
+    let root = unique_temp_directory("artifact-prune-symlink");
+    let outside = unique_temp_directory("artifact-prune-outside");
+    fs::create_dir_all(&root).expect("artifact root");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(outside.join("keep.txt"), "keep").expect("outside file");
+    symlink(&outside, root.join("run-linked")).expect("run symlink");
+    for index in 0..3 {
+      fs::create_dir_all(root.join(format!("run-{index:02}"))).expect("artifact run");
+    }
+
+    prune_shell_output_artifact_root(&root, 1);
+
+    assert!(root.join("run-linked").exists());
+    assert!(outside.join("keep.txt").exists());
+
+    let _ = fs::remove_dir_all(root);
+    let _ = fs::remove_dir_all(outside);
   }
 
   fn unique_temp_directory(prefix: &str) -> PathBuf {

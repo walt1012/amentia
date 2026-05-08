@@ -199,10 +199,19 @@ pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
 }
 
 fn seatbelt_string(path: &Path) -> String {
-  path
-    .to_string_lossy()
-    .replace('\\', "\\\\")
-    .replace('"', "\\\"")
+  let mut escaped = String::new();
+  for character in path.to_string_lossy().chars() {
+    match character {
+      '\\' => escaped.push_str("\\\\"),
+      '"' => escaped.push_str("\\\""),
+      '\n' => escaped.push_str("\\n"),
+      '\r' => escaped.push_str("\\r"),
+      '\t' => escaped.push_str("\\t"),
+      character if character.is_control() => escaped.push('_'),
+      character => escaped.push(character),
+    }
+  }
+  escaped
 }
 
 #[cfg(test)]
@@ -228,6 +237,15 @@ mod tests {
     let profile = macos_seatbelt_profile(&policy);
 
     assert!(profile.contains("(subpath \"/tmp/Pith \\\"Demo\\\"\")"));
+  }
+
+  #[test]
+  fn profile_escapes_control_characters_in_paths() {
+    let policy = SandboxPolicy::workspace_read_write("/tmp/Pith\nDemo\tRoot");
+    let profile = macos_seatbelt_profile(&policy);
+
+    assert!(!profile.contains("Pith\nDemo"));
+    assert!(profile.contains("(subpath \"/tmp/Pith\\nDemo\\tRoot\")"));
   }
 
   #[test]
