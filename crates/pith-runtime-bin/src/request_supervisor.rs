@@ -1,3 +1,4 @@
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
@@ -54,26 +55,36 @@ impl RequestSupervisor {
     };
 
     self.handles.push(thread::spawn(move || {
-      let prepared = {
-        let mut locked_context = lock_context(&context);
-        prepare(&mut locked_context, request)
-      };
-
-      let response = match prepared {
-        Ok(prepared) => {
-          let completed = if let Some(local_execution_lane) = local_execution_lane {
-            let _lane = local_execution_lane
-              .lock()
-              .unwrap_or_else(|poisoned| poisoned.into_inner());
-            execute(prepared)
-          } else {
-            execute(prepared)
-          };
+      let request_id = request.id.clone();
+      let response = catch_unwind(AssertUnwindSafe(|| {
+        let prepared = {
           let mut locked_context = lock_context(&context);
-          complete(&mut locked_context, completed)
+          prepare(&mut locked_context, request)
+        };
+
+        match prepared {
+          Ok(prepared) => {
+            let completed = if let Some(local_execution_lane) = local_execution_lane {
+              let _lane = local_execution_lane
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+              execute(prepared)
+            } else {
+              execute(prepared)
+            };
+            let mut locked_context = lock_context(&context);
+            complete(&mut locked_context, completed)
+          }
+          Err(response) => response,
         }
-        Err(response) => response,
-      };
+      }))
+      .unwrap_or_else(|_| {
+        JsonRpcResponse::error(
+          request_id,
+          -32099,
+          "Runtime request recovered after an internal panic",
+        )
+      });
 
       let _ = output.write_json(&response);
     }));
