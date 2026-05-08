@@ -58,8 +58,7 @@ fn read_bounded_manifest_content(path: &Path, label: &str) -> Result<String> {
     );
   }
 
-  String::from_utf8(bytes)
-    .with_context(|| format!("{label} {} is not valid UTF-8", path.display()))
+  String::from_utf8(bytes).with_context(|| format!("{label} {} is not valid UTF-8", path.display()))
 }
 
 #[cfg(test)]
