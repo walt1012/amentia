@@ -415,7 +415,9 @@ fn turn_start_web_search_uses_builtin_network_permission() {
   assert_eq!(items[1]["kind"], "plan");
   assert_eq!(items[2]["kind"], "warning");
   assert_eq!(items[2]["title"], "Turn Cancelled");
-  assert!(items.iter().all(|item| item["title"] != "Plugin Permission Required"));
+  assert!(items
+    .iter()
+    .all(|item| item["title"] != "Plugin Permission Required"));
 }
 
 #[test]
@@ -461,7 +463,9 @@ fn turn_start_routes_fresh_public_requests_to_builtin_web_search() {
   assert_eq!(items[1]["kind"], "plan");
   assert_eq!(items[2]["kind"], "warning");
   assert_eq!(items[2]["title"], "Turn Cancelled");
-  assert!(items.iter().all(|item| item["title"] != "Plugin Permission Required"));
+  assert!(items
+    .iter()
+    .all(|item| item["title"] != "Plugin Permission Required"));
 }
 
 #[test]
