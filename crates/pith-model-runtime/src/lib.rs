@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::{
@@ -15,10 +16,12 @@ use pith_process::{
   wait_for_child, ChildExitReason,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
 const LLAMA_CPP_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const LLAMA_CPP_PIPE_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
+const GGUF_MAGIC: [u8; 4] = *b"GGUF";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelRole {
@@ -190,14 +193,29 @@ impl LocalModelRuntime {
 
     match (binary_path, model_path) {
       (Some(binary_path), Some(model_path)) if binary_path.is_file() && model_path.is_file() => {
-        Self {
-          pack,
-          manifest,
-          source,
-          backend: ModelBackend::LlamaCppCli {
-            binary_path,
-            model_path,
-            manifest_path,
+        match validate_runtime_model_file(&model_path, manifest.as_ref()) {
+          Ok(()) => Self {
+            pack,
+            manifest,
+            source,
+            backend: ModelBackend::LlamaCppCli {
+              binary_path,
+              model_path,
+              manifest_path,
+            },
+          },
+          Err(error) => Self {
+            pack,
+            manifest,
+            source,
+            backend: ModelBackend::Unconfigured {
+              detail: format!(
+                "Local model runtime is unavailable because model integrity verification failed: {error}"
+              ),
+              binary_path: Some(binary_path),
+              model_path: Some(model_path),
+              manifest_path,
+            },
           },
         }
       }
@@ -607,6 +625,91 @@ fn read_manifest(path: &Path) -> Result<ModelPackManifest> {
     fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
   serde_json::from_str(&content)
     .with_context(|| format!("failed to parse model pack manifest {}", path.display()))
+}
+
+fn validate_runtime_model_file(
+  model_path: &Path,
+  manifest: Option<&ModelPackManifest>,
+) -> Result<()> {
+  let Some(manifest) = manifest else {
+    bail!("model pack manifest is required for local model verification");
+  };
+
+  let actual_file_name = model_path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .unwrap_or_default();
+  if actual_file_name != manifest.file_name {
+    bail!(
+      "model file name mismatch: expected {}, found {}",
+      manifest.file_name,
+      actual_file_name
+    );
+  }
+
+  let metadata = fs::metadata(model_path)
+    .with_context(|| format!("failed to inspect model file {}", model_path.display()))?;
+  if let Some(expected_size_bytes) = manifest.size_bytes {
+    if metadata.len() != expected_size_bytes {
+      bail!(
+        "model size mismatch: expected {} bytes, found {} bytes",
+        expected_size_bytes,
+        metadata.len()
+      );
+    }
+  }
+
+  validate_gguf_magic(model_path)?;
+
+  let expected_sha256 = manifest
+    .sha256
+    .as_deref()
+    .map(str::trim)
+    .filter(|value| !value.is_empty())
+    .context("model manifest is missing SHA-256 metadata")?;
+  let actual_sha256 = sha256_hex(model_path)?;
+  if !expected_sha256.eq_ignore_ascii_case(&actual_sha256) {
+    bail!(
+      "model checksum mismatch: expected {}, found {}",
+      expected_sha256,
+      actual_sha256
+    );
+  }
+
+  Ok(())
+}
+
+fn validate_gguf_magic(model_path: &Path) -> Result<()> {
+  let mut file = fs::File::open(model_path)
+    .with_context(|| format!("failed to open model file {}", model_path.display()))?;
+  let mut magic = [0_u8; 4];
+  file
+    .read_exact(&mut magic)
+    .with_context(|| format!("failed to read GGUF header from {}", model_path.display()))?;
+  if magic != GGUF_MAGIC {
+    bail!("model file is not a GGUF file");
+  }
+
+  Ok(())
+}
+
+fn sha256_hex(path: &Path) -> Result<String> {
+  let mut file =
+    fs::File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
+  let mut hasher = Sha256::new();
+  let mut buffer = [0_u8; 1024 * 1024];
+
+  loop {
+    let bytes_read = file
+      .read(&mut buffer)
+      .with_context(|| format!("failed to read {}", path.display()))?;
+    if bytes_read == 0 {
+      break;
+    }
+    hasher.update(&buffer[..bytes_read]);
+  }
+
+  Ok(format!("{:x}", hasher.finalize()))
 }
 
 fn normalize_path(path: &Path) -> PathBuf {
@@ -1177,6 +1280,68 @@ mod tests {
   }
 
   #[test]
+  fn runtime_accepts_manifest_verified_model_file() {
+    let temp_root = unique_temp_directory("model-verified");
+    fs::create_dir_all(&temp_root).expect("temp root");
+    let binary_path = temp_root.join("llama-cli");
+    let model_path = temp_root.join("test-model.gguf");
+    let manifest_path = temp_root.join("model-pack.json");
+    fs::write(&binary_path, "fake binary").expect("binary");
+    fs::write(&model_path, b"GGUFmodel bytes").expect("model");
+    let manifest = test_manifest(
+      "test-model.gguf",
+      Some(sha256_hex(&model_path).expect("model sha256")),
+      Some(fs::metadata(&model_path).expect("model metadata").len()),
+    );
+
+    let runtime = LocalModelRuntime::from_resolution(
+      Some(ManifestResolution {
+        manifest,
+        manifest_path,
+        source: "test".to_string(),
+      }),
+      Some(binary_path),
+      Some(model_path),
+    );
+    let health = runtime.health();
+
+    assert_eq!(health.backend, "llama.cpp");
+    assert_eq!(health.status, "ready");
+    assert_eq!(health.metrics["readiness"], "ready");
+
+    remove_temp_directory(&temp_root);
+  }
+
+  #[test]
+  fn runtime_rejects_model_with_wrong_manifest_checksum() {
+    let temp_root = unique_temp_directory("model-bad-checksum");
+    fs::create_dir_all(&temp_root).expect("temp root");
+    let binary_path = temp_root.join("llama-cli");
+    let model_path = temp_root.join("test-model.gguf");
+    let manifest_path = temp_root.join("model-pack.json");
+    fs::write(&binary_path, "fake binary").expect("binary");
+    fs::write(&model_path, b"GGUFmodel bytes").expect("model");
+
+    let runtime = LocalModelRuntime::from_resolution(
+      Some(ManifestResolution {
+        manifest: test_manifest("test-model.gguf", Some("0".repeat(64)), Some(15)),
+        manifest_path,
+        source: "test".to_string(),
+      }),
+      Some(binary_path),
+      Some(model_path),
+    );
+    let health = runtime.health();
+
+    assert_eq!(health.backend, "unconfigured");
+    assert_eq!(health.status, "unavailable");
+    assert!(health.detail.contains("checksum mismatch"));
+    assert_eq!(health.metrics["readiness"], "misconfigured");
+
+    remove_temp_directory(&temp_root);
+  }
+
+  #[test]
   fn discovery_roots_include_configured_model_directories() {
     let _environment = lock_environment();
     let previous_model_pack_root = env::var("PITH_MODEL_PACK_ROOT").ok();
@@ -1274,6 +1439,27 @@ mod tests {
 
     assert_eq!(output.bytes.len(), LLAMA_CPP_PIPE_OUTPUT_LIMIT);
     assert_eq!(output.source_byte_count, LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512);
+  }
+
+  fn test_manifest(
+    file_name: &str,
+    sha256: Option<String>,
+    size_bytes: Option<u64>,
+  ) -> ModelPackManifest {
+    ModelPackManifest {
+      id: "test-model".to_string(),
+      display_name: "Test Model".to_string(),
+      file_name: file_name.to_string(),
+      context_size: 4096,
+      model_context_size: Some(4096),
+      max_output_tokens: 128,
+      backend: "llama.cpp".to_string(),
+      license: Some("apache-2.0".to_string()),
+      homepage: None,
+      download_url: None,
+      sha256,
+      size_bytes,
+    }
   }
 
   fn restore_env_var(key: &str, value: Option<String>) {
