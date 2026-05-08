@@ -96,11 +96,11 @@ mod tests {
       infer_explicit_web_search_query("websearch pith plugins").as_deref(),
       Some("pith plugins")
     );
+    assert_eq!(infer_explicit_web_search_query("look up README.md"), None);
     assert_eq!(
-      infer_explicit_web_search_query("look up README.md"),
+      infer_explicit_web_search_query("search RuntimeContext"),
       None
     );
-    assert_eq!(infer_explicit_web_search_query("search RuntimeContext"), None);
   }
 
   #[test]
