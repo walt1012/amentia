@@ -21,11 +21,10 @@ pub(crate) fn prepare_turn_action(
     return PreparedTurnAction::WebSearch(intent);
   }
 
-  if let Some(intent) = infer_fresh_web_search_intent(message) {
-    return PreparedTurnAction::WebSearch(intent);
-  }
-
   let Some(workspace) = workspace else {
+    if let Some(intent) = infer_fresh_web_search_intent(message) {
+      return PreparedTurnAction::WebSearch(intent);
+    }
     return PreparedTurnAction::NoWorkspace;
   };
   let workspace_root = Path::new(&workspace.root_path);
@@ -54,6 +53,10 @@ pub(crate) fn prepare_turn_action(
 
   if let Some(query) = infer_search_query(message) {
     return PreparedTurnAction::Search { query };
+  }
+
+  if let Some(intent) = infer_fresh_web_search_intent(message) {
+    return PreparedTurnAction::WebSearch(intent);
   }
 
   PreparedTurnAction::ListWorkspace

@@ -538,6 +538,61 @@ fn turn_start_reads_a_requested_workspace_file() {
 }
 
 #[test]
+fn turn_start_prefers_workspace_file_over_fresh_web_search() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("fresh-local-file");
+  fs::write(
+    workspace.join("Cargo.toml"),
+    "[package]\nname = \"pith-test\"\nversion = \"0.1.0\"\n",
+  )
+  .expect("write cargo manifest");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Local Manifest Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "What version is in Cargo.toml?"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[2]["kind"], "toolStart");
+  assert_eq!(items[2]["title"], "read_file");
+  assert_eq!(items[2]["attributes"]["tool"], "read_file");
+  assert_eq!(items[2]["attributes"]["relativePath"], "Cargo.toml");
+  assert_eq!(items[3]["kind"], "toolResult");
+  assert!(items[3]["content"].as_str().unwrap().contains("0.1.0"));
+}
+
+#[test]
 fn collect_notifications_emits_thread_update_for_active_turn() {
   let mut context = RuntimeContext::new_in_memory();
   enable_full_access_plugin(&mut context);

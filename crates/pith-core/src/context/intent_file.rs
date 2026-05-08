@@ -1,7 +1,13 @@
 use std::path::Path;
 
 pub(crate) fn infer_requested_file_path(message: &str, workspace_root: &Path) -> Option<String> {
-  let common_files = ["README.md", "Cargo.toml", "Package.swift"];
+  let common_files = [
+    "README.md",
+    "Cargo.toml",
+    "Package.swift",
+    "package.json",
+    "pyproject.toml",
+  ];
   let lowercased_message = message.to_lowercase();
 
   for candidate in common_files {

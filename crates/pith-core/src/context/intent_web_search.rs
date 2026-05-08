@@ -76,6 +76,12 @@ pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIn
     "diff",
     "commit",
     "branch",
+    "project",
+    "codebase",
+    "cargo.toml",
+    "package.json",
+    "package.swift",
+    "pyproject.toml",
   ]
   .iter()
   .any(|signal| lowercased_message.contains(signal));
@@ -116,6 +122,7 @@ mod tests {
       infer_fresh_web_search_intent("What is the latest LFM2.5 release?").expect("intent");
     assert_eq!(release.query, "What is the latest LFM2.5 release");
     assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
+    assert!(infer_fresh_web_search_intent("What version is in Cargo.toml?").is_none());
   }
 
   #[test]
