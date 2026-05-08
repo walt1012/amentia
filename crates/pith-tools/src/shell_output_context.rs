@@ -218,10 +218,18 @@ fn shell_output_artifact_root() -> PathBuf {
 }
 
 fn ensure_shell_output_artifact_root(root: &Path) -> Result<()> {
-  fs::create_dir_all(root)
-    .with_context(|| format!("failed to create shell output artifact root {}", root.display()))?;
-  let metadata = fs::symlink_metadata(root)
-    .with_context(|| format!("failed to inspect shell output artifact root {}", root.display()))?;
+  fs::create_dir_all(root).with_context(|| {
+    format!(
+      "failed to create shell output artifact root {}",
+      root.display()
+    )
+  })?;
+  let metadata = fs::symlink_metadata(root).with_context(|| {
+    format!(
+      "failed to inspect shell output artifact root {}",
+      root.display()
+    )
+  })?;
   if metadata.file_type().is_symlink() || !metadata.is_dir() {
     bail!(
       "shell output artifact root must be a real directory: {}",
