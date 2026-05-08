@@ -11,7 +11,7 @@ extension AppViewModel {
       return false
     }
 
-    return (modelHealth.metrics["readiness"] ?? "unknown") == "configured"
+    return (modelHealth.metrics["readiness"] ?? "unknown") == "ready"
   }
 
   func refreshLocalModelCatalog() {
