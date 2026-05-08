@@ -402,6 +402,10 @@ fn turn_start_web_search_requires_network_permission() {
   );
   assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
   assert_eq!(items[2]["attributes"]["query"], "Pith local model");
+  assert_eq!(
+    items[2]["attributes"]["routingReason"],
+    "explicitWebSearchRequest"
+  );
 }
 
 #[test]
@@ -446,6 +450,10 @@ fn turn_start_routes_fresh_public_requests_to_web_search_permission_gate() {
   assert_eq!(
     items[2]["attributes"]["query"],
     "What is the latest LFM2.5 release"
+  );
+  assert_eq!(
+    items[2]["attributes"]["routingReason"],
+    "freshPublicInformation"
   );
 }
 

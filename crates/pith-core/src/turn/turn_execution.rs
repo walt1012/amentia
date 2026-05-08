@@ -70,8 +70,8 @@ pub(crate) fn execute_prepared_turn_snapshot(
         &mut pending_active_turn,
       );
     }
-    (_, PreparedTurnAction::WebSearch { query }) => {
-      execute_web_search_turn(&snapshot, query, &mut items, &mut pending_active_turn);
+    (_, PreparedTurnAction::WebSearch(intent)) => {
+      execute_web_search_turn(&snapshot, intent, &mut items, &mut pending_active_turn);
     }
     (Some(workspace), PreparedTurnAction::ListWorkspace) => {
       execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);

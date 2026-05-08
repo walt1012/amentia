@@ -4,7 +4,7 @@ use std::path::Path;
 use pith_protocol::WorkspaceSummary;
 
 use crate::intent_inference::{
-  infer_explicit_web_search_query, infer_fresh_web_search_query, infer_requested_file_path,
+  infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_requested_file_path,
   infer_search_query, infer_shell_command, infer_write_intent,
 };
 use crate::plugin_permissions::permission_is_granted;
@@ -17,12 +17,12 @@ pub(crate) fn prepare_turn_action(
   workspace: Option<&WorkspaceSummary>,
   permission_sources: &HashMap<String, Vec<String>>,
 ) -> PreparedTurnAction {
-  if let Some(query) = infer_explicit_web_search_query(message) {
-    return PreparedTurnAction::WebSearch { query };
+  if let Some(intent) = infer_explicit_web_search_intent(message) {
+    return PreparedTurnAction::WebSearch(intent);
   }
 
-  if let Some(query) = infer_fresh_web_search_query(message) {
-    return PreparedTurnAction::WebSearch { query };
+  if let Some(intent) = infer_fresh_web_search_intent(message) {
+    return PreparedTurnAction::WebSearch(intent);
   }
 
   let Some(workspace) = workspace else {

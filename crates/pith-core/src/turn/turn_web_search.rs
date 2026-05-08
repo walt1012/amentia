@@ -4,6 +4,7 @@ use pith_protocol::TimelineItem;
 use pith_tools::web_search;
 
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
+use crate::intent_inference::WebSearchIntent;
 use crate::local_responses::{
   build_plan_item, format_web_search_result, summarize_web_search_result,
 };
@@ -14,10 +15,11 @@ const WEB_SEARCH_MAX_RESULTS: usize = 5;
 
 pub(super) fn execute_web_search_turn(
   snapshot: &PreparedTurnSnapshot,
-  query: &str,
+  intent: &WebSearchIntent,
   items: &mut Vec<TimelineItem>,
   pending_active_turn: &mut Option<ActiveTurn>,
 ) {
+  let query = intent.query.as_str();
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
@@ -48,7 +50,13 @@ pub(super) fn execute_web_search_turn(
       "network.outbound",
       "search the web",
       "the web",
-      HashMap::from([("query".to_string(), query.to_string())]),
+      HashMap::from([
+        ("query".to_string(), query.to_string()),
+        (
+          "routingReason".to_string(),
+          intent.routing_reason.to_string(),
+        ),
+      ]),
     ));
     return;
   }
@@ -61,6 +69,10 @@ pub(super) fn execute_web_search_turn(
       ("tool".to_string(), "web_search".to_string()),
       ("provider".to_string(), "DuckDuckGo Lite".to_string()),
       ("networkAccess".to_string(), "true".to_string()),
+      (
+        "routingReason".to_string(),
+        intent.routing_reason.to_string(),
+      ),
     ])),
   });
 
@@ -74,6 +86,10 @@ pub(super) fn execute_web_search_turn(
           ("tool".to_string(), "web_search".to_string()),
           ("provider".to_string(), "DuckDuckGo Lite".to_string()),
           ("resultCount".to_string(), results.len().to_string()),
+          (
+            "routingReason".to_string(),
+            intent.routing_reason.to_string(),
+          ),
         ])),
       });
       let (summary, summary_attributes) = summarize_web_search_result(
@@ -106,6 +122,10 @@ pub(super) fn execute_web_search_turn(
         attributes: Some(HashMap::from([
           ("tool".to_string(), "web_search".to_string()),
           ("provider".to_string(), "DuckDuckGo Lite".to_string()),
+          (
+            "routingReason".to_string(),
+            intent.routing_reason.to_string(),
+          ),
         ])),
       });
       items.push(TimelineItem {

@@ -1,4 +1,10 @@
-pub(crate) fn infer_explicit_web_search_query(message: &str) -> Option<String> {
+#[derive(Debug, Clone)]
+pub(crate) struct WebSearchIntent {
+  pub(crate) query: String,
+  pub(crate) routing_reason: &'static str,
+}
+
+pub(crate) fn infer_explicit_web_search_intent(message: &str) -> Option<WebSearchIntent> {
   let trimmed = message.trim();
   let lowercased_message = trimmed.to_lowercase();
 
@@ -19,7 +25,10 @@ pub(crate) fn infer_explicit_web_search_query(message: &str) -> Option<String> {
         .trim()
         .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
       if !query.is_empty() {
-        return Some(query.to_string());
+        return Some(WebSearchIntent {
+          query: query.to_string(),
+          routing_reason: "explicitWebSearchRequest",
+        });
       }
     }
   }
@@ -27,7 +36,7 @@ pub(crate) fn infer_explicit_web_search_query(message: &str) -> Option<String> {
   None
 }
 
-pub(crate) fn infer_fresh_web_search_query(message: &str) -> Option<String> {
+pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIntent> {
   let trimmed = message
     .trim()
     .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
@@ -72,7 +81,10 @@ pub(crate) fn infer_fresh_web_search_query(message: &str) -> Option<String> {
   .any(|signal| lowercased_message.contains(signal));
 
   if has_freshness_signal && !has_local_signal {
-    Some(trimmed.to_string())
+    Some(WebSearchIntent {
+      query: trimmed.to_string(),
+      routing_reason: "freshPublicInformation",
+    })
   } else {
     None
   }
@@ -84,34 +96,36 @@ mod tests {
 
   #[test]
   fn web_search_query_inference_requires_web_intent() {
-    assert_eq!(
-      infer_explicit_web_search_query("web search for `Pith local model`?").as_deref(),
-      Some("Pith local model")
-    );
-    assert_eq!(
-      infer_explicit_web_search_query("search the web for Liquid AI LFM2.5").as_deref(),
-      Some("Liquid AI LFM2.5")
-    );
-    assert_eq!(
-      infer_explicit_web_search_query("websearch pith plugins").as_deref(),
-      Some("pith plugins")
-    );
-    assert_eq!(infer_explicit_web_search_query("look up README.md"), None);
-    assert_eq!(
-      infer_explicit_web_search_query("search RuntimeContext"),
-      None
-    );
+    let local_model =
+      infer_explicit_web_search_intent("web search for `Pith local model`?").expect("intent");
+    assert_eq!(local_model.query, "Pith local model");
+
+    let lfm = infer_explicit_web_search_intent("search the web for Liquid AI LFM2.5")
+      .expect("intent");
+    assert_eq!(lfm.query, "Liquid AI LFM2.5");
+
+    let plugins = infer_explicit_web_search_intent("websearch pith plugins").expect("intent");
+    assert_eq!(plugins.query, "pith plugins");
+    assert!(infer_explicit_web_search_intent("look up README.md").is_none());
+    assert!(infer_explicit_web_search_intent("search RuntimeContext").is_none());
   }
 
   #[test]
   fn fresh_web_search_query_inference_uses_current_information_signals() {
-    assert_eq!(
-      infer_fresh_web_search_query("What is the latest LFM2.5 release?").as_deref(),
-      Some("What is the latest LFM2.5 release")
-    );
-    assert_eq!(
-      infer_fresh_web_search_query("What changed in this repo?"),
-      None
-    );
+    let release =
+      infer_fresh_web_search_intent("What is the latest LFM2.5 release?").expect("intent");
+    assert_eq!(release.query, "What is the latest LFM2.5 release");
+    assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
+  }
+
+  #[test]
+  fn web_search_intent_exposes_routing_reason() {
+    let explicit =
+      infer_explicit_web_search_intent("search the web for Pith").expect("explicit intent");
+    assert_eq!(explicit.routing_reason, "explicitWebSearchRequest");
+
+    let fresh =
+      infer_fresh_web_search_intent("What is the current Rust release?").expect("fresh intent");
+    assert_eq!(fresh.routing_reason, "freshPublicInformation");
   }
 }
