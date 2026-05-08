@@ -5,6 +5,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
+use pith_process::{configure_process_group, terminate_process_group_or_child};
 
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
 const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -106,64 +107,14 @@ fn build_git_command(workspace_root: &Path, args: &[&str]) -> Command {
   let mut process = Command::new("git");
   process.arg("-C").arg(workspace_root).args(args);
 
-  #[cfg(unix)]
-  set_unix_process_group(&mut process);
+  configure_process_group(&mut process);
 
   process
 }
 
 fn terminate_git_child(child: &mut std::process::Child) {
-  #[cfg(unix)]
-  {
-    terminate_unix_process_group(child);
-  }
-
-  #[cfg(not(unix))]
-  {
-    let _ = child.kill();
-  }
-
+  terminate_process_group_or_child(child, Duration::from_millis(200));
   let _ = child.wait();
-}
-
-#[cfg(unix)]
-fn set_unix_process_group(process: &mut Command) {
-  use std::os::unix::process::CommandExt;
-
-  unsafe {
-    process.pre_exec(|| {
-      if setpgid(0, 0) == 0 {
-        Ok(())
-      } else {
-        Err(std::io::Error::last_os_error())
-      }
-    });
-  }
-}
-
-#[cfg(unix)]
-fn terminate_unix_process_group(child: &mut std::process::Child) {
-  let process_group_id = -(child.id() as i32);
-  unsafe {
-    kill(process_group_id, SIGTERM);
-  }
-  thread::sleep(Duration::from_millis(200));
-  if matches!(child.try_wait(), Ok(None)) {
-    unsafe {
-      kill(process_group_id, SIGKILL);
-    }
-  }
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
-#[cfg(unix)]
-const SIGKILL: i32 = 9;
-
-#[cfg(unix)]
-extern "C" {
-  fn kill(pid: i32, sig: i32) -> i32;
-  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 #[cfg(test)]

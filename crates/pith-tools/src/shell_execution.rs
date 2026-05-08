@@ -6,6 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
+use pith_process::{configure_process_group, terminate_process_group_or_child};
 
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -176,29 +177,7 @@ fn remove_artifact_directory(artifact_directory: &Path) {
 }
 
 fn terminate_shell_child(child: &mut Child) {
-  #[cfg(unix)]
-  {
-    terminate_unix_process_group(child);
-  }
-
-  #[cfg(not(unix))]
-  {
-    let _ = child.kill();
-  }
-}
-
-#[cfg(unix)]
-fn terminate_unix_process_group(child: &mut Child) {
-  let process_group_id = -(child.id() as i32);
-  unsafe {
-    kill(process_group_id, SIGTERM);
-  }
-  thread::sleep(Duration::from_millis(200));
-  if matches!(child.try_wait(), Ok(None)) {
-    unsafe {
-      kill(process_group_id, SIGKILL);
-    }
-  }
+  terminate_process_group_or_child(child, Duration::from_millis(200));
 }
 
 #[cfg(target_family = "windows")]
@@ -233,7 +212,7 @@ fn build_shell_command(
         .env("TMP", temporary_root)
         .env("TEMP", temporary_root);
     }
-    set_unix_process_group(&mut process);
+    configure_process_group(&mut process);
     return process;
   }
 
@@ -253,34 +232,8 @@ fn build_shell_command(
 fn build_unix_shell_command(command: &str) -> Command {
   let mut process = Command::new("sh");
   process.args(["-lc", command]);
-  set_unix_process_group(&mut process);
+  configure_process_group(&mut process);
   process
-}
-
-#[cfg(unix)]
-fn set_unix_process_group(process: &mut Command) {
-  use std::os::unix::process::CommandExt;
-
-  unsafe {
-    process.pre_exec(|| {
-      if setpgid(0, 0) == 0 {
-        Ok(())
-      } else {
-        Err(std::io::Error::last_os_error())
-      }
-    });
-  }
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
-#[cfg(unix)]
-const SIGKILL: i32 = 9;
-
-#[cfg(unix)]
-extern "C" {
-  fn kill(pid: i32, sig: i32) -> i32;
-  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 #[cfg(test)]

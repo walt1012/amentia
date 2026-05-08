@@ -12,6 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use pith_process::{configure_process_group, terminate_process_group_or_child};
 use serde::{Deserialize, Serialize};
 
 const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
@@ -1099,61 +1100,15 @@ fn join_pipe_reader(reader: Option<thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
 }
 
 fn terminate_llama_child(child: &mut Child) {
-  #[cfg(unix)]
-  {
-    terminate_unix_process_group(child);
-  }
-
-  #[cfg(not(unix))]
-  {
-    let _ = child.kill();
-  }
+  terminate_process_group_or_child(child, Duration::from_millis(200));
 }
 
 fn build_llama_cpp_command(binary_path: &Path) -> Command {
   let mut process = Command::new(binary_path);
 
-  #[cfg(unix)]
-  {
-    use std::os::unix::process::CommandExt;
-
-    unsafe {
-      process.pre_exec(|| {
-        if setpgid(0, 0) == 0 {
-          Ok(())
-        } else {
-          Err(std::io::Error::last_os_error())
-        }
-      });
-    }
-  }
+  configure_process_group(&mut process);
 
   process
-}
-
-#[cfg(unix)]
-fn terminate_unix_process_group(child: &mut Child) {
-  let process_group_id = -(child.id() as i32);
-  unsafe {
-    kill(process_group_id, SIGTERM);
-  }
-  thread::sleep(Duration::from_millis(200));
-  if matches!(child.try_wait(), Ok(None)) {
-    unsafe {
-      kill(process_group_id, SIGKILL);
-    }
-  }
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
-#[cfg(unix)]
-const SIGKILL: i32 = 9;
-
-#[cfg(unix)]
-extern "C" {
-  fn kill(pid: i32, sig: i32) -> i32;
-  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 fn clean_model_output(output: &str) -> String {

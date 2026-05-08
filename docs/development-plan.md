@@ -824,6 +824,7 @@ Recommended monorepo layout:
 |   |-- pith-core/
 |   |-- pith-model-runtime/
 |   |-- pith-plugin-host/
+|   |-- pith-process/
 |   |-- pith-sandbox/
 |   |-- pith-protocol/
 |   |-- pith-runtime-bin/
