@@ -103,7 +103,11 @@ pub(super) fn execute_read_turn(
         kind: "warning".to_string(),
         title: "read_file failed".to_string(),
         content: error.to_string(),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "read_file",
+          workspace,
+          [("relativePath".to_string(), relative_path.to_string())],
+        )),
       });
       items.push(TimelineItem {
         kind: "assistantMessage".to_string(),

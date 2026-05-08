@@ -54,7 +54,18 @@ pub(super) fn append_approved_write_execution(
     Ok(relative_path) => {
       append_successful_write(events, workspace, approval, &content, relative_path)
     }
-    Err(error) => events.push_item(warning_item("write_file failed", error.to_string())),
+    Err(error) => events.push_item(warning_item(
+      "write_file failed",
+      error.to_string(),
+      Some(workspace_tool_attributes(
+        "write_file",
+        workspace,
+        [
+          ("approvalId".to_string(), approval.id.clone()),
+          ("relativePath".to_string(), approval.relative_path.clone()),
+        ],
+      )),
+    )),
   }
 }
 

@@ -106,7 +106,11 @@ pub(super) fn execute_search_turn(
         kind: "warning".to_string(),
         title: "search_files failed".to_string(),
         content: error.to_string(),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "search_files",
+          workspace,
+          [("query".to_string(), query.to_string())],
+        )),
       });
       items.push(TimelineItem {
         kind: "assistantMessage".to_string(),

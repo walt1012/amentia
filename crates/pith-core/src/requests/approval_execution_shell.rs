@@ -94,6 +94,17 @@ pub(super) fn append_approved_shell_execution(
       events.extend_hook_memory_captures(memory_captures);
       events.extend_items(hook_items);
     }
-    Err(error) => events.push_item(warning_item("run_shell failed", error.to_string())),
+    Err(error) => events.push_item(warning_item(
+      "run_shell failed",
+      error.to_string(),
+      Some(workspace_tool_attributes(
+        "run_shell",
+        workspace,
+        [
+          ("approvalId".to_string(), approval.id.clone()),
+          ("command".to_string(), command.clone()),
+        ],
+      )),
+    )),
   }
 }

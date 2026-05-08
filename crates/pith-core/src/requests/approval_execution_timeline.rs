@@ -44,12 +44,16 @@ pub(super) fn tool_start_item(
   }
 }
 
-pub(super) fn warning_item(title: &str, content: String) -> TimelineItem {
+pub(super) fn warning_item(
+  title: &str,
+  content: String,
+  attributes: Option<HashMap<String, String>>,
+) -> TimelineItem {
   TimelineItem {
     kind: "warning".to_string(),
     title: title.to_string(),
     content,
-    attributes: None,
+    attributes,
   }
 }
 

@@ -107,7 +107,11 @@ pub(super) fn execute_list_turn(
         kind: "warning".to_string(),
         title: "list_directory failed".to_string(),
         content: error.to_string(),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "list_directory",
+          workspace,
+          [("relativePath".to_string(), ".".to_string())],
+        )),
       });
       items.push(TimelineItem {
         kind: "assistantMessage".to_string(),

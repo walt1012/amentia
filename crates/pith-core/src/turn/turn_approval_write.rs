@@ -100,7 +100,11 @@ pub(super) fn execute_write_turn(
         kind: "warning".to_string(),
         title: "generate_diff failed".to_string(),
         content: error.to_string(),
-        attributes: None,
+        attributes: Some(workspace_tool_attributes(
+          "generate_diff",
+          workspace,
+          [("relativePath".to_string(), intent.relative_path.clone())],
+        )),
       });
     }
   }
