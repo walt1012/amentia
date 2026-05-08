@@ -7,9 +7,30 @@ use crate::types::ShellSandboxSummary;
 
 const SHELL_SANDBOX_TEMP_DIR: &str = ".pith/sandbox-tmp";
 
+pub(crate) struct ShellSandboxPlan {
+  pub(crate) policy: pith_sandbox::SandboxPolicy,
+  pub(crate) summary: ShellSandboxSummary,
+}
+
+pub(crate) fn shell_sandbox_plan(workspace_root: &Path) -> ShellSandboxPlan {
+  let policy = shell_sandbox_policy(workspace_root);
+  let status = pith_sandbox::native_sandbox_status(&policy);
+
+  ShellSandboxPlan {
+    policy,
+    summary: shell_sandbox_summary_from_status(status),
+  }
+}
+
 pub(crate) fn shell_sandbox_summary(workspace_root: &Path) -> ShellSandboxSummary {
   let status = shell_sandbox_status(workspace_root);
 
+  shell_sandbox_summary_from_status(status)
+}
+
+fn shell_sandbox_summary_from_status(
+  status: pith_sandbox::NativeSandboxStatus,
+) -> ShellSandboxSummary {
   ShellSandboxSummary {
     mode: status.mode,
     backend: status.backend,

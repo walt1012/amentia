@@ -7,9 +7,6 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 
-#[cfg(target_os = "macos")]
-use crate::shell_sandbox::{shell_sandbox_policy, shell_sandbox_temp_root};
-
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
@@ -24,11 +21,12 @@ pub(crate) fn shell_command_timeout_seconds() -> u64 {
 pub(crate) fn run_shell_with_timeout(
   command: &str,
   workspace_root: &Path,
+  sandbox_policy: &pith_sandbox::SandboxPolicy,
   timeout: Duration,
   max_output_bytes: usize,
   artifact_directory: PathBuf,
 ) -> Result<ShellOutput> {
-  let mut child = build_shell_command(command, workspace_root)
+  let mut child = build_shell_command(command, workspace_root, sandbox_policy)
     .current_dir(workspace_root)
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
@@ -188,28 +186,37 @@ fn terminate_unix_process_group(child: &mut Child) {
 }
 
 #[cfg(target_family = "windows")]
-fn build_shell_command(command: &str, _workspace_root: &Path) -> Command {
+fn build_shell_command(
+  command: &str,
+  _workspace_root: &Path,
+  _sandbox_policy: &pith_sandbox::SandboxPolicy,
+) -> Command {
   let mut process = Command::new("powershell");
   process.args(["-NoProfile", "-Command", command]);
   process
 }
 
 #[cfg(target_os = "macos")]
-fn build_shell_command(command: &str, workspace_root: &Path) -> Command {
+fn build_shell_command(
+  command: &str,
+  _workspace_root: &Path,
+  sandbox_policy: &pith_sandbox::SandboxPolicy,
+) -> Command {
   if pith_sandbox::native_sandbox_available() {
-    let policy = shell_sandbox_policy(workspace_root);
-    let profile = pith_sandbox::macos_seatbelt_profile(&policy);
-    let temporary_root = shell_sandbox_temp_root(workspace_root);
+    let profile = pith_sandbox::macos_seatbelt_profile(sandbox_policy);
     let mut process = Command::new(pith_sandbox::macos_sandbox_exec_path());
     process
       .arg("-p")
       .arg(profile)
       .arg("/bin/sh")
       .arg("-lc")
-      .arg(command)
-      .env("TMPDIR", &temporary_root)
-      .env("TMP", &temporary_root)
-      .env("TEMP", &temporary_root);
+      .arg(command);
+    if let Some(temporary_root) = sandbox_policy.temporary_root() {
+      process
+        .env("TMPDIR", temporary_root)
+        .env("TMP", temporary_root)
+        .env("TEMP", temporary_root);
+    }
     set_unix_process_group(&mut process);
     return process;
   }
@@ -218,7 +225,11 @@ fn build_shell_command(command: &str, workspace_root: &Path) -> Command {
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
-fn build_shell_command(command: &str, _workspace_root: &Path) -> Command {
+fn build_shell_command(
+  command: &str,
+  _workspace_root: &Path,
+  _sandbox_policy: &pith_sandbox::SandboxPolicy,
+) -> Command {
   build_unix_shell_command(command)
 }
 
@@ -274,6 +285,7 @@ mod tests {
     let result = run_shell_with_timeout(
       "sleep 5",
       &workspace,
+      &pith_sandbox::SandboxPolicy::workspace_read_write(&workspace),
       Duration::from_millis(100),
       1024,
       artifact_directory,
