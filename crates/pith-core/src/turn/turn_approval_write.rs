@@ -4,12 +4,12 @@ use std::path::Path;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::generate_diff;
 
+use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::approval_types::PendingApproval;
 use crate::intent_inference;
 use crate::local_responses::build_plan_item;
 use crate::plugin_permissions::build_permission_denied_items;
 use crate::request_state::PreparedTurnSnapshot;
-use super::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_write_turn(
   snapshot: &PreparedTurnSnapshot,

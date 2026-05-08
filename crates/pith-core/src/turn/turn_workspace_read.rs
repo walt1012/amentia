@@ -4,11 +4,11 @@ use std::path::Path;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::read_file;
 
+use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{build_plan_item, format_file_result, summarize_file_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
-use super::turn_tool_provenance::workspace_tool_attributes;
 
 pub(super) fn execute_read_turn(
   snapshot: &PreparedTurnSnapshot,
