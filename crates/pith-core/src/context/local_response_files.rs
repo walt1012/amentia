@@ -12,6 +12,7 @@ use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes
 pub(crate) fn summarize_file_result(
   model_runtime: &LocalModelRuntime,
   memory_notes: &[MemoryNote],
+  memory_query: &str,
   thread_title: &str,
   workspace_name: &str,
   result: &ReadFileResult,
@@ -21,7 +22,7 @@ pub(crate) fn summarize_file_result(
     model_runtime,
     memory_notes,
     Some(workspace_name),
-    &format!("{thread_title} {}", result.relative_path),
+    &format!("{memory_query} {}", result.relative_path),
   );
   let preview = result
     .content
@@ -54,6 +55,7 @@ pub(crate) fn summarize_file_result(
 pub(crate) fn summarize_directory_result(
   model_runtime: &LocalModelRuntime,
   memory_notes: &[MemoryNote],
+  memory_query: &str,
   thread_title: &str,
   workspace_name: &str,
   entries: &[DirectoryEntry],
@@ -63,7 +65,7 @@ pub(crate) fn summarize_directory_result(
     model_runtime,
     memory_notes,
     Some(workspace_name),
-    &format!("{thread_title} workspace root"),
+    &format!("{memory_query} workspace root"),
   );
   if entries.is_empty() {
     return generate_local_summary(

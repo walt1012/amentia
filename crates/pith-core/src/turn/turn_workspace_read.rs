@@ -69,6 +69,7 @@ pub(super) fn execute_read_turn(
       let (summary, summary_attributes) = summarize_file_result(
         &snapshot.model_runtime,
         &snapshot.memory_notes,
+        &snapshot.message,
         &snapshot.thread_title,
         &workspace.display_name,
         &result,
