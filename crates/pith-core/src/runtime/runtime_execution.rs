@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
+use pith_model_runtime::GenerationCancellation;
 use pith_protocol::ApprovalRequest;
 
 use super::runtime_execution_approvals::RuntimePendingApprovalState;
@@ -11,6 +12,14 @@ use crate::approval_types::PendingApproval;
 pub(crate) struct RuntimeExecutionState {
   pending_approvals: RuntimePendingApprovalState,
   active_turns: RuntimeActiveTurnState,
+  running_turns: HashMap<String, RunningTurnCancellation>,
+  pending_running_cancellations: HashSet<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct RunningTurnCancellation {
+  thread_id: String,
+  cancellation: GenerationCancellation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +46,8 @@ impl RuntimeExecutionState {
     Self {
       pending_approvals: RuntimePendingApprovalState::new(pending_approvals),
       active_turns: RuntimeActiveTurnState::new(active_turns),
+      running_turns: HashMap::new(),
+      pending_running_cancellations: HashSet::new(),
     }
   }
 
@@ -44,13 +55,15 @@ impl RuntimeExecutionState {
     Self {
       pending_approvals: RuntimePendingApprovalState::empty(),
       active_turns: RuntimeActiveTurnState::empty(),
+      running_turns: HashMap::new(),
+      pending_running_cancellations: HashSet::new(),
     }
   }
 
   pub(crate) fn counts(&self) -> RuntimeExecutionCounts {
     RuntimeExecutionCounts {
       pending_approval_count: self.pending_approvals.count(),
-      active_turn_count: self.active_turns.count(),
+      active_turn_count: self.active_turns.count() + self.running_turns.len(),
     }
   }
 
@@ -100,6 +113,57 @@ impl RuntimeExecutionState {
 
   pub(crate) fn remove_active_turn(&mut self, id: &str) -> Option<ActiveTurn> {
     self.active_turns.remove(id)
+  }
+
+  pub(crate) fn insert_running_turn(
+    &mut self,
+    turn_id: String,
+    thread_id: String,
+    cancellation: GenerationCancellation,
+  ) {
+    self.running_turns.insert(
+      turn_id,
+      RunningTurnCancellation {
+        thread_id,
+        cancellation,
+      },
+    );
+  }
+
+  pub(crate) fn cancel_running_turn_for_thread(
+    &mut self,
+    thread_id: &str,
+  ) -> Option<(String, String)> {
+    let (turn_id, running_turn) = self
+      .running_turns
+      .iter()
+      .find(|(_, turn)| turn.thread_id == thread_id)
+      .map(|(turn_id, turn)| (turn_id.clone(), turn.clone()))?;
+    running_turn.cancellation.cancel();
+    Some((turn_id, running_turn.thread_id))
+  }
+
+  pub(crate) fn request_running_turn_cancel_for_thread(
+    &mut self,
+    thread_id: &str,
+  ) -> Option<(String, String)> {
+    let cancellation = self.cancel_running_turn_for_thread(thread_id);
+    if cancellation.is_some() {
+      self.pending_running_cancellations.remove(thread_id);
+    } else {
+      self
+        .pending_running_cancellations
+        .insert(thread_id.to_string());
+    }
+    cancellation
+  }
+
+  pub(crate) fn take_pending_running_turn_cancel(&mut self, thread_id: &str) -> bool {
+    self.pending_running_cancellations.remove(thread_id)
+  }
+
+  pub(crate) fn remove_running_turn(&mut self, turn_id: &str) {
+    self.running_turns.remove(turn_id);
   }
 }
 

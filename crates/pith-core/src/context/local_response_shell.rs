@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_memory::MemoryNote;
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_tools::ShellCommandResult;
 
 use super::local_response_formatting::format_shell_result;
@@ -14,6 +14,7 @@ pub(crate) fn summarize_shell_result(
   memory_notes: &[MemoryNote],
   workspace_name: &str,
   result: &ShellCommandResult,
+  cancellation: Option<&GenerationCancellation>,
 ) -> (String, HashMap<String, String>) {
   let memory_context = pack_memory_notes_for_context(
     model_runtime,
@@ -50,6 +51,7 @@ pub(crate) fn summarize_shell_result(
     observation_summary,
     &memory_context,
     Some(&observation),
+    cancellation,
   );
   attributes.extend(result.sandbox.attributes());
 

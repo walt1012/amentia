@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_memory::{MemoryEvent, MemoryNote};
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
@@ -43,6 +43,7 @@ pub(crate) struct PreparedTurnSnapshot {
   pub(crate) message: String,
   pub(crate) workspace: Option<WorkspaceSummary>,
   pub(crate) model_runtime: LocalModelRuntime,
+  pub(crate) cancellation: GenerationCancellation,
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
   pub(crate) action: PreparedTurnAction,

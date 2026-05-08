@@ -61,7 +61,17 @@ extension AppViewModel {
       return
     }
 
-    if cancelPendingTurnRequest() {
+    if let pendingThreadID = requestPendingTurnCancellation() {
+      Task {
+        do {
+          _ = try await runtimeBridge.cancelRunningTurn(threadID: pendingThreadID)
+        } catch {
+          appendEntry(
+            to: pendingThreadID,
+            TimelineEventPresenter.turnCancelFailed(error: error)
+          )
+        }
+      }
       return
     }
 
@@ -95,12 +105,21 @@ extension AppViewModel {
     appendItemsToTimeline(threadID: result.threadID, items: result.items)
     updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
     updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
-    refreshThreadPreview(
-      threadID: result.threadID,
-      preview: TimelineEventPresenter.turnPreview(
+    let wasCancelled = result.items.contains {
+      $0.attributes["streamingStatus"] == "cancelled"
+    }
+    if wasCancelled {
+      runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
+    }
+    let preview = wasCancelled
+      ? TimelineEventPresenter.cancelledResponsePreview
+      : TimelineEventPresenter.turnPreview(
         turnID: result.turnID,
         activeTurnID: result.activeTurnID
       )
+    refreshThreadPreview(
+      threadID: result.threadID,
+      preview: preview
     )
 
     if refreshMemory {
@@ -161,9 +180,9 @@ extension AppViewModel {
     await loadThreadHistory(threadID: result.threadID)
   }
 
-  private func cancelPendingTurnRequest() -> Bool {
-    guard let threadID = pendingTurnRequest.cancel() else {
-      return false
+  private func requestPendingTurnCancellation() -> String? {
+    guard let threadID = pendingTurnRequest.threadID else {
+      return nil
     }
 
     runtimeDetail = TimelineEventPresenter.cancellingTurnDetail
@@ -171,6 +190,6 @@ extension AppViewModel {
       threadID: threadID,
       preview: TimelineEventPresenter.cancellingResponsePreview
     )
-    return true
+    return threadID
   }
 }

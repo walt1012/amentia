@@ -13,7 +13,14 @@ pub(super) fn execute_no_workspace_turn(
     &snapshot.message,
     None,
     "Wait for a workspace before running filesystem tools.".to_string(),
+    Some(&snapshot.cancellation),
   ));
+  if snapshot.cancellation.is_cancelled() {
+    items.extend(crate::turn_streaming::build_turn_cancelled_items(
+      &snapshot.turn_id,
+    ));
+    return;
+  }
   items.push(TimelineItem {
     kind: "warning".to_string(),
     title: "Workspace Required".to_string(),

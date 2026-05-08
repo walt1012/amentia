@@ -32,7 +32,14 @@ pub(super) fn execute_read_turn(
         relative_path, workspace.display_name
       )
     },
+    Some(&snapshot.cancellation),
   ));
+  if snapshot.cancellation.is_cancelled() {
+    items.extend(crate::turn_streaming::build_turn_cancelled_items(
+      &snapshot.turn_id,
+    ));
+    return;
+  }
   if !permission_is_granted(&snapshot.permission_sources, "file.read") {
     items.extend(build_permission_denied_items(
       &snapshot.permission_sources,
@@ -65,7 +72,14 @@ pub(super) fn execute_read_turn(
         &snapshot.thread_title,
         &workspace.display_name,
         &result,
+        Some(&snapshot.cancellation),
       );
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
       *pending_active_turn = start_streaming_assistant_turn(
         &snapshot.thread_id,
         &snapshot.turn_id,

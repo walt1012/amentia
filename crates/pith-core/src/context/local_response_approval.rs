@@ -45,5 +45,6 @@ pub(crate) fn summarize_denied_approval(
     observation_summary,
     &memory_context,
     None,
+    None,
   )
 }

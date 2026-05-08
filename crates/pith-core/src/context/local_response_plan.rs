@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_memory::MemoryNote;
-use pith_model_runtime::{GenerateRequest, LocalModelRuntime, ModelRole};
+use pith_model_runtime::{GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole};
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
 use crate::context_memory_pack::{
@@ -14,6 +14,7 @@ pub(crate) fn build_plan_item(
   message: &str,
   workspace: Option<&WorkspaceSummary>,
   plan_hint: String,
+  cancellation: Option<&GenerationCancellation>,
 ) -> TimelineItem {
   let memory_context = pack_memory_notes_for_context(
     model_runtime,
@@ -39,6 +40,7 @@ pub(crate) fn build_plan_item(
       plan_hint
     ),
     max_tokens: 80,
+    cancellation: cancellation.cloned(),
   });
   let mut attributes = HashMap::from([
     ("responseRole".to_string(), "planner".to_string()),

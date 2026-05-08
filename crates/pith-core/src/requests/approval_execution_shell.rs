@@ -55,6 +55,7 @@ pub(super) fn append_approved_shell_execution(
         memory_notes,
         &workspace.display_name,
         &result,
+        None,
       );
       events.push_item(TimelineItem {
         kind: "toolResult".to_string(),

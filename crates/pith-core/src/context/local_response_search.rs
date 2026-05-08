@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_memory::MemoryNote;
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_tools::SearchMatch;
 
 use super::local_response_formatting::format_search_result;
@@ -16,6 +16,7 @@ pub(crate) fn summarize_search_result(
   workspace_name: &str,
   query: &str,
   matches: &[SearchMatch],
+  cancellation: Option<&GenerationCancellation>,
 ) -> (String, HashMap<String, String>) {
   let memory_context =
     pack_memory_notes_for_context(model_runtime, memory_notes, Some(workspace_name), query);
@@ -32,6 +33,7 @@ pub(crate) fn summarize_search_result(
       ),
       &memory_context,
       None,
+      cancellation,
     );
   }
 
@@ -64,5 +66,6 @@ pub(crate) fn summarize_search_result(
     observation_summary,
     &memory_context,
     Some(&observation),
+    cancellation,
   )
 }

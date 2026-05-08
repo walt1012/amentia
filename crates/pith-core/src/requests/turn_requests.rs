@@ -1,3 +1,4 @@
+use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnStartResult};
 
 use crate::approval_state::approvals_for_thread;
@@ -32,6 +33,7 @@ pub fn prepare_turn_start(
 
   let current_workspace = context.workspace_state.current_cloned();
   let model_runtime = context.model_state.snapshot();
+  let cancellation = GenerationCancellation::new();
   let memory_notes = context.memory_state.snapshot_notes();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
   let prepared_thread = {
@@ -51,6 +53,17 @@ pub fn prepare_turn_start(
     prepared_thread.workspace.as_ref(),
     &permission_sources,
   );
+  if context
+    .execution_state
+    .take_pending_running_turn_cancel(&prepared_thread.thread_id)
+  {
+    cancellation.cancel();
+  }
+  context.execution_state.insert_running_turn(
+    prepared_thread.turn_id.clone(),
+    prepared_thread.thread_id.clone(),
+    cancellation.clone(),
+  );
 
   Ok(PreparedTurnStart {
     request_id: request.id,
@@ -62,6 +75,7 @@ pub fn prepare_turn_start(
       message: params.message,
       workspace: prepared_thread.workspace,
       model_runtime,
+      cancellation,
       memory_notes,
       permission_sources,
       action,
@@ -85,6 +99,15 @@ pub fn complete_prepared_turn_start(
   completed: CompletedTurnStart,
 ) -> JsonRpcResponse {
   let output = completed.output;
+  context.execution_state.remove_running_turn(&output.turn_id);
+  let was_cancelled = output.items.iter().any(|item| {
+    item
+      .attributes
+      .as_ref()
+      .and_then(|attributes| attributes.get("streamingStatus"))
+      .map(|status| status == "cancelled")
+      .unwrap_or(false)
+  });
   let active_turn_id = output
     .pending_active_turn
     .as_ref()
@@ -98,7 +121,9 @@ pub fn complete_prepared_turn_start(
     return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
   };
 
-  if active_turn_id.is_some() {
+  if was_cancelled {
+    thread.mark_cancelled();
+  } else if active_turn_id.is_some() {
     thread.mark_streaming();
   } else if !thread.status_contains("approval") {
     thread.mark_ready();

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, TimelineItem, TurnCancelParams, TurnCancelResult,
+  TurnCancelRunningParams,
 };
 
 use crate::active_turns::update_streaming_item;
@@ -49,29 +50,7 @@ pub(crate) fn handle_turn_cancel(
   );
   thread.mark_cancelled();
 
-  let items = vec![
-    TimelineItem {
-      kind: "warning".to_string(),
-      title: "Turn Cancelled".to_string(),
-      content: format!(
-        "Cancelled {} before the assistant response completed.",
-        params.turn_id
-      ),
-      attributes: Some(HashMap::from([(
-        "turnId".to_string(),
-        params.turn_id.clone(),
-      )])),
-    },
-    TimelineItem {
-      kind: "assistantMessage".to_string(),
-      title: "Assistant".to_string(),
-      content: "Pith stopped the active response at your request.".to_string(),
-      attributes: Some(HashMap::from([
-        ("turnId".to_string(), params.turn_id.clone()),
-        ("streamingStatus".to_string(), "cancelled".to_string()),
-      ])),
-    },
-  ];
+  let items = build_turn_cancelled_items(&params.turn_id);
   thread.append_items(items.clone());
 
   if let Err(error) = context.persist_threads() {
@@ -93,4 +72,59 @@ pub(crate) fn handle_turn_cancel(
         .active_turn_id_for_thread(&cancelled_thread_id),
     },
   )
+}
+
+pub(crate) fn handle_turn_cancel_running(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match parse_required_params::<TurnCancelRunningParams>(
+    &request,
+    "turn/cancelRunning",
+  ) {
+    Ok(params) => params,
+    Err(response) => return response,
+  };
+
+  if context.thread_state.find(&params.thread_id).is_none() {
+    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+  }
+
+  let (turn_id, thread_id) = context
+    .execution_state
+    .request_running_turn_cancel_for_thread(&params.thread_id)
+    .unwrap_or_else(|| ("".to_string(), params.thread_id.clone()));
+
+  JsonRpcResponse::success(
+    request.id,
+    &TurnCancelResult {
+      turn_id,
+      thread_id: thread_id.clone(),
+      items: vec![],
+      active_turn_id: context.execution_state.active_turn_id_for_thread(&thread_id),
+    },
+  )
+}
+
+pub(crate) fn build_turn_cancelled_items(turn_id: &str) -> Vec<TimelineItem> {
+  vec![
+    TimelineItem {
+      kind: "warning".to_string(),
+      title: "Turn Cancelled".to_string(),
+      content: format!("Cancelled {turn_id} before the assistant response completed."),
+      attributes: Some(HashMap::from([(
+        "turnId".to_string(),
+        turn_id.to_string(),
+      )])),
+    },
+    TimelineItem {
+      kind: "assistantMessage".to_string(),
+      title: "Assistant".to_string(),
+      content: "Pith stopped the local response at your request.".to_string(),
+      attributes: Some(HashMap::from([
+        ("turnId".to_string(), turn_id.to_string()),
+        ("streamingStatus".to_string(), "cancelled".to_string()),
+      ])),
+    },
+  ]
 }

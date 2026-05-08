@@ -5,7 +5,9 @@ use crate::runtime_context::RuntimeContext;
 
 use super::turn_streaming_progress::advance_active_turn;
 
-pub(crate) use super::turn_cancel::handle_turn_cancel;
+pub(crate) use super::turn_cancel::{
+  build_turn_cancelled_items, handle_turn_cancel, handle_turn_cancel_running,
+};
 
 pub fn collect_notifications(context: &mut RuntimeContext) -> Result<Vec<JsonRpcNotification>> {
   let active_turn_ids = context.execution_state.active_turn_ids();

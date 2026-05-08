@@ -26,6 +26,7 @@ pub mod methods {
   pub const WORKSPACE_OPEN: &str = "workspace/open";
   pub const WORKSPACE_SEARCH: &str = "workspace/search";
   pub const TURN_CANCEL: &str = "turn/cancel";
+  pub const TURN_CANCEL_RUNNING: &str = "turn/cancelRunning";
   pub const THREAD_READ: &str = "thread/read";
   pub const THREAD_START: &str = "thread/start";
   pub const THREAD_LIST: &str = "thread/list";
@@ -525,6 +526,12 @@ pub struct TurnStartResult {
 #[serde(rename_all = "camelCase")]
 pub struct TurnCancelParams {
   pub turn_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnCancelRunningParams {
+  pub thread_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

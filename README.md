@@ -88,7 +88,7 @@ shape. `pith-core` is the Rust orchestration layer, and its source tree is group
 turn, plugin, context, workspace, thread, and support domains. The macOS target follows the same rule
 with app, runtime, local model, plugin, memory, timeline, workspace, and setup domains.
 
-`pith-memory` owns memory semantics such as notes, events, summaries, and retrieval. `pith-storage`
+`pith-memory` owns memory semantics such as notes, events, summaries, and note ranking. `pith-storage`
 owns durable runtime persistence for threads, workspace state, approvals, memory notes, and plugin
 state.
 `pith-plugin-host` owns plugin manifests, discovery, capability registries, connector metadata, and

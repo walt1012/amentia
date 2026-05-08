@@ -76,7 +76,12 @@ mod tests {
       },
     ];
 
-    let ranked = rank_memory_notes(&notes, Some("pith"), "review docs/output.txt", 2);
+    let ranked = rank_memory_notes(
+      &notes,
+      Some("pith"),
+      "workspace review docs/output.txt",
+      2,
+    );
 
     assert_eq!(ranked.len(), 2);
     assert_eq!(ranked[0].note.id, "memory-3");
@@ -100,5 +105,22 @@ mod tests {
     assert_eq!(ranked.len(), 1);
     assert_eq!(ranked[0].note.id, "memory-1");
     assert!(ranked[0].score > 0);
+  }
+
+  #[test]
+  fn rank_memory_notes_ignores_workspace_notes_without_query_overlap() {
+    let notes = vec![MemoryNote {
+      id: "memory-1".to_string(),
+      title: "Opened workspace pith".to_string(),
+      body: "Pith opened the workspace at /tmp/pith.".to_string(),
+      scope: "pith".to_string(),
+      source: "workspace".to_string(),
+      created_at: 1,
+      tags: vec!["workspace".to_string(), "session".to_string()],
+    }];
+
+    let ranked = rank_memory_notes(&notes, Some("pith"), "review docs output", 4);
+
+    assert!(ranked.is_empty());
   }
 }

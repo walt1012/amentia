@@ -81,6 +81,10 @@ struct TurnCancelParams: Codable {
   let turnId: String
 }
 
+struct TurnCancelRunningParams: Codable {
+  let threadId: String
+}
+
 struct TurnCancelResult: Codable {
   let turnId: String
   let threadId: String

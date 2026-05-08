@@ -34,7 +34,14 @@ pub(super) fn execute_write_turn(
         intent.relative_path, workspace.display_name
       )
     },
+    Some(&snapshot.cancellation),
   ));
+  if snapshot.cancellation.is_cancelled() {
+    items.extend(crate::turn_streaming::build_turn_cancelled_items(
+      &snapshot.turn_id,
+    ));
+    return;
+  }
   let Some(approval_id) = approval_id else {
     items.extend(build_permission_denied_items(
       &snapshot.permission_sources,

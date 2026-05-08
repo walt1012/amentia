@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_memory::MemoryNote;
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_tools::{DirectoryEntry, ReadFileResult};
 
 use super::local_response_formatting::format_directory_result;
@@ -15,6 +15,7 @@ pub(crate) fn summarize_file_result(
   thread_title: &str,
   workspace_name: &str,
   result: &ReadFileResult,
+  cancellation: Option<&GenerationCancellation>,
 ) -> (String, HashMap<String, String>) {
   let memory_context = pack_memory_notes_for_context(
     model_runtime,
@@ -46,6 +47,7 @@ pub(crate) fn summarize_file_result(
     observation_summary,
     &memory_context,
     Some(&observation),
+    cancellation,
   )
 }
 
@@ -55,6 +57,7 @@ pub(crate) fn summarize_directory_result(
   thread_title: &str,
   workspace_name: &str,
   entries: &[DirectoryEntry],
+  cancellation: Option<&GenerationCancellation>,
 ) -> (String, HashMap<String, String>) {
   let memory_context = pack_memory_notes_for_context(
     model_runtime,
@@ -75,6 +78,7 @@ pub(crate) fn summarize_directory_result(
       ),
       &memory_context,
       None,
+      cancellation,
     );
   }
 
@@ -105,5 +109,6 @@ pub(crate) fn summarize_directory_result(
     observation_summary,
     &memory_context,
     Some(&observation),
+    cancellation,
   )
 }

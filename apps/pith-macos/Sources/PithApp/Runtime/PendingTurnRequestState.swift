@@ -30,22 +30,6 @@ final class PendingTurnRequestState {
     self.task = task
   }
 
-  func cancel() -> String? {
-    guard let requestID,
-          let threadID
-    else {
-      return nil
-    }
-
-    guard let task else {
-      clear(requestID: requestID)
-      return threadID
-    }
-
-    task.cancel()
-    return threadID
-  }
-
   func clear(requestID: UUID) {
     guard self.requestID == requestID else {
       return

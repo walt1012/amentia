@@ -4,6 +4,10 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
+use std::sync::{
+  atomic::{AtomicBool, Ordering},
+  Arc,
+};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -69,6 +73,7 @@ pub struct GenerateRequest {
   pub role: ModelRole,
   pub prompt: String,
   pub max_tokens: usize,
+  pub cancellation: Option<GenerationCancellation>,
 }
 
 #[derive(Debug, Clone)]
@@ -77,6 +82,33 @@ pub struct GenerateResponse {
   pub backend: String,
   pub status: String,
   pub model_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct GenerationCancellation {
+  cancelled: Arc<AtomicBool>,
+}
+
+impl GenerationCancellation {
+  pub fn new() -> Self {
+    Self {
+      cancelled: Arc::new(AtomicBool::new(false)),
+    }
+  }
+
+  pub fn cancel(&self) {
+    self.cancelled.store(true, Ordering::SeqCst);
+  }
+
+  pub fn is_cancelled(&self) -> bool {
+    self.cancelled.load(Ordering::SeqCst)
+  }
+}
+
+impl Default for GenerationCancellation {
+  fn default() -> Self {
+    Self::new()
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -241,6 +273,10 @@ impl LocalModelRuntime {
   }
 
   pub fn generate(&self, request: GenerateRequest) -> GenerateResponse {
+    if request_is_cancelled(&request) {
+      return self.generate_cancelled(&request.role);
+    }
+
     match &self.backend {
       ModelBackend::Unconfigured { detail, .. } => {
         self.generate_failure("unconfigured", "unavailable", &request.role, detail)
@@ -257,13 +293,31 @@ impl LocalModelRuntime {
           status: "ready".to_string(),
           model_id: self.pack.id.clone(),
         },
-        Err(error) => self.generate_failure(
-          "llama.cpp",
-          "error",
-          &request.role,
-          &format!("Local llama.cpp inference failed: {error}"),
-        ),
+        Err(error) => {
+          if request_is_cancelled(&request) {
+            self.generate_cancelled(&request.role)
+          } else {
+            self.generate_failure(
+              "llama.cpp",
+              "error",
+              &request.role,
+              &format!("Local llama.cpp inference failed: {error}"),
+            )
+          }
+        }
       },
+    }
+  }
+
+  fn generate_cancelled(&self, role: &ModelRole) -> GenerateResponse {
+    GenerateResponse {
+      text: format!(
+        "{} Local model generation was cancelled before completion.",
+        role_prefix(role)
+      ),
+      backend: "local".to_string(),
+      status: "cancelled".to_string(),
+      model_id: self.pack.id.clone(),
     }
   }
 
@@ -892,6 +946,7 @@ fn generate_with_llama_cpp(
     context_size,
     max_tokens,
     &request.prompt,
+    request.cancellation.as_ref(),
   )
   .with_context(|| format!("failed to execute {}", binary_path.display()))?;
 
@@ -923,6 +978,7 @@ fn run_llama_cpp_with_timeout(
   context_size: usize,
   max_tokens: usize,
   prompt: &str,
+  cancellation: Option<&GenerationCancellation>,
 ) -> Result<Output> {
   let timeout = llama_cpp_timeout();
   let mut child = build_llama_cpp_command(binary_path)
@@ -949,6 +1005,14 @@ fn run_llama_cpp_with_timeout(
   let status = loop {
     if let Some(status) = child.try_wait()? {
       break status;
+    }
+
+    if cancellation
+      .map(GenerationCancellation::is_cancelled)
+      .unwrap_or(false)
+    {
+      terminate_llama_child(&mut child);
+      break child.wait()?;
     }
 
     if started_at.elapsed() >= timeout {
@@ -981,6 +1045,14 @@ fn run_llama_cpp_with_timeout(
     stdout,
     stderr,
   })
+}
+
+fn request_is_cancelled(request: &GenerateRequest) -> bool {
+  request
+    .cancellation
+    .as_ref()
+    .map(GenerationCancellation::is_cancelled)
+    .unwrap_or(false)
 }
 
 fn llama_cpp_timeout() -> Duration {
@@ -1131,6 +1203,7 @@ mod tests {
       role: ModelRole::Summarizer,
       prompt: "Summarize this test prompt.".to_string(),
       max_tokens: 96,
+      cancellation: None,
     });
 
     assert!(response

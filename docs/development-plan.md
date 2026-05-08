@@ -366,7 +366,7 @@ The Rust side should use a multi-crate workspace.
 
 - workspace memory capture
 - thread memory summaries
-- local retrieval primitives
+- local memory note ranking
 - memory compaction hooks
 
 `pith-plugin-host`
@@ -512,7 +512,7 @@ The default model is a hard requirement, but it should be treated realistically.
 - extraction
 - short planning
 - command formatting
-- small retrieval-assisted tasks
+- small context-assisted tasks
 
 It is not sufficient as the final long-term answer for strong coding quality across complex repositories.
 
@@ -535,7 +535,7 @@ support, but the selected GGUF is downloaded, verified, activated, and then reus
 The app should not feel like a model zoo. Keep the first-use catalog compact, current, and easy to understand:
 
 - `LFM2.5-350M Q4_K_M` remains the default fastest first-use download
-- `Granite 4.0-H-350M Q4_K_M` is the preferred Apache-2.0 tiny model for tool, code, and retrieval-assisted workflows
+- `Granite 4.0-H-350M Q4_K_M` is the preferred Apache-2.0 tiny model for tool, code, and context-assisted workflows
 
 Retire older, redundant, or awkward-fit entries when they do not clearly beat the active set. Every built-in catalog entry must include verified file size and SHA-256 metadata before activation is allowed.
 
@@ -713,20 +713,20 @@ Initial built-in memory responsibilities:
 - workspace facts store
 - thread summaries
 - user notes attached to workspaces
-- lightweight ranked retrieval into prompts, with retrieval scores exposed for context attribution
+- lightweight memory note ranking into prompts, with ranking scores exposed for context attribution
 
 Phase 2 memory responsibilities:
 
 - cross-thread memory references
-- plugin-provided retrieval policies
+- plugin-provided memory ranking policies
 - background memory compaction
-- workspace context retrieval only after the context ledger and thread compaction paths are stable
-- optional local embedding and rerank path only after lexical retrieval proves useful
+- workspace context selection only after the context ledger and thread compaction paths are stable
+- optional local embedding and rerank path only after lexical context selection proves useful
 
 ### 14.9 Context Engineering Direction
 
-Pith should not treat the current memory retrieval path as Codex-style RAG. The current implementation
-is retrieval-assisted memory context: it ranks explicit user and workspace notes, fits them into a small
+Pith should not treat the current memory ranking path as Codex-style RAG. The current implementation
+is attribution-backed memory context: it ranks explicit user and workspace notes, fits them into a small
 model budget, and exposes attribution so the UI and runtime can explain why context was included.
 
 The Codex-inspired direction is context engineering, not a generic document RAG layer:
@@ -734,11 +734,11 @@ The Codex-inspired direction is context engineering, not a generic document RAG 
 - context ledger for file reads, diffs, approvals, shell output, plugin output, and model observations
 - thread compaction that preserves decisions, touched paths, unresolved tasks, and evidence references
 - budget-aware prompt assembly that can explain what was kept, compressed, or dropped
-- workspace retrieval after ledger and compaction are reliable, starting with lexical scoring before embeddings
+- workspace context selection after ledger and compaction are reliable, starting with lexical scoring before embeddings
 - optional local embeddings or reranking only when they improve the local daily loop without adding weight
 
-Milestone 3 should close with retrieval-assisted memory, compact prompts, attribution, and bounded execution.
-Milestone 4 may expand into workspace retrieval, but only as a continuation of the ledger and compaction
+Milestone 3 should close with ranked memory note packing, compact prompts, attribution, and bounded execution.
+Milestone 4 may expand into workspace-level retrieval, but only as a continuation of the ledger and compaction
 architecture rather than a separate search product.
 
 ## 15. Security And Approval Model
@@ -957,7 +957,7 @@ Deliverables:
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
 - inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
 - workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
-- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, retrieval score attribution, short tool observation previews, and a clear path toward context ledger design
+- local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, ranking score attribution, short tool observation previews, and a clear path toward context ledger design
 - native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
 - plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 
@@ -1130,7 +1130,7 @@ Mitigation:
 Milestone 3 is in closeout. The current codebase has the core daily-driver path in place: guided
 local model setup, strict model readiness, bounded model and shell subprocesses, runtime request
 unblocking for heavy work, workspace-bound threads, first-request readiness diagnostics, native
-sandbox diagnostics, compact context packing, retrieval-assisted memory attribution, and progressive disclosure
+sandbox diagnostics, compact context packing, ranked memory attribution, and progressive disclosure
 for secondary controls.
 
 The next product step is a broad review and refactor gate, not another feature expansion. Review the
@@ -1143,7 +1143,7 @@ Refactor priorities:
 2. keep the main timeline and local model flow as the primary product surface
 3. preserve bounded execution, cancellation, integrity checks, and workspace scoping as non-negotiable runtime contracts
 4. preserve the machine-readable setup contract from runtime launch through model, workspace, thread, and first request
-5. keep memory retrieval scoped as attribution-backed context packing until the context ledger and compaction design is ready
+5. keep memory ranking scoped as attribution-backed context packing until the context ledger and compaction design is ready
 6. defer broad connector execution, third-party auth, multi-agent workflows, generic RAG, and platform expansion to Milestone 4
 7. keep this plan outcome-based so implementation detail lives in code, commits, tests, and review notes
 
