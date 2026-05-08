@@ -102,10 +102,7 @@ pub fn execute_prepared_turn_start(prepared: PreparedTurnStart) -> CompletedTurn
     turn_actions::build_recovered_turn_output(thread_id, turn_id, display_message)
   });
 
-  CompletedTurnStart {
-    request_id,
-    output,
-  }
+  CompletedTurnStart { request_id, output }
 }
 
 pub fn complete_prepared_turn_start(
