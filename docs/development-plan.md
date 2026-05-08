@@ -929,6 +929,7 @@ Deliverables:
 - plugin enable and disable flow
 - plugin installation and removal workflow
 - plugin manifest validation and repair surfaces
+- bounded plugin manifest, command, and hook metadata loading
 - plugin capability registry
 - memory-aware plugin integration points
 - per-plugin permissions UI
@@ -939,7 +940,7 @@ Deliverables:
 
 Exit criteria:
 
-- bundled and locally installed plugin manifests load, validate, and surface provenance in-app
+- bundled and locally installed plugin manifests load within metadata size limits, validate, and surface provenance in-app
 - connector metadata can be inspected without requiring third-party auth or execution
 - prompt-only plugin commands are visible but blocked until they provide an execution contract
 - real plugin-owned execution, third-party auth, and connector workflows are explicitly deferred to Milestone 4
