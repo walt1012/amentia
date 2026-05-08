@@ -1,11 +1,13 @@
-use std::fs;
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 
+use crate::bounded_file::{read_text_prefix, text_prefix};
 use crate::paths::{
   canonical_workspace_root, sanitize_relative_path, validate_workspace_write_target,
 };
+
+const DIFF_PREVIEW_MAX_BYTES: usize = 128 * 1024;
 
 pub fn generate_diff(
   workspace_root: &Path,
@@ -21,18 +23,27 @@ pub fn generate_diff(
     bail!("workspace path points to a directory");
   }
 
-  let previous_content = if target.is_file() {
-    fs::read_to_string(&target)
-      .with_context(|| format!("failed to read file {}", target.display()))?
+  let previous_preview = if target.is_file() {
+    read_text_prefix(&target, DIFF_PREVIEW_MAX_BYTES)
   } else {
-    String::new()
+    Ok(text_prefix("", DIFF_PREVIEW_MAX_BYTES))
   };
-
-  Ok(build_unified_diff(
+  let previous_preview = previous_preview
+    .with_context(|| format!("failed to read file {}", target.display()))?;
+  let next_preview = text_prefix(next_content, DIFF_PREVIEW_MAX_BYTES);
+  let mut diff = build_unified_diff(
     &sanitized_relative_path,
-    &previous_content,
-    next_content,
-  ))
+    &previous_preview.content,
+    &next_preview.content,
+  );
+  if previous_preview.is_truncated || next_preview.is_truncated {
+    diff = format!(
+      "[diff preview truncated to {} bytes per side]\n{}",
+      DIFF_PREVIEW_MAX_BYTES, diff
+    );
+  }
+
+  Ok(diff)
 }
 
 fn build_unified_diff(relative_path: &str, previous_content: &str, next_content: &str) -> String {
@@ -136,6 +147,24 @@ mod tests {
     assert!(error
       .to_string()
       .contains("workspace path crosses a symlink"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn generate_diff_bounds_large_file_preview() {
+    let workspace = unique_temp_workspace("diff-bounded");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(
+      workspace.join("large.txt"),
+      format!("{}\nold tail\n", "old\n".repeat(70_000)),
+    )
+    .expect("large file");
+
+    let diff = generate_diff(&workspace, "large.txt", "new content").expect("diff");
+
+    assert!(diff.contains("diff preview truncated"));
+    assert!(diff.len() < 300_000);
 
     let _ = fs::remove_dir_all(workspace);
   }

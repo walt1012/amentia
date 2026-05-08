@@ -955,7 +955,7 @@ Deliverables:
 - guided local model delivery with `LFM2.5-350M` as the default, small local alternatives, persisted choice, and one-click download, pause, resume, cancel, activation, and relaunch
 - strict local model readiness with verified model integrity, no silent degraded-generation path, one active model at a time, and clear selection, reset, and recovery states
 - bounded local inference with generation timeouts, cancellation, subprocess cleanup, and runtime unblocking after model failure
-- native local sandbox foundation for shell execution, with workspace-scoped policy, workspace-local temp routing, compact output previews, app-owned output artifacts with retention, and readiness diagnostics
+- native local sandbox foundation for shell and file tools, with workspace-scoped policy, workspace-local temp routing, bounded file and diff previews, compact shell output previews, app-owned output artifacts with retention, and readiness diagnostics
 - fresh-install flow from runtime launch to model, workspace, thread, and first request without hidden setup knowledge
 - compact daily-loop surface built around the timeline header, setup progress, readiness chips, composer gating, and keyboard-first actions
 - timeline quality improvements for stable selection, concise operation history, diff readability, streaming state, and contextual recovery
@@ -969,7 +969,7 @@ Exit criteria:
 
 - a fresh install can choose, download, activate, and run a selected small local model without hidden degraded-generation behavior
 - model generation timeout, cancellation, or backend failure does not require restarting the app to recover the runtime loop
-- shell execution is bounded by approvals, timeouts, cleanup, workspace-local temp routing, compact output artifacts, and native sandbox diagnostics without requiring third-party containers
+- shell and file tool execution is bounded by approvals, timeouts, cleanup, workspace-local temp routing, compact previews, output artifact retention, and native sandbox diagnostics without requiring third-party containers
 - a user can bind a workspace, create or resume a thread, send the first local request, and recover from common setup failures without reading external docs
 - the normal ready state feels quiet, stable, intentional, and distinctly native on Intel Mac hardware
 

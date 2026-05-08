@@ -1,3 +1,4 @@
+mod bounded_file;
 mod diff;
 mod paths;
 mod shell;

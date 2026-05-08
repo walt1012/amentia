@@ -3,6 +3,7 @@ use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 
+use crate::bounded_file::read_text_prefix;
 use crate::paths::{
   canonical_workspace_root, relative_path_string, resolve_workspace_path, sanitize_relative_path,
   validate_workspace_write_parent, validate_workspace_write_target,
@@ -56,19 +57,12 @@ pub fn read_file(
 ) -> Result<ReadFileResult> {
   let target = resolve_workspace_path(workspace_root, relative_path, false)?;
   let workspace_root = canonical_workspace_root(workspace_root)?;
-  let bytes =
-    fs::read(&target).with_context(|| format!("failed to read file {}", target.display()))?;
-  let is_truncated = bytes.len() > max_bytes;
-  let preview_bytes = if is_truncated {
-    &bytes[..max_bytes]
-  } else {
-    &bytes[..]
-  };
+  let preview = read_text_prefix(&target, max_bytes)?;
 
   Ok(ReadFileResult {
     relative_path: relative_path_string(&workspace_root, &target)?,
-    content: String::from_utf8_lossy(preview_bytes).into_owned(),
-    is_truncated,
+    content: preview.content,
+    is_truncated: preview.is_truncated,
   })
 }
 
@@ -197,6 +191,20 @@ mod tests {
 
     let _ = fs::remove_dir_all(workspace);
     let _ = fs::remove_dir_all(outside);
+  }
+
+  #[test]
+  fn read_file_uses_bounded_preview() {
+    let workspace = unique_temp_workspace("read-bounded");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("large.txt"), "x".repeat(4096)).expect("large file");
+
+    let result = read_file(&workspace, "large.txt", 128).expect("read result");
+
+    assert_eq!(result.content.len(), 128);
+    assert!(result.is_truncated);
+
+    let _ = fs::remove_dir_all(workspace);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {
