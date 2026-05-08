@@ -4,9 +4,7 @@ use pith_memory::MemoryNote;
 use pith_model_runtime::LocalModelRuntime;
 
 use super::local_response_generation::generate_local_summary;
-use crate::context_memory_pack::{
-  format_memory_context_prompt, pack_memory_notes_for_context,
-};
+use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
 
 pub(crate) fn summarize_denied_approval(
   model_runtime: &LocalModelRuntime,

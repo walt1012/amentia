@@ -20,7 +20,11 @@ pub fn format_memory_context_prompt(memory_context: &MemoryContextPack) -> Strin
     memory_context.budget_char_count,
     memory_context.context_window_tokens
   );
-  format!("{}\n{}", header, format_memory_prompt(&memory_context.notes))
+  format!(
+    "{}\n{}",
+    header,
+    format_memory_prompt(&memory_context.notes)
+  )
 }
 
 pub fn merge_memory_context_attributes(
