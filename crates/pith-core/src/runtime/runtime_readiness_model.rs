@@ -4,6 +4,7 @@ pub(super) fn local_model_check(
   model_ready: bool,
   display_name: &str,
   backend: &str,
+  health_detail: &str,
 ) -> RuntimeReadinessCheck {
   let status = if model_ready {
     "ready"
@@ -17,8 +18,10 @@ pub(super) fn local_model_check(
     status: status.to_string(),
     detail: if model_ready {
       format!("{display_name} is ready through {backend}.")
-    } else {
+    } else if health_detail.trim().is_empty() {
       "Download and select one local model before agent work starts.".to_string()
+    } else {
+      health_detail.to_string()
     },
   }
 }

@@ -58,9 +58,8 @@ fn runtime_readiness_reports_agent_control_surface() {
     .as_str()
     .expect("summary")
     .contains("local agent work"));
-  let check_ids = result["checks"]
-    .as_array()
-    .expect("checks")
+  let checks = result["checks"].as_array().expect("checks");
+  let check_ids = checks
     .iter()
     .filter_map(|check| check["id"].as_str())
     .collect::<Vec<_>>();
@@ -76,6 +75,19 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
+  assert_eq!(result["metrics"]["webSearchTimeoutSeconds"], "20");
+  let local_model = checks
+    .iter()
+    .find(|check| check["id"] == "localModel")
+    .expect("local model check");
+  if local_model["status"].as_str() != Some("ready") {
+    assert!(
+      local_model["detail"]
+        .as_str()
+        .expect("local model detail")
+        .contains("Local model runtime is unavailable")
+    );
+  }
 }
 
 #[test]

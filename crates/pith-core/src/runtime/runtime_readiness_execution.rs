@@ -17,7 +17,7 @@ pub(super) fn bounded_runtime_check() -> RuntimeReadinessCheck {
     id: "boundedRuntime".to_string(),
     title: "Bounded Runtime".to_string(),
     status: "ready".to_string(),
-    detail: "Shell and llama.cpp subprocesses use timeouts and cleanup.".to_string(),
+    detail: "Shell, llama.cpp, web search, and git helpers are bounded.".to_string(),
   }
 }
 

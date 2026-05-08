@@ -65,6 +65,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
         model_ready,
         &model_health.display_name,
         &model_health.backend,
+        &model_health.detail,
       ),
       workspace_check(context),
       thread_check(thread_ready, workspace_thread_count),

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use pith_model_runtime::llama_cpp_timeout_seconds;
 use pith_sandbox::NativeSandboxStatus;
-use pith_tools::shell_command_timeout_seconds;
+use pith_tools::{shell_command_timeout_seconds, web_search_timeout_seconds};
 
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionCounts;
@@ -88,6 +88,10 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     (
       "shellTimeoutSeconds".to_string(),
       shell_command_timeout_seconds().to_string(),
+    ),
+    (
+      "webSearchTimeoutSeconds".to_string(),
+      web_search_timeout_seconds().to_string(),
     ),
     (
       "llamaTimeoutSeconds".to_string(),

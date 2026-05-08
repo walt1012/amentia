@@ -22,6 +22,10 @@ pub fn web_search(query: &str, max_results: usize) -> Result<Vec<WebSearchResult
   web_search_with_cancellation(query, max_results, || false)
 }
 
+pub fn web_search_timeout_seconds() -> u64 {
+  WEB_SEARCH_PROCESS_TIMEOUT.as_secs()
+}
+
 pub fn web_search_with_cancellation<F>(
   query: &str,
   max_results: usize,
