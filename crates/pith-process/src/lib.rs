@@ -182,10 +182,7 @@ mod tests {
   fn wait_for_child_reports_completed_exit() {
     let mut command = Command::new("sh");
     configure_process_group(&mut command);
-    let mut child = command
-      .args(["-c", "exit 7"])
-      .spawn()
-      .expect("spawn child");
+    let mut child = command.args(["-c", "exit 7"]).spawn().expect("spawn child");
 
     let result = wait_for_child(
       &mut child,
