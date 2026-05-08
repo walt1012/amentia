@@ -36,7 +36,7 @@ pub fn run_shell(
     &sandbox_plan.policy,
     shell_command_timeout(),
     max_output_bytes,
-    shell_output_artifact_directory(),
+    shell_output_artifact_directory()?,
   )
   .with_context(|| {
     format!(

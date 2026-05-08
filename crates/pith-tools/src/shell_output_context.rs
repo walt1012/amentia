@@ -1,8 +1,11 @@
 use std::collections::HashSet;
 use std::env;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use anyhow::{bail, Context, Result};
 
 use crate::types::ShellOutputContext;
 
@@ -58,10 +61,11 @@ pub(crate) fn build_shell_output_context(
   }
 }
 
-pub(crate) fn shell_output_artifact_directory() -> PathBuf {
+pub(crate) fn shell_output_artifact_directory() -> Result<PathBuf> {
   let root = shell_output_artifact_root();
+  ensure_shell_output_artifact_root(&root)?;
   prune_shell_output_artifact_root(&root, SHELL_OUTPUT_ARTIFACT_RETAINED_RUNS);
-  root.join(shell_output_artifact_run_name())
+  create_shell_output_artifact_run_directory(&root)
 }
 
 fn compact_output_for_context(
@@ -211,6 +215,43 @@ fn shell_output_artifact_root() -> PathBuf {
     .join("Pith")
     .join("artifacts")
     .join("sandbox-output")
+}
+
+fn ensure_shell_output_artifact_root(root: &Path) -> Result<()> {
+  fs::create_dir_all(root)
+    .with_context(|| format!("failed to create shell output artifact root {}", root.display()))?;
+  let metadata = fs::symlink_metadata(root)
+    .with_context(|| format!("failed to inspect shell output artifact root {}", root.display()))?;
+  if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    bail!(
+      "shell output artifact root must be a real directory: {}",
+      root.display()
+    );
+  }
+  Ok(())
+}
+
+fn create_shell_output_artifact_run_directory(root: &Path) -> Result<PathBuf> {
+  for _ in 0..16 {
+    let run_directory = root.join(shell_output_artifact_run_name());
+    match fs::create_dir(&run_directory) {
+      Ok(()) => return Ok(run_directory),
+      Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
+      Err(error) => {
+        return Err(error).with_context(|| {
+          format!(
+            "failed to create shell output artifact directory {}",
+            run_directory.display()
+          )
+        });
+      }
+    }
+  }
+
+  bail!(
+    "failed to allocate a unique shell output artifact directory under {}",
+    root.display()
+  )
 }
 
 #[derive(Debug)]
@@ -377,6 +418,40 @@ mod tests {
     assert!(outside.join("keep.txt").exists());
 
     let _ = fs::remove_dir_all(root);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[test]
+  fn shell_output_artifact_directory_creates_real_run_directory() {
+    let root = unique_temp_directory("artifact-run-directory");
+
+    ensure_shell_output_artifact_root(&root).expect("artifact root");
+    let run_directory =
+      create_shell_output_artifact_run_directory(&root).expect("artifact run directory");
+
+    assert!(run_directory.is_dir());
+    assert!(run_directory.starts_with(&root));
+
+    let _ = fs::remove_dir_all(root);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_output_artifact_root_rejects_symlink() {
+    use std::os::unix::fs::symlink;
+
+    let root_parent = unique_temp_directory("artifact-root-parent");
+    let outside = unique_temp_directory("artifact-root-outside");
+    let root = root_parent.join("sandbox-output");
+    fs::create_dir_all(&root_parent).expect("root parent");
+    fs::create_dir_all(&outside).expect("outside");
+    symlink(&outside, &root).expect("artifact root symlink");
+
+    let error = ensure_shell_output_artifact_root(&root).expect_err("symlink root should fail");
+
+    assert!(error.to_string().contains("must be a real directory"));
+
+    let _ = fs::remove_dir_all(root_parent);
     let _ = fs::remove_dir_all(outside);
   }
 

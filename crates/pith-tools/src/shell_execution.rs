@@ -1,4 +1,4 @@
-use std::fs::{self, File};
+use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -68,7 +68,7 @@ pub(crate) fn run_shell_with_timeout(
     if stdout.source_byte_count > max_output_bytes || stderr.source_byte_count > max_output_bytes {
       Some(artifact_directory)
     } else {
-      let _ = fs::remove_dir_all(&artifact_directory);
+      remove_artifact_directory(&artifact_directory);
       None
     };
 
@@ -114,7 +114,10 @@ where
     if let Some(parent) = artifact_path.parent() {
       fs::create_dir_all(parent)?;
     }
-    let mut artifact = File::create(artifact_path)?;
+    let mut artifact = OpenOptions::new()
+      .write(true)
+      .create_new(true)
+      .open(artifact_path)?;
     let mut preview = Vec::with_capacity(max_preview_bytes.min(64 * 1024));
     let mut source_byte_count = 0;
     let mut buffer = [0_u8; 8192];
@@ -157,6 +160,19 @@ fn join_pipe_reader(
         source_byte_count: 0,
       })
     })
+}
+
+fn remove_artifact_directory(artifact_directory: &Path) {
+  let Ok(metadata) = fs::symlink_metadata(artifact_directory) else {
+    return;
+  };
+
+  if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    let _ = fs::remove_file(artifact_directory);
+    return;
+  }
+
+  let _ = fs::remove_dir_all(artifact_directory);
 }
 
 fn terminate_shell_child(child: &mut Child) {
@@ -317,6 +333,28 @@ mod tests {
     assert_eq!(fs::read(artifact_path).expect("artifact").len(), 4096);
 
     let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn artifact_cleanup_removes_symlink_without_following_it() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("artifact-cleanup-symlink");
+    let outside = unique_temp_workspace("artifact-cleanup-outside");
+    let artifact_directory = workspace.join("artifact-link");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(outside.join("keep.txt"), "keep").expect("outside file");
+    symlink(&outside, &artifact_directory).expect("artifact symlink");
+
+    remove_artifact_directory(&artifact_directory);
+
+    assert!(!artifact_directory.exists());
+    assert!(outside.join("keep.txt").is_file());
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {
