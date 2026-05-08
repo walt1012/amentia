@@ -4,7 +4,8 @@ use anyhow::{bail, Context, Result};
 
 use crate::paths::canonical_workspace_root;
 use crate::shell_execution::{run_shell_with_timeout, shell_command_timeout};
-use crate::shell_output_context::{build_shell_output_context, shell_output_artifact_directory};
+use crate::shell_output_artifacts::shell_output_artifact_directory;
+use crate::shell_output_context::build_shell_output_context;
 use crate::shell_sandbox::{
   prepare_shell_sandbox_environment, shell_sandbox_plan,
   shell_sandbox_status as build_shell_sandbox_status,
