@@ -149,7 +149,11 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert!(check_ids.contains(&"workspace"));
   assert!(check_ids.contains(&"thread"));
   assert!(check_ids.contains(&"firstRequest"));
+  assert!(check_ids.contains(&"nativeSandbox"));
   assert!(check_ids.contains(&"boundedRuntime"));
+  assert_eq!(result["metrics"]["sandboxMode"], "workspaceReadWrite");
+  assert!(result["metrics"]["sandboxBackend"].is_string());
+  assert_eq!(result["metrics"]["sandboxNetworkAllowed"], "false");
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
@@ -888,6 +892,7 @@ fn approval_respond_runs_shell_after_approval() {
   assert_eq!(items[2]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[2]["attributes"]["sandboxBackend"].is_string());
   assert!(items[2]["attributes"]["sandboxActive"].is_string());
+  assert!(items[2]["attributes"]["sandboxNetworkAllowed"].is_string());
   assert_eq!(
     items[2]["attributes"]["sandboxOutputContextMode"],
     "sandboxOutputPreview"
