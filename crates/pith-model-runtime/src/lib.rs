@@ -1077,10 +1077,7 @@ where
     let mut bytes = Vec::with_capacity(LLAMA_CPP_PIPE_OUTPUT_LIMIT.min(64 * 1024));
     let mut buffer = [0_u8; 8192];
 
-    loop {
-      let Ok(bytes_read) = reader.read(&mut buffer) else {
-        break;
-      };
+    while let Ok(bytes_read) = reader.read(&mut buffer) {
       if bytes_read == 0 {
         break;
       }
