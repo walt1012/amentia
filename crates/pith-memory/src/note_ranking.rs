@@ -76,12 +76,7 @@ mod tests {
       },
     ];
 
-    let ranked = rank_memory_notes(
-      &notes,
-      Some("pith"),
-      "workspace review docs/output.txt",
-      2,
-    );
+    let ranked = rank_memory_notes(&notes, Some("pith"), "workspace review docs/output.txt", 2);
 
     assert_eq!(ranked.len(), 2);
     assert_eq!(ranked[0].note.id, "memory-3");

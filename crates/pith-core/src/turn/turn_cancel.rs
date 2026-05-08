@@ -78,13 +78,11 @@ pub(crate) fn handle_turn_cancel_running(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match parse_required_params::<TurnCancelRunningParams>(
-    &request,
-    "turn/cancelRunning",
-  ) {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
+  let params =
+    match parse_required_params::<TurnCancelRunningParams>(&request, "turn/cancelRunning") {
+      Ok(params) => params,
+      Err(response) => return response,
+    };
 
   if context.thread_state.find(&params.thread_id).is_none() {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
@@ -101,7 +99,9 @@ pub(crate) fn handle_turn_cancel_running(
       turn_id,
       thread_id: thread_id.clone(),
       items: vec![],
-      active_turn_id: context.execution_state.active_turn_id_for_thread(&thread_id),
+      active_turn_id: context
+        .execution_state
+        .active_turn_id_for_thread(&thread_id),
     },
   )
 }
@@ -112,10 +112,7 @@ pub(crate) fn build_turn_cancelled_items(turn_id: &str) -> Vec<TimelineItem> {
       kind: "warning".to_string(),
       title: "Turn Cancelled".to_string(),
       content: format!("Cancelled {turn_id} before the assistant response completed."),
-      attributes: Some(HashMap::from([(
-        "turnId".to_string(),
-        turn_id.to_string(),
-      )])),
+      attributes: Some(HashMap::from([("turnId".to_string(), turn_id.to_string())])),
     },
     TimelineItem {
       kind: "assistantMessage".to_string(),
