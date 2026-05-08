@@ -755,7 +755,7 @@ The Codex-inspired direction is context engineering, not a generic document RAG 
 - thread compaction that preserves decisions, touched paths, unresolved tasks, and evidence references
 - budget-aware prompt assembly that can explain what was kept, compressed, or dropped
 - sandbox-backed output previews that keep raw shell output local while passing only compact evidence into prompts
-- explicit web search as a separate network tool gated by `network.outbound`, not as sandbox behavior or generic RAG
+- web search as a separate network tool gated by `network.outbound`, not as sandbox behavior or generic RAG
 - workspace context selection after ledger and compaction are reliable, starting with lexical scoring before embeddings
 - optional local embeddings or reranking only when they improve the local daily loop without adding weight
 
@@ -985,7 +985,7 @@ Deliverables:
 - inspector progressive disclosure for local model, memory, workspace search, plugin manager, thread, and diagnostics so secondary controls do not become primary chrome
 - workspace and thread integrity through workspace-bound threads, restoration, stale restore handling, runtime crash recovery, and pending request cleanup
 - local context management for small models through compact prompts, ranked memory note packing, budget-aware context headers, ranking score attribution, sandbox-backed tool observation previews, and a clear path toward context ledger design
-- explicit web search foundation through a permission-gated `web_search` tool and a default-off bundled Web Search plugin for current public information
+- default-on web search foundation through a permission-gated `web_search` tool and bundled Web Search plugin for current public information when the agent routing path needs freshness
 - native desktop polish on Intel Macs, including better loading, blocking, empty, and error states without adding heavyweight surfaces
 - plugin work limited to manager polish and capability visibility; broad connectors, third-party auth, real plugin execution contracts, and multi-agent workflows stay in Milestone 4 unless they unblock the local daily loop
 

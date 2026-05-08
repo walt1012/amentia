@@ -365,6 +365,7 @@ fn turn_start_warns_when_workspace_is_missing() {
 #[test]
 fn turn_start_web_search_requires_network_permission() {
   let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
 
   let _ = handle_request(
     &mut context,
@@ -401,6 +402,51 @@ fn turn_start_web_search_requires_network_permission() {
   );
   assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
   assert_eq!(items[2]["attributes"]["query"], "Pith local model");
+}
+
+#[test]
+fn turn_start_routes_fresh_public_requests_to_web_search_permission_gate() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Fresh Info Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "What is the latest LFM2.5 release?"
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(items[2]["kind"], "warning");
+  assert_eq!(items[2]["title"], "Plugin Permission Required");
+  assert_eq!(
+    items[2]["attributes"]["requiredPermission"],
+    "network.outbound"
+  );
+  assert_eq!(items[2]["attributes"]["blockedAction"], "search the web");
+  assert_eq!(
+    items[2]["attributes"]["query"],
+    "What is the latest LFM2.5 release"
+  );
 }
 
 #[test]
