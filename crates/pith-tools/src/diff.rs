@@ -28,8 +28,8 @@ pub fn generate_diff(
   } else {
     Ok(text_prefix("", DIFF_PREVIEW_MAX_BYTES))
   };
-  let previous_preview = previous_preview
-    .with_context(|| format!("failed to read file {}", target.display()))?;
+  let previous_preview =
+    previous_preview.with_context(|| format!("failed to read file {}", target.display()))?;
   let next_preview = text_prefix(next_content, DIFF_PREVIEW_MAX_BYTES);
   let mut diff = build_unified_diff(
     &sanitized_relative_path,
