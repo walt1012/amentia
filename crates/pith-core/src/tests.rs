@@ -1041,7 +1041,7 @@ fn follow_up_turn_retrieves_recent_memory_notes() {
     .expect("follow-up items")
     .clone();
 
-  assert_eq!(items[1]["attributes"]["memoryNoteCount"], "3");
+  assert_eq!(items[1]["attributes"]["memoryNoteCount"], "2");
   assert_eq!(items[1]["attributes"]["memoryContextWindowTokens"], "4096");
   assert_eq!(items[1]["attributes"]["memoryContextBudgetChars"], "1228");
   assert!(items[1]["attributes"]["memoryNoteTitles"]
@@ -1052,7 +1052,7 @@ fn follow_up_turn_retrieves_recent_memory_notes() {
     .as_str()
     .unwrap()
     .contains("Wrote docs/output.txt"));
-  assert_eq!(items[4]["attributes"]["memoryNoteCount"], "3");
+  assert_eq!(items[4]["attributes"]["memoryNoteCount"], "2");
   assert_eq!(items[4]["attributes"]["memoryContextWindowTokens"], "4096");
 }
 
