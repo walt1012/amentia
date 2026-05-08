@@ -117,15 +117,37 @@ impl ShellSandboxSummary {
 }
 
 impl ShellOutputContext {
+  pub fn source_total_bytes(&self) -> usize {
+    self.source_stdout_bytes.saturating_add(self.source_stderr_bytes)
+  }
+
+  pub fn retained_total_bytes(&self) -> usize {
+    self.retained_stdout_bytes.saturating_add(self.retained_stderr_bytes)
+  }
+
+  pub fn saved_bytes(&self) -> usize {
+    self.source_total_bytes().saturating_sub(self.retained_total_bytes())
+  }
+
+  pub fn savings_percent(&self) -> usize {
+    let source_total = self.source_total_bytes();
+    if source_total == 0 {
+      return 0;
+    }
+
+    self.saved_bytes().saturating_mul(100) / source_total
+  }
+
   pub fn display_line(&self) -> String {
     let artifact = self.artifact_directory.as_deref().unwrap_or("not needed");
     format!(
-      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; artifact: {}",
+      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifact: {}",
       self.mode,
       self.retained_stdout_bytes,
       self.source_stdout_bytes,
       self.retained_stderr_bytes,
       self.source_stderr_bytes,
+      self.savings_percent(),
       artifact
     )
   }
@@ -157,6 +179,14 @@ impl ShellOutputContext {
         "sandboxOutputCompacted".to_string(),
         self.was_compacted.to_string(),
       ),
+      (
+        "sandboxOutputSavedBytes".to_string(),
+        self.saved_bytes().to_string(),
+      ),
+      (
+        "sandboxOutputSavingsPercent".to_string(),
+        self.savings_percent().to_string(),
+      ),
     ]);
     if let Some(artifact_directory) = &self.artifact_directory {
       attributes.insert(
@@ -165,5 +195,31 @@ impl ShellOutputContext {
       );
     }
     attributes
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn shell_output_context_reports_context_savings() {
+    let context = ShellOutputContext {
+      mode: "sandboxOutputPreview".to_string(),
+      source_stdout_bytes: 900,
+      source_stderr_bytes: 100,
+      retained_stdout_bytes: 100,
+      retained_stderr_bytes: 50,
+      budget_bytes: 256,
+      was_compacted: true,
+      artifact_directory: Some("/tmp/pith/run-1".to_string()),
+    };
+
+    assert_eq!(context.source_total_bytes(), 1000);
+    assert_eq!(context.retained_total_bytes(), 150);
+    assert_eq!(context.saved_bytes(), 850);
+    assert_eq!(context.savings_percent(), 85);
+    assert!(context.display_line().contains("saved 85%"));
+    assert_eq!(context.attributes()["sandboxOutputSavingsPercent"], "85");
   }
 }
