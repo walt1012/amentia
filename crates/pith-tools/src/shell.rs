@@ -119,10 +119,7 @@ mod tests {
         .sandbox
         .writable_roots
         .contains(&workspace.display().to_string()));
-      assert!(result
-        .sandbox
-        .writable_roots
-        .contains(&expected_temp_root));
+      assert!(result.sandbox.writable_roots.contains(&expected_temp_root));
     } else {
       assert_eq!(result.sandbox.temporary_root, None);
       assert!(result.sandbox.writable_roots.is_empty());
