@@ -38,8 +38,7 @@ pub(crate) fn run_shell_with_timeout(
   let mut child = match child_result {
     Ok(child) => child,
     Err(error) => {
-      discard_shell_output_artifact_directory(&artifact_directory);
-      return Err(error.into());
+      return discard_artifact_and_return_error(&artifact_directory, error.into());
     }
   };
   let stdout_reader = child.stdout.take().map(|reader| {
@@ -56,17 +55,32 @@ pub(crate) fn run_shell_with_timeout(
       max_output_bytes,
     )
   });
-  let wait = wait_for_child(
+  let wait = match wait_for_child(
     &mut child,
     timeout,
     SHELL_POLL_INTERVAL,
     Duration::from_millis(200),
     || false,
-  )?;
+  ) {
+    Ok(wait) => wait,
+    Err(error) => {
+      return discard_artifact_and_return_error(&artifact_directory, error.into());
+    }
+  };
   let timed_out = wait.reason == ChildExitReason::TimedOut;
 
-  let stdout = join_pipe_reader(stdout_reader)?;
-  let stderr = join_pipe_reader(stderr_reader)?;
+  let stdout = match join_pipe_reader(stdout_reader) {
+    Ok(stdout) => stdout,
+    Err(error) => {
+      return discard_artifact_and_return_error(&artifact_directory, error);
+    }
+  };
+  let stderr = match join_pipe_reader(stderr_reader) {
+    Ok(stderr) => stderr,
+    Err(error) => {
+      return discard_artifact_and_return_error(&artifact_directory, error);
+    }
+  };
   let artifact_directory =
     if stdout.source_byte_count > max_output_bytes || stderr.source_byte_count > max_output_bytes {
       Some(artifact_directory)
@@ -163,6 +177,14 @@ fn join_pipe_reader(
         source_byte_count: 0,
       })
     })
+}
+
+fn discard_artifact_and_return_error<T>(
+  artifact_directory: &Path,
+  error: anyhow::Error,
+) -> Result<T> {
+  discard_shell_output_artifact_directory(artifact_directory);
+  Err(error)
 }
 
 #[cfg(target_family = "windows")]
@@ -287,6 +309,20 @@ mod tests {
       1024,
       artifact_directory.clone(),
     );
+
+    assert!(result.is_err());
+    assert!(!artifact_directory.exists());
+
+    let _ = fs::remove_dir_all(artifact_directory);
+  }
+
+  #[test]
+  fn artifact_error_boundary_discards_directory() {
+    let artifact_directory = unique_temp_workspace("artifact-error-boundary");
+    fs::create_dir_all(&artifact_directory).expect("artifact directory");
+
+    let result: Result<()> =
+      discard_artifact_and_return_error(&artifact_directory, anyhow::anyhow!("boom"));
 
     assert!(result.is_err());
     assert!(!artifact_directory.exists());
