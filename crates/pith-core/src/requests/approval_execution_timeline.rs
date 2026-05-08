@@ -31,12 +31,16 @@ pub(super) fn approval_denied_item(approval: &PendingApproval) -> TimelineItem {
   }
 }
 
-pub(super) fn tool_start_item(title: &str, content: String) -> TimelineItem {
+pub(super) fn tool_start_item(
+  title: &str,
+  content: String,
+  attributes: Option<HashMap<String, String>>,
+) -> TimelineItem {
   TimelineItem {
     kind: "toolStart".to_string(),
     title: title.to_string(),
     content,
-    attributes: None,
+    attributes,
   }
 }
 

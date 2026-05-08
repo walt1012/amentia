@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use pith_protocol::WorkspaceSummary;
 
-pub(super) fn workspace_tool_attributes(
+pub(crate) fn workspace_tool_attributes(
   tool: &str,
   workspace: &WorkspaceSummary,
   extra: impl IntoIterator<Item = (String, String)>,

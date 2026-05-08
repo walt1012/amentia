@@ -874,6 +874,10 @@ fn approval_respond_writes_file_after_approval() {
 
   assert_eq!(items[0]["kind"], "approvalResolved");
   assert_eq!(items[1]["title"], "write_file");
+  assert_eq!(items[1]["attributes"]["tool"], "write_file");
+  assert_eq!(items[1]["attributes"]["relativePath"], "docs/output.txt");
+  assert_eq!(items[2]["attributes"]["tool"], "write_file");
+  assert_eq!(items[2]["attributes"]["bytesWritten"], "26");
   assert_eq!(written_content, "Approval protected content");
 }
 
@@ -973,7 +977,12 @@ fn approval_respond_runs_shell_after_approval() {
   let items = approval_result["items"].as_array().expect("approval items");
 
   assert_eq!(items[1]["title"], "run_shell");
+  assert_eq!(items[1]["attributes"]["tool"], "run_shell");
+  assert_eq!(items[1]["attributes"]["command"], "ls");
   assert!(items[2]["content"].as_str().unwrap().contains("marker.txt"));
+  assert_eq!(items[2]["attributes"]["tool"], "run_shell");
+  assert_eq!(items[2]["attributes"]["command"], "ls");
+  assert_eq!(items[2]["attributes"]["exitCode"], "0");
   assert_eq!(items[2]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[2]["attributes"]["sandboxBackend"].is_string());
   assert!(items[2]["attributes"]["sandboxActive"].is_string());

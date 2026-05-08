@@ -9,6 +9,11 @@ pub(crate) fn build_permission_denied_items(
   workspace_name: &str,
   mut attributes: HashMap<String, String>,
 ) -> Vec<TimelineItem> {
+  let action_scope = if workspace_name == "the web" {
+    "".to_string()
+  } else {
+    format!(" in {workspace_name}")
+  };
   let granted_by = permission_sources
     .get(permission)
     .map(|plugins| plugins.join(", "))
@@ -22,7 +27,7 @@ pub(crate) fn build_permission_denied_items(
       kind: "warning".to_string(),
       title: "Plugin Permission Required".to_string(),
       content: format!(
-        "Pith could not {blocked_action} in {workspace_name} because no enabled plugin grants `{permission}`."
+        "Pith could not {blocked_action}{action_scope} because no enabled plugin grants `{permission}`."
       ),
       attributes: Some(attributes.clone()),
     },
@@ -57,5 +62,18 @@ mod tests {
       Some(&"shell.exec".to_string())
     );
     assert_eq!(attributes.get("grantedBy"), Some(&"none".to_string()));
+  }
+
+  #[test]
+  fn permission_denied_items_do_not_repeat_web_scope() {
+    let items = build_permission_denied_items(
+      &HashMap::new(),
+      "network.outbound",
+      "search the web",
+      "the web",
+      HashMap::new(),
+    );
+    assert!(items[0].content.contains("could not search the web because"));
+    assert!(!items[0].content.contains("in the web"));
   }
 }

@@ -4,7 +4,10 @@ pub use request_state::{
 pub use runtime_context::RuntimeContext;
 
 mod turn;
-pub(crate) use turn::{active_turns, approval_state, approval_types, turn_actions, turn_streaming};
+pub(crate) use turn::{
+  active_turns, approval_state, approval_types, turn_actions, turn_streaming,
+  turn_tool_provenance,
+};
 
 mod threads;
 pub(crate) use threads::{thread_state, thread_summary};

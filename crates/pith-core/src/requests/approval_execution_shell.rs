@@ -11,6 +11,7 @@ use crate::approval_types::PendingApproval;
 use crate::local_responses::{format_shell_result, summarize_shell_result};
 use crate::plugin_hooks::build_shell_completed_hook_items;
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
+use crate::turn_tool_provenance::workspace_tool_attributes;
 
 use super::approval_execution_events::ApprovalExecutionEvents;
 use super::approval_execution_timeline::{assistant_item, tool_start_item, warning_item};
@@ -42,7 +43,18 @@ pub(super) fn append_approved_shell_execution(
   }
 
   let command = approval.command.clone().unwrap_or_default();
-  events.push_item(tool_start_item("run_shell", command.clone()));
+  events.push_item(tool_start_item(
+    "run_shell",
+    command.clone(),
+    Some(workspace_tool_attributes(
+      "run_shell",
+      workspace,
+      [
+        ("approvalId".to_string(), approval.id.clone()),
+        ("command".to_string(), command.clone()),
+      ],
+    )),
+  ));
 
   match run_shell(Path::new(&workspace.root_path), &command, 4096) {
     Ok(result) => {
@@ -62,7 +74,16 @@ pub(super) fn append_approved_shell_execution(
         title: "run_shell result".to_string(),
         content: format_shell_result(&result),
         attributes: Some({
-          let mut attributes = result.sandbox.attributes();
+          let mut attributes = workspace_tool_attributes(
+            "run_shell",
+            workspace,
+            [
+              ("approvalId".to_string(), approval.id.clone()),
+              ("command".to_string(), command.clone()),
+              ("exitCode".to_string(), result.exit_code.to_string()),
+            ],
+          );
+          attributes.extend(result.sandbox.attributes());
           attributes.extend(result.output_context.attributes());
           attributes
         }),
