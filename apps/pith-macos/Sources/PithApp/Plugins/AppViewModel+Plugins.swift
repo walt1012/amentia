@@ -164,6 +164,10 @@ extension AppViewModel {
     PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot)
   }
 
+  func pluginCatalogPreview() -> [PluginSummary] {
+    PluginDashboardPresenter.catalogPreview(pluginDashboardSnapshot)
+  }
+
   func pluginPermissionCountSummary() -> String {
     PluginDashboardPresenter.permissionCountSummary(pluginDashboardSnapshot)
   }
@@ -244,12 +248,20 @@ extension AppViewModel {
     PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot)
   }
 
+  func pluginCommandPreview() -> [PluginCommandSummary] {
+    PluginDashboardPresenter.commandPreview(pluginDashboardSnapshot)
+  }
+
   func pluginHookCountSummary() -> String {
     PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginHookDetailSummary() -> String {
     PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot)
+  }
+
+  func pluginHookPreview() -> [PluginHookSummary] {
+    PluginDashboardPresenter.hookPreview(pluginDashboardSnapshot)
   }
 
   func refreshPluginState() async {

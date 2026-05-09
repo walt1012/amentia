@@ -49,6 +49,10 @@ enum PluginDashboardPresenter {
       .joined(separator: "\n")
   }
 
+  static func catalogPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {
+    snapshot.plugins
+  }
+
   static func permissionCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     let readyPlugins = readyPluginList(snapshot)
     let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
@@ -190,6 +194,10 @@ enum PluginDashboardPresenter {
       .joined(separator: "\n")
   }
 
+  static func commandPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginCommandSummary] {
+    snapshot.commands
+  }
+
   static func hookCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     if snapshot.hooks.isEmpty {
       return "No Plugin Hooks"
@@ -206,6 +214,10 @@ enum PluginDashboardPresenter {
     return snapshot.hooks
       .map { "\($0.pluginDisplayName): \($0.title) (\($0.event))" }
       .joined(separator: "\n")
+  }
+
+  static func hookPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginHookSummary] {
+    snapshot.hooks
   }
 
   private static func readyPluginList(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {

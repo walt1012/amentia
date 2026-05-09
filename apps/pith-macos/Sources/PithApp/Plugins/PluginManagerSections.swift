@@ -40,9 +40,9 @@ private struct PluginCatalogSection: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
-      if !viewModel.plugins.isEmpty {
+      if !viewModel.pluginCatalogPreview().isEmpty {
         Divider()
-        ForEach(viewModel.plugins) { plugin in
+        ForEach(viewModel.pluginCatalogPreview()) { plugin in
           PluginRow(
             plugin: plugin,
             canEdit: viewModel.canSetPluginEnabled(pluginID: plugin.id),
@@ -126,9 +126,9 @@ private struct PluginCommandsSection: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
-      if !viewModel.pluginCommands.isEmpty {
+      if !viewModel.pluginCommandPreview().isEmpty {
         Divider()
-        ForEach(viewModel.pluginCommands) { command in
+        ForEach(viewModel.pluginCommandPreview()) { command in
           PluginCommandRow(
             command: command,
             canRun: viewModel.canRunPluginCommand(commandID: command.id),
@@ -172,9 +172,9 @@ private struct PluginHooksSection: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
-      if !viewModel.pluginHooks.isEmpty {
+      if !viewModel.pluginHookPreview().isEmpty {
         Divider()
-        ForEach(viewModel.pluginHooks) { hook in
+        ForEach(viewModel.pluginHookPreview()) { hook in
           PluginHookRow(hook: hook)
         }
       }
