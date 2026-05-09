@@ -73,6 +73,8 @@ mod tests_plugins;
 #[cfg(test)]
 mod tests_runtime_surface;
 #[cfg(test)]
+mod tests_turn_lifecycle;
+#[cfg(test)]
 mod tests_turn_web_search;
 #[cfg(test)]
 mod tests_turn_workspace_tools;
