@@ -6,6 +6,9 @@ use anyhow::{bail, Context, Result};
 use crate::paths::{canonical_workspace_root, relative_path_string};
 use crate::types::SearchMatch;
 
+const SEARCH_MAX_FILE_BYTES: u64 = 256 * 1024;
+const SEARCH_MAX_VISITED_ENTRIES: usize = 20_000;
+
 pub fn search_files(
   workspace_root: &Path,
   query: &str,
@@ -23,6 +26,25 @@ pub fn search_files_with_cancellation<F>(
 where
   F: Fn() -> bool,
 {
+  search_files_with_entry_limit(
+    workspace_root,
+    query,
+    max_results,
+    SEARCH_MAX_VISITED_ENTRIES,
+    is_cancelled,
+  )
+}
+
+fn search_files_with_entry_limit<F>(
+  workspace_root: &Path,
+  query: &str,
+  max_results: usize,
+  max_visited_entries: usize,
+  is_cancelled: F,
+) -> Result<Vec<SearchMatch>>
+where
+  F: Fn() -> bool,
+{
   let workspace_root = canonical_workspace_root(workspace_root)?;
   let normalized_query = query.trim().to_lowercase();
 
@@ -34,12 +56,14 @@ where
   }
 
   let mut results = vec![];
+  let mut budget = SearchBudget::new(max_visited_entries);
   visit_directory(
     &workspace_root,
     &workspace_root,
     &normalized_query,
     max_results,
     &is_cancelled,
+    &mut budget,
     &mut results,
   )?;
 
@@ -52,6 +76,7 @@ fn visit_directory<F>(
   normalized_query: &str,
   max_results: usize,
   is_cancelled: &F,
+  budget: &mut SearchBudget,
   results: &mut Vec<SearchMatch>,
 ) -> Result<()>
 where
@@ -64,10 +89,17 @@ where
     return Ok(());
   }
 
-  let mut entries = fs::read_dir(current_dir)
+  let mut entries = Vec::new();
+  for entry in fs::read_dir(current_dir)
     .with_context(|| format!("failed to read directory {}", current_dir.display()))?
     .filter_map(|entry| entry.ok())
-    .collect::<Vec<_>>();
+  {
+    if is_cancelled() {
+      bail!("search cancelled");
+    }
+    budget.visit_entry()?;
+    entries.push(entry);
+  }
   entries.sort_by_key(|entry| entry.path());
 
   for entry in entries {
@@ -97,12 +129,13 @@ where
         normalized_query,
         max_results,
         is_cancelled,
+        budget,
         results,
       )?;
       continue;
     }
 
-    if !metadata.is_file() || metadata.len() > 256 * 1024 {
+    if !metadata.is_file() || metadata.len() > SEARCH_MAX_FILE_BYTES {
       continue;
     }
 
@@ -136,6 +169,28 @@ where
   }
 
   Ok(())
+}
+
+struct SearchBudget {
+  visited_entries: usize,
+  max_entries: usize,
+}
+
+impl SearchBudget {
+  fn new(max_entries: usize) -> Self {
+    Self {
+      visited_entries: 0,
+      max_entries,
+    }
+  }
+
+  fn visit_entry(&mut self) -> Result<()> {
+    if self.visited_entries >= self.max_entries {
+      bail!("search scanned too many workspace entries; narrow the query");
+    }
+    self.visited_entries += 1;
+    Ok(())
+  }
 }
 
 #[cfg(test)]
@@ -178,6 +233,24 @@ mod tests {
       search_files_with_cancellation(&workspace, "needle", 10, || true).expect_err("cancelled");
 
     assert!(error.to_string().contains("search cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn search_files_stops_at_entry_budget() {
+    let workspace = unique_temp_workspace("search-budget");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("one.txt"), "one").expect("one file");
+    fs::write(workspace.join("two.txt"), "two").expect("two file");
+    fs::write(workspace.join("three.txt"), "three").expect("three file");
+
+    let error = search_files_with_entry_limit(&workspace, "needle", 10, 2, || false)
+      .expect_err("entry budget");
+
+    assert!(error
+      .to_string()
+      .contains("search scanned too many workspace entries"));
 
     let _ = fs::remove_dir_all(workspace);
   }
