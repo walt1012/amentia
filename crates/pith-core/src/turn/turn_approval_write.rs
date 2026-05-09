@@ -68,7 +68,10 @@ pub(super) fn execute_write_turn(
         workspace,
         [
           ("relativePath".to_string(), intent.relative_path.clone()),
-          ("bytesRequested".to_string(), intent.content.len().to_string()),
+          (
+            "bytesRequested".to_string(),
+            intent.content.len().to_string(),
+          ),
           ("maxBytes".to_string(), write_file_max_bytes().to_string()),
         ],
       )),
