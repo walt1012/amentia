@@ -3,7 +3,7 @@ use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 
-use crate::bounded_file::read_text_prefix;
+use crate::bounded_file::read_text_prefix_with_cancellation;
 use crate::paths::{
   canonical_workspace_root, relative_path_string, resolve_workspace_path, sanitize_relative_path,
   validate_workspace_write_parent, validate_workspace_write_target,
@@ -103,9 +103,29 @@ pub fn read_file(
   relative_path: &str,
   max_bytes: usize,
 ) -> Result<ReadFileResult> {
+  read_file_with_cancellation(workspace_root, relative_path, max_bytes, || false)
+}
+
+pub fn read_file_with_cancellation<F>(
+  workspace_root: &Path,
+  relative_path: &str,
+  max_bytes: usize,
+  is_cancelled: F,
+) -> Result<ReadFileResult>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("file read cancelled");
+  }
   let target = resolve_workspace_path(workspace_root, relative_path, false)?;
   let workspace_root = canonical_workspace_root(workspace_root)?;
-  let preview = read_text_prefix(&target, max_bytes)?;
+  let metadata = fs::metadata(&target)
+    .with_context(|| format!("failed to read metadata for {}", target.display()))?;
+  if !metadata.is_file() {
+    bail!("workspace path is not a regular file");
+  }
+  let preview = read_text_prefix_with_cancellation(&target, max_bytes, &is_cancelled)?;
 
   Ok(ReadFileResult {
     relative_path: relative_path_string(&workspace_root, &target)?,
@@ -283,6 +303,20 @@ mod tests {
 
     assert_eq!(result.content.len(), 128);
     assert!(result.is_truncated);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn read_file_stops_when_cancelled() {
+    let workspace = unique_temp_workspace("read-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("inside.txt"), "visible").expect("inside file");
+
+    let error =
+      read_file_with_cancellation(&workspace, "inside.txt", 128, || true).expect_err("cancelled");
+
+    assert!(error.to_string().contains("file read cancelled"));
 
     let _ = fs::remove_dir_all(workspace);
   }

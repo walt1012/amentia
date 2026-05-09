@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::read_file;
+use pith_tools::read_file_with_cancellation;
 
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
@@ -63,7 +63,12 @@ pub(super) fn execute_read_turn(
     )),
   });
 
-  match read_file(Path::new(&workspace.root_path), relative_path, 4096) {
+  match read_file_with_cancellation(
+    Path::new(&workspace.root_path),
+    relative_path,
+    4096,
+    || snapshot.cancellation.is_cancelled(),
+  ) {
     Ok(result) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
@@ -99,6 +104,12 @@ pub(super) fn execute_read_turn(
       );
     }
     Err(error) => {
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "read_file failed".to_string(),

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 
 pub(crate) struct BoundedTextPreview {
   pub(crate) content: String,
@@ -10,6 +10,20 @@ pub(crate) struct BoundedTextPreview {
 }
 
 pub(crate) fn read_text_prefix(path: &Path, max_bytes: usize) -> Result<BoundedTextPreview> {
+  read_text_prefix_with_cancellation(path, max_bytes, &|| false)
+}
+
+pub(crate) fn read_text_prefix_with_cancellation<F>(
+  path: &Path,
+  max_bytes: usize,
+  is_cancelled: &F,
+) -> Result<BoundedTextPreview>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("file read cancelled");
+  }
   let mut file =
     File::open(path).with_context(|| format!("failed to open file {}", path.display()))?;
   let read_limit = max_bytes.saturating_add(1);
@@ -17,11 +31,17 @@ pub(crate) fn read_text_prefix(path: &Path, max_bytes: usize) -> Result<BoundedT
   let mut buffer = [0_u8; 8192];
 
   while bytes.len() < read_limit {
+    if is_cancelled() {
+      bail!("file read cancelled");
+    }
     let remaining = read_limit.saturating_sub(bytes.len());
     let read_size = remaining.min(buffer.len());
     let bytes_read = file
       .read(&mut buffer[..read_size])
       .with_context(|| format!("failed to read file {}", path.display()))?;
+    if is_cancelled() {
+      bail!("file read cancelled");
+    }
     if bytes_read == 0 {
       break;
     }
