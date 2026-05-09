@@ -12,6 +12,10 @@ use crate::types::{DirectoryEntry, ReadFileResult};
 
 const LIST_DIRECTORY_MAX_SCANNED_ENTRIES: usize = 5_000;
 
+pub fn list_directory_max_scanned_entries() -> usize {
+  LIST_DIRECTORY_MAX_SCANNED_ENTRIES
+}
+
 pub fn list_directory(
   workspace_root: &Path,
   relative_path: Option<&str>,

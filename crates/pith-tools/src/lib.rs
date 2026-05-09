@@ -27,6 +27,10 @@ pub use web_search::{
   WebSearchStatus,
 };
 pub use workspace_files::{
-  list_directory, list_directory_with_cancellation, read_file, write_file,
+  list_directory, list_directory_max_scanned_entries, list_directory_with_cancellation, read_file,
+  write_file,
 };
-pub use workspace_search::{search_files, search_files_with_cancellation};
+pub use workspace_search::{
+  search_files, search_files_max_file_bytes, search_files_max_visited_entries,
+  search_files_with_cancellation,
+};

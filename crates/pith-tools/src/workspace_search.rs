@@ -9,6 +9,14 @@ use crate::types::SearchMatch;
 const SEARCH_MAX_FILE_BYTES: u64 = 256 * 1024;
 const SEARCH_MAX_VISITED_ENTRIES: usize = 20_000;
 
+pub fn search_files_max_file_bytes() -> u64 {
+  SEARCH_MAX_FILE_BYTES
+}
+
+pub fn search_files_max_visited_entries() -> usize {
+  SEARCH_MAX_VISITED_ENTRIES
+}
+
 pub fn search_files(
   workspace_root: &Path,
   query: &str,
