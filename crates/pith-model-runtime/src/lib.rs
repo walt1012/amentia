@@ -3,126 +3,19 @@ use std::env;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
-use std::sync::{
-  atomic::{AtomicBool, Ordering},
-  Arc,
-};
-use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
-use pith_process::{
-  configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
-  wait_for_child, ChildExitReason,
-};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-const LLAMA_CPP_TIMEOUT: Duration = Duration::from_secs(180);
-const LLAMA_CPP_POLL_INTERVAL: Duration = Duration::from_millis(50);
-const LLAMA_CPP_PIPE_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
 const GGUF_MAGIC: [u8; 4] = *b"GGUF";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ModelRole {
-  Default,
-  Planner,
-  Coder,
-  Summarizer,
-}
+mod inference;
+mod types;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelPackDescriptor {
-  pub id: String,
-  pub display_name: String,
-  pub default_role: ModelRole,
-}
+pub use inference::llama_cpp_timeout_seconds;
+pub use types::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelHealth {
-  pub pack_id: String,
-  pub display_name: String,
-  pub backend: String,
-  pub status: String,
-  pub detail: String,
-  pub source: String,
-  pub binary_path: Option<String>,
-  pub model_path: Option<String>,
-  pub manifest_path: Option<String>,
-  pub metrics: HashMap<String, String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelPackManifest {
-  pub id: String,
-  pub display_name: String,
-  pub file_name: String,
-  pub context_size: usize,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub model_context_size: Option<usize>,
-  pub max_output_tokens: usize,
-  pub backend: String,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub license: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub homepage: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub download_url: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub sha256: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub size_bytes: Option<u64>,
-}
-
-#[derive(Debug, Clone)]
-pub struct GenerateRequest {
-  pub role: ModelRole,
-  pub prompt: String,
-  pub max_tokens: usize,
-  pub cancellation: Option<GenerationCancellation>,
-}
-
-#[derive(Debug, Clone)]
-pub struct GenerateResponse {
-  pub text: String,
-  pub backend: String,
-  pub status: String,
-  pub model_id: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct GenerationCancellation {
-  cancelled: Arc<AtomicBool>,
-}
-
-impl GenerationCancellation {
-  pub fn new() -> Self {
-    Self {
-      cancelled: Arc::new(AtomicBool::new(false)),
-    }
-  }
-
-  pub fn cancel(&self) {
-    self.cancelled.store(true, Ordering::SeqCst);
-  }
-
-  pub fn is_cancelled(&self) -> bool {
-    self.cancelled.load(Ordering::SeqCst)
-  }
-}
-
-impl Default for GenerationCancellation {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-
-#[derive(Debug, Clone)]
-pub struct ModelBootstrap {
-  pub manifest_path: PathBuf,
-  pub readme_path: Option<PathBuf>,
-  pub copied_files: Vec<PathBuf>,
-}
+use inference::{generate_with_llama_cpp, generation_failure_text, request_is_cancelled};
 
 #[derive(Debug, Clone)]
 pub struct LocalModelRuntime {
@@ -406,14 +299,6 @@ impl LocalModelRuntime {
       readme_path,
       copied_files,
     })
-  }
-}
-
-pub fn built_in_model_pack() -> ModelPackDescriptor {
-  ModelPackDescriptor {
-    id: "lfm2.5-350m".to_string(),
-    display_name: "LFM2.5-350M".to_string(),
-    default_role: ModelRole::Default,
   }
 }
 
@@ -1036,169 +921,6 @@ fn display_path(path: impl AsRef<Path>) -> String {
   path.as_ref().display().to_string()
 }
 
-fn generate_with_llama_cpp(
-  binary_path: &Path,
-  model_path: &Path,
-  request: &GenerateRequest,
-  manifest: Option<&ModelPackManifest>,
-) -> Result<String> {
-  let context_size = manifest.map(|item| item.context_size).unwrap_or(4096);
-  let max_tokens = manifest
-    .map(|item| item.max_output_tokens.min(request.max_tokens))
-    .unwrap_or(request.max_tokens);
-  let output = run_llama_cpp_with_timeout(
-    binary_path,
-    model_path,
-    context_size,
-    max_tokens,
-    &request.prompt,
-    request.cancellation.as_ref(),
-  )
-  .with_context(|| format!("failed to execute {}", binary_path.display()))?;
-
-  if !output.status.success() {
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    bail!(
-      "llama.cpp exited with status {}: {}",
-      output.status,
-      if stderr.is_empty() {
-        "no stderr output".to_string()
-      } else {
-        stderr
-      }
-    );
-  }
-
-  let text = String::from_utf8(output.stdout).context("llama.cpp output was not valid UTF-8")?;
-  let cleaned = clean_model_output(&text);
-  if cleaned.is_empty() {
-    bail!("llama.cpp produced an empty response");
-  }
-
-  Ok(cleaned)
-}
-
-fn run_llama_cpp_with_timeout(
-  binary_path: &Path,
-  model_path: &Path,
-  context_size: usize,
-  max_tokens: usize,
-  prompt: &str,
-  cancellation: Option<&GenerationCancellation>,
-) -> Result<Output> {
-  let timeout = llama_cpp_timeout();
-  let mut child = build_llama_cpp_command(binary_path)
-    .arg("-m")
-    .arg(model_path)
-    .arg("--temp")
-    .arg("0.2")
-    .arg("--ctx-size")
-    .arg(context_size.to_string())
-    .arg("-n")
-    .arg(max_tokens.to_string())
-    .arg("--no-display-prompt")
-    .arg("-p")
-    .arg(prompt)
-    .stdin(Stdio::null())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()?;
-  let stdout_reader = child
-    .stdout
-    .take()
-    .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
-  let stderr_reader = child
-    .stderr
-    .take()
-    .map(|reader| read_bounded_pipe_in_background(reader, LLAMA_CPP_PIPE_OUTPUT_LIMIT));
-  let wait = wait_for_child(
-    &mut child,
-    timeout,
-    LLAMA_CPP_POLL_INTERVAL,
-    Duration::from_millis(200),
-    || {
-      cancellation
-        .map(GenerationCancellation::is_cancelled)
-        .unwrap_or(false)
-    },
-  )?;
-
-  let stdout = join_bounded_pipe_reader(stdout_reader).bytes;
-  let stderr = join_bounded_pipe_reader(stderr_reader).bytes;
-
-  if wait.reason == ChildExitReason::TimedOut {
-    let stderr_text = String::from_utf8_lossy(&stderr).trim().to_string();
-    if stderr_text.is_empty() {
-      bail!("llama.cpp timed out after {} seconds", timeout.as_secs());
-    }
-
-    bail!(
-      "llama.cpp timed out after {} seconds: {}",
-      timeout.as_secs(),
-      stderr_text
-    );
-  }
-
-  Ok(Output {
-    status: wait.status,
-    stdout,
-    stderr,
-  })
-}
-
-fn request_is_cancelled(request: &GenerateRequest) -> bool {
-  request
-    .cancellation
-    .as_ref()
-    .map(GenerationCancellation::is_cancelled)
-    .unwrap_or(false)
-}
-
-fn llama_cpp_timeout() -> Duration {
-  env::var("PITH_LLAMA_CPP_TIMEOUT_SECONDS")
-    .ok()
-    .and_then(|value| value.parse::<u64>().ok())
-    .filter(|seconds| *seconds > 0)
-    .map(Duration::from_secs)
-    .unwrap_or(LLAMA_CPP_TIMEOUT)
-}
-
-pub fn llama_cpp_timeout_seconds() -> u64 {
-  llama_cpp_timeout().as_secs()
-}
-
-fn build_llama_cpp_command(binary_path: &Path) -> Command {
-  let mut process = Command::new(binary_path);
-
-  configure_process_group(&mut process);
-
-  process
-}
-
-fn clean_model_output(output: &str) -> String {
-  output
-    .lines()
-    .filter(|line| {
-      let trimmed = line.trim();
-      !trimmed.is_empty() && !trimmed.starts_with("build:") && !trimmed.starts_with("main:")
-    })
-    .collect::<Vec<_>>()
-    .join("\n")
-    .trim()
-    .to_string()
-}
-
-fn generation_failure_text(role: &ModelRole, detail: &str) -> String {
-  let role_label = match role {
-    ModelRole::Default => "default",
-    ModelRole::Planner => "planner",
-    ModelRole::Coder => "coder",
-    ModelRole::Summarizer => "summarizer",
-  };
-
-  format!("Pith could not produce a local {role_label} response because {detail}")
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -1427,18 +1149,6 @@ mod tests {
     assert_eq!(bootstrap.copied_files.len(), 2);
 
     remove_temp_directory(&temp_root);
-  }
-
-  #[test]
-  fn llama_pipe_reader_bounds_retained_output() {
-    let input = std::io::Cursor::new(vec![b'x'; LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512]);
-    let output = join_bounded_pipe_reader(Some(read_bounded_pipe_in_background(
-      input,
-      LLAMA_CPP_PIPE_OUTPUT_LIMIT,
-    )));
-
-    assert_eq!(output.bytes.len(), LLAMA_CPP_PIPE_OUTPUT_LIMIT);
-    assert_eq!(output.source_byte_count, LLAMA_CPP_PIPE_OUTPUT_LIMIT + 512);
   }
 
   fn test_manifest(
