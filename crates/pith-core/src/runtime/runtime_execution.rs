@@ -119,7 +119,9 @@ impl RuntimeExecutionState {
     thread_id: String,
     cancellation: GenerationCancellation,
   ) {
-    self.running.insert_running_turn(turn_id, thread_id, cancellation);
+    self
+      .running
+      .insert_running_turn(turn_id, thread_id, cancellation);
   }
 
   pub(crate) fn cancel_running_turn_for_thread(
@@ -135,7 +137,9 @@ impl RuntimeExecutionState {
     thread_id: String,
     cancellation: GenerationCancellation,
   ) {
-    self.running.insert_running_approval(approval_id, thread_id, cancellation);
+    self
+      .running
+      .insert_running_approval(approval_id, thread_id, cancellation);
   }
 
   pub(crate) fn cancel_running_approval_for_thread(&mut self, thread_id: &str) -> Option<String> {
