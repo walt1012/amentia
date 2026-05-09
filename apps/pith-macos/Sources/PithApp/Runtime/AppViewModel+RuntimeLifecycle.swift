@@ -80,6 +80,7 @@ extension AppViewModel {
         state.activeTurnThreadID = nil
       }
       pendingTurnRequest.clear()
+      pendingApprovalExecution.clear()
     }
 
     if plan.clearsModelReadinessState {

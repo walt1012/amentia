@@ -136,7 +136,7 @@ extension AppViewModel {
       isLocalModelReady: isLocalModelReady(),
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
-      hasCancelableTurn: timelineState.hasCancelableRuntimeTurn || pendingTurnRequest.canCancel,
+      hasCancelableTurn: hasCancelableLocalExecution(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
       pendingApprovalIDs: timelineState.selectedPendingApprovalIDs
     )

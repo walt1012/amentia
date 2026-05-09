@@ -15,6 +15,7 @@ final class AppViewModel: ObservableObject {
 
   let runtimeBridge: RuntimeBridge
   let pendingTurnRequest = PendingTurnRequestState()
+  let pendingApprovalExecution = PendingApprovalExecutionState()
   let workspaceSearchSession = WorkspaceSearchSession()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator
   let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()

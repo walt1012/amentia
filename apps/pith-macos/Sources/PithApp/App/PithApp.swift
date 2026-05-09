@@ -47,7 +47,7 @@ struct PithApp: App {
         .keyboardShortcut(.return, modifiers: [.command])
         .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel Turn") {
+        Button("Cancel Execution") {
           viewModel.cancelActiveTurn()
         }
         .keyboardShortcut(.cancelAction)

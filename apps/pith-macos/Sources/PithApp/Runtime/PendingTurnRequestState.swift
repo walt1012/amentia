@@ -1,6 +1,6 @@
 import Foundation
 
-final class PendingTurnRequestState {
+final class PendingRuntimeRequestState {
   private(set) var requestID: UUID?
   private(set) var threadID: String?
   private var task: Task<Void, Never>?
@@ -44,3 +44,6 @@ final class PendingTurnRequestState {
     task = nil
   }
 }
+
+typealias PendingTurnRequestState = PendingRuntimeRequestState
+typealias PendingApprovalExecutionState = PendingRuntimeRequestState

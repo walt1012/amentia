@@ -58,7 +58,7 @@ enum SessionActionPlanner {
     case .launchRuntime:
       return runtimeLaunchButtonTitle(snapshot)
     case .cancelTurn:
-      return "Cancel Turn"
+      return "Cancel Execution"
     }
   }
 

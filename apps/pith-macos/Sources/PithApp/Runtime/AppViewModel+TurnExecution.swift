@@ -40,7 +40,21 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard !pendingApprovalExecution.isPending else {
+      return
+    }
+
+    let approvalThreadID = self.selectedThreadID
+    let requestID = approvalThreadID.map {
+      pendingApprovalExecution.begin(threadID: $0)
+    }
+
+    let task = Task {
+      defer {
+        if let requestID {
+          pendingApprovalExecution.clear(requestID: requestID)
+        }
+      }
       do {
         let result = try await runtimeBridge.respondToApproval(
           approvalID: approvalID,
@@ -53,6 +67,9 @@ extension AppViewModel {
           TimelineEventPresenter.approvalResponseFailed(error: error)
         )
       }
+    }
+    if let requestID {
+      pendingApprovalExecution.bind(task: task, requestID: requestID)
     }
   }
 
@@ -68,6 +85,20 @@ extension AppViewModel {
         } catch {
           appendEntry(
             to: pendingThreadID,
+            TimelineEventPresenter.turnCancelFailed(error: error)
+          )
+        }
+      }
+      return
+    }
+
+    if let approvalThreadID = requestPendingApprovalCancellation() {
+      Task {
+        do {
+          _ = try await runtimeBridge.cancelRunningTurn(threadID: approvalThreadID)
+        } catch {
+          appendEntry(
+            to: approvalThreadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
           )
         }
@@ -95,7 +126,13 @@ extension AppViewModel {
   }
 
   func hasActiveOrPendingTurn() -> Bool {
-    activeTurnID != nil || pendingTurnRequest.isPending
+    activeTurnID != nil || pendingTurnRequest.isPending || pendingApprovalExecution.isPending
+  }
+
+  func hasCancelableLocalExecution() -> Bool {
+    timelineState.hasCancelableRuntimeTurn
+      || pendingTurnRequest.canCancel
+      || pendingApprovalExecution.canCancel
   }
 
   func applyRuntimeTurnResult(
@@ -182,6 +219,19 @@ extension AppViewModel {
 
   private func requestPendingTurnCancellation() -> String? {
     guard let threadID = pendingTurnRequest.threadID else {
+      return nil
+    }
+
+    runtimeDetail = TimelineEventPresenter.cancellingTurnDetail
+    refreshThreadPreview(
+      threadID: threadID,
+      preview: TimelineEventPresenter.cancellingResponsePreview
+    )
+    return threadID
+  }
+
+  private func requestPendingApprovalCancellation() -> String? {
+    guard let threadID = pendingApprovalExecution.threadID else {
       return nil
     }
 
