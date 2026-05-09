@@ -17,7 +17,7 @@ extension AppViewModel {
 
     let task = Task {
       defer {
-        pendingTurnRequest.clear(requestID: requestID)
+        localExecutionRequests.clearAgentRequest(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
@@ -30,7 +30,7 @@ extension AppViewModel {
         applyPendingTurnFailure(threadID: threadID, message: message, error: error)
       }
     }
-    pendingTurnRequest.bind(task: task, requestID: requestID)
+    localExecutionRequests.bindAgentRequest(task: task, requestID: requestID)
   }
 
   func respondToApproval(approvalID: String, decision: String) {
@@ -40,19 +40,19 @@ extension AppViewModel {
       return
     }
 
-    guard !pendingApprovalExecution.isPending else {
+    guard !localExecutionRequests.isApprovalExecutionPending else {
       return
     }
 
     let approvalThreadID = self.selectedThreadID
     let requestID = approvalThreadID.map {
-      pendingApprovalExecution.begin(threadID: $0)
+      localExecutionRequests.beginApprovalExecution(threadID: $0)
     }
 
     let task = Task {
       defer {
         if let requestID {
-          pendingApprovalExecution.clear(requestID: requestID)
+          localExecutionRequests.clearApprovalExecution(requestID: requestID)
         }
       }
       do {
@@ -69,7 +69,7 @@ extension AppViewModel {
       }
     }
     if let requestID {
-      pendingApprovalExecution.bind(task: task, requestID: requestID)
+      localExecutionRequests.bindApprovalExecution(task: task, requestID: requestID)
     }
   }
 
@@ -126,13 +126,11 @@ extension AppViewModel {
   }
 
   func hasActiveOrPendingTurn() -> Bool {
-    activeTurnID != nil || pendingTurnRequest.isPending || pendingApprovalExecution.isPending
+    activeTurnID != nil || localExecutionRequests.hasPendingExecution
   }
 
   func hasCancelableLocalExecution() -> Bool {
-    timelineState.hasCancelableRuntimeTurn
-      || pendingTurnRequest.canCancel
-      || pendingApprovalExecution.canCancel
+    timelineState.hasCancelableRuntimeTurn || localExecutionRequests.canCancelPendingExecution
   }
 
   func applyRuntimeTurnResult(
@@ -167,7 +165,7 @@ extension AppViewModel {
   private func beginPendingLocalTurn(threadID: String) -> UUID {
     draftMessage = ""
     runtimeDetail = TimelineEventPresenter.generatingLocalResponseDetail
-    return pendingTurnRequest.begin(threadID: threadID)
+    return localExecutionRequests.beginAgentRequest(threadID: threadID)
   }
 
   private func applyPendingTurnCancellation(threadID: String) {
@@ -218,7 +216,7 @@ extension AppViewModel {
   }
 
   private func requestPendingTurnCancellation() -> String? {
-    guard let threadID = pendingTurnRequest.threadID else {
+    guard let threadID = localExecutionRequests.pendingAgentThreadID() else {
       return nil
     }
 
@@ -231,7 +229,7 @@ extension AppViewModel {
   }
 
   private func requestPendingApprovalCancellation() -> String? {
-    guard let threadID = pendingApprovalExecution.threadID else {
+    guard let threadID = localExecutionRequests.pendingApprovalThreadID() else {
       return nil
     }
 

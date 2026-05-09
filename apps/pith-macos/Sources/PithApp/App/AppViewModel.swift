@@ -14,8 +14,7 @@ final class AppViewModel: ObservableObject {
   @Published private var pluginState: PluginRuntimeState
 
   let runtimeBridge: RuntimeBridge
-  let pendingTurnRequest = PendingTurnRequestState()
-  let pendingApprovalExecution = PendingApprovalExecutionState()
+  let localExecutionRequests = LocalExecutionRequestCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator
   let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()

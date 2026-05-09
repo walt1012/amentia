@@ -116,11 +116,11 @@ extension AppViewModel {
     }
 
     runtimeDetail = TimelineEventPresenter.runningPluginCommandDetail
-    let requestID = pendingTurnRequest.begin(threadID: threadID)
+    let requestID = localExecutionRequests.beginAgentRequest(threadID: threadID)
 
     let task = Task {
       defer {
-        pendingTurnRequest.clear(requestID: requestID)
+        localExecutionRequests.clearAgentRequest(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
@@ -145,7 +145,7 @@ extension AppViewModel {
         )
       }
     }
-    pendingTurnRequest.bind(task: task, requestID: requestID)
+    localExecutionRequests.bindAgentRequest(task: task, requestID: requestID)
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {
