@@ -67,9 +67,13 @@ mod tests_approval_execution;
 #[cfg(test)]
 mod tests_memory_context;
 #[cfg(test)]
-mod tests_plugin_execution;
+mod tests_plugin_command_execution;
 #[cfg(test)]
-mod tests_plugins;
+mod tests_plugin_lifecycle;
+#[cfg(test)]
+mod tests_plugin_permissions;
+#[cfg(test)]
+mod tests_plugin_registry;
 #[cfg(test)]
 mod tests_runtime_surface;
 #[cfg(test)]
