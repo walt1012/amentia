@@ -5,7 +5,15 @@ mod manifest;
 mod paths;
 mod registry;
 #[cfg(test)]
-mod tests;
+mod tests_bundled;
+#[cfg(test)]
+mod tests_lifecycle;
+#[cfg(test)]
+mod tests_manifest;
+#[cfg(test)]
+mod tests_registry;
+#[cfg(test)]
+mod tests_support;
 mod types;
 mod validation;
 
