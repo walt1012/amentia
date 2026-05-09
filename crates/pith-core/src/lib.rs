@@ -63,6 +63,6 @@ mod test_support;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_plugins;
-#[cfg(test)]
 mod tests_plugin_execution;
+#[cfg(test)]
+mod tests_plugins;
