@@ -1,0 +1,94 @@
+use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
+use super::*;
+use pith_protocol::methods;
+use serde_json::json;
+use std::fs;
+
+#[test]
+fn approval_respond_writes_file_after_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("approval-write");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Approval Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Write docs/output.txt: Approval protected content"
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  let turn_items = turn_result["items"].as_array().expect("turn items");
+  assert_eq!(turn_items[2]["title"], "generate_diff");
+  assert_eq!(turn_items[2]["attributes"]["tool"], "generate_diff");
+  assert_eq!(turn_items[2]["attributes"]["maxBytes"], "131072");
+  assert_eq!(
+    turn_items[2]["attributes"]["relativePath"],
+    "docs/output.txt"
+  );
+  assert_eq!(turn_items[3]["kind"], "diffArtifact");
+  assert_eq!(turn_items[3]["attributes"]["tool"], "generate_diff");
+  assert_eq!(turn_items[3]["attributes"]["maxBytes"], "131072");
+  assert!(turn_items[3]["content"]
+    .as_str()
+    .unwrap()
+    .contains("+++ b/docs/output.txt"));
+  assert_eq!(turn_items[4]["kind"], "approvalRequested");
+  let approval_id = turn_result["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+
+  let written_content =
+    fs::read_to_string(workspace.join("docs").join("output.txt")).expect("read written output");
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(approval_response.error.is_none());
+  let approval_result = approval_response.result.expect("approval result");
+  let items = approval_result["items"].as_array().expect("approval items");
+
+  assert_eq!(items[0]["kind"], "approvalResolved");
+  assert_eq!(items[1]["title"], "write_file");
+  assert_eq!(items[1]["attributes"]["tool"], "write_file");
+  assert_eq!(items[1]["attributes"]["relativePath"], "docs/output.txt");
+  assert_eq!(items[1]["attributes"]["maxBytes"], "1048576");
+  assert_eq!(items[2]["attributes"]["tool"], "write_file");
+  assert_eq!(items[2]["attributes"]["bytesWritten"], "26");
+  assert_eq!(items[2]["attributes"]["maxBytes"], "1048576");
+  assert_eq!(written_content, "Approval protected content");
+}

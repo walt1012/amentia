@@ -63,7 +63,9 @@ mod test_support;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_approval_execution;
+mod tests_approval_shell;
+#[cfg(test)]
+mod tests_approval_write;
 #[cfg(test)]
 mod tests_memory_context;
 #[cfg(test)]
