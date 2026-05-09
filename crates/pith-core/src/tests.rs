@@ -79,8 +79,14 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert!(result["metrics"]["shellOutputArtifactRoot"].is_string());
   assert_eq!(result["metrics"]["shellOutputArtifactRetainedRuns"], "20");
   assert_eq!(result["metrics"]["workspaceSearchMaxFileBytes"], "262144");
-  assert_eq!(result["metrics"]["workspaceSearchMaxVisitedEntries"], "20000");
-  assert_eq!(result["metrics"]["directoryListingMaxScannedEntries"], "5000");
+  assert_eq!(
+    result["metrics"]["workspaceSearchMaxVisitedEntries"],
+    "20000"
+  );
+  assert_eq!(
+    result["metrics"]["directoryListingMaxScannedEntries"],
+    "5000"
+  );
   assert_eq!(result["metrics"]["webSearchTimeoutSeconds"], "20");
   assert_eq!(result["metrics"]["webSearchProvider"], "DuckDuckGo Lite");
   assert_eq!(result["metrics"]["webSearchClient"], "curl");
