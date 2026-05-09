@@ -87,8 +87,13 @@ pub(crate) fn format_shell_result(result: &ShellCommandResult) -> String {
   } else {
     ""
   };
+  let cancellation_note = if result.cancelled {
+    "\n\n[command cancelled]"
+  } else {
+    ""
+  };
   format!(
-    "Command: {}\nExit Code: {}\n{}\n{}\n\nstdout:\n{}\n\nstderr:\n{}{}{}",
+    "Command: {}\nExit Code: {}\n{}\n{}\n\nstdout:\n{}\n\nstderr:\n{}{}{}{}",
     result.command,
     result.exit_code,
     result.sandbox.display_line(),
@@ -96,6 +101,7 @@ pub(crate) fn format_shell_result(result: &ShellCommandResult) -> String {
     stdout,
     stderr,
     truncation_note,
-    timeout_note
+    timeout_note,
+    cancellation_note
   )
 }

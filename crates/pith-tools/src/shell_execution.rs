@@ -28,6 +28,7 @@ pub(crate) fn run_shell_with_timeout(
   timeout: Duration,
   max_output_bytes: usize,
   artifact_directory: PathBuf,
+  is_cancelled: impl Fn() -> bool,
 ) -> Result<ShellOutput> {
   let mut shell_command = build_shell_command(command, workspace_root, sandbox_policy);
   let child_result = shell_command
@@ -60,7 +61,7 @@ pub(crate) fn run_shell_with_timeout(
     timeout,
     SHELL_POLL_INTERVAL,
     Duration::from_millis(200),
-    || false,
+    is_cancelled,
   ) {
     Ok(wait) => wait,
     Err(error) => {
@@ -68,6 +69,7 @@ pub(crate) fn run_shell_with_timeout(
     }
   };
   let timed_out = wait.reason == ChildExitReason::TimedOut;
+  let cancelled = wait.reason == ChildExitReason::Cancelled;
 
   let stdout = match join_pipe_reader(stdout_reader) {
     Ok(stdout) => stdout,
@@ -90,7 +92,7 @@ pub(crate) fn run_shell_with_timeout(
     };
 
   Ok(ShellOutput {
-    exit_code: if timed_out {
+    exit_code: if timed_out || cancelled {
       -1
     } else {
       wait.status.code().unwrap_or(-1)
@@ -101,6 +103,7 @@ pub(crate) fn run_shell_with_timeout(
     stderr_source_bytes: stderr.source_byte_count,
     artifact_directory,
     timed_out,
+    cancelled,
   })
 }
 
@@ -112,6 +115,7 @@ pub(crate) struct ShellOutput {
   pub(crate) stderr_source_bytes: usize,
   pub(crate) artifact_directory: Option<PathBuf>,
   pub(crate) timed_out: bool,
+  pub(crate) cancelled: bool,
 }
 
 struct PipeCapture {
@@ -265,6 +269,7 @@ mod tests {
       Duration::from_millis(100),
       1024,
       artifact_directory,
+      || false,
     )
     .expect("shell result");
 
@@ -308,12 +313,38 @@ mod tests {
       Duration::from_millis(100),
       1024,
       artifact_directory.clone(),
+      || false,
     );
 
     assert!(result.is_err());
     assert!(!artifact_directory.exists());
 
     let _ = fs::remove_dir_all(artifact_directory);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn shell_cancellation_terminates_blocking_command() {
+    let workspace = unique_temp_workspace("shell-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+
+    let artifact_directory = workspace.join("artifacts");
+    let result = run_shell_with_timeout(
+      "sleep 5",
+      &workspace,
+      &pith_sandbox::SandboxPolicy::workspace_read_write(&workspace),
+      Duration::from_secs(5),
+      1024,
+      artifact_directory,
+      || true,
+    )
+    .expect("shell result");
+
+    assert!(result.cancelled);
+    assert!(!result.timed_out);
+    assert_eq!(result.exit_code, -1);
+
+    let _ = fs::remove_dir_all(workspace);
   }
 
   #[test]

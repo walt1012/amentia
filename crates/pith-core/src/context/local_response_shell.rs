@@ -27,7 +27,12 @@ pub(crate) fn summarize_shell_result(
   } else {
     "native sandbox limited"
   };
-  let observation_summary = if result.exit_code == 0 {
+  let observation_summary = if result.cancelled {
+    format!(
+      "Pith ran `{}` in {} with {} and it was cancelled.",
+      result.command, workspace_name, sandbox_summary
+    )
+  } else if result.exit_code == 0 {
     format!(
       "Pith ran `{}` in {} with {} and it finished successfully.",
       result.command, workspace_name, sandbox_summary

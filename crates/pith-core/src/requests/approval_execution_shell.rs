@@ -90,6 +90,8 @@ pub(super) fn append_approved_shell_execution(
               ("approvalId".to_string(), approval.id.clone()),
               ("command".to_string(), command.clone()),
               ("exitCode".to_string(), result.exit_code.to_string()),
+              ("timedOut".to_string(), result.timed_out.to_string()),
+              ("cancelled".to_string(), result.cancelled.to_string()),
               (
                 "maxOutputBytes".to_string(),
                 SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),

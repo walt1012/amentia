@@ -22,6 +22,18 @@ pub fn run_shell(
   command: &str,
   max_output_bytes: usize,
 ) -> Result<ShellCommandResult> {
+  run_shell_with_cancellation(workspace_root, command, max_output_bytes, || false)
+}
+
+pub fn run_shell_with_cancellation<F>(
+  workspace_root: &Path,
+  command: &str,
+  max_output_bytes: usize,
+  is_cancelled: F,
+) -> Result<ShellCommandResult>
+where
+  F: Fn() -> bool,
+{
   let workspace_root = canonical_workspace_root(workspace_root)?;
   let trimmed_command = command.trim();
   if trimmed_command.is_empty() {
@@ -38,6 +50,7 @@ pub fn run_shell(
     shell_command_timeout(),
     max_output_bytes,
     shell_output_artifact_directory()?,
+    is_cancelled,
   )
   .with_context(|| {
     format!(
@@ -59,6 +72,14 @@ pub fn run_shell(
       stderr = format!("{stderr}\n{timeout_message}");
     }
   }
+  if output.cancelled {
+    let cancellation_message = "Command was cancelled and terminated.";
+    if stderr.trim().is_empty() {
+      stderr = cancellation_message.to_string();
+    } else {
+      stderr = format!("{stderr}\n{cancellation_message}");
+    }
+  }
   let stdout_source_bytes = output.stdout_source_bytes.max(stdout.len());
   let stderr_source_bytes = output.stderr_source_bytes.max(stderr.len());
   let output_context = build_shell_output_context(
@@ -78,6 +99,7 @@ pub fn run_shell(
     stderr: output_context.stderr_preview,
     was_truncated: output_context.context.was_compacted,
     timed_out: output.timed_out,
+    cancelled: output.cancelled,
     sandbox,
     output_context: output_context.context,
   })

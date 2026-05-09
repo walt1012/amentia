@@ -51,6 +51,7 @@ pub struct ShellCommandResult {
   pub stderr: String,
   pub was_truncated: bool,
   pub timed_out: bool,
+  pub cancelled: bool,
   pub sandbox: ShellSandboxSummary,
   pub output_context: ShellOutputContext,
 }

@@ -14,7 +14,8 @@ mod workspace_search;
 
 pub use diff::{diff_preview_max_bytes, generate_diff, generate_diff_with_cancellation};
 pub use shell::{
-  run_shell, shell_command_timeout_seconds, shell_sandbox_status, shell_sandbox_summary,
+  run_shell, run_shell_with_cancellation, shell_command_timeout_seconds, shell_sandbox_status,
+  shell_sandbox_summary,
 };
 pub use shell_output_artifacts::{
   shell_output_artifact_retained_runs, shell_output_artifact_root_path,
