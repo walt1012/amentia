@@ -103,8 +103,8 @@ enum LocalModelDownloadRequestPlanner {
 
     let operation = resumeBytesReceived == nil ? "downloading" : "continuing"
     return """
-      Free at least \(formattedByteCount(requiredBytes)) on the local model volume before \(operation) \(model.displayName). \
-      Available: \(formattedByteCount(availableBytes)).
+      Free at least \(LocalModelByteFormatter.string(requiredBytes)) on the local model volume before \(operation) \(model.displayName). \
+      Available: \(LocalModelByteFormatter.string(availableBytes)).
       """
   }
 
@@ -152,11 +152,6 @@ enum LocalModelDownloadRequestPlanner {
     return candidate
   }
 
-  private static func formattedByteCount(_ byteCount: Int64) -> String {
-    let formatter = ByteCountFormatter()
-    formatter.countStyle = .file
-    return formatter.string(fromByteCount: byteCount)
-  }
 }
 
 private extension LocalModelDownloadRequestPlan {
