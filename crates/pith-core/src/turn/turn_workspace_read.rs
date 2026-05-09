@@ -63,12 +63,9 @@ pub(super) fn execute_read_turn(
     )),
   });
 
-  match read_file_with_cancellation(
-    Path::new(&workspace.root_path),
-    relative_path,
-    4096,
-    || snapshot.cancellation.is_cancelled(),
-  ) {
+  match read_file_with_cancellation(Path::new(&workspace.root_path), relative_path, 4096, || {
+    snapshot.cancellation.is_cancelled()
+  }) {
     Ok(result) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
