@@ -8,6 +8,7 @@ mod shell_output_context;
 mod shell_sandbox;
 mod types;
 mod web_search;
+mod web_search_parser;
 mod workspace_files;
 mod workspace_search;
 
