@@ -71,4 +71,6 @@ mod tests_runtime_surface;
 #[cfg(test)]
 mod tests_turn_web_search;
 #[cfg(test)]
+mod tests_turn_workspace_tools;
+#[cfg(test)]
 mod tests_workspace_state;
