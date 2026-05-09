@@ -10,6 +10,8 @@ use crate::local_responses::{build_plan_item, format_search_result, summarize_se
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
 
+const SEARCH_FILES_RESULT_LIMIT: usize = 12;
+
 pub(super) fn execute_search_turn(
   snapshot: &PreparedTurnSnapshot,
   workspace: &WorkspaceSummary,
@@ -59,13 +61,22 @@ pub(super) fn execute_search_turn(
     attributes: Some(workspace_tool_attributes(
       "search_files",
       workspace,
-      [("query".to_string(), query.to_string())],
+      [
+        ("query".to_string(), query.to_string()),
+        (
+          "maxResults".to_string(),
+          SEARCH_FILES_RESULT_LIMIT.to_string(),
+        ),
+      ],
     )),
   });
 
-  match search_files_with_cancellation(Path::new(&workspace.root_path), query, 12, || {
-    snapshot.cancellation.is_cancelled()
-  }) {
+  match search_files_with_cancellation(
+    Path::new(&workspace.root_path),
+    query,
+    SEARCH_FILES_RESULT_LIMIT,
+    || snapshot.cancellation.is_cancelled(),
+  ) {
     Ok(matches) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
@@ -77,6 +88,10 @@ pub(super) fn execute_search_turn(
           [
             ("query".to_string(), query.to_string()),
             ("resultCount".to_string(), matches.len().to_string()),
+            (
+              "maxResults".to_string(),
+              SEARCH_FILES_RESULT_LIMIT.to_string(),
+            ),
           ],
         )),
       });

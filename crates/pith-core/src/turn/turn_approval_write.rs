@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::generate_diff_with_cancellation;
+use pith_tools::{diff_preview_max_bytes, generate_diff_with_cancellation};
 
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::approval_types::PendingApproval;
@@ -72,7 +72,10 @@ pub(super) fn execute_write_turn(
     attributes: Some(workspace_tool_attributes(
       "generate_diff",
       workspace,
-      [("relativePath".to_string(), intent.relative_path.clone())],
+      [
+        ("relativePath".to_string(), intent.relative_path.clone()),
+        ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+      ],
     )),
   });
   match generate_diff_with_cancellation(
@@ -92,6 +95,7 @@ pub(super) fn execute_write_turn(
           [
             ("action".to_string(), "write_file".to_string()),
             ("relativePath".to_string(), intent.relative_path.clone()),
+            ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
           ],
         )),
       });

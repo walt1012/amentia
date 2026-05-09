@@ -10,6 +10,8 @@ use crate::local_responses::{build_plan_item, format_file_result, summarize_file
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
 
+const READ_FILE_PREVIEW_MAX_BYTES: usize = 4096;
+
 pub(super) fn execute_read_turn(
   snapshot: &PreparedTurnSnapshot,
   workspace: &WorkspaceSummary,
@@ -59,13 +61,22 @@ pub(super) fn execute_read_turn(
     attributes: Some(workspace_tool_attributes(
       "read_file",
       workspace,
-      [("relativePath".to_string(), relative_path.to_string())],
+      [
+        ("relativePath".to_string(), relative_path.to_string()),
+        (
+          "maxBytes".to_string(),
+          READ_FILE_PREVIEW_MAX_BYTES.to_string(),
+        ),
+      ],
     )),
   });
 
-  match read_file_with_cancellation(Path::new(&workspace.root_path), relative_path, 4096, || {
-    snapshot.cancellation.is_cancelled()
-  }) {
+  match read_file_with_cancellation(
+    Path::new(&workspace.root_path),
+    relative_path,
+    READ_FILE_PREVIEW_MAX_BYTES,
+    || snapshot.cancellation.is_cancelled(),
+  ) {
     Ok(result) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
@@ -74,7 +85,14 @@ pub(super) fn execute_read_turn(
         attributes: Some(workspace_tool_attributes(
           "read_file",
           workspace,
-          [("relativePath".to_string(), relative_path.to_string())],
+          [
+            ("relativePath".to_string(), relative_path.to_string()),
+            (
+              "maxBytes".to_string(),
+              READ_FILE_PREVIEW_MAX_BYTES.to_string(),
+            ),
+            ("isTruncated".to_string(), result.is_truncated.to_string()),
+          ],
         )),
       });
       let (summary, summary_attributes) = summarize_file_result(

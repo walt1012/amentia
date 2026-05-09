@@ -12,6 +12,8 @@ use crate::local_responses::{
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
 
+const LIST_DIRECTORY_RESULT_LIMIT: usize = 24;
+
 pub(super) fn execute_list_turn(
   snapshot: &PreparedTurnSnapshot,
   workspace: &WorkspaceSummary,
@@ -60,13 +62,22 @@ pub(super) fn execute_list_turn(
     attributes: Some(workspace_tool_attributes(
       "list_directory",
       workspace,
-      [("relativePath".to_string(), ".".to_string())],
+      [
+        ("relativePath".to_string(), ".".to_string()),
+        (
+          "maxResults".to_string(),
+          LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+        ),
+      ],
     )),
   });
 
-  match list_directory_with_cancellation(Path::new(&workspace.root_path), None, 24, || {
-    snapshot.cancellation.is_cancelled()
-  }) {
+  match list_directory_with_cancellation(
+    Path::new(&workspace.root_path),
+    None,
+    LIST_DIRECTORY_RESULT_LIMIT,
+    || snapshot.cancellation.is_cancelled(),
+  ) {
     Ok(entries) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
@@ -78,6 +89,10 @@ pub(super) fn execute_list_turn(
           [
             ("relativePath".to_string(), ".".to_string()),
             ("entryCount".to_string(), entries.len().to_string()),
+            (
+              "maxResults".to_string(),
+              LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+            ),
           ],
         )),
       });
