@@ -13,9 +13,9 @@ pub use inference::llama_cpp_timeout_seconds;
 pub use types::*;
 
 use inference::{generate_with_llama_cpp, generation_failure_text, request_is_cancelled};
-use validation::validate_runtime_model_file;
 #[cfg(test)]
 use validation::sha256_hex;
+use validation::validate_runtime_model_file;
 
 #[derive(Debug, Clone)]
 pub struct LocalModelRuntime {
