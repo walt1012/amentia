@@ -1,9 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::ApprovalRequest;
 
 use super::runtime_execution_approvals::RuntimePendingApprovalState;
+use super::runtime_execution_running::RuntimeRunningExecutionState;
 use super::runtime_execution_turns::RuntimeActiveTurnState;
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
@@ -12,15 +13,7 @@ use crate::approval_types::PendingApproval;
 pub(crate) struct RuntimeExecutionState {
   pending_approvals: RuntimePendingApprovalState,
   active_turns: RuntimeActiveTurnState,
-  running_turns: HashMap<String, RunningTurnCancellation>,
-  running_approvals: HashMap<String, RunningApprovalCancellation>,
-  pending_running_cancellations: HashSet<String>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct RunningTurnCancellation {
-  thread_id: String,
-  cancellation: GenerationCancellation,
+  running: RuntimeRunningExecutionState,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,12 +21,6 @@ pub(crate) struct RuntimeExecutionCounts {
   pending_approval_count: usize,
   active_turn_count: usize,
   running_approval_count: usize,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct RunningApprovalCancellation {
-  thread_id: String,
-  cancellation: GenerationCancellation,
 }
 
 impl RuntimeExecutionCounts {
@@ -58,9 +45,7 @@ impl RuntimeExecutionState {
     Self {
       pending_approvals: RuntimePendingApprovalState::new(pending_approvals),
       active_turns: RuntimeActiveTurnState::new(active_turns),
-      running_turns: HashMap::new(),
-      running_approvals: HashMap::new(),
-      pending_running_cancellations: HashSet::new(),
+      running: RuntimeRunningExecutionState::empty(),
     }
   }
 
@@ -68,17 +53,15 @@ impl RuntimeExecutionState {
     Self {
       pending_approvals: RuntimePendingApprovalState::empty(),
       active_turns: RuntimeActiveTurnState::empty(),
-      running_turns: HashMap::new(),
-      running_approvals: HashMap::new(),
-      pending_running_cancellations: HashSet::new(),
+      running: RuntimeRunningExecutionState::empty(),
     }
   }
 
   pub(crate) fn counts(&self) -> RuntimeExecutionCounts {
     RuntimeExecutionCounts {
       pending_approval_count: self.pending_approvals.count(),
-      active_turn_count: self.active_turns.count() + self.running_turns.len(),
-      running_approval_count: self.running_approvals.len(),
+      active_turn_count: self.active_turns.count() + self.running.running_turn_count(),
+      running_approval_count: self.running.running_approval_count(),
     }
   }
 
@@ -136,26 +119,14 @@ impl RuntimeExecutionState {
     thread_id: String,
     cancellation: GenerationCancellation,
   ) {
-    self.running_turns.insert(
-      turn_id,
-      RunningTurnCancellation {
-        thread_id,
-        cancellation,
-      },
-    );
+    self.running.insert_running_turn(turn_id, thread_id, cancellation);
   }
 
   pub(crate) fn cancel_running_turn_for_thread(
     &mut self,
     thread_id: &str,
   ) -> Option<(String, String)> {
-    let (turn_id, running_turn) = self
-      .running_turns
-      .iter()
-      .find(|(_, turn)| turn.thread_id == thread_id)
-      .map(|(turn_id, turn)| (turn_id.clone(), turn.clone()))?;
-    running_turn.cancellation.cancel();
-    Some((turn_id, running_turn.thread_id))
+    self.running.cancel_running_turn_for_thread(thread_id)
   }
 
   pub(crate) fn insert_running_approval(
@@ -164,54 +135,30 @@ impl RuntimeExecutionState {
     thread_id: String,
     cancellation: GenerationCancellation,
   ) {
-    self.running_approvals.insert(
-      approval_id,
-      RunningApprovalCancellation {
-        thread_id,
-        cancellation,
-      },
-    );
+    self.running.insert_running_approval(approval_id, thread_id, cancellation);
   }
 
   pub(crate) fn cancel_running_approval_for_thread(&mut self, thread_id: &str) -> Option<String> {
-    let running_approval = self
-      .running_approvals
-      .iter()
-      .find(|(_, approval)| approval.thread_id == thread_id)
-      .map(|(_, approval)| approval.clone())?;
-    running_approval.cancellation.cancel();
-    Some(running_approval.thread_id)
+    self.running.cancel_running_approval_for_thread(thread_id)
   }
 
   pub(crate) fn request_running_turn_cancel_for_thread(
     &mut self,
     thread_id: &str,
   ) -> Option<(String, String)> {
-    let cancellation = self.cancel_running_turn_for_thread(thread_id).or_else(|| {
-      self
-        .cancel_running_approval_for_thread(thread_id)
-        .map(|thread_id| ("".to_string(), thread_id))
-    });
-    if cancellation.is_some() {
-      self.pending_running_cancellations.remove(thread_id);
-    } else {
-      self
-        .pending_running_cancellations
-        .insert(thread_id.to_string());
-    }
-    cancellation
+    self.running.request_cancel_for_thread(thread_id)
   }
 
   pub(crate) fn take_pending_running_turn_cancel(&mut self, thread_id: &str) -> bool {
-    self.pending_running_cancellations.remove(thread_id)
+    self.running.take_pending_cancel(thread_id)
   }
 
   pub(crate) fn remove_running_turn(&mut self, turn_id: &str) {
-    self.running_turns.remove(turn_id);
+    self.running.remove_running_turn(turn_id);
   }
 
   pub(crate) fn remove_running_approval(&mut self, approval_id: &str) {
-    self.running_approvals.remove(approval_id);
+    self.running.remove_running_approval(approval_id);
   }
 }
 
@@ -260,5 +207,30 @@ mod tests {
     assert_eq!(state.counts().running_approval_count(), 1);
     state.remove_running_approval("approval-1");
     assert_eq!(state.counts().running_approval_count(), 0);
+  }
+
+  #[test]
+  fn running_cancel_request_is_remembered_until_work_starts() {
+    let mut state = RuntimeExecutionState::empty();
+
+    let cancelled = state.request_running_turn_cancel_for_thread("thread-1");
+
+    assert_eq!(cancelled, None);
+    assert!(state.take_pending_running_turn_cancel("thread-1"));
+    assert!(!state.take_pending_running_turn_cancel("thread-1"));
+  }
+
+  #[test]
+  fn running_turn_counts_as_active_until_removed() {
+    let mut state = RuntimeExecutionState::empty();
+    state.insert_running_turn(
+      "turn-1".to_string(),
+      "thread-1".to_string(),
+      GenerationCancellation::new(),
+    );
+
+    assert_eq!(state.counts().active_turn_count(), 1);
+    state.remove_running_turn("turn-1");
+    assert_eq!(state.counts().active_turn_count(), 0);
   }
 }
