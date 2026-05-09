@@ -13,7 +13,7 @@ use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionCounts;
 use crate::turn::turn_tool_limits::{
   LIST_DIRECTORY_RESULT_LIMIT, READ_FILE_PREVIEW_MAX_BYTES, SEARCH_FILES_RESULT_LIMIT,
-  WEB_SEARCH_RESULT_LIMIT,
+  SHELL_OUTPUT_PREVIEW_MAX_BYTES, WEB_SEARCH_RESULT_LIMIT,
 };
 
 pub(super) struct ReadinessMetricsInput<'a> {
@@ -139,6 +139,10 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     (
       "turnSearchFilesMaxResults".to_string(),
       SEARCH_FILES_RESULT_LIMIT.to_string(),
+    ),
+    (
+      "turnShellOutputMaxBytes".to_string(),
+      SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
     ),
     (
       "turnWebSearchMaxResults".to_string(),

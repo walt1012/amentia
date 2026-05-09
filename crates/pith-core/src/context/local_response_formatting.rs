@@ -2,11 +2,13 @@ use pith_tools::{
   DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult, WebSearchResult,
 };
 
+use crate::turn::turn_tool_limits::READ_FILE_PREVIEW_MAX_BYTES;
+
 pub(crate) fn format_file_result(result: &ReadFileResult) -> String {
   if result.is_truncated {
     format!(
-      "File: {}\n\n{}\n\n[output truncated at 4096 bytes]",
-      result.relative_path, result.content
+      "File: {}\n\n{}\n\n[output truncated at {} bytes]",
+      result.relative_path, result.content, READ_FILE_PREVIEW_MAX_BYTES
     )
   } else {
     format!("File: {}\n\n{}", result.relative_path, result.content)

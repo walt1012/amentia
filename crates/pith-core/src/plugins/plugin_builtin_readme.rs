@@ -5,6 +5,7 @@ use pith_protocol::WorkspaceSummary;
 use pith_tools::read_file;
 
 use super::plugin_command_text::compact_text_preview;
+use crate::turn::turn_tool_limits::READ_FILE_PREVIEW_MAX_BYTES;
 
 pub(super) fn build_workspace_readme_note_result(
   command: &HostPluginCommandEntry,
@@ -23,7 +24,11 @@ pub(super) fn build_workspace_readme_note_result(
     return "Open a workspace before capturing a workspace note.".to_string();
   };
 
-  match read_file(Path::new(&workspace.root_path), "README.md", 4096) {
+  match read_file(
+    Path::new(&workspace.root_path),
+    "README.md",
+    READ_FILE_PREVIEW_MAX_BYTES,
+  ) {
     Ok(result) => {
       let summary = compact_text_preview(&result.content, 10, 900);
       let input_summary = input

@@ -11,6 +11,7 @@ use crate::approval_types::PendingApproval;
 use crate::local_responses::{format_shell_result, summarize_shell_result};
 use crate::plugin_hooks::build_shell_completed_hook_items;
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
+use crate::turn::turn_tool_limits::SHELL_OUTPUT_PREVIEW_MAX_BYTES;
 use crate::turn_tool_provenance::workspace_tool_attributes;
 
 use super::approval_execution_events::ApprovalExecutionEvents;
@@ -52,11 +53,19 @@ pub(super) fn append_approved_shell_execution(
       [
         ("approvalId".to_string(), approval.id.clone()),
         ("command".to_string(), command.clone()),
+        (
+          "maxOutputBytes".to_string(),
+          SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+        ),
       ],
     )),
   ));
 
-  match run_shell(Path::new(&workspace.root_path), &command, 4096) {
+  match run_shell(
+    Path::new(&workspace.root_path),
+    &command,
+    SHELL_OUTPUT_PREVIEW_MAX_BYTES,
+  ) {
     Ok(result) => {
       events.set_memory_event(MemoryEvent::ShellCommandRan {
         workspace_display_name: workspace.display_name.clone(),
@@ -81,6 +90,10 @@ pub(super) fn append_approved_shell_execution(
               ("approvalId".to_string(), approval.id.clone()),
               ("command".to_string(), command.clone()),
               ("exitCode".to_string(), result.exit_code.to_string()),
+              (
+                "maxOutputBytes".to_string(),
+                SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+              ),
             ],
           );
           attributes.extend(result.sandbox.attributes());
