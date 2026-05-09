@@ -11,6 +11,9 @@ use pith_tools::{
 
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionCounts;
+use crate::turn::turn_tool_limits::{
+  LIST_DIRECTORY_RESULT_LIMIT, READ_FILE_PREVIEW_MAX_BYTES, SEARCH_FILES_RESULT_LIMIT,
+};
 
 pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) context: &'a RuntimeContext,
@@ -123,6 +126,18 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     (
       "workspaceWriteMaxBytes".to_string(),
       write_file_max_bytes().to_string(),
+    ),
+    (
+      "turnReadFileMaxBytes".to_string(),
+      READ_FILE_PREVIEW_MAX_BYTES.to_string(),
+    ),
+    (
+      "turnListDirectoryMaxResults".to_string(),
+      LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+    ),
+    (
+      "turnSearchFilesMaxResults".to_string(),
+      SEARCH_FILES_RESULT_LIMIT.to_string(),
     ),
     (
       "webSearchTimeoutSeconds".to_string(),

@@ -4,13 +4,12 @@ use std::path::Path;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::search_files_with_cancellation;
 
+use super::turn_tool_limits::SEARCH_FILES_RESULT_LIMIT;
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{build_plan_item, format_search_result, summarize_search_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
-
-const SEARCH_FILES_RESULT_LIMIT: usize = 12;
 
 pub(super) fn execute_search_turn(
   snapshot: &PreparedTurnSnapshot,

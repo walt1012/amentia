@@ -89,6 +89,9 @@ fn runtime_readiness_reports_agent_control_surface() {
   );
   assert_eq!(result["metrics"]["diffPreviewMaxBytes"], "131072");
   assert_eq!(result["metrics"]["workspaceWriteMaxBytes"], "1048576");
+  assert_eq!(result["metrics"]["turnReadFileMaxBytes"], "4096");
+  assert_eq!(result["metrics"]["turnListDirectoryMaxResults"], "24");
+  assert_eq!(result["metrics"]["turnSearchFilesMaxResults"], "12");
   assert_eq!(result["metrics"]["webSearchTimeoutSeconds"], "20");
   assert_eq!(result["metrics"]["webSearchProvider"], "DuckDuckGo Lite");
   assert_eq!(result["metrics"]["webSearchClient"], "curl");
