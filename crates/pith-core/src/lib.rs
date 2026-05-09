@@ -65,6 +65,8 @@ mod tests;
 #[cfg(test)]
 mod tests_approval_execution;
 #[cfg(test)]
+mod tests_memory_context;
+#[cfg(test)]
 mod tests_plugin_execution;
 #[cfg(test)]
 mod tests_plugins;
