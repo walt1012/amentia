@@ -28,7 +28,7 @@ pub use web_search::{
 };
 pub use workspace_files::{
   list_directory, list_directory_max_scanned_entries, list_directory_with_cancellation, read_file,
-  read_file_with_cancellation, write_file,
+  read_file_with_cancellation, write_file, write_file_max_bytes,
 };
 pub use workspace_search::{
   search_files, search_files_max_file_bytes, search_files_max_visited_entries,

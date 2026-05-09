@@ -3,7 +3,7 @@ use std::path::Path;
 
 use pith_memory::MemoryEvent;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::write_file;
+use pith_tools::{write_file, write_file_max_bytes};
 
 use crate::approval_types::PendingApproval;
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
@@ -42,6 +42,7 @@ pub(super) fn append_approved_write_execution(
       [
         ("approvalId".to_string(), approval.id.clone()),
         ("relativePath".to_string(), approval.relative_path.clone()),
+        ("maxBytes".to_string(), write_file_max_bytes().to_string()),
       ],
     )),
   ));
@@ -63,6 +64,7 @@ pub(super) fn append_approved_write_execution(
         [
           ("approvalId".to_string(), approval.id.clone()),
           ("relativePath".to_string(), approval.relative_path.clone()),
+          ("maxBytes".to_string(), write_file_max_bytes().to_string()),
         ],
       )),
     )),
@@ -91,6 +93,7 @@ fn append_successful_write(
         ("approvalId".to_string(), approval.id.clone()),
         ("relativePath".to_string(), relative_path.clone()),
         ("bytesWritten".to_string(), content.len().to_string()),
+        ("maxBytes".to_string(), write_file_max_bytes().to_string()),
       ],
     )),
   });

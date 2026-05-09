@@ -88,6 +88,7 @@ fn runtime_readiness_reports_agent_control_surface() {
     "5000"
   );
   assert_eq!(result["metrics"]["diffPreviewMaxBytes"], "131072");
+  assert_eq!(result["metrics"]["workspaceWriteMaxBytes"], "1048576");
   assert_eq!(result["metrics"]["webSearchTimeoutSeconds"], "20");
   assert_eq!(result["metrics"]["webSearchProvider"], "DuckDuckGo Lite");
   assert_eq!(result["metrics"]["webSearchClient"], "curl");
@@ -910,8 +911,10 @@ fn approval_respond_writes_file_after_approval() {
   assert_eq!(items[1]["title"], "write_file");
   assert_eq!(items[1]["attributes"]["tool"], "write_file");
   assert_eq!(items[1]["attributes"]["relativePath"], "docs/output.txt");
+  assert_eq!(items[1]["attributes"]["maxBytes"], "1048576");
   assert_eq!(items[2]["attributes"]["tool"], "write_file");
   assert_eq!(items[2]["attributes"]["bytesWritten"], "26");
+  assert_eq!(items[2]["attributes"]["maxBytes"], "1048576");
   assert_eq!(written_content, "Approval protected content");
 }
 

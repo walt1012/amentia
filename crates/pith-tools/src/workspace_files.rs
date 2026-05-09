@@ -11,9 +11,14 @@ use crate::paths::{
 use crate::types::{DirectoryEntry, ReadFileResult};
 
 const LIST_DIRECTORY_MAX_SCANNED_ENTRIES: usize = 5_000;
+const WRITE_FILE_MAX_BYTES: usize = 1024 * 1024;
 
 pub fn list_directory_max_scanned_entries() -> usize {
   LIST_DIRECTORY_MAX_SCANNED_ENTRIES
+}
+
+pub fn write_file_max_bytes() -> usize {
+  WRITE_FILE_MAX_BYTES
 }
 
 pub fn list_directory(
@@ -135,6 +140,10 @@ where
 }
 
 pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> Result<String> {
+  if content.len() > WRITE_FILE_MAX_BYTES {
+    bail!("workspace write content exceeds the maximum allowed size");
+  }
+
   let workspace_root = canonical_workspace_root(workspace_root)?;
   let sanitized_relative_path = sanitize_relative_path(relative_path)?;
   let target = workspace_root.join(&sanitized_relative_path);
@@ -317,6 +326,22 @@ mod tests {
       read_file_with_cancellation(&workspace, "inside.txt", 128, || true).expect_err("cancelled");
 
     assert!(error.to_string().contains("file read cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn write_file_rejects_large_payload() {
+    let workspace = unique_temp_workspace("write-large");
+    fs::create_dir_all(&workspace).expect("workspace");
+    let content = "x".repeat(write_file_max_bytes() + 1);
+
+    let error = write_file(&workspace, "large.txt", &content).expect_err("large payload");
+
+    assert!(error
+      .to_string()
+      .contains("workspace write content exceeds"));
+    assert!(!workspace.join("large.txt").exists());
 
     let _ = fs::remove_dir_all(workspace);
   }
