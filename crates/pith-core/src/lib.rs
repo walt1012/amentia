@@ -63,6 +63,8 @@ mod test_support;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_approval_execution;
+#[cfg(test)]
 mod tests_plugin_execution;
 #[cfg(test)]
 mod tests_plugins;
