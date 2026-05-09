@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::generate_diff;
+use pith_tools::generate_diff_with_cancellation;
 
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::approval_types::PendingApproval;
@@ -75,10 +75,11 @@ pub(super) fn execute_write_turn(
       [("relativePath".to_string(), intent.relative_path.clone())],
     )),
   });
-  match generate_diff(
+  match generate_diff_with_cancellation(
     Path::new(&workspace.root_path),
     &intent.relative_path,
     &intent.content,
+    || snapshot.cancellation.is_cancelled(),
   ) {
     Ok(diff) => {
       items.push(TimelineItem {
@@ -96,6 +97,12 @@ pub(super) fn execute_write_turn(
       });
     }
     Err(error) => {
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "generate_diff failed".to_string(),
@@ -107,6 +114,12 @@ pub(super) fn execute_write_turn(
         )),
       });
     }
+  }
+  if snapshot.cancellation.is_cancelled() {
+    items.extend(crate::turn_streaming::build_turn_cancelled_items(
+      &snapshot.turn_id,
+    ));
+    return;
   }
   items.push(TimelineItem {
     kind: "approvalRequested".to_string(),

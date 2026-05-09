@@ -11,7 +11,7 @@ mod web_search;
 mod workspace_files;
 mod workspace_search;
 
-pub use diff::generate_diff;
+pub use diff::{generate_diff, generate_diff_with_cancellation};
 pub use shell::{
   run_shell, shell_command_timeout_seconds, shell_sandbox_status, shell_sandbox_summary,
 };

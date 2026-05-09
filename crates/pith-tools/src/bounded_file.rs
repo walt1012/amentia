@@ -9,10 +9,6 @@ pub(crate) struct BoundedTextPreview {
   pub(crate) is_truncated: bool,
 }
 
-pub(crate) fn read_text_prefix(path: &Path, max_bytes: usize) -> Result<BoundedTextPreview> {
-  read_text_prefix_with_cancellation(path, max_bytes, &|| false)
-}
-
 pub(crate) fn read_text_prefix_with_cancellation<F>(
   path: &Path,
   max_bytes: usize,
