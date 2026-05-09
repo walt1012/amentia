@@ -27,4 +27,4 @@ pub use web_search::{
   WebSearchStatus,
 };
 pub use workspace_files::{list_directory, read_file, write_file};
-pub use workspace_search::search_files;
+pub use workspace_search::{search_files, search_files_with_cancellation};

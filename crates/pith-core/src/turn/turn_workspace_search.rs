@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::search_files;
+use pith_tools::search_files_with_cancellation;
 
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
@@ -63,7 +63,9 @@ pub(super) fn execute_search_turn(
     )),
   });
 
-  match search_files(Path::new(&workspace.root_path), query, 12) {
+  match search_files_with_cancellation(Path::new(&workspace.root_path), query, 12, || {
+    snapshot.cancellation.is_cancelled()
+  }) {
     Ok(matches) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
@@ -102,6 +104,12 @@ pub(super) fn execute_search_turn(
       );
     }
     Err(error) => {
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "search_files failed".to_string(),

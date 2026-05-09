@@ -11,11 +11,26 @@ pub fn search_files(
   query: &str,
   max_results: usize,
 ) -> Result<Vec<SearchMatch>> {
+  search_files_with_cancellation(workspace_root, query, max_results, || false)
+}
+
+pub fn search_files_with_cancellation<F>(
+  workspace_root: &Path,
+  query: &str,
+  max_results: usize,
+  is_cancelled: F,
+) -> Result<Vec<SearchMatch>>
+where
+  F: Fn() -> bool,
+{
   let workspace_root = canonical_workspace_root(workspace_root)?;
   let normalized_query = query.trim().to_lowercase();
 
   if normalized_query.is_empty() {
     bail!("search query must not be empty");
+  }
+  if is_cancelled() {
+    bail!("search cancelled");
   }
 
   let mut results = vec![];
@@ -24,19 +39,27 @@ pub fn search_files(
     &workspace_root,
     &normalized_query,
     max_results,
+    &is_cancelled,
     &mut results,
   )?;
 
   Ok(results)
 }
 
-fn visit_directory(
+fn visit_directory<F>(
   workspace_root: &Path,
   current_dir: &Path,
   normalized_query: &str,
   max_results: usize,
+  is_cancelled: &F,
   results: &mut Vec<SearchMatch>,
-) -> Result<()> {
+) -> Result<()>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("search cancelled");
+  }
   if results.len() >= max_results {
     return Ok(());
   }
@@ -48,6 +71,9 @@ fn visit_directory(
   entries.sort_by_key(|entry| entry.path());
 
   for entry in entries {
+    if is_cancelled() {
+      bail!("search cancelled");
+    }
     if results.len() >= max_results {
       break;
     }
@@ -70,6 +96,7 @@ fn visit_directory(
         &resolved_directory,
         normalized_query,
         max_results,
+        is_cancelled,
         results,
       )?;
       continue;
@@ -89,6 +116,9 @@ fn visit_directory(
 
     let text = String::from_utf8_lossy(&content);
     for (index, line) in text.lines().enumerate() {
+      if is_cancelled() {
+        bail!("search cancelled");
+      }
       if !line.to_lowercase().contains(normalized_query) {
         continue;
       }
@@ -136,6 +166,20 @@ mod tests {
 
     let _ = fs::remove_dir_all(workspace);
     let _ = fs::remove_dir_all(outside);
+  }
+
+  #[test]
+  fn search_files_stops_when_cancelled() {
+    let workspace = unique_temp_workspace("search-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("inside.txt"), "visible needle").expect("inside file");
+
+    let error = search_files_with_cancellation(&workspace, "needle", 10, || true)
+      .expect_err("cancelled");
+
+    assert!(error.to_string().contains("search cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {
