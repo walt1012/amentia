@@ -15,9 +15,9 @@ pub use types::*;
 #[cfg(test)]
 use discovery::discovery_roots;
 use discovery::{
-  ManifestResolution, normalize_path, resolve_binary_path, resolve_bootstrap_manifest,
-  resolve_manifest, resolve_model_path, suggested_binary_install_path,
-  suggested_manifest_install_path, suggested_model_install_path,
+  normalize_path, resolve_binary_path, resolve_bootstrap_manifest, resolve_manifest,
+  resolve_model_path, suggested_binary_install_path, suggested_manifest_install_path,
+  suggested_model_install_path, ManifestResolution,
 };
 use inference::{generate_with_llama_cpp, generation_failure_text, request_is_cancelled};
 #[cfg(test)]
