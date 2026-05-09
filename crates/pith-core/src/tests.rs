@@ -1,6 +1,4 @@
-use super::test_support::{
-  create_temp_workspace, enable_full_access_plugin, request,
-};
+use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
 use super::*;
 use pith_protocol::methods;
 use serde_json::json;
