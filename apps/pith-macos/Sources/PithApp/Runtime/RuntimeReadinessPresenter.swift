@@ -13,6 +13,13 @@ struct RuntimeReadinessSnapshot {
   let hasDraftMessage: Bool
 }
 
+struct ReadinessStepSummary: Identifiable, Hashable {
+  let id: String
+  let label: String
+  let detail: String
+  let tone: StatusTone
+}
+
 enum RuntimeReadinessPresenter {
   static func steps(_ snapshot: RuntimeReadinessSnapshot) -> [ReadinessStepSummary] {
     [

@@ -33,3 +33,19 @@ struct JSONRPCError: Decodable {
 struct OptionalRequestParams: Encodable {
   static let none = OptionalRequestParams()
 }
+
+extension RuntimeBridge {
+  func responseResult<ResultType: Decodable>(
+    from response: JSONRPCResponse<ResultType>
+  ) throws -> ResultType {
+    if let error = response.error {
+      throw RuntimeError.rpc(error.message)
+    }
+
+    guard let result = response.result else {
+      throw RuntimeError.invalidResponse
+    }
+
+    return result
+  }
+}
