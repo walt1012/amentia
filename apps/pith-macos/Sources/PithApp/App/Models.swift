@@ -20,22 +20,6 @@ struct WorkspaceSearchMatchSummary: Identifiable, Hashable {
   let line: String
 }
 
-struct MemoryStatusSummary: Hashable {
-  let noteCount: Int
-  let latestTitle: String?
-  let summary: String
-}
-
-struct MemoryNoteSummary: Identifiable, Hashable {
-  let id: String
-  let title: String
-  let body: String
-  let scope: String
-  let source: String
-  let createdAt: Int
-  let tags: [String]
-}
-
 struct TimelineEntry: Identifiable, Hashable {
   enum Kind: String {
     case userMessage
