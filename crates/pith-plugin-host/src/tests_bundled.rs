@@ -63,10 +63,9 @@ fn bundled_plugin_manifests_match_runtime_schema() {
     Some("builtin.reviewDiffSummary")
   );
 
-  let hook_manifest = read_hook_manifest(
-    &bundled_root.join("shell-recorder/hooks/shell.recorder.json"),
-  )
-  .expect("parse bundled hook manifest");
+  let hook_manifest =
+    read_hook_manifest(&bundled_root.join("shell-recorder/hooks/shell.recorder.json"))
+      .expect("parse bundled hook manifest");
   assert_eq!(hook_manifest.event, "shell.completed");
   assert!(!hook_manifest.message_template.trim().is_empty());
   assert_eq!(
