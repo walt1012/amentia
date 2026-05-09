@@ -1,20 +1,22 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use pith_memory::MemoryNote;
-use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::Connection;
 
+mod approvals;
+mod legacy;
+mod memory;
 mod paths;
+mod plugins;
 mod schema;
+mod threads;
 mod time;
 mod types;
+mod workspace;
 
 use crate::paths::{default_database_path, default_runtime_state_path};
 use crate::schema::ensure_schema;
-use crate::time::current_timestamp;
 pub use crate::types::{StoragePaths, StoredApprovalRecord, StoredThreadRecord};
 
 #[derive(Debug, Clone)]
@@ -38,388 +40,6 @@ impl RuntimeStore {
     }
   }
 
-  pub fn load_threads(&self) -> Result<Vec<StoredThreadRecord>> {
-    let connection = self.open_connection()?;
-    self.import_legacy_threads_if_needed(&connection)?;
-
-    let mut statement = connection.prepare(
-      "SELECT id, title, status, turn_count, items_json, workspace_root_path, workspace_display_name
-       FROM threads
-       ORDER BY updated_at DESC, id ASC",
-    )?;
-
-    let rows = statement.query_map([], |row| {
-      let items_json: String = row.get(4)?;
-      let items = serde_json::from_str::<Vec<TimelineItem>>(&items_json).map_err(|error| {
-        rusqlite::Error::FromSqlConversionFailure(
-          items_json.len(),
-          rusqlite::types::Type::Text,
-          Box::new(error),
-        )
-      })?;
-
-      let workspace = match (
-        row.get::<_, Option<String>>(5)?,
-        row.get::<_, Option<String>>(6)?,
-      ) {
-        (Some(root_path), Some(display_name)) => Some(WorkspaceSummary {
-          root_path,
-          display_name,
-        }),
-        _ => None,
-      };
-
-      Ok(StoredThreadRecord {
-        summary: ThreadSummary {
-          id: row.get(0)?,
-          title: row.get(1)?,
-          status: row.get(2)?,
-          workspace: workspace.clone(),
-        },
-        turn_count: row.get::<_, i64>(3)? as usize,
-        items,
-        workspace,
-      })
-    })?;
-
-    rows
-      .collect::<std::result::Result<Vec<_>, _>>()
-      .context("failed to load persisted thread records")
-  }
-
-  pub fn save_threads(&self, threads: &[StoredThreadRecord]) -> Result<()> {
-    let mut connection = self.open_connection()?;
-    let transaction = connection.transaction()?;
-
-    transaction.execute("DELETE FROM threads", [])?;
-
-    for thread in threads {
-      let items_json =
-        serde_json::to_string(&thread.items).context("failed to serialize timeline items")?;
-      let workspace = thread
-        .workspace
-        .clone()
-        .or(thread.summary.workspace.clone());
-
-      transaction.execute(
-        "INSERT INTO threads (
-          id,
-          title,
-          status,
-          turn_count,
-          items_json,
-          workspace_root_path,
-          workspace_display_name,
-          updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![
-          &thread.summary.id,
-          &thread.summary.title,
-          &thread.summary.status,
-          thread.turn_count as i64,
-          items_json,
-          workspace
-            .as_ref()
-            .map(|workspace| workspace.root_path.clone()),
-          workspace
-            .as_ref()
-            .map(|workspace| workspace.display_name.clone()),
-          current_timestamp()?,
-        ],
-      )?;
-    }
-
-    transaction.commit()?;
-    Ok(())
-  }
-
-  pub fn load_workspace(&self) -> Result<Option<WorkspaceSummary>> {
-    let connection = self.open_connection()?;
-    let workspace = connection
-      .query_row(
-        "SELECT root_path, display_name
-         FROM workspace_state
-         WHERE id = 1",
-        [],
-        |row| {
-          Ok(WorkspaceSummary {
-            root_path: row.get(0)?,
-            display_name: row.get(1)?,
-          })
-        },
-      )
-      .optional()?;
-
-    Ok(workspace)
-  }
-
-  pub fn load_pending_approvals(&self) -> Result<Vec<StoredApprovalRecord>> {
-    let connection = self.open_connection()?;
-    let mut statement = connection.prepare(
-      "SELECT id, thread_id, action, title, relative_path, content, command
-       FROM approvals
-       WHERE decision IS NULL
-       ORDER BY requested_at ASC, id ASC",
-    )?;
-
-    let rows = statement.query_map([], |row| {
-      Ok(StoredApprovalRecord {
-        id: row.get(0)?,
-        thread_id: row.get(1)?,
-        action: row.get(2)?,
-        title: row.get(3)?,
-        relative_path: row.get(4)?,
-        content: row.get(5)?,
-        command: row.get(6)?,
-      })
-    })?;
-
-    rows
-      .collect::<std::result::Result<Vec<_>, _>>()
-      .context("failed to load pending approval records")
-  }
-
-  pub fn load_memory_notes(&self, limit: usize) -> Result<Vec<MemoryNote>> {
-    let connection = self.open_connection()?;
-    let mut statement = connection.prepare(
-      "SELECT id, title, body, scope, source, created_at, tags_json
-       FROM memory_notes
-       ORDER BY created_at DESC, id ASC
-       LIMIT ?1",
-    )?;
-
-    let rows = statement.query_map([limit as i64], |row| {
-      let tags_json: String = row.get(6)?;
-      let tags = serde_json::from_str::<Vec<String>>(&tags_json).map_err(|error| {
-        rusqlite::Error::FromSqlConversionFailure(
-          tags_json.len(),
-          rusqlite::types::Type::Text,
-          Box::new(error),
-        )
-      })?;
-
-      Ok(MemoryNote {
-        id: row.get(0)?,
-        title: row.get(1)?,
-        body: row.get(2)?,
-        scope: row.get(3)?,
-        source: row.get(4)?,
-        created_at: row.get(5)?,
-        tags,
-      })
-    })?;
-
-    rows
-      .collect::<std::result::Result<Vec<_>, _>>()
-      .context("failed to load memory notes")
-  }
-
-  pub fn load_plugin_states(&self) -> Result<HashMap<String, bool>> {
-    let connection = self.open_connection()?;
-    let mut statement =
-      connection.prepare("SELECT plugin_id, enabled FROM plugin_state ORDER BY plugin_id ASC")?;
-    let rows = statement.query_map([], |row| {
-      Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? != 0))
-    })?;
-
-    Ok(
-      rows
-        .collect::<std::result::Result<Vec<_>, _>>()?
-        .into_iter()
-        .collect(),
-    )
-  }
-
-  pub fn save_pending_approvals(&self, approvals: &[StoredApprovalRecord]) -> Result<()> {
-    let mut connection = self.open_connection()?;
-    let transaction = connection.transaction()?;
-    transaction.execute("DELETE FROM approvals WHERE decision IS NULL", [])?;
-
-    for approval in approvals {
-      transaction.execute(
-        "INSERT INTO approvals (
-          id,
-          thread_id,
-          action,
-          title,
-          relative_path,
-          content,
-          command,
-          requested_at,
-          decision,
-          resolved_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL)",
-        params![
-          &approval.id,
-          &approval.thread_id,
-          &approval.action,
-          &approval.title,
-          &approval.relative_path,
-          &approval.content,
-          &approval.command,
-          current_timestamp()?,
-        ],
-      )?;
-    }
-
-    transaction.commit()?;
-    Ok(())
-  }
-
-  pub fn resolve_approval(&self, approval: &StoredApprovalRecord, decision: &str) -> Result<()> {
-    let connection = self.open_connection()?;
-    connection.execute(
-      "INSERT INTO approvals (
-        id,
-        thread_id,
-        action,
-        title,
-        relative_path,
-        content,
-        command,
-        requested_at,
-        decision,
-        resolved_at
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-      ON CONFLICT(id) DO UPDATE SET
-        thread_id = excluded.thread_id,
-        action = excluded.action,
-        title = excluded.title,
-        relative_path = excluded.relative_path,
-        content = excluded.content,
-        command = excluded.command,
-        decision = excluded.decision,
-        resolved_at = excluded.resolved_at",
-      params![
-        &approval.id,
-        &approval.thread_id,
-        &approval.action,
-        &approval.title,
-        &approval.relative_path,
-        &approval.content,
-        &approval.command,
-        current_timestamp()?,
-        decision,
-        current_timestamp()?,
-      ],
-    )?;
-
-    Ok(())
-  }
-
-  pub fn next_approval_sequence(&self) -> Result<usize> {
-    let connection = self.open_connection()?;
-    let mut statement = connection.prepare("SELECT id FROM approvals ORDER BY id ASC")?;
-    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
-
-    let max_sequence = rows
-      .collect::<std::result::Result<Vec<_>, _>>()?
-      .into_iter()
-      .filter_map(|id| {
-        id.strip_prefix("approval-")
-          .and_then(|suffix| suffix.parse::<usize>().ok())
-      })
-      .max()
-      .unwrap_or(0);
-
-    Ok(max_sequence + 1)
-  }
-
-  pub fn save_memory_note(&self, note: &MemoryNote) -> Result<()> {
-    let connection = self.open_connection()?;
-    let tags_json =
-      serde_json::to_string(&note.tags).context("failed to serialize memory note tags")?;
-    connection.execute(
-      "INSERT INTO memory_notes (
-        id,
-        title,
-        body,
-        scope,
-        source,
-        created_at,
-        tags_json
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-      ON CONFLICT(id) DO UPDATE SET
-        title = excluded.title,
-        body = excluded.body,
-        scope = excluded.scope,
-        source = excluded.source,
-        created_at = excluded.created_at,
-        tags_json = excluded.tags_json",
-      params![
-        &note.id,
-        &note.title,
-        &note.body,
-        &note.scope,
-        &note.source,
-        note.created_at,
-        tags_json,
-      ],
-    )?;
-
-    Ok(())
-  }
-
-  pub fn next_memory_sequence(&self) -> Result<usize> {
-    let connection = self.open_connection()?;
-    let mut statement = connection.prepare("SELECT id FROM memory_notes ORDER BY id ASC")?;
-    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
-
-    let max_sequence = rows
-      .collect::<std::result::Result<Vec<_>, _>>()?
-      .into_iter()
-      .filter_map(|id| {
-        id.strip_prefix("memory-")
-          .and_then(|suffix| suffix.parse::<usize>().ok())
-      })
-      .max()
-      .unwrap_or(0);
-
-    Ok(max_sequence + 1)
-  }
-
-  pub fn save_workspace(&self, workspace: &WorkspaceSummary) -> Result<()> {
-    let connection = self.open_connection()?;
-    connection.execute(
-      "INSERT INTO workspace_state (id, root_path, display_name, updated_at)
-       VALUES (1, ?1, ?2, ?3)
-       ON CONFLICT(id) DO UPDATE SET
-         root_path = excluded.root_path,
-         display_name = excluded.display_name,
-         updated_at = excluded.updated_at",
-      params![
-        &workspace.root_path,
-        &workspace.display_name,
-        current_timestamp()?,
-      ],
-    )?;
-
-    Ok(())
-  }
-
-  pub fn save_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
-    let connection = self.open_connection()?;
-    connection.execute(
-      "INSERT INTO plugin_state (plugin_id, enabled, updated_at)
-       VALUES (?1, ?2, ?3)
-       ON CONFLICT(plugin_id) DO UPDATE SET
-         enabled = excluded.enabled,
-         updated_at = excluded.updated_at",
-      params![plugin_id, if enabled { 1 } else { 0 }, current_timestamp()?],
-    )?;
-
-    Ok(())
-  }
-
-  pub fn delete_plugin_state(&self, plugin_id: &str) -> Result<()> {
-    let connection = self.open_connection()?;
-    connection.execute(
-      "DELETE FROM plugin_state WHERE plugin_id = ?1",
-      params![plugin_id],
-    )?;
-    Ok(())
-  }
-
   fn open_connection(&self) -> Result<Connection> {
     if let Some(parent) = self.database_path.parent() {
       fs::create_dir_all(parent)
@@ -431,73 +51,19 @@ impl RuntimeStore {
     ensure_schema(&connection)?;
     Ok(connection)
   }
-
-  fn import_legacy_threads_if_needed(&self, connection: &Connection) -> Result<()> {
-    let existing_count: i64 =
-      connection.query_row("SELECT COUNT(*) FROM threads", [], |row| row.get(0))?;
-    if existing_count > 0 || !self.legacy_runtime_state_path.exists() {
-      return Ok(());
-    }
-
-    let legacy_content =
-      fs::read_to_string(&self.legacy_runtime_state_path).with_context(|| {
-        format!(
-          "failed to read legacy runtime state from {}",
-          self.legacy_runtime_state_path.display()
-        )
-      })?;
-    let legacy_threads = serde_json::from_str::<Vec<StoredThreadRecord>>(&legacy_content)
-      .with_context(|| {
-        format!(
-          "failed to parse legacy runtime state from {}",
-          self.legacy_runtime_state_path.display()
-        )
-      })?;
-
-    for thread in legacy_threads {
-      let items_json =
-        serde_json::to_string(&thread.items).context("failed to serialize migrated items")?;
-      let workspace = thread
-        .workspace
-        .clone()
-        .or(thread.summary.workspace.clone());
-      connection.execute(
-        "INSERT INTO threads (
-          id,
-          title,
-          status,
-          turn_count,
-          items_json,
-          workspace_root_path,
-          workspace_display_name,
-          updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![
-          thread.summary.id,
-          thread.summary.title,
-          thread.summary.status,
-          thread.turn_count as i64,
-          items_json,
-          workspace
-            .as_ref()
-            .map(|workspace| workspace.root_path.clone()),
-          workspace
-            .as_ref()
-            .map(|workspace| workspace.display_name.clone()),
-          current_timestamp()?,
-        ],
-      )?;
-    }
-
-    Ok(())
-  }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use std::env;
+  use std::path::PathBuf;
   use std::time::{SystemTime, UNIX_EPOCH};
+
+  use pith_memory::MemoryNote;
+  use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+  use rusqlite::Connection;
+
+  use super::*;
 
   fn create_temp_directory(label: &str) -> PathBuf {
     let unique = SystemTime::now()
