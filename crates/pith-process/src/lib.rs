@@ -148,10 +148,8 @@ fn terminate_unix_process_group(child: &mut Child, grace_period: Duration) {
 
   thread::sleep(grace_period);
 
-  if matches!(child.try_wait(), Ok(None)) {
-    if !send_unix_signal(process_group_id, SIGKILL) {
-      let _ = child.kill();
-    }
+  if matches!(child.try_wait(), Ok(None)) && !send_unix_signal(process_group_id, SIGKILL) {
+    let _ = child.kill();
   }
 }
 
