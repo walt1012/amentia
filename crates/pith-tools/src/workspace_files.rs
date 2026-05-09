@@ -260,8 +260,8 @@ mod tests {
     fs::write(workspace.join("two.txt"), "two").expect("two file");
     fs::write(workspace.join("three.txt"), "three").expect("three file");
 
-    let error = list_directory_with_entry_limit(&workspace, None, 10, 2, || false)
-      .expect_err("entry budget");
+    let error =
+      list_directory_with_entry_limit(&workspace, None, 10, 2, || false).expect_err("entry budget");
 
     assert!(error
       .to_string()
