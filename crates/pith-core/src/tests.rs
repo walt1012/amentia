@@ -1,7 +1,7 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::test_support::{
-  bundled_plugin_entry, create_temp_plugin_bundle, create_temp_workspace, enable_full_access_plugin,
-  replace_plugin_catalog, request,
+  bundled_plugin_entry, create_temp_plugin_bundle, create_temp_workspace,
+  enable_full_access_plugin, replace_plugin_catalog, request,
 };
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
