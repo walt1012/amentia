@@ -1,5 +1,13 @@
 import SwiftUI
 
+enum StatusTone: String, Hashable {
+  case neutral
+  case ready
+  case active
+  case warning
+  case danger
+}
+
 extension StatusTone {
   var color: Color {
     switch self {
