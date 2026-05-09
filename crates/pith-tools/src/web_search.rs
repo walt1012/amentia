@@ -97,7 +97,11 @@ where
   }
 
   let html = String::from_utf8_lossy(&output.stdout);
-  Ok(parse_duckduckgo_lite_results(&html, max_results, WEB_SEARCH_PROVIDER))
+  Ok(parse_duckduckgo_lite_results(
+    &html,
+    max_results,
+    WEB_SEARCH_PROVIDER,
+  ))
 }
 
 struct WebSearchHttpOutput {
