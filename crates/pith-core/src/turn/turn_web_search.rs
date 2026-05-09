@@ -214,10 +214,7 @@ mod tests {
       attributes.get("query").map(String::as_str),
       Some("latest pith release")
     );
-    assert_eq!(
-      attributes.get("maxResults").map(String::as_str),
-      Some("5")
-    );
+    assert_eq!(attributes.get("maxResults").map(String::as_str), Some("5"));
     assert_eq!(
       attributes.get("client").map(String::as_str),
       Some("example-client")
