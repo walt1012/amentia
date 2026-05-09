@@ -75,7 +75,7 @@ extension AppViewModel {
 
   func removePlugin(pluginID: String) {
     guard canRemovePlugin(pluginID: pluginID),
-          let plugin = plugins.first(where: { $0.id == pluginID })
+          let plugin = pluginSummary(pluginID: pluginID)
     else {
       return
     }
@@ -153,39 +153,39 @@ extension AppViewModel {
   }
 
   func pluginCountSummary() -> String {
-    PluginDashboardPresenter.pluginCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.pluginCountSummary(pluginDashboardSnapshot)
   }
 
   func localPluginCountSummary() -> String {
-    PluginDashboardPresenter.localPluginCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.localPluginCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginDetailSummary() -> String {
-    PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginPermissionCountSummary() -> String {
-    PluginDashboardPresenter.permissionCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.permissionCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginPermissionDetailSummary() -> String {
-    PluginDashboardPresenter.permissionDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.permissionDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginPermissionPreview() -> [PluginSummary] {
-    PluginDashboardPresenter.permissionPreview(pluginDashboardSnapshot())
+    PluginDashboardPresenter.permissionPreview(pluginDashboardSnapshot)
   }
 
   func invalidPluginCountSummary() -> String {
-    PluginDashboardPresenter.invalidPluginCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.invalidPluginCountSummary(pluginDashboardSnapshot)
   }
 
   func invalidPluginDetailSummary() -> String {
-    PluginDashboardPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot)
   }
 
   func invalidPlugins() -> [PluginSummary] {
-    PluginDashboardPresenter.invalidPlugins(pluginDashboardSnapshot())
+    PluginDashboardPresenter.invalidPlugins(pluginDashboardSnapshot)
   }
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
@@ -201,7 +201,7 @@ extension AppViewModel {
   }
 
   func revealPluginManifest(pluginID: String) {
-    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
+    guard let plugin = pluginSummary(pluginID: pluginID) else {
       runtimeDetail = "Plugin manifest path is unavailable."
       return
     }
@@ -213,43 +213,43 @@ extension AppViewModel {
   }
 
   func pluginRegistryCountSummary() -> String {
-    PluginDashboardPresenter.registryCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.registryCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginRegistryDetailSummary() -> String {
-    PluginDashboardPresenter.registryDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.registryDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginCapabilityPreview() -> [PluginCapabilitySummary] {
-    PluginDashboardPresenter.capabilityPreview(pluginDashboardSnapshot())
+    PluginDashboardPresenter.capabilityPreview(pluginDashboardSnapshot)
   }
 
   func pluginConnectorCountSummary() -> String {
-    PluginDashboardPresenter.connectorCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.connectorCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginConnectorDetailSummary() -> String {
-    PluginDashboardPresenter.connectorDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.connectorDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginConnectorPreview() -> [PluginConnectorSummary] {
-    PluginDashboardPresenter.connectorPreview(pluginDashboardSnapshot())
+    PluginDashboardPresenter.connectorPreview(pluginDashboardSnapshot)
   }
 
   func pluginCommandCountSummary() -> String {
-    PluginDashboardPresenter.commandCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.commandCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginCommandDetailSummary() -> String {
-    PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginHookCountSummary() -> String {
-    PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot)
   }
 
   func pluginHookDetailSummary() -> String {
-    PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot())
+    PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot)
   }
 
   func refreshPluginState() async {
@@ -269,17 +269,6 @@ extension AppViewModel {
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
       plugins: plugins,
       commands: pluginCommands
-    )
-  }
-
-  private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
-    PluginDashboardSnapshot(
-      plugins: plugins,
-      registrySummary: pluginCapabilityRegistrySummary,
-      capabilities: pluginCapabilities,
-      connectors: pluginConnectors,
-      commands: pluginCommands,
-      hooks: pluginHooks
     )
   }
 }

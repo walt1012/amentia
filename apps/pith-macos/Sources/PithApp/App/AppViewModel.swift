@@ -226,6 +226,14 @@ final class AppViewModel: ObservableObject {
     pluginState.hooks
   }
 
+  var pluginDashboardSnapshot: PluginDashboardSnapshot {
+    pluginState.dashboardSnapshot
+  }
+
+  func pluginSummary(pluginID: String) -> PluginSummary? {
+    pluginState.plugin(id: pluginID)
+  }
+
   var memoryStatus: MemoryStatusSummary? {
     memoryState.status
   }
