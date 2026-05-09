@@ -174,8 +174,8 @@ mod tests {
     fs::create_dir_all(&workspace).expect("workspace");
     fs::write(workspace.join("inside.txt"), "visible needle").expect("inside file");
 
-    let error = search_files_with_cancellation(&workspace, "needle", 10, || true)
-      .expect_err("cancelled");
+    let error =
+      search_files_with_cancellation(&workspace, "needle", 10, || true).expect_err("cancelled");
 
     assert!(error.to_string().contains("search cancelled"));
 
