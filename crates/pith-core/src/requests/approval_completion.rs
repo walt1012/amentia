@@ -20,7 +20,9 @@ pub fn complete_prepared_approval_respond(
     memory_event,
     hook_memory_captures,
   } = completed.output;
-  context.execution_state.remove_running_approval(&approval.id);
+  context
+    .execution_state
+    .remove_running_approval(&approval.id);
 
   let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
     return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");

@@ -57,9 +57,7 @@ fn execution_control_detail(
     return format!("{active_turn_count} turn(s) are active and cancellable.");
   }
   if running_approval_count > 0 {
-    return format!(
-      "{running_approval_count} approval execution(s) are active and cancellable."
-    );
+    return format!("{running_approval_count} approval execution(s) are active and cancellable.");
   }
 
   "Risky actions require approval, and local executions can be cancelled.".to_string()

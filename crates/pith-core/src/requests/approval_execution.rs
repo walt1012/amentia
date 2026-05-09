@@ -25,10 +25,7 @@ pub fn execute_prepared_approval_respond(
       build_recovered_approval_output(fallback_approval, fallback_decision, fallback_workspace)
     });
 
-  CompletedApprovalRespond {
-    request_id,
-    output,
-  }
+  CompletedApprovalRespond { request_id, output }
 }
 
 fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExecutionOutput {
