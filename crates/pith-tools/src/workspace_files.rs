@@ -15,32 +15,51 @@ pub fn list_directory(
   relative_path: Option<&str>,
   limit: usize,
 ) -> Result<Vec<DirectoryEntry>> {
+  list_directory_with_cancellation(workspace_root, relative_path, limit, || false)
+}
+
+pub fn list_directory_with_cancellation<F>(
+  workspace_root: &Path,
+  relative_path: Option<&str>,
+  limit: usize,
+  is_cancelled: F,
+) -> Result<Vec<DirectoryEntry>>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("directory listing cancelled");
+  }
   let target = resolve_workspace_path(workspace_root, relative_path.unwrap_or("."), true)?;
   let workspace_root = canonical_workspace_root(workspace_root)?;
 
-  let mut entries = fs::read_dir(&target)
+  let mut entries = Vec::new();
+  for entry in fs::read_dir(&target)
     .with_context(|| format!("failed to read directory {}", target.display()))?
     .filter_map(|entry| entry.ok())
-    .map(|entry| {
-      let path = entry.path();
-      let metadata = fs::symlink_metadata(&path)
-        .with_context(|| format!("failed to read metadata for {}", path.display()))?;
-      let entry_type = if metadata.file_type().is_symlink() {
-        "symlink"
-      } else if metadata.is_dir() {
-        "directory"
-      } else {
-        "file"
-      };
-      let relative_path = relative_path_string(&workspace_root, &path)?;
+  {
+    if is_cancelled() {
+      bail!("directory listing cancelled");
+    }
 
-      Ok(DirectoryEntry {
-        name: entry.file_name().to_string_lossy().into_owned(),
-        relative_path,
-        entry_type: entry_type.to_string(),
-      })
-    })
-    .collect::<Result<Vec<_>>>()?;
+    let path = entry.path();
+    let metadata = fs::symlink_metadata(&path)
+      .with_context(|| format!("failed to read metadata for {}", path.display()))?;
+    let entry_type = if metadata.file_type().is_symlink() {
+      "symlink"
+    } else if metadata.is_dir() {
+      "directory"
+    } else {
+      "file"
+    };
+    let relative_path = relative_path_string(&workspace_root, &path)?;
+
+    entries.push(DirectoryEntry {
+      name: entry.file_name().to_string_lossy().into_owned(),
+      relative_path,
+      entry_type: entry_type.to_string(),
+    });
+  }
 
   entries.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
   if entries.len() > limit {
@@ -191,6 +210,20 @@ mod tests {
 
     let _ = fs::remove_dir_all(workspace);
     let _ = fs::remove_dir_all(outside);
+  }
+
+  #[test]
+  fn list_directory_stops_when_cancelled() {
+    let workspace = unique_temp_workspace("list-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("inside.txt"), "visible").expect("inside file");
+
+    let error =
+      list_directory_with_cancellation(&workspace, None, 10, || true).expect_err("cancelled");
+
+    assert!(error.to_string().contains("directory listing cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
   }
 
   #[test]

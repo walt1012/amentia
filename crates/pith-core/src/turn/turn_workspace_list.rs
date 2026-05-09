@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::list_directory;
+use pith_tools::list_directory_with_cancellation;
 
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
@@ -64,7 +64,9 @@ pub(super) fn execute_list_turn(
     )),
   });
 
-  match list_directory(Path::new(&workspace.root_path), None, 24) {
+  match list_directory_with_cancellation(Path::new(&workspace.root_path), None, 24, || {
+    snapshot.cancellation.is_cancelled()
+  }) {
     Ok(entries) => {
       items.push(TimelineItem {
         kind: "toolResult".to_string(),
@@ -103,6 +105,12 @@ pub(super) fn execute_list_turn(
       );
     }
     Err(error) => {
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "list_directory failed".to_string(),
