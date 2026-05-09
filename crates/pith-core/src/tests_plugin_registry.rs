@@ -5,7 +5,6 @@ use super::test_support::{
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::methods;
-use serde_json::json;
 
 #[test]
 fn plugin_command_registry_lists_enabled_command_plugins() {
