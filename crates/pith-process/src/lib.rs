@@ -113,15 +113,7 @@ where
 pub fn configure_process_group(process: &mut Command) {
   use std::os::unix::process::CommandExt;
 
-  unsafe {
-    process.pre_exec(|| {
-      if setpgid(0, 0) == 0 {
-        Ok(())
-      } else {
-        Err(std::io::Error::last_os_error())
-      }
-    });
-  }
+  process.process_group(0);
 }
 
 #[cfg(not(unix))]
@@ -166,7 +158,6 @@ const SIGKILL: i32 = 9;
 #[cfg(unix)]
 extern "C" {
   fn kill(pid: i32, sig: i32) -> i32;
-  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 #[cfg(test)]
