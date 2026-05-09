@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use pith_model_runtime::llama_cpp_timeout_seconds;
 use pith_sandbox::NativeSandboxStatus;
 use pith_tools::{
-  list_directory_max_scanned_entries, search_files_max_file_bytes,
+  diff_preview_max_bytes, list_directory_max_scanned_entries, search_files_max_file_bytes,
   search_files_max_visited_entries, shell_command_timeout_seconds,
   shell_output_artifact_retained_runs, shell_output_artifact_root_path, web_search_timeout_seconds,
   WebSearchStatus,
@@ -115,6 +115,10 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     (
       "directoryListingMaxScannedEntries".to_string(),
       list_directory_max_scanned_entries().to_string(),
+    ),
+    (
+      "diffPreviewMaxBytes".to_string(),
+      diff_preview_max_bytes().to_string(),
     ),
     (
       "webSearchTimeoutSeconds".to_string(),

@@ -11,6 +11,10 @@ use crate::paths::{
 
 const DIFF_PREVIEW_MAX_BYTES: usize = 128 * 1024;
 
+pub fn diff_preview_max_bytes() -> usize {
+  DIFF_PREVIEW_MAX_BYTES
+}
+
 pub fn generate_diff(
   workspace_root: &Path,
   relative_path: &str,
