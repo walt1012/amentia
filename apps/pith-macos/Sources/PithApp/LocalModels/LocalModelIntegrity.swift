@@ -9,7 +9,6 @@ struct LocalModelIntegrityState {
 enum LocalModelIntegrity {
   private static let ggufMagic = Data([0x47, 0x47, 0x55, 0x46])
   private static let minimumModelBytes: Int64 = 64 * 1024 * 1024
-  private static let verifiedModelKeyPrefix = "pith.verifiedLocalModel."
 
   static func state(at path: String, item: LocalModelCatalogItem) -> LocalModelIntegrityState {
     let localMetadata = localFileMetadata(at: path)
@@ -41,7 +40,7 @@ enum LocalModelIntegrity {
       )
     }
 
-    rememberVerifiedModel(
+    LocalModelVerificationStampStore.rememberVerifiedModel(
       modelID: model.id,
       path: model.installPath,
       expectedSHA256: model.sha256,
@@ -91,7 +90,7 @@ enum LocalModelIntegrity {
       )
       try validateGGUFMagic(at: URL(fileURLWithPath: path), displayName: item.displayName)
       try validateExpectedSHA256(item.sha256, displayName: item.displayName)
-      if hasVerifiedModel(
+      if LocalModelVerificationStampStore.hasVerifiedModel(
         modelID: item.id,
         path: path,
         expectedSHA256: item.sha256,
@@ -102,10 +101,10 @@ enum LocalModelIntegrity {
 
       let actualSHA256 = try sha256Hex(at: URL(fileURLWithPath: path))
       guard actualSHA256.caseInsensitiveCompare(item.sha256) == .orderedSame else {
-        forgetVerifiedModel(modelID: item.id)
+        LocalModelVerificationStampStore.forgetVerifiedModel(modelID: item.id)
         return false
       }
-      rememberVerifiedModel(
+      LocalModelVerificationStampStore.rememberVerifiedModel(
         modelID: item.id,
         path: path,
         expectedSHA256: item.sha256,
@@ -113,7 +112,7 @@ enum LocalModelIntegrity {
       )
       return true
     } catch {
-      forgetVerifiedModel(modelID: item.id)
+      LocalModelVerificationStampStore.forgetVerifiedModel(modelID: item.id)
       return false
     }
   }
@@ -172,92 +171,4 @@ enum LocalModelIntegrity {
     return hasher.finalize().map { String(format: "%02x", $0) }.joined()
   }
 
-  private static func hasVerifiedModel(
-    modelID: String,
-    path: String,
-    expectedSHA256: String,
-    localMetadata: LocalModelFileMetadata
-  ) -> Bool {
-    UserDefaults.standard.string(forKey: verifiedModelKey(for: modelID)) == verificationStamp(
-      path: path,
-      expectedSHA256: expectedSHA256,
-      localMetadata: localMetadata
-    )
-  }
-
-  private static func rememberVerifiedModel(
-    modelID: String,
-    path: String,
-    expectedSHA256: String,
-    localMetadata: LocalModelFileMetadata
-  ) {
-    let stamp = verificationStamp(
-      path: path,
-      expectedSHA256: expectedSHA256,
-      localMetadata: localMetadata
-    )
-    UserDefaults.standard.set(stamp, forKey: verifiedModelKey(for: modelID))
-  }
-
-  private static func forgetVerifiedModel(modelID: String) {
-    UserDefaults.standard.removeObject(forKey: verifiedModelKey(for: modelID))
-  }
-
-  private static func verifiedModelKey(for modelID: String) -> String {
-    "\(verifiedModelKeyPrefix)\(modelID)"
-  }
-
-  private static func verificationStamp(
-    path: String,
-    expectedSHA256: String,
-    localMetadata: LocalModelFileMetadata
-  ) -> String {
-    [
-      normalizedPath(path),
-      String(localMetadata.sizeBytes),
-      String(localMetadata.modificationMilliseconds),
-      expectedSHA256.lowercased(),
-    ].joined(separator: "|")
-  }
-
-  private static func normalizedPath(_ path: String) -> String {
-    URL(fileURLWithPath: path).standardizedFileURL.path
-  }
-}
-
-private struct LocalModelFileMetadata {
-  let sizeBytes: Int64
-  let modificationDate: Date?
-
-  var modificationMilliseconds: Int64 {
-    guard let modificationDate else {
-      return 0
-    }
-
-    return Int64(modificationDate.timeIntervalSince1970 * 1000)
-  }
-}
-
-private enum LocalModelIntegrityError: LocalizedError {
-  case missingSize(path: String)
-  case sizeTooSmall(displayName: String, expectedMinimumBytes: Int64, actualBytes: Int64)
-  case invalidMagic(displayName: String)
-  case missingChecksum(displayName: String)
-  case checksumMismatch(displayName: String, expected: String, actual: String)
-
-  var errorDescription: String? {
-    switch self {
-    case .missingSize(let path):
-      return "Could not inspect local model size at \(path)."
-    case .sizeTooSmall(let displayName, let expectedMinimumBytes, let actualBytes):
-      return
-        "\(displayName) is incomplete. Expected at least \(expectedMinimumBytes) bytes, found \(actualBytes)."
-    case .invalidMagic(let displayName):
-      return "\(displayName) is not a valid GGUF file."
-    case .missingChecksum(let displayName):
-      return "\(displayName) is missing required SHA-256 metadata."
-    case .checksumMismatch(let displayName, let expected, let actual):
-      return "\(displayName) checksum mismatch. Expected \(expected), found \(actual)."
-    }
-  }
 }
