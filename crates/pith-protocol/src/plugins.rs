@@ -1,0 +1,180 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginSummary {
+  pub id: String,
+  pub name: String,
+  pub version: String,
+  pub display_name: String,
+  pub status: String,
+  pub description: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub author_name: Option<String>,
+  pub enabled: bool,
+  pub default_enabled: bool,
+  pub capabilities: Vec<String>,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  pub provenance: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub validation_error: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub validation_hint: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginListResult {
+  pub plugins: Vec<PluginSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginInstallParams {
+  pub source_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginInstallResult {
+  pub plugin: PluginSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRemoveParams {
+  pub manifest_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRemoveResult {
+  pub plugin_id: String,
+  pub display_name: String,
+  pub removed_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCapabilityRegistration {
+  pub capability_id: String,
+  pub kind: String,
+  pub identifier: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+  pub metadata: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCapabilityRegistrySummary {
+  pub enabled_plugin_count: usize,
+  pub total_capability_count: usize,
+  pub capability_counts_by_kind: HashMap<String, usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCapabilityRegistryResult {
+  pub capabilities: Vec<PluginCapabilityRegistration>,
+  pub summary: PluginCapabilityRegistrySummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorSummary {
+  pub connector_id: String,
+  pub display_name: String,
+  pub service: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub enabled: bool,
+  pub status: String,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub homepage: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub auth_type: Option<String>,
+  pub auth_required: bool,
+  #[serde(default)]
+  pub auth_scopes: Vec<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_store: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorRegistryResult {
+  pub connectors: Vec<PluginConnectorSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandSummary {
+  pub command_id: String,
+  pub title: String,
+  pub description: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub source_path: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub execution_kind: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub memory_summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandRegistryResult {
+  pub commands: Vec<PluginCommandSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandRunParams {
+  pub thread_id: String,
+  pub command_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub input: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginHookSummary {
+  pub hook_id: String,
+  pub title: String,
+  pub description: String,
+  pub event: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub source_path: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub memory_summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginHookRegistryResult {
+  pub hooks: Vec<PluginHookSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginSetEnabledParams {
+  pub plugin_id: String,
+  pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginSetEnabledResult {
+  pub plugin: PluginSummary,
+}
