@@ -2,12 +2,12 @@ import Foundation
 
 enum TimelineEventPresenter {
   static let generatingLocalResponseDetail = "Generating local response..."
-  static let pendingTurnCancelledDetail = "Local turn request cancelled."
+  static let pendingTurnCancelledDetail = "Local execution request cancelled."
   static let runningPluginCommandDetail = "Running local plugin command..."
   static let pluginCommandNeedsExecutionContractDetail =
     "Plugin command needs an execution contract before it can run."
   static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
-  static let cancellingTurnDetail = "Cancelling local turn request..."
+  static let cancellingTurnDetail = "Cancelling local execution..."
 
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
@@ -135,8 +135,8 @@ enum TimelineEventPresenter {
 
   static func pendingTurnCancelled() -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Turn Cancelled",
-      body: "The pending local turn request was cancelled before streaming started.",
+      title: "Execution Cancelled",
+      body: "The pending local execution request was cancelled before it finished.",
       attributes: [:]
     )
   }
@@ -195,7 +195,7 @@ enum TimelineEventPresenter {
 
   static func turnCancelFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Turn Cancel Failed",
+      title: "Execution Cancel Failed",
       body: error.localizedDescription,
       attributes: [:]
     )

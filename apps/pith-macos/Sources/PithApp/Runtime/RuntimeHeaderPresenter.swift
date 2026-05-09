@@ -32,7 +32,7 @@ enum RuntimeHeaderPresenter {
         return "Model is ready. Open a workspace to bind tools to a project."
       }
       if snapshot.hasActiveTurn {
-        return "Pith is streaming locally. Cancel only if the turn is no longer useful."
+        return "Pith is running locally. Cancel only if the execution is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
         return "Select or create a thread to start local agent work."

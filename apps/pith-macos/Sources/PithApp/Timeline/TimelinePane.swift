@@ -191,7 +191,7 @@ struct TimelinePane: View {
         .buttonStyle(.borderedProminent)
         .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel") {
+        Button("Cancel Execution") {
           viewModel.cancelActiveTurn()
         }
         .buttonStyle(.bordered)

@@ -38,7 +38,7 @@ enum ComposerStatusPresenter {
     }
 
     if snapshot.hasActiveTurn {
-      return "Pith is streaming a response. Cancel to stop the current turn."
+      return "Pith is running a local execution. Cancel to stop it."
     }
 
     if snapshot.isWaitingForFirstMessage {
@@ -72,7 +72,7 @@ enum ComposerStatusPresenter {
       }
 
       if snapshot.hasActiveTurn {
-        return "Pith is streaming locally. Cancel the turn if it is no longer useful."
+        return "Pith is running locally. Cancel the execution if it is no longer useful."
       }
 
       if snapshot.isWaitingForFirstMessage {
