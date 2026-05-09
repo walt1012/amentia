@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::{diff_preview_max_bytes, generate_diff_with_cancellation};
+use pith_tools::{diff_preview_max_bytes, generate_diff_with_cancellation, write_file_max_bytes};
 
 use super::turn_tool_provenance::workspace_tool_attributes;
 use crate::approval_types::PendingApproval;
@@ -53,6 +53,36 @@ pub(super) fn execute_write_turn(
     ));
     return;
   };
+
+  if intent.content.len() > write_file_max_bytes() {
+    items.push(TimelineItem {
+      kind: "warning".to_string(),
+      title: "write_file rejected".to_string(),
+      content: format!(
+        "The proposed write is {} bytes, above the {} byte workspace write limit.",
+        intent.content.len(),
+        write_file_max_bytes()
+      ),
+      attributes: Some(workspace_tool_attributes(
+        "write_file",
+        workspace,
+        [
+          ("relativePath".to_string(), intent.relative_path.clone()),
+          ("bytesRequested".to_string(), intent.content.len().to_string()),
+          ("maxBytes".to_string(), write_file_max_bytes().to_string()),
+        ],
+      )),
+    });
+    items.push(TimelineItem {
+      kind: "assistantMessage".to_string(),
+      title: "Assistant".to_string(),
+      content:
+        "Pith did not request approval because the proposed write is too large. Split it into smaller changes."
+          .to_string(),
+      attributes: None,
+    });
+    return;
+  }
 
   let approval = PendingApproval {
     id: approval_id.clone(),
