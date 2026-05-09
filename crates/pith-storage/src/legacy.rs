@@ -23,8 +23,8 @@ pub(crate) fn import_legacy_threads_if_needed(
       legacy_runtime_state_path.display()
     )
   })?;
-  let legacy_threads =
-    serde_json::from_str::<Vec<StoredThreadRecord>>(&legacy_content).with_context(|| {
+  let legacy_threads = serde_json::from_str::<Vec<StoredThreadRecord>>(&legacy_content)
+    .with_context(|| {
       format!(
         "failed to parse legacy runtime state from {}",
         legacy_runtime_state_path.display()
