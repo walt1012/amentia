@@ -38,29 +38,6 @@ final class RuntimeBridge {
     )
   }
 
-  func localPluginInstallRootPath() -> String {
-    RuntimeBridgeLocalEnvironment.localPluginInstallRootPath()
-  }
-
-  func localModelStorageRootPath() -> String {
-    RuntimeBridgeLocalEnvironment.localModelStorageRootPath()
-  }
-
-  func activeLocalModelPath() -> String? {
-    RuntimeBridgeLocalEnvironment.activeLocalModelPath()
-  }
-
-  func configureActiveLocalModel(manifestPath: String, modelPath: String) {
-    RuntimeBridgeLocalEnvironment.configureActiveLocalModel(
-      manifestPath: manifestPath,
-      modelPath: modelPath
-    )
-  }
-
-  func clearActiveLocalModel() {
-    RuntimeBridgeLocalEnvironment.clearActiveLocalModel()
-  }
-
   func stopRuntime(detail: String = "Runtime stopped.") {
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
@@ -251,20 +228,6 @@ final class RuntimeBridge {
 
     let decoder = JSONDecoder()
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
-  }
-
-  func responseResult<ResultType: Decodable>(
-    from response: JSONRPCResponse<ResultType>
-  ) throws -> ResultType {
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
-
-    return result
   }
 
 }
