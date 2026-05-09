@@ -5,6 +5,7 @@ use pith_tools::{
   web_search_status, web_search_timeout_seconds, web_search_with_cancellation, WebSearchStatus,
 };
 
+use super::turn_tool_limits::WEB_SEARCH_RESULT_LIMIT;
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::intent_inference::WebSearchIntent;
 use crate::local_responses::{
@@ -12,8 +13,6 @@ use crate::local_responses::{
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
-
-const WEB_SEARCH_MAX_RESULTS: usize = 5;
 
 pub(super) fn execute_web_search_turn(
   snapshot: &PreparedTurnSnapshot,
@@ -88,7 +87,7 @@ pub(super) fn execute_web_search_turn(
     attributes: Some(web_search_attributes(intent, &search_status)),
   });
 
-  match web_search_with_cancellation(query, WEB_SEARCH_MAX_RESULTS, || {
+  match web_search_with_cancellation(query, WEB_SEARCH_RESULT_LIMIT, || {
     snapshot.cancellation.is_cancelled()
   }) {
     Ok(results) => {
@@ -153,6 +152,11 @@ fn web_search_attributes(
 ) -> HashMap<String, String> {
   HashMap::from([
     ("tool".to_string(), "web_search".to_string()),
+    ("query".to_string(), intent.query.clone()),
+    (
+      "maxResults".to_string(),
+      WEB_SEARCH_RESULT_LIMIT.to_string(),
+    ),
     ("provider".to_string(), status.provider.clone()),
     ("client".to_string(), status.client.clone()),
     ("networkAccess".to_string(), "true".to_string()),
@@ -205,6 +209,14 @@ mod tests {
     assert_eq!(
       attributes.get("provider").map(String::as_str),
       Some("Example Search")
+    );
+    assert_eq!(
+      attributes.get("query").map(String::as_str),
+      Some("latest pith release")
+    );
+    assert_eq!(
+      attributes.get("maxResults").map(String::as_str),
+      Some("5")
     );
     assert_eq!(
       attributes.get("client").map(String::as_str),
