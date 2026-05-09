@@ -124,13 +124,6 @@ impl RuntimeExecutionState {
       .insert_running_turn(turn_id, thread_id, cancellation);
   }
 
-  pub(crate) fn cancel_running_turn_for_thread(
-    &mut self,
-    thread_id: &str,
-  ) -> Option<(String, String)> {
-    self.running.cancel_running_turn_for_thread(thread_id)
-  }
-
   pub(crate) fn insert_running_approval(
     &mut self,
     approval_id: String,
@@ -140,10 +133,6 @@ impl RuntimeExecutionState {
     self
       .running
       .insert_running_approval(approval_id, thread_id, cancellation);
-  }
-
-  pub(crate) fn cancel_running_approval_for_thread(&mut self, thread_id: &str) -> Option<String> {
-    self.running.cancel_running_approval_for_thread(thread_id)
   }
 
   pub(crate) fn request_running_turn_cancel_for_thread(
