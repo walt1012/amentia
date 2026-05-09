@@ -31,7 +31,7 @@ It should feel like a native desktop workspace for controlled agent work, not a 
 - Structured events beat transcript parsing.
 - Bounded execution beats best-effort execution.
 - Progressive disclosure beats always-visible admin panels.
-- Context engineering beats generic document RAG.
+- Focused context engineering beats generic retrieval systems.
 - Plugin contracts beat prompt-template shortcuts.
 
 ## Reference Lessons
@@ -93,9 +93,9 @@ Context direction:
 - compact prompt assembly for small local models
 - ranked memory notes with attribution
 - compact tool observations and artifact references
-- built-in web search as a separate permissioned network retrieval tool for current public information
+- built-in web search as a separate permissioned network tool for current public information
 
-Web search is not sandbox behavior. Current memory ranking is not generic RAG.
+Web search is not sandbox behavior, and current memory ranking is not generic RAG. Do not add document RAG to the current roadmap; web search plus compact local context is enough until real usage proves otherwise.
 
 ## Plugin Direction
 
@@ -164,7 +164,7 @@ Candidate outcomes:
 - Notion reference connector
 - MCP client support
 - context ledger and thread compaction
-- optional local retrieval and reranking
+- connector-aware context packaging
 - automation and multi-agent workflows
 
 ## Current Focus
@@ -179,7 +179,7 @@ Stay on Milestone 3 closeout:
 - reduce architecture bottlenecks without cosmetic file splitting
 - keep the UI calm and primary-task focused
 
-Do not start broad connector execution, third-party auth, multi-agent workflows, or generic RAG until Milestone 4.
+Do not start broad connector execution, third-party auth, multi-agent workflows, or generic RAG during Milestone 3. Generic RAG is not part of the current roadmap.
 
 ## Quality Gates
 
