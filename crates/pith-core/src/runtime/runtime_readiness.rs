@@ -22,6 +22,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let execution_counts = context.execution_state.counts();
   let pending_approval_count = execution_counts.pending_approval_count();
   let active_turn_count = execution_counts.active_turn_count();
+  let running_approval_count = execution_counts.running_approval_count();
   let sandbox_status = context
     .workspace_state
     .current()
@@ -34,7 +35,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     "setup_required"
   } else if pending_approval_count > 0 {
     "needs_approval"
-  } else if active_turn_count > 0 {
+  } else if active_turn_count > 0 || running_approval_count > 0 {
     "running"
   } else {
     "ready"
@@ -60,6 +61,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       first_request_sent,
       pending_approval_count,
       active_turn_count,
+      running_approval_count,
     ),
     checks: vec![
       local_model_check(
@@ -72,7 +74,11 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       thread_check(thread_ready, workspace_thread_count),
       first_request_check(first_request_sent, thread_ready),
       context_check(&context_window, &output_cap),
-      execution_control_check(pending_approval_count, active_turn_count),
+      execution_control_check(
+        pending_approval_count,
+        active_turn_count,
+        running_approval_count,
+      ),
       native_sandbox_check(&sandbox_status),
       web_search_check(&web_search_status),
       plugin_check(enabled_plugin_count, context.plugin_state.catalog_len()),

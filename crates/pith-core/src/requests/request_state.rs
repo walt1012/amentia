@@ -85,6 +85,7 @@ pub(crate) struct PreparedApprovalSnapshot {
   pub(crate) decision: String,
   pub(crate) workspace: WorkspaceSummary,
   pub(crate) model_runtime: LocalModelRuntime,
+  pub(crate) cancellation: GenerationCancellation,
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
   pub(crate) plugins: Vec<PluginCatalogEntry>,

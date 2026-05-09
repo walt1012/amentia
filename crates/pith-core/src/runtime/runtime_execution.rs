@@ -13,6 +13,7 @@ pub(crate) struct RuntimeExecutionState {
   pending_approvals: RuntimePendingApprovalState,
   active_turns: RuntimeActiveTurnState,
   running_turns: HashMap<String, RunningTurnCancellation>,
+  running_approvals: HashMap<String, RunningApprovalCancellation>,
   pending_running_cancellations: HashSet<String>,
 }
 
@@ -26,6 +27,13 @@ pub(crate) struct RunningTurnCancellation {
 pub(crate) struct RuntimeExecutionCounts {
   pending_approval_count: usize,
   active_turn_count: usize,
+  running_approval_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct RunningApprovalCancellation {
+  thread_id: String,
+  cancellation: GenerationCancellation,
 }
 
 impl RuntimeExecutionCounts {
@@ -35,6 +43,10 @@ impl RuntimeExecutionCounts {
 
   pub(crate) fn active_turn_count(&self) -> usize {
     self.active_turn_count
+  }
+
+  pub(crate) fn running_approval_count(&self) -> usize {
+    self.running_approval_count
   }
 }
 
@@ -47,6 +59,7 @@ impl RuntimeExecutionState {
       pending_approvals: RuntimePendingApprovalState::new(pending_approvals),
       active_turns: RuntimeActiveTurnState::new(active_turns),
       running_turns: HashMap::new(),
+      running_approvals: HashMap::new(),
       pending_running_cancellations: HashSet::new(),
     }
   }
@@ -56,6 +69,7 @@ impl RuntimeExecutionState {
       pending_approvals: RuntimePendingApprovalState::empty(),
       active_turns: RuntimeActiveTurnState::empty(),
       running_turns: HashMap::new(),
+      running_approvals: HashMap::new(),
       pending_running_cancellations: HashSet::new(),
     }
   }
@@ -64,6 +78,7 @@ impl RuntimeExecutionState {
     RuntimeExecutionCounts {
       pending_approval_count: self.pending_approvals.count(),
       active_turn_count: self.active_turns.count() + self.running_turns.len(),
+      running_approval_count: self.running_approvals.len(),
     }
   }
 
@@ -143,11 +158,40 @@ impl RuntimeExecutionState {
     Some((turn_id, running_turn.thread_id))
   }
 
+  pub(crate) fn insert_running_approval(
+    &mut self,
+    approval_id: String,
+    thread_id: String,
+    cancellation: GenerationCancellation,
+  ) {
+    self.running_approvals.insert(
+      approval_id,
+      RunningApprovalCancellation {
+        thread_id,
+        cancellation,
+      },
+    );
+  }
+
+  pub(crate) fn cancel_running_approval_for_thread(&mut self, thread_id: &str) -> Option<String> {
+    let running_approval = self
+      .running_approvals
+      .iter()
+      .find(|(_, approval)| approval.thread_id == thread_id)
+      .map(|(_, approval)| approval.clone())?;
+    running_approval.cancellation.cancel();
+    Some(running_approval.thread_id)
+  }
+
   pub(crate) fn request_running_turn_cancel_for_thread(
     &mut self,
     thread_id: &str,
   ) -> Option<(String, String)> {
-    let cancellation = self.cancel_running_turn_for_thread(thread_id);
+    let cancellation = self.cancel_running_turn_for_thread(thread_id).or_else(|| {
+      self
+        .cancel_running_approval_for_thread(thread_id)
+        .map(|thread_id| ("".to_string(), thread_id))
+    });
     if cancellation.is_some() {
       self.pending_running_cancellations.remove(thread_id);
     } else {
@@ -164,6 +208,10 @@ impl RuntimeExecutionState {
 
   pub(crate) fn remove_running_turn(&mut self, turn_id: &str) {
     self.running_turns.remove(turn_id);
+  }
+
+  pub(crate) fn remove_running_approval(&mut self, approval_id: &str) {
+    self.running_approvals.remove(approval_id);
   }
 }
 
@@ -192,5 +240,25 @@ mod tests {
 
     assert_eq!(counts.pending_approval_count(), 1);
     assert_eq!(counts.active_turn_count(), 0);
+    assert_eq!(counts.running_approval_count(), 0);
+  }
+
+  #[test]
+  fn running_approval_can_be_cancelled_by_thread() {
+    let mut state = RuntimeExecutionState::empty();
+    let cancellation = GenerationCancellation::new();
+    state.insert_running_approval(
+      "approval-1".to_string(),
+      "thread-1".to_string(),
+      cancellation.clone(),
+    );
+
+    let cancelled = state.request_running_turn_cancel_for_thread("thread-1");
+
+    assert_eq!(cancelled, Some(("".to_string(), "thread-1".to_string())));
+    assert!(cancellation.is_cancelled());
+    assert_eq!(state.counts().running_approval_count(), 1);
+    state.remove_running_approval("approval-1");
+    assert_eq!(state.counts().running_approval_count(), 0);
   }
 }

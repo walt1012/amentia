@@ -1,3 +1,4 @@
+use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{ApprovalRespondParams, JsonRpcRequest, JsonRpcResponse};
 
 pub use super::approval_completion::complete_prepared_approval_respond;
@@ -46,6 +47,7 @@ pub fn prepare_approval_respond(
   };
   let current_workspace = context.workspace_state.current_cloned();
   let model_runtime = context.model_state.snapshot();
+  let cancellation = GenerationCancellation::new();
   let memory_notes = context.memory_state.snapshot_notes();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
   let plugins = context.plugin_state.snapshot_catalog();
@@ -69,6 +71,17 @@ pub fn prepare_approval_respond(
   context
     .execution_state
     .remove_pending_approval(&params.approval_id);
+  if context
+    .execution_state
+    .take_pending_running_turn_cancel(&approval.thread_id)
+  {
+    cancellation.cancel();
+  }
+  context.execution_state.insert_running_approval(
+    approval.id.clone(),
+    approval.thread_id.clone(),
+    cancellation.clone(),
+  );
 
   Ok(PreparedApprovalRespond {
     request_id: request.id,
@@ -77,6 +90,7 @@ pub fn prepare_approval_respond(
       decision,
       workspace,
       model_runtime,
+      cancellation,
       memory_notes,
       permission_sources,
       plugins,

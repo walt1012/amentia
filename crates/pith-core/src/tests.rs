@@ -76,6 +76,7 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
+  assert_eq!(result["metrics"]["runningApprovalCount"], "0");
   assert!(result["metrics"]["shellOutputArtifactRoot"].is_string());
   assert_eq!(result["metrics"]["shellOutputArtifactRetainedRuns"], "20");
   assert_eq!(result["metrics"]["workspaceSearchMaxFileBytes"], "262144");
@@ -1052,6 +1053,90 @@ fn approval_respond_runs_shell_after_approval() {
     .recent_notes(16)
     .into_iter()
     .any(|note| note.title == "Shell Completion" && note.source == "plugin.shell-recorder"));
+}
+
+#[test]
+fn approved_shell_execution_honors_pending_cancellation() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("approval-shell-cancel");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Shell Cancel Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Run shell: sleep 5"
+      })),
+    ),
+  );
+  let approval_id = turn_response.result.expect("turn result")["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+
+  let cancel_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_CANCEL_RUNNING,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  assert!(cancel_response.error.is_none());
+
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(approval_response.error.is_none());
+  let approval_result = approval_response.result.expect("approval result");
+  let items = approval_result["items"].as_array().expect("approval items");
+  let shell_result = items
+    .iter()
+    .find(|item| item["title"] == "run_shell result")
+    .expect("shell result");
+
+  assert_eq!(shell_result["attributes"]["cancelled"], "true");
+  assert_eq!(shell_result["attributes"]["exitCode"], "-1");
+  assert!(shell_result["content"]
+    .as_str()
+    .expect("shell content")
+    .contains("command cancelled"));
+
+  let readiness_response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
+  let readiness = readiness_response.result.expect("readiness result");
+  assert_eq!(readiness["metrics"]["runningApprovalCount"], "0");
 }
 
 #[test]

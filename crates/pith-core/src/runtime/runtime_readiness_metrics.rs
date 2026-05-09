@@ -59,6 +59,10 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
       execution_counts.active_turn_count().to_string(),
     ),
     (
+      "runningApprovalCount".to_string(),
+      execution_counts.running_approval_count().to_string(),
+    ),
+    (
       "workspaceThreadCount".to_string(),
       workspace_thread_count.to_string(),
     ),

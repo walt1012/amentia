@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_memory::{MemoryEvent, MemoryNote};
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::run_shell;
+use pith_tools::run_shell_with_cancellation;
 
 use crate::approval_types::PendingApproval;
 use crate::local_responses::{format_shell_result, summarize_shell_result};
@@ -22,6 +22,7 @@ pub(super) fn append_approved_shell_execution(
   approval: &PendingApproval,
   workspace: &WorkspaceSummary,
   model_runtime: &LocalModelRuntime,
+  cancellation: &GenerationCancellation,
   memory_notes: &[MemoryNote],
   permission_sources: &HashMap<String, Vec<String>>,
   plugins: &[PluginCatalogEntry],
@@ -61,10 +62,11 @@ pub(super) fn append_approved_shell_execution(
     )),
   ));
 
-  match run_shell(
+  match run_shell_with_cancellation(
     Path::new(&workspace.root_path),
     &command,
     SHELL_OUTPUT_PREVIEW_MAX_BYTES,
+    || cancellation.is_cancelled(),
   ) {
     Ok(result) => {
       events.set_memory_event(MemoryEvent::ShellCommandRan {
@@ -76,7 +78,7 @@ pub(super) fn append_approved_shell_execution(
         memory_notes,
         &workspace.display_name,
         &result,
-        None,
+        Some(cancellation),
       );
       events.push_item(TimelineItem {
         kind: "toolResult".to_string(),

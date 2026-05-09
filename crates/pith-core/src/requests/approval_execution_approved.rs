@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pith_memory::MemoryNote;
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::WorkspaceSummary;
 
@@ -15,6 +15,7 @@ pub(super) fn execute_approved_approval(
   approval: &PendingApproval,
   workspace: &WorkspaceSummary,
   model_runtime: &LocalModelRuntime,
+  cancellation: &GenerationCancellation,
   memory_notes: &[MemoryNote],
   permission_sources: &HashMap<String, Vec<String>>,
   plugins: &[PluginCatalogEntry],
@@ -31,6 +32,7 @@ pub(super) fn execute_approved_approval(
       approval,
       workspace,
       model_runtime,
+      cancellation,
       memory_notes,
       permission_sources,
       plugins,
