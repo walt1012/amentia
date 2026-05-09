@@ -62,3 +62,5 @@ pub use workspace_search::{
 mod test_support;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_plugins;
