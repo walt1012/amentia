@@ -1,5 +1,13 @@
 import Foundation
 
+struct ThreadSummary: Identifiable, Hashable {
+  let id: String
+  var title: String
+  var preview: String
+  var workspaceRootPath: String?
+  var workspaceDisplayName: String?
+}
+
 struct TimelineEntry: Identifiable, Hashable {
   enum Kind: String {
     case userMessage

@@ -1,6 +1,39 @@
 import Foundation
 
 extension RuntimeBridge {
+  struct RuntimeModelHealth {
+    let packID: String
+    let displayName: String
+    let backend: String
+    let status: String
+    let detail: String
+    let source: String
+    let binaryPath: String?
+    let modelPath: String?
+    let manifestPath: String?
+    let metrics: [String: String]
+  }
+
+  struct RuntimeReadinessCheck {
+    let id: String
+    let title: String
+    let status: String
+    let detail: String
+  }
+
+  struct RuntimeReadiness {
+    let status: String
+    let summary: String
+    let checks: [RuntimeReadinessCheck]
+    let metrics: [String: String]
+  }
+
+  struct RuntimeModelBootstrap {
+    let manifestPath: String
+    let readmePath: String?
+    let copiedFiles: [String]
+  }
+
   func modelHealth() async throws -> RuntimeModelHealth {
     let response: JSONRPCResponse<ModelHealthResult> = try await sendRequest(
       method: "model/health",
@@ -57,4 +90,37 @@ extension RuntimeBridge {
       copiedFiles: result.copiedFiles
     )
   }
+}
+
+struct ModelHealthResult: Codable {
+  let packId: String
+  let displayName: String
+  let backend: String
+  let status: String
+  let detail: String
+  let source: String
+  let binaryPath: String?
+  let modelPath: String?
+  let manifestPath: String?
+  let metrics: [String: String]
+}
+
+struct RuntimeReadinessCheckResult: Codable {
+  let id: String
+  let title: String
+  let status: String
+  let detail: String
+}
+
+struct RuntimeReadinessResult: Codable {
+  let status: String
+  let summary: String
+  let checks: [RuntimeReadinessCheckResult]
+  let metrics: [String: String]
+}
+
+struct ModelBootstrapResult: Codable {
+  let manifestPath: String
+  let readmePath: String?
+  let copiedFiles: [String]
 }

@@ -129,3 +129,92 @@ struct PluginCommandRunParams: Codable {
   let commandId: String
   let input: String?
 }
+
+extension RuntimeBridge {
+  struct RuntimePlugin {
+    let id: String
+    let name: String
+    let version: String
+    let displayName: String
+    let status: String
+    let description: String
+    let authorName: String?
+    let enabled: Bool
+    let defaultEnabled: Bool
+    let capabilities: [String]
+    let permissions: [String]
+    let manifestPath: String
+    let provenance: String
+    let validationError: String?
+    let validationHint: String?
+  }
+
+  struct RuntimePluginRemoval {
+    let pluginID: String
+    let displayName: String
+    let removedPath: String
+  }
+
+  struct RuntimePluginCapabilityRegistry {
+    let capabilities: [RuntimePluginCapability]
+    let summary: RuntimePluginCapabilityRegistrySummary
+  }
+
+  struct RuntimePluginCapabilityRegistrySummary {
+    let enabledPluginCount: Int
+    let totalCapabilityCount: Int
+    let capabilityCountsByKind: [String: Int]
+  }
+
+  struct RuntimePluginCapability {
+    let capabilityID: String
+    let kind: String
+    let identifier: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let manifestPath: String
+    let metadata: [String: String]
+  }
+
+  struct RuntimePluginCommand {
+    let commandID: String
+    let title: String
+    let description: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let executionKind: String?
+    let memorySummary: String?
+  }
+
+  struct RuntimePluginConnector {
+    let connectorID: String
+    let displayName: String
+    let service: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let enabled: Bool
+    let status: String
+    let permissions: [String]
+    let manifestPath: String
+    let homepage: String?
+    let authType: String?
+    let authRequired: Bool
+    let authScopes: [String]
+    let credentialStore: String?
+  }
+
+  struct RuntimePluginHook {
+    let hookID: String
+    let title: String
+    let description: String
+    let event: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let memorySummary: String?
+  }
+}

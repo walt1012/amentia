@@ -34,3 +34,17 @@ struct WorkspaceSearchMatchPayload: Codable {
   let lineNumber: Int
   let line: String
 }
+
+extension RuntimeBridge {
+  struct RuntimeWorkspace {
+    let rootPath: String
+    let displayName: String
+    let threadCount: Int
+  }
+
+  struct RuntimeWorkspaceSearchMatch {
+    let relativePath: String
+    let lineNumber: Int
+    let line: String
+  }
+}
