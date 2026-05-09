@@ -8,7 +8,7 @@ struct TimelinePane: View {
       VStack(alignment: .leading, spacing: 10) {
         header
         setupSurface
-        readinessSteps
+        TimelineReadinessStrip(viewModel: viewModel)
       }
       .padding(20)
 
@@ -43,7 +43,7 @@ struct TimelinePane: View {
       }
 
       Divider()
-      composer
+      TimelineComposerView(viewModel: viewModel)
     }
     .frame(minWidth: 520)
   }
@@ -154,105 +154,4 @@ struct TimelinePane: View {
     }
   }
 
-  @ViewBuilder
-  private var readinessSteps: some View {
-    if viewModel.shouldShowReadinessSteps() {
-      HStack(spacing: 8) {
-        ForEach(viewModel.runtimeReadinessSteps()) { step in
-          ReadinessChip(
-            step: step,
-            actionTitle: viewModel.readinessStepActionTitle(step),
-            canRunAction: viewModel.canRunReadinessStepAction(step),
-            onAction: {
-              viewModel.runReadinessStepAction(step)
-            }
-          )
-        }
-        Spacer()
-      }
-    }
-  }
-
-  private var composer: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .bottom, spacing: 12) {
-        TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
-          .textFieldStyle(.roundedBorder)
-          .disabled(!viewModel.canUseComposer())
-          .onSubmit {
-            if viewModel.canSendDraftMessage() {
-              viewModel.sendDraftMessage()
-            }
-          }
-
-        Button("Send") {
-          viewModel.sendDraftMessage()
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(!viewModel.canSendDraftMessage())
-
-        Button("Cancel Execution") {
-          viewModel.cancelActiveTurn()
-        }
-        .buttonStyle(.bordered)
-        .disabled(!viewModel.canCancelActiveTurn())
-      }
-
-      HStack(spacing: 6) {
-        if viewModel.showsComposerActivity() {
-          ProgressView()
-            .controlSize(.small)
-        }
-        Text(viewModel.composerStatusSummary())
-          .font(.caption2)
-          .foregroundColor(viewModel.runtimeState == .failed ? .red : .secondary)
-      }
-    }
-    .padding(20)
-  }
-}
-
-private struct ReadinessChip: View {
-  let step: ReadinessStepSummary
-  let actionTitle: String?
-  let canRunAction: Bool
-  let onAction: () -> Void
-
-  var body: some View {
-    if actionTitle != nil {
-      Button(action: onAction) {
-        content
-      }
-      .buttonStyle(.plain)
-      .disabled(!canRunAction)
-      .help(actionTitle.map { "\($0) \(step.label)" } ?? "\(step.label): \(step.detail)")
-    } else {
-      content
-    }
-  }
-
-  private var content: some View {
-    HStack(spacing: 5) {
-      Text(step.label)
-        .font(.caption2.weight(.medium))
-        .foregroundColor(.secondary)
-
-      Text(step.detail)
-        .font(.caption2.weight(.semibold))
-        .foregroundColor(step.tone.color)
-        .lineLimit(1)
-        .truncationMode(.tail)
-        .frame(maxWidth: 150, alignment: .leading)
-
-      if let actionTitle {
-        Text(actionTitle)
-          .font(.caption2.weight(.bold))
-          .foregroundColor(canRunAction ? step.tone.color : .secondary)
-      }
-    }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 5)
-    .background(step.tone.color.opacity(actionTitle == nil ? 0.10 : 0.16))
-    .clipShape(Capsule())
-  }
 }
