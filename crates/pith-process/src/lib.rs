@@ -74,7 +74,15 @@ where
   let started_at = Instant::now();
 
   loop {
-    if let Some(status) = child.try_wait()? {
+    let child_status = match child.try_wait() {
+      Ok(status) => status,
+      Err(error) => {
+        terminate_process_group_or_child(child, termination_grace_period);
+        return Err(error);
+      }
+    };
+
+    if let Some(status) = child_status {
       return Ok(ChildWaitResult {
         status,
         reason: ChildExitReason::Completed,

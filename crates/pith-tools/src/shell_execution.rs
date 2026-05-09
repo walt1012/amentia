@@ -6,9 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::Result;
-use pith_process::{
-  configure_process_group, terminate_process_group_or_child, wait_for_child, ChildExitReason,
-};
+use pith_process::{configure_process_group, wait_for_child, ChildExitReason};
 
 use crate::shell_output_artifacts::discard_shell_output_artifact_directory;
 
@@ -66,7 +64,6 @@ pub(crate) fn run_shell_with_timeout(
   ) {
     Ok(wait) => wait,
     Err(error) => {
-      terminate_process_group_or_child(&mut child, Duration::from_millis(200));
       return discard_artifact_and_return_error(&artifact_directory, error.into());
     }
   };
