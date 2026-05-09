@@ -66,3 +66,5 @@ mod tests;
 mod tests_plugin_execution;
 #[cfg(test)]
 mod tests_plugins;
+#[cfg(test)]
+mod tests_runtime_surface;
