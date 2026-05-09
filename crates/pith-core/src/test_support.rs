@@ -71,6 +71,39 @@ pub(crate) fn replace_plugin_catalog(
   context.plugin_state.replace_catalog(catalog);
 }
 
+pub(crate) fn bundled_plugin_entry(
+  id: &str,
+  display_name: &str,
+  enabled: bool,
+  default_enabled: bool,
+  capabilities: &[&str],
+  permissions: &[&str],
+) -> PluginCatalogEntry {
+  PluginCatalogEntry {
+    id: id.to_string(),
+    name: id.to_string(),
+    version: "0.1.0".to_string(),
+    display_name: display_name.to_string(),
+    status: "ready".to_string(),
+    description: "Test plugin".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled,
+    default_enabled,
+    capabilities: capabilities
+      .iter()
+      .map(|capability| capability.to_string())
+      .collect(),
+    permissions: permissions
+      .iter()
+      .map(|permission| permission.to_string())
+      .collect(),
+    manifest_path: format!("plugins/bundled/{id}/pith-plugin.json"),
+    provenance: "bundled".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  }
+}
+
 pub(crate) fn enable_full_access_plugin(context: &mut RuntimeContext) {
   replace_plugin_catalog(
     context,
