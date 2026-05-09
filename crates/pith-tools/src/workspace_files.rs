@@ -10,6 +10,8 @@ use crate::paths::{
 };
 use crate::types::{DirectoryEntry, ReadFileResult};
 
+const LIST_DIRECTORY_MAX_SCANNED_ENTRIES: usize = 5_000;
+
 pub fn list_directory(
   workspace_root: &Path,
   relative_path: Option<&str>,
@@ -27,6 +29,25 @@ pub fn list_directory_with_cancellation<F>(
 where
   F: Fn() -> bool,
 {
+  list_directory_with_entry_limit(
+    workspace_root,
+    relative_path,
+    limit,
+    LIST_DIRECTORY_MAX_SCANNED_ENTRIES,
+    is_cancelled,
+  )
+}
+
+fn list_directory_with_entry_limit<F>(
+  workspace_root: &Path,
+  relative_path: Option<&str>,
+  limit: usize,
+  max_scanned_entries: usize,
+  is_cancelled: F,
+) -> Result<Vec<DirectoryEntry>>
+where
+  F: Fn() -> bool,
+{
   if is_cancelled() {
     bail!("directory listing cancelled");
   }
@@ -34,6 +55,7 @@ where
   let workspace_root = canonical_workspace_root(workspace_root)?;
 
   let mut entries = Vec::new();
+  let mut scanned_entries = 0;
   for entry in fs::read_dir(&target)
     .with_context(|| format!("failed to read directory {}", target.display()))?
     .filter_map(|entry| entry.ok())
@@ -41,6 +63,10 @@ where
     if is_cancelled() {
       bail!("directory listing cancelled");
     }
+    if scanned_entries >= max_scanned_entries {
+      bail!("directory listing scanned too many entries; open a narrower folder");
+    }
+    scanned_entries += 1;
 
     let path = entry.path();
     let metadata = fs::symlink_metadata(&path)
@@ -222,6 +248,24 @@ mod tests {
       list_directory_with_cancellation(&workspace, None, 10, || true).expect_err("cancelled");
 
     assert!(error.to_string().contains("directory listing cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn list_directory_stops_at_entry_budget() {
+    let workspace = unique_temp_workspace("list-budget");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("one.txt"), "one").expect("one file");
+    fs::write(workspace.join("two.txt"), "two").expect("two file");
+    fs::write(workspace.join("three.txt"), "three").expect("three file");
+
+    let error = list_directory_with_entry_limit(&workspace, None, 10, 2, || false)
+      .expect_err("entry budget");
+
+    assert!(error
+      .to_string()
+      .contains("directory listing scanned too many entries"));
 
     let _ = fs::remove_dir_all(workspace);
   }
