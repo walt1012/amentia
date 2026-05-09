@@ -55,10 +55,10 @@ where
   let workspace_root = canonical_workspace_root(workspace_root)?;
 
   let mut entries = Vec::new();
-  let mut scanned_entries = 0;
-  for entry in fs::read_dir(&target)
+  for (scanned_entries, entry) in fs::read_dir(&target)
     .with_context(|| format!("failed to read directory {}", target.display()))?
     .filter_map(|entry| entry.ok())
+    .enumerate()
   {
     if is_cancelled() {
       bail!("directory listing cancelled");
@@ -66,7 +66,6 @@ where
     if scanned_entries >= max_scanned_entries {
       bail!("directory listing scanned too many entries; open a narrower folder");
     }
-    scanned_entries += 1;
 
     let path = entry.path();
     let metadata = fs::symlink_metadata(&path)
