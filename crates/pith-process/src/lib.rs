@@ -142,15 +142,22 @@ pub fn terminate_process_group_or_child(child: &mut Child, grace_period: Duratio
 #[cfg(unix)]
 fn terminate_unix_process_group(child: &mut Child, grace_period: Duration) {
   let process_group_id = -(child.id() as i32);
-  unsafe {
-    kill(process_group_id, SIGTERM);
+  if !send_unix_signal(process_group_id, SIGTERM) {
+    let _ = child.kill();
   }
+
   thread::sleep(grace_period);
+
   if matches!(child.try_wait(), Ok(None)) {
-    unsafe {
-      kill(process_group_id, SIGKILL);
+    if !send_unix_signal(process_group_id, SIGKILL) {
+      let _ = child.kill();
     }
   }
+}
+
+#[cfg(unix)]
+fn send_unix_signal(pid: i32, signal: i32) -> bool {
+  unsafe { kill(pid, signal) == 0 }
 }
 
 #[cfg(unix)]
