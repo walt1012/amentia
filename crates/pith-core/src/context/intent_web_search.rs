@@ -45,27 +45,52 @@ pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIn
   }
 
   let lowercased_message = trimmed.to_lowercase();
-  let has_freshness_signal = [
+  let has_freshness_signal = has_fresh_public_information_signal(&lowercased_message);
+  let has_local_signal = has_local_workspace_signal(&lowercased_message);
+
+  if has_freshness_signal && !has_local_signal {
+    Some(WebSearchIntent {
+      query: trimmed.to_string(),
+      routing_reason: "freshPublicInformation",
+    })
+  } else {
+    None
+  }
+}
+
+fn has_fresh_public_information_signal(message: &str) -> bool {
+  [
     "latest",
     "current",
     "today",
-    "now",
+    "right now",
+    "as of",
+    "this week",
+    "this month",
     "recent",
     "news",
     "release",
     "released",
     "version",
     "price",
+    "stock",
+    "exchange rate",
     "schedule",
     "score",
     "weather",
+    "ceo",
+    "president",
     "who is",
     "what is the newest",
     "what is the current",
+    "newest",
   ]
   .iter()
-  .any(|signal| lowercased_message.contains(signal));
-  let has_local_signal = [
+  .any(|signal| message.contains(signal))
+}
+
+fn has_local_workspace_signal(message: &str) -> bool {
+  [
     "workspace",
     "repo",
     "repository",
@@ -84,16 +109,7 @@ pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIn
     "pyproject.toml",
   ]
   .iter()
-  .any(|signal| lowercased_message.contains(signal));
-
-  if has_freshness_signal && !has_local_signal {
-    Some(WebSearchIntent {
-      query: trimmed.to_string(),
-      routing_reason: "freshPublicInformation",
-    })
-  } else {
-    None
-  }
+  .any(|signal| message.contains(signal))
 }
 
 #[cfg(test)]
@@ -121,8 +137,14 @@ mod tests {
     let release =
       infer_fresh_web_search_intent("What is the latest LFM2.5 release?").expect("intent");
     assert_eq!(release.query, "What is the latest LFM2.5 release");
+    let ceo = infer_fresh_web_search_intent("Who is the CEO of Liquid AI?").expect("intent");
+    assert_eq!(ceo.routing_reason, "freshPublicInformation");
+    let stock =
+      infer_fresh_web_search_intent("What is Apple's stock price today?").expect("intent");
+    assert_eq!(stock.query, "What is Apple's stock price today");
     assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
     assert!(infer_fresh_web_search_intent("What version is in Cargo.toml?").is_none());
+    assert!(infer_fresh_web_search_intent("How should I proceed now?").is_none());
   }
 
   #[test]
