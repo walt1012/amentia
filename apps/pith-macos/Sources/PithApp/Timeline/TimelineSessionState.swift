@@ -13,7 +13,7 @@ enum TimelineSessionState {
       thread: ThreadSummary(
         id: welcomeThreadID,
         title: "Welcome to Pith",
-        preview: "Open a workspace to begin the local agent loop.",
+        preview: "Open a workspace to begin local work.",
         workspaceRootPath: nil,
         workspaceDisplayName: nil
       ),

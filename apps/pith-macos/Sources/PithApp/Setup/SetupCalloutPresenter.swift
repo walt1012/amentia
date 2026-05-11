@@ -33,10 +33,10 @@ enum SetupCalloutPresenter {
       return "Choose the project Pith should inspect, search, and edit locally."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create or select a runtime thread before sending the first local request."
+      return "Create or select a thread before sending the first local request."
     }
 
-    return "Pith is ready for local agent work."
+    return "Pith is ready for local work."
   }
 
   static func detail(_ snapshot: SetupCalloutSnapshot) -> String {
@@ -47,7 +47,7 @@ enum SetupCalloutPresenter {
       return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Threads keep the timeline, approvals, cancellation, and memory context together."
+      return "Threads keep timeline, approvals, cancellation, and local memory together."
     }
 
     return "Ready"

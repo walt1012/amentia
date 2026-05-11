@@ -30,7 +30,7 @@ enum ComposerStatusPresenter {
     }
 
     if !snapshot.hasWorkspace {
-      return "Open a workspace to start local agent work"
+      return "Open a workspace to start local work"
     }
 
     if !snapshot.hasRuntimeThreadSelection {
@@ -53,11 +53,11 @@ enum ComposerStatusPresenter {
   static func statusSummary(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local runtime to start the agent loop."
+      return "Launch the local runtime to start."
     case .launching:
       return "Launching the local runtime..."
     case .failed:
-      return "Relaunch the local runtime to recover the agent loop."
+      return "Relaunch the local runtime to recover."
     case .ready:
       if !snapshot.isLocalModelReady {
         return "\(snapshot.modelSetupSummary) Continue model setup to run locally."
@@ -68,7 +68,7 @@ enum ComposerStatusPresenter {
       }
 
       if !snapshot.hasRuntimeThreadSelection {
-        return "Create a thread to start local agent work."
+        return "Create a thread to start local work."
       }
 
       if snapshot.hasActiveTurn {
@@ -82,7 +82,7 @@ enum ComposerStatusPresenter {
         return "Choose a starter prompt or type a short local request."
       }
 
-      return "Ready for local agent work."
+      return "Ready for local work."
     }
   }
 }
