@@ -120,7 +120,9 @@ final class RuntimeBridge {
     let seconds = RuntimeBridgeRequestPolicy.timeoutSeconds(from: timeoutNanoseconds)
     let error = RuntimeError.requestTimedOut(method: method, seconds: seconds)
     continuation.resume(throwing: error)
-    stopRuntimeAfterRequestTimeout(method: method, seconds: seconds)
+    if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterTimedOutRequest(method: method) {
+      stopRuntimeAfterRequestTimeout(method: method, seconds: seconds)
+    }
   }
 
   private func handleRequestCancellation(requestID: Int, method: String) {
