@@ -273,11 +273,9 @@ mod tests {
       status.temporary_root.as_deref(),
       Some("/Users/example/work/.pith/sandbox-tmp")
     );
-    assert!(
-      status
-        .writable_roots
-        .contains(&"/Users/example/work".to_string())
-    );
+    assert!(status
+      .writable_roots
+      .contains(&"/Users/example/work".to_string()));
     assert!(status
       .writable_roots
       .contains(&"/Users/example/work/.pith/sandbox-tmp".to_string()));
@@ -296,6 +294,8 @@ mod tests {
     assert!(!status.network_allowed);
     assert_eq!(status.temporary_root.as_deref(), Some("/workspace/tmp"));
     assert!(status.writable_roots.contains(&"/workspace".to_string()));
-    assert!(status.writable_roots.contains(&"/workspace/tmp".to_string()));
+    assert!(status
+      .writable_roots
+      .contains(&"/workspace/tmp".to_string()));
   }
 }
