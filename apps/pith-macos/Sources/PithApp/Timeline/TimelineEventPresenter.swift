@@ -65,6 +65,10 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func turnCancelFailedDetail(error: Error) -> String {
+    "Cancel failed: \(error.localizedDescription)"
+  }
+
   static func threadLoadFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Thread Load Failed",

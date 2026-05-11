@@ -84,6 +84,7 @@ extension AppViewModel {
           _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingThreadID)
         } catch {
           localExecutionRequests.restoreAgentCancellationRequest(threadID: pendingThreadID)
+          runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
           appendEntry(
             to: pendingThreadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
@@ -99,6 +100,7 @@ extension AppViewModel {
           _ = try await runtimeBridge.cancelRunningExecution(threadID: approvalThreadID)
         } catch {
           localExecutionRequests.restoreApprovalCancellationRequest(threadID: approvalThreadID)
+          runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
           appendEntry(
             to: approvalThreadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
@@ -119,6 +121,7 @@ extension AppViewModel {
         let result = try await runtimeBridge.cancelTurn(turnID: activeTurnID)
         await applyTurnCancellation(result, previewThreadID: activeTurnThreadID)
       } catch {
+        runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
         appendEntry(
           to: activeTurnThreadID,
           TimelineEventPresenter.turnCancelFailed(error: error)
