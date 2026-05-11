@@ -114,9 +114,10 @@ enum TimelineInspectorPresenter {
       let mode = entry.attributes["sandboxMode"] ?? "unknown"
       let backend = entry.attributes["sandboxBackend"] ?? "unknown"
       let active = entry.attributes["sandboxActive"] ?? "unknown"
-      let networkAllowed = entry.attributes["sandboxNetworkAllowed"] ?? "unknown"
+      let networkPolicy = entry.attributes["sandboxNetworkPolicy"]
+        ?? sandboxNetworkPolicySummary(entry.attributes["sandboxNetworkAllowed"])
       lines.append(
-        "Sandbox: \(mode) | backend \(backend) | active \(active) | network \(networkAllowed)"
+        "Sandbox: \(mode) | backend \(backend) | active \(active) | \(networkPolicy)"
       )
 
       if let temporaryRoot = entry.attributes["sandboxTempRoot"] {
@@ -157,6 +158,17 @@ enum TimelineInspectorPresenter {
     }
 
     return lines.joined(separator: "\n")
+  }
+
+  private static func sandboxNetworkPolicySummary(_ value: String?) -> String {
+    switch value {
+    case "true":
+      return "network allowed"
+    case "false":
+      return "network denied"
+    default:
+      return "network unknown"
+    }
   }
 
   private static func diffLines(from body: String) -> [DiffLineSummary] {

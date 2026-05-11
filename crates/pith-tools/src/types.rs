@@ -88,18 +88,23 @@ impl ShellSandboxSummary {
     }
   }
 
-  pub fn display_line(&self) -> String {
-    let network_state = if self.network_allowed {
+  pub fn network_policy(&self) -> &'static str {
+    if self.network_allowed {
       "network allowed"
-    } else {
+    } else if self.active {
       "network denied"
-    };
+    } else {
+      "network denied by policy, not native-enforced"
+    }
+  }
+
+  pub fn display_line(&self) -> String {
     format!(
       "Sandbox: {} via {} ({}, {})",
       self.mode,
       self.backend,
       self.state(),
-      network_state
+      self.network_policy()
     )
   }
 
@@ -111,6 +116,10 @@ impl ShellSandboxSummary {
       (
         "sandboxNetworkAllowed".to_string(),
         self.network_allowed.to_string(),
+      ),
+      (
+        "sandboxNetworkPolicy".to_string(),
+        self.network_policy().to_string(),
       ),
       ("sandboxDetail".to_string(), self.detail.clone()),
     ]);
@@ -247,6 +256,42 @@ impl ShellOutputContext {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn shell_sandbox_summary_reports_network_enforcement_scope() {
+    let inactive = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "processOnly".to_string(),
+      active: false,
+      network_allowed: false,
+      temporary_root: None,
+      writable_roots: Vec::new(),
+      detail: "Native sandbox unavailable.".to_string(),
+    };
+
+    assert_eq!(
+      inactive.network_policy(),
+      "network denied by policy, not native-enforced"
+    );
+    assert!(inactive.display_line().contains("not native-enforced"));
+    assert_eq!(
+      inactive.attributes()["sandboxNetworkPolicy"],
+      "network denied by policy, not native-enforced"
+    );
+
+    let active = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "macosSeatbelt".to_string(),
+      active: true,
+      network_allowed: false,
+      temporary_root: None,
+      writable_roots: Vec::new(),
+      detail: "Native sandbox active.".to_string(),
+    };
+
+    assert_eq!(active.network_policy(), "network denied");
+    assert_eq!(active.attributes()["sandboxNetworkPolicy"], "network denied");
+  }
 
   #[test]
   fn shell_output_context_reports_context_savings() {
