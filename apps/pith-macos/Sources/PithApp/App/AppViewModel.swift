@@ -14,6 +14,7 @@ final class AppViewModel: ObservableObject {
   @Published private var pluginState: PluginRuntimeState
 
   let runtimeBridge: RuntimeBridge
+  let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
   let localExecutionRequests = LocalExecutionRequestCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator

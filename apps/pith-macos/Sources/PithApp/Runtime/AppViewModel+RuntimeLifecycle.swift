@@ -16,6 +16,7 @@ extension AppViewModel {
     updateRuntimeConnectionState { state in
       state.clearLastFailureDetail()
     }
+    let launchToken = runtimeLaunchCoordinator.begin()
 
     Task {
       do {
@@ -26,9 +27,20 @@ extension AppViewModel {
           isRestorablePath: isRestorableWorkspacePath,
           clearStoredWorkspace: AppPreferences.clearLastWorkspacePath
         )
+        guard runtimeLaunchCoordinator.isCurrent(launchToken) else {
+          return
+        }
         try await applyRuntimeLaunchBootstrap(bootstrap)
+        guard runtimeLaunchCoordinator.isCurrent(launchToken) else {
+          return
+        }
+        runtimeLaunchCoordinator.finish(launchToken)
         announceFirstRequestReadyIfNeeded()
       } catch {
+        guard runtimeLaunchCoordinator.isCurrent(launchToken) else {
+          return
+        }
+        runtimeLaunchCoordinator.finish(launchToken)
         applyRuntimeLaunchFailure(error)
       }
     }
@@ -80,6 +92,7 @@ extension AppViewModel {
         state.activeTurnThreadID = nil
       }
       localExecutionRequests.clearAll()
+      runtimeLaunchCoordinator.cancel()
     }
 
     if plan.clearsModelReadinessState {
@@ -176,5 +189,35 @@ extension AppViewModel {
     var isDirectory = ObjCBool(false)
     return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
       && isDirectory.boolValue
+  }
+}
+
+struct RuntimeLaunchRequestToken: Equatable {
+  fileprivate let id: UUID
+}
+
+final class RuntimeLaunchCoordinator {
+  private var activeRequestID: UUID?
+
+  func begin() -> RuntimeLaunchRequestToken {
+    let requestID = UUID()
+    activeRequestID = requestID
+    return RuntimeLaunchRequestToken(id: requestID)
+  }
+
+  func isCurrent(_ token: RuntimeLaunchRequestToken) -> Bool {
+    activeRequestID == token.id
+  }
+
+  func finish(_ token: RuntimeLaunchRequestToken) {
+    guard isCurrent(token) else {
+      return
+    }
+
+    activeRequestID = nil
+  }
+
+  func cancel() {
+    activeRequestID = nil
   }
 }
