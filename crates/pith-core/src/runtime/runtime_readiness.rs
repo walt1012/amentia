@@ -31,15 +31,14 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let web_search_status = web_search_status();
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
 
-  let status = if !model_ready || !workspace_ready || !thread_ready {
-    "setup_required"
-  } else if pending_approval_count > 0 {
-    "needs_approval"
-  } else if active_turn_count > 0 || running_approval_count > 0 {
-    "running"
-  } else {
-    "ready"
-  };
+  let status = readiness_status(
+    model_ready,
+    workspace_ready,
+    thread_ready,
+    pending_approval_count,
+    active_turn_count,
+    running_approval_count,
+  );
   let context_window = model_health
     .metrics
     .get("contextSize")
@@ -117,4 +116,56 @@ fn has_first_request(context: &RuntimeContext) -> bool {
         .has_user_message_for_workspace(workspace)
     })
     .unwrap_or(false)
+}
+
+fn readiness_status(
+  model_ready: bool,
+  workspace_ready: bool,
+  thread_ready: bool,
+  pending_approval_count: usize,
+  active_turn_count: usize,
+  running_approval_count: usize,
+) -> &'static str {
+  if !model_ready || !workspace_ready || !thread_ready {
+    "setup_required"
+  } else if pending_approval_count > 0 {
+    "needs_approval"
+  } else if active_turn_count > 0 || running_approval_count > 0 {
+    "running"
+  } else {
+    "ready"
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn readiness_status_prioritizes_setup_requirements() {
+    let status = readiness_status(false, true, true, 1, 1, 1);
+
+    assert_eq!(status, "setup_required");
+  }
+
+  #[test]
+  fn readiness_status_reports_pending_approvals_before_running_work() {
+    let status = readiness_status(true, true, true, 1, 1, 1);
+
+    assert_eq!(status, "needs_approval");
+  }
+
+  #[test]
+  fn readiness_status_reports_running_when_work_is_active() {
+    let status = readiness_status(true, true, true, 0, 1, 0);
+
+    assert_eq!(status, "running");
+  }
+
+  #[test]
+  fn readiness_status_reports_ready_when_setup_is_complete_and_idle() {
+    let status = readiness_status(true, true, true, 0, 0, 0);
+
+    assert_eq!(status, "ready");
+  }
 }

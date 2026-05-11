@@ -43,144 +43,223 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     execution_counts,
   } = input;
 
-  let mut metrics = HashMap::from([
-    ("modelStatus".to_string(), model_status.to_string()),
-    ("modelPackId".to_string(), model_pack_id.to_string()),
-    (
-      "workspaceBound".to_string(),
-      context.workspace_state.is_open().to_string(),
-    ),
-    (
-      "pendingApprovalCount".to_string(),
-      execution_counts.pending_approval_count().to_string(),
-    ),
-    (
-      "activeTurnCount".to_string(),
-      execution_counts.active_turn_count().to_string(),
-    ),
-    (
-      "runningApprovalCount".to_string(),
-      execution_counts.running_approval_count().to_string(),
-    ),
-    (
-      "workspaceThreadCount".to_string(),
-      workspace_thread_count.to_string(),
-    ),
-    (
-      "firstRequestSent".to_string(),
-      first_request_sent.to_string(),
-    ),
-    (
-      "memoryNoteCount".to_string(),
-      context.memory_state.note_count().to_string(),
-    ),
-    (
-      "pluginCount".to_string(),
-      context.plugin_state.catalog_len().to_string(),
-    ),
-    (
-      "enabledPluginCount".to_string(),
-      enabled_plugin_count.to_string(),
-    ),
-    ("sandboxMode".to_string(), sandbox_status.mode.clone()),
-    ("sandboxBackend".to_string(), sandbox_status.backend.clone()),
-    (
-      "sandboxAvailable".to_string(),
-      sandbox_status.available.to_string(),
-    ),
-    (
-      "sandboxActive".to_string(),
-      sandbox_status.active.to_string(),
-    ),
-    (
-      "sandboxNetworkAllowed".to_string(),
-      sandbox_status.network_allowed.to_string(),
-    ),
-    (
-      "contextWindowTokens".to_string(),
-      context_window.to_string(),
-    ),
-    (
-      "shellTimeoutSeconds".to_string(),
-      shell_command_timeout_seconds().to_string(),
-    ),
-    (
-      "shellOutputArtifactRoot".to_string(),
-      shell_output_artifact_root_path(),
-    ),
-    (
-      "shellOutputArtifactRetainedRuns".to_string(),
-      shell_output_artifact_retained_runs().to_string(),
-    ),
-    (
-      "workspaceSearchMaxFileBytes".to_string(),
-      search_files_max_file_bytes().to_string(),
-    ),
-    (
-      "workspaceSearchMaxVisitedEntries".to_string(),
-      search_files_max_visited_entries().to_string(),
-    ),
-    (
-      "directoryListingMaxScannedEntries".to_string(),
-      list_directory_max_scanned_entries().to_string(),
-    ),
-    (
-      "diffPreviewMaxBytes".to_string(),
-      diff_preview_max_bytes().to_string(),
-    ),
-    (
-      "workspaceWriteMaxBytes".to_string(),
-      write_file_max_bytes().to_string(),
-    ),
-    (
-      "turnReadFileMaxBytes".to_string(),
-      READ_FILE_PREVIEW_MAX_BYTES.to_string(),
-    ),
-    (
-      "turnListDirectoryMaxResults".to_string(),
-      LIST_DIRECTORY_RESULT_LIMIT.to_string(),
-    ),
-    (
-      "turnSearchFilesMaxResults".to_string(),
-      SEARCH_FILES_RESULT_LIMIT.to_string(),
-    ),
-    (
-      "turnShellOutputMaxBytes".to_string(),
-      SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
-    ),
-    (
-      "turnWebSearchMaxResults".to_string(),
-      WEB_SEARCH_RESULT_LIMIT.to_string(),
-    ),
-    (
-      "webSearchTimeoutSeconds".to_string(),
-      web_search_timeout_seconds().to_string(),
-    ),
-    (
-      "webSearchProvider".to_string(),
-      web_search_status.provider.clone(),
-    ),
-    (
-      "webSearchClient".to_string(),
-      web_search_status.client.clone(),
-    ),
-    (
-      "webSearchAvailable".to_string(),
-      web_search_status.available.to_string(),
-    ),
-    (
-      "llamaTimeoutSeconds".to_string(),
-      llama_cpp_timeout_seconds().to_string(),
-    ),
-  ]);
+  let mut metrics = HashMap::new();
+  insert_model_metrics(&mut metrics, model_status, model_pack_id, context_window);
+  insert_workspace_metrics(
+    &mut metrics,
+    context,
+    workspace_thread_count,
+    first_request_sent,
+  );
+  insert_execution_metrics(&mut metrics, execution_counts);
+  insert_memory_metrics(&mut metrics, context);
+  insert_plugin_metrics(&mut metrics, context, enabled_plugin_count);
+  insert_sandbox_metrics(&mut metrics, sandbox_status);
+  insert_tool_limit_metrics(&mut metrics);
+  insert_web_search_metrics(&mut metrics, web_search_status);
+  metrics
+}
+
+fn insert_model_metrics(
+  metrics: &mut HashMap<String, String>,
+  model_status: &str,
+  model_pack_id: &str,
+  context_window: &str,
+) {
+  insert_metric(metrics, "modelStatus", model_status);
+  insert_metric(metrics, "modelPackId", model_pack_id);
+  insert_metric(metrics, "contextWindowTokens", context_window);
+  insert_metric(
+    metrics,
+    "llamaTimeoutSeconds",
+    llama_cpp_timeout_seconds().to_string(),
+  );
+}
+
+fn insert_workspace_metrics(
+  metrics: &mut HashMap<String, String>,
+  context: &RuntimeContext,
+  workspace_thread_count: usize,
+  first_request_sent: bool,
+) {
+  insert_metric(
+    metrics,
+    "workspaceBound",
+    context.workspace_state.is_open().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "workspaceThreadCount",
+    workspace_thread_count.to_string(),
+  );
+  insert_metric(metrics, "firstRequestSent", first_request_sent.to_string());
+}
+
+fn insert_execution_metrics(
+  metrics: &mut HashMap<String, String>,
+  execution_counts: RuntimeExecutionCounts,
+) {
+  insert_metric(
+    metrics,
+    "pendingApprovalCount",
+    execution_counts.pending_approval_count().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "activeTurnCount",
+    execution_counts.active_turn_count().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "runningApprovalCount",
+    execution_counts.running_approval_count().to_string(),
+  );
+}
+
+fn insert_memory_metrics(metrics: &mut HashMap<String, String>, context: &RuntimeContext) {
+  insert_metric(
+    metrics,
+    "memoryNoteCount",
+    context.memory_state.note_count().to_string(),
+  );
+}
+
+fn insert_plugin_metrics(
+  metrics: &mut HashMap<String, String>,
+  context: &RuntimeContext,
+  enabled_plugin_count: usize,
+) {
+  insert_metric(
+    metrics,
+    "pluginCount",
+    context.plugin_state.catalog_len().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "enabledPluginCount",
+    enabled_plugin_count.to_string(),
+  );
+}
+
+fn insert_sandbox_metrics(
+  metrics: &mut HashMap<String, String>,
+  sandbox_status: &NativeSandboxStatus,
+) {
+  insert_metric(metrics, "sandboxMode", sandbox_status.mode.clone());
+  insert_metric(metrics, "sandboxBackend", sandbox_status.backend.clone());
+  insert_metric(
+    metrics,
+    "sandboxAvailable",
+    sandbox_status.available.to_string(),
+  );
+  insert_metric(metrics, "sandboxActive", sandbox_status.active.to_string());
+  insert_metric(
+    metrics,
+    "sandboxNetworkAllowed",
+    sandbox_status.network_allowed.to_string(),
+  );
   if let Some(temporary_root) = &sandbox_status.temporary_root {
-    metrics.insert("sandboxTempRoot".to_string(), temporary_root.clone());
+    insert_metric(metrics, "sandboxTempRoot", temporary_root.clone());
   }
   if !sandbox_status.writable_roots.is_empty() {
-    metrics.insert(
-      "sandboxWritableRoots".to_string(),
+    insert_metric(
+      metrics,
+      "sandboxWritableRoots",
       sandbox_status.writable_roots.join("\n"),
     );
   }
-  metrics
+}
+
+fn insert_tool_limit_metrics(metrics: &mut HashMap<String, String>) {
+  insert_metric(
+    metrics,
+    "shellTimeoutSeconds",
+    shell_command_timeout_seconds().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "shellOutputArtifactRoot",
+    shell_output_artifact_root_path(),
+  );
+  insert_metric(
+    metrics,
+    "shellOutputArtifactRetainedRuns",
+    shell_output_artifact_retained_runs().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "workspaceSearchMaxFileBytes",
+    search_files_max_file_bytes().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "workspaceSearchMaxVisitedEntries",
+    search_files_max_visited_entries().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "directoryListingMaxScannedEntries",
+    list_directory_max_scanned_entries().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "diffPreviewMaxBytes",
+    diff_preview_max_bytes().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "workspaceWriteMaxBytes",
+    write_file_max_bytes().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "turnReadFileMaxBytes",
+    READ_FILE_PREVIEW_MAX_BYTES.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "turnListDirectoryMaxResults",
+    LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "turnSearchFilesMaxResults",
+    SEARCH_FILES_RESULT_LIMIT.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "turnShellOutputMaxBytes",
+    SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "turnWebSearchMaxResults",
+    WEB_SEARCH_RESULT_LIMIT.to_string(),
+  );
+}
+
+fn insert_web_search_metrics(
+  metrics: &mut HashMap<String, String>,
+  web_search_status: &WebSearchStatus,
+) {
+  insert_metric(
+    metrics,
+    "webSearchTimeoutSeconds",
+    web_search_timeout_seconds().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "webSearchProvider",
+    web_search_status.provider.clone(),
+  );
+  insert_metric(metrics, "webSearchClient", web_search_status.client.clone());
+  insert_metric(
+    metrics,
+    "webSearchAvailable",
+    web_search_status.available.to_string(),
+  );
+}
+
+fn insert_metric(metrics: &mut HashMap<String, String>, key: &str, value: impl Into<String>) {
+  metrics.insert(key.to_string(), value.into());
 }
