@@ -16,7 +16,7 @@ extension AppViewModel {
   }
 
   func requestPendingTurnCancellation() -> String? {
-    guard let threadID = localExecutionRequests.pendingAgentThreadID() else {
+    guard let threadID = localExecutionRequests.requestAgentCancellationThreadID() else {
       return nil
     }
 
@@ -29,7 +29,7 @@ extension AppViewModel {
   }
 
   func requestPendingApprovalCancellation() -> String? {
-    guard let threadID = localExecutionRequests.pendingApprovalThreadID() else {
+    guard let threadID = localExecutionRequests.requestApprovalCancellationThreadID() else {
       return nil
     }
 

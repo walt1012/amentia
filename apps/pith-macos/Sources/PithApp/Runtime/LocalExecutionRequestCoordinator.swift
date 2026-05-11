@@ -28,8 +28,8 @@ final class LocalExecutionRequestCoordinator {
     agentRequest.clear(requestID: requestID)
   }
 
-  func pendingAgentThreadID() -> String? {
-    agentRequest.threadID
+  func requestAgentCancellationThreadID() -> String? {
+    agentRequest.requestCancellation()
   }
 
   func beginApprovalExecution(threadID: String) -> UUID {
@@ -44,8 +44,8 @@ final class LocalExecutionRequestCoordinator {
     approvalExecution.clear(requestID: requestID)
   }
 
-  func pendingApprovalThreadID() -> String? {
-    approvalExecution.threadID
+  func requestApprovalCancellationThreadID() -> String? {
+    approvalExecution.requestCancellation()
   }
 
   func clearAll() {
@@ -57,6 +57,7 @@ final class LocalExecutionRequestCoordinator {
 private final class PendingRuntimeRequestState {
   private(set) var requestID: UUID?
   private(set) var threadID: String?
+  private var cancellationRequested = false
   private var task: Task<Void, Never>?
 
   var isPending: Bool {
@@ -64,7 +65,7 @@ private final class PendingRuntimeRequestState {
   }
 
   var canCancel: Bool {
-    requestID != nil && threadID != nil
+    requestID != nil && threadID != nil && !cancellationRequested
   }
 
   func begin(threadID: String) -> UUID {
@@ -72,6 +73,7 @@ private final class PendingRuntimeRequestState {
     let requestID = UUID()
     self.requestID = requestID
     self.threadID = threadID
+    cancellationRequested = false
     return requestID
   }
 
@@ -94,7 +96,17 @@ private final class PendingRuntimeRequestState {
   func clear() {
     requestID = nil
     threadID = nil
+    cancellationRequested = false
     task = nil
+  }
+
+  func requestCancellation() -> String? {
+    guard canCancel, let threadID else {
+      return nil
+    }
+
+    cancellationRequested = true
+    return threadID
   }
 
   func cancelAndClear() {
