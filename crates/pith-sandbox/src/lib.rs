@@ -21,6 +21,18 @@ pub struct NativeSandboxStatus {
   pub detail: String,
 }
 
+impl NativeSandboxStatus {
+  pub fn network_policy(&self) -> &'static str {
+    if self.network_allowed {
+      "network allowed"
+    } else if self.active {
+      "network denied"
+    } else {
+      "network denied by policy, not native-enforced"
+    }
+  }
+}
+
 impl SandboxPolicy {
   pub fn workspace_read_write(workspace_root: impl Into<PathBuf>) -> Self {
     Self {
@@ -292,6 +304,10 @@ mod tests {
     assert!(!status.available);
     assert!(!status.active);
     assert!(!status.network_allowed);
+    assert_eq!(
+      status.network_policy(),
+      "network denied by policy, not native-enforced"
+    );
     assert_eq!(status.temporary_root.as_deref(), Some("/workspace/tmp"));
     assert!(status.writable_roots.contains(&"/workspace".to_string()));
     assert!(status

@@ -64,6 +64,10 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert_eq!(result["metrics"]["sandboxMode"], "workspaceReadWrite");
   assert!(result["metrics"]["sandboxBackend"].is_string());
   assert_eq!(result["metrics"]["sandboxNetworkAllowed"], "false");
+  assert_eq!(
+    result["metrics"]["sandboxNetworkPolicy"],
+    "network denied by policy, not native-enforced"
+  );
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");

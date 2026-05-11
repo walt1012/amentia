@@ -163,6 +163,11 @@ fn insert_sandbox_metrics(
     "sandboxNetworkAllowed",
     sandbox_status.network_allowed.to_string(),
   );
+  insert_metric(
+    metrics,
+    "sandboxNetworkPolicy",
+    sandbox_status.network_policy(),
+  );
   if let Some(temporary_root) = &sandbox_status.temporary_root {
     insert_metric(metrics, "sandboxTempRoot", temporary_root.clone());
   }
