@@ -73,7 +73,7 @@ pub fn prepare_approval_respond(
     .remove_pending_approval(&params.approval_id);
   if context
     .execution_state
-    .take_pending_running_turn_cancel(&approval.thread_id)
+    .take_pending_running_cancel(&approval.thread_id)
   {
     cancellation.cancel();
   }

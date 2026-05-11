@@ -57,7 +57,7 @@ pub fn prepare_turn_start(
   );
   if context
     .execution_state
-    .take_pending_running_turn_cancel(&prepared_thread.thread_id)
+    .take_pending_running_cancel(&prepared_thread.thread_id)
   {
     cancellation.cancel();
   }

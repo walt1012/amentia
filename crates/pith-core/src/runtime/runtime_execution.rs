@@ -142,7 +142,7 @@ impl RuntimeExecutionState {
     self.running.request_cancel_for_thread(thread_id)
   }
 
-  pub(crate) fn take_pending_running_turn_cancel(&mut self, thread_id: &str) -> bool {
+  pub(crate) fn take_pending_running_cancel(&mut self, thread_id: &str) -> bool {
     self.running.take_pending_cancel(thread_id)
   }
 
@@ -211,8 +211,8 @@ mod tests {
     let cancelled = state.request_running_cancel_for_thread("thread-1");
 
     assert_eq!(cancelled, None);
-    assert!(state.take_pending_running_turn_cancel("thread-1"));
-    assert!(!state.take_pending_running_turn_cancel("thread-1"));
+    assert!(state.take_pending_running_cancel("thread-1"));
+    assert!(!state.take_pending_running_cancel("thread-1"));
   }
 
   #[test]
