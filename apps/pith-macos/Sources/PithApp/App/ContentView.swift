@@ -92,12 +92,13 @@ private struct SidebarEmptyState: View {
 struct SettingsView: View {
   var body: some View {
     Form {
-      Section("Model") {
-        Text("First-use catalog: LFM2.5-350M default, Granite 4.0-H-350M recommended alternative")
+      Section("Local Models") {
+        Text("Pith downloads verified GGUF models in app.")
+        Text("Default: LFM2.5-350M. Alternative: Granite 4.0-H-350M.")
       }
 
       Section("Platform") {
-        Text("Target: macOS 12+ on Intel")
+        Text("Built for macOS 12+ on Intel.")
       }
     }
     .padding(20)
