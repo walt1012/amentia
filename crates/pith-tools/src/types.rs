@@ -290,7 +290,10 @@ mod tests {
     };
 
     assert_eq!(active.network_policy(), "network denied");
-    assert_eq!(active.attributes()["sandboxNetworkPolicy"], "network denied");
+    assert_eq!(
+      active.attributes()["sandboxNetworkPolicy"],
+      "network denied"
+    );
   }
 
   #[test]
