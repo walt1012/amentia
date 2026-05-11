@@ -1,11 +1,13 @@
 import Foundation
 
 struct SetupCalloutSnapshot {
+  let runtimeState: RuntimeBridge.ConnectionState
   let isLocalModelReady: Bool
   let hasWorkspace: Bool
   let hasRuntimeThreadSelection: Bool
   let modelGuidance: LocalModelSetupGuidance
   let modelProgressDetail: String?
+  let runtimeLaunchActionTitle: String
   let modelPrimaryActionTitle: String?
   let modelSecondaryActionTitle: String?
 }
@@ -63,6 +65,10 @@ enum SetupCalloutPresenter {
 
   static func primaryActionTitle(_ snapshot: SetupCalloutSnapshot) -> String? {
     if !snapshot.isLocalModelReady {
+      if snapshot.runtimeState == .disconnected || snapshot.runtimeState == .failed {
+        return snapshot.runtimeLaunchActionTitle
+      }
+
       return snapshot.modelPrimaryActionTitle
     }
     if !snapshot.hasWorkspace {

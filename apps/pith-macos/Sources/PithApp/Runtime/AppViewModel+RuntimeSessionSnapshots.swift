@@ -89,11 +89,13 @@ extension AppViewModel {
     }
 
     return SetupCalloutSnapshot(
+      runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       modelGuidance: localModelSetupGuidance(),
       modelProgressDetail: modelProgressDetail,
+      runtimeLaunchActionTitle: runtimeLaunchButtonTitle(),
       modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
       modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
     )
@@ -101,9 +103,11 @@ extension AppViewModel {
 
   func setupCalloutActionSnapshot() -> SetupCalloutActionSnapshot {
     SetupCalloutActionSnapshot(
+      runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
+      canLaunchRuntime: canLaunchRuntime(),
       canRunModelSetupAction: canRunModelSetupCalloutAction(),
       canRunModelSetupSecondaryAction: canRunModelSetupCalloutSecondaryAction(),
       canOpenWorkspace: canOpenWorkspace(),

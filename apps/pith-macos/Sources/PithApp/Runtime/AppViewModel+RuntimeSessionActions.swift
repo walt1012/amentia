@@ -63,6 +63,8 @@ extension AppViewModel {
     }
 
     switch action {
+    case .launchRuntime:
+      launchRuntime()
     case .setupModel:
       runModelSetupCalloutAction()
     case .openWorkspace:
