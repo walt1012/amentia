@@ -25,11 +25,22 @@ final class RuntimeBridge {
       )
     )
 
-    let response: JSONRPCResponse<InitializeResult> = try await sendRequest(
-      method: "initialize",
-      params: initializeParams
-    )
-    let result = try responseResult(from: response)
+    let result: InitializeResult
+    do {
+      let response: JSONRPCResponse<InitializeResult> = try await sendRequest(
+        method: "initialize",
+        params: initializeParams
+      )
+      result = try responseResult(from: response)
+    } catch {
+      guard connectionState != .failed else {
+        throw error
+      }
+
+      let detail = "Runtime initialization failed: \(error.localizedDescription)"
+      stopRuntimeAfterRequestBoundary(detail: detail)
+      throw RuntimeError.rpc(detail)
+    }
 
     updateConnectionState(.ready, detail: "\(result.serverInfo.name) \(result.serverInfo.version)")
 
