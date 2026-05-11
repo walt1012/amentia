@@ -47,6 +47,8 @@ impl RequestSupervisor {
     Execute: FnOnce(Prepared) -> Completed + Send + 'static,
     Complete: FnOnce(&mut RuntimeContext, Completed) -> JsonRpcResponse + Send + 'static,
   {
+    self.reap_finished();
+
     let context = Arc::clone(&self.context);
     let output = self.output.clone();
     let local_execution_lane = match lane {
