@@ -31,7 +31,7 @@ It should feel like a native desktop workspace for controlled agent work, not a 
 - Structured events beat transcript parsing.
 - Bounded execution beats best-effort execution.
 - Progressive disclosure beats always-visible admin panels.
-- Focused context engineering beats generic retrieval systems.
+- Focused retrieval and context engineering beat generic retrieval systems.
 - Plugin contracts beat prompt-template shortcuts.
 
 ## Reference Lessons
@@ -93,9 +93,9 @@ Context direction:
 - compact prompt assembly for small local models
 - ranked memory notes with attribution
 - compact tool observations and artifact references
-- built-in web search as a separate permissioned network tool for current public information
+- built-in web search as the current retrieval layer for public information
 
-Web search is not sandbox behavior, and current memory ranking is not generic RAG. Do not add document RAG to the current roadmap; web search plus compact local context is enough until real usage proves otherwise.
+Web search is the current RAG retrieval layer for fresh public information. It is not sandbox behavior, and current memory ranking is not a document RAG system. Do not add local document indexing, vector stores, or broad generic RAG to the current roadmap; web retrieval plus compact local context is enough until real usage proves otherwise.
 
 ## Plugin Direction
 
@@ -142,7 +142,7 @@ Required outcomes:
 - compact timeline and progressive inspector surfaces
 - stable workspace, thread, selection, runtime, and cancellation recovery
 - compact context packing for small local models
-- default-on permissioned web search for current public information
+- default-on permissioned web retrieval for current public information
 - refactor of large or mixed-responsibility areas that block future work
 
 Exit criteria:
@@ -175,11 +175,11 @@ Stay on Milestone 3 closeout:
 - keep execution bounded and cancellable
 - keep sandbox native and diagnostic-driven
 - keep context compact and explainable
-- keep web search separate from sandbox and memory
+- keep web retrieval separate from sandbox and memory ranking
 - reduce architecture bottlenecks without cosmetic file splitting
 - keep the UI calm and primary-task focused
 
-Do not start broad connector execution, third-party auth, multi-agent workflows, or generic RAG during Milestone 3. Generic RAG is not part of the current roadmap.
+Do not start broad connector execution, third-party auth, multi-agent workflows, local document indexing, vector stores, or generic document RAG during Milestone 3.
 
 ## Quality Gates
 
