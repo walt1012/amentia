@@ -56,10 +56,9 @@ final class RuntimeBridge {
         )
       },
       onReadError: { [weak self] processIdentifier, error in
-        self?.failPendingResponses(with: error)
-        self?.handleProcessTermination(
+        self?.handleProcessReadError(
           processIdentifier: processIdentifier,
-          detail: "Runtime disconnected."
+          error: error
         )
       },
       onTermination: { [weak self] processIdentifier, detail in
@@ -133,6 +132,18 @@ final class RuntimeBridge {
 
   private func failPendingResponses(with error: Error) {
     pendingResponses.failAll(with: error)
+  }
+
+  private func handleProcessReadError(processIdentifier: ObjectIdentifier, error: Error) {
+    guard processSession?.identifier == processIdentifier else {
+      return
+    }
+
+    failPendingResponses(with: error)
+    handleProcessTermination(
+      processIdentifier: processIdentifier,
+      detail: "Runtime disconnected."
+    )
   }
 
   private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
