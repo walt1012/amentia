@@ -158,8 +158,9 @@ final class RuntimeBridge {
   }
 
   private func resetProcessState() {
-    processSession?.stop()
+    let session = processSession
     processSession = nil
+    session?.stop()
   }
 
   private func updateConnectionState(_ state: ConnectionState, detail: String) {
