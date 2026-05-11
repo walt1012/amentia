@@ -11,17 +11,19 @@ struct ContentView: View {
     }
     .toolbar {
       ToolbarItem {
-        Button("Open Workspace") {
-          viewModel.openWorkspace()
+        if viewModel.canOpenWorkspace() {
+          Button("Open Workspace") {
+            viewModel.openWorkspace()
+          }
         }
-        .disabled(!viewModel.canOpenWorkspace())
       }
 
       ToolbarItem {
-        Button("New Thread") {
-          viewModel.createThread()
+        if viewModel.canCreateThread() {
+          Button("New Thread") {
+            viewModel.createThread()
+          }
         }
-        .disabled(!viewModel.canCreateThread())
       }
 
       ToolbarItem(placement: .primaryAction) {
@@ -41,7 +43,7 @@ struct ContentView: View {
         if viewModel.threads.isEmpty {
           SidebarEmptyState(
             title: "No Threads Yet",
-            detail: "Use the timeline setup flow to launch the runtime, choose a local model, and open a workspace."
+            detail: viewModel.sidebarEmptyStateDetail()
           )
         } else {
           ForEach(viewModel.threads) { thread in
@@ -62,6 +64,12 @@ struct ContentView: View {
     .listStyle(.sidebar)
   }
 
+}
+
+private extension AppViewModel {
+  func sidebarEmptyStateDetail() -> String {
+    "\(setupProgressSummary()). \(setupProgressDetail())."
+  }
 }
 
 private struct SidebarEmptyState: View {
