@@ -10,6 +10,7 @@ struct RuntimeConnectionStateSnapshot {
 struct RuntimeConnectionStatePlan {
   let clearsActiveTurnState: Bool
   let clearsModelReadinessState: Bool
+  let clearsRuntimeDerivedState: Bool
   let resetsLastFailureDetail: Bool
   let updatedLastFailureDetail: String?
   let shouldAppendFailureNotice: Bool
@@ -58,6 +59,7 @@ enum RuntimeConnectionStateReducer {
       return RuntimeConnectionStatePlan(
         clearsActiveTurnState: false,
         clearsModelReadinessState: false,
+        clearsRuntimeDerivedState: false,
         resetsLastFailureDetail: true,
         updatedLastFailureDetail: nil,
         shouldAppendFailureNotice: false
@@ -66,6 +68,7 @@ enum RuntimeConnectionStateReducer {
       return RuntimeConnectionStatePlan(
         clearsActiveTurnState: true,
         clearsModelReadinessState: true,
+        clearsRuntimeDerivedState: true,
         resetsLastFailureDetail: false,
         updatedLastFailureDetail: snapshot.detail,
         shouldAppendFailureNotice: shouldAppendFailureNotice(snapshot)
@@ -74,6 +77,7 @@ enum RuntimeConnectionStateReducer {
       return RuntimeConnectionStatePlan(
         clearsActiveTurnState: true,
         clearsModelReadinessState: true,
+        clearsRuntimeDerivedState: true,
         resetsLastFailureDetail: false,
         updatedLastFailureDetail: nil,
         shouldAppendFailureNotice: false
@@ -82,6 +86,7 @@ enum RuntimeConnectionStateReducer {
       return RuntimeConnectionStatePlan(
         clearsActiveTurnState: false,
         clearsModelReadinessState: false,
+        clearsRuntimeDerivedState: false,
         resetsLastFailureDetail: false,
         updatedLastFailureDetail: nil,
         shouldAppendFailureNotice: false

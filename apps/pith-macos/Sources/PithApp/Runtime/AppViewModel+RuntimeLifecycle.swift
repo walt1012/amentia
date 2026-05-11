@@ -103,6 +103,15 @@ extension AppViewModel {
       }
     }
 
+    if plan.clearsRuntimeDerivedState {
+      updateMemoryState { state in
+        state.resetRuntimeData()
+      }
+      updatePluginState { state in
+        state.reset()
+      }
+    }
+
     if plan.shouldAppendFailureNotice {
       appendEntry(
         to: selectedThreadID,
