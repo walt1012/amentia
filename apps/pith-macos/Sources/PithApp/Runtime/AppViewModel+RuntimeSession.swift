@@ -70,7 +70,7 @@ extension AppViewModel {
   }
 
   func shouldShowSetupCallout() -> Bool {
-    runtimeState == .ready
+    runtimeState != .launching
       && (!isLocalModelReady() || workspace == nil || !hasRuntimeThreadSelection())
   }
 
