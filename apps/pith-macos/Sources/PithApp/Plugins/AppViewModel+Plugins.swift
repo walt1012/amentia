@@ -40,6 +40,7 @@ extension AppViewModel {
       runtimeDetail = "Finish the current plugin operation before starting another."
       return
     }
+    let timelineThreadID = selectedThreadID
 
     Task {
       defer {
@@ -49,12 +50,12 @@ extension AppViewModel {
         let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: preview.sourcePath)
         await refreshPluginState()
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview)
         )
       } catch {
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.pluginInstallFailed(error: error)
         )
       }
@@ -72,6 +73,7 @@ extension AppViewModel {
       runtimeDetail = "Finish the current plugin operation before changing another plugin."
       return
     }
+    let timelineThreadID = selectedThreadID
 
     Task {
       defer {
@@ -81,12 +83,12 @@ extension AppViewModel {
         let updatedPlugin = try await runtimeBridge.setPluginEnabled(pluginID: pluginID, enabled: enabled)
         await refreshPluginState()
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled)
         )
       } catch {
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.pluginUpdateFailed(pluginID: pluginID, error: error)
         )
       }
@@ -111,6 +113,7 @@ extension AppViewModel {
       runtimeDetail = "Finish the current plugin operation before removing another plugin."
       return
     }
+    let timelineThreadID = selectedThreadID
 
     Task {
       defer {
@@ -120,12 +123,12 @@ extension AppViewModel {
         let removedPlugin = try await runtimeBridge.removePlugin(manifestPath: plugin.manifestPath)
         await refreshPluginState()
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.pluginRemoved(removedPlugin)
         )
       } catch {
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error)
         )
       }

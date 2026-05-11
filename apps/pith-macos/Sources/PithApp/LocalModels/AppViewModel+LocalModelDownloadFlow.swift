@@ -28,6 +28,7 @@ extension AppViewModel {
     startPlan: LocalModelDownloadStartPlan,
     shouldActivateAfterDownload: Bool
   ) {
+    let timelineThreadID = selectedThreadID
     let task = Task {
       defer {
         modelDownloadState.clearActiveDownload()
@@ -63,10 +64,18 @@ extension AppViewModel {
           )
         }
 
-        applyModelDownloadCompletionPlan(completionState.completionPlan, model: model)
+        applyModelDownloadCompletionPlan(
+          completionState.completionPlan,
+          model: model,
+          timelineThreadID: timelineThreadID
+        )
       } catch {
         let interruptionPlan = LocalModelDownloadInterruptionPlanner.plan(model: model, error: error)
-        applyModelDownloadInterruptionPlan(interruptionPlan, model: model)
+        applyModelDownloadInterruptionPlan(
+          interruptionPlan,
+          model: model,
+          timelineThreadID: timelineThreadID
+        )
       }
     }
     modelDownloadCoordinator.start(task)
@@ -93,7 +102,8 @@ extension AppViewModel {
 
   func applyModelDownloadCompletionPlan(
     _ plan: LocalModelDownloadCompletionPlan,
-    model: LocalModelSummary
+    model: LocalModelSummary,
+    timelineThreadID: ThreadSummary.ID? = nil
   ) {
     switch plan.mode {
     case .activated, .waitingForTurn:
@@ -106,7 +116,7 @@ extension AppViewModel {
     modelDownloadState.clearProgress()
     refreshLocalModelCatalog()
     appendEntry(
-      to: selectedThreadID,
+      to: timelineThreadID ?? selectedThreadID,
       TimelineEventPresenter.localModelDownloaded(plan)
     )
 
@@ -122,7 +132,8 @@ extension AppViewModel {
 
   func applyModelDownloadInterruptionPlan(
     _ plan: LocalModelDownloadInterruptionPlan,
-    model: LocalModelSummary
+    model: LocalModelSummary,
+    timelineThreadID: ThreadSummary.ID? = nil
   ) {
     switch plan.mode {
     case .paused(let resumeData):
@@ -143,7 +154,7 @@ extension AppViewModel {
     }
     runtimeDetail = plan.runtimeDetail
     appendEntry(
-      to: selectedThreadID,
+      to: timelineThreadID ?? selectedThreadID,
       TimelineEventPresenter.localModelEvent(
         title: plan.timelineTitle,
         body: plan.timelineBody,

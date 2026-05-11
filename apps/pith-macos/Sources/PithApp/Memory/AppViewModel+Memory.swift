@@ -10,6 +10,7 @@ extension AppViewModel {
     guard let operationID = beginMemorySaveOperation() else {
       return
     }
+    let timelineThreadID = selectedThreadID
     runtimeDetail = "Saving memory note..."
 
     Task {
@@ -23,12 +24,12 @@ extension AppViewModel {
         }
         await refreshMemoryState()
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.memoryNoteSaved(note)
         )
       } catch {
         appendEntry(
-          to: selectedThreadID,
+          to: timelineThreadID,
           TimelineEventPresenter.memoryNoteFailed(error: error)
         )
       }
