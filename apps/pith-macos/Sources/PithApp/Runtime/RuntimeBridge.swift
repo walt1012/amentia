@@ -5,13 +5,14 @@ final class RuntimeBridge {
   var onThreadUpdated: ThreadUpdatedHandler?
   var onConnectionStateChanged: ConnectionStateHandler?
 
+  private let processStateQueue = DispatchQueue(label: "pith.runtime.bridge.process-state")
   private var processSession: RuntimeBridgeProcessSession?
   private let messageDispatcher = RuntimeBridgeMessageDispatcher()
   private let pendingResponses = RuntimeBridgePendingResponses()
   private let requestWriter = RuntimeBridgeRequestWriter()
 
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
-    if processSession?.isRunning != true {
+    if currentProcessSession()?.isRunning != true {
       resetProcessState()
       try launchProcess()
     }
@@ -58,7 +59,7 @@ final class RuntimeBridge {
 
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
-    processSession = try RuntimeBridgeProcessSession(
+    let session = try RuntimeBridgeProcessSession(
       executableURL: executableURL,
       environment: runtimeEnvironment(),
       onLine: { [weak self] processIdentifier, data in
@@ -77,10 +78,11 @@ final class RuntimeBridge {
         self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
       }
     )
+    storeProcessSession(session)
   }
 
   private func handleIncomingMessage(processIdentifier: ObjectIdentifier, data: Data) {
-    guard processSession?.identifier == processIdentifier else {
+    guard isCurrentProcessSession(processIdentifier) else {
       return
     }
 
@@ -147,31 +149,62 @@ final class RuntimeBridge {
   }
 
   private func handleProcessReadError(processIdentifier: ObjectIdentifier, error: Error) {
-    guard processSession?.identifier == processIdentifier else {
+    guard let session = detachProcessSession(matching: processIdentifier) else {
       return
     }
 
     failPendingResponses(with: error)
-    handleProcessTermination(
-      processIdentifier: processIdentifier,
-      detail: "Runtime disconnected."
-    )
+    session.stop()
+    updateConnectionState(.failed, detail: "Runtime disconnected.")
   }
 
   private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
-    guard processSession?.identifier == processIdentifier else {
+    guard let session = detachProcessSession(matching: processIdentifier) else {
       return
     }
 
     failPendingResponses(with: RuntimeError.rpc(detail))
-    resetProcessState()
+    session.stop()
     updateConnectionState(.failed, detail: detail)
   }
 
   private func resetProcessState() {
-    let session = processSession
-    processSession = nil
+    let session = detachProcessSession()
     session?.stop()
+  }
+
+  private func currentProcessSession() -> RuntimeBridgeProcessSession? {
+    processStateQueue.sync {
+      processSession
+    }
+  }
+
+  private func storeProcessSession(_ session: RuntimeBridgeProcessSession) {
+    processStateQueue.sync {
+      processSession = session
+    }
+  }
+
+  private func isCurrentProcessSession(_ processIdentifier: ObjectIdentifier) -> Bool {
+    processStateQueue.sync {
+      processSession?.identifier == processIdentifier
+    }
+  }
+
+  private func detachProcessSession(
+    matching processIdentifier: ObjectIdentifier? = nil
+  ) -> RuntimeBridgeProcessSession? {
+    processStateQueue.sync {
+      guard let session = processSession else {
+        return nil
+      }
+      if let processIdentifier, session.identifier != processIdentifier {
+        return nil
+      }
+
+      processSession = nil
+      return session
+    }
   }
 
   private func updateConnectionState(_ state: ConnectionState, detail: String) {
@@ -205,7 +238,7 @@ final class RuntimeBridge {
     method: String,
     params: Params
   ) async throws -> JSONRPCResponse<ResultType> {
-    guard let inputHandle = processSession?.inputHandle else {
+    guard let inputHandle = currentProcessSession()?.inputHandle else {
       throw RuntimeError.runtimePipeUnavailable
     }
 
