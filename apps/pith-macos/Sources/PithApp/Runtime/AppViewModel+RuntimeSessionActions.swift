@@ -101,33 +101,19 @@ extension AppViewModel {
   }
 
   func runtimePrimaryActionTitle() -> String? {
-    let snapshot = sessionActionSnapshot()
-    return SessionActionPlanner.runtimePrimaryActionTitle(
-      for: SessionActionPlanner.runtimePrimaryAction(snapshot),
-      snapshot: snapshot
-    )
+    SessionActionPlanner.runtimePrimaryActionTitle(sessionActionSnapshot())
   }
 
   func canRunRuntimePrimaryAction() -> Bool {
-    let snapshot = sessionActionSnapshot()
-    return SessionActionPlanner.canRunRuntimePrimaryAction(
-      SessionActionPlanner.runtimePrimaryAction(snapshot),
-      snapshot: snapshot
-    )
+    SessionActionPlanner.canRunRuntimePrimaryAction(sessionActionSnapshot())
   }
 
   func runRuntimePrimaryAction() {
-    let snapshot = sessionActionSnapshot()
-    guard let action = SessionActionPlanner.runtimePrimaryAction(snapshot),
-          SessionActionPlanner.canRunRuntimePrimaryAction(action, snapshot: snapshot)
-    else {
+    guard canRunRuntimePrimaryAction() else {
       return
     }
 
-    switch action {
-    case .cancelTurn:
-      cancelActiveTurn()
-    }
+    cancelActiveTurn()
   }
 
   func canLaunchRuntime() -> Bool {
