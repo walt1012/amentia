@@ -42,8 +42,9 @@ final class RuntimeBridge {
         throw error
       }
 
-      let detail = "Runtime initialization failed: \(error.localizedDescription)"
-      stopRuntimeAfterRequestBoundary(detail: detail)
+      let detail = stopRuntimeAfterRequestBoundary(
+        detail: "Runtime initialization failed: \(error.localizedDescription)"
+      )
       throw RuntimeError.rpc(detail)
     }
 
@@ -148,10 +149,13 @@ final class RuntimeBridge {
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
-  private func stopRuntimeAfterRequestBoundary(detail: String) {
+  @discardableResult
+  private func stopRuntimeAfterRequestBoundary(detail: String) -> String {
+    let detail = runtimeFailureDetail(detail)
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.failed, detail: detail)
+    return detail
   }
 
   private func failPendingResponses(with error: Error) {
@@ -163,9 +167,10 @@ final class RuntimeBridge {
       return
     }
 
-    failPendingResponses(with: error)
+    let detail = runtimeFailureDetail("Runtime disconnected.", session: session)
+    failPendingResponses(with: RuntimeError.rpc(detail))
     session.stop()
-    updateConnectionState(.failed, detail: "Runtime disconnected.")
+    updateConnectionState(.failed, detail: detail)
   }
 
   private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
@@ -173,9 +178,21 @@ final class RuntimeBridge {
       return
     }
 
+    let detail = runtimeFailureDetail(detail, session: session)
     failPendingResponses(with: RuntimeError.rpc(detail))
     session.stop()
     updateConnectionState(.failed, detail: detail)
+  }
+
+  private func runtimeFailureDetail(
+    _ detail: String,
+    session: RuntimeBridgeProcessSession? = nil
+  ) -> String {
+    guard let summary = (session ?? currentProcessSession())?.recentErrorSummary else {
+      return detail
+    }
+
+    return "\(detail) Runtime stderr: \(summary)"
   }
 
   private func resetProcessState() {

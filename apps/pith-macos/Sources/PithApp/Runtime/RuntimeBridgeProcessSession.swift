@@ -7,11 +7,25 @@ final class RuntimeBridgeProcessSession {
   private let process: Process
   private let outputHandle: FileHandle
   private let errorHandle: FileHandle
+  private let recentErrorOutputQueue = DispatchQueue(label: "pith.runtime.bridge.stderr-tail")
+  private let recentErrorOutputLimit = 4096
+  private let recentErrorSummaryLimit = 900
+  private var recentErrorOutput = ""
   private var readerTask: Task<Void, Never>?
   private var errorReaderTask: Task<Void, Never>?
 
   var isRunning: Bool {
     process.isRunning
+  }
+
+  var recentErrorSummary: String? {
+    recentErrorOutputQueue.sync {
+      let summary = Self.compactRuntimeErrorOutput(
+        recentErrorOutput,
+        limit: recentErrorSummaryLimit
+      )
+      return summary.isEmpty ? nil : summary
+    }
   }
 
   init(
@@ -135,6 +149,8 @@ final class RuntimeBridgeProcessSession {
             return
           }
 
+          self.appendRecentErrorOutput(chunk)
+
           #if DEBUG
             if let rawMessage = String(data: chunk, encoding: .utf8) {
               let message = rawMessage.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -149,5 +165,32 @@ final class RuntimeBridgeProcessSession {
         }
       }
     }
+  }
+
+  private func appendRecentErrorOutput(_ chunk: Data) {
+    guard let message = String(data: chunk, encoding: .utf8) else {
+      return
+    }
+
+    recentErrorOutputQueue.sync {
+      recentErrorOutput += message
+      if recentErrorOutput.count > recentErrorOutputLimit {
+        recentErrorOutput = String(recentErrorOutput.suffix(recentErrorOutputLimit))
+      }
+    }
+  }
+
+  private static func compactRuntimeErrorOutput(_ output: String, limit: Int) -> String {
+    let normalized = output
+      .components(separatedBy: .whitespacesAndNewlines)
+      .filter { !$0.isEmpty }
+      .joined(separator: " ")
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard normalized.count > limit else {
+      return normalized
+    }
+
+    return "..." + String(normalized.suffix(limit))
   }
 }
