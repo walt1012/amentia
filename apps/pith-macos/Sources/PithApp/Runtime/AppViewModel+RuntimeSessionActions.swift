@@ -136,6 +136,7 @@ extension AppViewModel {
 
   func canOpenWorkspace() -> Bool {
     SessionActionPlanner.canOpenWorkspace(sessionActionSnapshot())
+      && !workspaceOpenCoordinator.isOpening
   }
 
   func canCreateThread() -> Bool {

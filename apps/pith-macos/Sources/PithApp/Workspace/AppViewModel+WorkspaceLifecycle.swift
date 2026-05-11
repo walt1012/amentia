@@ -11,15 +11,31 @@ extension AppViewModel {
       return
     }
 
+    guard let requestToken = workspaceOpenCoordinator.begin() else {
+      return
+    }
+    runtimeDetail = "Opening workspace..."
+
     Task {
       do {
         let bootstrap = try await WorkspaceOpenBootstrapLoader.load(
           runtimeBridge: runtimeBridge,
           path: url.path
         )
+        guard workspaceOpenCoordinator.isCurrent(requestToken) else {
+          return
+        }
         try await applyWorkspaceOpenBootstrap(bootstrap)
+        guard workspaceOpenCoordinator.isCurrent(requestToken) else {
+          return
+        }
+        workspaceOpenCoordinator.finish(requestToken)
         announceFirstRequestReadyIfNeeded()
       } catch {
+        guard workspaceOpenCoordinator.isCurrent(requestToken) else {
+          return
+        }
+        workspaceOpenCoordinator.finish(requestToken)
         appendEntry(
           to: selectedThreadID,
           TimelineEventPresenter.workspaceOpenFailed(error: error)

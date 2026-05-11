@@ -93,6 +93,7 @@ extension AppViewModel {
       }
       localExecutionRequests.clearAll()
       runtimeLaunchCoordinator.cancel()
+      workspaceOpenCoordinator.cancel()
     }
 
     if plan.clearsModelReadinessState {
