@@ -20,7 +20,9 @@ enum PluginActionPlanner {
       return false
     }
 
-    return snapshot.runtimeState == .ready && plugin.status == "ready"
+    return snapshot.runtimeState == .ready
+      && plugin.status == "ready"
+      && !snapshot.hasActiveOrPendingTurn
   }
 
   static func canRemove(pluginID: String, snapshot: PluginActionSnapshot) -> Bool {
@@ -28,7 +30,9 @@ enum PluginActionPlanner {
       return false
     }
 
-    return snapshot.runtimeState == .ready && isRemovable(plugin)
+    return snapshot.runtimeState == .ready
+      && isRemovable(plugin)
+      && !snapshot.hasActiveOrPendingTurn
   }
 
   static func commandNeedsExecutionContract(
