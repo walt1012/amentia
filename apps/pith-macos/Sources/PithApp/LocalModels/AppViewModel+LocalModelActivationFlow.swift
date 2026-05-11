@@ -36,11 +36,16 @@ extension AppViewModel {
 
     switch plan.action {
     case .stopAndLaunch:
+      runtimeRelaunchCoordinator.cancel()
       runtimeBridge.stopRuntime(detail: plan.stopDetail ?? runningDetail)
       launchRuntime(launchDetail: plan.launchDetail ?? runningDetail)
     case .stopAndLaunchAfterCurrentLaunchSettles:
+      let requestToken = runtimeRelaunchCoordinator.begin()
       runtimeBridge.stopRuntime(detail: plan.stopDetail ?? runningDetail)
-      Task {
+      let task = Task {
+        defer {
+          runtimeRelaunchCoordinator.finish(requestToken)
+        }
         for _ in 0..<10 {
           if runtimeState != .launching {
             break
@@ -48,13 +53,52 @@ extension AppViewModel {
           try? await Task.sleep(nanoseconds: 200_000_000)
         }
         if runtimeState == .launching {
+          guard runtimeRelaunchCoordinator.isCurrent(requestToken) else {
+            return
+          }
           runtimeDetail = plan.launchTimeoutDetail ?? idleDetail
+          return
+        }
+        if runtimeState == .ready {
+          return
+        }
+        guard runtimeRelaunchCoordinator.isCurrent(requestToken) else {
           return
         }
         launchRuntime(launchDetail: plan.launchDetail ?? runningDetail)
       }
+      runtimeRelaunchCoordinator.bind(task: task, token: requestToken)
     case .updateIdleDetail:
+      runtimeRelaunchCoordinator.cancel()
       break
     }
+  }
+}
+
+struct RuntimeRelaunchRequestToken: Equatable {
+  fileprivate let id: UUID
+}
+
+final class RuntimeRelaunchCoordinator {
+  private let taskSlot = CancellableTaskSlot()
+
+  func begin() -> RuntimeRelaunchRequestToken {
+    RuntimeRelaunchRequestToken(id: taskSlot.replace())
+  }
+
+  func bind(task: Task<Void, Never>, token: RuntimeRelaunchRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: RuntimeRelaunchRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: RuntimeRelaunchRequestToken) {
+    taskSlot.finish(token.id)
+  }
+
+  func cancel() {
+    taskSlot.cancel()
   }
 }

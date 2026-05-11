@@ -41,3 +41,39 @@ extension AppViewModel {
     return threadID
   }
 }
+
+struct TurnCancellationRequestToken: Equatable {
+  fileprivate let id: UUID
+}
+
+final class TurnCancellationCoordinator {
+  private let taskSlot = CancellableTaskSlot()
+
+  var isCancelling: Bool {
+    taskSlot.isActive
+  }
+
+  func begin() -> TurnCancellationRequestToken? {
+    guard let requestID = taskSlot.begin() else {
+      return nil
+    }
+
+    return TurnCancellationRequestToken(id: requestID)
+  }
+
+  func bind(task: Task<Void, Never>, token: TurnCancellationRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: TurnCancellationRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: TurnCancellationRequestToken) {
+    taskSlot.finish(token.id)
+  }
+
+  func cancel() {
+    taskSlot.cancel()
+  }
+}

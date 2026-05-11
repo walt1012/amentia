@@ -19,6 +19,8 @@ final class AppViewModel: ObservableObject {
   let threadCreationCoordinator = ThreadCreationCoordinator()
   let threadHistoryLoadCoordinator = ThreadHistoryLoadCoordinator()
   let localExecutionRequests = LocalExecutionRequestCoordinator()
+  let turnCancellationCoordinator = TurnCancellationCoordinator()
+  let runtimeRelaunchCoordinator = RuntimeRelaunchCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
   let localModelMetadataCoordinator = LocalModelMetadataCoordinator()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator

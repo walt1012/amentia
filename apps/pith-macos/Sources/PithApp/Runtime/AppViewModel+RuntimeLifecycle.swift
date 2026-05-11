@@ -93,6 +93,7 @@ extension AppViewModel {
         state.activeTurnThreadID = nil
       }
       localExecutionRequests.clearAll()
+      turnCancellationCoordinator.cancel()
       runtimeLaunchCoordinator.cancel()
       workspaceOpenCoordinator.cancel()
       threadCreationCoordinator.cancel()

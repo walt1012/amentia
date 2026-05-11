@@ -117,11 +117,31 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard let requestToken = turnCancellationCoordinator.begin() else {
+      return
+    }
+    runtimeDetail = TimelineEventPresenter.cancellingTurnDetail
+    refreshThreadPreview(
+      threadID: activeTurnThreadID,
+      preview: TimelineEventPresenter.cancellingResponsePreview
+    )
+
+    let task = Task {
+      defer {
+        turnCancellationCoordinator.finish(requestToken)
+      }
       do {
         let result = try await runtimeBridge.cancelTurn(turnID: activeTurnID)
+        guard turnCancellationCoordinator.isCurrent(requestToken) else {
+          return
+        }
         await applyTurnCancellation(result, previewThreadID: activeTurnThreadID)
       } catch {
+        guard !Task.isCancelled,
+              turnCancellationCoordinator.isCurrent(requestToken)
+        else {
+          return
+        }
         runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
         appendEntry(
           to: activeTurnThreadID,
@@ -129,6 +149,7 @@ extension AppViewModel {
         )
       }
     }
+    turnCancellationCoordinator.bind(task: task, token: requestToken)
   }
 
   func hasActiveOrPendingTurn() -> Bool {
@@ -136,6 +157,7 @@ extension AppViewModel {
   }
 
   func hasCancelableLocalExecution() -> Bool {
-    timelineState.hasCancelableRuntimeTurn || localExecutionRequests.canCancelPendingExecution
+    (timelineState.hasCancelableRuntimeTurn && !turnCancellationCoordinator.isCancelling)
+      || localExecutionRequests.canCancelPendingExecution
   }
 }
