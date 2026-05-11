@@ -1,10 +1,14 @@
 import Foundation
 
 final class RuntimeBridge {
-  private(set) var connectionState: ConnectionState = .disconnected
+  var connectionState: ConnectionState {
+    currentConnectionState()
+  }
   var onThreadUpdated: ThreadUpdatedHandler?
   var onConnectionStateChanged: ConnectionStateHandler?
 
+  private let connectionStateQueue = DispatchQueue(label: "pith.runtime.bridge.connection-state")
+  private var connectionStateValue: ConnectionState = .disconnected
   private let processStateQueue = DispatchQueue(label: "pith.runtime.bridge.process-state")
   private var processSession: RuntimeBridgeProcessSession?
   private let messageDispatcher = RuntimeBridgeMessageDispatcher()
@@ -208,8 +212,16 @@ final class RuntimeBridge {
   }
 
   private func updateConnectionState(_ state: ConnectionState, detail: String) {
-    connectionState = state
+    connectionStateQueue.sync {
+      connectionStateValue = state
+    }
     onConnectionStateChanged?(state, detail)
+  }
+
+  private func currentConnectionState() -> ConnectionState {
+    connectionStateQueue.sync {
+      connectionStateValue
+    }
   }
 
   private func resolveRuntimeURL() throws -> URL {
