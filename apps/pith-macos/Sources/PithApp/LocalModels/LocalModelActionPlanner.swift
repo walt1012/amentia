@@ -34,6 +34,9 @@ enum LocalModelActionPlanner {
     if let pausedModelDownloadID = snapshot.pausedModelDownloadID {
       return .continueDownload(modelID: pausedModelDownloadID)
     }
+    guard snapshot.runtimeState == .ready else {
+      return nil
+    }
     if snapshot.canDownloadSelectedModel {
       return .downloadSelectedModel
     }
