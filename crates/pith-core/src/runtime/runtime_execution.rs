@@ -4,7 +4,9 @@ use pith_model_runtime::GenerationCancellation;
 use pith_protocol::ApprovalRequest;
 
 use super::runtime_execution_approvals::RuntimePendingApprovalState;
-use super::runtime_execution_running::RuntimeRunningExecutionState;
+use super::runtime_execution_running::{
+  RuntimeRunningCancellation, RuntimeRunningExecutionState,
+};
 use super::runtime_execution_turns::RuntimeActiveTurnState;
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
@@ -135,10 +137,10 @@ impl RuntimeExecutionState {
       .insert_running_approval(approval_id, thread_id, cancellation);
   }
 
-  pub(crate) fn request_running_turn_cancel_for_thread(
+  pub(crate) fn request_running_cancel_for_thread(
     &mut self,
     thread_id: &str,
-  ) -> Option<(String, String)> {
+  ) -> Option<RuntimeRunningCancellation> {
     self.running.request_cancel_for_thread(thread_id)
   }
 
@@ -193,9 +195,11 @@ mod tests {
       cancellation.clone(),
     );
 
-    let cancelled = state.request_running_turn_cancel_for_thread("thread-1");
+    let cancelled = state.request_running_cancel_for_thread("thread-1");
 
-    assert_eq!(cancelled, Some(("".to_string(), "thread-1".to_string())));
+    let cancelled = cancelled.expect("running approval cancelled");
+    assert_eq!(cancelled.turn_id(), None);
+    assert_eq!(cancelled.thread_id(), "thread-1");
     assert!(cancellation.is_cancelled());
     assert_eq!(state.counts().running_approval_count(), 1);
     state.remove_running_approval("approval-1");
@@ -206,7 +210,7 @@ mod tests {
   fn running_cancel_request_is_remembered_until_work_starts() {
     let mut state = RuntimeExecutionState::empty();
 
-    let cancelled = state.request_running_turn_cancel_for_thread("thread-1");
+    let cancelled = state.request_running_cancel_for_thread("thread-1");
 
     assert_eq!(cancelled, None);
     assert!(state.take_pending_running_turn_cancel("thread-1"));
@@ -225,5 +229,24 @@ mod tests {
     assert_eq!(state.counts().active_turn_count(), 1);
     state.remove_running_turn("turn-1");
     assert_eq!(state.counts().active_turn_count(), 0);
+  }
+
+  #[test]
+  fn running_turn_cancel_reports_turn_identity() {
+    let mut state = RuntimeExecutionState::empty();
+    let cancellation = GenerationCancellation::new();
+    state.insert_running_turn(
+      "turn-1".to_string(),
+      "thread-1".to_string(),
+      cancellation.clone(),
+    );
+
+    let cancelled = state
+      .request_running_cancel_for_thread("thread-1")
+      .expect("running turn cancelled");
+
+    assert_eq!(cancelled.turn_id(), Some("turn-1"));
+    assert_eq!(cancelled.thread_id(), "thread-1");
+    assert!(cancellation.is_cancelled());
   }
 }

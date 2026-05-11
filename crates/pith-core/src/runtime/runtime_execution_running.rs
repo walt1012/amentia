@@ -2,6 +2,36 @@ use std::collections::{HashMap, HashSet};
 
 use pith_model_runtime::GenerationCancellation;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RuntimeRunningCancellation {
+  turn_id: Option<String>,
+  thread_id: String,
+}
+
+impl RuntimeRunningCancellation {
+  fn turn(turn_id: String, thread_id: String) -> Self {
+    Self {
+      turn_id: Some(turn_id),
+      thread_id,
+    }
+  }
+
+  fn approval(thread_id: String) -> Self {
+    Self {
+      turn_id: None,
+      thread_id,
+    }
+  }
+
+  pub(crate) fn turn_id(&self) -> Option<&str> {
+    self.turn_id.as_deref()
+  }
+
+  pub(crate) fn thread_id(&self) -> &str {
+    &self.thread_id
+  }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct RuntimeRunningExecutionState {
   running_turns: HashMap<String, RunningCancellation>,
@@ -50,14 +80,14 @@ impl RuntimeRunningExecutionState {
   pub(crate) fn cancel_running_turn_for_thread(
     &mut self,
     thread_id: &str,
-  ) -> Option<(String, String)> {
+  ) -> Option<RuntimeRunningCancellation> {
     let (turn_id, running_turn) = self
       .running_turns
       .iter()
       .find(|(_, turn)| turn.thread_id == thread_id)
       .map(|(turn_id, turn)| (turn_id.clone(), turn.clone()))?;
     running_turn.cancellation.cancel();
-    Some((turn_id, running_turn.thread_id))
+    Some(RuntimeRunningCancellation::turn(turn_id, running_turn.thread_id))
   }
 
   pub(crate) fn insert_running_approval(
@@ -75,22 +105,26 @@ impl RuntimeRunningExecutionState {
     );
   }
 
-  pub(crate) fn cancel_running_approval_for_thread(&mut self, thread_id: &str) -> Option<String> {
+  pub(crate) fn cancel_running_approval_for_thread(
+    &mut self,
+    thread_id: &str,
+  ) -> Option<RuntimeRunningCancellation> {
     let running_approval = self
       .running_approvals
       .iter()
       .find(|(_, approval)| approval.thread_id == thread_id)
       .map(|(_, approval)| approval.clone())?;
     running_approval.cancellation.cancel();
-    Some(running_approval.thread_id)
+    Some(RuntimeRunningCancellation::approval(running_approval.thread_id))
   }
 
-  pub(crate) fn request_cancel_for_thread(&mut self, thread_id: &str) -> Option<(String, String)> {
-    let cancellation = self.cancel_running_turn_for_thread(thread_id).or_else(|| {
-      self
-        .cancel_running_approval_for_thread(thread_id)
-        .map(|thread_id| ("".to_string(), thread_id))
-    });
+  pub(crate) fn request_cancel_for_thread(
+    &mut self,
+    thread_id: &str,
+  ) -> Option<RuntimeRunningCancellation> {
+    let cancellation = self
+      .cancel_running_turn_for_thread(thread_id)
+      .or_else(|| self.cancel_running_approval_for_thread(thread_id));
     if cancellation.is_some() {
       self.pending_cancellations.remove(thread_id);
     } else {
