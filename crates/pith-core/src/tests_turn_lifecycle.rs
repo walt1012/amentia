@@ -136,6 +136,7 @@ fn turn_cancel_stops_an_active_assistant_response() {
   let cancel_result = cancel_response.result.expect("cancel result");
   let items = cancel_result["items"].as_array().expect("cancel items");
 
+  assert_eq!(cancel_result["turnId"], "thread-1-turn-1");
   assert_eq!(items[0]["title"], "Turn Cancelled");
   assert_eq!(cancel_result["activeTurnId"], serde_json::Value::Null);
 }

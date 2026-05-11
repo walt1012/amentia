@@ -173,6 +173,9 @@ fn approved_shell_execution_honors_pending_cancellation() {
     ),
   );
   assert!(cancel_response.error.is_none());
+  let cancel_result = cancel_response.result.expect("cancel result");
+  assert_eq!(cancel_result["threadId"], "thread-1");
+  assert_eq!(cancel_result["turnId"], serde_json::Value::Null);
 
   let approval_response = handle_request(
     &mut context,
