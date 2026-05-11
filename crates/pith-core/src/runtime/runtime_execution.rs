@@ -20,6 +20,7 @@ pub(crate) struct RuntimeExecutionState {
 pub(crate) struct RuntimeExecutionCounts {
   pending_approval_count: usize,
   active_turn_count: usize,
+  running_turn_count: usize,
   running_approval_count: usize,
 }
 
@@ -30,6 +31,10 @@ impl RuntimeExecutionCounts {
 
   pub(crate) fn active_turn_count(&self) -> usize {
     self.active_turn_count
+  }
+
+  pub(crate) fn running_turn_count(&self) -> usize {
+    self.running_turn_count
   }
 
   pub(crate) fn running_approval_count(&self) -> usize {
@@ -60,7 +65,8 @@ impl RuntimeExecutionState {
   pub(crate) fn counts(&self) -> RuntimeExecutionCounts {
     RuntimeExecutionCounts {
       pending_approval_count: self.pending_approvals.count(),
-      active_turn_count: self.active_turns.count() + self.running.running_turn_count(),
+      active_turn_count: self.active_turns.count(),
+      running_turn_count: self.running.running_turn_count(),
       running_approval_count: self.running.running_approval_count(),
     }
   }
@@ -216,7 +222,7 @@ mod tests {
   }
 
   #[test]
-  fn running_turn_counts_as_active_until_removed() {
+  fn running_turn_counts_separately_until_removed() {
     let mut state = RuntimeExecutionState::empty();
     state.insert_running_turn(
       "turn-1".to_string(),
@@ -224,9 +230,10 @@ mod tests {
       GenerationCancellation::new(),
     );
 
-    assert_eq!(state.counts().active_turn_count(), 1);
-    state.remove_running_turn("turn-1");
     assert_eq!(state.counts().active_turn_count(), 0);
+    assert_eq!(state.counts().running_turn_count(), 1);
+    state.remove_running_turn("turn-1");
+    assert_eq!(state.counts().running_turn_count(), 0);
   }
 
   #[test]

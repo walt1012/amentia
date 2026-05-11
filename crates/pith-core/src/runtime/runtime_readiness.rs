@@ -22,6 +22,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let execution_counts = context.execution_state.counts();
   let pending_approval_count = execution_counts.pending_approval_count();
   let active_turn_count = execution_counts.active_turn_count();
+  let running_turn_count = execution_counts.running_turn_count();
   let running_approval_count = execution_counts.running_approval_count();
   let sandbox_status = context
     .workspace_state
@@ -37,6 +38,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     thread_ready,
     pending_approval_count,
     active_turn_count,
+    running_turn_count,
     running_approval_count,
   );
   let context_window = model_health
@@ -60,6 +62,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       first_request_sent,
       pending_approval_count,
       active_turn_count,
+      running_turn_count,
       running_approval_count,
     ),
     checks: vec![
@@ -76,6 +79,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       execution_control_check(
         pending_approval_count,
         active_turn_count,
+        running_turn_count,
         running_approval_count,
       ),
       native_sandbox_check(&sandbox_status),
@@ -124,13 +128,14 @@ fn readiness_status(
   thread_ready: bool,
   pending_approval_count: usize,
   active_turn_count: usize,
+  running_turn_count: usize,
   running_approval_count: usize,
 ) -> &'static str {
   if !model_ready || !workspace_ready || !thread_ready {
     "setup_required"
   } else if pending_approval_count > 0 {
     "needs_approval"
-  } else if active_turn_count > 0 || running_approval_count > 0 {
+  } else if active_turn_count > 0 || running_turn_count > 0 || running_approval_count > 0 {
     "running"
   } else {
     "ready"
@@ -143,28 +148,28 @@ mod tests {
 
   #[test]
   fn readiness_status_prioritizes_setup_requirements() {
-    let status = readiness_status(false, true, true, 1, 1, 1);
+    let status = readiness_status(false, true, true, 1, 1, 1, 1);
 
     assert_eq!(status, "setup_required");
   }
 
   #[test]
   fn readiness_status_reports_pending_approvals_before_running_work() {
-    let status = readiness_status(true, true, true, 1, 1, 1);
+    let status = readiness_status(true, true, true, 1, 1, 1, 1);
 
     assert_eq!(status, "needs_approval");
   }
 
   #[test]
   fn readiness_status_reports_running_when_work_is_active() {
-    let status = readiness_status(true, true, true, 0, 1, 0);
+    let status = readiness_status(true, true, true, 0, 1, 0, 0);
 
     assert_eq!(status, "running");
   }
 
   #[test]
   fn readiness_status_reports_ready_when_setup_is_complete_and_idle() {
-    let status = readiness_status(true, true, true, 0, 0, 0);
+    let status = readiness_status(true, true, true, 0, 0, 0, 0);
 
     assert_eq!(status, "ready");
   }

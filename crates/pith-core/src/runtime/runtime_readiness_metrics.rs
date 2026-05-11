@@ -111,6 +111,11 @@ fn insert_execution_metrics(
   );
   insert_metric(
     metrics,
+    "runningTurnCount",
+    execution_counts.running_turn_count().to_string(),
+  );
+  insert_metric(
+    metrics,
     "runningApprovalCount",
     execution_counts.running_approval_count().to_string(),
   );
