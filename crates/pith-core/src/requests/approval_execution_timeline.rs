@@ -44,6 +44,19 @@ pub(super) fn tool_start_item(
   }
 }
 
+pub(super) fn tool_result_item(
+  title: &str,
+  content: String,
+  attributes: Option<HashMap<String, String>>,
+) -> TimelineItem {
+  TimelineItem {
+    kind: "toolResult".to_string(),
+    title: title.to_string(),
+    content,
+    attributes,
+  }
+}
+
 pub(super) fn warning_item(
   title: &str,
   content: String,
@@ -66,5 +79,59 @@ pub(super) fn assistant_item(
     title: "Assistant".to_string(),
     content,
     attributes,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn approval() -> PendingApproval {
+    PendingApproval {
+      id: "approval-1".to_string(),
+      thread_id: "thread-1".to_string(),
+      action: "write_file".to_string(),
+      title: "Write README.md".to_string(),
+      relative_path: "README.md".to_string(),
+      content: Some("content".to_string()),
+      command: None,
+    }
+  }
+
+  #[test]
+  fn approval_granted_item_keeps_decision_attributes() {
+    let item = approval_granted_item(&approval());
+    let attributes = item.attributes.expect("attributes");
+
+    assert_eq!(item.kind, "approvalResolved");
+    assert_eq!(item.title, "Approval Granted");
+    assert_eq!(
+      attributes.get("approvalId").map(String::as_str),
+      Some("approval-1")
+    );
+    assert_eq!(
+      attributes.get("decision").map(String::as_str),
+      Some("approved")
+    );
+  }
+
+  #[test]
+  fn tool_result_item_uses_structured_tool_result_kind() {
+    let item = tool_result_item(
+      "write_file result",
+      "Wrote 7 bytes.".to_string(),
+      Some(HashMap::from([(
+        "relativePath".to_string(),
+        "README.md".to_string(),
+      )])),
+    );
+
+    let attributes = item.attributes.expect("attributes");
+    assert_eq!(item.kind, "toolResult");
+    assert_eq!(item.title, "write_file result");
+    assert_eq!(
+      attributes.get("relativePath").map(String::as_str),
+      Some("README.md")
+    );
   }
 }

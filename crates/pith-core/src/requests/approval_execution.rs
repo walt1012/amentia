@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use pith_protocol::{TimelineItem, WorkspaceSummary};
+use pith_protocol::WorkspaceSummary;
 
 use crate::approval_types::PendingApproval;
 use crate::request_state::{
@@ -11,6 +11,7 @@ use crate::request_state::{
 
 use super::approval_execution_approved::execute_approved_approval;
 use super::approval_execution_denied::execute_denied_approval;
+use super::approval_execution_timeline::warning_item;
 
 pub fn execute_prepared_approval_respond(
   prepared: PreparedApprovalRespond,
@@ -66,15 +67,14 @@ fn build_recovered_approval_output(
     approval: approval.clone(),
     decision,
     workspace,
-    items: vec![TimelineItem {
-      kind: "warning".to_string(),
-      title: "Approval Execution Recovered".to_string(),
-      content: "Pith recovered after the approval action failed internally.".to_string(),
-      attributes: Some(HashMap::from([
+    items: vec![warning_item(
+      "Approval Execution Recovered",
+      "Pith recovered after the approval action failed internally.".to_string(),
+      Some(HashMap::from([
         ("approvalId".to_string(), approval.id),
         ("action".to_string(), approval.action),
       ])),
-    }],
+    )],
     memory_event: None,
     hook_memory_captures: vec![],
   }

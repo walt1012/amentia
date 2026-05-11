@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_memory::MemoryEvent;
-use pith_protocol::{TimelineItem, WorkspaceSummary};
+use pith_protocol::WorkspaceSummary;
 use pith_tools::{write_file, write_file_max_bytes};
 
 use crate::approval_types::PendingApproval;
@@ -10,7 +10,9 @@ use crate::plugin_permissions::{build_permission_denied_items, permission_is_gra
 use crate::turn_tool_provenance::workspace_tool_attributes;
 
 use super::approval_execution_events::ApprovalExecutionEvents;
-use super::approval_execution_timeline::{assistant_item, tool_start_item, warning_item};
+use super::approval_execution_timeline::{
+  assistant_item, tool_result_item, tool_start_item, warning_item,
+};
 
 pub(super) fn append_approved_write_execution(
   events: &mut ApprovalExecutionEvents,
@@ -82,11 +84,10 @@ fn append_successful_write(
     workspace_display_name: workspace.display_name.clone(),
     relative_path: relative_path.clone(),
   });
-  events.push_item(TimelineItem {
-    kind: "toolResult".to_string(),
-    title: "write_file result".to_string(),
-    content: format!("Wrote {} bytes to {}.", content.len(), relative_path),
-    attributes: Some(workspace_tool_attributes(
+  events.push_item(tool_result_item(
+    "write_file result",
+    format!("Wrote {} bytes to {}.", content.len(), relative_path),
+    Some(workspace_tool_attributes(
       "write_file",
       workspace,
       [
@@ -96,7 +97,7 @@ fn append_successful_write(
         ("maxBytes".to_string(), write_file_max_bytes().to_string()),
       ],
     )),
-  });
+  ));
   events.push_item(assistant_item(
     format!(
       "Pith wrote {} in {} after your approval.",

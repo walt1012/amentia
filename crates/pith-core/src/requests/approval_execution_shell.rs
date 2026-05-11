@@ -4,7 +4,7 @@ use std::path::Path;
 use pith_memory::{MemoryEvent, MemoryNote};
 use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
-use pith_protocol::{TimelineItem, WorkspaceSummary};
+use pith_protocol::WorkspaceSummary;
 use pith_tools::run_shell_with_cancellation;
 
 use crate::approval_types::PendingApproval;
@@ -15,7 +15,9 @@ use crate::turn::turn_tool_limits::SHELL_OUTPUT_PREVIEW_MAX_BYTES;
 use crate::turn_tool_provenance::workspace_tool_attributes;
 
 use super::approval_execution_events::ApprovalExecutionEvents;
-use super::approval_execution_timeline::{assistant_item, tool_start_item, warning_item};
+use super::approval_execution_timeline::{
+  assistant_item, tool_result_item, tool_start_item, warning_item,
+};
 
 pub(super) fn append_approved_shell_execution(
   events: &mut ApprovalExecutionEvents,
@@ -80,11 +82,10 @@ pub(super) fn append_approved_shell_execution(
         &result,
         Some(cancellation),
       );
-      events.push_item(TimelineItem {
-        kind: "toolResult".to_string(),
-        title: "run_shell result".to_string(),
-        content: format_shell_result(&result),
-        attributes: Some({
+      events.push_item(tool_result_item(
+        "run_shell result",
+        format_shell_result(&result),
+        Some({
           let mut attributes = workspace_tool_attributes(
             "run_shell",
             workspace,
@@ -104,7 +105,7 @@ pub(super) fn append_approved_shell_execution(
           attributes.extend(result.output_context.attributes());
           attributes
         }),
-      });
+      ));
       events.push_item(assistant_item(summary, Some(summary_attributes)));
       let (hook_items, memory_captures) =
         build_shell_completed_hook_items(plugins, workspace, &command, &result);
