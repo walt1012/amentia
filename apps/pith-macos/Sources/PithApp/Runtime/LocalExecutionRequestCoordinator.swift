@@ -32,6 +32,10 @@ final class LocalExecutionRequestCoordinator {
     agentRequest.requestCancellation()
   }
 
+  func restoreAgentCancellationRequest(threadID: String) {
+    agentRequest.restoreCancellationRequest(threadID: threadID)
+  }
+
   func beginApprovalExecution(threadID: String) -> UUID {
     approvalExecution.begin(threadID: threadID)
   }
@@ -46,6 +50,10 @@ final class LocalExecutionRequestCoordinator {
 
   func requestApprovalCancellationThreadID() -> String? {
     approvalExecution.requestCancellation()
+  }
+
+  func restoreApprovalCancellationRequest(threadID: String) {
+    approvalExecution.restoreCancellationRequest(threadID: threadID)
   }
 
   func clearAll() {
@@ -107,6 +115,14 @@ private final class PendingRuntimeRequestState {
 
     cancellationRequested = true
     return threadID
+  }
+
+  func restoreCancellationRequest(threadID: String) {
+    guard self.threadID == threadID else {
+      return
+    }
+
+    cancellationRequested = false
   }
 
   func cancelAndClear() {

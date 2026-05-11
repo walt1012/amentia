@@ -83,6 +83,7 @@ extension AppViewModel {
         do {
           _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingThreadID)
         } catch {
+          localExecutionRequests.restoreAgentCancellationRequest(threadID: pendingThreadID)
           appendEntry(
             to: pendingThreadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
@@ -97,6 +98,7 @@ extension AppViewModel {
         do {
           _ = try await runtimeBridge.cancelRunningExecution(threadID: approvalThreadID)
         } catch {
+          localExecutionRequests.restoreApprovalCancellationRequest(threadID: approvalThreadID)
           appendEntry(
             to: approvalThreadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
