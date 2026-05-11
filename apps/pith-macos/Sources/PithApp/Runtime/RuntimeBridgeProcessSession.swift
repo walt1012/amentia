@@ -15,7 +15,7 @@ final class RuntimeBridgeProcessSession {
   init(
     executableURL: URL,
     environment: [String: String],
-    onLine: @escaping @Sendable (Data) -> Void,
+    onLine: @escaping @Sendable (ObjectIdentifier, Data) -> Void,
     onReadError: @escaping @Sendable (ObjectIdentifier, Error) -> Void,
     onTermination: @escaping @Sendable (ObjectIdentifier, String) -> Void
   ) throws {
@@ -65,7 +65,7 @@ final class RuntimeBridgeProcessSession {
 
   private func startReaderLoop(
     with handle: FileHandle,
-    onLine: @escaping @Sendable (Data) -> Void,
+    onLine: @escaping @Sendable (ObjectIdentifier, Data) -> Void,
     onReadError: @escaping @Sendable (ObjectIdentifier, Error) -> Void
   ) {
     let processIdentifier = identifier
@@ -79,7 +79,7 @@ final class RuntimeBridgeProcessSession {
           return
         }
 
-        onLine(Data(line.utf8))
+        onLine(processIdentifier, Data(line.utf8))
       }
     }
   }

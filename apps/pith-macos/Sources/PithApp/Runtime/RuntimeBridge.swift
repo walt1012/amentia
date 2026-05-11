@@ -49,8 +49,11 @@ final class RuntimeBridge {
     processSession = try RuntimeBridgeProcessSession(
       executableURL: executableURL,
       environment: runtimeEnvironment(),
-      onLine: { [weak self] data in
-        self?.handleIncomingMessage(data)
+      onLine: { [weak self] processIdentifier, data in
+        self?.handleIncomingMessage(
+          processIdentifier: processIdentifier,
+          data: data
+        )
       },
       onReadError: { [weak self] processIdentifier, error in
         self?.failPendingResponses(with: error)
@@ -65,7 +68,11 @@ final class RuntimeBridge {
     )
   }
 
-  private func handleIncomingMessage(_ data: Data) {
+  private func handleIncomingMessage(processIdentifier: ObjectIdentifier, data: Data) {
+    guard processSession?.identifier == processIdentifier else {
+      return
+    }
+
     switch messageDispatcher.decode(data) {
     case .response(let responseID, let data):
       let continuation = takePendingResponse(requestID: responseID)
