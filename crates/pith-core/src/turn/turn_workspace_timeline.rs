@@ -104,7 +104,10 @@ mod tests {
     let attributes = item.attributes.expect("attributes");
     assert_eq!(item.kind, "toolStart");
     assert_eq!(item.title, "read_file");
-    assert_eq!(attributes.get("tool").map(String::as_str), Some("read_file"));
+    assert_eq!(
+      attributes.get("tool").map(String::as_str),
+      Some("read_file")
+    );
     assert_eq!(
       attributes.get("workspaceDisplayName").map(String::as_str),
       Some("Pith")
