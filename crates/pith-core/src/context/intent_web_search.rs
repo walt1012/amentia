@@ -33,6 +33,18 @@ pub(crate) fn infer_explicit_web_search_intent(message: &str) -> Option<WebSearc
     }
   }
 
+  if let Some(index) = lowercased_message.find("look up ") {
+    let query = trimmed[index + "look up ".len()..]
+      .trim()
+      .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
+    if !query.is_empty() && !has_local_workspace_signal(&query.to_lowercase()) {
+      return Some(WebSearchIntent {
+        query: query.to_string(),
+        routing_reason: "explicitWebSearchRequest",
+      });
+    }
+  }
+
   None
 }
 
@@ -128,6 +140,8 @@ mod tests {
 
     let plugins = infer_explicit_web_search_intent("websearch pith plugins").expect("intent");
     assert_eq!(plugins.query, "pith plugins");
+    let lookup = infer_explicit_web_search_intent("look up Liquid AI").expect("lookup intent");
+    assert_eq!(lookup.query, "Liquid AI");
     assert!(infer_explicit_web_search_intent("look up README.md").is_none());
     assert!(infer_explicit_web_search_intent("search RuntimeContext").is_none());
   }
