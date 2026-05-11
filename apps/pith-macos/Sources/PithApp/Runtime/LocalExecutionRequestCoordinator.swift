@@ -49,8 +49,8 @@ final class LocalExecutionRequestCoordinator {
   }
 
   func clearAll() {
-    agentRequest.clear()
-    approvalExecution.clear()
+    agentRequest.cancelAndClear()
+    approvalExecution.cancelAndClear()
   }
 }
 
@@ -68,8 +68,7 @@ private final class PendingRuntimeRequestState {
   }
 
   func begin(threadID: String) -> UUID {
-    task?.cancel()
-    clear()
+    cancelAndClear()
     let requestID = UUID()
     self.requestID = requestID
     self.threadID = threadID
@@ -96,5 +95,10 @@ private final class PendingRuntimeRequestState {
     requestID = nil
     threadID = nil
     task = nil
+  }
+
+  func cancelAndClear() {
+    task?.cancel()
+    clear()
   }
 }
