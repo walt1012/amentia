@@ -39,8 +39,10 @@ enum SessionActionPlanner {
 
   static func runtimePrimaryAction(_ snapshot: SessionActionSnapshot) -> RuntimePrimaryAction? {
     switch snapshot.runtimeState {
-    case .disconnected, .failed, .launching:
+    case .disconnected, .failed:
       return .launchRuntime
+    case .launching:
+      return nil
     case .ready:
       return snapshot.hasCancelableTurn ? .cancelTurn : nil
     }
