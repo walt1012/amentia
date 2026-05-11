@@ -54,51 +54,33 @@ struct LocalModelMetadataRequestToken: Equatable {
 }
 
 final class LocalModelMetadataCoordinator {
-  private var activeRequestID: UUID?
-  private var activeTask: Task<Void, Never>?
+  private let taskSlot = CancellableTaskSlot()
 
   var isRunning: Bool {
-    activeRequestID != nil
+    taskSlot.isActive
   }
 
   func begin() -> LocalModelMetadataRequestToken? {
-    guard activeRequestID == nil else {
+    guard let requestID = taskSlot.begin() else {
       return nil
     }
 
-    let requestID = UUID()
-    activeRequestID = requestID
     return LocalModelMetadataRequestToken(id: requestID)
   }
 
   func bind(task: Task<Void, Never>, token: LocalModelMetadataRequestToken) {
-    guard isCurrent(token) else {
-      task.cancel()
-      return
-    }
-
-    activeTask = task
+    taskSlot.bind(task: task, requestID: token.id)
   }
 
   func isCurrent(_ token: LocalModelMetadataRequestToken) -> Bool {
-    activeRequestID == token.id
+    taskSlot.isCurrent(token.id)
   }
 
   func finish(_ token: LocalModelMetadataRequestToken) {
-    guard isCurrent(token) else {
-      return
-    }
-
-    clear()
+    taskSlot.finish(token.id)
   }
 
   func cancel() {
-    activeTask?.cancel()
-    clear()
-  }
-
-  private func clear() {
-    activeRequestID = nil
-    activeTask = nil
+    taskSlot.cancel()
   }
 }

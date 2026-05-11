@@ -211,44 +211,25 @@ struct RuntimeLaunchRequestToken: Equatable {
 }
 
 final class RuntimeLaunchCoordinator {
-  private var activeRequestID: UUID?
-  private var activeTask: Task<Void, Never>?
+  private let taskSlot = CancellableTaskSlot()
 
   func begin() -> RuntimeLaunchRequestToken {
-    cancel()
-    let requestID = UUID()
-    activeRequestID = requestID
-    return RuntimeLaunchRequestToken(id: requestID)
+    RuntimeLaunchRequestToken(id: taskSlot.replace())
   }
 
   func bind(task: Task<Void, Never>, token: RuntimeLaunchRequestToken) {
-    guard isCurrent(token) else {
-      task.cancel()
-      return
-    }
-
-    activeTask = task
+    taskSlot.bind(task: task, requestID: token.id)
   }
 
   func isCurrent(_ token: RuntimeLaunchRequestToken) -> Bool {
-    activeRequestID == token.id
+    taskSlot.isCurrent(token.id)
   }
 
   func finish(_ token: RuntimeLaunchRequestToken) {
-    guard isCurrent(token) else {
-      return
-    }
-
-    clear()
+    taskSlot.finish(token.id)
   }
 
   func cancel() {
-    activeTask?.cancel()
-    clear()
-  }
-
-  private func clear() {
-    activeRequestID = nil
-    activeTask = nil
+    taskSlot.cancel()
   }
 }

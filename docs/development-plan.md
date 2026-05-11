@@ -32,7 +32,7 @@ Memory and storage do not conflict: memory owns meaning and ranking; storage own
 
 ## Review Snapshot
 
-- Keep: short runtime locks, bounded subprocesses, symlink-safe workspace tools, verified local model activation, progressive inspector surfaces.
+- Keep: short runtime locks, bounded subprocesses, symlink-safe workspace tools, verified local model activation, progressive inspector surfaces, shared cancellable app task slots.
 - Watch: do not split Swift files for cosmetic size; create coordinators/stores only when ownership actually changes.
 - Watch: keep `pith-core` modular enough for Milestone 4 plugin execution seams.
 - Watch: plugin commands are built-in execution contracts today, not third-party plugin processes.
