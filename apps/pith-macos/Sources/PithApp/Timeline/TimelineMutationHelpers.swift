@@ -122,11 +122,13 @@ enum TimelineMutationState {
     runtimeActiveTurnID: String?
   ) -> ActiveTurnSelectionState {
     guard let runtimeActiveTurnID else {
+      if currentActiveTurnThreadID == threadID {
+        return ActiveTurnSelectionState(activeTurnID: nil, activeTurnThreadID: nil)
+      }
+
       return ActiveTurnSelectionState(
-        activeTurnID: nil,
-        activeTurnThreadID: currentActiveTurnThreadID == threadID
-          ? nil
-          : currentActiveTurnThreadID
+        activeTurnID: currentActiveTurnID,
+        activeTurnThreadID: currentActiveTurnThreadID
       )
     }
 
