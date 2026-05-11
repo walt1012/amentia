@@ -18,7 +18,7 @@ extension AppViewModel {
     }
     runtimeDetail = "Opening workspace..."
 
-    Task {
+    let task = Task {
       do {
         let bootstrap = try await WorkspaceOpenBootstrapLoader.load(
           runtimeBridge: runtimeBridge,
@@ -46,6 +46,7 @@ extension AppViewModel {
         )
       }
     }
+    workspaceOpenCoordinator.bind(task: task, token: requestToken)
   }
 
   private func applyWorkspaceOpenBootstrap(_ bootstrap: WorkspaceOpenBootstrap) async throws {

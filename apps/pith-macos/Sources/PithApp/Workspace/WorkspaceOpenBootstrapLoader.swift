@@ -30,6 +30,7 @@ struct WorkspaceOpenRequestToken: Equatable {
 
 final class WorkspaceOpenCoordinator {
   private var activeRequestID: UUID?
+  private var activeTask: Task<Void, Never>?
 
   var isOpening: Bool {
     activeRequestID != nil
@@ -48,6 +49,15 @@ final class WorkspaceOpenCoordinator {
     )
   }
 
+  func bind(task: Task<Void, Never>, token: WorkspaceOpenRequestToken) {
+    guard isCurrent(token) else {
+      task.cancel()
+      return
+    }
+
+    activeTask = task
+  }
+
   func isCurrent(_ token: WorkspaceOpenRequestToken) -> Bool {
     activeRequestID == token.id
   }
@@ -57,10 +67,16 @@ final class WorkspaceOpenCoordinator {
       return
     }
 
-    activeRequestID = nil
+    clear()
   }
 
   func cancel() {
+    activeTask?.cancel()
+    clear()
+  }
+
+  private func clear() {
     activeRequestID = nil
+    activeTask = nil
   }
 }
