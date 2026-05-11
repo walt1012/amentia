@@ -17,6 +17,7 @@ final class AppViewModel: ObservableObject {
   let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
   let workspaceOpenCoordinator = WorkspaceOpenCoordinator()
   let threadCreationCoordinator = ThreadCreationCoordinator()
+  let threadHistoryLoadCoordinator = ThreadHistoryLoadCoordinator()
   let localExecutionRequests = LocalExecutionRequestCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
   let localModelMetadataCoordinator = LocalModelMetadataCoordinator()

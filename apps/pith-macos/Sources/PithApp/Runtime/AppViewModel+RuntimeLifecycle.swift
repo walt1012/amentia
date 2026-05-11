@@ -96,6 +96,7 @@ extension AppViewModel {
       runtimeLaunchCoordinator.cancel()
       workspaceOpenCoordinator.cancel()
       threadCreationCoordinator.cancel()
+      threadHistoryLoadCoordinator.cancel()
       localModelMetadataCoordinator.cancel()
       resetWorkspaceSearch()
     }
