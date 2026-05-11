@@ -87,7 +87,10 @@ impl RuntimeRunningExecutionState {
       .find(|(_, turn)| turn.thread_id == thread_id)
       .map(|(turn_id, turn)| (turn_id.clone(), turn.clone()))?;
     running_turn.cancellation.cancel();
-    Some(RuntimeRunningCancellation::turn(turn_id, running_turn.thread_id))
+    Some(RuntimeRunningCancellation::turn(
+      turn_id,
+      running_turn.thread_id,
+    ))
   }
 
   pub(crate) fn insert_running_approval(
@@ -115,7 +118,9 @@ impl RuntimeRunningExecutionState {
       .find(|(_, approval)| approval.thread_id == thread_id)
       .map(|(_, approval)| approval.clone())?;
     running_approval.cancellation.cancel();
-    Some(RuntimeRunningCancellation::approval(running_approval.thread_id))
+    Some(RuntimeRunningCancellation::approval(
+      running_approval.thread_id,
+    ))
   }
 
   pub(crate) fn request_cancel_for_thread(
