@@ -1,14 +1,28 @@
-pub(super) fn readiness_summary(
-  status: &str,
-  model_ready: bool,
-  workspace_ready: bool,
-  thread_ready: bool,
-  first_request_sent: bool,
-  pending_approval_count: usize,
-  active_turn_count: usize,
-  running_turn_count: usize,
-  running_approval_count: usize,
-) -> String {
+pub(super) struct ReadinessSummaryInput<'a> {
+  pub(super) status: &'a str,
+  pub(super) model_ready: bool,
+  pub(super) workspace_ready: bool,
+  pub(super) thread_ready: bool,
+  pub(super) first_request_sent: bool,
+  pub(super) pending_approval_count: usize,
+  pub(super) active_turn_count: usize,
+  pub(super) running_turn_count: usize,
+  pub(super) running_approval_count: usize,
+}
+
+pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
+  let ReadinessSummaryInput {
+    status,
+    model_ready,
+    workspace_ready,
+    thread_ready,
+    first_request_sent,
+    pending_approval_count,
+    active_turn_count,
+    running_turn_count,
+    running_approval_count,
+  } = input;
+
   match status {
     "setup_required" if !model_ready => {
       "Download and select one local model to enable local agent work.".to_string()

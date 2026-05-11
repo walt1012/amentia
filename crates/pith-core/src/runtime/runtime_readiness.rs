@@ -6,8 +6,8 @@ use pith_tools::{shell_sandbox_status, web_search_status};
 
 use super::runtime_readiness_checks::{
   bounded_runtime_check, context_check, execution_control_check, first_request_check,
-  local_model_check, native_sandbox_check, plugin_check, readiness_summary, thread_check,
-  web_search_check, workspace_check,
+  local_model_check, native_sandbox_check, plugin_check, readiness_summary,
+  ReadinessSummaryInput, thread_check, web_search_check, workspace_check,
 };
 use super::runtime_readiness_metrics::{readiness_metrics, ReadinessMetricsInput};
 use crate::runtime_context::RuntimeContext;
@@ -54,7 +54,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
 
   RuntimeReadinessResult {
     status: status.to_string(),
-    summary: readiness_summary(
+    summary: readiness_summary(ReadinessSummaryInput {
       status,
       model_ready,
       workspace_ready,
@@ -64,7 +64,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       active_turn_count,
       running_turn_count,
       running_approval_count,
-    ),
+    }),
     checks: vec![
       local_model_check(
         model_ready,
