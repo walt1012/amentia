@@ -81,7 +81,7 @@ extension AppViewModel {
     if let pendingThreadID = requestPendingTurnCancellation() {
       Task {
         do {
-          _ = try await runtimeBridge.cancelRunningTurn(threadID: pendingThreadID)
+          _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingThreadID)
         } catch {
           appendEntry(
             to: pendingThreadID,
@@ -95,7 +95,7 @@ extension AppViewModel {
     if let approvalThreadID = requestPendingApprovalCancellation() {
       Task {
         do {
-          _ = try await runtimeBridge.cancelRunningTurn(threadID: approvalThreadID)
+          _ = try await runtimeBridge.cancelRunningExecution(threadID: approvalThreadID)
         } catch {
           appendEntry(
             to: approvalThreadID,

@@ -140,7 +140,7 @@ extension RuntimeBridge {
     let pendingApprovals: [RuntimeApproval]
   }
 
-  struct RuntimeTurnCancellation {
+  struct RuntimeCancellationResult {
     let turnID: String?
     let threadID: String
     let items: [RuntimeTimelineItemResult]

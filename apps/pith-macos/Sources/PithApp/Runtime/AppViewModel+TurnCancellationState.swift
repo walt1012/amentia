@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 extension AppViewModel {
   func applyTurnCancellation(
-    _ result: RuntimeBridge.RuntimeTurnCancellation,
+    _ result: RuntimeBridge.RuntimeCancellationResult,
     previewThreadID: String
   ) async {
     appendItemsToTimeline(threadID: result.threadID, items: result.items)
