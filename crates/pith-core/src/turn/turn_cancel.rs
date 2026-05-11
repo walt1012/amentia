@@ -64,7 +64,7 @@ pub(crate) fn handle_turn_cancel(
   JsonRpcResponse::success(
     request.id,
     &TurnCancelResult {
-      turn_id: params.turn_id,
+      turn_id: Some(params.turn_id),
       thread_id: active_turn_snapshot.thread_id().to_string(),
       items,
       active_turn_id: context
@@ -98,8 +98,7 @@ pub(crate) fn handle_turn_cancel_running(
   let turn_id = cancellation
     .as_ref()
     .and_then(|cancellation| cancellation.turn_id())
-    .unwrap_or("")
-    .to_string();
+    .map(str::to_string);
 
   JsonRpcResponse::success(
     request.id,

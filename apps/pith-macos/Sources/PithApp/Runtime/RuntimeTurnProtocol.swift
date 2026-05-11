@@ -86,7 +86,7 @@ struct TurnCancelRunningParams: Codable {
 }
 
 struct TurnCancelResult: Codable {
-  let turnId: String
+  let turnId: String?
   let threadId: String
   let items: [RuntimeTimelineItem]
   let activeTurnId: String?
@@ -141,7 +141,7 @@ extension RuntimeBridge {
   }
 
   struct RuntimeTurnCancellation {
-    let turnID: String
+    let turnID: String?
     let threadID: String
     let items: [RuntimeTimelineItemResult]
     let activeTurnID: String?

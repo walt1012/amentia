@@ -116,7 +116,8 @@ pub struct TurnCancelRunningParams {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnCancelResult {
-  pub turn_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub turn_id: Option<String>,
   pub thread_id: String,
   pub items: Vec<TimelineItem>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
