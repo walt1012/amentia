@@ -3,7 +3,9 @@ import Foundation
 @MainActor
 extension AppViewModel {
   func canSearchWorkspace() -> Bool {
-    WorkspaceSearchSession.canSearch(workspaceSearchSnapshot())
+    let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
+    return WorkspaceSearchSession.canSearch(workspaceSearchSnapshot())
+      && workspaceSearchSession.canStart(query: query)
   }
 
   func searchWorkspace() {

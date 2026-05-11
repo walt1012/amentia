@@ -79,6 +79,7 @@ struct WorkspaceSearchRuntimeState {
 
 final class WorkspaceSearchSession {
   private var activeRequestID: UUID?
+  private var activeQuery: String?
   private var activeTask: Task<Void, Never>?
 
   static func trimmedQuery(_ query: String) -> String {
@@ -112,11 +113,16 @@ final class WorkspaceSearchSession {
     cancelActiveSearch()
     let requestID = UUID()
     activeRequestID = requestID
+    activeQuery = query
     return WorkspaceSearchRequestToken(
       id: requestID,
       query: query,
       status: "Searching for \"\(query)\"..."
     )
+  }
+
+  func canStart(query: String) -> Bool {
+    activeQuery != query
   }
 
   func bind(task: Task<Void, Never>, token: WorkspaceSearchRequestToken) {
@@ -159,6 +165,7 @@ final class WorkspaceSearchSession {
 
   private func clearActiveSearch() {
     activeRequestID = nil
+    activeQuery = nil
     activeTask = nil
   }
 
