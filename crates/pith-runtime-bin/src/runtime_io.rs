@@ -16,7 +16,10 @@ impl RuntimeOutput {
   }
 
   pub(crate) fn write_json<T: serde::Serialize>(&self, payload: &T) -> Result<()> {
-    let mut locked_stdout = self.stdout.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut locked_stdout = self
+      .stdout
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
     writeln!(locked_stdout, "{}", serde_json::to_string(payload)?)?;
     locked_stdout.flush()?;
     Ok(())
