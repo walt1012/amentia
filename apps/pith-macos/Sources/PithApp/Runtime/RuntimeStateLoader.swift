@@ -10,10 +10,14 @@ enum RuntimeStateLoader {
     using runtimeBridge: RuntimeBridge,
     serverLabel: String?
   ) async -> ModelHealthRefresh {
-    let runtimeModel = try? await runtimeBridge.modelHealth()
-
-    guard let runtimeModel else {
-      return ModelHealthRefresh(modelHealth: nil, runtimeDetail: serverLabel)
+    let runtimeModel: RuntimeBridge.RuntimeModelHealth
+    do {
+      runtimeModel = try await runtimeBridge.modelHealth()
+    } catch {
+      return ModelHealthRefresh(
+        modelHealth: nil,
+        runtimeDetail: modelHealthFailureDetail(serverLabel: serverLabel, error: error)
+      )
     }
 
     return ModelHealthRefresh(
@@ -25,8 +29,32 @@ enum RuntimeStateLoader {
   static func refreshRuntimeReadiness(
     using runtimeBridge: RuntimeBridge
   ) async -> RuntimeReadinessSummary? {
-    let readiness = try? await runtimeBridge.runtimeReadiness()
+    do {
+      let readiness = try await runtimeBridge.runtimeReadiness()
+      return RuntimeSummaryMapper.readinessSummary(from: readiness)
+    } catch {
+      return RuntimeReadinessSummary(
+        status: "unavailable",
+        summary: "Runtime readiness unavailable: \(error.localizedDescription)",
+        checks: [
+          RuntimeReadinessCheckSummary(
+            id: "runtime-readiness",
+            title: "Runtime Readiness",
+            status: "unavailable",
+            detail: error.localizedDescription
+          )
+        ],
+        metrics: ["error": error.localizedDescription]
+      )
+    }
+  }
 
-    return readiness.map { RuntimeSummaryMapper.readinessSummary(from: $0) }
+  private static func modelHealthFailureDetail(serverLabel: String?, error: Error) -> String {
+    let detail = "Model health unavailable: \(error.localizedDescription)"
+    guard let serverLabel, !serverLabel.isEmpty else {
+      return detail
+    }
+
+    return "\(serverLabel) | \(detail)"
   }
 }
