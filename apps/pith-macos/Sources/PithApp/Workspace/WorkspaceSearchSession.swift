@@ -109,7 +109,6 @@ final class WorkspaceSearchSession {
   }
 
   func begin(query: String) -> WorkspaceSearchRequestToken {
-    cancelActiveSearch()
     let requestID = taskSlot.replace()
     activeQuery = query
     return WorkspaceSearchRequestToken(
@@ -153,7 +152,7 @@ final class WorkspaceSearchSession {
 
   private func cancelActiveSearch() {
     taskSlot.cancel()
-    clearActiveSearch()
+    activeQuery = nil
   }
 
   private func clearActiveSearch() {

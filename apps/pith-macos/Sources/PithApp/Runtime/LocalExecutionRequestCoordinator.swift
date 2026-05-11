@@ -63,38 +63,31 @@ final class LocalExecutionRequestCoordinator {
 }
 
 private final class PendingRuntimeRequestState {
-  private(set) var requestID: UUID?
+  private let taskSlot = CancellableTaskSlot()
   private(set) var threadID: String?
   private var cancellationRequested = false
-  private var task: Task<Void, Never>?
 
   var isPending: Bool {
-    requestID != nil
+    taskSlot.isActive
   }
 
   var canCancel: Bool {
-    requestID != nil && threadID != nil && !cancellationRequested
+    taskSlot.isActive && threadID != nil && !cancellationRequested
   }
 
   func begin(threadID: String) -> UUID {
-    cancelAndClear()
-    let requestID = UUID()
-    self.requestID = requestID
+    let requestID = taskSlot.replace()
     self.threadID = threadID
     cancellationRequested = false
     return requestID
   }
 
   func bind(task: Task<Void, Never>, requestID: UUID) {
-    guard self.requestID == requestID else {
-      return
-    }
-
-    self.task = task
+    taskSlot.bind(task: task, requestID: requestID)
   }
 
   func clear(requestID: UUID) {
-    guard self.requestID == requestID else {
+    guard taskSlot.isCurrent(requestID) else {
       return
     }
 
@@ -102,10 +95,13 @@ private final class PendingRuntimeRequestState {
   }
 
   func clear() {
-    requestID = nil
+    taskSlot.clear()
+    clearMetadata()
+  }
+
+  private func clearMetadata() {
     threadID = nil
     cancellationRequested = false
-    task = nil
   }
 
   func requestCancellation() -> String? {
@@ -126,7 +122,7 @@ private final class PendingRuntimeRequestState {
   }
 
   func cancelAndClear() {
-    task?.cancel()
-    clear()
+    taskSlot.cancel()
+    clearMetadata()
   }
 }
