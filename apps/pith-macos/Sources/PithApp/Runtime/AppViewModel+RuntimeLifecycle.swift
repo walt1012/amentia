@@ -18,7 +18,7 @@ extension AppViewModel {
     }
     let launchToken = runtimeLaunchCoordinator.begin()
 
-    Task {
+    let task = Task {
       do {
         let bootstrap = try await RuntimeLaunchBootstrapLoader.load(
           runtimeBridge: runtimeBridge,
@@ -44,6 +44,7 @@ extension AppViewModel {
         applyRuntimeLaunchFailure(error)
       }
     }
+    runtimeLaunchCoordinator.bind(task: task, token: launchToken)
   }
 
   func refreshModelHealthState(serverLabel: String? = nil) async {
@@ -209,11 +210,22 @@ struct RuntimeLaunchRequestToken: Equatable {
 
 final class RuntimeLaunchCoordinator {
   private var activeRequestID: UUID?
+  private var activeTask: Task<Void, Never>?
 
   func begin() -> RuntimeLaunchRequestToken {
+    cancel()
     let requestID = UUID()
     activeRequestID = requestID
     return RuntimeLaunchRequestToken(id: requestID)
+  }
+
+  func bind(task: Task<Void, Never>, token: RuntimeLaunchRequestToken) {
+    guard isCurrent(token) else {
+      task.cancel()
+      return
+    }
+
+    activeTask = task
   }
 
   func isCurrent(_ token: RuntimeLaunchRequestToken) -> Bool {
@@ -225,10 +237,16 @@ final class RuntimeLaunchCoordinator {
       return
     }
 
-    activeRequestID = nil
+    clear()
   }
 
   func cancel() {
+    activeTask?.cancel()
+    clear()
+  }
+
+  private func clear() {
     activeRequestID = nil
+    activeTask = nil
   }
 }
