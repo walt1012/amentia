@@ -278,6 +278,13 @@ final class RuntimeBridge {
     }
 
     let requestID = pendingResponses.reserveRequestID()
+    let request = JSONRPCRequest(
+      id: requestID,
+      method: method,
+      params: params
+    )
+    let encoder = JSONEncoder()
+    let payload = try encoder.encode(request) + Data([0x0A])
     let timeoutNanoseconds = RuntimeBridgeRequestPolicy.timeoutNanoseconds(for: method)
     let timeoutTask = Task { [weak self] in
       do {
@@ -302,17 +309,9 @@ final class RuntimeBridge {
           pendingResponses.store(continuation, requestID: requestID)
 
           do {
-            let request = JSONRPCRequest(
-              id: requestID,
-              method: method,
-              params: params
-            )
-            let encoder = JSONEncoder()
-            let payload = try encoder.encode(request) + Data([0x0A])
             try requestWriter.write(payload, to: inputHandle)
           } catch {
-            let pending = takePendingResponse(requestID: requestID)
-            pending?.resume(throwing: error)
+            stopRuntimeAfterRequestWriteFailure(method: method, error: error)
           }
         }
       }, onCancel: {
@@ -327,6 +326,13 @@ final class RuntimeBridge {
 
     let decoder = JSONDecoder()
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
+  }
+
+  private func stopRuntimeAfterRequestWriteFailure(method: String, error: Error) {
+    let detail =
+      "Runtime request \(method) could not be written: \(error.localizedDescription). " +
+      "Relaunch the local runtime to continue."
+    stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
 }
