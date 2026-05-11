@@ -18,6 +18,8 @@ pub(crate) fn infer_explicit_web_search_intent(message: &str) -> Option<WebSearc
     "search web for ",
     "search the web for ",
     "search online for ",
+    "browse the web for ",
+    "check online for ",
     "look up online ",
   ] {
     if let Some(index) = lowercased_message.find(keyword) {
@@ -77,6 +79,8 @@ fn has_fresh_public_information_signal(message: &str) -> bool {
     "today",
     "right now",
     "as of",
+    "up to date",
+    "up-to-date",
     "this week",
     "this month",
     "recent",
@@ -140,6 +144,10 @@ mod tests {
 
     let plugins = infer_explicit_web_search_intent("websearch pith plugins").expect("intent");
     assert_eq!(plugins.query, "pith plugins");
+    let browser = infer_explicit_web_search_intent("browse the web for Pith").expect("intent");
+    assert_eq!(browser.query, "Pith");
+    let online = infer_explicit_web_search_intent("check online for LFM2.5").expect("intent");
+    assert_eq!(online.query, "LFM2.5");
     let lookup = infer_explicit_web_search_intent("look up Liquid AI").expect("lookup intent");
     assert_eq!(lookup.query, "Liquid AI");
     assert!(infer_explicit_web_search_intent("look up README.md").is_none());
@@ -156,6 +164,9 @@ mod tests {
     let stock =
       infer_fresh_web_search_intent("What is Apple's stock price today?").expect("intent");
     assert_eq!(stock.query, "What is Apple's stock price today");
+    let current =
+      infer_fresh_web_search_intent("Is the LFM2.5 model list up to date?").expect("intent");
+    assert_eq!(current.routing_reason, "freshPublicInformation");
     assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
     assert!(infer_fresh_web_search_intent("What version is in Cargo.toml?").is_none());
     assert!(infer_fresh_web_search_intent("How should I proceed now?").is_none());
