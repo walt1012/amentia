@@ -5,6 +5,8 @@ final class RuntimeBridgeProcessSession {
   let inputHandle: FileHandle
 
   private let process: Process
+  private let outputHandle: FileHandle
+  private let errorHandle: FileHandle
   private var readerTask: Task<Void, Never>?
   private var errorReaderTask: Task<Void, Never>?
 
@@ -35,6 +37,8 @@ final class RuntimeBridgeProcessSession {
     self.process = process
     self.identifier = processIdentifier
     self.inputHandle = stdinPipe.fileHandleForWriting
+    self.outputHandle = stdoutPipe.fileHandleForReading
+    self.errorHandle = stderrPipe.fileHandleForReading
 
     process.terminationHandler = { [processIdentifier] process in
       let detail = "Runtime exited with status \(process.terminationStatus)."
@@ -44,11 +48,11 @@ final class RuntimeBridgeProcessSession {
     try process.run()
 
     startReaderLoop(
-      with: stdoutPipe.fileHandleForReading,
+      with: outputHandle,
       onLine: onLine,
       onReadError: onReadError
     )
-    startErrorReaderLoop(with: stderrPipe.fileHandleForReading)
+    startErrorReaderLoop(with: errorHandle)
   }
 
   func stop() {
@@ -58,9 +62,14 @@ final class RuntimeBridgeProcessSession {
     errorReaderTask = nil
     process.terminationHandler = nil
 
+    try? inputHandle.close()
+
     if process.isRunning {
       process.terminate()
     }
+
+    try? outputHandle.close()
+    try? errorHandle.close()
   }
 
   private func startReaderLoop(
