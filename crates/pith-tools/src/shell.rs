@@ -106,11 +106,15 @@ where
 }
 
 pub fn shell_sandbox_summary(workspace_root: &Path) -> ShellSandboxSummary {
-  build_shell_sandbox_summary(workspace_root)
+  let workspace_root =
+    canonical_workspace_root(workspace_root).unwrap_or_else(|_| workspace_root.to_path_buf());
+  build_shell_sandbox_summary(&workspace_root)
 }
 
 pub fn shell_sandbox_status(workspace_root: &Path) -> pith_sandbox::NativeSandboxStatus {
-  build_shell_sandbox_status(workspace_root)
+  let workspace_root =
+    canonical_workspace_root(workspace_root).unwrap_or_else(|_| workspace_root.to_path_buf());
+  build_shell_sandbox_status(&workspace_root)
 }
 
 #[cfg(test)]
