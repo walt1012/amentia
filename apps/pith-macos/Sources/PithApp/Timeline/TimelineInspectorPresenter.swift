@@ -118,6 +118,18 @@ enum TimelineInspectorPresenter {
       lines.append(
         "Sandbox: \(mode) | backend \(backend) | active \(active) | network \(networkAllowed)"
       )
+
+      if let temporaryRoot = entry.attributes["sandboxTempRoot"] {
+        lines.append("Temp root: \(temporaryRoot)")
+      }
+
+      if let writableRoots = entry.attributes["sandboxWritableRoots"] {
+        lines.append("Writable roots:\n\(writableRoots)")
+      }
+
+      if let detail = entry.attributes["sandboxDetail"] {
+        lines.append("Detail: \(detail)")
+      }
     }
 
     if let outputContextMode = entry.attributes["sandboxOutputContextMode"] {
