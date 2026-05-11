@@ -16,6 +16,7 @@ final class AppViewModel: ObservableObject {
   let runtimeBridge: RuntimeBridge
   let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
   let workspaceOpenCoordinator = WorkspaceOpenCoordinator()
+  let threadCreationCoordinator = ThreadCreationCoordinator()
   let localExecutionRequests = LocalExecutionRequestCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator

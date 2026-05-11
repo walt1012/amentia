@@ -127,6 +127,7 @@ extension AppViewModel {
 
   func canCreateThread() -> Bool {
     SessionActionPlanner.canCreateThread(sessionActionSnapshot())
+      && !threadCreationCoordinator.isCreating
   }
 
   func canInstallPlugin() -> Bool {

@@ -7,18 +7,36 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard let requestToken = threadCreationCoordinator.begin() else {
+      return
+    }
+    let failureThreadID = selectedThreadID
+    let title = "Thread \(threads.count + 1)"
+
+    let task = Task {
+      defer {
+        threadCreationCoordinator.finish(requestToken)
+      }
       do {
-        let thread = try await runtimeBridge.startThread(title: "Thread \(threads.count + 1)")
+        let thread = try await runtimeBridge.startThread(title: title)
+        guard threadCreationCoordinator.isCurrent(requestToken) else {
+          return
+        }
         await applyCreatedThread(thread)
         announceFirstRequestReadyIfNeeded()
       } catch {
+        guard !Task.isCancelled,
+              threadCreationCoordinator.isCurrent(requestToken)
+        else {
+          return
+        }
         appendEntry(
-          to: selectedThreadID,
+          to: failureThreadID,
           TimelineEventPresenter.threadCreationFailed(error: error)
         )
       }
     }
+    threadCreationCoordinator.bind(task: task, token: requestToken)
   }
 
   func selectThread(id: String?) {
@@ -176,5 +194,59 @@ extension AppViewModel {
 
   private func threadTitle(for threadID: String) -> String {
     timelineState.threadTitle(for: threadID)
+  }
+}
+
+struct ThreadCreationRequestToken: Equatable {
+  fileprivate let id: UUID
+}
+
+final class ThreadCreationCoordinator {
+  private var activeRequestID: UUID?
+  private var activeTask: Task<Void, Never>?
+
+  var isCreating: Bool {
+    activeRequestID != nil
+  }
+
+  func begin() -> ThreadCreationRequestToken? {
+    guard activeRequestID == nil else {
+      return nil
+    }
+
+    let requestID = UUID()
+    activeRequestID = requestID
+    return ThreadCreationRequestToken(id: requestID)
+  }
+
+  func bind(task: Task<Void, Never>, token: ThreadCreationRequestToken) {
+    guard isCurrent(token) else {
+      task.cancel()
+      return
+    }
+
+    activeTask = task
+  }
+
+  func isCurrent(_ token: ThreadCreationRequestToken) -> Bool {
+    activeRequestID == token.id
+  }
+
+  func finish(_ token: ThreadCreationRequestToken) {
+    guard isCurrent(token) else {
+      return
+    }
+
+    clear()
+  }
+
+  func cancel() {
+    activeTask?.cancel()
+    clear()
+  }
+
+  private func clear() {
+    activeRequestID = nil
+    activeTask = nil
   }
 }
