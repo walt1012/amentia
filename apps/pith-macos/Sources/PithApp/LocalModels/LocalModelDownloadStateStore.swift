@@ -42,5 +42,6 @@ enum LocalModelDownloadStateStore {
     }
 
     try? manager.removeItem(at: targetURL)
+    LocalModelVerificationStampStore.forgetVerifiedModel(modelID: model.id)
   }
 }
