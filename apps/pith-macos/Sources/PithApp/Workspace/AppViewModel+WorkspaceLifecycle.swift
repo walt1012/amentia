@@ -11,7 +11,9 @@ extension AppViewModel {
       return
     }
 
-    guard let requestToken = workspaceOpenCoordinator.begin() else {
+    guard let requestToken = workspaceOpenCoordinator.begin(
+      previousRuntimeDetail: runtimeDetail
+    ) else {
       return
     }
     runtimeDetail = "Opening workspace..."
@@ -29,12 +31,14 @@ extension AppViewModel {
         guard workspaceOpenCoordinator.isCurrent(requestToken) else {
           return
         }
+        restoreRuntimeDetailAfterWorkspaceOpen(requestToken)
         workspaceOpenCoordinator.finish(requestToken)
         announceFirstRequestReadyIfNeeded()
       } catch {
         guard workspaceOpenCoordinator.isCurrent(requestToken) else {
           return
         }
+        restoreRuntimeDetailAfterWorkspaceOpen(requestToken)
         workspaceOpenCoordinator.finish(requestToken)
         appendEntry(
           to: selectedThreadID,
@@ -65,5 +69,15 @@ extension AppViewModel {
       to: selectedThreadID,
       TimelineEventPresenter.workspaceOpened(workspace)
     )
+  }
+
+  private func restoreRuntimeDetailAfterWorkspaceOpen(_ token: WorkspaceOpenRequestToken) {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    runtimeDetail = modelDownloadCoordinator.isDownloading
+      ? modelDownloadProgressSummary()
+      : token.previousRuntimeDetail
   }
 }

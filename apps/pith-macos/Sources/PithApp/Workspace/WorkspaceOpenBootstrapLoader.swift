@@ -25,6 +25,7 @@ enum WorkspaceOpenBootstrapLoader {
 
 struct WorkspaceOpenRequestToken: Equatable {
   fileprivate let id: UUID
+  let previousRuntimeDetail: String
 }
 
 final class WorkspaceOpenCoordinator {
@@ -34,14 +35,17 @@ final class WorkspaceOpenCoordinator {
     activeRequestID != nil
   }
 
-  func begin() -> WorkspaceOpenRequestToken? {
+  func begin(previousRuntimeDetail: String) -> WorkspaceOpenRequestToken? {
     guard activeRequestID == nil else {
       return nil
     }
 
     let requestID = UUID()
     activeRequestID = requestID
-    return WorkspaceOpenRequestToken(id: requestID)
+    return WorkspaceOpenRequestToken(
+      id: requestID,
+      previousRuntimeDetail: previousRuntimeDetail
+    )
   }
 
   func isCurrent(_ token: WorkspaceOpenRequestToken) -> Bool {
