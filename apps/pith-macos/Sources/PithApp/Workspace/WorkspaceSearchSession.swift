@@ -44,6 +44,7 @@ struct WorkspaceSearchRuntimeState {
   }
 
   mutating func begin(_ token: WorkspaceSearchRequestToken) {
+    results = []
     isSearching = true
     status = token.status
   }
@@ -78,6 +79,7 @@ struct WorkspaceSearchRuntimeState {
 
 final class WorkspaceSearchSession {
   private var activeRequestID: UUID?
+  private var activeTask: Task<Void, Never>?
 
   static func trimmedQuery(_ query: String) -> String {
     query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -86,7 +88,6 @@ final class WorkspaceSearchSession {
   static func canSearch(_ snapshot: WorkspaceSearchSnapshot) -> Bool {
     snapshot.runtimeState == .ready
       && snapshot.hasWorkspace
-      && !snapshot.isSearching
       && !trimmedQuery(snapshot.query).isEmpty
   }
 
@@ -108,6 +109,7 @@ final class WorkspaceSearchSession {
   }
 
   func begin(query: String) -> WorkspaceSearchRequestToken {
+    cancelActiveSearch()
     let requestID = UUID()
     activeRequestID = requestID
     return WorkspaceSearchRequestToken(
@@ -117,24 +119,47 @@ final class WorkspaceSearchSession {
     )
   }
 
+  func bind(task: Task<Void, Never>, token: WorkspaceSearchRequestToken) {
+    guard activeRequestID == token.id else {
+      task.cancel()
+      return
+    }
+
+    activeTask = task
+  }
+
   func isCurrent(_ token: WorkspaceSearchRequestToken) -> Bool {
     activeRequestID == token.id
   }
 
-  func finish() {
-    activeRequestID = nil
+  func finish(_ token: WorkspaceSearchRequestToken) {
+    guard activeRequestID == token.id else {
+      return
+    }
+
+    clearActiveSearch()
   }
 
   func resetStatus(hasWorkspace: Bool) -> String {
-    activeRequestID = nil
+    cancelActiveSearch()
     return hasWorkspace
       ? "Search the open workspace by text."
       : "Open a workspace before searching."
   }
 
   func changedQueryStatus() -> String {
-    activeRequestID = nil
+    clearActiveSearch()
     return "Query changed. Press Return to search again."
+  }
+
+  private func cancelActiveSearch() {
+    activeTask?.cancel()
+    clearActiveSearch()
+  }
+
+  private func clearActiveSearch() {
+    activeRequestID = nil
+    activeTask = nil
   }
 
   static func successStatus(query: String, matchCount: Int) -> String {

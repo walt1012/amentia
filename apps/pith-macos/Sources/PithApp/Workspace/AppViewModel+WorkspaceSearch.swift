@@ -17,7 +17,10 @@ extension AppViewModel {
     updateWorkspaceSearchState { state in
       state.begin(requestToken)
     }
-    Task {
+    let task = Task {
+      defer {
+        workspaceSearchSession.finish(requestToken)
+      }
       do {
         let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
         guard workspaceSearchSession.isCurrent(requestToken) else {
@@ -56,8 +59,8 @@ extension AppViewModel {
           )
         }
       }
-      workspaceSearchSession.finish()
     }
+    workspaceSearchSession.bind(task: task, token: requestToken)
   }
 
   func clearWorkspaceSearch() {
