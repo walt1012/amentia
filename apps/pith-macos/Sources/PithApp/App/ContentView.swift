@@ -38,16 +38,23 @@ struct ContentView: View {
   private var sidebar: some View {
     List(selection: Binding(get: { viewModel.selectedThreadID }, set: { viewModel.selectThread(id: $0) })) {
       Section("Threads") {
-        ForEach(viewModel.threads) { thread in
-          VStack(alignment: .leading, spacing: 4) {
-            Text(thread.title)
-              .font(.headline)
-            Text(thread.preview)
-              .font(.caption)
-              .foregroundColor(.secondary)
+        if viewModel.threads.isEmpty {
+          SidebarEmptyState(
+            title: "No Threads Yet",
+            detail: "Use the timeline setup flow to launch the runtime, choose a local model, and open a workspace."
+          )
+        } else {
+          ForEach(viewModel.threads) { thread in
+            VStack(alignment: .leading, spacing: 4) {
+              Text(thread.title)
+                .font(.headline)
+              Text(thread.preview)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 4)
+            .tag(thread.id)
           }
-          .padding(.vertical, 4)
-          .tag(thread.id)
         }
       }
     }
@@ -55,6 +62,23 @@ struct ContentView: View {
     .listStyle(.sidebar)
   }
 
+}
+
+private struct SidebarEmptyState: View {
+  let title: String
+  let detail: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text(title)
+        .font(.subheadline.weight(.semibold))
+      Text(detail)
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(.vertical, 8)
+  }
 }
 
 struct SettingsView: View {
