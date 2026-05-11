@@ -57,6 +57,10 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func approvalResponseFailedDetail(error: Error) -> String {
+    "Approval response failed: \(error.localizedDescription)"
+  }
+
   static func turnCancelFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Execution Cancel Failed",

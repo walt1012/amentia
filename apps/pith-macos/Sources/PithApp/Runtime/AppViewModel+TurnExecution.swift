@@ -62,8 +62,9 @@ extension AppViewModel {
         )
         await applyApprovalResponse(result)
       } catch {
+        runtimeDetail = TimelineEventPresenter.approvalResponseFailedDetail(error: error)
         appendEntry(
-          to: selectedThreadID,
+          to: approvalThreadID ?? selectedThreadID,
           TimelineEventPresenter.approvalResponseFailed(error: error)
         )
       }
