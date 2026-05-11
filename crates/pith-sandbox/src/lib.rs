@@ -73,47 +73,36 @@ pub fn native_sandbox_status(policy: &SandboxPolicy) -> NativeSandboxStatus {
   let available = native_sandbox_available();
   let backend = native_backend_name().to_string();
   let active = cfg!(target_os = "macos") && available;
-  let configured_temporary_root = policy
+  let temporary_root = policy
     .temporary_root()
     .map(|path| path.display().to_string());
-  let writable_roots = if active {
-    policy
-      .writable_roots()
-      .into_iter()
-      .map(|path| path.display().to_string())
-      .collect()
+  let writable_roots = policy
+    .writable_roots()
+    .into_iter()
+    .map(|path| path.display().to_string())
+    .collect();
+  let boundary_detail = sandbox_boundary_detail(policy, temporary_root.as_deref());
+  let network_detail = if active {
+    if policy.allow_network() {
+      "Network access is allowed by policy."
+    } else {
+      "Network access is denied by default."
+    }
+  } else if policy.allow_network() {
+    "Configured policy allows network access, but it is not native-enforced while inactive."
   } else {
-    Vec::new()
-  };
-  let temporary_root = if active {
-    configured_temporary_root
-  } else {
-    None
-  };
-  let network_detail = if policy.allow_network() {
-    "Network access is allowed by policy."
-  } else {
-    "Network access is denied by default."
+    "Configured policy denies network access, but it is not native-enforced while inactive."
   };
   let detail = if active {
-    if let Some(temporary_root) = &temporary_root {
-      format!(
-        "Shell actions run through macOS Seatbelt with write access limited to workspace {} and temporary files routed to {}. {}",
-        policy.workspace_root().display(),
-        temporary_root,
-        network_detail
-      )
-    } else {
-      format!(
-        "Shell actions run through macOS Seatbelt with write access limited to workspace {}. {}",
-        policy.workspace_root().display(),
-        network_detail
-      )
-    }
+    format!("Shell actions run through macOS Seatbelt with {boundary_detail}. {network_detail}")
   } else if cfg!(target_os = "macos") {
-    "macOS native sandbox backend is unavailable; shell actions still use approvals, timeouts, and cleanup.".to_string()
+    format!(
+      "macOS native sandbox backend is unavailable; configured policy would keep {boundary_detail}. Shell actions still use approvals, timeouts, and cleanup. {network_detail}"
+    )
   } else {
-    "Native macOS sandbox is unavailable on this platform; shell actions still use approvals, timeouts, and cleanup.".to_string()
+    format!(
+      "Native macOS sandbox is unavailable on this platform; configured policy would keep {boundary_detail}. Shell actions still use approvals, timeouts, and cleanup. {network_detail}"
+    )
   };
 
   NativeSandboxStatus {
@@ -125,6 +114,21 @@ pub fn native_sandbox_status(policy: &SandboxPolicy) -> NativeSandboxStatus {
     temporary_root,
     writable_roots,
     detail,
+  }
+}
+
+fn sandbox_boundary_detail(policy: &SandboxPolicy, temporary_root: Option<&str>) -> String {
+  if let Some(temporary_root) = temporary_root {
+    format!(
+      "write access limited to workspace {} and temporary files routed to {}",
+      policy.workspace_root().display(),
+      temporary_root
+    )
+  } else {
+    format!(
+      "write access limited to workspace {}",
+      policy.workspace_root().display()
+    )
   }
 }
 
@@ -265,27 +269,33 @@ mod tests {
       .with_temporary_root("/Users/example/work/.pith/sandbox-tmp");
     let status = native_sandbox_status(&policy);
 
-    if status.active {
-      assert_eq!(
-        status.temporary_root.as_deref(),
-        Some("/Users/example/work/.pith/sandbox-tmp")
-      );
-    } else {
-      assert_eq!(status.temporary_root, None);
-    }
+    assert_eq!(
+      status.temporary_root.as_deref(),
+      Some("/Users/example/work/.pith/sandbox-tmp")
+    );
+    assert!(
+      status
+        .writable_roots
+        .contains(&"/Users/example/work".to_string())
+    );
+    assert!(status
+      .writable_roots
+      .contains(&"/Users/example/work/.pith/sandbox-tmp".to_string()));
   }
 
   #[cfg(not(target_os = "macos"))]
   #[test]
   fn status_reports_process_only_outside_macos() {
-    let policy = SandboxPolicy::workspace_read_write("/workspace");
+    let policy =
+      SandboxPolicy::workspace_read_write("/workspace").with_temporary_root("/workspace/tmp");
     let status = native_sandbox_status(&policy);
 
     assert_eq!(status.backend, "processOnly");
     assert!(!status.available);
     assert!(!status.active);
     assert!(!status.network_allowed);
-    assert_eq!(status.temporary_root, None);
-    assert!(status.writable_roots.is_empty());
+    assert_eq!(status.temporary_root.as_deref(), Some("/workspace/tmp"));
+    assert!(status.writable_roots.contains(&"/workspace".to_string()));
+    assert!(status.writable_roots.contains(&"/workspace/tmp".to_string()));
   }
 }

@@ -140,20 +140,15 @@ mod tests {
     let expected_temp_root = crate::shell_sandbox::shell_sandbox_temp_root(&workspace)
       .display()
       .to_string();
-    if result.sandbox.active {
-      assert_eq!(
-        result.sandbox.temporary_root.as_deref(),
-        Some(expected_temp_root.as_str())
-      );
-      assert!(result
-        .sandbox
-        .writable_roots
-        .contains(&workspace.display().to_string()));
-      assert!(result.sandbox.writable_roots.contains(&expected_temp_root));
-    } else {
-      assert_eq!(result.sandbox.temporary_root, None);
-      assert!(result.sandbox.writable_roots.is_empty());
-    }
+    assert_eq!(
+      result.sandbox.temporary_root.as_deref(),
+      Some(expected_temp_root.as_str())
+    );
+    assert!(result
+      .sandbox
+      .writable_roots
+      .contains(&workspace.display().to_string()));
+    assert!(result.sandbox.writable_roots.contains(&expected_temp_root));
     assert!(!result.sandbox.detail.is_empty());
     assert_eq!(result.output_context.mode, "sandboxOutputPreview");
     assert!(!result.output_context.was_compacted);
