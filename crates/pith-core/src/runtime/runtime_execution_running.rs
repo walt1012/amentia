@@ -142,6 +142,16 @@ impl RuntimeRunningExecutionState {
     self.pending_cancellations.remove(thread_id)
   }
 
+  pub(crate) fn cancel_all_running(&mut self) {
+    for running_turn in self.running_turns.values() {
+      running_turn.cancellation.cancel();
+    }
+    for running_approval in self.running_approvals.values() {
+      running_approval.cancellation.cancel();
+    }
+    self.pending_cancellations.clear();
+  }
+
   pub(crate) fn remove_running_turn(&mut self, turn_id: &str) {
     self.running_turns.remove(turn_id);
   }

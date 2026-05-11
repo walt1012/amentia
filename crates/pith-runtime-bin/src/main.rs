@@ -17,6 +17,7 @@ use pith_protocol::{JsonRpcRequest, JsonRpcResponse};
 use request_router::route_runtime_request;
 use request_supervisor::RequestSupervisor;
 use runtime_io::RuntimeOutput;
+use runtime_lock::lock_context;
 
 fn main() -> Result<()> {
   let context = Arc::new(Mutex::new(RuntimeContext::new()?));
@@ -48,6 +49,10 @@ fn main() -> Result<()> {
     route_runtime_request(request, &mut request_supervisor, &context, &output)?;
   }
 
+  {
+    let mut locked_context = lock_context(&context);
+    locked_context.cancel_running_work();
+  }
   running.store(false, Ordering::SeqCst);
   let _ = notification_thread.join();
   request_supervisor.join_all();

@@ -1,4 +1,5 @@
 pub(crate) mod context_compaction;
+pub(crate) mod context_execution;
 pub(crate) mod context_lifecycle;
 pub(crate) mod context_memory;
 pub(crate) mod context_memory_budget;
