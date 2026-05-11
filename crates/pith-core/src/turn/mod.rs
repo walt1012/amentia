@@ -15,6 +15,7 @@ pub(crate) mod turn_streaming_progress;
 pub(crate) mod turn_tool_limits;
 pub(crate) mod turn_tool_provenance;
 pub(crate) mod turn_web_search;
+pub(crate) mod turn_web_search_timeline;
 pub(crate) mod turn_workspace_execution;
 pub(crate) mod turn_workspace_fallback;
 pub(crate) mod turn_workspace_list;
