@@ -266,6 +266,10 @@ final class AppViewModel: ObservableObject {
     }
   }
 
+  var isSavingMemoryNote: Bool {
+    memoryState.isSavingNote
+  }
+
   func updateWorkspaceSearchState(
     _ update: (inout WorkspaceSearchRuntimeState) -> Void
   ) {

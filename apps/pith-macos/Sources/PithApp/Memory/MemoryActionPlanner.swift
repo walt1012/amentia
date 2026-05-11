@@ -3,6 +3,7 @@ import Foundation
 struct MemoryActionSnapshot {
   let runtimeState: RuntimeBridge.ConnectionState
   let hasWorkspace: Bool
+  let isSavingNote: Bool
   let title: String
   let body: String
 }
@@ -19,6 +20,7 @@ enum MemoryActionPlanner {
 
     guard snapshot.runtimeState == .ready,
           snapshot.hasWorkspace,
+          !snapshot.isSavingNote,
           !title.isEmpty,
           !body.isEmpty
     else {

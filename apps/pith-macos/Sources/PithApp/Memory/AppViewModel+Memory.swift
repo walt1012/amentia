@@ -7,7 +7,15 @@ extension AppViewModel {
       return
     }
 
+    guard let operationID = beginMemorySaveOperation() else {
+      return
+    }
+    runtimeDetail = "Saving memory note..."
+
     Task {
+      defer {
+        finishMemorySaveOperation(operationID)
+      }
       do {
         let note = try await runtimeBridge.createMemoryNote(title: draft.title, body: draft.body)
         updateMemoryState { state in
@@ -68,8 +76,23 @@ extension AppViewModel {
     MemoryActionSnapshot(
       runtimeState: runtimeState,
       hasWorkspace: workspace != nil,
+      isSavingNote: isSavingMemoryNote,
       title: memoryNoteTitle,
       body: memoryNoteBody
     )
+  }
+
+  private func beginMemorySaveOperation() -> UUID? {
+    var operationID: UUID?
+    updateMemoryState { state in
+      operationID = state.beginSaveOperation()
+    }
+    return operationID
+  }
+
+  private func finishMemorySaveOperation(_ operationID: UUID) {
+    updateMemoryState { state in
+      state.finishSaveOperation(operationID)
+    }
   }
 }
