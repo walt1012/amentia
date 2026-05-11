@@ -58,18 +58,16 @@ pub(crate) fn shell_sandbox_temp_root(workspace_root: &Path) -> PathBuf {
 
 pub(crate) fn prepare_shell_sandbox_environment(
   workspace_root: &Path,
-  sandbox: &ShellSandboxSummary,
+  _sandbox: &ShellSandboxSummary,
 ) -> Result<()> {
-  if sandbox.active {
-    let temporary_root = shell_sandbox_temp_root(workspace_root);
-    clear_sandbox_temporary_root(&temporary_root)?;
-    fs::create_dir_all(&temporary_root).with_context(|| {
-      format!(
-        "failed to create sandbox temporary directory {}",
-        temporary_root.display()
-      )
-    })?;
-  }
+  let temporary_root = shell_sandbox_temp_root(workspace_root);
+  clear_sandbox_temporary_root(&temporary_root)?;
+  fs::create_dir_all(&temporary_root).with_context(|| {
+    format!(
+      "failed to create sandbox temporary directory {}",
+      temporary_root.display()
+    )
+  })?;
 
   Ok(())
 }
@@ -144,6 +142,27 @@ mod tests {
 
     assert!(temporary_root.is_dir());
     assert!(!stale_file.exists());
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn prepare_environment_creates_inactive_sandbox_temporary_root() {
+    let workspace = unique_temp_workspace("shell-sandbox-inactive-temp");
+    let temporary_root = shell_sandbox_temp_root(&workspace);
+    let sandbox = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "processOnly".to_string(),
+      active: false,
+      network_allowed: false,
+      temporary_root: Some(temporary_root.display().to_string()),
+      writable_roots: vec![workspace.display().to_string()],
+      detail: "test sandbox".to_string(),
+    };
+
+    prepare_shell_sandbox_environment(&workspace, &sandbox).expect("prepare sandbox");
+
+    assert!(temporary_root.is_dir());
 
     let _ = fs::remove_dir_all(workspace);
   }

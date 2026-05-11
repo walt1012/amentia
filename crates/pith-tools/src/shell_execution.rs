@@ -31,6 +31,7 @@ pub(crate) fn run_shell_with_timeout(
   is_cancelled: impl Fn() -> bool,
 ) -> Result<ShellOutput> {
   let mut shell_command = build_shell_command(command, workspace_root, sandbox_policy);
+  apply_sandbox_environment(&mut shell_command, sandbox_policy);
   let child_result = shell_command
     .current_dir(workspace_root)
     .stdout(Stdio::piped())
@@ -202,6 +203,15 @@ fn build_shell_command(
   process
 }
 
+fn apply_sandbox_environment(process: &mut Command, sandbox_policy: &pith_sandbox::SandboxPolicy) {
+  if let Some(temporary_root) = sandbox_policy.temporary_root() {
+    process
+      .env("TMPDIR", temporary_root)
+      .env("TMP", temporary_root)
+      .env("TEMP", temporary_root);
+  }
+}
+
 #[cfg(target_os = "macos")]
 fn build_shell_command(
   command: &str,
@@ -217,12 +227,6 @@ fn build_shell_command(
       .arg("/bin/sh")
       .arg("-lc")
       .arg(command);
-    if let Some(temporary_root) = sandbox_policy.temporary_root() {
-      process
-        .env("TMPDIR", temporary_root)
-        .env("TMP", temporary_root)
-        .env("TEMP", temporary_root);
-    }
     configure_process_group(&mut process);
     return process;
   }
@@ -359,6 +363,35 @@ mod tests {
     assert!(!artifact_directory.exists());
 
     let _ = fs::remove_dir_all(artifact_directory);
+  }
+
+  #[test]
+  fn sandbox_environment_routes_temporary_paths_to_workspace() {
+    let workspace = unique_temp_workspace("sandbox-env");
+    let temporary_root = workspace.join(".pith").join("sandbox-tmp");
+    let policy = pith_sandbox::SandboxPolicy::workspace_read_write(&workspace)
+      .with_temporary_root(&temporary_root);
+    let mut command = Command::new("pith-test");
+
+    apply_sandbox_environment(&mut command, &policy);
+
+    let env = command
+      .get_envs()
+      .filter_map(|(key, value)| {
+        value.map(|value| {
+          (
+            key.to_string_lossy().to_string(),
+            value.to_string_lossy().to_string(),
+          )
+        })
+      })
+      .collect::<std::collections::HashMap<_, _>>();
+    let expected = temporary_root.display().to_string();
+    assert_eq!(env.get("TMPDIR"), Some(&expected));
+    assert_eq!(env.get("TMP"), Some(&expected));
+    assert_eq!(env.get("TEMP"), Some(&expected));
+
+    let _ = fs::remove_dir_all(workspace);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {

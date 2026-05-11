@@ -97,11 +97,11 @@ pub fn native_sandbox_status(policy: &SandboxPolicy) -> NativeSandboxStatus {
     format!("Shell actions run through macOS Seatbelt with {boundary_detail}. {network_detail}")
   } else if cfg!(target_os = "macos") {
     format!(
-      "macOS native sandbox backend is unavailable; configured policy would keep {boundary_detail}. Shell actions still use approvals, timeouts, and cleanup. {network_detail}"
+      "macOS native sandbox backend is unavailable; configured policy targets {boundary_detail}. Shell actions still use approvals, workspace temp routing, timeouts, and cleanup. {network_detail}"
     )
   } else {
     format!(
-      "Native macOS sandbox is unavailable on this platform; configured policy would keep {boundary_detail}. Shell actions still use approvals, timeouts, and cleanup. {network_detail}"
+      "Native macOS sandbox is unavailable on this platform; configured policy targets {boundary_detail}. Shell actions still use approvals, workspace temp routing, timeouts, and cleanup. {network_detail}"
     )
   };
 
