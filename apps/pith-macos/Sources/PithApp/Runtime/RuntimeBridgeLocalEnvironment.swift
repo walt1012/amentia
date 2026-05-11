@@ -8,6 +8,7 @@ struct RuntimeBridgeActiveLocalModelSelection {
 enum RuntimeBridgeLocalEnvironment {
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
+  private static let activeModelInvalidationDetailKey = "pith.activeModelInvalidationDetail"
 
   static func localPluginInstallRootPath() -> String {
     pluginDirectory().path
@@ -26,11 +27,28 @@ enum RuntimeBridgeLocalEnvironment {
   static func configureActiveLocalModel(manifestPath: String, modelPath: String) {
     UserDefaults.standard.set(manifestPath, forKey: activeModelManifestPathKey)
     UserDefaults.standard.set(modelPath, forKey: activeModelPathKey)
+    UserDefaults.standard.removeObject(forKey: activeModelInvalidationDetailKey)
   }
 
   static func clearActiveLocalModel() {
+    clearActiveLocalModel(invalidationDetail: nil)
+  }
+
+  static func consumeActiveLocalModelInvalidationDetail() -> String? {
+    let defaults = UserDefaults.standard
+    let detail = defaults.string(forKey: activeModelInvalidationDetailKey)
+    defaults.removeObject(forKey: activeModelInvalidationDetailKey)
+    return detail
+  }
+
+  private static func clearActiveLocalModel(invalidationDetail: String?) {
     UserDefaults.standard.removeObject(forKey: activeModelManifestPathKey)
     UserDefaults.standard.removeObject(forKey: activeModelPathKey)
+    if let invalidationDetail {
+      UserDefaults.standard.set(invalidationDetail, forKey: activeModelInvalidationDetailKey)
+    } else {
+      UserDefaults.standard.removeObject(forKey: activeModelInvalidationDetailKey)
+    }
   }
 
   static func runtimeEnvironment() -> [String: String] {
@@ -59,7 +77,10 @@ enum RuntimeBridgeLocalEnvironment {
     guard manager.fileExists(atPath: manifestPath),
           manager.fileExists(atPath: modelPath)
     else {
-      clearActiveLocalModel()
+      clearActiveLocalModel(
+        invalidationDetail:
+          "The saved active local model was reset because its manifest or GGUF file no longer exists. Choose or download a model to continue."
+      )
       return nil
     }
 
@@ -68,7 +89,10 @@ enum RuntimeBridgeLocalEnvironment {
       modelPath: modelPath,
       manifestPath: manifestPath
     ) else {
-      clearActiveLocalModel()
+      clearActiveLocalModel(
+        invalidationDetail:
+          "The saved active local model was reset because its manifest and GGUF file no longer match the verified catalog. Choose or download a model to continue."
+      )
       return nil
     }
 
@@ -118,5 +142,9 @@ extension RuntimeBridge {
 
   func clearActiveLocalModel() {
     RuntimeBridgeLocalEnvironment.clearActiveLocalModel()
+  }
+
+  func consumeActiveLocalModelInvalidationDetail() -> String? {
+    RuntimeBridgeLocalEnvironment.consumeActiveLocalModelInvalidationDetail()
   }
 }
