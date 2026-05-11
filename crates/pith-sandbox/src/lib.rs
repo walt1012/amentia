@@ -23,13 +23,17 @@ pub struct NativeSandboxStatus {
 
 impl NativeSandboxStatus {
   pub fn network_policy(&self) -> &'static str {
-    if self.network_allowed {
-      "network allowed"
-    } else if self.active {
-      "network denied"
-    } else {
-      "network denied by policy, not native-enforced"
-    }
+    network_policy_label(self.active, self.network_allowed)
+  }
+}
+
+pub fn network_policy_label(active: bool, network_allowed: bool) -> &'static str {
+  if network_allowed {
+    "network allowed"
+  } else if active {
+    "network denied"
+  } else {
+    "network denied by policy, not native-enforced"
   }
 }
 

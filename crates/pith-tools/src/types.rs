@@ -89,13 +89,7 @@ impl ShellSandboxSummary {
   }
 
   pub fn network_policy(&self) -> &'static str {
-    if self.network_allowed {
-      "network allowed"
-    } else if self.active {
-      "network denied"
-    } else {
-      "network denied by policy, not native-enforced"
-    }
+    pith_sandbox::network_policy_label(self.active, self.network_allowed)
   }
 
   pub fn display_line(&self) -> String {

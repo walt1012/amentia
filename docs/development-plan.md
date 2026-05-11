@@ -60,6 +60,13 @@ M3 ends when Pith is usable daily without restart anxiety or setup confusion:
 - Context remains compact and explainable for tiny local models.
 - Code is clean enough to start real plugin execution without another broad refactor.
 
+## M3 Status
+
+- Done: first-use model download flow, verified catalog activation, active model recovery, bounded shell/model/web-search paths, runtime request supervision, symlink-safe workspace tools, progressive inspector surfaces, and native sandbox diagnostics.
+- Done: web search is the current retrieval layer; generic local RAG and vector indexing remain out of scope.
+- Active: runtime cancellation and relaunch recovery, local model edge-case recovery, compact context shaping, and final readiness polish.
+- Next: close the remaining daily-driver recovery gaps, then review whether the architecture is ready for Milestone 4 plugin execution.
+
 ## Next Order
 
 1. Model setup hardening: first-use guidance, activation recovery, corrupt model handling, release metadata review.
