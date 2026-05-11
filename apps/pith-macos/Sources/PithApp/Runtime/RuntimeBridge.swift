@@ -65,7 +65,10 @@ final class RuntimeBridge {
     let executableURL = try resolveRuntimeURL()
     let session = try RuntimeBridgeProcessSession(
       executableURL: executableURL,
-      environment: runtimeEnvironment(),
+      environment: runtimeEnvironment()
+    )
+    storeProcessSession(session)
+    session.startObserving(
       onLine: { [weak self] processIdentifier, data in
         self?.handleIncomingMessage(
           processIdentifier: processIdentifier,
@@ -82,7 +85,10 @@ final class RuntimeBridge {
         self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
       }
     )
-    storeProcessSession(session)
+    guard isCurrentProcessSession(session.identifier), session.isRunning else {
+      detachProcessSession(matching: session.identifier)?.stop()
+      throw RuntimeError.rpc("Runtime exited before initialization.")
+    }
   }
 
   private func handleIncomingMessage(processIdentifier: ObjectIdentifier, data: Data) {

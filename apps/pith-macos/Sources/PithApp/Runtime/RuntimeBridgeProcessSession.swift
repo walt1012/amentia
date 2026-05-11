@@ -16,10 +16,7 @@ final class RuntimeBridgeProcessSession {
 
   init(
     executableURL: URL,
-    environment: [String: String],
-    onLine: @escaping @Sendable (ObjectIdentifier, Data) -> Void,
-    onReadError: @escaping @Sendable (ObjectIdentifier, Error) -> Void,
-    onTermination: @escaping @Sendable (ObjectIdentifier, String) -> Void
+    environment: [String: String]
   ) throws {
     let process = Process()
     let stdinPipe = Pipe()
@@ -40,12 +37,24 @@ final class RuntimeBridgeProcessSession {
     self.outputHandle = stdoutPipe.fileHandleForReading
     self.errorHandle = stderrPipe.fileHandleForReading
 
+    try process.run()
+  }
+
+  func startObserving(
+    onLine: @escaping @Sendable (ObjectIdentifier, Data) -> Void,
+    onReadError: @escaping @Sendable (ObjectIdentifier, Error) -> Void,
+    onTermination: @escaping @Sendable (ObjectIdentifier, String) -> Void
+  ) {
+    let processIdentifier = identifier
     process.terminationHandler = { [processIdentifier] process in
       let detail = "Runtime exited with status \(process.terminationStatus)."
       onTermination(processIdentifier, detail)
     }
 
-    try process.run()
+    guard process.isRunning else {
+      onTermination(processIdentifier, "Runtime exited with status \(process.terminationStatus).")
+      return
+    }
 
     startReaderLoop(
       with: outputHandle,
