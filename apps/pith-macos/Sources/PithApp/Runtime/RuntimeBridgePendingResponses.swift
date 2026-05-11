@@ -37,3 +37,13 @@ final class RuntimeBridgePendingResponses {
     }
   }
 }
+
+final class RuntimeBridgeRequestWriter {
+  private let queue = DispatchQueue(label: "pith.runtime.bridge.request-writer")
+
+  func write(_ payload: Data, to handle: FileHandle) throws {
+    try queue.sync {
+      try handle.write(contentsOf: payload)
+    }
+  }
+}

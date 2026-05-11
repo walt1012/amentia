@@ -8,6 +8,7 @@ final class RuntimeBridge {
   private var processSession: RuntimeBridgeProcessSession?
   private let messageDispatcher = RuntimeBridgeMessageDispatcher()
   private let pendingResponses = RuntimeBridgePendingResponses()
+  private let requestWriter = RuntimeBridgeRequestWriter()
 
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
     if processSession?.isRunning != true {
@@ -228,7 +229,7 @@ final class RuntimeBridge {
             )
             let encoder = JSONEncoder()
             let payload = try encoder.encode(request) + Data([0x0A])
-            try inputHandle.write(contentsOf: payload)
+            try requestWriter.write(payload, to: inputHandle)
           } catch {
             let pending = takePendingResponse(requestID: requestID)
             pending?.resume(throwing: error)
