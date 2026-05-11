@@ -51,7 +51,7 @@ final class CancellableTaskSlot {
     clear()
   }
 
-  private func clear() {
+  func clear() {
     requestID = nil
     task = nil
   }

@@ -78,9 +78,8 @@ struct WorkspaceSearchRuntimeState {
 }
 
 final class WorkspaceSearchSession {
-  private var activeRequestID: UUID?
+  private let taskSlot = CancellableTaskSlot()
   private var activeQuery: String?
-  private var activeTask: Task<Void, Never>?
 
   static func trimmedQuery(_ query: String) -> String {
     query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -111,8 +110,7 @@ final class WorkspaceSearchSession {
 
   func begin(query: String) -> WorkspaceSearchRequestToken {
     cancelActiveSearch()
-    let requestID = UUID()
-    activeRequestID = requestID
+    let requestID = taskSlot.replace()
     activeQuery = query
     return WorkspaceSearchRequestToken(
       id: requestID,
@@ -126,20 +124,15 @@ final class WorkspaceSearchSession {
   }
 
   func bind(task: Task<Void, Never>, token: WorkspaceSearchRequestToken) {
-    guard activeRequestID == token.id else {
-      task.cancel()
-      return
-    }
-
-    activeTask = task
+    taskSlot.bind(task: task, requestID: token.id)
   }
 
   func isCurrent(_ token: WorkspaceSearchRequestToken) -> Bool {
-    activeRequestID == token.id
+    taskSlot.isCurrent(token.id)
   }
 
   func finish(_ token: WorkspaceSearchRequestToken) {
-    guard activeRequestID == token.id else {
+    guard isCurrent(token) else {
       return
     }
 
@@ -159,14 +152,13 @@ final class WorkspaceSearchSession {
   }
 
   private func cancelActiveSearch() {
-    activeTask?.cancel()
+    taskSlot.cancel()
     clearActiveSearch()
   }
 
   private func clearActiveSearch() {
-    activeRequestID = nil
     activeQuery = nil
-    activeTask = nil
+    taskSlot.clear()
   }
 
   static func successStatus(query: String, matchCount: Int) -> String {
