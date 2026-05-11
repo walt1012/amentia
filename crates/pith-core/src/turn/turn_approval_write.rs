@@ -4,7 +4,9 @@ use std::path::Path;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::{diff_preview_max_bytes, generate_diff_with_cancellation, write_file_max_bytes};
 
-use super::turn_tool_provenance::workspace_tool_attributes;
+use super::turn_workspace_timeline::{
+  workspace_diff_artifact_item, workspace_tool_start_item, workspace_tool_warning_item,
+};
 use crate::approval_types::PendingApproval;
 use crate::intent_inference;
 use crate::local_responses::build_plan_item;
@@ -55,27 +57,24 @@ pub(super) fn execute_write_turn(
   };
 
   if intent.content.len() > write_file_max_bytes() {
-    items.push(TimelineItem {
-      kind: "warning".to_string(),
-      title: "write_file rejected".to_string(),
-      content: format!(
+    items.push(workspace_tool_warning_item(
+      "write_file",
+      "write_file rejected".to_string(),
+      format!(
         "The proposed write is {} bytes, above the {} byte workspace write limit.",
         intent.content.len(),
         write_file_max_bytes()
       ),
-      attributes: Some(workspace_tool_attributes(
-        "write_file",
-        workspace,
-        [
-          ("relativePath".to_string(), intent.relative_path.clone()),
-          (
-            "bytesRequested".to_string(),
-            intent.content.len().to_string(),
-          ),
-          ("maxBytes".to_string(), write_file_max_bytes().to_string()),
-        ],
-      )),
-    });
+      workspace,
+      [
+        ("relativePath".to_string(), intent.relative_path.clone()),
+        (
+          "bytesRequested".to_string(),
+          intent.content.len().to_string(),
+        ),
+        ("maxBytes".to_string(), write_file_max_bytes().to_string()),
+      ],
+    ));
     items.push(TimelineItem {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
@@ -98,19 +97,15 @@ pub(super) fn execute_write_turn(
   };
   *pending_approval = Some(approval.clone());
 
-  items.push(TimelineItem {
-    kind: "toolStart".to_string(),
-    title: "generate_diff".to_string(),
-    content: intent.relative_path.clone(),
-    attributes: Some(workspace_tool_attributes(
-      "generate_diff",
-      workspace,
-      [
-        ("relativePath".to_string(), intent.relative_path.clone()),
-        ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
-      ],
-    )),
-  });
+  items.push(workspace_tool_start_item(
+    "generate_diff",
+    intent.relative_path.clone(),
+    workspace,
+    [
+      ("relativePath".to_string(), intent.relative_path.clone()),
+      ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+    ],
+  ));
   match generate_diff_with_cancellation(
     Path::new(&workspace.root_path),
     &intent.relative_path,
@@ -118,20 +113,15 @@ pub(super) fn execute_write_turn(
     || snapshot.cancellation.is_cancelled(),
   ) {
     Ok(diff) => {
-      items.push(TimelineItem {
-        kind: "diffArtifact".to_string(),
-        title: "Diff Preview".to_string(),
-        content: diff,
-        attributes: Some(workspace_tool_attributes(
-          "generate_diff",
-          workspace,
-          [
-            ("action".to_string(), "write_file".to_string()),
-            ("relativePath".to_string(), intent.relative_path.clone()),
-            ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
-          ],
-        )),
-      });
+      items.push(workspace_diff_artifact_item(
+        diff,
+        workspace,
+        [
+          ("action".to_string(), "write_file".to_string()),
+          ("relativePath".to_string(), intent.relative_path.clone()),
+          ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+        ],
+      ));
     }
     Err(error) => {
       if snapshot.cancellation.is_cancelled() {
@@ -140,16 +130,13 @@ pub(super) fn execute_write_turn(
         ));
         return;
       }
-      items.push(TimelineItem {
-        kind: "warning".to_string(),
-        title: "generate_diff failed".to_string(),
-        content: error.to_string(),
-        attributes: Some(workspace_tool_attributes(
-          "generate_diff",
-          workspace,
-          [("relativePath".to_string(), intent.relative_path.clone())],
-        )),
-      });
+      items.push(workspace_tool_warning_item(
+        "generate_diff",
+        "generate_diff failed".to_string(),
+        error.to_string(),
+        workspace,
+        [("relativePath".to_string(), intent.relative_path.clone())],
+      ));
     }
   }
   if snapshot.cancellation.is_cancelled() {

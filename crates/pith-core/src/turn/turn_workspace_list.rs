@@ -5,7 +5,9 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use pith_tools::list_directory_with_cancellation;
 
 use super::turn_tool_limits::LIST_DIRECTORY_RESULT_LIMIT;
-use super::turn_tool_provenance::workspace_tool_attributes;
+use super::turn_workspace_timeline::{
+  workspace_tool_failed_items, workspace_tool_result_item, workspace_tool_start_item,
+};
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{
   build_plan_item, format_directory_result, summarize_directory_result,
@@ -54,22 +56,18 @@ pub(super) fn execute_list_turn(
     return;
   }
 
-  items.push(TimelineItem {
-    kind: "toolStart".to_string(),
-    title: "list_directory".to_string(),
-    content: ".".to_string(),
-    attributes: Some(workspace_tool_attributes(
-      "list_directory",
-      workspace,
-      [
-        ("relativePath".to_string(), ".".to_string()),
-        (
-          "maxResults".to_string(),
-          LIST_DIRECTORY_RESULT_LIMIT.to_string(),
-        ),
-      ],
-    )),
-  });
+  items.push(workspace_tool_start_item(
+    "list_directory",
+    ".".to_string(),
+    workspace,
+    [
+      ("relativePath".to_string(), ".".to_string()),
+      (
+        "maxResults".to_string(),
+        LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+      ),
+    ],
+  ));
 
   match list_directory_with_cancellation(
     Path::new(&workspace.root_path),
@@ -78,23 +76,19 @@ pub(super) fn execute_list_turn(
     || snapshot.cancellation.is_cancelled(),
   ) {
     Ok(entries) => {
-      items.push(TimelineItem {
-        kind: "toolResult".to_string(),
-        title: "list_directory result".to_string(),
-        content: format_directory_result(&entries),
-        attributes: Some(workspace_tool_attributes(
-          "list_directory",
-          workspace,
-          [
-            ("relativePath".to_string(), ".".to_string()),
-            ("entryCount".to_string(), entries.len().to_string()),
-            (
-              "maxResults".to_string(),
-              LIST_DIRECTORY_RESULT_LIMIT.to_string(),
-            ),
-          ],
-        )),
-      });
+      items.push(workspace_tool_result_item(
+        "list_directory",
+        format_directory_result(&entries),
+        workspace,
+        [
+          ("relativePath".to_string(), ".".to_string()),
+          ("entryCount".to_string(), entries.len().to_string()),
+          (
+            "maxResults".to_string(),
+            LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+          ),
+        ],
+      ));
       let (summary, summary_attributes) = summarize_directory_result(
         &snapshot.model_runtime,
         &snapshot.memory_notes,
@@ -125,25 +119,16 @@ pub(super) fn execute_list_turn(
         ));
         return;
       }
-      items.push(TimelineItem {
-        kind: "warning".to_string(),
-        title: "list_directory failed".to_string(),
-        content: error.to_string(),
-        attributes: Some(workspace_tool_attributes(
-          "list_directory",
-          workspace,
-          [("relativePath".to_string(), ".".to_string())],
-        )),
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: format!(
+      items.extend(workspace_tool_failed_items(
+        "list_directory",
+        error.to_string(),
+        format!(
           "Pith could not inspect the root of {} yet. Re-open the workspace and try again.",
           workspace.display_name
         ),
-        attributes: None,
-      });
+        workspace,
+        [("relativePath".to_string(), ".".to_string())],
+      ));
     }
   }
 }
