@@ -55,6 +55,10 @@ impl RuntimeContext {
       sequence_state: RuntimeSequenceState::new(1, 1),
     }
   }
+
+  pub fn cancel_running_work(&mut self) {
+    self.execution_state.cancel_running_work();
+  }
 }
 
 impl Default for RuntimeContext {
