@@ -125,8 +125,6 @@ extension AppViewModel {
     }
 
     switch action {
-    case .launchRuntime:
-      launchRuntime()
     case .cancelTurn:
       cancelActiveTurn()
     }

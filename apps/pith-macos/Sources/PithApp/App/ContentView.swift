@@ -25,15 +25,6 @@ struct ContentView: View {
           }
         }
       }
-
-      ToolbarItem(placement: .primaryAction) {
-        if viewModel.shouldShowRuntimeToolbarAction() {
-          Button(viewModel.runtimeLaunchButtonTitle()) {
-            viewModel.launchRuntime()
-          }
-          .disabled(!viewModel.canLaunchRuntime())
-        }
-      }
     }
   }
 
