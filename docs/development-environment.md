@@ -95,7 +95,8 @@ The runtime resolves bundled plugins in this order:
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 
-Milestone 1 uses a built-in memory module in the runtime, so the plugin root can stay empty until the plugin milestone.
+The plugin root can stay light during Milestone 3. Real third-party plugin execution belongs to
+Milestone 4 after the local model, runtime recovery, sandbox, and UI ownership boundaries are stable.
 
 ## GitHub Actions Notes
 

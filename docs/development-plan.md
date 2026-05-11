@@ -1,97 +1,94 @@
 # Pith Development Plan
 
-## North Star
+## Mission
 
 Pith is a small, strong, local-first macOS agent app for controlled local work.
 
 It should feel native, focused, recoverable, and capable. It must not become a generic chatbot, web wrapper, terminal skin, hosted-model frontend, or feature zoo.
 
-## Hard Rules
+## Rules
 
-- Product name: `Pith`
-- Platform: macOS 12+
-- CPU target: `x86_64` only
-- Core intelligence: local model, no required external model API
-- First-use model flow: in-app download, defaulting to `LFM2.5-350M`
-- Runtime model rule: one active local model at a time
-- Repository artifacts: English only
-- Foundation: free and open source
+- Product: `Pith`, macOS 12+, `x86_64` only.
+- Intelligence: local model by default, no required external model API.
+- First use: in-app model download, defaulting to `LFM2.5-350M`.
+- Runtime: one active local model at a time.
+- Repository: English-only source, docs, commits, branches, and PR text.
+- Foundation: free and open source.
 
-## Principles
+## Ownership
 
-- Small beats sprawling.
-- Native beats web-shell.
-- Structured events beat transcript parsing.
-- Bounded execution beats best-effort execution.
-- Progressive disclosure beats admin panels.
-- Focused retrieval and context engineering beat generic retrieval systems.
-- Plugin contracts beat prompt-template shortcuts.
+- `apps/pith-macos`: native UI, setup, approvals, timeline, model manager, inspector, and app-facing state.
+- `crates/pith-runtime-bin`: JSON-RPC process, request routing, request supervision, notifications, and runtime lock boundaries.
+- `crates/pith-core`: orchestration, request reducers, turn lifecycle, readiness, permissions, context packing, memory usage, and plugin baselines.
+- `crates/pith-protocol`: typed wire contract.
+- `crates/pith-tools`: bounded workspace tools, shell, web search, output compaction, and path safety.
+- `crates/pith-sandbox`: native sandbox policy and diagnostics.
+- `crates/pith-model-runtime`: local model discovery, validation, health, bounded inference, and failure wording.
+- `crates/pith-memory`: memory semantics, note ranking, summaries, and context selection.
+- `crates/pith-storage`: durable persistence for threads, workspace state, approvals, memory notes, and plugin state.
+- `crates/pith-plugin-host`: manifests, discovery, validation, registries, connector metadata, and bundle lifecycle.
 
-## Architecture
+Memory and storage do not conflict: memory owns meaning and ranking; storage owns durable records.
 
-- `Pith.app`: native SwiftUI/AppKit shell for interaction, setup, approvals, timeline, and progressive surfaces.
-- `pith-runtime`: local Rust runtime for orchestration, model readiness, tools, permissions, persistence, memory ranking, plugins, sandbox diagnostics, and bounded subprocesses.
-- Protocol: typed JSON-RPC with explicit provenance, permissions, approvals, artifacts, cancellation, and recovery state.
+## Review Snapshot
 
-## Product Direction
+- Keep: short runtime locks, bounded subprocesses, symlink-safe workspace tools, verified local model activation, progressive inspector surfaces.
+- Watch: do not split Swift files for cosmetic size; create coordinators/stores only when ownership actually changes.
+- Watch: keep `pith-core` modular enough for Milestone 4 plugin execution seams.
+- Watch: plugin commands are built-in execution contracts today, not third-party plugin processes.
+- Watch: CI checks internal model metadata; release work must re-check upstream URLs, sizes, checksums, and licenses.
 
-Models:
+## Retrieval And Context
 
-- Default: `LFM2.5-350M Q4_K_M`
-- Alternative: `Granite 4.0-H-350M Q4_K_M`
-- Downloads must verify URL, size, GGUF shape, and SHA-256 before activation.
-- Avoid model-zoo growth unless a model clearly improves the tiny local loop.
+- Web search is the current retrieval layer for fresh public information.
+- Web search must stay default-available, permissioned, bounded, cancellable, and separate from sandbox enforcement.
+- Current routing can be deterministic or explicit while tiny local models mature; later tool planning can let the model choose retrieval when reliable.
+- Memory ranking is compact, attributed context selection for known notes, not generic document RAG.
+- Do not add local vector stores, embedding services, generic file RAG, or document indexing until usage proves the need.
 
-Tools and sandbox:
+## Current Milestone: M3 Daily Driver Foundation
 
-- Tools must be structured, inspectable, bounded, workspace-scoped, and permission-aware.
-- Use native macOS sandbox when available.
-- Shell, model generation, web retrieval, and helper subprocesses must support timeout, cancellation, cleanup, and compact output.
+M3 ends when Pith is usable daily without restart anxiety or setup confusion:
 
-Context and retrieval:
-
-- Compact prompt assembly for small local models.
-- Ranked memory notes with attribution.
-- Compact tool observations and artifact references.
-- Web search is the current RAG retrieval layer for fresh public information.
-- Do not add local document indexing, vector stores, or generic document RAG until real usage proves it is needed.
-
-Plugins:
-
-- Milestone 2 delivered metadata, discovery, validation, visibility, and permission foundations.
-- Milestone 3 only polishes visibility and boundaries.
-- Milestone 4 adds real plugin execution contracts, third-party auth, MCP connectors, and connector workflows such as Notion.
-
-## Roadmap
-
-- Milestone 0: complete. Monorepo, app shell, Rust runtime, JSON-RPC, CI.
-- Milestone 1: complete. Local agent MVP with workspace, threads, timeline, model path, tools, approvals, diffs, and persistence.
-- Milestone 2: complete. Plugin MVP metadata, registry, manager surfaces, permissions, and connector metadata.
-- Milestone 3: current. Premium local daily-driver quality.
-- Milestone 4: later. Real plugin execution, connectors, MCP, context ledger, thread compaction, and automation.
-
-## Milestone 3 Exit
-
-- Fresh install can download, verify, activate, and use one selected local model.
-- Failed generation, timeout, cancellation, or runtime exit does not require app restart.
-- Tools are bounded, inspectable, permission-aware, and workspace-scoped.
-- Sandbox diagnostics expose backend, active state, writable roots, temp root, and network policy.
-- Timeline, inspector, setup, and model management stay calm and progressive.
+- Fresh install can select, download, verify, activate, and use one local model.
+- Download pause, continue, cancel, failure recovery, and partial-file cleanup are reliable.
+- Runtime exit, timeout, cancellation, and model generation failure recover without app restart.
+- Shell, workspace tools, model generation, web search, and helpers are bounded and inspectable.
+- Native sandbox diagnostics show backend, active state, writable roots, temp root, and network policy.
+- Workspace boundaries stay safe across symlinks, shell temp files, writes, search, and approvals.
+- Timeline and inspector stay calm in the normal ready state.
 - Context remains compact and explainable for tiny local models.
-- Web retrieval is default-on, permissioned, bounded, and separate from sandbox and memory ranking.
-- Architecture is clean enough to start real plugin execution work.
+- Code is clean enough to start real plugin execution without another broad refactor.
 
-## Not Yet
+## Next Order
 
-- No broad connector execution.
-- No third-party auth flows.
+1. Model setup hardening: first-use guidance, activation recovery, corrupt model handling, release metadata review.
+2. Runtime recovery: diagnostics, cancellation, pending request cleanup, relaunch flow.
+3. Sandbox diagnostics: native vs process-only wording, temp routing, network policy, timeline attributes.
+4. Context and retrieval: compact observations, memory attribution, web search shaping, no pseudo-RAG drift.
+5. Swift ownership: keep `AppViewModel` as facade; move ownership only into real domain stores/coordinators.
+
+## Milestone 4: Real Plugin Platform
+
+- Add real plugin execution contracts, not more prompt templates.
+- Add typed capability inputs and outputs.
+- Add third-party auth and connectors such as Notion.
+- Consider MCP only if it fits Pith's local-first, small, native direction.
+- Keep plugin state, logs, failures, and outputs visible without polluting the main flow.
+
+## Not Now
+
+- No hosted model dependency.
 - No multi-agent workflows.
-- No local document indexing or vector store.
-- No generic document RAG.
-- No cosmetic splitting that makes architecture harder to understand.
+- No generic document RAG or local vector database.
+- No broad connector marketplace.
+- No cosmetic refactor that only moves code around.
+- No large UI expansion before M3 is stable.
 
-## Next Moves
+## Discipline
 
-1. Close remaining Milestone 3 gaps in model setup, runtime recovery, sandbox diagnostics, context compactness, and Swift coordinator boundaries.
-2. Keep UI quiet in the normal ready state.
-3. Review architecture before opening Milestone 4.
+- CI is hygiene, not a milestone.
+- Remote CI is the source of truth for Rust fmt, clippy, tests, smoke coverage, model manifest validation, and Swift build.
+- Local validation tools are optional and should not block progress.
+- Keep commits scoped and fix CI from logs, not guesses.
+- Split modules only when it clarifies ownership or failure boundaries.
