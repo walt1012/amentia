@@ -4,19 +4,13 @@ use pith_model_runtime::GenerationCancellation;
 
 #[derive(Debug, Clone)]
 pub(crate) struct RuntimeRunningExecutionState {
-  running_turns: HashMap<String, RunningTurnCancellation>,
-  running_approvals: HashMap<String, RunningApprovalCancellation>,
+  running_turns: HashMap<String, RunningCancellation>,
+  running_approvals: HashMap<String, RunningCancellation>,
   pending_cancellations: HashSet<String>,
 }
 
 #[derive(Debug, Clone)]
-struct RunningTurnCancellation {
-  thread_id: String,
-  cancellation: GenerationCancellation,
-}
-
-#[derive(Debug, Clone)]
-struct RunningApprovalCancellation {
+struct RunningCancellation {
   thread_id: String,
   cancellation: GenerationCancellation,
 }
@@ -46,7 +40,7 @@ impl RuntimeRunningExecutionState {
   ) {
     self.running_turns.insert(
       turn_id,
-      RunningTurnCancellation {
+      RunningCancellation {
         thread_id,
         cancellation,
       },
@@ -74,7 +68,7 @@ impl RuntimeRunningExecutionState {
   ) {
     self.running_approvals.insert(
       approval_id,
-      RunningApprovalCancellation {
+      RunningCancellation {
         thread_id,
         cancellation,
       },
