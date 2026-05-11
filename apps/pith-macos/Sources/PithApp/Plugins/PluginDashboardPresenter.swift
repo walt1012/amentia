@@ -7,6 +7,7 @@ struct PluginDashboardSnapshot {
   let connectors: [PluginConnectorSummary]
   let commands: [PluginCommandSummary]
   let hooks: [PluginHookSummary]
+  let hasLifecycleOperation: Bool
 }
 
 enum PluginDashboardPresenter {

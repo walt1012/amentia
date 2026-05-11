@@ -6,6 +6,7 @@ struct PluginActionSnapshot {
   let hasRuntimeThreadSelection: Bool
   let selectedThreadID: String?
   let hasActiveOrPendingTurn: Bool
+  let hasLifecycleOperation: Bool
   let plugins: [PluginSummary]
   let commands: [PluginCommandSummary]
 }
@@ -23,6 +24,7 @@ enum PluginActionPlanner {
     return snapshot.runtimeState == .ready
       && plugin.status == "ready"
       && !snapshot.hasActiveOrPendingTurn
+      && !snapshot.hasLifecycleOperation
   }
 
   static func canRemove(pluginID: String, snapshot: PluginActionSnapshot) -> Bool {
@@ -33,6 +35,7 @@ enum PluginActionPlanner {
     return snapshot.runtimeState == .ready
       && isRemovable(plugin)
       && !snapshot.hasActiveOrPendingTurn
+      && !snapshot.hasLifecycleOperation
   }
 
   static func commandNeedsExecutionContract(
@@ -58,5 +61,6 @@ enum PluginActionPlanner {
       && snapshot.hasRuntimeThreadSelection
       && snapshot.selectedThreadID != nil
       && !snapshot.hasActiveOrPendingTurn
+      && !snapshot.hasLifecycleOperation
   }
 }

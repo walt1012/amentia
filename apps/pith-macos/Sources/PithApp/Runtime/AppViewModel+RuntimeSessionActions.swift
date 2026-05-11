@@ -145,6 +145,7 @@ extension AppViewModel {
 
   func canInstallPlugin() -> Bool {
     SessionActionPlanner.canInstallPlugin(sessionActionSnapshot())
+      && !hasPluginLifecycleOperation()
   }
 
   func canSendDraftMessage() -> Bool {

@@ -34,7 +34,17 @@ extension AppViewModel {
       return
     }
 
+    guard let operationID = beginPluginLifecycleOperation(
+      detail: "Installing local plugin..."
+    ) else {
+      runtimeDetail = "Finish the current plugin operation before starting another."
+      return
+    }
+
     Task {
+      defer {
+        finishPluginLifecycleOperation(operationID)
+      }
       do {
         let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: preview.sourcePath)
         await refreshPluginState()
@@ -56,7 +66,17 @@ extension AppViewModel {
       return
     }
 
+    guard let operationID = beginPluginLifecycleOperation(
+      detail: enabled ? "Enabling plugin..." : "Disabling plugin..."
+    ) else {
+      runtimeDetail = "Finish the current plugin operation before changing another plugin."
+      return
+    }
+
     Task {
+      defer {
+        finishPluginLifecycleOperation(operationID)
+      }
       do {
         let updatedPlugin = try await runtimeBridge.setPluginEnabled(pluginID: pluginID, enabled: enabled)
         await refreshPluginState()
@@ -85,7 +105,17 @@ extension AppViewModel {
       return
     }
 
+    guard let operationID = beginPluginLifecycleOperation(
+      detail: "Removing local plugin..."
+    ) else {
+      runtimeDetail = "Finish the current plugin operation before removing another plugin."
+      return
+    }
+
     Task {
+      defer {
+        finishPluginLifecycleOperation(operationID)
+      }
       do {
         let removedPlugin = try await runtimeBridge.removePlugin(manifestPath: plugin.manifestPath)
         await refreshPluginState()
@@ -152,6 +182,10 @@ extension AppViewModel {
     PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: pluginActionSnapshot())
   }
 
+  func hasPluginLifecycleOperation() -> Bool {
+    pluginDashboardSnapshot.hasLifecycleOperation
+  }
+
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
     PluginActionPlanner.isRemovable(plugin)
   }
@@ -191,8 +225,26 @@ extension AppViewModel {
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       selectedThreadID: selectedThreadID,
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
+      hasLifecycleOperation: hasPluginLifecycleOperation(),
       plugins: plugins,
       commands: pluginCommands
     )
+  }
+
+  private func beginPluginLifecycleOperation(detail: String) -> UUID? {
+    var operationID: UUID?
+    updatePluginState { state in
+      operationID = state.beginLifecycleOperation()
+    }
+    if operationID != nil {
+      runtimeDetail = detail
+    }
+    return operationID
+  }
+
+  private func finishPluginLifecycleOperation(_ operationID: UUID) {
+    updatePluginState { state in
+      state.finishLifecycleOperation(operationID)
+    }
   }
 }

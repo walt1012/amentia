@@ -16,6 +16,7 @@ struct PluginRuntimeState {
   var connectors: [PluginConnectorSummary]
   var commands: [PluginCommandSummary]
   var hooks: [PluginHookSummary]
+  private var lifecycleOperationID: UUID?
 
   init(
     plugins: [PluginSummary] = [],
@@ -23,7 +24,8 @@ struct PluginRuntimeState {
     capabilities: [PluginCapabilitySummary] = [],
     connectors: [PluginConnectorSummary] = [],
     commands: [PluginCommandSummary] = [],
-    hooks: [PluginHookSummary] = []
+    hooks: [PluginHookSummary] = [],
+    lifecycleOperationID: UUID? = nil
   ) {
     self.plugins = plugins
     self.registrySummary = registrySummary
@@ -31,6 +33,11 @@ struct PluginRuntimeState {
     self.connectors = connectors
     self.commands = commands
     self.hooks = hooks
+    self.lifecycleOperationID = lifecycleOperationID
+  }
+
+  var hasLifecycleOperation: Bool {
+    lifecycleOperationID != nil
   }
 
   var dashboardSnapshot: PluginDashboardSnapshot {
@@ -40,7 +47,8 @@ struct PluginRuntimeState {
       capabilities: capabilities,
       connectors: connectors,
       commands: commands,
-      hooks: hooks
+      hooks: hooks,
+      hasLifecycleOperation: hasLifecycleOperation
     )
   }
 
@@ -67,6 +75,24 @@ struct PluginRuntimeState {
     if let hooks = refresh.hooks {
       self.hooks = hooks
     }
+  }
+
+  mutating func beginLifecycleOperation() -> UUID? {
+    guard lifecycleOperationID == nil else {
+      return nil
+    }
+
+    let operationID = UUID()
+    lifecycleOperationID = operationID
+    return operationID
+  }
+
+  mutating func finishLifecycleOperation(_ operationID: UUID) {
+    guard lifecycleOperationID == operationID else {
+      return
+    }
+
+    lifecycleOperationID = nil
   }
 
   mutating func reset() {
