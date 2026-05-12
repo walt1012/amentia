@@ -183,7 +183,10 @@ mod tests {
   fn plugin_id_segment_replaces_path_unsafe_characters() {
     assert_eq!(safe_plugin_id_segment("../notion:sync"), "_notion_sync");
     assert_eq!(safe_plugin_id_segment("..."), "plugin");
-    assert_eq!(safe_plugin_id_segment("com.example.plugin"), "com.example.plugin");
+    assert_eq!(
+      safe_plugin_id_segment("com.example.plugin"),
+      "com.example.plugin"
+    );
     assert_eq!(safe_plugin_id_segment("notion-sync"), "notion-sync");
   }
 

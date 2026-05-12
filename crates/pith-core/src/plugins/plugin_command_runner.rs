@@ -105,7 +105,12 @@ pub(super) fn run_external_plugin_command(
     &input_payload.to_string(),
     cancellation,
   )?;
-  Ok(plugin_runner_output(command, &execution.kind, &output_text, sandbox.attributes()))
+  Ok(plugin_runner_output(
+    command,
+    &execution.kind,
+    &output_text,
+    sandbox.attributes(),
+  ))
 }
 
 fn run_stdio_runner(
