@@ -4,9 +4,7 @@ use pith_memory::MemoryNote;
 use pith_model_runtime::{GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole};
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
-use crate::context_compaction::{
-  compact_generation_prompt, merge_generation_prompt_attributes,
-};
+use crate::context_compaction::{compact_generation_prompt, merge_generation_prompt_attributes};
 use crate::context_memory_pack::{
   format_memory_context_prompt, merge_memory_context_attributes, pack_memory_notes_for_context,
 };
