@@ -128,10 +128,18 @@ extension RuntimeBridge {
     return result.connectors.map { runtimePluginConnector(from: $0) }
   }
 
-  func authorizePluginConnector(connectorID: String) async throws -> RuntimePluginConnector {
+  func authorizePluginConnector(
+    connectorID: String,
+    credentialLabel: String? = nil,
+    credentialSecret: String? = nil
+  ) async throws -> RuntimePluginConnector {
     let response: JSONRPCResponse<PluginConnectorCredentialResult> = try await sendRequest(
       method: "plugin/connectorAuthorize",
-      params: PluginConnectorCredentialParams(connectorId: connectorID)
+      params: PluginConnectorCredentialParams(
+        connectorId: connectorID,
+        credentialLabel: credentialLabel,
+        credentialSecret: credentialSecret
+      )
     )
     let result = try responseResult(from: response)
 

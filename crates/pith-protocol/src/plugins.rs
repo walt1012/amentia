@@ -124,6 +124,10 @@ pub struct PluginConnectorRegistryResult {
 #[serde(rename_all = "camelCase")]
 pub struct PluginConnectorCredentialParams {
   pub connector_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_label: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_secret: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

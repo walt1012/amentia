@@ -10,6 +10,7 @@ pub(crate) struct PluginConnectorCredentialState {
   pub(crate) plugin_id: String,
   pub(crate) credential_store: String,
   pub(crate) credential_label: String,
+  pub(crate) credential_secret: Option<String>,
   pub(crate) authorized_at: i64,
   pub(crate) updated_at: i64,
 }
@@ -21,6 +22,7 @@ impl From<StoredPluginConnectorCredential> for PluginConnectorCredentialState {
       plugin_id: record.plugin_id,
       credential_store: record.credential_store,
       credential_label: record.credential_label,
+      credential_secret: record.credential_secret,
       authorized_at: record.authorized_at,
       updated_at: record.updated_at,
     }
@@ -34,6 +36,7 @@ impl From<&PluginConnectorCredentialState> for StoredPluginConnectorCredential {
       plugin_id: state.plugin_id.clone(),
       credential_store: state.credential_store.clone(),
       credential_label: state.credential_label.clone(),
+      credential_secret: state.credential_secret.clone(),
       authorized_at: state.authorized_at,
       updated_at: state.updated_at,
     }

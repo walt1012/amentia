@@ -24,9 +24,28 @@ pub(super) fn build_command_connector_refs(
           handle: connector.connector_id,
           store: credential.credential_store.clone(),
           label: credential.credential_label.clone(),
+          env_key: credential
+            .credential_secret
+            .as_ref()
+            .map(|_| credential_env_key(&credential.connector_id)),
           authorized_at: credential.authorized_at,
         },
+        credential_secret: credential.credential_secret.clone(),
       })
     })
     .collect()
+}
+
+fn credential_env_key(connector_id: &str) -> String {
+  let suffix = connector_id
+    .chars()
+    .map(|character| {
+      if character.is_ascii_alphanumeric() {
+        character.to_ascii_uppercase()
+      } else {
+        '_'
+      }
+    })
+    .collect::<String>();
+  format!("PITH_PLUGIN_CREDENTIAL_{suffix}")
 }

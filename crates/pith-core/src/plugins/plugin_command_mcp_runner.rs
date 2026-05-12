@@ -131,6 +131,7 @@ pub(super) fn run_mcp_plugin_command(
     &entrypoint_path,
     &server.args,
     &input_payload,
+    connector_refs,
     cancellation,
     &runner_context_attributes,
   )?;

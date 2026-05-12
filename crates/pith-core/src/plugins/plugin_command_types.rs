@@ -1,3 +1,5 @@
+use std::fmt;
+
 use pith_memory::MemoryNote;
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
@@ -30,12 +32,29 @@ pub(super) struct PluginCommandSnapshot {
   pub(super) running_id: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct PluginConnectorExecutionRef {
   pub(super) connector_id: String,
   pub(super) service: String,
   pub(super) credential_provider: PluginConnectorCredentialProviderRef,
+  #[serde(skip)]
+  pub(super) credential_secret: Option<String>,
+}
+
+impl fmt::Debug for PluginConnectorExecutionRef {
+  fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    formatter
+      .debug_struct("PluginConnectorExecutionRef")
+      .field("connector_id", &self.connector_id)
+      .field("service", &self.service)
+      .field("credential_provider", &self.credential_provider)
+      .field(
+        "credential_secret",
+        &self.credential_secret.as_ref().map(|_| "<redacted>"),
+      )
+      .finish()
+  }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -45,6 +64,8 @@ pub(super) struct PluginConnectorCredentialProviderRef {
   pub(super) handle: String,
   pub(super) store: String,
   pub(super) label: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub(super) env_key: Option<String>,
   pub(super) authorized_at: i64,
 }
 

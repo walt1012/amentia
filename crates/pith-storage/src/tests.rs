@@ -300,6 +300,7 @@ fn sqlite_store_round_trips_plugin_connector_credentials() {
     plugin_id: "notion-connector".to_string(),
     credential_store: "keychain".to_string(),
     credential_label: "Notion authorization marker".to_string(),
+    credential_secret: Some("notion-token".to_string()),
     authorized_at: 10,
     updated_at: 10,
   };
@@ -325,6 +326,7 @@ fn sqlite_store_deletes_plugin_connector_credentials() {
     plugin_id: "notion-connector".to_string(),
     credential_store: "keychain".to_string(),
     credential_label: "Notion authorization marker".to_string(),
+    credential_secret: None,
     authorized_at: 10,
     updated_at: 10,
   };
@@ -353,6 +355,7 @@ fn sqlite_store_deletes_plugin_connector_credentials_by_plugin() {
     plugin_id: "notion-connector".to_string(),
     credential_store: "keychain".to_string(),
     credential_label: "Notion authorization marker".to_string(),
+    credential_secret: None,
     authorized_at: 10,
     updated_at: 10,
   };
@@ -361,6 +364,7 @@ fn sqlite_store_deletes_plugin_connector_credentials_by_plugin() {
     plugin_id: "other-connector".to_string(),
     credential_store: "keychain".to_string(),
     credential_label: "Other authorization marker".to_string(),
+    credential_secret: None,
     authorized_at: 11,
     updated_at: 11,
   };

@@ -49,7 +49,11 @@ pub(crate) fn handle_plugin_connector_authorize(
       .credential_store
       .clone()
       .unwrap_or_else(|| "local".to_string()),
-    credential_label: format!("{} authorization marker", connector.display_name),
+    credential_label: params
+      .credential_label
+      .clone()
+      .unwrap_or_else(|| format!("{} authorization marker", connector.display_name)),
+    credential_secret: normalized_credential_secret(params.credential_secret.as_deref()),
     authorized_at: timestamp,
     updated_at: timestamp,
   };
@@ -123,4 +127,11 @@ fn current_unix_timestamp() -> Result<i64, String> {
     .duration_since(UNIX_EPOCH)
     .map(|duration| duration.as_secs() as i64)
     .map_err(|error| format!("System clock is before Unix epoch: {error}"))
+}
+
+fn normalized_credential_secret(secret: Option<&str>) -> Option<String> {
+  secret
+    .map(str::trim)
+    .filter(|secret| !secret.is_empty())
+    .map(str::to_string)
 }

@@ -37,6 +37,18 @@ struct PluginConnectorRegistryResult: Codable {
 
 struct PluginConnectorCredentialParams: Codable {
   let connectorId: String
+  let credentialLabel: String?
+  let credentialSecret: String?
+
+  init(
+    connectorId: String,
+    credentialLabel: String? = nil,
+    credentialSecret: String? = nil
+  ) {
+    self.connectorId = connectorId
+    self.credentialLabel = credentialLabel
+    self.credentialSecret = credentialSecret
+  }
 }
 
 struct PluginConnectorCredentialResult: Codable {

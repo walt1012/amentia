@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 
 use crate::time::current_timestamp;
 
-const SCHEMA_VERSION: i64 = 7;
+const SCHEMA_VERSION: i64 = 8;
 
 #[derive(Debug, Clone, Copy)]
 struct SchemaMigration {
@@ -12,7 +12,7 @@ struct SchemaMigration {
   sql: &'static str,
 }
 
-const SCHEMA_MIGRATIONS: [SchemaMigration; 7] = [
+const SCHEMA_MIGRATIONS: [SchemaMigration; 8] = [
   SchemaMigration {
     version: 1,
     name: "initial_workspace_and_threads",
@@ -113,6 +113,13 @@ const SCHEMA_MIGRATIONS: [SchemaMigration; 7] = [
       ON plugin_connector_credentials(plugin_id ASC, connector_id ASC);
     ",
   },
+  SchemaMigration {
+    version: 8,
+    name: "plugin_connector_credential_secret",
+    sql: "
+      ALTER TABLE plugin_connector_credentials ADD COLUMN credential_secret TEXT;
+    ",
+  },
 ];
 
 pub(crate) fn ensure_schema(connection: &Connection) -> Result<()> {
@@ -144,6 +151,13 @@ pub(crate) fn ensure_schema(connection: &Connection) -> Result<()> {
         "threads",
         "workspace_display_name",
         "ALTER TABLE threads ADD COLUMN workspace_display_name TEXT;",
+      )?;
+    } else if migration.version == 8 {
+      add_column_if_missing(
+        &transaction,
+        "plugin_connector_credentials",
+        "credential_secret",
+        "ALTER TABLE plugin_connector_credentials ADD COLUMN credential_secret TEXT;",
       )?;
     } else {
       transaction.execute_batch(migration.sql)?;

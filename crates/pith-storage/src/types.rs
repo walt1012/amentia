@@ -46,6 +46,8 @@ pub struct StoredPluginConnectorCredential {
   pub plugin_id: String,
   pub credential_store: String,
   pub credential_label: String,
+  #[serde(default)]
+  pub credential_secret: Option<String>,
   pub authorized_at: i64,
   pub updated_at: i64,
 }

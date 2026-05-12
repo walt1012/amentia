@@ -49,7 +49,8 @@ impl RuntimeStore {
   pub fn load_plugin_connector_credentials(&self) -> Result<Vec<StoredPluginConnectorCredential>> {
     let connection = self.open_connection()?;
     let mut statement = connection.prepare(
-      "SELECT connector_id, plugin_id, credential_store, credential_label, authorized_at, updated_at
+      "SELECT connector_id, plugin_id, credential_store, credential_label, credential_secret,
+              authorized_at, updated_at
        FROM plugin_connector_credentials
        ORDER BY plugin_id ASC, connector_id ASC",
     )?;
@@ -59,8 +60,9 @@ impl RuntimeStore {
         plugin_id: row.get(1)?,
         credential_store: row.get(2)?,
         credential_label: row.get(3)?,
-        authorized_at: row.get(4)?,
-        updated_at: row.get(5)?,
+        credential_secret: row.get(4)?,
+        authorized_at: row.get(5)?,
+        updated_at: row.get(6)?,
       })
     })?;
 
@@ -74,13 +76,15 @@ impl RuntimeStore {
     let connection = self.open_connection()?;
     connection.execute(
       "INSERT INTO plugin_connector_credentials (
-         connector_id, plugin_id, credential_store, credential_label, authorized_at, updated_at
+         connector_id, plugin_id, credential_store, credential_label, credential_secret,
+         authorized_at, updated_at
        )
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
        ON CONFLICT(connector_id) DO UPDATE SET
          plugin_id = excluded.plugin_id,
          credential_store = excluded.credential_store,
          credential_label = excluded.credential_label,
+         credential_secret = excluded.credential_secret,
          authorized_at = excluded.authorized_at,
          updated_at = excluded.updated_at",
       params![
@@ -88,6 +92,7 @@ impl RuntimeStore {
         &credential.plugin_id,
         &credential.credential_store,
         &credential.credential_label,
+        &credential.credential_secret,
         credential.authorized_at,
         credential.updated_at
       ],

@@ -143,6 +143,7 @@ mod tests {
         plugin_id: "notion-connector".to_string(),
         credential_store: "keychain".to_string(),
         credential_label: "Notion authorization marker".to_string(),
+        credential_secret: None,
         authorized_at: 6,
         updated_at: 6,
       })

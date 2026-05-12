@@ -180,6 +180,7 @@ pub(super) fn run_external_plugin_command(
     &entrypoint_path,
     &[],
     &input_payload.to_string(),
+    connector_refs,
     cancellation,
     &runner_context_attributes,
   )?;
@@ -251,6 +252,7 @@ pub(super) fn run_stdio_runner(
   entrypoint_path: &Path,
   args: &[String],
   input_payload: &str,
+  connector_refs: &[PluginConnectorExecutionRef],
   cancellation: &GenerationCancellation,
   sandbox_attributes: &HashMap<String, String>,
 ) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
@@ -264,6 +266,15 @@ pub(super) fn run_stdio_runner(
     .env("PITH_PLUGIN_ID", &command.plugin_id)
     .env("PITH_PLUGIN_SANDBOX_DETAIL", sandbox.detail())
     .env("PITH_PLUGIN_SOURCE_PATH", &command.source_path);
+  for connector in connector_refs {
+    let Some(secret) = connector.credential_secret.as_deref() else {
+      continue;
+    };
+    let Some(env_key) = connector.credential_provider.env_key.as_deref() else {
+      continue;
+    };
+    process.env(env_key, secret);
+  }
 
   let mut child = process.spawn().map_err(|error| {
     PluginRunnerFailure::new(
