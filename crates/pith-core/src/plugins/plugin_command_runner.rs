@@ -22,6 +22,8 @@ const PLUGIN_RUNNER_GRACE_PERIOD: Duration = Duration::from_millis(250);
 const PLUGIN_RUNNER_OUTPUT_LIMIT: usize = 64 * 1024;
 const PLUGIN_RUNNER_LOG_PREVIEW_LIMIT: usize = 2048;
 
+type PluginRunnerRunResult<T> = std::result::Result<T, Box<PluginRunnerFailure>>;
+
 pub(super) struct PluginRunnerResult {
   pub(super) execution_kind: String,
   pub(super) content: String,
@@ -70,6 +72,10 @@ impl PluginRunnerFailure {
   fn from_pair((code, message): (i32, String)) -> Self {
     Self::empty(code, message)
   }
+
+  fn boxed(self) -> Box<Self> {
+    Box::new(self)
+  }
 }
 
 #[derive(Debug, Deserialize)]
@@ -107,12 +113,13 @@ pub(super) fn run_external_plugin_command(
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
   cancellation: &GenerationCancellation,
-) -> std::result::Result<PluginRunnerResult, PluginRunnerFailure> {
+) -> PluginRunnerRunResult<PluginRunnerResult> {
   if cancellation.is_cancelled() {
     return Err(PluginRunnerFailure::empty(
       -32055,
       format!("Plugin command `{}` was cancelled.", command.command_id),
-    ));
+    )
+    .boxed());
   }
 
   let execution = command.execution.as_ref().ok_or_else(|| {
@@ -123,6 +130,7 @@ pub(super) fn run_external_plugin_command(
         command.command_id
       ),
     )
+    .boxed()
   })?;
   if execution.driver != "stdio" {
     return Err(unsupported_execution_error(command));
@@ -131,11 +139,13 @@ pub(super) fn run_external_plugin_command(
     .entrypoint
     .as_deref()
     .ok_or_else(|| unsupported_execution_error(command))?;
-  let plugin_root = plugin_root_for_command(command).map_err(PluginRunnerFailure::from_pair)?;
+  let plugin_root = plugin_root_for_command(command)
+    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
   let entrypoint_path =
-    safe_entrypoint_path(&plugin_root, entrypoint).map_err(PluginRunnerFailure::from_pair)?;
+    safe_entrypoint_path(&plugin_root, entrypoint)
+      .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
   let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
-    .map_err(PluginRunnerFailure::from_pair)?;
+    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
   let sandbox_attributes = sandbox.attributes();
   let input_payload = json!({
     "envelope": execution.input.envelope,
@@ -168,7 +178,7 @@ fn run_stdio_runner(
   input_payload: &str,
   cancellation: &GenerationCancellation,
   sandbox_attributes: &HashMap<String, String>,
-) -> std::result::Result<PluginRunnerProcessOutput, PluginRunnerFailure> {
+) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
   let mut process = sandbox.build_command(entrypoint_path);
   process
     .stdin(Stdio::piped())
@@ -188,6 +198,7 @@ fn run_stdio_runner(
       ),
       sandbox_attributes.clone(),
     )
+    .boxed()
   })?;
   if let Some(mut stdin) = child.stdin.take() {
     if let Err(error) = stdin
@@ -203,7 +214,8 @@ fn run_stdio_runner(
           command.command_id
         ),
         sandbox_attributes.clone(),
-      ));
+      )
+      .boxed());
     }
   }
 
@@ -231,6 +243,7 @@ fn run_stdio_runner(
       ),
       sandbox_attributes.clone(),
     )
+    .boxed()
   })?;
   let stdout_output = join_bounded_pipe_reader(stdout_reader);
   let stderr_output = join_bounded_pipe_reader(stderr_reader);
@@ -253,7 +266,8 @@ fn run_stdio_runner(
         stdout,
         stderr,
         failure_attributes,
-      ))
+      )
+      .boxed())
     }
     ChildExitReason::TimedOut => {
       return Err(PluginRunnerFailure::with_output(
@@ -266,7 +280,8 @@ fn run_stdio_runner(
         stdout,
         stderr,
         failure_attributes,
-      ))
+      )
+      .boxed())
     }
     ChildExitReason::Completed => {}
   }
@@ -282,7 +297,8 @@ fn run_stdio_runner(
       stdout,
       stderr,
       failure_attributes,
-    ));
+    )
+    .boxed());
   }
 
   Ok(PluginRunnerProcessOutput {
@@ -429,7 +445,7 @@ fn plugin_runner_timeline_item(
   })
 }
 
-fn unsupported_execution_error(command: &HostPluginCommandEntry) -> PluginRunnerFailure {
+fn unsupported_execution_error(command: &HostPluginCommandEntry) -> Box<PluginRunnerFailure> {
   PluginRunnerFailure::empty(
     -32053,
     format!(
@@ -437,6 +453,7 @@ fn unsupported_execution_error(command: &HostPluginCommandEntry) -> PluginRunner
       command.command_id
     ),
   )
+  .boxed()
 }
 
 fn runner_output_attributes(

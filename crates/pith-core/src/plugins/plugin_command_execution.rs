@@ -57,6 +57,7 @@ fn execute_plugin_command_snapshot(
       ) {
         Ok(result) => result,
         Err(failure) => {
+          let failure = *failure;
           let code = failure.code;
           let message = failure.message;
           let stdout = failure.stdout;
