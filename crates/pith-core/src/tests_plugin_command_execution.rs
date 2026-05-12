@@ -440,10 +440,12 @@ fn plugin_command_run_passes_connector_refs_to_stdio_runner_without_secrets() {
     r#"#!/bin/sh
 payload=$(cat)
 case "$payload" in *'"connectorId":"notion-runner::notion"'*) connector_id=true;; *) connector_id=false;; esac
-case "$payload" in *'"credentialStore":"keychain"'*) store=true;; *) store=false;; esac
-case "$payload" in *'"credentialLabel":"Notion authorization marker"'*) label=true;; *) label=false;; esac
+case "$payload" in *'"provider":"pith.localCredentialProvider"'*) provider=true;; *) provider=false;; esac
+case "$payload" in *'"handle":"notion-runner::notion"'*) handle=true;; *) handle=false;; esac
+case "$payload" in *'"store":"keychain"'*) store=true;; *) store=false;; esac
+case "$payload" in *'"label":"Notion authorization marker"'*) label=true;; *) label=false;; esac
 case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
-printf '{"content":"connectorId=%s store=%s label=%s secretLeak=%s"}\n' "$connector_id" "$store" "$label" "$secret_leak"
+printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secretLeak=%s"}\n' "$connector_id" "$provider" "$handle" "$store" "$label" "$secret_leak"
 "#,
   )
   .expect("write connector runner");
@@ -527,6 +529,10 @@ printf '{"content":"connectorId=%s store=%s label=%s secretLeak=%s"}\n' "$connec
     "notion-runner::notion"
   );
   assert_eq!(items[0]["attributes"]["connectorServices"], "notion");
+  assert_eq!(
+    items[0]["attributes"]["connectorCredentialProviders"],
+    "pith.localCredentialProvider"
+  );
   assert_eq!(items[1]["kind"], "pluginResult");
   assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
   assert_eq!(
@@ -542,8 +548,16 @@ printf '{"content":"connectorId=%s store=%s label=%s secretLeak=%s"}\n' "$connec
     "keychain"
   );
   assert_eq!(
+    items[1]["attributes"]["pluginRunnerCredentialProviders"],
+    "pith.localCredentialProvider"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerCredentialHandles"],
+    "notion-runner::notion"
+  );
+  assert_eq!(
     items[1]["content"],
-    "connectorId=true store=true label=true secretLeak=false"
+    "connectorId=true provider=true handle=true store=true label=true secretLeak=false"
   );
 }
 

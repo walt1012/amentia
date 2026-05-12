@@ -200,7 +200,7 @@ fn insert_connector_runner_attributes(
     "pluginRunnerConnectorStores".to_string(),
     connector_refs
       .iter()
-      .map(|connector| connector.credential_store.as_str())
+      .map(|connector| connector.credential_provider.store.as_str())
       .collect::<Vec<_>>()
       .join(", "),
   );
@@ -209,6 +209,22 @@ fn insert_connector_runner_attributes(
     connector_refs
       .iter()
       .map(|connector| connector.service.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "pluginRunnerCredentialProviders".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.provider.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "pluginRunnerCredentialHandles".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.handle.as_str())
       .collect::<Vec<_>>()
       .join(", "),
   );

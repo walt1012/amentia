@@ -35,8 +35,16 @@ pub(super) struct PluginCommandSnapshot {
 pub(super) struct PluginConnectorExecutionRef {
   pub(super) connector_id: String,
   pub(super) service: String,
-  pub(super) credential_store: String,
-  pub(super) credential_label: String,
+  pub(super) credential_provider: PluginConnectorCredentialProviderRef,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PluginConnectorCredentialProviderRef {
+  pub(super) provider: String,
+  pub(super) handle: String,
+  pub(super) store: String,
+  pub(super) label: String,
   pub(super) authorized_at: i64,
 }
 

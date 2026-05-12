@@ -78,7 +78,15 @@ fn insert_connector_context_attributes(
     "connectorCredentialStores".to_string(),
     connector_refs
       .iter()
-      .map(|connector| connector.credential_store.as_str())
+      .map(|connector| connector.credential_provider.store.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "connectorCredentialProviders".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.provider.as_str())
       .collect::<Vec<_>>()
       .join(", "),
   );
