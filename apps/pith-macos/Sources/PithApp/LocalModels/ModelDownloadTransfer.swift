@@ -119,6 +119,8 @@ final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
          !resumeData.isEmpty
       {
         complete(.failure(ModelDownloadPaused(resumeData: resumeData)))
+      } else {
+        complete(.failure(CancellationError()))
       }
       return
     }
