@@ -86,14 +86,16 @@ pub fn prepare_plugin_command_run(
   );
   let snapshot = build_plugin_command_snapshot(
     context,
-    params.thread_id,
-    command,
-    workspace,
-    input,
-    connector_refs,
-    cancellation,
-    running_id,
-    approval_id,
+    PluginCommandSnapshotDraft {
+      thread_id: params.thread_id,
+      command,
+      workspace,
+      input,
+      connector_refs,
+      cancellation,
+      running_id,
+      approval_id,
+    },
   );
 
   Ok(PreparedPluginCommandRun {
@@ -147,19 +149,20 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
 
   Ok(Some(build_plugin_command_snapshot(
     context,
-    approval.thread_id.clone(),
-    command,
-    workspace,
-    input,
-    connector_refs,
-    cancellation,
-    running_id,
-    None,
+    PluginCommandSnapshotDraft {
+      thread_id: approval.thread_id.clone(),
+      command,
+      workspace,
+      input,
+      connector_refs,
+      cancellation,
+      running_id,
+      approval_id: None,
+    },
   )))
 }
 
-fn build_plugin_command_snapshot(
-  context: &RuntimeContext,
+struct PluginCommandSnapshotDraft {
   thread_id: String,
   command: HostPluginCommandEntry,
   workspace: Option<WorkspaceSummary>,
@@ -168,7 +171,22 @@ fn build_plugin_command_snapshot(
   cancellation: GenerationCancellation,
   running_id: String,
   approval_id: Option<String>,
+}
+
+fn build_plugin_command_snapshot(
+  context: &RuntimeContext,
+  draft: PluginCommandSnapshotDraft,
 ) -> PluginCommandSnapshot {
+  let PluginCommandSnapshotDraft {
+    thread_id,
+    command,
+    workspace,
+    input,
+    connector_refs,
+    cancellation,
+    running_id,
+    approval_id,
+  } = draft;
   let memory_query = input
     .as_deref()
     .map(|input| {
