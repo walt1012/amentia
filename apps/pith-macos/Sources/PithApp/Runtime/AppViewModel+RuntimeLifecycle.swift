@@ -48,7 +48,10 @@ extension AppViewModel {
     runtimeLaunchCoordinator.bind(task: task, token: launchToken)
   }
 
-  func refreshModelHealthState(serverLabel: String? = nil) async {
+  func refreshModelHealthState(
+    serverLabel: String? = nil,
+    announcesFirstRequestReady: Bool = true
+  ) async {
     let modelRefresh = await RuntimeStateLoader.refreshModelHealth(
       using: runtimeBridge,
       serverLabel: serverLabel
@@ -61,7 +64,9 @@ extension AppViewModel {
     }
     refreshLocalModelCatalog()
     await refreshRuntimeReadiness()
-    announceFirstRequestReadyIfNeeded()
+    if announcesFirstRequestReady {
+      announceFirstRequestReadyIfNeeded()
+    }
   }
 
   func refreshRuntimeReadiness() async {
@@ -131,7 +136,8 @@ extension AppViewModel {
 
     runtimeState = .ready
     await refreshModelHealthState(
-      serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)"
+      serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)",
+      announcesFirstRequestReady: false
     )
     applyMemoryStateRefresh(bootstrap.memoryRefresh, clearsMissing: true)
     await refreshPluginState()
