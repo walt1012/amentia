@@ -381,10 +381,7 @@ fn mcp_runner_output(
     );
   }
   let Some(result) = response.result else {
-    attributes.insert(
-      "mcpProtocolStatus".to_string(),
-      "missingResult".to_string(),
-    );
+    attributes.insert("mcpProtocolStatus".to_string(), "missingResult".to_string());
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
@@ -466,17 +463,18 @@ impl PluginMcpOutputScan {
       self.output_line_count.to_string(),
     );
     if let Some(preview) = self.last_invalid_json_preview.as_ref() {
-      attributes.insert(
-        "mcpLastInvalidJsonPreview".to_string(),
-        preview.clone(),
-      );
+      attributes.insert("mcpLastInvalidJsonPreview".to_string(), preview.clone());
     }
   }
 }
 
 fn scan_mcp_output(output: &str) -> PluginMcpOutputScan {
   let mut scan = PluginMcpOutputScan::empty();
-  for line in output.lines().map(str::trim).filter(|line| !line.is_empty()) {
+  for line in output
+    .lines()
+    .map(str::trim)
+    .filter(|line| !line.is_empty())
+  {
     scan.output_line_count += 1;
     match serde_json::from_str::<PluginMcpJsonRpcEnvelope>(line) {
       Ok(response) => {
@@ -523,10 +521,7 @@ fn missing_mcp_tool_response_message(
   }
   format!(
     "MCP server `{}` returned {} JSON-RPC response(s), but none matched tool call id {} for `{}`.",
-    target.server_id,
-    scan.json_response_count,
-    MCP_TOOL_CALL_REQUEST_ID,
-    target.tool_name
+    target.server_id, scan.json_response_count, MCP_TOOL_CALL_REQUEST_ID, target.tool_name
   )
 }
 

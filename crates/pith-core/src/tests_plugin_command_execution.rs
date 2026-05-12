@@ -806,7 +806,9 @@ fn plugin_command_run_records_mcp_protocol_diagnostics() {
   )
   .expect("write mcp diagnostics plugin manifest");
   fs::write(
-    source_root.join("commands").join("mcp-diagnostics.run.json"),
+    source_root
+      .join("commands")
+      .join("mcp-diagnostics.run.json"),
     r#"{
   "title": "Run MCP Diagnostics",
   "description": "Run an MCP command that emits malformed stdout.",
@@ -832,8 +834,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
     .expect("mcp diagnostics server metadata")
     .permissions();
   permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions)
-    .expect("set mcp diagnostics server permissions");
+  fs::set_permissions(&server_path, permissions).expect("set mcp diagnostics server permissions");
   replace_plugin_catalog(
     &mut context,
     vec![PluginCatalogEntry {
@@ -896,7 +897,10 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "missingToolResponse");
+  assert_eq!(
+    items[1]["attributes"]["mcpProtocolStatus"],
+    "missingToolResponse"
+  );
   assert_eq!(items[1]["attributes"]["mcpInitializeResponseSeen"], "true");
   assert_eq!(items[1]["attributes"]["mcpToolResponseSeen"], "false");
   assert_eq!(items[1]["attributes"]["mcpJsonResponseCount"], "1");
