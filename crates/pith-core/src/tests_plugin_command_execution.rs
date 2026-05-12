@@ -717,7 +717,10 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "approvalRequested");
   assert_eq!(items[1]["title"], "Plugin Approval Requested");
-  assert_eq!(result["pendingApprovals"][0]["action"], "run_plugin_command");
+  assert_eq!(
+    result["pendingApprovals"][0]["action"],
+    "run_plugin_command"
+  );
   assert_eq!(
     result["pendingApprovals"][0]["title"],
     "Run Create Notion Task"

@@ -8,7 +8,10 @@ pub(super) fn approval_granted_item(approval: &PendingApproval) -> TimelineItem 
   let content = if approval.action == "run_plugin_command" {
     format!(
       "Approved plugin command {}.",
-      approval.command.as_deref().unwrap_or(&approval.relative_path)
+      approval
+        .command
+        .as_deref()
+        .unwrap_or(&approval.relative_path)
     )
   } else {
     format!(
@@ -31,7 +34,10 @@ pub(super) fn approval_denied_item(approval: &PendingApproval) -> TimelineItem {
   let content = if approval.action == "run_plugin_command" {
     format!(
       "Denied plugin command {}.",
-      approval.command.as_deref().unwrap_or(&approval.relative_path)
+      approval
+        .command
+        .as_deref()
+        .unwrap_or(&approval.relative_path)
     )
   } else {
     format!("Denied {} for {}.", approval.action, approval.relative_path)
