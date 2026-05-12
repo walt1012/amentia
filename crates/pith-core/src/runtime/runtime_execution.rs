@@ -22,6 +22,7 @@ pub(crate) struct RuntimeExecutionCounts {
   active_turn_count: usize,
   running_turn_count: usize,
   running_approval_count: usize,
+  running_plugin_command_count: usize,
 }
 
 impl RuntimeExecutionCounts {
@@ -39,6 +40,10 @@ impl RuntimeExecutionCounts {
 
   pub(crate) fn running_approval_count(&self) -> usize {
     self.running_approval_count
+  }
+
+  pub(crate) fn running_plugin_command_count(&self) -> usize {
+    self.running_plugin_command_count
   }
 }
 
@@ -68,6 +73,7 @@ impl RuntimeExecutionState {
       active_turn_count: self.active_turns.count(),
       running_turn_count: self.running.running_turn_count(),
       running_approval_count: self.running.running_approval_count(),
+      running_plugin_command_count: self.running.running_plugin_command_count(),
     }
   }
 
@@ -141,6 +147,17 @@ impl RuntimeExecutionState {
       .insert_running_approval(approval_id, thread_id, cancellation);
   }
 
+  pub(crate) fn insert_running_plugin_command(
+    &mut self,
+    running_id: String,
+    thread_id: String,
+    cancellation: GenerationCancellation,
+  ) {
+    self
+      .running
+      .insert_running_plugin_command(running_id, thread_id, cancellation);
+  }
+
   pub(crate) fn request_running_cancel_for_thread(
     &mut self,
     thread_id: &str,
@@ -166,6 +183,10 @@ impl RuntimeExecutionState {
 
   pub(crate) fn remove_running_approval(&mut self, approval_id: &str) {
     self.running.remove_running_approval(approval_id);
+  }
+
+  pub(crate) fn remove_running_plugin_command(&mut self, running_id: &str) {
+    self.running.remove_running_plugin_command(running_id);
   }
 }
 
@@ -195,6 +216,7 @@ mod tests {
     assert_eq!(counts.pending_approval_count(), 1);
     assert_eq!(counts.active_turn_count(), 0);
     assert_eq!(counts.running_approval_count(), 0);
+    assert_eq!(counts.running_plugin_command_count(), 0);
   }
 
   #[test]
@@ -245,6 +267,28 @@ mod tests {
   }
 
   #[test]
+  fn running_plugin_command_counts_and_cancels_by_thread() {
+    let mut state = RuntimeExecutionState::empty();
+    let cancellation = GenerationCancellation::new();
+    state.insert_running_plugin_command(
+      "plugin-command-1".to_string(),
+      "thread-1".to_string(),
+      cancellation.clone(),
+    );
+
+    assert_eq!(state.counts().running_plugin_command_count(), 1);
+    let cancelled = state
+      .request_running_cancel_for_thread("thread-1")
+      .expect("running plugin command cancelled");
+
+    assert_eq!(cancelled.turn_id(), None);
+    assert_eq!(cancelled.thread_id(), "thread-1");
+    assert!(cancellation.is_cancelled());
+    state.remove_running_plugin_command("plugin-command-1");
+    assert_eq!(state.counts().running_plugin_command_count(), 0);
+  }
+
+  #[test]
   fn running_turn_cancel_reports_turn_identity() {
     let mut state = RuntimeExecutionState::empty();
     let cancellation = GenerationCancellation::new();
@@ -289,6 +333,7 @@ mod tests {
     assert!(approval_cancellation.is_cancelled());
     assert_eq!(state.counts().running_turn_count(), 1);
     assert_eq!(state.counts().running_approval_count(), 1);
+    assert_eq!(state.counts().running_plugin_command_count(), 0);
     assert!(!state.take_pending_running_cancel("queued-thread"));
   }
 
@@ -314,5 +359,6 @@ mod tests {
     assert!(approval_cancellation.is_cancelled());
     assert_eq!(state.counts().running_turn_count(), 0);
     assert_eq!(state.counts().running_approval_count(), 0);
+    assert_eq!(state.counts().running_plugin_command_count(), 0);
   }
 }

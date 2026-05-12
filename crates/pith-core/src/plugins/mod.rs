@@ -10,6 +10,7 @@ pub(crate) mod plugin_command_memory;
 pub(crate) mod plugin_command_memory_body;
 pub(crate) mod plugin_command_memory_tags;
 pub(crate) mod plugin_command_preparation;
+pub(crate) mod plugin_command_runner;
 pub(crate) mod plugin_command_text;
 pub(crate) mod plugin_command_timeline;
 pub(crate) mod plugin_command_types;

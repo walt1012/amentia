@@ -5,6 +5,7 @@ pub(super) fn execution_control_check(
   active_turn_count: usize,
   running_turn_count: usize,
   running_approval_count: usize,
+  running_plugin_command_count: usize,
 ) -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "executionControls".to_string(),
@@ -14,6 +15,7 @@ pub(super) fn execution_control_check(
       active_turn_count,
       running_turn_count,
       running_approval_count,
+      running_plugin_command_count,
     )
     .to_string(),
     detail: execution_control_detail(
@@ -21,6 +23,7 @@ pub(super) fn execution_control_check(
       active_turn_count,
       running_turn_count,
       running_approval_count,
+      running_plugin_command_count,
     ),
   }
 }
@@ -30,7 +33,8 @@ pub(super) fn bounded_runtime_check() -> RuntimeReadinessCheck {
     id: "boundedRuntime".to_string(),
     title: "Bounded Runtime".to_string(),
     status: "ready".to_string(),
-    detail: "Shell, llama.cpp, web search, and git helpers are bounded.".to_string(),
+    detail: "Shell, llama.cpp, web search, git helpers, and plugin runners are bounded."
+      .to_string(),
   }
 }
 
@@ -39,10 +43,15 @@ fn execution_control_status(
   active_turn_count: usize,
   running_turn_count: usize,
   running_approval_count: usize,
+  running_plugin_command_count: usize,
 ) -> &'static str {
   if pending_approval_count > 0 {
     "needs_approval"
-  } else if active_turn_count > 0 || running_turn_count > 0 || running_approval_count > 0 {
+  } else if active_turn_count > 0
+    || running_turn_count > 0
+    || running_approval_count > 0
+    || running_plugin_command_count > 0
+  {
     "running"
   } else {
     "ready"
@@ -54,6 +63,7 @@ fn execution_control_detail(
   active_turn_count: usize,
   running_turn_count: usize,
   running_approval_count: usize,
+  running_plugin_command_count: usize,
 ) -> String {
   if pending_approval_count > 0 {
     return format!("{pending_approval_count} approval request(s) are pending.");
@@ -66,6 +76,11 @@ fn execution_control_detail(
   }
   if running_approval_count > 0 {
     return format!("{running_approval_count} approval execution(s) are active and cancellable.");
+  }
+  if running_plugin_command_count > 0 {
+    return format!(
+      "{running_plugin_command_count} plugin command execution(s) are active and cancellable."
+    );
   }
 
   "Risky actions require approval, and local executions can be cancelled.".to_string()

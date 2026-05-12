@@ -119,6 +119,11 @@ fn insert_execution_metrics(
     "runningApprovalCount",
     execution_counts.running_approval_count().to_string(),
   );
+  insert_metric(
+    metrics,
+    "runningPluginCommandCount",
+    execution_counts.running_plugin_command_count().to_string(),
+  );
 }
 
 fn insert_memory_metrics(metrics: &mut HashMap<String, String>, context: &RuntimeContext) {

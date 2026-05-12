@@ -1,4 +1,5 @@
 use pith_memory::MemoryNote;
+use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
@@ -11,6 +12,7 @@ pub struct PreparedPluginCommandRun {
 #[derive(Debug)]
 pub struct CompletedPluginCommandRun {
   pub(super) request_id: serde_json::Value,
+  pub(super) running_id: String,
   pub(super) output: std::result::Result<PluginCommandOutput, (i32, String)>,
 }
 
@@ -22,6 +24,8 @@ pub(super) struct PluginCommandSnapshot {
   pub(super) input: Option<String>,
   pub(super) command_item: TimelineItem,
   pub(super) memory_notes: Vec<MemoryNote>,
+  pub(super) cancellation: GenerationCancellation,
+  pub(super) running_id: String,
 }
 
 #[derive(Debug)]

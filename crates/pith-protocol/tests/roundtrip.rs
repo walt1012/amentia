@@ -357,6 +357,71 @@ fn plugin_command_registry_round_trips() {
 }
 
 #[test]
+fn plugin_command_execution_contract_round_trips_default_shape() {
+  let execution = PluginCommandExecutionSummary {
+    kind: "stdio.notionSync".to_string(),
+    driver: "stdio".to_string(),
+    entrypoint: Some("bin/notion-sync".to_string()),
+    input: PluginCommandEnvelopeSummary {
+      envelope: "pith.plugin.command.input".to_string(),
+      fields: vec![
+        PluginCommandEnvelopeFieldSummary {
+          name: "threadId".to_string(),
+          kind: "string".to_string(),
+          required: true,
+          description: Some("Runtime thread identifier.".to_string()),
+        },
+        PluginCommandEnvelopeFieldSummary {
+          name: "input".to_string(),
+          kind: "text".to_string(),
+          required: false,
+          description: Some("Optional user command input.".to_string()),
+        },
+        PluginCommandEnvelopeFieldSummary {
+          name: "workspace".to_string(),
+          kind: "workspaceSummary".to_string(),
+          required: false,
+          description: Some("Selected workspace context.".to_string()),
+        },
+      ],
+    },
+    output: PluginCommandEnvelopeSummary {
+      envelope: "pith.plugin.command.output".to_string(),
+      fields: vec![
+        PluginCommandEnvelopeFieldSummary {
+          name: "items".to_string(),
+          kind: "timelineItems".to_string(),
+          required: true,
+          description: Some("Timeline items to append.".to_string()),
+        },
+        PluginCommandEnvelopeFieldSummary {
+          name: "memoryNotes".to_string(),
+          kind: "memoryNotes".to_string(),
+          required: false,
+          description: Some("Optional memory notes to store.".to_string()),
+        },
+      ],
+    },
+    supported: true,
+  };
+
+  let value = serde_json::to_value(&execution).expect("serialize plugin execution");
+  assert!(value.get("entrypoint").is_some());
+  assert!(value.get("supported").is_some());
+  assert_eq!(value["input"]["fields"][0]["name"], "threadId");
+  assert_eq!(value["output"]["fields"][1]["name"], "memoryNotes");
+
+  let decoded: PluginCommandExecutionSummary =
+    serde_json::from_value(value).expect("deserialize plugin execution");
+
+  assert_eq!(decoded.driver, "stdio");
+  assert_eq!(decoded.entrypoint.as_deref(), Some("bin/notion-sync"));
+  assert_eq!(decoded.input.fields.len(), 3);
+  assert_eq!(decoded.output.fields.len(), 2);
+  assert!(decoded.supported);
+}
+
+#[test]
 fn plugin_hook_registry_round_trips() {
   let result = PluginHookRegistryResult {
     hooks: vec![PluginHookSummary {

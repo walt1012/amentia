@@ -23,6 +23,13 @@ impl RuntimeRunningCancellation {
     }
   }
 
+  fn plugin_command(thread_id: String) -> Self {
+    Self {
+      turn_id: None,
+      thread_id,
+    }
+  }
+
   pub(crate) fn turn_id(&self) -> Option<&str> {
     self.turn_id.as_deref()
   }
@@ -36,6 +43,7 @@ impl RuntimeRunningCancellation {
 pub(crate) struct RuntimeRunningExecutionState {
   running_turns: HashMap<String, RunningCancellation>,
   running_approvals: HashMap<String, RunningCancellation>,
+  running_plugin_commands: HashMap<String, RunningCancellation>,
   pending_cancellations: HashSet<String>,
 }
 
@@ -50,6 +58,7 @@ impl RuntimeRunningExecutionState {
     Self {
       running_turns: HashMap::new(),
       running_approvals: HashMap::new(),
+      running_plugin_commands: HashMap::new(),
       pending_cancellations: HashSet::new(),
     }
   }
@@ -60,6 +69,10 @@ impl RuntimeRunningExecutionState {
 
   pub(crate) fn running_approval_count(&self) -> usize {
     self.running_approvals.len()
+  }
+
+  pub(crate) fn running_plugin_command_count(&self) -> usize {
+    self.running_plugin_commands.len()
   }
 
   pub(crate) fn insert_running_turn(
@@ -123,13 +136,44 @@ impl RuntimeRunningExecutionState {
     ))
   }
 
+  pub(crate) fn insert_running_plugin_command(
+    &mut self,
+    running_id: String,
+    thread_id: String,
+    cancellation: GenerationCancellation,
+  ) {
+    self.running_plugin_commands.insert(
+      running_id,
+      RunningCancellation {
+        thread_id,
+        cancellation,
+      },
+    );
+  }
+
+  pub(crate) fn cancel_running_plugin_command_for_thread(
+    &mut self,
+    thread_id: &str,
+  ) -> Option<RuntimeRunningCancellation> {
+    let running_command = self
+      .running_plugin_commands
+      .iter()
+      .find(|(_, command)| command.thread_id == thread_id)
+      .map(|(_, command)| command.clone())?;
+    running_command.cancellation.cancel();
+    Some(RuntimeRunningCancellation::plugin_command(
+      running_command.thread_id,
+    ))
+  }
+
   pub(crate) fn request_cancel_for_thread(
     &mut self,
     thread_id: &str,
   ) -> Option<RuntimeRunningCancellation> {
     let cancellation = self
       .cancel_running_turn_for_thread(thread_id)
-      .or_else(|| self.cancel_running_approval_for_thread(thread_id));
+      .or_else(|| self.cancel_running_approval_for_thread(thread_id))
+      .or_else(|| self.cancel_running_plugin_command_for_thread(thread_id));
     if cancellation.is_some() {
       self.pending_cancellations.remove(thread_id);
     } else {
@@ -149,6 +193,9 @@ impl RuntimeRunningExecutionState {
     for running_approval in self.running_approvals.values() {
       running_approval.cancellation.cancel();
     }
+    for running_plugin_command in self.running_plugin_commands.values() {
+      running_plugin_command.cancellation.cancel();
+    }
     self.pending_cancellations.clear();
   }
 
@@ -160,10 +207,15 @@ impl RuntimeRunningExecutionState {
     self.running_approvals.remove(approval_id);
   }
 
+  pub(crate) fn remove_running_plugin_command(&mut self, running_id: &str) {
+    self.running_plugin_commands.remove(running_id);
+  }
+
   pub(crate) fn clear_after_recovery(&mut self) {
     self.cancel_all_running();
     self.running_turns.clear();
     self.running_approvals.clear();
+    self.running_plugin_commands.clear();
     self.pending_cancellations.clear();
   }
 }

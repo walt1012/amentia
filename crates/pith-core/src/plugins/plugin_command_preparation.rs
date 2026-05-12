@@ -1,7 +1,8 @@
+use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::build_command_registry;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams};
 
-use super::plugin_command_builtins::is_supported_builtin_execution;
+use super::plugin_command_execution::is_supported_plugin_command_execution;
 use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{PluginCommandSnapshot, PreparedPluginCommandRun};
 use crate::context_memory_pack::pack_memory_notes_for_context;
@@ -24,12 +25,22 @@ pub fn prepare_plugin_command_run(
       "Plugin command not found",
     ));
   };
-  if !is_supported_builtin_execution(command.execution_kind.as_deref()) {
+  if command.execution.is_none() {
     return Err(JsonRpcResponse::error(
       request.id,
       -32053,
       format!(
         "Plugin command `{}` requires an explicit execution contract.",
+        command.command_id
+      ),
+    ));
+  }
+  if !is_supported_plugin_command_execution(&command) {
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32053,
+      format!(
+        "Plugin command `{}` requires a supported execution contract.",
         command.command_id
       ),
     ));
@@ -79,6 +90,19 @@ pub fn prepare_plugin_command_run(
     input.as_deref(),
     &memory_context,
   );
+  let cancellation = GenerationCancellation::new();
+  if context
+    .execution_state
+    .take_pending_running_cancel(&params.thread_id)
+  {
+    cancellation.cancel();
+  }
+  let running_id = format!("{}::{}", params.thread_id, command.command_id);
+  context.execution_state.insert_running_plugin_command(
+    running_id.clone(),
+    params.thread_id.clone(),
+    cancellation.clone(),
+  );
 
   Ok(PreparedPluginCommandRun {
     request_id: request.id,
@@ -89,6 +113,8 @@ pub fn prepare_plugin_command_run(
       input,
       command_item,
       memory_notes,
+      cancellation,
+      running_id,
     },
   })
 }

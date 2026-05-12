@@ -12,6 +12,9 @@ pub fn complete_prepared_plugin_command_run(
   context: &mut RuntimeContext,
   completed: CompletedPluginCommandRun,
 ) -> JsonRpcResponse {
+  context
+    .execution_state
+    .remove_running_plugin_command(&completed.running_id);
   match completed.output {
     Ok(output) => match complete_plugin_command_items(context, output) {
       Ok(result) => JsonRpcResponse::success(completed.request_id, &result),

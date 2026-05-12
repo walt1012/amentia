@@ -8,6 +8,7 @@ pub(super) struct ReadinessSummaryInput<'a> {
   pub(super) active_turn_count: usize,
   pub(super) running_turn_count: usize,
   pub(super) running_approval_count: usize,
+  pub(super) running_plugin_command_count: usize,
 }
 
 pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
@@ -21,6 +22,7 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
     active_turn_count,
     running_turn_count,
     running_approval_count,
+    running_plugin_command_count,
   } = input;
 
   match status {
@@ -39,7 +41,8 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
     "running" => {
       let active_execution_count = active_turn_count
         .saturating_add(running_turn_count)
-        .saturating_add(running_approval_count);
+        .saturating_add(running_approval_count)
+        .saturating_add(running_plugin_command_count);
       format!("Runtime is running {active_execution_count} local execution(s).")
     }
     "ready" if !first_request_sent => "Runtime ready for the first local request.".to_string(),

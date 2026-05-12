@@ -95,8 +95,13 @@ The runtime resolves bundled plugins in this order:
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 
-The plugin root can stay light during Milestone 3. Real third-party plugin execution belongs to
-Milestone 4 after the local model, runtime recovery, sandbox, and UI ownership boundaries are stable.
+Milestone 4 development should keep plugin discovery separate from plugin execution. Discovery owns
+manifest validation, registries, connector metadata, and enablement state. Execution owns bounded
+runners, auth policy, credential storage, cancellation, sandbox policy, output envelopes, and logs.
+
+The minimal runner surface starts with plugin-bundle-scoped `stdio` entrypoints. Do not add new
+connector surfaces before runner logs, failures, native sandbox binding, and output envelopes are
+inspectable.
 
 ## GitHub Actions Notes
 

@@ -48,14 +48,15 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestone 1 and Milestone 2 are complete on the active development branch.
+Milestones 1, 2, and 3 are complete on the active development branch.
 
-Milestone 3 is underway. The current focus is first-use local model delivery and daily-driver polish
-while keeping the UI compact, local-first, and workspace-safe.
+Milestone 4 is underway. The current focus is turning plugins into real bounded local capabilities
+instead of prompt templates while keeping the app compact, local-first, and workspace-safe.
 
 The active branch includes guided local model choice, download, and activation, pause/continue/cancel
-with persisted recovery state, workspace-bound thread filtering, compact setup guidance, progressive
-inspector disclosure, and timeline/diff readability polish.
+with persisted recovery state, workspace-bound thread filtering, bounded shell/model/web-search
+execution, native sandbox diagnostics, progressive inspector disclosure, and typed plugin command
+contracts with a minimal bounded `stdio` runner path.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 

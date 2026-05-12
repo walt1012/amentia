@@ -87,12 +87,17 @@ M4 makes plugins real local capabilities, not prompt templates:
 
 ## M4 Status
 
-- Done: command registries expose typed execution contracts with driver, entrypoint, support status, input envelope, and output envelope.
-- Active: add the minimal bounded plugin runner path before adding new connector surfaces.
+- Done: command registries expose typed execution contracts with driver, entrypoint,
+  support status, input envelope, and output envelope.
+- Done: plugin registry assembly is split by capability, connector, command, hook,
+  metadata, and execution-contract ownership.
+- Done: minimal `stdio` plugin runner path is bounded, plugin-root scoped,
+  cancellable, and can accept runner-owned timeline items.
+- Active: harden runner logs, failure inspection, and native sandbox binding before adding new connector surfaces.
 
 ## Next Order
 
-1. Add a minimal bounded plugin runner path before adding any new connector surface.
+1. Harden plugin runner logs, failure inspection, and native sandbox binding.
 2. Add connector auth lifecycle for one Notion-like connector path only.
 3. Keep web search as the only active retrieval layer unless user workflows prove local RAG is needed.
 4. Keep Swift and Rust ownership changes tied to real runtime, plugin, model, or sandbox boundaries.

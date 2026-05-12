@@ -149,6 +149,65 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
 }
 
 #[test]
+fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-stdio-status",
+    "stdio-tools",
+    "Stdio Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    source_root.join("commands").join("stdio-tools.run.json"),
+    r#"{
+  "title": "Run Stdio Tool",
+  "description": "Run a local stdio tool from the plugin bundle.",
+  "prompt": "Run the local stdio tool.",
+  "execution": {
+    "kind": "stdio.echo",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "stdio-tools".to_string(),
+      name: "stdio-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Stdio Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Stdio command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:stdio-tools.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["execution"]["driver"], "stdio");
+  assert_eq!(commands[0]["execution"]["entrypoint"], "runner.sh");
+  assert_eq!(commands[0]["execution"]["supported"], true);
+}
+
+#[test]
 fn plugin_hook_registry_lists_enabled_hook_plugins() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(

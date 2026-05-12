@@ -294,6 +294,67 @@ fn build_command_registry_loads_enabled_plugin_commands() {
 }
 
 #[test]
+fn build_command_registry_applies_default_execution_contract() {
+  let plugin_root = create_temp_plugin_root("command-default-contract");
+  let plugin_dir = plugin_root.join("notion-runner");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "notion-runner",
+  "version": "0.1.0",
+  "displayName": "Notion Runner",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:notion.sync-page"
+  ],
+  "permissions": [
+    "network.outbound"
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  fs::write(
+    commands_dir.join("notion.sync-page.json"),
+    r#"{
+  "title": "Sync Notion Page",
+  "description": "Run the Notion page sync command.",
+  "prompt": "Sync the selected Notion page.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "bin/notion-sync"
+  }
+}"#,
+  )
+  .expect("write command definition");
+
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+  let commands = build_command_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  let execution = commands[0]
+    .execution
+    .as_ref()
+    .expect("command execution contract");
+  assert_eq!(execution.kind, "stdio.notionSync");
+  assert_eq!(execution.driver, "stdio");
+  assert_eq!(execution.entrypoint.as_deref(), Some("bin/notion-sync"));
+  assert_eq!(execution.input.envelope, "pith.plugin.command.input");
+  assert_eq!(execution.input.fields.len(), 3);
+  assert_eq!(execution.input.fields[0].name, "threadId");
+  assert_eq!(execution.input.fields[1].name, "input");
+  assert_eq!(execution.input.fields[2].name, "workspace");
+  assert_eq!(execution.output.envelope, "pith.plugin.command.output");
+  assert_eq!(execution.output.fields.len(), 2);
+  assert_eq!(execution.output.fields[0].name, "items");
+  assert_eq!(execution.output.fields[1].name, "memoryNotes");
+}
+
+#[test]
 fn build_hook_registry_loads_enabled_plugin_hooks() {
   let plugin_root = create_temp_plugin_root("hook-registry");
   let plugin_dir = plugin_root.join("shell-recorder");
