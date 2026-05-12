@@ -137,7 +137,10 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
     commands[0]["execution"]["input"]["envelope"],
     "notion.createTask.input"
   );
-  assert_eq!(commands[0]["execution"]["input"]["fields"][0]["name"], "title");
+  assert_eq!(
+    commands[0]["execution"]["input"]["fields"][0]["name"],
+    "title"
+  );
   assert_eq!(
     commands[0]["execution"]["output"]["envelope"],
     "notion.createTask.output"

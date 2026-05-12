@@ -3,13 +3,12 @@ use std::path::Path;
 
 use crate::io::{read_command_manifest, read_hook_manifest, read_manifest};
 use crate::manifest::{
-  PluginCommandEnvelopeFieldManifest, PluginCommandEnvelopeManifest,
-  PluginCommandExecutionManifest,
+  PluginCommandEnvelopeFieldManifest, PluginCommandEnvelopeManifest, PluginCommandExecutionManifest,
 };
 use crate::types::{
-  PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry,
-  PluginCommandEnvelopeEntry, PluginCommandEnvelopeFieldEntry, PluginCommandExecutionEntry,
-  PluginConnectorEntry, PluginHookEntry,
+  PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginCommandEnvelopeEntry,
+  PluginCommandEnvelopeFieldEntry, PluginCommandExecutionEntry, PluginConnectorEntry,
+  PluginHookEntry,
 };
 
 pub fn build_capability_registry(
@@ -265,7 +264,12 @@ fn default_input_envelope() -> PluginCommandEnvelopeEntry {
     fields: vec![
       command_envelope_field("threadId", "string", true, "Runtime thread identifier."),
       command_envelope_field("input", "text", false, "Optional user command input."),
-      command_envelope_field("workspace", "workspaceSummary", false, "Selected workspace context."),
+      command_envelope_field(
+        "workspace",
+        "workspaceSummary",
+        false,
+        "Selected workspace context.",
+      ),
     ],
   }
 }

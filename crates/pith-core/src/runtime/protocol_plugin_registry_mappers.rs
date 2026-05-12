@@ -1,9 +1,9 @@
 use pith_plugin_host::{
   PluginCapabilityRegistration as HostPluginCapabilityRegistration,
+  PluginCommandEntry as HostPluginCommandEntry,
   PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
   PluginCommandEnvelopeFieldEntry as HostPluginCommandEnvelopeFieldEntry,
-  PluginCommandEntry as HostPluginCommandEntry, PluginConnectorEntry as HostPluginConnectorEntry,
-  PluginHookEntry as HostPluginHookEntry,
+  PluginConnectorEntry as HostPluginConnectorEntry, PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
   PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,

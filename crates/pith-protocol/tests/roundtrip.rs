@@ -1,12 +1,12 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
-  PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
-  PluginCommandExecutionSummary, PluginCommandRegistryResult, PluginCommandRunParams,
-  PluginCommandSummary, PluginConnectorRegistryResult, PluginConnectorSummary,
-  PluginHookRegistryResult, PluginHookSummary, PluginInstallParams, PluginRemoveParams,
-  PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary,
-  TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
+  PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
+  PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
+  PluginHookSummary, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
+  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
+  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
