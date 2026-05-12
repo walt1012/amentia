@@ -115,11 +115,13 @@ pub(super) fn run_external_plugin_command(
   cancellation: &GenerationCancellation,
 ) -> PluginRunnerRunResult<PluginRunnerResult> {
   if cancellation.is_cancelled() {
-    return Err(PluginRunnerFailure::empty(
-      -32055,
-      format!("Plugin command `{}` was cancelled.", command.command_id),
-    )
-    .boxed());
+    return Err(
+      PluginRunnerFailure::empty(
+        -32055,
+        format!("Plugin command `{}` was cancelled.", command.command_id),
+      )
+      .boxed(),
+    );
   }
 
   let execution = command.execution.as_ref().ok_or_else(|| {
@@ -141,9 +143,8 @@ pub(super) fn run_external_plugin_command(
     .ok_or_else(|| unsupported_execution_error(command))?;
   let plugin_root = plugin_root_for_command(command)
     .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
-  let entrypoint_path =
-    safe_entrypoint_path(&plugin_root, entrypoint)
-      .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
+  let entrypoint_path = safe_entrypoint_path(&plugin_root, entrypoint)
+    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
   let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
     .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
   let sandbox_attributes = sandbox.attributes();
@@ -207,15 +208,17 @@ fn run_stdio_runner(
     {
       terminate_process_group_or_child(&mut child, PLUGIN_RUNNER_GRACE_PERIOD);
       let _ = child.wait();
-      return Err(PluginRunnerFailure::new(
-        -32054,
-        format!(
-          "Plugin command `{}` failed to receive input: {error}",
-          command.command_id
-        ),
-        sandbox_attributes.clone(),
-      )
-      .boxed());
+      return Err(
+        PluginRunnerFailure::new(
+          -32054,
+          format!(
+            "Plugin command `{}` failed to receive input: {error}",
+            command.command_id
+          ),
+          sandbox_attributes.clone(),
+        )
+        .boxed(),
+      );
     }
   }
 
@@ -260,45 +263,51 @@ fn run_stdio_runner(
 
   match wait.reason {
     ChildExitReason::Cancelled => {
-      return Err(PluginRunnerFailure::with_output(
-        -32055,
-        format!("Plugin command `{}` was cancelled.", command.command_id),
-        stdout,
-        stderr,
-        failure_attributes,
+      return Err(
+        PluginRunnerFailure::with_output(
+          -32055,
+          format!("Plugin command `{}` was cancelled.", command.command_id),
+          stdout,
+          stderr,
+          failure_attributes,
+        )
+        .boxed(),
       )
-      .boxed())
     }
     ChildExitReason::TimedOut => {
-      return Err(PluginRunnerFailure::with_output(
-        -32056,
+      return Err(
+        PluginRunnerFailure::with_output(
+          -32056,
+          format!(
+            "Plugin command `{}` timed out after {} seconds.",
+            command.command_id,
+            PLUGIN_RUNNER_TIMEOUT.as_secs()
+          ),
+          stdout,
+          stderr,
+          failure_attributes,
+        )
+        .boxed(),
+      )
+    }
+    ChildExitReason::Completed => {}
+  }
+  if !wait.status.success() {
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
         format!(
-          "Plugin command `{}` timed out after {} seconds.",
+          "Plugin command `{}` exited with status {}.{}",
           command.command_id,
-          PLUGIN_RUNNER_TIMEOUT.as_secs()
+          wait.status,
+          stderr_suffix(&stderr)
         ),
         stdout,
         stderr,
         failure_attributes,
       )
-      .boxed())
-    }
-    ChildExitReason::Completed => {}
-  }
-  if !wait.status.success() {
-    return Err(PluginRunnerFailure::with_output(
-      -32054,
-      format!(
-        "Plugin command `{}` exited with status {}.{}",
-        command.command_id,
-        wait.status,
-        stderr_suffix(&stderr)
-      ),
-      stdout,
-      stderr,
-      failure_attributes,
-    )
-    .boxed());
+      .boxed(),
+    );
   }
 
   Ok(PluginRunnerProcessOutput {
