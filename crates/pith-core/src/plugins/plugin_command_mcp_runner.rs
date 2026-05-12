@@ -414,7 +414,7 @@ fn mcp_tool_response(output: &str) -> Option<PluginMcpJsonRpcEnvelope> {
         None
       }
     })
-    .last()
+    .next_back()
 }
 
 fn is_mcp_tool_response_id(id: Option<&Value>) -> bool {
