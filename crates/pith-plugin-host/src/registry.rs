@@ -142,10 +142,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         .memory
         .as_ref()
         .map(|memory| memory.note_title.clone());
-      let execution = command
-        .execution
-        .as_ref()
-        .and_then(command_execution_entry);
+      let execution = command.execution.as_ref().and_then(command_execution_entry);
       let execution_kind = execution.as_ref().map(|execution| execution.kind.clone());
       let memory_note_source = command
         .memory

@@ -38,7 +38,10 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
   assert_eq!(commands[0]["pluginId"], "workspace-notes");
   assert_eq!(commands[0]["title"], "Capture Workspace Note");
   assert_eq!(commands[0]["executionKind"], "builtin.workspaceReadmeNote");
-  assert_eq!(commands[0]["execution"]["kind"], "builtin.workspaceReadmeNote");
+  assert_eq!(
+    commands[0]["execution"]["kind"],
+    "builtin.workspaceReadmeNote"
+  );
   assert_eq!(commands[0]["execution"]["driver"], "builtin");
   assert_eq!(commands[0]["execution"]["supported"], true);
 }
@@ -46,8 +49,11 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
 #[test]
 fn plugin_command_registry_marks_unsupported_execution_contracts() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root =
-    create_temp_plugin_bundle("plugin-command-contract-status", "notion-tools", "Notion Tools");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-contract-status",
+    "notion-tools",
+    "Notion Tools",
+  );
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
     source_root.join("commands").join("notion-tools.run.json"),
