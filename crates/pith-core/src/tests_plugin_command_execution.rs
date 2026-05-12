@@ -563,6 +563,177 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_executes_mcp_stdio_connector_action() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-runner",
+    "notion-mcp",
+    "Notion MCP",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-mcp",
+  "version": "0.1.0",
+  "displayName": "Notion MCP",
+  "description": "Connector-backed MCP command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:notion-mcp.create-task", "mcp_server:notion", "connector:notion"],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "notion",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["insert_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("notion-mcp.create-task.json"),
+    r#"{
+  "title": "Create Notion Task",
+  "description": "Create a Notion task through an MCP server.",
+  "prompt": "Create a task in Notion from the current thread.",
+  "execution": {
+    "kind": "mcp.notionCreateTask",
+    "driver": "mcp",
+    "entrypoint": "notion.createTask"
+  }
+}"#,
+  )
+  .expect("write mcp command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+payload=$(cat)
+case "$payload" in *'"method":"tools/call"'*) method=true;; *) method=false;; esac
+case "$payload" in *'"name":"createTask"'*) tool=true;; *) tool=false;; esac
+case "$payload" in *'"provider":"pith.localCredentialProvider"'*) provider=true;; *) provider=false;; esac
+case "$payload" in *'"handle":"notion-mcp::notion"'*) handle=true;; *) handle=false;; esac
+case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"method=%s tool=%s provider=%s handle=%s secretLeak=%s"}]}}\n' "$method" "$tool" "$provider" "$handle" "$secret_leak"
+"#,
+  )
+  .expect("write mcp server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions).expect("set mcp server permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-mcp".to_string(),
+      name: "notion-mcp".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion MCP".to_string(),
+      status: "ready".to_string(),
+      description: "Connector-backed MCP command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-mcp.create-task".to_string(),
+        "mcp_server:notion".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Connector Thread"
+      })),
+    ),
+  );
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-mcp::notion"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-mcp::notion-mcp.create-task",
+        "input": "Create a follow-up task"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["attributes"]["executionKind"], "mcp.notionCreateTask");
+  assert_eq!(items[1]["attributes"]["mcpServerId"], "notion");
+  assert_eq!(items[1]["attributes"]["mcpToolName"], "createTask");
+  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerCredentialProviders"],
+    "pith.localCredentialProvider"
+  );
+  assert_eq!(
+    items[1]["content"],
+    "method=true tool=true provider=true handle=true secretLeak=false"
+  );
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_records_stdio_runner_failure() {
   use std::os::unix::fs::PermissionsExt;
 

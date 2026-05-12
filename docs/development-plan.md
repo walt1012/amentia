@@ -67,17 +67,19 @@ M4 turns plugins into bounded local capabilities:
   bounded runner envelopes and timeline metadata.
 - Done: connector credential references now use a local provider handle instead
   of scattering credential-shaped fields through runner input.
-- Active: connect those local provider handles to real MCP/stdio connector
-  execution without expanding the UI surface.
+- Done: first MCP stdio adapter runs declared MCP server commands through the
+  bounded plugin process path and parses `tools/call` responses.
+- Active: harden MCP connector execution with real credential resolution,
+  permission prompts, and stronger protocol recovery.
 
 ## Next Order
 
-1. Add the first real MCP-backed connector action behind the bounded runner
-   contract.
+1. Add real local credential resolution behind the provider handle.
 2. Keep connector credentials local and inspectable, with explicit permission
    and sandbox boundaries.
-3. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
-4. Let model-driven tool choice mature slowly; keep deterministic routing where
+3. Add permission prompts for connector network/MCP actions.
+4. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
+5. Let model-driven tool choice mature slowly; keep deterministic routing where
    tiny local models are not reliable yet.
 
 ## Not Now

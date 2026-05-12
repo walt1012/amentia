@@ -14,6 +14,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use serde::Deserialize;
 use serde_json::json;
 
+use super::plugin_command_mcp_runner::{is_supported_mcp_execution, run_mcp_plugin_command};
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 
@@ -23,7 +24,7 @@ const PLUGIN_RUNNER_GRACE_PERIOD: Duration = Duration::from_millis(250);
 const PLUGIN_RUNNER_OUTPUT_LIMIT: usize = 64 * 1024;
 const PLUGIN_RUNNER_LOG_PREVIEW_LIMIT: usize = 2048;
 
-type PluginRunnerRunResult<T> = std::result::Result<T, Box<PluginRunnerFailure>>;
+pub(super) type PluginRunnerRunResult<T> = std::result::Result<T, Box<PluginRunnerFailure>>;
 
 pub(super) struct PluginRunnerResult {
   pub(super) execution_kind: String,
@@ -40,13 +41,13 @@ pub(super) struct PluginRunnerFailure {
   pub(super) attributes: HashMap<String, String>,
 }
 
-struct PluginRunnerProcessOutput {
-  stdout: String,
-  attributes: HashMap<String, String>,
+pub(super) struct PluginRunnerProcessOutput {
+  pub(super) stdout: String,
+  pub(super) attributes: HashMap<String, String>,
 }
 
 impl PluginRunnerFailure {
-  fn empty(code: i32, message: String) -> Self {
+  pub(super) fn empty(code: i32, message: String) -> Self {
     Self::with_output(code, message, String::new(), String::new(), HashMap::new())
   }
 
@@ -54,7 +55,7 @@ impl PluginRunnerFailure {
     Self::with_output(code, message, String::new(), String::new(), attributes)
   }
 
-  fn with_output(
+  pub(super) fn with_output(
     code: i32,
     message: String,
     stdout: String,
@@ -70,11 +71,11 @@ impl PluginRunnerFailure {
     }
   }
 
-  fn from_pair((code, message): (i32, String)) -> Self {
+  pub(super) fn from_pair((code, message): (i32, String)) -> Self {
     Self::empty(code, message)
   }
 
-  fn boxed(self) -> Box<Self> {
+  pub(super) fn boxed(self) -> Box<Self> {
     Box::new(self)
   }
 }
@@ -100,11 +101,13 @@ struct PluginRunnerTimelineItemEnvelope {
 
 pub(crate) fn is_supported_external_plugin_execution(command: &HostPluginCommandEntry) -> bool {
   command.execution.as_ref().is_some_and(|execution| {
-    execution.driver == "stdio"
-      && execution
+    if execution.driver == "stdio" {
+      return execution
         .entrypoint
         .as_deref()
-        .is_some_and(|entrypoint| !entrypoint.trim().is_empty())
+        .is_some_and(|entrypoint| !entrypoint.trim().is_empty());
+    }
+    execution.driver == "mcp" && is_supported_mcp_execution(command, execution)
   })
 }
 
@@ -137,6 +140,17 @@ pub(super) fn run_external_plugin_command(
     .boxed()
   })?;
   if execution.driver != "stdio" {
+    if execution.driver == "mcp" {
+      return run_mcp_plugin_command(
+        command,
+        execution,
+        thread_id,
+        workspace,
+        input,
+        connector_refs,
+        cancellation,
+      );
+    }
     return Err(unsupported_execution_error(command));
   }
   let entrypoint = execution
@@ -164,6 +178,7 @@ pub(super) fn run_external_plugin_command(
     command,
     &sandbox,
     &entrypoint_path,
+    &[],
     &input_payload.to_string(),
     cancellation,
     &runner_context_attributes,
@@ -176,7 +191,7 @@ pub(super) fn run_external_plugin_command(
   ))
 }
 
-fn insert_connector_runner_attributes(
+pub(super) fn insert_connector_runner_attributes(
   attributes: &mut HashMap<String, String>,
   connector_refs: &[PluginConnectorExecutionRef],
 ) {
@@ -230,15 +245,17 @@ fn insert_connector_runner_attributes(
   );
 }
 
-fn run_stdio_runner(
+pub(super) fn run_stdio_runner(
   command: &HostPluginCommandEntry,
   sandbox: &PluginRunnerSandbox,
   entrypoint_path: &Path,
+  args: &[String],
   input_payload: &str,
   cancellation: &GenerationCancellation,
   sandbox_attributes: &HashMap<String, String>,
 ) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
   let mut process = sandbox.build_command(entrypoint_path);
+  process.args(args);
   process
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
@@ -374,7 +391,7 @@ fn run_stdio_runner(
   })
 }
 
-fn plugin_root_for_command(
+pub(super) fn plugin_root_for_command(
   command: &HostPluginCommandEntry,
 ) -> std::result::Result<PathBuf, (i32, String)> {
   Path::new(&command.source_path)
@@ -392,7 +409,7 @@ fn plugin_root_for_command(
     })
 }
 
-fn safe_entrypoint_path(
+pub(super) fn safe_entrypoint_path(
   plugin_root: &Path,
   entrypoint: &str,
 ) -> std::result::Result<PathBuf, (i32, String)> {
@@ -512,7 +529,9 @@ fn plugin_runner_timeline_item(
   })
 }
 
-fn unsupported_execution_error(command: &HostPluginCommandEntry) -> Box<PluginRunnerFailure> {
+pub(super) fn unsupported_execution_error(
+  command: &HostPluginCommandEntry,
+) -> Box<PluginRunnerFailure> {
   PluginRunnerFailure::empty(
     -32053,
     format!(
@@ -599,7 +618,7 @@ fn bounded_log_preview(content: &str) -> String {
   preview
 }
 
-fn merged_attributes(
+pub(super) fn merged_attributes(
   mut base: HashMap<String, String>,
   attributes: HashMap<String, String>,
 ) -> HashMap<String, String> {

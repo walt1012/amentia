@@ -152,6 +152,93 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
 }
 
 #[test]
+fn plugin_command_registry_marks_mcp_execution_contracts_supported() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-status",
+    "notion-tools",
+    "Notion Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-tools",
+  "version": "0.1.0",
+  "displayName": "Notion Tools",
+  "description": "Notion MCP command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:notion-tools.create-task", "mcp_server:notion"],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "notion",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp command plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("notion-tools.create-task.json"),
+    r#"{
+  "title": "Create Notion Task",
+  "description": "Create a Notion task from the current thread.",
+  "prompt": "Create a task in Notion from the current thread.",
+  "execution": {
+    "kind": "mcp.notionCreateTask",
+    "driver": "mcp",
+    "entrypoint": "notion.createTask"
+  }
+}"#,
+  )
+  .expect("write mcp command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion MCP command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-tools.create-task".to_string(),
+        "mcp_server:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["execution"]["driver"], "mcp");
+  assert_eq!(commands[0]["execution"]["entrypoint"], "notion.createTask");
+  assert_eq!(commands[0]["execution"]["supported"], true);
+  assert_eq!(commands[0]["runStatus"], "ready");
+}
+
+#[test]
 fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
