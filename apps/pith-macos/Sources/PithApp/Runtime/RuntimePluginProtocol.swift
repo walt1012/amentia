@@ -73,7 +73,21 @@ struct RuntimePluginCommandExecutionPayload: Codable {
   let kind: String
   let driver: String
   let entrypoint: String?
+  let input: RuntimePluginCommandEnvelopePayload?
+  let output: RuntimePluginCommandEnvelopePayload?
   let supported: Bool
+}
+
+struct RuntimePluginCommandEnvelopePayload: Codable {
+  let envelope: String
+  let fields: [RuntimePluginCommandEnvelopeFieldPayload]
+}
+
+struct RuntimePluginCommandEnvelopeFieldPayload: Codable {
+  let name: String
+  let kind: String
+  let required: Bool
+  let description: String?
 }
 
 struct RuntimePluginConnectorPayload: Codable {
@@ -202,7 +216,21 @@ extension RuntimeBridge {
     let kind: String
     let driver: String
     let entrypoint: String?
+    let input: RuntimePluginCommandEnvelope?
+    let output: RuntimePluginCommandEnvelope?
     let supported: Bool
+  }
+
+  struct RuntimePluginCommandEnvelope {
+    let envelope: String
+    let fields: [RuntimePluginCommandEnvelopeField]
+  }
+
+  struct RuntimePluginCommandEnvelopeField {
+    let name: String
+    let kind: String
+    let required: Bool
+    let description: String?
   }
 
   struct RuntimePluginConnector {

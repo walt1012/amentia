@@ -85,13 +85,17 @@ M4 makes plugins real local capabilities, not prompt templates:
 - Plugin UI stays progressive: discover, inspect, enable, authorize, run, and debug without crowding the main flow.
 - MCP can be considered only as a local-first connector/runtime option, not as a broad marketplace shortcut.
 
+## M4 Status
+
+- Done: command registries expose typed execution contracts with driver, entrypoint, support status, input envelope, and output envelope.
+- Active: add the minimal bounded plugin runner path before adding new connector surfaces.
+
 ## Next Order
 
-1. Add plugin contract schemas for typed command input and output envelopes.
-2. Add a minimal bounded plugin runner path before adding any new connector surface.
-3. Add connector auth lifecycle for one Notion-like connector path only.
-4. Keep web search as the only active retrieval layer unless user workflows prove local RAG is needed.
-5. Keep Swift and Rust ownership changes tied to real runtime, plugin, model, or sandbox boundaries.
+1. Add a minimal bounded plugin runner path before adding any new connector surface.
+2. Add connector auth lifecycle for one Notion-like connector path only.
+3. Keep web search as the only active retrieval layer unless user workflows prove local RAG is needed.
+4. Keep Swift and Rust ownership changes tied to real runtime, plugin, model, or sandbox boundaries.
 
 ## Not Now
 

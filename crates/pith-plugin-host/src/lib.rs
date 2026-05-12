@@ -29,5 +29,6 @@ pub use registry::{
 };
 pub use types::{
   PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry,
-  PluginCommandExecutionEntry, PluginConnectorEntry, PluginHookEntry, PluginRemovalRecord,
+  PluginCommandEnvelopeEntry, PluginCommandEnvelopeFieldEntry, PluginCommandExecutionEntry,
+  PluginConnectorEntry, PluginHookEntry, PluginRemovalRecord,
 };

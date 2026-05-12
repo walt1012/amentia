@@ -78,6 +78,24 @@ pub struct PluginCommandExecutionEntry {
   pub kind: String,
   pub driver: String,
   pub entrypoint: Option<String>,
+  pub input: PluginCommandEnvelopeEntry,
+  pub output: PluginCommandEnvelopeEntry,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandEnvelopeEntry {
+  pub envelope: String,
+  pub fields: Vec<PluginCommandEnvelopeFieldEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandEnvelopeFieldEntry {
+  pub name: String,
+  pub kind: String,
+  pub required: bool,
+  pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

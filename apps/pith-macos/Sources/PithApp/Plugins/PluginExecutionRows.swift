@@ -34,6 +34,13 @@ struct PluginCommandRow: View {
         .foregroundColor(command.execution?.supported == true ? .secondary : .orange)
         .textSelection(.enabled)
 
+      if let contractLabel {
+        Text(contractLabel)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if let memorySummary = command.memorySummary {
         Text(memorySummary)
           .font(.caption2)
@@ -58,6 +65,17 @@ struct PluginCommandRow: View {
 
     let suffix = execution.supported ? "supported" : "not supported yet"
     return "\(execution.kind) via \(execution.driver) (\(suffix))"
+  }
+
+  private var contractLabel: String? {
+    guard let execution = command.execution,
+          let input = execution.input,
+          let output = execution.output
+    else {
+      return nil
+    }
+
+    return "Contract: \(input.envelope) -> \(output.envelope)"
   }
 }
 

@@ -104,6 +104,8 @@ extension RuntimeBridge {
             kind: $0.kind,
             driver: $0.driver,
             entrypoint: $0.entrypoint,
+            input: RuntimePluginCommandEnvelopeMapper.map($0.input),
+            output: RuntimePluginCommandEnvelopeMapper.map($0.output),
             supported: $0.supported
           )
         },
@@ -217,6 +219,28 @@ extension RuntimeBridge {
       items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
       pendingApprovals: result.pendingApprovals.map(RuntimeBridgePayloadMapper.approval(from:)),
       activeTurnID: result.activeTurnId
+    )
+  }
+}
+
+private enum RuntimePluginCommandEnvelopeMapper {
+  static func map(
+    _ payload: RuntimePluginCommandEnvelopePayload?
+  ) -> RuntimeBridge.RuntimePluginCommandEnvelope? {
+    guard let payload else {
+      return nil
+    }
+
+    return RuntimeBridge.RuntimePluginCommandEnvelope(
+      envelope: payload.envelope,
+      fields: payload.fields.map {
+        RuntimeBridge.RuntimePluginCommandEnvelopeField(
+          name: $0.name,
+          kind: $0.kind,
+          required: $0.required,
+          description: $0.description
+        )
+      }
     )
   }
 }

@@ -220,7 +220,29 @@ fn build_command_registry_loads_enabled_plugin_commands() {
   "description": "Prepare a reusable note from the current workspace.",
   "prompt": "Read README.md and summarize the most reusable workspace detail.",
   "execution": {
-    "kind": "builtin.workspaceReadmeNote"
+    "kind": "builtin.workspaceReadmeNote",
+    "input": {
+      "envelope": "workspace.capture.input",
+      "fields": [
+        {
+          "name": "workspace",
+          "kind": "workspaceSummary",
+          "required": true,
+          "description": "Workspace to summarize."
+        }
+      ]
+    },
+    "output": {
+      "envelope": "workspace.capture.output",
+      "fields": [
+        {
+          "name": "note",
+          "kind": "memoryNote",
+          "required": false,
+          "description": "Captured note."
+        }
+      ]
+    }
   },
   "memory": {
     "noteTitle": "Workspace Capture",
@@ -254,6 +276,10 @@ fn build_command_registry_loads_enabled_plugin_commands() {
   assert_eq!(execution.kind, "builtin.workspaceReadmeNote");
   assert_eq!(execution.driver, "builtin");
   assert_eq!(execution.entrypoint, None);
+  assert_eq!(execution.input.envelope, "workspace.capture.input");
+  assert_eq!(execution.input.fields[0].name, "workspace");
+  assert_eq!(execution.output.envelope, "workspace.capture.output");
+  assert_eq!(execution.output.fields[0].kind, "memoryNote");
   assert_eq!(
     commands[0].memory_note_source.as_deref(),
     Some("plugin.workspace-notes")

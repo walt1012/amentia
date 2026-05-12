@@ -1,11 +1,12 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
-  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandExecutionSummary,
-  PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
-  PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
-  PluginHookSummary, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
-  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
+  PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
+  PluginCommandExecutionSummary, PluginCommandRegistryResult, PluginCommandRunParams,
+  PluginCommandSummary, PluginConnectorRegistryResult, PluginConnectorSummary,
+  PluginHookRegistryResult, PluginHookSummary, PluginInstallParams, PluginRemoveParams,
+  PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary,
+  TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -299,6 +300,24 @@ fn plugin_command_registry_round_trips() {
         kind: "builtin.workspaceReadmeNote".to_string(),
         driver: "builtin".to_string(),
         entrypoint: None,
+        input: PluginCommandEnvelopeSummary {
+          envelope: "pith.plugin.command.input".to_string(),
+          fields: vec![PluginCommandEnvelopeFieldSummary {
+            name: "threadId".to_string(),
+            kind: "string".to_string(),
+            required: true,
+            description: Some("Runtime thread identifier.".to_string()),
+          }],
+        },
+        output: PluginCommandEnvelopeSummary {
+          envelope: "pith.plugin.command.output".to_string(),
+          fields: vec![PluginCommandEnvelopeFieldSummary {
+            name: "items".to_string(),
+            kind: "timelineItems".to_string(),
+            required: true,
+            description: Some("Timeline items to append.".to_string()),
+          }],
+        },
         supported: true,
       }),
       execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
@@ -323,6 +342,13 @@ fn plugin_command_registry_round_trips() {
       .as_ref()
       .map(|execution| execution.driver.as_str()),
     Some("builtin")
+  );
+  assert_eq!(
+    decoded.commands[0]
+      .execution
+      .as_ref()
+      .map(|execution| execution.input.envelope.as_str()),
+    Some("pith.plugin.command.input")
   );
   assert_eq!(
     decoded.commands[0].memory_summary.as_deref(),

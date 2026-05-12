@@ -131,11 +131,33 @@ enum RuntimeSummaryMapper {
           kind: $0.kind,
           driver: $0.driver,
           entrypoint: $0.entrypoint,
+          input: pluginCommandEnvelopeSummary(from: $0.input),
+          output: pluginCommandEnvelopeSummary(from: $0.output),
           supported: $0.supported
         )
       },
       executionKind: command.executionKind,
       memorySummary: command.memorySummary
+    )
+  }
+
+  private static func pluginCommandEnvelopeSummary(
+    from envelope: RuntimeBridge.RuntimePluginCommandEnvelope?
+  ) -> PluginCommandEnvelopeSummary? {
+    guard let envelope else {
+      return nil
+    }
+
+    return PluginCommandEnvelopeSummary(
+      envelope: envelope.envelope,
+      fields: envelope.fields.map {
+        PluginCommandEnvelopeFieldSummary(
+          name: $0.name,
+          kind: $0.kind,
+          required: $0.required,
+          description: $0.description
+        )
+      }
     )
   }
 

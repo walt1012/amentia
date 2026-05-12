@@ -18,7 +18,10 @@ pub(super) fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Ve
 #[cfg(test)]
 mod tests {
   use super::*;
-  use pith_plugin_host::PluginCommandExecutionEntry as HostPluginCommandExecutionEntry;
+  use pith_plugin_host::{
+    PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
+    PluginCommandExecutionEntry as HostPluginCommandExecutionEntry,
+  };
 
   fn command() -> HostPluginCommandEntry {
     HostPluginCommandEntry {
@@ -34,11 +37,20 @@ mod tests {
         kind: "builtin.workspaceReadmeNote".to_string(),
         driver: "builtin".to_string(),
         entrypoint: None,
+        input: empty_envelope("pith.plugin.command.input"),
+        output: empty_envelope("pith.plugin.command.output"),
       }),
       execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
       memory_note_title: Some("README Note".to_string()),
       memory_note_source: Some("plugin.workspace-notes".to_string()),
       memory_note_tags: vec!["readme".to_string(), "command".to_string()],
+    }
+  }
+
+  fn empty_envelope(envelope: &str) -> HostPluginCommandEnvelopeEntry {
+    HostPluginCommandEnvelopeEntry {
+      envelope: envelope.to_string(),
+      fields: vec![],
     }
   }
 

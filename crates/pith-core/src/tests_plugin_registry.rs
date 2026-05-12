@@ -43,6 +43,14 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
     "builtin.workspaceReadmeNote"
   );
   assert_eq!(commands[0]["execution"]["driver"], "builtin");
+  assert_eq!(
+    commands[0]["execution"]["input"]["envelope"],
+    "pith.plugin.command.input"
+  );
+  assert_eq!(
+    commands[0]["execution"]["output"]["envelope"],
+    "pith.plugin.command.output"
+  );
   assert_eq!(commands[0]["execution"]["supported"], true);
 }
 
@@ -64,7 +72,29 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
   "execution": {
     "kind": "mcp.notionCreateTask",
     "driver": "mcp",
-    "entrypoint": "notion.createTask"
+    "entrypoint": "notion.createTask",
+    "input": {
+      "envelope": "notion.createTask.input",
+      "fields": [
+        {
+          "name": "title",
+          "kind": "string",
+          "required": true,
+          "description": "Task title."
+        }
+      ]
+    },
+    "output": {
+      "envelope": "notion.createTask.output",
+      "fields": [
+        {
+          "name": "url",
+          "kind": "url",
+          "required": false,
+          "description": "Created task URL."
+        }
+      ]
+    }
   }
 }"#,
   )
@@ -103,6 +133,15 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
   assert_eq!(commands.len(), 1);
   assert_eq!(commands[0]["execution"]["driver"], "mcp");
   assert_eq!(commands[0]["execution"]["entrypoint"], "notion.createTask");
+  assert_eq!(
+    commands[0]["execution"]["input"]["envelope"],
+    "notion.createTask.input"
+  );
+  assert_eq!(commands[0]["execution"]["input"]["fields"][0]["name"], "title");
+  assert_eq!(
+    commands[0]["execution"]["output"]["envelope"],
+    "notion.createTask.output"
+  );
   assert_eq!(commands[0]["execution"]["supported"], false);
 }
 

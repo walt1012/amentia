@@ -93,6 +93,29 @@ pub(crate) struct PluginCommandExecutionManifest {
   pub(crate) driver: Option<String>,
   #[serde(default)]
   pub(crate) entrypoint: Option<String>,
+  #[serde(default)]
+  pub(crate) input: Option<PluginCommandEnvelopeManifest>,
+  #[serde(default)]
+  pub(crate) output: Option<PluginCommandEnvelopeManifest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PluginCommandEnvelopeManifest {
+  pub(crate) envelope: String,
+  #[serde(default)]
+  pub(crate) fields: Vec<PluginCommandEnvelopeFieldManifest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PluginCommandEnvelopeFieldManifest {
+  pub(crate) name: String,
+  pub(crate) kind: String,
+  #[serde(default)]
+  pub(crate) required: bool,
+  #[serde(default)]
+  pub(crate) description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

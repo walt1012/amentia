@@ -69,7 +69,21 @@ struct PluginCommandExecutionSummary: Hashable {
   let kind: String
   let driver: String
   let entrypoint: String?
+  let input: PluginCommandEnvelopeSummary?
+  let output: PluginCommandEnvelopeSummary?
   let supported: Bool
+}
+
+struct PluginCommandEnvelopeSummary: Hashable {
+  let envelope: String
+  let fields: [PluginCommandEnvelopeFieldSummary]
+}
+
+struct PluginCommandEnvelopeFieldSummary: Hashable {
+  let name: String
+  let kind: String
+  let required: Bool
+  let description: String?
 }
 
 struct PluginHookSummary: Identifiable, Hashable {

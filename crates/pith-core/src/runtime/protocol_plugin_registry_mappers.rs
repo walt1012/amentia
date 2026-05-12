@@ -1,11 +1,13 @@
 use pith_plugin_host::{
   PluginCapabilityRegistration as HostPluginCapabilityRegistration,
+  PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
+  PluginCommandEnvelopeFieldEntry as HostPluginCommandEnvelopeFieldEntry,
   PluginCommandEntry as HostPluginCommandEntry, PluginConnectorEntry as HostPluginConnectorEntry,
   PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
-  PluginCapabilityRegistration, PluginCommandExecutionSummary, PluginCommandSummary,
-  PluginConnectorSummary, PluginHookSummary,
+  PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
+  PluginCommandExecutionSummary, PluginCommandSummary, PluginConnectorSummary, PluginHookSummary,
 };
 
 use crate::plugins::plugin_command_builtins::is_supported_builtin_execution;
@@ -37,6 +39,8 @@ pub(super) fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> Plu
       kind: execution.kind.clone(),
       driver: execution.driver.clone(),
       entrypoint: execution.entrypoint.clone(),
+      input: to_protocol_plugin_command_envelope(&execution.input),
+      output: to_protocol_plugin_command_envelope(&execution.output),
       supported: is_supported_builtin_execution(Some(&execution.kind)),
     });
   PluginCommandSummary {
@@ -50,6 +54,30 @@ pub(super) fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> Plu
     execution,
     execution_kind: command.execution_kind,
     memory_summary,
+  }
+}
+
+fn to_protocol_plugin_command_envelope(
+  envelope: &HostPluginCommandEnvelopeEntry,
+) -> PluginCommandEnvelopeSummary {
+  PluginCommandEnvelopeSummary {
+    envelope: envelope.envelope.clone(),
+    fields: envelope
+      .fields
+      .iter()
+      .map(to_protocol_plugin_command_envelope_field)
+      .collect(),
+  }
+}
+
+fn to_protocol_plugin_command_envelope_field(
+  field: &HostPluginCommandEnvelopeFieldEntry,
+) -> PluginCommandEnvelopeFieldSummary {
+  PluginCommandEnvelopeFieldSummary {
+    name: field.name.clone(),
+    kind: field.kind.clone(),
+    required: field.required,
+    description: field.description.clone(),
   }
 }
 
