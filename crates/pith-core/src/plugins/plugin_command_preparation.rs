@@ -36,7 +36,10 @@ pub fn prepare_plugin_command_run(
       request.id,
       error_code,
       readiness.run_blocker.unwrap_or_else(|| {
-        format!("Plugin command `{}` is not ready to run.", command.command_id)
+        format!(
+          "Plugin command `{}` is not ready to run.",
+          command.command_id
+        )
       }),
     ));
   }

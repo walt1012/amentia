@@ -211,8 +211,11 @@ fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
 #[test]
 fn connector_backed_plugin_commands_require_connector_auth() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root =
-    create_temp_plugin_bundle("plugin-command-connector-auth", "notion-tools", "Notion Tools");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-connector-auth",
+    "notion-tools",
+    "Notion Tools",
+  );
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
     &plugin_manifest,
@@ -291,10 +294,7 @@ fn connector_backed_plugin_commands_require_connector_auth() {
   assert_eq!(command["commandId"], "notion-tools::notion-tools.sync");
   assert_eq!(command["execution"]["supported"], true);
   assert_eq!(command["runStatus"], "needsConnectorAuth");
-  assert_eq!(
-    command["requiredConnectorIds"][0],
-    "notion-tools::notion"
-  );
+  assert_eq!(command["requiredConnectorIds"][0], "notion-tools::notion");
 
   let blocked_response = handle_request(
     &mut context,

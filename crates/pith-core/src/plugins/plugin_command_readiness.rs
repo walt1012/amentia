@@ -69,10 +69,11 @@ pub(crate) fn command_readiness(
     );
   }
 
-  if let Some(connector) = required_connectors
-    .iter()
-    .find(|connector| plugin_state.connector_credential(&connector.connector_id).is_none())
-  {
+  if let Some(connector) = required_connectors.iter().find(|connector| {
+    plugin_state
+      .connector_credential(&connector.connector_id)
+      .is_none()
+  }) {
     return PluginCommandReadiness::blocked(
       "needsConnectorAuth",
       format!(
