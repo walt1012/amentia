@@ -293,7 +293,9 @@ fn plugin_connector_registry_round_trips() {
   assert!(value["connectors"][0].get("connectorId").is_some());
   assert!(value["connectors"][0].get("authRequired").is_some());
   assert!(value["connectors"][0].get("credentialPresent").is_some());
-  assert!(value["connectors"][0].get("credentialSecretPresent").is_some());
+  assert!(value["connectors"][0]
+    .get("credentialSecretPresent")
+    .is_some());
 }
 
 #[test]
@@ -337,7 +339,9 @@ fn plugin_connector_credential_payloads_round_trip() {
 
   assert!(params_value.get("connectorId").is_some());
   assert!(result_value["connector"].get("authStatus").is_some());
-  assert!(result_value["connector"].get("credentialSecretPresent").is_some());
+  assert!(result_value["connector"]
+    .get("credentialSecretPresent")
+    .is_some());
   assert_eq!(decoded.connector.auth_status, "authorized");
   assert!(decoded.connector.credential_present);
   assert!(decoded.connector.credential_secret_present);
