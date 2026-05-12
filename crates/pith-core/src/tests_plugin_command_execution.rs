@@ -522,7 +522,10 @@ printf '{"content":"connectorId=%s store=%s label=%s secretLeak=%s"}\n' "$connec
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
   let items = result["items"].as_array().expect("items");
-  assert_eq!(items[0]["attributes"]["connectorIds"], "notion-runner::notion");
+  assert_eq!(
+    items[0]["attributes"]["connectorIds"],
+    "notion-runner::notion"
+  );
   assert_eq!(items[0]["attributes"]["connectorServices"], "notion");
   assert_eq!(items[1]["kind"], "pluginResult");
   assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
@@ -530,7 +533,10 @@ printf '{"content":"connectorId=%s store=%s label=%s secretLeak=%s"}\n' "$connec
     items[1]["attributes"]["pluginRunnerConnectorIds"],
     "notion-runner::notion"
   );
-  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorServices"], "notion");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerConnectorServices"],
+    "notion"
+  );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerConnectorStores"],
     "keychain"
