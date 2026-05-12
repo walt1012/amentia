@@ -295,6 +295,8 @@ fn plugin_connector_registry_round_trips() {
 fn plugin_connector_credential_payloads_round_trip() {
   let params = PluginConnectorCredentialParams {
     connector_id: "notion-connector::notion".to_string(),
+    credential_label: None,
+    credential_secret: None,
   };
   let result = PluginConnectorCredentialResult {
     connector: PluginConnectorSummary {
