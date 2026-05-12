@@ -137,7 +137,10 @@ enum RuntimeSummaryMapper {
         )
       },
       executionKind: command.executionKind,
-      memorySummary: command.memorySummary
+      memorySummary: command.memorySummary,
+      runStatus: command.runStatus,
+      runBlocker: command.runBlocker,
+      requiredConnectorIds: command.requiredConnectorIds
     )
   }
 

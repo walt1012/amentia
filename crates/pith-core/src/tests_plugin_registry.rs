@@ -53,6 +53,7 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
     "pith.plugin.command.output"
   );
   assert_eq!(commands[0]["execution"]["supported"], true);
+  assert_eq!(commands[0]["runStatus"], "ready");
 }
 
 #[test]
@@ -147,6 +148,7 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
     "notion.createTask.output"
   );
   assert_eq!(commands[0]["execution"]["supported"], false);
+  assert_eq!(commands[0]["runStatus"], "unsupportedExecution");
 }
 
 #[test]
@@ -203,6 +205,133 @@ fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
   assert_eq!(commands[0]["execution"]["driver"], "stdio");
   assert_eq!(commands[0]["execution"]["entrypoint"], "runner.sh");
   assert_eq!(commands[0]["execution"]["supported"], true);
+  assert_eq!(commands[0]["runStatus"], "ready");
+}
+
+#[test]
+fn connector_backed_plugin_commands_require_connector_auth() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-connector-auth", "notion-tools", "Notion Tools");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-tools",
+  "version": "0.1.0",
+  "displayName": "Notion Tools",
+  "description": "Notion connector command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:notion-tools.sync", "connector:notion"],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector command plugin manifest");
+  fs::write(
+    source_root.join("commands").join("notion-tools.sync.json"),
+    r#"{
+  "title": "Sync Notion",
+  "description": "Sync local context to Notion.",
+  "prompt": "Prepare a Notion sync payload.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion connector command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-tools.sync".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let registry_response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+  assert!(registry_response.error.is_none());
+  let registry = registry_response
+    .result
+    .expect("connector command registry result");
+  let command = &registry["commands"][0];
+  assert_eq!(command["commandId"], "notion-tools::notion-tools.sync");
+  assert_eq!(command["execution"]["supported"], true);
+  assert_eq!(command["runStatus"], "needsConnectorAuth");
+  assert_eq!(
+    command["requiredConnectorIds"][0],
+    "notion-tools::notion"
+  );
+
+  let blocked_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-tools::notion-tools.sync"
+      })),
+    ),
+  );
+  assert_eq!(
+    blocked_response.error.expect("auth blocker error").code,
+    -32058
+  );
+
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-tools::notion"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+  let ready_response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  let ready_registry = ready_response
+    .result
+    .expect("ready connector command registry result");
+  assert_eq!(ready_registry["commands"][0]["runStatus"], "ready");
 }
 
 #[test]

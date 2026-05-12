@@ -67,6 +67,9 @@ struct PluginCommandSummary: Identifiable, Hashable {
   let execution: PluginCommandExecutionSummary?
   let executionKind: String?
   let memorySummary: String?
+  let runStatus: String
+  let runBlocker: String?
+  let requiredConnectorIds: [String]
 }
 
 struct PluginCommandExecutionSummary: Hashable {

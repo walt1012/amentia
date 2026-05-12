@@ -368,6 +368,9 @@ fn plugin_command_registry_round_trips() {
       }),
       execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
       memory_summary: Some("Stores a workspace memory note after execution.".to_string()),
+      run_status: "ready".to_string(),
+      run_blocker: None,
+      required_connector_ids: vec![],
     }],
   };
 
@@ -400,6 +403,7 @@ fn plugin_command_registry_round_trips() {
     decoded.commands[0].memory_summary.as_deref(),
     Some("Stores a workspace memory note after execution.")
   );
+  assert_eq!(decoded.commands[0].run_status, "ready");
 }
 
 #[test]

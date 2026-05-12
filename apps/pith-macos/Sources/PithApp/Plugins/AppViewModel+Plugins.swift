@@ -212,6 +212,13 @@ extension AppViewModel {
       runtimeDetail = TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
       return
     }
+    if PluginActionPlanner.commandNeedsConnectorAuth(commandID: commandID, snapshot: snapshot) {
+      runtimeDetail = PluginActionPlanner.commandRunBlocker(
+        commandID: commandID,
+        snapshot: snapshot
+      ) ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+      return
+    }
 
     guard PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot),
           let threadID = selectedThreadID

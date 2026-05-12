@@ -77,7 +77,25 @@ enum PluginActionPlanner {
       return true
     }
 
-    return command.execution == nil || command.execution?.supported == false
+    return command.runStatus == "missingExecution"
+      || command.runStatus == "unsupportedExecution"
+      || command.execution == nil
+      || command.execution?.supported == false
+  }
+
+  static func commandNeedsConnectorAuth(
+    commandID: String,
+    snapshot: PluginActionSnapshot
+  ) -> Bool {
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }) else {
+      return false
+    }
+
+    return command.runStatus == "needsConnectorAuth"
+  }
+
+  static func commandRunBlocker(commandID: String, snapshot: PluginActionSnapshot) -> String? {
+    snapshot.commands.first(where: { $0.id == commandID })?.runBlocker
   }
 
   static func canRunCommand(commandID: String, snapshot: PluginActionSnapshot) -> Bool {
@@ -89,6 +107,7 @@ enum PluginActionPlanner {
 
     return snapshot.runtimeState == .ready
       && snapshot.isLocalModelReady
+      && command.runStatus == "ready"
       && snapshot.hasRuntimeThreadSelection
       && snapshot.selectedThreadID != nil
       && !snapshot.hasActiveOrPendingTurn

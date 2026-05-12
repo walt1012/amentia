@@ -31,7 +31,12 @@ struct PluginCommandRow: View {
 
       Text("Execution: \(executionLabel)")
         .font(.caption2)
-        .foregroundColor(command.execution?.supported == true ? .secondary : .orange)
+        .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
+        .textSelection(.enabled)
+
+      Text("Run State: \(runStateLabel)")
+        .font(.caption2)
+        .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
 
       if let contractLabel {
@@ -43,6 +48,13 @@ struct PluginCommandRow: View {
 
       if let memorySummary = command.memorySummary {
         Text(memorySummary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if !command.requiredConnectorIds.isEmpty {
+        Text("Connectors: \(command.requiredConnectorIds.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -65,6 +77,14 @@ struct PluginCommandRow: View {
 
     let suffix = execution.supported ? "supported" : "not supported yet"
     return "\(execution.kind) via \(execution.driver) (\(suffix))"
+  }
+
+  private var runStateLabel: String {
+    if let blocker = command.runBlocker {
+      return "\(command.runStatus) | \(blocker)"
+    }
+
+    return command.runStatus
   }
 
   private var contractLabel: String? {

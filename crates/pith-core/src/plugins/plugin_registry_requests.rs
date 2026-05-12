@@ -22,7 +22,7 @@ pub(crate) fn handle_plugin_command_registry(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &build_protocol_command_registry(context.plugin_state.catalog()),
+    &build_protocol_command_registry(&context.plugin_state),
   )
 }
 

@@ -75,6 +75,9 @@ struct RuntimePluginCommandPayload: Codable {
   let execution: RuntimePluginCommandExecutionPayload?
   let executionKind: String?
   let memorySummary: String?
+  let runStatus: String
+  let runBlocker: String?
+  let requiredConnectorIds: [String]
 }
 
 struct RuntimePluginCommandExecutionPayload: Codable {
@@ -222,6 +225,9 @@ extension RuntimeBridge {
     let execution: RuntimePluginCommandExecution?
     let executionKind: String?
     let memorySummary: String?
+    let runStatus: String
+    let runBlocker: String?
+    let requiredConnectorIds: [String]
   }
 
   struct RuntimePluginCommandExecution {

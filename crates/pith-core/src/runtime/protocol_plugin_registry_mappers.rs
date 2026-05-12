@@ -11,6 +11,7 @@ use pith_protocol::{
 };
 
 use crate::plugins::plugin_command_execution::is_supported_plugin_command_execution;
+use crate::plugins::plugin_command_readiness::PluginCommandReadiness;
 use crate::runtime_plugins::PluginConnectorCredentialState;
 
 pub(super) fn to_protocol_capability(
@@ -28,7 +29,10 @@ pub(super) fn to_protocol_capability(
   }
 }
 
-pub(super) fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> PluginCommandSummary {
+pub(super) fn to_protocol_plugin_command(
+  command: HostPluginCommandEntry,
+  readiness: PluginCommandReadiness,
+) -> PluginCommandSummary {
   let memory_summary = command
     .memory_note_title
     .as_ref()
@@ -56,6 +60,9 @@ pub(super) fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> Plu
     execution,
     execution_kind: command.execution_kind,
     memory_summary,
+    run_status: readiness.run_status,
+    run_blocker: readiness.run_blocker,
+    required_connector_ids: readiness.required_connector_ids,
   }
 }
 

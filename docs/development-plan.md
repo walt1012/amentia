@@ -61,13 +61,15 @@ M4 turns plugins into bounded local capabilities:
   stderr diagnostics in timeline metadata.
 - Done: Notion-like connectors expose persisted local auth status, authorize,
   clear credential, and failure surfaces without a broad marketplace.
-- Active: connect authorized connectors to bounded execution contracts and
-  permission checks.
+- Done: connector-backed plugin commands are blocked until required connector
+  auth is present, and command registries expose the run blocker.
+- Active: connect authorized connectors to bounded MCP/stdio execution
+  contracts and permission checks.
 
 ## Next Order
 
-1. Use connector auth state when deciding whether MCP or connector-backed
-   plugin commands can execute.
+1. Add the first connector-backed execution path that consumes connector auth
+   state without leaking credentials into prompts.
 2. Keep connector credentials local and inspectable, with explicit permission
    and sandbox boundaries.
 3. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.

@@ -8,6 +8,8 @@ use pith_protocol::{
   PluginConnectorRegistryResult, PluginHookRegistryResult,
 };
 
+use crate::plugins::plugin_command_readiness::command_readiness;
+
 use super::protocol_plugin_registry_mappers::{
   to_protocol_capability, to_protocol_plugin_command, to_protocol_plugin_connector,
   to_protocol_plugin_hook,
@@ -43,12 +45,15 @@ pub(crate) fn build_protocol_capability_registry(
 }
 
 pub(crate) fn build_protocol_command_registry(
-  plugins: &[PluginCatalogEntry],
+  plugin_state: &RuntimePluginState,
 ) -> PluginCommandRegistryResult {
   PluginCommandRegistryResult {
-    commands: build_command_registry(plugins)
+    commands: build_command_registry(plugin_state.catalog())
       .into_iter()
-      .map(to_protocol_plugin_command)
+      .map(|command| {
+        let readiness = command_readiness(&command, plugin_state);
+        to_protocol_plugin_command(command, readiness)
+      })
       .collect(),
   }
 }

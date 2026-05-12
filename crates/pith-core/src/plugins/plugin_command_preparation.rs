@@ -2,7 +2,7 @@ use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::build_command_registry;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams};
 
-use super::plugin_command_execution::is_supported_plugin_command_execution;
+use super::plugin_command_readiness::command_readiness;
 use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{PluginCommandSnapshot, PreparedPluginCommandRun};
 use crate::context_memory_pack::pack_memory_notes_for_context;
@@ -25,24 +25,19 @@ pub fn prepare_plugin_command_run(
       "Plugin command not found",
     ));
   };
-  if command.execution.is_none() {
+  let readiness = command_readiness(&command, &context.plugin_state);
+  if !readiness.is_ready() {
+    let error_code = if readiness.run_status == "needsConnectorAuth" {
+      -32058
+    } else {
+      -32053
+    };
     return Err(JsonRpcResponse::error(
       request.id,
-      -32053,
-      format!(
-        "Plugin command `{}` requires an explicit execution contract.",
-        command.command_id
-      ),
-    ));
-  }
-  if !is_supported_plugin_command_execution(&command) {
-    return Err(JsonRpcResponse::error(
-      request.id,
-      -32053,
-      format!(
-        "Plugin command `{}` requires a supported execution contract.",
-        command.command_id
-      ),
+      error_code,
+      readiness.run_blocker.unwrap_or_else(|| {
+        format!("Plugin command `{}` is not ready to run.", command.command_id)
+      }),
     ));
   }
 

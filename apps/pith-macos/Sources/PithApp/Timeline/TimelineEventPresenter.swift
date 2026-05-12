@@ -6,6 +6,8 @@ enum TimelineEventPresenter {
   static let runningPluginCommandDetail = "Running local plugin command..."
   static let pluginCommandNeedsExecutionContractDetail =
     "Plugin command needs a supported execution contract before it can run."
+  static let pluginCommandNeedsConnectorAuthDetail =
+    "Authorize the required connector before running this plugin command."
   static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
   static let pluginCommandFailedDetail =
     "Local plugin command failed. Inspect the failed runner item for logs."
