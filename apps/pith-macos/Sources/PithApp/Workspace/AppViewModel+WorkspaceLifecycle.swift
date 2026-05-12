@@ -16,6 +16,7 @@ extension AppViewModel {
     ) else {
       return
     }
+    let failureThreadID = selectedThreadID
     runtimeDetail = "Opening workspace..."
 
     let task = Task {
@@ -41,7 +42,7 @@ extension AppViewModel {
         restoreRuntimeDetailAfterWorkspaceOpen(requestToken)
         workspaceOpenCoordinator.finish(requestToken)
         appendEntry(
-          to: selectedThreadID,
+          to: failureThreadID,
           TimelineEventPresenter.workspaceOpenFailed(error: error)
         )
       }

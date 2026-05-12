@@ -17,6 +17,7 @@ extension AppViewModel {
       state.clearLastFailureDetail()
     }
     let launchToken = runtimeLaunchCoordinator.begin()
+    let failureThreadID = selectedThreadID
 
     let task = Task {
       do {
@@ -41,7 +42,7 @@ extension AppViewModel {
           return
         }
         runtimeLaunchCoordinator.finish(launchToken)
-        applyRuntimeLaunchFailure(error)
+        applyRuntimeLaunchFailure(error, timelineThreadID: failureThreadID)
       }
     }
     runtimeLaunchCoordinator.bind(task: task, token: launchToken)
@@ -183,7 +184,7 @@ extension AppViewModel {
     }
   }
 
-  private func applyRuntimeLaunchFailure(_ error: Error) {
+  private func applyRuntimeLaunchFailure(_ error: Error, timelineThreadID: ThreadSummary.ID?) {
     runtimeState = .failed
     runtimeDetail = error.localizedDescription
     updateLocalModelReadinessState { state in
@@ -196,7 +197,7 @@ extension AppViewModel {
       state.reset()
     }
     appendEntry(
-      to: selectedThreadID,
+      to: timelineThreadID,
       TimelineEventPresenter.runtimeLaunchFailed(error: error)
     )
   }
