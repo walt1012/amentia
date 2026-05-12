@@ -5,13 +5,21 @@ use pith_protocol::TimelineItem;
 use crate::approval_types::PendingApproval;
 
 pub(super) fn approval_granted_item(approval: &PendingApproval) -> TimelineItem {
+  let content = if approval.action == "run_plugin_command" {
+    format!(
+      "Approved plugin command {}.",
+      approval.command.as_deref().unwrap_or(&approval.relative_path)
+    )
+  } else {
+    format!(
+      "Approved {} for {}.",
+      approval.action, approval.relative_path
+    )
+  };
   TimelineItem {
     kind: "approvalResolved".to_string(),
     title: "Approval Granted".to_string(),
-    content: format!(
-      "Approved {} for {}.",
-      approval.action, approval.relative_path
-    ),
+    content,
     attributes: Some(HashMap::from([
       ("approvalId".to_string(), approval.id.clone()),
       ("decision".to_string(), "approved".to_string()),
@@ -20,10 +28,18 @@ pub(super) fn approval_granted_item(approval: &PendingApproval) -> TimelineItem 
 }
 
 pub(super) fn approval_denied_item(approval: &PendingApproval) -> TimelineItem {
+  let content = if approval.action == "run_plugin_command" {
+    format!(
+      "Denied plugin command {}.",
+      approval.command.as_deref().unwrap_or(&approval.relative_path)
+    )
+  } else {
+    format!("Denied {} for {}.", approval.action, approval.relative_path)
+  };
   TimelineItem {
     kind: "approvalResolved".to_string(),
     title: "Approval Denied".to_string(),
-    content: format!("Denied {} for {}.", approval.action, approval.relative_path),
+    content,
     attributes: Some(HashMap::from([
       ("approvalId".to_string(), approval.id.clone()),
       ("decision".to_string(), "denied".to_string()),

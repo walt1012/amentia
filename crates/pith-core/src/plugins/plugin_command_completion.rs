@@ -35,7 +35,11 @@ fn complete_plugin_command_items(
     input,
     mut items,
     capture_memory,
+    pending_approval,
   } = output;
+  if let Some(approval) = pending_approval {
+    context.execution_state.insert_pending_approval(approval);
+  }
   let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&requested_thread_id) else {
       return Err((-32004, "Thread not found".to_string()));

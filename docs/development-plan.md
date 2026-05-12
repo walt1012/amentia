@@ -74,15 +74,17 @@ M4 turns plugins into bounded local capabilities:
   `network.outbound` before any runner process starts.
 - Done: connector credentials can resolve into per-run environment bindings,
   keeping secrets out of plugin registries, timeline metadata, and MCP stdin.
-- Active: harden MCP connector execution with user-facing permission prompts
-  and stronger protocol recovery.
+- Done: connector-backed MCP plugin commands now request user approval before
+  runner launch and continue through the existing approval response path.
+- Active: harden MCP connector execution with stronger protocol recovery and
+  diagnostics.
 
 ## Next Order
 
-1. Add user-facing permission prompts for connector network/MCP actions.
+1. Strengthen MCP protocol recovery and diagnostics.
 2. Keep connector credentials local, inspectable, and clearable behind sandbox
    boundaries.
-3. Strengthen MCP protocol recovery and diagnostics.
+3. Keep plugin approvals progressive and avoid extra always-visible UI.
 4. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
 5. Let model-driven tool choice mature slowly; keep deterministic routing where
    tiny local models are not reliable yet.

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 
+use super::plugin_command_approval::build_plugin_command_approval_request;
 use super::plugin_command_builtins::execute_builtin_plugin_command;
 use super::plugin_command_builtins::is_supported_builtin_execution;
 use super::plugin_command_permission_gate::plugin_command_permission_denied_items;
@@ -30,6 +31,12 @@ pub fn execute_prepared_plugin_command_run(
 pub(crate) fn is_supported_plugin_command_execution(command: &HostPluginCommandEntry) -> bool {
   is_supported_builtin_execution(command.execution_kind.as_deref())
     || is_supported_external_plugin_execution(command)
+}
+
+pub(crate) fn execute_plugin_command_snapshot_items(
+  snapshot: PluginCommandSnapshot,
+) -> std::result::Result<Vec<pith_protocol::TimelineItem>, (i32, String)> {
+  execute_plugin_command_snapshot(snapshot).map(|output| output.items)
 }
 
 fn execute_plugin_command_snapshot(
@@ -63,6 +70,29 @@ fn execute_plugin_command_snapshot(
           input: snapshot.input,
           items,
           capture_memory: false,
+          pending_approval: None,
+        });
+      }
+
+      if let Some(approval_id) = snapshot.approval_id.clone() {
+        let (approval, approval_items) = build_plugin_command_approval_request(
+          approval_id,
+          &snapshot.thread_id,
+          &snapshot.command,
+          snapshot.workspace.as_ref(),
+          snapshot.input.as_deref(),
+          &snapshot.connector_refs,
+        );
+        let mut items = vec![snapshot.command_item];
+        items.extend(approval_items);
+        return Ok(PluginCommandOutput {
+          thread_id: snapshot.thread_id,
+          command: snapshot.command,
+          workspace: snapshot.workspace,
+          input: snapshot.input,
+          items,
+          capture_memory: false,
+          pending_approval: Some(approval),
         });
       }
 
@@ -98,6 +128,7 @@ fn execute_plugin_command_snapshot(
             input: snapshot.input,
             items: vec![snapshot.command_item, failure_item],
             capture_memory: false,
+            pending_approval: None,
           });
         }
       };
@@ -111,6 +142,7 @@ fn execute_plugin_command_snapshot(
           input: snapshot.input,
           items,
           capture_memory: true,
+          pending_approval: None,
         });
       }
       (
@@ -134,5 +166,6 @@ fn execute_plugin_command_snapshot(
     input: snapshot.input,
     items: vec![snapshot.command_item, result_item, assistant_item],
     capture_memory: true,
+    pending_approval: None,
   })
 }

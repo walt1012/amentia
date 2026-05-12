@@ -4,6 +4,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use pith_protocol::WorkspaceSummary;
 
 use crate::approval_types::PendingApproval;
+use crate::plugin_commands::execute_plugin_command_snapshot_items;
 use crate::request_state::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
   PreparedApprovalSnapshot,
@@ -39,9 +40,10 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
     memory_notes,
     permission_sources,
     plugins,
+    approved_plugin_command,
   } = snapshot;
 
-  let events = if decision == "approved" {
+  let mut events = if decision == "approved" {
     execute_approved_approval(
       &approval,
       &workspace,
@@ -54,6 +56,23 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
   } else {
     execute_denied_approval(&approval, &workspace, &model_runtime, &memory_notes)
   };
+  if decision == "approved" {
+    if let Some(plugin_command) = approved_plugin_command {
+      match execute_plugin_command_snapshot_items(plugin_command) {
+        Ok(items) => events.extend_items(items),
+        Err((code, message)) => {
+          events.push_item(warning_item(
+            "Plugin Command Failed",
+            format!("{message}\n\nError code: {code}"),
+            Some(HashMap::from([
+              ("approvalId".to_string(), approval.id.clone()),
+              ("action".to_string(), approval.action.clone()),
+            ])),
+          ));
+        }
+      }
+    }
+  }
 
   events.into_output(approval, decision, workspace)
 }

@@ -711,26 +711,55 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
-
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
   let items = result["items"].as_array().expect("items");
-  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "approvalRequested");
+  assert_eq!(items[1]["title"], "Plugin Approval Requested");
+  assert_eq!(result["pendingApprovals"][0]["action"], "run_plugin_command");
   assert_eq!(
-    items[1]["attributes"]["executionKind"],
+    result["pendingApprovals"][0]["title"],
+    "Run Create Notion Task"
+  );
+  let approval_id = result["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(approval_response.error.is_none());
+  let approval_result = approval_response.result.expect("approval result");
+  let items = approval_result["items"].as_array().expect("approval items");
+  assert_eq!(items[0]["kind"], "approvalResolved");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert_eq!(
+    items[2]["attributes"]["executionKind"],
     "mcp.notionCreateTask"
   );
-  assert_eq!(items[1]["attributes"]["mcpServerId"], "notion");
-  assert_eq!(items[1]["attributes"]["mcpToolName"], "createTask");
-  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
+  assert_eq!(items[2]["attributes"]["mcpServerId"], "notion");
+  assert_eq!(items[2]["attributes"]["mcpToolName"], "createTask");
+  assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerCredentialProviders"],
+    items[2]["attributes"]["pluginRunnerCredentialProviders"],
     "pith.localCredentialProvider"
   );
   assert_eq!(
-    items[1]["content"],
+    items[2]["content"],
     "method=true tool=true provider=true handle=true secretLeak=false credentialEnv=true tokenLeak=false"
   );
 }

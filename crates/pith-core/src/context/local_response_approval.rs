@@ -25,6 +25,12 @@ pub(crate) fn summarize_denied_approval(
       "Pith skipped the shell command `{}` because the approval was denied.",
       command
     )
+  } else if action == "run_plugin_command" {
+    let command = command.unwrap_or_default();
+    format!(
+      "Pith skipped the plugin command `{}` because the approval was denied.",
+      command
+    )
   } else {
     format!(
       "Pith skipped writing {} because the approval was denied.",

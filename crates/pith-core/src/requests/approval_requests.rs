@@ -4,6 +4,7 @@ use pith_protocol::{ApprovalRespondParams, JsonRpcRequest, JsonRpcResponse};
 pub use super::approval_completion::complete_prepared_approval_respond;
 pub use super::approval_execution::execute_prepared_approval_respond;
 
+use crate::plugin_commands::prepare_approved_plugin_command_snapshot;
 use crate::plugin_permissions::granted_permission_sources;
 use crate::request_params::parse_required_params;
 use crate::request_state::{PreparedApprovalRespond, PreparedApprovalSnapshot};
@@ -52,31 +53,55 @@ pub fn prepare_approval_respond(
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
   let plugins = context.plugin_state.snapshot_catalog();
 
-  let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
-    return Err(JsonRpcResponse::error(
-      request.id,
-      -32004,
-      "Thread not found",
-    ));
+  let workspace = {
+    let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
+      return Err(JsonRpcResponse::error(
+        request.id,
+        -32004,
+        "Thread not found",
+      ));
+    };
+    thread.bind_workspace_if_missing(current_workspace);
+    let Some(workspace) = thread.workspace_cloned() else {
+      return Err(JsonRpcResponse::error(
+        request.id,
+        -32031,
+        "Open a workspace for this thread before resolving approvals",
+      ));
+    };
+    workspace
   };
-  thread.bind_workspace_if_missing(current_workspace);
-  let Some(workspace) = thread.workspace_cloned() else {
-    return Err(JsonRpcResponse::error(
-      request.id,
-      -32031,
-      "Open a workspace for this thread before resolving approvals",
-    ));
-  };
-  thread.mark_resolving_approval(&approval.id);
-  context
-    .execution_state
-    .remove_pending_approval(&params.approval_id);
   if context
     .execution_state
     .take_pending_running_cancel(&approval.thread_id)
   {
     cancellation.cancel();
   }
+  let approved_plugin_command = if decision == "approved" {
+    match prepare_approved_plugin_command_snapshot(
+      context,
+      &approval,
+      Some(workspace.clone()),
+      cancellation.clone(),
+    ) {
+      Ok(snapshot) => snapshot,
+      Err((code, message)) => return Err(JsonRpcResponse::error(request.id, code, message)),
+    }
+  } else {
+    None
+  };
+  if let Some(thread) = context.thread_state.find_mut(&approval.thread_id) {
+    thread.mark_resolving_approval(&approval.id);
+  } else {
+    return Err(JsonRpcResponse::error(
+      request.id,
+      -32004,
+      "Thread not found",
+    ));
+  }
+  context
+    .execution_state
+    .remove_pending_approval(&params.approval_id);
   context.execution_state.insert_running_approval(
     approval.id.clone(),
     approval.thread_id.clone(),
@@ -94,6 +119,7 @@ pub fn prepare_approval_respond(
       memory_notes,
       permission_sources,
       plugins,
+      approved_plugin_command,
     },
   })
 }

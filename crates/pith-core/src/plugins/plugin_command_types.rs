@@ -6,6 +6,8 @@ use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use serde::Serialize;
 
+use crate::approval_types::PendingApproval;
+
 #[derive(Debug)]
 pub struct PreparedPluginCommandRun {
   pub(super) request_id: serde_json::Value,
@@ -20,7 +22,7 @@ pub struct CompletedPluginCommandRun {
 }
 
 #[derive(Debug)]
-pub(super) struct PluginCommandSnapshot {
+pub(crate) struct PluginCommandSnapshot {
   pub(super) thread_id: String,
   pub(super) command: HostPluginCommandEntry,
   pub(super) workspace: Option<WorkspaceSummary>,
@@ -30,6 +32,7 @@ pub(super) struct PluginCommandSnapshot {
   pub(super) memory_notes: Vec<MemoryNote>,
   pub(super) cancellation: GenerationCancellation,
   pub(super) running_id: String,
+  pub(super) approval_id: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -77,4 +80,5 @@ pub(super) struct PluginCommandOutput {
   pub(super) input: Option<String>,
   pub(super) items: Vec<TimelineItem>,
   pub(super) capture_memory: bool,
+  pub(super) pending_approval: Option<PendingApproval>,
 }

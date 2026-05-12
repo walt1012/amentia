@@ -9,6 +9,7 @@ use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::intent_inference;
 use crate::plugin_hooks::PluginHookMemoryCapture;
+use crate::plugin_commands::PluginCommandSnapshot;
 
 #[derive(Debug)]
 pub struct PreparedTurnStart {
@@ -89,6 +90,7 @@ pub(crate) struct PreparedApprovalSnapshot {
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
   pub(crate) plugins: Vec<PluginCatalogEntry>,
+  pub(crate) approved_plugin_command: Option<PluginCommandSnapshot>,
 }
 
 #[derive(Debug)]
