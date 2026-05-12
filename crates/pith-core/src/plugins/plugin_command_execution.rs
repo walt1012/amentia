@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 
 use super::plugin_command_builtins::execute_builtin_plugin_command;
@@ -31,7 +33,7 @@ pub(crate) fn is_supported_plugin_command_execution(command: &HostPluginCommandE
 fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
-  let (execution_kind, content) =
+  let (execution_kind, content, attributes) =
     if is_supported_builtin_execution(snapshot.command.execution_kind.as_deref()) {
       let builtin_result = execute_builtin_plugin_command(
         &snapshot.command,
@@ -39,7 +41,11 @@ fn execute_plugin_command_snapshot(
         snapshot.input.as_deref(),
         &snapshot.memory_notes,
       )?;
-      (builtin_result.execution_kind, builtin_result.content)
+      (
+        builtin_result.execution_kind,
+        builtin_result.content,
+        HashMap::new(),
+      )
     } else {
       let runner_result = run_external_plugin_command(
         &snapshot.command,
@@ -59,11 +65,18 @@ fn execute_plugin_command_snapshot(
           items,
         });
       }
-      (runner_result.execution_kind, runner_result.content)
+      (
+        runner_result.execution_kind,
+        runner_result.content,
+        runner_result.attributes,
+      )
     };
 
-  let result_item =
+  let mut result_item =
     build_plugin_result_timeline_item(&snapshot.command, &execution_kind, content.clone());
+  if let Some(item_attributes) = result_item.attributes.as_mut() {
+    item_attributes.extend(attributes);
+  }
   let assistant_item =
     build_plugin_assistant_timeline_item(&snapshot.command, &execution_kind, &content);
   Ok(PluginCommandOutput {

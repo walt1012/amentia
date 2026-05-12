@@ -286,6 +286,7 @@ fn plugin_command_run_executes_bounded_stdio_runner() {
     &runner_path,
     r#"#!/bin/sh
 cat >/dev/null
+[ -n "$PITH_PLUGIN_SANDBOX_TEMP" ] || exit 9
 printf '{"content":"External runner completed."}\n'
 "#,
   )
@@ -355,6 +356,8 @@ printf '{"content":"External runner completed."}\n'
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[1]["kind"], "pluginResult");
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.echo");
+  assert!(items[1]["attributes"]["sandboxBackend"].is_string());
+  assert!(items[1]["attributes"]["sandboxTemporaryRoot"].is_string());
   assert_eq!(items[1]["content"], "External runner completed.");
   assert_eq!(
     result["pendingApprovals"]
@@ -482,6 +485,7 @@ JSON
   assert_eq!(items[1]["content"], "Owned timeline item.");
   assert_eq!(items[1]["attributes"]["runner"], "stdio");
   assert_eq!(items[1]["attributes"]["pluginId"], "owned-items");
+  assert!(items[1]["attributes"]["sandboxBackend"].is_string());
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.ownedItems");
 }
 

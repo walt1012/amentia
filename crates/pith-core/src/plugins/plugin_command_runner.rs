@@ -1,18 +1,20 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::Duration;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_process::{
-  configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
-  terminate_process_group_or_child, wait_for_child, ChildExitReason,
+  join_bounded_pipe_reader, read_bounded_pipe_in_background, terminate_process_group_or_child,
+  wait_for_child, ChildExitReason,
 };
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use serde::Deserialize;
 use serde_json::json;
+
+use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 
 const PLUGIN_RUNNER_TIMEOUT: Duration = Duration::from_secs(60);
 const PLUGIN_RUNNER_POLL_INTERVAL: Duration = Duration::from_millis(25);
@@ -23,6 +25,7 @@ pub(super) struct PluginRunnerResult {
   pub(super) execution_kind: String,
   pub(super) content: String,
   pub(super) items: Vec<TimelineItem>,
+  pub(super) attributes: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -86,6 +89,7 @@ pub(super) fn run_external_plugin_command(
     .ok_or_else(|| unsupported_execution_error(command))?;
   let plugin_root = plugin_root_for_command(command)?;
   let entrypoint_path = safe_entrypoint_path(&plugin_root, entrypoint)?;
+  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)?;
   let input_payload = json!({
     "envelope": execution.input.envelope,
     "threadId": thread_id,
@@ -96,30 +100,29 @@ pub(super) fn run_external_plugin_command(
 
   let output_text = run_stdio_runner(
     command,
-    &plugin_root,
+    &sandbox,
     &entrypoint_path,
     &input_payload.to_string(),
     cancellation,
   )?;
-  Ok(plugin_runner_output(command, &execution.kind, &output_text))
+  Ok(plugin_runner_output(command, &execution.kind, &output_text, sandbox.attributes()))
 }
 
 fn run_stdio_runner(
   command: &HostPluginCommandEntry,
-  plugin_root: &Path,
+  sandbox: &PluginRunnerSandbox,
   entrypoint_path: &Path,
   input_payload: &str,
   cancellation: &GenerationCancellation,
 ) -> std::result::Result<String, (i32, String)> {
-  let mut process = Command::new(entrypoint_path);
-  configure_process_group(&mut process);
+  let mut process = sandbox.build_command(entrypoint_path);
   process
-    .current_dir(plugin_root)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .env("PITH_PLUGIN_COMMAND_ID", &command.command_id)
     .env("PITH_PLUGIN_ID", &command.plugin_id)
+    .env("PITH_PLUGIN_SANDBOX_DETAIL", sandbox.detail())
     .env("PITH_PLUGIN_SOURCE_PATH", &command.source_path);
 
   let mut child = process.spawn().map_err(|error| {
@@ -277,12 +280,14 @@ fn plugin_runner_output(
   command: &HostPluginCommandEntry,
   execution_kind: &str,
   output: &str,
+  attributes: HashMap<String, String>,
 ) -> PluginRunnerResult {
   let Ok(envelope) = serde_json::from_str::<PluginRunnerOutputEnvelope>(output) else {
     return PluginRunnerResult {
       execution_kind: execution_kind.to_string(),
       content: plugin_runner_content(output),
       items: vec![],
+      attributes,
     };
   };
   let content = envelope
@@ -294,13 +299,14 @@ fn plugin_runner_output(
   let items = envelope
     .items
     .into_iter()
-    .filter_map(|item| plugin_runner_timeline_item(command, execution_kind, item))
+    .filter_map(|item| plugin_runner_timeline_item(command, execution_kind, &attributes, item))
     .collect();
 
   PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
     content,
     items,
+    attributes,
   }
 }
 
@@ -315,6 +321,7 @@ fn plugin_runner_content(output: &str) -> String {
 fn plugin_runner_timeline_item(
   command: &HostPluginCommandEntry,
   execution_kind: &str,
+  base_attributes: &HashMap<String, String>,
   item: PluginRunnerTimelineItemEnvelope,
 ) -> Option<TimelineItem> {
   let kind = item.kind.trim();
@@ -324,7 +331,8 @@ fn plugin_runner_timeline_item(
     return None;
   }
 
-  let mut attributes = item.attributes;
+  let mut attributes = base_attributes.clone();
+  attributes.extend(item.attributes);
   attributes
     .entry("pluginId".to_string())
     .or_insert_with(|| command.plugin_id.clone());

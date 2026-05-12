@@ -56,7 +56,7 @@ instead of prompt templates while keeping the app compact, local-first, and work
 The active branch includes guided local model choice, download, and activation, pause/continue/cancel
 with persisted recovery state, workspace-bound thread filtering, bounded shell/model/web-search
 execution, native sandbox diagnostics, progressive inspector disclosure, and typed plugin command
-contracts with a minimal bounded `stdio` runner path.
+contracts with a minimal bounded, sandbox-bound `stdio` runner path.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 

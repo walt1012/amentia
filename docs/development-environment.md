@@ -99,9 +99,9 @@ Milestone 4 development should keep plugin discovery separate from plugin execut
 manifest validation, registries, connector metadata, and enablement state. Execution owns bounded
 runners, auth policy, credential storage, cancellation, sandbox policy, output envelopes, and logs.
 
-The minimal runner surface starts with plugin-bundle-scoped `stdio` entrypoints. Do not add new
-connector surfaces before runner logs, failures, native sandbox binding, and output envelopes are
-inspectable.
+The minimal runner surface starts with plugin-bundle-scoped `stdio` entrypoints bound to the native
+sandbox policy. Do not add new connector surfaces before runner logs, failures, and output envelopes
+are inspectable.
 
 ## GitHub Actions Notes
 
