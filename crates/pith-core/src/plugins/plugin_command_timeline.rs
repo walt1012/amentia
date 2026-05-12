@@ -115,7 +115,10 @@ pub(super) fn build_plugin_failure_timeline_item(
   attributes.extend(HashMap::from([
     ("pluginId".to_string(), command.plugin_id.clone()),
     ("commandId".to_string(), command.command_id.clone()),
-    ("pluginCommandStatus".to_string(), command_status.to_string()),
+    (
+      "pluginCommandStatus".to_string(),
+      command_status.to_string(),
+    ),
     ("pluginRunnerErrorCode".to_string(), code.to_string()),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));

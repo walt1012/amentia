@@ -359,7 +359,10 @@ printf '{"content":"External runner completed."}\n'
   assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[1]["attributes"]["sandboxBackend"].is_string());
   assert!(items[1]["attributes"]["sandboxTempRoot"].is_string());
-  assert_eq!(items[1]["attributes"]["pluginRunnerExitReason"], "completed");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExitReason"],
+    "completed"
+  );
   assert_eq!(items[1]["content"], "External runner completed.");
   assert_eq!(
     result["pendingApprovals"]
@@ -480,7 +483,10 @@ exit 7
   assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
   assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
-  assert_eq!(items[1]["attributes"]["pluginRunnerExitReason"], "completed");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExitReason"],
+    "completed"
+  );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerStderrPreview"],
     "diagnostic stderr"
@@ -489,8 +495,14 @@ exit 7
     items[1]["attributes"]["pluginRunnerStdoutPreview"],
     "diagnostic stdout"
   );
-  assert!(items[1]["content"].as_str().unwrap().contains("diagnostic stderr"));
-  assert!(items[1]["content"].as_str().unwrap().contains("diagnostic stdout"));
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
+    .contains("diagnostic stderr"));
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
+    .contains("diagnostic stdout"));
   assert_eq!(
     context
       .execution_state

@@ -241,18 +241,9 @@ fn run_stdio_runner(
     .trim()
     .to_string();
   let mut output_attributes = runner_output_attributes(&wait, &stdout_output, &stderr_output);
-  insert_log_preview(
-    &mut output_attributes,
-    "pluginRunnerStdoutPreview",
-    &stdout,
-  );
-  insert_log_preview(
-    &mut output_attributes,
-    "pluginRunnerStderrPreview",
-    &stderr,
-  );
-  let failure_attributes =
-    merged_attributes(sandbox_attributes.clone(), output_attributes.clone());
+  insert_log_preview(&mut output_attributes, "pluginRunnerStdoutPreview", &stdout);
+  insert_log_preview(&mut output_attributes, "pluginRunnerStderrPreview", &stderr);
+  let failure_attributes = merged_attributes(sandbox_attributes.clone(), output_attributes.clone());
 
   match wait.reason {
     ChildExitReason::Cancelled => {
@@ -458,7 +449,10 @@ fn runner_output_attributes(
       "pluginRunnerExitReason".to_string(),
       child_exit_reason_label(wait.reason).to_string(),
     ),
-    ("pluginRunnerExitStatus".to_string(), wait.status.to_string()),
+    (
+      "pluginRunnerExitStatus".to_string(),
+      wait.status.to_string(),
+    ),
     (
       "pluginRunnerExitCode".to_string(),
       wait
