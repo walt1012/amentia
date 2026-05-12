@@ -68,8 +68,9 @@ M3 ends when Pith is usable daily without restart anxiety or setup confusion:
 - Done: workspace writes, diffs, reads, listings, search, shell temp routing, and artifact cleanup respect symlink-safe boundaries.
 - Done: web search is the current retrieval layer; generic local RAG and vector indexing remain out of scope.
 - Done: local planner and summarizer prompts use compact prompt envelopes with attribution for tiny model context limits.
+- Done: model release metadata can be audited against Hugging Face size, checksum, and license headers without making CI network-fragile.
 - Done: inspector and setup surfaces are progressive enough for daily use without expanding every control by default.
-- Active: final M3 readiness audit and release metadata re-check before moving into Milestone 4 plugin execution.
+- Active: final M3 readiness audit before moving into Milestone 4 plugin execution.
 
 ## Next Order
 
