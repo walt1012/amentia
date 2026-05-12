@@ -130,8 +130,12 @@ private extension PluginConnectorSummary {
     let required = authRequired ? "required" : "optional"
     let scopes = authScopes.isEmpty ? "no scopes" : authScopes.joined(separator: ", ")
     let store = credentialStore ?? "none"
+    let provider = credentialProvider ?? "none"
+    let handle = credentialHandle ?? "none"
     let credential = credentialLabel ?? "no credential"
+    let secret = credentialSecretPresent ? "env-bound" : "none"
     return "Auth: \(type) | \(authStatus) | \(required) | \(scopes) "
-      + "| store: \(store) | \(credential)"
+      + "| store: \(store) | provider: \(provider) | handle: \(handle) "
+      + "| secret: \(secret) | \(credential)"
   }
 }

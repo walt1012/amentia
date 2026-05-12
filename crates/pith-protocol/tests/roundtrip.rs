@@ -268,8 +268,12 @@ fn plugin_connector_registry_round_trips() {
       credential_store: Some("keychain".to_string()),
       auth_status: "disabled".to_string(),
       credential_present: false,
+      credential_secret_present: false,
+      credential_provider: None,
+      credential_handle: None,
       credential_label: None,
       authorized_at: None,
+      credential_updated_at: None,
     }],
   };
 
@@ -289,6 +293,7 @@ fn plugin_connector_registry_round_trips() {
   assert!(value["connectors"][0].get("connectorId").is_some());
   assert!(value["connectors"][0].get("authRequired").is_some());
   assert!(value["connectors"][0].get("credentialPresent").is_some());
+  assert!(value["connectors"][0].get("credentialSecretPresent").is_some());
 }
 
 #[test]
@@ -316,8 +321,12 @@ fn plugin_connector_credential_payloads_round_trip() {
       credential_store: Some("keychain".to_string()),
       auth_status: "authorized".to_string(),
       credential_present: true,
+      credential_secret_present: true,
+      credential_provider: Some("pith.localCredentialProvider".to_string()),
+      credential_handle: Some("notion-connector::notion".to_string()),
       credential_label: Some("Notion authorization marker".to_string()),
       authorized_at: Some(10),
+      credential_updated_at: Some(11),
     },
   };
 
@@ -328,8 +337,14 @@ fn plugin_connector_credential_payloads_round_trip() {
 
   assert!(params_value.get("connectorId").is_some());
   assert!(result_value["connector"].get("authStatus").is_some());
+  assert!(result_value["connector"].get("credentialSecretPresent").is_some());
   assert_eq!(decoded.connector.auth_status, "authorized");
   assert!(decoded.connector.credential_present);
+  assert!(decoded.connector.credential_secret_present);
+  assert_eq!(
+    decoded.connector.credential_provider.as_deref(),
+    Some("pith.localCredentialProvider")
+  );
 }
 
 #[test]

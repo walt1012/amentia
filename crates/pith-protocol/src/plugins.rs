@@ -108,10 +108,17 @@ pub struct PluginConnectorSummary {
   pub credential_store: Option<String>,
   pub auth_status: String,
   pub credential_present: bool,
+  pub credential_secret_present: bool,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_provider: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_handle: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub credential_label: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub authorized_at: Option<i64>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_updated_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

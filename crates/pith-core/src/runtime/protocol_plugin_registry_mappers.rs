@@ -14,6 +14,8 @@ use crate::plugins::plugin_command_execution::is_supported_plugin_command_execut
 use crate::plugins::plugin_command_readiness::PluginCommandReadiness;
 use crate::runtime_plugins::PluginConnectorCredentialState;
 
+const LOCAL_CREDENTIAL_PROVIDER: &str = "pith.localCredentialProvider";
+
 pub(super) fn to_protocol_capability(
   capability: HostPluginCapabilityRegistration,
 ) -> PluginCapabilityRegistration {
@@ -94,7 +96,11 @@ pub(super) fn to_protocol_plugin_connector(
   connector: HostPluginConnectorEntry,
   credential: Option<&PluginConnectorCredentialState>,
 ) -> PluginConnectorSummary {
+  let connector_id = connector.connector_id.clone();
   let credential_present = credential.is_some();
+  let credential_secret_present = credential
+    .and_then(|state| state.credential_secret.as_ref())
+    .is_some();
   let auth_status = connector_auth_status(&connector, credential_present);
   let status = connector_status(&connector, credential_present);
   PluginConnectorSummary {
@@ -114,8 +120,12 @@ pub(super) fn to_protocol_plugin_connector(
     credential_store: connector.credential_store,
     auth_status,
     credential_present,
+    credential_secret_present,
+    credential_provider: credential.map(|_| LOCAL_CREDENTIAL_PROVIDER.to_string()),
+    credential_handle: credential.map(|_| connector_id),
     credential_label: credential.map(|state| state.credential_label.clone()),
     authorized_at: credential.map(|state| state.authorized_at),
+    credential_updated_at: credential.map(|state| state.updated_at),
   }
 }
 

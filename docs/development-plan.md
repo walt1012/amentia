@@ -78,16 +78,15 @@ M4 turns plugins into bounded local capabilities:
   runner launch and continue through the existing approval response path.
 - Done: MCP stdio output now records protocol diagnostics for initialize
   responses, tool-call responses, malformed stdout, and tool errors.
-- Active: keep connector credentials local, inspectable, and clearable behind
-  sandbox boundaries.
+- Done: connector registries expose non-secret local credential provider,
+  handle, secret-presence, and update metadata for inspection and clearing.
+- Active: keep plugin approvals progressive and avoid extra always-visible UI.
 
 ## Next Order
 
-1. Keep connector credentials local, inspectable, and clearable behind sandbox
-   boundaries.
-2. Keep plugin approvals progressive and avoid extra always-visible UI.
-3. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
-4. Let model-driven tool choice mature slowly; keep deterministic routing where
+1. Keep plugin approvals progressive and avoid extra always-visible UI.
+2. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
+3. Let model-driven tool choice mature slowly; keep deterministic routing where
    tiny local models are not reliable yet.
 
 ## Not Now

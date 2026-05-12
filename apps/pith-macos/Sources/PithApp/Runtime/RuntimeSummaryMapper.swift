@@ -184,8 +184,12 @@ enum RuntimeSummaryMapper {
       credentialStore: connector.credentialStore,
       authStatus: connector.authStatus,
       credentialPresent: connector.credentialPresent,
+      credentialSecretPresent: connector.credentialSecretPresent,
+      credentialProvider: connector.credentialProvider,
+      credentialHandle: connector.credentialHandle,
       credentialLabel: connector.credentialLabel,
-      authorizedAt: connector.authorizedAt
+      authorizedAt: connector.authorizedAt,
+      credentialUpdatedAt: connector.credentialUpdatedAt
     )
   }
 

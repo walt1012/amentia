@@ -472,6 +472,7 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
   assert_eq!(connectors[0]["status"], "disabled");
   assert_eq!(connectors[0]["authStatus"], "disabled");
   assert_eq!(connectors[0]["credentialPresent"], false);
+  assert_eq!(connectors[0]["credentialSecretPresent"], false);
   assert_eq!(connectors[0]["authType"], "oauth2");
   assert_eq!(connectors[0]["credentialStore"], "keychain");
 }
@@ -502,13 +503,15 @@ fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   assert_eq!(initial_connector["status"], "needsAuth");
   assert_eq!(initial_connector["authStatus"], "needsAuth");
   assert_eq!(initial_connector["credentialPresent"], false);
+  assert_eq!(initial_connector["credentialSecretPresent"], false);
 
   let authorize_response = handle_request(
     &mut context,
     request(
       methods::PLUGIN_CONNECTOR_AUTHORIZE,
       Some(json!({
-        "connectorId": "notion-connector::notion"
+        "connectorId": "notion-connector::notion",
+        "credentialSecret": "notion-local-token"
       })),
     ),
   );
@@ -520,10 +523,20 @@ fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   assert_eq!(authorized_connector["status"], "ready");
   assert_eq!(authorized_connector["authStatus"], "authorized");
   assert_eq!(authorized_connector["credentialPresent"], true);
+  assert_eq!(authorized_connector["credentialSecretPresent"], true);
+  assert_eq!(
+    authorized_connector["credentialProvider"],
+    "pith.localCredentialProvider"
+  );
+  assert_eq!(
+    authorized_connector["credentialHandle"],
+    "notion-connector::notion"
+  );
   assert_eq!(
     authorized_connector["credentialLabel"],
     "Notion authorization marker"
   );
+  assert!(authorized_connector["credentialUpdatedAt"].is_i64());
 
   let clear_response = handle_request(
     &mut context,
@@ -542,6 +555,9 @@ fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   assert_eq!(cleared_connector["status"], "needsAuth");
   assert_eq!(cleared_connector["authStatus"], "needsAuth");
   assert_eq!(cleared_connector["credentialPresent"], false);
+  assert_eq!(cleared_connector["credentialSecretPresent"], false);
+  assert!(cleared_connector["credentialProvider"].is_null());
+  assert!(cleared_connector["credentialHandle"].is_null());
 }
 
 #[test]
