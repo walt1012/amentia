@@ -53,6 +53,7 @@ fn execute_plugin_command_snapshot(
         &snapshot.thread_id,
         snapshot.workspace.as_ref(),
         snapshot.input.as_deref(),
+        &snapshot.connector_refs,
         &snapshot.cancellation,
       ) {
         Ok(result) => result,

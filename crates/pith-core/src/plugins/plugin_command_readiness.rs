@@ -3,6 +3,7 @@ use pith_plugin_host::{
 };
 
 use super::plugin_command_execution::is_supported_plugin_command_execution;
+use super::plugin_command_types::PluginConnectorExecutionRef;
 use crate::runtime_plugins::RuntimePluginState;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -85,6 +86,25 @@ pub(crate) fn command_readiness(
   }
 
   PluginCommandReadiness::ready(required_connector_ids)
+}
+
+pub(super) fn command_connector_refs(
+  command: &HostPluginCommandEntry,
+  plugin_state: &RuntimePluginState,
+) -> Vec<PluginConnectorExecutionRef> {
+  required_auth_connectors(command, plugin_state)
+    .into_iter()
+    .filter_map(|connector| {
+      let credential = plugin_state.connector_credential(&connector.connector_id)?;
+      Some(PluginConnectorExecutionRef {
+        connector_id: connector.connector_id,
+        service: connector.service,
+        credential_store: credential.credential_store.clone(),
+        credential_label: credential.credential_label.clone(),
+        authorized_at: credential.authorized_at,
+      })
+    })
+    .collect()
 }
 
 fn required_auth_connectors(

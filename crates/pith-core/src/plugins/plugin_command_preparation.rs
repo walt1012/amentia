@@ -2,7 +2,7 @@ use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::build_command_registry;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams};
 
-use super::plugin_command_readiness::command_readiness;
+use super::plugin_command_readiness::{command_connector_refs, command_readiness};
 use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{PluginCommandSnapshot, PreparedPluginCommandRun};
 use crate::context_memory_pack::pack_memory_notes_for_context;
@@ -82,11 +82,13 @@ pub fn prepare_plugin_command_run(
     workspace.as_ref().map(|entry| entry.display_name.as_str()),
     &memory_query,
   );
+  let connector_refs = command_connector_refs(&command, &context.plugin_state);
   let command_item = build_plugin_command_timeline_item(
     &command,
     workspace.as_ref(),
     input.as_deref(),
     &memory_context,
+    &connector_refs,
   );
   let cancellation = GenerationCancellation::new();
   if context
@@ -109,6 +111,7 @@ pub fn prepare_plugin_command_run(
       command,
       workspace,
       input,
+      connector_refs,
       command_item,
       memory_notes,
       cancellation,

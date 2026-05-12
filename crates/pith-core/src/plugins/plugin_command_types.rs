@@ -2,6 +2,7 @@ use pith_memory::MemoryNote;
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
+use serde::Serialize;
 
 #[derive(Debug)]
 pub struct PreparedPluginCommandRun {
@@ -22,10 +23,21 @@ pub(super) struct PluginCommandSnapshot {
   pub(super) command: HostPluginCommandEntry,
   pub(super) workspace: Option<WorkspaceSummary>,
   pub(super) input: Option<String>,
+  pub(super) connector_refs: Vec<PluginConnectorExecutionRef>,
   pub(super) command_item: TimelineItem,
   pub(super) memory_notes: Vec<MemoryNote>,
   pub(super) cancellation: GenerationCancellation,
   pub(super) running_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PluginConnectorExecutionRef {
+  pub(super) connector_id: String,
+  pub(super) service: String,
+  pub(super) credential_store: String,
+  pub(super) credential_label: String,
+  pub(super) authorized_at: i64,
 }
 
 #[derive(Debug)]

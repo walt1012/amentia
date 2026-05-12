@@ -382,6 +382,167 @@ printf '{"content":"External runner completed."}\n'
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_passes_connector_refs_to_stdio_runner_without_secrets() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-connector-runner",
+    "notion-runner",
+    "Notion Runner",
+  );
+  let workspace = create_temp_workspace("plugin-command-connector-runner-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-runner",
+  "version": "0.1.0",
+  "displayName": "Notion Runner",
+  "description": "Connector-backed stdio command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:notion-runner.sync", "connector:notion"],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector runner plugin manifest");
+  fs::write(
+    source_root.join("commands").join("notion-runner.sync.json"),
+    r#"{
+  "title": "Sync Notion",
+  "description": "Run a connector-backed stdio command.",
+  "prompt": "Sync local context with Notion.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+payload=$(cat)
+case "$payload" in *'"connectorId":"notion-runner::notion"'*) connector_id=true;; *) connector_id=false;; esac
+case "$payload" in *'"credentialStore":"keychain"'*) store=true;; *) store=false;; esac
+case "$payload" in *'"credentialLabel":"Notion authorization marker"'*) label=true;; *) label=false;; esac
+case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
+printf '{"content":"connectorId=%s store=%s label=%s secretLeak=%s"}\n' "$connector_id" "$store" "$label" "$secret_leak"
+"#,
+  )
+  .expect("write connector runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-runner".to_string(),
+      name: "notion-runner".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Runner".to_string(),
+      status: "ready".to_string(),
+      description: "Connector-backed stdio command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-runner.sync".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Connector Runner Thread"
+      })),
+    ),
+  );
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-runner::notion"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-runner::notion-runner.sync"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["attributes"]["connectorIds"], "notion-runner::notion");
+  assert_eq!(items[0]["attributes"]["connectorServices"], "notion");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerConnectorIds"],
+    "notion-runner::notion"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorServices"], "notion");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerConnectorStores"],
+    "keychain"
+  );
+  assert_eq!(
+    items[1]["content"],
+    "connectorId=true store=true label=true secretLeak=false"
+  );
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_records_stdio_runner_failure() {
   use std::os::unix::fs::PermissionsExt;
 

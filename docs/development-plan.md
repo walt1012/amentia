@@ -63,17 +63,20 @@ M4 turns plugins into bounded local capabilities:
   clear credential, and failure surfaces without a broad marketplace.
 - Done: connector-backed plugin commands are blocked until required connector
   auth is present, and command registries expose the run blocker.
-- Active: connect authorized connectors to bounded MCP/stdio execution
-  contracts and permission checks.
+- Done: authorized connector commands pass non-secret credential references to
+  bounded runner envelopes and timeline metadata.
+- Active: connect those local credential references to real MCP/stdio connector
+  execution without expanding the UI surface.
 
 ## Next Order
 
-1. Add the first connector-backed execution path that consumes connector auth
-   state without leaking credentials into prompts.
+1. Add a local credential provider boundary for connector runners.
 2. Keep connector credentials local and inspectable, with explicit permission
    and sandbox boundaries.
-3. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
-4. Let model-driven tool choice mature slowly; keep deterministic routing where
+3. Add the first real MCP-backed connector action behind the same bounded
+   runner contract.
+4. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
+5. Let model-driven tool choice mature slowly; keep deterministic routing where
    tiny local models are not reliable yet.
 
 ## Not Now

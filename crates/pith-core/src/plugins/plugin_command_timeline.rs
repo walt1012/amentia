@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
+use super::plugin_command_types::PluginConnectorExecutionRef;
 use crate::context_memory_pack::{merge_memory_context_attributes, MemoryContextPack};
 
 const PLUGIN_FAILURE_LOG_PREVIEW_LIMIT: usize = 2048;
@@ -12,6 +13,7 @@ pub(super) fn build_plugin_command_timeline_item(
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
   memory_context: &MemoryContextPack,
+  connector_refs: &[PluginConnectorExecutionRef],
 ) -> TimelineItem {
   let mut attributes = HashMap::from([
     ("commandId".to_string(), command.command_id.clone()),
@@ -34,6 +36,7 @@ pub(super) fn build_plugin_command_timeline_item(
   if let Some(execution_kind) = command.execution_kind.as_ref() {
     attributes.insert("executionKind".to_string(), execution_kind.clone());
   }
+  insert_connector_context_attributes(&mut attributes, connector_refs);
   merge_memory_context_attributes(&mut attributes, memory_context);
 
   let workspace_label = workspace
@@ -53,6 +56,40 @@ pub(super) fn build_plugin_command_timeline_item(
     content,
     attributes: Some(attributes),
   }
+}
+
+fn insert_connector_context_attributes(
+  attributes: &mut HashMap<String, String>,
+  connector_refs: &[PluginConnectorExecutionRef],
+) {
+  if connector_refs.is_empty() {
+    return;
+  }
+
+  attributes.insert(
+    "connectorIds".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.connector_id.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "connectorCredentialStores".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_store.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "connectorServices".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.service.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
 }
 
 pub(super) fn build_plugin_result_timeline_item(

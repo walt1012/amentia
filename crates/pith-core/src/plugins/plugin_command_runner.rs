@@ -15,6 +15,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
+use super::plugin_command_types::PluginConnectorExecutionRef;
 
 const PLUGIN_RUNNER_TIMEOUT: Duration = Duration::from_secs(60);
 const PLUGIN_RUNNER_POLL_INTERVAL: Duration = Duration::from_millis(25);
@@ -112,6 +113,7 @@ pub(super) fn run_external_plugin_command(
   thread_id: &str,
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
+  connector_refs: &[PluginConnectorExecutionRef],
   cancellation: &GenerationCancellation,
 ) -> PluginRunnerRunResult<PluginRunnerResult> {
   if cancellation.is_cancelled() {
@@ -147,13 +149,15 @@ pub(super) fn run_external_plugin_command(
     .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
   let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
     .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
-  let sandbox_attributes = sandbox.attributes();
+  let mut runner_context_attributes = sandbox.attributes();
+  insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);
   let input_payload = json!({
     "envelope": execution.input.envelope,
     "threadId": thread_id,
     "commandId": command.command_id,
     "input": input,
     "workspace": workspace,
+    "connectors": connector_refs,
   });
 
   let output = run_stdio_runner(
@@ -162,14 +166,52 @@ pub(super) fn run_external_plugin_command(
     &entrypoint_path,
     &input_payload.to_string(),
     cancellation,
-    &sandbox_attributes,
+    &runner_context_attributes,
   )?;
   Ok(plugin_runner_output(
     command,
     &execution.kind,
     &output.stdout,
-    merged_attributes(sandbox_attributes, output.attributes),
+    merged_attributes(runner_context_attributes, output.attributes),
   ))
+}
+
+fn insert_connector_runner_attributes(
+  attributes: &mut HashMap<String, String>,
+  connector_refs: &[PluginConnectorExecutionRef],
+) {
+  if connector_refs.is_empty() {
+    return;
+  }
+
+  attributes.insert(
+    "pluginRunnerConnectorCount".to_string(),
+    connector_refs.len().to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerConnectorIds".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.connector_id.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "pluginRunnerConnectorStores".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_store.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "pluginRunnerConnectorServices".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.service.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
 }
 
 fn run_stdio_runner(
