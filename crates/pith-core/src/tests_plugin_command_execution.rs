@@ -850,11 +850,8 @@ fn plugin_command_run_blocks_mcp_without_declared_mcp_permission() {
 #[test]
 fn plugin_command_run_blocks_connector_mcp_without_declared_network_permission() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root = create_temp_plugin_bundle(
-    "plugin-command-mcp-network",
-    "mcp-network",
-    "MCP Network",
-  );
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-mcp-network", "mcp-network", "MCP Network");
   let workspace = create_temp_workspace("plugin-command-mcp-network-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
