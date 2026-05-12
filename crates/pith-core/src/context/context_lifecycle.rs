@@ -59,6 +59,11 @@ impl RuntimeContext {
   pub fn cancel_running_work(&mut self) {
     self.execution_state.cancel_running_work();
   }
+
+  pub fn recover_after_request_panic(&mut self) -> Result<()> {
+    self.execution_state.clear_running_work_after_recovery();
+    self.persist_runtime_state()
+  }
 }
 
 impl Default for RuntimeContext {

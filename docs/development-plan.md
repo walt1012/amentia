@@ -62,10 +62,13 @@ M3 ends when Pith is usable daily without restart anxiety or setup confusion:
 
 ## M3 Status
 
-- Done: first-use model download flow, verified catalog activation, active model recovery, model health/readiness failure wording, setup progress and action consistency, verified-safe partial download and stamp cleanup, download pause fallback cleanup, stable model-download, workspace-open, and launch-failure timeline attribution, deferred setup-ready announcements during launch bootstrap, bounded shell/model/web-search paths, replaceable workspace search with duplicate-submit suppression and isolated timeout handling, cancellable launch, relaunch, workspace-open, thread-creation, selected-thread history, model-metadata, stale local-execution tasks, active turn cancellation requests, and stable async timeline attribution, runtime request supervision, thread-scoped cancellation and approval failure feedback, symlink-safe workspace tools, progressive inspector surfaces, and native sandbox diagnostics.
+- Done: model setup is first-use guided, catalog-based, checksum verified, resumable, cancellable, and single-active-model only.
+- Done: runtime requests use short locks, supervised execution lanes, bounded subprocesses, cancellable turns and approvals, relaunch recovery, panic cleanup, and stable timeline attribution.
+- Done: shell, workspace tools, model inference, web search, git helpers, sandbox temp paths, and output artifacts are bounded and inspectable.
+- Done: workspace writes, diffs, reads, listings, search, shell temp routing, and artifact cleanup respect symlink-safe boundaries.
 - Done: web search is the current retrieval layer; generic local RAG and vector indexing remain out of scope.
-- Active: runtime cancellation and relaunch recovery, local model edge-case recovery, compact context shaping, and final readiness polish.
-- Next: close the remaining daily-driver recovery gaps, then review whether the architecture is ready for Milestone 4 plugin execution.
+- Done: inspector and setup surfaces are progressive enough for daily use without expanding every control by default.
+- Active: final M3 readiness audit, compact context polish, and release metadata re-check before moving into Milestone 4 plugin execution.
 
 ## Next Order
 

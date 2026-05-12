@@ -156,6 +156,10 @@ impl RuntimeExecutionState {
     self.running.cancel_all_running();
   }
 
+  pub(crate) fn clear_running_work_after_recovery(&mut self) {
+    self.running.clear_after_recovery();
+  }
+
   pub(crate) fn remove_running_turn(&mut self, turn_id: &str) {
     self.running.remove_running_turn(turn_id);
   }
@@ -286,5 +290,29 @@ mod tests {
     assert_eq!(state.counts().running_turn_count(), 1);
     assert_eq!(state.counts().running_approval_count(), 1);
     assert!(!state.take_pending_running_cancel("queued-thread"));
+  }
+
+  #[test]
+  fn recovery_clears_running_work_after_cancelling_it() {
+    let mut state = RuntimeExecutionState::empty();
+    let turn_cancellation = GenerationCancellation::new();
+    let approval_cancellation = GenerationCancellation::new();
+    state.insert_running_turn(
+      "turn-1".to_string(),
+      "thread-1".to_string(),
+      turn_cancellation.clone(),
+    );
+    state.insert_running_approval(
+      "approval-1".to_string(),
+      "thread-1".to_string(),
+      approval_cancellation.clone(),
+    );
+
+    state.clear_running_work_after_recovery();
+
+    assert!(turn_cancellation.is_cancelled());
+    assert!(approval_cancellation.is_cancelled());
+    assert_eq!(state.counts().running_turn_count(), 0);
+    assert_eq!(state.counts().running_approval_count(), 0);
   }
 }

@@ -159,4 +159,11 @@ impl RuntimeRunningExecutionState {
   pub(crate) fn remove_running_approval(&mut self, approval_id: &str) {
     self.running_approvals.remove(approval_id);
   }
+
+  pub(crate) fn clear_after_recovery(&mut self) {
+    self.cancel_all_running();
+    self.running_turns.clear();
+    self.running_approvals.clear();
+    self.pending_cancellations.clear();
+  }
 }

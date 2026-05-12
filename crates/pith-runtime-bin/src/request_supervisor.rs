@@ -81,10 +81,24 @@ impl RequestSupervisor {
         }
       }))
       .unwrap_or_else(|_| {
+        let recovery_error = {
+          let mut locked_context = lock_context(&context);
+          locked_context.recover_after_request_panic().err()
+        };
+        let message = recovery_error
+          .map(|error| {
+            format!(
+              "Runtime request recovered after an internal panic; state cleanup failed: {error}"
+            )
+          })
+          .unwrap_or_else(|| {
+            "Runtime request recovered after an internal panic; running work was cleared."
+              .to_string()
+          });
         JsonRpcResponse::error(
           request_id,
           -32099,
-          "Runtime request recovered after an internal panic",
+          message,
         )
       });
 
