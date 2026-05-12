@@ -756,6 +756,9 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   );
   assert_eq!(items[2]["attributes"]["mcpServerId"], "notion");
   assert_eq!(items[2]["attributes"]["mcpToolName"], "createTask");
+  assert_eq!(items[2]["attributes"]["mcpProtocolStatus"], "completed");
+  assert_eq!(items[2]["attributes"]["mcpInitializeResponseSeen"], "true");
+  assert_eq!(items[2]["attributes"]["mcpToolResponseSeen"], "true");
   assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
   assert_eq!(
     items[2]["attributes"]["pluginRunnerCredentialProviders"],
@@ -765,6 +768,147 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[2]["content"],
     "method=true tool=true provider=true handle=true secretLeak=false credentialEnv=true tokenLeak=false"
   );
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_command_run_records_mcp_protocol_diagnostics() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-diagnostics",
+    "mcp-diagnostics",
+    "MCP Diagnostics",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-diagnostics-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-diagnostics",
+  "version": "0.1.0",
+  "displayName": "MCP Diagnostics",
+  "description": "MCP protocol diagnostics plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-diagnostics.run", "mcp_server:local"],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp diagnostics plugin manifest");
+  fs::write(
+    source_root.join("commands").join("mcp-diagnostics.run.json"),
+    r#"{
+  "title": "Run MCP Diagnostics",
+  "description": "Run an MCP command that emits malformed stdout.",
+  "prompt": "Run MCP diagnostics.",
+  "execution": {
+    "kind": "mcp.localDiagnostics",
+    "driver": "mcp",
+    "entrypoint": "local.inspect"
+  }
+}"#,
+  )
+  .expect("write mcp diagnostics command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf 'debug line on stdout\n'
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+"#,
+  )
+  .expect("write mcp diagnostics server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp diagnostics server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions)
+    .expect("set mcp diagnostics server permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-diagnostics".to_string(),
+      name: "mcp-diagnostics".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Diagnostics".to_string(),
+      status: "ready".to_string(),
+      description: "MCP protocol diagnostics plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-diagnostics.run".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec!["mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Diagnostics Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-diagnostics::mcp-diagnostics.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "missingToolResponse");
+  assert_eq!(items[1]["attributes"]["mcpInitializeResponseSeen"], "true");
+  assert_eq!(items[1]["attributes"]["mcpToolResponseSeen"], "false");
+  assert_eq!(items[1]["attributes"]["mcpJsonResponseCount"], "1");
+  assert_eq!(items[1]["attributes"]["mcpInvalidJsonLineCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["mcpLastInvalidJsonPreview"],
+    "debug line on stdout"
+  );
+  assert!(items[1]["content"]
+    .as_str()
+    .expect("warning content")
+    .contains("initialized but did not return a tool response"));
 }
 
 #[test]

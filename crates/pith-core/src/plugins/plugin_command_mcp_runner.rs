@@ -20,7 +20,9 @@ use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 
 const PLUGIN_MANIFEST_MAX_BYTES: usize = 64 * 1024;
+const MCP_INITIALIZE_REQUEST_ID: i64 = 1;
 const MCP_TOOL_CALL_REQUEST_ID: i64 = 2;
+const MCP_INVALID_JSON_PREVIEW_LIMIT: usize = 240;
 
 struct PluginMcpTarget {
   server_id: String,
@@ -57,6 +59,15 @@ struct PluginMcpContentEnvelope {
 struct PluginMcpErrorEnvelope {
   code: i32,
   message: String,
+}
+
+struct PluginMcpOutputScan {
+  tool_response: Option<PluginMcpJsonRpcEnvelope>,
+  initialize_response_seen: bool,
+  json_response_count: usize,
+  invalid_json_line_count: usize,
+  output_line_count: usize,
+  last_invalid_json_preview: Option<String>,
 }
 
 pub(super) fn is_supported_mcp_execution(
@@ -332,16 +343,19 @@ fn mcp_runner_output(
   execution_kind: &str,
   target: &PluginMcpTarget,
   output: &str,
-  attributes: HashMap<String, String>,
+  mut attributes: HashMap<String, String>,
 ) -> PluginRunnerRunResult<PluginRunnerResult> {
-  let Some(response) = mcp_tool_response(output) else {
+  let mut scan = scan_mcp_output(output);
+  scan.insert_attributes(&mut attributes);
+  let Some(response) = scan.tool_response.take() else {
+    attributes.insert(
+      "mcpProtocolStatus".to_string(),
+      "missingToolResponse".to_string(),
+    );
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
-        format!(
-          "Plugin command `{}` did not return an MCP tool response.",
-          command.command_id
-        ),
+        missing_mcp_tool_response_message(command, target, &scan),
         output.to_string(),
         String::new(),
         attributes,
@@ -350,6 +364,8 @@ fn mcp_runner_output(
     );
   };
   if let Some(error) = response.error {
+    attributes.insert("mcpProtocolStatus".to_string(), "toolError".to_string());
+    attributes.insert("mcpErrorCode".to_string(), error.code.to_string());
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
@@ -365,6 +381,10 @@ fn mcp_runner_output(
     );
   }
   let Some(result) = response.result else {
+    attributes.insert(
+      "mcpProtocolStatus".to_string(),
+      "missingResult".to_string(),
+    );
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
@@ -381,6 +401,10 @@ fn mcp_runner_output(
   };
   let content = mcp_result_content(&result);
   if result.is_error {
+    attributes.insert(
+      "mcpProtocolStatus".to_string(),
+      "toolResultError".to_string(),
+    );
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
@@ -395,6 +419,10 @@ fn mcp_runner_output(
       .boxed(),
     );
   }
+  attributes.insert(
+    "mcpProtocolStatus".to_string(),
+    mcp_success_protocol_status(&scan).to_string(),
+  );
 
   Ok(PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
@@ -404,26 +432,137 @@ fn mcp_runner_output(
   })
 }
 
-fn mcp_tool_response(output: &str) -> Option<PluginMcpJsonRpcEnvelope> {
-  output
-    .lines()
-    .filter_map(|line| {
-      let response = serde_json::from_str::<PluginMcpJsonRpcEnvelope>(line.trim()).ok()?;
-      if is_mcp_tool_response_id(response.id.as_ref()) {
-        Some(response)
-      } else {
-        None
+impl PluginMcpOutputScan {
+  fn empty() -> Self {
+    Self {
+      tool_response: None,
+      initialize_response_seen: false,
+      json_response_count: 0,
+      invalid_json_line_count: 0,
+      output_line_count: 0,
+      last_invalid_json_preview: None,
+    }
+  }
+
+  fn insert_attributes(&self, attributes: &mut HashMap<String, String>) {
+    attributes.insert(
+      "mcpInitializeResponseSeen".to_string(),
+      self.initialize_response_seen.to_string(),
+    );
+    attributes.insert(
+      "mcpToolResponseSeen".to_string(),
+      self.tool_response.is_some().to_string(),
+    );
+    attributes.insert(
+      "mcpJsonResponseCount".to_string(),
+      self.json_response_count.to_string(),
+    );
+    attributes.insert(
+      "mcpInvalidJsonLineCount".to_string(),
+      self.invalid_json_line_count.to_string(),
+    );
+    attributes.insert(
+      "mcpOutputLineCount".to_string(),
+      self.output_line_count.to_string(),
+    );
+    if let Some(preview) = self.last_invalid_json_preview.as_ref() {
+      attributes.insert(
+        "mcpLastInvalidJsonPreview".to_string(),
+        preview.clone(),
+      );
+    }
+  }
+}
+
+fn scan_mcp_output(output: &str) -> PluginMcpOutputScan {
+  let mut scan = PluginMcpOutputScan::empty();
+  for line in output.lines().map(str::trim).filter(|line| !line.is_empty()) {
+    scan.output_line_count += 1;
+    match serde_json::from_str::<PluginMcpJsonRpcEnvelope>(line) {
+      Ok(response) => {
+        scan.json_response_count += 1;
+        let response_id = response.id.as_ref();
+        if is_mcp_initialize_response_id(response_id) {
+          scan.initialize_response_seen = true;
+        }
+        if is_mcp_tool_response_id(response_id) {
+          scan.tool_response = Some(response);
+        }
       }
-    })
-    .next_back()
+      Err(_) => {
+        scan.invalid_json_line_count += 1;
+        scan.last_invalid_json_preview = Some(bounded_mcp_invalid_json_preview(line));
+      }
+    }
+  }
+  scan
+}
+
+fn missing_mcp_tool_response_message(
+  command: &HostPluginCommandEntry,
+  target: &PluginMcpTarget,
+  scan: &PluginMcpOutputScan,
+) -> String {
+  if scan.output_line_count == 0 {
+    return format!(
+      "MCP server `{}` did not write a response for plugin command `{}`.",
+      target.server_id, command.command_id
+    );
+  }
+  if scan.json_response_count == 0 {
+    return format!(
+      "MCP server `{}` wrote {} non-JSON stdout line(s) and no tool response for `{}`.",
+      target.server_id, scan.invalid_json_line_count, target.tool_name
+    );
+  }
+  if scan.initialize_response_seen {
+    return format!(
+      "MCP server `{}` initialized but did not return a tool response for `{}`.",
+      target.server_id, target.tool_name
+    );
+  }
+  format!(
+    "MCP server `{}` returned {} JSON-RPC response(s), but none matched tool call id {} for `{}`.",
+    target.server_id,
+    scan.json_response_count,
+    MCP_TOOL_CALL_REQUEST_ID,
+    target.tool_name
+  )
+}
+
+fn mcp_success_protocol_status(scan: &PluginMcpOutputScan) -> &'static str {
+  if scan.invalid_json_line_count > 0 || !scan.initialize_response_seen {
+    "completedWithWarnings"
+  } else {
+    "completed"
+  }
+}
+
+fn is_mcp_initialize_response_id(id: Option<&Value>) -> bool {
+  is_mcp_response_id(id, MCP_INITIALIZE_REQUEST_ID)
 }
 
 fn is_mcp_tool_response_id(id: Option<&Value>) -> bool {
+  is_mcp_response_id(id, MCP_TOOL_CALL_REQUEST_ID)
+}
+
+fn is_mcp_response_id(id: Option<&Value>, expected_id: i64) -> bool {
   match id {
-    Some(Value::Number(number)) => number.as_i64() == Some(MCP_TOOL_CALL_REQUEST_ID),
-    Some(Value::String(value)) => value == &MCP_TOOL_CALL_REQUEST_ID.to_string(),
+    Some(Value::Number(number)) => number.as_i64() == Some(expected_id),
+    Some(Value::String(value)) => value == &expected_id.to_string(),
     _ => false,
   }
+}
+
+fn bounded_mcp_invalid_json_preview(line: &str) -> String {
+  let mut preview = line
+    .chars()
+    .take(MCP_INVALID_JSON_PREVIEW_LIMIT)
+    .collect::<String>();
+  if line.chars().count() > MCP_INVALID_JSON_PREVIEW_LIMIT {
+    preview.push_str("[truncated]");
+  }
+  preview
 }
 
 fn mcp_result_content(result: &PluginMcpToolResultEnvelope) -> String {
