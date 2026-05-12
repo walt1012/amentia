@@ -12,15 +12,32 @@ extension AppViewModel {
     let wasCancelled = result.items.contains {
       $0.attributes["streamingStatus"] == "cancelled"
     }
-    if wasCancelled {
-      runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
+    let pluginCommandCancelled = result.items.contains {
+      $0.attributes["pluginCommandStatus"] == "cancelled"
     }
-    let preview = wasCancelled
-      ? TimelineEventPresenter.cancelledResponsePreview
-      : TimelineEventPresenter.turnPreview(
+    let pluginCommandFailed = result.items.contains {
+      $0.attributes["pluginCommandStatus"] == "failed"
+    }
+    if pluginCommandCancelled {
+      runtimeDetail = TimelineEventPresenter.pendingPluginCommandCancelledDetail
+    } else if wasCancelled {
+      runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
+    } else if pluginCommandFailed {
+      runtimeDetail = TimelineEventPresenter.pluginCommandFailedDetail
+    }
+    let preview: String
+    if pluginCommandCancelled {
+      preview = TimelineEventPresenter.cancelledPluginCommandPreview
+    } else if wasCancelled {
+      preview = TimelineEventPresenter.cancelledResponsePreview
+    } else if pluginCommandFailed {
+      preview = TimelineEventPresenter.failedPluginCommandPreview
+    } else {
+      preview = TimelineEventPresenter.turnPreview(
         turnID: result.turnID,
         activeTurnID: result.activeTurnID
       )
+    }
     refreshThreadPreview(
       threadID: result.threadID,
       preview: preview

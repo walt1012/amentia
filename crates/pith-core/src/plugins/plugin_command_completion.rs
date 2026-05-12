@@ -34,6 +34,7 @@ fn complete_plugin_command_items(
     workspace,
     input,
     mut items,
+    capture_memory,
   } = output;
   let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&requested_thread_id) else {
@@ -53,35 +54,37 @@ fn complete_plugin_command_items(
     .map_err(|error| (-32010, error.to_string()))?;
   refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
 
-  match maybe_capture_plugin_command_memory(
-    context,
-    &thread_id,
-    &command,
-    input.as_deref(),
-    workspace.as_ref(),
-    &items,
-  ) {
-    Ok(Some(memory_item)) => {
-      if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-        thread.push_item(memory_item.clone());
+  if capture_memory {
+    match maybe_capture_plugin_command_memory(
+      context,
+      &thread_id,
+      &command,
+      input.as_deref(),
+      workspace.as_ref(),
+      &items,
+    ) {
+      Ok(Some(memory_item)) => {
+        if let Some(thread) = context.thread_state.find_mut(&thread_id) {
+          thread.push_item(memory_item.clone());
+        }
+        items.push(memory_item);
+        context
+          .persist_runtime_state()
+          .map_err(|error| (-32010, error.to_string()))?;
+        refresh_thread_summary_note(context, &thread_id)
+          .map_err(|error| (-32012, error.to_string()))?;
       }
-      items.push(memory_item);
-      context
-        .persist_runtime_state()
-        .map_err(|error| (-32010, error.to_string()))?;
-      refresh_thread_summary_note(context, &thread_id)
-        .map_err(|error| (-32012, error.to_string()))?;
-    }
-    Ok(None) => {}
-    Err(error) => {
-      let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
-      if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-        thread.push_item(warning_item.clone());
+      Ok(None) => {}
+      Err(error) => {
+        let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
+        if let Some(thread) = context.thread_state.find_mut(&thread_id) {
+          thread.push_item(warning_item.clone());
+        }
+        items.push(warning_item);
+        context
+          .persist_runtime_state()
+          .map_err(|error| (-32010, error.to_string()))?;
       }
-      items.push(warning_item);
-      context
-        .persist_runtime_state()
-        .map_err(|error| (-32010, error.to_string()))?;
     }
   }
 

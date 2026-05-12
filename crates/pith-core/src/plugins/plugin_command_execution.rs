@@ -8,7 +8,8 @@ use super::plugin_command_runner::{
   is_supported_external_plugin_execution, run_external_plugin_command,
 };
 use super::plugin_command_timeline::{
-  build_plugin_assistant_timeline_item, build_plugin_result_timeline_item,
+  build_plugin_assistant_timeline_item, build_plugin_failure_timeline_item,
+  build_plugin_result_timeline_item,
 };
 use super::plugin_command_types::{
   CompletedPluginCommandRun, PluginCommandOutput, PluginCommandSnapshot, PreparedPluginCommandRun,
@@ -47,13 +48,39 @@ fn execute_plugin_command_snapshot(
         HashMap::new(),
       )
     } else {
-      let runner_result = run_external_plugin_command(
+      let runner_result = match run_external_plugin_command(
         &snapshot.command,
         &snapshot.thread_id,
         snapshot.workspace.as_ref(),
         snapshot.input.as_deref(),
         &snapshot.cancellation,
-      )?;
+      ) {
+        Ok(result) => result,
+        Err(failure) => {
+          let code = failure.code;
+          let message = failure.message;
+          let stdout = failure.stdout;
+          let stderr = failure.stderr;
+          let attributes = failure.attributes;
+          let failure_item = build_plugin_failure_timeline_item(
+            &snapshot.command,
+            snapshot.command.execution_kind.as_deref(),
+            code,
+            message,
+            &stdout,
+            &stderr,
+            attributes,
+          );
+          return Ok(PluginCommandOutput {
+            thread_id: snapshot.thread_id,
+            command: snapshot.command,
+            workspace: snapshot.workspace,
+            input: snapshot.input,
+            items: vec![snapshot.command_item, failure_item],
+            capture_memory: false,
+          });
+        }
+      };
       if !runner_result.items.is_empty() {
         let mut items = vec![snapshot.command_item];
         items.extend(runner_result.items);
@@ -63,6 +90,7 @@ fn execute_plugin_command_snapshot(
           workspace: snapshot.workspace,
           input: snapshot.input,
           items,
+          capture_memory: true,
         });
       }
       (
@@ -85,5 +113,6 @@ fn execute_plugin_command_snapshot(
     workspace: snapshot.workspace,
     input: snapshot.input,
     items: vec![snapshot.command_item, result_item, assistant_item],
+    capture_memory: true,
   })
 }

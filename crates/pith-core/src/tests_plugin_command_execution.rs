@@ -356,8 +356,10 @@ printf '{"content":"External runner completed."}\n'
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[1]["kind"], "pluginResult");
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.echo");
+  assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[1]["attributes"]["sandboxBackend"].is_string());
-  assert!(items[1]["attributes"]["sandboxTemporaryRoot"].is_string());
+  assert!(items[1]["attributes"]["sandboxTempRoot"].is_string());
+  assert_eq!(items[1]["attributes"]["pluginRunnerExitReason"], "completed");
   assert_eq!(items[1]["content"], "External runner completed.");
   assert_eq!(
     result["pendingApprovals"]
@@ -366,6 +368,129 @@ printf '{"content":"External runner completed."}\n'
       .len(),
     0
   );
+  assert_eq!(
+    context
+      .execution_state
+      .counts()
+      .running_plugin_command_count(),
+    0
+  );
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_command_run_records_stdio_runner_failure() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-stdio-failure",
+    "stdio-failure",
+    "Stdio Failure",
+  );
+  let workspace = create_temp_workspace("plugin-command-stdio-failure-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    source_root.join("commands").join("stdio-failure.run.json"),
+    r#"{
+  "title": "Run Failing Plugin",
+  "description": "Execute a local stdio runner that fails.",
+  "prompt": "Run the local plugin runner.",
+  "execution": {
+    "kind": "stdio.failure",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf 'diagnostic stdout\n'
+printf 'diagnostic stderr\n' >&2
+exit 7
+"#,
+  )
+  .expect("write runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "stdio-failure".to_string(),
+      name: "stdio-failure".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Stdio Failure".to_string(),
+      status: "ready".to_string(),
+      description: "Failing stdio command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:stdio-failure.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Stdio Failure Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "stdio-failure::stdio-failure.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
+  assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
+  assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
+  assert_eq!(items[1]["attributes"]["pluginRunnerExitReason"], "completed");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerStderrPreview"],
+    "diagnostic stderr"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerStdoutPreview"],
+    "diagnostic stdout"
+  );
+  assert!(items[1]["content"].as_str().unwrap().contains("diagnostic stderr"));
+  assert!(items[1]["content"].as_str().unwrap().contains("diagnostic stdout"));
   assert_eq!(
     context
       .execution_state
@@ -485,6 +610,7 @@ JSON
   assert_eq!(items[1]["content"], "Owned timeline item.");
   assert_eq!(items[1]["attributes"]["runner"], "stdio");
   assert_eq!(items[1]["attributes"]["pluginId"], "owned-items");
+  assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[1]["attributes"]["sandboxBackend"].is_string());
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.ownedItems");
 }
@@ -566,9 +692,16 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
   fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
-  let error = response.error.expect("entrypoint escape error");
-  assert_eq!(error.code, -32054);
-  assert!(error.message.contains("inside the plugin bundle"));
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
+  assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
+    .contains("inside the plugin bundle"));
   assert_eq!(
     context
       .execution_state

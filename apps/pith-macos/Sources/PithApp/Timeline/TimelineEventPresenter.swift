@@ -7,11 +7,14 @@ enum TimelineEventPresenter {
   static let pluginCommandNeedsExecutionContractDetail =
     "Plugin command needs a supported execution contract before it can run."
   static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
+  static let pluginCommandFailedDetail =
+    "Local plugin command failed. Inspect the failed runner item for logs."
   static let cancellingTurnDetail = "Cancelling local execution..."
 
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
   static let cancelledPluginCommandPreview = "Cancelled plugin command"
+  static let failedPluginCommandPreview = "Plugin command failed"
 
   static func turnPreview(turnID: String, activeTurnID: String?) -> String {
     activeTurnID == nil ? "\(turnID) ready" : "Streaming response"

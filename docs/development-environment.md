@@ -100,8 +100,8 @@ manifest validation, registries, connector metadata, and enablement state. Execu
 runners, auth policy, credential storage, cancellation, sandbox policy, output envelopes, and logs.
 
 The minimal runner surface starts with plugin-bundle-scoped `stdio` entrypoints bound to the native
-sandbox policy. Do not add new connector surfaces before runner logs, failures, and output envelopes
-are inspectable.
+sandbox policy. Runner success and failure paths should expose sandbox, exit, stdout, and stderr
+diagnostics before new connector surfaces are added.
 
 ## GitHub Actions Notes
 

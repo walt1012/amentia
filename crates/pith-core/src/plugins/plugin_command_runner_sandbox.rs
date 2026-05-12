@@ -72,12 +72,28 @@ impl PluginRunnerSandbox {
   pub(super) fn attributes(&self) -> HashMap<String, String> {
     let status = pith_sandbox::native_sandbox_status(&self.policy);
     let mut attributes = HashMap::from([
-      ("sandboxBackend".to_string(), status.backend),
+      ("sandboxMode".to_string(), status.mode.clone()),
+      ("sandboxBackend".to_string(), status.backend.clone()),
       ("sandboxActive".to_string(), status.active.to_string()),
+      (
+        "sandboxNetworkAllowed".to_string(),
+        status.network_allowed.to_string(),
+      ),
+      (
+        "sandboxNetworkPolicy".to_string(),
+        status.network_policy().to_string(),
+      ),
       ("sandboxDetail".to_string(), status.detail),
     ]);
     if let Some(temporary_root) = status.temporary_root {
+      attributes.insert("sandboxTempRoot".to_string(), temporary_root.clone());
       attributes.insert("sandboxTemporaryRoot".to_string(), temporary_root);
+    }
+    if !status.writable_roots.is_empty() {
+      attributes.insert(
+        "sandboxWritableRoots".to_string(),
+        status.writable_roots.join("\n"),
+      );
     }
     attributes
   }

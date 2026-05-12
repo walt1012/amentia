@@ -35,4 +35,5 @@ pub(super) struct PluginCommandOutput {
   pub(super) workspace: Option<WorkspaceSummary>,
   pub(super) input: Option<String>,
   pub(super) items: Vec<TimelineItem>,
+  pub(super) capture_memory: bool,
 }

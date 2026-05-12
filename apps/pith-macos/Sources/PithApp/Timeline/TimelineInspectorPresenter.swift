@@ -105,7 +105,9 @@ enum TimelineInspectorPresenter {
 
     let hasSandbox = entry.attributes["sandboxMode"] != nil
     let hasOutputContext = entry.attributes["sandboxOutputContextMode"] != nil
-    if !hasSandbox && !hasOutputContext {
+    let hasPluginRunner = entry.attributes["pluginRunnerExitReason"] != nil
+      || entry.attributes["pluginRunnerErrorCode"] != nil
+    if !hasSandbox && !hasOutputContext && !hasPluginRunner {
       return nil
     }
 
@@ -130,6 +132,32 @@ enum TimelineInspectorPresenter {
 
       if let detail = entry.attributes["sandboxDetail"] {
         lines.append("Detail: \(detail)")
+      }
+    }
+
+    if hasPluginRunner {
+      let reason = entry.attributes["pluginRunnerExitReason"] ?? "unknown"
+      let status = entry.attributes["pluginRunnerExitStatus"] ?? "unknown"
+      let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
+      lines.append("Plugin runner: \(reason) | status \(status) | exit \(code)")
+
+      if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
+        lines.append("Plugin runner error: \(errorCode)")
+      }
+
+      let retainedStdout = entry.attributes["pluginRunnerStdoutRetainedBytes"] ?? "unknown"
+      let sourceStdout = entry.attributes["pluginRunnerStdoutSourceBytes"] ?? "unknown"
+      let retainedStderr = entry.attributes["pluginRunnerStderrRetainedBytes"] ?? "unknown"
+      let sourceStderr = entry.attributes["pluginRunnerStderrSourceBytes"] ?? "unknown"
+      lines.append(
+        "Runner output: stdout \(retainedStdout)/\(sourceStdout) bytes | "
+          + "stderr \(retainedStderr)/\(sourceStderr) bytes"
+      )
+      if let stderrPreview = entry.attributes["pluginRunnerStderrPreview"] {
+        lines.append("Runner stderr preview:\n\(stderrPreview)")
+      }
+      if let stdoutPreview = entry.attributes["pluginRunnerStdoutPreview"] {
+        lines.append("Runner stdout preview:\n\(stdoutPreview)")
       }
     }
 
