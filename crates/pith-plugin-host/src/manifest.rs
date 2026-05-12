@@ -89,6 +89,10 @@ pub(crate) struct PluginCommandManifest {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PluginCommandExecutionManifest {
   pub(crate) kind: String,
+  #[serde(default)]
+  pub(crate) driver: Option<String>,
+  #[serde(default)]
+  pub(crate) entrypoint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

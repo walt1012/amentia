@@ -46,9 +46,11 @@ Memory and storage do not conflict: memory owns meaning and ranking; storage own
 - Memory ranking is compact, attributed context selection for known notes, not generic document RAG.
 - Do not add local vector stores, embedding services, generic file RAG, or document indexing until usage proves the need.
 
-## Current Milestone: M3 Daily Driver Foundation
+## Milestone 3: Daily Driver Foundation
 
-M3 ends when Pith is usable daily without restart anxiety or setup confusion:
+Status: closed.
+
+M3 made Pith usable daily without restart anxiety or setup confusion:
 
 - Fresh install can select, download, verify, activate, and use one local model.
 - Download pause, continue, cancel, failure recovery, and partial-file cleanup are reliable.
@@ -70,23 +72,26 @@ M3 ends when Pith is usable daily without restart anxiety or setup confusion:
 - Done: local planner and summarizer prompts use compact prompt envelopes with attribution for tiny model context limits.
 - Done: model release metadata can be audited against Hugging Face size, checksum, and license headers without making CI network-fragile.
 - Done: inspector and setup surfaces are progressive enough for daily use without expanding every control by default.
-- Active: final M3 readiness audit before moving into Milestone 4 plugin execution.
+- Done: plugin command registries now expose typed execution contracts, so M4 can add real plugin runners without returning to prompt-template commands.
+
+## Current Milestone: M4 Real Plugin Platform
+
+M4 makes plugins real local capabilities, not prompt templates:
+
+- Commands declare typed execution contracts with driver, entrypoint, support status, inputs, and outputs.
+- Built-in commands remain small local workflows; third-party commands must run through bounded, inspectable runners.
+- Connectors such as Notion require explicit auth policy, credential storage, permissions, logs, and failure states.
+- Plugin execution must respect workspace boundaries, sandbox policy, cancellation, timeouts, and output compaction.
+- Plugin UI stays progressive: discover, inspect, enable, authorize, run, and debug without crowding the main flow.
+- MCP can be considered only as a local-first connector/runtime option, not as a broad marketplace shortcut.
 
 ## Next Order
 
-1. Model setup hardening: first-use guidance, activation recovery, corrupt model handling, release metadata review.
-2. Runtime recovery: diagnostics, cancellation, pending request cleanup, relaunch flow.
-3. Sandbox diagnostics: native vs process-only wording, temp routing, network policy, timeline attributes.
-4. Context and retrieval: compact observations, memory attribution, web search shaping, no pseudo-RAG drift.
-5. Swift ownership: keep `AppViewModel` as facade; move ownership only into real domain stores/coordinators.
-
-## Milestone 4: Real Plugin Platform
-
-- Add real plugin execution contracts, not more prompt templates.
-- Add typed capability inputs and outputs.
-- Add third-party auth and connectors such as Notion.
-- Consider MCP only if it fits Pith's local-first, small, native direction.
-- Keep plugin state, logs, failures, and outputs visible without polluting the main flow.
+1. Add plugin contract schemas for typed command input and output envelopes.
+2. Add a minimal bounded plugin runner path before adding any new connector surface.
+3. Add connector auth lifecycle for one Notion-like connector path only.
+4. Keep web search as the only active retrieval layer unless user workflows prove local RAG is needed.
+5. Keep Swift and Rust ownership changes tied to real runtime, plugin, model, or sandbox boundaries.
 
 ## Not Now
 
@@ -95,7 +100,7 @@ M3 ends when Pith is usable daily without restart anxiety or setup confusion:
 - No generic document RAG or local vector database.
 - No broad connector marketplace.
 - No cosmetic refactor that only moves code around.
-- No large UI expansion before M3 is stable.
+- No large UI expansion before plugin execution is real.
 
 ## Discipline
 

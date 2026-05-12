@@ -64,8 +64,16 @@ struct RuntimePluginCommandPayload: Codable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let execution: RuntimePluginCommandExecutionPayload?
   let executionKind: String?
   let memorySummary: String?
+}
+
+struct RuntimePluginCommandExecutionPayload: Codable {
+  let kind: String
+  let driver: String
+  let entrypoint: String?
+  let supported: Bool
 }
 
 struct RuntimePluginConnectorPayload: Codable {
@@ -185,8 +193,16 @@ extension RuntimeBridge {
     let pluginDisplayName: String
     let permissions: [String]
     let sourcePath: String
+    let execution: RuntimePluginCommandExecution?
     let executionKind: String?
     let memorySummary: String?
+  }
+
+  struct RuntimePluginCommandExecution {
+    let kind: String
+    let driver: String
+    let entrypoint: String?
+    let supported: Bool
   }
 
   struct RuntimePluginConnector {

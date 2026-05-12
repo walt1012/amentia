@@ -29,9 +29,9 @@ struct PluginCommandRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
 
-      Text("Execution: \(command.executionKind ?? "missing contract")")
+      Text("Execution: \(executionLabel)")
         .font(.caption2)
-        .foregroundColor(command.executionKind == nil ? .orange : .secondary)
+        .foregroundColor(command.execution?.supported == true ? .secondary : .orange)
         .textSelection(.enabled)
 
       if let memorySummary = command.memorySummary {
@@ -49,6 +49,15 @@ struct PluginCommandRow: View {
       }
     }
     .padding(.vertical, 4)
+  }
+
+  private var executionLabel: String {
+    guard let execution = command.execution else {
+      return "missing contract"
+    }
+
+    let suffix = execution.supported ? "supported" : "not supported yet"
+    return "\(execution.kind) via \(execution.driver) (\(suffix))"
   }
 }
 

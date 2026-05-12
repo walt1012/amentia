@@ -46,12 +46,12 @@ enum PluginActionPlanner {
       return true
     }
 
-    return command.executionKind == nil
+    return command.execution == nil || command.execution?.supported == false
   }
 
   static func canRunCommand(commandID: String, snapshot: PluginActionSnapshot) -> Bool {
     guard let command = snapshot.commands.first(where: { $0.id == commandID }),
-          command.executionKind != nil
+          command.execution?.supported == true
     else {
       return false
     }

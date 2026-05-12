@@ -126,6 +126,14 @@ enum RuntimeSummaryMapper {
       pluginDisplayName: command.pluginDisplayName,
       permissions: command.permissions,
       sourcePath: command.sourcePath,
+      execution: command.execution.map {
+        PluginCommandExecutionSummary(
+          kind: $0.kind,
+          driver: $0.driver,
+          entrypoint: $0.entrypoint,
+          supported: $0.supported
+        )
+      },
       executionKind: command.executionKind,
       memorySummary: command.memorySummary
     )

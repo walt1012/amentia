@@ -5,7 +5,7 @@ enum TimelineEventPresenter {
   static let pendingTurnCancelledDetail = "Local execution request cancelled."
   static let runningPluginCommandDetail = "Running local plugin command..."
   static let pluginCommandNeedsExecutionContractDetail =
-    "Plugin command needs an execution contract before it can run."
+    "Plugin command needs a supported execution contract before it can run."
   static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
   static let cancellingTurnDetail = "Cancelling local execution..."
 

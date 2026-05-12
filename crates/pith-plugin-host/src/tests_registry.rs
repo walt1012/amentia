@@ -247,6 +247,13 @@ fn build_command_registry_loads_enabled_plugin_commands() {
     commands[0].execution_kind.as_deref(),
     Some("builtin.workspaceReadmeNote")
   );
+  let execution = commands[0]
+    .execution
+    .as_ref()
+    .expect("command execution contract");
+  assert_eq!(execution.kind, "builtin.workspaceReadmeNote");
+  assert_eq!(execution.driver, "builtin");
+  assert_eq!(execution.entrypoint, None);
   assert_eq!(
     commands[0].memory_note_source.as_deref(),
     Some("plugin.workspace-notes")

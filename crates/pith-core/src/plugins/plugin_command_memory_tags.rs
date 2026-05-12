@@ -1,4 +1,7 @@
-use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+use pith_plugin_host::{
+  PluginCommandEntry as HostPluginCommandEntry,
+  PluginCommandExecutionEntry as HostPluginCommandExecutionEntry,
+};
 
 pub(super) fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Vec<String> {
   let mut tags = vec![
@@ -29,6 +32,11 @@ mod tests {
       plugin_display_name: "Workspace Notes".to_string(),
       permissions: vec!["file.read".to_string()],
       source_path: "/tmp/workspace-notes/pith-plugin.json".to_string(),
+      execution: Some(HostPluginCommandExecutionEntry {
+        kind: "builtin.workspaceReadmeNote".to_string(),
+        driver: "builtin".to_string(),
+        entrypoint: None,
+      }),
       execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
       memory_note_title: Some("README Note".to_string()),
       memory_note_source: Some("plugin.workspace-notes".to_string()),

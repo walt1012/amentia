@@ -1,10 +1,12 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::test_support::{
-  bundled_manifest_plugin_entry, bundled_plugin_entry, replace_plugin_catalog, request,
+  bundled_manifest_plugin_entry, bundled_plugin_entry, create_temp_plugin_bundle,
+  replace_plugin_catalog, request,
 };
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::methods;
+use std::fs;
 
 #[test]
 fn plugin_command_registry_lists_enabled_command_plugins() {
@@ -36,6 +38,66 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
   assert_eq!(commands[0]["pluginId"], "workspace-notes");
   assert_eq!(commands[0]["title"], "Capture Workspace Note");
   assert_eq!(commands[0]["executionKind"], "builtin.workspaceReadmeNote");
+  assert_eq!(commands[0]["execution"]["kind"], "builtin.workspaceReadmeNote");
+  assert_eq!(commands[0]["execution"]["driver"], "builtin");
+  assert_eq!(commands[0]["execution"]["supported"], true);
+}
+
+#[test]
+fn plugin_command_registry_marks_unsupported_execution_contracts() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-contract-status", "notion-tools", "Notion Tools");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    source_root.join("commands").join("notion-tools.run.json"),
+    r#"{
+  "title": "Create Notion Task",
+  "description": "Create a Notion task from the current thread.",
+  "prompt": "Create a task in Notion from the current thread.",
+  "execution": {
+    "kind": "mcp.notionCreateTask",
+    "driver": "mcp",
+    "entrypoint": "notion.createTask"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:notion-tools.run".to_string()],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["execution"]["driver"], "mcp");
+  assert_eq!(commands[0]["execution"]["entrypoint"], "notion.createTask");
+  assert_eq!(commands[0]["execution"]["supported"], false);
 }
 
 #[test]

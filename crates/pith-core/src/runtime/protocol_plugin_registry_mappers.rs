@@ -4,8 +4,11 @@ use pith_plugin_host::{
   PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
-  PluginCapabilityRegistration, PluginCommandSummary, PluginConnectorSummary, PluginHookSummary,
+  PluginCapabilityRegistration, PluginCommandExecutionSummary, PluginCommandSummary,
+  PluginConnectorSummary, PluginHookSummary,
 };
+
+use crate::plugins::plugin_command_builtins::is_supported_builtin_execution;
 
 pub(super) fn to_protocol_capability(
   capability: HostPluginCapabilityRegistration,
@@ -27,6 +30,15 @@ pub(super) fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> Plu
     .memory_note_title
     .as_ref()
     .map(|title| format!("Stores a workspace memory note as `{title}` after execution."));
+  let execution = command
+    .execution
+    .as_ref()
+    .map(|execution| PluginCommandExecutionSummary {
+      kind: execution.kind.clone(),
+      driver: execution.driver.clone(),
+      entrypoint: execution.entrypoint.clone(),
+      supported: is_supported_builtin_execution(Some(&execution.kind)),
+    });
   PluginCommandSummary {
     command_id: command.command_id,
     title: command.title,
@@ -35,6 +47,7 @@ pub(super) fn to_protocol_plugin_command(command: HostPluginCommandEntry) -> Plu
     plugin_display_name: command.plugin_display_name,
     permissions: command.permissions,
     source_path: command.source_path,
+    execution,
     execution_kind: command.execution_kind,
     memory_summary,
   }

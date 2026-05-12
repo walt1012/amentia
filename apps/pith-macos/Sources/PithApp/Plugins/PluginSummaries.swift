@@ -60,8 +60,16 @@ struct PluginCommandSummary: Identifiable, Hashable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let execution: PluginCommandExecutionSummary?
   let executionKind: String?
   let memorySummary: String?
+}
+
+struct PluginCommandExecutionSummary: Hashable {
+  let kind: String
+  let driver: String
+  let entrypoint: String?
+  let supported: Bool
 }
 
 struct PluginHookSummary: Identifiable, Hashable {

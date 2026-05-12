@@ -125,9 +125,21 @@ pub struct PluginCommandSummary {
   pub permissions: Vec<String>,
   pub source_path: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub execution: Option<PluginCommandExecutionSummary>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub execution_kind: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub memory_summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandExecutionSummary {
+  pub kind: String,
+  pub driver: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub entrypoint: Option<String>,
+  pub supported: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

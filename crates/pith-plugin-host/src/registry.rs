@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::io::{read_command_manifest, read_hook_manifest, read_manifest};
+use crate::manifest::PluginCommandExecutionManifest;
 use crate::types::{
-  PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginConnectorEntry,
-  PluginHookEntry,
+  PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry,
+  PluginCommandExecutionEntry, PluginConnectorEntry, PluginHookEntry,
 };
 
 pub fn build_capability_registry(
@@ -141,10 +142,11 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         .memory
         .as_ref()
         .map(|memory| memory.note_title.clone());
-      let execution_kind = command
+      let execution = command
         .execution
         .as_ref()
-        .map(|execution| execution.kind.clone());
+        .and_then(command_execution_entry);
+      let execution_kind = execution.as_ref().map(|execution| execution.kind.clone());
       let memory_note_source = command
         .memory
         .as_ref()
@@ -164,6 +166,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         plugin_display_name: plugin.display_name.clone(),
         permissions: plugin.permissions.clone(),
         source_path: command_path.display().to_string(),
+        execution,
         execution_kind,
         memory_note_title,
         memory_note_source,
@@ -180,6 +183,42 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       .then_with(|| left.command_id.cmp(&right.command_id))
   });
   commands
+}
+
+fn command_execution_entry(
+  execution: &PluginCommandExecutionManifest,
+) -> Option<PluginCommandExecutionEntry> {
+  let kind = execution.kind.trim().to_string();
+  if kind.is_empty() {
+    return None;
+  }
+  let driver = execution
+    .driver
+    .as_deref()
+    .map(str::trim)
+    .filter(|driver| !driver.is_empty())
+    .map(str::to_string)
+    .unwrap_or_else(|| default_execution_driver(&kind));
+
+  Some(PluginCommandExecutionEntry {
+    kind,
+    driver,
+    entrypoint: execution
+      .entrypoint
+      .as_deref()
+      .map(str::trim)
+      .filter(|entrypoint| !entrypoint.is_empty())
+      .map(str::to_string),
+  })
+}
+
+fn default_execution_driver(kind: &str) -> String {
+  kind
+    .split_once('.')
+    .map(|(driver, _)| driver)
+    .filter(|driver| !driver.trim().is_empty())
+    .unwrap_or("custom")
+    .to_string()
 }
 
 pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntry> {

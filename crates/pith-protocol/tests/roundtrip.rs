@@ -1,11 +1,11 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, PluginCapabilityRegistration,
-  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginConnectorRegistryResult,
-  PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
-  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
-  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandExecutionSummary,
+  PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
+  PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
+  PluginHookSummary, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
+  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
+  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -295,6 +295,12 @@ fn plugin_command_registry_round_trips() {
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
       source_path: "plugins/bundled/workspace-notes/commands/workspace.capture-note.json"
         .to_string(),
+      execution: Some(PluginCommandExecutionSummary {
+        kind: "builtin.workspaceReadmeNote".to_string(),
+        driver: "builtin".to_string(),
+        entrypoint: None,
+        supported: true,
+      }),
       execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
       memory_summary: Some("Stores a workspace memory note after execution.".to_string()),
     }],
@@ -310,6 +316,13 @@ fn plugin_command_registry_round_trips() {
   assert_eq!(
     decoded.commands[0].execution_kind.as_deref(),
     Some("builtin.workspaceReadmeNote")
+  );
+  assert_eq!(
+    decoded.commands[0]
+      .execution
+      .as_ref()
+      .map(|execution| execution.driver.as_str()),
+    Some("builtin")
   );
   assert_eq!(
     decoded.commands[0].memory_summary.as_deref(),

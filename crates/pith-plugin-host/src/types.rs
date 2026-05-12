@@ -65,10 +65,19 @@ pub struct PluginCommandEntry {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub source_path: String,
+  pub execution: Option<PluginCommandExecutionEntry>,
   pub execution_kind: Option<String>,
   pub memory_note_title: Option<String>,
   pub memory_note_source: Option<String>,
   pub memory_note_tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandExecutionEntry {
+  pub kind: String,
+  pub driver: String,
+  pub entrypoint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
