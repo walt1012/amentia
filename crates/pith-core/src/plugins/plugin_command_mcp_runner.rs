@@ -5,17 +5,16 @@ use std::path::Path;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::{
-  PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry,
-  PluginManifest, PluginMcpServerManifest,
+  PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry, PluginManifest,
+  PluginMcpServerManifest,
 };
 use pith_protocol::WorkspaceSummary;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::plugin_command_runner::{
-  insert_connector_runner_attributes, merged_attributes, plugin_root_for_command,
-  run_stdio_runner, safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult,
-  PluginRunnerRunResult,
+  insert_connector_runner_attributes, merged_attributes, plugin_root_for_command, run_stdio_runner,
+  safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
@@ -153,7 +152,10 @@ fn insert_mcp_runner_attributes(
   attributes.insert("mcpToolName".to_string(), target.tool_name.clone());
   attributes.insert(
     "mcpTransport".to_string(),
-    server.transport.clone().unwrap_or_else(|| "stdio".to_string()),
+    server
+      .transport
+      .clone()
+      .unwrap_or_else(|| "stdio".to_string()),
   );
 }
 
@@ -381,7 +383,10 @@ fn mcp_runner_output(
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
-        format!("MCP tool `{}` returned an error: {}", target.tool_name, content),
+        format!(
+          "MCP tool `{}` returned an error: {}",
+          target.tool_name, content
+        ),
         output.to_string(),
         String::new(),
         attributes,

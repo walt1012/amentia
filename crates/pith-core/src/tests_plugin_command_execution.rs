@@ -567,11 +567,8 @@ fn plugin_command_run_executes_mcp_stdio_connector_action() {
   use std::os::unix::fs::PermissionsExt;
 
   let mut context = RuntimeContext::new_in_memory();
-  let source_root = create_temp_plugin_bundle(
-    "plugin-command-mcp-runner",
-    "notion-mcp",
-    "Notion MCP",
-  );
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-mcp-runner", "notion-mcp", "Notion MCP");
   let workspace = create_temp_workspace("plugin-command-mcp-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
   let server_path = source_root.join("mcp-server.sh");
@@ -718,7 +715,10 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   let result = response.result.expect("command run result");
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[1]["kind"], "pluginResult");
-  assert_eq!(items[1]["attributes"]["executionKind"], "mcp.notionCreateTask");
+  assert_eq!(
+    items[1]["attributes"]["executionKind"],
+    "mcp.notionCreateTask"
+  );
   assert_eq!(items[1]["attributes"]["mcpServerId"], "notion");
   assert_eq!(items[1]["attributes"]["mcpToolName"], "createTask");
   assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");

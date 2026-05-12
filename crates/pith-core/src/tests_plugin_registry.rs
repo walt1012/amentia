@@ -154,11 +154,8 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
 #[test]
 fn plugin_command_registry_marks_mcp_execution_contracts_supported() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root = create_temp_plugin_bundle(
-    "plugin-command-mcp-status",
-    "notion-tools",
-    "Notion Tools",
-  );
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-mcp-status", "notion-tools", "Notion Tools");
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
     &plugin_manifest,
