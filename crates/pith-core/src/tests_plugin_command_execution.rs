@@ -732,6 +732,264 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   );
 }
 
+#[test]
+fn plugin_command_run_blocks_mcp_without_declared_mcp_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-permission",
+    "mcp-permission",
+    "MCP Permission",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-permission-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-permission",
+  "version": "0.1.0",
+  "displayName": "MCP Permission",
+  "description": "MCP command plugin missing permissions",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-permission.run", "mcp_server:local"],
+  "permissions": [],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "missing-mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp permission plugin manifest");
+  fs::write(
+    source_root.join("commands").join("mcp-permission.run.json"),
+    r#"{
+  "title": "Run MCP",
+  "description": "Run an MCP command.",
+  "prompt": "Run the MCP command.",
+  "execution": {
+    "kind": "mcp.localRun",
+    "driver": "mcp",
+    "entrypoint": "local.run"
+  }
+}"#,
+  )
+  .expect("write mcp permission command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-permission".to_string(),
+      name: "mcp-permission".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Permission".to_string(),
+      status: "ready".to_string(),
+      description: "MCP command plugin missing permissions".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-permission.run".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec![],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Permission Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-permission::mcp-permission.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["title"], "Plugin Permission Required");
+  assert_eq!(items[1]["attributes"]["requiredPermission"], "mcp.connect");
+  assert_eq!(
+    items[1]["attributes"]["permissionGate"],
+    "pluginCommandExecution"
+  );
+}
+
+#[test]
+fn plugin_command_run_blocks_connector_mcp_without_declared_network_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-network",
+    "mcp-network",
+    "MCP Network",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-network-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-network",
+  "version": "0.1.0",
+  "displayName": "MCP Network",
+  "description": "Connector MCP command plugin missing network permission",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-network.sync", "mcp_server:notion", "connector:notion"],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "notion",
+      "command": "missing-mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["insert_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp network plugin manifest");
+  fs::write(
+    source_root.join("commands").join("mcp-network.sync.json"),
+    r#"{
+  "title": "Sync MCP",
+  "description": "Sync through a connector-backed MCP command.",
+  "prompt": "Sync through MCP.",
+  "execution": {
+    "kind": "mcp.notionSync",
+    "driver": "mcp",
+    "entrypoint": "notion.sync"
+  }
+}"#,
+  )
+  .expect("write mcp network command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-network".to_string(),
+      name: "mcp-network".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Network".to_string(),
+      status: "ready".to_string(),
+      description: "Connector MCP command plugin missing network permission".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-network.sync".to_string(),
+        "mcp_server:notion".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Network Thread"
+      })),
+    ),
+  );
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "mcp-network::notion"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-network::mcp-network.sync"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["title"], "Plugin Permission Required");
+  assert_eq!(
+    items[1]["attributes"]["requiredPermission"],
+    "network.outbound"
+  );
+  assert_eq!(
+    items[1]["attributes"]["permissionGate"],
+    "pluginCommandExecution"
+  );
+}
+
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_records_stdio_runner_failure() {

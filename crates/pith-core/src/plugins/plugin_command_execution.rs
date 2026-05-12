@@ -4,6 +4,7 @@ use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 
 use super::plugin_command_builtins::execute_builtin_plugin_command;
 use super::plugin_command_builtins::is_supported_builtin_execution;
+use super::plugin_command_permission_gate::plugin_command_permission_denied_items;
 use super::plugin_command_runner::{
   is_supported_external_plugin_execution, run_external_plugin_command,
 };
@@ -48,6 +49,23 @@ fn execute_plugin_command_snapshot(
         HashMap::new(),
       )
     } else {
+      if let Some(permission_items) = plugin_command_permission_denied_items(
+        &snapshot.command,
+        snapshot.workspace.as_ref(),
+        &snapshot.connector_refs,
+      ) {
+        let mut items = vec![snapshot.command_item];
+        items.extend(permission_items);
+        return Ok(PluginCommandOutput {
+          thread_id: snapshot.thread_id,
+          command: snapshot.command,
+          workspace: snapshot.workspace,
+          input: snapshot.input,
+          items,
+          capture_memory: false,
+        });
+      }
+
       let runner_result = match run_external_plugin_command(
         &snapshot.command,
         &snapshot.thread_id,

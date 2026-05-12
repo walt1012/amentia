@@ -10,6 +10,7 @@ pub(crate) mod plugin_command_mcp_runner;
 pub(crate) mod plugin_command_memory;
 pub(crate) mod plugin_command_memory_body;
 pub(crate) mod plugin_command_memory_tags;
+pub(crate) mod plugin_command_permission_gate;
 pub(crate) mod plugin_command_preparation;
 pub(crate) mod plugin_command_readiness;
 pub(crate) mod plugin_command_runner;
