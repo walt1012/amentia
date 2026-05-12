@@ -95,11 +95,7 @@ impl RequestSupervisor {
             "Runtime request recovered after an internal panic; running work was cleared."
               .to_string()
           });
-        JsonRpcResponse::error(
-          request_id,
-          -32099,
-          message,
-        )
+        JsonRpcResponse::error(request_id, -32099, message)
       });
 
       let _ = output.write_json(&response);
