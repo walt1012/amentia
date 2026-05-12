@@ -62,16 +62,10 @@ fn execute_plugin_command_snapshot(
       (runner_result.execution_kind, runner_result.content)
     };
 
-  let result_item = build_plugin_result_timeline_item(
-    &snapshot.command,
-    &execution_kind,
-    content.clone(),
-  );
-  let assistant_item = build_plugin_assistant_timeline_item(
-    &snapshot.command,
-    &execution_kind,
-    &content,
-  );
+  let result_item =
+    build_plugin_result_timeline_item(&snapshot.command, &execution_kind, content.clone());
+  let assistant_item =
+    build_plugin_assistant_timeline_item(&snapshot.command, &execution_kind, &content);
   Ok(PluginCommandOutput {
     thread_id: snapshot.thread_id,
     command: snapshot.command,

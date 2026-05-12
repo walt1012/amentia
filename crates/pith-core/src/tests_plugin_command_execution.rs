@@ -261,8 +261,11 @@ fn plugin_command_run_executes_bounded_stdio_runner() {
   use std::os::unix::fs::PermissionsExt;
 
   let mut context = RuntimeContext::new_in_memory();
-  let source_root =
-    create_temp_plugin_bundle("plugin-command-stdio-runner", "stdio-runner", "Stdio Runner");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-stdio-runner",
+    "stdio-runner",
+    "Stdio Runner",
+  );
   let workspace = create_temp_workspace("plugin-command-stdio-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
   let runner_path = source_root.join("runner.sh");
@@ -354,10 +357,19 @@ printf '{"content":"External runner completed."}\n'
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.echo");
   assert_eq!(items[1]["content"], "External runner completed.");
   assert_eq!(
-    result["pendingApprovals"].as_array().expect("pending approvals").len(),
+    result["pendingApprovals"]
+      .as_array()
+      .expect("pending approvals")
+      .len(),
     0
   );
-  assert_eq!(context.execution_state.counts().running_plugin_command_count(), 0);
+  assert_eq!(
+    context
+      .execution_state
+      .counts()
+      .running_plugin_command_count(),
+    0
+  );
 }
 
 #[cfg(unix)]
@@ -476,8 +488,11 @@ JSON
 #[test]
 fn plugin_command_run_rejects_runner_entrypoint_escape() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root =
-    create_temp_plugin_bundle("plugin-command-entrypoint-escape", "escape-runner", "Escape Runner");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-entrypoint-escape",
+    "escape-runner",
+    "Escape Runner",
+  );
   let workspace = create_temp_workspace("plugin-command-entrypoint-escape-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
@@ -550,5 +565,11 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   let error = response.error.expect("entrypoint escape error");
   assert_eq!(error.code, -32054);
   assert!(error.message.contains("inside the plugin bundle"));
-  assert_eq!(context.execution_state.counts().running_plugin_command_count(), 0);
+  assert_eq!(
+    context
+      .execution_state
+      .counts()
+      .running_plugin_command_count(),
+    0
+  );
 }

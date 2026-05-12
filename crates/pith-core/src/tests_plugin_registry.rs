@@ -151,11 +151,8 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
 #[test]
 fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root = create_temp_plugin_bundle(
-    "plugin-command-stdio-status",
-    "stdio-tools",
-    "Stdio Tools",
-  );
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-stdio-status", "stdio-tools", "Stdio Tools");
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
     source_root.join("commands").join("stdio-tools.run.json"),

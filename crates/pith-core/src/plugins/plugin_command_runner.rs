@@ -45,16 +45,13 @@ struct PluginRunnerTimelineItemEnvelope {
 }
 
 pub(crate) fn is_supported_external_plugin_execution(command: &HostPluginCommandEntry) -> bool {
-  command
-    .execution
-    .as_ref()
-    .is_some_and(|execution| {
-      execution.driver == "stdio"
-        && execution
-          .entrypoint
-          .as_deref()
-          .is_some_and(|entrypoint| !entrypoint.trim().is_empty())
-    })
+  command.execution.as_ref().is_some_and(|execution| {
+    execution.driver == "stdio"
+      && execution
+        .entrypoint
+        .as_deref()
+        .is_some_and(|entrypoint| !entrypoint.trim().is_empty())
+  })
 }
 
 pub(super) fn run_external_plugin_command(
