@@ -114,10 +114,7 @@ impl RuntimePluginState {
     self.catalog = catalog;
   }
 
-  pub(crate) fn set_connector_credential(
-    &mut self,
-    credential: PluginConnectorCredentialState,
-  ) {
+  pub(crate) fn set_connector_credential(&mut self, credential: PluginConnectorCredentialState) {
     self
       .connector_credentials
       .insert(credential.connector_id.clone(), credential);

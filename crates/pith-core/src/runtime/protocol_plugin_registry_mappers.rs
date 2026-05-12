@@ -122,10 +122,7 @@ fn connector_status(connector: &HostPluginConnectorEntry, credential_present: bo
   "ready".to_string()
 }
 
-fn connector_auth_status(
-  connector: &HostPluginConnectorEntry,
-  credential_present: bool,
-) -> String {
+fn connector_auth_status(connector: &HostPluginConnectorEntry, credential_present: bool) -> String {
   if !connector.enabled {
     return "disabled".to_string();
   }

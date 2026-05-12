@@ -3,11 +3,11 @@ use pith_protocol::{
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
   PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
-  PluginConnectorCredentialParams, PluginConnectorCredentialResult,
-  PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
-  PluginHookSummary, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
-  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
+  PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
+  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use std::collections::HashMap;
 

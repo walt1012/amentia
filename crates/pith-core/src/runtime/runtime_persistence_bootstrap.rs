@@ -71,11 +71,9 @@ mod tests {
   use std::fs;
   use std::time::{SystemTime, UNIX_EPOCH};
 
-use pith_memory::MemoryNote;
-use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
-use pith_storage::{
-  StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord,
-};
+  use pith_memory::MemoryNote;
+  use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+  use pith_storage::{StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord};
 
   fn create_temp_directory(label: &str) -> std::path::PathBuf {
     let unique = SystemTime::now()

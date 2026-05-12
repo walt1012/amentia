@@ -46,9 +46,7 @@ impl RuntimeStore {
     Ok(())
   }
 
-  pub fn load_plugin_connector_credentials(
-    &self,
-  ) -> Result<Vec<StoredPluginConnectorCredential>> {
+  pub fn load_plugin_connector_credentials(&self) -> Result<Vec<StoredPluginConnectorCredential>> {
     let connection = self.open_connection()?;
     let mut statement = connection.prepare(
       "SELECT connector_id, plugin_id, credential_store, credential_label, authorized_at, updated_at

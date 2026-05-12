@@ -93,10 +93,9 @@ fn connector_success(
   connector_id: &str,
 ) -> JsonRpcResponse {
   match find_protocol_connector(context, connector_id) {
-    Some(connector) => JsonRpcResponse::success(
-      request_id,
-      &PluginConnectorCredentialResult { connector },
-    ),
+    Some(connector) => {
+      JsonRpcResponse::success(request_id, &PluginConnectorCredentialResult { connector })
+    }
     None => JsonRpcResponse::error(request_id, -32055, "Plugin connector not found"),
   }
 }
