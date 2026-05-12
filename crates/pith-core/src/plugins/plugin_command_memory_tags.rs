@@ -1,7 +1,4 @@
-use pith_plugin_host::{
-  PluginCommandEntry as HostPluginCommandEntry,
-  PluginCommandExecutionEntry as HostPluginCommandExecutionEntry,
-};
+use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 
 pub(super) fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Vec<String> {
   let mut tags = vec![
@@ -21,6 +18,7 @@ pub(super) fn plugin_command_memory_tags(command: &HostPluginCommandEntry) -> Ve
 #[cfg(test)]
 mod tests {
   use super::*;
+  use pith_plugin_host::PluginCommandExecutionEntry as HostPluginCommandExecutionEntry;
 
   fn command() -> HostPluginCommandEntry {
     HostPluginCommandEntry {
