@@ -80,13 +80,16 @@ M4 turns plugins into bounded local capabilities:
   responses, tool-call responses, malformed stdout, and tool errors.
 - Done: connector registries expose non-secret local credential provider,
   handle, secret-presence, and update metadata for inspection and clearing.
-- Active: keep plugin approvals progressive and avoid extra always-visible UI.
+- Done: selected timeline inspection now separates plugin diagnostics from
+  sandbox diagnostics and only shows plugin context when a plugin item is
+  selected.
+- Active: keep plugin UI progressive: discover, inspect, enable, authorize,
+  run, debug.
 
 ## Next Order
 
-1. Keep plugin approvals progressive and avoid extra always-visible UI.
-2. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
-3. Let model-driven tool choice mature slowly; keep deterministic routing where
+1. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
+2. Let model-driven tool choice mature slowly; keep deterministic routing where
    tiny local models are not reliable yet.
 
 ## Not Now

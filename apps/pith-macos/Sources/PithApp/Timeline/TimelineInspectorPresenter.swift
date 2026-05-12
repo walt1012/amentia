@@ -98,6 +98,46 @@ enum TimelineInspectorPresenter {
     return lines.joined(separator: "\n")
   }
 
+  static func selectedEntryPluginSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
+    guard let entry = snapshot.selectedEntry, hasPluginContext(entry) else {
+      return nil
+    }
+
+    var lines: [String] = []
+    if let pluginID = entry.attributes["pluginId"] {
+      let displayName = entry.attributes["pluginDisplayName"] ?? "Plugin"
+      lines.append("Plugin: \(displayName) | \(pluginID)")
+    }
+
+    if let commandID = entry.attributes["commandId"] {
+      let executionKind = entry.attributes["executionKind"] ?? "unknown execution"
+      lines.append("Command: \(commandID) | \(executionKind)")
+    }
+
+    if let sourcePath = entry.attributes["sourcePath"] {
+      lines.append("Source: \(sourcePath)")
+    }
+
+    if let approvalID = entry.attributes["approvalId"] {
+      let action = entry.attributes["action"] ?? "unknown"
+      lines.append("Approval: \(action) | \(approvalID)")
+    }
+
+    if let connectorSummary = connectorSummary(entry) {
+      lines.append(connectorSummary)
+    }
+
+    if let permissionGate = entry.attributes["permissionGate"] {
+      let required = entry.attributes["requiredPermission"] ?? "unknown"
+      lines.append("Permission gate: \(permissionGate) | requires \(required)")
+    }
+
+    appendPluginRunnerSummary(entry, to: &lines)
+    appendMcpProtocolSummary(entry, to: &lines)
+
+    return lines.joined(separator: "\n")
+  }
+
   static func selectedEntrySandboxSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
     guard let entry = snapshot.selectedEntry else {
       return nil
@@ -105,9 +145,7 @@ enum TimelineInspectorPresenter {
 
     let hasSandbox = entry.attributes["sandboxMode"] != nil
     let hasOutputContext = entry.attributes["sandboxOutputContextMode"] != nil
-    let hasPluginRunner = entry.attributes["pluginRunnerExitReason"] != nil
-      || entry.attributes["pluginRunnerErrorCode"] != nil
-    if !hasSandbox && !hasOutputContext && !hasPluginRunner {
+    if !hasSandbox && !hasOutputContext {
       return nil
     }
 
@@ -132,32 +170,6 @@ enum TimelineInspectorPresenter {
 
       if let detail = entry.attributes["sandboxDetail"] {
         lines.append("Detail: \(detail)")
-      }
-    }
-
-    if hasPluginRunner {
-      let reason = entry.attributes["pluginRunnerExitReason"] ?? "unknown"
-      let status = entry.attributes["pluginRunnerExitStatus"] ?? "unknown"
-      let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
-      lines.append("Plugin runner: \(reason) | status \(status) | exit \(code)")
-
-      if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
-        lines.append("Plugin runner error: \(errorCode)")
-      }
-
-      let retainedStdout = entry.attributes["pluginRunnerStdoutRetainedBytes"] ?? "unknown"
-      let sourceStdout = entry.attributes["pluginRunnerStdoutSourceBytes"] ?? "unknown"
-      let retainedStderr = entry.attributes["pluginRunnerStderrRetainedBytes"] ?? "unknown"
-      let sourceStderr = entry.attributes["pluginRunnerStderrSourceBytes"] ?? "unknown"
-      lines.append(
-        "Runner output: stdout \(retainedStdout)/\(sourceStdout) bytes | "
-          + "stderr \(retainedStderr)/\(sourceStderr) bytes"
-      )
-      if let stderrPreview = entry.attributes["pluginRunnerStderrPreview"] {
-        lines.append("Runner stderr preview:\n\(stderrPreview)")
-      }
-      if let stdoutPreview = entry.attributes["pluginRunnerStdoutPreview"] {
-        lines.append("Runner stdout preview:\n\(stdoutPreview)")
       }
     }
 
@@ -186,6 +198,108 @@ enum TimelineInspectorPresenter {
     }
 
     return lines.joined(separator: "\n")
+  }
+
+  private static func hasPluginContext(_ entry: TimelineEntry) -> Bool {
+    [
+      "pluginId",
+      "commandId",
+      "executionKind",
+      "approvalId",
+      "pluginRunnerExitReason",
+      "pluginRunnerErrorCode",
+      "mcpProtocolStatus",
+      "permissionGate",
+    ].contains { key in entry.attributes[key] != nil }
+  }
+
+  private static func connectorSummary(_ entry: TimelineEntry) -> String? {
+    guard let connectorIDs = firstAttribute(entry, keys: [
+      "connectorIds",
+      "pluginRunnerConnectorIds",
+    ]) else {
+      return nil
+    }
+
+    let services = firstAttribute(entry, keys: [
+      "connectorServices",
+      "pluginRunnerConnectorServices",
+    ]) ?? "unknown service"
+    let stores = firstAttribute(entry, keys: [
+      "connectorCredentialStores",
+      "pluginRunnerConnectorStores",
+    ]) ?? "unknown store"
+    let providers = firstAttribute(entry, keys: [
+      "connectorCredentialProviders",
+      "pluginRunnerCredentialProviders",
+    ]) ?? "unknown provider"
+    return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers)"
+  }
+
+  private static func firstAttribute(_ entry: TimelineEntry, keys: [String]) -> String? {
+    keys.compactMap { key in entry.attributes[key] }.first
+  }
+
+  private static func appendPluginRunnerSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard entry.attributes["pluginRunnerExitReason"] != nil
+      || entry.attributes["pluginRunnerErrorCode"] != nil
+    else {
+      return
+    }
+
+    let reason = entry.attributes["pluginRunnerExitReason"] ?? "unknown"
+    let status = entry.attributes["pluginRunnerExitStatus"] ?? "unknown"
+    let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
+    lines.append("Plugin runner: \(reason) | status \(status) | exit \(code)")
+
+    if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
+      lines.append("Plugin runner error: \(errorCode)")
+    }
+
+    let retainedStdout = entry.attributes["pluginRunnerStdoutRetainedBytes"] ?? "unknown"
+    let sourceStdout = entry.attributes["pluginRunnerStdoutSourceBytes"] ?? "unknown"
+    let retainedStderr = entry.attributes["pluginRunnerStderrRetainedBytes"] ?? "unknown"
+    let sourceStderr = entry.attributes["pluginRunnerStderrSourceBytes"] ?? "unknown"
+    lines.append(
+      "Runner output: stdout \(retainedStdout)/\(sourceStdout) bytes | "
+        + "stderr \(retainedStderr)/\(sourceStderr) bytes"
+    )
+
+    if let stderrPreview = entry.attributes["pluginRunnerStderrPreview"] {
+      lines.append("Runner stderr preview:\n\(stderrPreview)")
+    }
+    if let stdoutPreview = entry.attributes["pluginRunnerStdoutPreview"] {
+      lines.append("Runner stdout preview:\n\(stdoutPreview)")
+    }
+  }
+
+  private static func appendMcpProtocolSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard let protocolStatus = entry.attributes["mcpProtocolStatus"] else {
+      return
+    }
+
+    let server = entry.attributes["mcpServerId"] ?? "unknown"
+    let tool = entry.attributes["mcpToolName"] ?? "unknown"
+    let initializeSeen = entry.attributes["mcpInitializeResponseSeen"] ?? "unknown"
+    let toolSeen = entry.attributes["mcpToolResponseSeen"] ?? "unknown"
+    let invalidLines = entry.attributes["mcpInvalidJsonLineCount"] ?? "0"
+    lines.append(
+      "MCP: \(protocolStatus) | server \(server) | tool \(tool) | "
+        + "initialize \(initializeSeen) | tool response \(toolSeen) | invalid stdout \(invalidLines)"
+    )
+
+    if let errorCode = entry.attributes["mcpErrorCode"] {
+      lines.append("MCP error code: \(errorCode)")
+    }
+    if let invalidPreview = entry.attributes["mcpLastInvalidJsonPreview"] {
+      lines.append("MCP invalid stdout preview:\n\(invalidPreview)")
+    }
   }
 
   private static func sandboxNetworkPolicySummary(_ value: String?) -> String {

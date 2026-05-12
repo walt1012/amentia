@@ -9,6 +9,7 @@ struct InspectorPane: View {
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
   @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = false
   @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
+  @AppStorage("pith.inspector.selectedPluginExpanded") private var selectedPluginExpanded = false
   @AppStorage("pith.inspector.selectedSandboxExpanded") private var selectedSandboxExpanded = false
   @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
@@ -55,6 +56,7 @@ struct InspectorPane: View {
         selectedItemSection
         diffDetailSection
         selectedMemorySection
+        selectedPluginSection
         selectedSandboxSection
       }
       .padding(20)
@@ -100,6 +102,19 @@ struct InspectorPane: View {
     if let memorySummary = viewModel.selectedEntryMemorySummary() {
       DisclosureGroup("Selected Memory Context", isExpanded: $selectedMemoryExpanded) {
         Text(memorySummary)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var selectedPluginSection: some View {
+    if let pluginSummary = viewModel.selectedEntryPluginSummary() {
+      DisclosureGroup("Selected Plugin Context", isExpanded: $selectedPluginExpanded) {
+        Text(pluginSummary)
           .font(.caption)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
