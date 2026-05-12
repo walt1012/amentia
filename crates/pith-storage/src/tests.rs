@@ -224,7 +224,7 @@ fn sqlite_store_migrates_existing_version_one_database() {
   assert_eq!(threads.len(), 1);
   assert_eq!(threads[0].summary.id, "thread-old");
   assert!(pending_approvals.is_empty());
-  assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6]);
+  assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6, 7]);
   assert!(approval_indexes.contains(&"idx_approvals_requested_at".to_string()));
 }
 
@@ -289,4 +289,96 @@ fn sqlite_store_deletes_plugin_state() {
   fs::remove_dir_all(&root).expect("cleanup temp directory");
 
   assert!(!plugin_states.contains_key("workspace-notes"));
+}
+
+#[test]
+fn sqlite_store_round_trips_plugin_connector_credentials() {
+  let root = create_temp_directory("plugin-connector-credentials");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let credential = StoredPluginConnectorCredential {
+    connector_id: "notion-connector::notion".to_string(),
+    plugin_id: "notion-connector".to_string(),
+    credential_store: "keychain".to_string(),
+    credential_label: "Notion authorization marker".to_string(),
+    authorized_at: 10,
+    updated_at: 10,
+  };
+
+  store
+    .save_plugin_connector_credential(&credential)
+    .expect("save connector credential");
+  let credentials = store
+    .load_plugin_connector_credentials()
+    .expect("load connector credentials");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(credentials, vec![credential]);
+}
+
+#[test]
+fn sqlite_store_deletes_plugin_connector_credentials() {
+  let root = create_temp_directory("plugin-connector-credential-delete");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let credential = StoredPluginConnectorCredential {
+    connector_id: "notion-connector::notion".to_string(),
+    plugin_id: "notion-connector".to_string(),
+    credential_store: "keychain".to_string(),
+    credential_label: "Notion authorization marker".to_string(),
+    authorized_at: 10,
+    updated_at: 10,
+  };
+
+  store
+    .save_plugin_connector_credential(&credential)
+    .expect("save connector credential");
+  store
+    .delete_plugin_connector_credential("notion-connector::notion")
+    .expect("delete connector credential");
+  let credentials = store
+    .load_plugin_connector_credentials()
+    .expect("load connector credentials");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert!(credentials.is_empty());
+}
+
+#[test]
+fn sqlite_store_deletes_plugin_connector_credentials_by_plugin() {
+  let root = create_temp_directory("plugin-connector-credential-plugin-delete");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let notion = StoredPluginConnectorCredential {
+    connector_id: "notion-connector::notion".to_string(),
+    plugin_id: "notion-connector".to_string(),
+    credential_store: "keychain".to_string(),
+    credential_label: "Notion authorization marker".to_string(),
+    authorized_at: 10,
+    updated_at: 10,
+  };
+  let other = StoredPluginConnectorCredential {
+    connector_id: "other-connector::service".to_string(),
+    plugin_id: "other-connector".to_string(),
+    credential_store: "keychain".to_string(),
+    credential_label: "Other authorization marker".to_string(),
+    authorized_at: 11,
+    updated_at: 11,
+  };
+
+  store
+    .save_plugin_connector_credential(&notion)
+    .expect("save notion credential");
+  store
+    .save_plugin_connector_credential(&other)
+    .expect("save other credential");
+  store
+    .delete_plugin_connector_credentials_for_plugin("notion-connector")
+    .expect("delete connector credentials for plugin");
+  let credentials = store
+    .load_plugin_connector_credentials()
+    .expect("load connector credentials");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(credentials, vec![other]);
 }

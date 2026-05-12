@@ -8,6 +8,7 @@ struct PluginActionSnapshot {
   let hasActiveOrPendingTurn: Bool
   let hasLifecycleOperation: Bool
   let plugins: [PluginSummary]
+  let connectors: [PluginConnectorSummary]
   let commands: [PluginCommandSummary]
 }
 
@@ -34,6 +35,36 @@ enum PluginActionPlanner {
 
     return snapshot.runtimeState == .ready
       && isRemovable(plugin)
+      && !snapshot.hasActiveOrPendingTurn
+      && !snapshot.hasLifecycleOperation
+  }
+
+  static func canAuthorizeConnector(
+    connectorID: String,
+    snapshot: PluginActionSnapshot
+  ) -> Bool {
+    guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
+      return false
+    }
+
+    return snapshot.runtimeState == .ready
+      && connector.enabled
+      && connector.authRequired
+      && connector.authStatus == "needsAuth"
+      && !snapshot.hasActiveOrPendingTurn
+      && !snapshot.hasLifecycleOperation
+  }
+
+  static func canClearConnectorCredential(
+    connectorID: String,
+    snapshot: PluginActionSnapshot
+  ) -> Bool {
+    guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
+      return false
+    }
+
+    return snapshot.runtimeState == .ready
+      && connector.credentialPresent
       && !snapshot.hasActiveOrPendingTurn
       && !snapshot.hasLifecycleOperation
   }

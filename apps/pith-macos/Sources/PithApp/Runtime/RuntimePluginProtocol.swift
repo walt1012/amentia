@@ -35,6 +35,14 @@ struct PluginConnectorRegistryResult: Codable {
   let connectors: [RuntimePluginConnectorPayload]
 }
 
+struct PluginConnectorCredentialParams: Codable {
+  let connectorId: String
+}
+
+struct PluginConnectorCredentialResult: Codable {
+  let connector: RuntimePluginConnectorPayload
+}
+
 struct PluginHookRegistryResult: Codable {
   let hooks: [RuntimePluginHookPayload]
 }
@@ -105,6 +113,10 @@ struct RuntimePluginConnectorPayload: Codable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let authStatus: String
+  let credentialPresent: Bool
+  let credentialLabel: String?
+  let authorizedAt: Int?
 }
 
 struct RuntimePluginHookPayload: Codable {
@@ -248,6 +260,10 @@ extension RuntimeBridge {
     let authRequired: Bool
     let authScopes: [String]
     let credentialStore: String?
+    let authStatus: String
+    let credentialPresent: Bool
+    let credentialLabel: String?
+    let authorizedAt: Int?
   }
 
   struct RuntimePluginHook {

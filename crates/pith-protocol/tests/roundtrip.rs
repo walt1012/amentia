@@ -3,6 +3,7 @@ use pith_protocol::{
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
   PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
+  PluginConnectorCredentialParams, PluginConnectorCredentialResult,
   PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
   PluginHookSummary, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
   PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
@@ -265,6 +266,10 @@ fn plugin_connector_registry_round_trips() {
       auth_required: true,
       auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
       credential_store: Some("keychain".to_string()),
+      auth_status: "disabled".to_string(),
+      credential_present: false,
+      credential_label: None,
+      authorized_at: None,
     }],
   };
 
@@ -279,9 +284,50 @@ fn plugin_connector_registry_round_trips() {
     "notion-connector::notion"
   );
   assert_eq!(decoded.connectors[0].status, "disabled");
+  assert_eq!(decoded.connectors[0].auth_status, "disabled");
   assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
   assert!(value["connectors"][0].get("connectorId").is_some());
   assert!(value["connectors"][0].get("authRequired").is_some());
+  assert!(value["connectors"][0].get("credentialPresent").is_some());
+}
+
+#[test]
+fn plugin_connector_credential_payloads_round_trip() {
+  let params = PluginConnectorCredentialParams {
+    connector_id: "notion-connector::notion".to_string(),
+  };
+  let result = PluginConnectorCredentialResult {
+    connector: PluginConnectorSummary {
+      connector_id: "notion-connector::notion".to_string(),
+      display_name: "Notion".to_string(),
+      service: "notion".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      plugin_display_name: "Notion Connector".to_string(),
+      enabled: true,
+      status: "ready".to_string(),
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: "plugins/bundled/notion-connector/pith-plugin.json".to_string(),
+      homepage: Some("https://www.notion.so".to_string()),
+      auth_type: Some("oauth2".to_string()),
+      auth_required: true,
+      auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
+      credential_store: Some("keychain".to_string()),
+      auth_status: "authorized".to_string(),
+      credential_present: true,
+      credential_label: Some("Notion authorization marker".to_string()),
+      authorized_at: Some(10),
+    },
+  };
+
+  let params_value = serde_json::to_value(params).expect("serialize connector params");
+  let result_value = serde_json::to_value(result).expect("serialize connector result");
+  let decoded: PluginConnectorCredentialResult =
+    serde_json::from_value(result_value.clone()).expect("deserialize connector result");
+
+  assert!(params_value.get("connectorId").is_some());
+  assert!(result_value["connector"].get("authStatus").is_some());
+  assert_eq!(decoded.connector.auth_status, "authorized");
+  assert!(decoded.connector.credential_present);
 }
 
 #[test]

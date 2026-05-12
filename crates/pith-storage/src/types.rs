@@ -39,3 +39,13 @@ pub struct StoredApprovalRecord {
   pub content: Option<String>,
   pub command: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoredPluginConnectorCredential {
+  pub connector_id: String,
+  pub plugin_id: String,
+  pub credential_store: String,
+  pub credential_label: String,
+  pub authorized_at: i64,
+  pub updated_at: i64,
+}

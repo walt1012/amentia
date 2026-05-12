@@ -122,24 +122,27 @@ extension RuntimeBridge {
     )
     let result = try responseResult(from: response)
 
-    return result.connectors.map { connector in
-      RuntimePluginConnector(
-        connectorID: connector.connectorId,
-        displayName: connector.displayName,
-        service: connector.service,
-        pluginID: connector.pluginId,
-        pluginDisplayName: connector.pluginDisplayName,
-        enabled: connector.enabled,
-        status: connector.status,
-        permissions: connector.permissions,
-        manifestPath: connector.manifestPath,
-        homepage: connector.homepage,
-        authType: connector.authType,
-        authRequired: connector.authRequired,
-        authScopes: connector.authScopes,
-        credentialStore: connector.credentialStore
-      )
-    }
+    return result.connectors.map { runtimePluginConnector(from: $0) }
+  }
+
+  func authorizePluginConnector(connectorID: String) async throws -> RuntimePluginConnector {
+    let response: JSONRPCResponse<PluginConnectorCredentialResult> = try await sendRequest(
+      method: "plugin/connectorAuthorize",
+      params: PluginConnectorCredentialParams(connectorId: connectorID)
+    )
+    let result = try responseResult(from: response)
+
+    return runtimePluginConnector(from: result.connector)
+  }
+
+  func clearPluginConnectorCredential(connectorID: String) async throws -> RuntimePluginConnector {
+    let response: JSONRPCResponse<PluginConnectorCredentialResult> = try await sendRequest(
+      method: "plugin/connectorClearCredential",
+      params: PluginConnectorCredentialParams(connectorId: connectorID)
+    )
+    let result = try responseResult(from: response)
+
+    return runtimePluginConnector(from: result.connector)
   }
 
   func listPluginHooks() async throws -> [RuntimePluginHook] {
@@ -241,6 +244,33 @@ private enum RuntimePluginCommandEnvelopeMapper {
           description: $0.description
         )
       }
+    )
+  }
+}
+
+private extension RuntimeBridge {
+  func runtimePluginConnector(
+    from connector: RuntimePluginConnectorPayload
+  ) -> RuntimePluginConnector {
+    RuntimePluginConnector(
+      connectorID: connector.connectorId,
+      displayName: connector.displayName,
+      service: connector.service,
+      pluginID: connector.pluginId,
+      pluginDisplayName: connector.pluginDisplayName,
+      enabled: connector.enabled,
+      status: connector.status,
+      permissions: connector.permissions,
+      manifestPath: connector.manifestPath,
+      homepage: connector.homepage,
+      authType: connector.authType,
+      authRequired: connector.authRequired,
+      authScopes: connector.authScopes,
+      credentialStore: connector.credentialStore,
+      authStatus: connector.authStatus,
+      credentialPresent: connector.credentialPresent,
+      credentialLabel: connector.credentialLabel,
+      authorizedAt: connector.authorizedAt
     )
   }
 }

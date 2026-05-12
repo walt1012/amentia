@@ -59,13 +59,15 @@ M4 turns plugins into bounded local capabilities:
   scoped, native-sandbox-bound, and supports runner-owned timeline items.
 - Done: runner success and failure paths expose sandbox, exit, stdout, and
   stderr diagnostics in timeline metadata.
-- Active: add one Notion-like connector auth lifecycle without expanding into
-  a broad marketplace.
+- Done: Notion-like connectors expose persisted local auth status, authorize,
+  clear credential, and failure surfaces without a broad marketplace.
+- Active: connect authorized connectors to bounded execution contracts and
+  permission checks.
 
 ## Next Order
 
-1. Add a minimal connector auth lifecycle: status, authorize, clear credential,
-   and failure states for one Notion-like connector.
+1. Use connector auth state when deciding whether MCP or connector-backed
+   plugin commands can execute.
 2. Keep connector credentials local and inspectable, with explicit permission
    and sandbox boundaries.
 3. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.

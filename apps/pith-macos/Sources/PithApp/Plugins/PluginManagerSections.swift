@@ -155,7 +155,19 @@ private struct PluginConnectorsSection: View {
       if !viewModel.pluginConnectorPreview().isEmpty {
         Divider()
         ForEach(viewModel.pluginConnectorPreview()) { connector in
-          PluginConnectorRow(connector: connector)
+          PluginConnectorRow(
+            connector: connector,
+            canAuthorize: viewModel.canAuthorizePluginConnector(connectorID: connector.id),
+            canClearCredential: viewModel.canClearPluginConnectorCredential(
+              connectorID: connector.id
+            ),
+            onAuthorize: {
+              viewModel.authorizePluginConnector(connectorID: connector.id)
+            },
+            onClearCredential: {
+              viewModel.clearPluginConnectorCredential(connectorID: connector.id)
+            }
+          )
         }
       }
     }

@@ -24,6 +24,12 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       plugin_requests::handle_plugin_command_registry(context, request)
     }
     methods::PLUGIN_COMMAND_RUN => plugin_commands::handle_plugin_command_run(context, request),
+    methods::PLUGIN_CONNECTOR_AUTHORIZE => {
+      plugin_requests::handle_plugin_connector_authorize(context, request)
+    }
+    methods::PLUGIN_CONNECTOR_CLEAR_CREDENTIAL => {
+      plugin_requests::handle_plugin_connector_clear_credential(context, request)
+    }
     methods::PLUGIN_CONNECTOR_REGISTRY => {
       plugin_requests::handle_plugin_connector_registry(context, request)
     }

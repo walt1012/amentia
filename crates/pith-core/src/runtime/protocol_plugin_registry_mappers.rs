@@ -11,6 +11,7 @@ use pith_protocol::{
 };
 
 use crate::plugins::plugin_command_execution::is_supported_plugin_command_execution;
+use crate::runtime_plugins::PluginConnectorCredentialState;
 
 pub(super) fn to_protocol_capability(
   capability: HostPluginCapabilityRegistration,
@@ -84,7 +85,11 @@ fn to_protocol_plugin_command_envelope_field(
 
 pub(super) fn to_protocol_plugin_connector(
   connector: HostPluginConnectorEntry,
+  credential: Option<&PluginConnectorCredentialState>,
 ) -> PluginConnectorSummary {
+  let credential_present = credential.is_some();
+  let auth_status = connector_auth_status(&connector, credential_present);
+  let status = connector_status(&connector, credential_present);
   PluginConnectorSummary {
     connector_id: connector.connector_id,
     display_name: connector.display_name,
@@ -92,7 +97,7 @@ pub(super) fn to_protocol_plugin_connector(
     plugin_id: connector.plugin_id,
     plugin_display_name: connector.plugin_display_name,
     enabled: connector.enabled,
-    status: connector.status,
+    status,
     permissions: connector.permissions,
     manifest_path: connector.manifest_path,
     homepage: connector.homepage,
@@ -100,7 +105,37 @@ pub(super) fn to_protocol_plugin_connector(
     auth_required: connector.auth_required,
     auth_scopes: connector.auth_scopes,
     credential_store: connector.credential_store,
+    auth_status,
+    credential_present,
+    credential_label: credential.map(|state| state.credential_label.clone()),
+    authorized_at: credential.map(|state| state.authorized_at),
   }
+}
+
+fn connector_status(connector: &HostPluginConnectorEntry, credential_present: bool) -> String {
+  if !connector.enabled {
+    return "disabled".to_string();
+  }
+  if connector.auth_required && !credential_present {
+    return "needsAuth".to_string();
+  }
+  "ready".to_string()
+}
+
+fn connector_auth_status(
+  connector: &HostPluginConnectorEntry,
+  credential_present: bool,
+) -> String {
+  if !connector.enabled {
+    return "disabled".to_string();
+  }
+  if !connector.auth_required {
+    return "notRequired".to_string();
+  }
+  if credential_present {
+    return "authorized".to_string();
+  }
+  "needsAuth".to_string()
 }
 
 pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSummary {

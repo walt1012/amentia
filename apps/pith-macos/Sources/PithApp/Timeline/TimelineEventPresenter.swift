@@ -268,6 +268,61 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func pluginConnectorAuthorized(
+    _ connector: RuntimeBridge.RuntimePluginConnector
+  ) -> TimelineEntry {
+    TimelineEntryFactory.system(
+      title: "Connector Authorized",
+      body:
+        "\(connector.displayName) is ready for \(connector.service) through \(connector.pluginDisplayName).",
+      attributes: [
+        "connectorId": connector.connectorID,
+        "pluginId": connector.pluginID,
+        "authStatus": connector.authStatus,
+      ]
+    )
+  }
+
+  static func pluginConnectorAuthFailed(
+    connectorID: String,
+    error: Error
+  ) -> TimelineEntry {
+    TimelineEntryFactory.warning(
+      title: "Connector Authorization Failed",
+      body: error.localizedDescription,
+      attributes: [
+        "connectorId": connectorID
+      ]
+    )
+  }
+
+  static func pluginConnectorCredentialCleared(
+    _ connector: RuntimeBridge.RuntimePluginConnector
+  ) -> TimelineEntry {
+    TimelineEntryFactory.system(
+      title: "Connector Credential Cleared",
+      body: "\(connector.displayName) credentials were cleared from local connector state.",
+      attributes: [
+        "connectorId": connector.connectorID,
+        "pluginId": connector.pluginID,
+        "authStatus": connector.authStatus,
+      ]
+    )
+  }
+
+  static func pluginConnectorCredentialClearFailed(
+    connectorID: String,
+    error: Error
+  ) -> TimelineEntry {
+    TimelineEntryFactory.warning(
+      title: "Connector Credential Clear Failed",
+      body: error.localizedDescription,
+      attributes: [
+        "connectorId": connectorID
+      ]
+    )
+  }
+
   static func pluginCommandCancelled() -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Plugin Command Cancelled",

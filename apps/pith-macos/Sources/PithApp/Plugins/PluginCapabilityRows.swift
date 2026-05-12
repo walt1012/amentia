@@ -46,6 +46,10 @@ private extension PluginCapabilitySummary {
 
 struct PluginConnectorRow: View {
   let connector: PluginConnectorSummary
+  let canAuthorize: Bool
+  let canClearCredential: Bool
+  let onAuthorize: () -> Void
+  let onClearCredential: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -59,6 +63,8 @@ struct PluginConnectorRow: View {
         }
 
         Spacer()
+
+        connectorActions
       }
 
       Text("\(connector.pluginDisplayName) | \(connector.pluginID)")
@@ -87,6 +93,25 @@ struct PluginConnectorRow: View {
     .padding(.vertical, 4)
   }
 
+  @ViewBuilder
+  private var connectorActions: some View {
+    if connector.authRequired {
+      if connector.credentialPresent {
+        Button("Clear") {
+          onClearCredential()
+        }
+        .font(.caption2)
+        .disabled(!canClearCredential)
+      } else {
+        Button("Authorize") {
+          onAuthorize()
+        }
+        .font(.caption2)
+        .disabled(!canAuthorize)
+      }
+    }
+  }
+
   private var statusColor: Color {
     switch connector.status {
     case "ready":
@@ -105,6 +130,8 @@ private extension PluginConnectorSummary {
     let required = authRequired ? "required" : "optional"
     let scopes = authScopes.isEmpty ? "no scopes" : authScopes.joined(separator: ", ")
     let store = credentialStore ?? "none"
-    return "Auth: \(type) | \(required) | \(scopes) | store: \(store)"
+    let credential = credentialLabel ?? "no credential"
+    return "Auth: \(type) | \(authStatus) | \(required) | \(scopes) "
+      + "| store: \(store) | \(credential)"
   }
 }

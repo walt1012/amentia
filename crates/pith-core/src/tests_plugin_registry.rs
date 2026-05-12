@@ -6,6 +6,7 @@ use super::test_support::{
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::methods;
+use serde_json::json;
 use std::fs;
 
 #[test]
@@ -256,8 +257,78 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
   assert_eq!(connectors.len(), 1);
   assert_eq!(connectors[0]["connectorId"], "notion-connector::notion");
   assert_eq!(connectors[0]["status"], "disabled");
+  assert_eq!(connectors[0]["authStatus"], "disabled");
+  assert_eq!(connectors[0]["credentialPresent"], false);
   assert_eq!(connectors[0]["authType"], "oauth2");
   assert_eq!(connectors[0]["credentialStore"], "keychain");
+}
+
+#[test]
+fn plugin_connector_auth_lifecycle_updates_connector_registry() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["mcp_server:notion", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+
+  let initial_response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_CONNECTOR_REGISTRY, None),
+  );
+  let initial_result = initial_response
+    .result
+    .expect("initial connector registry result");
+  let initial_connector = &initial_result["connectors"][0];
+  assert_eq!(initial_connector["status"], "needsAuth");
+  assert_eq!(initial_connector["authStatus"], "needsAuth");
+  assert_eq!(initial_connector["credentialPresent"], false);
+
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-connector::notion"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+  let authorized_connector = authorize_response
+    .result
+    .expect("authorize connector result")["connector"]
+    .clone();
+  assert_eq!(authorized_connector["status"], "ready");
+  assert_eq!(authorized_connector["authStatus"], "authorized");
+  assert_eq!(authorized_connector["credentialPresent"], true);
+  assert_eq!(
+    authorized_connector["credentialLabel"],
+    "Notion authorization marker"
+  );
+
+  let clear_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_CLEAR_CREDENTIAL,
+      Some(json!({
+        "connectorId": "notion-connector::notion"
+      })),
+    ),
+  );
+  assert!(clear_response.error.is_none());
+  let cleared_connector = clear_response
+    .result
+    .expect("clear connector credential result")["connector"]
+    .clone();
+  assert_eq!(cleared_connector["status"], "needsAuth");
+  assert_eq!(cleared_connector["authStatus"], "needsAuth");
+  assert_eq!(cleared_connector["credentialPresent"], false);
 }
 
 #[test]

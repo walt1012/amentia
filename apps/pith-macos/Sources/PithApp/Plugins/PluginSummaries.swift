@@ -50,6 +50,10 @@ struct PluginConnectorSummary: Identifiable, Hashable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let authStatus: String
+  let credentialPresent: Bool
+  let credentialLabel: String?
+  let authorizedAt: Int?
 }
 
 struct PluginCommandSummary: Identifiable, Hashable {

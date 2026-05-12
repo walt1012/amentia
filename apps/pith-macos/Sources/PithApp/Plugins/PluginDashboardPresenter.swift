@@ -169,7 +169,9 @@ enum PluginDashboardPresenter {
     }
 
     return snapshot.connectors
-      .map { "\($0.displayName): \($0.status) via \($0.pluginDisplayName)" }
+      .map {
+        "\($0.displayName): \($0.status) | auth: \($0.authStatus) via \($0.pluginDisplayName)"
+      }
       .joined(separator: "\n")
   }
 

@@ -135,6 +135,77 @@ extension AppViewModel {
     }
   }
 
+  func authorizePluginConnector(connectorID: String) {
+    guard canAuthorizePluginConnector(connectorID: connectorID) else {
+      return
+    }
+
+    guard let operationID = beginPluginLifecycleOperation(
+      detail: "Authorizing connector..."
+    ) else {
+      runtimeDetail = "Finish the current plugin operation before authorizing a connector."
+      return
+    }
+    let timelineThreadID = selectedThreadID
+
+    Task {
+      defer {
+        finishPluginLifecycleOperation(operationID)
+      }
+      do {
+        let connector = try await runtimeBridge.authorizePluginConnector(connectorID: connectorID)
+        await refreshPluginState()
+        appendEntry(
+          to: timelineThreadID,
+          TimelineEventPresenter.pluginConnectorAuthorized(connector)
+        )
+      } catch {
+        appendEntry(
+          to: timelineThreadID,
+          TimelineEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error)
+        )
+      }
+    }
+  }
+
+  func clearPluginConnectorCredential(connectorID: String) {
+    guard canClearPluginConnectorCredential(connectorID: connectorID) else {
+      return
+    }
+
+    guard let operationID = beginPluginLifecycleOperation(
+      detail: "Clearing connector credential..."
+    ) else {
+      runtimeDetail = "Finish the current plugin operation before clearing a connector credential."
+      return
+    }
+    let timelineThreadID = selectedThreadID
+
+    Task {
+      defer {
+        finishPluginLifecycleOperation(operationID)
+      }
+      do {
+        let connector = try await runtimeBridge.clearPluginConnectorCredential(
+          connectorID: connectorID
+        )
+        await refreshPluginState()
+        appendEntry(
+          to: timelineThreadID,
+          TimelineEventPresenter.pluginConnectorCredentialCleared(connector)
+        )
+      } catch {
+        appendEntry(
+          to: timelineThreadID,
+          TimelineEventPresenter.pluginConnectorCredentialClearFailed(
+            connectorID: connectorID,
+            error: error
+          )
+        )
+      }
+    }
+  }
+
   func runPluginCommand(commandID: String) {
     let snapshot = pluginActionSnapshot()
     if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
@@ -201,6 +272,20 @@ extension AppViewModel {
     PluginActionPlanner.canRemove(pluginID: pluginID, snapshot: pluginActionSnapshot())
   }
 
+  func canAuthorizePluginConnector(connectorID: String) -> Bool {
+    PluginActionPlanner.canAuthorizeConnector(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
+  }
+
+  func canClearPluginConnectorCredential(connectorID: String) -> Bool {
+    PluginActionPlanner.canClearConnectorCredential(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
+  }
+
   func revealPluginManifest(pluginID: String) {
     guard let plugin = pluginSummary(pluginID: pluginID) else {
       runtimeDetail = "Plugin manifest path is unavailable."
@@ -230,6 +315,7 @@ extension AppViewModel {
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
       hasLifecycleOperation: hasPluginLifecycleOperation(),
       plugins: plugins,
+      connectors: pluginConnectors,
       commands: pluginCommands
     )
   }

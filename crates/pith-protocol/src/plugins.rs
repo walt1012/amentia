@@ -106,12 +106,30 @@ pub struct PluginConnectorSummary {
   pub auth_scopes: Vec<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub credential_store: Option<String>,
+  pub auth_status: String,
+  pub credential_present: bool,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub credential_label: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub authorized_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PluginConnectorRegistryResult {
   pub connectors: Vec<PluginConnectorSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorCredentialParams {
+  pub connector_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorCredentialResult {
+  pub connector: PluginConnectorSummary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -16,6 +16,7 @@ pub(crate) mod plugin_command_text;
 pub(crate) mod plugin_command_timeline;
 pub(crate) mod plugin_command_types;
 pub(crate) mod plugin_commands;
+pub(crate) mod plugin_connector_auth;
 pub(crate) mod plugin_hook_memory;
 pub(crate) mod plugin_hook_memory_body;
 pub(crate) mod plugin_hook_memory_tags;

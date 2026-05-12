@@ -32,7 +32,7 @@ pub(crate) fn handle_plugin_connector_registry(
 ) -> JsonRpcResponse {
   JsonRpcResponse::success(
     request.id,
-    &build_protocol_connector_registry(context.plugin_state.catalog()),
+    &build_protocol_connector_registry(&context.plugin_state),
   )
 }
 

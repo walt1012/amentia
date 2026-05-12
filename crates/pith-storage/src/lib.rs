@@ -19,7 +19,9 @@ mod workspace;
 
 use crate::paths::{default_database_path, default_runtime_state_path};
 use crate::schema::ensure_schema;
-pub use crate::types::{StoragePaths, StoredApprovalRecord, StoredThreadRecord};
+pub use crate::types::{
+  StoragePaths, StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord,
+};
 
 #[derive(Debug, Clone)]
 pub struct RuntimeStore {

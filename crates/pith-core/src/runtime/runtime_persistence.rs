@@ -13,13 +13,17 @@ use super::runtime_persistence_execution::{
   resolve_approval as resolve_approval_in_store, save_runtime_state as save_runtime_state_to_store,
 };
 use super::runtime_persistence_plugins::{
+  delete_plugin_connector_credential as delete_plugin_connector_credential_from_store,
+  delete_plugin_connector_credentials_for_plugin as delete_plugin_connector_credentials_for_plugin_from_store,
   delete_plugin_state as delete_plugin_state_from_store,
   load_plugin_states as load_plugin_states_from_store,
+  save_plugin_connector_credential as save_plugin_connector_credential_to_store,
   save_plugin_enabled as save_plugin_enabled_to_store,
 };
 use super::runtime_persistence_threads::save_threads as save_threads_to_store;
 use crate::approval_types::PendingApproval;
 use crate::runtime_execution::RuntimeExecutionState;
+use crate::runtime_plugins::PluginConnectorCredentialState;
 use crate::runtime_threads::RuntimeThreadState;
 
 #[derive(Debug, Clone)]
@@ -86,6 +90,24 @@ impl RuntimePersistenceState {
 
   pub(crate) fn load_plugin_states(&self) -> Result<HashMap<String, bool>> {
     load_plugin_states_from_store(self.store())
+  }
+
+  pub(crate) fn save_plugin_connector_credential(
+    &self,
+    credential: &PluginConnectorCredentialState,
+  ) -> Result<()> {
+    save_plugin_connector_credential_to_store(self.store(), credential)
+  }
+
+  pub(crate) fn delete_plugin_connector_credential(&self, connector_id: &str) -> Result<()> {
+    delete_plugin_connector_credential_from_store(self.store(), connector_id)
+  }
+
+  pub(crate) fn delete_plugin_connector_credentials_for_plugin(
+    &self,
+    plugin_id: &str,
+  ) -> Result<()> {
+    delete_plugin_connector_credentials_for_plugin_from_store(self.store(), plugin_id)
   }
 
   #[cfg(test)]

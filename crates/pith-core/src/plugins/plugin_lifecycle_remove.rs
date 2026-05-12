@@ -25,6 +25,14 @@ pub(crate) fn handle_plugin_remove(
   if let Err(error) = context.delete_plugin_state(&removed_plugin.plugin_id) {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
+  if let Err(error) =
+    context.delete_plugin_connector_credentials_for_plugin(&removed_plugin.plugin_id)
+  {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+  context
+    .plugin_state
+    .clear_connector_credentials_for_plugin(&removed_plugin.plugin_id);
   if let Err(error) = context.refresh_plugins() {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }

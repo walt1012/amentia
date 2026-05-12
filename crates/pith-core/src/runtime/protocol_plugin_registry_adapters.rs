@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use pith_plugin_host::{
-  build_capability_registry, build_command_registry, build_connector_registry, build_hook_registry,
-  PluginCatalogEntry,
+  build_capability_registry, build_command_registry, build_hook_registry, PluginCatalogEntry,
 };
 use pith_protocol::{
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
@@ -13,6 +12,7 @@ use super::protocol_plugin_registry_mappers::{
   to_protocol_capability, to_protocol_plugin_command, to_protocol_plugin_connector,
   to_protocol_plugin_hook,
 };
+use super::runtime_plugins::RuntimePluginState;
 
 pub(crate) fn build_protocol_capability_registry(
   plugins: &[PluginCatalogEntry],
@@ -54,12 +54,16 @@ pub(crate) fn build_protocol_command_registry(
 }
 
 pub(crate) fn build_protocol_connector_registry(
-  plugins: &[PluginCatalogEntry],
+  plugin_state: &RuntimePluginState,
 ) -> PluginConnectorRegistryResult {
   PluginConnectorRegistryResult {
-    connectors: build_connector_registry(plugins)
+    connectors: plugin_state
+      .connector_entries()
       .into_iter()
-      .map(to_protocol_plugin_connector)
+      .map(|connector| {
+        let credential = plugin_state.connector_credential(&connector.connector_id);
+        to_protocol_plugin_connector(connector, credential)
+      })
       .collect(),
   }
 }
