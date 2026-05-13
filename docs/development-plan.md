@@ -52,29 +52,14 @@ typed plugin registries.
 
 M4 turns plugins into bounded local capabilities. Current status:
 
-- Done: typed plugin registries are split by capability, connector, command,
-  hook, metadata, and execution-contract ownership.
-- Done: bounded `stdio` and MCP command runners execute inside plugin-root and
-  sandbox boundaries, with cancellation, failure classification, recovery
-  hints, diagnostics, protocol parsing, and runner-owned timeline output.
-- Done: connector-backed commands have local credential metadata, non-secret
-  per-run bindings, manual credential entry, auth blockers, mandatory approval
-  before launch, and approval policy disclosure in registry and UI surfaces.
-- Done: the macOS plugin UI stays progressive: command rows expose connector
-  auth, connector blockers, lightweight text input, manifest reveal, approval
-  policy, run blockers, and runner-level credential/setup diagnostics without
-  adding a broad admin console.
-- Done: plugin command readiness separates execution-contract support from
-  run-time setup, so invalid `stdio` and MCP runner entrypoints block before
-  launch.
-- Done: MCP command permission gaps surface as registry/run readiness blockers
-  before runner launch.
-- Done: external plugin runners map declared `network.outbound` permission into
-  native sandbox network policy.
-- Done: local plugin install rejects symlinked bundle contents and cleans failed
-  installs to preserve plugin-root boundaries.
-- Active: tighten the run/debug loop for real third-party connectors while
-  keeping deterministic routing and minimal UI.
+- Completed: typed registries, progressive plugin UI, connector auth metadata,
+  mandatory connector approvals, and runner-owned timeline output.
+- Completed: bounded `stdio` and MCP runners with cancellation, protocol
+  diagnostics, setup readiness, permission readiness, and sandbox diagnostics.
+- Completed: plugin-root boundaries cover discovery, runner entrypoints,
+  network policy, local install cleanup, and symlink-safe bundle install.
+- Active: finish third-party connector debug loops and lifecycle hardening
+  without adding a broad marketplace or admin console.
 
 ## Next Order
 

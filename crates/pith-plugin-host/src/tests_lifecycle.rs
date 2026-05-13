@@ -51,6 +51,40 @@ fn discover_plugins_in_roots_merges_local_and_bundled_catalogs() {
   assert!(plugins.iter().any(|plugin| plugin.id == "focus-review"));
 }
 
+#[cfg(unix)]
+#[test]
+fn discover_plugins_skips_symlinked_plugin_directories() {
+  use std::os::unix::fs::symlink;
+
+  let local_root = create_temp_plugin_root("discover-symlink-local");
+  let outside_root = create_temp_plugin_root("discover-symlink-outside");
+  let outside_plugin_dir = outside_root.join("outside-plugin");
+  fs::create_dir_all(&outside_plugin_dir).expect("create outside plugin dir");
+  fs::write(
+    outside_plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "outside-plugin",
+  "version": "0.1.0",
+  "displayName": "Outside Plugin",
+  "description": "Plugin outside the configured root.",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:outside.run"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write outside manifest");
+  symlink(&outside_plugin_dir, local_root.join("outside-plugin"))
+    .expect("create plugin dir symlink");
+
+  let plugins = discover_plugins(&local_root).expect("discover plugins");
+
+  fs::remove_dir_all(&local_root).expect("cleanup local plugin root");
+  fs::remove_dir_all(&outside_root).expect("cleanup outside plugin root");
+
+  assert!(plugins.is_empty());
+}
+
 #[test]
 fn install_and_remove_local_plugin_bundle_round_trip() {
   let source_root = create_temp_plugin_root("install-source");

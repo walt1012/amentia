@@ -92,13 +92,20 @@ fn discover_plugin_manifests(directory: &Path, manifests: &mut Vec<PathBuf>) -> 
     let entry = entry
       .with_context(|| format!("failed to inspect plugin entry in {}", directory.display()))?;
     let path = entry.path();
+    let metadata = fs::symlink_metadata(&path)
+      .with_context(|| format!("failed to inspect plugin path {}", path.display()))?;
 
-    if path.is_dir() {
+    if metadata.file_type().is_symlink() {
+      continue;
+    }
+
+    if metadata.is_dir() {
       discover_plugin_manifests(&path, manifests)?;
       continue;
     }
 
-    if path
+    if metadata.is_file()
+      && path
       .file_name()
       .and_then(|name| name.to_str())
       .is_some_and(|name| name == "pith-plugin.json")
