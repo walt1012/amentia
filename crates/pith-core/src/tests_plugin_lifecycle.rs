@@ -233,12 +233,6 @@ fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
   let install_root = create_temp_workspace("plugin-remove-refresh-root");
   fs::create_dir_all(&database_path).expect("create directory at database path");
   context
-    .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
-  context
     .plugin_state
     .configure_roots(vec![install_root.clone()], install_root.clone());
   replace_plugin_catalog(&mut context, vec![]);
@@ -254,6 +248,12 @@ fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
   );
   assert!(install_response.error.is_none());
 
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
   let manifest_path = context.plugin_state.catalog()[0].manifest_path.clone();
   let remove_response = handle_request(
     &mut context,
