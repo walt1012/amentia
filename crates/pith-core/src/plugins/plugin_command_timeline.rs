@@ -157,6 +157,7 @@ pub(super) fn build_plugin_failure_timeline_item(
   } else {
     "Failed"
   };
+  let failure_kind = plugin_runner_failure_kind(code, &attributes);
   attributes.extend(HashMap::from([
     ("pluginId".to_string(), command.plugin_id.clone()),
     ("commandId".to_string(), command.command_id.clone()),
@@ -165,6 +166,7 @@ pub(super) fn build_plugin_failure_timeline_item(
       command_status.to_string(),
     ),
     ("pluginRunnerErrorCode".to_string(), code.to_string()),
+    ("pluginRunnerFailureKind".to_string(), failure_kind.to_string()),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));
   if let Some(execution_kind) = execution_kind {
@@ -199,4 +201,23 @@ fn bounded_failure_log_preview(content: &str) -> String {
     preview.push_str("\n[truncated]");
   }
   preview
+}
+
+fn plugin_runner_failure_kind(code: i32, attributes: &HashMap<String, String>) -> &'static str {
+  if code == -32055 {
+    return "cancelled";
+  }
+  if code == -32056 {
+    return "timeout";
+  }
+  if code == -32053 {
+    return "unsupportedExecution";
+  }
+  if attributes.contains_key("mcpProtocolStatus") {
+    return "mcpProtocol";
+  }
+  if attributes.contains_key("pluginRunnerExitReason") {
+    return "processExit";
+  }
+  "runnerSetup"
 }

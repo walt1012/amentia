@@ -212,6 +212,7 @@ enum TimelineInspectorPresenter {
       "approvalId",
       "pluginRunnerExitReason",
       "pluginRunnerErrorCode",
+      "pluginRunnerFailureKind",
       "mcpProtocolStatus",
       "permissionGate",
       "pluginCommandRunId",
@@ -258,7 +259,10 @@ enum TimelineInspectorPresenter {
     let reason = entry.attributes["pluginRunnerExitReason"] ?? "unknown"
     let status = entry.attributes["pluginRunnerExitStatus"] ?? "unknown"
     let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
-    lines.append("Plugin runner: \(reason) | status \(status) | exit \(code)")
+    let failureKind = entry.attributes["pluginRunnerFailureKind"] ?? "unknown"
+    lines.append(
+      "Plugin runner: \(failureKind) | \(reason) | status \(status) | exit \(code)"
+    )
 
     if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
       lines.append("Plugin runner error: \(errorCode)")
