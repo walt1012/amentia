@@ -112,14 +112,14 @@ enum PluginActionPlanner {
       return "Command needs a supported execution contract."
     }
 
+    if command.runStatus != "ready" {
+      return command.runBlocker ?? "Command is not ready."
+    }
     if snapshot.runtimeState != .ready {
       return "Runtime is not ready."
     }
     if !snapshot.isLocalModelReady {
       return "Local model is not ready."
-    }
-    if command.runStatus != "ready" {
-      return command.runBlocker ?? "Command is not ready."
     }
     if !snapshot.hasRuntimeThreadSelection || snapshot.selectedThreadID == nil {
       return "Select or create a thread first."
