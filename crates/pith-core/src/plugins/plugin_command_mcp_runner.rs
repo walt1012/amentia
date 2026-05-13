@@ -109,13 +109,13 @@ pub(super) fn run_mcp_plugin_command(
 
   let mut setup_attributes = plugin_runner_setup_attributes(command, execution);
   let target = mcp_target_for_execution(command, execution)
-    .map_err(|failure| merge_setup_failure(&setup_attributes, failure))?;
+    .map_err(|failure| merge_setup_failure(&setup_attributes, *failure))?;
   let plugin_root = plugin_root_for_command(command).map_err(|failure| {
     PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
   })?;
   insert_plugin_root_attribute(&mut setup_attributes, &plugin_root);
   let server = mcp_server_for_target(command, &plugin_root, &target.server_id)
-    .map_err(|failure| merge_setup_failure(&setup_attributes, failure))?;
+    .map_err(|failure| merge_setup_failure(&setup_attributes, *failure))?;
   let server_command = server.command.as_deref().ok_or_else(|| {
     PluginRunnerFailure::with_output(
       -32053,
@@ -174,9 +174,8 @@ pub(super) fn run_mcp_plugin_command(
 
 fn merge_setup_failure(
   setup_attributes: &HashMap<String, String>,
-  failure: Box<PluginRunnerFailure>,
+  failure: PluginRunnerFailure,
 ) -> Box<PluginRunnerFailure> {
-  let failure = *failure;
   PluginRunnerFailure::with_output(
     failure.code,
     failure.message,
