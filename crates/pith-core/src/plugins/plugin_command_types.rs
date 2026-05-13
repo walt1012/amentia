@@ -60,6 +60,16 @@ impl fmt::Debug for PluginConnectorExecutionRef {
   }
 }
 
+impl PluginConnectorExecutionRef {
+  pub(super) fn credential_binding(&self) -> &'static str {
+    if self.credential_provider.env_key.is_some() {
+      return "env-bound";
+    }
+
+    "marker-only"
+  }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct PluginConnectorCredentialProviderRef {

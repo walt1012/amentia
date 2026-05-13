@@ -244,6 +244,30 @@ pub(super) fn insert_connector_runner_attributes(
       .collect::<Vec<_>>()
       .join(", "),
   );
+  attributes.insert(
+    "pluginRunnerCredentialLabels".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.label.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "pluginRunnerCredentialAuthorizedAt".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.authorized_at.to_string())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "pluginRunnerSecretBindings".to_string(),
+    connector_refs
+      .iter()
+      .map(PluginConnectorExecutionRef::credential_binding)
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
 }
 
 pub(super) fn run_stdio_runner(

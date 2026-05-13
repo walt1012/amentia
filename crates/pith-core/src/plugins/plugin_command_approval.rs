@@ -69,13 +69,7 @@ pub(super) fn build_plugin_command_approval_request(
     .join(", ");
   let secret_bindings = connector_refs
     .iter()
-    .map(|connector| {
-      if connector.credential_provider.env_key.is_some() {
-        "env-bound"
-      } else {
-        "none"
-      }
-    })
+    .map(PluginConnectorExecutionRef::credential_binding)
     .collect::<Vec<_>>()
     .join(", ");
 

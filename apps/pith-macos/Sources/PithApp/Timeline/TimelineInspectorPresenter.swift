@@ -247,6 +247,7 @@ enum TimelineInspectorPresenter {
     let bindings = firstAttribute(entry, keys: [
       "credentialBinding",
       "connectorSecretBindings",
+      "pluginRunnerSecretBindings",
     ]) ?? "unknown binding"
     return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers) "
       + "| \(bindings)"

@@ -91,6 +91,38 @@ fn insert_connector_context_attributes(
       .join(", "),
   );
   attributes.insert(
+    "connectorCredentialHandles".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.handle.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "connectorCredentialLabels".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.label.as_str())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "connectorCredentialAuthorizedAt".to_string(),
+    connector_refs
+      .iter()
+      .map(|connector| connector.credential_provider.authorized_at.to_string())
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
+    "connectorSecretBindings".to_string(),
+    connector_refs
+      .iter()
+      .map(PluginConnectorExecutionRef::credential_binding)
+      .collect::<Vec<_>>()
+      .join(", "),
+  );
+  attributes.insert(
     "connectorServices".to_string(),
     connector_refs
       .iter()

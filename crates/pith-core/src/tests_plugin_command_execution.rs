@@ -531,9 +531,25 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[0]["attributes"]["connectorCredentialProviders"],
     "pith.localCredentialProvider"
   );
+  assert_eq!(
+    items[0]["attributes"]["connectorCredentialHandles"],
+    "notion-runner::notion"
+  );
+  assert_eq!(
+    items[0]["attributes"]["connectorCredentialLabels"],
+    "Notion authorization marker"
+  );
+  assert_eq!(
+    items[0]["attributes"]["connectorSecretBindings"],
+    "marker-only"
+  );
+  assert!(items[0]["attributes"]["connectorCredentialAuthorizedAt"].is_string());
   assert_eq!(items[1]["kind"], "approvalRequested");
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
-  assert_eq!(items[1]["attributes"]["connectorSecretBindings"], "none");
+  assert_eq!(
+    items[1]["attributes"]["connectorSecretBindings"],
+    "marker-only"
+  );
   assert_eq!(
     result["pendingApprovals"][0]["action"],
     "run_plugin_command"
@@ -571,6 +587,14 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[1]["attributes"]["connectorCredentialProviders"],
     "pith.localCredentialProvider"
   );
+  assert_eq!(
+    items[1]["attributes"]["connectorCredentialLabels"],
+    "Notion authorization marker"
+  );
+  assert_eq!(
+    items[1]["attributes"]["connectorSecretBindings"],
+    "marker-only"
+  );
   assert_eq!(items[2]["kind"], "pluginResult");
   assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
   assert_eq!(
@@ -593,6 +617,15 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[2]["attributes"]["pluginRunnerCredentialHandles"],
     "notion-runner::notion"
   );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerCredentialLabels"],
+    "Notion authorization marker"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerSecretBindings"],
+    "marker-only"
+  );
+  assert!(items[2]["attributes"]["pluginRunnerCredentialAuthorizedAt"].is_string());
   assert_eq!(
     items[2]["content"],
     "connectorId=true provider=true handle=true store=true label=true secretLeak=false"
@@ -835,6 +868,15 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[2]["attributes"]["pluginRunnerCredentialProviders"],
     "pith.localCredentialProvider"
   );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerCredentialLabels"],
+    "Notion authorization marker"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerSecretBindings"],
+    "env-bound"
+  );
+  assert!(items[2]["attributes"]["pluginRunnerCredentialAuthorizedAt"].is_string());
   assert_eq!(
     items[2]["content"],
     "method=true tool=true provider=true handle=true secretLeak=false credentialEnv=true tokenLeak=false"
