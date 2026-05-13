@@ -206,6 +206,8 @@ enum RuntimeSummaryMapper {
       pluginDisplayName: hook.pluginDisplayName,
       permissions: hook.permissions,
       sourcePath: hook.sourcePath,
+      status: hook.status,
+      runBlocker: hook.runBlocker,
       memorySummary: hook.memorySummary
     )
   }

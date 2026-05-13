@@ -163,5 +163,7 @@ struct PluginHookSummary: Identifiable, Hashable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let status: String
+  let runBlocker: String?
   let memorySummary: String?
 }

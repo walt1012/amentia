@@ -228,6 +228,9 @@ pub struct PluginHookSummary {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub source_path: String,
+  pub status: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub run_blocker: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub memory_summary: Option<String>,
 }

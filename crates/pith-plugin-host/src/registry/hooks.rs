@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use anyhow::Error;
+
 use crate::io::read_hook_manifest;
 use crate::types::{PluginCatalogEntry, PluginHookEntry};
 
@@ -28,8 +30,17 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
       }
 
       let hook_path = plugin_root.join("hooks").join(format!("{identifier}.json"));
-      let Ok(hook) = read_hook_manifest(&hook_path) else {
-        continue;
+      let hook = match read_hook_manifest(&hook_path) {
+        Ok(hook) => hook,
+        Err(error) => {
+          hooks.push(invalid_hook_entry(
+            plugin,
+            identifier,
+            &hook_path,
+            error,
+          ));
+          continue;
+        }
       };
       let memory_note_title = hook.memory.as_ref().map(|memory| memory.note_title.clone());
       let memory_note_source = hook
@@ -52,6 +63,7 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
         plugin_display_name: plugin.display_name.clone(),
         permissions: plugin.permissions.clone(),
         source_path: hook_path.display().to_string(),
+        manifest_error: None,
         memory_note_title,
         memory_note_source,
         memory_note_tags,
@@ -68,4 +80,30 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
       .then_with(|| left.hook_id.cmp(&right.hook_id))
   });
   hooks
+}
+
+fn invalid_hook_entry(
+  plugin: &PluginCatalogEntry,
+  identifier: &str,
+  hook_path: &Path,
+  error: Error,
+) -> PluginHookEntry {
+  PluginHookEntry {
+    hook_id: format!("{}::{}", plugin.id, identifier),
+    title: identifier.to_string(),
+    description: "Plugin hook manifest could not be loaded.".to_string(),
+    event: "invalid".to_string(),
+    message_template: String::new(),
+    plugin_id: plugin.id.clone(),
+    plugin_display_name: plugin.display_name.clone(),
+    permissions: plugin.permissions.clone(),
+    source_path: hook_path.display().to_string(),
+    manifest_error: Some(format!(
+      "Plugin hook `{}` manifest could not be loaded: {error}",
+      identifier
+    )),
+    memory_note_title: None,
+    memory_note_source: None,
+    memory_note_tags: vec![],
+  }
 }

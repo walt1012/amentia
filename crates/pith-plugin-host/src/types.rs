@@ -112,6 +112,7 @@ pub struct PluginHookEntry {
   pub plugin_display_name: String,
   pub permissions: Vec<String>,
   pub source_path: String,
+  pub manifest_error: Option<String>,
   pub memory_note_title: Option<String>,
   pub memory_note_source: Option<String>,
   pub memory_note_tags: Vec<String>,

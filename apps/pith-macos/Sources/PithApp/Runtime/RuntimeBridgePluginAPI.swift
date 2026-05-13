@@ -176,6 +176,8 @@ extension RuntimeBridge {
         pluginDisplayName: hook.pluginDisplayName,
         permissions: hook.permissions,
         sourcePath: hook.sourcePath,
+        status: hook.status ?? "ready",
+        runBlocker: hook.runBlocker,
         memorySummary: hook.memorySummary
       )
     }

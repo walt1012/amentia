@@ -1251,6 +1251,72 @@ fn plugin_hook_registry_lists_enabled_hook_plugins() {
   assert_eq!(hooks[0]["pluginId"], "shell-recorder");
   assert_eq!(hooks[0]["event"], "shell.completed");
   assert_eq!(hooks[0]["title"], "Record Shell Completion");
+  assert_eq!(hooks[0]["status"], "ready");
+}
+
+#[test]
+fn plugin_hook_registry_surfaces_invalid_hook_manifests() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-hook-invalid-manifest",
+    "broken-hooks",
+    "Broken Hooks",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::create_dir_all(source_root.join("hooks")).expect("create hooks dir");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "broken-hooks",
+  "version": "0.1.0",
+  "displayName": "Broken Hooks",
+  "description": "Broken hook plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["hook:shell.broken"],
+  "permissions": ["shell.exec"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write hook plugin manifest");
+  fs::write(source_root.join("hooks").join("shell.broken.json"), "{")
+    .expect("write invalid hook manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "broken-hooks".to_string(),
+      name: "broken-hooks".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Broken Hooks".to_string(),
+      status: "ready".to_string(),
+      description: "Broken hook plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["hook:shell.broken".to_string()],
+      permissions: vec!["shell.exec".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(&mut context, request(methods::PLUGIN_HOOK_REGISTRY, None));
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("hook registry result");
+  let hooks = result["hooks"].as_array().expect("hooks");
+  assert_eq!(hooks.len(), 1);
+  assert_eq!(hooks[0]["hookId"], "broken-hooks::shell.broken");
+  assert_eq!(hooks[0]["title"], "shell.broken");
+  assert_eq!(hooks[0]["event"], "invalid");
+  assert_eq!(hooks[0]["status"], "invalidHookManifest");
+  assert!(hooks[0]["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("manifest could not be loaded"));
 }
 
 #[test]

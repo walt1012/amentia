@@ -31,6 +31,7 @@ mod tests {
       plugin_display_name: "Shell Recorder".to_string(),
       permissions: vec!["shell.exec".to_string()],
       source_path: "/tmp/shell-recorder/pith-plugin.json".to_string(),
+      manifest_error: None,
       memory_note_title: Some("Shell Completion".to_string()),
       memory_note_source: Some("plugin.shell-recorder".to_string()),
       memory_note_tags: vec!["shell".to_string(), "hook".to_string()],

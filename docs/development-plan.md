@@ -57,7 +57,7 @@ M4 turns plugins into bounded local capabilities. Current status:
   timeline output.
 - Completed execution baseline: bounded `stdio` and MCP runners, cancellation,
   setup/readiness checks, permission gates, sandbox diagnostics, protocol
-  diagnostics, invalid command manifest surfacing, input/output contract
+  diagnostics, invalid command and hook manifest surfacing, input/output contract
   preflight, malformed envelope diagnostics, connector-scoped network policy,
   command-scoped connector payloads, and runner-authored memory notes.
 - Completed lifecycle baseline: symlink-safe bundle install, nested manifest

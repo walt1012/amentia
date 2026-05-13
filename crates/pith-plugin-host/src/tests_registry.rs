@@ -514,7 +514,49 @@ fn build_hook_registry_loads_enabled_plugin_hooks() {
     hooks[0].memory_note_tags,
     vec!["shell".to_string(), "hook".to_string()]
   );
+  assert_eq!(hooks[0].manifest_error, None);
   assert!(hooks[0].source_path.ends_with("shell.recorder.json"));
+}
+
+#[test]
+fn build_hook_registry_surfaces_invalid_hook_manifests() {
+  let plugin_root = create_temp_plugin_root("hook-invalid-manifest");
+  let plugin_dir = plugin_root.join("broken-hook");
+  let hooks_dir = plugin_dir.join("hooks");
+  fs::create_dir_all(&hooks_dir).expect("create hooks dir");
+  fs::write(hooks_dir.join("shell.broken.json"), "{")
+    .expect("write invalid hook definition");
+  let plugin = PluginCatalogEntry {
+    id: "broken-hook".to_string(),
+    name: "broken-hook".to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Broken Hook".to_string(),
+    status: "ready".to_string(),
+    description: "Manually constructed plugin".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec!["hook:shell.broken".to_string()],
+    permissions: vec!["shell.exec".to_string()],
+    manifest_path: plugin_dir.join("pith-plugin.json").display().to_string(),
+    provenance: "local".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+
+  let hooks = build_hook_registry(&[plugin]);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert_eq!(hooks.len(), 1);
+  assert_eq!(hooks[0].hook_id, "broken-hook::shell.broken");
+  assert_eq!(hooks[0].title, "shell.broken");
+  assert_eq!(hooks[0].event, "invalid");
+  assert!(hooks[0]
+    .manifest_error
+    .as_deref()
+    .expect("manifest error")
+    .contains("manifest could not be loaded"));
 }
 
 #[test]

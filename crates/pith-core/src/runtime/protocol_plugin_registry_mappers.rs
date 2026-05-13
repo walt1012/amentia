@@ -166,6 +166,11 @@ pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSu
     .memory_note_title
     .as_ref()
     .map(|title| format!("Stores a workspace memory note as `{title}` when the hook runs."));
+  let status = if hook.manifest_error.is_some() {
+    "invalidHookManifest"
+  } else {
+    "ready"
+  };
   PluginHookSummary {
     hook_id: hook.hook_id,
     title: hook.title,
@@ -175,6 +180,8 @@ pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSu
     plugin_display_name: hook.plugin_display_name,
     permissions: hook.permissions,
     source_path: hook.source_path,
+    status: status.to_string(),
+    run_blocker: hook.manifest_error,
     memory_summary,
   }
 }

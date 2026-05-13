@@ -262,9 +262,7 @@ enum PluginDashboardPresenter {
       return "Enable ready plugins with declared hook capabilities to extend local runtime events."
     }
 
-    return snapshot.hooks
-      .map { "\($0.pluginDisplayName): \($0.title) (\($0.event))" }
-      .joined(separator: "\n")
+    return snapshot.hooks.map(hookDetail).joined(separator: "\n")
   }
 
   static func hookPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginHookSummary] {
@@ -277,5 +275,13 @@ enum PluginDashboardPresenter {
 
   private static func invalidPluginList(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {
     snapshot.plugins.filter { $0.status != "ready" }
+  }
+
+  private static func hookDetail(_ hook: PluginHookSummary) -> String {
+    let status = hook.status == "ready" ? hook.event : "\(hook.event) | \(hook.status)"
+    if let runBlocker = hook.runBlocker {
+      return "\(hook.pluginDisplayName): \(hook.title) (\(status)) | \(runBlocker)"
+    }
+    return "\(hook.pluginDisplayName): \(hook.title) (\(status))"
   }
 }

@@ -213,7 +213,7 @@ struct PluginHookRow: View {
             .font(.caption.weight(.semibold))
           Text("\(hook.pluginDisplayName) | \(hook.event)")
             .font(.caption2)
-            .foregroundColor(.secondary)
+            .foregroundColor(hook.status == "ready" ? .secondary : .orange)
         }
 
         Spacer()
@@ -227,6 +227,13 @@ struct PluginHookRow: View {
         Text(memorySummary)
           .font(.caption2)
           .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if let runBlocker = hook.runBlocker {
+        Text(runBlocker)
+          .font(.caption2)
+          .foregroundColor(.orange)
           .textSelection(.enabled)
       }
 
