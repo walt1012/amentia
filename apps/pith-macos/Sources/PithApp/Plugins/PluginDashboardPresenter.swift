@@ -160,7 +160,22 @@ enum PluginDashboardPresenter {
       return "No Connectors"
     }
 
-    return "\(snapshot.connectors.count) Connector\(snapshot.connectors.count == 1 ? "" : "s")"
+    let readyCount = snapshot.connectors.filter { $0.status == "ready" }.count
+    let needsAuthCount = snapshot.connectors.filter { $0.authStatus == "needsAuth" }.count
+    let authorizedCount = snapshot.connectors.filter { $0.credentialPresent }.count
+    var parts = [
+      "\(snapshot.connectors.count) Connector\(snapshot.connectors.count == 1 ? "" : "s")"
+    ]
+    if readyCount > 0 {
+      parts.append("\(readyCount) ready")
+    }
+    if needsAuthCount > 0 {
+      parts.append("\(needsAuthCount) need auth")
+    }
+    if authorizedCount > 0 {
+      parts.append("\(authorizedCount) authorized")
+    }
+    return parts.joined(separator: " | ")
   }
 
   static func connectorDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
