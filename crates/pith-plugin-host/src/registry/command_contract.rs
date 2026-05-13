@@ -29,7 +29,7 @@ pub(super) fn command_execution_entry(
       .map(str::trim)
       .filter(|entrypoint| !entrypoint.is_empty())
       .map(str::to_string),
-    connector_ids: execution.connectors.as_ref().map(normalized_connector_ids),
+    connector_ids: execution.connectors.as_deref().map(normalized_connector_ids),
     input: command_envelope_entry(execution.input.as_ref(), default_input_envelope()),
     output: command_envelope_entry(execution.output.as_ref(), default_output_envelope()),
   })
