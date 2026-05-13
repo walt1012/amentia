@@ -153,11 +153,20 @@ enum PluginActionPlanner {
     if command.runStatus != "ready" {
       return command.runBlocker ?? "Command is not ready."
     }
+    if !command.unsupportedRequiredInputFieldNames.isEmpty {
+      return "Command requires unsupported input fields: \(command.unsupportedRequiredInputFieldNames.joined(separator: ", "))."
+    }
+    if command.requiresConnectorInput && command.declaredConnectorIds.isEmpty {
+      return "Command requires connector input, but no connector is declared."
+    }
     if snapshot.runtimeState != .ready {
       return "Runtime is not ready."
     }
     if !snapshot.isLocalModelReady {
       return "Local model is not ready."
+    }
+    if command.requiresWorkspaceInput && !snapshot.hasRuntimeThreadSelection {
+      return "Command requires a workspace-bound thread."
     }
     if !snapshot.hasRuntimeThreadSelection || snapshot.selectedThreadID == nil {
       return "Select or create a thread first."

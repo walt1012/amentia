@@ -88,6 +88,13 @@ struct PluginCommandRow: View {
           .textSelection(.enabled)
       }
 
+      if let requiredInputLabel {
+        Text(requiredInputLabel)
+          .font(.caption2)
+          .foregroundColor(command.unsupportedRequiredInputFieldNames.isEmpty ? .secondary : .orange)
+          .textSelection(.enabled)
+      }
+
       if let memorySummary = command.memorySummary {
         Text(memorySummary)
           .font(.caption2)
@@ -171,6 +178,14 @@ struct PluginCommandRow: View {
     }
 
     return "Contract: \(input.envelope) -> \(output.envelope)"
+  }
+
+  private var requiredInputLabel: String? {
+    guard !command.requiredInputFieldNames.isEmpty else {
+      return nil
+    }
+
+    return "Required input fields: \(command.requiredInputFieldNames.joined(separator: ", "))"
   }
 
   private var showsManifestAction: Bool {

@@ -109,8 +109,30 @@ extension PluginCommandSummary {
     inputField.map { $0.required && $0.isPlainTextInput } ?? false
   }
 
+  var requiresWorkspaceInput: Bool {
+    requiredInputFields.contains { $0.name == "workspace" }
+  }
+
+  var requiresConnectorInput: Bool {
+    requiredInputFields.contains { $0.name == "connectors" }
+  }
+
+  var requiredInputFieldNames: [String] {
+    requiredInputFields.map(\.name)
+  }
+
+  var unsupportedRequiredInputFieldNames: [String] {
+    requiredInputFields
+      .filter { !$0.isSupportedByPithCommandRun }
+      .map(\.name)
+  }
+
   private var inputField: PluginCommandEnvelopeFieldSummary? {
     execution?.input?.fields.first { $0.name == "input" }
+  }
+
+  private var requiredInputFields: [PluginCommandEnvelopeFieldSummary] {
+    execution?.input?.fields.filter(\.required) ?? []
   }
 }
 
@@ -118,6 +140,17 @@ private extension PluginCommandEnvelopeFieldSummary {
   var isPlainTextInput: Bool {
     let normalizedKind = kind.lowercased()
     return normalizedKind == "text" || normalizedKind == "string"
+  }
+
+  var isSupportedByPithCommandRun: Bool {
+    switch name {
+    case "threadId", "commandId", "envelope", "workspace", "connectors":
+      return true
+    case "input":
+      return isPlainTextInput
+    default:
+      return false
+    }
   }
 }
 
