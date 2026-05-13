@@ -2142,7 +2142,9 @@ fn plugin_command_run_rejects_malformed_stdio_output_envelope() {
   let plugin_manifest = source_root.join("pith-plugin.json");
   let runner_path = source_root.join("runner.sh");
   fs::write(
-    source_root.join("commands").join("malformed-output.run.json"),
+    source_root
+      .join("commands")
+      .join("malformed-output.run.json"),
     r#"{
   "title": "Run Malformed Output Plugin",
   "description": "Execute a local stdio runner with malformed JSON output.",

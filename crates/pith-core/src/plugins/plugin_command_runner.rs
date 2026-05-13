@@ -797,10 +797,7 @@ fn plugin_runner_output(
           "pluginRunnerOutputStatus".to_string(),
           "malformedEnvelope".to_string(),
         );
-        attributes.insert(
-          "pluginRunnerOutputParsed".to_string(),
-          "false".to_string(),
-        );
+        attributes.insert("pluginRunnerOutputParsed".to_string(), "false".to_string());
         attributes.insert(
           "pluginRunnerOutputParseError".to_string(),
           bounded_log_preview(&error.to_string()),
@@ -824,10 +821,7 @@ fn plugin_runner_output(
         "pluginRunnerOutputStatus".to_string(),
         "plainText".to_string(),
       );
-      attributes.insert(
-        "pluginRunnerOutputParsed".to_string(),
-        "false".to_string(),
-      );
+      attributes.insert("pluginRunnerOutputParsed".to_string(), "false".to_string());
       return Ok(PluginRunnerResult {
         execution_kind: execution_kind.to_string(),
         content: plugin_runner_content(output),
