@@ -99,18 +99,38 @@ enum PluginActionPlanner {
   }
 
   static func canRunCommand(commandID: String, snapshot: PluginActionSnapshot) -> Bool {
+    commandRunDisabledReason(commandID: commandID, snapshot: snapshot) == nil
+  }
+
+  static func commandRunDisabledReason(
+    commandID: String,
+    snapshot: PluginActionSnapshot
+  ) -> String? {
     guard let command = snapshot.commands.first(where: { $0.id == commandID }),
           command.execution?.supported == true
     else {
-      return false
+      return "Command needs a supported execution contract."
     }
 
-    return snapshot.runtimeState == .ready
-      && snapshot.isLocalModelReady
-      && command.runStatus == "ready"
-      && snapshot.hasRuntimeThreadSelection
-      && snapshot.selectedThreadID != nil
-      && !snapshot.hasActiveOrPendingTurn
-      && !snapshot.hasLifecycleOperation
+    if snapshot.runtimeState != .ready {
+      return "Runtime is not ready."
+    }
+    if !snapshot.isLocalModelReady {
+      return "Local model is not ready."
+    }
+    if command.runStatus != "ready" {
+      return command.runBlocker ?? "Command is not ready."
+    }
+    if !snapshot.hasRuntimeThreadSelection || snapshot.selectedThreadID == nil {
+      return "Select or create a thread first."
+    }
+    if snapshot.hasActiveOrPendingTurn {
+      return "Finish or cancel the active task first."
+    }
+    if snapshot.hasLifecycleOperation {
+      return "Finish the current plugin operation first."
+    }
+
+    return nil
   }
 }

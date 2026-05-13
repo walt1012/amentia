@@ -4,6 +4,7 @@ struct PluginCommandRow: View {
   let command: PluginCommandSummary
   let requiredConnectors: [PluginConnectorSummary]
   let canRun: Bool
+  let runDisabledReason: String?
   let canAuthorizeConnector: (String) -> Bool
   let onRun: () -> Void
   let onRunWithInput: () -> Void
@@ -58,6 +59,13 @@ struct PluginCommandRow: View {
         .font(.caption2)
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
+
+      if let runDisabledReason {
+        Text("Run blocker: \(runDisabledReason)")
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
 
       if command.approvalRequired {
         Text("Approval: \(approvalLabel)")

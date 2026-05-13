@@ -238,6 +238,10 @@ extension AppViewModel {
     guard PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot),
           let threadID = selectedThreadID
     else {
+      runtimeDetail = PluginActionPlanner.commandRunDisabledReason(
+        commandID: commandID,
+        snapshot: snapshot
+      ) ?? "Plugin command cannot run yet."
       return
     }
 
@@ -282,6 +286,13 @@ extension AppViewModel {
 
   func canRunPluginCommand(commandID: String) -> Bool {
     PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: pluginActionSnapshot())
+  }
+
+  func pluginCommandRunDisabledReason(commandID: String) -> String? {
+    PluginActionPlanner.commandRunDisabledReason(
+      commandID: commandID,
+      snapshot: pluginActionSnapshot()
+    )
   }
 
   func hasPluginLifecycleOperation() -> Bool {

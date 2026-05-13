@@ -133,6 +133,7 @@ private struct PluginCommandsSection: View {
             command: command,
             requiredConnectors: viewModel.requiredPluginConnectors(commandID: command.id),
             canRun: viewModel.canRunPluginCommand(commandID: command.id),
+            runDisabledReason: viewModel.pluginCommandRunDisabledReason(commandID: command.id),
             canAuthorizeConnector: { connectorID in
               viewModel.canAuthorizePluginConnector(connectorID: connectorID)
             },
