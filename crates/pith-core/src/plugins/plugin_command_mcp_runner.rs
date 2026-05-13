@@ -110,10 +110,9 @@ pub(super) fn run_mcp_plugin_command(
   let mut setup_attributes = plugin_runner_setup_attributes(command, execution);
   let target = mcp_target_for_execution(command, execution)
     .map_err(|failure| merge_setup_failure(&setup_attributes, failure))?;
-  let plugin_root = plugin_root_for_command(command)
-    .map_err(|failure| {
-      PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
-    })?;
+  let plugin_root = plugin_root_for_command(command).map_err(|failure| {
+    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+  })?;
   insert_plugin_root_attribute(&mut setup_attributes, &plugin_root);
   let server = mcp_server_for_target(command, &plugin_root, &target.server_id)
     .map_err(|failure| merge_setup_failure(&setup_attributes, failure))?;
@@ -135,10 +134,11 @@ pub(super) fn run_mcp_plugin_command(
     PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
   })?;
   insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
-  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
-    .map_err(|failure| {
+  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root).map_err(
+    |failure| {
       PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
-    })?;
+    },
+  )?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);

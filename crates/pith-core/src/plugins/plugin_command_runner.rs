@@ -5,9 +5,7 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use pith_model_runtime::GenerationCancellation;
-use pith_plugin_host::{
-  PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry,
-};
+use pith_plugin_host::{PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry};
 use pith_process::{
   join_bounded_pipe_reader, read_bounded_pipe_in_background, terminate_process_group_or_child,
   wait_for_child, BoundedPipeOutput, ChildExitReason, ChildWaitResult,
@@ -175,10 +173,11 @@ pub(super) fn run_external_plugin_command(
     PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
   })?;
   insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
-  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
-    .map_err(|failure| {
+  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root).map_err(
+    |failure| {
       PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
-    })?;
+    },
+  )?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);

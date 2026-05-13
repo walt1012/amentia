@@ -625,7 +625,10 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[2]["attributes"]["pluginRunnerExecutionKind"],
     "stdio.notionSync"
   );
-  assert_eq!(items[2]["attributes"]["pluginRunnerEntrypoint"], "runner.sh");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypoint"],
+    "runner.sh"
+  );
   assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
   assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(
@@ -871,10 +874,7 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   );
   assert_eq!(items[2]["attributes"]["mcpServerId"], "notion");
   assert_eq!(items[2]["attributes"]["mcpToolName"], "createTask");
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerExecutionDriver"],
-    "mcp"
-  );
+  assert_eq!(items[2]["attributes"]["pluginRunnerExecutionDriver"], "mcp");
   assert_eq!(
     items[2]["attributes"]["pluginRunnerExecutionKind"],
     "mcp.notionCreateTask"
@@ -1435,7 +1435,10 @@ exit 7
     items[1]["attributes"]["pluginRunnerExecutionKind"],
     "stdio.failure"
   );
-  assert_eq!(items[1]["attributes"]["pluginRunnerEntrypoint"], "runner.sh");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypoint"],
+    "runner.sh"
+  );
   assert!(items[1]["attributes"]["pluginRunnerPluginRoot"].is_string());
   assert!(items[1]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
