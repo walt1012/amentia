@@ -396,9 +396,7 @@ fn plugin_command_run_rejects_missing_required_user_input_before_runner_start() 
   let plugin_manifest = source_root.join("pith-plugin.json");
   let runner_path = source_root.join("runner.sh");
   fs::write(
-    source_root
-      .join("commands")
-      .join("required-input.run.json"),
+    source_root.join("commands").join("required-input.run.json"),
     r#"{
   "title": "Run Required Input Plugin",
   "description": "Execute a local stdio runner that requires user input.",
