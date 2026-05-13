@@ -258,11 +258,8 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 #[test]
 fn plugin_command_registry_blocks_non_executable_mcp_runner() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root = create_temp_plugin_bundle(
-    "plugin-command-mcp-runner-setup",
-    "mcp-setup",
-    "MCP Setup",
-  );
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-mcp-runner-setup", "mcp-setup", "MCP Setup");
   let plugin_manifest = source_root.join("pith-plugin.json");
   let server_path = source_root.join("mcp-server.sh");
   fs::write(
