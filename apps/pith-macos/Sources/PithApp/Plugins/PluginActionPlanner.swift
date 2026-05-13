@@ -144,15 +144,17 @@ enum PluginActionPlanner {
     commandID: String,
     snapshot: PluginActionSnapshot
   ) -> String? {
-    guard let command = snapshot.commands.first(where: { $0.id == commandID }),
-          command.execution?.supported == true
-    else {
-      return "Command needs a supported execution contract."
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }) else {
+      return "Command was not found."
     }
 
     if command.runStatus != "ready" {
       return command.runBlocker ?? "Command is not ready."
     }
+    guard command.execution?.supported == true else {
+      return "Command needs a supported execution contract."
+    }
+
     if !command.unsupportedRequiredInputFieldNames.isEmpty {
       return "Command requires unsupported input fields: \(command.unsupportedRequiredInputFieldNames.joined(separator: ", "))."
     }

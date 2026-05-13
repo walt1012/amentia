@@ -58,6 +58,64 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
 }
 
 #[test]
+fn plugin_command_registry_surfaces_invalid_command_manifests() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-invalid-manifest",
+    "broken-tools",
+    "Broken Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("broken-tools.run.json"),
+    "{",
+  )
+  .expect("write invalid command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "broken-tools".to_string(),
+      name: "broken-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Broken Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Broken command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:broken-tools.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["commandId"], "broken-tools::broken-tools.run");
+  assert_eq!(commands[0]["title"], "broken-tools.run");
+  assert_eq!(commands[0]["runStatus"], "invalidCommandManifest");
+  assert!(commands[0]["execution"].is_null());
+  assert!(commands[0]["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("manifest could not be loaded"));
+}
+
+#[test]
 fn plugin_command_registry_marks_unsupported_execution_contracts() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(

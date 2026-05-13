@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use anyhow::Error;
+
 use crate::io::read_command_manifest;
 use crate::types::{PluginCatalogEntry, PluginCommandEntry};
 
@@ -31,8 +33,12 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       let command_path = plugin_root
         .join("commands")
         .join(format!("{identifier}.json"));
-      let Ok(command) = read_command_manifest(&command_path) else {
-        continue;
+      let command = match read_command_manifest(&command_path) {
+        Ok(command) => command,
+        Err(error) => {
+          commands.push(invalid_command_entry(plugin, identifier, &command_path, error));
+          continue;
+        }
       };
       let memory_note_title = command
         .memory
@@ -61,6 +67,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         source_path: command_path.display().to_string(),
         execution,
         execution_kind,
+        manifest_error: None,
         memory_note_title,
         memory_note_source,
         memory_note_tags,
@@ -76,4 +83,31 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       .then_with(|| left.command_id.cmp(&right.command_id))
   });
   commands
+}
+
+fn invalid_command_entry(
+  plugin: &PluginCatalogEntry,
+  identifier: &str,
+  command_path: &Path,
+  error: Error,
+) -> PluginCommandEntry {
+  PluginCommandEntry {
+    command_id: format!("{}::{}", plugin.id, identifier),
+    title: identifier.to_string(),
+    description: "Plugin command manifest could not be loaded.".to_string(),
+    prompt: String::new(),
+    plugin_id: plugin.id.clone(),
+    plugin_display_name: plugin.display_name.clone(),
+    permissions: plugin.permissions.clone(),
+    source_path: command_path.display().to_string(),
+    execution: None,
+    execution_kind: None,
+    manifest_error: Some(format!(
+      "Plugin command `{}` manifest could not be loaded: {error}",
+      identifier
+    )),
+    memory_note_title: None,
+    memory_note_source: None,
+    memory_note_tags: vec![],
+  }
 }

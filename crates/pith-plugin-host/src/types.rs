@@ -67,6 +67,7 @@ pub struct PluginCommandEntry {
   pub source_path: String,
   pub execution: Option<PluginCommandExecutionEntry>,
   pub execution_kind: Option<String>,
+  pub manifest_error: Option<String>,
   pub memory_note_title: Option<String>,
   pub memory_note_source: Option<String>,
   pub memory_note_tags: Vec<String>,

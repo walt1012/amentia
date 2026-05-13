@@ -42,6 +42,7 @@ mod tests {
         output: empty_envelope("pith.plugin.command.output"),
       }),
       execution_kind: Some("builtin.workspaceReadmeNote".to_string()),
+      manifest_error: None,
       memory_note_title: Some("README Note".to_string()),
       memory_note_source: Some("plugin.workspace-notes".to_string()),
       memory_note_tags: vec!["readme".to_string(), "command".to_string()],

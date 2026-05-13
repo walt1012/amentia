@@ -72,6 +72,14 @@ pub(crate) fn command_readiness(
     .collect::<Vec<_>>();
   required_connector_ids.extend(connector_requirements.missing_connector_ids.clone());
 
+  if let Some(manifest_error) = command.manifest_error.as_ref() {
+    return PluginCommandReadiness::blocked(
+      "invalidCommandManifest",
+      manifest_error.clone(),
+      declared_connector_ids,
+      required_connector_ids,
+    );
+  }
   if command.execution.is_none() {
     return PluginCommandReadiness::blocked(
       "missingExecution",
