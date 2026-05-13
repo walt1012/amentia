@@ -67,6 +67,8 @@ M4 turns plugins into bounded local capabilities. Current status:
 - Done: plugin command readiness separates execution-contract support from
   run-time setup, so invalid `stdio` and MCP runner entrypoints block before
   launch.
+- Done: MCP command permission gaps surface as registry/run readiness blockers
+  before runner launch.
 - Active: tighten the run/debug loop for real third-party connectors while
   keeping deterministic routing and minimal UI.
 

@@ -256,6 +256,110 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_registry_blocks_mcp_without_declared_mcp_permission() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-permission-status",
+    "mcp-permission",
+    "MCP Permission",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-permission",
+  "version": "0.1.0",
+  "displayName": "MCP Permission",
+  "description": "MCP command plugin missing permission",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-permission.run", "mcp_server:local"],
+  "permissions": [],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp plugin manifest");
+  fs::write(
+    source_root.join("commands").join("mcp-permission.run.json"),
+    r#"{
+  "title": "Run MCP Permission",
+  "description": "Run a local MCP server from the plugin bundle.",
+  "prompt": "Run the MCP command.",
+  "execution": {
+    "kind": "mcp.localRun",
+    "driver": "mcp",
+    "entrypoint": "local.run"
+  }
+}"#,
+  )
+  .expect("write mcp command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+"#,
+  )
+  .expect("write mcp server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-permission".to_string(),
+      name: "mcp-permission".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Permission".to_string(),
+      status: "ready".to_string(),
+      description: "MCP permission plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-permission.run".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec![],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["execution"]["driver"], "mcp");
+  assert_eq!(commands[0]["execution"]["supported"], true);
+  assert_eq!(commands[0]["runStatus"], "missingPermission");
+  assert!(commands[0]["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("mcp.connect"));
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_registry_blocks_non_executable_mcp_runner() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =

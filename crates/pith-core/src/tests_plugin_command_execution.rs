@@ -1206,17 +1206,9 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
   fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
-  assert!(response.error.is_none());
-  let result = response.result.expect("command run result");
-  let items = result["items"].as_array().expect("items");
-  assert_eq!(items[0]["kind"], "pluginCommand");
-  assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["title"], "Plugin Permission Required");
-  assert_eq!(items[1]["attributes"]["requiredPermission"], "mcp.connect");
-  assert_eq!(
-    items[1]["attributes"]["permissionGate"],
-    "pluginCommandExecution"
-  );
+  let error = response.error.expect("permission blocker error");
+  assert_eq!(error.code, -32053);
+  assert!(error.message.contains("mcp.connect"));
 }
 
 #[test]
@@ -1361,20 +1353,9 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
   fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
-  assert!(response.error.is_none());
-  let result = response.result.expect("command run result");
-  let items = result["items"].as_array().expect("items");
-  assert_eq!(items[0]["kind"], "pluginCommand");
-  assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["title"], "Plugin Permission Required");
-  assert_eq!(
-    items[1]["attributes"]["requiredPermission"],
-    "network.outbound"
-  );
-  assert_eq!(
-    items[1]["attributes"]["permissionGate"],
-    "pluginCommandExecution"
-  );
+  let error = response.error.expect("permission blocker error");
+  assert_eq!(error.code, -32053);
+  assert!(error.message.contains("network.outbound"));
 }
 
 #[cfg(unix)]

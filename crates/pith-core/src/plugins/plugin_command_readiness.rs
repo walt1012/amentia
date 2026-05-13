@@ -2,6 +2,7 @@ use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 
 use super::plugin_command_execution::is_supported_plugin_command_execution;
 use super::plugin_command_mcp_runner::mcp_runner_setup_blocker;
+use super::plugin_command_permission_gate::plugin_command_permission_blocker;
 use super::plugin_command_runner::stdio_runner_setup_blocker;
 use super::plugin_connector_requirements::required_auth_connectors;
 use crate::runtime_plugins::RuntimePluginState;
@@ -66,6 +67,15 @@ pub(crate) fn command_readiness(
         "Plugin command `{}` requires a supported execution contract.",
         command.command_id
       ),
+      required_connector_ids,
+    );
+  }
+  if let Some(run_blocker) =
+    plugin_command_permission_blocker(command, !required_connectors.is_empty())
+  {
+    return PluginCommandReadiness::blocked(
+      "missingPermission",
+      run_blocker,
       required_connector_ids,
     );
   }

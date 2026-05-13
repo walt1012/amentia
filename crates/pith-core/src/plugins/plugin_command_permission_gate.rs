@@ -6,6 +6,34 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use super::plugin_command_types::PluginConnectorExecutionRef;
 use super::plugin_permissions::build_permission_denied_items;
 
+pub(crate) fn plugin_command_permission_blocker(
+  command: &HostPluginCommandEntry,
+  connector_backed: bool,
+) -> Option<String> {
+  let execution = command.execution.as_ref()?;
+  if execution.driver != "mcp" {
+    return None;
+  }
+
+  if !command_declares_permission(command, "mcp.connect") {
+    return Some(plugin_command_permission_blocker_message(
+      command,
+      "mcp.connect",
+      "run an MCP command",
+    ));
+  }
+
+  if connector_backed && !command_declares_permission(command, "network.outbound") {
+    return Some(plugin_command_permission_blocker_message(
+      command,
+      "network.outbound",
+      "run a connector-backed MCP command",
+    ));
+  }
+
+  None
+}
+
 pub(super) fn plugin_command_permission_denied_items(
   command: &HostPluginCommandEntry,
   workspace: Option<&WorkspaceSummary>,
@@ -42,6 +70,17 @@ fn command_declares_permission(command: &HostPluginCommandEntry, permission: &st
     .permissions
     .iter()
     .any(|declared_permission| declared_permission == permission)
+}
+
+fn plugin_command_permission_blocker_message(
+  command: &HostPluginCommandEntry,
+  permission: &str,
+  blocked_action: &str,
+) -> String {
+  format!(
+    "Plugin command `{}` needs `{}` permission to {}.",
+    command.command_id, permission, blocked_action
+  )
 }
 
 fn build_plugin_command_denial(
