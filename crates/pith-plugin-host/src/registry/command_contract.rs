@@ -29,9 +29,19 @@ pub(super) fn command_execution_entry(
       .map(str::trim)
       .filter(|entrypoint| !entrypoint.is_empty())
       .map(str::to_string),
+    connector_ids: execution.connectors.as_ref().map(normalized_connector_ids),
     input: command_envelope_entry(execution.input.as_ref(), default_input_envelope()),
     output: command_envelope_entry(execution.output.as_ref(), default_output_envelope()),
   })
+}
+
+fn normalized_connector_ids(connectors: &[String]) -> Vec<String> {
+  connectors
+    .iter()
+    .map(|connector| connector.trim())
+    .filter(|connector| !connector.is_empty())
+    .map(str::to_string)
+    .collect()
 }
 
 fn command_envelope_entry(

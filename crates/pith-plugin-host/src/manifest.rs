@@ -94,6 +94,8 @@ pub(crate) struct PluginCommandExecutionManifest {
   #[serde(default)]
   pub(crate) entrypoint: Option<String>,
   #[serde(default)]
+  pub(crate) connectors: Option<Vec<String>>,
+  #[serde(default)]
   pub(crate) input: Option<PluginCommandEnvelopeManifest>,
   #[serde(default)]
   pub(crate) output: Option<PluginCommandEnvelopeManifest>,

@@ -4,7 +4,7 @@ use super::plugin_command_execution::is_supported_plugin_command_execution;
 use super::plugin_command_mcp_runner::mcp_runner_setup_blocker;
 use super::plugin_command_permission_gate::plugin_command_permission_blocker;
 use super::plugin_command_runner::stdio_runner_setup_blocker;
-use super::plugin_connector_requirements::required_auth_connectors;
+use super::plugin_connector_requirements::command_connector_requirements;
 use crate::runtime_plugins::RuntimePluginState;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,11 +44,13 @@ pub(crate) fn command_readiness(
   command: &HostPluginCommandEntry,
   plugin_state: &RuntimePluginState,
 ) -> PluginCommandReadiness {
-  let required_connectors = required_auth_connectors(command, plugin_state);
-  let required_connector_ids = required_connectors
+  let connector_requirements = command_connector_requirements(command, plugin_state);
+  let required_connectors = connector_requirements.connectors;
+  let mut required_connector_ids = required_connectors
     .iter()
     .map(|connector| connector.connector_id.clone())
     .collect::<Vec<_>>();
+  required_connector_ids.extend(connector_requirements.missing_connector_ids.clone());
 
   if command.execution.is_none() {
     return PluginCommandReadiness::blocked(
@@ -70,8 +72,18 @@ pub(crate) fn command_readiness(
       required_connector_ids,
     );
   }
+  if let Some(connector_id) = connector_requirements.missing_connector_ids.first() {
+    return PluginCommandReadiness::blocked(
+      "missingConnector",
+      format!(
+        "Plugin command `{}` references connector `{}` that is not declared.",
+        command.command_id, connector_id
+      ),
+      required_connector_ids,
+    );
+  }
   if let Some(run_blocker) =
-    plugin_command_permission_blocker(command, !required_connectors.is_empty())
+    plugin_command_permission_blocker(command, connector_requirements.connector_backed)
   {
     return PluginCommandReadiness::blocked(
       "missingPermission",

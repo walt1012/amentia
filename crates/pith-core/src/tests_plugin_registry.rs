@@ -749,6 +749,312 @@ printf '{"content":"ok"}\n'
 }
 
 #[test]
+fn connector_backed_plugin_commands_can_scope_connector_requirements() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-scoped-connectors",
+    "notion-tools",
+    "Notion Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-tools",
+  "version": "0.1.0",
+  "displayName": "Notion Tools",
+  "description": "Notion connector command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:notion-tools.status",
+    "command:notion-tools.sync",
+    "connector:notion"
+  ],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector command plugin manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&runner_path)
+      .expect("runner metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+  }
+  fs::write(
+    source_root.join("commands").join("notion-tools.status.json"),
+    r#"{
+  "title": "Show Notion Status",
+  "description": "Show local setup status without contacting Notion.",
+  "prompt": "Show setup status.",
+  "execution": {
+    "kind": "stdio.status",
+    "entrypoint": "runner.sh",
+    "connectors": []
+  }
+}"#,
+  )
+  .expect("write local status command manifest");
+  fs::write(
+    source_root.join("commands").join("notion-tools.sync.json"),
+    r#"{
+  "title": "Sync Notion",
+  "description": "Sync local context to Notion.",
+  "prompt": "Prepare a Notion sync payload.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "runner.sh",
+    "connectors": ["notion"]
+  }
+}"#,
+  )
+  .expect("write scoped connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion connector command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-tools.status".to_string(),
+        "command:notion-tools.sync".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  let status = commands
+    .iter()
+    .find(|command| command["commandId"] == "notion-tools::notion-tools.status")
+    .expect("status command");
+  let sync = commands
+    .iter()
+    .find(|command| command["commandId"] == "notion-tools::notion-tools.sync")
+    .expect("sync command");
+
+  assert_eq!(status["runStatus"], "ready");
+  assert_eq!(status["requiredConnectorIds"].as_array().unwrap().len(), 0);
+  assert_eq!(status["approvalRequired"], false);
+  assert_eq!(sync["runStatus"], "needsConnectorAuth");
+  assert_eq!(sync["requiredConnectorIds"][0], "notion-tools::notion");
+}
+
+#[test]
+fn connector_backed_plugin_commands_report_missing_declared_connectors() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-missing-connector",
+    "notion-tools",
+    "Notion Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    source_root.join("commands").join("notion-tools.sync.json"),
+    r#"{
+  "title": "Sync Notion",
+  "description": "Sync local context to Notion.",
+  "prompt": "Prepare a Notion sync payload.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "runner.sh",
+    "connectors": ["missing"]
+  }
+}"#,
+  )
+  .expect("write missing connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion connector command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:notion-tools.sync".to_string()],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let command = &result["commands"][0];
+  assert_eq!(command["runStatus"], "missingConnector");
+  assert_eq!(command["requiredConnectorIds"][0], "notion-tools::missing");
+  assert!(command["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("not declared"));
+}
+
+#[test]
+fn connector_backed_plugin_commands_do_not_require_auth_for_optional_connectors() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-optional-connector",
+    "browser-tools",
+    "Browser Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "browser-tools",
+  "version": "0.1.0",
+  "displayName": "Browser Tools",
+  "description": "Connector command plugin without required auth",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:browser-tools.search", "connector:web"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "web",
+      "displayName": "Web",
+      "service": "web"
+    }
+  ],
+  "authPolicy": {
+    "type": "none",
+    "required": false,
+    "credentialStore": "none"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write optional connector plugin manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&runner_path)
+      .expect("runner metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+  }
+  fs::write(
+    source_root.join("commands").join("browser-tools.search.json"),
+    r#"{
+  "title": "Search Web",
+  "description": "Search the web through an auth-free connector.",
+  "prompt": "Search the web.",
+  "execution": {
+    "kind": "stdio.webSearch",
+    "entrypoint": "runner.sh",
+    "connectors": ["web"]
+  }
+}"#,
+  )
+  .expect("write optional connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "browser-tools".to_string(),
+      name: "browser-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Browser Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Connector command plugin without required auth".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:browser-tools.search".to_string(),
+        "connector:web".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let command = &result["commands"][0];
+  assert_eq!(command["runStatus"], "ready");
+  assert_eq!(command["requiredConnectorIds"].as_array().unwrap().len(), 0);
+  assert_eq!(command["approvalRequired"], false);
+}
+
+#[test]
 fn connector_backed_stdio_commands_require_network_permission() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(

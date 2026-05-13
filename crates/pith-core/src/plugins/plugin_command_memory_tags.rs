@@ -37,6 +37,7 @@ mod tests {
         kind: "builtin.workspaceReadmeNote".to_string(),
         driver: "builtin".to_string(),
         entrypoint: None,
+        connector_ids: None,
         input: empty_envelope("pith.plugin.command.input"),
         output: empty_envelope("pith.plugin.command.output"),
       }),

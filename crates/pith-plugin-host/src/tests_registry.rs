@@ -380,7 +380,8 @@ fn build_command_registry_applies_default_execution_contract() {
   "prompt": "Sync the selected Notion page.",
   "execution": {
     "kind": "stdio.notionSync",
-    "entrypoint": "bin/notion-sync"
+    "entrypoint": "bin/notion-sync",
+    "connectors": ["notion"]
   }
 }"#,
   )
@@ -398,6 +399,9 @@ fn build_command_registry_applies_default_execution_contract() {
   assert_eq!(execution.kind, "stdio.notionSync");
   assert_eq!(execution.driver, "stdio");
   assert_eq!(execution.entrypoint.as_deref(), Some("bin/notion-sync"));
+  let connector_ids = execution.connector_ids.as_ref().expect("connector ids");
+  assert_eq!(connector_ids.len(), 1);
+  assert_eq!(connector_ids[0], "notion");
   assert_eq!(execution.input.envelope, "pith.plugin.command.input");
   assert_eq!(execution.input.fields.len(), 3);
   assert_eq!(execution.input.fields[0].name, "threadId");

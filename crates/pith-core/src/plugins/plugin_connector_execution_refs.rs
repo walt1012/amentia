@@ -3,7 +3,7 @@ use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use super::plugin_command_types::{
   PluginConnectorCredentialProviderRef, PluginConnectorExecutionRef,
 };
-use super::plugin_connector_requirements::required_auth_connectors;
+use super::plugin_connector_requirements::command_connector_requirements;
 use crate::runtime_plugins::RuntimePluginState;
 
 const LOCAL_CREDENTIAL_PROVIDER: &str = "pith.localCredentialProvider";
@@ -12,7 +12,8 @@ pub(super) fn build_command_connector_refs(
   command: &HostPluginCommandEntry,
   plugin_state: &RuntimePluginState,
 ) -> Vec<PluginConnectorExecutionRef> {
-  required_auth_connectors(command, plugin_state)
+  command_connector_requirements(command, plugin_state)
+    .connectors
     .into_iter()
     .filter_map(|connector| {
       let credential = plugin_state.connector_credential(&connector.connector_id)?;

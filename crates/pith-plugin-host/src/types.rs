@@ -78,6 +78,7 @@ pub struct PluginCommandExecutionEntry {
   pub kind: String,
   pub driver: String,
   pub entrypoint: Option<String>,
+  pub connector_ids: Option<Vec<String>>,
   pub input: PluginCommandEnvelopeEntry,
   pub output: PluginCommandEnvelopeEntry,
 }
