@@ -126,6 +126,11 @@ struct PluginCommandRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
+    } else if !command.declaredConnectorIds.isEmpty {
+      Text("Connectors: \(command.declaredConnectorIds.joined(separator: ", "))")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
     }
   }
 

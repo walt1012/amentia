@@ -11,14 +11,19 @@ use crate::runtime_plugins::RuntimePluginState;
 pub(crate) struct PluginCommandReadiness {
   pub(crate) run_status: String,
   pub(crate) run_blocker: Option<String>,
+  pub(crate) declared_connector_ids: Vec<String>,
   pub(crate) required_connector_ids: Vec<String>,
 }
 
 impl PluginCommandReadiness {
-  pub(crate) fn ready(required_connector_ids: Vec<String>) -> Self {
+  pub(crate) fn ready(
+    declared_connector_ids: Vec<String>,
+    required_connector_ids: Vec<String>,
+  ) -> Self {
     Self {
       run_status: "ready".to_string(),
       run_blocker: None,
+      declared_connector_ids,
       required_connector_ids,
     }
   }
@@ -26,11 +31,13 @@ impl PluginCommandReadiness {
   pub(crate) fn blocked(
     run_status: &str,
     run_blocker: String,
+    declared_connector_ids: Vec<String>,
     required_connector_ids: Vec<String>,
   ) -> Self {
     Self {
       run_status: run_status.to_string(),
       run_blocker: Some(run_blocker),
+      declared_connector_ids,
       required_connector_ids,
     }
   }
@@ -45,6 +52,19 @@ pub(crate) fn command_readiness(
   plugin_state: &RuntimePluginState,
 ) -> PluginCommandReadiness {
   let connector_requirements = command_connector_requirements(command, plugin_state);
+  let mut declared_connector_ids = connector_requirements
+    .scoped_connectors
+    .iter()
+    .map(|connector| connector.connector_id.clone())
+    .collect::<Vec<_>>();
+  for connector_id in &connector_requirements.missing_connector_ids {
+    if !declared_connector_ids
+      .iter()
+      .any(|existing| existing == connector_id)
+    {
+      declared_connector_ids.push(connector_id.clone());
+    }
+  }
   let required_connectors = connector_requirements.connectors;
   let mut required_connector_ids = required_connectors
     .iter()
@@ -59,6 +79,7 @@ pub(crate) fn command_readiness(
         "Plugin command `{}` requires an explicit execution contract.",
         command.command_id
       ),
+      declared_connector_ids,
       required_connector_ids,
     );
   }
@@ -69,6 +90,7 @@ pub(crate) fn command_readiness(
         "Plugin command `{}` requires a supported execution contract.",
         command.command_id
       ),
+      declared_connector_ids,
       required_connector_ids,
     );
   }
@@ -79,6 +101,7 @@ pub(crate) fn command_readiness(
         "Plugin command `{}` references connector `{}` that is not declared.",
         command.command_id, connector_id
       ),
+      declared_connector_ids,
       required_connector_ids,
     );
   }
@@ -88,6 +111,7 @@ pub(crate) fn command_readiness(
     return PluginCommandReadiness::blocked(
       "missingPermission",
       run_blocker,
+      declared_connector_ids,
       required_connector_ids,
     );
   }
@@ -103,15 +127,26 @@ pub(crate) fn command_readiness(
         "Plugin command `{}` requires authorizing connector `{}` first.",
         command.command_id, connector.connector_id
       ),
+      declared_connector_ids,
       required_connector_ids,
     );
   }
   if let Some(run_blocker) = stdio_runner_setup_blocker(command) {
-    return PluginCommandReadiness::blocked("runnerSetup", run_blocker, required_connector_ids);
+    return PluginCommandReadiness::blocked(
+      "runnerSetup",
+      run_blocker,
+      declared_connector_ids,
+      required_connector_ids,
+    );
   }
   if let Some(run_blocker) = mcp_runner_setup_blocker(command) {
-    return PluginCommandReadiness::blocked("runnerSetup", run_blocker, required_connector_ids);
+    return PluginCommandReadiness::blocked(
+      "runnerSetup",
+      run_blocker,
+      declared_connector_ids,
+      required_connector_ids,
+    );
   }
 
-  PluginCommandReadiness::ready(required_connector_ids)
+  PluginCommandReadiness::ready(declared_connector_ids, required_connector_ids)
 }

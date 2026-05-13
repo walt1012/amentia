@@ -1054,6 +1054,7 @@ printf '{"content":"ok"}\n'
   let result = response.result.expect("command registry result");
   let command = &result["commands"][0];
   assert_eq!(command["runStatus"], "ready");
+  assert_eq!(command["declaredConnectorIds"][0], "browser-tools::web");
   assert_eq!(command["requiredConnectorIds"].as_array().unwrap().len(), 0);
   assert_eq!(command["approvalRequired"], false);
 }

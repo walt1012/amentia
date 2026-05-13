@@ -70,6 +70,7 @@ pub(super) fn to_protocol_plugin_command(
     memory_summary,
     run_status: readiness.run_status,
     run_blocker: readiness.run_blocker,
+    declared_connector_ids: readiness.declared_connector_ids,
     required_connector_ids: readiness.required_connector_ids,
     approval_required,
     approval_reason,

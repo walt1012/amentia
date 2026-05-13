@@ -391,6 +391,7 @@ fn plugin_command_registry_round_trips() {
       memory_summary: Some("Stores a workspace memory note after execution.".to_string()),
       run_status: "ready".to_string(),
       run_blocker: None,
+      declared_connector_ids: vec!["workspace-notes::memory".to_string()],
       required_connector_ids: vec![],
       approval_required: false,
       approval_reason: None,
@@ -427,6 +428,10 @@ fn plugin_command_registry_round_trips() {
     Some("Stores a workspace memory note after execution.")
   );
   assert_eq!(decoded.commands[0].run_status, "ready");
+  assert_eq!(
+    decoded.commands[0].declared_connector_ids,
+    vec!["workspace-notes::memory"]
+  );
   assert!(!decoded.commands[0].approval_required);
 }
 

@@ -73,6 +73,7 @@ struct PluginCommandSummary: Identifiable, Hashable {
   let memorySummary: String?
   let runStatus: String
   let runBlocker: String?
+  let declaredConnectorIds: [String]
   let requiredConnectorIds: [String]
   let approvalRequired: Bool
   let approvalReason: String?

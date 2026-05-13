@@ -163,6 +163,8 @@ pub struct PluginCommandSummary {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub run_blocker: Option<String>,
   #[serde(default)]
+  pub declared_connector_ids: Vec<String>,
+  #[serde(default)]
   pub required_connector_ids: Vec<String>,
   #[serde(default)]
   pub approval_required: bool,
