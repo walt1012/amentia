@@ -383,6 +383,6 @@ enum TimelineEventPresenter {
       return "none"
     }
 
-    connector.credentialSecretPresent ? "env-bound" : "marker-only"
+    return connector.credentialSecretPresent ? "env-bound" : "marker-only"
   }
 }
