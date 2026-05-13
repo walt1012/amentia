@@ -734,7 +734,10 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[1]["attributes"]["connectorCredentialHandles"],
     "notion-mcp::notion"
   );
-  assert_eq!(items[1]["attributes"]["connectorSecretBindings"], "env-bound");
+  assert_eq!(
+    items[1]["attributes"]["connectorSecretBindings"],
+    "env-bound"
+  );
   assert!(items[1]["content"]
     .as_str()
     .expect("approval content")
