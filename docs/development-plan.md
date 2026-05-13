@@ -63,6 +63,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   for third-party plugin debugging.
 - Completed: command execution contracts can scope connector dependencies so
   setup/status commands are not blocked by unrelated connector auth.
+- Completed: runner network sandbox honors command connector scope for
+  connector plugins with local setup/status commands.
 - Active: finish third-party connector debug loops and lifecycle hardening
   without adding a broad marketplace or admin console.
 

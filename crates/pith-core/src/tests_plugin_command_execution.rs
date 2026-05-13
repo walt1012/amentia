@@ -383,6 +383,152 @@ printf '{"content":"External runner completed."}\n'
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_disables_network_for_empty_connector_scope() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-empty-connector-scope",
+    "notion-runner",
+    "Notion Runner",
+  );
+  let workspace = create_temp_workspace("plugin-command-empty-connector-scope-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-runner",
+  "version": "0.1.0",
+  "displayName": "Notion Runner",
+  "description": "Connector plugin with a local status command",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:notion-runner.status", "connector:notion"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("notion-runner.status.json"),
+    r#"{
+  "title": "Show Notion Status",
+  "description": "Run local setup checks without contacting Notion.",
+  "prompt": "Show local status.",
+  "execution": {
+    "kind": "stdio.status",
+    "entrypoint": "runner.sh",
+    "connectors": []
+  }
+}"#,
+  )
+  .expect("write status command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf '{"content":"status ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-runner".to_string(),
+      name: "notion-runner".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Runner".to_string(),
+      status: "ready".to_string(),
+      description: "Connector plugin with a local status command".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-runner.status".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Connector Status Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-runner::notion-runner.status"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["attributes"]["sandboxNetworkAllowed"], "false");
+  assert!(items[1]["attributes"]["sandboxNetworkPolicy"]
+    .as_str()
+    .expect("sandbox network policy")
+    .contains("network denied"));
+  assert_eq!(items[1]["content"], "status ok");
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("pending approvals")
+      .len(),
+    0
+  );
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   use std::os::unix::fs::PermissionsExt;
 

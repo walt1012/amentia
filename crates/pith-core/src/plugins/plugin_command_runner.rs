@@ -812,10 +812,20 @@ pub(super) fn unsupported_execution_error(
 }
 
 pub(super) fn command_allows_network(command: &HostPluginCommandEntry) -> bool {
-  command
+  let declares_network = command
     .permissions
     .iter()
-    .any(|permission| permission == "network.outbound")
+    .any(|permission| permission == "network.outbound");
+  if !declares_network {
+    return false;
+  }
+
+  command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.connector_ids.as_ref())
+    .map(|connector_ids| !connector_ids.is_empty())
+    .unwrap_or(true)
 }
 
 fn runner_output_attributes(
