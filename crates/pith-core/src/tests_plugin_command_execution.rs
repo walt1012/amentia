@@ -1999,6 +1999,136 @@ exit 7
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_rejects_empty_stdio_output_envelope() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-empty-output",
+    "empty-output",
+    "Empty Output",
+  );
+  let workspace = create_temp_workspace("plugin-command-empty-output-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    source_root.join("commands").join("empty-output.run.json"),
+    r#"{
+  "title": "Run Empty Output Plugin",
+  "description": "Execute a local stdio runner with an empty output envelope.",
+  "prompt": "Run the local plugin runner.",
+  "execution": {
+    "kind": "stdio.emptyOutput",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf '{}\n'
+"#,
+  )
+  .expect("write runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "empty-output".to_string(),
+      name: "empty-output".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Empty Output".to_string(),
+      status: "ready".to_string(),
+      description: "Empty output command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:empty-output.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Empty Output Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "empty-output::empty-output.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "outputContract"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerRecoveryHint"],
+    "Return content or valid timeline items from the plugin runner."
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputStatus"],
+    "emptyEnvelope"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerOutputParsed"], "true");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputContentBytes"],
+    "0"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputValidTimelineItemCount"],
+    "0"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputInvalidTimelineItemCount"],
+    "0"
+  );
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
+    .contains("without content or valid timeline items"));
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_preflights_non_executable_runner() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
@@ -2205,6 +2335,18 @@ JSON
   assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[1]["attributes"]["sandboxBackend"].is_string());
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.ownedItems");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputStatus"],
+    "envelope"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputValidTimelineItemCount"],
+    "1"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputInvalidTimelineItemCount"],
+    "0"
+  );
 }
 
 #[test]

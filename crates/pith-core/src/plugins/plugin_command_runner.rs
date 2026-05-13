@@ -264,12 +264,12 @@ pub(super) fn run_external_plugin_command(
     cancellation,
     &runner_context_attributes,
   )?;
-  Ok(plugin_runner_output(
+  plugin_runner_output(
     command,
     &execution.kind,
     &output.stdout,
     merged_attributes(runner_context_attributes, output.attributes),
-  ))
+  )
 }
 
 pub(super) fn plugin_runner_setup_attributes(
@@ -769,34 +769,133 @@ fn plugin_runner_output(
   command: &HostPluginCommandEntry,
   execution_kind: &str,
   output: &str,
-  attributes: HashMap<String, String>,
-) -> PluginRunnerResult {
+  mut attributes: HashMap<String, String>,
+) -> PluginRunnerRunResult<PluginRunnerResult> {
   let Ok(envelope) = serde_json::from_str::<PluginRunnerOutputEnvelope>(output) else {
-    return PluginRunnerResult {
+    attributes.insert(
+      "pluginRunnerOutputStatus".to_string(),
+      "plainText".to_string(),
+    );
+    return Ok(PluginRunnerResult {
       execution_kind: execution_kind.to_string(),
       content: plugin_runner_content(output),
       items: vec![],
       attributes,
-    };
+    });
   };
   let content = envelope
     .content
     .or(envelope.message)
     .map(|content| content.trim().to_string())
     .filter(|content| !content.is_empty())
-    .unwrap_or_else(|| plugin_runner_content(output));
-  let items = envelope
-    .items
-    .into_iter()
-    .filter_map(|item| plugin_runner_timeline_item(command, execution_kind, &attributes, item))
-    .collect();
+    .unwrap_or_default();
+  let (items, invalid_item_count) = plugin_runner_timeline_items(
+    command,
+    execution_kind,
+    &attributes,
+    envelope.items,
+  );
+  insert_plugin_runner_output_attributes(
+    &mut attributes,
+    &content,
+    items.len(),
+    invalid_item_count,
+  );
+  if content.is_empty() && items.is_empty() {
+    attributes.insert(
+      "pluginRunnerOutputStatus".to_string(),
+      "emptyEnvelope".to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!(
+          "Plugin command `{}` returned an output envelope without content or valid timeline items.",
+          command.command_id
+        ),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
+  attributes.insert(
+    "pluginRunnerOutputStatus".to_string(),
+    "envelope".to_string(),
+  );
+  let items = plugin_runner_timeline_items_with_attributes(items, &attributes);
 
-  PluginRunnerResult {
+  Ok(PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
-    content,
+    content: if content.is_empty() {
+      "Plugin command completed with timeline items.".to_string()
+    } else {
+      content
+    },
     items,
     attributes,
-  }
+  })
+}
+
+fn plugin_runner_timeline_items(
+  command: &HostPluginCommandEntry,
+  execution_kind: &str,
+  base_attributes: &HashMap<String, String>,
+  items: Vec<PluginRunnerTimelineItemEnvelope>,
+) -> (Vec<TimelineItem>, usize) {
+  let total_item_count = items.len();
+  let valid_items = items
+    .into_iter()
+    .filter_map(|item| {
+      plugin_runner_timeline_item(command, execution_kind, base_attributes, item)
+    })
+    .collect::<Vec<_>>();
+  let invalid_item_count = total_item_count.saturating_sub(valid_items.len());
+
+  (valid_items, invalid_item_count)
+}
+
+fn plugin_runner_timeline_items_with_attributes(
+  items: Vec<TimelineItem>,
+  attributes: &HashMap<String, String>,
+) -> Vec<TimelineItem> {
+  items
+    .into_iter()
+    .map(|mut item| {
+      let item_attributes = item.attributes.get_or_insert_with(HashMap::new);
+      for (key, value) in attributes {
+        item_attributes
+          .entry(key.clone())
+          .or_insert_with(|| value.clone());
+      }
+      item
+    })
+    .collect()
+}
+
+fn insert_plugin_runner_output_attributes(
+  attributes: &mut HashMap<String, String>,
+  content: &str,
+  valid_item_count: usize,
+  invalid_item_count: usize,
+) {
+  attributes.insert(
+    "pluginRunnerOutputParsed".to_string(),
+    "true".to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerOutputContentBytes".to_string(),
+    content.len().to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerOutputValidTimelineItemCount".to_string(),
+    valid_item_count.to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerOutputInvalidTimelineItemCount".to_string(),
+    invalid_item_count.to_string(),
+  );
 }
 
 fn plugin_runner_content(output: &str) -> String {

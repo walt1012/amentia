@@ -256,6 +256,9 @@ fn plugin_runner_failure_kind(code: i32, attributes: &HashMap<String, String>) -
   if attributes.contains_key("mcpProtocolStatus") {
     return "mcpProtocol";
   }
+  if attributes.contains_key("pluginRunnerOutputStatus") {
+    return "outputContract";
+  }
   if attributes.contains_key("pluginRunnerExitReason") {
     return "processExit";
   }
@@ -270,6 +273,7 @@ fn plugin_runner_recovery_hint(failure_kind: &str) -> &'static str {
       "Update the plugin command manifest to declare a supported execution contract."
     }
     "mcpProtocol" => "Check the MCP server command and stdout JSON-RPC framing.",
+    "outputContract" => "Return content or valid timeline items from the plugin runner.",
     "processExit" => "Inspect runner stderr, stdout, and exit status.",
     _ => "Check the plugin manifest, entrypoint path, sandbox, and local files.",
   }
