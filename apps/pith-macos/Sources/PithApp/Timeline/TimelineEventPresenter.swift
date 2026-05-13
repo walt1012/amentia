@@ -221,7 +221,7 @@ enum TimelineEventPresenter {
       ? error.localizedDescription
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
 
-    TimelineEntryFactory.warning(
+    return TimelineEntryFactory.warning(
       title: "Plugin Install Failed",
       body: body,
       attributes: [:]
