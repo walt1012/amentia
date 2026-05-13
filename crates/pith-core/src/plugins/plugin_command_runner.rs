@@ -789,18 +789,53 @@ fn plugin_runner_output(
   output: &str,
   mut attributes: HashMap<String, String>,
 ) -> PluginRunnerRunResult<PluginRunnerResult> {
-  let Ok(envelope) = serde_json::from_str::<PluginRunnerOutputEnvelope>(output) else {
-    attributes.insert(
-      "pluginRunnerOutputStatus".to_string(),
-      "plainText".to_string(),
-    );
-    return Ok(PluginRunnerResult {
-      execution_kind: execution_kind.to_string(),
-      content: plugin_runner_content(output),
-      items: vec![],
-      memory_notes: vec![],
-      attributes,
-    });
+  let envelope = match serde_json::from_str::<PluginRunnerOutputEnvelope>(output) {
+    Ok(envelope) => envelope,
+    Err(error) => {
+      if plugin_runner_output_looks_like_json(output) {
+        attributes.insert(
+          "pluginRunnerOutputStatus".to_string(),
+          "malformedEnvelope".to_string(),
+        );
+        attributes.insert(
+          "pluginRunnerOutputParsed".to_string(),
+          "false".to_string(),
+        );
+        attributes.insert(
+          "pluginRunnerOutputParseError".to_string(),
+          bounded_log_preview(&error.to_string()),
+        );
+        return Err(
+          PluginRunnerFailure::with_output(
+            -32054,
+            format!(
+              "Plugin command `{}` returned a malformed JSON output envelope: {error}",
+              command.command_id
+            ),
+            output.to_string(),
+            String::new(),
+            attributes,
+          )
+          .boxed(),
+        );
+      }
+
+      attributes.insert(
+        "pluginRunnerOutputStatus".to_string(),
+        "plainText".to_string(),
+      );
+      attributes.insert(
+        "pluginRunnerOutputParsed".to_string(),
+        "false".to_string(),
+      );
+      return Ok(PluginRunnerResult {
+        execution_kind: execution_kind.to_string(),
+        content: plugin_runner_content(output),
+        items: vec![],
+        memory_notes: vec![],
+        attributes,
+      });
+    }
   };
   let content = envelope
     .content
@@ -828,7 +863,7 @@ fn plugin_runner_output(
       PluginRunnerFailure::with_output(
         -32054,
         format!(
-          "Plugin command `{}` returned an output envelope without content or valid timeline items.",
+          "Plugin command `{}` returned an output envelope without content, valid timeline items, or memory notes.",
           command.command_id
         ),
         output.to_string(),
@@ -979,6 +1014,11 @@ fn plugin_runner_content(output: &str) -> String {
   }
 
   output.to_string()
+}
+
+fn plugin_runner_output_looks_like_json(output: &str) -> bool {
+  let trimmed = output.trim_start();
+  trimmed.starts_with('{') || trimmed.starts_with('[')
 }
 
 fn plugin_runner_timeline_item(

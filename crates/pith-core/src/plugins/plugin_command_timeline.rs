@@ -273,7 +273,9 @@ fn plugin_runner_recovery_hint(failure_kind: &str) -> &'static str {
       "Update the plugin command manifest to declare a supported execution contract."
     }
     "mcpProtocol" => "Check the MCP server command and stdout JSON-RPC framing.",
-    "outputContract" => "Return content or valid timeline items from the plugin runner.",
+    "outputContract" => {
+      "Return plain text, a valid JSON output envelope, valid timeline items, or memory notes."
+    }
     "processExit" => "Inspect runner stderr, stdout, and exit status.",
     _ => "Check the plugin manifest, entrypoint path, sandbox, and local files.",
   }
