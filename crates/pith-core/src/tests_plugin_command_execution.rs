@@ -629,7 +629,10 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[2]["attributes"]["pluginRunnerEntrypoint"],
     "runner.sh"
   );
-  assert_eq!(items[2]["attributes"]["pluginRunnerEntrypointCheck"], "ready");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypointCheck"],
+    "ready"
+  );
   assert_eq!(
     items[2]["attributes"]["pluginRunnerEntrypointFileKind"],
     "file"
@@ -893,7 +896,10 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     "notion.createTask"
   );
   assert_eq!(items[2]["attributes"]["mcpServerCommand"], "mcp-server.sh");
-  assert_eq!(items[2]["attributes"]["pluginRunnerEntrypointCheck"], "ready");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypointCheck"],
+    "ready"
+  );
   assert_eq!(
     items[2]["attributes"]["pluginRunnerEntrypointFileKind"],
     "file"
@@ -1457,7 +1463,10 @@ exit 7
     items[1]["attributes"]["pluginRunnerEntrypoint"],
     "runner.sh"
   );
-  assert_eq!(items[1]["attributes"]["pluginRunnerEntrypointCheck"], "ready");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypointCheck"],
+    "ready"
+  );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerEntrypointFileKind"],
     "file"
