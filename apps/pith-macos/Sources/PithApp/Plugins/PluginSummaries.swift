@@ -74,6 +74,8 @@ struct PluginCommandSummary: Identifiable, Hashable {
   let runStatus: String
   let runBlocker: String?
   let requiredConnectorIds: [String]
+  let approvalRequired: Bool
+  let approvalReason: String?
 }
 
 struct PluginCommandExecutionSummary: Hashable {

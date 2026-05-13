@@ -113,7 +113,9 @@ extension RuntimeBridge {
         memorySummary: command.memorySummary,
         runStatus: command.runStatus,
         runBlocker: command.runBlocker,
-        requiredConnectorIds: command.requiredConnectorIds
+        requiredConnectorIds: command.requiredConnectorIds,
+        approvalRequired: command.approvalRequired ?? false,
+        approvalReason: command.approvalReason
       )
     }
   }

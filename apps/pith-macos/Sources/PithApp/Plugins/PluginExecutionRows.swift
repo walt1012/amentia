@@ -59,6 +59,13 @@ struct PluginCommandRow: View {
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
 
+      if command.approvalRequired {
+        Text("Approval: \(approvalLabel)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if let contractLabel {
         Text(contractLabel)
           .font(.caption2)
@@ -129,6 +136,10 @@ struct PluginCommandRow: View {
     }
 
     return command.runStatus
+  }
+
+  private var approvalLabel: String {
+    command.approvalReason ?? "Required before runner launch."
   }
 
   private var contractLabel: String? {

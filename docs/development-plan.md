@@ -95,6 +95,8 @@ M4 turns plugins into bounded local capabilities:
   runner launch, regardless of whether the driver is stdio or MCP.
 - Done: commands that declare plain text input can be run with a lightweight
   input prompt without adding a full form builder.
+- Done: command registries and rows now disclose connector-backed approval
+  policy before launch.
 - Active: keep plugin UI progressive: discover, inspect, enable, authorize,
   run, debug.
 

@@ -392,6 +392,8 @@ fn plugin_command_registry_round_trips() {
       run_status: "ready".to_string(),
       run_blocker: None,
       required_connector_ids: vec![],
+      approval_required: false,
+      approval_reason: None,
     }],
   };
 
@@ -425,6 +427,7 @@ fn plugin_command_registry_round_trips() {
     Some("Stores a workspace memory note after execution.")
   );
   assert_eq!(decoded.commands[0].run_status, "ready");
+  assert!(!decoded.commands[0].approval_required);
 }
 
 #[test]

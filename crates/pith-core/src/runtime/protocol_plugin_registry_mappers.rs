@@ -40,6 +40,12 @@ pub(super) fn to_protocol_plugin_command(
     .as_ref()
     .map(|title| format!("Stores a workspace memory note as `{title}` after execution."));
   let supported = is_supported_plugin_command_execution(&command);
+  let approval_required = readiness.is_ready()
+    && command.execution.is_some()
+    && !readiness.required_connector_ids.is_empty();
+  let approval_reason = approval_required.then(|| {
+    "Connector-backed plugin commands require approval before runner launch.".to_string()
+  });
   let execution = command
     .execution
     .as_ref()
@@ -65,6 +71,8 @@ pub(super) fn to_protocol_plugin_command(
     run_status: readiness.run_status,
     run_blocker: readiness.run_blocker,
     required_connector_ids: readiness.required_connector_ids,
+    approval_required,
+    approval_reason,
   }
 }
 

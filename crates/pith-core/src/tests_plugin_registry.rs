@@ -378,6 +378,7 @@ fn connector_backed_plugin_commands_require_connector_auth() {
   assert_eq!(command["commandId"], "notion-tools::notion-tools.sync");
   assert_eq!(command["execution"]["supported"], true);
   assert_eq!(command["runStatus"], "needsConnectorAuth");
+  assert_eq!(command["approvalRequired"], false);
   assert_eq!(command["requiredConnectorIds"][0], "notion-tools::notion");
 
   let blocked_response = handle_request(
@@ -416,6 +417,11 @@ fn connector_backed_plugin_commands_require_connector_auth() {
     .result
     .expect("ready connector command registry result");
   assert_eq!(ready_registry["commands"][0]["runStatus"], "ready");
+  assert_eq!(ready_registry["commands"][0]["approvalRequired"], true);
+  assert_eq!(
+    ready_registry["commands"][0]["approvalReason"],
+    "Connector-backed plugin commands require approval before runner launch."
+  );
 }
 
 #[test]

@@ -90,6 +90,8 @@ struct RuntimePluginCommandPayload: Codable {
   let runStatus: String
   let runBlocker: String?
   let requiredConnectorIds: [String]
+  let approvalRequired: Bool?
+  let approvalReason: String?
 }
 
 struct RuntimePluginCommandExecutionPayload: Codable {
@@ -244,6 +246,8 @@ extension RuntimeBridge {
     let runStatus: String
     let runBlocker: String?
     let requiredConnectorIds: [String]
+    let approvalRequired: Bool
+    let approvalReason: String?
   }
 
   struct RuntimePluginCommandExecution {
