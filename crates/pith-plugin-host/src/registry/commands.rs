@@ -36,7 +36,12 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       let command = match read_command_manifest(&command_path) {
         Ok(command) => command,
         Err(error) => {
-          commands.push(invalid_command_entry(plugin, identifier, &command_path, error));
+          commands.push(invalid_command_entry(
+            plugin,
+            identifier,
+            &command_path,
+            error,
+          ));
           continue;
         }
       };

@@ -67,9 +67,7 @@ fn plugin_command_registry_surfaces_invalid_command_manifests() {
   );
   let plugin_manifest = source_root.join("pith-plugin.json");
   fs::write(
-    source_root
-      .join("commands")
-      .join("broken-tools.run.json"),
+    source_root.join("commands").join("broken-tools.run.json"),
     "{",
   )
   .expect("write invalid command manifest");
