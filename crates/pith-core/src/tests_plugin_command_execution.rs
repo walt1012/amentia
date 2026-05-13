@@ -1096,6 +1096,7 @@ fn plugin_command_run_blocks_mcp_without_declared_mcp_permission() {
   );
   let workspace = create_temp_workspace("plugin-command-mcp-permission-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
   fs::write(
     &plugin_manifest,
     r#"{
@@ -1109,7 +1110,7 @@ fn plugin_command_run_blocks_mcp_without_declared_mcp_permission() {
   "mcpServers": [
     {
       "id": "local",
-      "command": "missing-mcp-server.sh",
+      "command": "mcp-server.sh",
       "transport": "stdio"
     }
   ],
@@ -1131,6 +1132,23 @@ fn plugin_command_run_blocks_mcp_without_declared_mcp_permission() {
 }"#,
   )
   .expect("write mcp permission command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+"#,
+  )
+  .expect("write mcp server");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&server_path)
+      .expect("mcp server metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+  }
   replace_plugin_catalog(
     &mut context,
     vec![PluginCatalogEntry {
@@ -1208,6 +1226,7 @@ fn plugin_command_run_blocks_connector_mcp_without_declared_network_permission()
     create_temp_plugin_bundle("plugin-command-mcp-network", "mcp-network", "MCP Network");
   let workspace = create_temp_workspace("plugin-command-mcp-network-workspace");
   let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
   fs::write(
     &plugin_manifest,
     r#"{
@@ -1221,7 +1240,7 @@ fn plugin_command_run_blocks_connector_mcp_without_declared_network_permission()
   "mcpServers": [
     {
       "id": "notion",
-      "command": "missing-mcp-server.sh",
+      "command": "mcp-server.sh",
       "transport": "stdio"
     }
   ],
@@ -1257,6 +1276,23 @@ fn plugin_command_run_blocks_connector_mcp_without_declared_network_permission()
 }"#,
   )
   .expect("write mcp network command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+"#,
+  )
+  .expect("write mcp server");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&server_path)
+      .expect("mcp server metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+  }
   replace_plugin_catalog(
     &mut context,
     vec![PluginCatalogEntry {

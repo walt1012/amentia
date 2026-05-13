@@ -65,7 +65,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   policy, run blockers, and runner-level credential/setup diagnostics without
   adding a broad admin console.
 - Done: plugin command readiness separates execution-contract support from
-  run-time setup, so invalid `stdio` runner entrypoints block before launch.
+  run-time setup, so invalid `stdio` and MCP runner entrypoints block before
+  launch.
 - Active: tighten the run/debug loop for real third-party connectors while
   keeping deterministic routing and minimal UI.
 

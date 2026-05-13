@@ -15,8 +15,8 @@ use serde_json::{json, Value};
 use super::plugin_command_runner::{
   insert_connector_runner_attributes, insert_plugin_root_attribute,
   insert_resolved_entrypoint_attribute, merged_attributes, plugin_root_for_command,
-  plugin_runner_setup_attributes, run_stdio_runner, safe_entrypoint_path, PluginRunnerFailure,
-  PluginRunnerResult, PluginRunnerRunResult,
+  plugin_runner_setup_attributes, run_stdio_runner, runner_entrypoint_setup_blocker,
+  safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
@@ -86,6 +86,42 @@ pub(super) fn is_supported_mcp_execution(
     .ok()
     .and_then(|server| server.command)
     .is_some_and(|command| !command.trim().is_empty())
+}
+
+pub(crate) fn mcp_runner_setup_blocker(command: &HostPluginCommandEntry) -> Option<String> {
+  let execution = command.execution.as_ref()?;
+  if execution.driver != "mcp" {
+    return None;
+  }
+  let target = match mcp_target_for_execution(command, execution) {
+    Ok(target) => target,
+    Err(failure) => return Some(failure.message.clone()),
+  };
+  let plugin_root = match plugin_root_for_command(command) {
+    Ok(plugin_root) => plugin_root,
+    Err((_, message)) => return Some(message),
+  };
+  let server = match mcp_server_for_target(command, &plugin_root, &target.server_id) {
+    Ok(server) => server,
+    Err(failure) => return Some(failure.message.clone()),
+  };
+  let Some(server_command) = server
+    .command
+    .as_deref()
+    .map(str::trim)
+    .filter(|command| !command.is_empty())
+  else {
+    return Some(format!(
+      "Plugin command `{}` requires an MCP server command.",
+      command.command_id
+    ));
+  };
+  let entrypoint_path = match safe_entrypoint_path(&plugin_root, server_command) {
+    Ok(entrypoint_path) => entrypoint_path,
+    Err((_, message)) => return Some(message),
+  };
+
+  runner_entrypoint_setup_blocker(command, &entrypoint_path)
 }
 
 pub(super) fn run_mcp_plugin_command(

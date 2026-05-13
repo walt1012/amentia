@@ -140,6 +140,13 @@ pub(crate) fn stdio_runner_setup_blocker(command: &HostPluginCommandEntry) -> Op
     Ok(entrypoint_path) => entrypoint_path,
     Err((_, message)) => return Some(message),
   };
+  runner_entrypoint_setup_blocker(command, &entrypoint_path)
+}
+
+pub(crate) fn runner_entrypoint_setup_blocker(
+  command: &HostPluginCommandEntry,
+  entrypoint_path: &Path,
+) -> Option<String> {
   let metadata = match entrypoint_path.metadata() {
     Ok(metadata) => metadata,
     Err(error) => {
