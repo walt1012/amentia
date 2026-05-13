@@ -213,6 +213,7 @@ enum TimelineInspectorPresenter {
       "pluginRunnerExitReason",
       "pluginRunnerErrorCode",
       "pluginRunnerFailureKind",
+      "pluginRunnerRecoveryHint",
       "mcpProtocolStatus",
       "permissionGate",
       "pluginCommandRunId",
@@ -266,6 +267,9 @@ enum TimelineInspectorPresenter {
 
     if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
       lines.append("Plugin runner error: \(errorCode)")
+    }
+    if let recoveryHint = entry.attributes["pluginRunnerRecoveryHint"] {
+      lines.append("Recovery: \(recoveryHint)")
     }
 
     let retainedStdout = entry.attributes["pluginRunnerStdoutRetainedBytes"] ?? "unknown"

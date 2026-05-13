@@ -973,6 +973,10 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
     "mcpProtocol"
   );
   assert_eq!(
+    items[1]["attributes"]["pluginRunnerRecoveryHint"],
+    "Check the MCP server command and stdout JSON-RPC framing."
+  );
+  assert_eq!(
     items[1]["attributes"]["mcpProtocolStatus"],
     "missingToolResponse"
   );
@@ -1351,6 +1355,10 @@ exit 7
     items[1]["attributes"]["pluginRunnerFailureKind"],
     "processExit"
   );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerRecoveryHint"],
+    "Inspect runner stderr, stdout, and exit status."
+  );
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
   assert_eq!(
     items[1]["attributes"]["pluginRunnerExitReason"],
@@ -1582,6 +1590,10 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   assert_eq!(
     items[1]["attributes"]["pluginRunnerFailureKind"],
     "runnerSetup"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerRecoveryHint"],
+    "Check the plugin manifest, entrypoint path, sandbox, and local files."
   );
   assert!(items[1]["content"]
     .as_str()

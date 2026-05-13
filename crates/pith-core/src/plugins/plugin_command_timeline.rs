@@ -158,6 +158,7 @@ pub(super) fn build_plugin_failure_timeline_item(
     "Failed"
   };
   let failure_kind = plugin_runner_failure_kind(code, &attributes);
+  let recovery_hint = plugin_runner_recovery_hint(failure_kind);
   attributes.extend(HashMap::from([
     ("pluginId".to_string(), command.plugin_id.clone()),
     ("commandId".to_string(), command.command_id.clone()),
@@ -169,6 +170,10 @@ pub(super) fn build_plugin_failure_timeline_item(
     (
       "pluginRunnerFailureKind".to_string(),
       failure_kind.to_string(),
+    ),
+    (
+      "pluginRunnerRecoveryHint".to_string(),
+      recovery_hint.to_string(),
     ),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));
@@ -223,4 +228,17 @@ fn plugin_runner_failure_kind(code: i32, attributes: &HashMap<String, String>) -
     return "processExit";
   }
   "runnerSetup"
+}
+
+fn plugin_runner_recovery_hint(failure_kind: &str) -> &'static str {
+  match failure_kind {
+    "cancelled" => "Run the command again when the current task is ready.",
+    "timeout" => "Check whether the runner is waiting for input or doing unbounded work.",
+    "unsupportedExecution" => {
+      "Update the plugin command manifest to declare a supported execution contract."
+    }
+    "mcpProtocol" => "Check the MCP server command and stdout JSON-RPC framing.",
+    "processExit" => "Inspect runner stderr, stdout, and exit status.",
+    _ => "Check the plugin manifest, entrypoint path, sandbox, and local files.",
+  }
 }

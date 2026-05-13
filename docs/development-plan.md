@@ -55,8 +55,8 @@ M4 turns plugins into bounded local capabilities. Current status:
 - Done: typed plugin registries are split by capability, connector, command,
   hook, metadata, and execution-contract ownership.
 - Done: bounded `stdio` and MCP command runners execute inside plugin-root and
-  sandbox boundaries, with cancellation, failure classification, diagnostics,
-  protocol parsing, and runner-owned timeline output.
+  sandbox boundaries, with cancellation, failure classification, recovery
+  hints, diagnostics, protocol parsing, and runner-owned timeline output.
 - Done: connector-backed commands have local credential metadata, non-secret
   per-run bindings, auth blockers, mandatory approval before launch, and
   approval policy disclosure in registry and UI surfaces.
