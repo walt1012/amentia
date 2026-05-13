@@ -216,10 +216,14 @@ enum TimelineEventPresenter {
     )
   }
 
-  static func pluginInstallFailed(error: Error) -> TimelineEntry {
+  static func pluginInstallFailed(error: Error, repairHint: String) -> TimelineEntry {
+    let body = repairHint.isEmpty
+      ? error.localizedDescription
+      : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
+
     TimelineEntryFactory.warning(
       title: "Plugin Install Failed",
-      body: error.localizedDescription,
+      body: body,
       attributes: [:]
     )
   }

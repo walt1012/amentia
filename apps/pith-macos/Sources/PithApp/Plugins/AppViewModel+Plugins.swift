@@ -54,9 +54,10 @@ extension AppViewModel {
           TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview)
         )
       } catch {
+        let repairHint = PluginInstallDialogPresenter.repairHint(for: error)
         appendEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginInstallFailed(error: error)
+          TimelineEventPresenter.pluginInstallFailed(error: error, repairHint: repairHint)
         )
       }
     }

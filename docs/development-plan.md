@@ -59,7 +59,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   setup/readiness checks, permission gates, sandbox diagnostics, protocol
   diagnostics, invalid command and hook manifest surfacing, input/output contract
   preflight, malformed envelope diagnostics, connector-scoped network policy,
-  command-scoped connector payloads, and runner-authored memory notes.
+  command-scoped connector payloads, runner-authored memory notes, and install
+  failure repair hints.
 - Completed lifecycle baseline: symlink-safe bundle install, nested manifest
   rejection, direct-child local removal, persisted-state-safe enable changes,
   and catalog refresh after removal cleanup errors.
