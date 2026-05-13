@@ -529,6 +529,175 @@ printf '{"content":"status ok"}\n'
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_passes_auth_free_connector_context_to_runner() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-auth-free-connector",
+    "browser-runner",
+    "Browser Runner",
+  );
+  let workspace = create_temp_workspace("plugin-command-auth-free-connector-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "browser-runner",
+  "version": "0.1.0",
+  "displayName": "Browser Runner",
+  "description": "Auth-free connector command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:browser-runner.search", "connector:web"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "web",
+      "displayName": "Web",
+      "service": "web"
+    }
+  ],
+  "authPolicy": {
+    "type": "none",
+    "required": false,
+    "credentialStore": "none"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write auth-free connector plugin manifest");
+  fs::write(
+    source_root.join("commands").join("browser-runner.search.json"),
+    r#"{
+  "title": "Search Web",
+  "description": "Run an auth-free connector-backed stdio command.",
+  "prompt": "Search the web.",
+  "execution": {
+    "kind": "stdio.webSearch",
+    "entrypoint": "runner.sh",
+    "connectors": ["web"]
+  }
+}"#,
+  )
+  .expect("write auth-free connector command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+payload=$(cat)
+case "$payload" in *'"connectorId":"browser-runner::web"'*) connector_id=true;; *) connector_id=false;; esac
+case "$payload" in *'"provider":"pith.noCredentialRequired"'*) provider=true;; *) provider=false;; esac
+case "$payload" in *'"handle":"browser-runner::web"'*) handle=true;; *) handle=false;; esac
+case "$payload" in *'"store":"none"'*) store=true;; *) store=false;; esac
+case "$payload" in *'"envKey"'*) env_key=true;; *) env_key=false;; esac
+case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
+printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secretLeak=%s"}\n' "$connector_id" "$provider" "$handle" "$store" "$env_key" "$secret_leak"
+"#,
+  )
+  .expect("write auth-free connector runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "browser-runner".to_string(),
+      name: "browser-runner".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Browser Runner".to_string(),
+      status: "ready".to_string(),
+      description: "Auth-free connector command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:browser-runner.search".to_string(),
+        "connector:web".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Auth-Free Connector Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "browser-runner::browser-runner.search"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[0]["attributes"]["connectorIds"], "browser-runner::web");
+  assert_eq!(items[0]["attributes"]["connectorServices"], "web");
+  assert_eq!(
+    items[0]["attributes"]["connectorCredentialProviders"],
+    "pith.noCredentialRequired"
+  );
+  assert_eq!(items[0]["attributes"]["connectorSecretBindings"], "none");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerConnectorIds"],
+    "browser-runner::web"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerCredentialProviders"],
+    "pith.noCredentialRequired"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerSecretBindings"],
+    "none"
+  );
+  assert_eq!(items[1]["attributes"]["sandboxNetworkAllowed"], "true");
+  assert_eq!(
+    items[1]["content"],
+    "connectorId=true provider=true handle=true store=true envKey=false secretLeak=false"
+  );
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("pending approvals")
+      .len(),
+    0
+  );
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   use std::os::unix::fs::PermissionsExt;
 

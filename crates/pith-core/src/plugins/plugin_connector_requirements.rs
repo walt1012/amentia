@@ -6,6 +6,7 @@ use crate::runtime_plugins::RuntimePluginState;
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginCommandConnectorRequirements {
+  pub(super) scoped_connectors: Vec<HostPluginConnectorEntry>,
   pub(super) connectors: Vec<HostPluginConnectorEntry>,
   pub(super) missing_connector_ids: Vec<String>,
   pub(super) connector_backed: bool,
@@ -32,11 +33,13 @@ pub(super) fn command_connector_requirements(
   else {
     return PluginCommandConnectorRequirements {
       connector_backed: !plugin_connectors.is_empty(),
+      scoped_connectors: plugin_connectors,
       connectors: auth_connectors,
       missing_connector_ids: vec![],
     };
   };
 
+  let mut scoped_connectors = vec![];
   let mut required_connectors = vec![];
   let mut missing_connector_ids = vec![];
   let mut connector_backed = false;
@@ -47,6 +50,12 @@ pub(super) fn command_connector_requirements(
         || connector.connector_id == resolved_connector_id.as_str()
     }) {
       connector_backed = true;
+      if !scoped_connectors
+        .iter()
+        .any(|existing: &HostPluginConnectorEntry| existing.connector_id == connector.connector_id)
+      {
+        scoped_connectors.push(connector.clone());
+      }
       if !connector.auth_required {
         continue;
       }
@@ -67,6 +76,7 @@ pub(super) fn command_connector_requirements(
   }
 
   PluginCommandConnectorRequirements {
+    scoped_connectors,
     connectors: required_connectors,
     missing_connector_ids,
     connector_backed,

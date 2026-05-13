@@ -65,6 +65,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   setup/status commands are not blocked by unrelated connector auth.
 - Completed: runner network sandbox honors command connector scope for
   connector plugins with local setup/status commands.
+- Completed: auth-free scoped connectors reach runner payloads and diagnostics
+  without creating credential approvals or secret bindings.
 - Active: finish third-party connector debug loops and lifecycle hardening
   without adding a broad marketplace or admin console.
 

@@ -1,7 +1,9 @@
-use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+use pith_plugin_host::{
+  PluginCommandEntry as HostPluginCommandEntry, PluginConnectorEntry as HostPluginConnectorEntry,
+};
 
 use super::plugin_command_types::{
-  PluginConnectorCredentialProviderRef, PluginConnectorExecutionRef,
+  PluginConnectorCredentialProviderRef, PluginConnectorExecutionRef, NO_CREDENTIAL_PROVIDER,
 };
 use super::plugin_connector_requirements::command_connector_requirements;
 use crate::runtime_plugins::RuntimePluginState;
@@ -13,9 +15,12 @@ pub(super) fn build_command_connector_refs(
   plugin_state: &RuntimePluginState,
 ) -> Vec<PluginConnectorExecutionRef> {
   command_connector_requirements(command, plugin_state)
-    .connectors
+    .scoped_connectors
     .into_iter()
     .filter_map(|connector| {
+      if !connector.auth_required {
+        return Some(no_credential_connector_ref(connector));
+      }
       let credential = plugin_state.connector_credential(&connector.connector_id)?;
       Some(PluginConnectorExecutionRef {
         connector_id: connector.connector_id.clone(),
@@ -35,6 +40,26 @@ pub(super) fn build_command_connector_refs(
       })
     })
     .collect()
+}
+
+fn no_credential_connector_ref(
+  connector: HostPluginConnectorEntry,
+) -> PluginConnectorExecutionRef {
+  PluginConnectorExecutionRef {
+    connector_id: connector.connector_id.clone(),
+    service: connector.service,
+    credential_provider: PluginConnectorCredentialProviderRef {
+      provider: NO_CREDENTIAL_PROVIDER.to_string(),
+      handle: connector.connector_id,
+      store: connector
+        .credential_store
+        .unwrap_or_else(|| "none".to_string()),
+      label: "No credential required".to_string(),
+      env_key: None,
+      authorized_at: 0,
+    },
+    credential_secret: None,
+  }
 }
 
 fn credential_env_key(connector_id: &str) -> String {

@@ -8,6 +8,8 @@ use serde::Serialize;
 
 use crate::approval_types::PendingApproval;
 
+pub(super) const NO_CREDENTIAL_PROVIDER: &str = "pith.noCredentialRequired";
+
 #[derive(Debug)]
 pub struct PreparedPluginCommandRun {
   pub(super) request_id: serde_json::Value,
@@ -62,11 +64,18 @@ impl fmt::Debug for PluginConnectorExecutionRef {
 
 impl PluginConnectorExecutionRef {
   pub(super) fn credential_binding(&self) -> &'static str {
+    if self.credential_provider.provider == NO_CREDENTIAL_PROVIDER {
+      return "none";
+    }
     if self.credential_provider.env_key.is_some() {
       return "env-bound";
     }
 
     "marker-only"
+  }
+
+  pub(super) fn requires_user_approval(&self) -> bool {
+    self.credential_provider.provider != NO_CREDENTIAL_PROVIDER
   }
 }
 
