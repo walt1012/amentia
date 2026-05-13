@@ -62,8 +62,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   before launch, and approval policy disclosure in registry and UI surfaces.
 - Done: the macOS plugin UI stays progressive: command rows expose connector
   auth, connector blockers, lightweight text input, manifest reveal, approval
-  policy, run blockers, and runner-level credential diagnostics without adding
-  a broad admin console.
+  policy, run blockers, and runner-level credential/setup diagnostics without
+  adding a broad admin console.
 - Active: tighten the run/debug loop for real third-party connectors while
   keeping deterministic routing and minimal UI.
 

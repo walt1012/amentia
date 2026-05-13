@@ -629,6 +629,15 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[2]["attributes"]["pluginRunnerEntrypoint"],
     "runner.sh"
   );
+  assert_eq!(items[2]["attributes"]["pluginRunnerEntrypointCheck"], "ready");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypointFileKind"],
+    "file"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypointExecutable"],
+    "true"
+  );
   assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
   assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(
@@ -884,6 +893,15 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     "notion.createTask"
   );
   assert_eq!(items[2]["attributes"]["mcpServerCommand"], "mcp-server.sh");
+  assert_eq!(items[2]["attributes"]["pluginRunnerEntrypointCheck"], "ready");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypointFileKind"],
+    "file"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypointExecutable"],
+    "true"
+  );
   assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
   assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(items[2]["attributes"]["mcpProtocolStatus"], "completed");
@@ -1439,6 +1457,15 @@ exit 7
     items[1]["attributes"]["pluginRunnerEntrypoint"],
     "runner.sh"
   );
+  assert_eq!(items[1]["attributes"]["pluginRunnerEntrypointCheck"], "ready");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypointFileKind"],
+    "file"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypointExecutable"],
+    "true"
+  );
   assert!(items[1]["attributes"]["pluginRunnerPluginRoot"].is_string());
   assert!(items[1]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
@@ -1462,6 +1489,126 @@ exit 7
     .as_str()
     .unwrap()
     .contains("diagnostic stdout"));
+  assert_eq!(
+    context
+      .execution_state
+      .counts()
+      .running_plugin_command_count(),
+    0
+  );
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_command_run_preflights_non_executable_runner() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root =
+    create_temp_plugin_bundle("plugin-command-non-executable", "non-exec", "Non Exec");
+  let workspace = create_temp_workspace("plugin-command-non-executable-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    source_root.join("commands").join("non-exec.run.json"),
+    r#"{
+  "title": "Run Non Executable Plugin",
+  "description": "Execute a local stdio runner without executable permissions.",
+  "prompt": "Run the local plugin runner.",
+  "execution": {
+    "kind": "stdio.nonExecutable",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf 'should not run\n'
+"#,
+  )
+  .expect("write runner");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "non-exec".to_string(),
+      name: "non-exec".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Non Exec".to_string(),
+      status: "ready".to_string(),
+      description: "Non executable stdio command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:non-exec.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Non Exec Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "non-exec::non-exec.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "runnerSetup"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypointCheck"],
+    "notExecutable"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypointFileKind"],
+    "file"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypointExecutable"],
+    "false"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExecutionKind"],
+    "stdio.nonExecutable"
+  );
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
+    .contains("not executable"));
   assert_eq!(
     context
       .execution_state

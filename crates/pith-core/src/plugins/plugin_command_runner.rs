@@ -1,8 +1,12 @@
 use std::collections::HashMap;
+use std::fs::Metadata;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::{PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry};
@@ -345,6 +349,9 @@ pub(super) fn run_stdio_runner(
   cancellation: &GenerationCancellation,
   sandbox_attributes: &HashMap<String, String>,
 ) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
+  let mut runner_attributes = sandbox_attributes.clone();
+  validate_runner_entrypoint(command, entrypoint_path, &mut runner_attributes)?;
+
   let mut process = sandbox.build_command(entrypoint_path);
   process.args(args);
   process
@@ -372,7 +379,7 @@ pub(super) fn run_stdio_runner(
         "Plugin command `{}` failed to start: {error}",
         command.command_id
       ),
-      sandbox_attributes.clone(),
+      runner_attributes.clone(),
     )
     .boxed()
   })?;
@@ -390,7 +397,7 @@ pub(super) fn run_stdio_runner(
             "Plugin command `{}` failed to receive input: {error}",
             command.command_id
           ),
-          sandbox_attributes.clone(),
+          runner_attributes.clone(),
         )
         .boxed(),
       );
@@ -419,7 +426,7 @@ pub(super) fn run_stdio_runner(
         "Plugin command `{}` failed while running: {error}",
         command.command_id
       ),
-      sandbox_attributes.clone(),
+      runner_attributes.clone(),
     )
     .boxed()
   })?;
@@ -434,7 +441,7 @@ pub(super) fn run_stdio_runner(
   let mut output_attributes = runner_output_attributes(&wait, &stdout_output, &stderr_output);
   insert_log_preview(&mut output_attributes, "pluginRunnerStdoutPreview", &stdout);
   insert_log_preview(&mut output_attributes, "pluginRunnerStderrPreview", &stderr);
-  let failure_attributes = merged_attributes(sandbox_attributes.clone(), output_attributes.clone());
+  let failure_attributes = merged_attributes(runner_attributes.clone(), output_attributes.clone());
 
   match wait.reason {
     ChildExitReason::Cancelled => {
@@ -487,8 +494,108 @@ pub(super) fn run_stdio_runner(
 
   Ok(PluginRunnerProcessOutput {
     stdout,
-    attributes: output_attributes,
+    attributes: merged_attributes(runner_attributes, output_attributes),
   })
+}
+
+fn validate_runner_entrypoint(
+  command: &HostPluginCommandEntry,
+  entrypoint_path: &Path,
+  attributes: &mut HashMap<String, String>,
+) -> PluginRunnerRunResult<()> {
+  let metadata = entrypoint_path.metadata().map_err(|error| {
+    let mut failure_attributes = attributes.clone();
+    failure_attributes.insert(
+      "pluginRunnerEntrypointCheck".to_string(),
+      "metadataError".to_string(),
+    );
+    PluginRunnerFailure::new(
+      -32054,
+      format!(
+        "Plugin command `{}` runner entrypoint metadata could not be read: {error}",
+        command.command_id
+      ),
+      failure_attributes,
+    )
+    .boxed()
+  })?;
+  let file_kind = runner_entrypoint_file_kind(&metadata);
+  attributes.insert(
+    "pluginRunnerEntrypointFileKind".to_string(),
+    file_kind.to_string(),
+  );
+  if !metadata.is_file() {
+    attributes.insert(
+      "pluginRunnerEntrypointExecutable".to_string(),
+      "false".to_string(),
+    );
+    attributes.insert(
+      "pluginRunnerEntrypointCheck".to_string(),
+      "notFile".to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::new(
+        -32054,
+        format!(
+          "Plugin command `{}` runner entrypoint is not a file: {}",
+          command.command_id,
+          entrypoint_path.display()
+        ),
+        attributes.clone(),
+      )
+      .boxed(),
+    );
+  }
+
+  let executable = runner_entrypoint_is_executable(&metadata);
+  attributes.insert(
+    "pluginRunnerEntrypointExecutable".to_string(),
+    executable.to_string(),
+  );
+  if !executable {
+    attributes.insert(
+      "pluginRunnerEntrypointCheck".to_string(),
+      "notExecutable".to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::new(
+        -32054,
+        format!(
+          "Plugin command `{}` runner entrypoint is not executable: {}",
+          command.command_id,
+          entrypoint_path.display()
+        ),
+        attributes.clone(),
+      )
+      .boxed(),
+    );
+  }
+
+  attributes.insert(
+    "pluginRunnerEntrypointCheck".to_string(),
+    "ready".to_string(),
+  );
+  Ok(())
+}
+
+fn runner_entrypoint_file_kind(metadata: &Metadata) -> &'static str {
+  if metadata.is_file() {
+    "file"
+  } else if metadata.is_dir() {
+    "directory"
+  } else {
+    "other"
+  }
+}
+
+#[cfg(unix)]
+fn runner_entrypoint_is_executable(metadata: &Metadata) -> bool {
+  metadata.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn runner_entrypoint_is_executable(_metadata: &Metadata) -> bool {
+  true
 }
 
 pub(super) fn plugin_root_for_command(
