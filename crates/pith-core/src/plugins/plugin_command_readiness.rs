@@ -84,11 +84,7 @@ pub(crate) fn command_readiness(
     );
   }
   if let Some(run_blocker) = stdio_runner_setup_blocker(command) {
-    return PluginCommandReadiness::blocked(
-      "runnerSetup",
-      run_blocker,
-      required_connector_ids,
-    );
+    return PluginCommandReadiness::blocked("runnerSetup", run_blocker, required_connector_ids);
   }
 
   PluginCommandReadiness::ready(required_connector_ids)
