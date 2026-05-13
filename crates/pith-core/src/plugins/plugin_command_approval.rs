@@ -7,6 +7,8 @@ use super::plugin_command_types::PluginConnectorExecutionRef;
 use crate::approval_types::PendingApproval;
 
 pub(crate) const PLUGIN_COMMAND_APPROVAL_ACTION: &str = "run_plugin_command";
+pub(crate) const PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON: &str =
+  "Connector-backed plugin commands require approval before runner launch.";
 
 pub(super) fn plugin_command_requires_user_approval(
   command: &HostPluginCommandEntry,

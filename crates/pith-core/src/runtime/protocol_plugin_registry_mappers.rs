@@ -10,6 +10,7 @@ use pith_protocol::{
   PluginCommandExecutionSummary, PluginCommandSummary, PluginConnectorSummary, PluginHookSummary,
 };
 
+use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
 use crate::plugins::plugin_command_execution::is_supported_plugin_command_execution;
 use crate::plugins::plugin_command_readiness::PluginCommandReadiness;
 use crate::runtime_plugins::PluginConnectorCredentialState;
@@ -44,7 +45,7 @@ pub(super) fn to_protocol_plugin_command(
     && command.execution.is_some()
     && !readiness.required_connector_ids.is_empty();
   let approval_reason = approval_required
-    .then(|| "Connector-backed plugin commands require approval before runner launch.".to_string());
+    .then(|| PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON.to_string());
   let execution = command
     .execution
     .as_ref()

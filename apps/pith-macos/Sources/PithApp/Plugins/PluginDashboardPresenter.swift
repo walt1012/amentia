@@ -195,7 +195,8 @@ enum PluginDashboardPresenter {
     return snapshot.commands
       .map { command in
         let status = command.runStatus == "ready" ? "ready" : command.runStatus
-        return "\(command.pluginDisplayName): \(command.title) (\(status))"
+        let policy = command.approvalRequired ? " | approval" : ""
+        return "\(command.pluginDisplayName): \(command.title) (\(status)\(policy))"
       }
       .joined(separator: "\n")
   }

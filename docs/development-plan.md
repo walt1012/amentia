@@ -50,55 +50,21 @@ typed plugin registries.
 
 ## Current Milestone: M4 Real Plugin Platform
 
-M4 turns plugins into bounded local capabilities:
+M4 turns plugins into bounded local capabilities. Current status:
 
-- Done: command registries expose typed execution contracts.
-- Done: plugin registry assembly is split by capability, connector, command,
+- Done: typed plugin registries are split by capability, connector, command,
   hook, metadata, and execution-contract ownership.
-- Done: minimal `stdio` plugin runner is bounded, cancellable, plugin-root
-  scoped, native-sandbox-bound, and supports runner-owned timeline items.
-- Done: runner success and failure paths expose sandbox, exit, stdout, and
-  stderr diagnostics in timeline metadata.
-- Done: Notion-like connectors expose persisted local auth status, authorize,
-  clear credential, and failure surfaces without a broad marketplace.
-- Done: connector-backed plugin commands are blocked until required connector
-  auth is present, and command registries expose the run blocker.
-- Done: authorized connector commands pass non-secret credential references to
-  bounded runner envelopes and timeline metadata.
-- Done: connector credential references now use a local provider handle instead
-  of scattering credential-shaped fields through runner input.
-- Done: first MCP stdio adapter runs declared MCP server commands through the
-  bounded plugin process path and parses `tools/call` responses.
-- Done: MCP command execution now requires explicit plugin-declared
-  `mcp.connect`, and connector-backed MCP commands also require
-  `network.outbound` before any runner process starts.
-- Done: connector credentials can resolve into per-run environment bindings,
-  keeping secrets out of plugin registries, timeline metadata, and MCP stdin.
-- Done: connector-backed MCP plugin commands now request user approval before
-  runner launch and continue through the existing approval response path.
-- Done: MCP stdio output now records protocol diagnostics for initialize
-  responses, tool-call responses, malformed stdout, and tool errors.
-- Done: connector registries expose non-secret local credential provider,
-  handle, secret-presence, and update metadata for inspection and clearing.
-- Done: selected timeline inspection now separates plugin diagnostics from
-  sandbox diagnostics and only shows plugin context when a plugin item is
-  selected.
-- Done: plugin commands now surface required connector status and inline
-  authorization actions at the blocked command row.
-- Done: blocked command rows expose a focused manifest reveal action for local
-  plugin debugging without adding a broad debug panel.
-- Done: plugin command timeline items share a stable run id across command,
-  approval, runner result, failure, and runner-owned items.
-- Done: connector-backed plugin approvals show non-secret connector, provider,
-  handle, label, and secret-binding metadata before launch.
-- Done: every connector-backed plugin command now requires approval before
-  runner launch, regardless of whether the driver is stdio or MCP.
-- Done: commands that declare plain text input can be run with a lightweight
-  input prompt without adding a full form builder.
-- Done: command registries and rows now disclose connector-backed approval
-  policy before launch.
-- Active: keep plugin UI progressive: discover, inspect, enable, authorize,
-  run, debug.
+- Done: bounded `stdio` and MCP command runners execute inside plugin-root and
+  sandbox boundaries, with cancellation, diagnostics, protocol parsing, and
+  runner-owned timeline output.
+- Done: connector-backed commands have local credential metadata, non-secret
+  per-run bindings, auth blockers, mandatory approval before launch, and
+  approval policy disclosure in registry and UI surfaces.
+- Done: the macOS plugin UI stays progressive: command rows expose connector
+  auth, lightweight text input, manifest reveal, approval policy, and focused
+  timeline diagnostics without adding a broad admin console.
+- Active: tighten the run/debug loop for real third-party connectors while
+  keeping deterministic routing and minimal UI.
 
 ## Next Order
 

@@ -4,6 +4,7 @@ use super::test_support::{
   replace_plugin_catalog, request,
 };
 use super::*;
+use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::methods;
 use serde_json::json;
@@ -420,7 +421,7 @@ fn connector_backed_plugin_commands_require_connector_auth() {
   assert_eq!(ready_registry["commands"][0]["approvalRequired"], true);
   assert_eq!(
     ready_registry["commands"][0]["approvalReason"],
-    "Connector-backed plugin commands require approval before runner launch."
+    PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON
   );
 }
 
