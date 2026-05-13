@@ -568,7 +568,9 @@ fn plugin_command_run_passes_auth_free_connector_context_to_runner() {
   )
   .expect("write auth-free connector plugin manifest");
   fs::write(
-    source_root.join("commands").join("browser-runner.search.json"),
+    source_root
+      .join("commands")
+      .join("browser-runner.search.json"),
     r#"{
   "title": "Search Web",
   "description": "Run an auth-free connector-backed stdio command.",
@@ -661,7 +663,10 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secr
   let result = response.result.expect("command run result");
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[0]["kind"], "pluginCommand");
-  assert_eq!(items[0]["attributes"]["connectorIds"], "browser-runner::web");
+  assert_eq!(
+    items[0]["attributes"]["connectorIds"],
+    "browser-runner::web"
+  );
   assert_eq!(items[0]["attributes"]["connectorServices"], "web");
   assert_eq!(
     items[0]["attributes"]["connectorCredentialProviders"],
@@ -678,10 +683,7 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secr
     items[1]["attributes"]["pluginRunnerCredentialProviders"],
     "pith.noCredentialRequired"
   );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerSecretBindings"],
-    "none"
-  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerSecretBindings"], "none");
   assert_eq!(items[1]["attributes"]["sandboxNetworkAllowed"], "true");
   assert_eq!(
     items[1]["content"],

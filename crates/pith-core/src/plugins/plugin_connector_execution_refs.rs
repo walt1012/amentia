@@ -42,9 +42,7 @@ pub(super) fn build_command_connector_refs(
     .collect()
 }
 
-fn no_credential_connector_ref(
-  connector: HostPluginConnectorEntry,
-) -> PluginConnectorExecutionRef {
+fn no_credential_connector_ref(connector: HostPluginConnectorEntry) -> PluginConnectorExecutionRef {
   PluginConnectorExecutionRef {
     connector_id: connector.connector_id.clone(),
     service: connector.service,
