@@ -225,14 +225,19 @@ fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
   let mut context = RuntimeContext::new_in_memory();
   let storage_root = create_temp_workspace("plugin-remove-failing-storage");
   let database_path = storage_root.join("pith.db");
-  let source_root =
-    create_temp_plugin_bundle("plugin-remove-refresh-source", "focus-review", "Focus Review");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-remove-refresh-source",
+    "focus-review",
+    "Focus Review",
+  );
   let install_root = create_temp_workspace("plugin-remove-refresh-root");
   fs::create_dir_all(&database_path).expect("create directory at database path");
-  context.persistence_state.set_store_for_testing(RuntimeStore::new(
-    database_path,
-    storage_root.join("threads.json"),
-  ));
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
   context
     .plugin_state
     .configure_roots(vec![install_root.clone()], install_root.clone());
