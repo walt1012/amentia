@@ -222,6 +222,7 @@ enum TimelineInspectorPresenter {
 
   private static func connectorSummary(_ entry: TimelineEntry) -> String? {
     guard let connectorIDs = firstAttribute(entry, keys: [
+      "connectorId",
       "connectorIds",
       "pluginRunnerConnectorIds",
     ]) else {
@@ -229,18 +230,26 @@ enum TimelineInspectorPresenter {
     }
 
     let services = firstAttribute(entry, keys: [
+      "connectorService",
       "connectorServices",
       "pluginRunnerConnectorServices",
     ]) ?? "unknown service"
     let stores = firstAttribute(entry, keys: [
+      "credentialStore",
       "connectorCredentialStores",
       "pluginRunnerConnectorStores",
     ]) ?? "unknown store"
     let providers = firstAttribute(entry, keys: [
+      "credentialProvider",
       "connectorCredentialProviders",
       "pluginRunnerCredentialProviders",
     ]) ?? "unknown provider"
-    return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers)"
+    let bindings = firstAttribute(entry, keys: [
+      "credentialBinding",
+      "connectorSecretBindings",
+    ]) ?? "unknown binding"
+    return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers) "
+      + "| \(bindings)"
   }
 
   private static func firstAttribute(_ entry: TimelineEntry, keys: [String]) -> String? {

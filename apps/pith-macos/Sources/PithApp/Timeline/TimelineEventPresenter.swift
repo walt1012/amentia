@@ -273,15 +273,16 @@ enum TimelineEventPresenter {
   static func pluginConnectorAuthorized(
     _ connector: RuntimeBridge.RuntimePluginConnector
   ) -> TimelineEntry {
-    TimelineEntryFactory.system(
+    let body = [
+      "\(connector.displayName) is ready for \(connector.service) through "
+        + "\(connector.pluginDisplayName).",
+      "Credential Binding: \(connectorCredentialBinding(connector))",
+    ].joined(separator: "\n")
+
+    return TimelineEntryFactory.system(
       title: "Connector Authorized",
-      body:
-        "\(connector.displayName) is ready for \(connector.service) through \(connector.pluginDisplayName).",
-      attributes: [
-        "connectorId": connector.connectorID,
-        "pluginId": connector.pluginID,
-        "authStatus": connector.authStatus,
-      ]
+      body: body,
+      attributes: pluginConnectorCredentialAttributes(connector)
     )
   }
 
@@ -304,11 +305,7 @@ enum TimelineEventPresenter {
     TimelineEntryFactory.system(
       title: "Connector Credential Cleared",
       body: "\(connector.displayName) credentials were cleared from local connector state.",
-      attributes: [
-        "connectorId": connector.connectorID,
-        "pluginId": connector.pluginID,
-        "authStatus": connector.authStatus,
-      ]
+      attributes: pluginConnectorCredentialAttributes(connector)
     )
   }
 
@@ -339,5 +336,53 @@ enum TimelineEventPresenter {
       body: error.localizedDescription,
       attributes: [:]
     )
+  }
+
+  private static func pluginConnectorCredentialAttributes(
+    _ connector: RuntimeBridge.RuntimePluginConnector
+  ) -> [String: String] {
+    var attributes = [
+      "connectorId": connector.connectorID,
+      "pluginId": connector.pluginID,
+      "pluginDisplayName": connector.pluginDisplayName,
+      "connectorService": connector.service,
+      "authStatus": connector.authStatus,
+      "credentialPresent": "\(connector.credentialPresent)",
+      "credentialBinding": connectorCredentialBinding(connector),
+    ]
+
+    if let authType = connector.authType {
+      attributes["authType"] = authType
+    }
+    if let credentialStore = connector.credentialStore {
+      attributes["credentialStore"] = credentialStore
+    }
+    if let credentialProvider = connector.credentialProvider {
+      attributes["credentialProvider"] = credentialProvider
+    }
+    if let credentialHandle = connector.credentialHandle {
+      attributes["credentialHandle"] = credentialHandle
+    }
+    if let credentialLabel = connector.credentialLabel {
+      attributes["credentialLabel"] = credentialLabel
+    }
+    if let authorizedAt = connector.authorizedAt {
+      attributes["authorizedAt"] = "\(authorizedAt)"
+    }
+    if let credentialUpdatedAt = connector.credentialUpdatedAt {
+      attributes["credentialUpdatedAt"] = "\(credentialUpdatedAt)"
+    }
+
+    return attributes
+  }
+
+  private static func connectorCredentialBinding(
+    _ connector: RuntimeBridge.RuntimePluginConnector
+  ) -> String {
+    if !connector.credentialPresent {
+      return "none"
+    }
+
+    connector.credentialSecretPresent ? "env-bound" : "marker-only"
   }
 }

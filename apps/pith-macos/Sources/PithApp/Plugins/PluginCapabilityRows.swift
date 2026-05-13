@@ -154,9 +154,17 @@ private extension PluginConnectorSummary {
     let provider = credentialProvider ?? "none"
     let handle = credentialHandle ?? "none"
     let credential = credentialLabel ?? "no credential"
-    let secret = credentialSecretPresent ? "env-bound" : "none"
+    let binding = credentialBinding
     return "Auth: \(type) | \(authStatus) | \(required) | \(scopes) "
       + "| store: \(store) | provider: \(provider) | handle: \(handle) "
-      + "| secret: \(secret) | \(credential)"
+      + "| credential binding: \(binding) | \(credential)"
+  }
+
+  private var credentialBinding: String {
+    if !credentialPresent {
+      return "none"
+    }
+
+    return credentialSecretPresent ? "env-bound" : "marker-only"
   }
 }
