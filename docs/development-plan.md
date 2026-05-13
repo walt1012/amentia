@@ -69,6 +69,10 @@ M4 turns plugins into bounded local capabilities. Current status:
   without creating credential approvals or secret bindings.
 - Completed: command registry separates declared connector scope from
   auth-required connector requirements for clearer third-party debugging.
+- Completed: plugin bundle lifecycle rejects nested manifests and constrains
+  removal to direct local install children.
+- Completed: plugin enable changes persist before mutating runtime state so
+  disk failures cannot leave a misleading enabled catalog.
 - Active: finish third-party connector debug loops and lifecycle hardening
   without adding a broad marketplace or admin console.
 

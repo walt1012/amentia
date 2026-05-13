@@ -130,6 +130,79 @@ fn install_and_remove_local_plugin_bundle_round_trip() {
   assert!(removed_plugin.removed_path.ends_with("focus-review"));
 }
 
+#[test]
+fn inspect_rejects_nested_plugin_manifests() {
+  let source_root = create_temp_plugin_root("install-nested-manifest-source");
+  let source_plugin_dir = source_root.join("focus-review");
+  let nested_plugin_dir = source_plugin_dir.join("nested");
+  fs::create_dir_all(&nested_plugin_dir).expect("create nested plugin dir");
+  fs::write(
+    source_plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "focus-review",
+  "version": "0.1.0",
+  "displayName": "Focus Review",
+  "description": "Local plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:review.focus"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write source manifest");
+  fs::write(
+    nested_plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "hidden-plugin",
+  "version": "0.1.0",
+  "displayName": "Hidden Plugin",
+  "description": "Nested plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:hidden.run"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write nested manifest");
+
+  let error = inspect_plugin_bundle(&source_plugin_dir)
+    .expect_err("nested plugin manifests should be rejected");
+
+  fs::remove_dir_all(&source_root).expect("cleanup source root");
+
+  assert!(error.to_string().contains("nested pith-plugin.json"));
+}
+
+#[test]
+fn remove_rejects_manifest_at_install_root() {
+  let install_root = create_temp_plugin_root("remove-install-root-manifest");
+  fs::write(
+    install_root.join("pith-plugin.json"),
+    r#"{
+  "name": "root-plugin",
+  "version": "0.1.0",
+  "displayName": "Root Plugin",
+  "description": "Invalid install root plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:root.run"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write root manifest");
+  fs::create_dir_all(install_root.join("sibling")).expect("create sibling dir");
+
+  let error = remove_local_plugin_bundle(&install_root.join("pith-plugin.json"), &install_root)
+    .expect_err("install root manifest should not be removable as a plugin");
+
+  assert!(install_root.exists());
+  assert!(install_root.join("sibling").exists());
+
+  fs::remove_dir_all(&install_root).expect("cleanup install root");
+
+  assert!(error.to_string().contains("directly under"));
+}
+
 #[cfg(unix)]
 #[test]
 fn install_rejects_plugin_bundle_symlinks_and_cleans_destination() {

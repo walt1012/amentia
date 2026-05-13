@@ -17,6 +17,24 @@ pub(crate) fn handle_plugin_set_enabled(
     Err(response) => return response,
   };
 
+  let Some(plugin) = context.plugin_state.find(&params.plugin_id) else {
+    return JsonRpcResponse::error(request.id, -32050, "Plugin not found");
+  };
+  if plugin.status != "ready" {
+    return JsonRpcResponse::error(
+      request.id,
+      -32051,
+      plugin
+        .validation_error
+        .clone()
+        .unwrap_or_else(|| "Plugin manifest is invalid".to_string()),
+    );
+  }
+
+  if let Err(error) = context.persist_plugin_enabled(&params.plugin_id, params.enabled) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
   let updated_plugin = match context
     .plugin_state
     .set_enabled(&params.plugin_id, params.enabled)
@@ -29,12 +47,6 @@ pub(crate) fn handle_plugin_set_enabled(
       return JsonRpcResponse::error(request.id, -32051, message);
     }
   };
-  let plugin_id = updated_plugin.id.clone();
-  let plugin_enabled = updated_plugin.enabled;
-
-  if let Err(error) = context.persist_plugin_enabled(&plugin_id, plugin_enabled) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
 
   JsonRpcResponse::success(
     request.id,

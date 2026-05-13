@@ -43,6 +43,49 @@ fn plugin_set_enabled_updates_runtime_catalog() {
 }
 
 #[test]
+fn plugin_set_enabled_does_not_mutate_catalog_when_persistence_fails() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("plugin-enable-failing-storage");
+  let database_path = storage_root.join("pith.db");
+  fs::create_dir_all(&database_path).expect("create directory at database path");
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "workspace-notes",
+      "Workspace Notes",
+      false,
+      false,
+      &["prompt_pack:workspace.notes"],
+      &["file.read"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_SET_ENABLED,
+      Some(json!({
+        "pluginId": "workspace-notes",
+        "enabled": true
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("plugin enable error");
+  assert_eq!(error.code, -32010);
+  assert!(!context.plugin_state.catalog()[0].enabled);
+}
+
+#[test]
 fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
