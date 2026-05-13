@@ -58,8 +58,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   sandbox boundaries, with cancellation, failure classification, recovery
   hints, diagnostics, protocol parsing, and runner-owned timeline output.
 - Done: connector-backed commands have local credential metadata, non-secret
-  per-run bindings, auth blockers, mandatory approval before launch, and
-  approval policy disclosure in registry and UI surfaces.
+  per-run bindings, manual credential entry, auth blockers, mandatory approval
+  before launch, and approval policy disclosure in registry and UI surfaces.
 - Done: the macOS plugin UI stays progressive: command rows expose connector
   auth, connector blockers, lightweight text input, manifest reveal, approval
   policy, run blockers, and focused timeline diagnostics without adding a

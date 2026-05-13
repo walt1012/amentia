@@ -141,6 +141,16 @@ extension AppViewModel {
         ?? "Connector cannot be authorized yet."
       return
     }
+    guard let connector = pluginConnectors.first(where: { $0.id == connectorID }) else {
+      runtimeDetail = "Connector is not loaded."
+      return
+    }
+    guard let credentialInput = PluginConnectorCredentialDialogPresenter.credentialInput(
+      connector: connector
+    ) else {
+      runtimeDetail = "Connector authorization was cancelled."
+      return
+    }
 
     guard let operationID = beginPluginLifecycleOperation(
       detail: "Authorizing connector..."
@@ -156,7 +166,11 @@ extension AppViewModel {
         finishPluginLifecycleOperation(operationID)
       }
       do {
-        let connector = try await runtimeBridge.authorizePluginConnector(connectorID: connectorID)
+        let connector = try await runtimeBridge.authorizePluginConnector(
+          connectorID: connectorID,
+          credentialLabel: credentialInput.label,
+          credentialSecret: credentialInput.secret
+        )
         await refreshPluginState()
         appendEntry(
           to: timelineThreadID,
