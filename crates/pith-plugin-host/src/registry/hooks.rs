@@ -33,12 +33,7 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
       let hook = match read_hook_manifest(&hook_path) {
         Ok(hook) => hook,
         Err(error) => {
-          hooks.push(invalid_hook_entry(
-            plugin,
-            identifier,
-            &hook_path,
-            error,
-          ));
+          hooks.push(invalid_hook_entry(plugin, identifier, &hook_path, error));
           continue;
         }
       };

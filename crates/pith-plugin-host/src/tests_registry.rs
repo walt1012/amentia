@@ -524,8 +524,7 @@ fn build_hook_registry_surfaces_invalid_hook_manifests() {
   let plugin_dir = plugin_root.join("broken-hook");
   let hooks_dir = plugin_dir.join("hooks");
   fs::create_dir_all(&hooks_dir).expect("create hooks dir");
-  fs::write(hooks_dir.join("shell.broken.json"), "{")
-    .expect("write invalid hook definition");
+  fs::write(hooks_dir.join("shell.broken.json"), "{").expect("write invalid hook definition");
   let plugin = PluginCatalogEntry {
     id: "broken-hook".to_string(),
     name: "broken-hook".to_string(),
