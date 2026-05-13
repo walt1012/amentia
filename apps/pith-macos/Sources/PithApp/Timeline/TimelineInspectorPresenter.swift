@@ -131,6 +131,8 @@ enum TimelineInspectorPresenter {
       lines.append(connectorSummary)
     }
 
+    appendPluginRunnerSetupSummary(entry, to: &lines)
+
     if let permissionGate = entry.attributes["permissionGate"] {
       let required = entry.attributes["requiredPermission"] ?? "unknown"
       lines.append("Permission gate: \(permissionGate) | requires \(required)")
@@ -257,6 +259,31 @@ enum TimelineInspectorPresenter {
     keys.compactMap { key in entry.attributes[key] }.first
   }
 
+  private static func appendPluginRunnerSetupSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard entry.attributes["pluginRunnerExecutionDriver"] != nil
+      || entry.attributes["pluginRunnerEntrypoint"] != nil
+    else {
+      return
+    }
+
+    let driver = entry.attributes["pluginRunnerExecutionDriver"] ?? "unknown driver"
+    let kind = entry.attributes["pluginRunnerExecutionKind"]
+      ?? entry.attributes["executionKind"]
+      ?? "unknown execution"
+    let entrypoint = entry.attributes["pluginRunnerEntrypoint"] ?? "unknown entrypoint"
+    lines.append("Runner: \(driver) | \(kind) | \(entrypoint)")
+
+    if let resolvedEntrypoint = entry.attributes["pluginRunnerResolvedEntrypoint"] {
+      lines.append("Runner path: \(resolvedEntrypoint)")
+    }
+    if let pluginRoot = entry.attributes["pluginRunnerPluginRoot"] {
+      lines.append("Plugin root: \(pluginRoot)")
+    }
+  }
+
   private static func appendPluginRunnerSummary(
     _ entry: TimelineEntry,
     to lines: inout [String]
@@ -317,6 +344,9 @@ enum TimelineInspectorPresenter {
         + "initialize \(initializeSeen) | tool response \(toolSeen) | invalid stdout \(invalidLines)"
     )
 
+    if let serverCommand = entry.attributes["mcpServerCommand"] {
+      lines.append("MCP server command: \(serverCommand)")
+    }
     if let errorCode = entry.attributes["mcpErrorCode"] {
       lines.append("MCP error code: \(errorCode)")
     }

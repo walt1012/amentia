@@ -5,7 +5,9 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use pith_model_runtime::GenerationCancellation;
-use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+use pith_plugin_host::{
+  PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry,
+};
 use pith_process::{
   join_bounded_pipe_reader, read_bounded_pipe_in_background, terminate_process_group_or_child,
   wait_for_child, BoundedPipeOutput, ChildExitReason, ChildWaitResult,
@@ -75,6 +77,13 @@ impl PluginRunnerFailure {
     Self::empty(code, message)
   }
 
+  pub(super) fn from_pair_with_attributes(
+    (code, message): (i32, String),
+    attributes: HashMap<String, String>,
+  ) -> Self {
+    Self::new(code, message, attributes)
+  }
+
   pub(super) fn boxed(self) -> Box<Self> {
     Box::new(self)
   }
@@ -139,6 +148,7 @@ pub(super) fn run_external_plugin_command(
     )
     .boxed()
   })?;
+  let mut setup_attributes = plugin_runner_setup_attributes(command, execution);
   if execution.driver != "stdio" {
     if execution.driver == "mcp" {
       return run_mcp_plugin_command(
@@ -157,13 +167,20 @@ pub(super) fn run_external_plugin_command(
     .entrypoint
     .as_deref()
     .ok_or_else(|| unsupported_execution_error(command))?;
-  let plugin_root = plugin_root_for_command(command)
-    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
-  let entrypoint_path = safe_entrypoint_path(&plugin_root, entrypoint)
-    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
+  let plugin_root = plugin_root_for_command(command).map_err(|failure| {
+    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+  })?;
+  insert_plugin_root_attribute(&mut setup_attributes, &plugin_root);
+  let entrypoint_path = safe_entrypoint_path(&plugin_root, entrypoint).map_err(|failure| {
+    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+  })?;
+  insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
   let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
-    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
-  let mut runner_context_attributes = sandbox.attributes();
+    .map_err(|failure| {
+      PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    })?;
+  let mut runner_context_attributes = setup_attributes;
+  runner_context_attributes.extend(sandbox.attributes());
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);
   let input_payload = json!({
     "envelope": execution.input.envelope,
@@ -190,6 +207,55 @@ pub(super) fn run_external_plugin_command(
     &output.stdout,
     merged_attributes(runner_context_attributes, output.attributes),
   ))
+}
+
+pub(super) fn plugin_runner_setup_attributes(
+  command: &HostPluginCommandEntry,
+  execution: &PluginCommandExecutionEntry,
+) -> HashMap<String, String> {
+  let mut attributes = HashMap::from([
+    (
+      "pluginRunnerExecutionDriver".to_string(),
+      execution.driver.clone(),
+    ),
+    (
+      "pluginRunnerExecutionKind".to_string(),
+      execution.kind.clone(),
+    ),
+    (
+      "pluginRunnerSourcePath".to_string(),
+      command.source_path.clone(),
+    ),
+  ]);
+  if let Some(entrypoint) = execution
+    .entrypoint
+    .as_deref()
+    .map(str::trim)
+    .filter(|entrypoint| !entrypoint.is_empty())
+  {
+    attributes.insert("pluginRunnerEntrypoint".to_string(), entrypoint.to_string());
+  }
+  attributes
+}
+
+pub(super) fn insert_plugin_root_attribute(
+  attributes: &mut HashMap<String, String>,
+  plugin_root: &Path,
+) {
+  attributes.insert(
+    "pluginRunnerPluginRoot".to_string(),
+    plugin_root.display().to_string(),
+  );
+}
+
+pub(super) fn insert_resolved_entrypoint_attribute(
+  attributes: &mut HashMap<String, String>,
+  entrypoint_path: &Path,
+) {
+  attributes.insert(
+    "pluginRunnerResolvedEntrypoint".to_string(),
+    entrypoint_path.display().to_string(),
+  );
 }
 
 pub(super) fn insert_connector_runner_attributes(
@@ -567,12 +633,18 @@ fn plugin_runner_timeline_item(
 pub(super) fn unsupported_execution_error(
   command: &HostPluginCommandEntry,
 ) -> Box<PluginRunnerFailure> {
-  PluginRunnerFailure::empty(
+  let attributes = command
+    .execution
+    .as_ref()
+    .map(|execution| plugin_runner_setup_attributes(command, execution))
+    .unwrap_or_default();
+  PluginRunnerFailure::new(
     -32053,
     format!(
       "Plugin command `{}` requires a supported execution contract.",
       command.command_id
     ),
+    attributes,
   )
   .boxed()
 }

@@ -13,8 +13,10 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::plugin_command_runner::{
-  insert_connector_runner_attributes, merged_attributes, plugin_root_for_command, run_stdio_runner,
-  safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
+  insert_connector_runner_attributes, insert_plugin_root_attribute,
+  insert_resolved_entrypoint_attribute, merged_attributes, plugin_root_for_command,
+  plugin_runner_setup_attributes, run_stdio_runner, safe_entrypoint_path, PluginRunnerFailure,
+  PluginRunnerResult, PluginRunnerRunResult,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
@@ -105,25 +107,40 @@ pub(super) fn run_mcp_plugin_command(
     );
   }
 
-  let target = mcp_target_for_execution(command, execution)?;
+  let mut setup_attributes = plugin_runner_setup_attributes(command, execution);
+  let target = mcp_target_for_execution(command, execution)
+    .map_err(|failure| merge_setup_failure(&setup_attributes, failure))?;
   let plugin_root = plugin_root_for_command(command)
-    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
-  let server = mcp_server_for_target(command, &plugin_root, &target.server_id)?;
+    .map_err(|failure| {
+      PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    })?;
+  insert_plugin_root_attribute(&mut setup_attributes, &plugin_root);
+  let server = mcp_server_for_target(command, &plugin_root, &target.server_id)
+    .map_err(|failure| merge_setup_failure(&setup_attributes, failure))?;
   let server_command = server.command.as_deref().ok_or_else(|| {
-    PluginRunnerFailure::empty(
+    PluginRunnerFailure::with_output(
       -32053,
       format!(
         "Plugin command `{}` requires an MCP server command.",
         command.command_id
       ),
+      String::new(),
+      String::new(),
+      setup_attributes.clone(),
     )
     .boxed()
   })?;
-  let entrypoint_path = safe_entrypoint_path(&plugin_root, server_command)
-    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
+  setup_attributes.insert("mcpServerCommand".to_string(), server_command.to_string());
+  let entrypoint_path = safe_entrypoint_path(&plugin_root, server_command).map_err(|failure| {
+    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+  })?;
+  insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
   let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root)
-    .map_err(|failure| PluginRunnerFailure::from_pair(failure).boxed())?;
-  let mut runner_context_attributes = sandbox.attributes();
+    .map_err(|failure| {
+      PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    })?;
+  let mut runner_context_attributes = setup_attributes;
+  runner_context_attributes.extend(sandbox.attributes());
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);
   insert_mcp_runner_attributes(&mut runner_context_attributes, &target, &server);
   let input_payload = mcp_tool_call_payload(
@@ -153,6 +170,21 @@ pub(super) fn run_mcp_plugin_command(
     &output.stdout,
     merged_attributes(runner_context_attributes, output.attributes),
   )
+}
+
+fn merge_setup_failure(
+  setup_attributes: &HashMap<String, String>,
+  failure: Box<PluginRunnerFailure>,
+) -> Box<PluginRunnerFailure> {
+  let failure = *failure;
+  PluginRunnerFailure::with_output(
+    failure.code,
+    failure.message,
+    failure.stdout,
+    failure.stderr,
+    merged_attributes(setup_attributes.clone(), failure.attributes),
+  )
+  .boxed()
 }
 
 fn insert_mcp_runner_attributes(

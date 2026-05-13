@@ -618,6 +618,17 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     "notion-runner::notion"
   );
   assert_eq!(
+    items[2]["attributes"]["pluginRunnerExecutionDriver"],
+    "stdio"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerExecutionKind"],
+    "stdio.notionSync"
+  );
+  assert_eq!(items[2]["attributes"]["pluginRunnerEntrypoint"], "runner.sh");
+  assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
+  assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
+  assert_eq!(
     items[2]["attributes"]["pluginRunnerCredentialLabels"],
     "Notion authorization marker"
   );
@@ -860,6 +871,21 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   );
   assert_eq!(items[2]["attributes"]["mcpServerId"], "notion");
   assert_eq!(items[2]["attributes"]["mcpToolName"], "createTask");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerExecutionDriver"],
+    "mcp"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerExecutionKind"],
+    "mcp.notionCreateTask"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerEntrypoint"],
+    "notion.createTask"
+  );
+  assert_eq!(items[2]["attributes"]["mcpServerCommand"], "mcp-server.sh");
+  assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
+  assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(items[2]["attributes"]["mcpProtocolStatus"], "completed");
   assert_eq!(items[2]["attributes"]["mcpInitializeResponseSeen"], "true");
   assert_eq!(items[2]["attributes"]["mcpToolResponseSeen"], "true");
@@ -1401,6 +1427,17 @@ exit 7
     items[1]["attributes"]["pluginRunnerRecoveryHint"],
     "Inspect runner stderr, stdout, and exit status."
   );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExecutionDriver"],
+    "stdio"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExecutionKind"],
+    "stdio.failure"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerEntrypoint"], "runner.sh");
+  assert!(items[1]["attributes"]["pluginRunnerPluginRoot"].is_string());
+  assert!(items[1]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
   assert_eq!(
     items[1]["attributes"]["pluginRunnerExitReason"],
@@ -1637,6 +1674,19 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
     items[1]["attributes"]["pluginRunnerRecoveryHint"],
     "Check the plugin manifest, entrypoint path, sandbox, and local files."
   );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExecutionDriver"],
+    "stdio"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerExecutionKind"],
+    "stdio.escape"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerEntrypoint"],
+    "../runner.sh"
+  );
+  assert!(items[1]["attributes"]["pluginRunnerPluginRoot"].is_string());
   assert!(items[1]["content"]
     .as_str()
     .unwrap()
