@@ -184,7 +184,22 @@ enum PluginDashboardPresenter {
       return "No Plugin Commands"
     }
 
-    return "\(snapshot.commands.count) Plugin Command\(snapshot.commands.count == 1 ? "" : "s")"
+    let readyCount = snapshot.commands.filter { $0.runStatus == "ready" }.count
+    let blockedCount = snapshot.commands.count - readyCount
+    let approvalCount = snapshot.commands.filter { $0.approvalRequired }.count
+    var parts = [
+      "\(snapshot.commands.count) Plugin Command\(snapshot.commands.count == 1 ? "" : "s")"
+    ]
+    if readyCount > 0 {
+      parts.append("\(readyCount) ready")
+    }
+    if blockedCount > 0 {
+      parts.append("\(blockedCount) blocked")
+    }
+    if approvalCount > 0 {
+      parts.append("\(approvalCount) approval gated")
+    }
+    return parts.joined(separator: " | ")
   }
 
   static func commandDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
