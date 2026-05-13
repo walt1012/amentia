@@ -808,7 +808,9 @@ printf '{"content":"ok"}\n'
     fs::set_permissions(&runner_path, permissions).expect("make runner executable");
   }
   fs::write(
-    source_root.join("commands").join("notion-tools.status.json"),
+    source_root
+      .join("commands")
+      .join("notion-tools.status.json"),
     r#"{
   "title": "Show Notion Status",
   "description": "Show local setup status without contacting Notion.",
@@ -1002,7 +1004,9 @@ printf '{"content":"ok"}\n'
     fs::set_permissions(&runner_path, permissions).expect("make runner executable");
   }
   fs::write(
-    source_root.join("commands").join("browser-tools.search.json"),
+    source_root
+      .join("commands")
+      .join("browser-tools.search.json"),
     r#"{
   "title": "Search Web",
   "description": "Search the web through an auth-free connector.",
