@@ -166,7 +166,10 @@ pub(super) fn build_plugin_failure_timeline_item(
       command_status.to_string(),
     ),
     ("pluginRunnerErrorCode".to_string(), code.to_string()),
-    ("pluginRunnerFailureKind".to_string(), failure_kind.to_string()),
+    (
+      "pluginRunnerFailureKind".to_string(),
+      failure_kind.to_string(),
+    ),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));
   if let Some(execution_kind) = execution_kind {

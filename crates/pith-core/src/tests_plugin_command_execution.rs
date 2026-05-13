@@ -968,7 +968,10 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["attributes"]["pluginRunnerFailureKind"], "mcpProtocol");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "mcpProtocol"
+  );
   assert_eq!(
     items[1]["attributes"]["mcpProtocolStatus"],
     "missingToolResponse"
@@ -1344,7 +1347,10 @@ exit 7
   assert_eq!(items[1]["kind"], "warning");
   assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
   assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
-  assert_eq!(items[1]["attributes"]["pluginRunnerFailureKind"], "processExit");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "processExit"
+  );
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
   assert_eq!(
     items[1]["attributes"]["pluginRunnerExitReason"],
@@ -1573,7 +1579,10 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   assert_eq!(items[1]["kind"], "warning");
   assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
   assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
-  assert_eq!(items[1]["attributes"]["pluginRunnerFailureKind"], "runnerSetup");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "runnerSetup"
+  );
   assert!(items[1]["content"]
     .as_str()
     .unwrap()
