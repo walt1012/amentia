@@ -359,6 +359,7 @@ printf '{"content":"External runner completed."}\n'
   assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[1]["attributes"]["sandboxBackend"].is_string());
   assert!(items[1]["attributes"]["sandboxTempRoot"].is_string());
+  assert_eq!(items[1]["attributes"]["sandboxNetworkAllowed"], "false");
   assert_eq!(
     items[1]["attributes"]["pluginRunnerExitReason"],
     "completed"
@@ -652,6 +653,11 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     "marker-only"
   );
   assert!(items[2]["attributes"]["pluginRunnerCredentialAuthorizedAt"].is_string());
+  assert_eq!(items[2]["attributes"]["sandboxNetworkAllowed"], "true");
+  assert!(items[2]["attributes"]["sandboxNetworkPolicy"]
+    .as_str()
+    .expect("sandbox network policy")
+    .contains("network allowed"));
   assert_eq!(
     items[2]["content"],
     "connectorId=true provider=true handle=true store=true label=true secretLeak=false"

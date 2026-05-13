@@ -19,6 +19,7 @@ impl PluginRunnerSandbox {
     workspace: Option<&WorkspaceSummary>,
     plugin_id: &str,
     plugin_root: &Path,
+    allow_network: bool,
   ) -> std::result::Result<Self, (i32, String)> {
     let workspace = workspace.ok_or_else(|| {
       (
@@ -49,10 +50,13 @@ impl PluginRunnerSandbox {
       )
     })?;
 
+    let policy = pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root)
+      .with_temporary_root(temporary_root.clone())
+      .with_read_only_root(plugin_root.clone())
+      .with_network_access(allow_network);
+
     Ok(Self {
-      policy: pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root)
-        .with_temporary_root(temporary_root.clone())
-        .with_read_only_root(plugin_root.clone()),
+      policy,
       plugin_root,
       temporary_root,
     })
@@ -227,7 +231,7 @@ mod tests {
       display_name: "Test Workspace".to_string(),
     };
 
-    PluginRunnerSandbox::prepare(Some(&workspace), "notion/sync", &plugin_root)
+    PluginRunnerSandbox::prepare(Some(&workspace), "notion/sync", &plugin_root, false)
       .expect("prepare sandbox");
 
     assert!(temporary_root.is_dir());

@@ -229,11 +229,15 @@ pub(super) fn run_external_plugin_command(
     PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
   })?;
   insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
-  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root).map_err(
-    |failure| {
-      PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
-    },
-  )?;
+  let sandbox = PluginRunnerSandbox::prepare(
+    workspace,
+    &command.plugin_id,
+    &plugin_root,
+    command_allows_network(command),
+  )
+  .map_err(|failure| {
+    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+  })?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);
@@ -805,6 +809,13 @@ pub(super) fn unsupported_execution_error(
     attributes,
   )
   .boxed()
+}
+
+pub(super) fn command_allows_network(command: &HostPluginCommandEntry) -> bool {
+  command
+    .permissions
+    .iter()
+    .any(|permission| permission == "network.outbound")
 }
 
 fn runner_output_attributes(

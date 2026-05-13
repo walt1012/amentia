@@ -11,11 +11,8 @@ pub(crate) fn plugin_command_permission_blocker(
   connector_backed: bool,
 ) -> Option<String> {
   let execution = command.execution.as_ref()?;
-  if execution.driver != "mcp" {
-    return None;
-  }
 
-  if !command_declares_permission(command, "mcp.connect") {
+  if execution.driver == "mcp" && !command_declares_permission(command, "mcp.connect") {
     return Some(plugin_command_permission_blocker_message(
       command,
       "mcp.connect",
@@ -40,11 +37,8 @@ pub(super) fn plugin_command_permission_denied_items(
   connector_refs: &[PluginConnectorExecutionRef],
 ) -> Option<Vec<TimelineItem>> {
   let execution = command.execution.as_ref()?;
-  if execution.driver != "mcp" {
-    return None;
-  }
 
-  if !command_declares_permission(command, "mcp.connect") {
+  if execution.driver == "mcp" && !command_declares_permission(command, "mcp.connect") {
     return Some(build_plugin_command_denial(
       command,
       workspace,

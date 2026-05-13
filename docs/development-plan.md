@@ -69,6 +69,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   launch.
 - Done: MCP command permission gaps surface as registry/run readiness blockers
   before runner launch.
+- Done: external plugin runners map declared `network.outbound` permission into
+  native sandbox network policy.
 - Active: tighten the run/debug loop for real third-party connectors while
   keeping deterministic routing and minimal UI.
 

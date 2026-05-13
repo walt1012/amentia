@@ -749,6 +749,118 @@ printf '{"content":"ok"}\n'
 }
 
 #[test]
+fn connector_backed_stdio_commands_require_network_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-stdio-network-permission",
+    "stdio-network",
+    "Stdio Network",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "stdio-network",
+  "version": "0.1.0",
+  "displayName": "Stdio Network",
+  "description": "Connector-backed stdio command plugin missing network permission",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:stdio-network.sync", "connector:notion"],
+  "permissions": [],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector command plugin manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&runner_path)
+      .expect("runner metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+  }
+  fs::write(
+    source_root.join("commands").join("stdio-network.sync.json"),
+    r#"{
+  "title": "Sync Stdio Network",
+  "description": "Sync through a connector-backed stdio command.",
+  "prompt": "Sync through stdio.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "stdio-network".to_string(),
+      name: "stdio-network".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Stdio Network".to_string(),
+      status: "ready".to_string(),
+      description: "Connector-backed stdio command plugin missing network permission".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:stdio-network.sync".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec![],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["execution"]["driver"], "stdio");
+  assert_eq!(commands[0]["execution"]["supported"], true);
+  assert_eq!(commands[0]["runStatus"], "missingPermission");
+  assert!(commands[0]["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("network.outbound"));
+}
+
+#[test]
 fn plugin_hook_registry_lists_enabled_hook_plugins() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(

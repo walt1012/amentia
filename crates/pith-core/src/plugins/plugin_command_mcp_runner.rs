@@ -13,7 +13,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::plugin_command_runner::{
-  insert_connector_runner_attributes, insert_plugin_root_attribute,
+  command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
   insert_resolved_entrypoint_attribute, merged_attributes, plugin_root_for_command,
   plugin_runner_setup_attributes, run_stdio_runner, runner_entrypoint_setup_blocker,
   safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
@@ -170,11 +170,15 @@ pub(super) fn run_mcp_plugin_command(
     PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
   })?;
   insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
-  let sandbox = PluginRunnerSandbox::prepare(workspace, &command.plugin_id, &plugin_root).map_err(
-    |failure| {
-      PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
-    },
-  )?;
+  let sandbox = PluginRunnerSandbox::prepare(
+    workspace,
+    &command.plugin_id,
+    &plugin_root,
+    command_allows_network(command),
+  )
+  .map_err(|failure| {
+    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+  })?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);

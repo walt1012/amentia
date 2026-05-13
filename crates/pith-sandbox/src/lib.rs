@@ -29,8 +29,10 @@ impl NativeSandboxStatus {
 }
 
 pub fn network_policy_label(active: bool, network_allowed: bool) -> &'static str {
-  if network_allowed {
+  if active && network_allowed {
     "network allowed"
+  } else if network_allowed {
+    "network allowed by policy, not native-enforced"
   } else if active {
     "network denied"
   } else {
@@ -55,6 +57,11 @@ impl SandboxPolicy {
 
   pub fn with_read_only_root(mut self, read_only_root: impl Into<PathBuf>) -> Self {
     self.read_only_roots.push(read_only_root.into());
+    self
+  }
+
+  pub fn with_network_access(mut self, allow_network: bool) -> Self {
+    self.allow_network = allow_network;
     self
   }
 
@@ -141,7 +148,7 @@ pub fn native_sandbox_status(policy: &SandboxPolicy) -> NativeSandboxStatus {
     backend,
     available,
     active,
-    network_allowed: active && policy.allow_network(),
+    network_allowed: policy.allow_network(),
     temporary_root,
     writable_roots,
     detail,
@@ -288,6 +295,15 @@ mod tests {
   }
 
   #[test]
+  fn profile_allows_network_when_policy_requests_it() {
+    let policy = SandboxPolicy::workspace_read_write("/Users/example/work")
+      .with_network_access(true);
+    let profile = macos_seatbelt_profile(&policy);
+
+    assert!(profile.contains("(allow network*)"));
+  }
+
+  #[test]
   fn profile_escapes_workspace_path() {
     let policy = SandboxPolicy::workspace_read_write("/tmp/Pith \"Demo\"");
     let profile = macos_seatbelt_profile(&policy);
@@ -380,5 +396,20 @@ mod tests {
     assert!(status
       .writable_roots
       .contains(&"/workspace/tmp".to_string()));
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  #[test]
+  fn status_reports_network_allowed_policy_outside_macos() {
+    let policy = SandboxPolicy::workspace_read_write("/workspace")
+      .with_network_access(true);
+    let status = native_sandbox_status(&policy);
+
+    assert!(!status.active);
+    assert!(status.network_allowed);
+    assert_eq!(
+      status.network_policy(),
+      "network allowed by policy, not native-enforced"
+    );
   }
 }
