@@ -189,6 +189,60 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
 }
 
 #[test]
+fn build_capability_registry_reports_command_definition_status() {
+  let plugin_root = create_temp_plugin_root("command-definition-status");
+  let plugin_dir = plugin_root.join("workspace-notes");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "workspace-notes",
+  "version": "0.1.0",
+  "displayName": "Workspace Notes",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:workspace.capture-note",
+    "command:workspace.missing-note"
+  ],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  fs::write(
+    commands_dir.join("workspace.capture-note.json"),
+    r#"{
+  "title": "Capture Workspace Note",
+  "description": "Prepare a reusable note.",
+  "prompt": "Capture a note."
+}"#,
+  )
+  .expect("write command definition");
+
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+  let registry = build_capability_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  let ready = registry
+    .iter()
+    .find(|capability| capability.identifier == "workspace.capture-note")
+    .expect("ready command capability");
+  assert_eq!(ready.metadata["surface"], "command");
+  assert_eq!(ready.metadata["definitionStatus"], "ready");
+
+  let missing = registry
+    .iter()
+    .find(|capability| capability.identifier == "workspace.missing-note")
+    .expect("missing command capability");
+  assert_eq!(missing.metadata["surface"], "command");
+  assert_eq!(missing.metadata["definitionStatus"], "missing");
+  assert!(missing.metadata["definitionError"].contains("failed to read"));
+}
+
+#[test]
 fn build_command_registry_loads_enabled_plugin_commands() {
   let plugin_root = create_temp_plugin_root("command-registry");
   let plugin_dir = plugin_root.join("workspace-notes");

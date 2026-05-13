@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::io::read_manifest;
+use anyhow::Result;
+
+use crate::io::{read_command_manifest, read_hook_manifest, read_manifest};
 use crate::types::PluginCatalogEntry;
+
+use super::capability_identifier_is_safe;
 
 pub(super) fn plugin_capability_metadata(
   plugin: &PluginCatalogEntry,
@@ -10,8 +14,37 @@ pub(super) fn plugin_capability_metadata(
   let Ok(manifest) = read_manifest(Path::new(&plugin.manifest_path)) else {
     return HashMap::new();
   };
+  let plugin_root = Path::new(&plugin.manifest_path).parent();
 
   let mut metadata_by_capability = HashMap::new();
+  if let Some(plugin_root) = plugin_root {
+    for capability in &manifest.capabilities {
+      let Some((kind, identifier)) = capability.split_once(':') else {
+        continue;
+      };
+      if !capability_identifier_is_safe(identifier) {
+        continue;
+      }
+      if kind == "command" {
+        metadata_by_capability.insert(
+          capability.clone(),
+          definition_metadata(
+            plugin_root,
+            "command",
+            "commands",
+            identifier,
+            read_command_manifest,
+          ),
+        );
+      } else if kind == "hook" {
+        metadata_by_capability.insert(
+          capability.clone(),
+          definition_metadata(plugin_root, "hook", "hooks", identifier, read_hook_manifest),
+        );
+      }
+    }
+  }
+
   for skill in manifest.skills {
     let mut metadata = HashMap::from([
       ("description".to_string(), skill.description),
@@ -60,4 +93,38 @@ pub(super) fn plugin_capability_metadata(
   }
 
   metadata_by_capability
+}
+
+fn definition_metadata<T>(
+  plugin_root: &Path,
+  surface: &str,
+  directory: &str,
+  identifier: &str,
+  read_definition: fn(&Path) -> Result<T>,
+) -> HashMap<String, String> {
+  let definition_path = plugin_root
+    .join(directory)
+    .join(format!("{identifier}.json"));
+  let mut metadata = HashMap::from([
+    ("surface".to_string(), surface.to_string()),
+    (
+      "definitionPath".to_string(),
+      definition_path.display().to_string(),
+    ),
+  ]);
+  match read_definition(&definition_path) {
+    Ok(_) => {
+      metadata.insert("definitionStatus".to_string(), "ready".to_string());
+    }
+    Err(error) => {
+      let status = if definition_path.exists() {
+        "invalid"
+      } else {
+        "missing"
+      };
+      metadata.insert("definitionStatus".to_string(), status.to_string());
+      metadata.insert("definitionError".to_string(), error.to_string());
+    }
+  }
+  metadata
 }

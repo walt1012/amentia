@@ -59,6 +59,8 @@ M4 turns plugins into bounded local capabilities. Current status:
 - Completed: plugin-root boundaries cover discovery, runner entrypoints,
   capability identifiers, network policy, local install cleanup, and
   symlink-safe bundle install.
+- Completed: capability registry surfaces command and hook definition status
+  for third-party plugin debugging.
 - Active: finish third-party connector debug loops and lifecycle hardening
   without adding a broad marketplace or admin console.
 
