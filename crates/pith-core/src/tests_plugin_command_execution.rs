@@ -533,10 +533,7 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
   );
   assert_eq!(items[1]["kind"], "approvalRequested");
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
-  assert_eq!(
-    items[1]["attributes"]["connectorSecretBindings"],
-    "none"
-  );
+  assert_eq!(items[1]["attributes"]["connectorSecretBindings"], "none");
   assert_eq!(
     result["pendingApprovals"][0]["action"],
     "run_plugin_command"
