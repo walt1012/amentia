@@ -85,6 +85,8 @@ M4 turns plugins into bounded local capabilities:
   selected.
 - Done: plugin commands now surface required connector status and inline
   authorization actions at the blocked command row.
+- Done: blocked command rows expose a focused manifest reveal action for local
+  plugin debugging without adding a broad debug panel.
 - Active: keep plugin UI progressive: discover, inspect, enable, authorize,
   run, debug.
 

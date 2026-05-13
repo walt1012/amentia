@@ -141,6 +141,9 @@ private struct PluginCommandsSection: View {
             },
             onAuthorizeConnector: { connectorID in
               viewModel.authorizePluginConnector(connectorID: connectorID)
+            },
+            onRevealManifest: {
+              viewModel.revealPluginManifest(pluginID: command.pluginID)
             }
           )
         }

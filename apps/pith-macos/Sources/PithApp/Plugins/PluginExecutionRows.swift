@@ -7,6 +7,7 @@ struct PluginCommandRow: View {
   let canAuthorizeConnector: (String) -> Bool
   let onRun: () -> Void
   let onAuthorizeConnector: (String) -> Void
+  let onRevealManifest: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -26,6 +27,13 @@ struct PluginCommandRow: View {
         }
         .buttonStyle(.bordered)
         .disabled(!canRun)
+
+        if showsManifestAction {
+          Button("Manifest") {
+            onRevealManifest()
+          }
+          .font(.caption2)
+        }
       }
 
       Text(command.description)
@@ -123,6 +131,10 @@ struct PluginCommandRow: View {
     }
 
     return "Contract: \(input.envelope) -> \(output.envelope)"
+  }
+
+  private var showsManifestAction: Bool {
+    command.runStatus != "ready" || command.execution?.supported == false
   }
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
