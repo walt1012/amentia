@@ -14,9 +14,10 @@ use serde_json::{json, Value};
 
 use super::plugin_command_runner::{
   command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
-  insert_resolved_entrypoint_attribute, merged_attributes, plugin_root_for_command,
-  plugin_runner_setup_attributes, run_stdio_runner, runner_entrypoint_setup_blocker,
-  safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
+  insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes, merged_attributes,
+  plugin_root_for_command, plugin_runner_setup_attributes, run_stdio_runner,
+  runner_entrypoint_setup_blocker, safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult,
+  PluginRunnerRunResult,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
@@ -181,6 +182,7 @@ pub(super) fn run_mcp_plugin_command(
   })?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
+  insert_runner_input_value_attributes(&mut runner_context_attributes, input);
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);
   insert_mcp_runner_attributes(&mut runner_context_attributes, &target, &server);
   let input_payload = mcp_tool_call_payload(

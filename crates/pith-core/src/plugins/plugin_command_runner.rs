@@ -9,7 +9,10 @@ use std::time::Duration;
 use std::os::unix::fs::PermissionsExt;
 
 use pith_model_runtime::GenerationCancellation;
-use pith_plugin_host::{PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry};
+use pith_plugin_host::{
+  PluginCommandEntry as HostPluginCommandEntry, PluginCommandEnvelopeEntry,
+  PluginCommandExecutionEntry,
+};
 use pith_process::{
   join_bounded_pipe_reader, read_bounded_pipe_in_background, terminate_process_group_or_child,
   wait_for_child, BoundedPipeOutput, ChildExitReason, ChildWaitResult,
@@ -240,6 +243,7 @@ pub(super) fn run_external_plugin_command(
   })?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
+  insert_runner_input_value_attributes(&mut runner_context_attributes, input);
   insert_connector_runner_attributes(&mut runner_context_attributes, connector_refs);
   let input_payload = json!({
     "envelope": execution.input.envelope,
@@ -294,7 +298,54 @@ pub(super) fn plugin_runner_setup_attributes(
   {
     attributes.insert("pluginRunnerEntrypoint".to_string(), entrypoint.to_string());
   }
+  insert_envelope_attributes(&mut attributes, "pluginRunnerInput", &execution.input);
+  insert_envelope_attributes(&mut attributes, "pluginRunnerOutput", &execution.output);
   attributes
+}
+
+fn insert_envelope_attributes(
+  attributes: &mut HashMap<String, String>,
+  prefix: &str,
+  envelope: &PluginCommandEnvelopeEntry,
+) {
+  attributes.insert(format!("{prefix}Envelope"), envelope.envelope.clone());
+  attributes.insert(
+    format!("{prefix}FieldCount"),
+    envelope.fields.len().to_string(),
+  );
+  let field_names = envelope
+    .fields
+    .iter()
+    .map(|field| field.name.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  if !field_names.is_empty() {
+    attributes.insert(format!("{prefix}FieldNames"), field_names);
+  }
+  let required_fields = envelope
+    .fields
+    .iter()
+    .filter(|field| field.required)
+    .map(|field| field.name.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  if !required_fields.is_empty() {
+    attributes.insert(format!("{prefix}RequiredFields"), required_fields);
+  }
+}
+
+pub(super) fn insert_runner_input_value_attributes(
+  attributes: &mut HashMap<String, String>,
+  input: Option<&str>,
+) {
+  attributes.insert(
+    "pluginRunnerInputProvided".to_string(),
+    input.is_some().to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerInputBytes".to_string(),
+    input.map(str::len).unwrap_or(0).to_string(),
+  );
 }
 
 pub(super) fn insert_plugin_root_attribute(

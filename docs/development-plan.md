@@ -52,30 +52,17 @@ typed plugin registries.
 
 M4 turns plugins into bounded local capabilities. Current status:
 
-- Completed: typed registries, progressive plugin UI, connector auth metadata,
-  mandatory connector approvals, and runner-owned timeline output.
-- Completed: bounded `stdio` and MCP runners with cancellation, protocol
-  diagnostics, setup readiness, permission readiness, and sandbox diagnostics.
-- Completed: plugin-root boundaries cover discovery, runner entrypoints,
-  capability identifiers, network policy, local install cleanup, and
-  symlink-safe bundle install.
-- Completed: capability registry surfaces command and hook definition status
-  for third-party plugin debugging.
-- Completed: command execution contracts can scope connector dependencies so
-  setup/status commands are not blocked by unrelated connector auth.
-- Completed: runner network sandbox honors command connector scope for
-  connector plugins with local setup/status commands.
-- Completed: auth-free scoped connectors reach runner payloads and diagnostics
-  without creating credential approvals or secret bindings.
-- Completed: command registry separates declared connector scope from
-  auth-required connector requirements for clearer third-party debugging.
-- Completed: plugin bundle lifecycle rejects nested manifests and constrains
-  removal to direct local install children.
-- Completed: plugin enable changes persist before mutating runtime state so
-  disk failures cannot leave a misleading enabled catalog.
-- Completed: plugin removal refreshes runtime catalog after disk removal even
-  if persisted cleanup reports an error.
-- Active: finish third-party connector debug loops and lifecycle hardening
+- Completed platform baseline: typed registries, progressive plugin UI,
+  connector auth metadata, mandatory credential approvals, and runner-owned
+  timeline output.
+- Completed execution baseline: bounded `stdio` and MCP runners, cancellation,
+  setup/readiness checks, permission gates, sandbox diagnostics, protocol
+  diagnostics, input/output contract diagnostics, connector-scoped network
+  policy, and command-scoped connector payloads.
+- Completed lifecycle baseline: symlink-safe bundle install, nested manifest
+  rejection, direct-child local removal, persisted-state-safe enable changes,
+  and catalog refresh after removal cleanup errors.
+- Active: finish third-party plugin debug loops and setup failure recovery
   without adding a broad marketplace or admin console.
 
 ## Next Order

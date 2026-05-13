@@ -1398,6 +1398,11 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   assert_eq!(items[1]["attributes"]["mcpInitializeResponseSeen"], "true");
   assert_eq!(items[1]["attributes"]["mcpToolResponseSeen"], "false");
   assert_eq!(items[1]["attributes"]["mcpJsonResponseCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerInputEnvelope"],
+    "pith.plugin.command.input"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerInputProvided"], "false");
   assert_eq!(items[1]["attributes"]["mcpInvalidJsonLineCount"], "1");
   assert_eq!(
     items[1]["attributes"]["mcpLastInvalidJsonPreview"],
@@ -1769,7 +1774,8 @@ exit 7
       methods::PLUGIN_COMMAND_RUN,
       Some(json!({
         "threadId": "thread-1",
-        "commandId": "stdio-failure::stdio-failure.run"
+        "commandId": "stdio-failure::stdio-failure.run",
+        "input": "Debug input"
       })),
     ),
   );
@@ -1802,6 +1808,28 @@ exit 7
   assert_eq!(
     items[1]["attributes"]["pluginRunnerEntrypoint"],
     "runner.sh"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerInputEnvelope"],
+    "pith.plugin.command.input"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerInputFieldNames"],
+    "threadId, input, workspace"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerInputRequiredFields"],
+    "threadId"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerInputProvided"], "true");
+  assert_eq!(items[1]["attributes"]["pluginRunnerInputBytes"], "11");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputEnvelope"],
+    "pith.plugin.command.output"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputRequiredFields"],
+    "items"
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerEntrypointCheck"],
