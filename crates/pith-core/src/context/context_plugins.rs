@@ -53,4 +53,24 @@ impl RuntimeContext {
     ));
     Ok(())
   }
+
+  pub(crate) fn refresh_plugins_with_runtime_state_fallback(
+    &mut self,
+  ) -> Result<Option<anyhow::Error>> {
+    let runtime_states = self
+      .plugin_state
+      .catalog()
+      .iter()
+      .map(|plugin| (plugin.id.clone(), plugin.enabled))
+      .collect::<HashMap<_, _>>();
+    let (plugin_states, state_error) = match self.persisted_plugin_states() {
+      Ok(plugin_states) => (plugin_states, None),
+      Err(error) => (runtime_states, Some(error)),
+    };
+    self.plugin_state.replace_catalog(apply_plugin_states(
+      load_plugin_catalog(self.plugin_state.roots())?,
+      &plugin_states,
+    ));
+    Ok(state_error)
+  }
 }
