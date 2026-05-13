@@ -78,6 +78,13 @@ extension AppViewModel {
     PluginDashboardPresenter.commandPreview(pluginDashboardSnapshot)
   }
 
+  func requiredPluginConnectors(commandID: String) -> [PluginConnectorSummary] {
+    PluginDashboardPresenter.requiredConnectors(
+      commandID: commandID,
+      snapshot: pluginDashboardSnapshot
+    )
+  }
+
   func pluginHookCountSummary() -> String {
     PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot)
   }

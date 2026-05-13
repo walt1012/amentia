@@ -83,6 +83,8 @@ M4 turns plugins into bounded local capabilities:
 - Done: selected timeline inspection now separates plugin diagnostics from
   sandbox diagnostics and only shows plugin context when a plugin item is
   selected.
+- Done: plugin commands now surface required connector status and inline
+  authorization actions at the blocked command row.
 - Active: keep plugin UI progressive: discover, inspect, enable, authorize,
   run, debug.
 

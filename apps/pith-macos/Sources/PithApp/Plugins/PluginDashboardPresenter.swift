@@ -204,6 +204,19 @@ enum PluginDashboardPresenter {
     snapshot.commands
   }
 
+  static func requiredConnectors(
+    commandID: String,
+    snapshot: PluginDashboardSnapshot
+  ) -> [PluginConnectorSummary] {
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }) else {
+      return []
+    }
+
+    return command.requiredConnectorIds.compactMap { connectorID in
+      snapshot.connectors.first(where: { $0.id == connectorID })
+    }
+  }
+
   static func hookCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     if snapshot.hooks.isEmpty {
       return "No Plugin Hooks"

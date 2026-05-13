@@ -131,9 +131,16 @@ private struct PluginCommandsSection: View {
         ForEach(viewModel.pluginCommandPreview()) { command in
           PluginCommandRow(
             command: command,
+            requiredConnectors: viewModel.requiredPluginConnectors(commandID: command.id),
             canRun: viewModel.canRunPluginCommand(commandID: command.id),
+            canAuthorizeConnector: { connectorID in
+              viewModel.canAuthorizePluginConnector(connectorID: connectorID)
+            },
             onRun: {
               viewModel.runPluginCommand(commandID: command.id)
+            },
+            onAuthorizeConnector: { connectorID in
+              viewModel.authorizePluginConnector(connectorID: connectorID)
             }
           )
         }

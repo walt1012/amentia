@@ -2,8 +2,11 @@ import SwiftUI
 
 struct PluginCommandRow: View {
   let command: PluginCommandSummary
+  let requiredConnectors: [PluginConnectorSummary]
   let canRun: Bool
+  let canAuthorizeConnector: (String) -> Bool
   let onRun: () -> Void
+  let onAuthorizeConnector: (String) -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -53,12 +56,7 @@ struct PluginCommandRow: View {
           .textSelection(.enabled)
       }
 
-      if !command.requiredConnectorIds.isEmpty {
-        Text("Connectors: \(command.requiredConnectorIds.joined(separator: ", "))")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
+      connectorRows
 
       if !command.permissions.isEmpty {
         Text("Permissions: \(command.permissions.joined(separator: ", "))")
@@ -68,6 +66,35 @@ struct PluginCommandRow: View {
       }
     }
     .padding(.vertical, 4)
+  }
+
+  @ViewBuilder
+  private var connectorRows: some View {
+    if !requiredConnectors.isEmpty {
+      ForEach(requiredConnectors) { connector in
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          Text(connectorLabel(connector))
+            .font(.caption2)
+            .foregroundColor(connector.authStatus == "needsAuth" ? .orange : .secondary)
+            .textSelection(.enabled)
+
+          Spacer()
+
+          if connector.authStatus == "needsAuth" {
+            Button("Authorize") {
+              onAuthorizeConnector(connector.id)
+            }
+            .font(.caption2)
+            .disabled(!canAuthorizeConnector(connector.id))
+          }
+        }
+      }
+    } else if !command.requiredConnectorIds.isEmpty {
+      Text("Connectors: \(command.requiredConnectorIds.joined(separator: ", "))")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+    }
   }
 
   private var executionLabel: String {
@@ -96,6 +123,11 @@ struct PluginCommandRow: View {
     }
 
     return "Contract: \(input.envelope) -> \(output.envelope)"
+  }
+
+  private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
+    let secret = connector.credentialSecretPresent ? "env-bound" : "no secret"
+    return "Connector: \(connector.displayName) | \(connector.authStatus) | \(secret)"
   }
 }
 
