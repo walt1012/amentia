@@ -43,9 +43,8 @@ pub(super) fn to_protocol_plugin_command(
   let approval_required = readiness.is_ready()
     && command.execution.is_some()
     && !readiness.required_connector_ids.is_empty();
-  let approval_reason = approval_required.then(|| {
-    "Connector-backed plugin commands require approval before runner launch.".to_string()
-  });
+  let approval_reason = approval_required
+    .then(|| "Connector-backed plugin commands require approval before runner launch.".to_string());
   let execution = command
     .execution
     .as_ref()
