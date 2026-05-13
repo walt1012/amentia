@@ -725,6 +725,20 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[1]["attributes"]["pluginCommandRunId"],
     items[0]["attributes"]["pluginCommandRunId"]
   );
+  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
+  assert_eq!(
+    items[1]["attributes"]["connectorCredentialProviders"],
+    "pith.localCredentialProvider"
+  );
+  assert_eq!(
+    items[1]["attributes"]["connectorCredentialHandles"],
+    "notion-mcp::notion"
+  );
+  assert_eq!(items[1]["attributes"]["connectorSecretBindings"], "env-bound");
+  assert!(items[1]["content"]
+    .as_str()
+    .expect("approval content")
+    .contains("secrets env-bound"));
   assert_eq!(
     result["pendingApprovals"][0]["action"],
     "run_plugin_command"

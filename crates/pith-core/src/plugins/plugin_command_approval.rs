@@ -44,6 +44,42 @@ pub(super) fn build_plugin_command_approval_request(
     .map(|connector| connector.connector_id.as_str())
     .collect::<Vec<_>>()
     .join(", ");
+  let connector_services = connector_refs
+    .iter()
+    .map(|connector| connector.service.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  let credential_stores = connector_refs
+    .iter()
+    .map(|connector| connector.credential_provider.store.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  let credential_providers = connector_refs
+    .iter()
+    .map(|connector| connector.credential_provider.provider.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  let credential_handles = connector_refs
+    .iter()
+    .map(|connector| connector.credential_provider.handle.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  let credential_labels = connector_refs
+    .iter()
+    .map(|connector| connector.credential_provider.label.as_str())
+    .collect::<Vec<_>>()
+    .join(", ");
+  let secret_bindings = connector_refs
+    .iter()
+    .map(|connector| {
+      if connector.credential_provider.env_key.is_some() {
+        "env-bound"
+      } else {
+        "none"
+      }
+    })
+    .collect::<Vec<_>>()
+    .join(", ");
 
   (
     approval.clone(),
@@ -52,8 +88,13 @@ pub(super) fn build_plugin_command_approval_request(
         kind: "approvalRequested".to_string(),
         title: "Plugin Approval Requested".to_string(),
         content: format!(
-          "Pith needs approval before running {} from {} in {}.\nConnectors: {}",
-          command.title, command.plugin_display_name, workspace_label, connector_ids
+          "Pith needs approval before running {} from {} in {}.\nConnectors: {}\nCredentials: {} | secrets {}",
+          command.title,
+          command.plugin_display_name,
+          workspace_label,
+          connector_ids,
+          credential_providers,
+          secret_bindings
         ),
         attributes: Some(HashMap::from([
           ("approvalId".to_string(), approval.id.clone()),
@@ -65,6 +106,12 @@ pub(super) fn build_plugin_command_approval_request(
             command.plugin_display_name.clone(),
           ),
           ("connectorIds".to_string(), connector_ids),
+          ("connectorServices".to_string(), connector_services),
+          ("connectorCredentialStores".to_string(), credential_stores),
+          ("connectorCredentialProviders".to_string(), credential_providers),
+          ("connectorCredentialHandles".to_string(), credential_handles),
+          ("connectorCredentialLabels".to_string(), credential_labels),
+          ("connectorSecretBindings".to_string(), secret_bindings),
         ])),
       },
       TimelineItem {
