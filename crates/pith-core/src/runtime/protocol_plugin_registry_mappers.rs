@@ -44,8 +44,8 @@ pub(super) fn to_protocol_plugin_command(
   let approval_required = readiness.is_ready()
     && command.execution.is_some()
     && !readiness.required_connector_ids.is_empty();
-  let approval_reason = approval_required
-    .then(|| PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON.to_string());
+  let approval_reason =
+    approval_required.then(|| PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON.to_string());
   let execution = command
     .execution
     .as_ref()
