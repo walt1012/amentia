@@ -31,7 +31,10 @@ pub fn install_plugin_bundle(
     );
   }
 
-  copy_directory(&source_root, &destination_root)?;
+  if let Err(error) = copy_directory(&source_root, &destination_root) {
+    let _ = fs::remove_dir_all(&destination_root);
+    return Err(error);
+  }
   Ok(crate::catalog::load_plugin_entry(
     destination_root.join("pith-plugin.json"),
   ))
@@ -121,10 +124,20 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
     let entry = entry.with_context(|| format!("failed to inspect {}", source.display()))?;
     let entry_path = entry.path();
     let destination_path = destination.join(entry.file_name());
+    let metadata = fs::symlink_metadata(&entry_path)
+      .with_context(|| format!("failed to inspect plugin path {}", entry_path.display()))?;
+    let file_type = metadata.file_type();
 
-    if entry_path.is_dir() {
+    if file_type.is_symlink() {
+      anyhow::bail!(
+        "plugin bundles cannot contain symbolic links: {}",
+        entry_path.display()
+      );
+    }
+
+    if metadata.is_dir() {
       copy_directory(&entry_path, &destination_path)?;
-    } else {
+    } else if metadata.is_file() {
       fs::copy(&entry_path, &destination_path).with_context(|| {
         format!(
           "failed to copy {} to {}",
@@ -132,6 +145,11 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
           destination_path.display()
         )
       })?;
+    } else {
+      anyhow::bail!(
+        "plugin bundles cannot contain unsupported file type: {}",
+        entry_path.display()
+      );
     }
   }
 

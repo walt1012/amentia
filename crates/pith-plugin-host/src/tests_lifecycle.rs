@@ -95,3 +95,46 @@ fn install_and_remove_local_plugin_bundle_round_trip() {
   assert_eq!(removed_plugin.plugin_id, "focus-review");
   assert!(removed_plugin.removed_path.ends_with("focus-review"));
 }
+
+#[cfg(unix)]
+#[test]
+fn install_rejects_plugin_bundle_symlinks_and_cleans_destination() {
+  use std::os::unix::fs::symlink;
+
+  let source_root = create_temp_plugin_root("install-symlink-source");
+  let install_root = create_temp_plugin_root("install-symlink-target");
+  let outside_root = create_temp_plugin_root("install-symlink-outside");
+  let source_plugin_dir = source_root.join("symlink-plugin");
+  fs::create_dir_all(source_plugin_dir.join("commands")).expect("create source commands dir");
+  fs::write(
+    source_plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "symlink-plugin",
+  "version": "0.1.0",
+  "displayName": "Symlink Plugin",
+  "description": "Local plugin with a symlink.",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:review.focus"],
+  "permissions": ["file.read"],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write source manifest");
+  fs::write(outside_root.join("outside.txt"), "outside").expect("write outside file");
+  symlink(
+    outside_root.join("outside.txt"),
+    source_plugin_dir.join("commands/outside-link.json"),
+  )
+  .expect("create plugin symlink");
+
+  let error = install_plugin_bundle(&source_plugin_dir, &install_root)
+    .expect_err("symlinked plugin bundle should be rejected");
+
+  assert!(!install_root.join("symlink-plugin").exists());
+
+  fs::remove_dir_all(&source_root).expect("cleanup source root");
+  fs::remove_dir_all(&install_root).expect("cleanup install root");
+  fs::remove_dir_all(&outside_root).expect("cleanup outside root");
+
+  assert!(error.to_string().contains("symbolic links"));
+}

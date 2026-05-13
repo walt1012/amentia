@@ -71,6 +71,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   before runner launch.
 - Done: external plugin runners map declared `network.outbound` permission into
   native sandbox network policy.
+- Done: local plugin install rejects symlinked bundle contents and cleans failed
+  installs to preserve plugin-root boundaries.
 - Active: tighten the run/debug loop for real third-party connectors while
   keeping deterministic routing and minimal UI.
 
