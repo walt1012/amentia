@@ -1,5 +1,6 @@
 use crate::types::{PluginCapabilityRegistration, PluginCatalogEntry};
 
+use super::capability_identifier_is_safe;
 use super::metadata::plugin_capability_metadata;
 
 pub fn build_capability_registry(
@@ -15,6 +16,9 @@ pub fn build_capability_registry(
         .iter()
         .filter_map(|capability| {
           let (kind, identifier) = capability.split_once(':')?;
+          if !capability_identifier_is_safe(identifier) {
+            return None;
+          }
           Some(PluginCapabilityRegistration {
             capability_id: format!("{}::{}", plugin.id, capability),
             kind: kind.to_string(),

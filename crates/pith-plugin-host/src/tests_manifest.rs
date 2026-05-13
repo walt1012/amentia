@@ -74,6 +74,17 @@ fn validate_manifest_rejects_plugin_name_path_segments() {
 }
 
 #[test]
+fn validate_manifest_rejects_capability_identifier_path_segments() {
+  let manifest = manifest(vec!["command:../outside"], vec!["file.read"]);
+
+  let error = validate_manifest(&manifest).expect_err("path segment capability should fail");
+
+  assert!(error
+    .to_string()
+    .contains("must not contain path separators"));
+}
+
+#[test]
 fn validation_hint_describes_supported_capability_kinds() {
   let hint = validation_hint_for_error("plugin capability kind `memory` is not supported");
 

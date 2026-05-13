@@ -88,6 +88,7 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         capability
       );
     }
+    validate_manifest_identifier("capability", identifier)?;
   }
 
   for skill in &manifest.skills {

@@ -57,7 +57,8 @@ M4 turns plugins into bounded local capabilities. Current status:
 - Completed: bounded `stdio` and MCP runners with cancellation, protocol
   diagnostics, setup readiness, permission readiness, and sandbox diagnostics.
 - Completed: plugin-root boundaries cover discovery, runner entrypoints,
-  network policy, local install cleanup, and symlink-safe bundle install.
+  capability identifiers, network policy, local install cleanup, and
+  symlink-safe bundle install.
 - Active: finish third-party connector debug loops and lifecycle hardening
   without adding a broad marketplace or admin console.
 

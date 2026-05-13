@@ -3,6 +3,8 @@ use std::path::Path;
 use crate::io::read_hook_manifest;
 use crate::types::{PluginCatalogEntry, PluginHookEntry};
 
+use super::capability_identifier_is_safe;
+
 pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntry> {
   let mut hooks = vec![];
 
@@ -19,6 +21,9 @@ pub fn build_hook_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginHookEntr
         continue;
       };
       if kind != "hook" {
+        continue;
+      }
+      if !capability_identifier_is_safe(identifier) {
         continue;
       }
 

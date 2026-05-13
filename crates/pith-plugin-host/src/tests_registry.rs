@@ -18,6 +18,7 @@ fn build_capability_registry_skips_disabled_and_invalid_plugins() {
       capabilities: vec![
         "prompt_pack:workspace.notes".to_string(),
         "settings:workspace.preferences".to_string(),
+        "command:../outside".to_string(),
       ],
       permissions: vec!["file.read".to_string(), "file.write".to_string()],
       manifest_path: "plugins/bundled/workspace-notes/pith-plugin.json".to_string(),
@@ -355,6 +356,46 @@ fn build_command_registry_applies_default_execution_contract() {
 }
 
 #[test]
+fn build_command_registry_skips_unsafe_capability_identifiers() {
+  let plugin_root = create_temp_plugin_root("command-unsafe-identifier");
+  let plugin_dir = plugin_root.join("unsafe-command");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::write(
+    plugin_dir.join("outside.json"),
+    r#"{
+  "title": "Outside Command",
+  "description": "This command must not be loaded through a path escape.",
+  "prompt": "Do not load this."
+}"#,
+  )
+  .expect("write outside command definition");
+  let plugin = PluginCatalogEntry {
+    id: "unsafe-command".to_string(),
+    name: "unsafe-command".to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Unsafe Command".to_string(),
+    status: "ready".to_string(),
+    description: "Manually constructed plugin".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec!["command:../outside".to_string()],
+    permissions: vec!["file.read".to_string()],
+    manifest_path: plugin_dir.join("pith-plugin.json").display().to_string(),
+    provenance: "local".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+
+  let commands = build_command_registry(&[plugin]);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert!(commands.is_empty());
+}
+
+#[test]
 fn build_hook_registry_loads_enabled_plugin_hooks() {
   let plugin_root = create_temp_plugin_root("hook-registry");
   let plugin_dir = plugin_root.join("shell-recorder");
@@ -416,4 +457,45 @@ fn build_hook_registry_loads_enabled_plugin_hooks() {
     vec!["shell".to_string(), "hook".to_string()]
   );
   assert!(hooks[0].source_path.ends_with("shell.recorder.json"));
+}
+
+#[test]
+fn build_hook_registry_skips_unsafe_capability_identifiers() {
+  let plugin_root = create_temp_plugin_root("hook-unsafe-identifier");
+  let plugin_dir = plugin_root.join("unsafe-hook");
+  let hooks_dir = plugin_dir.join("hooks");
+  fs::create_dir_all(&hooks_dir).expect("create hooks dir");
+  fs::write(
+    plugin_dir.join("outside.json"),
+    r#"{
+  "title": "Outside Hook",
+  "description": "This hook must not be loaded through a path escape.",
+  "event": "shell.completed",
+  "messageTemplate": "Do not load this."
+}"#,
+  )
+  .expect("write outside hook definition");
+  let plugin = PluginCatalogEntry {
+    id: "unsafe-hook".to_string(),
+    name: "unsafe-hook".to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Unsafe Hook".to_string(),
+    status: "ready".to_string(),
+    description: "Manually constructed plugin".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec!["hook:../outside".to_string()],
+    permissions: vec!["shell.exec".to_string()],
+    manifest_path: plugin_dir.join("pith-plugin.json").display().to_string(),
+    provenance: "local".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+
+  let hooks = build_hook_registry(&[plugin]);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert!(hooks.is_empty());
 }

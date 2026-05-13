@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::io::read_command_manifest;
 use crate::types::{PluginCatalogEntry, PluginCommandEntry};
 
+use super::capability_identifier_is_safe;
 use super::command_contract::command_execution_entry;
 
 pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginCommandEntry> {
@@ -21,6 +22,9 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         continue;
       };
       if kind != "command" {
+        continue;
+      }
+      if !capability_identifier_is_safe(identifier) {
         continue;
       }
 
