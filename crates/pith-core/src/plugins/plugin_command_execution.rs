@@ -44,7 +44,7 @@ fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
   let running_id = snapshot.running_id.clone();
-  let (execution_kind, content, attributes) =
+  let (execution_kind, content, runner_memory_notes, attributes) =
     if is_supported_builtin_execution(snapshot.command.execution_kind.as_deref()) {
       let builtin_result = execute_builtin_plugin_command(
         &snapshot.command,
@@ -55,6 +55,7 @@ fn execute_plugin_command_snapshot(
       (
         builtin_result.execution_kind,
         builtin_result.content,
+        vec![],
         HashMap::new(),
       )
     } else {
@@ -73,6 +74,7 @@ fn execute_plugin_command_snapshot(
           input: snapshot.input,
           items,
           capture_memory: false,
+          runner_memory_notes: vec![],
           pending_approval: None,
         });
       }
@@ -96,6 +98,7 @@ fn execute_plugin_command_snapshot(
           input: snapshot.input,
           items,
           capture_memory: false,
+          runner_memory_notes: vec![],
           pending_approval: Some(approval),
         });
       }
@@ -134,11 +137,13 @@ fn execute_plugin_command_snapshot(
             input: snapshot.input,
             items,
             capture_memory: false,
+            runner_memory_notes: vec![],
             pending_approval: None,
           });
         }
       };
       if !runner_result.items.is_empty() {
+        let runner_memory_notes = runner_result.memory_notes;
         let mut items = vec![snapshot.command_item];
         items.extend(runner_result.items);
         tag_plugin_command_items(&mut items, &running_id);
@@ -149,12 +154,14 @@ fn execute_plugin_command_snapshot(
           input: snapshot.input,
           items,
           capture_memory: true,
+          runner_memory_notes,
           pending_approval: None,
         });
       }
       (
         runner_result.execution_kind,
         runner_result.content,
+        runner_result.memory_notes,
         runner_result.attributes,
       )
     };
@@ -175,6 +182,7 @@ fn execute_plugin_command_snapshot(
     input: snapshot.input,
     items,
     capture_memory: true,
+    runner_memory_notes,
     pending_approval: None,
   })
 }

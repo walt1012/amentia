@@ -2129,6 +2129,138 @@ printf '{}\n'
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_captures_stdio_runner_memory_notes() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-runner-memory",
+    "runner-memory",
+    "Runner Memory",
+  );
+  let workspace = create_temp_workspace("plugin-command-runner-memory-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    source_root.join("commands").join("runner-memory.run.json"),
+    r#"{
+  "title": "Run Memory Plugin",
+  "description": "Execute a local stdio runner that emits memory notes.",
+  "prompt": "Run the local plugin runner.",
+  "execution": {
+    "kind": "stdio.runnerMemory",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+cat >/dev/null
+cat <<'JSON'
+{
+  "content": "Runner memory captured.",
+  "memoryNotes": [
+    {
+      "title": "Runner Preference",
+      "body": "Prefer narrow plugin output contracts.",
+      "source": "plugin.runner-memory.custom",
+      "tags": ["runner", "contract"]
+    }
+  ]
+}
+JSON
+"#,
+  )
+  .expect("write runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "runner-memory".to_string(),
+      name: "runner-memory".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Runner Memory".to_string(),
+      status: "ready".to_string(),
+      description: "Runner memory command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:runner-memory.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Runner Memory Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "runner-memory::runner-memory.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  let memory_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Memory Note Saved")
+    .expect("runner memory item");
+  assert_eq!(memory_item["attributes"]["memoryNoteTitle"], "Runner Preference");
+  assert_eq!(items[1]["attributes"]["pluginRunnerOutputMemoryNoteCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputInvalidMemoryNoteCount"],
+    "0"
+  );
+  let saved_note = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .find(|note| note.title == "Runner Preference")
+    .expect("saved runner memory note");
+  assert_eq!(saved_note.source, "plugin.runner-memory.custom");
+  assert!(saved_note
+    .body
+    .contains("Prefer narrow plugin output contracts."));
+  assert!(saved_note.tags.contains(&"contract".to_string()));
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_preflights_non_executable_runner() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =

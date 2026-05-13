@@ -37,6 +37,14 @@ pub(crate) struct PluginCommandSnapshot {
   pub(super) approval_id: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub(super) struct PluginRunnerMemoryNoteDraft {
+  pub(super) title: String,
+  pub(super) body: String,
+  pub(super) source: Option<String>,
+  pub(super) tags: Vec<String>,
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct PluginConnectorExecutionRef {
@@ -99,5 +107,6 @@ pub(super) struct PluginCommandOutput {
   pub(super) input: Option<String>,
   pub(super) items: Vec<TimelineItem>,
   pub(super) capture_memory: bool,
+  pub(super) runner_memory_notes: Vec<PluginRunnerMemoryNoteDraft>,
   pub(super) pending_approval: Option<PendingApproval>,
 }

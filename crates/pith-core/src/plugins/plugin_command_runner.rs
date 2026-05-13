@@ -23,13 +23,18 @@ use serde_json::json;
 
 use super::plugin_command_mcp_runner::{is_supported_mcp_execution, run_mcp_plugin_command};
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
-use super::plugin_command_types::PluginConnectorExecutionRef;
+use super::plugin_command_types::{PluginConnectorExecutionRef, PluginRunnerMemoryNoteDraft};
 
 const PLUGIN_RUNNER_TIMEOUT: Duration = Duration::from_secs(60);
 const PLUGIN_RUNNER_POLL_INTERVAL: Duration = Duration::from_millis(25);
 const PLUGIN_RUNNER_GRACE_PERIOD: Duration = Duration::from_millis(250);
 const PLUGIN_RUNNER_OUTPUT_LIMIT: usize = 64 * 1024;
 const PLUGIN_RUNNER_LOG_PREVIEW_LIMIT: usize = 2048;
+const PLUGIN_RUNNER_MEMORY_NOTE_LIMIT: usize = 4;
+const PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT: usize = 120;
+const PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT: usize = 4096;
+const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
+const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
 
 pub(super) type PluginRunnerRunResult<T> = std::result::Result<T, Box<PluginRunnerFailure>>;
 
@@ -37,6 +42,7 @@ pub(super) struct PluginRunnerResult {
   pub(super) execution_kind: String,
   pub(super) content: String,
   pub(super) items: Vec<TimelineItem>,
+  pub(super) memory_notes: Vec<PluginRunnerMemoryNoteDraft>,
   pub(super) attributes: HashMap<String, String>,
 }
 
@@ -101,6 +107,8 @@ struct PluginRunnerOutputEnvelope {
   message: Option<String>,
   #[serde(default)]
   items: Vec<PluginRunnerTimelineItemEnvelope>,
+  #[serde(default)]
+  memory_notes: Vec<PluginRunnerMemoryNoteEnvelope>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -111,6 +119,16 @@ struct PluginRunnerTimelineItemEnvelope {
   content: String,
   #[serde(default)]
   attributes: HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PluginRunnerMemoryNoteEnvelope {
+  title: Option<String>,
+  body: Option<String>,
+  source: Option<String>,
+  #[serde(default)]
+  tags: Vec<String>,
 }
 
 pub(crate) fn is_supported_external_plugin_execution(command: &HostPluginCommandEntry) -> bool {
@@ -780,6 +798,7 @@ fn plugin_runner_output(
       execution_kind: execution_kind.to_string(),
       content: plugin_runner_content(output),
       items: vec![],
+      memory_notes: vec![],
       attributes,
     });
   };
@@ -791,13 +810,17 @@ fn plugin_runner_output(
     .unwrap_or_default();
   let (items, invalid_item_count) =
     plugin_runner_timeline_items(command, execution_kind, &attributes, envelope.items);
+  let (memory_notes, invalid_memory_note_count) =
+    plugin_runner_memory_notes(envelope.memory_notes);
   insert_plugin_runner_output_attributes(
     &mut attributes,
     &content,
     items.len(),
     invalid_item_count,
+    memory_notes.len(),
+    invalid_memory_note_count,
   );
-  if content.is_empty() && items.is_empty() {
+  if content.is_empty() && items.is_empty() && memory_notes.is_empty() {
     attributes.insert(
       "pluginRunnerOutputStatus".to_string(),
       "emptyEnvelope".to_string(),
@@ -825,11 +848,16 @@ fn plugin_runner_output(
   Ok(PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
     content: if content.is_empty() {
-      "Plugin command completed with timeline items.".to_string()
+      if memory_notes.is_empty() {
+        "Plugin command completed with timeline items.".to_string()
+      } else {
+        "Plugin command completed with memory notes.".to_string()
+      }
     } else {
       content
     },
     items,
+    memory_notes,
     attributes,
   })
 }
@@ -873,6 +901,8 @@ fn insert_plugin_runner_output_attributes(
   content: &str,
   valid_item_count: usize,
   invalid_item_count: usize,
+  memory_note_count: usize,
+  invalid_memory_note_count: usize,
 ) {
   attributes.insert("pluginRunnerOutputParsed".to_string(), "true".to_string());
   attributes.insert(
@@ -887,6 +917,61 @@ fn insert_plugin_runner_output_attributes(
     "pluginRunnerOutputInvalidTimelineItemCount".to_string(),
     invalid_item_count.to_string(),
   );
+  attributes.insert(
+    "pluginRunnerOutputMemoryNoteCount".to_string(),
+    memory_note_count.to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerOutputInvalidMemoryNoteCount".to_string(),
+    invalid_memory_note_count.to_string(),
+  );
+}
+
+fn plugin_runner_memory_notes(
+  notes: Vec<PluginRunnerMemoryNoteEnvelope>,
+) -> (Vec<PluginRunnerMemoryNoteDraft>, usize) {
+  let total_note_count = notes.len();
+  let valid_notes = notes
+    .into_iter()
+    .take(PLUGIN_RUNNER_MEMORY_NOTE_LIMIT)
+    .filter_map(plugin_runner_memory_note)
+    .collect::<Vec<_>>();
+  let invalid_note_count = total_note_count.saturating_sub(valid_notes.len());
+
+  (valid_notes, invalid_note_count)
+}
+
+fn plugin_runner_memory_note(
+  note: PluginRunnerMemoryNoteEnvelope,
+) -> Option<PluginRunnerMemoryNoteDraft> {
+  let title = note.title.as_deref().map(str::trim).unwrap_or_default();
+  let body = note.body.as_deref().map(str::trim).unwrap_or_default();
+  if title.is_empty() || body.is_empty() {
+    return None;
+  }
+
+  Some(PluginRunnerMemoryNoteDraft {
+    title: bounded_runner_memory_text(title, PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT),
+    body: bounded_runner_memory_text(body, PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT),
+    source: note
+      .source
+      .as_deref()
+      .map(str::trim)
+      .filter(|source| !source.is_empty())
+      .map(str::to_string),
+    tags: note
+      .tags
+      .into_iter()
+      .take(PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT)
+      .map(|tag| tag.trim().to_string())
+      .filter(|tag| !tag.is_empty())
+      .map(|tag| bounded_runner_memory_text(&tag, PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT))
+      .collect(),
+  })
+}
+
+fn bounded_runner_memory_text(value: &str, limit: usize) -> String {
+  value.chars().take(limit).collect()
 }
 
 fn plugin_runner_content(output: &str) -> String {

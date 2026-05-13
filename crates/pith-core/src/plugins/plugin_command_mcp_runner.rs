@@ -498,6 +498,7 @@ fn mcp_runner_output(
     execution_kind: execution_kind.to_string(),
     content,
     items: vec![],
+    memory_notes: vec![],
     attributes,
   })
 }
