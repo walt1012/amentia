@@ -296,8 +296,8 @@ mod tests {
 
   #[test]
   fn profile_allows_network_when_policy_requests_it() {
-    let policy = SandboxPolicy::workspace_read_write("/Users/example/work")
-      .with_network_access(true);
+    let policy =
+      SandboxPolicy::workspace_read_write("/Users/example/work").with_network_access(true);
     let profile = macos_seatbelt_profile(&policy);
 
     assert!(profile.contains("(allow network*)"));
@@ -401,8 +401,7 @@ mod tests {
   #[cfg(not(target_os = "macos"))]
   #[test]
   fn status_reports_network_allowed_policy_outside_macos() {
-    let policy = SandboxPolicy::workspace_read_write("/workspace")
-      .with_network_access(true);
+    let policy = SandboxPolicy::workspace_read_write("/workspace").with_network_access(true);
     let status = native_sandbox_status(&policy);
 
     assert!(!status.active);
