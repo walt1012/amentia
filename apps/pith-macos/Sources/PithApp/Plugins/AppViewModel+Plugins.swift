@@ -231,10 +231,16 @@ extension AppViewModel {
   }
 
   func runPluginCommandWithInput(commandID: String) {
-    guard let command = pluginCommands.first(where: { $0.id == commandID }),
-          let input = PluginCommandInputDialogPresenter.commandInput(command: command)
-    else {
+    guard let command = pluginCommands.first(where: { $0.id == commandID }) else {
+      runtimeDetail = "Plugin command is not loaded."
+      return
+    }
+    guard let input = PluginCommandInputDialogPresenter.commandInput(command: command) else {
       runtimeDetail = "Plugin command input was cancelled."
+      return
+    }
+    if command.requiresPlainInput && input.isEmpty {
+      runtimeDetail = "Plugin command input is required."
       return
     }
 
@@ -252,6 +258,14 @@ extension AppViewModel {
         commandID: commandID,
         snapshot: snapshot
       ) ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+      return
+    }
+    if input == nil,
+       let reason = PluginActionPlanner.directCommandRunDisabledReason(
+         commandID: commandID,
+         snapshot: snapshot
+       ) {
+      runtimeDetail = reason
       return
     }
 

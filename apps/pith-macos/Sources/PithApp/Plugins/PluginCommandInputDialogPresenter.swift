@@ -9,7 +9,9 @@ enum PluginCommandInputDialogPresenter {
     alert.informativeText = inputPrompt(command)
 
     let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
-    textField.placeholderString = "Optional command input"
+    textField.placeholderString = command.requiresPlainInput
+      ? "Required command input"
+      : "Optional command input"
     alert.accessoryView = textField
     alert.addButton(withTitle: "Run")
     alert.addButton(withTitle: "Cancel")

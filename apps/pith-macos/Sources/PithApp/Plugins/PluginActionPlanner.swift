@@ -171,4 +171,22 @@ enum PluginActionPlanner {
 
     return nil
   }
+
+  static func directCommandRunDisabledReason(
+    commandID: String,
+    snapshot: PluginActionSnapshot
+  ) -> String? {
+    if let reason = commandRunDisabledReason(commandID: commandID, snapshot: snapshot) {
+      return reason
+    }
+
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }) else {
+      return "Command is not loaded."
+    }
+    if command.requiresPlainInput {
+      return "Command requires input. Use Run with Input."
+    }
+
+    return nil
+  }
 }

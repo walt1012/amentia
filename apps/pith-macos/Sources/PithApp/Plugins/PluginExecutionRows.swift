@@ -28,9 +28,9 @@ struct PluginCommandRow: View {
           onRun()
         }
         .buttonStyle(.bordered)
-        .disabled(!canRun)
+        .disabled(!canRunDirectly)
 
-        if acceptsPlainInput {
+        if command.acceptsPlainInput {
           Button("Run with Input") {
             onRunWithInput()
           }
@@ -64,6 +64,13 @@ struct PluginCommandRow: View {
         Text("Run blocker: \(runDisabledReason)")
           .font(.caption2)
           .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
+
+      if command.requiresPlainInput {
+        Text("Input required: use Run with Input.")
+          .font(.caption2)
+          .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
 
@@ -170,13 +177,8 @@ struct PluginCommandRow: View {
     command.runStatus != "ready" || command.execution?.supported == false
   }
 
-  private var acceptsPlainInput: Bool {
-    command.execution?
-      .input?
-      .fields
-      .contains { field in
-        field.name == "input" && (field.kind == "text" || field.kind == "string")
-      } ?? false
+  private var canRunDirectly: Bool {
+    canRun && !command.requiresPlainInput
   }
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {

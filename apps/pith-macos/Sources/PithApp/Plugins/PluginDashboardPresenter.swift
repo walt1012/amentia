@@ -226,7 +226,8 @@ enum PluginDashboardPresenter {
       .map { command in
         let status = command.runStatus == "ready" ? "ready" : command.runStatus
         let policy = command.approvalRequired ? " | approval" : ""
-        return "\(command.pluginDisplayName): \(command.title) (\(status)\(policy))"
+        let input = command.requiresPlainInput ? " | input" : ""
+        return "\(command.pluginDisplayName): \(command.title) (\(status)\(policy)\(input))"
       }
       .joined(separator: "\n")
   }

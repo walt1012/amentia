@@ -100,6 +100,27 @@ struct PluginCommandEnvelopeFieldSummary: Hashable {
   let description: String?
 }
 
+extension PluginCommandSummary {
+  var acceptsPlainInput: Bool {
+    inputField?.isPlainTextInput == true
+  }
+
+  var requiresPlainInput: Bool {
+    inputField.map { $0.required && $0.isPlainTextInput } ?? false
+  }
+
+  private var inputField: PluginCommandEnvelopeFieldSummary? {
+    execution?.input?.fields.first { $0.name == "input" }
+  }
+}
+
+private extension PluginCommandEnvelopeFieldSummary {
+  var isPlainTextInput: Bool {
+    let normalizedKind = kind.lowercased()
+    return normalizedKind == "text" || normalizedKind == "string"
+  }
+}
+
 struct PluginHookSummary: Identifiable, Hashable {
   let id: String
   let title: String
