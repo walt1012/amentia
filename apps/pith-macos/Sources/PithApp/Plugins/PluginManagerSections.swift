@@ -139,6 +139,9 @@ private struct PluginCommandsSection: View {
             onRun: {
               viewModel.runPluginCommand(commandID: command.id)
             },
+            onRunWithInput: {
+              viewModel.runPluginCommandWithInput(commandID: command.id)
+            },
             onAuthorizeConnector: { connectorID in
               viewModel.authorizePluginConnector(connectorID: connectorID)
             },

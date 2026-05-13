@@ -207,6 +207,21 @@ extension AppViewModel {
   }
 
   func runPluginCommand(commandID: String) {
+    runPluginCommand(commandID: commandID, input: nil)
+  }
+
+  func runPluginCommandWithInput(commandID: String) {
+    guard let command = pluginCommands.first(where: { $0.id == commandID }),
+          let input = PluginCommandInputDialogPresenter.commandInput(command: command)
+    else {
+      runtimeDetail = "Plugin command input was cancelled."
+      return
+    }
+
+    runPluginCommand(commandID: commandID, input: input)
+  }
+
+  private func runPluginCommand(commandID: String, input: String?) {
     let snapshot = pluginActionSnapshot()
     if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
       runtimeDetail = TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
@@ -228,13 +243,19 @@ extension AppViewModel {
 
     runtimeDetail = TimelineEventPresenter.runningPluginCommandDetail
     let requestID = localExecutionRequests.beginAgentRequest(threadID: threadID)
+    let trimmedInput = input?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let commandInput = trimmedInput?.isEmpty == true ? nil : trimmedInput
 
     let task = Task {
       defer {
         localExecutionRequests.clearAgentRequest(requestID: requestID)
       }
       do {
-        let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
+        let result = try await runtimeBridge.runPluginCommand(
+          threadID: threadID,
+          commandID: commandID,
+          input: commandInput
+        )
         await applyRuntimeTurnResult(result, refreshMemory: true)
       } catch {
         if Task.isCancelled {

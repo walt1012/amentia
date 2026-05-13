@@ -6,6 +6,7 @@ struct PluginCommandRow: View {
   let canRun: Bool
   let canAuthorizeConnector: (String) -> Bool
   let onRun: () -> Void
+  let onRunWithInput: () -> Void
   let onAuthorizeConnector: (String) -> Void
   let onRevealManifest: () -> Void
 
@@ -27,6 +28,14 @@ struct PluginCommandRow: View {
         }
         .buttonStyle(.bordered)
         .disabled(!canRun)
+
+        if acceptsPlainInput {
+          Button("Run with Input") {
+            onRunWithInput()
+          }
+          .font(.caption2)
+          .disabled(!canRun)
+        }
 
         if showsManifestAction {
           Button("Manifest") {
@@ -135,6 +144,15 @@ struct PluginCommandRow: View {
 
   private var showsManifestAction: Bool {
     command.runStatus != "ready" || command.execution?.supported == false
+  }
+
+  private var acceptsPlainInput: Bool {
+    command.execution?
+      .input?
+      .fields
+      .contains { field in
+        field.name == "input" && (field.kind == "text" || field.kind == "string")
+      } ?? false
   }
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
