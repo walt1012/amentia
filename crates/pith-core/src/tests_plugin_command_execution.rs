@@ -1590,34 +1590,9 @@ printf 'should not run\n'
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
   fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
-  assert!(response.error.is_none());
-  let result = response.result.expect("command run result");
-  let items = result["items"].as_array().expect("items");
-  assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerFailureKind"],
-    "runnerSetup"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypointCheck"],
-    "notExecutable"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypointFileKind"],
-    "file"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypointExecutable"],
-    "false"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerExecutionKind"],
-    "stdio.nonExecutable"
-  );
-  assert!(items[1]["content"]
-    .as_str()
-    .unwrap()
-    .contains("not executable"));
+  let error = response.error.expect("runner setup error");
+  assert_eq!(error.code, -32053);
+  assert!(error.message.contains("not executable"));
   assert_eq!(
     context
       .execution_state
@@ -1819,37 +1794,9 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
   fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
-  assert!(response.error.is_none());
-  let result = response.result.expect("command run result");
-  let items = result["items"].as_array().expect("items");
-  assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
-  assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerFailureKind"],
-    "runnerSetup"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Check the plugin manifest, entrypoint path, sandbox, and local files."
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerExecutionDriver"],
-    "stdio"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerExecutionKind"],
-    "stdio.escape"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypoint"],
-    "../runner.sh"
-  );
-  assert!(items[1]["attributes"]["pluginRunnerPluginRoot"].is_string());
-  assert!(items[1]["content"]
-    .as_str()
-    .unwrap()
-    .contains("inside the plugin bundle"));
+  let error = response.error.expect("runner setup error");
+  assert_eq!(error.code, -32053);
+  assert!(error.message.contains("inside the plugin bundle"));
   assert_eq!(
     context
       .execution_state

@@ -122,6 +122,51 @@ pub(crate) fn is_supported_external_plugin_execution(command: &HostPluginCommand
   })
 }
 
+pub(crate) fn stdio_runner_setup_blocker(command: &HostPluginCommandEntry) -> Option<String> {
+  let execution = command.execution.as_ref()?;
+  if execution.driver != "stdio" {
+    return None;
+  }
+  let entrypoint = execution
+    .entrypoint
+    .as_deref()
+    .map(str::trim)
+    .filter(|entrypoint| !entrypoint.is_empty())?;
+  let plugin_root = match plugin_root_for_command(command) {
+    Ok(plugin_root) => plugin_root,
+    Err((_, message)) => return Some(message),
+  };
+  let entrypoint_path = match safe_entrypoint_path(&plugin_root, entrypoint) {
+    Ok(entrypoint_path) => entrypoint_path,
+    Err((_, message)) => return Some(message),
+  };
+  let metadata = match entrypoint_path.metadata() {
+    Ok(metadata) => metadata,
+    Err(error) => {
+      return Some(format!(
+        "Plugin command `{}` runner entrypoint metadata could not be read: {error}",
+        command.command_id
+      ));
+    }
+  };
+  if !metadata.is_file() {
+    return Some(format!(
+      "Plugin command `{}` runner entrypoint is not a file: {}",
+      command.command_id,
+      entrypoint_path.display()
+    ));
+  }
+  if !runner_entrypoint_is_executable(&metadata) {
+    return Some(format!(
+      "Plugin command `{}` runner entrypoint is not executable: {}",
+      command.command_id,
+      entrypoint_path.display()
+    ));
+  }
+
+  None
+}
+
 pub(super) fn run_external_plugin_command(
   command: &HostPluginCommandEntry,
   thread_id: &str,

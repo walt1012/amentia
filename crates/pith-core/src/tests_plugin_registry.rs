@@ -242,6 +242,7 @@ fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
   let source_root =
     create_temp_plugin_bundle("plugin-command-stdio-status", "stdio-tools", "Stdio Tools");
   let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
   fs::write(
     source_root.join("commands").join("stdio-tools.run.json"),
     r#"{
@@ -255,6 +256,23 @@ fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
 }"#,
   )
   .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&runner_path)
+      .expect("runner metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+  }
   replace_plugin_catalog(
     &mut context,
     vec![PluginCatalogEntry {
@@ -293,6 +311,77 @@ fn plugin_command_registry_marks_stdio_execution_contracts_supported() {
   assert_eq!(commands[0]["runStatus"], "ready");
 }
 
+#[cfg(unix)]
+#[test]
+fn plugin_command_registry_blocks_non_executable_stdio_runner() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-stdio-runner-setup",
+    "stdio-setup",
+    "Stdio Setup",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    source_root.join("commands").join("stdio-setup.run.json"),
+    r#"{
+  "title": "Run Stdio Setup",
+  "description": "Run a local stdio tool from the plugin bundle.",
+  "prompt": "Run the local stdio tool.",
+  "execution": {
+    "kind": "stdio.echo",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "stdio-setup".to_string(),
+      name: "stdio-setup".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Stdio Setup".to_string(),
+      status: "ready".to_string(),
+      description: "Stdio setup plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:stdio-setup.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command registry result");
+  let commands = result["commands"].as_array().expect("commands");
+  assert_eq!(commands.len(), 1);
+  assert_eq!(commands[0]["execution"]["supported"], true);
+  assert_eq!(commands[0]["runStatus"], "runnerSetup");
+  assert!(commands[0]["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("not executable"));
+}
+
 #[test]
 fn connector_backed_plugin_commands_require_connector_auth() {
   let mut context = RuntimeContext::new_in_memory();
@@ -302,6 +391,7 @@ fn connector_backed_plugin_commands_require_connector_auth() {
     "Notion Tools",
   );
   let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
   fs::write(
     &plugin_manifest,
     r#"{
@@ -330,6 +420,23 @@ fn connector_backed_plugin_commands_require_connector_auth() {
 }"#,
   )
   .expect("write connector command plugin manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&runner_path)
+      .expect("runner metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+  }
   fs::write(
     source_root.join("commands").join("notion-tools.sync.json"),
     r#"{
