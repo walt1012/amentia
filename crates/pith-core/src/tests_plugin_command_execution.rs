@@ -383,6 +383,130 @@ printf '{"content":"External runner completed."}\n'
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_rejects_missing_required_user_input_before_runner_start() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-required-input",
+    "required-input",
+    "Required Input",
+  );
+  let workspace = create_temp_workspace("plugin-command-required-input-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("required-input.run.json"),
+    r#"{
+  "title": "Run Required Input Plugin",
+  "description": "Execute a local stdio runner that requires user input.",
+  "prompt": "Run the local plugin runner.",
+  "execution": {
+    "kind": "stdio.requiredInput",
+    "entrypoint": "runner.sh",
+    "input": {
+      "envelope": "pith.plugin.command.input",
+      "fields": [
+        {
+          "name": "threadId",
+          "kind": "string",
+          "required": true
+        },
+        {
+          "name": "input",
+          "kind": "text",
+          "required": true
+        }
+      ]
+    }
+  }
+}"#,
+  )
+  .expect("write command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"runner should not start"}\n'
+"#,
+  )
+  .expect("write runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "required-input".to_string(),
+      name: "required-input".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Required Input".to_string(),
+      status: "ready".to_string(),
+      description: "Required input command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:required-input.run".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Required Input Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "required-input::required-input.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  let error = response.error.expect("required input error");
+  assert_eq!(error.code, -32053);
+  assert!(error
+    .message
+    .contains("requires command input field `input`"));
+  assert_eq!(
+    context
+      .execution_state
+      .counts()
+      .running_plugin_command_count(),
+    0
+  );
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_disables_network_for_empty_connector_scope() {
   use std::os::unix::fs::PermissionsExt;
 

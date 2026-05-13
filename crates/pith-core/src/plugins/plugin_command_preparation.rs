@@ -69,6 +69,14 @@ pub fn prepare_plugin_command_run(
     .filter(|input| !input.is_empty())
     .map(str::to_string);
   let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  if let Err(message) = validate_plugin_command_input_contract(
+    &command,
+    workspace.as_ref(),
+    input.as_deref(),
+    &connector_refs,
+  ) {
+    return Err(JsonRpcResponse::error(request.id, -32053, message));
+  }
   let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
     .then(|| context.sequence_state.next_approval_id());
   let cancellation = GenerationCancellation::new();
@@ -145,6 +153,14 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
     .filter(|input| !input.is_empty())
     .map(str::to_string);
   let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  if let Err(message) = validate_plugin_command_input_contract(
+    &command,
+    workspace.as_ref(),
+    input.as_deref(),
+    &connector_refs,
+  ) {
+    return Err((-32053, message));
+  }
   let running_id = format!("{}::{}", approval.thread_id, command.command_id);
 
   Ok(Some(build_plugin_command_snapshot(
@@ -160,6 +176,52 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
       approval_id: None,
     },
   )))
+}
+
+fn validate_plugin_command_input_contract(
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+  connector_refs: &[PluginConnectorExecutionRef],
+) -> std::result::Result<(), String> {
+  let Some(execution) = command.execution.as_ref() else {
+    return Ok(());
+  };
+
+  for field in execution.input.fields.iter().filter(|field| field.required) {
+    match field.name.trim() {
+      "threadId" | "commandId" | "envelope" => {}
+      "input" if input.is_some() => {}
+      "input" => {
+        return Err(format!(
+          "Plugin command `{}` requires command input field `input`.",
+          command.command_id
+        ));
+      }
+      "workspace" if workspace.is_some() => {}
+      "workspace" => {
+        return Err(format!(
+          "Plugin command `{}` requires an open workspace for input field `workspace`.",
+          command.command_id
+        ));
+      }
+      "connectors" if !connector_refs.is_empty() => {}
+      "connectors" => {
+        return Err(format!(
+          "Plugin command `{}` requires connector input field `connectors`, but no connector context is available.",
+          command.command_id
+        ));
+      }
+      field_name => {
+        return Err(format!(
+          "Plugin command `{}` requires unsupported input field `{field_name}`.",
+          command.command_id
+        ));
+      }
+    }
+  }
+
+  Ok(())
 }
 
 struct PluginCommandSnapshotDraft {
