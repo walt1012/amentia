@@ -91,6 +91,8 @@ M4 turns plugins into bounded local capabilities:
   approval, runner result, failure, and runner-owned items.
 - Done: connector-backed plugin approvals show non-secret connector, provider,
   handle, label, and secret-binding metadata before launch.
+- Done: every connector-backed plugin command now requires approval before
+  runner launch, regardless of whether the driver is stdio or MCP.
 - Done: commands that declare plain text input can be run with a lightweight
   input prompt without adding a full form builder.
 - Active: keep plugin UI progressive: discover, inspect, enable, authorize,

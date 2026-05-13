@@ -12,11 +12,7 @@ pub(super) fn plugin_command_requires_user_approval(
   command: &HostPluginCommandEntry,
   connector_refs: &[PluginConnectorExecutionRef],
 ) -> bool {
-  command
-    .execution
-    .as_ref()
-    .is_some_and(|execution| execution.driver == "mcp")
-    && !connector_refs.is_empty()
+  command.execution.is_some() && !connector_refs.is_empty()
 }
 
 pub(super) fn build_plugin_command_approval_request(

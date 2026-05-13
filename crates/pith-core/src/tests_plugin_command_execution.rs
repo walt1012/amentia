@@ -382,7 +382,7 @@ printf '{"content":"External runner completed."}\n'
 
 #[cfg(unix)]
 #[test]
-fn plugin_command_run_passes_connector_refs_to_stdio_runner_without_secrets() {
+fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   use std::os::unix::fs::PermissionsExt;
 
   let mut context = RuntimeContext::new_in_memory();
@@ -518,12 +518,10 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
-
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
   let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(
     items[0]["attributes"]["connectorIds"],
     "notion-runner::notion"
@@ -533,30 +531,73 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[0]["attributes"]["connectorCredentialProviders"],
     "pith.localCredentialProvider"
   );
-  assert_eq!(items[1]["kind"], "pluginResult");
-  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
+  assert_eq!(items[1]["kind"], "approvalRequested");
+  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerConnectorIds"],
+    items[1]["attributes"]["connectorSecretBindings"],
+    "none"
+  );
+  assert_eq!(
+    result["pendingApprovals"][0]["action"],
+    "run_plugin_command"
+  );
+  let approval_id = result["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(approval_response.error.is_none());
+  let approval_result = approval_response.result.expect("approval result");
+  let items = approval_result["items"].as_array().expect("approval items");
+  assert_eq!(items[0]["kind"], "approvalResolved");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["connectorIds"],
+    "notion-runner::notion"
+  );
+  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
+  assert_eq!(
+    items[1]["attributes"]["connectorCredentialProviders"],
+    "pith.localCredentialProvider"
+  );
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerConnectorIds"],
     "notion-runner::notion"
   );
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerConnectorServices"],
+    items[2]["attributes"]["pluginRunnerConnectorServices"],
     "notion"
   );
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerConnectorStores"],
+    items[2]["attributes"]["pluginRunnerConnectorStores"],
     "keychain"
   );
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerCredentialProviders"],
+    items[2]["attributes"]["pluginRunnerCredentialProviders"],
     "pith.localCredentialProvider"
   );
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerCredentialHandles"],
+    items[2]["attributes"]["pluginRunnerCredentialHandles"],
     "notion-runner::notion"
   );
   assert_eq!(
-    items[1]["content"],
+    items[2]["content"],
     "connectorId=true provider=true handle=true store=true label=true secretLeak=false"
   );
 }
