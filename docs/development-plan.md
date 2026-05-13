@@ -87,6 +87,8 @@ M4 turns plugins into bounded local capabilities:
   authorization actions at the blocked command row.
 - Done: blocked command rows expose a focused manifest reveal action for local
   plugin debugging without adding a broad debug panel.
+- Done: plugin command timeline items share a stable run id across command,
+  approval, runner result, failure, and runner-owned items.
 - Active: keep plugin UI progressive: discover, inspect, enable, authorize,
   run, debug.
 

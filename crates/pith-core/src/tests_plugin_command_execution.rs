@@ -715,8 +715,16 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   let result = response.result.expect("command run result");
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(
+    items[0]["attributes"]["pluginCommandRunId"],
+    "thread-1::notion-mcp::notion-mcp.create-task"
+  );
   assert_eq!(items[1]["kind"], "approvalRequested");
   assert_eq!(items[1]["title"], "Plugin Approval Requested");
+  assert_eq!(
+    items[1]["attributes"]["pluginCommandRunId"],
+    items[0]["attributes"]["pluginCommandRunId"]
+  );
   assert_eq!(
     result["pendingApprovals"][0]["action"],
     "run_plugin_command"
@@ -750,6 +758,14 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   assert_eq!(items[0]["kind"], "approvalResolved");
   assert_eq!(items[1]["kind"], "pluginCommand");
   assert_eq!(items[2]["kind"], "pluginResult");
+  assert_eq!(
+    items[1]["attributes"]["pluginCommandRunId"],
+    "thread-1::notion-mcp::notion-mcp.create-task"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginCommandRunId"],
+    items[1]["attributes"]["pluginCommandRunId"]
+  );
   assert_eq!(
     items[2]["attributes"]["executionKind"],
     "mcp.notionCreateTask"

@@ -114,6 +114,10 @@ enum TimelineInspectorPresenter {
       lines.append("Command: \(commandID) | \(executionKind)")
     }
 
+    if let runID = entry.attributes["pluginCommandRunId"] {
+      lines.append("Run: \(runID)")
+    }
+
     if let sourcePath = entry.attributes["sourcePath"] {
       lines.append("Source: \(sourcePath)")
     }
@@ -210,6 +214,7 @@ enum TimelineInspectorPresenter {
       "pluginRunnerErrorCode",
       "mcpProtocolStatus",
       "permissionGate",
+      "pluginCommandRunId",
     ].contains { key in entry.attributes[key] != nil }
   }
 

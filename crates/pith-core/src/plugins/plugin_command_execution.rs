@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+use pith_protocol::TimelineItem;
 
 use super::plugin_command_approval::build_plugin_command_approval_request;
 use super::plugin_command_builtins::execute_builtin_plugin_command;
@@ -42,6 +43,7 @@ pub(crate) fn execute_plugin_command_snapshot_items(
 fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
+  let running_id = snapshot.running_id.clone();
   let (execution_kind, content, attributes) =
     if is_supported_builtin_execution(snapshot.command.execution_kind.as_deref()) {
       let builtin_result = execute_builtin_plugin_command(
@@ -63,6 +65,7 @@ fn execute_plugin_command_snapshot(
       ) {
         let mut items = vec![snapshot.command_item];
         items.extend(permission_items);
+        tag_plugin_command_items(&mut items, &running_id);
         return Ok(PluginCommandOutput {
           thread_id: snapshot.thread_id,
           command: snapshot.command,
@@ -85,6 +88,7 @@ fn execute_plugin_command_snapshot(
         );
         let mut items = vec![snapshot.command_item];
         items.extend(approval_items);
+        tag_plugin_command_items(&mut items, &running_id);
         return Ok(PluginCommandOutput {
           thread_id: snapshot.thread_id,
           command: snapshot.command,
@@ -121,12 +125,14 @@ fn execute_plugin_command_snapshot(
             &stderr,
             attributes,
           );
+          let mut items = vec![snapshot.command_item, failure_item];
+          tag_plugin_command_items(&mut items, &running_id);
           return Ok(PluginCommandOutput {
             thread_id: snapshot.thread_id,
             command: snapshot.command,
             workspace: snapshot.workspace,
             input: snapshot.input,
-            items: vec![snapshot.command_item, failure_item],
+            items,
             capture_memory: false,
             pending_approval: None,
           });
@@ -135,6 +141,7 @@ fn execute_plugin_command_snapshot(
       if !runner_result.items.is_empty() {
         let mut items = vec![snapshot.command_item];
         items.extend(runner_result.items);
+        tag_plugin_command_items(&mut items, &running_id);
         return Ok(PluginCommandOutput {
           thread_id: snapshot.thread_id,
           command: snapshot.command,
@@ -159,13 +166,24 @@ fn execute_plugin_command_snapshot(
   }
   let assistant_item =
     build_plugin_assistant_timeline_item(&snapshot.command, &execution_kind, &content);
+  let mut items = vec![snapshot.command_item, result_item, assistant_item];
+  tag_plugin_command_items(&mut items, &running_id);
   Ok(PluginCommandOutput {
     thread_id: snapshot.thread_id,
     command: snapshot.command,
     workspace: snapshot.workspace,
     input: snapshot.input,
-    items: vec![snapshot.command_item, result_item, assistant_item],
+    items,
     capture_memory: true,
     pending_approval: None,
   })
+}
+
+fn tag_plugin_command_items(items: &mut [TimelineItem], running_id: &str) {
+  for item in items {
+    item
+      .attributes
+      .get_or_insert_with(HashMap::new)
+      .insert("pluginCommandRunId".to_string(), running_id.to_string());
+  }
 }
