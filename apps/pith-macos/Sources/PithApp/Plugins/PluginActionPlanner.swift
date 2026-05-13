@@ -43,30 +43,68 @@ enum PluginActionPlanner {
     connectorID: String,
     snapshot: PluginActionSnapshot
   ) -> Bool {
+    connectorAuthorizeDisabledReason(connectorID: connectorID, snapshot: snapshot) == nil
+  }
+
+  static func connectorAuthorizeDisabledReason(
+    connectorID: String,
+    snapshot: PluginActionSnapshot
+  ) -> String? {
     guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
-      return false
+      return "Connector is not loaded."
     }
 
-    return snapshot.runtimeState == .ready
-      && connector.enabled
-      && connector.authRequired
-      && connector.authStatus == "needsAuth"
-      && !snapshot.hasActiveOrPendingTurn
-      && !snapshot.hasLifecycleOperation
+    if snapshot.runtimeState != .ready {
+      return "Runtime is not ready."
+    }
+    if !connector.enabled {
+      return "Connector plugin is disabled."
+    }
+    if !connector.authRequired {
+      return "Connector does not require authorization."
+    }
+    if connector.authStatus != "needsAuth" {
+      return "Connector is already authorized."
+    }
+    if snapshot.hasActiveOrPendingTurn {
+      return "Finish or cancel the active task first."
+    }
+    if snapshot.hasLifecycleOperation {
+      return "Finish the current plugin operation first."
+    }
+
+    return nil
   }
 
   static func canClearConnectorCredential(
     connectorID: String,
     snapshot: PluginActionSnapshot
   ) -> Bool {
+    connectorClearCredentialDisabledReason(connectorID: connectorID, snapshot: snapshot) == nil
+  }
+
+  static func connectorClearCredentialDisabledReason(
+    connectorID: String,
+    snapshot: PluginActionSnapshot
+  ) -> String? {
     guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
-      return false
+      return "Connector is not loaded."
     }
 
-    return snapshot.runtimeState == .ready
-      && connector.credentialPresent
-      && !snapshot.hasActiveOrPendingTurn
-      && !snapshot.hasLifecycleOperation
+    if snapshot.runtimeState != .ready {
+      return "Runtime is not ready."
+    }
+    if !connector.credentialPresent {
+      return "Connector has no stored credential."
+    }
+    if snapshot.hasActiveOrPendingTurn {
+      return "Finish or cancel the active task first."
+    }
+    if snapshot.hasLifecycleOperation {
+      return "Finish the current plugin operation first."
+    }
+
+    return nil
   }
 
   static func commandNeedsExecutionContract(

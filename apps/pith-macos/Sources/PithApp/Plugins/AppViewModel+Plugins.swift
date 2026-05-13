@@ -137,13 +137,16 @@ extension AppViewModel {
 
   func authorizePluginConnector(connectorID: String) {
     guard canAuthorizePluginConnector(connectorID: connectorID) else {
+      runtimeDetail = pluginConnectorAuthorizeDisabledReason(connectorID: connectorID)
+        ?? "Connector cannot be authorized yet."
       return
     }
 
     guard let operationID = beginPluginLifecycleOperation(
       detail: "Authorizing connector..."
     ) else {
-      runtimeDetail = "Finish the current plugin operation before authorizing a connector."
+      runtimeDetail = pluginConnectorAuthorizeDisabledReason(connectorID: connectorID)
+        ?? "Finish the current plugin operation before authorizing a connector."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -170,13 +173,16 @@ extension AppViewModel {
 
   func clearPluginConnectorCredential(connectorID: String) {
     guard canClearPluginConnectorCredential(connectorID: connectorID) else {
+      runtimeDetail = pluginConnectorClearDisabledReason(connectorID: connectorID)
+        ?? "Connector credential cannot be cleared yet."
       return
     }
 
     guard let operationID = beginPluginLifecycleOperation(
       detail: "Clearing connector credential..."
     ) else {
-      runtimeDetail = "Finish the current plugin operation before clearing a connector credential."
+      runtimeDetail = pluginConnectorClearDisabledReason(connectorID: connectorID)
+        ?? "Finish the current plugin operation before clearing a connector credential."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -318,8 +324,22 @@ extension AppViewModel {
     )
   }
 
+  func pluginConnectorAuthorizeDisabledReason(connectorID: String) -> String? {
+    PluginActionPlanner.connectorAuthorizeDisabledReason(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
+  }
+
   func canClearPluginConnectorCredential(connectorID: String) -> Bool {
     PluginActionPlanner.canClearConnectorCredential(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
+  }
+
+  func pluginConnectorClearDisabledReason(connectorID: String) -> String? {
+    PluginActionPlanner.connectorClearCredentialDisabledReason(
       connectorID: connectorID,
       snapshot: pluginActionSnapshot()
     )

@@ -175,6 +175,12 @@ private struct PluginConnectorsSection: View {
             canClearCredential: viewModel.canClearPluginConnectorCredential(
               connectorID: connector.id
             ),
+            authorizeDisabledReason: viewModel.pluginConnectorAuthorizeDisabledReason(
+              connectorID: connector.id
+            ),
+            clearCredentialDisabledReason: viewModel.pluginConnectorClearDisabledReason(
+              connectorID: connector.id
+            ),
             onAuthorize: {
               viewModel.authorizePluginConnector(connectorID: connector.id)
             },

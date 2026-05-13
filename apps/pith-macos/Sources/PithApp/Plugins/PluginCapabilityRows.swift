@@ -48,6 +48,8 @@ struct PluginConnectorRow: View {
   let connector: PluginConnectorSummary
   let canAuthorize: Bool
   let canClearCredential: Bool
+  let authorizeDisabledReason: String?
+  let clearCredentialDisabledReason: String?
   let onAuthorize: () -> Void
   let onClearCredential: () -> Void
 
@@ -75,6 +77,13 @@ struct PluginConnectorRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
+
+      if let actionBlocker {
+        Text("Connector blocker: \(actionBlocker)")
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
 
       if !connector.permissions.isEmpty {
         Text("Permissions: \(connector.permissions.joined(separator: ", "))")
@@ -110,6 +119,18 @@ struct PluginConnectorRow: View {
         .disabled(!canAuthorize)
       }
     }
+  }
+
+  private var actionBlocker: String? {
+    guard connector.authRequired else {
+      return nil
+    }
+
+    if connector.credentialPresent {
+      return clearCredentialDisabledReason
+    }
+
+    return authorizeDisabledReason
   }
 
   private var statusColor: Color {
