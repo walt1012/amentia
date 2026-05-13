@@ -8,6 +8,22 @@ struct PluginConnectorCredentialInput {
 
 enum PluginConnectorCredentialDialogPresenter {
   static func credentialInput(connector: PluginConnectorSummary) -> PluginConnectorCredentialInput? {
+    var initialLabel = connector.credentialLabel ?? "\(connector.displayName) authorization marker"
+    while true {
+      guard let input = credentialInput(connector: connector, initialLabel: initialLabel) else {
+        return nil
+      }
+      if input.secret != nil || confirmsMarkerOnlyAuthorization(connector: connector) {
+        return input
+      }
+      initialLabel = input.label ?? initialLabel
+    }
+  }
+
+  private static func credentialInput(
+    connector: PluginConnectorSummary,
+    initialLabel: String
+  ) -> PluginConnectorCredentialInput? {
     let alert = NSAlert()
     alert.alertStyle = .informational
     alert.messageText = "Authorize \(connector.displayName)"
@@ -15,10 +31,10 @@ enum PluginConnectorCredentialDialogPresenter {
 
     let labelField = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
     labelField.placeholderString = "Credential label"
-    labelField.stringValue = connector.credentialLabel ?? "\(connector.displayName) credential"
+    labelField.stringValue = initialLabel
 
     let secretField = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
-    secretField.placeholderString = "Optional token or API key"
+    secretField.placeholderString = "Token or API key, or leave blank for marker-only auth"
 
     let stack = NSStackView(views: [
       labeledField(title: "Label", field: labelField),
@@ -48,7 +64,22 @@ enum PluginConnectorCredentialDialogPresenter {
       ? "No declared scopes."
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
     return "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
-      + "\(scopes) Secrets are passed to plugin runners through per-run environment bindings."
+      + "\(scopes) Secrets are passed to plugin runners through per-run environment bindings. "
+      + "Leave the secret empty only when this connector uses marker-only authorization."
+  }
+
+  private static func confirmsMarkerOnlyAuthorization(
+    connector: PluginConnectorSummary
+  ) -> Bool {
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = "Authorize \(connector.displayName) Without a Secret?"
+    alert.informativeText =
+      "Pith can store an authorization marker without a token or API key. "
+      + "Use this only for connector flows that do not need a local secret."
+    alert.addButton(withTitle: "Authorize Marker")
+    alert.addButton(withTitle: "Back")
+    return alert.runModal() == .alertFirstButtonReturn
   }
 
   private static func labeledField(title: String, field: NSView) -> NSView {
