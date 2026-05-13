@@ -22,18 +22,24 @@ pub(crate) fn handle_plugin_remove(
       Err(error) => return JsonRpcResponse::error(request.id, -32054, error.to_string()),
     };
 
-  if let Err(error) = context.delete_plugin_state(&removed_plugin.plugin_id) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
+  let mut cleanup_error = None;
   if let Err(error) =
     context.delete_plugin_connector_credentials_for_plugin(&removed_plugin.plugin_id)
   {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    cleanup_error = Some(error);
+  }
+  if let Err(error) = context.delete_plugin_state(&removed_plugin.plugin_id) {
+    if cleanup_error.is_none() {
+      cleanup_error = Some(error);
+    }
   }
   context
     .plugin_state
     .clear_connector_credentials_for_plugin(&removed_plugin.plugin_id);
   if let Err(error) = context.refresh_plugins() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+  if let Some(error) = cleanup_error {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
 

@@ -219,3 +219,56 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   assert!(context.plugin_state.catalog().is_empty());
   assert!(!persisted_states.contains_key("focus-review"));
 }
+
+#[test]
+fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("plugin-remove-failing-storage");
+  let database_path = storage_root.join("pith.db");
+  let source_root =
+    create_temp_plugin_bundle("plugin-remove-refresh-source", "focus-review", "Focus Review");
+  let install_root = create_temp_workspace("plugin-remove-refresh-root");
+  fs::create_dir_all(&database_path).expect("create directory at database path");
+  context.persistence_state.set_store_for_testing(RuntimeStore::new(
+    database_path,
+    storage_root.join("threads.json"),
+  ));
+  context
+    .plugin_state
+    .configure_roots(vec![install_root.clone()], install_root.clone());
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let install_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_INSTALL,
+      Some(json!({
+        "sourcePath": source_root.display().to_string()
+      })),
+    ),
+  );
+  assert!(install_response.error.is_none());
+
+  let manifest_path = context.plugin_state.catalog()[0].manifest_path.clone();
+  let remove_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_REMOVE,
+      Some(json!({
+        "manifestPath": manifest_path
+      })),
+    ),
+  );
+
+  assert!(!std::path::Path::new(&manifest_path).exists());
+  assert!(context.plugin_state.catalog().is_empty());
+
+  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+    .expect("cleanup plugin source root");
+  fs::remove_dir_all(&install_root).expect("cleanup install root");
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  assert!(remove_response.result.is_none());
+  let error = remove_response.error.expect("plugin remove error");
+  assert_eq!(error.code, -32010);
+}

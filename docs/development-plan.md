@@ -73,6 +73,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   removal to direct local install children.
 - Completed: plugin enable changes persist before mutating runtime state so
   disk failures cannot leave a misleading enabled catalog.
+- Completed: plugin removal refreshes runtime catalog after disk removal even
+  if persisted cleanup reports an error.
 - Active: finish third-party connector debug loops and lifecycle hardening
   without adding a broad marketplace or admin console.
 
