@@ -104,14 +104,14 @@ fn discover_plugin_manifests(directory: &Path, manifests: &mut Vec<PathBuf>) -> 
       continue;
     }
 
-  if metadata.is_file()
-    && path
+    if metadata.is_file()
+      && path
         .file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| name == "pith-plugin.json")
-  {
-    manifests.push(path);
-  }
+    {
+      manifests.push(path);
+    }
   }
 
   Ok(())
