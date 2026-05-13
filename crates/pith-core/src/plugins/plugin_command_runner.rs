@@ -810,8 +810,7 @@ fn plugin_runner_output(
     .unwrap_or_default();
   let (items, invalid_item_count) =
     plugin_runner_timeline_items(command, execution_kind, &attributes, envelope.items);
-  let (memory_notes, invalid_memory_note_count) =
-    plugin_runner_memory_notes(envelope.memory_notes);
+  let (memory_notes, invalid_memory_note_count) = plugin_runner_memory_notes(envelope.memory_notes);
   insert_plugin_runner_output_attributes(
     &mut attributes,
     &content,

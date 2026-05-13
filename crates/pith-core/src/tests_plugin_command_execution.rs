@@ -2240,8 +2240,14 @@ JSON
     .iter()
     .find(|item| item["title"] == "Plugin Memory Note Saved")
     .expect("runner memory item");
-  assert_eq!(memory_item["attributes"]["memoryNoteTitle"], "Runner Preference");
-  assert_eq!(items[1]["attributes"]["pluginRunnerOutputMemoryNoteCount"], "1");
+  assert_eq!(
+    memory_item["attributes"]["memoryNoteTitle"],
+    "Runner Preference"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputMemoryNoteCount"],
+    "1"
+  );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerOutputInvalidMemoryNoteCount"],
     "0"
