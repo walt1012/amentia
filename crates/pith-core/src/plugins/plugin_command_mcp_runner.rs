@@ -77,16 +77,7 @@ pub(super) fn is_supported_mcp_execution(
   command: &HostPluginCommandEntry,
   execution: &PluginCommandExecutionEntry,
 ) -> bool {
-  let Ok(target) = mcp_target_for_execution(command, execution) else {
-    return false;
-  };
-  let Ok(plugin_root) = plugin_root_for_command(command) else {
-    return false;
-  };
-  mcp_server_for_target(command, &plugin_root, &target.server_id)
-    .ok()
-    .and_then(|server| server.command)
-    .is_some_and(|command| !command.trim().is_empty())
+  mcp_target_for_execution(command, execution).is_ok()
 }
 
 pub(crate) fn mcp_runner_setup_blocker(command: &HostPluginCommandEntry) -> Option<String> {
