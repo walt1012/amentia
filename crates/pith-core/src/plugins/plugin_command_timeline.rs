@@ -197,7 +197,10 @@ pub(super) fn build_plugin_failure_timeline_item(
       "pluginRunnerFailureKind".to_string(),
       failure_kind.to_string(),
     ),
-    ("pluginRunnerRecoveryHint".to_string(), recovery_hint.clone()),
+    (
+      "pluginRunnerRecoveryHint".to_string(),
+      recovery_hint.clone(),
+    ),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));
   if let Some(execution_kind) = execution_kind {
