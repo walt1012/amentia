@@ -135,6 +135,19 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         auth_policy.auth_type
       );
     }
+    if auth_policy.auth_type == "none" {
+      if auth_policy.required {
+        anyhow::bail!("plugin auth policy type `none` must not require credentials");
+      }
+      if !auth_policy.scopes.is_empty() {
+        anyhow::bail!("plugin auth policy type `none` must not declare scopes");
+      }
+      if let Some(credential_store) = auth_policy.credential_store.as_ref() {
+        if credential_store != "none" {
+          anyhow::bail!("plugin auth policy type `none` must use credential store `none`");
+        }
+      }
+    }
     if let Some(credential_store) = auth_policy.credential_store.as_ref() {
       if !KNOWN_CREDENTIAL_STORES.contains(&credential_store.as_str()) {
         anyhow::bail!(

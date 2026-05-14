@@ -32,7 +32,7 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     auth_type: "none".to_string(),
     required: false,
     scopes: vec![],
-    credential_store: Some("local".to_string()),
+    credential_store: Some("none".to_string()),
   });
 
   let result = validate_manifest(&manifest);
@@ -124,4 +124,27 @@ fn validate_manifest_rejects_unimplemented_keychain_store() {
   assert!(error
     .to_string()
     .contains("plugin credential store `keychain` is not supported"));
+}
+
+#[test]
+fn validate_manifest_rejects_local_store_for_auth_free_policy() {
+  let mut manifest = manifest(vec!["connector:web"], vec!["network.outbound"]);
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "web".to_string(),
+    display_name: "Web".to_string(),
+    service: "web".to_string(),
+    homepage: None,
+  }];
+  manifest.auth_policy = Some(PluginAuthPolicyManifest {
+    auth_type: "none".to_string(),
+    required: false,
+    scopes: vec![],
+    credential_store: Some("local".to_string()),
+  });
+
+  let error = validate_manifest(&manifest).expect_err("auth-free connectors use no credential");
+
+  assert!(error
+    .to_string()
+    .contains("plugin auth policy type `none` must use credential store `none`"));
 }
