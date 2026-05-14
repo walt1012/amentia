@@ -75,7 +75,7 @@ pub(super) fn plugin_capability_metadata(
     if !server.args.is_empty() {
       metadata.insert("args".to_string(), server.args.join(" "));
     }
-    insert_mcp_server_status(&mut metadata, &server_id, &transport, command.as_deref());
+    insert_mcp_server_status(&mut metadata, &server_id, command.as_deref());
     metadata_by_capability.insert(format!("mcp_server:{server_id}"), metadata);
   }
 
@@ -108,19 +108,9 @@ pub(super) fn plugin_capability_metadata(
 fn insert_mcp_server_status(
   metadata: &mut HashMap<String, String>,
   server_id: &str,
-  transport: &str,
   command: Option<&str>,
 ) {
-  if transport != "stdio" {
-    metadata.insert(
-      "serverStatus".to_string(),
-      "unsupportedTransport".to_string(),
-    );
-    metadata.insert(
-      "serverError".to_string(),
-      format!("MCP server `{server_id}` uses unsupported transport `{transport}`."),
-    );
-  } else if command.is_none() {
+  if command.is_none() {
     metadata.insert("serverStatus".to_string(), "missingCommand".to_string());
     metadata.insert(
       "serverError".to_string(),
