@@ -184,9 +184,7 @@ enum PluginDashboardPresenter {
     }
 
     return snapshot.connectors
-      .map {
-        "\($0.displayName): \($0.status) | auth: \($0.authStatus) via \($0.pluginDisplayName)"
-      }
+      .map { connectorDetail($0) }
       .joined(separator: "\n")
   }
 
@@ -224,10 +222,7 @@ enum PluginDashboardPresenter {
 
     return snapshot.commands
       .map { command in
-        let status = command.runStatus == "ready" ? "ready" : command.runStatus
-        let policy = command.approvalRequired ? " | approval" : ""
-        let input = command.requiredInputFieldNames.isEmpty ? "" : " | input"
-        return "\(command.pluginDisplayName): \(command.title) (\(status)\(policy)\(input))"
+        commandDetail(command, connectors: snapshot.connectors)
       }
       .joined(separator: "\n")
   }
@@ -275,6 +270,69 @@ enum PluginDashboardPresenter {
 
   private static func invalidPluginList(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {
     snapshot.plugins.filter { $0.status != "ready" }
+  }
+
+  private static func connectorDetail(_ connector: PluginConnectorSummary) -> String {
+    var parts = [
+      "\(connector.displayName): \(connector.status)",
+      "auth: \(connector.authStatus)",
+      "plugin: \(connector.pluginDisplayName)"
+    ]
+
+    if connector.authRequired {
+      parts.append("store: \(connector.credentialStore ?? "unknown")")
+      if connector.credentialPresent {
+        let binding = connector.credentialSecretPresent ? "env-bound" : "marker-only"
+        parts.append("credential: \(binding)")
+      } else {
+        parts.append("repair: authorize connector")
+      }
+    }
+
+    return parts.joined(separator: " | ")
+  }
+
+  private static func commandDetail(
+    _ command: PluginCommandSummary,
+    connectors: [PluginConnectorSummary]
+  ) -> String {
+    var parts = [
+      "\(command.pluginDisplayName): \(command.title)",
+      "status: \(command.runStatus)",
+      "run: \(command.explicitTurnRoute)"
+    ]
+
+    if command.approvalRequired {
+      parts.append("approval")
+    }
+    if !command.requiredInputFieldNames.isEmpty {
+      parts.append("input: \(command.requiredInputFieldNames.joined(separator: ", "))")
+    }
+    if !command.requiredConnectorIds.isEmpty {
+      parts.append("connectors: \(connectorStatusList(command, connectors: connectors))")
+    }
+    if let runBlocker = command.runBlocker, command.runStatus != "ready" {
+      parts.append("blocked: \(runBlocker)")
+    }
+    if let repairHint = command.runRepairHint, command.runStatus != "ready" {
+      parts.append("repair: \(repairHint)")
+    }
+
+    return parts.joined(separator: " | ")
+  }
+
+  private static func connectorStatusList(
+    _ command: PluginCommandSummary,
+    connectors: [PluginConnectorSummary]
+  ) -> String {
+    command.requiredConnectorIds
+      .map { connectorID in
+        guard let connector = connectors.first(where: { $0.id == connectorID }) else {
+          return "\(connectorID): missing"
+        }
+        return "\(connector.displayName): \(connector.authStatus)"
+      }
+      .joined(separator: ", ")
   }
 
   private static func hookDetail(_ hook: PluginHookSummary) -> String {

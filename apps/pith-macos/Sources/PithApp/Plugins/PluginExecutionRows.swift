@@ -60,6 +60,11 @@ struct PluginCommandRow: View {
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
 
+      Text("Turn Route: \(command.explicitTurnRoute)")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
       if let runDisabledReason {
         Text("Run blocker: \(runDisabledReason)")
           .font(.caption2)

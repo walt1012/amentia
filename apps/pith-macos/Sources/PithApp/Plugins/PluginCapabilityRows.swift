@@ -226,13 +226,10 @@ private extension PluginConnectorSummary {
     let required = authRequired ? "required" : "optional"
     let scopes = authScopes.isEmpty ? "no scopes" : authScopes.joined(separator: ", ")
     let store = credentialStore ?? "none"
-    let provider = credentialProvider ?? "none"
-    let handle = credentialHandle ?? "none"
     let credential = credentialLabel ?? "no credential"
     let binding = credentialBinding
     return "Auth: \(type) | \(authStatus) | \(required) | \(scopes) "
-      + "| store: \(store) | provider: \(provider) | handle: \(handle) "
-      + "| credential binding: \(binding) | \(credential)"
+      + "| store: \(store) | credential: \(binding) | \(credential)"
   }
 
   private var credentialBinding: String {

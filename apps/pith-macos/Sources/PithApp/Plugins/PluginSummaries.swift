@@ -102,6 +102,10 @@ struct PluginCommandEnvelopeFieldSummary: Hashable {
 }
 
 extension PluginCommandSummary {
+  var explicitTurnRoute: String {
+    "/plugin \(id)"
+  }
+
   var acceptsPlainInput: Bool {
     inputField?.isPlainTextInput == true
   }
