@@ -1,7 +1,7 @@
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, WorkspaceSummary};
-use serde_json::json;
+use serde_json::{json, Value};
 
 use super::plugin_command_approval::{
   plugin_command_requires_user_approval, PLUGIN_COMMAND_APPROVAL_ACTION,
@@ -35,14 +35,10 @@ pub fn prepare_plugin_command_run(
   };
   let readiness = command_readiness(&command, &context.plugin_state);
   if !readiness.is_ready() {
-    let error_code = if readiness.run_status == "needsConnectorAuth" {
-      -32058
-    } else {
-      -32053
-    };
-    return Err(plugin_command_readiness_error(
-      request.id, error_code, &command, readiness,
-    ));
+    return Err(
+      PluginCommandPreparationError::from_readiness(&command, readiness)
+        .into_response(request.id),
+    );
   }
 
   let Some(thread) = context.thread_state.find(&params.thread_id) else {
@@ -69,9 +65,10 @@ pub fn prepare_plugin_command_run(
     input.as_deref(),
     &connector_refs,
   ) {
-    return Err(plugin_command_input_contract_error(
-      request.id, &command, error,
-    ));
+    return Err(
+      PluginCommandPreparationError::from_input_contract(&command, error)
+        .into_response(request.id),
+    );
   }
   let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
     .then(|| context.sequence_state.next_approval_id());
@@ -108,50 +105,74 @@ pub fn prepare_plugin_command_run(
   })
 }
 
-fn plugin_command_readiness_error(
-  request_id: serde_json::Value,
+pub(crate) struct PluginCommandPreparationError {
   code: i32,
-  command: &HostPluginCommandEntry,
-  readiness: PluginCommandReadiness,
-) -> JsonRpcResponse {
-  let message = readiness.run_blocker.clone().unwrap_or_else(|| {
-    format!(
-      "Plugin command `{}` is not ready to run.",
-      command.command_id
-    )
-  });
-  JsonRpcResponse::error_with_data(
-    request_id,
-    code,
-    message,
-    &json!({
-      "pluginId": &command.plugin_id,
-      "commandId": &command.command_id,
-      "runStatus": readiness.run_status,
-      "runBlocker": readiness.run_blocker,
-      "runRepairHint": readiness.run_repair_hint,
-    }),
-  )
+  message: String,
+  data: Option<Value>,
 }
 
-fn plugin_command_input_contract_error(
-  request_id: serde_json::Value,
-  command: &HostPluginCommandEntry,
-  error: PluginCommandInputContractError,
-) -> JsonRpcResponse {
-  let message = error.message;
-  JsonRpcResponse::error_with_data(
-    request_id,
-    -32053,
-    message.clone(),
-    &json!({
-      "pluginId": &command.plugin_id,
-      "commandId": &command.command_id,
-      "runStatus": error.run_status,
-      "runBlocker": message,
-      "runRepairHint": error.run_repair_hint,
-    }),
-  )
+impl PluginCommandPreparationError {
+  fn plain(code: i32, message: impl Into<String>) -> Self {
+    Self {
+      code,
+      message: message.into(),
+      data: None,
+    }
+  }
+
+  fn from_readiness(
+    command: &HostPluginCommandEntry,
+    readiness: PluginCommandReadiness,
+  ) -> Self {
+    let code = if readiness.run_status == "needsConnectorAuth" {
+      -32058
+    } else {
+      -32053
+    };
+    let message = readiness.run_blocker.clone().unwrap_or_else(|| {
+      format!(
+        "Plugin command `{}` is not ready to run.",
+        command.command_id
+      )
+    });
+    Self {
+      code,
+      message,
+      data: Some(json!({
+        "pluginId": &command.plugin_id,
+        "commandId": &command.command_id,
+        "runStatus": readiness.run_status,
+        "runBlocker": readiness.run_blocker,
+        "runRepairHint": readiness.run_repair_hint,
+      })),
+    }
+  }
+
+  fn from_input_contract(
+    command: &HostPluginCommandEntry,
+    error: PluginCommandInputContractError,
+  ) -> Self {
+    let message = error.message;
+    Self {
+      code: -32053,
+      message: message.clone(),
+      data: Some(json!({
+        "pluginId": &command.plugin_id,
+        "commandId": &command.command_id,
+        "runStatus": error.run_status,
+        "runBlocker": message,
+        "runRepairHint": error.run_repair_hint,
+      })),
+    }
+  }
+
+  pub(crate) fn into_response(self, request_id: Value) -> JsonRpcResponse {
+    if let Some(data) = self.data {
+      JsonRpcResponse::error_with_data(request_id, self.code, self.message, &data)
+    } else {
+      JsonRpcResponse::error(request_id, self.code, self.message)
+    }
+  }
 }
 
 pub(crate) fn prepare_approved_plugin_command_snapshot(
@@ -159,32 +180,29 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
   approval: &PendingApproval,
   workspace: Option<WorkspaceSummary>,
   cancellation: GenerationCancellation,
-) -> std::result::Result<Option<PluginCommandSnapshot>, (i32, String)> {
+) -> std::result::Result<Option<PluginCommandSnapshot>, PluginCommandPreparationError> {
   if approval.action != PLUGIN_COMMAND_APPROVAL_ACTION {
     return Ok(None);
   }
   let Some(command_id) = approval.command.as_deref() else {
-    return Err((
+    return Err(PluginCommandPreparationError::plain(
       -32053,
-      "Plugin command approval is missing its command id".to_string(),
+      "Plugin command approval is missing its command id",
     ));
   };
   let Some(command) = build_command_registry(context.plugin_state.catalog())
     .into_iter()
     .find(|command| command.command_id == command_id)
   else {
-    return Err((-32052, "Plugin command not found".to_string()));
+    return Err(PluginCommandPreparationError::plain(
+      -32052,
+      "Plugin command not found",
+    ));
   };
   let readiness = command_readiness(&command, &context.plugin_state);
   if !readiness.is_ready() {
-    return Err((
-      -32053,
-      readiness.run_blocker.unwrap_or_else(|| {
-        format!(
-          "Plugin command `{}` is not ready to run.",
-          command.command_id
-        )
-      }),
+    return Err(PluginCommandPreparationError::from_readiness(
+      &command, readiness,
     ));
   }
 
@@ -201,7 +219,9 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
     input.as_deref(),
     &connector_refs,
   ) {
-    return Err((-32053, error.message));
+    return Err(PluginCommandPreparationError::from_input_contract(
+      &command, error,
+    ));
   }
   let running_id = format!("{}::{}", approval.thread_id, command.command_id);
 

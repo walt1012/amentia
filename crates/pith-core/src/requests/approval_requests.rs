@@ -85,7 +85,7 @@ pub fn prepare_approval_respond(
       cancellation.clone(),
     ) {
       Ok(snapshot) => snapshot,
-      Err((code, message)) => return Err(JsonRpcResponse::error(request.id, code, message)),
+      Err(error) => return Err(error.into_response(request.id)),
     }
   } else {
     None
