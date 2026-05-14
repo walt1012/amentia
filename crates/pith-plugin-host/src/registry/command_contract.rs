@@ -111,8 +111,18 @@ fn default_output_envelope() -> PluginCommandEnvelopeEntry {
   PluginCommandEnvelopeEntry {
     envelope: "pith.plugin.command.output".to_string(),
     fields: vec![
-      command_envelope_field("content", "text", false, "Plain text command result content."),
-      command_envelope_field("message", "text", false, "Alias for plain text result content."),
+      command_envelope_field(
+        "content",
+        "text",
+        false,
+        "Plain text command result content.",
+      ),
+      command_envelope_field(
+        "message",
+        "text",
+        false,
+        "Alias for plain text result content.",
+      ),
       command_envelope_field("items", "timelineItems", false, "Timeline items to append."),
       command_envelope_field(
         "memoryNotes",
