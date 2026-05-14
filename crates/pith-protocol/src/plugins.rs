@@ -38,6 +38,18 @@ pub struct PluginInstallParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginInspectParams {
+  pub source_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginInspectResult {
+  pub plugin: PluginSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginInstallResult {
   pub plugin: PluginSummary,
 }

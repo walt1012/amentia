@@ -8,6 +8,14 @@ struct PluginInstallParams: Codable {
   let sourcePath: String
 }
 
+struct PluginInspectParams: Codable {
+  let sourcePath: String
+}
+
+struct PluginInspectResult: Codable {
+  let plugin: RuntimePluginPayload
+}
+
 struct PluginInstallResult: Codable {
   let plugin: RuntimePluginPayload
 }

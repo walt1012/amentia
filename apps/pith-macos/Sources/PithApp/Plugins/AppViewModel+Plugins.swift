@@ -11,31 +11,8 @@ extension AppViewModel {
       return
     }
 
-    let preview: PluginInstallPreview
-    do {
-      preview = try PluginInstallInspector.preview(
-        for: url,
-        installRootPath: runtimeBridge.localPluginInstallRootPath()
-      )
-    } catch {
-      let repairHint = PluginInstallDialogPresenter.repairHint(for: error)
-      appendEntry(
-        to: selectedThreadID,
-        TimelineEventPresenter.pluginInstallPreviewFailed(
-          error: error,
-          repairHint: repairHint
-        )
-      )
-      return
-    }
-
-    guard PluginInstallDialogPresenter.confirmInstall(preview: preview) else {
-      runtimeDetail = "Plugin install was cancelled."
-      return
-    }
-
     guard let operationID = beginPluginLifecycleOperation(
-      detail: "Installing local plugin..."
+      detail: "Inspecting local plugin..."
     ) else {
       runtimeDetail = "Finish the current plugin operation before starting another."
       return
@@ -46,7 +23,20 @@ extension AppViewModel {
       defer {
         finishPluginLifecycleOperation(operationID)
       }
+      var confirmedPreview: PluginInstallPreview?
       do {
+        let inspectedPlugin = try await runtimeBridge.inspectPlugin(sourcePath: url.path)
+        let preview = PluginInstallInspector.preview(
+          for: url,
+          inspectedPlugin: inspectedPlugin,
+          installRootPath: runtimeBridge.localPluginInstallRootPath()
+        )
+        guard PluginInstallDialogPresenter.confirmInstall(preview: preview) else {
+          runtimeDetail = "Plugin install was cancelled."
+          return
+        }
+        confirmedPreview = preview
+        runtimeDetail = "Installing local plugin..."
         let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: preview.sourcePath)
         await refreshPluginState()
         appendEntry(
@@ -55,10 +45,20 @@ extension AppViewModel {
         )
       } catch {
         let repairHint = PluginInstallDialogPresenter.repairHint(for: error)
-        appendEntry(
-          to: timelineThreadID,
-          TimelineEventPresenter.pluginInstallFailed(error: error, repairHint: repairHint)
-        )
+        if confirmedPreview == nil {
+          appendEntry(
+            to: timelineThreadID,
+            TimelineEventPresenter.pluginInstallPreviewFailed(
+              error: error,
+              repairHint: repairHint
+            )
+          )
+        } else {
+          appendEntry(
+            to: timelineThreadID,
+            TimelineEventPresenter.pluginInstallFailed(error: error, repairHint: repairHint)
+          )
+        }
       }
     }
   }

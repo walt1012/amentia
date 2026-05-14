@@ -1,11 +1,35 @@
 use std::path::PathBuf;
 
 use pith_plugin_host::{inspect_plugin_bundle, install_plugin_bundle};
-use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginInstallParams, PluginInstallResult};
+use pith_protocol::{
+  JsonRpcRequest, JsonRpcResponse, PluginInspectParams, PluginInspectResult,
+  PluginInstallParams, PluginInstallResult,
+};
 
 use crate::protocol_adapters::to_protocol_plugin;
 use crate::request_params::parse_required_params;
 use crate::RuntimeContext;
+
+pub(crate) fn handle_plugin_inspect(
+  _context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match parse_required_params::<PluginInspectParams>(&request, "plugin/inspect") {
+    Ok(params) => params,
+    Err(response) => return response,
+  };
+
+  let source_path = PathBuf::from(&params.source_path);
+  match inspect_plugin_bundle(&source_path) {
+    Ok(plugin) => JsonRpcResponse::success(
+      request.id,
+      &PluginInspectResult {
+        plugin: to_protocol_plugin(plugin),
+      },
+    ),
+    Err(error) => JsonRpcResponse::error(request.id, -32053, error.to_string()),
+  }
+}
 
 pub(crate) fn handle_plugin_install(
   context: &mut RuntimeContext,

@@ -34,6 +34,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
       plugin_requests::handle_plugin_connector_registry(context, request)
     }
     methods::PLUGIN_HOOK_REGISTRY => plugin_requests::handle_plugin_hook_registry(context, request),
+    methods::PLUGIN_INSPECT => plugin_requests::handle_plugin_inspect(context, request),
     methods::PLUGIN_INSTALL => plugin_requests::handle_plugin_install(context, request),
     methods::PLUGIN_LIST => plugin_requests::handle_plugin_list(context, request),
     methods::PLUGIN_REMOVE => plugin_requests::handle_plugin_remove(context, request),

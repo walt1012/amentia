@@ -86,6 +86,34 @@ fn plugin_set_enabled_does_not_mutate_catalog_when_persistence_fails() {
 }
 
 #[test]
+fn plugin_inspect_previews_local_plugin_without_installing() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root =
+    create_temp_plugin_bundle("plugin-inspect-source", "focus-review", "Focus Review");
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_INSPECT,
+      Some(json!({
+        "sourcePath": source_root.display().to_string()
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+    .expect("cleanup plugin source root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("plugin inspect result");
+  assert_eq!(result["plugin"]["id"], "focus-review");
+  assert_eq!(result["plugin"]["displayName"], "Focus Review");
+  assert_eq!(result["plugin"]["provenance"], "local");
+  assert!(context.plugin_state.catalog().is_empty());
+}
+
+#[test]
 fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =

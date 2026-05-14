@@ -169,6 +169,9 @@ fn plugin_set_enabled_params_use_camel_case_fields() {
 
 #[test]
 fn plugin_install_and_remove_payloads_use_camel_case_fields() {
+  let inspect_params = PluginInspectParams {
+    source_path: "/tmp/pith/plugins/focus-review".to_string(),
+  };
   let install_params = PluginInstallParams {
     source_path: "/tmp/pith/plugins/focus-review".to_string(),
   };
@@ -180,14 +183,40 @@ fn plugin_install_and_remove_payloads_use_camel_case_fields() {
     display_name: "Focus Review".to_string(),
     removed_path: "/tmp/pith/plugins/local/focus-review".to_string(),
   };
+  let inspect_result = PluginInspectResult {
+    plugin: PluginSummary {
+      id: "focus-review".to_string(),
+      name: "focus-review".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Focus Review".to_string(),
+      status: "ready".to_string(),
+      description: "Review local changes.".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["command:review.focus".to_string()],
+      permissions: vec!["file.read".to_string()],
+      manifest_path: "/tmp/pith/plugins/focus-review/pith-plugin.json".to_string(),
+      provenance: "local".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    },
+  };
 
+  let inspect_value =
+    serde_json::to_value(inspect_params).expect("serialize plugin inspect params");
   let install_value =
     serde_json::to_value(install_params).expect("serialize plugin install params");
   let remove_value = serde_json::to_value(remove_params).expect("serialize plugin remove params");
   let result_value = serde_json::to_value(remove_result).expect("serialize plugin remove result");
+  let inspect_result_value =
+    serde_json::to_value(inspect_result).expect("serialize plugin inspect result");
 
+  assert!(inspect_value.get("sourcePath").is_some());
   assert!(install_value.get("sourcePath").is_some());
   assert!(remove_value.get("manifestPath").is_some());
+  assert!(inspect_result_value.get("plugin").is_some());
+  assert!(inspect_result_value["plugin"].get("displayName").is_some());
   assert!(result_value.get("pluginId").is_some());
   assert!(result_value.get("displayName").is_some());
   assert!(result_value.get("removedPath").is_some());

@@ -13,6 +13,7 @@ pub const PLUGIN_CONNECTOR_AUTHORIZE: &str = "plugin/connectorAuthorize";
 pub const PLUGIN_CONNECTOR_CLEAR_CREDENTIAL: &str = "plugin/connectorClearCredential";
 pub const PLUGIN_CONNECTOR_REGISTRY: &str = "plugin/connectorRegistry";
 pub const PLUGIN_HOOK_REGISTRY: &str = "plugin/hookRegistry";
+pub const PLUGIN_INSPECT: &str = "plugin/inspect";
 pub const PLUGIN_INSTALL: &str = "plugin/install";
 pub const PLUGIN_LIST: &str = "plugin/list";
 pub const PLUGIN_REMOVE: &str = "plugin/remove";

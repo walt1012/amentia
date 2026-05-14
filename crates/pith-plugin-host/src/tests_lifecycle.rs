@@ -174,6 +174,49 @@ fn inspect_rejects_nested_plugin_manifests() {
 }
 
 #[test]
+fn inspect_reports_manifest_validation_hint() {
+  let source_root = create_temp_plugin_root("inspect-invalid-manifest-source");
+  let source_plugin_dir = source_root.join("invalid-plugin");
+  fs::create_dir_all(&source_plugin_dir).expect("create source plugin dir");
+  fs::write(
+    source_plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "invalid-plugin",
+  "version": "0.1.0",
+  "displayName": "Invalid Plugin",
+  "description": "Invalid local plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:invalid.run"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write invalid manifest");
+
+  let error =
+    inspect_plugin_bundle(&source_plugin_dir).expect_err("invalid plugin should be rejected");
+
+  fs::remove_dir_all(&source_root).expect("cleanup source root");
+
+  let message = error.to_string();
+  assert!(message.contains("plugin credential store `keychain` is not supported"));
+  assert!(message.contains("Hint:"));
+  assert!(message.contains("supported credential stores"));
+}
+
+#[test]
 fn remove_rejects_manifest_at_install_root() {
   let install_root = create_temp_plugin_root("remove-install-root-manifest");
   fs::write(

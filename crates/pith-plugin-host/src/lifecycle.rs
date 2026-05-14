@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 
 use crate::io::read_manifest;
 use crate::types::{PluginCatalogEntry, PluginRemovalRecord};
-use crate::validation::validate_manifest;
+use crate::validation::{validate_manifest, validation_hint_for_error};
 
 pub fn install_plugin_bundle(
   source_path: &Path,
@@ -45,7 +45,11 @@ pub fn inspect_plugin_bundle(source_path: &Path) -> Result<PluginCatalogEntry> {
   ensure_single_root_manifest(&source_root)?;
   let source_manifest_path = source_root.join("pith-plugin.json");
   let manifest = read_manifest(&source_manifest_path)?;
-  validate_manifest(&manifest)?;
+  if let Err(error) = validate_manifest(&manifest) {
+    let message = error.to_string();
+    let hint = validation_hint_for_error(&message);
+    anyhow::bail!("{message}\nHint: {hint}");
+  }
   Ok(crate::catalog::load_plugin_entry(source_manifest_path))
 }
 

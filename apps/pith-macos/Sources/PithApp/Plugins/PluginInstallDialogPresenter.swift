@@ -45,6 +45,10 @@ enum PluginInstallDialogPresenter {
   static func repairHint(for error: Error) -> String {
     let message = error.localizedDescription
 
+    if message.contains("\nHint:") {
+      return ""
+    }
+
     if message.contains("does not contain pith-plugin.json") {
       return "Choose a plugin folder that contains pith-plugin.json, or select the manifest file directly."
     }

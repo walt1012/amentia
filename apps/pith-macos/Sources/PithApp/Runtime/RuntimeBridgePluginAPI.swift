@@ -8,25 +8,7 @@ extension RuntimeBridge {
     )
     let result = try responseResult(from: response)
 
-    return result.plugins.map { plugin in
-      RuntimePlugin(
-        id: plugin.id,
-        name: plugin.name,
-        version: plugin.version,
-        displayName: plugin.displayName,
-        status: plugin.status,
-        description: plugin.description,
-        authorName: plugin.authorName,
-        enabled: plugin.enabled,
-        defaultEnabled: plugin.defaultEnabled,
-        capabilities: plugin.capabilities,
-        permissions: plugin.permissions,
-        manifestPath: plugin.manifestPath,
-        provenance: plugin.provenance,
-        validationError: plugin.validationError,
-        validationHint: plugin.validationHint
-      )
-    }
+    return result.plugins.map { runtimePlugin(from: $0) }
   }
 
   func installPlugin(sourcePath: String) async throws -> RuntimePlugin {
@@ -36,23 +18,17 @@ extension RuntimeBridge {
     )
     let result = try responseResult(from: response)
 
-    return RuntimePlugin(
-      id: result.plugin.id,
-      name: result.plugin.name,
-      version: result.plugin.version,
-      displayName: result.plugin.displayName,
-      status: result.plugin.status,
-      description: result.plugin.description,
-      authorName: result.plugin.authorName,
-      enabled: result.plugin.enabled,
-      defaultEnabled: result.plugin.defaultEnabled,
-      capabilities: result.plugin.capabilities,
-      permissions: result.plugin.permissions,
-      manifestPath: result.plugin.manifestPath,
-      provenance: result.plugin.provenance,
-      validationError: result.plugin.validationError,
-      validationHint: result.plugin.validationHint
+    return runtimePlugin(from: result.plugin)
+  }
+
+  func inspectPlugin(sourcePath: String) async throws -> RuntimePlugin {
+    let response: JSONRPCResponse<PluginInspectResult> = try await sendRequest(
+      method: "plugin/inspect",
+      params: PluginInspectParams(sourcePath: sourcePath)
     )
+    let result = try responseResult(from: response)
+
+    return runtimePlugin(from: result.plugin)
   }
 
   func pluginCapabilityRegistry() async throws -> RuntimePluginCapabilityRegistry {
@@ -192,23 +168,7 @@ extension RuntimeBridge {
     )
     let result = try responseResult(from: response)
 
-    return RuntimePlugin(
-      id: result.plugin.id,
-      name: result.plugin.name,
-      version: result.plugin.version,
-      displayName: result.plugin.displayName,
-      status: result.plugin.status,
-      description: result.plugin.description,
-      authorName: result.plugin.authorName,
-      enabled: result.plugin.enabled,
-      defaultEnabled: result.plugin.defaultEnabled,
-      capabilities: result.plugin.capabilities,
-      permissions: result.plugin.permissions,
-      manifestPath: result.plugin.manifestPath,
-      provenance: result.plugin.provenance,
-      validationError: result.plugin.validationError,
-      validationHint: result.plugin.validationHint
-    )
+    return runtimePlugin(from: result.plugin)
   }
 
   func removePlugin(manifestPath: String) async throws -> RuntimePluginRemoval {
@@ -267,6 +227,26 @@ private enum RuntimePluginCommandEnvelopeMapper {
 }
 
 private extension RuntimeBridge {
+  func runtimePlugin(from plugin: RuntimePluginPayload) -> RuntimePlugin {
+    RuntimePlugin(
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      displayName: plugin.displayName,
+      status: plugin.status,
+      description: plugin.description,
+      authorName: plugin.authorName,
+      enabled: plugin.enabled,
+      defaultEnabled: plugin.defaultEnabled,
+      capabilities: plugin.capabilities,
+      permissions: plugin.permissions,
+      manifestPath: plugin.manifestPath,
+      provenance: plugin.provenance,
+      validationError: plugin.validationError,
+      validationHint: plugin.validationHint
+    )
+  }
+
   func runtimePluginConnector(
     from connector: RuntimePluginConnectorPayload
   ) -> RuntimePluginConnector {
