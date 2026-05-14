@@ -65,7 +65,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   auth prompts, and install failure repair hints.
 - Completed contract baseline: default runner output metadata matches accepted
   `content`, `message`, `items`, and `memoryNotes` envelopes, including MCP
-  `structuredContent` when it carries a Pith output envelope.
+  `structuredContent` when it carries a Pith output envelope, while generic MCP
+  structured data and malformed Pith envelopes stay diagnostically distinct.
 - Completed lifecycle baseline: symlink-safe bundle install, nested manifest
   rejection, direct-child local removal, persisted-state-safe enable changes,
   and catalog refresh after removal cleanup errors.

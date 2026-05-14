@@ -1709,6 +1709,155 @@ JSON
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_classifies_malformed_mcp_pith_output() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-malformed-pith-output",
+    "mcp-malformed",
+    "MCP Malformed",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-malformed-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-malformed",
+  "version": "0.1.0",
+  "displayName": "MCP Malformed",
+  "description": "MCP command plugin with malformed Pith structured output",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-malformed.inspect", "mcp_server:local"],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp malformed plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("mcp-malformed.inspect.json"),
+    r#"{
+  "title": "Inspect MCP Malformed Data",
+  "description": "Return malformed Pith MCP structured content.",
+  "prompt": "Inspect MCP malformed data.",
+  "execution": {
+    "kind": "mcp.localInspect",
+    "driver": "mcp",
+    "entrypoint": "local.inspect"
+  }
+}"#,
+  )
+  .expect("write mcp malformed command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+cat <<'JSON'
+{"jsonrpc":"2.0","id":2,"result":{"structuredContent":{"items":{"kind":"pluginResult"}}}}
+JSON
+"#,
+  )
+  .expect("write mcp malformed server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp malformed server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions).expect("set mcp malformed server permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-malformed".to_string(),
+      name: "mcp-malformed".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Malformed".to_string(),
+      status: "ready".to_string(),
+      description: "MCP command plugin with malformed Pith structured output".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-malformed.inspect".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec!["mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Malformed Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-malformed::mcp-malformed.inspect"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "outputContract"
+  );
+  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "completed");
+  assert_eq!(
+    items[1]["attributes"]["mcpStructuredContentStatus"],
+    "pithOutputEnvelope"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputStatus"],
+    "malformedEnvelope"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerOutputParsed"], "false");
+  assert!(items[1]["attributes"]["pluginRunnerOutputParseError"].is_string());
+  assert!(items[1]["content"]
+    .as_str()
+    .expect("malformed structured content")
+    .contains("malformed JSON output envelope"));
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_records_mcp_protocol_diagnostics() {
   use std::os::unix::fs::PermissionsExt;
 
