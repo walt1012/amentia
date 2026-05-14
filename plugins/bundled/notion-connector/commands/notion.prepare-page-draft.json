@@ -1,0 +1,16 @@
+{
+  "title": "Prepare Notion Page Draft",
+  "description": "Prepare a Notion-ready page draft from the current workspace through the Notion connector.",
+  "prompt": "Use the Notion connector to prepare a concise workspace page draft. Include the title, summary, and next actions before sending anything to Notion.",
+  "execution": {
+    "kind": "mcp.notion.preparePageDraft",
+    "driver": "mcp",
+    "entrypoint": "notion.preparePageDraft",
+    "connectors": ["notion"]
+  },
+  "memory": {
+    "noteTitle": "Notion Page Draft",
+    "noteSource": "plugin.notion-connector",
+    "noteTags": ["connector", "notion", "plugin"]
+  }
+}

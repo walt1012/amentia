@@ -85,4 +85,27 @@ fn bundled_plugin_manifests_match_runtime_schema() {
   assert!(notion_capabilities
     .iter()
     .any(|capability| capability == "mcp_server:notion"));
+  assert!(notion_capabilities
+    .iter()
+    .any(|capability| capability == "command:notion.prepare-page-draft"));
+
+  let notion_command = read_command_manifest(
+    &bundled_root.join("notion-connector/commands/notion.prepare-page-draft.json"),
+  )
+  .expect("parse notion command manifest");
+  assert_eq!(notion_command.title, "Prepare Notion Page Draft");
+  assert_eq!(
+    notion_command
+      .execution
+      .as_ref()
+      .map(|execution| execution.kind.as_str()),
+    Some("mcp.notion.preparePageDraft")
+  );
+  let notion_connectors = notion_command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.connectors.as_ref())
+    .expect("notion connector reference");
+  assert_eq!(notion_connectors.len(), 1);
+  assert_eq!(notion_connectors[0], "notion");
 }

@@ -56,7 +56,9 @@ authorization, sandbox diagnostics, runner-owned timeline output, runner memory
 notes, local install/remove lifecycle safety, and structured repair hints for
 registry, readiness, input-contract, approval-time, runner setup, MCP protocol,
 process exit, output-contract failures, and explicit turn-to-plugin command
-routing.
+routing. The bundled Notion connector now carries a connector-backed command
+contract so M4 can exercise real authorize/run/repair behavior without pretending
+to include a hosted integration.
 
 Current M4 focus:
 

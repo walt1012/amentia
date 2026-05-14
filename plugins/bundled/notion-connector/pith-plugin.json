@@ -7,6 +7,7 @@
     "name": "Pith"
   },
   "capabilities": [
+    "command:notion.prepare-page-draft",
     "prompt_pack:notion.workspace"
   ],
   "permissions": [
