@@ -118,6 +118,7 @@ pub(crate) fn execute_plugin_command_snapshot(
             snapshot.command.execution_kind.as_deref(),
             code,
             message,
+            snapshot.input.as_deref(),
             &stdout,
             &stderr,
             attributes,

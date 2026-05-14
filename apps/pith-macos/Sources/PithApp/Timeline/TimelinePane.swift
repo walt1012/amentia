@@ -21,6 +21,7 @@ struct TimelinePane: View {
               entry: entry,
               isSelected: viewModel.selectedEntryID == entry.id,
               showsApprovalActions: viewModel.isPendingApproval(entry),
+              showsPluginRetryAction: viewModel.canRetryPluginCommand(from: entry),
               onSelect: {
                 viewModel.selectTimelineEntry(id: entry.id)
               },
@@ -35,6 +36,9 @@ struct TimelinePane: View {
                   return
                 }
                 viewModel.respondToApproval(approvalID: approvalID, decision: "denied")
+              },
+              onRetry: {
+                viewModel.retryPluginCommand(from: entry)
               }
             )
           }

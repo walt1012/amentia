@@ -248,6 +248,35 @@ extension AppViewModel {
     runPluginCommand(commandID: commandID, input: input)
   }
 
+  func canRetryPluginCommand(from entry: TimelineEntry) -> Bool {
+    guard entry.attributes["pluginCommandStatus"] == "failed",
+          let commandID = entry.attributes["commandId"]
+    else {
+      return false
+    }
+
+    let snapshot = pluginActionSnapshot()
+    if entry.attributes["commandInput"] == nil {
+      return PluginActionPlanner.directCommandRunDisabledReason(
+        commandID: commandID,
+        snapshot: snapshot
+      ) == nil
+    }
+
+    return PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot)
+  }
+
+  func retryPluginCommand(from entry: TimelineEntry) {
+    guard entry.attributes["pluginCommandStatus"] == "failed",
+          let commandID = entry.attributes["commandId"]
+    else {
+      runtimeDetail = "Plugin command retry is unavailable."
+      return
+    }
+
+    runPluginCommand(commandID: commandID, input: entry.attributes["commandInput"])
+  }
+
   private func runPluginCommand(commandID: String, input: String?) {
     let snapshot = pluginActionSnapshot()
     if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {

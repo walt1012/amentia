@@ -61,7 +61,8 @@ contract so M4 can exercise real authorize/run/repair behavior without pretendin
 to include a hosted integration, and it declares the current `local` credential
 store rather than promising native Keychain storage before that exists. Plugin
 state refresh failures are surfaced in the plugin dashboard instead of being
-silently treated as an empty catalog.
+silently treated as an empty catalog. Failed plugin command cards can retry the
+same command input after the user repairs the runner, connector, or MCP issue.
 
 Current M4 focus:
 

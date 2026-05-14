@@ -5,9 +5,11 @@ struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
   let showsApprovalActions: Bool
+  let showsPluginRetryAction: Bool
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
+  let onRetry: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -57,17 +59,26 @@ struct TimelineCard: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
-      if showsApprovalActions {
+      if showsApprovalActions || showsPluginRetryAction {
         HStack(spacing: 12) {
-          Button("Approve") {
-            onApprove()
-          }
-          .buttonStyle(.borderedProminent)
+          if showsApprovalActions {
+            Button("Approve") {
+              onApprove()
+            }
+            .buttonStyle(.borderedProminent)
 
-          Button("Deny") {
-            onDeny()
+            Button("Deny") {
+              onDeny()
+            }
+            .buttonStyle(.bordered)
           }
-          .buttonStyle(.bordered)
+
+          if showsPluginRetryAction {
+            Button("Retry") {
+              onRetry()
+            }
+            .buttonStyle(.bordered)
+          }
         }
         .padding(.top, 4)
       }

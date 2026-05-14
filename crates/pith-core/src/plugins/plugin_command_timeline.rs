@@ -176,6 +176,7 @@ pub(super) fn build_plugin_failure_timeline_item(
   execution_kind: Option<&str>,
   code: i32,
   message: String,
+  input: Option<&str>,
   stdout: &str,
   stderr: &str,
   mut attributes: HashMap<String, String>,
@@ -209,6 +210,9 @@ pub(super) fn build_plugin_failure_timeline_item(
   ]));
   if let Some(execution_kind) = execution_kind {
     attributes.insert("executionKind".to_string(), execution_kind.to_string());
+  }
+  if let Some(input) = input {
+    attributes.insert("commandInput".to_string(), input.to_string());
   }
 
   let mut content = format!("{message}\n\nError code: {code}");
@@ -307,5 +311,46 @@ mod tests {
       plugin_runner_failure_kind(-32054, &attributes),
       "outputContract"
     );
+  }
+
+  #[test]
+  fn failure_item_preserves_command_input_for_retry() {
+    let item = build_plugin_failure_timeline_item(
+      &test_command(),
+      Some("stdio.test"),
+      -32054,
+      "Runner failed.".to_string(),
+      Some("retry this input"),
+      "",
+      "",
+      HashMap::new(),
+    );
+
+    assert_eq!(
+      item
+        .attributes
+        .as_ref()
+        .and_then(|attributes| attributes.get("commandInput")),
+      Some(&"retry this input".to_string())
+    );
+  }
+
+  fn test_command() -> HostPluginCommandEntry {
+    HostPluginCommandEntry {
+      command_id: "test-plugin::run".to_string(),
+      title: "Run Test Plugin".to_string(),
+      description: "Run a test plugin command.".to_string(),
+      prompt: "Run the plugin.".to_string(),
+      plugin_id: "test-plugin".to_string(),
+      plugin_display_name: "Test Plugin".to_string(),
+      permissions: vec![],
+      source_path: "plugins/test-plugin/commands/run.json".to_string(),
+      execution: None,
+      execution_kind: Some("stdio.test".to_string()),
+      manifest_error: None,
+      memory_note_title: None,
+      memory_note_source: None,
+      memory_note_tags: vec![],
+    }
   }
 }
