@@ -141,7 +141,7 @@ mod tests {
       .save_plugin_connector_credential(&StoredPluginConnectorCredential {
         connector_id: "notion-connector::notion".to_string(),
         plugin_id: "notion-connector".to_string(),
-        credential_store: "keychain".to_string(),
+        credential_store: "local".to_string(),
         credential_label: "Notion authorization marker".to_string(),
         credential_secret: None,
         authorized_at: 6,
@@ -173,7 +173,7 @@ mod tests {
         .plugin_connector_credentials
         .get("notion-connector::notion")
         .map(|credential| credential.credential_store.as_str()),
-      Some("keychain")
+      Some("local")
     );
     assert_eq!(bootstrap.sequence_state.next_approval_id(), "approval-4");
 

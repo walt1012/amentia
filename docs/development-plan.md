@@ -93,6 +93,7 @@ Current M4 focus:
 - No multi-agent workflows.
 - No generic document RAG or local vector database.
 - No broad connector marketplace.
+- No manifest-declared Keychain credentials until native Keychain storage exists.
 - No cosmetic refactor that only moves code around.
 - No large UI expansion before plugin execution is real.
 

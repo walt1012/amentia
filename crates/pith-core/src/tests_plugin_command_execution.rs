@@ -37,7 +37,7 @@ fn create_notion_stdio_runner_plugin(label: &str) -> (std::path::PathBuf, Plugin
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -63,7 +63,7 @@ payload=$(cat)
 case "$payload" in *'"connectorId":"notion-runner::notion"'*) connector_id=true;; *) connector_id=false;; esac
 case "$payload" in *'"provider":"pith.localCredentialProvider"'*) provider=true;; *) provider=false;; esac
 case "$payload" in *'"handle":"notion-runner::notion"'*) handle=true;; *) handle=false;; esac
-case "$payload" in *'"store":"keychain"'*) store=true;; *) store=false;; esac
+case "$payload" in *'"store":"local"'*) store=true;; *) store=false;; esac
 case "$payload" in *'"label":"Notion authorization marker"'*) label=true;; *) label=false;; esac
 case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
 printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secretLeak=%s","memoryNotes":[{"title":"Approved Connector Memory","body":"Connector runner memory survives approval execution.","source":"plugin.notion-runner.approved","tags":["connector","approved"]}]}\n' "$connector_id" "$provider" "$handle" "$store" "$label" "$secret_leak"
@@ -726,7 +726,7 @@ fn plugin_command_run_disables_network_for_empty_connector_scope() {
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -1145,7 +1145,7 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   );
   assert_eq!(
     items[2]["attributes"]["pluginRunnerConnectorStores"],
-    "keychain"
+    "local"
   );
   assert_eq!(
     items[2]["attributes"]["pluginRunnerCredentialProviders"],
@@ -1353,7 +1353,7 @@ fn plugin_command_run_executes_mcp_stdio_connector_action() {
     "type": "oauth2",
     "required": true,
     "scopes": ["insert_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -2503,7 +2503,7 @@ fn plugin_command_run_blocks_connector_mcp_without_declared_network_permission()
     "type": "oauth2",
     "required": true,
     "scopes": ["insert_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,

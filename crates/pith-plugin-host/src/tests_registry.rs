@@ -103,7 +103,7 @@ fn build_capability_registry_includes_connector_metadata() {
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content", "insert_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -122,7 +122,7 @@ fn build_capability_registry_includes_connector_metadata() {
     .expect("connector capability");
   assert_eq!(connector.metadata["service"], "notion");
   assert_eq!(connector.metadata["authType"], "oauth2");
-  assert_eq!(connector.metadata["credentialStore"], "keychain");
+  assert_eq!(connector.metadata["credentialStore"], "local");
   assert_eq!(
     connector.metadata["authScopes"],
     "read_content, insert_content"
@@ -217,7 +217,7 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content", "insert_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": false
 }"#,
@@ -240,7 +240,7 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
     connectors[0].auth_scopes,
     vec!["read_content".to_string(), "insert_content".to_string()]
   );
-  assert_eq!(connectors[0].credential_store.as_deref(), Some("keychain"));
+  assert_eq!(connectors[0].credential_store.as_deref(), Some("local"));
 }
 
 #[test]

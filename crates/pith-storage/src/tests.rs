@@ -306,7 +306,7 @@ fn sqlite_store_round_trips_plugin_connector_credentials() {
   let credential = StoredPluginConnectorCredential {
     connector_id: "notion-connector::notion".to_string(),
     plugin_id: "notion-connector".to_string(),
-    credential_store: "keychain".to_string(),
+    credential_store: "local".to_string(),
     credential_label: "Notion authorization marker".to_string(),
     credential_secret: Some("notion-token".to_string()),
     authorized_at: 10,
@@ -332,7 +332,7 @@ fn sqlite_store_deletes_plugin_connector_credentials() {
   let credential = StoredPluginConnectorCredential {
     connector_id: "notion-connector::notion".to_string(),
     plugin_id: "notion-connector".to_string(),
-    credential_store: "keychain".to_string(),
+    credential_store: "local".to_string(),
     credential_label: "Notion authorization marker".to_string(),
     credential_secret: None,
     authorized_at: 10,
@@ -361,7 +361,7 @@ fn sqlite_store_deletes_plugin_connector_credentials_by_plugin() {
   let notion = StoredPluginConnectorCredential {
     connector_id: "notion-connector::notion".to_string(),
     plugin_id: "notion-connector".to_string(),
-    credential_store: "keychain".to_string(),
+    credential_store: "local".to_string(),
     credential_label: "Notion authorization marker".to_string(),
     credential_secret: None,
     authorized_at: 10,
@@ -370,7 +370,7 @@ fn sqlite_store_deletes_plugin_connector_credentials_by_plugin() {
   let other = StoredPluginConnectorCredential {
     connector_id: "other-connector::service".to_string(),
     plugin_id: "other-connector".to_string(),
-    credential_store: "keychain".to_string(),
+    credential_store: "local".to_string(),
     credential_label: "Other authorization marker".to_string(),
     credential_secret: None,
     authorized_at: 11,

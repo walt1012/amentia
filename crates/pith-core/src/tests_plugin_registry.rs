@@ -763,7 +763,7 @@ fn connector_backed_plugin_commands_require_connector_auth() {
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -920,7 +920,7 @@ fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() 
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -1043,7 +1043,7 @@ fn connector_backed_plugin_commands_can_scope_connector_requirements() {
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,
@@ -1350,7 +1350,7 @@ fn connector_backed_stdio_commands_require_network_permission() {
     "type": "oauth2",
     "required": true,
     "scopes": ["read_content"],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": true
 }"#,

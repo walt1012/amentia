@@ -100,5 +100,5 @@ fn validation_hint_describes_supported_credential_stores() {
 
   assert!(hint.contains("supported credential stores"));
   assert!(hint.contains("local"));
-  assert!(hint.contains("keychain"));
+  assert!(!hint.contains("keychain"));
 }
