@@ -463,9 +463,12 @@ fn build_command_registry_applies_default_execution_contract() {
   assert_eq!(execution.input.fields[1].name, "input");
   assert_eq!(execution.input.fields[2].name, "workspace");
   assert_eq!(execution.output.envelope, "pith.plugin.command.output");
-  assert_eq!(execution.output.fields.len(), 2);
-  assert_eq!(execution.output.fields[0].name, "items");
-  assert_eq!(execution.output.fields[1].name, "memoryNotes");
+  assert_eq!(execution.output.fields.len(), 4);
+  assert_eq!(execution.output.fields[0].name, "content");
+  assert_eq!(execution.output.fields[1].name, "message");
+  assert_eq!(execution.output.fields[2].name, "items");
+  assert!(!execution.output.fields[2].required);
+  assert_eq!(execution.output.fields[3].name, "memoryNotes");
 }
 
 #[test]

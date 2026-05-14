@@ -63,6 +63,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   network policy, command-scoped connector payloads, runner-authored memory
   notes across direct and approved runs, local setup blockers before connector
   auth prompts, and install failure repair hints.
+- Completed contract baseline: default runner output metadata matches accepted
+  `content`, `message`, `items`, and `memoryNotes` envelopes.
 - Completed lifecycle baseline: symlink-safe bundle install, nested manifest
   rejection, direct-child local removal, persisted-state-safe enable changes,
   and catalog refresh after removal cleanup errors.
