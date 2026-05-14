@@ -285,6 +285,23 @@ extension AppViewModel {
     runPluginCommand(commandID: commandID, input: entry.attributes["commandInput"])
   }
 
+  func canRevealPluginCommandSource(from entry: TimelineEntry) -> Bool {
+    entry.attributes["pluginCommandStatus"] == "failed"
+      && pluginCommandSourcePath(from: entry) != nil
+  }
+
+  func revealPluginCommandSource(from entry: TimelineEntry) {
+    guard let sourcePath = pluginCommandSourcePath(from: entry) else {
+      runtimeDetail = "Plugin command source path is unavailable."
+      return
+    }
+
+    runtimeDetail = FileRevealService.revealFilePath(
+      sourcePath,
+      successDetail: "Revealed plugin command source."
+    )
+  }
+
   private func runPluginCommand(commandID: String, input: String?) {
     let snapshot = pluginActionSnapshot()
     if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
@@ -460,5 +477,17 @@ extension AppViewModel {
     updatePluginState { state in
       state.finishLifecycleOperation(operationID)
     }
+  }
+
+  private func pluginCommandSourcePath(from entry: TimelineEntry) -> String? {
+    [
+      "pluginRunnerResolvedEntrypoint",
+      "sourcePath",
+      "pluginRunnerPluginRoot",
+    ]
+    .compactMap { key in
+      entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    .first { !$0.isEmpty }
   }
 }

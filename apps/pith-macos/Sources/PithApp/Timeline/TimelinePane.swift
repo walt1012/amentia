@@ -22,6 +22,7 @@ struct TimelinePane: View {
               isSelected: viewModel.selectedEntryID == entry.id,
               showsApprovalActions: viewModel.isPendingApproval(entry),
               showsPluginRetryAction: viewModel.canRetryPluginCommand(from: entry),
+              showsPluginSourceAction: viewModel.canRevealPluginCommandSource(from: entry),
               onSelect: {
                 viewModel.selectTimelineEntry(id: entry.id)
               },
@@ -39,6 +40,9 @@ struct TimelinePane: View {
               },
               onRetry: {
                 viewModel.retryPluginCommand(from: entry)
+              },
+              onRevealPluginSource: {
+                viewModel.revealPluginCommandSource(from: entry)
               }
             )
           }
