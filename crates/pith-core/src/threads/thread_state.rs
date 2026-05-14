@@ -147,10 +147,6 @@ impl StoredThread {
     self.items.extend(items);
   }
 
-  pub(crate) fn push_item(&mut self, item: TimelineItem) {
-    self.items.push(item);
-  }
-
   pub(crate) fn snapshot(&self) -> (ThreadSummary, Vec<TimelineItem>) {
     (self.summary.clone(), self.items.clone())
   }
