@@ -113,6 +113,7 @@ extension RuntimeBridge {
         memorySummary: command.memorySummary,
         runStatus: command.runStatus,
         runBlocker: command.runBlocker,
+        runRepairHint: command.runRepairHint,
         declaredConnectorIds: command.declaredConnectorIds ?? [],
         requiredConnectorIds: command.requiredConnectorIds,
         approvalRequired: command.approvalRequired ?? false,
@@ -178,6 +179,7 @@ extension RuntimeBridge {
         sourcePath: hook.sourcePath,
         status: hook.status ?? "ready",
         runBlocker: hook.runBlocker,
+        runRepairHint: hook.runRepairHint,
         memorySummary: hook.memorySummary
       )
     }

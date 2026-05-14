@@ -391,6 +391,7 @@ fn plugin_command_registry_round_trips() {
       memory_summary: Some("Stores a workspace memory note after execution.".to_string()),
       run_status: "ready".to_string(),
       run_blocker: None,
+      run_repair_hint: None,
       declared_connector_ids: vec!["workspace-notes::memory".to_string()],
       required_connector_ids: vec![],
       approval_required: false,
@@ -514,6 +515,7 @@ fn plugin_hook_registry_round_trips() {
       source_path: "plugins/bundled/shell-recorder/hooks/shell.recorder.json".to_string(),
       status: "ready".to_string(),
       run_blocker: None,
+      run_repair_hint: None,
       memory_summary: Some("Stores shell completion memory after execution.".to_string()),
     }],
   };

@@ -11,6 +11,7 @@ use crate::runtime_plugins::RuntimePluginState;
 pub(crate) struct PluginCommandReadiness {
   pub(crate) run_status: String,
   pub(crate) run_blocker: Option<String>,
+  pub(crate) run_repair_hint: Option<String>,
   pub(crate) declared_connector_ids: Vec<String>,
   pub(crate) required_connector_ids: Vec<String>,
 }
@@ -23,6 +24,7 @@ impl PluginCommandReadiness {
     Self {
       run_status: "ready".to_string(),
       run_blocker: None,
+      run_repair_hint: None,
       declared_connector_ids,
       required_connector_ids,
     }
@@ -37,6 +39,7 @@ impl PluginCommandReadiness {
     Self {
       run_status: run_status.to_string(),
       run_blocker: Some(run_blocker),
+      run_repair_hint: Some(plugin_command_repair_hint(run_status).to_string()),
       declared_connector_ids,
       required_connector_ids,
     }
@@ -44,6 +47,29 @@ impl PluginCommandReadiness {
 
   pub(crate) fn is_ready(&self) -> bool {
     self.run_status == "ready"
+  }
+}
+
+fn plugin_command_repair_hint(run_status: &str) -> &'static str {
+  match run_status {
+    "invalidCommandManifest" => {
+      "Fix the command manifest JSON and schema fields, then refresh plugins."
+    }
+    "missingExecution" => "Add an execution contract before running this command.",
+    "unsupportedExecution" => {
+      "Use a supported driver: builtin, stdio, or MCP stdio."
+    }
+    "missingConnector" => {
+      "Declare the connector in the plugin manifest or remove it from the command contract."
+    }
+    "missingPermission" => {
+      "Add the required permission to the plugin manifest or narrow the command capability."
+    }
+    "runnerSetup" => {
+      "Check the runner path, executable bit, local bundle files, and sandbox diagnostics."
+    }
+    "needsConnectorAuth" => "Authorize the connector before running this command.",
+    _ => "Inspect the plugin manifest and command contract, then refresh plugins.",
   }
 }
 

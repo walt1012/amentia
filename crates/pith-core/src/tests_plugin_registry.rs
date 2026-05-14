@@ -55,6 +55,7 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
   );
   assert_eq!(commands[0]["execution"]["supported"], true);
   assert_eq!(commands[0]["runStatus"], "ready");
+  assert!(commands[0]["runRepairHint"].is_null());
 }
 
 #[test]
@@ -111,6 +112,10 @@ fn plugin_command_registry_surfaces_invalid_command_manifests() {
     .as_str()
     .expect("run blocker")
     .contains("manifest could not be loaded"));
+  assert!(commands[0]["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("Fix the command manifest"));
 }
 
 #[test]
@@ -206,6 +211,10 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
   );
   assert_eq!(commands[0]["execution"]["supported"], false);
   assert_eq!(commands[0]["runStatus"], "unsupportedExecution");
+  assert!(commands[0]["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("supported driver"));
 }
 
 #[test]
@@ -270,6 +279,10 @@ fn plugin_command_registry_blocks_mcp_commands_with_missing_server() {
     .as_str()
     .expect("run blocker")
     .contains("not declared"));
+  assert!(commands[0]["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("runner path"));
 }
 
 #[test]
@@ -824,6 +837,10 @@ printf '{"content":"ok"}\n'
   assert_eq!(command["runStatus"], "needsConnectorAuth");
   assert_eq!(command["approvalRequired"], false);
   assert_eq!(command["requiredConnectorIds"][0], "notion-tools::notion");
+  assert!(command["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("Authorize the connector"));
 
   let blocked_response = handle_request(
     &mut context,
@@ -861,6 +878,7 @@ printf '{"content":"ok"}\n'
     .result
     .expect("ready connector command registry result");
   assert_eq!(ready_registry["commands"][0]["runStatus"], "ready");
+  assert!(ready_registry["commands"][0]["runRepairHint"].is_null());
   assert_eq!(ready_registry["commands"][0]["approvalRequired"], true);
   assert_eq!(
     ready_registry["commands"][0]["approvalReason"],
@@ -1423,6 +1441,7 @@ fn plugin_hook_registry_lists_enabled_hook_plugins() {
   assert_eq!(hooks[0]["event"], "shell.completed");
   assert_eq!(hooks[0]["title"], "Record Shell Completion");
   assert_eq!(hooks[0]["status"], "ready");
+  assert!(hooks[0]["runRepairHint"].is_null());
 }
 
 #[test]
@@ -1488,6 +1507,10 @@ fn plugin_hook_registry_surfaces_invalid_hook_manifests() {
     .as_str()
     .expect("run blocker")
     .contains("manifest could not be loaded"));
+  assert!(hooks[0]["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("Fix the hook manifest"));
 }
 
 #[test]

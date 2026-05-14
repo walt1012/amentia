@@ -140,6 +140,7 @@ enum RuntimeSummaryMapper {
       memorySummary: command.memorySummary,
       runStatus: command.runStatus,
       runBlocker: command.runBlocker,
+      runRepairHint: command.runRepairHint,
       declaredConnectorIds: command.declaredConnectorIds,
       requiredConnectorIds: command.requiredConnectorIds,
       approvalRequired: command.approvalRequired,
@@ -208,6 +209,7 @@ enum RuntimeSummaryMapper {
       sourcePath: hook.sourcePath,
       status: hook.status,
       runBlocker: hook.runBlocker,
+      runRepairHint: hook.runRepairHint,
       memorySummary: hook.memorySummary
     )
   }

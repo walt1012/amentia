@@ -162,6 +162,8 @@ pub struct PluginCommandSummary {
   pub run_status: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub run_blocker: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub run_repair_hint: Option<String>,
   #[serde(default)]
   pub declared_connector_ids: Vec<String>,
   #[serde(default)]
@@ -231,6 +233,8 @@ pub struct PluginHookSummary {
   pub status: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub run_blocker: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub run_repair_hint: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub memory_summary: Option<String>,
 }

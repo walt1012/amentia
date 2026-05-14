@@ -89,6 +89,7 @@ struct RuntimePluginCommandPayload: Codable {
   let memorySummary: String?
   let runStatus: String
   let runBlocker: String?
+  let runRepairHint: String?
   let declaredConnectorIds: [String]?
   let requiredConnectorIds: [String]
   let approvalRequired: Bool?
@@ -152,6 +153,7 @@ struct RuntimePluginHookPayload: Codable {
   let sourcePath: String
   let status: String?
   let runBlocker: String?
+  let runRepairHint: String?
   let memorySummary: String?
 }
 
@@ -248,6 +250,7 @@ extension RuntimeBridge {
     let memorySummary: String?
     let runStatus: String
     let runBlocker: String?
+    let runRepairHint: String?
     let declaredConnectorIds: [String]
     let requiredConnectorIds: [String]
     let approvalRequired: Bool
@@ -311,6 +314,7 @@ extension RuntimeBridge {
     let sourcePath: String
     let status: String
     let runBlocker: String?
+    let runRepairHint: String?
     let memorySummary: String?
   }
 }

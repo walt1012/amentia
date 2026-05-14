@@ -70,6 +70,7 @@ pub(super) fn to_protocol_plugin_command(
     memory_summary,
     run_status: readiness.run_status,
     run_blocker: readiness.run_blocker,
+    run_repair_hint: readiness.run_repair_hint,
     declared_connector_ids: readiness.declared_connector_ids,
     required_connector_ids: readiness.required_connector_ids,
     approval_required,
@@ -171,6 +172,10 @@ pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSu
   } else {
     "ready"
   };
+  let run_repair_hint = hook
+    .manifest_error
+    .as_ref()
+    .map(|_| "Fix the hook manifest JSON and schema fields, then refresh plugins.".to_string());
   PluginHookSummary {
     hook_id: hook.hook_id,
     title: hook.title,
@@ -182,6 +187,7 @@ pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSu
     source_path: hook.source_path,
     status: status.to_string(),
     run_blocker: hook.manifest_error,
+    run_repair_hint,
     memory_summary,
   }
 }

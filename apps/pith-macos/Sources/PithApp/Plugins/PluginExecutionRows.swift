@@ -67,6 +67,13 @@ struct PluginCommandRow: View {
           .textSelection(.enabled)
       }
 
+      if let repairHint = command.runRepairHint {
+        Text("Repair: \(repairHint)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if command.requiresPlainInput {
         Text("Input required: use Run with Input.")
           .font(.caption2)
@@ -234,6 +241,13 @@ struct PluginHookRow: View {
         Text(runBlocker)
           .font(.caption2)
           .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
+
+      if let repairHint = hook.runRepairHint {
+        Text("Repair: \(repairHint)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
 
