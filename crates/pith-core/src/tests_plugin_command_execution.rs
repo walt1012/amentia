@@ -1696,7 +1696,10 @@ JSON
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[1]["kind"], "pluginResult");
   assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "completed");
-  assert_eq!(items[1]["attributes"]["mcpStructuredContentStatus"], "generic");
+  assert_eq!(
+    items[1]["attributes"]["mcpStructuredContentStatus"],
+    "generic"
+  );
   assert!(items[1]["attributes"]["pluginRunnerOutputStatus"].is_null());
   assert!(items[1]["content"]
     .as_str()
