@@ -209,7 +209,11 @@ enum TimelineEventPresenter {
     )
   }
 
-  static func pluginInstallPreviewFailed(error: Error, repairHint: String) -> TimelineEntry {
+  static func pluginInstallPreviewFailed(
+    error: Error,
+    repairHint: String,
+    sourcePath: String
+  ) -> TimelineEntry {
     let body = repairHint.isEmpty
       ? error.localizedDescription
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
@@ -217,7 +221,11 @@ enum TimelineEventPresenter {
     return TimelineEntryFactory.warning(
       title: "Plugin Install Preview Failed",
       body: body,
-      attributes: [:]
+      attributes: [
+        "pluginInstallStatus": "previewFailed",
+        "pluginSourcePath": sourcePath,
+        "sourcePath": sourcePath,
+      ]
     )
   }
 
@@ -234,6 +242,7 @@ enum TimelineEventPresenter {
         "pluginId": preview.pluginID,
         "pluginInstallStatus": preview.installStatus,
         "pluginSourcePath": preview.sourcePath,
+        "sourcePath": preview.sourcePath,
         "pluginInstallPath": preview.installPath,
       ]
     )
@@ -252,20 +261,32 @@ enum TimelineEventPresenter {
         "pluginStatus": plugin.status,
         "pluginManifestPath": plugin.manifestPath,
         "pluginSourcePath": preview.sourcePath,
+        "sourcePath": preview.sourcePath,
         "pluginInstallPath": preview.installPath,
       ]
     )
   }
 
-  static func pluginInstallFailed(error: Error, repairHint: String) -> TimelineEntry {
+  static func pluginInstallFailed(
+    error: Error,
+    repairHint: String,
+    sourcePath: String?
+  ) -> TimelineEntry {
     let body = repairHint.isEmpty
       ? error.localizedDescription
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
+    var attributes = [
+      "pluginInstallStatus": "failed"
+    ]
+    if let sourcePath {
+      attributes["pluginSourcePath"] = sourcePath
+      attributes["sourcePath"] = sourcePath
+    }
 
     return TimelineEntryFactory.warning(
       title: "Plugin Install Failed",
       body: body,
-      attributes: [:]
+      attributes: attributes
     )
   }
 

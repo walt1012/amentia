@@ -58,13 +58,18 @@ extension AppViewModel {
             to: timelineThreadID,
             TimelineEventPresenter.pluginInstallPreviewFailed(
               error: error,
-              repairHint: repairHint
+              repairHint: repairHint,
+              sourcePath: url.path
             )
           )
         } else {
           appendEntry(
             to: timelineThreadID,
-            TimelineEventPresenter.pluginInstallFailed(error: error, repairHint: repairHint)
+            TimelineEventPresenter.pluginInstallFailed(
+              error: error,
+              repairHint: repairHint,
+              sourcePath: confirmedPreview?.sourcePath
+            )
           )
         }
       }
@@ -340,20 +345,20 @@ extension AppViewModel {
     runPluginCommand(commandID: commandID, input: entry.attributes["commandInput"])
   }
 
-  func canRevealPluginCommandSource(from entry: TimelineEntry) -> Bool {
-    isPluginCommandIssueEntry(entry)
-      && pluginCommandSourcePath(from: entry) != nil
+  func canRevealPluginSource(from entry: TimelineEntry) -> Bool {
+    isPluginSourceRevealEntry(entry)
+      && pluginSourcePath(from: entry) != nil
   }
 
-  func revealPluginCommandSource(from entry: TimelineEntry) {
-    guard let sourcePath = pluginCommandSourcePath(from: entry) else {
-      runtimeDetail = "Plugin command source path is unavailable."
+  func revealPluginSource(from entry: TimelineEntry) {
+    guard let sourcePath = pluginSourcePath(from: entry) else {
+      runtimeDetail = "Plugin source path is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       sourcePath,
-      successDetail: "Revealed plugin command source."
+      successDetail: "Revealed plugin source."
     )
   }
 
@@ -556,16 +561,22 @@ extension AppViewModel {
     }
   }
 
-  private func pluginCommandSourcePath(from entry: TimelineEntry) -> String? {
+  private func pluginSourcePath(from entry: TimelineEntry) -> String? {
     [
       "pluginRunnerResolvedEntrypoint",
       "sourcePath",
+      "pluginSourcePath",
       "pluginRunnerPluginRoot",
     ]
     .compactMap { key in
       entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     .first { !$0.isEmpty }
+  }
+
+  private func isPluginSourceRevealEntry(_ entry: TimelineEntry) -> Bool {
+    isPluginCommandIssueEntry(entry)
+      || isPluginInstallIssueEntry(entry)
   }
 
   private func pluginCommandAuthorizationConnectorID(from entry: TimelineEntry) -> String? {
@@ -585,6 +596,15 @@ extension AppViewModel {
     entry.attributes["pluginCommandStatus"] == "failed"
       || entry.attributes["pluginCommandStatus"] == "blocked"
       || entry.attributes["pluginCommandRouting"] != nil
+  }
+
+  private func isPluginInstallIssueEntry(_ entry: TimelineEntry) -> Bool {
+    switch entry.attributes["pluginInstallStatus"] {
+    case "failed", "previewFailed", "blocked", "alreadyInstalled":
+      return true
+    default:
+      return false
+    }
   }
 
   private func isPluginCommandRetryableEntry(_ entry: TimelineEntry) -> Bool {

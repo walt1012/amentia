@@ -219,6 +219,9 @@ enum TimelineInspectorPresenter {
       "mcpProtocolStatus",
       "permissionGate",
       "pluginCommandRunId",
+      "pluginInstallStatus",
+      "sourcePath",
+      "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
   }
 
