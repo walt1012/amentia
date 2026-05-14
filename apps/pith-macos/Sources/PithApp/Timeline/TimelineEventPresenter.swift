@@ -442,10 +442,20 @@ enum TimelineEventPresenter {
   }
 
   static func pluginCommandFailed(error: Error) -> TimelineEntry {
+    var attributes = pluginCommandFailureAttributes(error)
+    let isBlocked = attributes["runStatus"] != nil
+      || attributes["runBlocker"] != nil
+      || attributes["runRepairHint"] != nil
+    if isBlocked {
+      attributes["pluginCommandStatus"] = "blocked"
+    } else if !attributes.isEmpty {
+      attributes["pluginCommandStatus"] = "failed"
+    }
+
     TimelineEntryFactory.warning(
-      title: "Plugin Command Failed",
+      title: isBlocked ? "Plugin Command Blocked" : "Plugin Command Failed",
       body: error.localizedDescription,
-      attributes: [:]
+      attributes: attributes
     )
   }
 
@@ -492,5 +502,12 @@ enum TimelineEventPresenter {
     }
 
     return connector.credentialSecretPresent ? "env-bound" : "marker-only"
+  }
+
+  private static func pluginCommandFailureAttributes(_ error: Error) -> [String: String] {
+    guard let runtimeError = error as? RuntimeBridge.RuntimeError else {
+      return [:]
+    }
+    return runtimeError.recoveryAttributes
   }
 }

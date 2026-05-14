@@ -20,6 +20,7 @@ extension RuntimeBridge {
     case requestTimedOut(method: String, seconds: Int)
     case rpc(String)
     case rpcWithRepair(message: String, repairHint: String)
+    case rpcWithRecovery(message: String, repairHint: String?, attributes: [String: String])
 
     var errorDescription: String? {
       switch self {
@@ -39,6 +40,20 @@ extension RuntimeBridge {
         return message
       case .rpcWithRepair(let message, let repairHint):
         return "\(message)\n\nRepair Hint: \(repairHint)"
+      case .rpcWithRecovery(let message, let repairHint, _):
+        guard let repairHint, !repairHint.isEmpty else {
+          return message
+        }
+        return "\(message)\n\nRepair Hint: \(repairHint)"
+      }
+    }
+
+    var recoveryAttributes: [String: String] {
+      switch self {
+      case .rpcWithRecovery(_, _, let attributes):
+        return attributes
+      default:
+        return [:]
       }
     }
   }
