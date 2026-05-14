@@ -118,8 +118,11 @@ fn plugin_inspect_previews_local_plugin_without_installing() {
 #[test]
 fn plugin_inspect_reports_duplicate_install_blocker() {
   let mut context = RuntimeContext::new_in_memory();
-  let source_root =
-    create_temp_plugin_bundle("plugin-inspect-duplicate", "workspace-notes", "Workspace Notes");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-inspect-duplicate",
+    "workspace-notes",
+    "Workspace Notes",
+  );
   replace_plugin_catalog(
     &mut context,
     vec![bundled_plugin_entry(

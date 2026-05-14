@@ -54,11 +54,7 @@ pub(crate) fn handle_plugin_install(
   };
   let install_readiness = plugin_install_readiness(context, &candidate_plugin);
   if let Some(blocker) = install_readiness.blocker {
-    return JsonRpcResponse::error(
-      request.id,
-      -32053,
-      blocker,
-    );
+    return JsonRpcResponse::error(request.id, -32053, blocker);
   }
   let installed_plugin =
     match install_plugin_bundle(&source_path, context.plugin_state.install_root()) {
