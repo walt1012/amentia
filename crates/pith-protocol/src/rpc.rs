@@ -15,7 +15,7 @@ pub struct JsonRpcResponse {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub result: Option<Value>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub error: Option<RpcError>,
+  pub error: Option<Box<RpcError>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,11 +49,11 @@ impl JsonRpcResponse {
     Self {
       id,
       result: None,
-      error: Some(RpcError {
+      error: Some(Box::new(RpcError {
         code,
         message: message.into(),
         data: None,
-      }),
+      })),
     }
   }
 
@@ -64,11 +64,11 @@ impl JsonRpcResponse {
     Self {
       id,
       result: None,
-      error: Some(RpcError {
+      error: Some(Box::new(RpcError {
         code,
         message: message.into(),
         data: Some(serde_json::to_value(data).expect("serializable error data")),
-      }),
+      })),
     }
   }
 }
