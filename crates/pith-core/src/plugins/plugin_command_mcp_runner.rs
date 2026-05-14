@@ -728,9 +728,15 @@ mod tests {
 
   #[test]
   fn detects_pith_text_content_envelopes() {
-    assert!(mcp_text_content_looks_like_pith_output(r#"{"content":"Captured context."}"#));
+    assert!(mcp_text_content_looks_like_pith_output(
+      r#"{"content":"Captured context."}"#
+    ));
     assert!(mcp_text_content_looks_like_pith_output(r#"{"items":[]}"#));
-    assert!(!mcp_text_content_looks_like_pith_output(r#"{"content":{"pageId":"abc123"}}"#));
-    assert!(!mcp_text_content_looks_like_pith_output("Captured context."));
+    assert!(!mcp_text_content_looks_like_pith_output(
+      r#"{"content":{"pageId":"abc123"}}"#
+    ));
+    assert!(!mcp_text_content_looks_like_pith_output(
+      "Captured context."
+    ));
   }
 }
