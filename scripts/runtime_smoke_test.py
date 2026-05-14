@@ -243,7 +243,7 @@ def main() -> int:
             "read_content",
             "insert_content",
           ],
-          "credentialStore": "keychain",
+          "credentialStore": "local",
         },
         "defaultEnabled": False,
       },
@@ -621,7 +621,7 @@ def main() -> int:
     )
     assert notion_connector["status"] == "disabled"
     assert notion_connector["authType"] == "oauth2"
-    assert notion_connector["credentialStore"] == "keychain"
+    assert notion_connector["credentialStore"] == "local"
     assert notion_connector["authScopes"] == ["read_content", "insert_content"]
     hook_registry, _ = send_request(
       process,

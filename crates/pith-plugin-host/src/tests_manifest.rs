@@ -102,3 +102,26 @@ fn validation_hint_describes_supported_credential_stores() {
   assert!(hint.contains("local"));
   assert!(!hint.contains("keychain"));
 }
+
+#[test]
+fn validate_manifest_rejects_unimplemented_keychain_store() {
+  let mut manifest = manifest(vec!["connector:notion"], vec!["network.outbound"]);
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.auth_policy = Some(PluginAuthPolicyManifest {
+    auth_type: "oauth2".to_string(),
+    required: true,
+    scopes: vec!["read_content".to_string()],
+    credential_store: Some("keychain".to_string()),
+  });
+
+  let error = validate_manifest(&manifest).expect_err("keychain is not implemented yet");
+
+  assert!(error
+    .to_string()
+    .contains("plugin credential store `keychain` is not supported"));
+}
