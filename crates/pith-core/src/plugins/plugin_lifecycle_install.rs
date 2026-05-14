@@ -12,7 +12,7 @@ use crate::request_params::parse_required_params;
 use crate::RuntimeContext;
 
 pub(crate) fn handle_plugin_inspect(
-  _context: &mut RuntimeContext,
+  context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
   let params = match parse_required_params::<PluginInspectParams>(&request, "plugin/inspect") {
@@ -52,17 +52,12 @@ pub(crate) fn handle_plugin_install(
     Ok(plugin) => plugin,
     Err(error) => return JsonRpcResponse::error(request.id, -32053, error.to_string()),
   };
-  if context
-    .plugin_state
-    .contains_plugin_id(&candidate_plugin.id)
-  {
+  let install_readiness = plugin_install_readiness(context, &candidate_plugin);
+  if let Some(blocker) = install_readiness.blocker {
     return JsonRpcResponse::error(
       request.id,
       -32053,
-      format!(
-        "Plugin `{}` is already installed",
-        candidate_plugin.display_name
-      ),
+      blocker,
     );
   }
   let installed_plugin =
