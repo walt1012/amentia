@@ -14,6 +14,9 @@ struct PluginInspectParams: Codable {
 
 struct PluginInspectResult: Codable {
   let plugin: RuntimePluginPayload
+  let installStatus: String
+  let installBlocker: String?
+  let installRepairHint: String?
 }
 
 struct PluginInstallResult: Codable {
@@ -215,6 +218,17 @@ extension RuntimeBridge {
     let provenance: String
     let validationError: String?
     let validationHint: String?
+  }
+
+  struct RuntimePluginInspection {
+    let plugin: RuntimePlugin
+    let installStatus: String
+    let installBlocker: String?
+    let installRepairHint: String?
+
+    var canInstall: Bool {
+      installStatus == "ready" && installBlocker == nil
+    }
   }
 
   struct RuntimePluginRemoval {

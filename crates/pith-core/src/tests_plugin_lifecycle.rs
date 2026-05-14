@@ -110,7 +110,53 @@ fn plugin_inspect_previews_local_plugin_without_installing() {
   assert_eq!(result["plugin"]["id"], "focus-review");
   assert_eq!(result["plugin"]["displayName"], "Focus Review");
   assert_eq!(result["plugin"]["provenance"], "local");
+  assert_eq!(result["installStatus"], "ready");
+  assert!(result.get("installBlocker").is_none());
   assert!(context.plugin_state.catalog().is_empty());
+}
+
+#[test]
+fn plugin_inspect_reports_duplicate_install_blocker() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root =
+    create_temp_plugin_bundle("plugin-inspect-duplicate", "workspace-notes", "Workspace Notes");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "workspace-notes",
+      "Workspace Notes",
+      true,
+      true,
+      &["prompt_pack:workspace.notes"],
+      &["file.read"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_INSPECT,
+      Some(json!({
+        "sourcePath": source_root.display().to_string()
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+    .expect("cleanup plugin source root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("plugin inspect result");
+  assert_eq!(result["plugin"]["id"], "workspace-notes");
+  assert_eq!(result["installStatus"], "alreadyInstalled");
+  assert!(result["installBlocker"]
+    .as_str()
+    .expect("install blocker")
+    .contains("already installed"));
+  assert!(result["installRepairHint"]
+    .as_str()
+    .expect("install repair hint")
+    .contains("Remove the existing local plugin first"));
 }
 
 #[test]

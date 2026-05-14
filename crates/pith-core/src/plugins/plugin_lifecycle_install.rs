@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use pith_plugin_host::PluginCatalogEntry;
 use pith_plugin_host::{inspect_plugin_bundle, install_plugin_bundle};
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, PluginInspectParams, PluginInspectResult, PluginInstallParams,
@@ -21,12 +22,18 @@ pub(crate) fn handle_plugin_inspect(
 
   let source_path = PathBuf::from(&params.source_path);
   match inspect_plugin_bundle(&source_path) {
-    Ok(plugin) => JsonRpcResponse::success(
-      request.id,
-      &PluginInspectResult {
-        plugin: to_protocol_plugin(plugin),
-      },
-    ),
+    Ok(plugin) => {
+      let install_readiness = plugin_install_readiness(context, &plugin);
+      JsonRpcResponse::success(
+        request.id,
+        &PluginInspectResult {
+          plugin: to_protocol_plugin(plugin),
+          install_status: install_readiness.status,
+          install_blocker: install_readiness.blocker,
+          install_repair_hint: install_readiness.repair_hint,
+        },
+      )
+    }
     Err(error) => JsonRpcResponse::error(request.id, -32053, error.to_string()),
   }
 }
@@ -80,4 +87,38 @@ pub(crate) fn handle_plugin_install(
       plugin: to_protocol_plugin(refreshed_plugin),
     },
   )
+}
+
+struct PluginInstallReadiness {
+  status: String,
+  blocker: Option<String>,
+  repair_hint: Option<String>,
+}
+
+fn plugin_install_readiness(
+  context: &RuntimeContext,
+  candidate_plugin: &PluginCatalogEntry,
+) -> PluginInstallReadiness {
+  if context
+    .plugin_state
+    .contains_plugin_id(&candidate_plugin.id)
+  {
+    return PluginInstallReadiness {
+      status: "alreadyInstalled".to_string(),
+      blocker: Some(format!(
+        "Plugin `{}` is already installed",
+        candidate_plugin.display_name
+      )),
+      repair_hint: Some(
+        "Remove the existing local plugin first, or change the plugin name before installing this copy."
+          .to_string(),
+      ),
+    };
+  }
+
+  PluginInstallReadiness {
+    status: "ready".to_string(),
+    blocker: None,
+    repair_hint: None,
+  }
 }

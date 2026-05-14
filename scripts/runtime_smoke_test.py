@@ -60,6 +60,7 @@ def assert_plugin_install_remove(
   )
   assert plugin_inspect["result"]["plugin"]["id"] == "focus-review"
   assert plugin_inspect["result"]["plugin"]["provenance"] == "local"
+  assert plugin_inspect["result"]["installStatus"] == "ready"
 
   plugin_install, _ = send_request(
     process,
@@ -74,10 +75,23 @@ def assert_plugin_install_remove(
   assert plugin_install["result"]["plugin"]["id"] == "focus-review"
   assert plugin_install["result"]["plugin"]["provenance"] == "local"
 
-  plugin_list_after_install, _ = send_request(
+  duplicate_plugin_inspect, _ = send_request(
     process,
     {
       "id": request_id_start + 2,
+      "method": "plugin/inspect",
+      "params": {
+        "sourcePath": str(plugin_import_dir / "focus-review"),
+      },
+    },
+  )
+  assert duplicate_plugin_inspect["result"]["installStatus"] == "alreadyInstalled"
+  assert "already installed" in duplicate_plugin_inspect["result"]["installBlocker"]
+
+  plugin_list_after_install, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 3,
       "method": "plugin/list",
     },
   )
@@ -92,7 +106,7 @@ def assert_plugin_install_remove(
   plugin_remove, _ = send_request(
     process,
     {
-      "id": request_id_start + 3,
+      "id": request_id_start + 4,
       "method": "plugin/remove",
       "params": {
         "manifestPath": installed_plugin["manifestPath"],
@@ -105,7 +119,7 @@ def assert_plugin_install_remove(
   plugin_list_after_remove, _ = send_request(
     process,
     {
-      "id": request_id_start + 4,
+      "id": request_id_start + 5,
       "method": "plugin/list",
     },
   )

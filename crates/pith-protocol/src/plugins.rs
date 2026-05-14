@@ -46,6 +46,11 @@ pub struct PluginInspectParams {
 #[serde(rename_all = "camelCase")]
 pub struct PluginInspectResult {
   pub plugin: PluginSummary,
+  pub install_status: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub install_blocker: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub install_repair_hint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

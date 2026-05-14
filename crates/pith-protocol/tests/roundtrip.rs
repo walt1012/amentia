@@ -201,6 +201,9 @@ fn plugin_install_and_remove_payloads_use_camel_case_fields() {
       validation_error: None,
       validation_hint: None,
     },
+    install_status: "ready".to_string(),
+    install_blocker: None,
+    install_repair_hint: None,
   };
 
   let inspect_value =
@@ -216,6 +219,8 @@ fn plugin_install_and_remove_payloads_use_camel_case_fields() {
   assert!(install_value.get("sourcePath").is_some());
   assert!(remove_value.get("manifestPath").is_some());
   assert!(inspect_result_value.get("plugin").is_some());
+  assert!(inspect_result_value.get("installStatus").is_some());
+  assert!(inspect_result_value.get("installBlocker").is_none());
   assert!(inspect_result_value["plugin"].get("displayName").is_some());
   assert!(result_value.get("pluginId").is_some());
   assert!(result_value.get("displayName").is_some());

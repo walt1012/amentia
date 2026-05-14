@@ -25,12 +25,20 @@ extension AppViewModel {
       }
       var confirmedPreview: PluginInstallPreview?
       do {
-        let inspectedPlugin = try await runtimeBridge.inspectPlugin(sourcePath: url.path)
+        let inspection = try await runtimeBridge.inspectPlugin(sourcePath: url.path)
         let preview = PluginInstallInspector.preview(
           for: url,
-          inspectedPlugin: inspectedPlugin,
+          inspection: inspection,
           installRootPath: runtimeBridge.localPluginInstallRootPath()
         )
+        guard preview.canInstall else {
+          runtimeDetail = preview.installBlocker ?? "Plugin cannot be installed yet."
+          appendEntry(
+            to: timelineThreadID,
+            TimelineEventPresenter.pluginInstallBlocked(preview: preview)
+          )
+          return
+        }
         guard PluginInstallDialogPresenter.confirmInstall(preview: preview) else {
           runtimeDetail = "Plugin install was cancelled."
           return

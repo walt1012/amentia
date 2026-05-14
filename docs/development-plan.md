@@ -60,8 +60,8 @@ Done:
 - Bounded `stdio` and MCP stdio runners with sandbox diagnostics, permissions,
   approvals, retries, repair hints, output contracts, and runner memory notes.
 - Local install/remove lifecycle, plugin state diagnostics, explicit `/plugin`
-  routing, inspect-before-install, and a connector-backed Notion command
-  contract.
+  routing, install readiness preflight, inspect-before-install, and a
+  connector-backed Notion command contract.
 - Honest connector credentials: current stores are `none` or `local`; Keychain
   and remote MCP transports wait until implemented. Authenticated connectors
   must declare `credentialStore: local` explicitly.

@@ -21,14 +21,19 @@ extension RuntimeBridge {
     return runtimePlugin(from: result.plugin)
   }
 
-  func inspectPlugin(sourcePath: String) async throws -> RuntimePlugin {
+  func inspectPlugin(sourcePath: String) async throws -> RuntimePluginInspection {
     let response: JSONRPCResponse<PluginInspectResult> = try await sendRequest(
       method: "plugin/inspect",
       params: PluginInspectParams(sourcePath: sourcePath)
     )
     let result = try responseResult(from: response)
 
-    return runtimePlugin(from: result.plugin)
+    return RuntimePluginInspection(
+      plugin: runtimePlugin(from: result.plugin),
+      installStatus: result.installStatus,
+      installBlocker: result.installBlocker,
+      installRepairHint: result.installRepairHint
+    )
   }
 
   func pluginCapabilityRegistry() async throws -> RuntimePluginCapabilityRegistry {

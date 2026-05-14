@@ -198,6 +198,24 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func pluginInstallBlocked(preview: PluginInstallPreview) -> TimelineEntry {
+    let blocker = preview.installBlocker ?? "Plugin cannot be installed yet."
+    let body = preview.installRepairHint?.isEmpty == false
+      ? "\(blocker)\n\nRepair Hint: \(preview.installRepairHint ?? "")"
+      : blocker
+
+    return TimelineEntryFactory.warning(
+      title: "Plugin Install Blocked",
+      body: body,
+      attributes: [
+        "pluginId": preview.pluginID,
+        "pluginInstallStatus": preview.installStatus,
+        "pluginSourcePath": preview.sourcePath,
+        "pluginInstallPath": preview.installPath,
+      ]
+    )
+  }
+
   static func pluginInstalled(
     _ plugin: RuntimeBridge.RuntimePlugin,
     preview: PluginInstallPreview
