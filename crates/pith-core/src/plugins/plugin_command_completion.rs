@@ -75,7 +75,8 @@ fn complete_plugin_command_items(
     context
       .persist_runtime_state()
       .map_err(|error| (-32010, error.to_string()))?;
-    refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
+    refresh_thread_summary_note(context, &thread_id)
+      .map_err(|error| (-32012, error.to_string()))?;
   }
 
   Ok(TurnStartResult {
