@@ -124,21 +124,6 @@ pub(crate) fn command_readiness(
     );
   }
 
-  if let Some(connector) = required_connectors.iter().find(|connector| {
-    plugin_state
-      .connector_credential(&connector.connector_id)
-      .is_none()
-  }) {
-    return PluginCommandReadiness::blocked(
-      "needsConnectorAuth",
-      format!(
-        "Plugin command `{}` requires authorizing connector `{}` first.",
-        command.command_id, connector.connector_id
-      ),
-      declared_connector_ids,
-      required_connector_ids,
-    );
-  }
   if let Some(run_blocker) = stdio_runner_setup_blocker(command) {
     return PluginCommandReadiness::blocked(
       "runnerSetup",
@@ -151,6 +136,22 @@ pub(crate) fn command_readiness(
     return PluginCommandReadiness::blocked(
       "runnerSetup",
       run_blocker,
+      declared_connector_ids,
+      required_connector_ids,
+    );
+  }
+
+  if let Some(connector) = required_connectors.iter().find(|connector| {
+    plugin_state
+      .connector_credential(&connector.connector_id)
+      .is_none()
+  }) {
+    return PluginCommandReadiness::blocked(
+      "needsConnectorAuth",
+      format!(
+        "Plugin command `{}` requires authorizing connector `{}` first.",
+        command.command_id, connector.connector_id
+      ),
       declared_connector_ids,
       required_connector_ids,
     );

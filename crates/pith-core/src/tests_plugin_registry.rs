@@ -869,6 +869,115 @@ printf '{"content":"ok"}\n'
 }
 
 #[test]
+fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-connector-setup-first",
+    "notion-tools",
+    "Notion Tools",
+  );
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-tools",
+  "version": "0.1.0",
+  "displayName": "Notion Tools",
+  "description": "Notion connector command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:notion-tools.sync", "connector:notion"],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "keychain"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector command plugin manifest");
+  fs::write(
+    source_root.join("commands").join("notion-tools.sync.json"),
+    r#"{
+  "title": "Sync Notion",
+  "description": "Sync local context to Notion.",
+  "prompt": "Prepare a Notion sync payload.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "missing-runner.sh"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion connector command plugin".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-tools.sync".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let registry_response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+  let blocked_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-tools::notion-tools.sync"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(registry_response.error.is_none());
+  let registry = registry_response
+    .result
+    .expect("connector setup registry result");
+  let command = &registry["commands"][0];
+  assert_eq!(command["runStatus"], "runnerSetup");
+  assert_eq!(command["requiredConnectorIds"][0], "notion-tools::notion");
+  assert_eq!(command["approvalRequired"], false);
+  assert!(command["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("entrypoint could not be resolved"));
+  let error = blocked_response.error.expect("runner setup blocker");
+  assert_eq!(error.code, -32053);
+  assert!(error
+    .message
+    .contains("entrypoint could not be resolved"));
+}
+
+#[test]
 fn connector_backed_plugin_commands_can_scope_connector_requirements() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
