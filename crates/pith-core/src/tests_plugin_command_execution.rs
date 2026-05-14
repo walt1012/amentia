@@ -1569,6 +1569,143 @@ JSON
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_preserves_generic_mcp_structured_content() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-generic-structured-output",
+    "mcp-generic",
+    "MCP Generic",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-generic-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-generic",
+  "version": "0.1.0",
+  "displayName": "MCP Generic",
+  "description": "MCP command plugin with generic structured output",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-generic.inspect", "mcp_server:local"],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp generic plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("mcp-generic.inspect.json"),
+    r#"{
+  "title": "Inspect MCP Data",
+  "description": "Return generic MCP structured content.",
+  "prompt": "Inspect MCP data.",
+  "execution": {
+    "kind": "mcp.localInspect",
+    "driver": "mcp",
+    "entrypoint": "local.inspect"
+  }
+}"#,
+  )
+  .expect("write mcp generic command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+cat <<'JSON'
+{"jsonrpc":"2.0","id":2,"result":{"structuredContent":{"content":{"pageId":"abc123"},"status":"ok"}}}
+JSON
+"#,
+  )
+  .expect("write mcp generic server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp generic server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions).expect("set mcp generic server permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-generic".to_string(),
+      name: "mcp-generic".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Generic".to_string(),
+      status: "ready".to_string(),
+      description: "MCP command plugin with generic structured output".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-generic.inspect".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec!["mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Generic Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-generic::mcp-generic.inspect"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "completed");
+  assert_eq!(items[1]["attributes"]["mcpStructuredContentStatus"], "generic");
+  assert!(items[1]["attributes"]["pluginRunnerOutputStatus"].is_null());
+  assert!(items[1]["content"]
+    .as_str()
+    .expect("generic structured content")
+    .contains("\"pageId\": \"abc123\""));
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_records_mcp_protocol_diagnostics() {
   use std::os::unix::fs::PermissionsExt;
 
