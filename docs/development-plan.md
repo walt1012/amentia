@@ -54,7 +54,8 @@ M4 turns plugins into bounded local capabilities. The platform now has typed
 registries, bounded `stdio` and MCP runners, permission gates, connector
 authorization, sandbox diagnostics, runner-owned timeline output, runner memory
 notes, local install/remove lifecycle safety, and structured repair hints for
-registry, readiness, input-contract, and approval-time failures.
+registry, readiness, input-contract, approval-time, runner setup, MCP protocol,
+process exit, and output-contract failures.
 
 Current M4 focus:
 
@@ -68,10 +69,9 @@ Current M4 focus:
 
 ## Next Order
 
-1. Close remaining plugin recovery gaps around runner setup repair.
-2. Add only the minimum model/tool routing needed for local plugins to feel
+1. Add only the minimum model/tool routing needed for local plugins to feel
    useful; keep deterministic routing until tiny models prove reliable.
-3. Review M4 exit readiness before starting broader connector/plugin discovery.
+2. Review M4 exit readiness before starting broader connector/plugin discovery.
 
 ## Not Now
 

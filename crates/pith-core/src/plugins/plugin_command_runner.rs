@@ -93,11 +93,9 @@ impl PluginRunnerFailure {
     (code, message): (i32, String),
     attributes: HashMap<String, String>,
   ) -> Self {
-    Self::new(
-      code,
-      message,
-      plugin_runner_setup_failed_attributes(attributes),
-    )
+    let mut attributes = plugin_runner_setup_failed_attributes(attributes);
+    attributes.insert("pluginRunnerSetupDetail".to_string(), message.clone());
+    Self::new(code, message, attributes)
   }
 
   pub(super) fn boxed(self) -> Box<Self> {

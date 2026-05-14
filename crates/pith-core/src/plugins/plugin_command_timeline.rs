@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
+use super::plugin_command_recovery_hints::runner_failure_recovery_hint;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 use crate::context_memory_pack::{merge_memory_context_attributes, MemoryContextPack};
 
@@ -190,7 +191,7 @@ pub(super) fn build_plugin_failure_timeline_item(
     "Failed"
   };
   let failure_kind = plugin_runner_failure_kind(code, &attributes);
-  let recovery_hint = plugin_runner_recovery_hint(failure_kind);
+  let recovery_hint = runner_failure_recovery_hint(failure_kind, &attributes);
   attributes.extend(HashMap::from([
     ("pluginId".to_string(), command.plugin_id.clone()),
     ("commandId".to_string(), command.command_id.clone()),
@@ -205,7 +206,7 @@ pub(super) fn build_plugin_failure_timeline_item(
     ),
     (
       "pluginRunnerRecoveryHint".to_string(),
-      recovery_hint.to_string(),
+      recovery_hint,
     ),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));
@@ -269,22 +270,6 @@ fn plugin_runner_failure_kind(code: i32, attributes: &HashMap<String, String>) -
     return "processExit";
   }
   "runnerSetup"
-}
-
-fn plugin_runner_recovery_hint(failure_kind: &str) -> &'static str {
-  match failure_kind {
-    "cancelled" => "Run the command again when the current task is ready.",
-    "timeout" => "Check whether the runner is waiting for input or doing unbounded work.",
-    "unsupportedExecution" => {
-      "Update the plugin command manifest to declare a supported execution contract."
-    }
-    "mcpProtocol" => "Check the MCP server command and stdout JSON-RPC framing.",
-    "outputContract" => {
-      "Return plain text, a valid JSON output envelope, valid timeline items, or memory notes."
-    }
-    "processExit" => "Inspect runner stderr, stdout, and exit status.",
-    _ => "Check the plugin manifest, entrypoint path, sandbox, and local files.",
-  }
 }
 
 #[cfg(test)]

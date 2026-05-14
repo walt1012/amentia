@@ -282,7 +282,7 @@ fn plugin_command_registry_blocks_mcp_commands_with_missing_server() {
   assert!(commands[0]["runRepairHint"]
     .as_str()
     .expect("repair hint")
-    .contains("runner path"));
+    .contains("Declare the referenced MCP server"));
 }
 
 #[test]
@@ -992,9 +992,19 @@ fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() 
     .as_str()
     .expect("run blocker")
     .contains("entrypoint could not be resolved"));
+  assert!(command["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("Add the runner file"));
   let error = blocked_response.error.expect("runner setup blocker");
   assert_eq!(error.code, -32053);
   assert!(error.message.contains("entrypoint could not be resolved"));
+  let data = error.data.expect("runner setup error data");
+  assert_eq!(data["runStatus"], "runnerSetup");
+  assert!(data["runRepairHint"]
+    .as_str()
+    .expect("error repair hint")
+    .contains("Add the runner file"));
 }
 
 #[test]

@@ -2241,7 +2241,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Check the MCP server command and stdout JSON-RPC framing."
+    "Make the MCP server return a JSON-RPC tools/call response with the expected request id."
   );
   assert_eq!(
     items[1]["attributes"]["mcpProtocolStatus"],
@@ -2647,7 +2647,7 @@ exit 7
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Inspect runner stderr, stdout, and exit status."
+    "Fix the runner error shown in stderr/stdout, then return exit code 0 with valid output."
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerExecutionDriver"],
@@ -2834,7 +2834,7 @@ printf '{}\n'
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Return plain text, a valid JSON output envelope, valid timeline items, or memory notes."
+    "Populate `content`, `message`, `items`, or `memoryNotes`, or return plain text."
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerOutputStatus"],
