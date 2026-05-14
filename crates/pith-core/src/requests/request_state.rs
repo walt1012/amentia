@@ -62,7 +62,7 @@ pub(crate) enum PreparedTurnAction {
     approval_id: Option<String>,
   },
   PluginCommand {
-    snapshot: PluginCommandSnapshot,
+    snapshot: Box<PluginCommandSnapshot>,
   },
   PluginCommandRouteFailed {
     command_id: String,

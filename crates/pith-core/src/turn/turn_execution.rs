@@ -61,7 +61,7 @@ pub(crate) fn execute_prepared_turn_snapshot(
     }
     PreparedTurnAction::PluginCommand { snapshot } => {
       let command_id = snapshot.command_id().to_string();
-      match execute_plugin_command_snapshot(snapshot) {
+      match execute_plugin_command_snapshot(*snapshot) {
         Ok(output) => {
           pending_approval = output.pending_approval.clone();
           let should_capture_memory = output.capture_memory;

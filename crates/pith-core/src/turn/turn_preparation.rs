@@ -38,7 +38,9 @@ pub(crate) fn prepare_turn_action(
       input,
       cancellation,
     ) {
-      Ok(snapshot) => PreparedTurnAction::PluginCommand { snapshot },
+      Ok(snapshot) => PreparedTurnAction::PluginCommand {
+        snapshot: Box::new(snapshot),
+      },
       Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
         attributes: error.route_failure_attributes(&command_id, routing_reason),
         command_id,
