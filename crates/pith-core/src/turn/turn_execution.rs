@@ -25,7 +25,10 @@ pub(crate) fn execute_prepared_turn_snapshot(
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
 
   match action {
-    PreparedTurnAction::Write { intent, approval_id } => {
+    PreparedTurnAction::Write {
+      intent,
+      approval_id,
+    } => {
       if let Some(workspace) = snapshot.workspace.as_ref() {
         execute_write_turn(
           &snapshot,
@@ -39,7 +42,10 @@ pub(crate) fn execute_prepared_turn_snapshot(
         execute_no_workspace_turn(&snapshot, &mut items);
       }
     }
-    PreparedTurnAction::Shell { command, approval_id } => {
+    PreparedTurnAction::Shell {
+      command,
+      approval_id,
+    } => {
       if let Some(workspace) = snapshot.workspace.as_ref() {
         execute_shell_turn(
           &snapshot,
@@ -84,7 +90,11 @@ pub(crate) fn execute_prepared_turn_snapshot(
         }
       }
     }
-    PreparedTurnAction::PluginCommandRouteFailed { command_id, message, attributes } => {
+    PreparedTurnAction::PluginCommandRouteFailed {
+      command_id,
+      message,
+      attributes,
+    } => {
       items.push(TimelineItem {
         kind: "warning".to_string(),
         title: "Plugin Command Not Ready".to_string(),

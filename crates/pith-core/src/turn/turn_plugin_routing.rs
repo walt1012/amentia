@@ -74,10 +74,9 @@ mod tests {
 
   #[test]
   fn detects_slash_plugin_command_with_input() {
-    let route = infer_explicit_plugin_command_route(
-      "/plugin notion-runner::notion-runner.sync sync today",
-    )
-    .expect("route");
+    let route =
+      infer_explicit_plugin_command_route("/plugin notion-runner::notion-runner.sync sync today")
+        .expect("route");
 
     assert_eq!(route.command_id, "notion-runner::notion-runner.sync");
     assert_eq!(route.input.as_deref(), Some("sync today"));

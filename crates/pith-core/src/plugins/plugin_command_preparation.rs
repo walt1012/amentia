@@ -171,7 +171,10 @@ impl PluginCommandPreparationError {
     routing_reason: &str,
   ) -> HashMap<String, String> {
     let mut attributes = HashMap::from([
-      ("pluginCommandRouting".to_string(), routing_reason.to_string()),
+      (
+        "pluginCommandRouting".to_string(),
+        routing_reason.to_string(),
+      ),
       ("commandId".to_string(), command_id.to_string()),
       ("errorCode".to_string(), self.code.to_string()),
     ]);
