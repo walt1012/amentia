@@ -66,8 +66,8 @@ Done:
 - Honest connector credentials: current stores are `none` or `local`; Keychain
   and remote MCP transports wait until implemented. Authenticated connectors
   must declare `credentialStore: local` explicitly, and connector auth failures
-  return visible repair metadata with panel and timeline authorization and
-  input-run recovery actions.
+  return visible repair metadata with panel and timeline enable, authorization,
+  input-run, retry, and source-reveal recovery actions.
 
 Active:
 
@@ -90,9 +90,8 @@ M4 exit criteria:
 
 ## Next Order
 
-1. Exercise the full third-party connector path against the current Notion-style
-   contract and close remaining blockers.
-2. Review M4 exit readiness before broader connector discovery or UI expansion.
+1. Smoke the full third-party connector loop from install through retry.
+2. Close only real blockers found in that loop, then review M4 exit readiness.
 
 ## Not Now
 

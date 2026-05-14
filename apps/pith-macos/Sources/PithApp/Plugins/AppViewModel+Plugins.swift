@@ -298,6 +298,29 @@ extension AppViewModel {
     return canAuthorizePluginConnector(connectorID: connectorID)
   }
 
+  func canEnablePlugin(from entry: TimelineEntry) -> Bool {
+    guard isPluginRecoveryEntry(entry),
+          let pluginID = pluginID(from: entry),
+          let plugin = pluginSummary(pluginID: pluginID),
+          !plugin.enabled
+    else {
+      return false
+    }
+
+    return canSetPluginEnabled(pluginID: pluginID)
+  }
+
+  func enablePlugin(from entry: TimelineEntry) {
+    guard canEnablePlugin(from: entry),
+          let pluginID = pluginID(from: entry)
+    else {
+      runtimeDetail = "Plugin enable action is unavailable."
+      return
+    }
+
+    setPluginEnabled(pluginID: pluginID, enabled: true)
+  }
+
   func canRunPluginCommandWithInput(from entry: TimelineEntry) -> Bool {
     guard isPluginCommandIssueEntry(entry),
           entry.attributes["commandInput"] == nil,
@@ -577,6 +600,31 @@ extension AppViewModel {
   private func isPluginSourceRevealEntry(_ entry: TimelineEntry) -> Bool {
     isPluginCommandIssueEntry(entry)
       || isPluginInstallIssueEntry(entry)
+  }
+
+  private func isPluginRecoveryEntry(_ entry: TimelineEntry) -> Bool {
+    isPluginCommandIssueEntry(entry)
+      || isPluginInstallIssueEntry(entry)
+      || entry.attributes["pluginId"] != nil
+  }
+
+  private func pluginID(from entry: TimelineEntry) -> String? {
+    if let pluginID = entry.attributes["pluginId"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !pluginID.isEmpty
+    {
+      return pluginID
+    }
+
+    guard let commandID = entry.attributes["commandId"] else {
+      return nil
+    }
+
+    guard let separatorRange = commandID.range(of: "::") else {
+      return nil
+    }
+
+    let pluginID = String(commandID[..<separatorRange.lowerBound])
+    return pluginID.isEmpty ? nil : pluginID
   }
 
   private func pluginCommandAuthorizationConnectorID(from entry: TimelineEntry) -> String? {
