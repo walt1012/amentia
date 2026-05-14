@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use pith_plugin_host::{inspect_plugin_bundle, install_plugin_bundle};
 use pith_protocol::{
-  JsonRpcRequest, JsonRpcResponse, PluginInspectParams, PluginInspectResult,
-  PluginInstallParams, PluginInstallResult,
+  JsonRpcRequest, JsonRpcResponse, PluginInspectParams, PluginInspectResult, PluginInstallParams,
+  PluginInstallResult,
 };
 
 use crate::protocol_adapters::to_protocol_plugin;
