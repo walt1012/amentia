@@ -64,7 +64,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   notes across direct and approved runs, local setup blockers before connector
   auth prompts, and install failure repair hints.
 - Completed contract baseline: default runner output metadata matches accepted
-  `content`, `message`, `items`, and `memoryNotes` envelopes.
+  `content`, `message`, `items`, and `memoryNotes` envelopes, including MCP
+  `structuredContent` when it carries a Pith output envelope.
 - Completed lifecycle baseline: symlink-safe bundle install, nested manifest
   rejection, direct-child local removal, persisted-state-safe enable changes,
   and catalog refresh after removal cleanup errors.

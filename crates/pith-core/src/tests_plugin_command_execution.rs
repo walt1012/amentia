@@ -1402,6 +1402,173 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_accepts_mcp_structured_pith_output() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-structured-output",
+    "mcp-structured",
+    "MCP Structured",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-structured-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-structured",
+  "version": "0.1.0",
+  "displayName": "MCP Structured",
+  "description": "MCP command plugin with Pith structured output",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-structured.capture", "mcp_server:local"],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp structured plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join("mcp-structured.capture.json"),
+    r#"{
+  "title": "Capture MCP Context",
+  "description": "Return Pith timeline and memory output through MCP structured content.",
+  "prompt": "Capture MCP context.",
+  "execution": {
+    "kind": "mcp.localCapture",
+    "driver": "mcp",
+    "entrypoint": "local.capture"
+  }
+}"#,
+  )
+  .expect("write mcp structured command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+cat <<'JSON'
+{"jsonrpc":"2.0","id":2,"result":{"structuredContent":{"items":[{"kind":"pluginResult","title":"MCP Structured Item","content":"Owned MCP timeline item.","attributes":{"runner":"mcp"}}],"memoryNotes":[{"title":"MCP Structured Memory","body":"MCP structured content can store Pith memory.","source":"plugin.mcp-structured","tags":["mcp","structured"]}]}}}
+JSON
+"#,
+  )
+  .expect("write mcp structured server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp structured server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions).expect("set mcp structured server permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-structured".to_string(),
+      name: "mcp-structured".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Structured".to_string(),
+      status: "ready".to_string(),
+      description: "MCP command plugin with Pith structured output".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-structured.capture".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec!["mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Structured Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-structured::mcp-structured.capture"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["title"], "MCP Structured Item");
+  assert_eq!(items[1]["attributes"]["runner"], "mcp");
+  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "completed");
+  assert_eq!(
+    items[1]["attributes"]["mcpStructuredContentStatus"],
+    "pithOutputEnvelope"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputStatus"],
+    "envelope"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputValidTimelineItemCount"],
+    "1"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputMemoryNoteCount"],
+    "1"
+  );
+  let memory_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Memory Note Saved")
+    .expect("mcp structured memory item");
+  assert_eq!(
+    memory_item["attributes"]["memoryNoteTitle"],
+    "MCP Structured Memory"
+  );
+  let saved_note = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .find(|note| note.title == "MCP Structured Memory")
+    .expect("saved mcp structured memory note");
+  assert_eq!(saved_note.source, "plugin.mcp-structured");
+  assert!(saved_note
+    .body
+    .contains("MCP structured content can store Pith memory."));
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_records_mcp_protocol_diagnostics() {
   use std::os::unix::fs::PermissionsExt;
 

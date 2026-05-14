@@ -798,7 +798,7 @@ pub(super) fn safe_entrypoint_path(
   Ok(resolved)
 }
 
-fn plugin_runner_output(
+pub(super) fn plugin_runner_output(
   command: &HostPluginCommandEntry,
   execution_kind: &str,
   output: &str,

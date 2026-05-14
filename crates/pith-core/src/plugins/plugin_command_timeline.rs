@@ -259,11 +259,11 @@ fn plugin_runner_failure_kind(code: i32, attributes: &HashMap<String, String>) -
   if code == -32053 {
     return "unsupportedExecution";
   }
-  if attributes.contains_key("mcpProtocolStatus") {
-    return "mcpProtocol";
-  }
   if attributes.contains_key("pluginRunnerOutputStatus") {
     return "outputContract";
+  }
+  if attributes.contains_key("mcpProtocolStatus") {
+    return "mcpProtocol";
   }
   if attributes.contains_key("pluginRunnerExitReason") {
     return "processExit";
@@ -308,6 +308,22 @@ mod tests {
     assert_eq!(
       plugin_runner_failure_kind(-32053, &attributes),
       "runnerSetup"
+    );
+  }
+
+  #[test]
+  fn failure_kind_prefers_output_contract_over_mcp_protocol_for_pith_envelopes() {
+    let attributes = HashMap::from([
+      ("mcpProtocolStatus".to_string(), "completed".to_string()),
+      (
+        "pluginRunnerOutputStatus".to_string(),
+        "malformedEnvelope".to_string(),
+      ),
+    ]);
+
+    assert_eq!(
+      plugin_runner_failure_kind(-32054, &attributes),
+      "outputContract"
     );
   }
 }

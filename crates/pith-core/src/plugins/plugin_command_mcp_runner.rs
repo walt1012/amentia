@@ -16,8 +16,8 @@ use super::plugin_command_runner::{
   command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
   insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes, merged_attributes,
   plugin_root_for_command, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
-  run_stdio_runner, runner_entrypoint_setup_blocker, safe_entrypoint_path, PluginRunnerFailure,
-  PluginRunnerResult, PluginRunnerRunResult,
+  plugin_runner_output, run_stdio_runner, runner_entrypoint_setup_blocker, safe_entrypoint_path,
+  PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
@@ -463,8 +463,8 @@ fn mcp_runner_output(
       .boxed(),
     );
   };
-  let content = mcp_result_content(&result);
   if result.is_error {
+    let content = mcp_result_content(&result);
     attributes.insert(
       "mcpProtocolStatus".to_string(),
       "toolResultError".to_string(),
@@ -487,6 +487,22 @@ fn mcp_runner_output(
     "mcpProtocolStatus".to_string(),
     mcp_success_protocol_status(&scan).to_string(),
   );
+  if let Some(structured_content) = result.structured_content.as_ref() {
+    if mcp_structured_content_looks_like_pith_output(structured_content) {
+      attributes.insert(
+        "mcpStructuredContentStatus".to_string(),
+        "pithOutputEnvelope".to_string(),
+      );
+      let output = structured_content.to_string();
+      return plugin_runner_output(command, execution_kind, &output, attributes);
+    }
+
+    attributes.insert(
+      "mcpStructuredContentStatus".to_string(),
+      "generic".to_string(),
+    );
+  }
+  let content = mcp_result_content(&result);
 
   Ok(PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
@@ -495,6 +511,17 @@ fn mcp_runner_output(
     memory_notes: vec![],
     attributes,
   })
+}
+
+fn mcp_structured_content_looks_like_pith_output(value: &Value) -> bool {
+  let Some(object) = value.as_object() else {
+    return false;
+  };
+
+  object.contains_key("content")
+    || object.contains_key("message")
+    || object.contains_key("items")
+    || object.contains_key("memoryNotes")
 }
 
 impl PluginMcpOutputScan {
