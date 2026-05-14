@@ -1070,10 +1070,9 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
     items[0]["attributes"]["connectorCredentialProviders"],
     "pith.localCredentialProvider"
   );
-  assert_eq!(
-    items[0]["attributes"]["connectorCredentialHandles"],
-    "notion-runner::notion"
-  );
+  assert!(items[0]["attributes"]
+    .get("connectorCredentialHandles")
+    .is_none());
   assert_eq!(
     items[0]["attributes"]["connectorCredentialLabels"],
     "Notion authorization marker"
@@ -1152,10 +1151,9 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
     items[2]["attributes"]["pluginRunnerCredentialProviders"],
     "pith.localCredentialProvider"
   );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerCredentialHandles"],
-    "notion-runner::notion"
-  );
+  assert!(items[2]["attributes"]
+    .get("pluginRunnerCredentialHandles")
+    .is_none());
   assert_eq!(
     items[2]["attributes"]["pluginRunnerExecutionDriver"],
     "stdio"
@@ -1484,10 +1482,9 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[1]["attributes"]["connectorCredentialProviders"],
     "pith.localCredentialProvider"
   );
-  assert_eq!(
-    items[1]["attributes"]["connectorCredentialHandles"],
-    "notion-mcp::notion"
-  );
+  assert!(items[1]["attributes"]
+    .get("connectorCredentialHandles")
+    .is_none());
   assert_eq!(
     items[1]["attributes"]["connectorSecretBindings"],
     "env-bound"
@@ -1495,7 +1492,7 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   assert!(items[1]["content"]
     .as_str()
     .expect("approval content")
-    .contains("secrets env-bound"));
+    .contains("bindings env-bound"));
   assert_eq!(
     result["pendingApprovals"][0]["action"],
     "run_plugin_command"

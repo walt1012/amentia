@@ -92,14 +92,6 @@ fn insert_connector_context_attributes(
       .join(", "),
   );
   attributes.insert(
-    "connectorCredentialHandles".to_string(),
-    connector_refs
-      .iter()
-      .map(|connector| connector.credential_provider.handle.as_str())
-      .collect::<Vec<_>>()
-      .join(", "),
-  );
-  attributes.insert(
     "connectorCredentialLabels".to_string(),
     connector_refs
       .iter()

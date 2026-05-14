@@ -66,7 +66,8 @@ same command input after the user repairs the runner, connector, or MCP issue.
 MCP diagnostics call out stdout JSON-RPC framing mistakes and show whether
 content or structured content was parsed as a Pith output envelope. Connector
 secret environment bindings include a per-run index to avoid normalized
-connector id collisions.
+connector id collisions. User-facing timeline metadata shows connector service,
+store, label, and binding status without exposing internal credential handles.
 
 Current M4 focus:
 

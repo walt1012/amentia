@@ -364,9 +364,6 @@ enum TimelineEventPresenter {
     if let credentialProvider = connector.credentialProvider {
       attributes["credentialProvider"] = credentialProvider
     }
-    if let credentialHandle = connector.credentialHandle {
-      attributes["credentialHandle"] = credentialHandle
-    }
     if let credentialLabel = connector.credentialLabel {
       attributes["credentialLabel"] = credentialLabel
     }

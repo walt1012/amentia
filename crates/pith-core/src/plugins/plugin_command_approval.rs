@@ -60,11 +60,6 @@ pub(super) fn build_plugin_command_approval_request(
     .map(|connector| connector.credential_provider.provider.as_str())
     .collect::<Vec<_>>()
     .join(", ");
-  let credential_handles = connector_refs
-    .iter()
-    .map(|connector| connector.credential_provider.handle.as_str())
-    .collect::<Vec<_>>()
-    .join(", ");
   let credential_labels = connector_refs
     .iter()
     .map(|connector| connector.credential_provider.label.as_str())
@@ -83,12 +78,14 @@ pub(super) fn build_plugin_command_approval_request(
         kind: "approvalRequested".to_string(),
         title: "Plugin Approval Requested".to_string(),
         content: format!(
-          "Pith needs approval before running {} from {} in {}.\nConnectors: {}\nCredentials: {} | secrets {}",
+          "Pith needs approval before running {} from {} in {}.\nConnectors: {} ({})\nCredentials: {} | stores {} | bindings {}",
           command.title,
           command.plugin_display_name,
           workspace_label,
+          connector_services,
           connector_ids,
-          credential_providers,
+          credential_labels,
+          credential_stores,
           secret_bindings
         ),
         attributes: Some(HashMap::from([
@@ -104,7 +101,6 @@ pub(super) fn build_plugin_command_approval_request(
           ("connectorServices".to_string(), connector_services),
           ("connectorCredentialStores".to_string(), credential_stores),
           ("connectorCredentialProviders".to_string(), credential_providers),
-          ("connectorCredentialHandles".to_string(), credential_handles),
           ("connectorCredentialLabels".to_string(), credential_labels),
           ("connectorSecretBindings".to_string(), secret_bindings),
         ])),

@@ -444,14 +444,6 @@ pub(super) fn insert_connector_runner_attributes(
       .join(", "),
   );
   attributes.insert(
-    "pluginRunnerCredentialHandles".to_string(),
-    connector_refs
-      .iter()
-      .map(|connector| connector.credential_provider.handle.as_str())
-      .collect::<Vec<_>>()
-      .join(", "),
-  );
-  attributes.insert(
     "pluginRunnerCredentialLabels".to_string(),
     connector_refs
       .iter()
