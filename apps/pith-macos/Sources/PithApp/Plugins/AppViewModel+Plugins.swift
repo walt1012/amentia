@@ -244,6 +244,17 @@ extension AppViewModel {
       runtimeDetail = "Plugin command is not loaded."
       return
     }
+    let snapshot = pluginActionSnapshot()
+    if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
+      appendBlockedPluginCommand(command, detail: TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail)
+      return
+    }
+    if PluginActionPlanner.commandNeedsConnectorAuth(commandID: commandID, snapshot: snapshot) {
+      let detail = PluginActionPlanner.commandRunBlocker(commandID: commandID, snapshot: snapshot)
+        ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+      appendBlockedPluginCommand(command, detail: detail)
+      return
+    }
     guard let input = PluginCommandInputDialogPresenter.commandInput(command: command) else {
       runtimeDetail = "Plugin command input was cancelled."
       return
@@ -322,14 +333,24 @@ extension AppViewModel {
   private func runPluginCommand(commandID: String, input: String?) {
     let snapshot = pluginActionSnapshot()
     if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
-      runtimeDetail = TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
+      let detail = TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
+      if let command = pluginCommands.first(where: { $0.id == commandID }) {
+        appendBlockedPluginCommand(command, detail: detail, input: input)
+      } else {
+        runtimeDetail = detail
+      }
       return
     }
     if PluginActionPlanner.commandNeedsConnectorAuth(commandID: commandID, snapshot: snapshot) {
-      runtimeDetail = PluginActionPlanner.commandRunBlocker(
+      let detail = PluginActionPlanner.commandRunBlocker(
         commandID: commandID,
         snapshot: snapshot
       ) ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+      if let command = pluginCommands.first(where: { $0.id == commandID }) {
+        appendBlockedPluginCommand(command, detail: detail, input: input)
+      } else {
+        runtimeDetail = detail
+      }
       return
     }
     if input == nil,
@@ -388,6 +409,18 @@ extension AppViewModel {
       }
     }
     localExecutionRequests.bindAgentRequest(task: task, requestID: requestID)
+  }
+
+  private func appendBlockedPluginCommand(
+    _ command: PluginCommandSummary,
+    detail: String,
+    input: String? = nil
+  ) {
+    runtimeDetail = detail
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEventPresenter.pluginCommandBlocked(command, detail: detail, input: input)
+    )
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {
@@ -523,6 +556,7 @@ extension AppViewModel {
 
   private func isPluginCommandIssueEntry(_ entry: TimelineEntry) -> Bool {
     entry.attributes["pluginCommandStatus"] == "failed"
+      || entry.attributes["pluginCommandStatus"] == "blocked"
       || entry.attributes["pluginCommandRouting"] != nil
   }
 

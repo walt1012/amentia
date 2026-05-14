@@ -367,6 +367,51 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func pluginCommandBlocked(
+    _ command: PluginCommandSummary,
+    detail: String?,
+    input: String?
+  ) -> TimelineEntry {
+    let blocker = detail ?? command.runBlocker ?? "Plugin command is not ready."
+    let repair = command.runRepairHint?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let body = repair?.isEmpty == false
+      ? "\(blocker)\n\nRepair Hint: \(repair ?? "")"
+      : blocker
+
+    var attributes = [
+      "pluginCommandStatus": "blocked",
+      "commandId": command.id,
+      "pluginId": command.pluginID,
+      "pluginDisplayName": command.pluginDisplayName,
+      "sourcePath": command.sourcePath,
+      "runStatus": command.runStatus,
+    ]
+
+    if let runBlocker = command.runBlocker {
+      attributes["runBlocker"] = runBlocker
+    }
+    if let runRepairHint = command.runRepairHint {
+      attributes["runRepairHint"] = runRepairHint
+    }
+    if let executionKind = command.executionKind {
+      attributes["executionKind"] = executionKind
+    }
+    if !command.requiredConnectorIds.isEmpty {
+      attributes["connectorIds"] = command.requiredConnectorIds.joined(separator: ", ")
+    } else if !command.declaredConnectorIds.isEmpty {
+      attributes["connectorIds"] = command.declaredConnectorIds.joined(separator: ", ")
+    }
+    if let input {
+      attributes["commandInput"] = input
+    }
+
+    return TimelineEntryFactory.warning(
+      title: "Plugin Command Blocked",
+      body: body,
+      attributes: attributes
+    )
+  }
+
   static func pluginCommandCancelled() -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Plugin Command Cancelled",
