@@ -1971,10 +1971,7 @@ exit 7
     items[1]["attributes"]["pluginRunnerOutputEnvelope"],
     "pith.plugin.command.output"
   );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputFieldCount"],
-    "4"
-  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerOutputFieldCount"], "4");
   assert_eq!(
     items[1]["attributes"]["pluginRunnerOutputFieldNames"],
     "content, message, items, memoryNotes"
