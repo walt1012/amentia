@@ -250,6 +250,12 @@ fn plugin_runner_failure_kind(code: i32, attributes: &HashMap<String, String>) -
   if code == -32056 {
     return "timeout";
   }
+  if attributes
+    .get("pluginRunnerSetupStatus")
+    .is_some_and(|status| status == "failed")
+  {
+    return "runnerSetup";
+  }
   if code == -32053 {
     return "unsupportedExecution";
   }
@@ -278,5 +284,30 @@ fn plugin_runner_recovery_hint(failure_kind: &str) -> &'static str {
     }
     "processExit" => "Inspect runner stderr, stdout, and exit status.",
     _ => "Check the plugin manifest, entrypoint path, sandbox, and local files.",
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::collections::HashMap;
+
+  use super::*;
+
+  #[test]
+  fn failure_kind_keeps_unsupported_execution_without_setup_marker() {
+    assert_eq!(
+      plugin_runner_failure_kind(-32053, &HashMap::new()),
+      "unsupportedExecution"
+    );
+  }
+
+  #[test]
+  fn failure_kind_prefers_runner_setup_marker_over_unsupported_code() {
+    let attributes = HashMap::from([(
+      "pluginRunnerSetupStatus".to_string(),
+      "failed".to_string(),
+    )]);
+
+    assert_eq!(plugin_runner_failure_kind(-32053, &attributes), "runnerSetup");
   }
 }

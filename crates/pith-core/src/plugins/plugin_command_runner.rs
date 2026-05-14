@@ -35,6 +35,7 @@ const PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT: usize = 120;
 const PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT: usize = 4096;
 const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
 const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
+const PLUGIN_RUNNER_SETUP_STATUS_KEY: &str = "pluginRunnerSetupStatus";
 
 pub(super) type PluginRunnerRunResult<T> = std::result::Result<T, Box<PluginRunnerFailure>>;
 
@@ -92,12 +93,19 @@ impl PluginRunnerFailure {
     (code, message): (i32, String),
     attributes: HashMap<String, String>,
   ) -> Self {
-    Self::new(code, message, attributes)
+    Self::new(code, message, plugin_runner_setup_failed_attributes(attributes))
   }
 
   pub(super) fn boxed(self) -> Box<Self> {
     Box::new(self)
   }
+}
+
+pub(super) fn plugin_runner_setup_failed_attributes(
+  mut attributes: HashMap<String, String>,
+) -> HashMap<String, String> {
+  attributes.insert(PLUGIN_RUNNER_SETUP_STATUS_KEY.to_string(), "failed".to_string());
+  attributes
 }
 
 #[derive(Debug, Deserialize)]

@@ -15,7 +15,8 @@ use serde_json::{json, Value};
 use super::plugin_command_runner::{
   command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
   insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes, merged_attributes,
-  plugin_root_for_command, plugin_runner_setup_attributes, run_stdio_runner,
+  plugin_root_for_command, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
+  run_stdio_runner,
   runner_entrypoint_setup_blocker, safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult,
   PluginRunnerRunResult,
 };
@@ -153,7 +154,7 @@ pub(super) fn run_mcp_plugin_command(
       ),
       String::new(),
       String::new(),
-      setup_attributes.clone(),
+      plugin_runner_setup_failed_attributes(setup_attributes.clone()),
     )
     .boxed()
   })?;
@@ -214,7 +215,10 @@ fn merge_setup_failure(
     failure.message,
     failure.stdout,
     failure.stderr,
-    merged_attributes(setup_attributes.clone(), failure.attributes),
+    plugin_runner_setup_failed_attributes(merged_attributes(
+      setup_attributes.clone(),
+      failure.attributes,
+    )),
   )
   .boxed()
 }
