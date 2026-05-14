@@ -56,9 +56,7 @@ fn plugin_command_repair_hint(run_status: &str) -> &'static str {
       "Fix the command manifest JSON and schema fields, then refresh plugins."
     }
     "missingExecution" => "Add an execution contract before running this command.",
-    "unsupportedExecution" => {
-      "Use a supported driver: builtin, stdio, or MCP stdio."
-    }
+    "unsupportedExecution" => "Use a supported driver: builtin, stdio, or MCP stdio.",
     "missingConnector" => {
       "Declare the connector in the plugin manifest or remove it from the command contract."
     }
