@@ -69,7 +69,9 @@ pub fn prepare_plugin_command_run(
     input.as_deref(),
     &connector_refs,
   ) {
-    return Err(plugin_command_input_contract_error(request.id, &command, error));
+    return Err(plugin_command_input_contract_error(
+      request.id, &command, error,
+    ));
   }
   let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
     .then(|| context.sequence_state.next_approval_id());
@@ -287,11 +289,7 @@ struct PluginCommandInputContractError {
 }
 
 impl PluginCommandInputContractError {
-  fn new(
-    message: String,
-    run_status: &'static str,
-    run_repair_hint: &'static str,
-  ) -> Self {
+  fn new(message: String, run_status: &'static str, run_repair_hint: &'static str) -> Self {
     Self {
       message,
       run_status,
