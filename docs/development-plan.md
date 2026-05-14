@@ -55,12 +55,14 @@ registries, bounded `stdio` and MCP runners, permission gates, connector
 authorization, sandbox diagnostics, runner-owned timeline output, runner memory
 notes, local install/remove lifecycle safety, and structured repair hints for
 registry, readiness, input-contract, approval-time, runner setup, MCP protocol,
-process exit, and output-contract failures.
+process exit, output-contract failures, and explicit turn-to-plugin command
+routing.
 
 Current M4 focus:
 
 - Tighten the third-party plugin debug loop: install, inspect, enable,
-  authorize, run, understand failure, repair, retry.
+  authorize, run from the panel or an explicit `/plugin` turn, understand
+  failure, repair, retry.
 - Keep output contracts narrow and deterministic for tiny local models:
   `content`, `message`, `items`, and `memoryNotes`, including MCP
   `structuredContent` or text envelopes when explicit.
@@ -69,8 +71,8 @@ Current M4 focus:
 
 ## Next Order
 
-1. Add only the minimum model/tool routing needed for local plugins to feel
-   useful; keep deterministic routing until tiny models prove reliable.
+1. Add only the minimum connector debug surfaces needed for real third-party
+   plugins; keep routing deterministic until tiny models prove reliable.
 2. Review M4 exit readiness before starting broader connector/plugin discovery.
 
 ## Not Now

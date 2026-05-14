@@ -185,6 +185,84 @@ fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
 }
 
 #[test]
+fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-command-route");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "workspace-notes",
+      "Workspace Notes",
+      true,
+      true,
+      &[
+        "command:workspace.capture-note",
+        "prompt_pack:workspace.notes",
+      ],
+      &["file.read", "file.write"],
+    )],
+  );
+  fs::write(
+    workspace.join("README.md"),
+    "Workspace Route\nExplicit plugin routing\n",
+  )
+  .expect("write readme");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Turn Plugin Command Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin workspace-notes::workspace.capture-note"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    "workspace-notes::workspace.capture-note"
+  );
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert!(items[2]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Explicit plugin routing"));
+  assert_eq!(items[3]["kind"], "assistantMessage");
+  assert!(items
+    .iter()
+    .any(|item| item["title"] == "Memory Note Saved"));
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(context.memory_state.note_count(), 3);
+}
+
+#[test]
 fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("bundled-plugin-results");

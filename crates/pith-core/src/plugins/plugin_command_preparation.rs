@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, WorkspaceSummary};
@@ -23,23 +25,6 @@ pub fn prepare_plugin_command_run(
 ) -> std::result::Result<PreparedPluginCommandRun, JsonRpcResponse> {
   let params = parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun")?;
 
-  let Some(command) = build_command_registry(context.plugin_state.catalog())
-    .into_iter()
-    .find(|command| command.command_id == params.command_id)
-  else {
-    return Err(JsonRpcResponse::error(
-      request.id,
-      -32052,
-      "Plugin command not found",
-    ));
-  };
-  let readiness = command_readiness(&command, &context.plugin_state);
-  if !readiness.is_ready() {
-    return Err(
-      PluginCommandPreparationError::from_readiness(&command, readiness).into_response(request.id),
-    );
-  }
-
   let Some(thread) = context.thread_state.find(&params.thread_id) else {
     return Err(JsonRpcResponse::error(
       request.id,
@@ -57,19 +42,6 @@ pub fn prepare_plugin_command_run(
     .map(str::trim)
     .filter(|input| !input.is_empty())
     .map(str::to_string);
-  let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
-  if let Err(error) = validate_plugin_command_input_contract(
-    &command,
-    workspace.as_ref(),
-    input.as_deref(),
-    &connector_refs,
-  ) {
-    return Err(
-      PluginCommandPreparationError::from_input_contract(&command, error).into_response(request.id),
-    );
-  }
-  let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
-    .then(|| context.sequence_state.next_approval_id());
   let cancellation = GenerationCancellation::new();
   if context
     .execution_state
@@ -77,30 +49,50 @@ pub fn prepare_plugin_command_run(
   {
     cancellation.cancel();
   }
+  let command = resolve_plugin_command(context, &params.command_id)
+    .map_err(|error| error.into_response(request.id.clone()))?;
   let running_id = format!("{}::{}", params.thread_id, command.command_id);
+  let snapshot = prepare_plugin_command_snapshot_for_execution(
+    context,
+    params.thread_id.clone(),
+    command,
+    workspace,
+    input,
+    cancellation.clone(),
+    running_id.clone(),
+  )
+  .map_err(|error| error.into_response(request.id.clone()))?;
   context.execution_state.insert_running_plugin_command(
     running_id.clone(),
     params.thread_id.clone(),
     cancellation.clone(),
-  );
-  let snapshot = build_plugin_command_snapshot(
-    context,
-    PluginCommandSnapshotDraft {
-      thread_id: params.thread_id,
-      command,
-      workspace,
-      input,
-      connector_refs,
-      cancellation,
-      running_id,
-      approval_id,
-    },
   );
 
   Ok(PreparedPluginCommandRun {
     request_id: request.id,
     snapshot,
   })
+}
+
+pub(crate) fn prepare_plugin_command_turn_snapshot(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+  workspace: Option<WorkspaceSummary>,
+  command_id: &str,
+  input: Option<String>,
+  cancellation: GenerationCancellation,
+) -> std::result::Result<PluginCommandSnapshot, PluginCommandPreparationError> {
+  let command = resolve_plugin_command(context, command_id)?;
+  let running_id = format!("{thread_id}::{}", command.command_id);
+  prepare_plugin_command_snapshot_for_execution(
+    context,
+    thread_id.to_string(),
+    command,
+    workspace,
+    input,
+    cancellation,
+    running_id,
+  )
 }
 
 pub(crate) struct PluginCommandPreparationError {
@@ -168,6 +160,46 @@ impl PluginCommandPreparationError {
       JsonRpcResponse::error(request_id, self.code, self.message)
     }
   }
+
+  pub(crate) fn message(&self) -> &str {
+    &self.message
+  }
+
+  pub(crate) fn route_failure_attributes(
+    &self,
+    command_id: &str,
+    routing_reason: &str,
+  ) -> HashMap<String, String> {
+    let mut attributes = HashMap::from([
+      ("pluginCommandRouting".to_string(), routing_reason.to_string()),
+      ("commandId".to_string(), command_id.to_string()),
+      ("errorCode".to_string(), self.code.to_string()),
+    ]);
+    if let Some(data) = self.data.as_ref().and_then(|data| data.as_object()) {
+      for (key, value) in data {
+        match value {
+          Value::String(text) if !text.is_empty() => {
+            attributes.insert(key.to_string(), text.to_string());
+          }
+          Value::Null => {}
+          value => {
+            attributes.insert(key.to_string(), value.to_string());
+          }
+        }
+      }
+    }
+    attributes
+  }
+}
+
+fn resolve_plugin_command(
+  context: &RuntimeContext,
+  command_id: &str,
+) -> std::result::Result<HostPluginCommandEntry, PluginCommandPreparationError> {
+  build_command_registry(context.plugin_state.catalog())
+    .into_iter()
+    .find(|command| command.command_id == command_id)
+    .ok_or_else(|| PluginCommandPreparationError::plain(-32052, "Plugin command not found"))
 }
 
 pub(crate) fn prepare_approved_plugin_command_snapshot(
@@ -233,6 +265,51 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
       approval_id: None,
     },
   )))
+}
+
+fn prepare_plugin_command_snapshot_for_execution(
+  context: &mut RuntimeContext,
+  thread_id: String,
+  command: HostPluginCommandEntry,
+  workspace: Option<WorkspaceSummary>,
+  input: Option<String>,
+  cancellation: GenerationCancellation,
+  running_id: String,
+) -> std::result::Result<PluginCommandSnapshot, PluginCommandPreparationError> {
+  let readiness = command_readiness(&command, &context.plugin_state);
+  if !readiness.is_ready() {
+    return Err(PluginCommandPreparationError::from_readiness(
+      &command, readiness,
+    ));
+  }
+
+  let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  if let Err(error) = validate_plugin_command_input_contract(
+    &command,
+    workspace.as_ref(),
+    input.as_deref(),
+    &connector_refs,
+  ) {
+    return Err(PluginCommandPreparationError::from_input_contract(
+      &command, error,
+    ));
+  }
+  let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
+    .then(|| context.sequence_state.next_approval_id());
+
+  Ok(build_plugin_command_snapshot(
+    context,
+    PluginCommandSnapshotDraft {
+      thread_id,
+      command,
+      workspace,
+      input,
+      connector_refs,
+      cancellation,
+      running_id,
+      approval_id,
+    },
+  ))
 }
 
 fn validate_plugin_command_input_contract(

@@ -37,6 +37,12 @@ pub(crate) struct PluginCommandSnapshot {
   pub(super) approval_id: Option<String>,
 }
 
+impl PluginCommandSnapshot {
+  pub(crate) fn command_id(&self) -> &str {
+    &self.command.command_id
+  }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct PluginRunnerMemoryNoteDraft {
   pub(super) title: String,

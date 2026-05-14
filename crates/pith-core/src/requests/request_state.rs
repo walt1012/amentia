@@ -61,6 +61,14 @@ pub(crate) enum PreparedTurnAction {
     command: String,
     approval_id: Option<String>,
   },
+  PluginCommand {
+    snapshot: PluginCommandSnapshot,
+  },
+  PluginCommandRouteFailed {
+    command_id: String,
+    message: String,
+    attributes: HashMap<String, String>,
+  },
   ReadFile {
     relative_path: String,
   },
@@ -78,6 +86,7 @@ pub(crate) struct TurnStartExecutionOutput {
   pub(crate) items: Vec<TimelineItem>,
   pub(crate) pending_approval: Option<PendingApproval>,
   pub(crate) pending_active_turn: Option<ActiveTurn>,
+  pub(crate) plugin_command_output: Option<PluginCommandOutput>,
 }
 
 #[derive(Debug)]

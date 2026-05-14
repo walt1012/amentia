@@ -4,6 +4,7 @@ use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnStartResult};
 
 use crate::approval_state::approvals_for_thread;
+use crate::plugin_commands::capture_plugin_command_output_memory;
 use crate::plugin_permissions::granted_permission_sources;
 use crate::request_params::parse_required_params;
 use crate::request_state::{CompletedTurnStart, PreparedTurnSnapshot, PreparedTurnStart};
@@ -51,9 +52,11 @@ pub fn prepare_turn_start(
   };
   let action = turn_actions::prepare_turn_action(
     context,
+    &prepared_thread.thread_id,
     &params.message,
     prepared_thread.workspace.as_ref(),
     &permission_sources,
+    cancellation.clone(),
   );
   if context
     .execution_state
@@ -109,7 +112,8 @@ pub fn complete_prepared_turn_start(
   context: &mut RuntimeContext,
   completed: CompletedTurnStart,
 ) -> JsonRpcResponse {
-  let output = completed.output;
+  let mut output = completed.output;
+  let plugin_command_output = output.plugin_command_output.take();
   context.execution_state.remove_running_turn(&output.turn_id);
   let was_cancelled = output.items.iter().any(|item| {
     item
@@ -152,6 +156,31 @@ pub fn complete_prepared_turn_start(
   if active_turn_id.is_none() {
     if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
       return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
+    }
+  }
+
+  if let Some(plugin_output) = plugin_command_output {
+    let memory_items = capture_plugin_command_output_memory(
+      context,
+      &output.thread_id,
+      &plugin_output.command,
+      plugin_output.workspace.as_ref(),
+      plugin_output.input.as_deref(),
+      &plugin_output.items,
+      plugin_output.capture_memory,
+      &plugin_output.runner_memory_notes,
+    );
+    if !memory_items.is_empty() {
+      if let Some(thread) = context.thread_state.find_mut(&output.thread_id) {
+        thread.append_items(memory_items.clone());
+      }
+      output.items.extend(memory_items);
+      if let Err(error) = context.persist_runtime_state() {
+        return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
+      }
+      if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
+        return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
+      }
     }
   }
 
