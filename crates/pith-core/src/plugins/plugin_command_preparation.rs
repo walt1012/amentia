@@ -36,8 +36,7 @@ pub fn prepare_plugin_command_run(
   let readiness = command_readiness(&command, &context.plugin_state);
   if !readiness.is_ready() {
     return Err(
-      PluginCommandPreparationError::from_readiness(&command, readiness)
-        .into_response(request.id),
+      PluginCommandPreparationError::from_readiness(&command, readiness).into_response(request.id),
     );
   }
 
@@ -66,8 +65,7 @@ pub fn prepare_plugin_command_run(
     &connector_refs,
   ) {
     return Err(
-      PluginCommandPreparationError::from_input_contract(&command, error)
-        .into_response(request.id),
+      PluginCommandPreparationError::from_input_contract(&command, error).into_response(request.id),
     );
   }
   let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
@@ -120,10 +118,7 @@ impl PluginCommandPreparationError {
     }
   }
 
-  fn from_readiness(
-    command: &HostPluginCommandEntry,
-    readiness: PluginCommandReadiness,
-  ) -> Self {
+  fn from_readiness(command: &HostPluginCommandEntry, readiness: PluginCommandReadiness) -> Self {
     let code = if readiness.run_status == "needsConnectorAuth" {
       -32058
     } else {
