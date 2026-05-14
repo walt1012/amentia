@@ -19,6 +19,7 @@ extension RuntimeBridge {
     case invalidResponse
     case requestTimedOut(method: String, seconds: Int)
     case rpc(String)
+    case rpcWithRepair(message: String, repairHint: String)
 
     var errorDescription: String? {
       switch self {
@@ -36,6 +37,8 @@ extension RuntimeBridge {
           "The local runtime was stopped so it can recover cleanly."
       case .rpc(let message):
         return message
+      case .rpcWithRepair(let message, let repairHint):
+        return "\(message)\n\nRepair Hint: \(repairHint)"
       }
     }
   }

@@ -253,6 +253,14 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
   assert!(error
     .message
     .contains("requires an explicit execution contract"));
+  let data = error.data.expect("command readiness error data");
+  assert_eq!(data["pluginId"], "prompt-only");
+  assert_eq!(data["commandId"], "prompt-only::prompt-only.run");
+  assert_eq!(data["runStatus"], "missingExecution");
+  assert!(data["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("execution contract"));
 }
 
 #[cfg(unix)]

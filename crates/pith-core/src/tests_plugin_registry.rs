@@ -852,9 +852,13 @@ printf '{"content":"ok"}\n'
       })),
     ),
   );
+  let blocked_error = blocked_response.error.expect("auth blocker error");
+  assert_eq!(blocked_error.code, -32058);
+  let blocked_data = blocked_error.data.expect("auth blocker error data");
+  assert_eq!(blocked_data["runStatus"], "needsConnectorAuth");
   assert_eq!(
-    blocked_response.error.expect("auth blocker error").code,
-    -32058
+    blocked_data["runRepairHint"],
+    "Authorize the connector before running this command."
   );
 
   let authorize_response = handle_request(

@@ -5,9 +5,9 @@ use pith_protocol::{
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
   PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
   PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInstallParams,
-  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
-  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, JsonRpcResponse,
+  ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams,
+  WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -23,6 +23,34 @@ fn initialize_params_uses_camel_case_fields() {
   let value = serde_json::to_value(params).expect("serialize initialize params");
   assert!(value.get("clientInfo").is_some());
   assert!(value.get("client_info").is_none());
+}
+
+#[test]
+fn json_rpc_error_data_round_trips() {
+  let response = JsonRpcResponse::error_with_data(
+    serde_json::json!(1),
+    -32053,
+    "Plugin command is not ready.",
+    &serde_json::json!({
+      "commandId": "notion-tools::notion.sync",
+      "runStatus": "runnerSetup",
+      "runRepairHint": "Check the runner path.",
+    }),
+  );
+
+  let value = serde_json::to_value(&response).expect("serialize error response");
+  let decoded: JsonRpcResponse =
+    serde_json::from_value(value.clone()).expect("deserialize error response");
+
+  assert_eq!(value["error"]["data"]["runStatus"], "runnerSetup");
+  assert_eq!(
+    decoded
+      .error
+      .expect("rpc error")
+      .data
+      .expect("rpc error data")["runRepairHint"],
+    "Check the runner path."
+  );
 }
 
 #[test]

@@ -29,6 +29,8 @@ pub struct JsonRpcNotification {
 pub struct RpcError {
   pub code: i32,
   pub message: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub data: Option<Value>,
 }
 
 impl JsonRpcResponse {
@@ -50,6 +52,22 @@ impl JsonRpcResponse {
       error: Some(RpcError {
         code,
         message: message.into(),
+        data: None,
+      }),
+    }
+  }
+
+  pub fn error_with_data<T>(id: Value, code: i32, message: impl Into<String>, data: &T) -> Self
+  where
+    T: Serialize,
+  {
+    Self {
+      id,
+      result: None,
+      error: Some(RpcError {
+        code,
+        message: message.into(),
+        data: Some(serde_json::to_value(data).expect("serializable error data")),
       }),
     }
   }

@@ -62,7 +62,8 @@ M4 turns plugins into bounded local capabilities. Current status:
   MCP command setup blockers, malformed envelope diagnostics, connector-scoped
   network policy, command-scoped connector payloads, runner-authored memory
   notes across direct and approved runs, local setup blockers before connector
-  auth prompts, install failure repair hints, and registry repair hints.
+  auth prompts, install failure repair hints, registry repair hints, and
+  structured command readiness errors.
 - Completed contract baseline: default runner output metadata matches accepted
   `content`, `message`, `items`, and `memoryNotes` envelopes, including MCP
   `structuredContent` or text content when either carries a Pith output

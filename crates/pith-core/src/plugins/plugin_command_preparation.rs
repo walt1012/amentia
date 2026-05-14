@@ -1,11 +1,12 @@
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::{build_command_registry, PluginCommandEntry as HostPluginCommandEntry};
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginCommandRunParams, WorkspaceSummary};
+use serde_json::json;
 
 use super::plugin_command_approval::{
   plugin_command_requires_user_approval, PLUGIN_COMMAND_APPROVAL_ACTION,
 };
-use super::plugin_command_readiness::command_readiness;
+use super::plugin_command_readiness::{command_readiness, PluginCommandReadiness};
 use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{
   PluginCommandSnapshot, PluginConnectorExecutionRef, PreparedPluginCommandRun,
@@ -39,15 +40,8 @@ pub fn prepare_plugin_command_run(
     } else {
       -32053
     };
-    return Err(JsonRpcResponse::error(
-      request.id,
-      error_code,
-      readiness.run_blocker.unwrap_or_else(|| {
-        format!(
-          "Plugin command `{}` is not ready to run.",
-          command.command_id
-        )
-      }),
+    return Err(plugin_command_readiness_error(
+      request.id, error_code, &command, readiness,
     ));
   }
 
@@ -110,6 +104,32 @@ pub fn prepare_plugin_command_run(
     request_id: request.id,
     snapshot,
   })
+}
+
+fn plugin_command_readiness_error(
+  request_id: serde_json::Value,
+  code: i32,
+  command: &HostPluginCommandEntry,
+  readiness: PluginCommandReadiness,
+) -> JsonRpcResponse {
+  let message = readiness.run_blocker.clone().unwrap_or_else(|| {
+    format!(
+      "Plugin command `{}` is not ready to run.",
+      command.command_id
+    )
+  });
+  JsonRpcResponse::error_with_data(
+    request_id,
+    code,
+    message,
+    &json!({
+      "pluginId": &command.plugin_id,
+      "commandId": &command.command_id,
+      "runStatus": readiness.run_status,
+      "runBlocker": readiness.run_blocker,
+      "runRepairHint": readiness.run_repair_hint,
+    }),
+  )
 }
 
 pub(crate) fn prepare_approved_plugin_command_snapshot(
