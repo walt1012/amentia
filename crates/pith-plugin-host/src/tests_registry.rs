@@ -187,9 +187,7 @@ fn build_capability_registry_reports_mcp_server_status() {
     .find(|capability| capability.capability_id == "mcp-tools::mcp_server:remote")
     .expect("remote mcp server capability");
   assert_eq!(remote.metadata["serverStatus"], "unsupportedTransport");
-  assert!(remote
-    .metadata["serverError"]
-    .contains("unsupported transport"));
+  assert!(remote.metadata["serverError"].contains("unsupported transport"));
 }
 
 #[test]

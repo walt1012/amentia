@@ -112,7 +112,10 @@ fn insert_mcp_server_status(
   command: Option<&str>,
 ) {
   if transport != "stdio" {
-    metadata.insert("serverStatus".to_string(), "unsupportedTransport".to_string());
+    metadata.insert(
+      "serverStatus".to_string(),
+      "unsupportedTransport".to_string(),
+    );
     metadata.insert(
       "serverError".to_string(),
       format!("MCP server `{server_id}` uses unsupported transport `{transport}`."),
