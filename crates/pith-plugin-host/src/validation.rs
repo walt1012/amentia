@@ -24,6 +24,7 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
 ];
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
 const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "local"];
+const KNOWN_MCP_TRANSPORTS: [&str; 1] = ["stdio"];
 
 pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("failed to parse plugin manifest") {
@@ -72,6 +73,14 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       KNOWN_CREDENTIAL_STORES.join(", ")
     );
   }
+  if validation_error.contains("plugin MCP server transport")
+    && validation_error.contains("is not supported")
+  {
+    return format!(
+      "Use one of the supported MCP transports: {}.",
+      KNOWN_MCP_TRANSPORTS.join(", ")
+    );
+  }
 
   "Review the manifest schema, then fix the reported field or value and reload the plugin catalog."
     .to_string()
@@ -108,6 +117,14 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
 
   for server in &manifest.mcp_servers {
     validate_manifest_identifier("mcp server", &server.id)?;
+    if let Some(transport) = server.transport.as_ref() {
+      if !KNOWN_MCP_TRANSPORTS.contains(&transport.as_str()) {
+        anyhow::bail!(
+          "plugin MCP server transport `{}` is not supported",
+          transport
+        );
+      }
+    }
     if let Some(command) = server.command.as_ref() {
       if command.trim().is_empty() {
         anyhow::bail!(

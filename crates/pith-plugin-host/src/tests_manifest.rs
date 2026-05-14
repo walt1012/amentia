@@ -104,6 +104,31 @@ fn validation_hint_describes_supported_credential_stores() {
 }
 
 #[test]
+fn validation_hint_describes_supported_mcp_transports() {
+  let hint = validation_hint_for_error("plugin MCP server transport `http` is not supported");
+
+  assert!(hint.contains("supported MCP transports"));
+  assert!(hint.contains("stdio"));
+}
+
+#[test]
+fn validate_manifest_rejects_unsupported_mcp_transport() {
+  let mut manifest = manifest(vec!["mcp_server:notion"], vec!["mcp.connect"]);
+  manifest.mcp_servers = vec![PluginMcpServerManifest {
+    id: "notion".to_string(),
+    command: Some("https://example.invalid/mcp".to_string()),
+    args: vec![],
+    transport: Some("http".to_string()),
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("remote MCP is not supported in M4");
+
+  assert!(error
+    .to_string()
+    .contains("plugin MCP server transport `http` is not supported"));
+}
+
+#[test]
 fn validate_manifest_rejects_unimplemented_keychain_store() {
   let mut manifest = manifest(vec!["connector:notion"], vec!["network.outbound"]);
   manifest.app_connectors = vec![PluginAppConnectorManifest {

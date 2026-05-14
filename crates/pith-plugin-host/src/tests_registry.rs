@@ -160,9 +160,8 @@ fn build_capability_registry_reports_mcp_server_status() {
       "args": ["--profile", "test"]
     },
     {
-      "id": "remote",
-      "transport": "http",
-      "command": "https://example.invalid/mcp"
+      "id": "missing",
+      "transport": "stdio"
     }
   ],
   "defaultEnabled": true
@@ -182,12 +181,12 @@ fn build_capability_registry_reports_mcp_server_status() {
   assert_eq!(ready.metadata["command"], "bin/ready-mcp");
   assert_eq!(ready.metadata["args"], "--profile test");
 
-  let remote = registry
+  let missing = registry
     .iter()
-    .find(|capability| capability.capability_id == "mcp-tools::mcp_server:remote")
-    .expect("remote mcp server capability");
-  assert_eq!(remote.metadata["serverStatus"], "unsupportedTransport");
-  assert!(remote.metadata["serverError"].contains("unsupported transport"));
+    .find(|capability| capability.capability_id == "mcp-tools::mcp_server:missing")
+    .expect("missing mcp server capability");
+  assert_eq!(missing.metadata["serverStatus"], "missingCommand");
+  assert!(missing.metadata["serverError"].contains("requires a command"));
 }
 
 #[test]

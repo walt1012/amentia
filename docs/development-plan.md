@@ -50,26 +50,21 @@ typed plugin registries.
 
 ## Current Milestone: M4 Real Plugin Platform
 
-M4 turns plugins into bounded local capabilities. The platform now has typed
-registries, bounded `stdio` and MCP runners, permission gates, connector
-authorization, sandbox diagnostics, runner-owned timeline output, runner memory
-notes, local install/remove lifecycle safety, and structured repair hints for
-registry, readiness, input-contract, approval-time, runner setup, MCP protocol,
-process exit, output-contract failures, and explicit turn-to-plugin command
-routing. The bundled Notion connector now carries a connector-backed command
-contract so M4 can exercise real authorize/run/repair behavior without pretending
-to include a hosted integration, and it declares the current `local` credential
-store rather than promising native Keychain storage before that exists. Plugin
-state refresh failures are surfaced in the plugin dashboard instead of being
-silently treated as an empty catalog. Failed plugin command cards can retry the
-same command input after the user repairs the runner, connector, or MCP issue.
-MCP diagnostics call out stdout JSON-RPC framing mistakes and show whether
-content or structured content was parsed as a Pith output envelope. Connector
-secret environment bindings include a per-run index to avoid normalized
-connector id collisions. User-facing timeline metadata shows connector service,
-store, label, and binding status without exposing internal credential handles.
+M4 turns plugins into bounded local capabilities. It should prove the third-party
+plugin loop without growing into a marketplace, admin console, or hosted
+integration layer.
 
-Current M4 focus:
+Done:
+
+- Typed plugin, command, connector, hook, and capability registries.
+- Bounded `stdio` and MCP stdio runners with sandbox diagnostics, permissions,
+  approvals, retries, repair hints, output contracts, and runner memory notes.
+- Local install/remove lifecycle, plugin state diagnostics, explicit `/plugin`
+  routing, and a connector-backed Notion command contract.
+- Honest connector credentials: current stores are `none` or `local`; Keychain
+  and remote MCP transports wait until implemented.
+
+Active:
 
 - Tighten the third-party plugin debug loop: install, inspect, enable,
   authorize, run from the panel or an explicit `/plugin` turn, understand
@@ -81,11 +76,18 @@ Current M4 focus:
 - Preserve the small app shape: progressive plugin UI, no broad marketplace,
   no admin-console sprawl.
 
+M4 exit criteria:
+
+- A third-party connector plugin can complete install, inspect, enable,
+  authorize, run, repair, and retry without hidden terminal knowledge.
+- Invalid manifests explain the exact unsupported contract and how to fix it.
+- Plugin output stays deterministic enough for the small local model.
+
 ## Next Order
 
-1. Exercise the full third-party plugin path with connector-backed examples and
-   fix only the gaps that block install, authorize, run, repair, retry.
-2. Review M4 exit readiness before starting broader connector/plugin discovery.
+1. Exercise the full third-party connector path against the current Notion-style
+   contract and close remaining blockers.
+2. Review M4 exit readiness before broader connector discovery or UI expansion.
 
 ## Not Now
 
@@ -94,6 +96,7 @@ Current M4 focus:
 - No generic document RAG or local vector database.
 - No broad connector marketplace.
 - No manifest-declared Keychain credentials until native Keychain storage exists.
+- No remote MCP transport until bounded local execution supports it.
 - No cosmetic refactor that only moves code around.
 - No large UI expansion before plugin execution is real.
 
