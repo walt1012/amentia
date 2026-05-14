@@ -2319,7 +2319,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Make the MCP server return a JSON-RPC tools/call response with the expected request id."
+    "Keep MCP stdout reserved for JSON-RPC responses, move logs to stderr, and return the tools/call response with the expected request id."
   );
   assert_eq!(
     items[1]["attributes"]["mcpProtocolStatus"],
