@@ -62,7 +62,8 @@ Done:
 - Local install/remove lifecycle, plugin state diagnostics, explicit `/plugin`
   routing, and a connector-backed Notion command contract.
 - Honest connector credentials: current stores are `none` or `local`; Keychain
-  and remote MCP transports wait until implemented.
+  and remote MCP transports wait until implemented. Authenticated connectors
+  must declare `credentialStore: local` explicitly.
 
 Active:
 

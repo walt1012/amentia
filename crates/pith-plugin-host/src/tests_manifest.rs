@@ -104,6 +104,16 @@ fn validation_hint_describes_supported_credential_stores() {
 }
 
 #[test]
+fn validation_hint_describes_required_authenticated_credential_store() {
+  let hint = validation_hint_for_error(
+    "plugin auth policy credential store is required for authenticated connectors",
+  );
+
+  assert!(hint.contains("credentialStore: local"));
+  assert!(hint.contains("authenticated connectors"));
+}
+
+#[test]
 fn validation_hint_describes_supported_mcp_transports() {
   let hint = validation_hint_for_error("plugin MCP server transport `http` is not supported");
 
@@ -149,6 +159,52 @@ fn validate_manifest_rejects_unimplemented_keychain_store() {
   assert!(error
     .to_string()
     .contains("plugin credential store `keychain` is not supported"));
+}
+
+#[test]
+fn validate_manifest_requires_local_store_for_authenticated_policy() {
+  let mut manifest = manifest(vec!["connector:notion"], vec!["network.outbound"]);
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.auth_policy = Some(PluginAuthPolicyManifest {
+    auth_type: "oauth2".to_string(),
+    required: true,
+    scopes: vec!["read_content".to_string()],
+    credential_store: None,
+  });
+
+  let error = validate_manifest(&manifest).expect_err("authenticated connectors need a store");
+
+  assert!(error
+    .to_string()
+    .contains("plugin auth policy credential store is required"));
+}
+
+#[test]
+fn validate_manifest_rejects_none_store_for_authenticated_policy() {
+  let mut manifest = manifest(vec!["connector:notion"], vec!["network.outbound"]);
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.auth_policy = Some(PluginAuthPolicyManifest {
+    auth_type: "api_key".to_string(),
+    required: true,
+    scopes: vec![],
+    credential_store: Some("none".to_string()),
+  });
+
+  let error = validate_manifest(&manifest).expect_err("authenticated connectors need local store");
+
+  assert!(error
+    .to_string()
+    .contains("plugin auth policy credential store is required"));
 }
 
 #[test]

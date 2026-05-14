@@ -73,6 +73,10 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       KNOWN_CREDENTIAL_STORES.join(", ")
     );
   }
+  if validation_error.contains("plugin auth policy credential store is required") {
+    return "Declare `credentialStore: local` for authenticated connectors, or use auth policy type `none` with credential store `none`."
+      .to_string();
+  }
   if validation_error.contains("plugin MCP server transport")
     && validation_error.contains("is not supported")
   {
@@ -163,6 +167,21 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         if credential_store != "none" {
           anyhow::bail!("plugin auth policy type `none` must use credential store `none`");
         }
+      }
+    } else {
+      match auth_policy.credential_store.as_deref() {
+        Some("local") => {}
+        Some("none") => {
+          anyhow::bail!(
+            "plugin auth policy credential store is required for authenticated connectors"
+          );
+        }
+        None => {
+          anyhow::bail!(
+            "plugin auth policy credential store is required for authenticated connectors"
+          );
+        }
+        Some(_) => {}
       }
     }
     if let Some(credential_store) = auth_policy.credential_store.as_ref() {
