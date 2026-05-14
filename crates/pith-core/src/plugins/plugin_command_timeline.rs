@@ -197,7 +197,7 @@ pub(super) fn build_plugin_failure_timeline_item(
       "pluginRunnerFailureKind".to_string(),
       failure_kind.to_string(),
     ),
-    ("pluginRunnerRecoveryHint".to_string(), recovery_hint),
+    ("pluginRunnerRecoveryHint".to_string(), recovery_hint.clone()),
     ("sourcePath".to_string(), command.source_path.clone()),
   ]));
   if let Some(execution_kind) = execution_kind {
@@ -208,6 +208,10 @@ pub(super) fn build_plugin_failure_timeline_item(
   }
 
   let mut content = format!("{message}\n\nError code: {code}");
+  if !recovery_hint.trim().is_empty() {
+    content.push_str("\n\nRecovery Hint:\n");
+    content.push_str(recovery_hint.trim());
+  }
   if !stderr.trim().is_empty() {
     content.push_str("\n\nStderr:\n");
     content.push_str(&bounded_failure_log_preview(stderr));

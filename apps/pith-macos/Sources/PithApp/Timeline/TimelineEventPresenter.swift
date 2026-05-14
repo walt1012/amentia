@@ -18,6 +18,29 @@ enum TimelineEventPresenter {
   static let cancelledPluginCommandPreview = "Cancelled plugin command"
   static let failedPluginCommandPreview = "Plugin command failed"
 
+  static func pluginCommandFailureDetail(
+    from items: [RuntimeBridge.RuntimeTimelineItemResult]
+  ) -> String {
+    guard let failedItem = items.first(where: {
+      $0.attributes["pluginCommandStatus"] == "failed"
+    }) else {
+      return pluginCommandFailedDetail
+    }
+
+    if let recoveryHint = failedItem.attributes["pluginRunnerRecoveryHint"],
+       !recoveryHint.isEmpty
+    {
+      return "Plugin command failed. \(recoveryHint)"
+    }
+    if let failureKind = failedItem.attributes["pluginRunnerFailureKind"],
+       !failureKind.isEmpty
+    {
+      return "Plugin command failed: \(failureKind). Select the failed item for details."
+    }
+
+    return pluginCommandFailedDetail
+  }
+
   static func turnPreview(turnID: String, activeTurnID: String?) -> String {
     activeTurnID == nil ? "\(turnID) ready" : "Streaming response"
   }

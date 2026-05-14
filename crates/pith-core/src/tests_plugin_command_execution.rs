@@ -2790,6 +2790,14 @@ exit 7
   assert!(items[1]["content"]
     .as_str()
     .unwrap()
+    .contains("Recovery Hint"));
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Fix the runner error shown in stderr/stdout"));
+  assert!(items[1]["content"]
+    .as_str()
+    .unwrap()
     .contains("diagnostic stderr"));
   assert!(items[1]["content"]
     .as_str()

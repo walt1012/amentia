@@ -58,7 +58,8 @@ Done:
 
 - Typed plugin, command, connector, hook, and capability registries.
 - Bounded `stdio` and MCP stdio runners with sandbox diagnostics, permissions,
-  approvals, retries, repair hints, output contracts, and runner memory notes.
+  approvals, retries, visible repair hints, output contracts, and runner
+  memory notes.
 - Local install/remove lifecycle, plugin state diagnostics, explicit `/plugin`
   routing, install readiness preflight, inspect-before-install, and a
   connector-backed Notion command contract.

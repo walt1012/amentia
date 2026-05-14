@@ -23,7 +23,7 @@ extension AppViewModel {
     } else if wasCancelled {
       runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
     } else if pluginCommandFailed {
-      runtimeDetail = TimelineEventPresenter.pluginCommandFailedDetail
+      runtimeDetail = TimelineEventPresenter.pluginCommandFailureDetail(from: result.items)
     }
     let preview: String
     if pluginCommandCancelled {
