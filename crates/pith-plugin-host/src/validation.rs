@@ -23,7 +23,7 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
   "mcp.connect",
 ];
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
-const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "keychain"];
+const KNOWN_CREDENTIAL_STORES: [&str; 3] = ["none", "local", "keychain"];
 
 pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("failed to parse plugin manifest") {
@@ -62,6 +62,14 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
     return format!(
       "Use one of the supported permissions: {}.",
       KNOWN_PERMISSIONS.join(", ")
+    );
+  }
+  if validation_error.contains("plugin credential store")
+    && validation_error.contains("is not supported")
+  {
+    return format!(
+      "Use one of the supported credential stores: {}.",
+      KNOWN_CREDENTIAL_STORES.join(", ")
     );
   }
 

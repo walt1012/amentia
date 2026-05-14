@@ -42,7 +42,7 @@
       "read_content",
       "insert_content"
     ],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": false
 }

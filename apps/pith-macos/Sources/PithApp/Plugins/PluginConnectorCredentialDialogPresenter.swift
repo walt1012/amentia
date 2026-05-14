@@ -60,11 +60,13 @@ enum PluginConnectorCredentialDialogPresenter {
 
   private static func credentialPrompt(_ connector: PluginConnectorSummary) -> String {
     let authType = connector.authType ?? "local credential"
+    let store = connector.credentialStore ?? "local"
     let scopes = connector.authScopes.isEmpty
       ? "No declared scopes."
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
     return "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
-      + "\(scopes) Secrets are passed to plugin runners through per-run environment bindings. "
+      + "\(scopes) Credential store: \(store). "
+      + "Secrets are passed to plugin runners through per-run environment bindings. "
       + "Leave the secret empty only when this connector uses marker-only authorization."
   }
 

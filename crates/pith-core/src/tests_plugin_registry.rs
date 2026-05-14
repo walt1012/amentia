@@ -1557,7 +1557,7 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
   assert_eq!(connectors[0]["credentialPresent"], false);
   assert_eq!(connectors[0]["credentialSecretPresent"], false);
   assert_eq!(connectors[0]["authType"], "oauth2");
-  assert_eq!(connectors[0]["credentialStore"], "keychain");
+  assert_eq!(connectors[0]["credentialStore"], "local");
 }
 
 #[test]

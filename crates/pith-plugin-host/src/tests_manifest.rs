@@ -32,7 +32,7 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     auth_type: "none".to_string(),
     required: false,
     scopes: vec![],
-    credential_store: Some("none".to_string()),
+    credential_store: Some("local".to_string()),
   });
 
   let result = validate_manifest(&manifest);
@@ -92,4 +92,13 @@ fn validation_hint_describes_supported_capability_kinds() {
   assert!(hint.contains("command"));
   assert!(hint.contains("connector"));
   assert!(hint.contains("settings"));
+}
+
+#[test]
+fn validation_hint_describes_supported_credential_stores() {
+  let hint = validation_hint_for_error("plugin credential store `vault` is not supported");
+
+  assert!(hint.contains("supported credential stores"));
+  assert!(hint.contains("local"));
+  assert!(hint.contains("keychain"));
 }
