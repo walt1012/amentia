@@ -34,13 +34,7 @@ pub(crate) fn is_supported_plugin_command_execution(command: &HostPluginCommandE
     || is_supported_external_plugin_execution(command)
 }
 
-pub(crate) fn execute_plugin_command_snapshot_items(
-  snapshot: PluginCommandSnapshot,
-) -> std::result::Result<Vec<pith_protocol::TimelineItem>, (i32, String)> {
-  execute_plugin_command_snapshot(snapshot).map(|output| output.items)
-}
-
-fn execute_plugin_command_snapshot(
+pub(crate) fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
   let running_id = snapshot.running_id.clone();

@@ -885,7 +885,7 @@ case "$payload" in *'"handle":"notion-runner::notion"'*) handle=true;; *) handle
 case "$payload" in *'"store":"keychain"'*) store=true;; *) store=false;; esac
 case "$payload" in *'"label":"Notion authorization marker"'*) label=true;; *) label=false;; esac
 case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
-printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secretLeak=%s"}\n' "$connector_id" "$provider" "$handle" "$store" "$label" "$secret_leak"
+printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secretLeak=%s","memoryNotes":[{"title":"Approved Connector Memory","body":"Connector runner memory survives approval execution.","source":"plugin.notion-runner.approved","tags":["connector","approved"]}]}\n' "$connector_id" "$provider" "$handle" "$store" "$label" "$secret_leak"
 "#,
   )
   .expect("write connector runner");
@@ -1101,6 +1101,28 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
     items[2]["content"],
     "connectorId=true provider=true handle=true store=true label=true secretLeak=false"
   );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerOutputMemoryNoteCount"],
+    "1"
+  );
+  let memory_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Memory Note Saved")
+    .expect("approved runner memory item");
+  assert_eq!(
+    memory_item["attributes"]["memoryNoteTitle"],
+    "Approved Connector Memory"
+  );
+  let saved_note = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .find(|note| note.title == "Approved Connector Memory")
+    .expect("saved approved runner memory note");
+  assert_eq!(saved_note.source, "plugin.notion-runner.approved");
+  assert!(saved_note
+    .body
+    .contains("Connector runner memory survives approval execution."));
 }
 
 #[cfg(unix)]

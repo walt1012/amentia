@@ -4,7 +4,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use pith_protocol::WorkspaceSummary;
 
 use crate::approval_types::PendingApproval;
-use crate::plugin_commands::execute_plugin_command_snapshot_items;
+use crate::plugin_commands::execute_plugin_command_snapshot;
 use crate::request_state::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
   PreparedApprovalSnapshot,
@@ -58,8 +58,11 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
   };
   if decision == "approved" {
     if let Some(plugin_command) = approved_plugin_command {
-      match execute_plugin_command_snapshot_items(plugin_command) {
-        Ok(items) => events.extend_items(items),
+      match execute_plugin_command_snapshot(plugin_command) {
+        Ok(output) => {
+          events.extend_items(output.items.clone());
+          events.set_approved_plugin_command_output(output);
+        }
         Err((code, message)) => {
           events.push_item(warning_item(
             "Plugin Command Failed",
@@ -96,5 +99,6 @@ fn build_recovered_approval_output(
     )],
     memory_event: None,
     hook_memory_captures: vec![],
+    approved_plugin_command_output: None,
   }
 }

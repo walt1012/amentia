@@ -8,7 +8,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::intent_inference;
-use crate::plugin_commands::PluginCommandSnapshot;
+use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
 use crate::plugin_hooks::PluginHookMemoryCapture;
 
 #[derive(Debug)]
@@ -101,4 +101,5 @@ pub(crate) struct ApprovalExecutionOutput {
   pub(crate) items: Vec<TimelineItem>,
   pub(crate) memory_event: Option<MemoryEvent>,
   pub(crate) hook_memory_captures: Vec<PluginHookMemoryCapture>,
+  pub(crate) approved_plugin_command_output: Option<PluginCommandOutput>,
 }

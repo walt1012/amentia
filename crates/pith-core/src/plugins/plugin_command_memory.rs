@@ -10,7 +10,49 @@ use super::plugin_command_types::PluginRunnerMemoryNoteDraft as RunnerMemoryNote
 use crate::runtime_memory::RuntimeMemoryNoteDraft;
 use crate::RuntimeContext;
 
-pub(super) fn maybe_capture_plugin_command_memory(
+pub(crate) fn capture_plugin_command_output_memory(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+  command: &HostPluginCommandEntry,
+  workspace: Option<&WorkspaceSummary>,
+  input: Option<&str>,
+  items: &[TimelineItem],
+  capture_memory: bool,
+  runner_memory_notes: &[RunnerMemoryNoteDraft],
+) -> Vec<TimelineItem> {
+  if !runner_memory_notes.is_empty() {
+    return match capture_plugin_runner_memory_notes(
+      context,
+      thread_id,
+      command,
+      workspace,
+      runner_memory_notes,
+    ) {
+      Ok(items) => items,
+      Err(error) => vec![build_plugin_command_memory_warning_item(
+        command,
+        error.to_string(),
+      )],
+    };
+  }
+
+  if capture_memory {
+    return match maybe_capture_plugin_command_memory(
+      context, thread_id, command, input, workspace, items,
+    ) {
+      Ok(Some(item)) => vec![item],
+      Ok(None) => vec![],
+      Err(error) => vec![build_plugin_command_memory_warning_item(
+        command,
+        error.to_string(),
+      )],
+    };
+  }
+
+  vec![]
+}
+
+fn maybe_capture_plugin_command_memory(
   context: &mut RuntimeContext,
   thread_id: &str,
   command: &HostPluginCommandEntry,
@@ -73,7 +115,7 @@ pub(super) fn maybe_capture_plugin_command_memory(
   }))
 }
 
-pub(super) fn build_plugin_command_memory_warning_item(
+fn build_plugin_command_memory_warning_item(
   command: &HostPluginCommandEntry,
   error_message: String,
 ) -> TimelineItem {
@@ -91,7 +133,7 @@ pub(super) fn build_plugin_command_memory_warning_item(
   }
 }
 
-pub(super) fn capture_plugin_runner_memory_notes(
+fn capture_plugin_runner_memory_notes(
   context: &mut RuntimeContext,
   thread_id: &str,
   command: &HostPluginCommandEntry,

@@ -1,9 +1,6 @@
 use pith_protocol::{JsonRpcResponse, TurnStartResult};
 
-use super::plugin_command_memory::{
-  build_plugin_command_memory_warning_item, capture_plugin_runner_memory_notes,
-  maybe_capture_plugin_command_memory,
-};
+use super::plugin_command_memory::capture_plugin_command_output_memory;
 use super::plugin_command_types::{CompletedPluginCommandRun, PluginCommandOutput};
 use crate::approval_state::approvals_for_thread;
 use crate::thread_summary::refresh_thread_summary_note;
@@ -60,72 +57,25 @@ fn complete_plugin_command_items(
     .map_err(|error| (-32010, error.to_string()))?;
   refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
 
-  if !runner_memory_notes.is_empty() {
-    match capture_plugin_runner_memory_notes(
-      context,
-      &thread_id,
-      &command,
-      workspace.as_ref(),
-      &runner_memory_notes,
-    ) {
-      Ok(memory_items) => {
-        if !memory_items.is_empty() {
-          if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-            thread.append_items(memory_items.clone());
-          }
-          items.extend(memory_items);
-          context
-            .persist_runtime_state()
-            .map_err(|error| (-32010, error.to_string()))?;
-          refresh_thread_summary_note(context, &thread_id)
-            .map_err(|error| (-32012, error.to_string()))?;
-        }
-      }
-      Err(error) => {
-        let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
-        if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-          thread.push_item(warning_item.clone());
-        }
-        items.push(warning_item);
-        context
-          .persist_runtime_state()
-          .map_err(|error| (-32010, error.to_string()))?;
-      }
+  let memory_items = capture_plugin_command_output_memory(
+    context,
+    &thread_id,
+    &command,
+    workspace.as_ref(),
+    input.as_deref(),
+    &items,
+    capture_memory,
+    &runner_memory_notes,
+  );
+  if !memory_items.is_empty() {
+    if let Some(thread) = context.thread_state.find_mut(&thread_id) {
+      thread.append_items(memory_items.clone());
     }
-  }
-
-  if capture_memory && runner_memory_notes.is_empty() {
-    match maybe_capture_plugin_command_memory(
-      context,
-      &thread_id,
-      &command,
-      input.as_deref(),
-      workspace.as_ref(),
-      &items,
-    ) {
-      Ok(Some(memory_item)) => {
-        if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-          thread.push_item(memory_item.clone());
-        }
-        items.push(memory_item);
-        context
-          .persist_runtime_state()
-          .map_err(|error| (-32010, error.to_string()))?;
-        refresh_thread_summary_note(context, &thread_id)
-          .map_err(|error| (-32012, error.to_string()))?;
-      }
-      Ok(None) => {}
-      Err(error) => {
-        let warning_item = build_plugin_command_memory_warning_item(&command, error.to_string());
-        if let Some(thread) = context.thread_state.find_mut(&thread_id) {
-          thread.push_item(warning_item.clone());
-        }
-        items.push(warning_item);
-        context
-          .persist_runtime_state()
-          .map_err(|error| (-32010, error.to_string()))?;
-      }
-    }
+    items.extend(memory_items);
+    context
+      .persist_runtime_state()
+      .map_err(|error| (-32010, error.to_string()))?;
+    refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
   }
 
   Ok(TurnStartResult {

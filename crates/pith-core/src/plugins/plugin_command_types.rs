@@ -38,7 +38,7 @@ pub(crate) struct PluginCommandSnapshot {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct PluginRunnerMemoryNoteDraft {
+pub(crate) struct PluginRunnerMemoryNoteDraft {
   pub(super) title: String,
   pub(super) body: String,
   pub(super) source: Option<String>,
@@ -100,13 +100,13 @@ pub(super) struct PluginConnectorCredentialProviderRef {
 }
 
 #[derive(Debug)]
-pub(super) struct PluginCommandOutput {
-  pub(super) thread_id: String,
-  pub(super) command: HostPluginCommandEntry,
-  pub(super) workspace: Option<WorkspaceSummary>,
-  pub(super) input: Option<String>,
-  pub(super) items: Vec<TimelineItem>,
-  pub(super) capture_memory: bool,
-  pub(super) runner_memory_notes: Vec<PluginRunnerMemoryNoteDraft>,
-  pub(super) pending_approval: Option<PendingApproval>,
+pub(crate) struct PluginCommandOutput {
+  pub(crate) thread_id: String,
+  pub(crate) command: HostPluginCommandEntry,
+  pub(crate) workspace: Option<WorkspaceSummary>,
+  pub(crate) input: Option<String>,
+  pub(crate) items: Vec<TimelineItem>,
+  pub(crate) capture_memory: bool,
+  pub(crate) runner_memory_notes: Vec<PluginRunnerMemoryNoteDraft>,
+  pub(crate) pending_approval: Option<PendingApproval>,
 }
