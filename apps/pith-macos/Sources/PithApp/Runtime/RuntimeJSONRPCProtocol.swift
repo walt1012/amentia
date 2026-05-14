@@ -34,6 +34,9 @@ struct JSONRPCError: Decodable {
 struct JSONRPCErrorData: Decodable {
   let pluginId: String?
   let commandId: String?
+  let connectorId: String?
+  let connectorStatus: String?
+  let connectorRepairHint: String?
   let runStatus: String?
   let runBlocker: String?
   let runRepairHint: String?
@@ -49,6 +52,9 @@ extension RuntimeBridge {
   ) throws -> ResultType {
     if let error = response.error {
       if let repairHint = error.data?.runRepairHint, !repairHint.isEmpty {
+        throw RuntimeError.rpcWithRepair(message: error.message, repairHint: repairHint)
+      }
+      if let repairHint = error.data?.connectorRepairHint, !repairHint.isEmpty {
         throw RuntimeError.rpcWithRepair(message: error.message, repairHint: repairHint)
       }
       throw RuntimeError.rpc(error.message)

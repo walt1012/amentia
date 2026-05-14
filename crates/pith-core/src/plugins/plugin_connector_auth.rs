@@ -5,11 +5,23 @@ use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, PluginConnectorCredentialParams,
   PluginConnectorCredentialResult, PluginConnectorSummary,
 };
+use serde_json::{json, Value};
 
 use crate::protocol_adapters::build_protocol_connector_registry;
 use crate::request_params::parse_required_params;
 use crate::runtime_plugins::PluginConnectorCredentialState;
 use crate::RuntimeContext;
+
+const MISSING_CONNECTOR_REPAIR_HINT: &str =
+  "Refresh plugins, reinstall the connector plugin, or use a connector id from the connector panel.";
+const AUTHORIZE_DISABLED_CONNECTOR_REPAIR_HINT: &str =
+  "Enable the connector plugin before authorizing it.";
+const NOT_REQUIRED_CONNECTOR_REPAIR_HINT: &str =
+  "Run the command without connector authorization; this connector does not require credentials.";
+const AUTHORIZE_STORE_REPAIR_HINT: &str =
+  "Check local storage permissions, then retry connector authorization.";
+const CLEAR_STORE_REPAIR_HINT: &str =
+  "Check local storage permissions, then retry clearing the connector credential.";
 
 pub(crate) fn handle_plugin_connector_authorize(
   context: &mut RuntimeContext,
@@ -25,16 +37,35 @@ pub(crate) fn handle_plugin_connector_authorize(
 
   let connector = match find_connector(context, &params.connector_id) {
     Some(connector) => connector,
-    None => return JsonRpcResponse::error(request.id, -32055, "Plugin connector not found"),
+    None => {
+      return connector_error_response(
+        request.id,
+        -32055,
+        &params.connector_id,
+        "Plugin connector not found",
+        "missingConnector",
+        MISSING_CONNECTOR_REPAIR_HINT,
+      );
+    }
   };
   if !connector.enabled {
-    return JsonRpcResponse::error(request.id, -32056, "Plugin connector is disabled");
+    return connector_error_response(
+      request.id,
+      -32056,
+      &params.connector_id,
+      "Plugin connector is disabled",
+      "disabled",
+      AUTHORIZE_DISABLED_CONNECTOR_REPAIR_HINT,
+    );
   }
   if !connector.auth_required {
-    return JsonRpcResponse::error(
+    return connector_error_response(
       request.id,
       -32057,
+      &params.connector_id,
       "Plugin connector does not require credentials",
+      "notRequired",
+      NOT_REQUIRED_CONNECTOR_REPAIR_HINT,
     );
   }
 
@@ -59,7 +90,14 @@ pub(crate) fn handle_plugin_connector_authorize(
   };
 
   if let Err(error) = context.persist_plugin_connector_credential(&credential) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    return connector_error_response(
+      request.id,
+      -32010,
+      &params.connector_id,
+      error.to_string(),
+      "credentialStoreError",
+      AUTHORIZE_STORE_REPAIR_HINT,
+    );
   }
   context.plugin_state.set_connector_credential(credential);
 
@@ -79,10 +117,24 @@ pub(crate) fn handle_plugin_connector_clear_credential(
   };
 
   if find_connector(context, &params.connector_id).is_none() {
-    return JsonRpcResponse::error(request.id, -32055, "Plugin connector not found");
+    return connector_error_response(
+      request.id,
+      -32055,
+      &params.connector_id,
+      "Plugin connector not found",
+      "missingConnector",
+      MISSING_CONNECTOR_REPAIR_HINT,
+    );
   }
   if let Err(error) = context.delete_plugin_connector_credential(&params.connector_id) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    return connector_error_response(
+      request.id,
+      -32010,
+      &params.connector_id,
+      error.to_string(),
+      "credentialStoreError",
+      CLEAR_STORE_REPAIR_HINT,
+    );
   }
   context
     .plugin_state
@@ -120,6 +172,26 @@ fn find_protocol_connector(
     .connectors
     .into_iter()
     .find(|connector| connector.connector_id == connector_id)
+}
+
+fn connector_error_response(
+  request_id: Value,
+  code: i32,
+  connector_id: &str,
+  message: impl Into<String>,
+  connector_status: &str,
+  connector_repair_hint: &str,
+) -> JsonRpcResponse {
+  JsonRpcResponse::error_with_data(
+    request_id,
+    code,
+    message,
+    &json!({
+      "connectorId": connector_id,
+      "connectorStatus": connector_status,
+      "connectorRepairHint": connector_repair_hint,
+    }),
+  )
 }
 
 fn current_unix_timestamp() -> Result<i64, String> {

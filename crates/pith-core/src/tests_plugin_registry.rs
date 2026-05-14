@@ -1644,6 +1644,69 @@ fn plugin_connector_auth_lifecycle_updates_connector_registry() {
 }
 
 #[test]
+fn plugin_connector_authorize_returns_repair_metadata_when_disabled() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      false,
+      false,
+      &["mcp_server:notion", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-connector::notion",
+        "credentialSecret": "notion-local-token"
+      })),
+    ),
+  );
+
+  let error = response.error.expect("connector auth error");
+  assert_eq!(error.code, -32056);
+  let data = error.data.expect("connector auth error data");
+  assert_eq!(data["connectorId"], "notion-connector::notion");
+  assert_eq!(data["connectorStatus"], "disabled");
+  assert!(data["connectorRepairHint"]
+    .as_str()
+    .expect("connector repair hint")
+    .contains("Enable the connector plugin"));
+}
+
+#[test]
+fn plugin_connector_clear_returns_repair_metadata_when_missing() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_CLEAR_CREDENTIAL,
+      Some(json!({
+        "connectorId": "missing-connector::notion"
+      })),
+    ),
+  );
+
+  let error = response.error.expect("connector clear error");
+  assert_eq!(error.code, -32055);
+  let data = error.data.expect("connector clear error data");
+  assert_eq!(data["connectorId"], "missing-connector::notion");
+  assert_eq!(data["connectorStatus"], "missingConnector");
+  assert!(data["connectorRepairHint"]
+    .as_str()
+    .expect("connector repair hint")
+    .contains("Refresh plugins"));
+}
+
+#[test]
 fn capability_registry_only_includes_ready_enabled_plugins() {
   let plugins = vec![
     bundled_plugin_entry(

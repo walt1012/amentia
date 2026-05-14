@@ -65,7 +65,8 @@ Done:
   connector-backed Notion command contract.
 - Honest connector credentials: current stores are `none` or `local`; Keychain
   and remote MCP transports wait until implemented. Authenticated connectors
-  must declare `credentialStore: local` explicitly.
+  must declare `credentialStore: local` explicitly, and connector auth failures
+  return visible repair metadata.
 
 Active:
 
