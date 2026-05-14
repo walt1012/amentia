@@ -1972,9 +1972,14 @@ exit 7
     "pith.plugin.command.output"
   );
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputRequiredFields"],
-    "items"
+    items[1]["attributes"]["pluginRunnerOutputFieldCount"],
+    "4"
   );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputFieldNames"],
+    "content, message, items, memoryNotes"
+  );
+  assert!(items[1]["attributes"]["pluginRunnerOutputRequiredFields"].is_null());
   assert_eq!(
     items[1]["attributes"]["pluginRunnerEntrypointCheck"],
     "ready"
