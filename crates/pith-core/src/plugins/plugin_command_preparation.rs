@@ -24,6 +24,14 @@ pub fn prepare_plugin_command_run(
   request: JsonRpcRequest,
 ) -> std::result::Result<PreparedPluginCommandRun, JsonRpcResponse> {
   let params = parse_required_params::<PluginCommandRunParams>(&request, "plugin/commandRun")?;
+  let command = resolve_plugin_command(context, &params.command_id)
+    .map_err(|error| error.into_response(request.id.clone()))?;
+  let readiness = command_readiness(&command, &context.plugin_state);
+  if !readiness.is_ready() {
+    return Err(
+      PluginCommandPreparationError::from_readiness(&command, readiness).into_response(request.id),
+    );
+  }
 
   let Some(thread) = context.thread_state.find(&params.thread_id) else {
     return Err(JsonRpcResponse::error(
@@ -49,8 +57,6 @@ pub fn prepare_plugin_command_run(
   {
     cancellation.cancel();
   }
-  let command = resolve_plugin_command(context, &params.command_id)
-    .map_err(|error| error.into_response(request.id.clone()))?;
   let running_id = format!("{}::{}", params.thread_id, command.command_id);
   let snapshot = prepare_plugin_command_snapshot_for_execution(
     context,
