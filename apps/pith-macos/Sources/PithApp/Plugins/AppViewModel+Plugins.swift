@@ -274,6 +274,23 @@ extension AppViewModel {
     return PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot)
   }
 
+  func canAuthorizePluginCommandConnector(from entry: TimelineEntry) -> Bool {
+    guard let connectorID = pluginCommandAuthorizationConnectorID(from: entry) else {
+      return false
+    }
+
+    return canAuthorizePluginConnector(connectorID: connectorID)
+  }
+
+  func authorizePluginCommandConnector(from entry: TimelineEntry) {
+    guard let connectorID = pluginCommandAuthorizationConnectorID(from: entry) else {
+      runtimeDetail = "Plugin command connector authorization is unavailable."
+      return
+    }
+
+    authorizePluginConnector(connectorID: connectorID)
+  }
+
   func retryPluginCommand(from entry: TimelineEntry) {
     guard isPluginCommandRetryableEntry(entry),
           let commandID = entry.attributes["commandId"]
@@ -489,6 +506,19 @@ extension AppViewModel {
       entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     .first { !$0.isEmpty }
+  }
+
+  private func pluginCommandAuthorizationConnectorID(from entry: TimelineEntry) -> String? {
+    guard isPluginCommandIssueEntry(entry),
+          let commandID = entry.attributes["commandId"]
+    else {
+      return nil
+    }
+
+    return PluginActionPlanner.commandAuthorizationConnectorID(
+      commandID: commandID,
+      snapshot: pluginActionSnapshot()
+    )
   }
 
   private func isPluginCommandIssueEntry(_ entry: TimelineEntry) -> Bool {

@@ -5,11 +5,13 @@ struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
   let showsApprovalActions: Bool
+  let showsPluginAuthorizeAction: Bool
   let showsPluginRetryAction: Bool
   let showsPluginSourceAction: Bool
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
+  let onAuthorizePluginConnector: () -> Void
   let onRetry: () -> Void
   let onRevealPluginSource: () -> Void
 
@@ -61,7 +63,7 @@ struct TimelineCard: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
-      if showsApprovalActions || showsPluginRetryAction || showsPluginSourceAction {
+      if showsActionRow {
         HStack(spacing: 12) {
           if showsApprovalActions {
             Button("Approve") {
@@ -73,6 +75,13 @@ struct TimelineCard: View {
               onDeny()
             }
             .buttonStyle(.bordered)
+          }
+
+          if showsPluginAuthorizeAction {
+            Button("Authorize Connector") {
+              onAuthorizePluginConnector()
+            }
+            .buttonStyle(.borderedProminent)
           }
 
           if showsPluginRetryAction {
@@ -121,6 +130,13 @@ struct TimelineCard: View {
     default:
       return Color(NSColor.controlBackgroundColor)
     }
+  }
+
+  private var showsActionRow: Bool {
+    showsApprovalActions
+      || showsPluginAuthorizeAction
+      || showsPluginRetryAction
+      || showsPluginSourceAction
   }
 
   private var kindLabel: String {

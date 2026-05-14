@@ -132,6 +132,30 @@ enum PluginActionPlanner {
     return command.runStatus == "needsConnectorAuth"
   }
 
+  static func commandAuthorizationConnectorID(
+    commandID: String,
+    snapshot: PluginActionSnapshot
+  ) -> String? {
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }),
+          command.runStatus == "needsConnectorAuth"
+    else {
+      return nil
+    }
+
+    let candidateConnectorIds = command.requiredConnectorIds.isEmpty
+      ? command.declaredConnectorIds
+      : command.requiredConnectorIds
+    return candidateConnectorIds.first { connectorID in
+      guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
+        return false
+      }
+
+      return connector.enabled
+        && connector.authRequired
+        && connector.authStatus == "needsAuth"
+    }
+  }
+
   static func commandRunBlocker(commandID: String, snapshot: PluginActionSnapshot) -> String? {
     snapshot.commands.first(where: { $0.id == commandID })?.runBlocker
   }
