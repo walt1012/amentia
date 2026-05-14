@@ -93,9 +93,7 @@ fn mcp_protocol_recovery_hint(attributes: &HashMap<String, String>) -> String {
     Some("toolError") | Some("toolResultError") => {
       "Fix the MCP tool error and return a successful tool result.".to_string()
     }
-    Some("missingResult") => {
-      "Return an MCP tool response with a result object.".to_string()
-    }
+    Some("missingResult") => "Return an MCP tool response with a result object.".to_string(),
     _ => "Check the MCP server command and stdout JSON-RPC framing.".to_string(),
   }
 }
