@@ -7,6 +7,7 @@ struct PluginDashboardSnapshot {
   let connectors: [PluginConnectorSummary]
   let commands: [PluginCommandSummary]
   let hooks: [PluginHookSummary]
+  let diagnostics: [String]
   let hasLifecycleOperation: Bool
 }
 
@@ -36,11 +37,13 @@ enum PluginDashboardPresenter {
   }
 
   static func pluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
+    let diagnostics = pluginLoadDiagnostics(snapshot)
     guard !snapshot.plugins.isEmpty else {
-      return "Pith discovers plugin manifests from configured local and app plugin roots."
+      return diagnostics
+        ?? "Pith discovers plugin manifests from configured local and app plugin roots."
     }
 
-    return snapshot.plugins
+    let pluginDetails = snapshot.plugins
       .map { plugin in
         let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
         let validation = plugin.validationError ?? "ok"
@@ -48,6 +51,12 @@ enum PluginDashboardPresenter {
         return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | capabilities: \(capabilities) | validation: \(validation)\(hint)"
       }
       .joined(separator: "\n")
+
+    guard let diagnostics else {
+      return pluginDetails
+    }
+
+    return "\(diagnostics)\n\(pluginDetails)"
   }
 
   static func catalogPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {
@@ -270,6 +279,16 @@ enum PluginDashboardPresenter {
 
   private static func invalidPluginList(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {
     snapshot.plugins.filter { $0.status != "ready" }
+  }
+
+  private static func pluginLoadDiagnostics(_ snapshot: PluginDashboardSnapshot) -> String? {
+    guard !snapshot.diagnostics.isEmpty else {
+      return nil
+    }
+
+    return snapshot.diagnostics
+      .map { "Plugin load issue: \($0)" }
+      .joined(separator: "\n")
   }
 
   private static func connectorDetail(_ connector: PluginConnectorSummary) -> String {

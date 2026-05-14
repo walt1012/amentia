@@ -2,11 +2,33 @@ import Foundation
 
 enum PluginStateLoader {
   static func refresh(using runtimeBridge: RuntimeBridge) async -> PluginStateRefresh {
-    let runtimePlugins = try? await runtimeBridge.listPlugins()
-    let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
-    let runtimeCommands = try? await runtimeBridge.listPluginCommands()
-    let runtimeConnectors = try? await runtimeBridge.listPluginConnectors()
-    let runtimeHooks = try? await runtimeBridge.listPluginHooks()
+    let pluginLoad = await load("catalog") {
+      try await runtimeBridge.listPlugins()
+    }
+    let registryLoad = await load("capability registry") {
+      try await runtimeBridge.pluginCapabilityRegistry()
+    }
+    let commandLoad = await load("command registry") {
+      try await runtimeBridge.listPluginCommands()
+    }
+    let connectorLoad = await load("connector registry") {
+      try await runtimeBridge.listPluginConnectors()
+    }
+    let hookLoad = await load("hook registry") {
+      try await runtimeBridge.listPluginHooks()
+    }
+    let runtimePlugins = pluginLoad.value
+    let runtimeRegistry = registryLoad.value
+    let runtimeCommands = commandLoad.value
+    let runtimeConnectors = connectorLoad.value
+    let runtimeHooks = hookLoad.value
+    let diagnostics = [
+      pluginLoad.diagnostic,
+      registryLoad.diagnostic,
+      commandLoad.diagnostic,
+      connectorLoad.diagnostic,
+      hookLoad.diagnostic,
+    ].compactMap { $0 }
 
     let plugins = runtimePlugins.map { plugins in
       plugins.map { RuntimeSummaryMapper.pluginSummary(from: $0) }
@@ -19,8 +41,20 @@ enum PluginStateLoader {
       capabilities: registryState.capabilities,
       connectors: mappedConnectors(runtimeConnectors, pluginsLoaded: runtimePlugins != nil),
       commands: mappedCommands(runtimeCommands, pluginsLoaded: runtimePlugins != nil),
-      hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil)
+      hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil),
+      diagnostics: diagnostics
     )
+  }
+
+  private static func load<T>(
+    _ label: String,
+    operation: () async throws -> T
+  ) async -> (value: T?, diagnostic: String?) {
+    do {
+      return (try await operation(), nil)
+    } catch {
+      return (nil, "\(label): \(error.localizedDescription)")
+    }
   }
 
   private static func buildRegistryState(
