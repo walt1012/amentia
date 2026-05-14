@@ -53,15 +53,10 @@ fn split_command_route(remainder: &str) -> Option<(&str, Option<&str>)> {
     return None;
   }
 
-  let split_at = trimmed
-    .find(char::is_whitespace)
-    .unwrap_or(trimmed.len());
+  let split_at = trimmed.find(char::is_whitespace).unwrap_or(trimmed.len());
   let command_id = &trimmed[..split_at];
   let input = trimmed[split_at..].trim();
-  Some((
-    command_id,
-    (!input.is_empty()).then_some(input),
-  ))
+  Some((command_id, (!input.is_empty()).then_some(input)))
 }
 
 fn is_supported_command_id(command_id: &str) -> bool {
@@ -69,8 +64,7 @@ fn is_supported_command_id(command_id: &str) -> bool {
     && !command_id.starts_with("::")
     && !command_id.ends_with("::")
     && command_id.chars().all(|character| {
-      character.is_ascii_alphanumeric()
-        || matches!(character, ':' | '.' | '_' | '-')
+      character.is_ascii_alphanumeric() || matches!(character, ':' | '.' | '_' | '-')
     })
 }
 
@@ -104,10 +98,7 @@ mod tests {
 
   #[test]
   fn ignores_natural_language_plugin_mentions() {
-    assert!(infer_explicit_plugin_command_route(
-      "Can a notion plugin help this thread?"
-    )
-    .is_none());
+    assert!(infer_explicit_plugin_command_route("Can a notion plugin help this thread?").is_none());
   }
 
   #[test]

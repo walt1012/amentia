@@ -4,6 +4,7 @@ use std::path::Path;
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::WorkspaceSummary;
 
+use super::turn_plugin_routing::infer_explicit_plugin_command_route;
 use crate::intent_inference::{
   infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_requested_file_path,
   infer_search_query, infer_shell_command, infer_write_intent,
@@ -12,8 +13,6 @@ use crate::plugin_commands::prepare_plugin_command_turn_snapshot;
 use crate::plugin_permissions::permission_is_granted;
 use crate::request_state::PreparedTurnAction;
 use crate::runtime_context::RuntimeContext;
-
-use super::turn_plugin_routing::infer_explicit_plugin_command_route;
 
 pub(crate) fn prepare_turn_action(
   context: &mut RuntimeContext,
