@@ -518,10 +518,12 @@ fn mcp_structured_content_looks_like_pith_output(value: &Value) -> bool {
     return false;
   };
 
-  object.contains_key("content")
-    || object.contains_key("message")
-    || object.contains_key("items")
-    || object.contains_key("memoryNotes")
+  if object.contains_key("items") || object.contains_key("memoryNotes") {
+    return true;
+  }
+
+  object.get("content").is_some_and(Value::is_string)
+    || object.get("message").is_some_and(Value::is_string)
 }
 
 impl PluginMcpOutputScan {
@@ -673,4 +675,35 @@ fn mcp_result_content(result: &PluginMcpToolResultEnvelope) -> String {
       .unwrap_or_else(|_| structured_content.to_string());
   }
   "MCP tool call completed.".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+  use serde_json::json;
+
+  use super::mcp_structured_content_looks_like_pith_output;
+
+  #[test]
+  fn detects_pith_structured_content_envelopes() {
+    assert!(mcp_structured_content_looks_like_pith_output(&json!({
+      "content": "Captured context."
+    })));
+    assert!(mcp_structured_content_looks_like_pith_output(&json!({
+      "items": []
+    })));
+    assert!(mcp_structured_content_looks_like_pith_output(&json!({
+      "memoryNotes": []
+    })));
+  }
+
+  #[test]
+  fn leaves_generic_structured_content_as_generic() {
+    assert!(!mcp_structured_content_looks_like_pith_output(&json!({
+      "content": { "pageId": "abc123" }
+    })));
+    assert!(!mcp_structured_content_looks_like_pith_output(&json!({
+      "databaseId": "db123",
+      "properties": { "title": "Task" }
+    })));
+  }
 }
