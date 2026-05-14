@@ -133,6 +133,63 @@ fn build_capability_registry_includes_connector_metadata() {
     .find(|capability| capability.capability_id == "notion-connector::mcp_server:notion")
     .expect("mcp server capability");
   assert_eq!(mcp_server.metadata["transport"], "stdio");
+  assert_eq!(mcp_server.metadata["serverStatus"], "missingCommand");
+  assert!(mcp_server.metadata["serverError"].contains("requires a command"));
+}
+
+#[test]
+fn build_capability_registry_reports_mcp_server_status() {
+  let plugin_root = create_temp_plugin_root("mcp-server-status");
+  let plugin_dir = plugin_root.join("mcp-tools");
+  fs::create_dir_all(&plugin_dir).expect("create mcp plugin dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "mcp-tools",
+  "version": "0.1.0",
+  "displayName": "MCP Tools",
+  "description": "MCP status plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "ready",
+      "transport": "stdio",
+      "command": "bin/ready-mcp",
+      "args": ["--profile", "test"]
+    },
+    {
+      "id": "remote",
+      "transport": "http",
+      "command": "https://example.invalid/mcp"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp manifest");
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+  let registry = build_capability_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup mcp plugin root");
+
+  let ready = registry
+    .iter()
+    .find(|capability| capability.capability_id == "mcp-tools::mcp_server:ready")
+    .expect("ready mcp server capability");
+  assert_eq!(ready.metadata["serverStatus"], "ready");
+  assert_eq!(ready.metadata["command"], "bin/ready-mcp");
+  assert_eq!(ready.metadata["args"], "--profile test");
+
+  let remote = registry
+    .iter()
+    .find(|capability| capability.capability_id == "mcp-tools::mcp_server:remote")
+    .expect("remote mcp server capability");
+  assert_eq!(remote.metadata["serverStatus"], "unsupportedTransport");
+  assert!(remote
+    .metadata["serverError"]
+    .contains("unsupported transport"));
 }
 
 #[test]

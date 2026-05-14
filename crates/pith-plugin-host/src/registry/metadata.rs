@@ -55,18 +55,28 @@ pub(super) fn plugin_capability_metadata(
   }
 
   for server in manifest.mcp_servers {
-    let mut metadata = HashMap::from([(
-      "transport".to_string(),
-      server.transport.unwrap_or_else(|| "stdio".to_string()),
-    )]);
-    metadata.insert("surface".to_string(), "mcp".to_string());
-    if let Some(command) = server.command {
-      metadata.insert("command".to_string(), command);
+    let server_id = server.id;
+    let transport = server.transport.unwrap_or_else(|| "stdio".to_string());
+    let command = server.command.and_then(|command| {
+      let command = command.trim().to_string();
+      if command.is_empty() {
+        None
+      } else {
+        Some(command)
+      }
+    });
+    let mut metadata = HashMap::from([
+      ("surface".to_string(), "mcp".to_string()),
+      ("transport".to_string(), transport.clone()),
+    ]);
+    if let Some(command) = command.as_ref() {
+      metadata.insert("command".to_string(), command.clone());
     }
     if !server.args.is_empty() {
       metadata.insert("args".to_string(), server.args.join(" "));
     }
-    metadata_by_capability.insert(format!("mcp_server:{}", server.id), metadata);
+    insert_mcp_server_status(&mut metadata, &server_id, &transport, command.as_deref());
+    metadata_by_capability.insert(format!("mcp_server:{server_id}"), metadata);
   }
 
   let auth_policy = manifest.auth_policy;
@@ -93,6 +103,29 @@ pub(super) fn plugin_capability_metadata(
   }
 
   metadata_by_capability
+}
+
+fn insert_mcp_server_status(
+  metadata: &mut HashMap<String, String>,
+  server_id: &str,
+  transport: &str,
+  command: Option<&str>,
+) {
+  if transport != "stdio" {
+    metadata.insert("serverStatus".to_string(), "unsupportedTransport".to_string());
+    metadata.insert(
+      "serverError".to_string(),
+      format!("MCP server `{server_id}` uses unsupported transport `{transport}`."),
+    );
+  } else if command.is_none() {
+    metadata.insert("serverStatus".to_string(), "missingCommand".to_string());
+    metadata.insert(
+      "serverError".to_string(),
+      format!("MCP server `{server_id}` requires a command for stdio transport."),
+    );
+  } else {
+    metadata.insert("serverStatus".to_string(), "ready".to_string());
+  }
 }
 
 fn definition_metadata<T>(
