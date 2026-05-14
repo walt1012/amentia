@@ -452,7 +452,7 @@ enum TimelineEventPresenter {
       attributes["pluginCommandStatus"] = "failed"
     }
 
-    TimelineEntryFactory.warning(
+    return TimelineEntryFactory.warning(
       title: isBlocked ? "Plugin Command Blocked" : "Plugin Command Failed",
       body: error.localizedDescription,
       attributes: attributes
