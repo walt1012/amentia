@@ -293,6 +293,33 @@ extension AppViewModel {
     return canAuthorizePluginConnector(connectorID: connectorID)
   }
 
+  func canRunPluginCommandWithInput(from entry: TimelineEntry) -> Bool {
+    guard isPluginCommandIssueEntry(entry),
+          entry.attributes["commandInput"] == nil,
+          let commandID = entry.attributes["commandId"],
+          let command = pluginCommands.first(where: { $0.id == commandID }),
+          command.requiresPlainInput
+    else {
+      return false
+    }
+
+    return PluginActionPlanner.canRunCommandWithInput(
+      commandID: commandID,
+      snapshot: pluginActionSnapshot()
+    )
+  }
+
+  func runPluginCommandWithInput(from entry: TimelineEntry) {
+    guard canRunPluginCommandWithInput(from: entry),
+          let commandID = entry.attributes["commandId"]
+    else {
+      runtimeDetail = "Plugin command input run is unavailable."
+      return
+    }
+
+    runPluginCommandWithInput(commandID: commandID)
+  }
+
   func authorizePluginCommandConnector(from entry: TimelineEntry) {
     guard let connectorID = pluginCommandAuthorizationConnectorID(from: entry) else {
       runtimeDetail = "Plugin command connector authorization is unavailable."

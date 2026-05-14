@@ -6,12 +6,14 @@ struct TimelineCard: View {
   let isSelected: Bool
   let showsApprovalActions: Bool
   let showsPluginAuthorizeAction: Bool
+  let showsPluginInputAction: Bool
   let showsPluginRetryAction: Bool
   let showsPluginSourceAction: Bool
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
   let onAuthorizePluginConnector: () -> Void
+  let onRunPluginCommandWithInput: () -> Void
   let onRetry: () -> Void
   let onRevealPluginSource: () -> Void
 
@@ -84,6 +86,13 @@ struct TimelineCard: View {
             .buttonStyle(.borderedProminent)
           }
 
+          if showsPluginInputAction {
+            Button("Run with Input") {
+              onRunPluginCommandWithInput()
+            }
+            .buttonStyle(.bordered)
+          }
+
           if showsPluginRetryAction {
             Button("Retry") {
               onRetry()
@@ -135,6 +144,7 @@ struct TimelineCard: View {
   private var showsActionRow: Bool {
     showsApprovalActions
       || showsPluginAuthorizeAction
+      || showsPluginInputAction
       || showsPluginRetryAction
       || showsPluginSourceAction
   }

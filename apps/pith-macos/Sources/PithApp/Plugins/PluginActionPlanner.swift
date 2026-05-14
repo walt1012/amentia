@@ -164,6 +164,16 @@ enum PluginActionPlanner {
     commandRunDisabledReason(commandID: commandID, snapshot: snapshot) == nil
   }
 
+  static func canRunCommandWithInput(commandID: String, snapshot: PluginActionSnapshot) -> Bool {
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }),
+          command.acceptsPlainInput
+    else {
+      return false
+    }
+
+    return commandRunDisabledReason(commandID: commandID, snapshot: snapshot) == nil
+  }
+
   static func commandRunDisabledReason(
     commandID: String,
     snapshot: PluginActionSnapshot
