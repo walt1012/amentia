@@ -503,6 +503,13 @@ fn mcp_runner_output(
     );
   }
   let content = mcp_result_content(&result);
+  if mcp_text_content_looks_like_pith_output(&content) {
+    attributes.insert(
+      "mcpContentStatus".to_string(),
+      "pithOutputEnvelope".to_string(),
+    );
+    return plugin_runner_output(command, execution_kind, &content, attributes);
+  }
 
   Ok(PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
@@ -524,6 +531,16 @@ fn mcp_structured_content_looks_like_pith_output(value: &Value) -> bool {
 
   object.get("content").is_some_and(Value::is_string)
     || object.get("message").is_some_and(Value::is_string)
+}
+
+fn mcp_text_content_looks_like_pith_output(text: &str) -> bool {
+  let text = text.trim();
+  if text.is_empty() {
+    return false;
+  }
+  serde_json::from_str::<Value>(text)
+    .ok()
+    .is_some_and(|value| mcp_structured_content_looks_like_pith_output(&value))
 }
 
 impl PluginMcpOutputScan {
@@ -681,7 +698,9 @@ fn mcp_result_content(result: &PluginMcpToolResultEnvelope) -> String {
 mod tests {
   use serde_json::json;
 
-  use super::mcp_structured_content_looks_like_pith_output;
+  use super::{
+    mcp_structured_content_looks_like_pith_output, mcp_text_content_looks_like_pith_output,
+  };
 
   #[test]
   fn detects_pith_structured_content_envelopes() {
@@ -705,5 +724,13 @@ mod tests {
       "databaseId": "db123",
       "properties": { "title": "Task" }
     })));
+  }
+
+  #[test]
+  fn detects_pith_text_content_envelopes() {
+    assert!(mcp_text_content_looks_like_pith_output(r#"{"content":"Captured context."}"#));
+    assert!(mcp_text_content_looks_like_pith_output(r#"{"items":[]}"#));
+    assert!(!mcp_text_content_looks_like_pith_output(r#"{"content":{"pageId":"abc123"}}"#));
+    assert!(!mcp_text_content_looks_like_pith_output("Captured context."));
   }
 }

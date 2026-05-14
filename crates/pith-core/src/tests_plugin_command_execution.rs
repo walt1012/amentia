@@ -1569,6 +1569,146 @@ JSON
 
 #[cfg(unix)]
 #[test]
+fn plugin_command_run_accepts_mcp_text_pith_output() {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-mcp-text-pith-output",
+    "mcp-text",
+    "MCP Text",
+  );
+  let workspace = create_temp_workspace("plugin-command-mcp-text-workspace");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let server_path = source_root.join("mcp-server.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "mcp-text",
+  "version": "0.1.0",
+  "displayName": "MCP Text",
+  "description": "MCP command plugin with text output",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:mcp-text.capture", "mcp_server:local"],
+  "permissions": ["mcp.connect"],
+  "mcpServers": [
+    {
+      "id": "local",
+      "command": "mcp-server.sh",
+      "transport": "stdio"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write mcp text plugin manifest");
+  fs::write(
+    source_root.join("commands").join("mcp-text.capture.json"),
+    r#"{
+  "title": "Capture MCP Text",
+  "description": "Return a Pith envelope from MCP text content.",
+  "prompt": "Capture MCP text content.",
+  "execution": {
+    "kind": "mcp.localCapture",
+    "driver": "mcp",
+    "entrypoint": "local.capture"
+  }
+}"#,
+  )
+  .expect("write mcp text command manifest");
+  fs::write(
+    &server_path,
+    r#"#!/bin/sh
+cat >/dev/null
+printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
+cat <<'JSON'
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\"content\":\"MCP text envelope captured.\"}"}]}}
+JSON
+"#,
+  )
+  .expect("write mcp text server");
+  let mut permissions = fs::metadata(&server_path)
+    .expect("mcp text server metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&server_path, permissions).expect("set mcp text server permissions");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "mcp-text".to_string(),
+      name: "mcp-text".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "MCP Text".to_string(),
+      status: "ready".to_string(),
+      description: "MCP command plugin with text output".to_string(),
+      author_name: Some("Pith".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:mcp-text.capture".to_string(),
+        "mcp_server:local".to_string(),
+      ],
+      permissions: vec!["mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "MCP Text Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "mcp-text::mcp-text.capture"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["content"], "MCP text envelope captured.");
+  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "completed");
+  assert_eq!(
+    items[1]["attributes"]["mcpContentStatus"],
+    "pithOutputEnvelope"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerOutputStatus"],
+    "envelope"
+  );
+  assert_eq!(items[1]["attributes"]["pluginRunnerOutputParsed"], "true");
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_command_run_preserves_generic_mcp_structured_content() {
   use std::os::unix::fs::PermissionsExt;
 
