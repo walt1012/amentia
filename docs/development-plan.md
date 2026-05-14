@@ -50,36 +50,29 @@ typed plugin registries.
 
 ## Current Milestone: M4 Real Plugin Platform
 
-M4 turns plugins into bounded local capabilities. Current status:
+M4 turns plugins into bounded local capabilities. The platform now has typed
+registries, bounded `stdio` and MCP runners, permission gates, connector
+authorization, sandbox diagnostics, runner-owned timeline output, runner memory
+notes, local install/remove lifecycle safety, and structured repair hints for
+registry, readiness, and input-contract failures.
 
-- Completed platform baseline: typed registries, progressive plugin UI,
-  capability diagnostics, connector auth metadata, mandatory credential
-  approvals, and runner-owned timeline output.
-- Completed execution baseline: bounded `stdio` and MCP runners, cancellation,
-  setup/readiness checks, setup failure classification, permission gates,
-  sandbox diagnostics, protocol diagnostics, invalid command and hook manifest
-  surfacing, input/output contract preflight, MCP server metadata diagnostics,
-  MCP command setup blockers, malformed envelope diagnostics, connector-scoped
-  network policy, command-scoped connector payloads, runner-authored memory
-  notes across direct and approved runs, local setup blockers before connector
-  auth prompts, install failure repair hints, registry repair hints, and
-  structured command readiness errors.
-- Completed contract baseline: default runner output metadata matches accepted
-  `content`, `message`, `items`, and `memoryNotes` envelopes, including MCP
-  `structuredContent` or text content when either carries a Pith output
-  envelope, while generic MCP data and malformed Pith envelopes stay
-  diagnostically distinct.
-- Completed lifecycle baseline: symlink-safe bundle install, nested manifest
-  rejection, direct-child local removal, persisted-state-safe enable changes,
-  and catalog refresh after removal cleanup errors.
-- Active: finish third-party plugin debug loops and setup failure recovery
-  without adding a broad marketplace or admin console.
+Current M4 focus:
+
+- Tighten the third-party plugin debug loop: install, inspect, enable,
+  authorize, run, understand failure, repair, retry.
+- Keep output contracts narrow and deterministic for tiny local models:
+  `content`, `message`, `items`, and `memoryNotes`, including MCP
+  `structuredContent` or text envelopes when explicit.
+- Preserve the small app shape: progressive plugin UI, no broad marketplace,
+  no admin-console sprawl.
 
 ## Next Order
 
-1. Keep plugin UI progressive: discover, inspect, enable, authorize, run, debug.
-2. Let model-driven tool choice mature slowly; keep deterministic routing where
-   tiny local models are not reliable yet.
+1. Close remaining plugin recovery gaps around approval-time failures and
+   runner setup repair.
+2. Add only the minimum model/tool routing needed for local plugins to feel
+   useful; keep deterministic routing until tiny models prove reliable.
+3. Review M4 exit readiness before starting broader connector/plugin discovery.
 
 ## Not Now
 

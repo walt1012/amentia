@@ -63,13 +63,13 @@ pub fn prepare_plugin_command_run(
     .filter(|input| !input.is_empty())
     .map(str::to_string);
   let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
-  if let Err(message) = validate_plugin_command_input_contract(
+  if let Err(error) = validate_plugin_command_input_contract(
     &command,
     workspace.as_ref(),
     input.as_deref(),
     &connector_refs,
   ) {
-    return Err(JsonRpcResponse::error(request.id, -32053, message));
+    return Err(plugin_command_input_contract_error(request.id, &command, error));
   }
   let approval_id = plugin_command_requires_user_approval(&command, &connector_refs)
     .then(|| context.sequence_state.next_approval_id());
@@ -132,6 +132,26 @@ fn plugin_command_readiness_error(
   )
 }
 
+fn plugin_command_input_contract_error(
+  request_id: serde_json::Value,
+  command: &HostPluginCommandEntry,
+  error: PluginCommandInputContractError,
+) -> JsonRpcResponse {
+  let message = error.message;
+  JsonRpcResponse::error_with_data(
+    request_id,
+    -32053,
+    message.clone(),
+    &json!({
+      "pluginId": &command.plugin_id,
+      "commandId": &command.command_id,
+      "runStatus": error.run_status,
+      "runBlocker": message,
+      "runRepairHint": error.run_repair_hint,
+    }),
+  )
+}
+
 pub(crate) fn prepare_approved_plugin_command_snapshot(
   context: &RuntimeContext,
   approval: &PendingApproval,
@@ -173,13 +193,13 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
     .filter(|input| !input.is_empty())
     .map(str::to_string);
   let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
-  if let Err(message) = validate_plugin_command_input_contract(
+  if let Err(error) = validate_plugin_command_input_contract(
     &command,
     workspace.as_ref(),
     input.as_deref(),
     &connector_refs,
   ) {
-    return Err((-32053, message));
+    return Err((-32053, error.message));
   }
   let running_id = format!("{}::{}", approval.thread_id, command.command_id);
 
@@ -203,7 +223,7 @@ fn validate_plugin_command_input_contract(
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
   connector_refs: &[PluginConnectorExecutionRef],
-) -> std::result::Result<(), String> {
+) -> std::result::Result<(), PluginCommandInputContractError> {
   let Some(execution) = command.execution.as_ref() else {
     return Ok(());
   };
@@ -213,35 +233,71 @@ fn validate_plugin_command_input_contract(
       "threadId" | "commandId" | "envelope" => {}
       "input" if input.is_some() => {}
       "input" => {
-        return Err(format!(
-          "Plugin command `{}` requires command input field `input`.",
-          command.command_id
+        return Err(PluginCommandInputContractError::new(
+          format!(
+            "Plugin command `{}` requires command input field `input`.",
+            command.command_id
+          ),
+          "missingInput",
+          "Run the command with input or make the `input` field optional.",
         ));
       }
       "workspace" if workspace.is_some() => {}
       "workspace" => {
-        return Err(format!(
-          "Plugin command `{}` requires an open workspace for input field `workspace`.",
-          command.command_id
+        return Err(PluginCommandInputContractError::new(
+          format!(
+            "Plugin command `{}` requires an open workspace for input field `workspace`.",
+            command.command_id
+          ),
+          "missingWorkspaceInput",
+          "Open a workspace before running this command or make the field optional.",
         ));
       }
       "connectors" if !connector_refs.is_empty() => {}
       "connectors" => {
-        return Err(format!(
-          "Plugin command `{}` requires connector input field `connectors`, but no connector context is available.",
-          command.command_id
+        return Err(PluginCommandInputContractError::new(
+          format!(
+            "Plugin command `{}` requires connector input field `connectors`, but no connector context is available.",
+            command.command_id
+          ),
+          "missingConnectorInput",
+          "Declare and authorize a connector, or make the connector input optional.",
         ));
       }
       field_name => {
-        return Err(format!(
-          "Plugin command `{}` requires unsupported input field `{field_name}`.",
-          command.command_id
+        return Err(PluginCommandInputContractError::new(
+          format!(
+            "Plugin command `{}` requires unsupported input field `{field_name}`.",
+            command.command_id
+          ),
+          "unsupportedInputField",
+          "Use supported required fields: threadId, commandId, envelope, input, workspace, or connectors.",
         ));
       }
     }
   }
 
   Ok(())
+}
+
+struct PluginCommandInputContractError {
+  message: String,
+  run_status: &'static str,
+  run_repair_hint: &'static str,
+}
+
+impl PluginCommandInputContractError {
+  fn new(
+    message: String,
+    run_status: &'static str,
+    run_repair_hint: &'static str,
+  ) -> Self {
+    Self {
+      message,
+      run_status,
+      run_repair_hint,
+    }
+  }
 }
 
 struct PluginCommandSnapshotDraft {

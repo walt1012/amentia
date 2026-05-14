@@ -502,6 +502,18 @@ printf '{"content":"runner should not start"}\n'
   assert!(error
     .message
     .contains("requires command input field `input`"));
+  let data = error.data.expect("input contract error data");
+  assert_eq!(data["pluginId"], "required-input");
+  assert_eq!(data["commandId"], "required-input::required-input.run");
+  assert_eq!(data["runStatus"], "missingInput");
+  assert!(data["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("requires command input field `input`"));
+  assert!(data["runRepairHint"]
+    .as_str()
+    .expect("repair hint")
+    .contains("Run the command with input"));
   assert_eq!(
     context
       .execution_state
