@@ -972,9 +972,7 @@ fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() 
     .contains("entrypoint could not be resolved"));
   let error = blocked_response.error.expect("runner setup blocker");
   assert_eq!(error.code, -32053);
-  assert!(error
-    .message
-    .contains("entrypoint could not be resolved"));
+  assert!(error.message.contains("entrypoint could not be resolved"));
 }
 
 #[test]
