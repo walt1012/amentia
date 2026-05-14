@@ -24,8 +24,22 @@ struct PluginCapabilityRow: View {
           .textSelection(.enabled)
       }
 
-      if !capability.metadata.isEmpty {
-        Text("Metadata: \(capability.metadataSummary)")
+      if let diagnosticSummary = capability.diagnosticSummary {
+        Text(diagnosticSummary)
+          .font(.caption2)
+          .foregroundColor(capability.diagnosticColor)
+          .textSelection(.enabled)
+      }
+
+      if let diagnosticDetail = capability.diagnosticDetail {
+        Text("Capability blocker: \(diagnosticDetail)")
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
+
+      if let metadataSummary = capability.metadataSummary {
+        Text("Metadata: \(metadataSummary)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -36,11 +50,72 @@ struct PluginCapabilityRow: View {
 }
 
 private extension PluginCapabilitySummary {
-  var metadataSummary: String {
-    metadata
+  var diagnosticSummary: String? {
+    if let serverStatus = metadata["serverStatus"] {
+      return "MCP server: \(displayStatus(serverStatus))"
+    }
+    if let definitionStatus = metadata["definitionStatus"] {
+      return "\(displaySurface) definition: \(displayStatus(definitionStatus))"
+    }
+    return nil
+  }
+
+  var diagnosticDetail: String? {
+    metadata["serverError"] ?? metadata["definitionError"]
+  }
+
+  var diagnosticColor: Color {
+    switch metadata["serverStatus"] ?? metadata["definitionStatus"] {
+    case "ready":
+      return .secondary
+    case nil:
+      return .secondary
+    default:
+      return .orange
+    }
+  }
+
+  var metadataSummary: String? {
+    let diagnosticKeys = Set([
+      "definitionError",
+      "definitionStatus",
+      "serverError",
+      "serverStatus"
+    ])
+    let visibleMetadata = metadata
+      .filter { !diagnosticKeys.contains($0.key) }
       .sorted(by: { $0.key < $1.key })
+    guard !visibleMetadata.isEmpty else {
+      return nil
+    }
+
+    return visibleMetadata
       .map { "\($0.key)=\($0.value)" }
       .joined(separator: " | ")
+  }
+
+  var displaySurface: String {
+    switch kind {
+    case "command":
+      return "Command"
+    case "hook":
+      return "Hook"
+    case "mcp_server":
+      return "MCP server"
+    default:
+      return kind
+    }
+  }
+
+  func displayStatus(_ status: String) -> String {
+    switch status {
+    case "missingCommand":
+      return "missing command"
+    case "unsupportedTransport":
+      return "unsupported transport"
+    default:
+      return status
+    }
   }
 }
 

@@ -53,8 +53,8 @@ typed plugin registries.
 M4 turns plugins into bounded local capabilities. Current status:
 
 - Completed platform baseline: typed registries, progressive plugin UI,
-  connector auth metadata, mandatory credential approvals, and runner-owned
-  timeline output.
+  capability diagnostics, connector auth metadata, mandatory credential
+  approvals, and runner-owned timeline output.
 - Completed execution baseline: bounded `stdio` and MCP runners, cancellation,
   setup/readiness checks, permission gates, sandbox diagnostics, protocol
   diagnostics, invalid command and hook manifest surfacing, input/output contract
