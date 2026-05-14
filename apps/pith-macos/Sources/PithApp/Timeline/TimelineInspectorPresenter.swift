@@ -355,6 +355,12 @@ enum TimelineInspectorPresenter {
     if let errorCode = entry.attributes["mcpErrorCode"] {
       lines.append("MCP error code: \(errorCode)")
     }
+    if let structuredContentStatus = entry.attributes["mcpStructuredContentStatus"] {
+      lines.append("MCP structured content: \(structuredContentStatus)")
+    }
+    if let contentStatus = entry.attributes["mcpContentStatus"] {
+      lines.append("MCP content: \(contentStatus)")
+    }
     if let invalidPreview = entry.attributes["mcpLastInvalidJsonPreview"] {
       lines.append("MCP invalid stdout preview:\n\(invalidPreview)")
     }

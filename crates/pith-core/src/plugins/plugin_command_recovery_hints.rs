@@ -87,6 +87,17 @@ fn output_contract_recovery_hint(attributes: &HashMap<String, String>) -> String
 fn mcp_protocol_recovery_hint(attributes: &HashMap<String, String>) -> String {
   match attributes.get("mcpProtocolStatus").map(String::as_str) {
     Some("missingToolResponse") => {
+      if attribute_number_is_positive(attributes, "mcpInvalidJsonLineCount") {
+        return "Keep MCP stdout reserved for JSON-RPC responses, move logs to stderr, and return the tools/call response with the expected request id."
+          .to_string();
+      }
+      if attributes
+        .get("mcpInitializeResponseSeen")
+        .is_some_and(|seen| seen == "false")
+      {
+        return "Handle the MCP initialize request before returning the tools/call response."
+          .to_string();
+      }
       "Make the MCP server return a JSON-RPC tools/call response with the expected request id."
         .to_string()
     }
@@ -96,6 +107,13 @@ fn mcp_protocol_recovery_hint(attributes: &HashMap<String, String>) -> String {
     Some("missingResult") => "Return an MCP tool response with a result object.".to_string(),
     _ => "Check the MCP server command and stdout JSON-RPC framing.".to_string(),
   }
+}
+
+fn attribute_number_is_positive(attributes: &HashMap<String, String>, key: &str) -> bool {
+  attributes
+    .get(key)
+    .and_then(|value| value.parse::<usize>().ok())
+    .is_some_and(|value| value > 0)
 }
 
 fn runner_setup_repair_hint(detail: &str) -> String {
@@ -170,5 +188,36 @@ mod tests {
     let hint = runner_failure_recovery_hint("outputContract", &attributes);
 
     assert!(hint.contains("Populate"));
+  }
+
+  #[test]
+  fn mcp_hint_explains_stdout_json_rpc_framing() {
+    let attributes = HashMap::from([
+      (
+        "mcpProtocolStatus".to_string(),
+        "missingToolResponse".to_string(),
+      ),
+      ("mcpInvalidJsonLineCount".to_string(), "2".to_string()),
+    ]);
+
+    let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
+
+    assert!(hint.contains("stdout reserved for JSON-RPC"));
+    assert!(hint.contains("logs to stderr"));
+  }
+
+  #[test]
+  fn mcp_hint_explains_missing_initialize_response() {
+    let attributes = HashMap::from([
+      (
+        "mcpProtocolStatus".to_string(),
+        "missingToolResponse".to_string(),
+      ),
+      ("mcpInitializeResponseSeen".to_string(), "false".to_string()),
+    ]);
+
+    let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
+
+    assert!(hint.contains("initialize request"));
   }
 }
