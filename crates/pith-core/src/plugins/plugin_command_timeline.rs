@@ -303,11 +303,11 @@ mod tests {
 
   #[test]
   fn failure_kind_prefers_runner_setup_marker_over_unsupported_code() {
-    let attributes = HashMap::from([(
-      "pluginRunnerSetupStatus".to_string(),
-      "failed".to_string(),
-    )]);
+    let attributes = HashMap::from([("pluginRunnerSetupStatus".to_string(), "failed".to_string())]);
 
-    assert_eq!(plugin_runner_failure_kind(-32053, &attributes), "runnerSetup");
+    assert_eq!(
+      plugin_runner_failure_kind(-32053, &attributes),
+      "runnerSetup"
+    );
   }
 }
