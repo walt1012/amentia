@@ -290,8 +290,8 @@ extension AppViewModel {
     return PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot)
   }
 
-  func canAuthorizePluginCommandConnector(from entry: TimelineEntry) -> Bool {
-    guard let connectorID = pluginCommandAuthorizationConnectorID(from: entry) else {
+  func canAuthorizePluginConnector(from entry: TimelineEntry) -> Bool {
+    guard let connectorID = pluginConnectorID(from: entry) else {
       return false
     }
 
@@ -348,9 +348,9 @@ extension AppViewModel {
     runPluginCommandWithInput(commandID: commandID)
   }
 
-  func authorizePluginCommandConnector(from entry: TimelineEntry) {
-    guard let connectorID = pluginCommandAuthorizationConnectorID(from: entry) else {
-      runtimeDetail = "Plugin command connector authorization is unavailable."
+  func authorizePluginConnector(from entry: TimelineEntry) {
+    guard let connectorID = pluginConnectorID(from: entry) else {
+      runtimeDetail = "Plugin connector authorization is unavailable."
       return
     }
 
@@ -615,29 +615,37 @@ extension AppViewModel {
       return pluginID
     }
 
-    guard let commandID = entry.attributes["commandId"] else {
-      return nil
-    }
-
-    guard let separatorRange = commandID.range(of: "::") else {
-      return nil
-    }
-
-    let pluginID = String(commandID[..<separatorRange.lowerBound])
-    return pluginID.isEmpty ? nil : pluginID
-  }
-
-  private func pluginCommandAuthorizationConnectorID(from entry: TimelineEntry) -> String? {
-    guard isPluginCommandIssueEntry(entry),
-          let commandID = entry.attributes["commandId"]
+    guard let qualifiedID = entry.attributes["commandId"]
+      ?? entry.attributes["connectorId"]
     else {
       return nil
     }
 
-    return PluginActionPlanner.commandAuthorizationConnectorID(
-      commandID: commandID,
-      snapshot: pluginActionSnapshot()
-    )
+    guard let separatorRange = qualifiedID.range(of: "::") else {
+      return nil
+    }
+
+    let pluginID = String(qualifiedID[..<separatorRange.lowerBound])
+    return pluginID.isEmpty ? nil : pluginID
+  }
+
+  private func pluginConnectorID(from entry: TimelineEntry) -> String? {
+    if isPluginCommandIssueEntry(entry),
+       let commandID = entry.attributes["commandId"],
+       let connectorID = PluginActionPlanner.commandAuthorizationConnectorID(
+         commandID: commandID,
+         snapshot: pluginActionSnapshot()
+       ) {
+      return connectorID
+    }
+
+    if let connectorID = entry.attributes["connectorId"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !connectorID.isEmpty
+    {
+      return connectorID
+    }
+
+    return nil
   }
 
   private func isPluginCommandIssueEntry(_ entry: TimelineEntry) -> Bool {

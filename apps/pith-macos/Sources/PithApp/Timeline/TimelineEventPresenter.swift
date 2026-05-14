@@ -46,7 +46,7 @@ enum TimelineEventPresenter {
   }
 
   static func threadCreationFailed(error: Error) -> TimelineEntry {
-    TimelineEntryFactory.warning(
+    return TimelineEntryFactory.warning(
       title: "Thread Creation Failed",
       body: error.localizedDescription,
       attributes: [:]
@@ -62,7 +62,7 @@ enum TimelineEventPresenter {
   }
 
   static func pendingTurnCancelled() -> TimelineEntry {
-    TimelineEntryFactory.warning(
+    return TimelineEntryFactory.warning(
       title: "Execution Cancelled",
       body: "The pending local execution request was cancelled before it finished.",
       attributes: [:]
@@ -356,12 +356,15 @@ enum TimelineEventPresenter {
     connectorID: String,
     error: Error
   ) -> TimelineEntry {
-    TimelineEntryFactory.warning(
+    let attributes = pluginConnectorFailureAttributes(
+      error,
+      fallbackConnectorID: connectorID
+    )
+
+    return TimelineEntryFactory.warning(
       title: "Connector Authorization Failed",
       body: error.localizedDescription,
-      attributes: [
-        "connectorId": connectorID
-      ]
+      attributes: attributes
     )
   }
 
@@ -379,12 +382,15 @@ enum TimelineEventPresenter {
     connectorID: String,
     error: Error
   ) -> TimelineEntry {
-    TimelineEntryFactory.warning(
+    let attributes = pluginConnectorFailureAttributes(
+      error,
+      fallbackConnectorID: connectorID
+    )
+
+    return TimelineEntryFactory.warning(
       title: "Connector Credential Clear Failed",
       body: error.localizedDescription,
-      attributes: [
-        "connectorId": connectorID
-      ]
+      attributes: attributes
     )
   }
 
@@ -509,5 +515,30 @@ enum TimelineEventPresenter {
       return [:]
     }
     return runtimeError.recoveryAttributes
+  }
+
+  private static func pluginConnectorFailureAttributes(
+    _ error: Error,
+    fallbackConnectorID: String
+  ) -> [String: String] {
+    var attributes = pluginCommandFailureAttributes(error)
+    if attributes["connectorId"] == nil {
+      attributes["connectorId"] = fallbackConnectorID
+    }
+    if attributes["pluginId"] == nil,
+       let connectorID = attributes["connectorId"],
+       let pluginID = pluginID(fromQualifiedID: connectorID) {
+      attributes["pluginId"] = pluginID
+    }
+    return attributes
+  }
+
+  private static func pluginID(fromQualifiedID qualifiedID: String) -> String? {
+    guard let separatorRange = qualifiedID.range(of: "::") else {
+      return nil
+    }
+
+    let pluginID = String(qualifiedID[..<separatorRange.lowerBound])
+    return pluginID.isEmpty ? nil : pluginID
   }
 }
