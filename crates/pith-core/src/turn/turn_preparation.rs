@@ -29,6 +29,7 @@ pub(crate) fn prepare_turn_action(
   if let Some(route) = infer_explicit_plugin_command_route(message) {
     let command_id = route.command_id;
     let input = route.input;
+    let route_input = input.clone();
     let routing_reason = route.routing_reason;
     return match prepare_plugin_command_turn_snapshot(
       context,
@@ -42,7 +43,11 @@ pub(crate) fn prepare_turn_action(
         snapshot: Box::new(snapshot),
       },
       Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
-        attributes: error.route_failure_attributes(&command_id, routing_reason),
+        attributes: error.route_failure_attributes(
+          &command_id,
+          routing_reason,
+          route_input.as_deref(),
+        ),
         command_id,
         message: error.message().to_string(),
       },

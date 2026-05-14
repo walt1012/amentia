@@ -257,7 +257,7 @@ extension AppViewModel {
   }
 
   func canRetryPluginCommand(from entry: TimelineEntry) -> Bool {
-    guard entry.attributes["pluginCommandStatus"] == "failed",
+    guard isPluginCommandRetryableEntry(entry),
           let commandID = entry.attributes["commandId"]
     else {
       return false
@@ -275,7 +275,7 @@ extension AppViewModel {
   }
 
   func retryPluginCommand(from entry: TimelineEntry) {
-    guard entry.attributes["pluginCommandStatus"] == "failed",
+    guard isPluginCommandRetryableEntry(entry),
           let commandID = entry.attributes["commandId"]
     else {
       runtimeDetail = "Plugin command retry is unavailable."
@@ -286,7 +286,7 @@ extension AppViewModel {
   }
 
   func canRevealPluginCommandSource(from entry: TimelineEntry) -> Bool {
-    entry.attributes["pluginCommandStatus"] == "failed"
+    isPluginCommandIssueEntry(entry)
       && pluginCommandSourcePath(from: entry) != nil
   }
 
@@ -489,5 +489,14 @@ extension AppViewModel {
       entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     .first { !$0.isEmpty }
+  }
+
+  private func isPluginCommandIssueEntry(_ entry: TimelineEntry) -> Bool {
+    entry.attributes["pluginCommandStatus"] == "failed"
+      || entry.attributes["pluginCommandRouting"] != nil
+  }
+
+  private func isPluginCommandRetryableEntry(_ entry: TimelineEntry) -> Bool {
+    isPluginCommandIssueEntry(entry)
   }
 }

@@ -134,6 +134,7 @@ impl PluginCommandPreparationError {
       data: Some(json!({
         "pluginId": &command.plugin_id,
         "commandId": &command.command_id,
+        "sourcePath": &command.source_path,
         "runStatus": readiness.run_status,
         "runBlocker": readiness.run_blocker,
         "runRepairHint": readiness.run_repair_hint,
@@ -152,6 +153,7 @@ impl PluginCommandPreparationError {
       data: Some(json!({
         "pluginId": &command.plugin_id,
         "commandId": &command.command_id,
+        "sourcePath": &command.source_path,
         "runStatus": error.run_status,
         "runBlocker": message,
         "runRepairHint": error.run_repair_hint,
@@ -175,6 +177,7 @@ impl PluginCommandPreparationError {
     &self,
     command_id: &str,
     routing_reason: &str,
+    input: Option<&str>,
   ) -> HashMap<String, String> {
     let mut attributes = HashMap::from([
       (
@@ -184,6 +187,9 @@ impl PluginCommandPreparationError {
       ("commandId".to_string(), command_id.to_string()),
       ("errorCode".to_string(), self.code.to_string()),
     ]);
+    if let Some(input) = input.map(str::trim).filter(|input| !input.is_empty()) {
+      attributes.insert("commandInput".to_string(), input.to_string());
+    }
     if let Some(data) = self.data.as_ref().and_then(|data| data.as_object()) {
       for (key, value) in data {
         match value {
@@ -464,5 +470,57 @@ fn build_plugin_command_snapshot(
     cancellation,
     running_id,
     approval_id,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn route_failure_attributes_keep_source_path_and_input() {
+    let command = HostPluginCommandEntry {
+      command_id: "test-plugin::run".to_string(),
+      title: "Run Test Plugin".to_string(),
+      description: "Run a test plugin command.".to_string(),
+      prompt: "Run the plugin.".to_string(),
+      plugin_id: "test-plugin".to_string(),
+      plugin_display_name: "Test Plugin".to_string(),
+      permissions: vec![],
+      source_path: "plugins/test-plugin/commands/run.json".to_string(),
+      execution: None,
+      execution_kind: Some("stdio.test".to_string()),
+      manifest_error: None,
+      memory_note_title: None,
+      memory_note_source: None,
+      memory_note_tags: vec![],
+    };
+    let error = PluginCommandPreparationError::from_input_contract(
+      &command,
+      PluginCommandInputContractError::new(
+        "Missing input.".to_string(),
+        "missingInput",
+        "Run with input.",
+      ),
+    );
+
+    let attributes = error.route_failure_attributes(
+      "test-plugin::run",
+      "slashPluginCommand",
+      Some("retry this input"),
+    );
+
+    assert_eq!(
+      attributes.get("sourcePath").map(String::as_str),
+      Some("plugins/test-plugin/commands/run.json")
+    );
+    assert_eq!(
+      attributes.get("commandInput").map(String::as_str),
+      Some("retry this input")
+    );
+    assert_eq!(
+      attributes.get("runRepairHint").map(String::as_str),
+      Some("Run with input.")
+    );
   }
 }

@@ -673,6 +673,14 @@ printf '{"content":"runner should not start"}\n'
   let data = error.data.expect("input contract error data");
   assert_eq!(data["pluginId"], "required-input");
   assert_eq!(data["commandId"], "required-input::required-input.run");
+  assert_eq!(
+    data["sourcePath"],
+    source_root
+      .join("commands")
+      .join("required-input.run.json")
+      .display()
+      .to_string()
+  );
   assert_eq!(data["runStatus"], "missingInput");
   assert!(data["runBlocker"]
     .as_str()
