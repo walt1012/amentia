@@ -1386,7 +1386,7 @@ case "$payload" in *'"name":"createTask"'*) tool=true;; *) tool=false;; esac
 case "$payload" in *'"provider":"pith.localCredentialProvider"'*) provider=true;; *) provider=false;; esac
 case "$payload" in *'"handle":"notion-mcp::notion"'*) handle=true;; *) handle=false;; esac
 case "$payload" in *"access_token"*|*"refresh_token"*|*"secret"*) secret_leak=true;; *) secret_leak=false;; esac
-if [ "$PITH_PLUGIN_CREDENTIAL_NOTION_MCP__NOTION" = "notion-local-token" ]; then credential_env=true; else credential_env=false; fi
+if [ "$PITH_PLUGIN_CREDENTIAL_1_NOTION_MCP__NOTION" = "notion-local-token" ]; then credential_env=true; else credential_env=false; fi
 case "$payload" in *"notion-local-token"*) token_leak=true;; *) token_leak=false;; esac
 printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"method=%s tool=%s provider=%s handle=%s secretLeak=%s credentialEnv=%s tokenLeak=%s"}]}}\n' "$method" "$tool" "$provider" "$handle" "$secret_leak" "$credential_env" "$token_leak"

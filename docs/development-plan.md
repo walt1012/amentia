@@ -64,7 +64,9 @@ state refresh failures are surfaced in the plugin dashboard instead of being
 silently treated as an empty catalog. Failed plugin command cards can retry the
 same command input after the user repairs the runner, connector, or MCP issue.
 MCP diagnostics call out stdout JSON-RPC framing mistakes and show whether
-content or structured content was parsed as a Pith output envelope.
+content or structured content was parsed as a Pith output envelope. Connector
+secret environment bindings include a per-run index to avoid normalized
+connector id collisions.
 
 Current M4 focus:
 

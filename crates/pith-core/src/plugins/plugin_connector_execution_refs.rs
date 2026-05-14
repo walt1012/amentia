@@ -17,7 +17,8 @@ pub(super) fn build_command_connector_refs(
   command_connector_requirements(command, plugin_state)
     .scoped_connectors
     .into_iter()
-    .filter_map(|connector| {
+    .enumerate()
+    .filter_map(|(index, connector)| {
       if !connector.auth_required {
         return Some(no_credential_connector_ref(connector));
       }
@@ -33,7 +34,7 @@ pub(super) fn build_command_connector_refs(
           env_key: credential
             .credential_secret
             .as_ref()
-            .map(|_| credential_env_key(&credential.connector_id)),
+            .map(|_| credential_env_key(&credential.connector_id, index)),
           authorized_at: credential.authorized_at,
         },
         credential_secret: credential.credential_secret.clone(),
@@ -60,7 +61,7 @@ fn no_credential_connector_ref(connector: HostPluginConnectorEntry) -> PluginCon
   }
 }
 
-fn credential_env_key(connector_id: &str) -> String {
+fn credential_env_key(connector_id: &str, index: usize) -> String {
   let suffix = connector_id
     .chars()
     .map(|character| {
@@ -71,5 +72,22 @@ fn credential_env_key(connector_id: &str) -> String {
       }
     })
     .collect::<String>();
-  format!("PITH_PLUGIN_CREDENTIAL_{suffix}")
+  format!("PITH_PLUGIN_CREDENTIAL_{}_{suffix}", index + 1)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::credential_env_key;
+
+  #[test]
+  fn credential_env_keys_include_stable_run_index_to_avoid_collisions() {
+    assert_eq!(
+      credential_env_key("notion-mcp::notion", 0),
+      "PITH_PLUGIN_CREDENTIAL_1_NOTION_MCP__NOTION"
+    );
+    assert_ne!(
+      credential_env_key("alpha-beta", 0),
+      credential_env_key("alpha_beta", 1)
+    );
+  }
 }
