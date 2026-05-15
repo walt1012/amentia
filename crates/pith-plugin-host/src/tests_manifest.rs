@@ -84,6 +84,16 @@ fn validate_manifest_rejects_plugin_name_whitespace() {
 }
 
 #[test]
+fn validate_manifest_rejects_plugin_name_colons() {
+  let mut manifest = manifest(vec!["command:review.focus"], vec!["file.read"]);
+  manifest.name = "focus:review".to_string();
+
+  let error = validate_manifest(&manifest).expect_err("colon plugin name should fail");
+
+  assert!(error.to_string().contains("must not contain `:`"));
+}
+
+#[test]
 fn validate_manifest_rejects_capability_identifier_path_segments() {
   let manifest = manifest(vec!["command:../outside"], vec!["file.read"]);
 
@@ -119,6 +129,18 @@ fn validation_hint_describes_stable_identifiers_for_whitespace() {
     validation_hint_for_error("plugin name identifier `focus review` must not contain whitespace");
 
   assert!(hint.contains("stable plugin identifiers"));
+  assert!(hint.contains("spaces"));
+  assert!(hint.contains("colons"));
+  assert!(hint.contains("notion-connector"));
+}
+
+#[test]
+fn validation_hint_describes_stable_identifiers_for_colons() {
+  let hint =
+    validation_hint_for_error("plugin name identifier `focus:review` must not contain `:`");
+
+  assert!(hint.contains("stable plugin identifiers"));
+  assert!(hint.contains("colons"));
   assert!(hint.contains("notion-connector"));
 }
 

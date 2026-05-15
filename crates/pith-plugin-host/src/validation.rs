@@ -53,9 +53,10 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
 
   if validation_error.contains("relative path segment")
     || validation_error.contains("path separators")
+    || validation_error.contains("must not contain `:`")
     || validation_error.contains("must not contain whitespace")
   {
-    return "Use stable plugin identifiers without path separators, for example `notion-connector`."
+    return "Use stable plugin identifiers without spaces, colons, or path separators, for example `notion-connector`."
       .to_string();
   }
 
