@@ -298,6 +298,123 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
 }
 
 #[test]
+fn plugin_remove_deletes_connector_credentials_for_local_plugin() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("plugin-remove-connector-storage");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-remove-connector-source",
+    "notion-remove",
+    "Notion Remove",
+  );
+  let install_root = create_temp_workspace("plugin-remove-connector-root");
+  fs::write(
+    source_root.join("pith-plugin.json"),
+    r#"{
+  "name": "notion-remove",
+  "version": "0.1.0",
+  "displayName": "Notion Remove",
+  "description": "Connector removal test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["connector:notion"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "oauth2",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "local"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector plugin manifest");
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      storage_root.join("pith.db"),
+      storage_root.join("threads.json"),
+    ));
+  context
+    .plugin_state
+    .configure_roots(vec![install_root.clone()], install_root.clone());
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let install_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_INSTALL,
+      Some(json!({
+        "sourcePath": source_root.display().to_string()
+      })),
+    ),
+  );
+  assert!(install_response.error.is_none());
+
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-remove::notion",
+        "credentialSecret": "remove-token"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+  assert!(context
+    .plugin_state
+    .connector_credential("notion-remove::notion")
+    .is_some());
+  assert_eq!(
+    context
+      .persistence_state
+      .store()
+      .expect("store")
+      .load_plugin_connector_credentials()
+      .expect("load connector credentials")
+      .len(),
+    1
+  );
+
+  let manifest_path = context.plugin_state.catalog()[0].manifest_path.clone();
+  let remove_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_REMOVE,
+      Some(json!({
+        "manifestPath": manifest_path
+      })),
+    ),
+  );
+  let persisted_credentials = context
+    .persistence_state
+    .store()
+    .expect("store")
+    .load_plugin_connector_credentials()
+    .expect("load connector credentials after removal");
+
+  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+    .expect("cleanup plugin source root");
+  fs::remove_dir_all(&install_root).expect("cleanup install root");
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  assert!(remove_response.error.is_none());
+  assert!(context.plugin_state.catalog().is_empty());
+  assert!(context
+    .plugin_state
+    .connector_credential("notion-remove::notion")
+    .is_none());
+  assert!(persisted_credentials.is_empty());
+}
+
+#[test]
 fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
   let mut context = RuntimeContext::new_in_memory();
   let storage_root = create_temp_workspace("plugin-remove-failing-storage");
