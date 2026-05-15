@@ -34,11 +34,16 @@ pub fn prepare_plugin_command_run(
   }
 
   let Some(thread) = context.thread_state.find(&params.thread_id) else {
-    return Err(JsonRpcResponse::error(
-      request.id,
-      -32004,
-      "Thread not found",
-    ));
+    return Err(
+      PluginCommandPreparationError::from_command_context(
+        &command,
+        -32004,
+        "missingThread",
+        "Thread not found",
+        "Select or create a thread, then run the plugin command again.",
+      )
+      .into_response(request.id),
+    );
   };
 
   let workspace = thread
@@ -170,6 +175,46 @@ impl PluginCommandPreparationError {
     }
   }
 
+  fn from_command_context(
+    command: &HostPluginCommandEntry,
+    code: i32,
+    run_status: &'static str,
+    message: impl Into<String>,
+    run_repair_hint: &'static str,
+  ) -> Self {
+    let message = message.into();
+    Self {
+      code,
+      message: message.clone(),
+      data: Some(json!({
+        "pluginId": &command.plugin_id,
+        "commandId": &command.command_id,
+        "sourcePath": &command.source_path,
+        "runStatus": run_status,
+        "runBlocker": message,
+        "runRepairHint": run_repair_hint,
+      })),
+    }
+  }
+
+  fn command_not_found(command_id: &str) -> Self {
+    let message = "Plugin command not found";
+    let repair_hint = concat!(
+      "Refresh plugins, enable the plugin, ",
+      "or select a command from the command panel."
+    );
+    Self {
+      code: -32052,
+      message: message.to_string(),
+      data: Some(json!({
+        "commandId": command_id,
+        "runStatus": "commandNotFound",
+        "runBlocker": message,
+        "runRepairHint": repair_hint,
+      })),
+    }
+  }
+
   pub(crate) fn into_response(self, request_id: Value) -> JsonRpcResponse {
     if let Some(data) = self.data {
       JsonRpcResponse::error_with_data(request_id, self.code, self.message, &data)
@@ -268,7 +313,7 @@ fn resolve_plugin_command(
   build_command_registry(context.plugin_state.catalog())
     .into_iter()
     .find(|command| command.command_id == command_id)
-    .ok_or_else(|| PluginCommandPreparationError::plain(-32052, "Plugin command not found"))
+    .ok_or_else(|| PluginCommandPreparationError::command_not_found(command_id))
 }
 
 pub(crate) fn prepare_approved_plugin_command_snapshot(
@@ -290,10 +335,7 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
     .into_iter()
     .find(|command| command.command_id == command_id)
   else {
-    return Err(PluginCommandPreparationError::plain(
-      -32052,
-      "Plugin command not found",
-    ));
+    return Err(PluginCommandPreparationError::command_not_found(command_id));
   };
   let readiness = command_readiness(&command, &context.plugin_state);
   if !readiness.is_ready() {

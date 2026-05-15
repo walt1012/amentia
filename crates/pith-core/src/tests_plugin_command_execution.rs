@@ -185,6 +185,77 @@ fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
 }
 
 #[test]
+fn plugin_command_run_reports_repair_metadata_when_thread_is_missing() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "workspace-notes",
+      "Workspace Notes",
+      true,
+      true,
+      &[
+        "command:workspace.capture-note",
+        "prompt_pack:workspace.notes",
+      ],
+      &["file.read", "file.write"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "missing-thread",
+        "commandId": "workspace-notes::workspace.capture-note"
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("plugin command missing thread error");
+  assert_eq!(error.code, -32004);
+  let data = error.data.expect("plugin command missing thread data");
+  assert_eq!(data["pluginId"], "workspace-notes");
+  assert_eq!(data["commandId"], "workspace-notes::workspace.capture-note");
+  assert_eq!(data["runStatus"], "missingThread");
+  assert_eq!(data["runBlocker"], "Thread not found");
+  assert!(data["runRepairHint"]
+    .as_str()
+    .expect("run repair hint")
+    .contains("Select or create a thread"));
+}
+
+#[test]
+fn plugin_command_run_reports_repair_metadata_when_command_is_missing() {
+  let mut context = RuntimeContext::new_in_memory();
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "missing-plugin::missing-command"
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("plugin command missing command error");
+  assert_eq!(error.code, -32052);
+  let data = error.data.expect("plugin command missing command data");
+  assert_eq!(data["commandId"], "missing-plugin::missing-command");
+  assert_eq!(data["runStatus"], "commandNotFound");
+  assert_eq!(data["runBlocker"], "Plugin command not found");
+  assert!(data["runRepairHint"]
+    .as_str()
+    .expect("run repair hint")
+    .contains("Refresh plugins"));
+}
+
+#[test]
 fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("turn-plugin-command-route");
