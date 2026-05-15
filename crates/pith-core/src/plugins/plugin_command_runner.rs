@@ -1259,7 +1259,10 @@ mod tests {
 
     assert_eq!(failure.code, -32054);
     assert_eq!(
-      failure.attributes.get("pluginRunnerOutputStatus").map(String::as_str),
+      failure
+        .attributes
+        .get("pluginRunnerOutputStatus")
+        .map(String::as_str),
       Some("invalidEnvelope")
     );
     assert_eq!(
@@ -1269,7 +1272,9 @@ mod tests {
         .map(String::as_str),
       Some("1")
     );
-    assert!(failure.message.contains("invalid timeline items or memory notes"));
+    assert!(failure
+      .message
+      .contains("invalid timeline items or memory notes"));
   }
 
   #[test]
@@ -1288,7 +1293,10 @@ mod tests {
 
     let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
       Ok(result) => result,
-      Err(failure) => panic!("valid oversized memory note list failed: {}", failure.message),
+      Err(failure) => panic!(
+        "valid oversized memory note list failed: {}",
+        failure.message
+      ),
     };
 
     assert_eq!(result.memory_notes.len(), 4);
