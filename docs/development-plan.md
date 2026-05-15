@@ -71,8 +71,9 @@ Done:
   actions.
 - Plugin install and enable flows now surface command/connector/hook counts and
   focus the plugin manager on the most likely next repair surface.
-- Plugin command failures now keep retry input and connector context on the
-  failure card, so repair and retry actions do not depend on neighboring items.
+- Plugin command failures now keep retry input plus singular connector repair
+  context on the failure card, so repair and retry actions do not depend on
+  neighboring items.
 
 Active:
 

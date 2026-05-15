@@ -75,6 +75,12 @@ fn insert_connector_context_attributes(
       .collect::<Vec<_>>()
       .join(", "),
   );
+  if connector_refs.len() == 1 {
+    attributes.insert(
+      "connectorId".to_string(),
+      connector_refs[0].connector_id.clone(),
+    );
+  }
   attributes.insert(
     "connectorCredentialStores".to_string(),
     connector_refs
@@ -372,6 +378,10 @@ mod tests {
     let attributes = item.attributes.as_ref().expect("attributes");
     assert_eq!(
       attributes.get("connectorIds").map(String::as_str),
+      Some("test-plugin::notion")
+    );
+    assert_eq!(
+      attributes.get("connectorId").map(String::as_str),
       Some("test-plugin::notion")
     );
     assert_eq!(

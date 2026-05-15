@@ -686,7 +686,21 @@ extension AppViewModel {
       return connectorID
     }
 
+    for key in ["connectorIds", "pluginRunnerConnectorIds"] {
+      if let connectorID = singleConnectorID(from: entry.attributes[key]) {
+        return connectorID
+      }
+    }
+
     return nil
+  }
+
+  private func singleConnectorID(from value: String?) -> String? {
+    let connectorIDs = value?
+      .split(separator: ",")
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty } ?? []
+    return connectorIDs.count == 1 ? connectorIDs[0] : nil
   }
 
   private func isPluginCommandIssueEntry(_ entry: TimelineEntry) -> Bool {
