@@ -159,7 +159,10 @@ mod tests {
       attributes.get("decision").map(String::as_str),
       Some("approved")
     );
-    assert_eq!(attributes.get("action").map(String::as_str), Some("write_file"));
+    assert_eq!(
+      attributes.get("action").map(String::as_str),
+      Some("write_file")
+    );
     assert_eq!(
       attributes.get("relativePath").map(String::as_str),
       Some("README.md")
