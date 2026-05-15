@@ -1502,10 +1502,7 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[1]["attributes"]["pluginCommandRunId"],
     items[0]["attributes"]["pluginCommandRunId"]
   );
-  assert_eq!(
-    items[1]["attributes"]["connectorId"],
-    "notion-mcp::notion"
-  );
+  assert_eq!(items[1]["attributes"]["connectorId"], "notion-mcp::notion");
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
   assert_eq!(
     items[1]["attributes"]["executionKind"],
