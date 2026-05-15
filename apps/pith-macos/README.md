@@ -36,3 +36,15 @@ export PITH_RUNTIME_PATH=/absolute/path/to/pith-runtime-bin
 ```
 
 The shell will use that executable when the runtime launch action is triggered.
+
+## Packaging
+
+Use the repository-level packaging script for release-shaped artifacts:
+
+```bash
+python3 scripts/package_macos_app.py
+```
+
+The script builds the Swift shell and `pith-runtime-bin`, assembles `Pith.app`, places the runtime
+binary next to the app executable, includes bundled plugin manifests and model metadata, and writes
+`artifacts/macos/Pith-macos-x86_64.zip`.

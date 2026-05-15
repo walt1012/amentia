@@ -8,7 +8,7 @@ This document describes the CI-first development baseline for `Pith`.
 
 Local Rust, Swift, and Python toolchains are optional. The repository does not require contributors
 to install local validation toolchains before pushing. GitHub Actions is the source of truth for
-formatting, linting, tests, smoke coverage, and the native macOS package build.
+formatting, linting, tests, smoke coverage, and the native macOS app package.
 
 ## Remote Checks
 
@@ -19,7 +19,7 @@ Every push to `main` or `codex/**` runs the canonical CI suite:
 - Rust tests with `cargo test --workspace`
 - model pack manifest validation
 - runtime smoke coverage through `scripts/runtime_smoke_test.py`
-- Swift package build on an Intel macOS runner
+- signed-ready x86_64 macOS app bundle packaging on an Intel macOS runner
 
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
@@ -45,6 +45,22 @@ export PITH_RUNTIME_PATH="$(pwd)/target/debug/pith-runtime-bin"
 cd apps/pith-macos
 swift run
 ```
+
+## macOS App Packaging
+
+The canonical package command is:
+
+```bash
+python3 scripts/package_macos_app.py
+```
+
+CI runs this on `macos-15-intel`. The script builds the Swift shell for `x86_64`, builds
+`pith-runtime-bin`, assembles `Pith.app`, bundles model metadata and bundled plugin manifests next to
+the runtime executable, validates the app bundle structure, and emits
+`artifacts/macos/Pith-macos-x86_64.zip`.
+
+The artifact is signed-ready, but not signed or notarized by CI yet. Signing and notarization should
+be added only after distribution identity and entitlements are finalized.
 
 ## Local Model Runtime
 
@@ -108,6 +124,6 @@ diagnostics before new connector surfaces are added.
 The workflow uses:
 
 - `ubuntu-latest` for Rust checks
-- `macos-15-intel` for the native Swift package build
+- `macos-15-intel` for the native x86_64 app bundle package
 
 This is intentional because the product target is Intel macOS and GitHub retired the `macos-13` runner image in late 2025.

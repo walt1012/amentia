@@ -42,17 +42,11 @@ owns durable records.
 
 ## Closed Foundation
 
-Milestones 1-3 are closed. Pith now has guided local model setup, resumable
+Milestones 1-4 are closed. Pith now has guided local model setup, resumable
 downloads, verified single-model activation, runtime recovery, bounded shell
 and model work, workspace-safe file tools, web search, native sandbox
-diagnostics, compact context packing, progressive inspector surfaces, and
-typed plugin registries.
-
-## Current Milestone: M4 Real Plugin Platform
-
-M4 turns plugins into bounded local capabilities. It should prove the third-party
-plugin loop without growing into a marketplace, admin console, or hosted
-integration layer.
+diagnostics, compact context packing, progressive inspector surfaces, typed
+plugin registries, and a real third-party connector plugin loop.
 
 Done:
 
@@ -80,12 +74,6 @@ Done:
   connector, source reveal, and lock-light catalog refresh operations update
   visible recovery status without forcing runtime relaunch.
 
-Active Focus:
-
-- Finish M4 by reviewing the third-party connector smoke path end to end.
-- Close only real install, auth, run, repair, retry, refresh, or UI recovery blockers.
-- Keep plugin UI progressive; avoid marketplace or admin-console sprawl.
-
 M4 Exit Gate:
 
 - A third-party connector plugin can complete install, inspect, enable,
@@ -93,6 +81,25 @@ M4 Exit Gate:
 - Invalid manifests explain the exact unsupported contract and how to fix it.
 - Fixing a local manifest or runner can be followed by in-app refresh.
 - Plugin output stays deterministic enough for the small local model.
+
+## Current Milestone: M5 Daily Driver Hardening
+
+M5 turns the working local agent platform into a dependable daily-driver app
+without expanding into a feature zoo.
+
+Active Focus:
+
+- Validate the first-run path: download model, open workspace, run local work.
+- Harden native sandbox, approvals, cancellation, and recovery boundaries.
+- Polish only the primary coding flow; keep plugin UI progressive and compact.
+- Keep the x86_64 macOS 12 app bundle packaging path signed-ready.
+
+M5 Exit Gate:
+
+- A fresh install can download a model, open a workspace, use web search, run a
+  plugin command, and recover from model/runtime/plugin failures in-app.
+- Sandbox and approval decisions are visible, bounded, and reversible.
+- CI produces a signed-ready x86_64 macOS 12 app bundle artifact.
 
 ## Not Now
 

@@ -46,22 +46,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Show Swift version
         run: swift --version
 
-      - name: Build macOS app package
-        working-directory: apps/pith-macos
+      - name: Build x86_64 macOS app bundle
         shell: bash
         run: |
           set +e
-          swift build 2>&1 | tee swift-build.log
+          python3 scripts/package_macos_app.py 2>&1 | tee macos-package.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             {
-              echo "Swift build failed. Last 80 lines:"
-              tail -n 80 swift-build.log
-            } > swift-build-summary.txt
-            message="$(python3 -c 'from pathlib import Path; text = Path("swift-build-summary.txt").read_text(); text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"); print(text)')"
-            echo "::error title=Swift build failed::$message"
+              echo "macOS app packaging failed. Last 120 lines:"
+              tail -n 120 macos-package.log
+            } > macos-package-summary.txt
+            message="$(python3 -c 'from pathlib import Path; text = Path("macos-package-summary.txt").read_text(); text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"); print(text)')"
+            echo "::error title=macOS app packaging failed::$message"
           fi
           exit "$status"
+
+      - name: Upload macOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pith-macos-x86_64
+          path: artifacts/macos/Pith-macos-x86_64.zip
