@@ -68,9 +68,10 @@ Done:
   clear flows, removal cleanup, source-revealable Notion-style connector
   contract, and no hidden Keychain or remote MCP claims.
 - Recovery loop: plugin inspect/install, enable/remove, route, permission,
-  approval, connector, runner, and RPC failures carry compact repair metadata;
-  the third-party connector smoke path covers inspect, install, enable,
-  pre-auth blockers, authorize, approve, fail, repair, and retry.
+  approval, connector, runner, completion-stage, and RPC failures carry compact
+  repair metadata plus retry input context; the third-party connector smoke path
+  covers inspect, install, enable, pre-auth blockers, authorize, approve, fail,
+  repair, and retry.
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve
   command IDs, plugin IDs, connector IDs, install blockers, input context,
   source paths where available, and recovery hints without leaking credential

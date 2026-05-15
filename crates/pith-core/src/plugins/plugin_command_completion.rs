@@ -49,6 +49,7 @@ fn complete_plugin_command_items(
         "missingThread",
         "Thread not found",
         "Select or create a thread, then run the plugin command again.",
+        input.as_deref(),
       ));
     };
 
@@ -67,6 +68,7 @@ fn complete_plugin_command_items(
       "persistFailed",
       error.to_string(),
       "Check local storage permissions, then retry the plugin command.",
+      input.as_deref(),
     )
   })?;
   refresh_thread_summary_note(context, &thread_id).map_err(|error| {
@@ -76,6 +78,7 @@ fn complete_plugin_command_items(
       "summaryFailed",
       error.to_string(),
       "Check local storage permissions, then refresh the thread summary.",
+      input.as_deref(),
     )
   })?;
 
@@ -101,6 +104,7 @@ fn complete_plugin_command_items(
         "persistFailed",
         error.to_string(),
         "Check local storage permissions, then retry the plugin command.",
+        input.as_deref(),
       )
     })?;
     refresh_thread_summary_note(context, &thread_id).map_err(|error| {
@@ -110,6 +114,7 @@ fn complete_plugin_command_items(
         "summaryFailed",
         error.to_string(),
         "Check local storage permissions, then refresh the thread summary.",
+        input.as_deref(),
       )
     })?;
   }
@@ -136,6 +141,7 @@ impl PluginCommandCompletionError {
     run_status: &'static str,
     message: impl Into<String>,
     run_repair_hint: &'static str,
+    input: Option<&str>,
   ) -> Self {
     let message = message.into();
     Self {
@@ -148,6 +154,7 @@ impl PluginCommandCompletionError {
         "runStatus": run_status,
         "runBlocker": message,
         "runRepairHint": run_repair_hint,
+        "commandInput": input,
       }),
     }
   }

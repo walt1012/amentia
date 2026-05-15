@@ -49,6 +49,7 @@ struct JSONRPCErrorData: Decodable {
   let runStatus: String?
   let runBlocker: String?
   let runRepairHint: String?
+  let commandInput: String?
 }
 
 extension JSONRPCErrorData {
@@ -87,6 +88,7 @@ extension JSONRPCErrorData {
     append(runStatus, forKey: "runStatus", to: &attributes)
     append(runBlocker, forKey: "runBlocker", to: &attributes)
     append(runRepairHint, forKey: "runRepairHint", to: &attributes)
+    append(commandInput, forKey: "commandInput", to: &attributes)
     return attributes
   }
 

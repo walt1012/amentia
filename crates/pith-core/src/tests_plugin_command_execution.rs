@@ -312,7 +312,8 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
       methods::PLUGIN_COMMAND_RUN,
       Some(json!({
         "threadId": "thread-1",
-        "commandId": "workspace-notes::workspace.capture-note"
+        "commandId": "workspace-notes::workspace.capture-note",
+        "input": "persist this note"
       })),
     ),
   );
@@ -326,6 +327,7 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
   let data = error.data.expect("plugin command persistence error data");
   assert_eq!(data["pluginId"], "workspace-notes");
   assert_eq!(data["commandId"], "workspace-notes::workspace.capture-note");
+  assert_eq!(data["commandInput"], "persist this note");
   assert_eq!(data["runStatus"], "persistFailed");
   assert!(data["runBlocker"].as_str().expect("run blocker").len() > 10);
   assert!(data["runRepairHint"]
