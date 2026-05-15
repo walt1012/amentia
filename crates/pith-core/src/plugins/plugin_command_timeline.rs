@@ -169,6 +169,7 @@ pub(super) fn build_plugin_failure_timeline_item(
   code: i32,
   message: String,
   input: Option<&str>,
+  connector_refs: &[PluginConnectorExecutionRef],
   stdout: &str,
   stderr: &str,
   mut attributes: HashMap<String, String>,
@@ -209,6 +210,7 @@ pub(super) fn build_plugin_failure_timeline_item(
   if let Some(input) = input {
     attributes.insert("commandInput".to_string(), input.to_string());
   }
+  insert_connector_context_attributes(&mut attributes, connector_refs);
 
   let mut content = format!("{message}\n\nError code: {code}");
   if !recovery_hint.trim().is_empty() {
@@ -320,6 +322,7 @@ mod tests {
       -32054,
       "Runner failed.".to_string(),
       Some("retry this input"),
+      &[],
       "",
       "",
       HashMap::new(),
@@ -332,6 +335,53 @@ mod tests {
         .and_then(|attributes| attributes.get("commandInput")),
       Some(&"retry this input".to_string())
     );
+  }
+
+  #[test]
+  fn failure_item_preserves_connector_context_for_repair() {
+    let item = build_plugin_failure_timeline_item(
+      &test_command(),
+      Some("stdio.test"),
+      -32054,
+      "Runner failed.".to_string(),
+      None,
+      &[test_connector_ref()],
+      "",
+      "",
+      HashMap::new(),
+    );
+
+    let attributes = item.attributes.as_ref().expect("attributes");
+    assert_eq!(
+      attributes.get("connectorIds").map(String::as_str),
+      Some("test-plugin::notion")
+    );
+    assert_eq!(
+      attributes.get("connectorSecretBindings").map(String::as_str),
+      Some("marker-only")
+    );
+    assert_eq!(
+      attributes.get("connectorServices").map(String::as_str),
+      Some("notion")
+    );
+  }
+
+  fn test_connector_ref() -> PluginConnectorExecutionRef {
+    use super::super::plugin_command_types::PluginConnectorCredentialProviderRef;
+
+    PluginConnectorExecutionRef {
+      connector_id: "test-plugin::notion".to_string(),
+      service: "notion".to_string(),
+      credential_provider: PluginConnectorCredentialProviderRef {
+        provider: "pith.localCredentialProvider".to_string(),
+        handle: "test-plugin::notion".to_string(),
+        store: "local".to_string(),
+        label: "Notion authorization marker".to_string(),
+        env_key: None,
+        authorized_at: 1,
+      },
+      credential_secret: None,
+    }
   }
 
   fn test_command() -> HostPluginCommandEntry {

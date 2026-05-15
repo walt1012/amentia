@@ -128,11 +128,6 @@ impl PluginCommandPreparationError {
         command.command_id
       )
     });
-    let connector_ids = if readiness.required_connector_ids.is_empty() {
-      readiness.declared_connector_ids.clone()
-    } else {
-      readiness.required_connector_ids.clone()
-    };
     let mut data = json!({
       "pluginId": &command.plugin_id,
       "commandId": &command.command_id,
@@ -141,12 +136,10 @@ impl PluginCommandPreparationError {
       "runBlocker": readiness.run_blocker,
       "runRepairHint": readiness.run_repair_hint,
     });
-    if !connector_ids.is_empty() {
-      data["connectorIds"] = json!(connector_ids.join(", "));
-      if connector_ids.len() == 1 {
-        data["connectorId"] = json!(&connector_ids[0]);
-      }
-    }
+    insert_connector_error_data(
+      &mut data,
+      readiness_connector_ids(&command.plugin_id, &readiness),
+    );
     Self {
       code,
       message,
@@ -162,14 +155,18 @@ impl PluginCommandPreparationError {
     Self {
       code: -32053,
       message: message.clone(),
-      data: Some(json!({
-        "pluginId": &command.plugin_id,
-        "commandId": &command.command_id,
-        "sourcePath": &command.source_path,
-        "runStatus": error.run_status,
-        "runBlocker": message,
-        "runRepairHint": error.run_repair_hint,
-      })),
+      data: Some({
+        let mut data = json!({
+          "pluginId": &command.plugin_id,
+          "commandId": &command.command_id,
+          "sourcePath": &command.source_path,
+          "runStatus": error.run_status,
+          "runBlocker": message,
+          "runRepairHint": error.run_repair_hint,
+        });
+        insert_connector_error_data(&mut data, declared_connector_ids(command));
+        data
+      }),
     }
   }
 
@@ -217,6 +214,53 @@ impl PluginCommandPreparationError {
     }
     attributes
   }
+}
+
+fn insert_connector_error_data(data: &mut Value, connector_ids: Vec<String>) {
+  if connector_ids.is_empty() {
+    return;
+  }
+
+  data["connectorIds"] = json!(connector_ids.join(", "));
+  if connector_ids.len() == 1 {
+    data["connectorId"] = json!(&connector_ids[0]);
+  }
+}
+
+fn readiness_connector_ids(
+  plugin_id: &str,
+  readiness: &PluginCommandReadiness,
+) -> Vec<String> {
+  if readiness.required_connector_ids.is_empty() {
+    return qualify_connector_ids(plugin_id, &readiness.declared_connector_ids);
+  }
+
+  qualify_connector_ids(plugin_id, &readiness.required_connector_ids)
+}
+
+fn declared_connector_ids(command: &HostPluginCommandEntry) -> Vec<String> {
+  let Some(connector_ids) = command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.connector_ids.as_ref())
+  else {
+    return vec![];
+  };
+
+  qualify_connector_ids(&command.plugin_id, connector_ids)
+}
+
+fn qualify_connector_ids(plugin_id: &str, connector_ids: &[String]) -> Vec<String> {
+  connector_ids
+    .iter()
+    .map(|connector_id| {
+      if connector_id.contains("::") {
+        connector_id.clone()
+      } else {
+        format!("{plugin_id}::{connector_id}")
+      }
+    })
+    .collect()
 }
 
 fn resolve_plugin_command(
@@ -534,5 +578,64 @@ mod tests {
       attributes.get("runRepairHint").map(String::as_str),
       Some("Run with input.")
     );
+  }
+
+  #[test]
+  fn input_contract_failure_keeps_connector_ids_for_repair() {
+    let command = HostPluginCommandEntry {
+      command_id: "test-plugin::run".to_string(),
+      title: "Run Test Plugin".to_string(),
+      description: "Run a test plugin command.".to_string(),
+      prompt: "Run the plugin.".to_string(),
+      plugin_id: "test-plugin".to_string(),
+      plugin_display_name: "Test Plugin".to_string(),
+      permissions: vec![],
+      source_path: "plugins/test-plugin/commands/run.json".to_string(),
+      execution: Some(test_connector_execution()),
+      execution_kind: Some("stdio.test".to_string()),
+      manifest_error: None,
+      memory_note_title: None,
+      memory_note_source: None,
+      memory_note_tags: vec![],
+    };
+    let error = PluginCommandPreparationError::from_input_contract(
+      &command,
+      PluginCommandInputContractError::new(
+        "Missing connector input.".to_string(),
+        "missingConnectorInput",
+        "Declare and authorize a connector.",
+      ),
+    );
+
+    let data = error
+      .data
+      .as_ref()
+      .and_then(|data| data.as_object())
+      .expect("error data");
+    assert_eq!(
+      data.get("connectorId").and_then(Value::as_str),
+      Some("test-plugin::notion")
+    );
+    assert_eq!(
+      data.get("connectorIds").and_then(Value::as_str),
+      Some("test-plugin::notion")
+    );
+  }
+
+  fn test_connector_execution() -> pith_plugin_host::PluginCommandExecutionEntry {
+    pith_plugin_host::PluginCommandExecutionEntry {
+      kind: "stdio.test".to_string(),
+      driver: "stdio".to_string(),
+      entrypoint: Some("runner.sh".to_string()),
+      connector_ids: Some(vec!["notion".to_string()]),
+      input: pith_plugin_host::PluginCommandEnvelopeEntry {
+        envelope: "pith.plugin.command.input".to_string(),
+        fields: vec![],
+      },
+      output: pith_plugin_host::PluginCommandEnvelopeEntry {
+        envelope: "pith.plugin.command.output".to_string(),
+        fields: vec![],
+      },
+    }
   }
 }

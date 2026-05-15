@@ -375,6 +375,7 @@ extension AppViewModel {
       return
     }
 
+    pluginManagerSection = .commands
     runPluginCommand(commandID: commandID, input: entry.attributes["commandInput"])
   }
 
@@ -437,6 +438,7 @@ extension AppViewModel {
       return
     }
 
+    pluginManagerSection = .commands
     runtimeDetail = TimelineEventPresenter.runningPluginCommandDetail
     let requestID = localExecutionRequests.beginAgentRequest(threadID: threadID)
     let trimmedInput = input?.trimmingCharacters(in: .whitespacesAndNewlines)

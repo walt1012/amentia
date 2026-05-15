@@ -119,6 +119,7 @@ pub(crate) fn execute_plugin_command_snapshot(
             code,
             message,
             snapshot.input.as_deref(),
+            &snapshot.connector_refs,
             &stdout,
             &stderr,
             attributes,

@@ -103,7 +103,7 @@ struct TimelineCard: View {
           }
 
           if showsPluginRetryAction {
-            Button("Retry") {
+            Button(pluginRetryTitle) {
               onRetry()
             }
             .buttonStyle(.bordered)
@@ -157,6 +157,14 @@ struct TimelineCard: View {
       || showsPluginInputAction
       || showsPluginRetryAction
       || showsPluginSourceAction
+  }
+
+  private var pluginRetryTitle: String {
+    if entry.attributes["commandInput"] != nil {
+      return "Retry with Input"
+    }
+
+    return "Retry"
   }
 
   private var kindLabel: String {
