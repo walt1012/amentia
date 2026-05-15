@@ -114,9 +114,8 @@ fn validation_hint_describes_supported_auth_policy_types() {
 
 #[test]
 fn validation_hint_explains_auth_free_policy_requirements() {
-  let required_hint = validation_hint_for_error(
-    "plugin auth policy type `none` must not require credentials",
-  );
+  let required_hint =
+    validation_hint_for_error("plugin auth policy type `none` must not require credentials");
   let scopes_hint =
     validation_hint_for_error("plugin auth policy type `none` must not declare scopes");
   let store_hint =
@@ -130,9 +129,8 @@ fn validation_hint_explains_auth_free_policy_requirements() {
 
 #[test]
 fn validation_hint_explains_connector_identity_fields() {
-  let display_name_hint = validation_hint_for_error(
-    "plugin connector `notion` must include a non-empty display name",
-  );
+  let display_name_hint =
+    validation_hint_for_error("plugin connector `notion` must include a non-empty display name");
   let service_hint =
     validation_hint_for_error("plugin connector `notion` must include a non-empty service");
 
