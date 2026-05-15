@@ -32,10 +32,12 @@ extension AppViewModel {
           installRootPath: runtimeBridge.localPluginInstallRootPath()
         )
         guard preview.canInstall else {
-          runtimeDetail = preview.installBlocker ?? "Plugin cannot be installed yet."
-          appendEntry(
+          let detail = preview.installBlocker ?? "Plugin cannot be installed yet."
+          appendPluginStatusEntry(
             to: timelineThreadID,
-            TimelineEventPresenter.pluginInstallBlocked(preview: preview)
+            TimelineEventPresenter.pluginInstallBlocked(preview: preview),
+            detail: detail,
+            preview: "Plugin install blocked"
           )
           return
         }
@@ -51,29 +53,37 @@ extension AppViewModel {
           capabilities: installedPlugin.capabilities,
           permissions: installedPlugin.permissions
         )
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview)
+          TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview),
+          detail: installedPlugin.enabled
+            ? "Plugin installed and enabled."
+            : "Plugin installed. Enable it before running commands.",
+          preview: "Plugin installed"
         )
       } catch {
         let repairHint = PluginInstallDialogPresenter.repairHint(for: error)
         if confirmedPreview == nil {
-          appendEntry(
+          appendPluginStatusEntry(
             to: timelineThreadID,
             TimelineEventPresenter.pluginInstallPreviewFailed(
               error: error,
               repairHint: repairHint,
               sourcePath: url.path
-            )
+            ),
+            detail: error.localizedDescription,
+            preview: "Plugin install preview failed"
           )
         } else {
-          appendEntry(
+          appendPluginStatusEntry(
             to: timelineThreadID,
             TimelineEventPresenter.pluginInstallFailed(
               error: error,
               repairHint: repairHint,
               sourcePath: confirmedPreview?.sourcePath
-            )
+            ),
+            detail: error.localizedDescription,
+            preview: "Plugin install failed"
           )
         }
       }
@@ -98,24 +108,31 @@ extension AppViewModel {
         finishPluginLifecycleOperation(operationID)
       }
       do {
-        let updatedPlugin = try await runtimeBridge.setPluginEnabled(pluginID: pluginID, enabled: enabled)
+        let updatedPlugin = try await runtimeBridge.setPluginEnabled(
+          pluginID: pluginID,
+          enabled: enabled
+        )
         await refreshPluginState()
         focusPluginManagerSection(
           capabilities: updatedPlugin.capabilities,
           permissions: updatedPlugin.permissions
         )
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled)
+          TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled),
+          detail: "\(updatedPlugin.displayName) is now \(enabled ? "enabled" : "disabled").",
+          preview: enabled ? "Plugin enabled" : "Plugin disabled"
         )
       } catch {
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginUpdateFailed(
             pluginID: pluginID,
             enabled: enabled,
             error: error
-          )
+          ),
+          detail: error.localizedDescription,
+          preview: enabled ? "Plugin enable failed" : "Plugin disable failed"
         )
       }
     }
@@ -148,14 +165,18 @@ extension AppViewModel {
       do {
         let removedPlugin = try await runtimeBridge.removePlugin(manifestPath: plugin.manifestPath)
         await refreshPluginState()
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginRemoved(removedPlugin)
+          TimelineEventPresenter.pluginRemoved(removedPlugin),
+          detail: "\(removedPlugin.displayName) was removed from the local plugin catalog.",
+          preview: "Plugin removed"
         )
       } catch {
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error)
+          TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error),
+          detail: error.localizedDescription,
+          preview: "Plugin removal failed"
         )
       }
     }
