@@ -1136,6 +1136,13 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   let approval_result = approval_response.result.expect("approval result");
   let items = approval_result["items"].as_array().expect("approval items");
   assert_eq!(items[0]["kind"], "approvalResolved");
+  assert_eq!(items[0]["attributes"]["decision"], "approved");
+  assert_eq!(items[0]["attributes"]["action"], "run_plugin_command");
+  assert_eq!(
+    items[0]["attributes"]["commandId"],
+    "notion-runner::notion-runner.sync"
+  );
+  assert_eq!(items[0]["attributes"]["pluginId"], "notion-runner");
   assert_eq!(items[1]["kind"], "pluginCommand");
   assert_eq!(
     items[1]["attributes"]["connectorIds"],
@@ -1558,6 +1565,17 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   let approval_result = approval_response.result.expect("approval result");
   let items = approval_result["items"].as_array().expect("approval items");
   assert_eq!(items[0]["kind"], "approvalResolved");
+  assert_eq!(items[0]["attributes"]["decision"], "approved");
+  assert_eq!(items[0]["attributes"]["action"], "run_plugin_command");
+  assert_eq!(
+    items[0]["attributes"]["commandId"],
+    "notion-mcp::notion-mcp.create-task"
+  );
+  assert_eq!(items[0]["attributes"]["pluginId"], "notion-mcp");
+  assert_eq!(
+    items[0]["attributes"]["commandInput"],
+    "Create a follow-up task"
+  );
   assert_eq!(items[1]["kind"], "pluginCommand");
   assert_eq!(items[2]["kind"], "pluginResult");
   assert_eq!(

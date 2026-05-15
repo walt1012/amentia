@@ -23,10 +23,7 @@ pub(super) fn approval_granted_item(approval: &PendingApproval) -> TimelineItem 
     kind: "approvalResolved".to_string(),
     title: "Approval Granted".to_string(),
     content,
-    attributes: Some(HashMap::from([
-      ("approvalId".to_string(), approval.id.clone()),
-      ("decision".to_string(), "approved".to_string()),
-    ])),
+    attributes: Some(approval_resolution_attributes(approval, "approved")),
   }
 }
 
@@ -46,11 +43,38 @@ pub(super) fn approval_denied_item(approval: &PendingApproval) -> TimelineItem {
     kind: "approvalResolved".to_string(),
     title: "Approval Denied".to_string(),
     content,
-    attributes: Some(HashMap::from([
-      ("approvalId".to_string(), approval.id.clone()),
-      ("decision".to_string(), "denied".to_string()),
-    ])),
+    attributes: Some(approval_resolution_attributes(approval, "denied")),
   }
+}
+
+fn approval_resolution_attributes(
+  approval: &PendingApproval,
+  decision: &str,
+) -> HashMap<String, String> {
+  let mut attributes = HashMap::from([
+    ("approvalId".to_string(), approval.id.clone()),
+    ("decision".to_string(), decision.to_string()),
+    ("action".to_string(), approval.action.clone()),
+    ("relativePath".to_string(), approval.relative_path.clone()),
+  ]);
+  if let Some(command_id) = approval.command.as_ref() {
+    attributes.insert("commandId".to_string(), command_id.clone());
+    if let Some(plugin_id) = plugin_id_from_command_id(command_id) {
+      attributes.insert("pluginId".to_string(), plugin_id.to_string());
+    }
+  }
+  if let Some(content) = approval.content.as_ref() {
+    attributes.insert("commandInput".to_string(), content.clone());
+  }
+
+  attributes
+}
+
+fn plugin_id_from_command_id(command_id: &str) -> Option<&str> {
+  command_id
+    .split_once("::")
+    .map(|(plugin_id, _)| plugin_id)
+    .filter(|plugin_id| !plugin_id.is_empty())
 }
 
 pub(super) fn tool_start_item(
@@ -134,6 +158,36 @@ mod tests {
     assert_eq!(
       attributes.get("decision").map(String::as_str),
       Some("approved")
+    );
+    assert_eq!(attributes.get("action").map(String::as_str), Some("write_file"));
+    assert_eq!(
+      attributes.get("relativePath").map(String::as_str),
+      Some("README.md")
+    );
+  }
+
+  #[test]
+  fn plugin_approval_resolution_keeps_command_context() {
+    let mut approval = approval();
+    approval.action = "run_plugin_command".to_string();
+    approval.relative_path = "plugin:notion-runner".to_string();
+    approval.command = Some("notion-runner::notion-runner.sync".to_string());
+    approval.content = Some("sync today".to_string());
+
+    let item = approval_denied_item(&approval);
+    let attributes = item.attributes.expect("attributes");
+
+    assert_eq!(
+      attributes.get("commandId").map(String::as_str),
+      Some("notion-runner::notion-runner.sync")
+    );
+    assert_eq!(
+      attributes.get("pluginId").map(String::as_str),
+      Some("notion-runner")
+    );
+    assert_eq!(
+      attributes.get("commandInput").map(String::as_str),
+      Some("sync today")
     );
   }
 

@@ -56,49 +56,31 @@ integration layer.
 
 Done:
 
-- Typed plugin, command, connector, hook, and capability registries.
-- Bounded `stdio` and MCP stdio runners with sandbox diagnostics, permissions,
-  approvals, retries, visible repair hints, source reveal, route-failure
-  metadata, output contracts, and runner memory notes.
-- Local install/remove lifecycle, plugin state diagnostics, explicit `/plugin`
-  routing, install readiness preflight, inspect-before-install, and a
-  source-revealable connector-backed Notion command contract.
-- Honest connector credentials: current stores are `none` or `local`; Keychain
-  and remote MCP transports wait until implemented. Authenticated connectors
-  must declare `credentialStore: local` explicitly, and connector auth failures
-  return self-contained repair metadata with command and connector panel repair
-  actions, re-authorization, input-run, retry, source reveal, and RPC recovery
-  actions.
-- Plugin install and enable flows now surface command/connector/hook counts and
-  focus the plugin manager on the most likely next repair surface.
-- Plugin command failures now keep retry input plus singular connector repair
-  context on the failure card, so repair and retry actions do not depend on
-  neighboring items.
-- Runtime RPC recovery, runner attributes, inspector summaries, and repair
-  actions preserve both singular and plural connector IDs without leaking
-  credential handles.
-- Explicit `/plugin` route failures use the same blocked command status as
-  panel-run failures, keeping repair actions and retry decisions consistent.
-- Connector-backed approval cards now carry command input, source path,
-  execution kind, and singular connector IDs for the same inspect/repair
-  context as run and failure cards.
-- Connector-backed approval cards can reveal plugin source before approval,
-  keeping trust decisions inside the native timeline.
-- Plugin command permission denials now use blocked command metadata and repair
-  hints, so missing permission issues route through the same inspect/repair
-  surface as other plugin command blockers.
+- Registry and lifecycle: typed plugin, command, connector, hook, capability
+  registries; local install/remove; inspect-before-install; compact state
+  diagnostics.
+- Execution: bounded `stdio` and MCP stdio runners with sandbox diagnostics,
+  permission gates, approval gating, cancellation-safe retries, deterministic
+  output contracts, and runner memory notes.
+- Connectors: honest `none` or `local` credential stores, connector auth and
+  clear flows, source-revealable Notion-style connector contract, and no hidden
+  Keychain or remote MCP claims.
+- Recovery loop: plugin install, enable, route, permission, approval, connector,
+  runner, and RPC failures carry compact repair metadata for panel actions,
+  source reveal, retry, input-run, and connector authorization.
+- Timeline trust: approval, run, blocked, failed, and resolved cards preserve
+  command IDs, plugin IDs, connector IDs, input context, source paths where
+  available, and recovery hints without leaking credential handles.
 
 Active:
 
-- Tighten the third-party plugin debug loop: install, inspect, enable,
-  authorize, run from the panel or an explicit `/plugin` turn, understand
-  failure, repair, retry. Keep diagnostics compact enough to stay inside the
-  minimal app surface.
-- Keep output contracts narrow and deterministic for tiny local models:
-  `content`, `message`, `items`, and `memoryNotes`, including MCP
-  `structuredContent` or text envelopes when explicit.
-- Preserve the small app shape: progressive plugin UI, no broad marketplace,
-  no admin-console sprawl.
+- Finish one full third-party connector plugin smoke path: install, inspect,
+  enable, authorize, approve, run, fail, repair, retry.
+- Tighten output contracts for tiny local models: `content`, `message`,
+  `items`, and `memoryNotes`, including explicit MCP structured or text
+  envelopes.
+- Keep the app small: progressive plugin UI, no broad marketplace, no
+  admin-console sprawl.
 
 M4 exit criteria:
 
