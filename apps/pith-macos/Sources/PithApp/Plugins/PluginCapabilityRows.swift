@@ -121,12 +121,15 @@ private extension PluginCapabilitySummary {
 
 struct PluginConnectorRow: View {
   let connector: PluginConnectorSummary
+  let canEnablePlugin: Bool
   let canAuthorize: Bool
   let canClearCredential: Bool
   let authorizeDisabledReason: String?
   let clearCredentialDisabledReason: String?
   let onAuthorize: () -> Void
   let onClearCredential: () -> Void
+  let onEnablePlugin: () -> Void
+  let onRevealManifest: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -142,6 +145,11 @@ struct PluginConnectorRow: View {
         Spacer()
 
         connectorActions
+
+        Button("Manifest") {
+          onRevealManifest()
+        }
+        .font(.caption2)
       }
 
       Text("\(connector.pluginDisplayName) | \(connector.pluginID)")
@@ -179,7 +187,13 @@ struct PluginConnectorRow: View {
 
   @ViewBuilder
   private var connectorActions: some View {
-    if connector.authRequired {
+    if !connector.enabled {
+      Button("Enable Plugin") {
+        onEnablePlugin()
+      }
+      .font(.caption2)
+      .disabled(!canEnablePlugin)
+    } else if connector.authRequired {
       if connector.credentialPresent {
         Button("Clear") {
           onClearCredential()

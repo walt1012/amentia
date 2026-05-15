@@ -171,6 +171,7 @@ private struct PluginConnectorsSection: View {
         ForEach(viewModel.pluginConnectorPreview()) { connector in
           PluginConnectorRow(
             connector: connector,
+            canEnablePlugin: viewModel.canSetPluginEnabled(pluginID: connector.pluginID),
             canAuthorize: viewModel.canAuthorizePluginConnector(connectorID: connector.id),
             canClearCredential: viewModel.canClearPluginConnectorCredential(
               connectorID: connector.id
@@ -186,6 +187,12 @@ private struct PluginConnectorsSection: View {
             },
             onClearCredential: {
               viewModel.clearPluginConnectorCredential(connectorID: connector.id)
+            },
+            onEnablePlugin: {
+              viewModel.setPluginEnabled(pluginID: connector.pluginID, enabled: true)
+            },
+            onRevealManifest: {
+              viewModel.revealPluginManifest(pluginID: connector.pluginID)
             }
           )
         }
