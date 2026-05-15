@@ -82,6 +82,19 @@ fn plugin_set_enabled_does_not_mutate_catalog_when_persistence_fails() {
   assert!(response.result.is_none());
   let error = response.error.expect("plugin enable error");
   assert_eq!(error.code, -32010);
+  let data = error.data.expect("plugin enable error data");
+  assert_eq!(data["pluginId"], "workspace-notes");
+  assert_eq!(data["pluginLifecycleOperation"], "enable");
+  assert_eq!(data["pluginLifecycleStatus"], "persistFailed");
+  assert!(data["lifecycleBlocker"]
+    .as_str()
+    .expect("lifecycle blocker")
+    .len()
+    > 10);
+  assert!(data["lifecycleRepairHint"]
+    .as_str()
+    .expect("lifecycle repair hint")
+    .contains("storage permissions"));
   assert!(!context.plugin_state.catalog()[0].enabled);
 }
 
@@ -585,4 +598,18 @@ fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
   assert!(remove_response.result.is_none());
   let error = remove_response.error.expect("plugin remove error");
   assert_eq!(error.code, -32010);
+  let data = error.data.expect("plugin remove error data");
+  assert_eq!(data["pluginId"], "focus-review");
+  assert_eq!(data["pluginLifecycleOperation"], "remove");
+  assert_eq!(data["pluginLifecycleStatus"], "cleanupFailed");
+  assert_eq!(data["sourcePath"], manifest_path);
+  assert!(data["lifecycleBlocker"]
+    .as_str()
+    .expect("lifecycle blocker")
+    .len()
+    > 10);
+  assert!(data["lifecycleRepairHint"]
+    .as_str()
+    .expect("lifecycle repair hint")
+    .contains("storage permissions"));
 }

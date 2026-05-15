@@ -111,7 +111,11 @@ extension AppViewModel {
       } catch {
         appendEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginUpdateFailed(pluginID: pluginID, error: error)
+          TimelineEventPresenter.pluginUpdateFailed(
+            pluginID: pluginID,
+            enabled: enabled,
+            error: error
+          )
         )
       }
     }

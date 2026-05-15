@@ -313,13 +313,16 @@ enum TimelineEventPresenter {
     )
   }
 
-  static func pluginUpdateFailed(pluginID: String, error: Error) -> TimelineEntry {
+  static func pluginUpdateFailed(pluginID: String, enabled: Bool, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Plugin Update Failed",
       body: error.localizedDescription,
-      attributes: [
-        "pluginId": pluginID
-      ]
+      attributes: pluginLifecycleFailureAttributes(
+        error,
+        fallbackOperation: enabled ? "enable" : "disable",
+        fallbackStatus: "failed",
+        pluginID: pluginID
+      )
     )
   }
 
@@ -339,9 +342,12 @@ enum TimelineEventPresenter {
     TimelineEntryFactory.warning(
       title: "Plugin Removal Failed",
       body: error.localizedDescription,
-      attributes: [
-        "pluginId": pluginID
-      ]
+      attributes: pluginLifecycleFailureAttributes(
+        error,
+        fallbackOperation: "remove",
+        fallbackStatus: "failed",
+        pluginID: pluginID
+      )
     )
   }
 
@@ -553,6 +559,28 @@ enum TimelineEventPresenter {
       if attributes["sourcePath"] == nil {
         attributes["sourcePath"] = sourcePath
       }
+    }
+    return attributes
+  }
+
+  private static func pluginLifecycleFailureAttributes(
+    _ error: Error,
+    fallbackOperation: String,
+    fallbackStatus: String,
+    pluginID: String
+  ) -> [String: String] {
+    var attributes = recoveryAttributes(error)
+    if attributes["pluginId"] == nil {
+      attributes["pluginId"] = pluginID
+    }
+    if attributes["pluginLifecycleOperation"] == nil {
+      attributes["pluginLifecycleOperation"] = fallbackOperation
+    }
+    if attributes["pluginLifecycleStatus"] == nil {
+      attributes["pluginLifecycleStatus"] = fallbackStatus
+    }
+    if attributes["lifecycleBlocker"] == nil {
+      attributes["lifecycleBlocker"] = error.localizedDescription
     }
     return attributes
   }

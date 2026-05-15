@@ -132,6 +132,7 @@ enum TimelineInspectorPresenter {
     }
 
     appendPluginInstallSummary(entry, to: &lines)
+    appendPluginLifecycleSummary(entry, to: &lines)
     appendPluginRunnerSetupSummary(entry, to: &lines)
 
     if let permissionGate = entry.attributes["permissionGate"] {
@@ -221,6 +222,7 @@ enum TimelineInspectorPresenter {
       "permissionGate",
       "pluginCommandRunId",
       "pluginInstallStatus",
+      "pluginLifecycleStatus",
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
@@ -278,6 +280,24 @@ enum TimelineInspectorPresenter {
     }
     if let repairHint = entry.attributes["installRepairHint"] {
       lines.append("Install repair: \(repairHint)")
+    }
+  }
+
+  private static func appendPluginLifecycleSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard let status = entry.attributes["pluginLifecycleStatus"] else {
+      return
+    }
+
+    let operation = entry.attributes["pluginLifecycleOperation"] ?? "plugin"
+    lines.append("Lifecycle: \(operation) | \(status)")
+    if let blocker = entry.attributes["lifecycleBlocker"] {
+      lines.append("Lifecycle blocker: \(blocker)")
+    }
+    if let repairHint = entry.attributes["lifecycleRepairHint"] {
+      lines.append("Lifecycle repair: \(repairHint)")
     }
   }
 
