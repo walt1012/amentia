@@ -95,6 +95,94 @@ fn plugin_command_run_rejects_empty_mcp_text_content() {
 }
 
 #[cfg(unix)]
+#[test]
+fn plugin_command_run_rejects_empty_mcp_result() {
+  let items = run_mcp_content_case(McpContentCase {
+    label: "plugin-command-mcp-empty-result",
+    plugin_id: "mcp-empty-result",
+    display_name: "MCP Empty Result",
+    execution_kind: "mcp.localEmptyResult",
+    thread_title: "MCP Empty Result Thread",
+    response_line: r#"{"jsonrpc":"2.0","id":2,"result":{}}"#,
+  });
+
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "mcpProtocol"
+  );
+  assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "emptyResult");
+  assert_eq!(items[1]["attributes"]["mcpContentCount"], "0");
+  assert_eq!(items[1]["attributes"]["mcpTextContentCount"], "0");
+  assert_eq!(items[1]["attributes"]["mcpUsableTextContentCount"], "0");
+  assert_eq!(items[1]["attributes"]["mcpUnsupportedContentCount"], "0");
+  assert!(items[1]["attributes"]["pluginRunnerRecoveryHint"]
+    .as_str()
+    .expect("recovery hint")
+    .contains("empty tool result"));
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_command_run_prefers_pith_structured_content_over_text() {
+  let items = run_mcp_content_case(McpContentCase {
+    label: "plugin-command-mcp-structured-priority",
+    plugin_id: "mcp-structured-priority",
+    display_name: "MCP Structured Priority",
+    execution_kind: "mcp.localStructuredPriority",
+    thread_title: "MCP Structured Priority Thread",
+    response_line: concat!(
+      r#"{"jsonrpc":"2.0","id":2,"result":{"content":["#,
+      r#"{"type":"text","text":"Text output should not win."}"#,
+      r#"],"structuredContent":{"content":"Structured output wins."}}}"#,
+    ),
+  });
+
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["content"], "Structured output wins.");
+  assert_eq!(
+    items[1]["attributes"]["mcpStructuredContentStatus"],
+    "pithOutputEnvelope"
+  );
+  assert_eq!(
+    items[1]["attributes"]["mcpResultSource"],
+    "structuredContent"
+  );
+  assert_eq!(items[1]["attributes"]["mcpTextContentCount"], "1");
+  assert_eq!(items[1]["attributes"]["mcpUsableTextContentCount"], "1");
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_command_run_uses_text_when_generic_structured_content_is_present() {
+  let items = run_mcp_content_case(McpContentCase {
+    label: "plugin-command-mcp-generic-structured-with-text",
+    plugin_id: "mcp-generic-structured",
+    display_name: "MCP Generic Structured",
+    execution_kind: "mcp.localGenericStructured",
+    thread_title: "MCP Generic Structured Thread",
+    response_line: concat!(
+      r#"{"jsonrpc":"2.0","id":2,"result":{"content":["#,
+      r#"{"type":"text","text":"Readable connector summary."}"#,
+      r#"],"structuredContent":{"pageId":"abc123","title":"Task"}}}"#,
+    ),
+  });
+
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "pluginResult");
+  assert_eq!(items[1]["content"], "Readable connector summary.");
+  assert_eq!(
+    items[1]["attributes"]["mcpStructuredContentStatus"],
+    "generic"
+  );
+  assert_eq!(items[1]["attributes"]["mcpResultSource"], "textContent");
+  assert_eq!(items[1]["attributes"]["mcpTextContentCount"], "1");
+  assert_eq!(items[1]["attributes"]["mcpUsableTextContentCount"], "1");
+}
+
+#[cfg(unix)]
 struct McpContentCase<'a> {
   label: &'a str,
   plugin_id: &'a str,

@@ -117,6 +117,9 @@ fn mcp_protocol_recovery_hint(attributes: &HashMap<String, String>) -> String {
       "Return non-empty MCP text content or structuredContent that Pith can convert into a useful plugin result."
         .to_string()
     }
+    Some("emptyResult") => {
+      "Return MCP text content or structuredContent instead of an empty tool result.".to_string()
+    }
     _ => "Check the MCP server command and stdout JSON-RPC framing.".to_string(),
   }
 }
@@ -267,5 +270,14 @@ mod tests {
 
     assert!(hint.contains("non-empty"));
     assert!(hint.contains("useful plugin result"));
+  }
+
+  #[test]
+  fn mcp_hint_explains_empty_result() {
+    let attributes = HashMap::from([("mcpProtocolStatus".to_string(), "emptyResult".to_string())]);
+
+    let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
+
+    assert!(hint.contains("empty tool result"));
   }
 }

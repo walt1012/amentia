@@ -493,6 +493,19 @@ fn mcp_runner_output(
   }
   let content_stats = mcp_content_stats(&result);
   content_stats.insert_attributes(&mut attributes);
+  if content_stats.total_count == 0 && result.structured_content.is_none() {
+    attributes.insert("mcpProtocolStatus".to_string(), "emptyResult".to_string());
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!("MCP tool `{}` returned an empty result.", target.tool_name),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
   if content_stats.usable_text_count == 0
     && result.structured_content.is_none()
     && content_stats.total_count > 0
@@ -524,6 +537,10 @@ fn mcp_runner_output(
         "mcpStructuredContentStatus".to_string(),
         "pithOutputEnvelope".to_string(),
       );
+      attributes.insert(
+        "mcpResultSource".to_string(),
+        "structuredContent".to_string(),
+      );
       let output = structured_content.to_string();
       return plugin_runner_output(command, execution_kind, &output, attributes);
     }
@@ -534,6 +551,10 @@ fn mcp_runner_output(
     );
   }
   let content = mcp_result_content(&result);
+  attributes.insert(
+    "mcpResultSource".to_string(),
+    mcp_result_content_source(&result, &content_stats).to_string(),
+  );
   if mcp_text_content_looks_like_pith_output(&content) {
     attributes.insert(
       "mcpContentStatus".to_string(),
@@ -797,6 +818,19 @@ fn mcp_result_content(result: &PluginMcpToolResultEnvelope) -> String {
       .unwrap_or_else(|_| structured_content.to_string());
   }
   "MCP tool call completed.".to_string()
+}
+
+fn mcp_result_content_source(
+  result: &PluginMcpToolResultEnvelope,
+  stats: &PluginMcpContentStats,
+) -> &'static str {
+  if stats.usable_text_count > 0 {
+    return "textContent";
+  }
+  if result.structured_content.is_some() {
+    return "structuredContent";
+  }
+  "emptyResult"
 }
 
 #[cfg(test)]

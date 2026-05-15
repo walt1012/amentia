@@ -62,7 +62,7 @@ Done:
 - Execution: bounded `stdio` and MCP stdio runners with sandbox diagnostics,
   permission gates, approval gating, cancellation-safe retries, deterministic
   output contracts, invalid-envelope repair hints, MCP content diagnostics, and
-  runner memory notes.
+  runner memory notes plus MCP result source attribution.
 - Connectors: honest `none` or `local` credential stores, connector auth and
   clear flows, source-revealable Notion-style connector contract, and no hidden
   Keychain or remote MCP claims.
@@ -76,8 +76,7 @@ Done:
 
 Active:
 
-- Harden remaining MCP envelope edge cases for tiny local models, especially
-  mixed text and structured content behavior.
+- Review M4 exit readiness against the third-party connector smoke path.
 - Close only real blockers found by the connector smoke path.
 - Keep the app small: progressive plugin UI, no broad marketplace, no
   admin-console sprawl.
@@ -91,9 +90,9 @@ M4 exit criteria:
 
 ## Next Order
 
-1. Harden plugin output envelope edge cases and MCP text or structured paths.
+1. Review M4 exit readiness before adding new plugin surface area.
 2. Close only real blockers found by the connector smoke path.
-3. Review M4 exit readiness before adding new plugin surface area.
+3. Keep plugin UI progressive and avoid marketplace sprawl.
 
 ## Not Now
 
