@@ -263,8 +263,11 @@ fn plugin_install_reports_refresh_failure_as_structured_recovery() {
       database_path,
       storage_root.join("threads.json"),
     ));
-  let source_root =
-    create_temp_plugin_bundle("plugin-install-refresh-fail", "focus-review", "Focus Review");
+  let source_root = create_temp_plugin_bundle(
+    "plugin-install-refresh-fail",
+    "focus-review",
+    "Focus Review",
+  );
   let source_path = source_root.display().to_string();
   let install_root = create_temp_workspace("plugin-install-refresh-fail-root");
   context
@@ -293,9 +296,7 @@ fn plugin_install_reports_refresh_failure_as_structured_recovery() {
   let data = error.data.expect("plugin install refresh error data");
   assert_eq!(data["sourcePath"], source_path.as_str());
   assert_eq!(data["pluginInstallStatus"], "refreshFailed");
-  let install_blocker = data["installBlocker"]
-    .as_str()
-    .expect("install blocker");
+  let install_blocker = data["installBlocker"].as_str().expect("install blocker");
   assert!(install_blocker.len() > 10);
 }
 
