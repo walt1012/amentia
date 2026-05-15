@@ -115,9 +115,8 @@ fn validation_hint_describes_supported_capability_kinds() {
 
 #[test]
 fn validation_hint_describes_stable_identifiers_for_whitespace() {
-  let hint = validation_hint_for_error(
-    "plugin name identifier `focus review` must not contain whitespace",
-  );
+  let hint =
+    validation_hint_for_error("plugin name identifier `focus review` must not contain whitespace");
 
   assert!(hint.contains("stable plugin identifiers"));
   assert!(hint.contains("notion-connector"));
