@@ -199,14 +199,18 @@ extension AppViewModel {
         )
         await refreshPluginState()
         focusAfterConnectorAuthorization(pluginID: connector.pluginID)
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorAuthorized(connector)
+          TimelineEventPresenter.pluginConnectorAuthorized(connector),
+          detail: "Connector authorized. Plugin commands were refreshed.",
+          preview: "Connector authorized"
         )
       } catch {
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error)
+          TimelineEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error),
+          detail: error.localizedDescription,
+          preview: "Connector authorization failed"
         )
       }
     }
@@ -238,17 +242,21 @@ extension AppViewModel {
         )
         await refreshPluginState()
         pluginManagerSection = .connectors
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorCredentialCleared(connector)
+          TimelineEventPresenter.pluginConnectorCredentialCleared(connector),
+          detail: "Connector credential cleared. Plugin commands were refreshed.",
+          preview: "Connector credential cleared"
         )
       } catch {
-        appendEntry(
+        appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorCredentialClearFailed(
             connectorID: connectorID,
             error: error
-          )
+          ),
+          detail: error.localizedDescription,
+          preview: "Connector credential clear failed"
         )
       }
     }
@@ -510,6 +518,19 @@ extension AppViewModel {
       to: selectedThreadID,
       TimelineEventPresenter.pluginCommandBlocked(command, detail: detail, input: input)
     )
+  }
+
+  private func appendPluginStatusEntry(
+    to threadID: String?,
+    _ entry: TimelineEntry,
+    detail: String,
+    preview: String
+  ) {
+    runtimeDetail = detail
+    if let threadID {
+      refreshThreadPreview(threadID: threadID, preview: preview)
+    }
+    appendEntry(to: threadID, entry)
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {
