@@ -650,7 +650,8 @@ extension AppViewModel {
   private func isPluginRecoveryEntry(_ entry: TimelineEntry) -> Bool {
     isPluginCommandIssueEntry(entry)
       || isPluginInstallIssueEntry(entry)
-      || entry.attributes["pluginId"] != nil
+      || isPluginConnectorIssueEntry(entry)
+      || isPluginLifecycleIssueEntry(entry)
   }
 
   private func pluginID(from entry: TimelineEntry) -> String? {
@@ -731,6 +732,10 @@ extension AppViewModel {
   private func isPluginConnectorIssueEntry(_ entry: TimelineEntry) -> Bool {
     entry.attributes["connectorStatus"] != nil
       || entry.attributes["connectorRepairHint"] != nil
+  }
+
+  private func isPluginLifecycleIssueEntry(_ entry: TimelineEntry) -> Bool {
+    entry.attributes["pluginLifecycleStatus"] != nil
   }
 
   private func isPluginCommandApprovalEntry(_ entry: TimelineEntry) -> Bool {
