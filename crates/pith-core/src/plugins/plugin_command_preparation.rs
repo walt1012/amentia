@@ -190,6 +190,10 @@ impl PluginCommandPreparationError {
   ) -> HashMap<String, String> {
     let mut attributes = HashMap::from([
       (
+        "pluginCommandStatus".to_string(),
+        "blocked".to_string(),
+      ),
+      (
         "pluginCommandRouting".to_string(),
         routing_reason.to_string(),
       ),
@@ -566,6 +570,10 @@ mod tests {
     assert_eq!(
       attributes.get("sourcePath").map(String::as_str),
       Some("plugins/test-plugin/commands/run.json")
+    );
+    assert_eq!(
+      attributes.get("pluginCommandStatus").map(String::as_str),
+      Some("blocked")
     );
     assert_eq!(
       attributes.get("commandInput").map(String::as_str),

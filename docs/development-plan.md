@@ -77,6 +77,8 @@ Done:
 - Runtime RPC recovery, runner attributes, inspector summaries, and repair
   actions preserve both singular and plural connector IDs without leaking
   credential handles.
+- Explicit `/plugin` route failures use the same blocked command status as
+  panel-run failures, keeping repair actions and retry decisions consistent.
 
 Active:
 
