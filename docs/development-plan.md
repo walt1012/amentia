@@ -72,8 +72,9 @@ Done:
   connector smoke path covers inspect, install, enable, pre-auth blockers,
   authorize, approve, fail, repair, and retry.
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve
-  command IDs, plugin IDs, connector IDs, input context, source paths where
-  available, and recovery hints without leaking credential handles.
+  command IDs, plugin IDs, connector IDs, install blockers, input context,
+  source paths where available, and recovery hints without leaking credential
+  handles.
 
 Active:
 

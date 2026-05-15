@@ -711,7 +711,13 @@ extension AppViewModel {
 
   private func isPluginInstallIssueEntry(_ entry: TimelineEntry) -> Bool {
     switch entry.attributes["pluginInstallStatus"] {
-    case "failed", "previewFailed", "blocked", "alreadyInstalled":
+    case "failed",
+         "previewFailed",
+         "inspectFailed",
+         "installFailed",
+         "refreshFailed",
+         "blocked",
+         "alreadyInstalled":
       return true
     default:
       return false

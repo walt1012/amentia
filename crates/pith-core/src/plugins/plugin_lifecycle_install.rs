@@ -90,7 +90,12 @@ pub(crate) fn handle_plugin_install(
     };
 
   if let Err(error) = context.refresh_plugins() {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    return plugin_install_error_response(
+      request.id,
+      "refreshFailed",
+      &params.source_path,
+      error.to_string(),
+    );
   }
 
   let refreshed_plugin = context

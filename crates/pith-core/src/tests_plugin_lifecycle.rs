@@ -252,6 +252,54 @@ fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
 }
 
 #[test]
+fn plugin_install_reports_refresh_failure_as_structured_recovery() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("plugin-install-refresh-failing-storage");
+  let database_path = storage_root.join("pith.db");
+  fs::create_dir_all(&database_path).expect("create directory at database path");
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
+  let source_root =
+    create_temp_plugin_bundle("plugin-install-refresh-fail", "focus-review", "Focus Review");
+  let source_path = source_root.display().to_string();
+  let install_root = create_temp_workspace("plugin-install-refresh-fail-root");
+  context
+    .plugin_state
+    .configure_roots(vec![install_root.clone()], install_root.clone());
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_INSTALL,
+      Some(json!({
+        "sourcePath": source_path.clone()
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+    .expect("cleanup plugin source root");
+  fs::remove_dir_all(&install_root).expect("cleanup install root");
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("plugin install refresh error");
+  assert_eq!(error.code, -32053);
+  let data = error.data.expect("plugin install refresh error data");
+  assert_eq!(data["sourcePath"], source_path.as_str());
+  assert_eq!(data["pluginInstallStatus"], "refreshFailed");
+  let install_blocker = data["installBlocker"]
+    .as_str()
+    .expect("install blocker");
+  assert!(install_blocker.len() > 10);
+}
+
+#[test]
 fn plugin_install_rejects_duplicate_plugin_ids() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(

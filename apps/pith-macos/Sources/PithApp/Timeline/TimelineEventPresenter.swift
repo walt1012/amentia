@@ -221,11 +221,12 @@ enum TimelineEventPresenter {
     return TimelineEntryFactory.warning(
       title: "Plugin Install Preview Failed",
       body: body,
-      attributes: [
-        "pluginInstallStatus": "previewFailed",
-        "pluginSourcePath": sourcePath,
-        "sourcePath": sourcePath,
-      ]
+      attributes: pluginInstallFailureAttributes(
+        error,
+        fallbackStatus: "previewFailed",
+        sourcePath: sourcePath,
+        repairHint: repairHint
+      )
     )
   }
 
@@ -285,18 +286,16 @@ enum TimelineEventPresenter {
     let body = repairHint.isEmpty
       ? error.localizedDescription
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
-    var attributes = [
-      "pluginInstallStatus": "failed"
-    ]
-    if let sourcePath {
-      attributes["pluginSourcePath"] = sourcePath
-      attributes["sourcePath"] = sourcePath
-    }
 
     return TimelineEntryFactory.warning(
       title: "Plugin Install Failed",
       body: body,
-      attributes: attributes
+      attributes: pluginInstallFailureAttributes(
+        error,
+        fallbackStatus: "failed",
+        sourcePath: sourcePath,
+        repairHint: repairHint
+      )
     )
   }
 
@@ -524,11 +523,42 @@ enum TimelineEventPresenter {
     return connector.credentialSecretPresent ? "env-bound" : "marker-only"
   }
 
-  private static func pluginCommandFailureAttributes(_ error: Error) -> [String: String] {
+  private static func recoveryAttributes(_ error: Error) -> [String: String] {
     guard let runtimeError = error as? RuntimeBridge.RuntimeError else {
       return [:]
     }
     return runtimeError.recoveryAttributes
+  }
+
+  private static func pluginInstallFailureAttributes(
+    _ error: Error,
+    fallbackStatus: String,
+    sourcePath: String?,
+    repairHint: String
+  ) -> [String: String] {
+    var attributes = recoveryAttributes(error)
+    if attributes["pluginInstallStatus"] == nil {
+      attributes["pluginInstallStatus"] = fallbackStatus
+    }
+    if attributes["installBlocker"] == nil {
+      attributes["installBlocker"] = error.localizedDescription
+    }
+    if attributes["installRepairHint"] == nil && !repairHint.isEmpty {
+      attributes["installRepairHint"] = repairHint
+    }
+    if let sourcePath, !sourcePath.isEmpty {
+      if attributes["pluginSourcePath"] == nil {
+        attributes["pluginSourcePath"] = sourcePath
+      }
+      if attributes["sourcePath"] == nil {
+        attributes["sourcePath"] = sourcePath
+      }
+    }
+    return attributes
+  }
+
+  private static func pluginCommandFailureAttributes(_ error: Error) -> [String: String] {
+    recoveryAttributes(error)
   }
 
   private static func pluginConnectorFailureAttributes(

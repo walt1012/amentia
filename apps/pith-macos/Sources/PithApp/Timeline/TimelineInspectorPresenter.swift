@@ -131,6 +131,7 @@ enum TimelineInspectorPresenter {
       lines.append(connectorSummary)
     }
 
+    appendPluginInstallSummary(entry, to: &lines)
     appendPluginRunnerSetupSummary(entry, to: &lines)
 
     if let permissionGate = entry.attributes["permissionGate"] {
@@ -261,6 +262,23 @@ enum TimelineInspectorPresenter {
 
   private static func firstAttribute(_ entry: TimelineEntry, keys: [String]) -> String? {
     keys.compactMap { key in entry.attributes[key] }.first
+  }
+
+  private static func appendPluginInstallSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard let status = entry.attributes["pluginInstallStatus"] else {
+      return
+    }
+
+    lines.append("Install: \(status)")
+    if let blocker = entry.attributes["installBlocker"] {
+      lines.append("Install blocker: \(blocker)")
+    }
+    if let repairHint = entry.attributes["installRepairHint"] {
+      lines.append("Install repair: \(repairHint)")
+    }
   }
 
   private static func appendPluginRunnerSetupSummary(
