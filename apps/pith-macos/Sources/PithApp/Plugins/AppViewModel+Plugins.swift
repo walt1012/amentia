@@ -478,10 +478,22 @@ extension AppViewModel {
           )
           return
         }
+        let failureEntry = TimelineEventPresenter.pluginCommandFailed(error: error)
+        if failureEntry.attributes["pluginCommandStatus"] == "blocked" {
+          refreshThreadPreview(
+            threadID: threadID,
+            preview: TimelineEventPresenter.blockedPluginCommandPreview
+          )
+        } else {
+          refreshThreadPreview(
+            threadID: threadID,
+            preview: TimelineEventPresenter.failedPluginCommandPreview
+          )
+        }
         runtimeDetail = error.localizedDescription
         appendEntry(
           to: threadID,
-          TimelineEventPresenter.pluginCommandFailed(error: error)
+          failureEntry
         )
       }
     }
