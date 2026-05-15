@@ -131,6 +131,7 @@ enum TimelineInspectorPresenter {
       lines.append(connectorSummary)
     }
 
+    appendPluginConnectorRecoverySummary(entry, to: &lines)
     appendPluginRunSummary(entry, to: &lines)
     appendPluginInstallSummary(entry, to: &lines)
     appendPluginLifecycleSummary(entry, to: &lines)
@@ -228,6 +229,10 @@ enum TimelineInspectorPresenter {
       "runBlocker",
       "runRepairHint",
       "commandInput",
+      "connectorId",
+      "connectorIds",
+      "connectorStatus",
+      "connectorRepairHint",
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
@@ -285,6 +290,24 @@ enum TimelineInspectorPresenter {
     }
     if let repairHint = entry.attributes["installRepairHint"] {
       lines.append("Install repair: \(repairHint)")
+    }
+  }
+
+  private static func appendPluginConnectorRecoverySummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard entry.attributes["connectorStatus"] != nil
+      || entry.attributes["connectorRepairHint"] != nil
+    else {
+      return
+    }
+
+    if let status = entry.attributes["connectorStatus"] {
+      lines.append("Connector status: \(status)")
+    }
+    if let repairHint = entry.attributes["connectorRepairHint"] {
+      lines.append("Connector repair: \(repairHint)")
     }
   }
 
