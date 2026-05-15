@@ -243,7 +243,9 @@ fn plugin_command_run_reports_repair_metadata_when_command_is_missing() {
   );
 
   assert!(response.result.is_none());
-  let error = response.error.expect("plugin command missing command error");
+  let error = response
+    .error
+    .expect("plugin command missing command error");
   assert_eq!(error.code, -32052);
   let data = error.data.expect("plugin command missing command data");
   assert_eq!(data["commandId"], "missing-plugin::missing-command");
