@@ -77,25 +77,18 @@ Done:
   source paths where available, runtime status, and recovery hints without
   leaking credential handles; recovery actions stay limited to issue cards.
 
-Active:
+Active Focus:
 
-- Review M4 exit readiness against the third-party connector smoke path.
-- Close only real blockers found by the connector smoke path.
-- Keep the app small: progressive plugin UI, no broad marketplace, no
-  admin-console sprawl.
+- Finish M4 by reviewing the third-party connector smoke path end to end.
+- Close only real install, auth, run, repair, retry, or UI recovery blockers.
+- Keep plugin UI progressive; avoid marketplace or admin-console sprawl.
 
-M4 exit criteria:
+M4 Exit Gate:
 
 - A third-party connector plugin can complete install, inspect, enable,
   authorize, run, repair, and retry without hidden terminal knowledge.
 - Invalid manifests explain the exact unsupported contract and how to fix it.
 - Plugin output stays deterministic enough for the small local model.
-
-## Next Order
-
-1. Review M4 exit readiness before adding new plugin surface area.
-2. Close only real blockers found by the connector smoke path.
-3. Keep plugin UI progressive and avoid marketplace sprawl.
 
 ## Not Now
 

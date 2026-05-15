@@ -376,7 +376,7 @@ extension AppViewModel {
   }
 
   func retryPluginCommand(from entry: TimelineEntry) {
-    guard isPluginCommandRetryableEntry(entry),
+    guard canRetryPluginCommand(from: entry),
           let commandID = entry.attributes["commandId"]
     else {
       runtimeDetail = "Plugin command retry is unavailable."
@@ -393,7 +393,9 @@ extension AppViewModel {
   }
 
   func revealPluginSource(from entry: TimelineEntry) {
-    guard let sourcePath = pluginSourcePath(from: entry) else {
+    guard canRevealPluginSource(from: entry),
+          let sourcePath = pluginSourcePath(from: entry)
+    else {
       runtimeDetail = "Plugin source path is unavailable."
       return
     }
