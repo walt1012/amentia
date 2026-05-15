@@ -66,19 +66,19 @@ Done:
   clear flows, source-revealable Notion-style connector contract, and no hidden
   Keychain or remote MCP claims.
 - Recovery loop: plugin install, enable, route, permission, approval, connector,
-  runner, and RPC failures carry compact repair metadata for panel actions,
-  source reveal, retry, input-run, and connector authorization.
+  runner, and RPC failures carry compact repair metadata; the third-party
+  connector smoke path covers inspect, install, enable, authorize, approve,
+  fail, repair, and retry.
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve
   command IDs, plugin IDs, connector IDs, input context, source paths where
   available, and recovery hints without leaking credential handles.
 
 Active:
 
-- Finish one full third-party connector plugin smoke path: install, inspect,
-  enable, authorize, approve, run, fail, repair, retry.
 - Tighten output contracts for tiny local models: `content`, `message`,
   `items`, and `memoryNotes`, including explicit MCP structured or text
   envelopes.
+- Close only real blockers found by the connector smoke path.
 - Keep the app small: progressive plugin UI, no broad marketplace, no
   admin-console sprawl.
 
@@ -91,8 +91,9 @@ M4 exit criteria:
 
 ## Next Order
 
-1. Smoke the full third-party connector loop from install through retry.
-2. Close only real blockers found in that loop, then review M4 exit readiness.
+1. Harden plugin output envelope edge cases and MCP text or structured paths.
+2. Close only real blockers found by the connector smoke path.
+3. Review M4 exit readiness before adding new plugin surface area.
 
 ## Not Now
 

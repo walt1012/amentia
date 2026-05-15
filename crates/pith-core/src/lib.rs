@@ -71,6 +71,8 @@ mod tests_memory_context;
 #[cfg(test)]
 mod tests_plugin_command_execution;
 #[cfg(test)]
+mod tests_plugin_connector_smoke;
+#[cfg(test)]
 mod tests_plugin_lifecycle;
 #[cfg(test)]
 mod tests_plugin_permissions;
