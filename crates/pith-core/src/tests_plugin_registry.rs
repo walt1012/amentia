@@ -1,7 +1,7 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::test_support::{
   bundled_manifest_plugin_entry, bundled_plugin_entry, create_temp_plugin_bundle,
-  replace_plugin_catalog, request,
+  create_temp_workspace, replace_plugin_catalog, request,
 };
 use super::*;
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
