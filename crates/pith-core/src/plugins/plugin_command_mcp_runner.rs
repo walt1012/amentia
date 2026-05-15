@@ -502,10 +502,7 @@ fn mcp_runner_output(
     } else {
       "emptyContent"
     };
-    attributes.insert(
-      "mcpProtocolStatus".to_string(),
-      status.to_string(),
-    );
+    attributes.insert("mcpProtocolStatus".to_string(), status.to_string());
     return Err(
       PluginRunnerFailure::with_output(
         -32054,
@@ -580,7 +577,10 @@ fn mcp_text_content_looks_like_pith_output(text: &str) -> bool {
 impl PluginMcpContentStats {
   fn insert_attributes(&self, attributes: &mut HashMap<String, String>) {
     attributes.insert("mcpContentCount".to_string(), self.total_count.to_string());
-    attributes.insert("mcpTextContentCount".to_string(), self.text_count.to_string());
+    attributes.insert(
+      "mcpTextContentCount".to_string(),
+      self.text_count.to_string(),
+    );
     attributes.insert(
       "mcpUsableTextContentCount".to_string(),
       self.usable_text_count.to_string(),

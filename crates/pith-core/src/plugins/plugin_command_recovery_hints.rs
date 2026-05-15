@@ -261,10 +261,7 @@ mod tests {
 
   #[test]
   fn mcp_hint_explains_empty_content() {
-    let attributes = HashMap::from([(
-      "mcpProtocolStatus".to_string(),
-      "emptyContent".to_string(),
-    )]);
+    let attributes = HashMap::from([("mcpProtocolStatus".to_string(), "emptyContent".to_string())]);
 
     let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
 

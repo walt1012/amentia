@@ -31,7 +31,10 @@ fn plugin_command_run_rejects_unsupported_mcp_content_only_output() {
 
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["attributes"]["pluginRunnerFailureKind"], "mcpProtocol");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "mcpProtocol"
+  );
   assert_eq!(
     items[1]["attributes"]["mcpProtocolStatus"],
     "unsupportedContent"
@@ -40,7 +43,10 @@ fn plugin_command_run_rejects_unsupported_mcp_content_only_output() {
   assert_eq!(items[1]["attributes"]["mcpTextContentCount"], "0");
   assert_eq!(items[1]["attributes"]["mcpUsableTextContentCount"], "0");
   assert_eq!(items[1]["attributes"]["mcpUnsupportedContentCount"], "1");
-  assert_eq!(items[1]["attributes"]["mcpUnsupportedContentTypes"], "image");
+  assert_eq!(
+    items[1]["attributes"]["mcpUnsupportedContentTypes"],
+    "image"
+  );
   assert!(items[1]["attributes"]["pluginRunnerRecoveryHint"]
     .as_str()
     .expect("recovery hint")
@@ -69,7 +75,10 @@ fn plugin_command_run_rejects_empty_mcp_text_content() {
 
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "warning");
-  assert_eq!(items[1]["attributes"]["pluginRunnerFailureKind"], "mcpProtocol");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "mcpProtocol"
+  );
   assert_eq!(items[1]["attributes"]["mcpProtocolStatus"], "emptyContent");
   assert_eq!(items[1]["attributes"]["mcpContentCount"], "1");
   assert_eq!(items[1]["attributes"]["mcpTextContentCount"], "1");
@@ -151,8 +160,7 @@ fn run_mcp_content_case(case: McpContentCase<'_>) -> Vec<Value> {
     ),
   )
   .expect("write mcp content command manifest");
-  fs::write(&server_path, mcp_server_script(case.response_line))
-  .expect("write mcp content server");
+  fs::write(&server_path, mcp_server_script(case.response_line)).expect("write mcp content server");
   let mut permissions = fs::metadata(&server_path)
     .expect("mcp content server metadata")
     .permissions();
@@ -217,10 +225,7 @@ fn run_mcp_content_case(case: McpContentCase<'_>) -> Vec<Value> {
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
-  result["items"]
-    .as_array()
-    .expect("items")
-    .clone()
+  result["items"].as_array().expect("items").clone()
 }
 
 #[cfg(unix)]
