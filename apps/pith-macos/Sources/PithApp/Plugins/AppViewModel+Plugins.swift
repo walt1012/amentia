@@ -456,6 +456,12 @@ extension AppViewModel {
       && pluginSourcePath(from: entry) != nil
   }
 
+  func canRefreshPlugins(from entry: TimelineEntry) -> Bool {
+    isPluginSourceRefreshEntry(entry)
+      && pluginSourcePath(from: entry) != nil
+      && canRefreshPlugins()
+  }
+
   func revealPluginSource(from entry: TimelineEntry) {
     guard canRevealPluginSource(from: entry),
           let sourcePath = pluginSourcePath(from: entry)
@@ -468,6 +474,15 @@ extension AppViewModel {
       sourcePath,
       successDetail: "Revealed plugin source."
     )
+  }
+
+  func refreshPlugins(from entry: TimelineEntry) async {
+    guard canRefreshPlugins(from: entry) else {
+      runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
+      return
+    }
+
+    await refreshPlugins()
   }
 
   private func runPluginCommand(commandID: String, input: String?) {
@@ -772,6 +787,10 @@ extension AppViewModel {
       || isPluginConnectorIssueEntry(entry)
       || isPluginLifecycleIssueEntry(entry)
       || isPluginCommandApprovalEntry(entry)
+  }
+
+  private func isPluginSourceRefreshEntry(_ entry: TimelineEntry) -> Bool {
+    isPluginRecoveryEntry(entry)
   }
 
   private func isPluginRecoveryEntry(_ entry: TimelineEntry) -> Bool {

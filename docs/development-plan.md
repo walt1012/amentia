@@ -77,7 +77,7 @@ Done:
   source paths where available, runtime status, and recovery hints without
   leaking credential handles; inspector summaries surface blockers, and recovery
   actions stay limited to issue cards or blocked rows; plugin lifecycle,
-  connector, and source-fix refresh operations update visible status.
+  connector, source reveal, and refresh operations update visible status.
 
 Active Focus:
 

@@ -10,6 +10,7 @@ struct TimelineCard: View {
   let showsPluginInputAction: Bool
   let showsPluginRetryAction: Bool
   let showsPluginSourceAction: Bool
+  let showsPluginRefreshAction: Bool
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
@@ -18,6 +19,7 @@ struct TimelineCard: View {
   let onRunPluginCommandWithInput: () -> Void
   let onRetry: () -> Void
   let onRevealPluginSource: () -> Void
+  let onRefreshPlugins: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -115,6 +117,13 @@ struct TimelineCard: View {
             }
             .buttonStyle(.bordered)
           }
+
+          if showsPluginRefreshAction {
+            Button("Refresh Plugins") {
+              onRefreshPlugins()
+            }
+            .buttonStyle(.bordered)
+          }
         }
         .padding(.top, 4)
       }
@@ -157,6 +166,7 @@ struct TimelineCard: View {
       || showsPluginInputAction
       || showsPluginRetryAction
       || showsPluginSourceAction
+      || showsPluginRefreshAction
   }
 
   private var pluginRetryTitle: String {

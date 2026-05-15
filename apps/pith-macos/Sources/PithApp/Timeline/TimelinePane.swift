@@ -26,6 +26,7 @@ struct TimelinePane: View {
               showsPluginInputAction: viewModel.canRunPluginCommandWithInput(from: entry),
               showsPluginRetryAction: viewModel.canRetryPluginCommand(from: entry),
               showsPluginSourceAction: viewModel.canRevealPluginSource(from: entry),
+              showsPluginRefreshAction: viewModel.canRefreshPlugins(from: entry),
               onSelect: {
                 viewModel.selectTimelineEntry(id: entry.id)
               },
@@ -55,6 +56,11 @@ struct TimelinePane: View {
               },
               onRevealPluginSource: {
                 viewModel.revealPluginSource(from: entry)
+              },
+              onRefreshPlugins: {
+                Task {
+                  await viewModel.refreshPlugins(from: entry)
+                }
               }
             )
           }
