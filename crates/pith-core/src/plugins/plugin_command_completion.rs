@@ -1,4 +1,6 @@
+use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::{JsonRpcResponse, TurnStartResult};
+use serde_json::{json, Value};
 
 use super::plugin_command_memory::capture_plugin_command_output_memory;
 use super::plugin_command_types::{CompletedPluginCommandRun, PluginCommandOutput};
@@ -16,7 +18,7 @@ pub fn complete_prepared_plugin_command_run(
   match completed.output {
     Ok(output) => match complete_plugin_command_items(context, output) {
       Ok(result) => JsonRpcResponse::success(completed.request_id, &result),
-      Err((code, message)) => JsonRpcResponse::error(completed.request_id, code, message),
+      Err(error) => error.into_response(completed.request_id),
     },
     Err((code, message)) => JsonRpcResponse::error(completed.request_id, code, message),
   }
@@ -25,7 +27,7 @@ pub fn complete_prepared_plugin_command_run(
 fn complete_plugin_command_items(
   context: &mut RuntimeContext,
   output: PluginCommandOutput,
-) -> std::result::Result<TurnStartResult, (i32, String)> {
+) -> std::result::Result<TurnStartResult, PluginCommandCompletionError> {
   let PluginCommandOutput {
     thread_id: requested_thread_id,
     command,
@@ -41,7 +43,13 @@ fn complete_plugin_command_items(
   }
   let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&requested_thread_id) else {
-      return Err((-32004, "Thread not found".to_string()));
+      return Err(PluginCommandCompletionError::from_command(
+        &command,
+        -32004,
+        "missingThread",
+        "Thread not found",
+        "Select or create a thread, then run the plugin command again.",
+      ));
     };
 
     let prepared_thread = thread.begin_plugin_command(workspace.clone());
@@ -54,8 +62,24 @@ fn complete_plugin_command_items(
 
   context
     .persist_runtime_state()
-    .map_err(|error| (-32010, error.to_string()))?;
-  refresh_thread_summary_note(context, &thread_id).map_err(|error| (-32012, error.to_string()))?;
+    .map_err(|error| {
+      PluginCommandCompletionError::from_command(
+        &command,
+        -32010,
+        "persistFailed",
+        error.to_string(),
+        "Check local storage permissions, then retry the plugin command.",
+      )
+    })?;
+  refresh_thread_summary_note(context, &thread_id).map_err(|error| {
+    PluginCommandCompletionError::from_command(
+      &command,
+      -32012,
+      "summaryFailed",
+      error.to_string(),
+      "Check local storage permissions, then refresh the thread summary.",
+    )
+  })?;
 
   let memory_items = capture_plugin_command_output_memory(
     context,
@@ -74,9 +98,24 @@ fn complete_plugin_command_items(
     items.extend(memory_items);
     context
       .persist_runtime_state()
-      .map_err(|error| (-32010, error.to_string()))?;
-    refresh_thread_summary_note(context, &thread_id)
-      .map_err(|error| (-32012, error.to_string()))?;
+      .map_err(|error| {
+        PluginCommandCompletionError::from_command(
+          &command,
+          -32010,
+          "persistFailed",
+          error.to_string(),
+          "Check local storage permissions, then retry the plugin command.",
+        )
+      })?;
+    refresh_thread_summary_note(context, &thread_id).map_err(|error| {
+      PluginCommandCompletionError::from_command(
+        &command,
+        -32012,
+        "summaryFailed",
+        error.to_string(),
+        "Check local storage permissions, then refresh the thread summary.",
+      )
+    })?;
   }
 
   Ok(TurnStartResult {
@@ -86,4 +125,38 @@ fn complete_plugin_command_items(
     pending_approvals: approvals_for_thread(context, &requested_thread_id),
     active_turn_id: None,
   })
+}
+
+struct PluginCommandCompletionError {
+  code: i32,
+  message: String,
+  data: Value,
+}
+
+impl PluginCommandCompletionError {
+  fn from_command(
+    command: &HostPluginCommandEntry,
+    code: i32,
+    run_status: &'static str,
+    message: impl Into<String>,
+    run_repair_hint: &'static str,
+  ) -> Self {
+    let message = message.into();
+    Self {
+      code,
+      message: message.clone(),
+      data: json!({
+        "pluginId": &command.plugin_id,
+        "commandId": &command.command_id,
+        "sourcePath": &command.source_path,
+        "runStatus": run_status,
+        "runBlocker": message,
+        "runRepairHint": run_repair_hint,
+      }),
+    }
+  }
+
+  fn into_response(self, request_id: Value) -> JsonRpcResponse {
+    JsonRpcResponse::error_with_data(request_id, self.code, self.message, &self.data)
+  }
 }

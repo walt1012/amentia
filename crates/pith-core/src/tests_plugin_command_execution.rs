@@ -5,6 +5,7 @@ use super::test_support::{
 use super::*;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::methods;
+use pith_storage::RuntimeStore;
 use serde_json::json;
 use std::fs;
 
@@ -255,6 +256,92 @@ fn plugin_command_run_reports_repair_metadata_when_command_is_missing() {
     .as_str()
     .expect("run repair hint")
     .contains("Refresh plugins"));
+}
+
+#[test]
+fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("plugin-command-completion-persist-fail");
+  let storage_root = create_temp_workspace("plugin-command-completion-failing-storage");
+  let database_path = storage_root.join("pith.db");
+  fs::create_dir_all(&database_path).expect("create directory at database path");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "workspace-notes",
+      "Workspace Notes",
+      true,
+      true,
+      &[
+        "command:workspace.capture-note",
+        "prompt_pack:workspace.notes",
+      ],
+      &["file.read", "file.write"],
+    )],
+  );
+  fs::write(
+    workspace.join("README.md"),
+    "Completion persistence test\n",
+  )
+  .expect("write readme");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Command Persistence"
+      })),
+    ),
+  );
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "workspace-notes::workspace.capture-note"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("plugin command persistence error");
+  assert_eq!(error.code, -32010);
+  let data = error.data.expect("plugin command persistence error data");
+  assert_eq!(data["pluginId"], "workspace-notes");
+  assert_eq!(data["commandId"], "workspace-notes::workspace.capture-note");
+  assert_eq!(data["runStatus"], "persistFailed");
+  assert!(
+    data["runBlocker"]
+      .as_str()
+      .expect("run blocker")
+      .len()
+      > 10
+  );
+  assert!(data["runRepairHint"]
+    .as_str()
+    .expect("run repair hint")
+    .contains("storage permissions"));
 }
 
 #[test]
