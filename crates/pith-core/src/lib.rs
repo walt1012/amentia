@@ -75,6 +75,8 @@ mod tests_plugin_connector_smoke;
 #[cfg(test)]
 mod tests_plugin_lifecycle;
 #[cfg(test)]
+mod tests_plugin_mcp_output;
+#[cfg(test)]
 mod tests_plugin_permissions;
 #[cfg(test)]
 mod tests_plugin_registry;

@@ -73,6 +73,14 @@ struct PluginMcpOutputScan {
   last_invalid_json_preview: Option<String>,
 }
 
+struct PluginMcpContentStats {
+  total_count: usize,
+  text_count: usize,
+  usable_text_count: usize,
+  unsupported_count: usize,
+  unsupported_types: Vec<String>,
+}
+
 pub(super) fn is_supported_mcp_execution(
   command: &HostPluginCommandEntry,
   execution: &PluginCommandExecutionEntry,
@@ -483,6 +491,32 @@ fn mcp_runner_output(
       .boxed(),
     );
   }
+  let content_stats = mcp_content_stats(&result);
+  content_stats.insert_attributes(&mut attributes);
+  if content_stats.usable_text_count == 0
+    && result.structured_content.is_none()
+    && content_stats.total_count > 0
+  {
+    let status = if content_stats.unsupported_count > 0 {
+      "unsupportedContent"
+    } else {
+      "emptyContent"
+    };
+    attributes.insert(
+      "mcpProtocolStatus".to_string(),
+      status.to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        unsupported_mcp_content_message(target, &content_stats),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
   attributes.insert(
     "mcpProtocolStatus".to_string(),
     mcp_success_protocol_status(&scan).to_string(),
@@ -541,6 +575,77 @@ fn mcp_text_content_looks_like_pith_output(text: &str) -> bool {
   serde_json::from_str::<Value>(text)
     .ok()
     .is_some_and(|value| mcp_structured_content_looks_like_pith_output(&value))
+}
+
+impl PluginMcpContentStats {
+  fn insert_attributes(&self, attributes: &mut HashMap<String, String>) {
+    attributes.insert("mcpContentCount".to_string(), self.total_count.to_string());
+    attributes.insert("mcpTextContentCount".to_string(), self.text_count.to_string());
+    attributes.insert(
+      "mcpUsableTextContentCount".to_string(),
+      self.usable_text_count.to_string(),
+    );
+    attributes.insert(
+      "mcpUnsupportedContentCount".to_string(),
+      self.unsupported_count.to_string(),
+    );
+    if !self.unsupported_types.is_empty() {
+      attributes.insert(
+        "mcpUnsupportedContentTypes".to_string(),
+        self.unsupported_types.join(", "),
+      );
+    }
+  }
+}
+
+fn mcp_content_stats(result: &PluginMcpToolResultEnvelope) -> PluginMcpContentStats {
+  let mut unsupported_types = vec![];
+  let mut text_count = 0;
+  let mut usable_text_count = 0;
+  let mut unsupported_count = 0;
+  for content in &result.content {
+    if content.content_type == "text" {
+      text_count += 1;
+      if content
+        .text
+        .as_deref()
+        .map(str::trim)
+        .is_some_and(|text| !text.is_empty())
+      {
+        usable_text_count += 1;
+      }
+      continue;
+    }
+    unsupported_count += 1;
+    if !unsupported_types.contains(&content.content_type) {
+      unsupported_types.push(content.content_type.clone());
+    }
+  }
+
+  PluginMcpContentStats {
+    total_count: result.content.len(),
+    text_count,
+    usable_text_count,
+    unsupported_count,
+    unsupported_types,
+  }
+}
+
+fn unsupported_mcp_content_message(
+  target: &PluginMcpTarget,
+  stats: &PluginMcpContentStats,
+) -> String {
+  if stats.unsupported_count > 0 {
+    return format!(
+      "MCP tool `{}` returned unsupported non-text content.",
+      target.tool_name
+    );
+  }
+
+  format!(
+    "MCP tool `{}` returned empty text content.",
+    target.tool_name
+  )
 }
 
 impl PluginMcpOutputScan {

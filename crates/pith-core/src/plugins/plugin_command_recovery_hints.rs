@@ -109,6 +109,14 @@ fn mcp_protocol_recovery_hint(attributes: &HashMap<String, String>) -> String {
       "Fix the MCP tool error and return a successful tool result.".to_string()
     }
     Some("missingResult") => "Return an MCP tool response with a result object.".to_string(),
+    Some("unsupportedContent") => {
+      "Return MCP text content or structuredContent that Pith can convert into text, timeline items, or memory notes."
+        .to_string()
+    }
+    Some("emptyContent") => {
+      "Return non-empty MCP text content or structuredContent that Pith can convert into a useful plugin result."
+        .to_string()
+    }
     _ => "Check the MCP server command and stdout JSON-RPC framing.".to_string(),
   }
 }
@@ -236,5 +244,31 @@ mod tests {
     let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
 
     assert!(hint.contains("initialize request"));
+  }
+
+  #[test]
+  fn mcp_hint_explains_unsupported_content() {
+    let attributes = HashMap::from([(
+      "mcpProtocolStatus".to_string(),
+      "unsupportedContent".to_string(),
+    )]);
+
+    let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
+
+    assert!(hint.contains("text content"));
+    assert!(hint.contains("structuredContent"));
+  }
+
+  #[test]
+  fn mcp_hint_explains_empty_content() {
+    let attributes = HashMap::from([(
+      "mcpProtocolStatus".to_string(),
+      "emptyContent".to_string(),
+    )]);
+
+    let hint = runner_failure_recovery_hint("mcpProtocol", &attributes);
+
+    assert!(hint.contains("non-empty"));
+    assert!(hint.contains("useful plugin result"));
   }
 }
