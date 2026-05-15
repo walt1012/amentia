@@ -1673,6 +1673,7 @@ fn plugin_connector_authorize_returns_repair_metadata_when_disabled() {
   assert_eq!(error.code, -32056);
   let data = error.data.expect("connector auth error data");
   assert_eq!(data["connectorId"], "notion-connector::notion");
+  assert_eq!(data["pluginId"], "notion-connector");
   assert_eq!(data["connectorStatus"], "disabled");
   assert!(data["connectorRepairHint"]
     .as_str()

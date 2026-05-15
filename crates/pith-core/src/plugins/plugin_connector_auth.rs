@@ -42,6 +42,7 @@ pub(crate) fn handle_plugin_connector_authorize(
         request.id,
         -32055,
         &params.connector_id,
+        None,
         "Plugin connector not found",
         "missingConnector",
         MISSING_CONNECTOR_REPAIR_HINT,
@@ -53,6 +54,7 @@ pub(crate) fn handle_plugin_connector_authorize(
       request.id,
       -32056,
       &params.connector_id,
+      Some(&connector.plugin_id),
       "Plugin connector is disabled",
       "disabled",
       AUTHORIZE_DISABLED_CONNECTOR_REPAIR_HINT,
@@ -63,6 +65,7 @@ pub(crate) fn handle_plugin_connector_authorize(
       request.id,
       -32057,
       &params.connector_id,
+      Some(&connector.plugin_id),
       "Plugin connector does not require credentials",
       "notRequired",
       NOT_REQUIRED_CONNECTOR_REPAIR_HINT,
@@ -94,6 +97,7 @@ pub(crate) fn handle_plugin_connector_authorize(
       request.id,
       -32010,
       &params.connector_id,
+      Some(&connector.plugin_id),
       error.to_string(),
       "credentialStoreError",
       AUTHORIZE_STORE_REPAIR_HINT,
@@ -116,21 +120,26 @@ pub(crate) fn handle_plugin_connector_clear_credential(
     Err(response) => return response,
   };
 
-  if find_connector(context, &params.connector_id).is_none() {
-    return connector_error_response(
-      request.id,
-      -32055,
-      &params.connector_id,
-      "Plugin connector not found",
-      "missingConnector",
-      MISSING_CONNECTOR_REPAIR_HINT,
-    );
-  }
+  let connector = match find_connector(context, &params.connector_id) {
+    Some(connector) => connector,
+    None => {
+      return connector_error_response(
+        request.id,
+        -32055,
+        &params.connector_id,
+        None,
+        "Plugin connector not found",
+        "missingConnector",
+        MISSING_CONNECTOR_REPAIR_HINT,
+      );
+    }
+  };
   if let Err(error) = context.delete_plugin_connector_credential(&params.connector_id) {
     return connector_error_response(
       request.id,
       -32010,
       &params.connector_id,
+      Some(&connector.plugin_id),
       error.to_string(),
       "credentialStoreError",
       CLEAR_STORE_REPAIR_HINT,
@@ -178,20 +187,21 @@ fn connector_error_response(
   request_id: Value,
   code: i32,
   connector_id: &str,
+  plugin_id: Option<&str>,
   message: impl Into<String>,
   connector_status: &str,
   connector_repair_hint: &str,
 ) -> JsonRpcResponse {
-  JsonRpcResponse::error_with_data(
-    request_id,
-    code,
-    message,
-    &json!({
-      "connectorId": connector_id,
-      "connectorStatus": connector_status,
-      "connectorRepairHint": connector_repair_hint,
-    }),
-  )
+  let mut data = json!({
+    "connectorId": connector_id,
+    "connectorStatus": connector_status,
+    "connectorRepairHint": connector_repair_hint,
+  });
+  if let Some(plugin_id) = plugin_id {
+    data["pluginId"] = json!(plugin_id);
+  }
+
+  JsonRpcResponse::error_with_data(request_id, code, message, &data)
 }
 
 fn current_unix_timestamp() -> Result<i64, String> {

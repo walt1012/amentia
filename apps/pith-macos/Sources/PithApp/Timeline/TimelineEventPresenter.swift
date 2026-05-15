@@ -423,10 +423,14 @@ enum TimelineEventPresenter {
     if let executionKind = command.executionKind {
       attributes["executionKind"] = executionKind
     }
-    if !command.requiredConnectorIds.isEmpty {
-      attributes["connectorIds"] = command.requiredConnectorIds.joined(separator: ", ")
-    } else if !command.declaredConnectorIds.isEmpty {
-      attributes["connectorIds"] = command.declaredConnectorIds.joined(separator: ", ")
+    let connectorIDs = command.requiredConnectorIds.isEmpty
+      ? command.declaredConnectorIds
+      : command.requiredConnectorIds
+    if !connectorIDs.isEmpty {
+      attributes["connectorIds"] = connectorIDs.joined(separator: ", ")
+      if connectorIDs.count == 1 {
+        attributes["connectorId"] = connectorIDs[0]
+      }
     }
     if let input {
       attributes["commandInput"] = input
