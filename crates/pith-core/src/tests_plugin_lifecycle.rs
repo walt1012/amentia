@@ -385,6 +385,60 @@ fn plugin_refresh_reloads_fixed_local_manifest() {
 }
 
 #[test]
+fn plugin_refresh_preserves_runtime_state_when_persistence_fails() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("plugin-refresh-state-warning-storage");
+  let database_path = storage_root.join("pith.db");
+  fs::create_dir_all(&database_path).expect("create directory at database path");
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
+  let plugin_root = create_temp_plugin_bundle(
+    "plugin-refresh-state-warning",
+    "refresh-state",
+    "Refresh State",
+  );
+  let scan_root = plugin_root
+    .parent()
+    .expect("plugin scan root")
+    .to_path_buf();
+  context
+    .plugin_state
+    .configure_roots(vec![scan_root.clone()], scan_root.clone());
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "refresh-state",
+      "Refresh State",
+      false,
+      true,
+      &["command:refresh-state.run"],
+      &["file.read"],
+    )],
+  );
+
+  let response = handle_request(&mut context, request(methods::PLUGIN_REFRESH, None));
+
+  fs::remove_dir_all(&scan_root).expect("cleanup plugin root");
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("plugin refresh result");
+  assert!(result["stateWarning"]
+    .as_str()
+    .expect("state warning")
+    .len()
+    > 10);
+  let plugins = result["plugins"].as_array().expect("plugin list");
+  assert_eq!(plugins.len(), 1);
+  assert_eq!(plugins[0]["id"], "refresh-state");
+  assert_eq!(plugins[0]["enabled"], false);
+}
+
+#[test]
 fn plugin_install_rejects_duplicate_plugin_ids() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
