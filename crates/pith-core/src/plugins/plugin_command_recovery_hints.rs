@@ -79,6 +79,10 @@ fn output_contract_recovery_hint(attributes: &HashMap<String, String>) -> String
     Some("emptyEnvelope") => {
       "Populate `content`, `message`, `items`, or `memoryNotes`, or return plain text.".to_string()
     }
+    Some("invalidEnvelope") => {
+      "Fix invalid timeline items or memory notes; each item needs kind, title, and content, and each memory note needs title and body."
+        .to_string()
+    }
     _ => "Return plain text, a valid JSON output envelope, valid timeline items, or memory notes."
       .to_string(),
   }
@@ -188,6 +192,19 @@ mod tests {
     let hint = runner_failure_recovery_hint("outputContract", &attributes);
 
     assert!(hint.contains("Populate"));
+  }
+
+  #[test]
+  fn output_hint_explains_invalid_envelope_items() {
+    let attributes = HashMap::from([(
+      "pluginRunnerOutputStatus".to_string(),
+      "invalidEnvelope".to_string(),
+    )]);
+
+    let hint = runner_failure_recovery_hint("outputContract", &attributes);
+
+    assert!(hint.contains("kind, title, and content"));
+    assert!(hint.contains("title and body"));
   }
 
   #[test]

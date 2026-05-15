@@ -60,6 +60,12 @@ pub(super) struct PluginRunnerProcessOutput {
   pub(super) attributes: HashMap<String, String>,
 }
 
+struct PluginRunnerMemoryNoteSelection {
+  notes: Vec<PluginRunnerMemoryNoteDraft>,
+  invalid_count: usize,
+  truncated_count: usize,
+}
+
 impl PluginRunnerFailure {
   pub(super) fn empty(code: i32, message: String) -> Self {
     Self::with_output(code, message, String::new(), String::new(), HashMap::new())
@@ -850,15 +856,36 @@ pub(super) fn plugin_runner_output(
     .unwrap_or_default();
   let (items, invalid_item_count) =
     plugin_runner_timeline_items(command, execution_kind, &attributes, envelope.items);
-  let (memory_notes, invalid_memory_note_count) = plugin_runner_memory_notes(envelope.memory_notes);
+  let memory_note_selection = plugin_runner_memory_notes(envelope.memory_notes);
   insert_plugin_runner_output_attributes(
     &mut attributes,
     &content,
     items.len(),
     invalid_item_count,
-    memory_notes.len(),
-    invalid_memory_note_count,
+    memory_note_selection.notes.len(),
+    memory_note_selection.invalid_count,
+    memory_note_selection.truncated_count,
   );
+  if invalid_item_count > 0 || memory_note_selection.invalid_count > 0 {
+    attributes.insert(
+      "pluginRunnerOutputStatus".to_string(),
+      "invalidEnvelope".to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!(
+          "Plugin command `{}` returned an output envelope with invalid timeline items or memory notes.",
+          command.command_id
+        ),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
+  let memory_notes = memory_note_selection.notes;
   if content.is_empty() && items.is_empty() && memory_notes.is_empty() {
     attributes.insert(
       "pluginRunnerOutputStatus".to_string(),
@@ -942,6 +969,7 @@ fn insert_plugin_runner_output_attributes(
   invalid_item_count: usize,
   memory_note_count: usize,
   invalid_memory_note_count: usize,
+  truncated_memory_note_count: usize,
 ) {
   attributes.insert("pluginRunnerOutputParsed".to_string(), "true".to_string());
   attributes.insert(
@@ -964,20 +992,36 @@ fn insert_plugin_runner_output_attributes(
     "pluginRunnerOutputInvalidMemoryNoteCount".to_string(),
     invalid_memory_note_count.to_string(),
   );
+  attributes.insert(
+    "pluginRunnerOutputTruncatedMemoryNoteCount".to_string(),
+    truncated_memory_note_count.to_string(),
+  );
 }
 
 fn plugin_runner_memory_notes(
   notes: Vec<PluginRunnerMemoryNoteEnvelope>,
-) -> (Vec<PluginRunnerMemoryNoteDraft>, usize) {
-  let total_note_count = notes.len();
-  let valid_notes = notes
-    .into_iter()
-    .take(PLUGIN_RUNNER_MEMORY_NOTE_LIMIT)
-    .filter_map(plugin_runner_memory_note)
-    .collect::<Vec<_>>();
-  let invalid_note_count = total_note_count.saturating_sub(valid_notes.len());
+) -> PluginRunnerMemoryNoteSelection {
+  let mut selected_notes = vec![];
+  let mut invalid_count = 0;
+  let mut truncated_count = 0;
 
-  (valid_notes, invalid_note_count)
+  for note in notes {
+    let Some(note) = plugin_runner_memory_note(note) else {
+      invalid_count += 1;
+      continue;
+    };
+    if selected_notes.len() < PLUGIN_RUNNER_MEMORY_NOTE_LIMIT {
+      selected_notes.push(note);
+    } else {
+      truncated_count += 1;
+    }
+  }
+
+  PluginRunnerMemoryNoteSelection {
+    notes: selected_notes,
+    invalid_count,
+    truncated_count,
+  }
 }
 
 fn plugin_runner_memory_note(
@@ -1187,5 +1231,99 @@ fn stderr_suffix(stderr: &str) -> String {
     String::new()
   } else {
     format!(" Stderr: {stderr}")
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::collections::HashMap;
+
+  use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+
+  use super::plugin_runner_output;
+
+  #[test]
+  fn output_contract_rejects_invalid_memory_notes_instead_of_partial_success() {
+    let command = test_command();
+    let output = r#"{
+      "content": "Partial content should not mask invalid memory.",
+      "memoryNotes": [
+        { "title": "Missing Body" }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("invalid output envelope should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure.attributes.get("pluginRunnerOutputStatus").map(String::as_str),
+      Some("invalidEnvelope")
+    );
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputInvalidMemoryNoteCount")
+        .map(String::as_str),
+      Some("1")
+    );
+    assert!(failure.message.contains("invalid timeline items or memory notes"));
+  }
+
+  #[test]
+  fn output_contract_truncates_extra_valid_memory_notes_without_failing() {
+    let command = test_command();
+    let output = r#"{
+      "content": "Memory notes captured.",
+      "memoryNotes": [
+        { "title": "Note 1", "body": "Body 1" },
+        { "title": "Note 2", "body": "Body 2" },
+        { "title": "Note 3", "body": "Body 3" },
+        { "title": "Note 4", "body": "Body 4" },
+        { "title": "Note 5", "body": "Body 5" }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!("valid oversized memory note list failed: {}", failure.message),
+    };
+
+    assert_eq!(result.memory_notes.len(), 4);
+    assert_eq!(
+      result
+        .attributes
+        .get("pluginRunnerOutputInvalidMemoryNoteCount")
+        .map(String::as_str),
+      Some("0")
+    );
+    assert_eq!(
+      result
+        .attributes
+        .get("pluginRunnerOutputTruncatedMemoryNoteCount")
+        .map(String::as_str),
+      Some("1")
+    );
+  }
+
+  fn test_command() -> HostPluginCommandEntry {
+    HostPluginCommandEntry {
+      command_id: "test-plugin::run".to_string(),
+      title: "Run Test Plugin".to_string(),
+      description: "Run a test plugin command.".to_string(),
+      prompt: "Run the plugin.".to_string(),
+      plugin_id: "test-plugin".to_string(),
+      plugin_display_name: "Test Plugin".to_string(),
+      permissions: vec![],
+      source_path: "plugins/test-plugin/commands/run.json".to_string(),
+      execution: None,
+      execution_kind: Some("stdio.test".to_string()),
+      manifest_error: None,
+      memory_note_title: None,
+      memory_note_source: None,
+      memory_note_tags: vec![],
+    }
   }
 }

@@ -61,7 +61,7 @@ Done:
   diagnostics.
 - Execution: bounded `stdio` and MCP stdio runners with sandbox diagnostics,
   permission gates, approval gating, cancellation-safe retries, deterministic
-  output contracts, and runner memory notes.
+  output contracts, invalid-envelope repair hints, and runner memory notes.
 - Connectors: honest `none` or `local` credential stores, connector auth and
   clear flows, source-revealable Notion-style connector contract, and no hidden
   Keychain or remote MCP claims.
@@ -75,9 +75,7 @@ Done:
 
 Active:
 
-- Tighten output contracts for tiny local models: `content`, `message`,
-  `items`, and `memoryNotes`, including explicit MCP structured or text
-  envelopes.
+- Harden remaining MCP envelope edge cases for tiny local models.
 - Close only real blockers found by the connector smoke path.
 - Keep the app small: progressive plugin UI, no broad marketplace, no
   admin-console sprawl.
