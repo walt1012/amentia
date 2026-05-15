@@ -74,7 +74,17 @@ pub(crate) fn handle_plugin_connector_authorize(
 
   let timestamp = match current_unix_timestamp() {
     Ok(timestamp) => timestamp,
-    Err(message) => return JsonRpcResponse::error(request.id, -32010, message),
+    Err(message) => {
+      return connector_error_response(
+        request.id,
+        -32010,
+        &params.connector_id,
+        Some(&connector.plugin_id),
+        message,
+        "clockError",
+        "Check the system clock, then retry connector authorization.",
+      );
+    }
   };
   let credential = PluginConnectorCredentialState {
     connector_id: connector.connector_id.clone(),
@@ -161,7 +171,15 @@ fn connector_success(
     Some(connector) => {
       JsonRpcResponse::success(request_id, &PluginConnectorCredentialResult { connector })
     }
-    None => JsonRpcResponse::error(request_id, -32055, "Plugin connector not found"),
+    None => connector_error_response(
+      request_id,
+      -32055,
+      connector_id,
+      None,
+      "Plugin connector not found",
+      "missingConnector",
+      MISSING_CONNECTOR_REPAIR_HINT,
+    ),
   }
 }
 

@@ -7,6 +7,7 @@ use super::*;
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::methods;
+use pith_storage::RuntimeStore;
 use serde_json::json;
 use std::fs;
 
@@ -1685,6 +1686,55 @@ fn plugin_connector_authorize_returns_repair_metadata_when_disabled() {
     .as_str()
     .expect("connector repair hint")
     .contains("Enable the connector plugin"));
+}
+
+#[test]
+fn plugin_connector_authorize_returns_repair_metadata_when_storage_fails() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("connector-auth-failing-storage");
+  let database_path = storage_root.join("pith.db");
+  fs::create_dir_all(&database_path).expect("create directory at database path");
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path,
+      storage_root.join("threads.json"),
+    ));
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["mcp_server:notion", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-connector::notion",
+        "credentialSecret": "notion-local-token"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  let error = response.error.expect("connector auth storage error");
+  assert_eq!(error.code, -32010);
+  let data = error.data.expect("connector auth storage error data");
+  assert_eq!(data["connectorId"], "notion-connector::notion");
+  assert_eq!(data["pluginId"], "notion-connector");
+  assert_eq!(data["connectorStatus"], "credentialStoreError");
+  assert!(data["connectorRepairHint"]
+    .as_str()
+    .expect("connector repair hint")
+    .contains("storage permissions"));
 }
 
 #[test]
