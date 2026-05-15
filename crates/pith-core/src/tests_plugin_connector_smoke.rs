@@ -319,8 +319,7 @@ fn run_smoke_command_before_auth(context: &mut RuntimeContext) -> Value {
   let error = response.error.expect("missing connector auth error");
   assert_eq!(error.code, -32058);
   assert!(error.message.contains("requires authorizing connector"));
-  let data = error.data.expect("missing connector auth data");
-  data
+  error.data.expect("missing connector auth data")
 }
 
 #[cfg(unix)]
