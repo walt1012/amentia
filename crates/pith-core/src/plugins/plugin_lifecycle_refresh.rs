@@ -59,9 +59,7 @@ pub fn prepare_plugin_refresh(
   })
 }
 
-pub fn execute_prepared_plugin_refresh(
-  prepared: PreparedPluginRefresh,
-) -> CompletedPluginRefresh {
+pub fn execute_prepared_plugin_refresh(prepared: PreparedPluginRefresh) -> CompletedPluginRefresh {
   let PreparedPluginRefresh {
     request_id,
     roots,
@@ -86,7 +84,9 @@ fn load_persisted_plugin_states(
   store: Option<&RuntimeStore>,
 ) -> std::result::Result<HashMap<String, bool>, String> {
   match store {
-    Some(store) => store.load_plugin_states().map_err(|error| error.to_string()),
+    Some(store) => store
+      .load_plugin_states()
+      .map_err(|error| error.to_string()),
     None => Ok(HashMap::new()),
   }
 }

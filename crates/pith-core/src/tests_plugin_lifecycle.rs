@@ -427,11 +427,13 @@ fn plugin_refresh_preserves_runtime_state_when_persistence_fails() {
 
   assert!(response.error.is_none());
   let result = response.result.expect("plugin refresh result");
-  assert!(result["stateWarning"]
-    .as_str()
-    .expect("state warning")
-    .len()
-    > 10);
+  assert!(
+    result["stateWarning"]
+      .as_str()
+      .expect("state warning")
+      .len()
+      > 10
+  );
   let plugins = result["plugins"].as_array().expect("plugin list");
   assert_eq!(plugins.len(), 1);
   assert_eq!(plugins[0]["id"], "refresh-state");
