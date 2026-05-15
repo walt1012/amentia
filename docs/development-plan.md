@@ -82,6 +82,8 @@ Done:
 - Connector-backed approval cards now carry command input, source path,
   execution kind, and singular connector IDs for the same inspect/repair
   context as run and failure cards.
+- Connector-backed approval cards can reveal plugin source before approval,
+  keeping trust decisions inside the native timeline.
 
 Active:
 

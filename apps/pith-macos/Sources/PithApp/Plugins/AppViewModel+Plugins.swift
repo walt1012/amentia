@@ -641,6 +641,7 @@ extension AppViewModel {
     isPluginCommandIssueEntry(entry)
       || isPluginInstallIssueEntry(entry)
       || isPluginConnectorIssueEntry(entry)
+      || isPluginCommandApprovalEntry(entry)
   }
 
   private func isPluginRecoveryEntry(_ entry: TimelineEntry) -> Bool {
@@ -721,6 +722,12 @@ extension AppViewModel {
   private func isPluginConnectorIssueEntry(_ entry: TimelineEntry) -> Bool {
     entry.attributes["connectorStatus"] != nil
       || entry.attributes["connectorRepairHint"] != nil
+  }
+
+  private func isPluginCommandApprovalEntry(_ entry: TimelineEntry) -> Bool {
+    entry.kind == .approval
+      && entry.attributes["action"] == "run_plugin_command"
+      && entry.attributes["sourcePath"] != nil
   }
 
   private func isPluginCommandRetryableEntry(_ entry: TimelineEntry) -> Bool {
