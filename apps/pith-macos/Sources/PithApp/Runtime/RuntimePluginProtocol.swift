@@ -4,6 +4,11 @@ struct PluginListResult: Codable {
   let plugins: [RuntimePluginPayload]
 }
 
+struct PluginRefreshResult: Codable {
+  let plugins: [RuntimePluginPayload]
+  let stateWarning: String?
+}
+
 struct PluginInstallParams: Codable {
   let sourcePath: String
 }
@@ -229,6 +234,11 @@ extension RuntimeBridge {
     var canInstall: Bool {
       installStatus == "ready" && installBlocker == nil
     }
+  }
+
+  struct RuntimePluginRefresh {
+    let plugins: [RuntimePlugin]
+    let stateWarning: String?
   }
 
   struct RuntimePluginRemoval {

@@ -32,6 +32,14 @@ pub struct PluginListResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginRefreshResult {
+  pub plugins: Vec<PluginSummary>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub state_warning: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginInstallParams {
   pub source_path: String,
 }

@@ -11,6 +11,19 @@ extension RuntimeBridge {
     return result.plugins.map { runtimePlugin(from: $0) }
   }
 
+  func refreshPluginCatalog() async throws -> RuntimePluginRefresh {
+    let response: JSONRPCResponse<PluginRefreshResult> = try await sendRequest(
+      method: "plugin/refresh",
+      params: OptionalRequestParams.none
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimePluginRefresh(
+      plugins: result.plugins.map { runtimePlugin(from: $0) },
+      stateWarning: result.stateWarning
+    )
+  }
+
   func installPlugin(sourcePath: String) async throws -> RuntimePlugin {
     let response: JSONRPCResponse<PluginInstallResult> = try await sendRequest(
       method: "plugin/install",

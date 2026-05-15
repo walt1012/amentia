@@ -16,6 +16,7 @@ pub const PLUGIN_HOOK_REGISTRY: &str = "plugin/hookRegistry";
 pub const PLUGIN_INSPECT: &str = "plugin/inspect";
 pub const PLUGIN_INSTALL: &str = "plugin/install";
 pub const PLUGIN_LIST: &str = "plugin/list";
+pub const PLUGIN_REFRESH: &str = "plugin/refresh";
 pub const PLUGIN_REMOVE: &str = "plugin/remove";
 pub const PLUGIN_SET_ENABLED: &str = "plugin/setEnabled";
 pub const RUNTIME_READINESS: &str = "runtime/readiness";

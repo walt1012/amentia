@@ -316,6 +316,75 @@ fn plugin_install_reports_refresh_failure_as_structured_recovery() {
 }
 
 #[test]
+fn plugin_refresh_reloads_fixed_local_manifest() {
+  let mut context = RuntimeContext::new_in_memory();
+  let plugin_root = create_temp_plugin_bundle("plugin-refresh-fix", "refresh-demo", "Refresh Demo");
+  let scan_root = plugin_root
+    .parent()
+    .expect("plugin scan root")
+    .to_path_buf();
+  context
+    .plugin_state
+    .configure_roots(vec![scan_root.clone()], scan_root.clone());
+  fs::write(
+    plugin_root.join("pith-plugin.json"),
+    r#"{
+"name": "refresh-demo",
+"version": "0.1.0",
+"displayName": "Refresh Demo",
+"description": "Refreshable local plugin",
+"author": { "name": "Pith" },
+"capabilities": ["memory:refresh-demo"],
+"permissions": ["file.read"],
+"defaultEnabled": true
+}"#,
+  )
+  .expect("write invalid plugin manifest");
+
+  let invalid_response = handle_request(&mut context, request(methods::PLUGIN_REFRESH, None));
+  assert!(invalid_response.error.is_none());
+  let invalid_plugins = invalid_response.result.expect("invalid refresh result")["plugins"]
+    .as_array()
+    .expect("invalid plugin list")
+    .clone();
+  assert_eq!(invalid_plugins.len(), 1);
+  assert_eq!(invalid_plugins[0]["status"], "invalid");
+  assert!(invalid_plugins[0]["validationHint"]
+    .as_str()
+    .expect("validation hint")
+    .contains("supported capability kinds"));
+
+  fs::write(
+    plugin_root.join("pith-plugin.json"),
+    r#"{
+"name": "refresh-demo",
+"version": "0.1.0",
+"displayName": "Refresh Demo",
+"description": "Refreshable local plugin",
+"author": { "name": "Pith" },
+"capabilities": ["command:refresh-demo.run"],
+"permissions": ["file.read"],
+"defaultEnabled": true
+}"#,
+  )
+  .expect("write fixed plugin manifest");
+
+  let fixed_response = handle_request(&mut context, request(methods::PLUGIN_REFRESH, None));
+
+  fs::remove_dir_all(&scan_root).expect("cleanup plugin root");
+
+  assert!(fixed_response.error.is_none());
+  let fixed_plugins = fixed_response.result.expect("fixed refresh result")["plugins"]
+    .as_array()
+    .expect("fixed plugin list")
+    .clone();
+  assert_eq!(fixed_plugins.len(), 1);
+  assert_eq!(fixed_plugins[0]["id"], "refresh-demo");
+  assert_eq!(fixed_plugins[0]["status"], "ready");
+  assert_eq!(fixed_plugins[0]["enabled"], true);
+}
+
+#[test]
 fn plugin_install_rejects_duplicate_plugin_ids() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(

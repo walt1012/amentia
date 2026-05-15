@@ -2,8 +2,19 @@ import Foundation
 
 enum PluginStateLoader {
   static func refresh(using runtimeBridge: RuntimeBridge) async -> PluginStateRefresh {
-    let pluginLoad = await load("catalog") {
-      try await runtimeBridge.listPlugins()
+    let catalogRefresh = await load("catalog refresh") {
+      try await runtimeBridge.refreshPluginCatalog()
+    }
+    let pluginLoad: (value: [RuntimeBridge.RuntimePlugin]?, diagnostic: String?)
+    if let refresh = catalogRefresh.value {
+      pluginLoad = (
+        refresh.plugins,
+        refresh.stateWarning.map { "catalog state: \($0)" }
+      )
+    } else {
+      pluginLoad = await load("catalog") {
+        try await runtimeBridge.listPlugins()
+      }
     }
     let registryLoad = await load("capability registry") {
       try await runtimeBridge.pluginCapabilityRegistry()
@@ -23,6 +34,7 @@ enum PluginStateLoader {
     let runtimeConnectors = connectorLoad.value
     let runtimeHooks = hookLoad.value
     let diagnostics = [
+      catalogRefresh.diagnostic,
       pluginLoad.diagnostic,
       registryLoad.diagnostic,
       commandLoad.diagnostic,
