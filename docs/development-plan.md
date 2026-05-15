@@ -61,9 +61,9 @@ Done:
   diagnostics; stable identifiers; precise manifest contract repair hints.
 - Execution: bounded `stdio` and MCP stdio runners with sandbox diagnostics,
   permission gates, approval gating, cancellation-safe retries, deterministic
-  output contracts, model-independent command planning, invalid-envelope repair
-  hints, MCP content diagnostics, and runner memory notes plus MCP result source
-  attribution.
+  input/output contracts, model-independent command planning, invalid-envelope
+  repair hints, MCP content diagnostics, and runner memory notes plus MCP result
+  source attribution.
 - Connectors: honest `none` or `local` credential stores, connector auth and
   clear flows, removal cleanup, source-revealable Notion-style connector
   contract, and no hidden Keychain or remote MCP claims.
