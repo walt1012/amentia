@@ -74,6 +74,16 @@ fn validate_manifest_rejects_plugin_name_path_segments() {
 }
 
 #[test]
+fn validate_manifest_rejects_plugin_name_whitespace() {
+  let mut manifest = manifest(vec!["command:review.focus"], vec!["file.read"]);
+  manifest.name = "focus review".to_string();
+
+  let error = validate_manifest(&manifest).expect_err("whitespace plugin name should fail");
+
+  assert!(error.to_string().contains("must not contain whitespace"));
+}
+
+#[test]
 fn validate_manifest_rejects_capability_identifier_path_segments() {
   let manifest = manifest(vec!["command:../outside"], vec!["file.read"]);
 
@@ -85,6 +95,15 @@ fn validate_manifest_rejects_capability_identifier_path_segments() {
 }
 
 #[test]
+fn validate_manifest_rejects_capability_identifier_whitespace() {
+  let manifest = manifest(vec!["command:review focus"], vec!["file.read"]);
+
+  let error = validate_manifest(&manifest).expect_err("whitespace capability should fail");
+
+  assert!(error.to_string().contains("must not contain whitespace"));
+}
+
+#[test]
 fn validation_hint_describes_supported_capability_kinds() {
   let hint = validation_hint_for_error("plugin capability kind `memory` is not supported");
 
@@ -92,6 +111,16 @@ fn validation_hint_describes_supported_capability_kinds() {
   assert!(hint.contains("command"));
   assert!(hint.contains("connector"));
   assert!(hint.contains("settings"));
+}
+
+#[test]
+fn validation_hint_describes_stable_identifiers_for_whitespace() {
+  let hint = validation_hint_for_error(
+    "plugin name identifier `focus review` must not contain whitespace",
+  );
+
+  assert!(hint.contains("stable plugin identifiers"));
+  assert!(hint.contains("notion-connector"));
 }
 
 #[test]
