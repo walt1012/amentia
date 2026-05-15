@@ -568,7 +568,6 @@ extension AppViewModel {
   func pluginActionSnapshot() -> PluginActionSnapshot {
     PluginActionSnapshot(
       runtimeState: runtimeState,
-      isLocalModelReady: isLocalModelReady(),
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       selectedThreadID: selectedThreadID,
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),

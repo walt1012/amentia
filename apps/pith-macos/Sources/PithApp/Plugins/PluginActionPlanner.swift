@@ -2,7 +2,6 @@ import Foundation
 
 struct PluginActionSnapshot {
   let runtimeState: RuntimeBridge.ConnectionState
-  let isLocalModelReady: Bool
   let hasRuntimeThreadSelection: Bool
   let selectedThreadID: String?
   let hasActiveOrPendingTurn: Bool
@@ -197,9 +196,6 @@ enum PluginActionPlanner {
     }
     if snapshot.runtimeState != .ready {
       return "Runtime is not ready."
-    }
-    if !snapshot.isLocalModelReady {
-      return "Local model is not ready."
     }
     if command.requiresWorkspaceInput && !snapshot.hasRuntimeThreadSelection {
       return "Command requires a workspace-bound thread."
