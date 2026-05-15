@@ -163,6 +163,59 @@ fn plugin_inspect_reports_duplicate_install_blocker() {
 }
 
 #[test]
+fn plugin_inspect_reports_structured_manifest_repair_data() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root =
+    create_temp_plugin_bundle("plugin-inspect-invalid", "focus-review", "Focus Review");
+  fs::write(
+    source_root.join("pith-plugin.json"),
+    r#"{
+"name": "focus review",
+"version": "0.1.0",
+"displayName": "Focus Review",
+"description": "Invalid test plugin",
+"author": { "name": "Pith" },
+"capabilities": ["command:focus-review.run"],
+"permissions": ["file.read"],
+"defaultEnabled": true
+}"#,
+  )
+  .expect("write invalid plugin manifest");
+  let source_path = source_root.display().to_string();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_INSPECT,
+      Some(json!({
+        "sourcePath": source_path.clone()
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
+    .expect("cleanup plugin source root");
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("plugin inspect error");
+  assert_eq!(error.code, -32053);
+  assert!(error.message.contains("must not contain whitespace"));
+  assert!(!error.message.contains("Hint:"));
+  let data = error.data.expect("plugin inspect error data");
+  assert_eq!(data["sourcePath"], source_path.as_str());
+  assert_eq!(data["pluginInstallStatus"], "inspectFailed");
+  assert!(data["installBlocker"]
+    .as_str()
+    .expect("install blocker")
+    .contains("must not contain whitespace"));
+  assert!(data["installRepairHint"]
+    .as_str()
+    .expect("install repair hint")
+    .contains("stable plugin identifiers"));
+}
+
+#[test]
 fn plugin_install_adds_local_plugin_to_the_runtime_catalog() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
@@ -206,6 +259,7 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
     "workspace-notes",
     "Workspace Notes",
   );
+  let source_path = source_root.display().to_string();
   replace_plugin_catalog(
     &mut context,
     vec![bundled_plugin_entry(
@@ -223,7 +277,7 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
     request(
       methods::PLUGIN_INSTALL,
       Some(json!({
-        "sourcePath": source_root.display().to_string()
+        "sourcePath": source_path.clone()
       })),
     ),
   );
@@ -233,7 +287,19 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
 
   assert!(response.result.is_none());
   let error = response.error.expect("plugin install error");
+  assert_eq!(error.code, -32053);
   assert!(error.message.contains("already installed"));
+  let data = error.data.expect("plugin install error data");
+  assert_eq!(data["sourcePath"], source_path.as_str());
+  assert_eq!(data["pluginInstallStatus"], "alreadyInstalled");
+  assert!(data["installBlocker"]
+    .as_str()
+    .expect("install blocker")
+    .contains("already installed"));
+  assert!(data["installRepairHint"]
+    .as_str()
+    .expect("install repair hint")
+    .contains("Remove the existing local plugin first"));
 }
 
 #[test]

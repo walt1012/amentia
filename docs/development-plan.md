@@ -67,8 +67,8 @@ Done:
 - Connectors: honest `none` or `local` credential stores, connector auth and
   clear flows, removal cleanup, source-revealable Notion-style connector
   contract, and no hidden Keychain or remote MCP claims.
-- Recovery loop: plugin install, enable, route, permission, approval, connector,
-  runner, and RPC failures carry compact repair metadata; the third-party
+- Recovery loop: plugin inspect/install, enable, route, permission, approval,
+  connector, runner, and RPC failures carry compact repair metadata; the third-party
   connector smoke path covers inspect, install, enable, pre-auth blockers,
   authorize, approve, fail, repair, and retry.
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve

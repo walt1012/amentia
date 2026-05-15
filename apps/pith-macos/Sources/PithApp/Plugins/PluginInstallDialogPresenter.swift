@@ -46,7 +46,7 @@ enum PluginInstallDialogPresenter {
   static func repairHint(for error: Error) -> String {
     let message = error.localizedDescription
 
-    if message.contains("\nHint:") {
+    if message.contains("\nHint:") || message.contains("\nRepair Hint:") {
       return ""
     }
 
