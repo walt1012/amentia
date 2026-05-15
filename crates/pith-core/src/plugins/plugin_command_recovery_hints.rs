@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 pub(super) fn readiness_repair_hint(run_status: &str, run_blocker: &str) -> String {
   match run_status {
-    "invalidCommandManifest" => {
-      plugin_definition_manifest_repair_hint("command", run_blocker)
-    }
+    "invalidCommandManifest" => plugin_definition_manifest_repair_hint("command", run_blocker),
     "missingExecution" => "Add an execution contract before running this command.".to_string(),
     "unsupportedExecution" => "Use a supported driver: builtin, stdio, or MCP stdio.".to_string(),
     "missingConnector" => {
