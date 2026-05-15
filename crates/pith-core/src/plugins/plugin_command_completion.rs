@@ -60,17 +60,15 @@ fn complete_plugin_command_items(
   let thread_id = prepared_thread.thread_id;
   let turn_id = prepared_thread.turn_id;
 
-  context
-    .persist_runtime_state()
-    .map_err(|error| {
-      PluginCommandCompletionError::from_command(
-        &command,
-        -32010,
-        "persistFailed",
-        error.to_string(),
-        "Check local storage permissions, then retry the plugin command.",
-      )
-    })?;
+  context.persist_runtime_state().map_err(|error| {
+    PluginCommandCompletionError::from_command(
+      &command,
+      -32010,
+      "persistFailed",
+      error.to_string(),
+      "Check local storage permissions, then retry the plugin command.",
+    )
+  })?;
   refresh_thread_summary_note(context, &thread_id).map_err(|error| {
     PluginCommandCompletionError::from_command(
       &command,
@@ -96,17 +94,15 @@ fn complete_plugin_command_items(
       thread.append_items(memory_items.clone());
     }
     items.extend(memory_items);
-    context
-      .persist_runtime_state()
-      .map_err(|error| {
-        PluginCommandCompletionError::from_command(
-          &command,
-          -32010,
-          "persistFailed",
-          error.to_string(),
-          "Check local storage permissions, then retry the plugin command.",
-        )
-      })?;
+    context.persist_runtime_state().map_err(|error| {
+      PluginCommandCompletionError::from_command(
+        &command,
+        -32010,
+        "persistFailed",
+        error.to_string(),
+        "Check local storage permissions, then retry the plugin command.",
+      )
+    })?;
     refresh_thread_summary_note(context, &thread_id).map_err(|error| {
       PluginCommandCompletionError::from_command(
         &command,

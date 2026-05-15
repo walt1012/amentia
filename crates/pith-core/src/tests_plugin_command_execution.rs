@@ -279,11 +279,7 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
       &["file.read", "file.write"],
     )],
   );
-  fs::write(
-    workspace.join("README.md"),
-    "Completion persistence test\n",
-  )
-  .expect("write readme");
+  fs::write(workspace.join("README.md"), "Completion persistence test\n").expect("write readme");
 
   let _ = handle_request(
     &mut context,
@@ -331,13 +327,7 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
   assert_eq!(data["pluginId"], "workspace-notes");
   assert_eq!(data["commandId"], "workspace-notes::workspace.capture-note");
   assert_eq!(data["runStatus"], "persistFailed");
-  assert!(
-    data["runBlocker"]
-      .as_str()
-      .expect("run blocker")
-      .len()
-      > 10
-  );
+  assert!(data["runBlocker"].as_str().expect("run blocker").len() > 10);
   assert!(data["runRepairHint"]
     .as_str()
     .expect("run repair hint")
