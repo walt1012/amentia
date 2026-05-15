@@ -70,6 +70,47 @@ pub(super) fn build_plugin_command_approval_request(
     .map(PluginConnectorExecutionRef::credential_binding)
     .collect::<Vec<_>>()
     .join(", ");
+  let mut approval_attributes = HashMap::from([
+    ("approvalId".to_string(), approval.id.clone()),
+    ("action".to_string(), approval.action.clone()),
+    ("commandId".to_string(), command.command_id.clone()),
+    ("pluginId".to_string(), command.plugin_id.clone()),
+    (
+      "pluginDisplayName".to_string(),
+      command.plugin_display_name.clone(),
+    ),
+    ("sourcePath".to_string(), command.source_path.clone()),
+    ("connectorIds".to_string(), connector_ids.clone()),
+    ("connectorServices".to_string(), connector_services.clone()),
+    (
+      "connectorCredentialStores".to_string(),
+      credential_stores.clone(),
+    ),
+    (
+      "connectorCredentialProviders".to_string(),
+      credential_providers.clone(),
+    ),
+    (
+      "connectorCredentialLabels".to_string(),
+      credential_labels.clone(),
+    ),
+    (
+      "connectorSecretBindings".to_string(),
+      secret_bindings.clone(),
+    ),
+  ]);
+  if connector_refs.len() == 1 {
+    approval_attributes.insert(
+      "connectorId".to_string(),
+      connector_refs[0].connector_id.clone(),
+    );
+  }
+  if let Some(execution_kind) = command.execution_kind.as_ref() {
+    approval_attributes.insert("executionKind".to_string(), execution_kind.clone());
+  }
+  if let Some(input) = input {
+    approval_attributes.insert("commandInput".to_string(), input.to_string());
+  }
 
   (
     approval.clone(),
@@ -88,22 +129,7 @@ pub(super) fn build_plugin_command_approval_request(
           credential_stores,
           secret_bindings
         ),
-        attributes: Some(HashMap::from([
-          ("approvalId".to_string(), approval.id.clone()),
-          ("action".to_string(), approval.action.clone()),
-          ("commandId".to_string(), command.command_id.clone()),
-          ("pluginId".to_string(), command.plugin_id.clone()),
-          (
-            "pluginDisplayName".to_string(),
-            command.plugin_display_name.clone(),
-          ),
-          ("connectorIds".to_string(), connector_ids),
-          ("connectorServices".to_string(), connector_services),
-          ("connectorCredentialStores".to_string(), credential_stores),
-          ("connectorCredentialProviders".to_string(), credential_providers),
-          ("connectorCredentialLabels".to_string(), credential_labels),
-          ("connectorSecretBindings".to_string(), secret_bindings),
-        ])),
+        attributes: Some(approval_attributes),
       },
       TimelineItem {
         kind: "assistantMessage".to_string(),

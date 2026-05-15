@@ -79,6 +79,9 @@ Done:
   credential handles.
 - Explicit `/plugin` route failures use the same blocked command status as
   panel-run failures, keeping repair actions and retry decisions consistent.
+- Connector-backed approval cards now carry command input, source path,
+  execution kind, and singular connector IDs for the same inspect/repair
+  context as run and failure cards.
 
 Active:
 

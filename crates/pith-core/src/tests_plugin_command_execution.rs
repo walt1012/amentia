@@ -1095,7 +1095,16 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   );
   assert!(items[0]["attributes"]["connectorCredentialAuthorizedAt"].is_string());
   assert_eq!(items[1]["kind"], "approvalRequested");
+  assert_eq!(
+    items[1]["attributes"]["connectorId"],
+    "notion-runner::notion"
+  );
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
+  assert_eq!(items[1]["attributes"]["executionKind"], "stdio.notionSync");
+  assert!(items[1]["attributes"]["sourcePath"]
+    .as_str()
+    .expect("approval source path")
+    .contains("notion-runner.sync.json"));
   assert_eq!(
     items[1]["attributes"]["connectorSecretBindings"],
     "marker-only"
@@ -1493,7 +1502,19 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     items[1]["attributes"]["pluginCommandRunId"],
     items[0]["attributes"]["pluginCommandRunId"]
   );
+  assert_eq!(
+    items[1]["attributes"]["connectorId"],
+    "notion-mcp::notion"
+  );
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
+  assert_eq!(
+    items[1]["attributes"]["executionKind"],
+    "mcp.notionCreateTask"
+  );
+  assert_eq!(
+    items[1]["attributes"]["commandInput"],
+    "Create a follow-up task"
+  );
   assert_eq!(
     items[1]["attributes"]["connectorCredentialProviders"],
     "pith.localCredentialProvider"
