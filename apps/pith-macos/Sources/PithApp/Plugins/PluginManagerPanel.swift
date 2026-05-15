@@ -9,11 +9,19 @@ struct PluginManagerPanel: View {
         .font(.headline)
 
       HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text(pluginSurfaceSummary)
+        Text(viewModel.pluginSurfaceSummary())
           .font(.caption)
           .foregroundColor(.secondary)
 
         Spacer()
+
+        Button("Refresh") {
+          Task {
+            await viewModel.refreshPlugins()
+          }
+        }
+        .font(.caption2)
+        .disabled(!viewModel.canRefreshPlugins())
 
         Button("Install Local Plugin") {
           viewModel.installPlugin()
@@ -36,14 +44,5 @@ struct PluginManagerPanel: View {
       )
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
-  private var pluginSurfaceSummary: String {
-    [
-      viewModel.pluginRegistryCountSummary(),
-      viewModel.pluginConnectorCountSummary(),
-      viewModel.pluginCommandCountSummary(),
-      viewModel.pluginHookCountSummary(),
-    ].joined(separator: " | ")
   }
 }

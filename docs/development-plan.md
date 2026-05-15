@@ -71,7 +71,7 @@ Done:
   approval, connector, runner, completion-stage, and RPC failures carry compact
   repair metadata plus retry input context; the third-party connector smoke path
   covers inspect, install, enable, pre-auth blockers, authorize, approve, fail,
-  repair, and retry.
+  repair, retry, and refresh-after-fix without restarting the app.
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve
   command IDs, plugin IDs, connector IDs, install blockers, input context,
   source paths where available, runtime status, and recovery hints without
@@ -82,7 +82,7 @@ Done:
 Active Focus:
 
 - Finish M4 by reviewing the third-party connector smoke path end to end.
-- Close only real install, auth, run, repair, retry, or UI recovery blockers.
+- Close only real install, auth, run, repair, retry, refresh, or UI recovery blockers.
 - Keep plugin UI progressive; avoid marketplace or admin-console sprawl.
 
 M4 Exit Gate:
@@ -90,6 +90,7 @@ M4 Exit Gate:
 - A third-party connector plugin can complete install, inspect, enable,
   authorize, run, repair, and retry without hidden terminal knowledge.
 - Invalid manifests explain the exact unsupported contract and how to fix it.
+- Fixing a local manifest or runner can be followed by in-app refresh.
 - Plugin output stays deterministic enough for the small local model.
 
 ## Not Now

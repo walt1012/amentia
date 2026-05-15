@@ -2,6 +2,41 @@ import Foundation
 
 @MainActor
 extension AppViewModel {
+  func refreshPlugins() async {
+    guard canRefreshPlugins() else {
+      runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
+      return
+    }
+
+    guard let operationID = beginPluginLifecycleOperation(
+      detail: "Refreshing plugins..."
+    ) else {
+      runtimeDetail = "Finish the current plugin operation before refreshing plugins."
+      return
+    }
+    let timelineThreadID = selectedThreadID
+
+    defer {
+      finishPluginLifecycleOperation(operationID)
+    }
+    await refreshPluginState()
+
+    let snapshot = pluginDashboardSnapshot
+    let hasDiagnostics = !snapshot.diagnostics.isEmpty
+    appendPluginStatusEntry(
+      to: timelineThreadID,
+      TimelineEventPresenter.pluginCatalogRefreshed(
+        pluginSummary: pluginCountSummary(),
+        surfaceSummary: pluginSurfaceSummary(),
+        diagnostics: snapshot.diagnostics
+      ),
+      detail: hasDiagnostics
+        ? "Plugin catalog refreshed with diagnostics."
+        : "Plugin catalog refreshed.",
+      preview: hasDiagnostics ? "Plugin refresh diagnostics" : "Plugins refreshed"
+    )
+  }
+
   func installPlugin() {
     guard canInstallPlugin() else {
       return
@@ -567,6 +602,24 @@ extension AppViewModel {
 
   func hasPluginLifecycleOperation() -> Bool {
     pluginDashboardSnapshot.hasLifecycleOperation
+  }
+
+  func canRefreshPlugins() -> Bool {
+    pluginRefreshDisabledReason() == nil
+  }
+
+  func pluginRefreshDisabledReason() -> String? {
+    if runtimeState != .ready {
+      return "Runtime is not ready."
+    }
+    if hasActiveOrPendingTurn() {
+      return "Finish or cancel the active task first."
+    }
+    if hasPluginLifecycleOperation() {
+      return "Finish the current plugin operation first."
+    }
+
+    return nil
   }
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {

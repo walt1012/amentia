@@ -14,6 +14,15 @@ extension AppViewModel {
     PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot)
   }
 
+  func pluginSurfaceSummary() -> String {
+    [
+      pluginRegistryCountSummary(),
+      pluginConnectorCountSummary(),
+      pluginCommandCountSummary(),
+      pluginHookCountSummary(),
+    ].joined(separator: " | ")
+  }
+
   func pluginCatalogPreview() -> [PluginSummary] {
     PluginDashboardPresenter.catalogPreview(pluginDashboardSnapshot)
   }

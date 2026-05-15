@@ -134,6 +134,7 @@ enum TimelineInspectorPresenter {
     appendPluginConnectorRecoverySummary(entry, to: &lines)
     appendPluginRunSummary(entry, to: &lines)
     appendPluginInstallSummary(entry, to: &lines)
+    appendPluginRefreshSummary(entry, to: &lines)
     appendPluginLifecycleSummary(entry, to: &lines)
     appendPluginRunnerSetupSummary(entry, to: &lines)
 
@@ -224,6 +225,7 @@ enum TimelineInspectorPresenter {
       "permissionGate",
       "pluginCommandRunId",
       "pluginInstallStatus",
+      "pluginRefreshStatus",
       "pluginLifecycleStatus",
       "runStatus",
       "runBlocker",
@@ -291,6 +293,18 @@ enum TimelineInspectorPresenter {
     if let repairHint = entry.attributes["installRepairHint"] {
       lines.append("Install repair: \(repairHint)")
     }
+  }
+
+  private static func appendPluginRefreshSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard let status = entry.attributes["pluginRefreshStatus"] else {
+      return
+    }
+
+    let count = entry.attributes["pluginRefreshDiagnosticCount"] ?? "0"
+    lines.append("Plugin refresh: \(status) | diagnostics \(count)")
   }
 
   private static func appendPluginConnectorRecoverySummary(

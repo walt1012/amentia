@@ -281,6 +281,29 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func pluginCatalogRefreshed(
+    pluginSummary: String,
+    surfaceSummary: String,
+    diagnostics: [String]
+  ) -> TimelineEntry {
+    let diagnosticBody = diagnostics.isEmpty
+      ? "No plugin diagnostics."
+      : diagnostics.map { "Diagnostic: \($0)" }.joined(separator: "\n")
+
+    return TimelineEntryFactory.system(
+      title: diagnostics.isEmpty ? "Plugins Refreshed" : "Plugins Refreshed With Diagnostics",
+      body: [
+        pluginSummary,
+        surfaceSummary,
+        diagnosticBody,
+      ].joined(separator: "\n"),
+      attributes: [
+        "pluginRefreshStatus": diagnostics.isEmpty ? "completed" : "completedWithDiagnostics",
+        "pluginRefreshDiagnosticCount": "\(diagnostics.count)",
+      ]
+    )
+  }
+
   static func pluginInstalled(
     _ plugin: RuntimeBridge.RuntimePlugin,
     preview: PluginInstallPreview
