@@ -13,6 +13,7 @@ use pith_protocol::{
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
 use crate::plugins::plugin_command_execution::is_supported_plugin_command_execution;
 use crate::plugins::plugin_command_readiness::PluginCommandReadiness;
+use crate::plugins::plugin_command_recovery_hints::plugin_definition_manifest_repair_hint;
 use crate::runtime_plugins::PluginConnectorCredentialState;
 
 const LOCAL_CREDENTIAL_PROVIDER: &str = "pith.localCredentialProvider";
@@ -175,7 +176,7 @@ pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSu
   let run_repair_hint = hook
     .manifest_error
     .as_ref()
-    .map(|_| "Fix the hook manifest JSON and schema fields, then refresh plugins.".to_string());
+    .map(|error| plugin_definition_manifest_repair_hint("hook", error));
   PluginHookSummary {
     hook_id: hook.hook_id,
     title: hook.title,

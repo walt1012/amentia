@@ -116,7 +116,7 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
     );
   }
 
-  "Review the manifest schema, then fix the reported field or value and reload the plugin catalog."
+  "Review the manifest schema, fix the reported field or value, then refresh plugins."
     .to_string()
 }
 

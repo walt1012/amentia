@@ -3,7 +3,7 @@ use std::collections::HashMap;
 pub(super) fn readiness_repair_hint(run_status: &str, run_blocker: &str) -> String {
   match run_status {
     "invalidCommandManifest" => {
-      "Fix the command manifest JSON and schema fields, then refresh plugins.".to_string()
+      plugin_definition_manifest_repair_hint("command", run_blocker)
     }
     "missingExecution" => "Add an execution contract before running this command.".to_string(),
     "unsupportedExecution" => "Use a supported driver: builtin, stdio, or MCP stdio.".to_string(),
@@ -19,6 +19,40 @@ pub(super) fn readiness_repair_hint(run_status: &str, run_blocker: &str) -> Stri
     "needsConnectorAuth" => "Authorize the connector before running this command.".to_string(),
     _ => "Inspect the plugin manifest and command contract, then refresh plugins.".to_string(),
   }
+}
+
+pub(crate) fn plugin_definition_manifest_repair_hint(kind: &str, detail: &str) -> String {
+  let normalized_detail = detail.to_ascii_lowercase();
+  if normalized_detail.contains("failed to parse") {
+    return format!(
+      "Fix the {kind} manifest JSON syntax and required camelCase fields, then refresh plugins."
+    );
+  }
+  if normalized_detail.contains("exceeds") && normalized_detail.contains("byte limit") {
+    return format!(
+      "Reduce the {kind} manifest size or move large content into runner files, then refresh plugins."
+    );
+  }
+  if normalized_detail.contains("not valid utf-8") {
+    return format!("Save the {kind} manifest as UTF-8 JSON, then refresh plugins.");
+  }
+  if normalized_detail.contains("missing field") {
+    return format!(
+      "Add the missing required {kind} manifest field shown in the error, then refresh plugins."
+    );
+  }
+  if normalized_detail.contains("invalid type") || normalized_detail.contains("expected") {
+    return format!(
+      "Match the {kind} manifest field types to the schema shown in the error, then refresh plugins."
+    );
+  }
+  if normalized_detail.contains("failed to read") {
+    return format!(
+      "Check that the {kind} manifest file exists and is readable, then refresh plugins."
+    );
+  }
+
+  format!("Fix the {kind} manifest JSON and schema fields, then refresh plugins.")
 }
 
 pub(super) fn runner_failure_recovery_hint(
@@ -169,7 +203,33 @@ fn runner_setup_repair_hint(detail: &str) -> String {
 mod tests {
   use std::collections::HashMap;
 
-  use super::{readiness_repair_hint, runner_failure_recovery_hint};
+  use super::{
+    plugin_definition_manifest_repair_hint, readiness_repair_hint, runner_failure_recovery_hint,
+  };
+
+  #[test]
+  fn readiness_hint_explains_command_json_parse_errors() {
+    let hint = readiness_repair_hint(
+      "invalidCommandManifest",
+      concat!(
+        "Plugin command `broken` manifest could not be loaded: ",
+        "failed to parse plugin command broken.json"
+      ),
+    );
+
+    assert!(hint.contains("JSON syntax"));
+    assert!(hint.contains("camelCase"));
+  }
+
+  #[test]
+  fn definition_hint_explains_hook_missing_fields() {
+    let hint = plugin_definition_manifest_repair_hint(
+      "hook",
+      "Plugin hook `shell` manifest could not be loaded: missing field `event`",
+    );
+
+    assert!(hint.contains("missing required hook manifest field"));
+  }
 
   #[test]
   fn readiness_hint_explains_missing_runner_file() {

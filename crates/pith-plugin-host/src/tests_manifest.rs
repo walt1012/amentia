@@ -208,6 +208,13 @@ fn validation_hint_describes_supported_mcp_transports() {
 }
 
 #[test]
+fn validation_hint_uses_refresh_action_for_unknown_manifest_errors() {
+  let hint = validation_hint_for_error("plugin settings field is not supported yet");
+
+  assert!(hint.contains("refresh plugins"));
+}
+
+#[test]
 fn validate_manifest_rejects_unsupported_mcp_transport() {
   let mut manifest = manifest(vec!["mcp_server:notion"], vec!["mcp.connect"]);
   manifest.mcp_servers = vec![PluginMcpServerManifest {
