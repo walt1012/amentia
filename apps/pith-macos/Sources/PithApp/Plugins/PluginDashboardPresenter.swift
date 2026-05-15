@@ -240,7 +240,7 @@ enum PluginDashboardPresenter {
     snapshot.commands
   }
 
-  static func requiredConnectors(
+  static func commandConnectors(
     commandID: String,
     snapshot: PluginDashboardSnapshot
   ) -> [PluginConnectorSummary] {
@@ -248,7 +248,7 @@ enum PluginDashboardPresenter {
       return []
     }
 
-    return command.requiredConnectorIds.compactMap { connectorID in
+    return command.visibleConnectorIds.compactMap { connectorID in
       snapshot.connectors.first(where: { $0.id == connectorID })
     }
   }
@@ -327,7 +327,7 @@ enum PluginDashboardPresenter {
     if !command.requiredInputFieldNames.isEmpty {
       parts.append("input: \(command.requiredInputFieldNames.joined(separator: ", "))")
     }
-    if !command.requiredConnectorIds.isEmpty {
+    if !command.visibleConnectorIds.isEmpty {
       parts.append("connectors: \(connectorStatusList(command, connectors: connectors))")
     }
     if let runBlocker = command.runBlocker, command.runStatus != "ready" {
@@ -344,7 +344,7 @@ enum PluginDashboardPresenter {
     _ command: PluginCommandSummary,
     connectors: [PluginConnectorSummary]
   ) -> String {
-    command.requiredConnectorIds
+    command.visibleConnectorIds
       .map { connectorID in
         guard let connector = connectors.first(where: { $0.id == connectorID }) else {
           return "\(connectorID): missing"

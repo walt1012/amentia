@@ -2,13 +2,15 @@ import SwiftUI
 
 struct PluginCommandRow: View {
   let command: PluginCommandSummary
-  let requiredConnectors: [PluginConnectorSummary]
+  let connectors: [PluginConnectorSummary]
   let canRun: Bool
   let runDisabledReason: String?
+  let canEnablePlugin: (String) -> Bool
   let canAuthorizeConnector: (String) -> Bool
   let onRun: () -> Void
   let onRunWithInput: () -> Void
   let onAuthorizeConnector: (String) -> Void
+  let onEnablePlugin: (String) -> Void
   let onRevealManifest: () -> Void
 
   var body: some View {
@@ -128,17 +130,23 @@ struct PluginCommandRow: View {
 
   @ViewBuilder
   private var connectorRows: some View {
-    if !requiredConnectors.isEmpty {
-      ForEach(requiredConnectors) { connector in
+    if !connectors.isEmpty {
+      ForEach(connectors) { connector in
         HStack(alignment: .firstTextBaseline, spacing: 8) {
           Text(connectorLabel(connector))
             .font(.caption2)
-            .foregroundColor(connector.authStatus == "needsAuth" ? .orange : .secondary)
+            .foregroundColor(connectorColor(connector))
             .textSelection(.enabled)
 
           Spacer()
 
-          if connector.authStatus == "needsAuth" {
+          if !connector.enabled {
+            Button("Enable Plugin") {
+              onEnablePlugin(connector.pluginID)
+            }
+            .font(.caption2)
+            .disabled(!canEnablePlugin(connector.pluginID))
+          } else if connector.authStatus == "needsAuth" {
             Button("Authorize") {
               onAuthorizeConnector(connector.id)
             }
@@ -147,16 +155,22 @@ struct PluginCommandRow: View {
           }
         }
       }
-    } else if !command.requiredConnectorIds.isEmpty {
-      Text("Connectors: \(command.requiredConnectorIds.joined(separator: ", "))")
+    }
+
+    ForEach(missingConnectorIds, id: \.self) { connectorID in
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text("Missing connector: \(connectorID)")
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+
+        Spacer()
+
+        Button("Manifest") {
+          onRevealManifest()
+        }
         .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
-    } else if !command.declaredConnectorIds.isEmpty {
-      Text("Connectors: \(command.declaredConnectorIds.joined(separator: ", "))")
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
+      }
     }
   }
 
@@ -210,7 +224,25 @@ struct PluginCommandRow: View {
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
     let secret = connector.credentialSecretPresent ? "env-bound" : "no secret"
-    return "Connector: \(connector.displayName) | \(connector.authStatus) | \(secret)"
+    return "Connector: \(connector.displayName) | \(connector.status) "
+      + "| auth: \(connector.authStatus) | \(secret)"
+  }
+
+  private var missingConnectorIds: [String] {
+    command.visibleConnectorIds.filter { connectorID in
+      !connectors.contains { $0.id == connectorID }
+    }
+  }
+
+  private func connectorColor(_ connector: PluginConnectorSummary) -> Color {
+    switch connector.status {
+    case "ready":
+      return .secondary
+    case "needsAuth", "disabled":
+      return .orange
+    default:
+      return .secondary
+    }
   }
 }
 

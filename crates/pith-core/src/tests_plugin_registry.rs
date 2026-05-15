@@ -856,6 +856,8 @@ printf '{"content":"ok"}\n'
   assert_eq!(blocked_error.code, -32058);
   let blocked_data = blocked_error.data.expect("auth blocker error data");
   assert_eq!(blocked_data["runStatus"], "needsConnectorAuth");
+  assert_eq!(blocked_data["connectorId"], "notion-tools::notion");
+  assert_eq!(blocked_data["connectorIds"], "notion-tools::notion");
   assert_eq!(
     blocked_data["runRepairHint"],
     "Authorize the connector before running this command."

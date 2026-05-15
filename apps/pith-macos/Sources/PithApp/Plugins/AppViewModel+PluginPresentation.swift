@@ -78,8 +78,8 @@ extension AppViewModel {
     PluginDashboardPresenter.commandPreview(pluginDashboardSnapshot)
   }
 
-  func requiredPluginConnectors(commandID: String) -> [PluginConnectorSummary] {
-    PluginDashboardPresenter.requiredConnectors(
+  func pluginCommandConnectors(commandID: String) -> [PluginConnectorSummary] {
+    PluginDashboardPresenter.commandConnectors(
       commandID: commandID,
       snapshot: pluginDashboardSnapshot
     )

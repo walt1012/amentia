@@ -66,9 +66,9 @@ Done:
 - Honest connector credentials: current stores are `none` or `local`; Keychain
   and remote MCP transports wait until implemented. Authenticated connectors
   must declare `credentialStore: local` explicitly, and connector auth failures
-  return self-contained repair metadata with panel connector enable,
-  re-authorization, input-run, retry, source-reveal from command, install, and
-  connector failures, and RPC recovery actions.
+  return self-contained repair metadata with command and connector panel repair
+  actions, re-authorization, input-run, retry, source reveal, and RPC recovery
+  actions.
 
 Active:
 

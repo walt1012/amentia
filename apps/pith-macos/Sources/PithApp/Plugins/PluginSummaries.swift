@@ -126,6 +126,10 @@ extension PluginCommandSummary {
     requiredInputFields.map(\.name)
   }
 
+  var visibleConnectorIds: [String] {
+    requiredConnectorIds.isEmpty ? declaredConnectorIds : requiredConnectorIds
+  }
+
   var unsupportedRequiredInputFieldNames: [String] {
     requiredInputFields
       .filter { !$0.isSupportedByPithCommandRun }

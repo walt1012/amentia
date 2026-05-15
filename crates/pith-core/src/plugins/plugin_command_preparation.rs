@@ -128,17 +128,29 @@ impl PluginCommandPreparationError {
         command.command_id
       )
     });
+    let connector_ids = if readiness.required_connector_ids.is_empty() {
+      readiness.declared_connector_ids.clone()
+    } else {
+      readiness.required_connector_ids.clone()
+    };
+    let mut data = json!({
+      "pluginId": &command.plugin_id,
+      "commandId": &command.command_id,
+      "sourcePath": &command.source_path,
+      "runStatus": readiness.run_status,
+      "runBlocker": readiness.run_blocker,
+      "runRepairHint": readiness.run_repair_hint,
+    });
+    if !connector_ids.is_empty() {
+      data["connectorIds"] = json!(connector_ids.join(", "));
+      if connector_ids.len() == 1 {
+        data["connectorId"] = json!(&connector_ids[0]);
+      }
+    }
     Self {
       code,
       message,
-      data: Some(json!({
-        "pluginId": &command.plugin_id,
-        "commandId": &command.command_id,
-        "sourcePath": &command.source_path,
-        "runStatus": readiness.run_status,
-        "runBlocker": readiness.run_blocker,
-        "runRepairHint": readiness.run_repair_hint,
-      })),
+      data: Some(data),
     }
   }
 
