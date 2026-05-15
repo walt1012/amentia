@@ -8,6 +8,7 @@ struct PluginStateRefresh {
   let commands: [PluginCommandSummary]?
   let hooks: [PluginHookSummary]?
   let diagnostics: [String]
+  let refreshRecoveryAttributes: [String: String]
 }
 
 struct PluginRuntimeState {
@@ -18,6 +19,7 @@ struct PluginRuntimeState {
   var commands: [PluginCommandSummary]
   var hooks: [PluginHookSummary]
   var diagnostics: [String]
+  var refreshRecoveryAttributes: [String: String]
   private var lifecycleOperationID: UUID?
 
   init(
@@ -28,6 +30,7 @@ struct PluginRuntimeState {
     commands: [PluginCommandSummary] = [],
     hooks: [PluginHookSummary] = [],
     diagnostics: [String] = [],
+    refreshRecoveryAttributes: [String: String] = [:],
     lifecycleOperationID: UUID? = nil
   ) {
     self.plugins = plugins
@@ -37,6 +40,7 @@ struct PluginRuntimeState {
     self.commands = commands
     self.hooks = hooks
     self.diagnostics = diagnostics
+    self.refreshRecoveryAttributes = refreshRecoveryAttributes
     self.lifecycleOperationID = lifecycleOperationID
   }
 
@@ -53,6 +57,7 @@ struct PluginRuntimeState {
       commands: commands,
       hooks: hooks,
       diagnostics: diagnostics,
+      refreshRecoveryAttributes: refreshRecoveryAttributes,
       hasLifecycleOperation: hasLifecycleOperation
     )
   }
@@ -81,6 +86,7 @@ struct PluginRuntimeState {
       self.hooks = hooks
     }
     diagnostics = refresh.diagnostics
+    refreshRecoveryAttributes = refresh.refreshRecoveryAttributes
   }
 
   mutating func beginLifecycleOperation() -> UUID? {

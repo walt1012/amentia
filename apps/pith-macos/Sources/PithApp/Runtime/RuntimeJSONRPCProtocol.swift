@@ -44,6 +44,8 @@ struct JSONRPCErrorData: Decodable {
   let pluginLifecycleStatus: String?
   let lifecycleBlocker: String?
   let lifecycleRepairHint: String?
+  let pluginRefreshStatus: String?
+  let pluginRefreshRepairHint: String?
   let connectorStatus: String?
   let connectorRepairHint: String?
   let runStatus: String?
@@ -66,6 +68,9 @@ extension JSONRPCErrorData {
     if let lifecycleRepairHint, !lifecycleRepairHint.isEmpty {
       return lifecycleRepairHint
     }
+    if let pluginRefreshRepairHint, !pluginRefreshRepairHint.isEmpty {
+      return pluginRefreshRepairHint
+    }
     return nil
   }
 
@@ -83,6 +88,8 @@ extension JSONRPCErrorData {
     append(pluginLifecycleStatus, forKey: "pluginLifecycleStatus", to: &attributes)
     append(lifecycleBlocker, forKey: "lifecycleBlocker", to: &attributes)
     append(lifecycleRepairHint, forKey: "lifecycleRepairHint", to: &attributes)
+    append(pluginRefreshStatus, forKey: "pluginRefreshStatus", to: &attributes)
+    append(pluginRefreshRepairHint, forKey: "pluginRefreshRepairHint", to: &attributes)
     append(connectorStatus, forKey: "connectorStatus", to: &attributes)
     append(connectorRepairHint, forKey: "connectorRepairHint", to: &attributes)
     append(runStatus, forKey: "runStatus", to: &attributes)

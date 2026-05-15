@@ -305,6 +305,9 @@ enum TimelineInspectorPresenter {
 
     let count = entry.attributes["pluginRefreshDiagnosticCount"] ?? "0"
     lines.append("Plugin refresh: \(status) | diagnostics \(count)")
+    if let repairHint = entry.attributes["pluginRefreshRepairHint"] {
+      lines.append("Plugin refresh repair: \(repairHint)")
+    }
   }
 
   private static func appendPluginConnectorRecoverySummary(

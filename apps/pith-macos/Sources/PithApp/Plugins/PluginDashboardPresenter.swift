@@ -8,6 +8,7 @@ struct PluginDashboardSnapshot {
   let commands: [PluginCommandSummary]
   let hooks: [PluginHookSummary]
   let diagnostics: [String]
+  let refreshRecoveryAttributes: [String: String]
   let hasLifecycleOperation: Bool
 }
 

@@ -5,11 +5,16 @@ enum PluginStateLoader {
     let catalogRefresh = await load("catalog refresh") {
       try await runtimeBridge.refreshPluginCatalog()
     }
-    let pluginLoad: (value: [RuntimeBridge.RuntimePlugin]?, diagnostic: String?)
+    let pluginLoad: (
+      value: [RuntimeBridge.RuntimePlugin]?,
+      diagnostic: String?,
+      recoveryAttributes: [String: String]
+    )
     if let refresh = catalogRefresh.value {
       pluginLoad = (
         refresh.plugins,
-        refresh.stateWarning.map { "catalog state: \($0)" }
+        refresh.stateWarning.map { "catalog state: \($0)" },
+        [:]
       )
     } else {
       pluginLoad = await load("catalog") {
@@ -54,19 +59,32 @@ enum PluginStateLoader {
       connectors: mappedConnectors(runtimeConnectors, pluginsLoaded: runtimePlugins != nil),
       commands: mappedCommands(runtimeCommands, pluginsLoaded: runtimePlugins != nil),
       hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil),
-      diagnostics: diagnostics
+      diagnostics: diagnostics,
+      refreshRecoveryAttributes: catalogRefresh.recoveryAttributes
     )
   }
 
   private static func load<T>(
     _ label: String,
     operation: () async throws -> T
-  ) async -> (value: T?, diagnostic: String?) {
+  ) async -> (value: T?, diagnostic: String?, recoveryAttributes: [String: String]) {
     do {
-      return (try await operation(), nil)
+      return (try await operation(), nil, [:])
     } catch {
-      return (nil, "\(label): \(error.localizedDescription)")
+      return (
+        nil,
+        "\(label): \(error.localizedDescription)",
+        runtimeRecoveryAttributes(from: error)
+      )
     }
+  }
+
+  private static func runtimeRecoveryAttributes(from error: Error) -> [String: String] {
+    guard let runtimeError = error as? RuntimeBridge.RuntimeError else {
+      return [:]
+    }
+
+    return runtimeError.recoveryAttributes
   }
 
   private static func buildRegistryState(

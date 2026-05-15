@@ -22,6 +22,11 @@ enum RuntimeBridgeRequestPolicy {
   }
 
   static func shouldStopRuntimeAfterTimedOutRequest(method: String) -> Bool {
-    method != "workspace/search"
+    switch method {
+    case "workspace/search", "plugin/refresh":
+      return false
+    default:
+      return true
+    }
   }
 }

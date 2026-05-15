@@ -35,7 +35,7 @@ extension RuntimeBridge {
       case .requestTimedOut(let method, let seconds):
         return
           "Runtime request \(method) timed out after \(seconds) seconds. " +
-          "The local runtime was stopped so it can recover cleanly."
+          "The request did not finish in time."
       case .rpc(let message):
         return message
       case .rpcWithRepair(let message, let repairHint):

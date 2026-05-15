@@ -28,7 +28,8 @@ extension AppViewModel {
       TimelineEventPresenter.pluginCatalogRefreshed(
         pluginSummary: pluginCountSummary(),
         surfaceSummary: pluginSurfaceSummary(),
-        diagnostics: snapshot.diagnostics
+        diagnostics: snapshot.diagnostics,
+        recoveryAttributes: snapshot.refreshRecoveryAttributes
       ),
       detail: hasDiagnostics
         ? "Plugin catalog refreshed with diagnostics."
