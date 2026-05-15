@@ -84,6 +84,9 @@ Done:
   context as run and failure cards.
 - Connector-backed approval cards can reveal plugin source before approval,
   keeping trust decisions inside the native timeline.
+- Plugin command permission denials now use blocked command metadata and repair
+  hints, so missing permission issues route through the same inspect/repair
+  surface as other plugin command blockers.
 
 Active:
 
