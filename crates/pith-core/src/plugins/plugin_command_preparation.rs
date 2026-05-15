@@ -227,10 +227,7 @@ fn insert_connector_error_data(data: &mut Value, connector_ids: Vec<String>) {
   }
 }
 
-fn readiness_connector_ids(
-  plugin_id: &str,
-  readiness: &PluginCommandReadiness,
-) -> Vec<String> {
+fn readiness_connector_ids(plugin_id: &str, readiness: &PluginCommandReadiness) -> Vec<String> {
   if readiness.required_connector_ids.is_empty() {
     return qualify_connector_ids(plugin_id, &readiness.declared_connector_ids);
   }

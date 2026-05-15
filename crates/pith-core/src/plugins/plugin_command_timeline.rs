@@ -357,7 +357,9 @@ mod tests {
       Some("test-plugin::notion")
     );
     assert_eq!(
-      attributes.get("connectorSecretBindings").map(String::as_str),
+      attributes
+        .get("connectorSecretBindings")
+        .map(String::as_str),
       Some("marker-only")
     );
     assert_eq!(
