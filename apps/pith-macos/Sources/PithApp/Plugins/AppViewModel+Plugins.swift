@@ -305,7 +305,9 @@ extension AppViewModel {
   }
 
   func canAuthorizePluginConnector(from entry: TimelineEntry) -> Bool {
-    guard let connectorID = pluginConnectorID(from: entry) else {
+    guard isPluginConnectorAuthorizationEntry(entry),
+          let connectorID = pluginConnectorID(from: entry)
+    else {
       return false
     }
 
@@ -363,7 +365,9 @@ extension AppViewModel {
   }
 
   func authorizePluginConnector(from entry: TimelineEntry) {
-    guard let connectorID = pluginConnectorID(from: entry) else {
+    guard canAuthorizePluginConnector(from: entry),
+          let connectorID = pluginConnectorID(from: entry)
+    else {
       runtimeDetail = "Plugin connector authorization is unavailable."
       return
     }
@@ -732,6 +736,11 @@ extension AppViewModel {
   private func isPluginConnectorIssueEntry(_ entry: TimelineEntry) -> Bool {
     entry.attributes["connectorStatus"] != nil
       || entry.attributes["connectorRepairHint"] != nil
+  }
+
+  private func isPluginConnectorAuthorizationEntry(_ entry: TimelineEntry) -> Bool {
+    isPluginConnectorIssueEntry(entry)
+      || isPluginCommandIssueEntry(entry)
   }
 
   private func isPluginLifecycleIssueEntry(_ entry: TimelineEntry) -> Bool {
