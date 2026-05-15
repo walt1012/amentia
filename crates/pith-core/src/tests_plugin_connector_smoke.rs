@@ -113,10 +113,8 @@ fn third_party_connector_plugin_smoke_path_supports_repair_and_retry() {
     ),
   );
   assert!(authorize_response.error.is_none());
-  let authorized_connector = authorize_response
-    .result
-    .expect("authorize result")["connector"]
-    .clone();
+  let authorized_connector =
+    authorize_response.result.expect("authorize result")["connector"].clone();
   assert_eq!(authorized_connector["status"], "ready");
   assert_eq!(authorized_connector["authStatus"], "authorized");
   assert_eq!(authorized_connector["credentialSecretPresent"], true);
