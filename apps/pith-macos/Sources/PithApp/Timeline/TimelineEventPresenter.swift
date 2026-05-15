@@ -9,6 +9,8 @@ enum TimelineEventPresenter {
   static let pluginCommandNeedsConnectorAuthDetail =
     "Authorize the required connector before running this plugin command."
   static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
+  static let pluginCommandBlockedDefaultDetail =
+    "Local plugin command is blocked. Inspect the blocked item for the repair hint."
   static let pluginCommandFailedDetail =
     "Local plugin command failed. Inspect the failed runner item for logs."
   static let cancellingTurnDetail = "Cancelling local execution..."
@@ -16,6 +18,7 @@ enum TimelineEventPresenter {
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
   static let cancelledPluginCommandPreview = "Cancelled plugin command"
+  static let blockedPluginCommandPreview = "Plugin command blocked"
   static let failedPluginCommandPreview = "Plugin command failed"
 
   static func pluginCommandFailureDetail(
@@ -39,6 +42,29 @@ enum TimelineEventPresenter {
     }
 
     return pluginCommandFailedDetail
+  }
+
+  static func pluginCommandBlockedDetail(
+    from items: [RuntimeBridge.RuntimeTimelineItemResult]
+  ) -> String {
+    guard let blockedItem = items.first(where: {
+      $0.attributes["pluginCommandStatus"] == "blocked"
+    }) else {
+      return pluginCommandBlockedDefaultDetail
+    }
+
+    if let repairHint = blockedItem.attributes["runRepairHint"],
+       !repairHint.isEmpty
+    {
+      return "Plugin command blocked. \(repairHint)"
+    }
+    if let blocker = blockedItem.attributes["runBlocker"],
+       !blocker.isEmpty
+    {
+      return "Plugin command blocked: \(blocker)"
+    }
+
+    return pluginCommandBlockedDefaultDetail
   }
 
   static func turnPreview(turnID: String, activeTurnID: String?) -> String {

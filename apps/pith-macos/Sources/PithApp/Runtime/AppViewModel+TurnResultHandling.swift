@@ -18,12 +18,17 @@ extension AppViewModel {
     let pluginCommandFailed = result.items.contains {
       $0.attributes["pluginCommandStatus"] == "failed"
     }
+    let pluginCommandBlocked = result.items.contains {
+      $0.attributes["pluginCommandStatus"] == "blocked"
+    }
     if pluginCommandCancelled {
       runtimeDetail = TimelineEventPresenter.pendingPluginCommandCancelledDetail
     } else if wasCancelled {
       runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
     } else if pluginCommandFailed {
       runtimeDetail = TimelineEventPresenter.pluginCommandFailureDetail(from: result.items)
+    } else if pluginCommandBlocked {
+      runtimeDetail = TimelineEventPresenter.pluginCommandBlockedDetail(from: result.items)
     }
     let preview: String
     if pluginCommandCancelled {
@@ -32,6 +37,8 @@ extension AppViewModel {
       preview = TimelineEventPresenter.cancelledResponsePreview
     } else if pluginCommandFailed {
       preview = TimelineEventPresenter.failedPluginCommandPreview
+    } else if pluginCommandBlocked {
+      preview = TimelineEventPresenter.blockedPluginCommandPreview
     } else {
       preview = TimelineEventPresenter.turnPreview(
         turnID: result.turnID,
