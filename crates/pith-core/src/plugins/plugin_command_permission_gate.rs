@@ -7,6 +7,9 @@ use super::plugin_command_recovery_hints::readiness_repair_hint;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 use super::plugin_permissions::build_permission_denied_items;
 
+const MCP_STDIO_PLUGIN_ACTION: &str = "run an MCP stdio plugin command";
+const CONNECTOR_PLUGIN_ACTION: &str = "run a connector-backed plugin command";
+
 pub(crate) fn plugin_command_permission_blocker(
   command: &HostPluginCommandEntry,
   connector_backed: bool,
@@ -17,7 +20,7 @@ pub(crate) fn plugin_command_permission_blocker(
     return Some(plugin_command_permission_blocker_message(
       command,
       "mcp.connect",
-      "run an MCP command",
+      MCP_STDIO_PLUGIN_ACTION,
     ));
   }
 
@@ -25,7 +28,7 @@ pub(crate) fn plugin_command_permission_blocker(
     return Some(plugin_command_permission_blocker_message(
       command,
       "network.outbound",
-      "run a connector-backed plugin command",
+      CONNECTOR_PLUGIN_ACTION,
     ));
   }
 
@@ -44,7 +47,7 @@ pub(super) fn plugin_command_permission_denied_items(
       command,
       workspace,
       "mcp.connect",
-      "run an MCP command",
+      MCP_STDIO_PLUGIN_ACTION,
     ));
   }
 
@@ -53,7 +56,7 @@ pub(super) fn plugin_command_permission_denied_items(
       command,
       None,
       "network.outbound",
-      "run a connector-backed plugin command",
+      CONNECTOR_PLUGIN_ACTION,
     ));
   }
 
@@ -168,5 +171,71 @@ mod tests {
       .get("runRepairHint")
       .expect("repair hint")
       .contains("required permission"));
+  }
+
+  #[test]
+  fn command_permission_blockers_use_precise_plugin_actions() {
+    let empty_input = pith_plugin_host::PluginCommandEnvelopeEntry {
+      envelope: "pith.plugin.command.input".to_string(),
+      fields: vec![],
+    };
+    let empty_output = pith_plugin_host::PluginCommandEnvelopeEntry {
+      envelope: "pith.plugin.command.output".to_string(),
+      fields: vec![],
+    };
+    let mcp_command = HostPluginCommandEntry {
+      command_id: "test-plugin::mcp-run".to_string(),
+      title: "Run MCP Plugin".to_string(),
+      description: "Run an MCP stdio plugin command.".to_string(),
+      prompt: "Run the plugin.".to_string(),
+      plugin_id: "test-plugin".to_string(),
+      plugin_display_name: "Test Plugin".to_string(),
+      permissions: vec![],
+      source_path: "plugins/test-plugin/commands/mcp-run.json".to_string(),
+      execution: Some(pith_plugin_host::PluginCommandExecutionEntry {
+        kind: "mcp.test".to_string(),
+        driver: "mcp".to_string(),
+        entrypoint: Some("local.run".to_string()),
+        connector_ids: None,
+        input: empty_input.clone(),
+        output: empty_output.clone(),
+      }),
+      execution_kind: Some("mcp.test".to_string()),
+      manifest_error: None,
+      memory_note_title: None,
+      memory_note_source: None,
+      memory_note_tags: vec![],
+    };
+    let connector_command = HostPluginCommandEntry {
+      command_id: "test-plugin::connector-run".to_string(),
+      title: "Run Connector Plugin".to_string(),
+      description: "Run a connector-backed plugin command.".to_string(),
+      prompt: "Run the plugin.".to_string(),
+      plugin_id: "test-plugin".to_string(),
+      plugin_display_name: "Test Plugin".to_string(),
+      permissions: vec!["mcp.connect".to_string()],
+      source_path: "plugins/test-plugin/commands/connector-run.json".to_string(),
+      execution: Some(pith_plugin_host::PluginCommandExecutionEntry {
+        kind: "stdio.test".to_string(),
+        driver: "stdio".to_string(),
+        entrypoint: Some("runner.sh".to_string()),
+        connector_ids: Some(vec!["notion".to_string()]),
+        input: empty_input,
+        output: empty_output,
+      }),
+      execution_kind: Some("stdio.test".to_string()),
+      manifest_error: None,
+      memory_note_title: None,
+      memory_note_source: None,
+      memory_note_tags: vec![],
+    };
+
+    let mcp_blocker = plugin_command_permission_blocker(&mcp_command, false).expect("mcp blocker");
+    let connector_blocker =
+      plugin_command_permission_blocker(&connector_command, true).expect("connector blocker");
+
+    assert!(mcp_blocker.contains("MCP stdio plugin command"));
+    assert!(connector_blocker.contains("connector-backed plugin command"));
+    assert!(!connector_blocker.contains("MCP"));
   }
 }

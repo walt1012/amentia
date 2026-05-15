@@ -102,6 +102,31 @@ fn third_party_connector_plugin_smoke_path_supports_repair_and_retry() {
   assert_eq!(connector["authStatus"], "needsAuth");
   assert_eq!(connector["credentialPresent"], false);
 
+  let command_registry = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+  assert!(command_registry.error.is_none());
+  let command_registry_result = command_registry.result.expect("command registry result");
+  let command = &command_registry_result["commands"][0];
+  assert_eq!(command["commandId"], "notion-smoke::notion-smoke.sync");
+  assert_eq!(command["runStatus"], "needsConnectorAuth");
+  assert_eq!(command["declaredConnectorIds"][0], "notion-smoke::notion");
+  assert_eq!(command["requiredConnectorIds"][0], "notion-smoke::notion");
+  assert!(command["runRepairHint"]
+    .as_str()
+    .expect("command repair hint")
+    .contains("Authorize the connector"));
+
+  let blocked_run = run_smoke_command_before_auth(&mut context);
+  assert_eq!(blocked_run["connectorId"], "notion-smoke::notion");
+  assert_eq!(blocked_run["connectorIds"], "notion-smoke::notion");
+  assert_eq!(blocked_run["runStatus"], "needsConnectorAuth");
+  assert!(blocked_run["runRepairHint"]
+    .as_str()
+    .expect("blocked repair hint")
+    .contains("Authorize the connector"));
+
   let authorize_response = handle_request(
     &mut context,
     request(
@@ -276,6 +301,26 @@ fn run_smoke_command(context: &mut RuntimeContext) -> Value {
   );
   assert_eq!(items[1]["attributes"]["commandInput"], "sync retry");
   result
+}
+
+#[cfg(unix)]
+fn run_smoke_command_before_auth(context: &mut RuntimeContext) -> Value {
+  let response = handle_request(
+    context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-smoke::notion-smoke.sync",
+        "input": "sync retry"
+      })),
+    ),
+  );
+  let error = response.error.expect("missing connector auth error");
+  assert_eq!(error.code, -32058);
+  assert!(error.message.contains("requires authorizing connector"));
+  let data = error.data.expect("missing connector auth data");
+  data
 }
 
 #[cfg(unix)]

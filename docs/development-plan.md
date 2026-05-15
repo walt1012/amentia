@@ -69,8 +69,8 @@ Done:
   contract, and no hidden Keychain or remote MCP claims.
 - Recovery loop: plugin install, enable, route, permission, approval, connector,
   runner, and RPC failures carry compact repair metadata; the third-party
-  connector smoke path covers inspect, install, enable, authorize, approve,
-  fail, repair, and retry.
+  connector smoke path covers inspect, install, enable, pre-auth blockers,
+  authorize, approve, fail, repair, and retry.
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve
   command IDs, plugin IDs, connector IDs, input context, source paths where
   available, and recovery hints without leaking credential handles.
