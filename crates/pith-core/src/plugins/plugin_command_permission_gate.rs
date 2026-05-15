@@ -25,7 +25,7 @@ pub(crate) fn plugin_command_permission_blocker(
     return Some(plugin_command_permission_blocker_message(
       command,
       "network.outbound",
-      "run a connector-backed MCP command",
+      "run a connector-backed plugin command",
     ));
   }
 
@@ -53,7 +53,7 @@ pub(super) fn plugin_command_permission_denied_items(
       command,
       None,
       "network.outbound",
-      "run a connector-backed MCP command",
+      "run a connector-backed plugin command",
     ));
   }
 
@@ -148,7 +148,7 @@ mod tests {
       &command,
       None,
       "network.outbound",
-      "run a connector-backed MCP command",
+      "run a connector-backed plugin command",
     );
     let attributes = items[0].attributes.as_ref().expect("attributes");
 

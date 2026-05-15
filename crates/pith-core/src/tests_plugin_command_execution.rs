@@ -1339,6 +1339,10 @@ fn approval_respond_returns_structured_plugin_command_readiness_error() {
     .as_str()
     .expect("run blocker")
     .contains("network.outbound"));
+  assert!(data["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("connector-backed plugin command"));
   assert!(data["runRepairHint"]
     .as_str()
     .expect("repair hint")

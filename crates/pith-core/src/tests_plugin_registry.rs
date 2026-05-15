@@ -1430,6 +1430,10 @@ printf '{"content":"ok"}\n'
     .as_str()
     .expect("run blocker")
     .contains("network.outbound"));
+  assert!(commands[0]["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("connector-backed plugin command"));
 }
 
 #[test]
