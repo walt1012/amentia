@@ -229,6 +229,7 @@ enum TimelineInspectorPresenter {
     guard let connectorIDs = firstAttribute(entry, keys: [
       "connectorId",
       "connectorIds",
+      "pluginRunnerConnectorId",
       "pluginRunnerConnectorIds",
     ]) else {
       return nil

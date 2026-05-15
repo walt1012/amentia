@@ -419,6 +419,12 @@ pub(super) fn insert_connector_runner_attributes(
       .collect::<Vec<_>>()
       .join(", "),
   );
+  if connector_refs.len() == 1 {
+    attributes.insert(
+      "pluginRunnerConnectorId".to_string(),
+      connector_refs[0].connector_id.clone(),
+    );
+  }
   attributes.insert(
     "pluginRunnerConnectorStores".to_string(),
     connector_refs

@@ -74,6 +74,9 @@ Done:
 - Plugin command failures now keep retry input plus singular connector repair
   context on the failure card, so repair and retry actions do not depend on
   neighboring items.
+- Runtime RPC recovery, runner attributes, inspector summaries, and repair
+  actions preserve both singular and plural connector IDs without leaking
+  credential handles.
 
 Active:
 

@@ -686,7 +686,7 @@ extension AppViewModel {
       return connectorID
     }
 
-    for key in ["connectorIds", "pluginRunnerConnectorIds"] {
+    for key in ["connectorIds", "pluginRunnerConnectorId", "pluginRunnerConnectorIds"] {
       if let connectorID = singleConnectorID(from: entry.attributes[key]) {
         return connectorID
       }

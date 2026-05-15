@@ -998,6 +998,10 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secr
     "browser-runner::web"
   );
   assert_eq!(
+    items[1]["attributes"]["pluginRunnerConnectorId"],
+    "browser-runner::web"
+  );
+  assert_eq!(
     items[1]["attributes"]["pluginRunnerCredentialProviders"],
     "pith.noCredentialRequired"
   );
@@ -1145,6 +1149,10 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
   assert_eq!(
     items[2]["attributes"]["pluginRunnerConnectorIds"],
+    "notion-runner::notion"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerConnectorId"],
     "notion-runner::notion"
   );
   assert_eq!(
