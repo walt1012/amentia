@@ -163,17 +163,32 @@ pub(super) fn build_plugin_assistant_timeline_item(
   }
 }
 
+pub(super) struct PluginFailureTimelineRequest<'a> {
+  pub(super) command: &'a HostPluginCommandEntry,
+  pub(super) execution_kind: Option<&'a str>,
+  pub(super) code: i32,
+  pub(super) message: String,
+  pub(super) input: Option<&'a str>,
+  pub(super) connector_refs: &'a [PluginConnectorExecutionRef],
+  pub(super) stdout: &'a str,
+  pub(super) stderr: &'a str,
+  pub(super) attributes: HashMap<String, String>,
+}
+
 pub(super) fn build_plugin_failure_timeline_item(
-  command: &HostPluginCommandEntry,
-  execution_kind: Option<&str>,
-  code: i32,
-  message: String,
-  input: Option<&str>,
-  connector_refs: &[PluginConnectorExecutionRef],
-  stdout: &str,
-  stderr: &str,
-  mut attributes: HashMap<String, String>,
+  request: PluginFailureTimelineRequest<'_>,
 ) -> TimelineItem {
+  let PluginFailureTimelineRequest {
+    command,
+    execution_kind,
+    code,
+    message,
+    input,
+    connector_refs,
+    stdout,
+    stderr,
+    mut attributes,
+  } = request;
   let command_status = if code == -32055 {
     "cancelled"
   } else {
@@ -316,17 +331,18 @@ mod tests {
 
   #[test]
   fn failure_item_preserves_command_input_for_retry() {
-    let item = build_plugin_failure_timeline_item(
-      &test_command(),
-      Some("stdio.test"),
-      -32054,
-      "Runner failed.".to_string(),
-      Some("retry this input"),
-      &[],
-      "",
-      "",
-      HashMap::new(),
-    );
+    let command = test_command();
+    let item = build_plugin_failure_timeline_item(PluginFailureTimelineRequest {
+      command: &command,
+      execution_kind: Some("stdio.test"),
+      code: -32054,
+      message: "Runner failed.".to_string(),
+      input: Some("retry this input"),
+      connector_refs: &[],
+      stdout: "",
+      stderr: "",
+      attributes: HashMap::new(),
+    });
 
     assert_eq!(
       item
@@ -339,17 +355,19 @@ mod tests {
 
   #[test]
   fn failure_item_preserves_connector_context_for_repair() {
-    let item = build_plugin_failure_timeline_item(
-      &test_command(),
-      Some("stdio.test"),
-      -32054,
-      "Runner failed.".to_string(),
-      None,
-      &[test_connector_ref()],
-      "",
-      "",
-      HashMap::new(),
-    );
+    let command = test_command();
+    let connector_refs = [test_connector_ref()];
+    let item = build_plugin_failure_timeline_item(PluginFailureTimelineRequest {
+      command: &command,
+      execution_kind: Some("stdio.test"),
+      code: -32054,
+      message: "Runner failed.".to_string(),
+      input: None,
+      connector_refs: &connector_refs,
+      stdout: "",
+      stderr: "",
+      attributes: HashMap::new(),
+    });
 
     let attributes = item.attributes.as_ref().expect("attributes");
     assert_eq!(

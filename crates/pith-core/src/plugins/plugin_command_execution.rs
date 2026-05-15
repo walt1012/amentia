@@ -12,7 +12,7 @@ use super::plugin_command_runner::{
 };
 use super::plugin_command_timeline::{
   build_plugin_assistant_timeline_item, build_plugin_failure_timeline_item,
-  build_plugin_result_timeline_item,
+  build_plugin_result_timeline_item, PluginFailureTimelineRequest,
 };
 use super::plugin_command_types::{
   CompletedPluginCommandRun, PluginCommandOutput, PluginCommandSnapshot, PreparedPluginCommandRun,
@@ -113,17 +113,17 @@ pub(crate) fn execute_plugin_command_snapshot(
           let stdout = failure.stdout;
           let stderr = failure.stderr;
           let attributes = failure.attributes;
-          let failure_item = build_plugin_failure_timeline_item(
-            &snapshot.command,
-            snapshot.command.execution_kind.as_deref(),
+          let failure_item = build_plugin_failure_timeline_item(PluginFailureTimelineRequest {
+            command: &snapshot.command,
+            execution_kind: snapshot.command.execution_kind.as_deref(),
             code,
             message,
-            snapshot.input.as_deref(),
-            &snapshot.connector_refs,
-            &stdout,
-            &stderr,
+            input: snapshot.input.as_deref(),
+            connector_refs: &snapshot.connector_refs,
+            stdout: &stdout,
+            stderr: &stderr,
             attributes,
-          );
+          });
           let mut items = vec![snapshot.command_item, failure_item];
           tag_plugin_command_items(&mut items, &running_id);
           return Ok(PluginCommandOutput {
