@@ -4,6 +4,7 @@ struct PluginCommandRow: View {
   let command: PluginCommandSummary
   let connectors: [PluginConnectorSummary]
   let canRun: Bool
+  let canRefresh: Bool
   let runDisabledReason: String?
   let canEnablePlugin: (String) -> Bool
   let canAuthorizeConnector: (String) -> Bool
@@ -11,7 +12,8 @@ struct PluginCommandRow: View {
   let onRunWithInput: () -> Void
   let onAuthorizeConnector: (String) -> Void
   let onEnablePlugin: (String) -> Void
-  let onRevealManifest: () -> Void
+  let onRevealSource: () -> Void
+  let onRefresh: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -41,10 +43,16 @@ struct PluginCommandRow: View {
         }
 
         if showsManifestAction {
-          Button("Manifest") {
-            onRevealManifest()
+          Button("Source") {
+            onRevealSource()
           }
           .font(.caption2)
+
+          Button("Refresh") {
+            onRefresh()
+          }
+          .font(.caption2)
+          .disabled(!canRefresh)
         }
       }
 
@@ -166,8 +174,8 @@ struct PluginCommandRow: View {
 
         Spacer()
 
-        Button("Manifest") {
-          onRevealManifest()
+        Button("Source") {
+          onRevealSource()
         }
         .font(.caption2)
       }
@@ -248,6 +256,9 @@ struct PluginCommandRow: View {
 
 struct PluginHookRow: View {
   let hook: PluginHookSummary
+  let canRefresh: Bool
+  let onRevealSource: () -> Void
+  let onRefresh: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -261,6 +272,19 @@ struct PluginHookRow: View {
         }
 
         Spacer()
+
+        if hook.status != "ready" {
+          Button("Source") {
+            onRevealSource()
+          }
+          .font(.caption2)
+
+          Button("Refresh") {
+            onRefresh()
+          }
+          .font(.caption2)
+          .disabled(!canRefresh)
+        }
       }
 
       Text(hook.description)

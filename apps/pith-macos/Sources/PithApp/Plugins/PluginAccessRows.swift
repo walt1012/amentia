@@ -41,7 +41,10 @@ struct PluginPermissionRow: View {
 struct InvalidPluginRow: View {
   let plugin: PluginSummary
   let canRemove: Bool
+  let canRefresh: Bool
+  let refreshDisabledReason: String?
   let onRevealManifest: () -> Void
+  let onRefresh: () -> Void
   let onRemove: () -> Void
 
   var body: some View {
@@ -63,6 +66,12 @@ struct InvalidPluginRow: View {
         }
         .buttonStyle(.bordered)
 
+        Button("Refresh") {
+          onRefresh()
+        }
+        .buttonStyle(.bordered)
+        .disabled(!canRefresh)
+
         if plugin.provenance == "local" {
           Button("Remove Local Plugin") {
             onRemove()
@@ -79,6 +88,13 @@ struct InvalidPluginRow: View {
 
       if let validationHint = plugin.validationHint {
         Text("Repair: \(validationHint)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if let refreshDisabledReason {
+        Text("Refresh blocked: \(refreshDisabledReason)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)

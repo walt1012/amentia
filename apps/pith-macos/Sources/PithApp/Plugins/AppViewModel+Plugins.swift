@@ -674,6 +674,19 @@ extension AppViewModel {
     )
   }
 
+  func revealPluginSourcePath(_ sourcePath: String) {
+    let sourcePath = sourcePath.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !sourcePath.isEmpty else {
+      runtimeDetail = "Plugin source path is unavailable."
+      return
+    }
+
+    runtimeDetail = FileRevealService.revealFilePath(
+      sourcePath,
+      successDetail: "Revealed plugin source."
+    )
+  }
+
   func refreshPluginState() async {
     let pluginRefresh = await PluginStateLoader.refresh(using: runtimeBridge)
     updatePluginState { state in

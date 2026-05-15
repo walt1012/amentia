@@ -76,8 +76,8 @@ Done:
   command IDs, plugin IDs, connector IDs, install blockers, input context,
   source paths where available, runtime status, and recovery hints without
   leaking credential handles; inspector summaries surface blockers, and recovery
-  actions stay limited to issue cards; plugin lifecycle and connector operations
-  refresh visible status instead of leaving stale progress text.
+  actions stay limited to issue cards or blocked rows; plugin lifecycle,
+  connector, and source-fix refresh operations update visible status.
 
 Active Focus:
 

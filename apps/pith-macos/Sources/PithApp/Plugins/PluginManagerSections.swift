@@ -103,8 +103,15 @@ private struct PluginAccessSection: View {
           InvalidPluginRow(
             plugin: plugin,
             canRemove: viewModel.canRemovePlugin(pluginID: plugin.id),
+            canRefresh: viewModel.canRefreshPlugins(),
+            refreshDisabledReason: viewModel.pluginRefreshDisabledReason(),
             onRevealManifest: {
               viewModel.revealPluginManifest(pluginID: plugin.id)
+            },
+            onRefresh: {
+              Task {
+                await viewModel.refreshPlugins()
+              }
             },
             onRemove: {
               viewModel.removePlugin(pluginID: plugin.id)
@@ -133,6 +140,7 @@ private struct PluginCommandsSection: View {
             command: command,
             connectors: viewModel.pluginCommandConnectors(commandID: command.id),
             canRun: viewModel.canRunPluginCommand(commandID: command.id),
+            canRefresh: viewModel.canRefreshPlugins(),
             runDisabledReason: viewModel.pluginCommandRunDisabledReason(commandID: command.id),
             canEnablePlugin: { pluginID in
               viewModel.canSetPluginEnabled(pluginID: pluginID)
@@ -152,8 +160,13 @@ private struct PluginCommandsSection: View {
             onEnablePlugin: { pluginID in
               viewModel.setPluginEnabled(pluginID: pluginID, enabled: true)
             },
-            onRevealManifest: {
-              viewModel.revealPluginManifest(pluginID: command.pluginID)
+            onRevealSource: {
+              viewModel.revealPluginSourcePath(command.sourcePath)
+            },
+            onRefresh: {
+              Task {
+                await viewModel.refreshPlugins()
+              }
             }
           )
         }
@@ -220,7 +233,18 @@ private struct PluginHooksSection: View {
       if !viewModel.pluginHookPreview().isEmpty {
         Divider()
         ForEach(viewModel.pluginHookPreview()) { hook in
-          PluginHookRow(hook: hook)
+          PluginHookRow(
+            hook: hook,
+            canRefresh: viewModel.canRefreshPlugins(),
+            onRevealSource: {
+              viewModel.revealPluginSourcePath(hook.sourcePath)
+            },
+            onRefresh: {
+              Task {
+                await viewModel.refreshPlugins()
+              }
+            }
+          )
         }
       }
     }
