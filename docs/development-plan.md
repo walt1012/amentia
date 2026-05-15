@@ -67,7 +67,8 @@ Done:
   and remote MCP transports wait until implemented. Authenticated connectors
   must declare `credentialStore: local` explicitly, and connector auth failures
   return self-contained repair metadata with panel and timeline enable,
-  re-authorization, input-run, retry, source-reveal, and RPC recovery actions.
+  re-authorization, input-run, retry, source-reveal from command, install, and
+  connector failures, and RPC recovery actions.
 
 Active:
 

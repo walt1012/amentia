@@ -529,6 +529,9 @@ enum TimelineEventPresenter {
     if attributes["connectorId"] == nil {
       attributes["connectorId"] = fallbackConnectorID
     }
+    if attributes["connectorStatus"] == nil {
+      attributes["connectorStatus"] = "failed"
+    }
     if attributes["pluginId"] == nil,
        let connectorID = attributes["connectorId"],
        let pluginID = pluginID(fromQualifiedID: connectorID) {

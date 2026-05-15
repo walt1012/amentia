@@ -585,7 +585,7 @@ extension AppViewModel {
   }
 
   private func pluginSourcePath(from entry: TimelineEntry) -> String? {
-    [
+    let explicitPath = [
       "pluginRunnerResolvedEntrypoint",
       "sourcePath",
       "pluginSourcePath",
@@ -595,11 +595,24 @@ extension AppViewModel {
       entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     .first { !$0.isEmpty }
+    if let explicitPath {
+      return explicitPath
+    }
+
+    guard let pluginID = pluginID(from: entry),
+          let plugin = pluginSummary(pluginID: pluginID)
+    else {
+      return nil
+    }
+
+    let manifestPath = plugin.manifestPath.trimmingCharacters(in: .whitespacesAndNewlines)
+    return manifestPath.isEmpty ? nil : manifestPath
   }
 
   private func isPluginSourceRevealEntry(_ entry: TimelineEntry) -> Bool {
     isPluginCommandIssueEntry(entry)
       || isPluginInstallIssueEntry(entry)
+      || isPluginConnectorIssueEntry(entry)
   }
 
   private func isPluginRecoveryEntry(_ entry: TimelineEntry) -> Bool {
@@ -661,6 +674,11 @@ extension AppViewModel {
     default:
       return false
     }
+  }
+
+  private func isPluginConnectorIssueEntry(_ entry: TimelineEntry) -> Bool {
+    entry.attributes["connectorStatus"] != nil
+      || entry.attributes["connectorRepairHint"] != nil
   }
 
   private func isPluginCommandRetryableEntry(_ entry: TimelineEntry) -> Bool {
