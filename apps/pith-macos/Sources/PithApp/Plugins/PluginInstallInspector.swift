@@ -19,6 +19,13 @@ struct PluginInstallPreview {
   var canInstall: Bool {
     installStatus == "ready" && installBlocker == nil
   }
+
+  var surfaceSummary: PluginSurfaceSummary {
+    PluginSurfaceClassifier.summary(
+      capabilities: capabilities,
+      permissions: permissions
+    )
+  }
 }
 
 enum PluginInstallInspector {

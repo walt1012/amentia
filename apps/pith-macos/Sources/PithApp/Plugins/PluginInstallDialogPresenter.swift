@@ -14,6 +14,7 @@ enum PluginInstallDialogPresenter {
       Manifest: \(preview.manifestPath)
       Install Path: \(preview.installPath)
       Default Enabled: \(preview.defaultEnabled ? "Yes" : "No")
+      Surface: \(preview.surfaceSummary.summary)
       Permissions: \(summaryLine(preview.permissions, empty: "none"))
       Capabilities: \(summaryLine(preview.capabilities, empty: "none"))
 

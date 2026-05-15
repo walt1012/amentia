@@ -12,6 +12,7 @@ final class AppViewModel: ObservableObject {
   @Published var modelDownloadState: LocalModelDownloadRuntimeState
   @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
+  @Published var pluginManagerSection: PluginManagerSection
 
   let runtimeBridge: RuntimeBridge
   let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
@@ -49,6 +50,7 @@ final class AppViewModel: ObservableObject {
     )
     self.memoryState = MemoryRuntimeState()
     self.pluginState = PluginRuntimeState()
+    self.pluginManagerSection = .catalog
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData
     )

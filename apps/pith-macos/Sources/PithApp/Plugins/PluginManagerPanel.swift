@@ -2,7 +2,6 @@ import SwiftUI
 
 struct PluginManagerPanel: View {
   @ObservedObject var viewModel: AppViewModel
-  @State private var section: PluginManagerSection = .catalog
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -23,7 +22,7 @@ struct PluginManagerPanel: View {
         .disabled(!viewModel.canInstallPlugin())
       }
 
-      Picker("Surface", selection: $section) {
+      Picker("Surface", selection: $viewModel.pluginManagerSection) {
         ForEach(PluginManagerSection.allCases) { section in
           Text(section.rawValue)
             .tag(section)
@@ -33,7 +32,7 @@ struct PluginManagerPanel: View {
 
       PluginManagerSectionView(
         viewModel: viewModel,
-        section: section
+        section: viewModel.pluginManagerSection
       )
     }
     .frame(maxWidth: .infinity, alignment: .leading)

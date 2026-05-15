@@ -47,6 +47,10 @@ extension AppViewModel {
         runtimeDetail = "Installing local plugin..."
         let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: preview.sourcePath)
         await refreshPluginState()
+        focusPluginManagerSection(
+          capabilities: installedPlugin.capabilities,
+          permissions: installedPlugin.permissions
+        )
         appendEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview)
@@ -96,6 +100,10 @@ extension AppViewModel {
       do {
         let updatedPlugin = try await runtimeBridge.setPluginEnabled(pluginID: pluginID, enabled: enabled)
         await refreshPluginState()
+        focusPluginManagerSection(
+          capabilities: updatedPlugin.capabilities,
+          permissions: updatedPlugin.permissions
+        )
         appendEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled)
@@ -186,6 +194,7 @@ extension AppViewModel {
           credentialSecret: credentialInput.secret
         )
         await refreshPluginState()
+        focusAfterConnectorAuthorization(pluginID: connector.pluginID)
         appendEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorAuthorized(connector)
@@ -224,6 +233,7 @@ extension AppViewModel {
           connectorID: connectorID
         )
         await refreshPluginState()
+        pluginManagerSection = .connectors
         appendEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorCredentialCleared(connector)
@@ -576,6 +586,22 @@ extension AppViewModel {
       runtimeDetail = detail
     }
     return operationID
+  }
+
+  private func focusPluginManagerSection(capabilities: [String], permissions: [String]) {
+    pluginManagerSection = PluginSurfaceClassifier.preferredSection(
+      capabilities: capabilities,
+      permissions: permissions
+    )
+  }
+
+  private func focusAfterConnectorAuthorization(pluginID: String) {
+    if pluginCommands.contains(where: { $0.pluginID == pluginID }) {
+      pluginManagerSection = .commands
+      return
+    }
+
+    pluginManagerSection = .connectors
   }
 
   private func finishPluginLifecycleOperation(_ operationID: UUID) {

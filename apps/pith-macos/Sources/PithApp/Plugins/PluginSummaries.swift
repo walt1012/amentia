@@ -18,6 +18,69 @@ struct PluginSummary: Identifiable, Hashable {
   let validationHint: String?
 }
 
+struct PluginSurfaceSummary: Hashable {
+  let commandCount: Int
+  let connectorCount: Int
+  let mcpServerCount: Int
+  let hookCount: Int
+  let permissionCount: Int
+
+  var preferredSection: PluginManagerSection {
+    if connectorCount > 0 || mcpServerCount > 0 {
+      return .connectors
+    }
+    if commandCount > 0 {
+      return .commands
+    }
+    if hookCount > 0 {
+      return .hooks
+    }
+    if permissionCount > 0 {
+      return .access
+    }
+    return .catalog
+  }
+
+  var summary: String {
+    var parts = [
+      "\(commandCount) command\(commandCount == 1 ? "" : "s")",
+      "\(connectorCount) connector\(connectorCount == 1 ? "" : "s")",
+      "\(hookCount) hook\(hookCount == 1 ? "" : "s")",
+    ]
+    if mcpServerCount > 0 {
+      parts.append("\(mcpServerCount) MCP server\(mcpServerCount == 1 ? "" : "s")")
+    }
+    parts.append("\(permissionCount) permission\(permissionCount == 1 ? "" : "s")")
+    return parts.joined(separator: " | ")
+  }
+}
+
+enum PluginSurfaceClassifier {
+  static func summary(
+    capabilities: [String],
+    permissions: [String]
+  ) -> PluginSurfaceSummary {
+    PluginSurfaceSummary(
+      commandCount: count(capabilities, kind: "command"),
+      connectorCount: count(capabilities, kind: "connector"),
+      mcpServerCount: count(capabilities, kind: "mcp_server"),
+      hookCount: count(capabilities, kind: "hook"),
+      permissionCount: permissions.count
+    )
+  }
+
+  static func preferredSection(
+    capabilities: [String],
+    permissions: [String]
+  ) -> PluginManagerSection {
+    summary(capabilities: capabilities, permissions: permissions).preferredSection
+  }
+
+  private static func count(_ capabilities: [String], kind: String) -> Int {
+    capabilities.filter { $0.hasPrefix("\(kind):") }.count
+  }
+}
+
 struct PluginCapabilityRegistrySummary: Hashable {
   let enabledPluginCount: Int
   let totalCapabilityCount: Int

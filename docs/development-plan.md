@@ -69,6 +69,8 @@ Done:
   return self-contained repair metadata with command and connector panel repair
   actions, re-authorization, input-run, retry, source reveal, and RPC recovery
   actions.
+- Plugin install and enable flows now surface command/connector/hook counts and
+  focus the plugin manager on the most likely next repair surface.
 
 Active:
 

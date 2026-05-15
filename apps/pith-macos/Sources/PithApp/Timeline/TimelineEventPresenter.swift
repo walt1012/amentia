@@ -231,9 +231,15 @@ enum TimelineEventPresenter {
 
   static func pluginInstallBlocked(preview: PluginInstallPreview) -> TimelineEntry {
     let blocker = preview.installBlocker ?? "Plugin cannot be installed yet."
-    let body = preview.installRepairHint?.isEmpty == false
-      ? "\(blocker)\n\nRepair Hint: \(preview.installRepairHint ?? "")"
-      : blocker
+    let body = [
+      blocker,
+      "Surface: \(preview.surfaceSummary.summary)",
+      preview.installRepairHint?.isEmpty == false
+        ? "Repair Hint: \(preview.installRepairHint ?? "")"
+        : nil,
+    ]
+    .compactMap { $0 }
+    .joined(separator: "\n\n")
 
     return TimelineEntryFactory.warning(
       title: "Plugin Install Blocked",
@@ -254,8 +260,12 @@ enum TimelineEventPresenter {
   ) -> TimelineEntry {
     TimelineEntryFactory.system(
       title: "Plugin Installed",
-      body:
-        "\(plugin.displayName) is now available in the local plugin manager.\nSource: \(preview.sourcePath)\nInstalled To: \(preview.installPath)",
+      body: [
+        "\(plugin.displayName) is now available in the local plugin manager.",
+        "Surface: \(preview.surfaceSummary.summary)",
+        "Source: \(preview.sourcePath)",
+        "Installed To: \(preview.installPath)",
+      ].joined(separator: "\n"),
       attributes: [
         "pluginId": plugin.id,
         "pluginStatus": plugin.status,
