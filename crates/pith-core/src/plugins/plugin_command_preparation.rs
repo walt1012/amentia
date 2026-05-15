@@ -392,9 +392,11 @@ fn validate_plugin_command_input_contract(
   };
 
   if let Some(field) = input.and_then(|_| {
-    execution.input.fields.iter().find(|field| {
-      field.name.trim() == "input" && !input_field_accepts_plain_text(field)
-    })
+    execution
+      .input
+      .fields
+      .iter()
+      .find(|field| field.name.trim() == "input" && !input_field_accepts_plain_text(field))
   }) {
     return Err(PluginCommandInputContractError::new(
       format!(
@@ -471,7 +473,10 @@ fn validate_plugin_command_input_contract(
 fn input_field_accepts_plain_text(
   field: &pith_plugin_host::PluginCommandEnvelopeFieldEntry,
 ) -> bool {
-  matches!(field.kind.trim().to_ascii_lowercase().as_str(), "text" | "string")
+  matches!(
+    field.kind.trim().to_ascii_lowercase().as_str(),
+    "text" | "string"
+  )
 }
 
 struct PluginCommandInputContractError {
@@ -671,13 +676,8 @@ mod tests {
   fn input_contract_rejects_plain_input_for_structured_optional_field() {
     let command = test_command_with_execution(test_input_execution("json", false));
 
-    let error = validate_plugin_command_input_contract(
-      &command,
-      None,
-      Some("plain input"),
-      &[],
-    )
-    .expect_err("input error");
+    let error = validate_plugin_command_input_contract(&command, None, Some("plain input"), &[])
+      .expect_err("input error");
 
     assert_eq!(error.run_status, "unsupportedInputField");
     assert!(error.message.contains("unsupported kind `json`"));
