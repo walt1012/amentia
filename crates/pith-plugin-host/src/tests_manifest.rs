@@ -104,6 +104,44 @@ fn validation_hint_describes_supported_credential_stores() {
 }
 
 #[test]
+fn validation_hint_describes_supported_auth_policy_types() {
+  let hint = validation_hint_for_error("plugin auth policy type `saml` is not supported");
+
+  assert!(hint.contains("supported auth policy types"));
+  assert!(hint.contains("api_key"));
+  assert!(hint.contains("oauth2"));
+}
+
+#[test]
+fn validation_hint_explains_auth_free_policy_requirements() {
+  let required_hint = validation_hint_for_error(
+    "plugin auth policy type `none` must not require credentials",
+  );
+  let scopes_hint =
+    validation_hint_for_error("plugin auth policy type `none` must not declare scopes");
+  let store_hint =
+    validation_hint_for_error("plugin auth policy type `none` must use credential store `none`");
+
+  assert!(required_hint.contains("required"));
+  assert!(required_hint.contains("credentialStore: local"));
+  assert!(scopes_hint.contains("Remove auth scopes"));
+  assert!(store_hint.contains("credentialStore: none"));
+}
+
+#[test]
+fn validation_hint_explains_connector_identity_fields() {
+  let display_name_hint = validation_hint_for_error(
+    "plugin connector `notion` must include a non-empty display name",
+  );
+  let service_hint =
+    validation_hint_for_error("plugin connector `notion` must include a non-empty service");
+
+  assert!(display_name_hint.contains("displayName"));
+  assert!(service_hint.contains("service"));
+  assert!(service_hint.contains("notion"));
+}
+
+#[test]
 fn validation_hint_describes_required_authenticated_credential_store() {
   let hint = validation_hint_for_error(
     "plugin auth policy credential store is required for authenticated connectors",
@@ -159,6 +197,46 @@ fn validate_manifest_rejects_unimplemented_keychain_store() {
   assert!(error
     .to_string()
     .contains("plugin credential store `keychain` is not supported"));
+}
+
+#[test]
+fn validate_manifest_rejects_unsupported_auth_policy_type() {
+  let mut manifest = manifest(vec!["connector:notion"], vec!["network.outbound"]);
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.auth_policy = Some(PluginAuthPolicyManifest {
+    auth_type: "saml".to_string(),
+    required: true,
+    scopes: vec!["read_content".to_string()],
+    credential_store: Some("local".to_string()),
+  });
+
+  let error = validate_manifest(&manifest).expect_err("unsupported auth type should fail");
+
+  assert!(error
+    .to_string()
+    .contains("plugin auth policy type `saml` is not supported"));
+}
+
+#[test]
+fn validate_manifest_rejects_connector_without_display_name() {
+  let mut manifest = manifest(vec!["connector:notion"], vec!["network.outbound"]);
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: " ".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("connector display name should be required");
+
+  assert!(error
+    .to_string()
+    .contains("plugin connector `notion` must include a non-empty display name"));
 }
 
 #[test]

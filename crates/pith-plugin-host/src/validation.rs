@@ -65,6 +65,34 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       KNOWN_PERMISSIONS.join(", ")
     );
   }
+  if validation_error.contains("plugin auth policy type")
+    && validation_error.contains("is not supported")
+  {
+    return format!(
+      "Use one of the supported auth policy types: {}.",
+      KNOWN_AUTH_TYPES.join(", ")
+    );
+  }
+  if validation_error.contains("plugin auth policy type `none` must not require credentials") {
+    return "Set auth policy `required` to false, or switch to `api_key` or `oauth2` with `credentialStore: local`."
+      .to_string();
+  }
+  if validation_error.contains("plugin auth policy type `none` must not declare scopes") {
+    return "Remove auth scopes for `none`, or switch to an authenticated policy with `credentialStore: local`."
+      .to_string();
+  }
+  if validation_error.contains("plugin auth policy type `none` must use credential store `none`") {
+    return "Use `credentialStore: none` for auth-free connectors, or switch to an authenticated policy with `credentialStore: local`."
+      .to_string();
+  }
+  if validation_error.contains("must include a non-empty display name") {
+    return "Add a human-readable connector displayName so Pith can show the connector clearly."
+      .to_string();
+  }
+  if validation_error.contains("must include a non-empty service") {
+    return "Add a stable connector service such as `notion`, `github`, or another lowercase service key."
+      .to_string();
+  }
   if validation_error.contains("plugin credential store")
     && validation_error.contains("is not supported")
   {
@@ -141,6 +169,12 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
 
   for connector in &manifest.app_connectors {
     validate_manifest_identifier("connector", &connector.id)?;
+    if connector.display_name.trim().is_empty() {
+      anyhow::bail!(
+        "plugin connector `{}` must include a non-empty display name",
+        connector.id
+      );
+    }
     if connector.service.trim().is_empty() {
       anyhow::bail!(
         "plugin connector `{}` must include a non-empty service",

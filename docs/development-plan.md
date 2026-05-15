@@ -58,7 +58,7 @@ Done:
 
 - Registry and lifecycle: typed plugin, command, connector, hook, capability
   registries; local install/remove; inspect-before-install; compact state
-  diagnostics.
+  diagnostics; precise manifest contract repair hints.
 - Execution: bounded `stdio` and MCP stdio runners with sandbox diagnostics,
   permission gates, approval gating, cancellation-safe retries, deterministic
   output contracts, invalid-envelope repair hints, MCP content diagnostics, and
