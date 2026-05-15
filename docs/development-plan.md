@@ -75,7 +75,8 @@ Done:
 - Timeline trust: approval, run, blocked, failed, and resolved cards preserve
   command IDs, plugin IDs, connector IDs, install blockers, input context,
   source paths where available, runtime status, and recovery hints without
-  leaking credential handles; recovery actions stay limited to issue cards.
+  leaking credential handles; inspector summaries surface blockers, and recovery
+  actions stay limited to issue cards.
 
 Active Focus:
 

@@ -650,6 +650,7 @@ extension AppViewModel {
     isPluginCommandIssueEntry(entry)
       || isPluginInstallIssueEntry(entry)
       || isPluginConnectorIssueEntry(entry)
+      || isPluginLifecycleIssueEntry(entry)
       || isPluginCommandApprovalEntry(entry)
   }
 
