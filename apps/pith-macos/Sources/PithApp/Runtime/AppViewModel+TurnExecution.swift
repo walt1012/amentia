@@ -17,7 +17,7 @@ extension AppViewModel {
 
     let task = Task {
       defer {
-        localExecutionRequests.clearAgentRequest(requestID: requestID)
+        localExecutionRequests.clearLocalWorkRequest(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
@@ -30,7 +30,7 @@ extension AppViewModel {
         applyPendingTurnFailure(threadID: threadID, message: message, error: error)
       }
     }
-    localExecutionRequests.bindAgentRequest(task: task, requestID: requestID)
+    localExecutionRequests.bindLocalWorkRequest(task: task, requestID: requestID)
   }
 
   func respondToApproval(approvalID: String, decision: String) {
@@ -84,7 +84,9 @@ extension AppViewModel {
         do {
           _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingCancellation.threadID)
         } catch {
-          localExecutionRequests.restoreAgentCancellationRequest(threadID: pendingCancellation.threadID)
+          localExecutionRequests.restoreLocalWorkCancellationRequest(
+            threadID: pendingCancellation.threadID
+          )
           runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
           appendEntry(
             to: pendingCancellation.threadID,

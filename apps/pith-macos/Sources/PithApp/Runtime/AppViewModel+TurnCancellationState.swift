@@ -16,7 +16,7 @@ extension AppViewModel {
   }
 
   func requestPendingTurnCancellation() -> PendingLocalExecutionCancellation? {
-    guard let cancellation = localExecutionRequests.requestAgentCancellation() else {
+    guard let cancellation = localExecutionRequests.requestLocalWorkCancellation() else {
       return nil
     }
 

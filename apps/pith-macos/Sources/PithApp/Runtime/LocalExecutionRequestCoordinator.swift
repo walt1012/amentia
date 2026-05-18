@@ -12,43 +12,43 @@ struct PendingLocalExecutionCancellation {
 }
 
 final class LocalExecutionRequestCoordinator {
-  private let agentRequest = PendingRuntimeRequestState()
+  private let localWork = PendingRuntimeRequestState()
   private let approvalExecution = PendingRuntimeRequestState()
 
   var hasPendingExecution: Bool {
-    agentRequest.isPending || approvalExecution.isPending
+    localWork.isPending || approvalExecution.isPending
   }
 
   var canCancelPendingExecution: Bool {
-    agentRequest.canCancel || approvalExecution.canCancel
+    localWork.canCancel || approvalExecution.canCancel
   }
 
   var isApprovalExecutionPending: Bool {
     approvalExecution.isPending
   }
 
-  func beginAgentRequest(threadID: String) -> UUID {
-    agentRequest.begin(threadID: threadID, kind: .agentTurn)
+  func beginAgentTurnRequest(threadID: String) -> UUID {
+    localWork.begin(threadID: threadID, kind: .agentTurn)
   }
 
   func beginPluginCommandRequest(threadID: String) -> UUID {
-    agentRequest.begin(threadID: threadID, kind: .pluginCommand)
+    localWork.begin(threadID: threadID, kind: .pluginCommand)
   }
 
-  func bindAgentRequest(task: Task<Void, Never>, requestID: UUID) {
-    agentRequest.bind(task: task, requestID: requestID)
+  func bindLocalWorkRequest(task: Task<Void, Never>, requestID: UUID) {
+    localWork.bind(task: task, requestID: requestID)
   }
 
-  func clearAgentRequest(requestID: UUID) {
-    agentRequest.clear(requestID: requestID)
+  func clearLocalWorkRequest(requestID: UUID) {
+    localWork.clear(requestID: requestID)
   }
 
-  func requestAgentCancellation() -> PendingLocalExecutionCancellation? {
-    agentRequest.requestCancellation()
+  func requestLocalWorkCancellation() -> PendingLocalExecutionCancellation? {
+    localWork.requestCancellation()
   }
 
-  func restoreAgentCancellationRequest(threadID: String) {
-    agentRequest.restoreCancellationRequest(threadID: threadID)
+  func restoreLocalWorkCancellationRequest(threadID: String) {
+    localWork.restoreCancellationRequest(threadID: threadID)
   }
 
   func beginApprovalExecution(threadID: String) -> UUID {
@@ -72,7 +72,7 @@ final class LocalExecutionRequestCoordinator {
   }
 
   func clearAll() {
-    agentRequest.cancelAndClear()
+    localWork.cancelAndClear()
     approvalExecution.cancelAndClear()
   }
 }

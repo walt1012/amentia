@@ -536,7 +536,7 @@ extension AppViewModel {
 
     let task = Task {
       defer {
-        localExecutionRequests.clearAgentRequest(requestID: requestID)
+        localExecutionRequests.clearLocalWorkRequest(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.runPluginCommand(
@@ -577,7 +577,7 @@ extension AppViewModel {
         )
       }
     }
-    localExecutionRequests.bindAgentRequest(task: task, requestID: requestID)
+    localExecutionRequests.bindLocalWorkRequest(task: task, requestID: requestID)
   }
 
   private func appendBlockedPluginCommand(
