@@ -158,6 +158,20 @@ impl RuntimeExecutionState {
       .insert_running_plugin_command(running_id, thread_id, cancellation);
   }
 
+  pub(crate) fn insert_running_workspace_search(
+    &mut self,
+    running_id: String,
+    cancellation: GenerationCancellation,
+  ) {
+    self
+      .running
+      .insert_running_workspace_search(running_id, cancellation);
+  }
+
+  pub(crate) fn cancel_running_workspace_searches(&mut self) -> usize {
+    self.running.cancel_running_workspace_searches()
+  }
+
   pub(crate) fn request_running_cancel_for_thread(
     &mut self,
     thread_id: &str,
@@ -187,6 +201,10 @@ impl RuntimeExecutionState {
 
   pub(crate) fn remove_running_plugin_command(&mut self, running_id: &str) {
     self.running.remove_running_plugin_command(running_id);
+  }
+
+  pub(crate) fn remove_running_workspace_search(&mut self, running_id: &str) {
+    self.running.remove_running_workspace_search(running_id);
   }
 }
 
