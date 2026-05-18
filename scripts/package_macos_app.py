@@ -286,6 +286,7 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
   assert_executable(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_executable(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_info_plist_matches_product_rules(app_path)
+  assert_pkg_info_matches_app_bundle(app_path)
   assert_package_manifest_matches_bundle(app_path, expected_arch)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
@@ -306,6 +307,13 @@ def assert_info_plist_matches_product_rules(app_path: Path) -> None:
       raise RuntimeError(
         f"Info.plist field {field} must be {expected_value!r}: {info_path}"
       )
+
+
+def assert_pkg_info_matches_app_bundle(app_path: Path) -> None:
+  pkg_info_path = app_path / "Contents" / "PkgInfo"
+  value = pkg_info_path.read_text(encoding="utf-8")
+  if value != "APPL????\n":
+    raise RuntimeError(f"PkgInfo must identify a macOS application bundle: {pkg_info_path}")
 
 
 def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -> None:
@@ -591,9 +599,19 @@ def create_zip(app_path: Path, zip_path: Path) -> None:
       ],
       app_path.parent,
     )
+    assert_zip_artifact(zip_path)
     return
 
   shutil.make_archive(str(zip_path.with_suffix("")), "zip", app_path.parent, app_path.name)
+  assert_zip_artifact(zip_path)
+
+
+def assert_zip_artifact(zip_path: Path) -> None:
+  require_file(zip_path, "macOS zip artifact")
+  if zip_path.suffix != ".zip":
+    raise RuntimeError(f"macOS package artifact must be a zip file: {zip_path}")
+  if zip_path.stat().st_size <= 0:
+    raise RuntimeError(f"macOS package artifact is empty: {zip_path}")
 
 
 def main() -> int:

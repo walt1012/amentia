@@ -59,9 +59,11 @@ CI runs this on `macos-15-intel`. The script builds the Swift shell for `x86_64`
 metadata and bundled plugin manifests under `Contents/Resources`, validates the app bundle, and emits
 `artifacts/macos/Pith-macos-x86_64.zip`.
 
-CI also verifies that model weight files are not bundled and ad-hoc signs the app when `codesign` is
-available. Distribution signing and notarization should be added only after identity and entitlements
-are finalized.
+Package validation checks the product `Info.plist`, `PkgInfo`, `PithPackage.json`, x86_64-only
+binaries, first-use model download metadata, bundled plugin resource contracts, absence of model
+weights, and a non-empty zip artifact. CI also ad-hoc signs the app when `codesign` is available.
+Distribution signing and notarization should be added only after identity and entitlements are
+finalized.
 
 ## Local Model Runtime
 

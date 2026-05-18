@@ -48,15 +48,14 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestones 1, 2, and 3 are complete on the active development branch.
-
-Milestone 4 is underway. The current focus is turning plugins into real bounded local capabilities
-instead of prompt templates while keeping the app compact, local-first, and workspace-safe.
+Milestones 1-4 are closed on the active development branch. The current focus is Milestone 5:
+daily-driver hardening for the first-run model download, workspace flow, web search, sandbox,
+approvals, plugin recovery, and x86_64 macOS package path.
 
 The active branch includes guided local model choice, download, and activation, pause/continue/cancel
 with persisted recovery state, workspace-bound thread filtering, bounded shell/model/web-search
-execution, native sandbox diagnostics, progressive inspector disclosure, and typed plugin command
-contracts with a bounded, sandbox-bound, inspectable `stdio` runner path.
+execution, native sandbox diagnostics, progressive inspector disclosure, typed plugin command
+contracts, and bounded local `stdio` or MCP stdio plugin runners.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 

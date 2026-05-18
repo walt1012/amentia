@@ -11,6 +11,7 @@ Planned uses:
 Current scripts:
 
 - `check_english_policy.py`: rejects CJK text in tracked source, documentation, and automation files
+- `package_macos_app.py`: builds and validates the x86_64 `Pith.app` package artifact in CI
 - `validate_model_pack.py`: checks the default model manifest and Swift local model catalog; add
   `--remote` during release audits to compare Hugging Face size, checksum, and license metadata
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, plugin, command,
