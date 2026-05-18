@@ -20,6 +20,7 @@ SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
+SUPPORTED_ARCH = "x86_64"
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
@@ -86,7 +87,8 @@ def parse_args() -> argparse.Namespace:
   )
   parser.add_argument(
     "--arch",
-    default="x86_64",
+    default=SUPPORTED_ARCH,
+    choices=(SUPPORTED_ARCH,),
     help="Swift build architecture. Pith ships x86_64 macOS artifacts.",
   )
   parser.add_argument(
@@ -172,7 +174,7 @@ def package_app(
   copy_tree_if_present(repo_root / "plugins", resources_path / "plugins")
   copy_llama_backend_if_present(repo_root, resources_path)
 
-  validate_app_bundle(app_path)
+  validate_app_bundle(app_path, arch)
   if not skip_ad_hoc_sign:
     sign_app_bundle_if_available(app_path)
     validate_app_signature_if_available(app_path)
@@ -267,7 +269,7 @@ def copy_llama_backend_if_present(repo_root: Path, macos_path: Path) -> None:
     return
 
 
-def validate_app_bundle(app_path: Path) -> None:
+def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
   required_paths = [
     app_path / "Contents" / "Info.plist",
     app_path / "Contents" / "Resources" / "PithPackage.json",
@@ -283,11 +285,49 @@ def validate_app_bundle(app_path: Path) -> None:
 
   assert_executable(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_executable(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
+  assert_package_manifest_matches_bundle(app_path, expected_arch)
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
+
+
+def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -> None:
+  manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+  manifest = read_json_object(manifest_path)
+  expected_values = {
+    "appName": APP_NAME,
+    "bundleIdentifier": DEFAULT_BUNDLE_ID,
+    "bundleVersion": DEFAULT_VERSION,
+    "minimumSystemVersion": "12.0",
+    "architecture": expected_arch,
+    "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
+    "modelDelivery": "in-app-download",
+    "signing": "ad-hoc when codesign is available",
+  }
+  for field, expected_value in expected_values.items():
+    if manifest.get(field) != expected_value:
+      raise RuntimeError(
+        f"Package manifest field {field} must be {expected_value!r}: {manifest_path}"
+      )
+
+  if required_bool_field(manifest, "modelWeightsBundled", manifest_path) is not False:
+    raise RuntimeError("Package manifest must not claim bundled model weights")
+  if not required_bool_field(manifest, "modelMetadataBundled", manifest_path):
+    raise RuntimeError("Package manifest must include bundled model metadata")
+  if not required_bool_field(manifest, "bundledPluginsIncluded", manifest_path):
+    raise RuntimeError("Package manifest must include bundled plugins")
+
+  model_manifest_path = (
+    app_path
+    / "Contents"
+    / "Resources"
+    / required_string_field(manifest, "defaultModelManifest", manifest_path)
+  )
+  require_file(model_manifest_path, "packaged default model manifest")
 
 
 def assert_packaged_model_manifest_is_downloadable(app_path: Path) -> None:
@@ -452,6 +492,13 @@ def required_positive_int_field(manifest: dict, field: str, path: Path) -> int:
   value = manifest.get(field)
   if not isinstance(value, int) or value <= 0:
     raise RuntimeError(f"Packaged JSON field must be a positive integer: {path}: {field}")
+  return value
+
+
+def required_bool_field(manifest: dict, field: str, path: Path) -> bool:
+  value = manifest.get(field)
+  if not isinstance(value, bool):
+    raise RuntimeError(f"Packaged JSON field must be a boolean: {path}: {field}")
   return value
 
 
