@@ -186,6 +186,107 @@ fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
 }
 
 #[test]
+fn plugin_command_run_honors_pending_running_cancel_before_builtin_execution() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("plugin-command-pending-cancel");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "workspace-notes",
+      "Workspace Notes",
+      true,
+      true,
+      &[
+        "command:workspace.capture-note",
+        "prompt_pack:workspace.notes",
+      ],
+      &["file.read", "file.write"],
+    )],
+  );
+  fs::write(workspace.join("README.md"), "Should not be captured\n")
+    .expect("write readme");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Command Cancel Thread"
+      })),
+    ),
+  );
+  let cancel_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_CANCEL_RUNNING,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  assert!(cancel_response.error.is_none());
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "workspace-notes::workspace.capture-note",
+        "input": "Cancel before execution"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items.len(), 2);
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "warning");
+  assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "cancelled");
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerFailureKind"],
+    "cancelled"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginRunnerRecoveryHint"],
+    "Run the command again when the current task is ready."
+  );
+  assert_eq!(
+    items[0]["attributes"]["pluginCommandRunId"],
+    "thread-1::workspace-notes::workspace.capture-note"
+  );
+  assert_eq!(
+    items[1]["attributes"]["pluginCommandRunId"],
+    items[0]["attributes"]["pluginCommandRunId"]
+  );
+  assert_eq!(
+    context
+      .execution_state
+      .counts()
+      .running_plugin_command_count(),
+    0
+  );
+  assert!(!context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .any(|note| note.title == "Workspace Capture"));
+}
+
+#[test]
 fn plugin_command_run_reports_repair_metadata_when_thread_is_missing() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(

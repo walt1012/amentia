@@ -38,6 +38,10 @@ pub(crate) fn execute_plugin_command_snapshot(
   snapshot: PluginCommandSnapshot,
 ) -> std::result::Result<PluginCommandOutput, (i32, String)> {
   let running_id = snapshot.running_id.clone();
+  if snapshot.cancellation.is_cancelled() {
+    return Ok(cancelled_plugin_command_output(snapshot, &running_id));
+  }
+
   let (execution_kind, content, runner_memory_notes, attributes) =
     if is_supported_builtin_execution(snapshot.command.execution_kind.as_deref()) {
       let builtin_result = execute_builtin_plugin_command(
@@ -181,6 +185,39 @@ pub(crate) fn execute_plugin_command_snapshot(
     runner_memory_notes,
     pending_approval: None,
   })
+}
+
+fn cancelled_plugin_command_output(
+  snapshot: PluginCommandSnapshot,
+  running_id: &str,
+) -> PluginCommandOutput {
+  let failure_item = build_plugin_failure_timeline_item(PluginFailureTimelineRequest {
+    command: &snapshot.command,
+    execution_kind: snapshot.command.execution_kind.as_deref(),
+    code: -32055,
+    message: format!(
+      "Plugin command `{}` was cancelled.",
+      snapshot.command.command_id
+    ),
+    input: snapshot.input.as_deref(),
+    connector_refs: &snapshot.connector_refs,
+    stdout: "",
+    stderr: "",
+    attributes: HashMap::new(),
+  });
+  let mut items = vec![snapshot.command_item, failure_item];
+  tag_plugin_command_items(&mut items, running_id);
+
+  PluginCommandOutput {
+    thread_id: snapshot.thread_id,
+    command: snapshot.command,
+    workspace: snapshot.workspace,
+    input: snapshot.input,
+    items,
+    capture_memory: false,
+    runner_memory_notes: vec![],
+    pending_approval: None,
+  }
 }
 
 fn tag_plugin_command_items(items: &mut [TimelineItem], running_id: &str) {
