@@ -21,6 +21,13 @@ RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
+REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
+  "notion-connector": {"command:notion.prepare-page-draft"},
+  "review-assistant": {"command:review.inspect-diff"},
+  "shell-recorder": {"command:shell.summarize-session", "hook:shell.recorder"},
+  "web-search": {"tool:web_search"},
+  "workspace-notes": {"command:workspace.capture-note"},
+}
 
 
 def run(command: list[str], cwd: Path) -> str:
@@ -264,6 +271,48 @@ def validate_app_bundle(app_path: Path) -> None:
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_no_model_weights_are_bundled(app_path)
+  assert_bundled_plugins_are_package_ready(app_path)
+
+
+def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
+  bundled_root = app_path / "Contents" / "Resources" / "plugins" / "bundled"
+  for plugin_id, required_capabilities in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES.items():
+    plugin_root = bundled_root / plugin_id
+    manifest_path = plugin_root / "pith-plugin.json"
+    require_file(manifest_path, f"bundled plugin manifest for {plugin_id}")
+    manifest = read_json_object(manifest_path)
+    if manifest.get("name") != plugin_id:
+      raise RuntimeError(f"Bundled plugin manifest name mismatch: {manifest_path}")
+    capabilities = set(manifest.get("capabilities", []))
+    missing_capabilities = required_capabilities - capabilities
+    if missing_capabilities:
+      missing = ", ".join(sorted(missing_capabilities))
+      raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
+    assert_bundled_plugin_capability_files(plugin_root, capabilities)
+
+
+def assert_bundled_plugin_capability_files(plugin_root: Path, capabilities: set[str]) -> None:
+  for capability in capabilities:
+    if capability.startswith("command:"):
+      command_id = capability.removeprefix("command:")
+      command_path = plugin_root / "commands" / f"{command_id}.json"
+      require_file(command_path, f"bundled plugin command {command_id}")
+      read_json_object(command_path)
+    elif capability.startswith("hook:"):
+      hook_id = capability.removeprefix("hook:")
+      hook_path = plugin_root / "hooks" / f"{hook_id}.json"
+      require_file(hook_path, f"bundled plugin hook {hook_id}")
+      read_json_object(hook_path)
+
+
+def read_json_object(path: Path) -> dict:
+  try:
+    value = json.loads(path.read_text(encoding="utf-8"))
+  except json.JSONDecodeError as error:
+    raise RuntimeError(f"Packaged JSON is invalid: {path}: {error}") from error
+  if not isinstance(value, dict):
+    raise RuntimeError(f"Packaged JSON must be an object: {path}")
+  return value
 
 
 def assert_no_model_weights_are_bundled(app_path: Path) -> None:

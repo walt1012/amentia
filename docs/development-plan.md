@@ -93,7 +93,7 @@ Active Focus:
 - Keep runtime readiness UI and smoke coverage aligned with the fresh-install path.
 - Harden native sandbox, approvals, cancellation, and recovery boundaries.
 - Polish only the primary coding flow; keep plugin UI progressive and compact.
-- Keep the x86_64 macOS 12 app bundle packaging path signed-ready.
+- Keep the x86_64 macOS 12 app bundle signed-ready with validated resources.
 
 M5 Exit Gate:
 
