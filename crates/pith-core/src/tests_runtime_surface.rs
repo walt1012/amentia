@@ -96,6 +96,9 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert_eq!(result["metrics"]["webSearchProvider"], "DuckDuckGo Lite");
   assert_eq!(result["metrics"]["webSearchClient"], "curl");
   assert!(result["metrics"]["webSearchAvailable"].is_string());
+  assert!(result["metrics"]["pluginRootCount"].is_string());
+  assert!(result["metrics"]["pluginRoots"].is_string());
+  assert!(result["metrics"]["pluginInstallRoot"].is_string());
   let local_model = checks
     .iter()
     .find(|check| check["id"] == "localModel")

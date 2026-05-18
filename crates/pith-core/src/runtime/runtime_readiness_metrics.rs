@@ -171,6 +171,27 @@ fn insert_plugin_metrics(
     "enabledPluginCommandCount",
     enabled_plugin_command_count.to_string(),
   );
+  insert_metric(
+    metrics,
+    "pluginRootCount",
+    context.plugin_state.roots().len().to_string(),
+  );
+  insert_metric(
+    metrics,
+    "pluginRoots",
+    context
+      .plugin_state
+      .roots()
+      .iter()
+      .map(|root| root.display().to_string())
+      .collect::<Vec<_>>()
+      .join("\n"),
+  );
+  insert_metric(
+    metrics,
+    "pluginInstallRoot",
+    context.plugin_state.install_root().display().to_string(),
+  );
 }
 
 fn insert_sandbox_metrics(
