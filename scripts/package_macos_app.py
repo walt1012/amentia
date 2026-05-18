@@ -293,6 +293,8 @@ def copy_llama_backend_if_present(repo_root: Path, macos_path: Path) -> None:
   for candidate in candidates:
     if not candidate.is_file():
       continue
+    if candidate.is_symlink():
+      raise RuntimeError(f"Packaged llama.cpp backend must not be a symlink: {candidate}")
     relative_parent = candidate.parent.relative_to(repo_root)
     target_directory = macos_path / relative_parent
     target_directory.mkdir(parents=True, exist_ok=True)
