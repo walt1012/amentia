@@ -79,15 +79,15 @@ extension AppViewModel {
       return
     }
 
-    if let pendingThreadID = requestPendingTurnCancellation() {
+    if let pendingCancellation = requestPendingTurnCancellation() {
       Task {
         do {
-          _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingThreadID)
+          _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingCancellation.threadID)
         } catch {
-          localExecutionRequests.restoreAgentCancellationRequest(threadID: pendingThreadID)
+          localExecutionRequests.restoreAgentCancellationRequest(threadID: pendingCancellation.threadID)
           runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
           appendEntry(
-            to: pendingThreadID,
+            to: pendingCancellation.threadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
           )
         }

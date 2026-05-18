@@ -15,17 +15,17 @@ extension AppViewModel {
     await loadThreadHistory(threadID: result.threadID)
   }
 
-  func requestPendingTurnCancellation() -> String? {
-    guard let threadID = localExecutionRequests.requestAgentCancellationThreadID() else {
+  func requestPendingTurnCancellation() -> PendingLocalExecutionCancellation? {
+    guard let cancellation = localExecutionRequests.requestAgentCancellation() else {
       return nil
     }
 
-    runtimeDetail = TimelineEventPresenter.cancellingTurnDetail
+    runtimeDetail = pendingCancellationDetail(cancellation.kind)
     refreshThreadPreview(
-      threadID: threadID,
-      preview: TimelineEventPresenter.cancellingResponsePreview
+      threadID: cancellation.threadID,
+      preview: pendingCancellationPreview(cancellation.kind)
     )
-    return threadID
+    return cancellation
   }
 
   func requestPendingApprovalCancellation() -> String? {
@@ -39,6 +39,24 @@ extension AppViewModel {
       preview: TimelineEventPresenter.cancellingResponsePreview
     )
     return threadID
+  }
+
+  private func pendingCancellationDetail(_ kind: PendingLocalExecutionKind) -> String {
+    switch kind {
+    case .agentTurn:
+      return TimelineEventPresenter.cancellingTurnDetail
+    case .pluginCommand:
+      return TimelineEventPresenter.cancellingPluginCommandDetail
+    }
+  }
+
+  private func pendingCancellationPreview(_ kind: PendingLocalExecutionKind) -> String {
+    switch kind {
+    case .agentTurn:
+      return TimelineEventPresenter.cancellingResponsePreview
+    case .pluginCommand:
+      return TimelineEventPresenter.cancellingPluginCommandPreview
+    }
   }
 }
 

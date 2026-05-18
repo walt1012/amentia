@@ -1,5 +1,15 @@
 import Foundation
 
+enum PendingLocalExecutionKind {
+  case agentTurn
+  case pluginCommand
+}
+
+struct PendingLocalExecutionCancellation {
+  let threadID: String
+  let kind: PendingLocalExecutionKind
+}
+
 final class LocalExecutionRequestCoordinator {
   private let agentRequest = PendingRuntimeRequestState()
   private let approvalExecution = PendingRuntimeRequestState()
@@ -17,7 +27,11 @@ final class LocalExecutionRequestCoordinator {
   }
 
   func beginAgentRequest(threadID: String) -> UUID {
-    agentRequest.begin(threadID: threadID)
+    agentRequest.begin(threadID: threadID, kind: .agentTurn)
+  }
+
+  func beginPluginCommandRequest(threadID: String) -> UUID {
+    agentRequest.begin(threadID: threadID, kind: .pluginCommand)
   }
 
   func bindAgentRequest(task: Task<Void, Never>, requestID: UUID) {
@@ -28,7 +42,7 @@ final class LocalExecutionRequestCoordinator {
     agentRequest.clear(requestID: requestID)
   }
 
-  func requestAgentCancellationThreadID() -> String? {
+  func requestAgentCancellation() -> PendingLocalExecutionCancellation? {
     agentRequest.requestCancellation()
   }
 
@@ -65,6 +79,7 @@ final class LocalExecutionRequestCoordinator {
 private final class PendingRuntimeRequestState {
   private let taskSlot = CancellableTaskSlot()
   private(set) var threadID: String?
+  private var kind: PendingLocalExecutionKind?
   private var cancellationRequested = false
 
   var isPending: Bool {
@@ -75,9 +90,10 @@ private final class PendingRuntimeRequestState {
     taskSlot.isActive && threadID != nil && !cancellationRequested
   }
 
-  func begin(threadID: String) -> UUID {
+  func begin(threadID: String, kind: PendingLocalExecutionKind) -> UUID {
     let requestID = taskSlot.replace()
     self.threadID = threadID
+    self.kind = kind
     cancellationRequested = false
     return requestID
   }
@@ -101,16 +117,17 @@ private final class PendingRuntimeRequestState {
 
   private func clearMetadata() {
     threadID = nil
+    kind = nil
     cancellationRequested = false
   }
 
-  func requestCancellation() -> String? {
-    guard canCancel, let threadID else {
+  func requestCancellation() -> PendingLocalExecutionCancellation? {
+    guard canCancel, let threadID, let kind else {
       return nil
     }
 
     cancellationRequested = true
-    return threadID
+    return PendingLocalExecutionCancellation(threadID: threadID, kind: kind)
   }
 
   func restoreCancellationRequest(threadID: String) {

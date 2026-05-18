@@ -14,10 +14,12 @@ enum TimelineEventPresenter {
   static let pluginCommandFailedDetail =
     "Local plugin command failed. Inspect the failed runner item for logs."
   static let cancellingTurnDetail = "Cancelling local execution..."
+  static let cancellingPluginCommandDetail = "Cancelling local plugin command..."
 
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
   static let cancelledPluginCommandPreview = "Cancelled plugin command"
+  static let cancellingPluginCommandPreview = "Cancelling plugin command"
   static let blockedPluginCommandPreview = "Plugin command blocked"
   static let failedPluginCommandPreview = "Plugin command failed"
 
