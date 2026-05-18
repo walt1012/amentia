@@ -42,7 +42,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let plugin_command_count = context.plugin_state.command_capability_count();
   let enabled_plugin_command_count = context.plugin_state.enabled_command_capability_count();
 
-  let status = readiness_status(
+  let status = readiness_status(ReadinessStatusInput {
     model_ready,
     workspace_ready,
     thread_ready,
@@ -52,7 +52,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     running_approval_count,
     running_plugin_command_count,
     running_workspace_search_count,
-  );
+  });
   let context_window = model_health
     .metrics
     .get("contextSize")
@@ -146,7 +146,7 @@ fn has_first_request(context: &RuntimeContext) -> bool {
     .unwrap_or(false)
 }
 
-fn readiness_status(
+struct ReadinessStatusInput {
   model_ready: bool,
   workspace_ready: bool,
   thread_ready: bool,
@@ -156,7 +156,21 @@ fn readiness_status(
   running_approval_count: usize,
   running_plugin_command_count: usize,
   running_workspace_search_count: usize,
-) -> &'static str {
+}
+
+fn readiness_status(input: ReadinessStatusInput) -> &'static str {
+  let ReadinessStatusInput {
+    model_ready,
+    workspace_ready,
+    thread_ready,
+    pending_approval_count,
+    active_turn_count,
+    running_turn_count,
+    running_approval_count,
+    running_plugin_command_count,
+    running_workspace_search_count,
+  } = input;
+
   if !model_ready || !workspace_ready || !thread_ready {
     "setup_required"
   } else if pending_approval_count > 0 {
@@ -177,44 +191,84 @@ fn readiness_status(
 mod tests {
   use super::*;
 
+  fn status_input() -> ReadinessStatusInput {
+    ReadinessStatusInput {
+      model_ready: true,
+      workspace_ready: true,
+      thread_ready: true,
+      pending_approval_count: 0,
+      active_turn_count: 0,
+      running_turn_count: 0,
+      running_approval_count: 0,
+      running_plugin_command_count: 0,
+      running_workspace_search_count: 0,
+    }
+  }
+
   #[test]
   fn readiness_status_prioritizes_setup_requirements() {
-    let status = readiness_status(false, true, true, 1, 1, 1, 1, 1, 1);
+    let status = readiness_status(ReadinessStatusInput {
+      model_ready: false,
+      pending_approval_count: 1,
+      active_turn_count: 1,
+      running_turn_count: 1,
+      running_approval_count: 1,
+      running_plugin_command_count: 1,
+      running_workspace_search_count: 1,
+      ..status_input()
+    });
 
     assert_eq!(status, "setup_required");
   }
 
   #[test]
   fn readiness_status_reports_pending_approvals_before_running_work() {
-    let status = readiness_status(true, true, true, 1, 1, 1, 1, 1, 1);
+    let status = readiness_status(ReadinessStatusInput {
+      pending_approval_count: 1,
+      active_turn_count: 1,
+      running_turn_count: 1,
+      running_approval_count: 1,
+      running_plugin_command_count: 1,
+      running_workspace_search_count: 1,
+      ..status_input()
+    });
 
     assert_eq!(status, "needs_approval");
   }
 
   #[test]
   fn readiness_status_reports_running_when_work_is_active() {
-    let status = readiness_status(true, true, true, 0, 1, 0, 0, 0, 0);
+    let status = readiness_status(ReadinessStatusInput {
+      active_turn_count: 1,
+      ..status_input()
+    });
 
     assert_eq!(status, "running");
   }
 
   #[test]
   fn readiness_status_reports_running_when_plugin_command_is_active() {
-    let status = readiness_status(true, true, true, 0, 0, 0, 0, 1, 0);
+    let status = readiness_status(ReadinessStatusInput {
+      running_plugin_command_count: 1,
+      ..status_input()
+    });
 
     assert_eq!(status, "running");
   }
 
   #[test]
   fn readiness_status_reports_running_when_workspace_search_is_active() {
-    let status = readiness_status(true, true, true, 0, 0, 0, 0, 0, 1);
+    let status = readiness_status(ReadinessStatusInput {
+      running_workspace_search_count: 1,
+      ..status_input()
+    });
 
     assert_eq!(status, "running");
   }
 
   #[test]
   fn readiness_status_reports_ready_when_setup_is_complete_and_idle() {
-    let status = readiness_status(true, true, true, 0, 0, 0, 0, 0, 0);
+    let status = readiness_status(status_input());
 
     assert_eq!(status, "ready");
   }
