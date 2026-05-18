@@ -45,6 +45,10 @@ def runtime_stderr_tail(env: Mapping[str, str], max_lines: int = 80) -> str:
   return "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:])
 
 
+def write_json_file(path: Path, value: dict) -> None:
+  path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+
+
 def stop_runtime(process: subprocess.Popen[str]) -> None:
   if process.poll() is not None:
     return
@@ -331,221 +335,191 @@ def main() -> int:
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant" / "commands").mkdir(parents=True, exist_ok=True)
-  (plugin_dir / "workspace-notes" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "workspace-notes",
-        "version": "0.1.0",
-        "displayName": "Workspace Notes",
-        "description": "Captures reusable workspace notes and preferences for local threads.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:workspace.capture-note",
-          "prompt_pack:workspace.notes",
-          "settings:workspace.preferences",
-        ],
-        "permissions": [
-          "file.read",
-          "file.write",
-        ],
-        "defaultEnabled": True,
+  write_json_file(
+    plugin_dir / "workspace-notes" / "pith-plugin.json",
+    {
+      "name": "workspace-notes",
+      "version": "0.1.0",
+      "displayName": "Workspace Notes",
+      "description": "Captures reusable workspace notes and preferences for local threads.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:workspace.capture-note",
+        "prompt_pack:workspace.notes",
+        "settings:workspace.preferences",
+      ],
+      "permissions": [
+        "file.read",
+        "file.write",
+      ],
+      "defaultEnabled": True,
+    },
   )
-  (plugin_dir / "notion-connector" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "notion-connector",
-        "version": "0.1.0",
-        "displayName": "Notion Connector",
-        "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [],
-        "permissions": [
-          "network.outbound",
-          "mcp.connect",
-        ],
-        "mcpServers": [
-          {
-            "id": "notion",
-            "transport": "stdio",
-          },
-        ],
-        "appConnectors": [
-          {
-            "id": "notion",
-            "displayName": "Notion",
-            "service": "notion",
-            "homepage": "https://www.notion.so",
-          },
-        ],
-        "authPolicy": {
-          "type": "oauth2",
-          "required": True,
-          "scopes": [
-            "read_content",
-            "insert_content",
-          ],
-          "credentialStore": "local",
-        },
-        "defaultEnabled": False,
+  write_json_file(
+    plugin_dir / "notion-connector" / "pith-plugin.json",
+    {
+      "name": "notion-connector",
+      "version": "0.1.0",
+      "displayName": "Notion Connector",
+      "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [],
+      "permissions": [
+        "network.outbound",
+        "mcp.connect",
+      ],
+      "mcpServers": [
+        {
+          "id": "notion",
+          "transport": "stdio",
+        },
+      ],
+      "appConnectors": [
+        {
+          "id": "notion",
+          "displayName": "Notion",
+          "service": "notion",
+          "homepage": "https://www.notion.so",
+        },
+      ],
+      "authPolicy": {
+        "type": "oauth2",
+        "required": True,
+        "scopes": [
+          "read_content",
+          "insert_content",
+        ],
+        "credentialStore": "local",
+      },
+      "defaultEnabled": False,
+    },
   )
-  (plugin_dir / "workspace-notes" / "commands" / "workspace.capture-note.json").write_text(
-    json.dumps(
-      {
-        "title": "Capture Workspace Note",
-        "description": "Read the workspace README and prepare a concise note candidate.",
-        "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
-        "execution": {
-          "kind": "builtin.workspaceReadmeNote",
-        },
-        "memory": {
-          "noteTitle": "Workspace Capture",
-          "noteSource": "plugin.workspace-notes",
-          "noteTags": ["workspace", "preference", "plugin"],
-        },
+  write_json_file(
+    plugin_dir / "workspace-notes" / "commands" / "workspace.capture-note.json",
+    {
+      "title": "Capture Workspace Note",
+      "description": "Read the workspace README and prepare a concise note candidate.",
+      "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
+      "execution": {
+        "kind": "builtin.workspaceReadmeNote",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "memory": {
+        "noteTitle": "Workspace Capture",
+        "noteSource": "plugin.workspace-notes",
+        "noteTags": ["workspace", "preference", "plugin"],
+      },
+    },
   )
-  (plugin_dir / "shell-recorder" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "shell-recorder",
-        "version": "0.1.0",
-        "displayName": "Shell Recorder",
-        "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:shell.summarize-session",
-          "hook:shell.recorder",
-          "tool:shell.timeline",
-        ],
-        "permissions": [
-          "shell.exec",
-        ],
-        "defaultEnabled": False,
+  write_json_file(
+    plugin_dir / "shell-recorder" / "pith-plugin.json",
+    {
+      "name": "shell-recorder",
+      "version": "0.1.0",
+      "displayName": "Shell Recorder",
+      "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:shell.summarize-session",
+        "hook:shell.recorder",
+        "tool:shell.timeline",
+      ],
+      "permissions": [
+        "shell.exec",
+      ],
+      "defaultEnabled": False,
+    },
   )
-  (plugin_dir / "shell-recorder" / "commands" / "shell.summarize-session.json").write_text(
-    json.dumps(
-      {
-        "title": "Summarize Shell Session",
-        "description": "Ask Pith to explain recent shell work in a compact summary.",
-        "prompt": "Summarize the most relevant recent shell activity for this workspace.",
-        "execution": {
-          "kind": "builtin.shellSessionSummary",
-        },
+  write_json_file(
+    plugin_dir / "shell-recorder" / "commands" / "shell.summarize-session.json",
+    {
+      "title": "Summarize Shell Session",
+      "description": "Ask Pith to explain recent shell work in a compact summary.",
+      "prompt": "Summarize the most relevant recent shell activity for this workspace.",
+      "execution": {
+        "kind": "builtin.shellSessionSummary",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+    },
   )
-  (plugin_dir / "shell-recorder" / "hooks" / "shell.recorder.json").write_text(
-    json.dumps(
-      {
-        "title": "Record Shell Completion",
-        "description": "Capture a compact shell completion note in the thread timeline.",
-        "event": "shell.completed",
-        "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
-        "memory": {
-          "noteTitle": "Shell Completion",
-          "noteSource": "plugin.shell-recorder",
-          "noteTags": ["shell", "hook", "plugin"],
-        },
+  write_json_file(
+    plugin_dir / "shell-recorder" / "hooks" / "shell.recorder.json",
+    {
+      "title": "Record Shell Completion",
+      "description": "Capture a compact shell completion note in the thread timeline.",
+      "event": "shell.completed",
+      "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
+      "memory": {
+        "noteTitle": "Shell Completion",
+        "noteSource": "plugin.shell-recorder",
+        "noteTags": ["shell", "hook", "plugin"],
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+    },
   )
-  (plugin_dir / "review-assistant" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "review-assistant",
-        "version": "0.1.0",
-        "displayName": "Review Assistant",
-        "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:review.inspect-diff",
-          "prompt_pack:review.prompts",
-          "tool:diff.summaries",
-        ],
-        "permissions": [
-          "file.read",
-          "model.invoke",
-        ],
-        "defaultEnabled": True,
+  write_json_file(
+    plugin_dir / "review-assistant" / "pith-plugin.json",
+    {
+      "name": "review-assistant",
+      "version": "0.1.0",
+      "displayName": "Review Assistant",
+      "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:review.inspect-diff",
+        "prompt_pack:review.prompts",
+        "tool:diff.summaries",
+      ],
+      "permissions": [
+        "file.read",
+        "model.invoke",
+      ],
+      "defaultEnabled": True,
+    },
   )
-  (plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json").write_text(
-    json.dumps(
-      {
-        "title": "Inspect Current Diff",
-        "description": "Ask Pith to review the active workspace diff with a code review mindset.",
-        "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
-        "execution": {
-          "kind": "builtin.reviewDiffSummary",
-        },
+  write_json_file(
+    plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json",
+    {
+      "title": "Inspect Current Diff",
+      "description": "Ask Pith to review the active workspace diff with a code review mindset.",
+      "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
+      "execution": {
+        "kind": "builtin.reviewDiffSummary",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+    },
   )
   (plugin_import_dir / "focus-review" / "commands").mkdir(parents=True, exist_ok=True)
-  (plugin_import_dir / "focus-review" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "focus-review",
-        "version": "0.1.0",
-        "displayName": "Focus Review",
-        "description": "Installs into the local plugin catalog during the runtime smoke test.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:focus.review",
-        ],
-        "permissions": [
-          "file.read",
-        ],
-        "defaultEnabled": True,
+  write_json_file(
+    plugin_import_dir / "focus-review" / "pith-plugin.json",
+    {
+      "name": "focus-review",
+      "version": "0.1.0",
+      "displayName": "Focus Review",
+      "description": "Installs into the local plugin catalog during the runtime smoke test.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:focus.review",
+      ],
+      "permissions": [
+        "file.read",
+      ],
+      "defaultEnabled": True,
+    },
   )
-  (plugin_import_dir / "focus-review" / "commands" / "focus.review.json").write_text(
-    json.dumps(
-      {
-        "title": "Focus Review",
-        "description": "Prepare a focused local review summary.",
-        "prompt": "Review the latest local changes and keep the summary focused on the most important issues.",
-      },
-      indent=2,
-    ),
-    encoding="utf-8",
+  write_json_file(
+    plugin_import_dir / "focus-review" / "commands" / "focus.review.json",
+    {
+      "title": "Focus Review",
+      "description": "Prepare a focused local review summary.",
+      "prompt": "Review the latest local changes and keep the summary focused on the most important issues.",
+    },
   )
   workspace_dir.mkdir(parents=True, exist_ok=True)
   (workspace_dir / "README.md").write_text("# Pith\nMilestone 1 smoke test\n", encoding="utf-8")
