@@ -74,6 +74,8 @@ fn runtime_readiness_reports_agent_control_surface() {
   assert_eq!(result["metrics"]["activeTurnCount"], "0");
   assert_eq!(result["metrics"]["runningTurnCount"], "0");
   assert_eq!(result["metrics"]["runningApprovalCount"], "0");
+  assert_eq!(result["metrics"]["runningPluginCommandCount"], "0");
+  assert_eq!(result["metrics"]["runningWorkspaceSearchCount"], "0");
   assert!(result["metrics"]["shellOutputArtifactRoot"].is_string());
   assert_eq!(result["metrics"]["shellOutputArtifactRetainedRuns"], "20");
   assert_eq!(result["metrics"]["workspaceSearchMaxFileBytes"], "262144");

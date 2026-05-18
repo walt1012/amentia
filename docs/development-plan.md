@@ -70,7 +70,8 @@ Order of Work:
   model, runtime, web search, plugin, or sandbox readiness is missing.
 - Agent execution loop: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation request-scoped, cancellable, and
-  visible without blocking unrelated read-only UI updates.
+  visible without blocking unrelated read-only UI updates; runtime workers must
+  be reaped without waiting for another user request.
 - Native safety loop: keep workspace file tools symlink-safe, sandbox decisions
   visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
   by default, and recovery actions tied to trusted runtime metadata.

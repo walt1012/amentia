@@ -363,6 +363,7 @@ def assert_builtin_plugin_commands(
   }
   assert post_cancel_checks["executionControls"]["status"] == "ready"
   assert post_cancel_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
+  assert post_cancel_readiness["result"]["metrics"]["runningWorkspaceSearchCount"] == "0"
 
 def connector_by_id(connectors: list[dict], connector_id: str) -> dict:
   return next(
@@ -718,6 +719,7 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["runningTurnCount"] == "0"
     assert runtime_readiness["result"]["metrics"]["runningApprovalCount"] == "0"
     assert runtime_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningWorkspaceSearchCount"] == "0"
     assert_fresh_install_readiness(runtime_readiness, model_is_ready)
 
     model_bootstrap, _ = send_request(

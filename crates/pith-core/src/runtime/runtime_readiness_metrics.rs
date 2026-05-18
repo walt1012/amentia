@@ -140,6 +140,11 @@ fn insert_execution_metrics(
     "runningPluginCommandCount",
     execution_counts.running_plugin_command_count().to_string(),
   );
+  insert_metric(
+    metrics,
+    "runningWorkspaceSearchCount",
+    execution_counts.running_workspace_search_count().to_string(),
+  );
 }
 
 fn insert_memory_metrics(metrics: &mut HashMap<String, String>, context: &RuntimeContext) {

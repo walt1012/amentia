@@ -6,6 +6,7 @@ pub(super) fn execution_control_check(
   running_turn_count: usize,
   running_approval_count: usize,
   running_plugin_command_count: usize,
+  running_workspace_search_count: usize,
 ) -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "executionControls".to_string(),
@@ -16,6 +17,7 @@ pub(super) fn execution_control_check(
       running_turn_count,
       running_approval_count,
       running_plugin_command_count,
+      running_workspace_search_count,
     )
     .to_string(),
     detail: execution_control_detail(
@@ -24,6 +26,7 @@ pub(super) fn execution_control_check(
       running_turn_count,
       running_approval_count,
       running_plugin_command_count,
+      running_workspace_search_count,
     ),
   }
 }
@@ -44,6 +47,7 @@ fn execution_control_status(
   running_turn_count: usize,
   running_approval_count: usize,
   running_plugin_command_count: usize,
+  running_workspace_search_count: usize,
 ) -> &'static str {
   if pending_approval_count > 0 {
     "needs_approval"
@@ -51,6 +55,7 @@ fn execution_control_status(
     || running_turn_count > 0
     || running_approval_count > 0
     || running_plugin_command_count > 0
+    || running_workspace_search_count > 0
   {
     "running"
   } else {
@@ -64,6 +69,7 @@ fn execution_control_detail(
   running_turn_count: usize,
   running_approval_count: usize,
   running_plugin_command_count: usize,
+  running_workspace_search_count: usize,
 ) -> String {
   if pending_approval_count > 0 {
     return format!("{pending_approval_count} approval request(s) are pending.");
@@ -80,6 +86,11 @@ fn execution_control_detail(
   if running_plugin_command_count > 0 {
     return format!(
       "{running_plugin_command_count} plugin command execution(s) are active and cancellable."
+    );
+  }
+  if running_workspace_search_count > 0 {
+    return format!(
+      "{running_workspace_search_count} workspace search(es) are active and cancellable."
     );
   }
 

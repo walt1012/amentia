@@ -23,6 +23,7 @@ pub(crate) struct RuntimeExecutionCounts {
   running_turn_count: usize,
   running_approval_count: usize,
   running_plugin_command_count: usize,
+  running_workspace_search_count: usize,
 }
 
 impl RuntimeExecutionCounts {
@@ -44,6 +45,10 @@ impl RuntimeExecutionCounts {
 
   pub(crate) fn running_plugin_command_count(&self) -> usize {
     self.running_plugin_command_count
+  }
+
+  pub(crate) fn running_workspace_search_count(&self) -> usize {
+    self.running_workspace_search_count
   }
 }
 
@@ -74,6 +79,7 @@ impl RuntimeExecutionState {
       running_turn_count: self.running.running_turn_count(),
       running_approval_count: self.running.running_approval_count(),
       running_plugin_command_count: self.running.running_plugin_command_count(),
+      running_workspace_search_count: self.running.running_workspace_search_count(),
     }
   }
 
@@ -308,6 +314,19 @@ mod tests {
     assert!(cancellation.is_cancelled());
     state.remove_running_plugin_command("plugin-command-1");
     assert_eq!(state.counts().running_plugin_command_count(), 0);
+  }
+
+  #[test]
+  fn running_workspace_search_counts_until_removed() {
+    let mut state = RuntimeExecutionState::empty();
+    state.insert_running_workspace_search(
+      "workspace-search-1".to_string(),
+      GenerationCancellation::new(),
+    );
+
+    assert_eq!(state.counts().running_workspace_search_count(), 1);
+    state.remove_running_workspace_search("workspace-search-1");
+    assert_eq!(state.counts().running_workspace_search_count(), 0);
   }
 
   #[test]

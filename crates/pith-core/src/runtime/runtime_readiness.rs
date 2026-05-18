@@ -26,6 +26,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let running_turn_count = execution_counts.running_turn_count();
   let running_approval_count = execution_counts.running_approval_count();
   let running_plugin_command_count = execution_counts.running_plugin_command_count();
+  let running_workspace_search_count = execution_counts.running_workspace_search_count();
   let sandbox_status = context
     .workspace_state
     .current()
@@ -50,6 +51,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     running_turn_count,
     running_approval_count,
     running_plugin_command_count,
+    running_workspace_search_count,
   );
   let context_window = model_health
     .metrics
@@ -75,6 +77,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       running_turn_count,
       running_approval_count,
       running_plugin_command_count,
+      running_workspace_search_count,
     }),
     checks: vec![
       local_model_check(
@@ -93,6 +96,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
         running_turn_count,
         running_approval_count,
         running_plugin_command_count,
+        running_workspace_search_count,
       ),
       native_sandbox_check(&sandbox_status),
       web_search_check(&web_search_status, &network_permission_sources),
@@ -151,6 +155,7 @@ fn readiness_status(
   running_turn_count: usize,
   running_approval_count: usize,
   running_plugin_command_count: usize,
+  running_workspace_search_count: usize,
 ) -> &'static str {
   if !model_ready || !workspace_ready || !thread_ready {
     "setup_required"
@@ -160,6 +165,7 @@ fn readiness_status(
     || running_turn_count > 0
     || running_approval_count > 0
     || running_plugin_command_count > 0
+    || running_workspace_search_count > 0
   {
     "running"
   } else {
@@ -173,35 +179,42 @@ mod tests {
 
   #[test]
   fn readiness_status_prioritizes_setup_requirements() {
-    let status = readiness_status(false, true, true, 1, 1, 1, 1, 1);
+    let status = readiness_status(false, true, true, 1, 1, 1, 1, 1, 1);
 
     assert_eq!(status, "setup_required");
   }
 
   #[test]
   fn readiness_status_reports_pending_approvals_before_running_work() {
-    let status = readiness_status(true, true, true, 1, 1, 1, 1, 1);
+    let status = readiness_status(true, true, true, 1, 1, 1, 1, 1, 1);
 
     assert_eq!(status, "needs_approval");
   }
 
   #[test]
   fn readiness_status_reports_running_when_work_is_active() {
-    let status = readiness_status(true, true, true, 0, 1, 0, 0, 0);
+    let status = readiness_status(true, true, true, 0, 1, 0, 0, 0, 0);
 
     assert_eq!(status, "running");
   }
 
   #[test]
   fn readiness_status_reports_running_when_plugin_command_is_active() {
-    let status = readiness_status(true, true, true, 0, 0, 0, 0, 1);
+    let status = readiness_status(true, true, true, 0, 0, 0, 0, 1, 0);
+
+    assert_eq!(status, "running");
+  }
+
+  #[test]
+  fn readiness_status_reports_running_when_workspace_search_is_active() {
+    let status = readiness_status(true, true, true, 0, 0, 0, 0, 0, 1);
 
     assert_eq!(status, "running");
   }
 
   #[test]
   fn readiness_status_reports_ready_when_setup_is_complete_and_idle() {
-    let status = readiness_status(true, true, true, 0, 0, 0, 0, 0);
+    let status = readiness_status(true, true, true, 0, 0, 0, 0, 0, 0);
 
     assert_eq!(status, "ready");
   }

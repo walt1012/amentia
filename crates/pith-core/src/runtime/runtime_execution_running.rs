@@ -77,6 +77,10 @@ impl RuntimeRunningExecutionState {
     self.running_plugin_commands.len()
   }
 
+  pub(crate) fn running_workspace_search_count(&self) -> usize {
+    self.running_workspace_searches.len()
+  }
+
   pub(crate) fn insert_running_turn(
     &mut self,
     turn_id: String,
