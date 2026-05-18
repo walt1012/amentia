@@ -76,7 +76,8 @@ Order of Work:
   by default, and recovery actions tied to trusted runtime metadata.
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
   binary, exact x86_64 architecture validation, model metadata, plugin
-  manifests, no model weights, and launch smoke coverage.
+  manifests, no model weights, parallel executable builds, and launch smoke
+  coverage.
 
 Immediate Next:
 

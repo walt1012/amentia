@@ -124,6 +124,11 @@ def parse_args() -> argparse.Namespace:
     help="Use an existing pith-runtime-bin instead of building one.",
   )
   parser.add_argument(
+    "--app-binary",
+    type=Path,
+    help="Use an existing PithApp executable instead of the default Swift build output.",
+  )
+  parser.add_argument(
     "--skip-build",
     action="store_true",
     help="Package already-built Swift and runtime binaries.",
@@ -709,7 +714,7 @@ def main() -> int:
 
   try:
     if args.skip_build:
-      app_binary = repo_root / "apps" / "pith-macos" / ".build" / args.configuration / SWIFT_EXECUTABLE_NAME
+      app_binary = args.app_binary or repo_root / "apps" / "pith-macos" / ".build" / args.configuration / SWIFT_EXECUTABLE_NAME
       runtime_binary = args.runtime_binary or repo_root / "target" / args.configuration / RUNTIME_EXECUTABLE_NAME
       require_file(app_binary, "Swift app executable")
       require_file(runtime_binary, "runtime executable")

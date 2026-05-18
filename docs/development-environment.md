@@ -54,10 +54,10 @@ The canonical package command is:
 python3 scripts/package_macos_app.py
 ```
 
-CI runs this on `macos-15-intel`. The script builds the Swift shell for `x86_64`, builds
-`pith-runtime-bin`, assembles `Pith.app`, places executables under `Contents/MacOS`, bundles model
-metadata and bundled plugin manifests under `Contents/Resources`, validates the app bundle, and emits
-`artifacts/macos/Pith-macos-x86_64.zip`.
+CI runs this on `macos-15-intel`. The Swift app executable and `pith-runtime-bin` build in
+parallel jobs, then a packaging job downloads both executables, assembles `Pith.app`, places
+executables under `Contents/MacOS`, bundles model metadata and bundled plugin manifests under
+`Contents/Resources`, validates the app bundle, and emits `artifacts/macos/Pith-macos-x86_64.zip`.
 
 Package validation checks the product `Info.plist`, `PkgInfo`, `PithPackage.json`, x86_64-only
 binaries, first-use model download metadata, bundled plugin resource contracts, absence of model

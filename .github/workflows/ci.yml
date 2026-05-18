@@ -43,7 +43,33 @@ jobs:
       - name: Runtime smoke test
         run: python3 scripts/runtime_smoke_test.py
 
-  swift:
+  swift-app:
+    runs-on: macos-15-intel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Build x86_64 Swift app executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift build --package-path apps/pith-macos -c release --arch x86_64
+          bin_path="$(swift build --package-path apps/pith-macos -c release --arch x86_64 --show-bin-path)"
+          mkdir -p artifacts/prebuilt
+          cp "$bin_path/PithApp" artifacts/prebuilt/PithApp
+          chmod +x artifacts/prebuilt/PithApp
+
+      - name: Upload Swift app executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: PithApp-x86_64
+          path: artifacts/prebuilt/PithApp
+          if-no-files-found: error
+
+  macos-runtime:
     runs-on: macos-15-intel
     steps:
       - name: Checkout
@@ -52,14 +78,55 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Show Swift version
-        run: swift --version
+      - name: Build x86_64 runtime executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -p pith-runtime-bin --release
+          mkdir -p artifacts/prebuilt
+          cp target/release/pith-runtime-bin artifacts/prebuilt/pith-runtime-bin
+          chmod +x artifacts/prebuilt/pith-runtime-bin
+
+      - name: Upload runtime executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: pith-runtime-bin-x86_64
+          path: artifacts/prebuilt/pith-runtime-bin
+          if-no-files-found: error
+
+  swift:
+    runs-on: macos-15-intel
+    needs:
+      - swift-app
+      - macos-runtime
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Swift app executable
+        uses: actions/download-artifact@v4
+        with:
+          name: PithApp-x86_64
+          path: artifacts/prebuilt
+
+      - name: Download runtime executable
+        uses: actions/download-artifact@v4
+        with:
+          name: pith-runtime-bin-x86_64
+          path: artifacts/prebuilt
+
+      - name: Restore executable permissions
+        run: chmod +x artifacts/prebuilt/PithApp artifacts/prebuilt/pith-runtime-bin
 
       - name: Build x86_64 macOS app bundle
         shell: bash
         run: |
           set +e
-          python3 scripts/package_macos_app.py 2>&1 | tee macos-package.log
+          python3 scripts/package_macos_app.py \
+            --skip-build \
+            --app-binary artifacts/prebuilt/PithApp \
+            --runtime-binary artifacts/prebuilt/pith-runtime-bin \
+            2>&1 | tee macos-package.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             {
