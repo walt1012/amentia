@@ -1119,6 +1119,8 @@ def main() -> int:
       shutil.rmtree(plugin_dir)
     if plugin_import_dir.exists():
       shutil.rmtree(plugin_import_dir)
+    if state_dir.exists():
+      shutil.rmtree(state_dir)
     if workspace_dir.exists():
       shutil.rmtree(workspace_dir)
 

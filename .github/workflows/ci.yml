@@ -73,3 +73,4 @@ jobs:
         with:
           name: Pith-macos-x86_64
           path: artifacts/macos/Pith-macos-x86_64.zip
+          if-no-files-found: error

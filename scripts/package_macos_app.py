@@ -174,6 +174,8 @@ def package_app(
   skip_ad_hoc_sign: bool,
   no_zip: bool,
 ) -> Path | None:
+  validate_swift_package_rules(repo_root)
+
   app_path = dist_dir / f"{APP_NAME}.app"
   contents_path = app_path / "Contents"
   macos_path = contents_path / "MacOS"
@@ -214,6 +216,19 @@ def reset_directory(path: Path) -> None:
 def require_file(path: Path, label: str) -> None:
   if not path.is_file():
     raise FileNotFoundError(f"Missing {label}: {path}")
+
+
+def validate_swift_package_rules(repo_root: Path) -> None:
+  package_path = repo_root / "apps" / "pith-macos" / "Package.swift"
+  text = package_path.read_text(encoding="utf-8")
+  required_fragments = {
+    "minimum macOS 12 platform": ".macOS(.v12)",
+    "PithApp executable product": 'name: "PithApp"',
+    "PithApp source target": 'path: "Sources/PithApp"',
+  }
+  for label, fragment in required_fragments.items():
+    if fragment not in text:
+      raise RuntimeError(f"Swift package is missing {label}: {package_path}")
 
 
 def write_info_plist(path: Path) -> None:
