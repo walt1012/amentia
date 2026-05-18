@@ -150,81 +150,15 @@ enum RuntimeReadinessPresenter {
       return ReadinessStepSummary(id: "tools", label: "Tools", detail: "Waiting", tone: .neutral)
     }
 
-    let toolChecks = runtimeToolChecks(snapshot.runtimeReadinessChecks)
-    guard !toolChecks.isEmpty else {
+    guard RuntimeToolReadinessPresenter.hasToolChecks(snapshot.runtimeReadinessChecks) else {
       return ReadinessStepSummary(id: "tools", label: "Tools", detail: "Waiting", tone: .neutral)
-    }
-
-    guard let issue = toolChecks.first(where: { !isReadyToolStatus($0.status) }) else {
-      return ReadinessStepSummary(id: "tools", label: "Tools", detail: "Ready", tone: .ready)
     }
 
     return ReadinessStepSummary(
       id: "tools",
       label: "Tools",
-      detail: toolReadinessDetail(issue),
-      tone: toolReadinessTone(issue.status)
+      detail: RuntimeToolReadinessPresenter.timelineDetail(snapshot.runtimeReadinessChecks),
+      tone: RuntimeToolReadinessPresenter.timelineTone(snapshot.runtimeReadinessChecks)
     )
-  }
-
-  private static func runtimeToolChecks(
-    _ checks: [RuntimeReadinessCheckSummary]
-  ) -> [RuntimeReadinessCheckSummary] {
-    let toolIDs = ["webSearch", "nativeSandbox", "plugins"]
-    return toolIDs.compactMap { id in
-      checks.first(where: { $0.id == id })
-    }
-  }
-
-  private static func isReadyToolStatus(_ status: String) -> Bool {
-    status == "ready"
-  }
-
-  private static func toolReadinessDetail(_ check: RuntimeReadinessCheckSummary) -> String {
-    let label: String
-    switch check.id {
-    case "webSearch":
-      label = "Web"
-    case "nativeSandbox":
-      label = "Sandbox"
-    case "plugins":
-      label = "Plugins"
-    default:
-      label = check.title
-    }
-
-    return "\(label) \(readinessStatusTitle(check.status))"
-  }
-
-  private static func readinessStatusTitle(_ status: String) -> String {
-    switch status {
-    case "limited":
-      return "Limited"
-    case "optional":
-      return "Optional"
-    case "setup_required":
-      return "Setup"
-    case "running":
-      return "Running"
-    case "needs_approval":
-      return "Approval"
-    case "failed":
-      return "Failed"
-    case "blocked":
-      return "Blocked"
-    default:
-      return status.capitalized
-    }
-  }
-
-  private static func toolReadinessTone(_ status: String) -> StatusTone {
-    switch status {
-    case "running":
-      return .active
-    case "limited", "optional", "setup_required", "needs_approval":
-      return .warning
-    default:
-      return .danger
-    }
   }
 }

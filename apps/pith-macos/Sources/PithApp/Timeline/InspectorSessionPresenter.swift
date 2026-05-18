@@ -84,7 +84,7 @@ enum InspectorSessionPresenter {
     let modelSummary = snapshot.isLocalModelReady ? "Model ready" : "Model pending"
     let readinessSummary =
       snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
-    let toolSummary = webSearchReadinessSummary(snapshot.runtimeReadinessChecks)
+    let toolSummary = RuntimeToolReadinessPresenter.inspectorSummary(snapshot.runtimeReadinessChecks)
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
     return [readinessSummary, toolSummary, workspaceSummary, threadSummary]
@@ -107,20 +107,4 @@ enum InspectorSessionPresenter {
     }
   }
 
-  private static func webSearchReadinessSummary(_ checks: [RuntimeReadinessCheckSummary]) -> String? {
-    guard let check = checks.first(where: { $0.id == "webSearch" }) else {
-      return nil
-    }
-
-    switch check.status {
-    case "ready":
-      return nil
-    case "limited":
-      return "Web search limited"
-    case "setup_required":
-      return "Web search setup"
-    default:
-      return "Web search \(check.status)"
-    }
-  }
 }
