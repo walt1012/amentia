@@ -356,8 +356,8 @@ mod tests {
     let _env_guard = EnvVarGuard::set(WEB_SEARCH_FIXTURE_PATH_ENV, fixture_path.as_os_str());
 
     let status = web_search_status();
-    let results = web_search_with_cancellation("Pith local model", 5, || false)
-      .expect("fixture web search");
+    let results =
+      web_search_with_cancellation("Pith local model", 5, || false).expect("fixture web search");
 
     let _ = std::fs::remove_file(&fixture_path);
     assert_eq!(status.client, WEB_SEARCH_FIXTURE_CLIENT);
