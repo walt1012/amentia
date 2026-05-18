@@ -11,6 +11,12 @@ import time
 from pathlib import Path
 
 
+NOTION_CONNECTOR_ID = "notion-connector::notion"
+NOTION_CREDENTIAL_LABEL = "Smoke Notion"
+NOTION_CREDENTIAL_SECRET = "notion-smoke-token"
+LOCAL_CREDENTIAL_PROVIDER = "pith.localCredentialProvider"
+
+
 def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
   return subprocess.Popen(
     ["cargo", "run", "-p", "pith-runtime-bin"],
@@ -248,6 +254,40 @@ def assert_builtin_plugin_commands(
   }
   assert post_cancel_checks["executionControls"]["status"] == "ready"
   assert post_cancel_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
+
+def connector_by_id(connectors: list[dict], connector_id: str) -> dict:
+  return next(
+    connector
+    for connector in connectors
+    if connector["connectorId"] == connector_id
+  )
+
+def assert_notion_connector_disabled(connector: dict) -> None:
+  assert connector["status"] == "disabled"
+  assert connector["authType"] == "oauth2"
+  assert connector["credentialStore"] == "local"
+  assert connector["authScopes"] == ["read_content", "insert_content"]
+
+def assert_notion_connector_authorized(connector: dict) -> None:
+  assert connector["status"] == "ready"
+  assert connector["authStatus"] == "authorized"
+  assert connector["credentialPresent"] is True
+  assert connector["credentialSecretPresent"] is True
+  assert connector["credentialProvider"] == LOCAL_CREDENTIAL_PROVIDER
+  assert connector["credentialHandle"] == NOTION_CONNECTOR_ID
+  assert connector["credentialLabel"] == NOTION_CREDENTIAL_LABEL
+  assert isinstance(connector["credentialUpdatedAt"], int)
+
+def assert_notion_connector_cleared(connector: dict) -> None:
+  assert connector["status"] == "needsAuth"
+  assert connector["authStatus"] == "needsAuth"
+  assert connector["credentialPresent"] is False
+  assert connector["credentialSecretPresent"] is False
+  assert "credentialProvider" not in connector
+  assert "credentialHandle" not in connector
+
+def assert_notion_secret_not_leaked(payload: dict) -> None:
+  assert NOTION_CREDENTIAL_SECRET not in json.dumps(payload)
 
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
@@ -730,24 +770,17 @@ def main() -> int:
       },
     )
     connectors = connector_registry["result"]["connectors"]
-    notion_connector = next(
-      connector
-      for connector in connectors
-      if connector["connectorId"] == "notion-connector::notion"
-    )
-    assert notion_connector["status"] == "disabled"
-    assert notion_connector["authType"] == "oauth2"
-    assert notion_connector["credentialStore"] == "local"
-    assert notion_connector["authScopes"] == ["read_content", "insert_content"]
+    notion_connector = connector_by_id(connectors, NOTION_CONNECTOR_ID)
+    assert_notion_connector_disabled(notion_connector)
     disabled_connector_authorize, _ = send_request(
       process,
       {
         "id": 120,
         "method": "plugin/connectorAuthorize",
         "params": {
-          "connectorId": "notion-connector::notion",
-          "credentialLabel": "Smoke Notion",
-          "credentialSecret": "notion-smoke-token",
+          "connectorId": NOTION_CONNECTOR_ID,
+          "credentialLabel": NOTION_CREDENTIAL_LABEL,
+          "credentialSecret": NOTION_CREDENTIAL_SECRET,
         },
       },
     )
@@ -773,22 +806,15 @@ def main() -> int:
         "id": 122,
         "method": "plugin/connectorAuthorize",
         "params": {
-          "connectorId": "notion-connector::notion",
-          "credentialLabel": "Smoke Notion",
-          "credentialSecret": "notion-smoke-token",
+          "connectorId": NOTION_CONNECTOR_ID,
+          "credentialLabel": NOTION_CREDENTIAL_LABEL,
+          "credentialSecret": NOTION_CREDENTIAL_SECRET,
         },
       },
     )
     authorized_notion = authorized_connector["result"]["connector"]
-    assert authorized_notion["status"] == "ready"
-    assert authorized_notion["authStatus"] == "authorized"
-    assert authorized_notion["credentialPresent"] is True
-    assert authorized_notion["credentialSecretPresent"] is True
-    assert authorized_notion["credentialProvider"] == "pith.localCredentialProvider"
-    assert authorized_notion["credentialHandle"] == "notion-connector::notion"
-    assert authorized_notion["credentialLabel"] == "Smoke Notion"
-    assert isinstance(authorized_notion["credentialUpdatedAt"], int)
-    assert "notion-smoke-token" not in json.dumps(authorized_connector)
+    assert_notion_connector_authorized(authorized_notion)
+    assert_notion_secret_not_leaked(authorized_connector)
 
     hook_registry, _ = send_request(
       process,
@@ -992,20 +1018,12 @@ def main() -> int:
         "method": "plugin/connectorRegistry",
       },
     )
-    recovered_notion = next(
-      connector
-      for connector in recovered_connector_registry["result"]["connectors"]
-      if connector["connectorId"] == "notion-connector::notion"
+    recovered_notion = connector_by_id(
+      recovered_connector_registry["result"]["connectors"],
+      NOTION_CONNECTOR_ID,
     )
-    assert recovered_notion["status"] == "ready"
-    assert recovered_notion["authStatus"] == "authorized"
-    assert recovered_notion["credentialPresent"] is True
-    assert recovered_notion["credentialSecretPresent"] is True
-    assert recovered_notion["credentialProvider"] == "pith.localCredentialProvider"
-    assert recovered_notion["credentialHandle"] == "notion-connector::notion"
-    assert recovered_notion["credentialLabel"] == "Smoke Notion"
-    assert isinstance(recovered_notion["credentialUpdatedAt"], int)
-    assert "notion-smoke-token" not in json.dumps(recovered_connector_registry)
+    assert_notion_connector_authorized(recovered_notion)
+    assert_notion_secret_not_leaked(recovered_connector_registry)
 
     cleared_connector, _ = send_request(
       process,
@@ -1013,17 +1031,41 @@ def main() -> int:
         "id": 58,
         "method": "plugin/connectorClearCredential",
         "params": {
-          "connectorId": "notion-connector::notion",
+          "connectorId": NOTION_CONNECTOR_ID,
         },
       },
     )
     cleared_notion = cleared_connector["result"]["connector"]
-    assert cleared_notion["status"] == "needsAuth"
-    assert cleared_notion["authStatus"] == "needsAuth"
-    assert cleared_notion["credentialPresent"] is False
-    assert cleared_notion["credentialSecretPresent"] is False
-    assert "credentialProvider" not in cleared_notion
-    assert "credentialHandle" not in cleared_notion
+    assert_notion_connector_cleared(cleared_notion)
+
+    process = restart_runtime(process, repo_root, env)
+    cleared_recovery_initialize, _ = send_request(
+      process,
+      {
+        "id": 59,
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "runtime-smoke-test",
+            "version": "0.1.0",
+          }
+        },
+      },
+    )
+    assert cleared_recovery_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+
+    cleared_recovery_registry, _ = send_request(
+      process,
+      {
+        "id": 124,
+        "method": "plugin/connectorRegistry",
+      },
+    )
+    cleared_recovered_notion = connector_by_id(
+      cleared_recovery_registry["result"]["connectors"],
+      NOTION_CONNECTOR_ID,
+    )
+    assert_notion_connector_cleared(cleared_recovered_notion)
 
     turn, _ = send_request(
       process,
