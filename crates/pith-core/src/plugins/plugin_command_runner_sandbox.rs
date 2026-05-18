@@ -236,15 +236,11 @@ mod tests {
       display_name: "Test Workspace".to_string(),
     };
 
-    let error = match PluginRunnerSandbox::prepare(
-      Some(&workspace),
-      "notion/sync",
-      &plugin_root,
-      false,
-    ) {
-      Ok(_) => panic!("parent symlink should fail"),
-      Err(error) => error,
-    };
+    let error =
+      match PluginRunnerSandbox::prepare(Some(&workspace), "notion/sync", &plugin_root, false) {
+        Ok(_) => panic!("parent symlink should fail"),
+        Err(error) => error,
+      };
 
     assert_eq!(error.0, -32054);
     assert!(error.1.contains("crosses a symlink"));
