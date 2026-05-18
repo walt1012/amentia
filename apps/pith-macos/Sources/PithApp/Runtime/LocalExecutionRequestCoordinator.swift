@@ -2,6 +2,7 @@ import Foundation
 
 enum PendingLocalExecutionKind {
   case agentTurn
+  case approvalExecution
   case pluginCommand
 }
 
@@ -51,7 +52,7 @@ final class LocalExecutionRequestCoordinator {
   }
 
   func beginApprovalExecution(threadID: String) -> UUID {
-    approvalExecution.begin(threadID: threadID)
+    approvalExecution.begin(threadID: threadID, kind: .approvalExecution)
   }
 
   func bindApprovalExecution(task: Task<Void, Never>, requestID: UUID) {
@@ -63,7 +64,7 @@ final class LocalExecutionRequestCoordinator {
   }
 
   func requestApprovalCancellationThreadID() -> String? {
-    approvalExecution.requestCancellation()
+    approvalExecution.requestCancellation()?.threadID
   }
 
   func restoreApprovalCancellationRequest(threadID: String) {

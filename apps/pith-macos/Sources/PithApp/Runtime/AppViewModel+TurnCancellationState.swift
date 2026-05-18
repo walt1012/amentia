@@ -43,7 +43,7 @@ extension AppViewModel {
 
   private func pendingCancellationDetail(_ kind: PendingLocalExecutionKind) -> String {
     switch kind {
-    case .agentTurn:
+    case .agentTurn, .approvalExecution:
       return TimelineEventPresenter.cancellingTurnDetail
     case .pluginCommand:
       return TimelineEventPresenter.cancellingPluginCommandDetail
@@ -52,7 +52,7 @@ extension AppViewModel {
 
   private func pendingCancellationPreview(_ kind: PendingLocalExecutionKind) -> String {
     switch kind {
-    case .agentTurn:
+    case .agentTurn, .approvalExecution:
       return TimelineEventPresenter.cancellingResponsePreview
     case .pluginCommand:
       return TimelineEventPresenter.cancellingPluginCommandPreview
