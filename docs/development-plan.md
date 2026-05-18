@@ -43,67 +43,51 @@ owns durable records.
 
 ## Closed Foundation
 
-Milestones 1-4 are closed. Pith now has guided local model setup, resumable
-downloads, verified single-model activation, runtime recovery, bounded shell
-and model work, workspace-safe file tools, web search, native sandbox
-diagnostics, compact context packing, progressive inspector surfaces, typed
-plugin registries, and a real third-party connector plugin loop.
+Milestones 1-4 are closed. Keep their details in git history, not in this plan.
 
-Done:
+Closed capabilities:
 
-- Registry and lifecycle: typed plugin, command, connector, hook, capability
-  registries; local install/remove; inspect-before-install; compact state
-  diagnostics; stable identifiers; precise manifest contract repair hints.
-- Execution: bounded `stdio` and MCP stdio runners with sandbox diagnostics,
-  permission gates, approval gating, cancellation-safe retries, deterministic
-  input/output contracts, model-independent command planning, invalid-envelope
-  repair hints, MCP content diagnostics, and runner memory notes plus MCP result
-  source attribution.
-- Connectors: honest `none` or `local` credential stores, connector auth and
-  clear flows, removal cleanup, source-revealable Notion-style connector
-  contract, and no hidden Keychain or remote MCP claims.
-- Recovery loop: plugin inspect/install, enable/remove, route, permission,
-  approval, connector, runner, completion-stage, and RPC failures carry compact
-  repair metadata plus retry input context; the third-party connector smoke path
-  covers inspect, install, enable, pre-auth blockers, authorize, approve, fail,
-  repair, retry, and refresh-after-fix without restarting the app.
-- Timeline trust: approval, run, blocked, failed, and resolved cards preserve
-  command IDs, plugin IDs, connector IDs, install blockers, input context,
-  source paths where available, runtime status, and recovery hints without
-  leaking credential handles; inspector summaries surface blockers, and recovery
-  actions stay limited to issue cards or blocked rows; plugin lifecycle,
-  connector, source reveal, and lock-light catalog refresh operations update
-  visible recovery status without forcing runtime relaunch.
-
-M4 Exit Gate:
-
-- A third-party connector plugin can complete install, inspect, enable,
-  authorize, run, repair, and retry without hidden terminal knowledge.
-- Invalid manifests explain the exact unsupported contract and how to fix it.
-- Fixing a local manifest or runner can be followed by in-app refresh.
-- Plugin output stays deterministic enough for the small local model.
+- Guided local model setup, resumable downloads, verified single-model
+  activation, runtime recovery, bounded shell and model work, workspace-safe file
+  tools, web search, native sandbox diagnostics, compact context packing, and
+  progressive inspector surfaces.
+- Typed plugin registries, local install/remove, inspect-before-install,
+  enable/disable, connector auth, bounded `stdio` and MCP stdio runners,
+  permission gates, approval gates, deterministic output envelopes, runner
+  memory notes, repair hints, and retry flows.
+- Timeline trust boundaries for approvals, plugin runs, connector blockers,
+  source reveal, refresh recovery, runtime status, and credential-safe metadata.
 
 ## Current Milestone: M5 Daily Driver Hardening
 
 M5 turns the working local agent platform into a dependable daily-driver app
 without expanding into a feature zoo.
 
-Active Focus:
+Order of Work:
 
-- Validate the first-run path: download model, open workspace, run local work.
-- Keep runtime readiness, web search, and packaged app launch smoke aligned with
-  the fresh-install path.
-- Let the local planner choose default web search candidates when the Web Search
-  plugin and model are ready; keep explicit web search requests deterministic.
-- Harden native sandbox, approvals, plugin cancellation, and recovery boundaries.
-- Keep model verification explicit after download or activation; avoid heavy
-  integrity work on app launch or UI refresh.
-- Keep test fixtures out of production runtime environments, and keep runtime
-  cancellation owned by the runtime instead of only the UI task layer.
-- Keep long-running work request-scoped: model activation, workspace search,
-  web search, plugins, and turns must not cross-cancel or switch state mid-turn.
-- Polish only the primary coding flow; keep plugin UI progressive and compact.
-- Keep the x86_64 macOS 12 app bundle signed-ready with validated resources.
+- First-run daily loop: download or resume a model, activate it, open a
+  workspace, create a thread, send the first request, and recover in-app when
+  model, runtime, web search, plugin, or sandbox readiness is missing.
+- Agent execution loop: keep turns, approvals, workspace search, web search,
+  plugin commands, and model activation request-scoped, cancellable, and
+  visible without blocking unrelated read-only UI updates.
+- Native safety loop: keep workspace file tools symlink-safe, sandbox decisions
+  visible, plugin runner output untrusted by default, and recovery actions tied
+  to trusted runtime metadata.
+- Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
+  binary, model metadata, plugin manifests, no model weights, and launch smoke
+  coverage.
+
+Immediate Next:
+
+- Finish readiness accuracy for plugin-backed Web Search and other optional
+  tools, so UI status matches actual permission gates.
+- Tighten sandbox diagnostics around plugin execution before adding broader
+  connector marketplace behavior.
+- Keep plugin UI compact and progressive; do not expand the inspector into an
+  always-visible admin console.
+- Continue architecture cleanup only when it clarifies ownership, failure
+  boundaries, or cancellation behavior.
 
 M5 Exit Gate:
 

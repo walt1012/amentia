@@ -1,4 +1,4 @@
-use super::test_support::request;
+use super::test_support::{bundled_plugin_entry, replace_plugin_catalog, request};
 use super::*;
 use pith_protocol::methods;
 use serde_json::json;
@@ -99,6 +99,8 @@ fn runtime_readiness_reports_agent_control_surface() {
     Some("curl" | "fixture")
   ));
   assert!(result["metrics"]["webSearchAvailable"].is_string());
+  assert!(result["metrics"]["webSearchPermissionGranted"].is_string());
+  assert!(result["metrics"]["webSearchPermissionSources"].is_string());
   assert!(result["metrics"]["pluginRootCount"].is_string());
   assert!(result["metrics"]["pluginRoots"].is_string());
   assert!(result["metrics"]["pluginInstallRoot"].is_string());
@@ -112,6 +114,39 @@ fn runtime_readiness_reports_agent_control_surface() {
       .expect("local model detail")
       .contains("Local model runtime is unavailable"));
   }
+}
+
+#[test]
+fn runtime_readiness_web_search_requires_enabled_network_plugin() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "web-search",
+      "Web Search",
+      false,
+      true,
+      &["tool:web_search"],
+      &["network.outbound"],
+    )],
+  );
+  let response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("runtime readiness result");
+  let web_search = result["checks"]
+    .as_array()
+    .expect("checks")
+    .iter()
+    .find(|check| check["id"] == "webSearch")
+    .expect("web search check");
+  assert_eq!(web_search["status"], "setup_required");
+  assert!(web_search["detail"]
+    .as_str()
+    .expect("detail")
+    .contains("Enable the Web Search plugin"));
+  assert_eq!(result["metrics"]["webSearchPermissionGranted"], "false");
+  assert_eq!(result["metrics"]["webSearchPermissionSources"], "");
 }
 
 #[test]

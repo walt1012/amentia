@@ -26,6 +26,7 @@ pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) plugin_command_count: usize,
   pub(super) sandbox_status: &'a NativeSandboxStatus,
   pub(super) web_search_status: &'a WebSearchStatus,
+  pub(super) web_search_permission_sources: &'a [String],
   pub(super) workspace_thread_count: usize,
   pub(super) first_request_sent: bool,
   pub(super) execution_counts: RuntimeExecutionCounts,
@@ -42,6 +43,7 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     plugin_command_count,
     sandbox_status,
     web_search_status,
+    web_search_permission_sources,
     workspace_thread_count,
     first_request_sent,
     execution_counts,
@@ -66,7 +68,11 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
   );
   insert_sandbox_metrics(&mut metrics, sandbox_status);
   insert_tool_limit_metrics(&mut metrics);
-  insert_web_search_metrics(&mut metrics, web_search_status);
+  insert_web_search_metrics(
+    &mut metrics,
+    web_search_status,
+    web_search_permission_sources,
+  );
   metrics
 }
 
@@ -299,6 +305,7 @@ fn insert_tool_limit_metrics(metrics: &mut HashMap<String, String>) {
 fn insert_web_search_metrics(
   metrics: &mut HashMap<String, String>,
   web_search_status: &WebSearchStatus,
+  permission_sources: &[String],
 ) {
   insert_metric(
     metrics,
@@ -315,6 +322,16 @@ fn insert_web_search_metrics(
     metrics,
     "webSearchAvailable",
     web_search_status.available.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "webSearchPermissionGranted",
+    (!permission_sources.is_empty()).to_string(),
+  );
+  insert_metric(
+    metrics,
+    "webSearchPermissionSources",
+    permission_sources.join(", "),
   );
 }
 
