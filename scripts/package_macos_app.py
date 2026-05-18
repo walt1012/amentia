@@ -21,6 +21,24 @@ RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
+DEFAULT_MODEL_ID = "lfm2.5-350m"
+DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
+  "models/builtin/lfm2.5-350m/model-pack.json"
+)
+REQUIRED_PACKAGED_MODEL_FIELDS = {
+  "id",
+  "display_name",
+  "file_name",
+  "context_size",
+  "model_context_size",
+  "max_output_tokens",
+  "backend",
+  "homepage",
+  "download_url",
+  "sha256",
+  "size_bytes",
+  "license",
+}
 REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "notion-connector": {"command:notion.prepare-page-draft"},
   "review-assistant": {"command:review.inspect-diff"},
@@ -209,6 +227,9 @@ def write_package_manifest(path: Path, arch: str) -> None:
     "minimumSystemVersion": "12.0",
     "architecture": arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
+    "modelDelivery": "in-app-download",
     "modelWeightsBundled": False,
     "modelMetadataBundled": True,
     "bundledPluginsIncluded": True,
@@ -253,13 +274,7 @@ def validate_app_bundle(app_path: Path) -> None:
     app_path / "Contents" / "PkgInfo",
     app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME,
     app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME,
-    app_path
-    / "Contents"
-    / "Resources"
-    / "models"
-    / "builtin"
-    / "lfm2.5-350m"
-    / "model-pack.json",
+    app_path / "Contents" / "Resources" / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
     app_path / "Contents" / "Resources" / "plugins" / "bundled",
   ]
   for path in required_paths:
@@ -271,7 +286,56 @@ def validate_app_bundle(app_path: Path) -> None:
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_no_model_weights_are_bundled(app_path)
+  assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
+
+
+def assert_packaged_model_manifest_is_downloadable(app_path: Path) -> None:
+  manifest_path = (
+    app_path / "Contents" / "Resources" / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH
+  )
+  manifest = read_json_object(manifest_path)
+  missing_fields = sorted(REQUIRED_PACKAGED_MODEL_FIELDS.difference(manifest.keys()))
+  if missing_fields:
+    raise RuntimeError(
+      f"Packaged model manifest is missing fields: {', '.join(missing_fields)}"
+    )
+  if manifest.get("id") != DEFAULT_MODEL_ID:
+    raise RuntimeError(f"Packaged default model id must be {DEFAULT_MODEL_ID}")
+  if manifest.get("backend") != "llama.cpp":
+    raise RuntimeError("Packaged default model backend must be llama.cpp")
+
+  file_name = required_string_field(manifest, "file_name", manifest_path)
+  if not file_name.lower().endswith(".gguf"):
+    raise RuntimeError("Packaged default model file_name must point to a GGUF file")
+  if (manifest_path.parent / file_name).exists():
+    raise RuntimeError("Packaged default model weights must be downloaded after first launch")
+
+  download_url = required_string_field(manifest, "download_url", manifest_path)
+  homepage = required_string_field(manifest, "homepage", manifest_path)
+  if not download_url.startswith("https://"):
+    raise RuntimeError("Packaged default model download_url must use HTTPS")
+  if not homepage.startswith("https://"):
+    raise RuntimeError("Packaged default model homepage must use HTTPS")
+
+  sha256 = required_string_field(manifest, "sha256", manifest_path)
+  if len(sha256) != 64 or any(character not in "0123456789abcdef" for character in sha256):
+    raise RuntimeError("Packaged default model sha256 must be lowercase hex")
+
+  size_bytes = required_positive_int_field(manifest, "size_bytes", manifest_path)
+  context_size = required_positive_int_field(manifest, "context_size", manifest_path)
+  model_context_size = required_positive_int_field(
+    manifest, "model_context_size", manifest_path
+  )
+  max_output_tokens = required_positive_int_field(
+    manifest, "max_output_tokens", manifest_path
+  )
+  if size_bytes <= 100_000_000:
+    raise RuntimeError("Packaged default model size_bytes is unexpectedly small")
+  if context_size > model_context_size:
+    raise RuntimeError("Packaged default model context_size exceeds model_context_size")
+  if max_output_tokens > context_size:
+    raise RuntimeError("Packaged default model max_output_tokens exceeds context_size")
 
 
 def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
@@ -374,6 +438,20 @@ def read_json_object(path: Path) -> dict:
     raise RuntimeError(f"Packaged JSON is invalid: {path}: {error}") from error
   if not isinstance(value, dict):
     raise RuntimeError(f"Packaged JSON must be an object: {path}")
+  return value
+
+
+def required_string_field(manifest: dict, field: str, path: Path) -> str:
+  value = manifest.get(field)
+  if not isinstance(value, str) or not value.strip():
+    raise RuntimeError(f"Packaged JSON field must be a non-empty string: {path}: {field}")
+  return value
+
+
+def required_positive_int_field(manifest: dict, field: str, path: Path) -> int:
+  value = manifest.get(field)
+  if not isinstance(value, int) or value <= 0:
+    raise RuntimeError(f"Packaged JSON field must be a positive integer: {path}: {field}")
   return value
 
 
