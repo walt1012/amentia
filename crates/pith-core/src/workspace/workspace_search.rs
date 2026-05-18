@@ -107,7 +107,7 @@ pub fn execute_prepared_workspace_search(
           line: entry.line,
         })
         .collect(),
-      })
+    })
     .map_err(|error| (-32041, error.to_string()));
 
   CompletedWorkspaceSearch {
