@@ -38,13 +38,15 @@ enum RuntimeToolReadinessPresenter {
   private static func toolChecks(
     _ checks: [RuntimeReadinessCheckSummary]
   ) -> [RuntimeReadinessCheckSummary] {
-    ["webSearch", "nativeSandbox", "plugins"].compactMap { id in
+    ["executionControls", "webSearch", "nativeSandbox", "plugins"].compactMap { id in
       checks.first(where: { $0.id == id })
     }
   }
 
   private static func shortLabel(_ check: RuntimeReadinessCheckSummary) -> String {
     switch check.id {
+    case "executionControls":
+      return "Execution"
     case "webSearch":
       return "Web"
     case "nativeSandbox":
@@ -58,6 +60,8 @@ enum RuntimeToolReadinessPresenter {
 
   private static func longLabel(_ check: RuntimeReadinessCheckSummary) -> String {
     switch check.id {
+    case "executionControls":
+      return "Execution controls"
     case "webSearch":
       return "Web search"
     case "nativeSandbox":

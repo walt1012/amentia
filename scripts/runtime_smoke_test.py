@@ -220,6 +220,18 @@ def assert_builtin_plugin_commands(
     cancelled_command_turn["result"]["items"][1]["attributes"]["pluginRunnerFailureKind"]
     == "cancelled"
   )
+  post_cancel_readiness, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 5,
+      "method": "runtime/readiness",
+    },
+  )
+  post_cancel_checks = {
+    check["id"]: check for check in post_cancel_readiness["result"]["checks"]
+  }
+  assert post_cancel_checks["executionControls"]["status"] == "ready"
+  assert post_cancel_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
 
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
@@ -568,6 +580,10 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["webSearchAvailable"] in {"true", "false"}
     assert "pluginCommandCount" in runtime_readiness["result"]["metrics"]
     assert "enabledPluginCommandCount" in runtime_readiness["result"]["metrics"]
+    assert runtime_readiness["result"]["metrics"]["pendingApprovalCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningTurnCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningApprovalCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
 
     model_bootstrap, _ = send_request(
       process,
