@@ -100,7 +100,8 @@ M5 Exit Gate:
 - A fresh install can download a model, open a workspace, use web search, run a
   plugin command, and recover from model/runtime/plugin failures in-app.
 - Sandbox and approval decisions are visible, bounded, and reversible.
-- CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact.
+- CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact
+  with model metadata and plugin manifests, but no model weights.
 
 ## Not Now
 

@@ -12,7 +12,7 @@ import stat
 import subprocess
 import sys
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 APP_NAME = "Pith"
@@ -27,7 +27,7 @@ DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
   "models/builtin/lfm2.5-350m/model-pack.json"
 )
-REQUIRED_ZIP_ENTRIES = {
+REQUIRED_ZIP_BASE_ENTRIES = {
   "Pith.app/Contents/Info.plist",
   "Pith.app/Contents/MacOS/Pith",
   "Pith.app/Contents/MacOS/pith-runtime-bin",
@@ -646,12 +646,43 @@ def assert_zip_artifact(zip_path: Path) -> None:
   if zip_path.stat().st_size <= 0:
     raise RuntimeError(f"macOS package artifact is empty: {zip_path}")
   with zipfile.ZipFile(zip_path) as archive:
-    names = set(archive.namelist())
-  missing_entries = sorted(REQUIRED_ZIP_ENTRIES.difference(names))
+    infos = archive.infolist()
+
+  assert_zip_entries_are_safe(zip_path, infos)
+  names = {info.filename for info in infos}
+  missing_entries = sorted(required_zip_entries().difference(names))
   if missing_entries:
     raise RuntimeError(
       f"macOS package artifact is missing entries: {', '.join(missing_entries)}"
     )
+
+
+def required_zip_entries() -> set[str]:
+  entries = set(REQUIRED_ZIP_BASE_ENTRIES)
+  entries.add(
+    f"Pith.app/Contents/Resources/{DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()}"
+  )
+  for plugin_id in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES:
+    entries.add(
+      f"Pith.app/Contents/Resources/plugins/bundled/{plugin_id}/pith-plugin.json"
+    )
+  return entries
+
+
+def assert_zip_entries_are_safe(zip_path: Path, infos: list[zipfile.ZipInfo]) -> None:
+  for info in infos:
+    normalized_name = info.filename.rstrip("/")
+    if not normalized_name:
+      continue
+    if "\\" in normalized_name:
+      raise RuntimeError(f"macOS zip artifact contains a backslash path: {info.filename}")
+    entry_path = PurePosixPath(normalized_name)
+    if entry_path.is_absolute() or any(part in {"", ".", ".."} for part in entry_path.parts):
+      raise RuntimeError(f"macOS zip artifact contains an unsafe path: {info.filename}")
+    if entry_path.suffix.lower() in PROHIBITED_MODEL_SUFFIXES:
+      raise RuntimeError(f"Model weight files must stay out of the zip artifact: {info.filename}")
+    if stat.S_IFMT(info.external_attr >> 16) == stat.S_IFLNK:
+      raise RuntimeError(f"macOS zip artifact must not contain symlinks: {info.filename}")
 
 
 def main() -> int:
