@@ -234,6 +234,15 @@ impl RuntimeRunningExecutionState {
     count
   }
 
+  pub(crate) fn cancel_running_workspace_search(&mut self, running_id: &str) -> bool {
+    if let Some(workspace_search) = self.running_workspace_searches.get(running_id) {
+      workspace_search.cancel();
+      return true;
+    }
+
+    false
+  }
+
   pub(crate) fn remove_running_workspace_search(&mut self, running_id: &str) {
     self.running_workspace_searches.remove(running_id);
   }

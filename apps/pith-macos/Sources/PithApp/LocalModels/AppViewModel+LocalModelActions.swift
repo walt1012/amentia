@@ -4,7 +4,8 @@ import Foundation
 extension AppViewModel {
   func canDownloadRecommendedModel(modelID: String) -> Bool {
     guard let model = localModel(for: modelID),
-          !model.downloaded
+          !model.downloaded,
+          !localModelActivationCoordinator.isActivating
     else {
       return false
     }
@@ -15,6 +16,7 @@ extension AppViewModel {
   func canActivateRecommendedModel(modelID: String) -> Bool {
     guard runtimeState != .launching,
           !hasActiveOrPendingTurn(),
+          !localModelActivationCoordinator.isActivating,
           !modelDownloadCoordinator.isDownloading,
           !modelDownloadState.hasPausedDownload
     else {
@@ -30,6 +32,7 @@ extension AppViewModel {
   func canResetActiveLocalModel() -> Bool {
     runtimeState != .launching
       && !hasActiveOrPendingTurn()
+      && !localModelActivationCoordinator.isActivating
       && !modelDownloadCoordinator.isDownloading
       && runtimeBridge.activeLocalModelPath() != nil
   }
@@ -70,6 +73,11 @@ extension AppViewModel {
   }
 
   func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
+    guard !localModelActivationCoordinator.isActivating else {
+      runtimeDetail = "Finish the current model selection check before downloading another model."
+      return
+    }
+
     guard let model = localModel(for: modelID) else {
       runtimeDetail = "The selected local model is unavailable."
       return
@@ -113,27 +121,49 @@ extension AppViewModel {
   }
 
   func activateRecommendedModel(modelID: String) {
+    guard runtimeState != .launching else {
+      runtimeDetail = "Wait for the local runtime launch to finish before switching models."
+      return
+    }
     guard !hasActiveOrPendingTurn() else {
       runtimeDetail = "Finish or cancel the current local turn before switching models."
       return
     }
+    guard !modelDownloadCoordinator.isDownloading,
+          !modelDownloadState.hasPausedDownload
+    else {
+      runtimeDetail = "Finish the current model download before switching models."
+      return
+    }
+    guard let requestID = localModelActivationCoordinator.begin() else {
+      runtimeDetail = "Finish the current model selection check before switching models."
+      return
+    }
 
     guard let model = localModel(for: modelID) else {
+      localModelActivationCoordinator.finish(requestID)
       runtimeDetail = "The selected local model is unavailable."
       return
     }
 
     guard model.downloaded else {
+      localModelActivationCoordinator.finish(requestID)
       runtimeDetail = "Download \(model.displayName) before using it."
       return
     }
 
     runtimeDetail = "Verifying \(model.displayName) before selection..."
-    Task {
+    let task = Task {
+      defer {
+        localModelActivationCoordinator.finish(requestID)
+      }
       do {
         let preparedActivation = try await LocalModelActivationPreparer.prepareInBackground(
           model: model
         )
+        guard localModelActivationCoordinator.isCurrent(requestID) else {
+          return
+        }
         guard !hasActiveOrPendingTurn() else {
           runtimeDetail = "Finish or cancel the current local turn before switching models."
           return
@@ -157,11 +187,16 @@ extension AppViewModel {
         )
       }
     }
+    localModelActivationCoordinator.bind(task: task, requestID: requestID)
   }
 
   func resetActiveLocalModel() {
     guard !hasActiveOrPendingTurn() else {
       runtimeDetail = "Finish or cancel the current local turn before resetting model selection."
+      return
+    }
+    guard !localModelActivationCoordinator.isActivating else {
+      runtimeDetail = "Finish the current model selection check before resetting model selection."
       return
     }
 

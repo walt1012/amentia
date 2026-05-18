@@ -33,6 +33,8 @@ pub struct WorkspaceSearchParams {
   pub query: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub max_results: Option<usize>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub client_request_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,6 +51,13 @@ pub struct WorkspaceSearchResult {
   pub query: String,
   pub workspace: WorkspaceSummary,
   pub matches: Vec<WorkspaceSearchMatch>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSearchCancelRunningParams {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub client_request_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -8,6 +8,38 @@ use super::local_response_formatting::format_web_search_result;
 use super::local_response_generation::generate_local_summary;
 use crate::context_compaction::compact_prompt_observation;
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
+use crate::intent_inference::WebSearchIntent;
+
+pub(crate) fn summarize_declined_web_search_candidate(
+  model_runtime: &LocalModelRuntime,
+  memory_notes: &[MemoryNote],
+  thread_title: &str,
+  user_message: &str,
+  intent: &WebSearchIntent,
+  cancellation: Option<&GenerationCancellation>,
+) -> (String, HashMap<String, String>) {
+  let memory_context =
+    pack_memory_notes_for_context(model_runtime, memory_notes, None, user_message);
+  let observation_summary = format!(
+    "The local planner declined web_search for candidate query \"{}\" because {}.",
+    intent.query, intent.routing_reason
+  );
+  let prompt = format!(
+    "You are Pith, a concise local agent. Answer the user directly without using web_search.\n\
+     If the request depends on current public facts, be transparent that no web search was used.\n\
+     Thread: {thread_title}\n{}\nUser request: {user_message}",
+    format_memory_context_prompt(&memory_context)
+  );
+
+  generate_local_summary(
+    model_runtime,
+    prompt,
+    observation_summary,
+    &memory_context,
+    None,
+    cancellation,
+  )
+}
 
 pub(crate) fn summarize_web_search_result(
   model_runtime: &LocalModelRuntime,

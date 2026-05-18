@@ -16,6 +16,7 @@ pub(crate) mod plugin_command_preparation;
 pub(crate) mod plugin_command_readiness;
 pub(crate) mod plugin_command_recovery_hints;
 pub(crate) mod plugin_command_runner;
+pub(crate) mod plugin_command_runner_output;
 pub(crate) mod plugin_command_runner_sandbox;
 pub(crate) mod plugin_command_text;
 pub(crate) mod plugin_command_timeline;

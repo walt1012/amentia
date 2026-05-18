@@ -3,7 +3,8 @@ use std::path::Path;
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, WorkspaceSearchCancelRunningResult, WorkspaceSearchMatch,
-  WorkspaceSearchParams, WorkspaceSearchResult, WorkspaceSummary,
+  WorkspaceSearchCancelRunningParams, WorkspaceSearchParams, WorkspaceSearchResult,
+  WorkspaceSummary,
 };
 use pith_tools::search_files_with_cancellation;
 
@@ -43,7 +44,19 @@ pub(crate) fn handle_workspace_search_cancel_running(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let cancelled_count = context.execution_state.cancel_running_workspace_searches();
+  let params = match workspace_search_cancel_params(&request) {
+    Ok(params) => params,
+    Err(response) => return response,
+  };
+  let cancelled_count = if let Some(client_request_id) = params.client_request_id.as_deref() {
+    usize::from(
+      context
+        .execution_state
+        .cancel_running_workspace_search(&workspace_search_client_running_id(client_request_id)),
+    )
+  } else {
+    context.execution_state.cancel_running_workspace_searches()
+  };
   JsonRpcResponse::success(
     request.id,
     &WorkspaceSearchCancelRunningResult { cancelled_count },
@@ -64,7 +77,7 @@ pub fn prepare_workspace_search(
     ));
   };
 
-  let running_id = workspace_search_running_id(&request.id);
+  let running_id = workspace_search_running_id(params.client_request_id.as_deref(), &request.id);
   let cancellation = GenerationCancellation::new();
   context
     .execution_state
@@ -130,6 +143,38 @@ pub fn complete_prepared_workspace_search(
   }
 }
 
-fn workspace_search_running_id(request_id: &serde_json::Value) -> String {
+fn workspace_search_cancel_params(
+  request: &JsonRpcRequest,
+) -> std::result::Result<WorkspaceSearchCancelRunningParams, JsonRpcResponse> {
+  let Some(params) = request.params.clone() else {
+    return Ok(WorkspaceSearchCancelRunningParams::default());
+  };
+  if params.is_null() {
+    return Ok(WorkspaceSearchCancelRunningParams::default());
+  }
+
+  serde_json::from_value::<WorkspaceSearchCancelRunningParams>(params).map_err(|error| {
+    JsonRpcResponse::error(
+      request.id.clone(),
+      -32602,
+      format!("Invalid workspace/searchCancelRunning params: {error}"),
+    )
+  })
+}
+
+fn workspace_search_running_id(
+  client_request_id: Option<&str>,
+  request_id: &serde_json::Value,
+) -> String {
+  client_request_id
+    .map(workspace_search_client_running_id)
+    .unwrap_or_else(|| workspace_search_json_rpc_running_id(request_id))
+}
+
+fn workspace_search_client_running_id(client_request_id: &str) -> String {
+  format!("workspace-search-client:{client_request_id}")
+}
+
+fn workspace_search_json_rpc_running_id(request_id: &serde_json::Value) -> String {
   format!("workspace-search:{request_id}")
 }

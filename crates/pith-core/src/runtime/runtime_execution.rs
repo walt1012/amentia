@@ -172,6 +172,10 @@ impl RuntimeExecutionState {
     self.running.cancel_running_workspace_searches()
   }
 
+  pub(crate) fn cancel_running_workspace_search(&mut self, running_id: &str) -> bool {
+    self.running.cancel_running_workspace_search(running_id)
+  }
+
   pub(crate) fn request_running_cancel_for_thread(
     &mut self,
     thread_id: &str,

@@ -21,6 +21,11 @@ struct WorkspaceCurrentResult: Codable {
 struct WorkspaceSearchParams: Codable {
   let query: String
   let maxResults: Int
+  let clientRequestId: String?
+}
+
+struct WorkspaceSearchCancelRunningParams: Codable {
+  let clientRequestId: String?
 }
 
 struct WorkspaceSearchResult: Codable {

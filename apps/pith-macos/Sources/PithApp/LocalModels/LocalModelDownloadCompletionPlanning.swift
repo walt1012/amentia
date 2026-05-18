@@ -93,9 +93,12 @@ enum LocalModelDownloadFinalizer {
   static func prepare(
     model: LocalModelSummary,
     activationRequested: Bool,
-    hasActiveOrPendingTurn: Bool
+    hasActiveOrPendingTurn: Bool,
+    validatesDownloadedModel: Bool = true
   ) throws -> LocalModelDownloadFinalizationPlan {
-    try LocalModelActivationPreparer.validateDownloadedModel(model)
+    if validatesDownloadedModel {
+      try LocalModelActivationPreparer.validateDownloadedModel(model)
+    }
 
     let canActivateNow = !hasActiveOrPendingTurn
     guard activationRequested && canActivateNow else {

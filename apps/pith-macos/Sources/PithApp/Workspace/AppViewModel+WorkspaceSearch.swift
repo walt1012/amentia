@@ -14,7 +14,7 @@ extension AppViewModel {
     }
 
     let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
-    let shouldCancelRunningSearch = isWorkspaceSearching
+    let runningSearchIDToCancel = workspaceSearchSession.runtimeRequestIDForActiveSearch()
     let requestToken = workspaceSearchSession.begin(query: query)
 
     updateWorkspaceSearchState { state in
@@ -25,13 +25,18 @@ extension AppViewModel {
         workspaceSearchSession.finish(requestToken)
       }
       do {
-        if shouldCancelRunningSearch {
-          _ = try? await runtimeBridge.cancelWorkspaceSearches()
+        if let runningSearchIDToCancel {
+          _ = try? await runtimeBridge.cancelWorkspaceSearch(
+            clientRequestId: runningSearchIDToCancel
+          )
           guard workspaceSearchSession.isCurrent(requestToken) else {
             return
           }
         }
-        let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
+        let matches = try await runtimeBridge.searchWorkspace(
+          query: requestToken.query,
+          clientRequestId: requestToken.runtimeRequestID
+        )
         guard workspaceSearchSession.isCurrent(requestToken) else {
           return
         }
@@ -104,7 +109,7 @@ extension AppViewModel {
   }
 
   func resetWorkspaceSearch() {
-    cancelRuntimeWorkspaceSearches()
+    cancelRuntimeWorkspaceSearch(workspaceSearchSession.runtimeRequestIDForActiveSearch())
     let resetStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
     updateWorkspaceSearchState { state in
       state.reset(status: resetStatus)
@@ -118,13 +123,13 @@ extension AppViewModel {
     }
   }
 
-  private func cancelRuntimeWorkspaceSearches() {
-    guard isWorkspaceSearching else {
+  private func cancelRuntimeWorkspaceSearch(_ runtimeRequestID: String?) {
+    guard let runtimeRequestID else {
       return
     }
 
     Task {
-      _ = try? await runtimeBridge.cancelWorkspaceSearches()
+      _ = try? await runtimeBridge.cancelWorkspaceSearch(clientRequestId: runtimeRequestID)
     }
   }
 }

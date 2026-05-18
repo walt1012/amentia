@@ -35,10 +35,27 @@ enum LocalModelDownloadSessionPlanner {
     activationRequested: Bool,
     hasActiveOrPendingTurn: Bool
   ) throws -> LocalModelDownloadSessionCompletionState {
+    try LocalModelActivationPreparer.validateDownloadedModel(model)
+
+    return try completionStateAfterValidation(
+      model: model,
+      sourceURL: sourceURL,
+      activationRequested: activationRequested,
+      hasActiveOrPendingTurn: hasActiveOrPendingTurn
+    )
+  }
+
+  static func completionStateAfterValidation(
+    model: LocalModelSummary,
+    sourceURL: URL,
+    activationRequested: Bool,
+    hasActiveOrPendingTurn: Bool
+  ) throws -> LocalModelDownloadSessionCompletionState {
     let finalizationPlan = try LocalModelDownloadFinalizer.prepare(
       model: model,
       activationRequested: activationRequested,
-      hasActiveOrPendingTurn: hasActiveOrPendingTurn
+      hasActiveOrPendingTurn: hasActiveOrPendingTurn,
+      validatesDownloadedModel: false
     )
     let completionPlan = LocalModelDownloadCompletionPlanner.plan(
       model: model,
@@ -54,22 +71,12 @@ enum LocalModelDownloadSessionPlanner {
     )
   }
 
-  static func completionStateInBackground(
-    model: LocalModelSummary,
-    sourceURL: URL,
-    activationRequested: Bool,
-    hasActiveOrPendingTurn: Bool
-  ) async throws -> LocalModelDownloadSessionCompletionState {
-    try await withCheckedThrowingContinuation { continuation in
+  static func validateDownloadedModelInBackground(model: LocalModelSummary) async throws {
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       DispatchQueue.global(qos: .utility).async {
         do {
-          let state = try completionState(
-            model: model,
-            sourceURL: sourceURL,
-            activationRequested: activationRequested,
-            hasActiveOrPendingTurn: hasActiveOrPendingTurn
-          )
-          continuation.resume(returning: state)
+          try LocalModelActivationPreparer.validateDownloadedModel(model)
+          continuation.resume(returning: ())
         } catch {
           continuation.resume(throwing: error)
         }

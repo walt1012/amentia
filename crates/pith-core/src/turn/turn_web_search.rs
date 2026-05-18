@@ -12,7 +12,8 @@ use super::turn_web_search_timeline::{
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::intent_inference::WebSearchIntent;
 use crate::local_responses::{
-  build_plan_item, format_web_search_result, summarize_web_search_result,
+  build_plan_item, format_web_search_result, summarize_declined_web_search_candidate,
+  summarize_web_search_result,
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
@@ -53,6 +54,59 @@ pub(super) fn model_confirms_web_search_candidate(
     return false;
   }
   decision.contains("WEB_SEARCH") || decision.contains("YES")
+}
+
+pub(super) fn execute_web_search_candidate_local_answer(
+  snapshot: &PreparedTurnSnapshot,
+  intent: &WebSearchIntent,
+  items: &mut Vec<TimelineItem>,
+  pending_active_turn: &mut Option<ActiveTurn>,
+) {
+  items.push(build_plan_item(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.message,
+    snapshot.workspace.as_ref(),
+    format!(
+      "Answer directly because the local planner declined web_search for \"{}\".",
+      intent.query
+    ),
+    Some(&snapshot.cancellation),
+  ));
+  if snapshot.cancellation.is_cancelled() {
+    items.extend(crate::turn_streaming::build_turn_cancelled_items(
+      &snapshot.turn_id,
+    ));
+    return;
+  }
+
+  let (summary, mut summary_attributes) = summarize_declined_web_search_candidate(
+    &snapshot.model_runtime,
+    &snapshot.memory_notes,
+    &snapshot.thread_title,
+    &snapshot.message,
+    intent,
+    Some(&snapshot.cancellation),
+  );
+  if snapshot.cancellation.is_cancelled() {
+    items.extend(crate::turn_streaming::build_turn_cancelled_items(
+      &snapshot.turn_id,
+    ));
+    return;
+  }
+  summary_attributes.insert("webSearchDecision".to_string(), "declined".to_string());
+  summary_attributes.insert(
+    "routingReason".to_string(),
+    intent.routing_reason.to_string(),
+  );
+  summary_attributes.insert("query".to_string(), intent.query.to_string());
+  *pending_active_turn = start_streaming_assistant_turn(
+    &snapshot.thread_id,
+    &snapshot.turn_id,
+    items,
+    summary,
+    summary_attributes,
+  );
 }
 
 pub(super) fn execute_web_search_turn(

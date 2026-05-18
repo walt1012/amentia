@@ -24,6 +24,7 @@ final class AppViewModel: ObservableObject {
   let runtimeRelaunchCoordinator = RuntimeRelaunchCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
   let localModelMetadataCoordinator = LocalModelMetadataCoordinator()
+  let localModelActivationCoordinator = LocalModelActivationCoordinator()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator
   let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
 

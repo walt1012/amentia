@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use pith_protocol::TimelineItem;
 
 use super::turn_approval_execution::{execute_shell_turn, execute_write_turn};
-use super::turn_web_search::model_confirms_web_search_candidate;
+use super::turn_web_search::{
+  execute_web_search_candidate_local_answer, model_confirms_web_search_candidate,
+};
 use super::turn_workspace_execution::{
   execute_list_turn, execute_no_workspace_turn, execute_read_turn, execute_search_turn,
   execute_web_search_turn,
@@ -143,10 +145,13 @@ pub(crate) fn execute_prepared_turn_snapshot(
     PreparedTurnAction::WebSearchCandidate(intent) => {
       if model_confirms_web_search_candidate(&snapshot, &intent) {
         execute_web_search_turn(&snapshot, &intent, &mut items, &mut pending_active_turn);
-      } else if let Some(workspace) = snapshot.workspace.as_ref() {
-        execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);
       } else {
-        execute_no_workspace_turn(&snapshot, &mut items);
+        execute_web_search_candidate_local_answer(
+          &snapshot,
+          &intent,
+          &mut items,
+          &mut pending_active_turn,
+        );
       }
     }
     PreparedTurnAction::ListWorkspace => {

@@ -21,6 +21,7 @@ struct WorkspaceSearchSnapshot {
 
 struct WorkspaceSearchRequestToken {
   let id: UUID
+  let runtimeRequestID: String
   let query: String
   let status: String
 }
@@ -80,6 +81,7 @@ struct WorkspaceSearchRuntimeState {
 final class WorkspaceSearchSession {
   private let taskSlot = CancellableTaskSlot()
   private var activeQuery: String?
+  private var activeRuntimeRequestID: String?
 
   static func trimmedQuery(_ query: String) -> String {
     query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -110,12 +112,19 @@ final class WorkspaceSearchSession {
 
   func begin(query: String) -> WorkspaceSearchRequestToken {
     let requestID = taskSlot.replace()
+    let runtimeRequestID = requestID.uuidString
     activeQuery = query
+    activeRuntimeRequestID = runtimeRequestID
     return WorkspaceSearchRequestToken(
       id: requestID,
+      runtimeRequestID: runtimeRequestID,
       query: query,
       status: "Searching for \"\(query)\"..."
     )
+  }
+
+  func runtimeRequestIDForActiveSearch() -> String? {
+    activeRuntimeRequestID
   }
 
   func canStart(query: String) -> Bool {
@@ -153,10 +162,12 @@ final class WorkspaceSearchSession {
   private func cancelActiveSearch() {
     taskSlot.cancel()
     activeQuery = nil
+    activeRuntimeRequestID = nil
   }
 
   private func clearActiveSearch() {
     activeQuery = nil
+    activeRuntimeRequestID = nil
     taskSlot.clear()
   }
 

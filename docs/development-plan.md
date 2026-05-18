@@ -99,6 +99,8 @@ Active Focus:
   integrity work on app launch or UI refresh.
 - Keep test fixtures out of production runtime environments, and keep runtime
   cancellation owned by the runtime instead of only the UI task layer.
+- Keep long-running work request-scoped: model activation, workspace search,
+  web search, plugins, and turns must not cross-cancel or switch state mid-turn.
 - Polish only the primary coding flow; keep plugin UI progressive and compact.
 - Keep the x86_64 macOS 12 app bundle signed-ready with validated resources.
 
