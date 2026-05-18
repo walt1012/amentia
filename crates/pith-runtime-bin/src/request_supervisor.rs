@@ -149,9 +149,7 @@ fn start_request_reaper(
   })
 }
 
-fn lock_handles(
-  handles: &Arc<Mutex<Vec<JoinHandle<()>>>>,
-) -> MutexGuard<'_, Vec<JoinHandle<()>>> {
+fn lock_handles(handles: &Arc<Mutex<Vec<JoinHandle<()>>>>) -> MutexGuard<'_, Vec<JoinHandle<()>>> {
   handles
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())

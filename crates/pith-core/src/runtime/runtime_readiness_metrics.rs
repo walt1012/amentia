@@ -143,7 +143,9 @@ fn insert_execution_metrics(
   insert_metric(
     metrics,
     "runningWorkspaceSearchCount",
-    execution_counts.running_workspace_search_count().to_string(),
+    execution_counts
+      .running_workspace_search_count()
+      .to_string(),
   );
 }
 
