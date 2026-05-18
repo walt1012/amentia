@@ -58,7 +58,8 @@ extension AppViewModel {
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       hasActiveTurn: hasActiveOrPendingTurn(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
-      hasDraftMessage: !trimmedDraftMessage.isEmpty
+      hasDraftMessage: !trimmedDraftMessage.isEmpty,
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
     )
   }
 

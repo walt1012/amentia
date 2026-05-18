@@ -90,7 +90,7 @@ without expanding into a feature zoo.
 Active Focus:
 
 - Validate the first-run path: download model, open workspace, run local work.
-- Keep runtime readiness and smoke coverage aligned with the fresh-install path.
+- Keep runtime readiness UI and smoke coverage aligned with the fresh-install path.
 - Harden native sandbox, approvals, cancellation, and recovery boundaries.
 - Polish only the primary coding flow; keep plugin UI progressive and compact.
 - Keep the x86_64 macOS 12 app bundle packaging path signed-ready.
