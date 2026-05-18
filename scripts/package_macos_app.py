@@ -283,12 +283,30 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
     manifest = read_json_object(manifest_path)
     if manifest.get("name") != plugin_id:
       raise RuntimeError(f"Bundled plugin manifest name mismatch: {manifest_path}")
-    capabilities = set(manifest.get("capabilities", []))
+    capabilities = plugin_capabilities(manifest_path, manifest)
     missing_capabilities = required_capabilities - capabilities
     if missing_capabilities:
       missing = ", ".join(sorted(missing_capabilities))
       raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
     assert_bundled_plugin_capability_files(plugin_root, capabilities)
+    assert_bundled_plugin_skill_files(plugin_root, manifest)
+
+
+def plugin_capabilities(manifest_path: Path, manifest: dict) -> set[str]:
+  capabilities = manifest.get("capabilities")
+  if not isinstance(capabilities, list) or not capabilities:
+    raise RuntimeError(f"Bundled plugin manifest must declare capabilities: {manifest_path}")
+  invalid_capability = next(
+    (
+      capability
+      for capability in capabilities
+      if not isinstance(capability, str) or not capability.strip()
+    ),
+    None,
+  )
+  if invalid_capability is not None:
+    raise RuntimeError(f"Bundled plugin manifest has an invalid capability: {manifest_path}")
+  return set(capabilities)
 
 
 def assert_bundled_plugin_capability_files(plugin_root: Path, capabilities: set[str]) -> None:
@@ -303,6 +321,19 @@ def assert_bundled_plugin_capability_files(plugin_root: Path, capabilities: set[
       hook_path = plugin_root / "hooks" / f"{hook_id}.json"
       require_file(hook_path, f"bundled plugin hook {hook_id}")
       read_json_object(hook_path)
+
+
+def assert_bundled_plugin_skill_files(plugin_root: Path, manifest: dict) -> None:
+  skills = manifest.get("skills", [])
+  if not isinstance(skills, list):
+    raise RuntimeError(f"Bundled plugin skills must be a list: {plugin_root}")
+  for skill in skills:
+    if not isinstance(skill, dict):
+      raise RuntimeError(f"Bundled plugin skill entry must be an object: {plugin_root}")
+    skill_path = skill.get("path")
+    if not isinstance(skill_path, str) or not skill_path.strip():
+      raise RuntimeError(f"Bundled plugin skill entry is missing path: {plugin_root}")
+    require_file(plugin_root / skill_path, f"bundled plugin skill {skill_path}")
 
 
 def read_json_object(path: Path) -> dict:
