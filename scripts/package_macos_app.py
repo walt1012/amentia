@@ -286,8 +286,8 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
   assert_executable(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_executable(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_package_manifest_matches_bundle(app_path, expected_arch)
-  assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
-  assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
+  assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
+  assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
@@ -513,12 +513,14 @@ def assert_executable(path: Path) -> None:
     raise PermissionError(f"Packaged executable is not executable: {path}")
 
 
-def assert_x86_64_if_lipo_is_available(path: Path) -> None:
+def assert_only_x86_64_if_lipo_is_available(path: Path) -> None:
   if shutil.which("lipo") is None:
     return
   output = run(["lipo", "-info", str(path)], path.parent)
   if "x86_64" not in output:
     raise RuntimeError(f"Packaged binary is not x86_64: {path}: {output}")
+  if "arm64" in output:
+    raise RuntimeError(f"Packaged binary must not include arm64: {path}: {output}")
 
 
 def sign_app_bundle_if_available(app_path: Path) -> None:
