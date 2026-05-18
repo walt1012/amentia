@@ -40,6 +40,25 @@ REQUIRED_PACKAGED_MODEL_FIELDS = {
   "size_bytes",
   "license",
 }
+REQUIRED_INFO_PLIST_VALUES = {
+  "CFBundleDevelopmentRegion": "en",
+  "CFBundleDisplayName": APP_NAME,
+  "CFBundleExecutable": APP_EXECUTABLE_NAME,
+  "CFBundleIdentifier": DEFAULT_BUNDLE_ID,
+  "CFBundleInfoDictionaryVersion": "6.0",
+  "CFBundleName": APP_NAME,
+  "CFBundlePackageType": "APPL",
+  "CFBundleShortVersionString": DEFAULT_VERSION,
+  "CFBundleSupportedPlatforms": ["MacOSX"],
+  "CFBundleVersion": DEFAULT_VERSION,
+  "LSApplicationCategoryType": "public.app-category.developer-tools",
+  "LSArchitecturePriority": [SUPPORTED_ARCH],
+  "LSMinimumSystemVersion": "12.0",
+  "NSHighResolutionCapable": True,
+  "NSPrincipalClass": "NSApplication",
+  "NSSupportsAutomaticTermination": True,
+  "NSSupportsSuddenTermination": True,
+}
 REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "notion-connector": {"command:notion.prepare-page-draft"},
   "review-assistant": {"command:review.inspect-diff"},
@@ -198,27 +217,8 @@ def require_file(path: Path, label: str) -> None:
 
 
 def write_info_plist(path: Path) -> None:
-  info = {
-    "CFBundleDevelopmentRegion": "en",
-    "CFBundleDisplayName": APP_NAME,
-    "CFBundleExecutable": APP_EXECUTABLE_NAME,
-    "CFBundleIdentifier": DEFAULT_BUNDLE_ID,
-    "CFBundleInfoDictionaryVersion": "6.0",
-    "CFBundleName": APP_NAME,
-    "CFBundlePackageType": "APPL",
-    "CFBundleShortVersionString": DEFAULT_VERSION,
-    "CFBundleSupportedPlatforms": ["MacOSX"],
-    "CFBundleVersion": DEFAULT_VERSION,
-    "LSApplicationCategoryType": "public.app-category.developer-tools",
-    "LSArchitecturePriority": ["x86_64"],
-    "LSMinimumSystemVersion": "12.0",
-    "NSHighResolutionCapable": True,
-    "NSPrincipalClass": "NSApplication",
-    "NSSupportsAutomaticTermination": True,
-    "NSSupportsSuddenTermination": True,
-  }
   with path.open("wb") as file:
-    plistlib.dump(info, file, sort_keys=True)
+    plistlib.dump(REQUIRED_INFO_PLIST_VALUES, file, sort_keys=True)
 
 
 def write_package_manifest(path: Path, arch: str) -> None:
@@ -285,12 +285,27 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
 
   assert_executable(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_executable(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
+  assert_info_plist_matches_product_rules(app_path)
   assert_package_manifest_matches_bundle(app_path, expected_arch)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
+
+
+def assert_info_plist_matches_product_rules(app_path: Path) -> None:
+  info_path = app_path / "Contents" / "Info.plist"
+  with info_path.open("rb") as file:
+    info = plistlib.load(file)
+
+  if not isinstance(info, dict):
+    raise RuntimeError(f"Info.plist must decode to a dictionary: {info_path}")
+  for field, expected_value in REQUIRED_INFO_PLIST_VALUES.items():
+    if info.get(field) != expected_value:
+      raise RuntimeError(
+        f"Info.plist field {field} must be {expected_value!r}: {info_path}"
+      )
 
 
 def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -> None:

@@ -573,6 +573,7 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["shellTimeoutSeconds"] == "120"
     assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
     assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"
+    assert runtime_readiness["result"]["metrics"]["sandboxAvailable"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["sandboxActive"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["webSearchTimeoutSeconds"] == "20"
     assert runtime_readiness["result"]["metrics"]["webSearchProvider"] == "DuckDuckGo Lite"
