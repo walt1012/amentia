@@ -99,7 +99,7 @@ M5 Exit Gate:
 - A fresh install can download a model, open a workspace, use web search, run a
   plugin command, and recover from model/runtime/plugin failures in-app.
 - Sandbox and approval decisions are visible, bounded, and reversible.
-- CI produces a signed-ready x86_64 macOS 12 app bundle artifact.
+- CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact.
 
 ## Not Now
 
@@ -116,6 +116,6 @@ M5 Exit Gate:
 
 - CI is hygiene, not a milestone.
 - Remote CI is the source of truth for Rust fmt, clippy, tests, smoke coverage,
-  model manifest validation, and Swift build.
+  model manifest validation, and macOS app packaging.
 - Keep commits scoped and fix CI from logs, not guesses.
 - Split modules only when ownership or failure boundaries become clearer.

@@ -59,8 +59,9 @@ CI runs this on `macos-15-intel`. The script builds the Swift shell for `x86_64`
 the runtime executable, validates the app bundle structure, and emits
 `artifacts/macos/Pith-macos-x86_64.zip`.
 
-The artifact is signed-ready, but not signed or notarized by CI yet. Signing and notarization should
-be added only after distribution identity and entitlements are finalized.
+CI also verifies that model weight files are not bundled and ad-hoc signs the app when `codesign` is
+available. Distribution signing and notarization should be added only after identity and entitlements
+are finalized.
 
 ## Local Model Runtime
 

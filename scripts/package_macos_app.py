@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import plistlib
 import shutil
@@ -19,6 +20,7 @@ SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
+PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 
 
 def run(command: list[str], cwd: Path) -> str:
@@ -77,6 +79,11 @@ def parse_args() -> argparse.Namespace:
     action="store_true",
     help="Leave only the app bundle in the dist directory.",
   )
+  parser.add_argument(
+    "--skip-ad-hoc-sign",
+    action="store_true",
+    help="Skip free ad-hoc codesign verification. CI should keep this enabled.",
+  )
   return parser.parse_args()
 
 
@@ -117,6 +124,8 @@ def package_app(
   dist_dir: Path,
   app_binary: Path,
   runtime_binary: Path,
+  arch: str,
+  skip_ad_hoc_sign: bool,
   no_zip: bool,
 ) -> Path | None:
   app_path = dist_dir / f"{APP_NAME}.app"
@@ -129,6 +138,7 @@ def package_app(
   resources_path.mkdir(parents=True)
 
   write_info_plist(contents_path / "Info.plist")
+  write_package_manifest(resources_path / "PithPackage.json", arch)
   (contents_path / "PkgInfo").write_text("APPL????\n", encoding="utf-8")
 
   copy_executable(app_binary, macos_path / APP_EXECUTABLE_NAME)
@@ -138,6 +148,9 @@ def package_app(
   copy_llama_backend_if_present(repo_root, macos_path)
 
   validate_app_bundle(app_path)
+  if not skip_ad_hoc_sign:
+    sign_app_bundle_if_available(app_path)
+    validate_app_signature_if_available(app_path)
   if no_zip:
     return None
 
@@ -181,6 +194,22 @@ def write_info_plist(path: Path) -> None:
     plistlib.dump(info, file, sort_keys=True)
 
 
+def write_package_manifest(path: Path, arch: str) -> None:
+  manifest = {
+    "appName": APP_NAME,
+    "bundleIdentifier": DEFAULT_BUNDLE_ID,
+    "bundleVersion": DEFAULT_VERSION,
+    "minimumSystemVersion": "12.0",
+    "architecture": arch,
+    "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
+    "modelWeightsBundled": False,
+    "modelMetadataBundled": True,
+    "bundledPluginsIncluded": True,
+    "signing": "ad-hoc when codesign is available",
+  }
+  path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def copy_executable(source: Path, destination: Path) -> None:
   require_file(source, "executable")
   shutil.copy2(source, destination)
@@ -213,6 +242,7 @@ def copy_llama_backend_if_present(repo_root: Path, macos_path: Path) -> None:
 def validate_app_bundle(app_path: Path) -> None:
   required_paths = [
     app_path / "Contents" / "Info.plist",
+    app_path / "Contents" / "Resources" / "PithPackage.json",
     app_path / "Contents" / "PkgInfo",
     app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME,
     app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME,
@@ -227,6 +257,13 @@ def validate_app_bundle(app_path: Path) -> None:
   assert_executable(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
+  assert_no_model_weights_are_bundled(app_path)
+
+
+def assert_no_model_weights_are_bundled(app_path: Path) -> None:
+  for path in app_path.rglob("*"):
+    if path.is_file() and path.suffix.lower() in PROHIBITED_MODEL_SUFFIXES:
+      raise RuntimeError(f"Model weight files must stay out of the app bundle: {path}")
 
 
 def assert_executable(path: Path) -> None:
@@ -240,6 +277,43 @@ def assert_x86_64_if_lipo_is_available(path: Path) -> None:
   output = run(["lipo", "-info", str(path)], path.parent)
   if "x86_64" not in output:
     raise RuntimeError(f"Packaged binary is not x86_64: {path}: {output}")
+
+
+def sign_app_bundle_if_available(app_path: Path) -> None:
+  if shutil.which("codesign") is None:
+    print("codesign not found; skipping ad-hoc signing validation.")
+    return
+
+  run(
+    [
+      "codesign",
+      "--force",
+      "--deep",
+      "--sign",
+      "-",
+      "--options",
+      "runtime",
+      str(app_path),
+    ],
+    app_path.parent,
+  )
+
+
+def validate_app_signature_if_available(app_path: Path) -> None:
+  if shutil.which("codesign") is None:
+    return
+
+  run(
+    [
+      "codesign",
+      "--verify",
+      "--deep",
+      "--strict",
+      "--verbose=2",
+      str(app_path),
+    ],
+    app_path.parent,
+  )
 
 
 def create_zip(app_path: Path, zip_path: Path) -> None:
@@ -279,7 +353,15 @@ def main() -> int:
       app_binary = build_swift_app(repo_root, args.configuration, args.arch)
       runtime_binary = args.runtime_binary or build_runtime(repo_root, args.configuration)
 
-    zip_path = package_app(repo_root, dist_dir, app_binary, runtime_binary, args.no_zip)
+    zip_path = package_app(
+      repo_root,
+      dist_dir,
+      app_binary,
+      runtime_binary,
+      args.arch,
+      args.skip_ad_hoc_sign,
+      args.no_zip,
+    )
   except Exception as error:
     print(f"macOS packaging failed: {error}", file=sys.stderr)
     return 1

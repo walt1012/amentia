@@ -47,4 +47,5 @@ python3 scripts/package_macos_app.py
 
 The script builds the Swift shell and `pith-runtime-bin`, assembles `Pith.app`, places the runtime
 binary next to the app executable, includes bundled plugin manifests and model metadata, and writes
-`artifacts/macos/Pith-macos-x86_64.zip`.
+`artifacts/macos/Pith-macos-x86_64.zip`. CI verifies that model weights are not bundled and ad-hoc
+signs the app when `codesign` is available.
