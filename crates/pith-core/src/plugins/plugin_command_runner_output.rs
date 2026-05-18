@@ -380,9 +380,7 @@ fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
   PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS.contains(&kind)
 }
 
-fn plugin_runner_owned_attributes(
-  attributes: HashMap<String, String>,
-) -> HashMap<String, String> {
+fn plugin_runner_owned_attributes(attributes: HashMap<String, String>) -> HashMap<String, String> {
   attributes
     .into_iter()
     .filter(|(key, _)| !plugin_runner_reserved_attribute(key))
@@ -513,7 +511,10 @@ mod tests {
     let command = test_command();
     let mut base_attributes = HashMap::new();
     base_attributes.insert("sandboxMode".to_string(), "workspaceReadWrite".to_string());
-    base_attributes.insert("pluginRunnerOutputStatus".to_string(), "baseStatus".to_string());
+    base_attributes.insert(
+      "pluginRunnerOutputStatus".to_string(),
+      "baseStatus".to_string(),
+    );
     let output = r#"{
       "items": [
         {
@@ -535,7 +536,10 @@ mod tests {
 
     let result = match plugin_runner_output(&command, "stdio.test", output, base_attributes) {
       Ok(result) => result,
-      Err(failure) => panic!("trusted output metadata should be protected: {}", failure.message),
+      Err(failure) => panic!(
+        "trusted output metadata should be protected: {}",
+        failure.message
+      ),
     };
     let attributes = result.items[0].attributes.as_ref().expect("attributes");
 
@@ -553,7 +557,9 @@ mod tests {
       Some("workspaceReadWrite")
     );
     assert_eq!(
-      attributes.get("pluginRunnerOutputStatus").map(String::as_str),
+      attributes
+        .get("pluginRunnerOutputStatus")
+        .map(String::as_str),
       Some("envelope")
     );
     assert!(!attributes.contains_key("approvalId"));
