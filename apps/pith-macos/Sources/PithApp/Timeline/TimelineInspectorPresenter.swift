@@ -389,6 +389,10 @@ enum TimelineInspectorPresenter {
     let entrypoint = entry.attributes["pluginRunnerEntrypoint"] ?? "unknown entrypoint"
     lines.append("Runner: \(driver) | \(kind) | \(entrypoint)")
 
+    if let setupStatus = entry.attributes["pluginRunnerSetupStatus"] {
+      let phase = entry.attributes["pluginRunnerSetupPhase"] ?? "unknown"
+      lines.append("Runner setup: \(setupStatus) | \(phase)")
+    }
     if let check = entry.attributes["pluginRunnerEntrypointCheck"] {
       let fileKind = entry.attributes["pluginRunnerEntrypointFileKind"] ?? "unknown file"
       let executable = entry.attributes["pluginRunnerEntrypointExecutable"] ?? "unknown"

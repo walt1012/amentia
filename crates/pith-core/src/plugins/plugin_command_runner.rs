@@ -107,6 +107,15 @@ pub(super) fn plugin_runner_setup_failed_attributes(
   attributes
 }
 
+pub(super) fn plugin_runner_setup_phase_attributes(
+  attributes: &HashMap<String, String>,
+  phase: &str,
+) -> HashMap<String, String> {
+  let mut attributes = attributes.clone();
+  attributes.insert("pluginRunnerSetupPhase".to_string(), phase.to_string());
+  attributes
+}
+
 pub(crate) fn is_supported_external_plugin_execution(command: &HostPluginCommandEntry) -> bool {
   command.execution.as_ref().is_some_and(|execution| {
     if execution.driver == "stdio" {
@@ -219,13 +228,23 @@ pub(super) fn run_external_plugin_command(
     .as_deref()
     .ok_or_else(|| unsupported_execution_error(command))?;
   let plugin_root = plugin_root_for_command(command).map_err(|failure| {
-    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    PluginRunnerFailure::from_pair_with_attributes(
+      failure,
+      plugin_runner_setup_phase_attributes(&setup_attributes, "pluginRootResolve"),
+    )
+    .boxed()
   })?;
   insert_plugin_root_attribute(&mut setup_attributes, &plugin_root);
   let entrypoint_path = safe_entrypoint_path(&plugin_root, entrypoint).map_err(|failure| {
-    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    PluginRunnerFailure::from_pair_with_attributes(
+      failure,
+      plugin_runner_setup_phase_attributes(&setup_attributes, "entrypointResolve"),
+    )
+    .boxed()
   })?;
   insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
+  let sandbox_setup_attributes =
+    plugin_runner_setup_phase_attributes(&setup_attributes, "sandboxPrepare");
   let sandbox = PluginRunnerSandbox::prepare(
     workspace,
     &command.plugin_id,
@@ -233,7 +252,8 @@ pub(super) fn run_external_plugin_command(
     command_allows_network(command),
   )
   .map_err(|failure| {
-    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    PluginRunnerFailure::from_pair_with_attributes(failure, sandbox_setup_attributes.clone())
+      .boxed()
   })?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());

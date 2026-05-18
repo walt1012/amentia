@@ -16,8 +16,8 @@ use super::plugin_command_runner::{
   command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
   insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes, merged_attributes,
   plugin_root_for_command, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
-  run_stdio_runner, runner_entrypoint_setup_blocker, safe_entrypoint_path, PluginRunnerFailure,
-  PluginRunnerResult, PluginRunnerRunResult,
+  plugin_runner_setup_phase_attributes, run_stdio_runner, runner_entrypoint_setup_blocker,
+  safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
 use super::plugin_command_runner_output::plugin_runner_output;
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
@@ -145,14 +145,20 @@ pub(super) fn run_mcp_plugin_command(
   }
 
   let mut setup_attributes = plugin_runner_setup_attributes(command, execution);
-  let target = mcp_target_for_execution(command, execution)
-    .map_err(|failure| merge_setup_failure(&setup_attributes, *failure))?;
+  let target = mcp_target_for_execution(command, execution).map_err(|failure| {
+    merge_setup_failure(&setup_attributes, "mcpTargetResolve", *failure)
+  })?;
   let plugin_root = plugin_root_for_command(command).map_err(|failure| {
-    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    PluginRunnerFailure::from_pair_with_attributes(
+      failure,
+      plugin_runner_setup_phase_attributes(&setup_attributes, "pluginRootResolve"),
+    )
+    .boxed()
   })?;
   insert_plugin_root_attribute(&mut setup_attributes, &plugin_root);
-  let server = mcp_server_for_target(command, &plugin_root, &target.server_id)
-    .map_err(|failure| merge_setup_failure(&setup_attributes, *failure))?;
+  let server = mcp_server_for_target(command, &plugin_root, &target.server_id).map_err(|failure| {
+    merge_setup_failure(&setup_attributes, "mcpServerResolve", *failure)
+  })?;
   let server_command = server.command.as_deref().ok_or_else(|| {
     PluginRunnerFailure::with_output(
       -32053,
@@ -162,15 +168,24 @@ pub(super) fn run_mcp_plugin_command(
       ),
       String::new(),
       String::new(),
-      plugin_runner_setup_failed_attributes(setup_attributes.clone()),
+      plugin_runner_setup_failed_attributes(plugin_runner_setup_phase_attributes(
+        &setup_attributes,
+        "mcpServerCommandResolve",
+      )),
     )
     .boxed()
   })?;
   setup_attributes.insert("mcpServerCommand".to_string(), server_command.to_string());
   let entrypoint_path = safe_entrypoint_path(&plugin_root, server_command).map_err(|failure| {
-    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    PluginRunnerFailure::from_pair_with_attributes(
+      failure,
+      plugin_runner_setup_phase_attributes(&setup_attributes, "entrypointResolve"),
+    )
+    .boxed()
   })?;
   insert_resolved_entrypoint_attribute(&mut setup_attributes, &entrypoint_path);
+  let sandbox_setup_attributes =
+    plugin_runner_setup_phase_attributes(&setup_attributes, "sandboxPrepare");
   let sandbox = PluginRunnerSandbox::prepare(
     workspace,
     &command.plugin_id,
@@ -178,7 +193,8 @@ pub(super) fn run_mcp_plugin_command(
     command_allows_network(command),
   )
   .map_err(|failure| {
-    PluginRunnerFailure::from_pair_with_attributes(failure, setup_attributes.clone()).boxed()
+    PluginRunnerFailure::from_pair_with_attributes(failure, sandbox_setup_attributes.clone())
+      .boxed()
   })?;
   let mut runner_context_attributes = setup_attributes;
   runner_context_attributes.extend(sandbox.attributes());
@@ -216,6 +232,7 @@ pub(super) fn run_mcp_plugin_command(
 
 fn merge_setup_failure(
   setup_attributes: &HashMap<String, String>,
+  phase: &str,
   failure: PluginRunnerFailure,
 ) -> Box<PluginRunnerFailure> {
   PluginRunnerFailure::with_output(
@@ -224,7 +241,7 @@ fn merge_setup_failure(
     failure.stdout,
     failure.stderr,
     plugin_runner_setup_failed_attributes(merged_attributes(
-      setup_attributes.clone(),
+      plugin_runner_setup_phase_attributes(setup_attributes, phase),
       failure.attributes,
     )),
   )

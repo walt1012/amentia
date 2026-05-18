@@ -81,8 +81,8 @@ Order of Work:
 Immediate Next:
 
 - Keep readiness accuracy aligned with plugin-backed tools and permission gates.
-- Continue tightening sandbox diagnostics around plugin execution before adding
-  broader connector marketplace behavior.
+- Continue tightening plugin execution diagnostics around sandbox setup phases
+  before adding broader connector marketplace behavior.
 - Keep plugin UI compact and progressive; do not expand the inspector into an
   always-visible admin console.
 - Continue architecture cleanup only when it clarifies ownership, failure

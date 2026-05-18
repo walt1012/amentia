@@ -179,6 +179,24 @@ fn runner_setup_repair_hint(detail: &str) -> String {
   if detail.contains("entrypoint could not be resolved") {
     return "Add the runner file to the plugin bundle or update the entrypoint path.".to_string();
   }
+  if detail.contains("workspace root could not be resolved") {
+    return "Reopen an existing workspace before running the plugin command.".to_string();
+  }
+  if detail.contains("sandbox temporary") && detail.contains("crosses a symlink") {
+    return "Replace the symlinked sandbox temporary path with a real directory inside the workspace."
+      .to_string();
+  }
+  if detail.contains("sandbox temporary")
+    && (detail.contains("must stay inside") || detail.contains("escapes"))
+  {
+    return "Keep the sandbox temporary root inside the selected workspace.".to_string();
+  }
+  if detail.contains("sandbox temporary directory component")
+    || detail.contains("sandbox temporary path component")
+  {
+    return "Repair the workspace `.pith` temporary directory so it is a real directory tree."
+      .to_string();
+  }
   if detail.contains("must stay inside") || detail.contains("resolved outside") {
     return "Use a relative entrypoint path that stays inside the plugin bundle.".to_string();
   }
@@ -249,6 +267,19 @@ mod tests {
     let hint = runner_failure_recovery_hint("runnerSetup", &attributes);
 
     assert!(hint.contains("Mark the runner entrypoint executable"));
+  }
+
+  #[test]
+  fn failure_hint_explains_sandbox_temporary_symlink_escape() {
+    let attributes = HashMap::from([(
+      "pluginRunnerSetupDetail".to_string(),
+      "Sandbox temporary path crosses a symlink.".to_string(),
+    )]);
+
+    let hint = runner_failure_recovery_hint("runnerSetup", &attributes);
+
+    assert!(hint.contains("symlinked sandbox temporary path"));
+    assert!(hint.contains("inside the workspace"));
   }
 
   #[test]
