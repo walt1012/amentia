@@ -15,6 +15,8 @@ const PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT: usize = 120;
 const PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT: usize = 4096;
 const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
 const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
+const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
+  &["pluginResult", "toolResult", "warning", "system"];
 
 struct PluginRunnerMemoryNoteSelection {
   notes: Vec<PluginRunnerMemoryNoteDraft>,
@@ -217,9 +219,13 @@ fn plugin_runner_timeline_items_with_attributes(
     .map(|mut item| {
       let item_attributes = item.attributes.get_or_insert_with(HashMap::new);
       for (key, value) in attributes {
-        item_attributes
-          .entry(key.clone())
-          .or_insert_with(|| value.clone());
+        if plugin_runner_reserved_attribute(key) {
+          item_attributes.insert(key.clone(), value.clone());
+        } else {
+          item_attributes
+            .entry(key.clone())
+            .or_insert_with(|| value.clone());
+        }
       }
       item
     })
@@ -343,12 +349,12 @@ fn plugin_runner_timeline_item(
   let kind = item.kind.trim();
   let title = item.title.trim();
   let content = item.content.trim();
-  if kind.is_empty() || title.is_empty() || content.is_empty() {
+  if !plugin_runner_timeline_kind_is_allowed(kind) || title.is_empty() || content.is_empty() {
     return None;
   }
 
-  let mut attributes = base_attributes.clone();
-  attributes.extend(item.attributes);
+  let mut attributes = plugin_runner_owned_attributes(item.attributes);
+  attributes.extend(base_attributes.clone());
   attributes
     .entry("pluginId".to_string())
     .or_insert_with(|| command.plugin_id.clone());
@@ -368,6 +374,56 @@ fn plugin_runner_timeline_item(
     content: content.to_string(),
     attributes: Some(attributes),
   })
+}
+
+fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
+  PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS.contains(&kind)
+}
+
+fn plugin_runner_owned_attributes(
+  attributes: HashMap<String, String>,
+) -> HashMap<String, String> {
+  attributes
+    .into_iter()
+    .filter(|(key, _)| !plugin_runner_reserved_attribute(key))
+    .collect()
+}
+
+fn plugin_runner_reserved_attribute(key: &str) -> bool {
+  matches!(
+    key,
+    "action"
+      | "approvalId"
+      | "commandId"
+      | "commandInput"
+      | "connectorId"
+      | "connectorIds"
+      | "connectorRepairHint"
+      | "connectorStatus"
+      | "decision"
+      | "executionKind"
+      | "memoryNoteId"
+      | "memoryNoteTitle"
+      | "memoryScope"
+      | "permissionGate"
+      | "pluginCommandRunId"
+      | "pluginCommandStatus"
+      | "pluginDisplayName"
+      | "pluginId"
+      | "pluginInstallStatus"
+      | "pluginLifecycleStatus"
+      | "pluginSourcePath"
+      | "requiredPermission"
+      | "runBlocker"
+      | "runRepairHint"
+      | "runStatus"
+      | "sourcePath"
+      | "streamingStatus"
+      | "turnId"
+  ) || key.starts_with("connector")
+    || key.starts_with("mcp")
+    || key.starts_with("pluginRunner")
+    || key.starts_with("sandbox")
 }
 
 #[cfg(test)]
@@ -447,6 +503,86 @@ mod tests {
       result
         .attributes
         .get("pluginRunnerOutputTruncatedMemoryNoteCount")
+        .map(String::as_str),
+      Some("1")
+    );
+  }
+
+  #[test]
+  fn output_contract_protects_core_timeline_metadata() {
+    let command = test_command();
+    let mut base_attributes = HashMap::new();
+    base_attributes.insert("sandboxMode".to_string(), "workspaceReadWrite".to_string());
+    base_attributes.insert("pluginRunnerOutputStatus".to_string(), "baseStatus".to_string());
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Runner Item",
+          "content": "Owned timeline item.",
+          "attributes": {
+            "runner": "stdio",
+            "pluginId": "spoofed-plugin",
+            "commandId": "spoofed-command",
+            "approvalId": "approval-1",
+            "turnId": "turn-1",
+            "sandboxMode": "none",
+            "pluginRunnerOutputStatus": "spoofed"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, base_attributes) {
+      Ok(result) => result,
+      Err(failure) => panic!("trusted output metadata should be protected: {}", failure.message),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(attributes.get("runner").map(String::as_str), Some("stdio"));
+    assert_eq!(
+      attributes.get("pluginId").map(String::as_str),
+      Some("test-plugin")
+    );
+    assert_eq!(
+      attributes.get("commandId").map(String::as_str),
+      Some("test-plugin::run")
+    );
+    assert_eq!(
+      attributes.get("sandboxMode").map(String::as_str),
+      Some("workspaceReadWrite")
+    );
+    assert_eq!(
+      attributes.get("pluginRunnerOutputStatus").map(String::as_str),
+      Some("envelope")
+    );
+    assert!(!attributes.contains_key("approvalId"));
+    assert!(!attributes.contains_key("turnId"));
+  }
+
+  #[test]
+  fn output_contract_rejects_action_timeline_kinds_from_runner() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "approvalRequested",
+          "title": "Fake Approval",
+          "content": "This must not become a trusted action."
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("untrusted action timeline item should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputInvalidTimelineItemCount")
         .map(String::as_str),
       Some("1")
     );

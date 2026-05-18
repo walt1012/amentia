@@ -1,5 +1,6 @@
 use super::test_support::{
-  create_temp_workspace, enable_full_access_plugin, replace_plugin_catalog, request,
+  bundled_plugin_entry, create_temp_workspace, enable_full_access_plugin, replace_plugin_catalog,
+  request,
 };
 use super::*;
 use pith_protocol::methods;
@@ -8,9 +9,9 @@ use std::ffi::OsString;
 use std::fs;
 
 #[test]
-fn turn_start_web_search_uses_builtin_network_permission() {
+fn turn_start_web_search_uses_enabled_web_search_permission() {
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![]);
+  enable_web_search_plugin(&mut context);
 
   let _ = handle_request(
     &mut context,
@@ -56,9 +57,50 @@ fn turn_start_web_search_uses_builtin_network_permission() {
 }
 
 #[test]
-fn turn_start_routes_fresh_public_requests_to_builtin_web_search() {
+fn turn_start_web_search_respects_disabled_web_search_plugin() {
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![]);
+  replace_plugin_catalog(&mut context, vec![web_search_plugin(false)]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Disabled Web Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "web search for Pith local model"
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let permission_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Permission Required")
+    .expect("permission item");
+
+  assert_eq!(
+    permission_item["attributes"]["requiredPermission"],
+    "network.outbound"
+  );
+  assert_eq!(permission_item["attributes"]["grantedBy"], "none");
+}
+
+#[test]
+fn turn_start_routes_fresh_public_requests_to_enabled_web_search() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_web_search_plugin(&mut context);
 
   let _ = handle_request(
     &mut context,
@@ -175,7 +217,7 @@ fn turn_start_executes_web_search_with_fixture_client() {
   let _fixture_path_guard =
     EnvVarGuard::set("PITH_WEB_SEARCH_FIXTURE_PATH", fixture_path.as_os_str());
   let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(&mut context, vec![]);
+  enable_web_search_plugin(&mut context);
 
   let _ = handle_request(
     &mut context,
@@ -237,4 +279,20 @@ impl Drop for EnvVarGuard {
       std::env::remove_var(self.key);
     }
   }
+}
+
+fn enable_web_search_plugin(context: &mut RuntimeContext) {
+  replace_plugin_catalog(context, vec![web_search_plugin(true)]);
+}
+
+fn web_search_plugin(enabled: bool) -> pith_plugin_host::PluginCatalogEntry {
+  let default_enabled = true;
+  bundled_plugin_entry(
+    "web-search",
+    "Web Search",
+    enabled,
+    default_enabled,
+    &["tool:web_search"],
+    &["network.outbound"],
+  )
 }

@@ -13,7 +13,8 @@ generic chatbot, terminal skin, hosted-model frontend, or feature zoo.
 - First use: in-app model download, defaulting to `LFM2.5-350M`.
 - Runtime: one active local model at a time.
 - Plugins: real local capabilities, not prompt templates.
-- Retrieval: web search is the active retrieval layer; no generic local RAG yet.
+- Retrieval: the default-enabled Web Search plugin is the active retrieval
+  layer; no generic local RAG yet.
 - Repository: English-only source, docs, commits, branches, and PR text.
 - Foundation: free and open source.
 
@@ -92,8 +93,8 @@ Active Focus:
 - Validate the first-run path: download model, open workspace, run local work.
 - Keep runtime readiness, web search, and packaged app launch smoke aligned with
   the fresh-install path.
-- Let the local planner choose default web search candidates when the model is
-  ready; keep explicit web search requests deterministic.
+- Let the local planner choose default web search candidates when the Web Search
+  plugin and model are ready; keep explicit web search requests deterministic.
 - Harden native sandbox, approvals, plugin cancellation, and recovery boundaries.
 - Keep model verification explicit after download or activation; avoid heavy
   integrity work on app launch or UI refresh.

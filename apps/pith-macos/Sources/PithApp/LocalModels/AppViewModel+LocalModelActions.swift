@@ -191,12 +191,9 @@ extension AppViewModel {
   }
 
   func resetActiveLocalModel() {
-    guard !hasActiveOrPendingTurn() else {
-      runtimeDetail = "Finish or cancel the current local turn before resetting model selection."
-      return
-    }
-    guard !localModelActivationCoordinator.isActivating else {
-      runtimeDetail = "Finish the current model selection check before resetting model selection."
+    guard canResetActiveLocalModel() else {
+      runtimeDetail =
+        "Finish runtime launch, model download, model selection check, or active local work before resetting model selection."
       return
     }
 
