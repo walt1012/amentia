@@ -272,8 +272,17 @@ def copy_executable(source: Path, destination: Path) -> None:
 def copy_tree_if_present(source: Path, destination: Path) -> None:
   if not source.exists():
     return
+  assert_copy_source_has_no_symlinks(source)
   ignore = shutil.ignore_patterns("*.gguf", "*.bin", "*.safetensors", ".DS_Store")
   shutil.copytree(source, destination, ignore=ignore)
+
+
+def assert_copy_source_has_no_symlinks(source: Path) -> None:
+  if source.is_symlink():
+    raise RuntimeError(f"Packaged resource source must not be a symlink: {source}")
+  symlink = next((path for path in source.rglob("*") if path.is_symlink()), None)
+  if symlink is not None:
+    raise RuntimeError(f"Packaged resources must not contain symlinks: {symlink}")
 
 
 def copy_llama_backend_if_present(repo_root: Path, macos_path: Path) -> None:
