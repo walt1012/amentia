@@ -60,6 +60,7 @@ pub struct ShellCommandResult {
 pub struct ShellSandboxSummary {
   pub mode: String,
   pub backend: String,
+  pub available: bool,
   pub active: bool,
   pub network_allowed: bool,
   pub temporary_root: Option<String>,
@@ -106,6 +107,7 @@ impl ShellSandboxSummary {
     let mut attributes = HashMap::from([
       ("sandboxMode".to_string(), self.mode.clone()),
       ("sandboxBackend".to_string(), self.backend.clone()),
+      ("sandboxAvailable".to_string(), self.available.to_string()),
       ("sandboxActive".to_string(), self.active.to_string()),
       (
         "sandboxNetworkAllowed".to_string(),
@@ -256,6 +258,7 @@ mod tests {
     let inactive = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "processOnly".to_string(),
+      available: false,
       active: false,
       network_allowed: false,
       temporary_root: None,
@@ -272,10 +275,12 @@ mod tests {
       inactive.attributes()["sandboxNetworkPolicy"],
       "network denied by policy, not native-enforced"
     );
+    assert_eq!(inactive.attributes()["sandboxAvailable"], "false");
 
     let active = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "macosSeatbelt".to_string(),
+      available: true,
       active: true,
       network_allowed: false,
       temporary_root: None,

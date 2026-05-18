@@ -786,6 +786,7 @@ printf '{"content":"External runner completed."}\n'
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.echo");
   assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[1]["attributes"]["sandboxBackend"].is_string());
+  assert!(items[1]["attributes"]["sandboxAvailable"].is_string());
   assert!(items[1]["attributes"]["sandboxTempRoot"].is_string());
   assert_eq!(items[1]["attributes"]["sandboxNetworkAllowed"], "false");
   assert_eq!(

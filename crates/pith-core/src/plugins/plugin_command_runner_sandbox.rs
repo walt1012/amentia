@@ -78,6 +78,7 @@ impl PluginRunnerSandbox {
     let mut attributes = HashMap::from([
       ("sandboxMode".to_string(), status.mode.clone()),
       ("sandboxBackend".to_string(), status.backend.clone()),
+      ("sandboxAvailable".to_string(), status.available.to_string()),
       ("sandboxActive".to_string(), status.active.to_string()),
       (
         "sandboxNetworkAllowed".to_string(),

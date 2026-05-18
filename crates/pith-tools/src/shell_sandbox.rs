@@ -34,6 +34,7 @@ fn shell_sandbox_summary_from_status(
   ShellSandboxSummary {
     mode: status.mode,
     backend: status.backend,
+    available: status.available,
     active: status.active,
     network_allowed: status.network_allowed,
     temporary_root: status.temporary_root,
@@ -128,6 +129,7 @@ mod tests {
     let sandbox = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "macosSeatbelt".to_string(),
+      available: true,
       active: true,
       network_allowed: false,
       temporary_root: Some(temporary_root.display().to_string()),
@@ -153,6 +155,7 @@ mod tests {
     let sandbox = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "processOnly".to_string(),
+      available: false,
       active: false,
       network_allowed: false,
       temporary_root: Some(temporary_root.display().to_string()),
@@ -183,6 +186,7 @@ mod tests {
     let sandbox = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "macosSeatbelt".to_string(),
+      available: true,
       active: true,
       network_allowed: false,
       temporary_root: Some(temporary_root.display().to_string()),

@@ -96,6 +96,7 @@ fn approval_respond_runs_shell_after_approval() {
   assert_eq!(items[2]["attributes"]["exitCode"], "0");
   assert_eq!(items[2]["attributes"]["sandboxMode"], "workspaceReadWrite");
   assert!(items[2]["attributes"]["sandboxBackend"].is_string());
+  assert!(items[2]["attributes"]["sandboxAvailable"].is_string());
   assert!(items[2]["attributes"]["sandboxActive"].is_string());
   assert!(items[2]["attributes"]["sandboxNetworkAllowed"].is_string());
   assert_eq!(

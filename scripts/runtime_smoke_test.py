@@ -1047,6 +1047,10 @@ def main() -> int:
     )
     assert shell_turn["result"]["items"][2]["kind"] == "approvalRequested"
     assert shell_turn["result"]["items"][2]["attributes"]["sandboxMode"] == "workspaceReadWrite"
+    assert shell_turn["result"]["items"][2]["attributes"]["sandboxAvailable"] in {
+      "true",
+      "false",
+    }
     assert shell_turn["result"]["items"][2]["attributes"]["sandboxActive"] in {
       "true",
       "false",
@@ -1071,6 +1075,10 @@ def main() -> int:
     assert shell_approval["result"]["items"][2]["attributes"]["sandboxBackend"] in {
       "macosSeatbelt",
       "processOnly",
+    }
+    assert shell_approval["result"]["items"][2]["attributes"]["sandboxAvailable"] in {
+      "true",
+      "false",
     }
     assert shell_approval["result"]["items"][2]["attributes"]["sandboxActive"] in {
       "true",
