@@ -33,9 +33,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let web_search_status = web_search_status();
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
   let plugin_command_count = context.plugin_state.command_capability_count();
-  let enabled_plugin_command_count = context
-    .plugin_state
-    .enabled_command_capability_count();
+  let enabled_plugin_command_count = context.plugin_state.enabled_command_capability_count();
 
   let status = readiness_status(
     model_ready,
