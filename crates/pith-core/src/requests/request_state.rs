@@ -76,6 +76,7 @@ pub(crate) enum PreparedTurnAction {
     query: String,
   },
   WebSearch(intent_inference::WebSearchIntent),
+  WebSearchCandidate(intent_inference::WebSearchIntent),
   ListWorkspace,
 }
 

@@ -14,6 +14,7 @@ extension AppViewModel {
     }
 
     let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
+    let shouldCancelRunningSearch = isWorkspaceSearching
     let requestToken = workspaceSearchSession.begin(query: query)
 
     updateWorkspaceSearchState { state in
@@ -24,6 +25,12 @@ extension AppViewModel {
         workspaceSearchSession.finish(requestToken)
       }
       do {
+        if shouldCancelRunningSearch {
+          _ = try? await runtimeBridge.cancelWorkspaceSearches()
+          guard workspaceSearchSession.isCurrent(requestToken) else {
+            return
+          }
+        }
         let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
         guard workspaceSearchSession.isCurrent(requestToken) else {
           return
@@ -97,6 +104,7 @@ extension AppViewModel {
   }
 
   func resetWorkspaceSearch() {
+    cancelRuntimeWorkspaceSearches()
     let resetStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
     updateWorkspaceSearchState { state in
       state.reset(status: resetStatus)
@@ -107,6 +115,16 @@ extension AppViewModel {
     let changedStatus = workspaceSearchSession.changedQueryStatus()
     updateWorkspaceSearchState { state in
       state.finishWithChangedQuery(status: changedStatus)
+    }
+  }
+
+  private func cancelRuntimeWorkspaceSearches() {
+    guard isWorkspaceSearching else {
+      return
+    }
+
+    Task {
+      _ = try? await runtimeBridge.cancelWorkspaceSearches()
     }
   }
 }

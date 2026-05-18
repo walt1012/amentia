@@ -128,25 +128,34 @@ extension AppViewModel {
       return
     }
 
-    do {
-      let preparedActivation = try LocalModelActivationPreparer.prepare(model: model)
-      runtimeBridge.configureActiveLocalModel(
-        manifestPath: preparedActivation.manifestPath,
-        modelPath: model.installPath
-      )
-      selectedSetupModelID = model.id
-      refreshLocalModelCatalog()
-      applyLocalModelActivationPlan(
-        LocalModelActivationPlanner.selectionPlan(
-          model: model,
-          manifestPath: preparedActivation.manifestPath
+    runtimeDetail = "Verifying \(model.displayName) before selection..."
+    Task {
+      do {
+        let preparedActivation = try await LocalModelActivationPreparer.prepareInBackground(
+          model: model
         )
-      )
-    } catch {
-      applyLocalModelActivationFailure(
-        LocalModelActivationPlanner.failurePlan(error: error),
-        model: model
-      )
+        guard !hasActiveOrPendingTurn() else {
+          runtimeDetail = "Finish or cancel the current local turn before switching models."
+          return
+        }
+        runtimeBridge.configureActiveLocalModel(
+          manifestPath: preparedActivation.manifestPath,
+          modelPath: model.installPath
+        )
+        selectedSetupModelID = model.id
+        refreshLocalModelCatalog()
+        applyLocalModelActivationPlan(
+          LocalModelActivationPlanner.selectionPlan(
+            model: model,
+            manifestPath: preparedActivation.manifestPath
+          )
+        )
+      } catch {
+        applyLocalModelActivationFailure(
+          LocalModelActivationPlanner.failurePlan(error: error),
+          model: model
+        )
+      }
     }
   }
 

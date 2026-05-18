@@ -24,6 +24,7 @@ pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
 pub const WORKSPACE_CURRENT: &str = "workspace/current";
 pub const WORKSPACE_OPEN: &str = "workspace/open";
 pub const WORKSPACE_SEARCH: &str = "workspace/search";
+pub const WORKSPACE_SEARCH_CANCEL_RUNNING: &str = "workspace/searchCancelRunning";
 pub const TURN_CANCEL: &str = "turn/cancel";
 pub const TURN_CANCEL_RUNNING: &str = "turn/cancelRunning";
 pub const THREAD_READ: &str = "thread/read";

@@ -7,6 +7,7 @@ use pith_process::configure_process_group;
 use pith_protocol::WorkspaceSummary;
 
 const PLUGIN_RUNNER_TEMP_DIR: &str = ".pith/plugin-runner-tmp";
+const PLUGIN_RUNNER_SAFE_PATH: &str = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
 
 pub(super) struct PluginRunnerSandbox {
   policy: pith_sandbox::SandboxPolicy,
@@ -64,6 +65,7 @@ impl PluginRunnerSandbox {
 
   pub(super) fn build_command(&self, entrypoint_path: &Path) -> Command {
     let mut command = build_sandboxed_command(entrypoint_path, &self.policy);
+    command.env_clear();
     command.current_dir(&self.plugin_root);
     self.apply_environment(&mut command);
     command
@@ -105,6 +107,10 @@ impl PluginRunnerSandbox {
 
   fn apply_environment(&self, command: &mut Command) {
     command
+      .env("PATH", PLUGIN_RUNNER_SAFE_PATH)
+      .env("HOME", &self.temporary_root)
+      .env("LANG", "en_US.UTF-8")
+      .env("LC_ALL", "en_US.UTF-8")
       .env("TMPDIR", &self.temporary_root)
       .env("TMP", &self.temporary_root)
       .env("TEMP", &self.temporary_root)
@@ -196,6 +202,7 @@ fn clear_runner_temporary_root(temporary_root: &Path) -> std::result::Result<(),
 
 #[cfg(test)]
 mod tests {
+  use std::collections::HashMap;
   use std::time::{SystemTime, UNIX_EPOCH};
 
   use super::*;
@@ -240,6 +247,45 @@ mod tests {
 
     let _ = fs::remove_dir_all(workspace_root);
     let _ = fs::remove_dir_all(outside);
+  }
+
+  #[test]
+  fn build_command_uses_explicit_safe_environment() {
+    let workspace_root = unique_temp_workspace("plugin-runner-env");
+    let plugin_root = workspace_root.join(".agents/plugins/env");
+    fs::create_dir_all(&plugin_root).expect("plugin root");
+    let workspace = WorkspaceSummary {
+      root_path: workspace_root.display().to_string(),
+      display_name: "Test Workspace".to_string(),
+    };
+    let sandbox = PluginRunnerSandbox::prepare(Some(&workspace), "env", &plugin_root, false)
+      .expect("prepare sandbox");
+    let temporary_root = sandbox.temporary_root.to_string_lossy().to_string();
+    let command = sandbox.build_command(&plugin_root.join("run"));
+    let environment = command
+      .get_envs()
+      .filter_map(|(key, value)| {
+        Some((
+          key.to_string_lossy().to_string(),
+          value?.to_string_lossy().to_string(),
+        ))
+      })
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      environment.get("PATH").map(String::as_str),
+      Some(PLUGIN_RUNNER_SAFE_PATH)
+    );
+    assert_eq!(
+      environment.get("HOME").map(String::as_str),
+      Some(temporary_root.as_str())
+    );
+    assert_eq!(
+      environment.get("PITH_PLUGIN_SANDBOX_TEMP").map(String::as_str),
+      Some(temporary_root.as_str())
+    );
+
+    let _ = fs::remove_dir_all(workspace_root);
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {

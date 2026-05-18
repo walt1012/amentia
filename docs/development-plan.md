@@ -92,9 +92,13 @@ Active Focus:
 - Validate the first-run path: download model, open workspace, run local work.
 - Keep runtime readiness, web search, and packaged app launch smoke aligned with
   the fresh-install path.
+- Let the local planner choose default web search candidates when the model is
+  ready; keep explicit web search requests deterministic.
 - Harden native sandbox, approvals, plugin cancellation, and recovery boundaries.
 - Keep model verification explicit after download or activation; avoid heavy
   integrity work on app launch or UI refresh.
+- Keep test fixtures out of production runtime environments, and keep runtime
+  cancellation owned by the runtime instead of only the UI task layer.
 - Polish only the primary coding flow; keep plugin UI progressive and compact.
 - Keep the x86_64 macOS 12 app bundle signed-ready with validated resources.
 

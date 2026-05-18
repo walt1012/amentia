@@ -1,6 +1,6 @@
 import Foundation
 
-struct ModelHealthSummary: Hashable {
+struct ModelHealthSummary: Hashable, Sendable {
   let packID: String
   let displayName: String
   let backend: String
@@ -13,21 +13,21 @@ struct ModelHealthSummary: Hashable {
   let metrics: [String: String]
 }
 
-struct RuntimeReadinessCheckSummary: Identifiable, Hashable {
+struct RuntimeReadinessCheckSummary: Identifiable, Hashable, Sendable {
   let id: String
   let title: String
   let status: String
   let detail: String
 }
 
-struct RuntimeReadinessSummary: Hashable {
+struct RuntimeReadinessSummary: Hashable, Sendable {
   let status: String
   let summary: String
   let checks: [RuntimeReadinessCheckSummary]
   let metrics: [String: String]
 }
 
-struct LocalModelSummary: Identifiable, Hashable {
+struct LocalModelSummary: Identifiable, Hashable, Sendable {
   let id: String
   let displayName: String
   let description: String

@@ -16,6 +16,7 @@ const WEB_SEARCH_PROVIDER: &str = "DuckDuckGo Lite";
 const WEB_SEARCH_ENDPOINT: &str = "https://lite.duckduckgo.com/lite/";
 const WEB_SEARCH_CLIENT: &str = "curl";
 const WEB_SEARCH_FIXTURE_CLIENT: &str = "fixture";
+const WEB_SEARCH_FIXTURE_ENABLED_ENV: &str = "PITH_ENABLE_WEB_SEARCH_FIXTURE";
 const WEB_SEARCH_FIXTURE_PATH_ENV: &str = "PITH_WEB_SEARCH_FIXTURE_PATH";
 const WEB_SEARCH_CURL_TIMEOUT_SECONDS: &str = "15";
 const WEB_SEARCH_CONNECT_TIMEOUT_SECONDS: &str = "8";
@@ -233,7 +234,15 @@ fn curl_command_path() -> Option<String> {
 }
 
 fn configured_web_search_fixture_path() -> Option<PathBuf> {
-  env::var_os(WEB_SEARCH_FIXTURE_PATH_ENV).map(PathBuf::from)
+  web_search_fixture_enabled()
+    .then(|| env::var_os(WEB_SEARCH_FIXTURE_PATH_ENV).map(PathBuf::from))
+    .flatten()
+}
+
+fn web_search_fixture_enabled() -> bool {
+  env::var(WEB_SEARCH_FIXTURE_ENABLED_ENV)
+    .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+    .unwrap_or(false)
 }
 
 #[cfg(target_os = "macos")]
@@ -330,12 +339,23 @@ mod tests {
   #[test]
   fn web_search_status_reports_provider_and_client() {
     let _guard = WEB_SEARCH_ENV_LOCK.lock().expect("web search env lock");
-    let _env_guard = EnvVarGuard::remove(WEB_SEARCH_FIXTURE_PATH_ENV);
+    let _enabled_guard = EnvVarGuard::remove(WEB_SEARCH_FIXTURE_ENABLED_ENV);
+    let _path_guard = EnvVarGuard::remove(WEB_SEARCH_FIXTURE_PATH_ENV);
     let status = web_search_status();
 
     assert_eq!(status.provider, WEB_SEARCH_PROVIDER);
     assert_eq!(status.client, WEB_SEARCH_CLIENT);
     assert!(!status.detail.is_empty());
+  }
+
+  #[test]
+  fn web_search_fixture_requires_explicit_test_gate() {
+    let _guard = WEB_SEARCH_ENV_LOCK.lock().expect("web search env lock");
+    let _enabled_guard = EnvVarGuard::remove(WEB_SEARCH_FIXTURE_ENABLED_ENV);
+    let _path_guard =
+      EnvVarGuard::set(WEB_SEARCH_FIXTURE_PATH_ENV, std::ffi::OsStr::new("/tmp/pith-fixture"));
+
+    assert!(configured_web_search_fixture_path().is_none());
   }
 
   #[test]
@@ -353,7 +373,9 @@ mod tests {
       "#,
     )
     .expect("write web search fixture");
-    let _env_guard = EnvVarGuard::set(WEB_SEARCH_FIXTURE_PATH_ENV, fixture_path.as_os_str());
+    let _enabled_guard =
+      EnvVarGuard::set(WEB_SEARCH_FIXTURE_ENABLED_ENV, std::ffi::OsStr::new("1"));
+    let _path_guard = EnvVarGuard::set(WEB_SEARCH_FIXTURE_PATH_ENV, fixture_path.as_os_str());
 
     let status = web_search_status();
     let results =

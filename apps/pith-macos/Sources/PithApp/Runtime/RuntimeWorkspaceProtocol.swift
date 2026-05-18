@@ -29,6 +29,10 @@ struct WorkspaceSearchResult: Codable {
   let matches: [WorkspaceSearchMatchPayload]
 }
 
+struct WorkspaceSearchCancelRunningResult: Codable {
+  let cancelledCount: Int
+}
+
 struct WorkspaceSearchMatchPayload: Codable {
   let relativePath: String
   let lineNumber: Int

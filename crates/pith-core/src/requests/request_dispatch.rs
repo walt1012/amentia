@@ -47,6 +47,9 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::WORKSPACE_CURRENT => workspace_requests::handle_workspace_current(context, request),
     methods::WORKSPACE_OPEN => workspace_requests::handle_workspace_open(context, request),
     methods::WORKSPACE_SEARCH => workspace_search::handle_workspace_search(context, request),
+    methods::WORKSPACE_SEARCH_CANCEL_RUNNING => {
+      workspace_search::handle_workspace_search_cancel_running(context, request)
+    }
     methods::TURN_CANCEL => turn_streaming::handle_turn_cancel(context, request),
     methods::TURN_CANCEL_RUNNING => turn_streaming::handle_turn_cancel_running(context, request),
     methods::THREAD_READ => thread_requests::handle_thread_read(context, request),

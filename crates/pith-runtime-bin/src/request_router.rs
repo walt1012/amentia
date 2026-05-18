@@ -63,7 +63,7 @@ pub(crate) fn route_runtime_request(
         request,
         prepare_workspace_search,
         execute_prepared_workspace_search,
-        |_context, completed| complete_prepared_workspace_search(completed),
+        complete_prepared_workspace_search,
       );
     }
     _ => {

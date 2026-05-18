@@ -9,6 +9,10 @@ enum RuntimeBridgeLocalEnvironment {
   private static let activeModelManifestPathKey = "pith.activeModelManifestPath"
   private static let activeModelPathKey = "pith.activeModelPath"
   private static let activeModelInvalidationDetailKey = "pith.activeModelInvalidationDetail"
+  private static let strippedRuntimeEnvironmentKeys = [
+    "PITH_ENABLE_WEB_SEARCH_FIXTURE",
+    "PITH_WEB_SEARCH_FIXTURE_PATH",
+  ]
 
   static func localPluginInstallRootPath() -> String {
     pluginDirectory().path
@@ -53,6 +57,7 @@ enum RuntimeBridgeLocalEnvironment {
 
   static func runtimeEnvironment() -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
+    stripRuntimeOnlyTestEnvironment(from: &environment)
     environment["PITH_DATA_DIR"] = storageDirectory().path
     environment["PITH_LOCAL_PLUGIN_DIR"] = pluginDirectory().path
     applyBundleResourceEnvironment(to: &environment)
@@ -62,6 +67,12 @@ enum RuntimeBridgeLocalEnvironment {
       environment["PITH_LFM_MODEL_PATH"] = activeModel.modelPath
     }
     return environment
+  }
+
+  private static func stripRuntimeOnlyTestEnvironment(from environment: inout [String: String]) {
+    for key in strippedRuntimeEnvironmentKeys {
+      environment.removeValue(forKey: key)
+    }
   }
 
   private static func applyBundleResourceEnvironment(to environment: inout [String: String]) {

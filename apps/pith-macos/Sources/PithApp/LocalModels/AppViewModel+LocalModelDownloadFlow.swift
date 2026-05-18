@@ -46,7 +46,7 @@ extension AppViewModel {
         )
         let completionState: LocalModelDownloadSessionCompletionState
         do {
-          completionState = try LocalModelDownloadSessionPlanner.completionState(
+          completionState = try await LocalModelDownloadSessionPlanner.completionStateInBackground(
             model: model,
             sourceURL: downloadURL,
             activationRequested: shouldActivateAfterDownload,

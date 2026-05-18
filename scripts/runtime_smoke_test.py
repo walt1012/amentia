@@ -613,6 +613,7 @@ def main() -> int:
   env = os.environ.copy()
   env["PITH_DATA_DIR"] = str(state_dir)
   env["PITH_PLUGIN_DIR"] = str(plugin_dir)
+  env["PITH_ENABLE_WEB_SEARCH_FIXTURE"] = "1"
   env["PITH_WEB_SEARCH_FIXTURE_PATH"] = str(write_web_search_fixture(state_dir))
   process = start_runtime(repo_root, env)
   success = False

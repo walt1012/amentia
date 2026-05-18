@@ -1,6 +1,6 @@
 import Foundation
 
-struct ModelDownloadProgress: Hashable {
+struct ModelDownloadProgress: Hashable, Sendable {
   let modelID: String
   let displayName: String
   var bytesReceived: Int64

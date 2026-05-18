@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use pith_model_runtime::{GenerateRequest, ModelRole};
 use pith_protocol::TimelineItem;
 use pith_tools::{web_search_status, web_search_with_cancellation};
 
@@ -15,6 +16,44 @@ use crate::local_responses::{
 };
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
+
+const WEB_SEARCH_ROUTE_DECISION_TOKENS: usize = 8;
+
+pub(super) fn model_confirms_web_search_candidate(
+  snapshot: &PreparedTurnSnapshot,
+  intent: &WebSearchIntent,
+) -> bool {
+  if snapshot.cancellation.is_cancelled() {
+    return true;
+  }
+
+  let response = snapshot.model_runtime.generate(GenerateRequest {
+    role: ModelRole::Planner,
+    prompt: format!(
+      "Choose whether Pith should use web_search before answering.\n\
+       Return exactly WEB_SEARCH or NO_SEARCH.\n\
+       Use WEB_SEARCH for current public facts, external docs, prices, news, releases, weather, schedules, or explicit online lookup.\n\
+       Use NO_SEARCH for local workspace, codebase, file, repo, or reasoning tasks.\n\
+       User request: {}\n\
+       Candidate reason: {}\n\
+       Decision:",
+      snapshot.message,
+      intent.routing_reason
+    ),
+    max_tokens: WEB_SEARCH_ROUTE_DECISION_TOKENS,
+    cancellation: Some(snapshot.cancellation.clone()),
+  });
+
+  if response.status != "ready" {
+    return true;
+  }
+
+  let decision = response.text.trim().to_ascii_uppercase();
+  if decision.contains("NO_SEARCH") {
+    return false;
+  }
+  decision.contains("WEB_SEARCH") || decision.contains("YES")
+}
 
 pub(super) fn execute_web_search_turn(
   snapshot: &PreparedTurnSnapshot,

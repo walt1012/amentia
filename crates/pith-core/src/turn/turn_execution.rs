@@ -7,6 +7,7 @@ use super::turn_workspace_execution::{
   execute_list_turn, execute_no_workspace_turn, execute_read_turn, execute_search_turn,
   execute_web_search_turn,
 };
+use super::turn_web_search::model_confirms_web_search_candidate;
 use crate::plugin_commands::execute_plugin_command_snapshot;
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
 
@@ -138,6 +139,15 @@ pub(crate) fn execute_prepared_turn_snapshot(
     }
     PreparedTurnAction::WebSearch(intent) => {
       execute_web_search_turn(&snapshot, &intent, &mut items, &mut pending_active_turn);
+    }
+    PreparedTurnAction::WebSearchCandidate(intent) => {
+      if model_confirms_web_search_candidate(&snapshot, &intent) {
+        execute_web_search_turn(&snapshot, &intent, &mut items, &mut pending_active_turn);
+      } else if let Some(workspace) = snapshot.workspace.as_ref() {
+        execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);
+      } else {
+        execute_no_workspace_turn(&snapshot, &mut items);
+      }
     }
     PreparedTurnAction::ListWorkspace => {
       if let Some(workspace) = snapshot.workspace.as_ref() {

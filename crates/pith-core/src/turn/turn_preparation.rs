@@ -56,7 +56,7 @@ pub(crate) fn prepare_turn_action(
 
   let Some(workspace) = workspace else {
     if let Some(intent) = infer_fresh_web_search_intent(message) {
-      return PreparedTurnAction::WebSearch(intent);
+      return PreparedTurnAction::WebSearchCandidate(intent);
     }
     return PreparedTurnAction::NoWorkspace;
   };
@@ -89,7 +89,7 @@ pub(crate) fn prepare_turn_action(
   }
 
   if let Some(intent) = infer_fresh_web_search_intent(message) {
-    return PreparedTurnAction::WebSearch(intent);
+    return PreparedTurnAction::WebSearchCandidate(intent);
   }
 
   PreparedTurnAction::ListWorkspace

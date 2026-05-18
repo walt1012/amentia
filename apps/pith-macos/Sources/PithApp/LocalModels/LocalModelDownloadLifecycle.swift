@@ -1,6 +1,6 @@
 import Foundation
 
-struct LocalModelDownloadSessionStartState {
+struct LocalModelDownloadSessionStartState: Sendable {
   let activeModelID: String
   let pausedModelID: String?
   let progress: ModelDownloadProgress
@@ -8,7 +8,7 @@ struct LocalModelDownloadSessionStartState {
   let shouldActivateAfterDownload: Bool
 }
 
-struct LocalModelDownloadSessionCompletionState {
+struct LocalModelDownloadSessionCompletionState: Sendable {
   let completionPlan: LocalModelDownloadCompletionPlan
   let preparedActivation: PreparedLocalModelActivation?
 }
@@ -52,5 +52,28 @@ enum LocalModelDownloadSessionPlanner {
       completionPlan: completionPlan,
       preparedActivation: finalizationPlan.preparedActivation
     )
+  }
+
+  static func completionStateInBackground(
+    model: LocalModelSummary,
+    sourceURL: URL,
+    activationRequested: Bool,
+    hasActiveOrPendingTurn: Bool
+  ) async throws -> LocalModelDownloadSessionCompletionState {
+    try await withCheckedThrowingContinuation { continuation in
+      DispatchQueue.global(qos: .utility).async {
+        do {
+          let state = try completionState(
+            model: model,
+            sourceURL: sourceURL,
+            activationRequested: activationRequested,
+            hasActiveOrPendingTurn: hasActiveOrPendingTurn
+          )
+          continuation.resume(returning: state)
+        } catch {
+          continuation.resume(throwing: error)
+        }
+      }
+    }
   }
 }

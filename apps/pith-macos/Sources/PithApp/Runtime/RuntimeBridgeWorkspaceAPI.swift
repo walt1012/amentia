@@ -48,4 +48,14 @@ extension RuntimeBridge {
       )
     }
   }
+
+  func cancelWorkspaceSearches() async throws -> Int {
+    let response: JSONRPCResponse<WorkspaceSearchCancelRunningResult> = try await sendRequest(
+      method: "workspace/searchCancelRunning",
+      params: OptionalRequestParams.none
+    )
+    let result = try responseResult(from: response)
+
+    return result.cancelledCount
+  }
 }

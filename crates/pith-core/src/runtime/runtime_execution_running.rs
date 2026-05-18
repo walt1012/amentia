@@ -44,6 +44,7 @@ pub(crate) struct RuntimeRunningExecutionState {
   running_turns: HashMap<String, RunningCancellation>,
   running_approvals: HashMap<String, RunningCancellation>,
   running_plugin_commands: HashMap<String, RunningCancellation>,
+  running_workspace_searches: HashMap<String, GenerationCancellation>,
   pending_cancellations: HashSet<String>,
 }
 
@@ -59,6 +60,7 @@ impl RuntimeRunningExecutionState {
       running_turns: HashMap::new(),
       running_approvals: HashMap::new(),
       running_plugin_commands: HashMap::new(),
+      running_workspace_searches: HashMap::new(),
       pending_cancellations: HashSet::new(),
     }
   }
@@ -196,6 +198,9 @@ impl RuntimeRunningExecutionState {
     for running_plugin_command in self.running_plugin_commands.values() {
       running_plugin_command.cancellation.cancel();
     }
+    for workspace_search in self.running_workspace_searches.values() {
+      workspace_search.cancel();
+    }
     self.pending_cancellations.clear();
   }
 
@@ -211,11 +216,34 @@ impl RuntimeRunningExecutionState {
     self.running_plugin_commands.remove(running_id);
   }
 
+  pub(crate) fn insert_running_workspace_search(
+    &mut self,
+    running_id: String,
+    cancellation: GenerationCancellation,
+  ) {
+    self
+      .running_workspace_searches
+      .insert(running_id, cancellation);
+  }
+
+  pub(crate) fn cancel_running_workspace_searches(&mut self) -> usize {
+    let count = self.running_workspace_searches.len();
+    for workspace_search in self.running_workspace_searches.values() {
+      workspace_search.cancel();
+    }
+    count
+  }
+
+  pub(crate) fn remove_running_workspace_search(&mut self, running_id: &str) {
+    self.running_workspace_searches.remove(running_id);
+  }
+
   pub(crate) fn clear_after_recovery(&mut self) {
     self.cancel_all_running();
     self.running_turns.clear();
     self.running_approvals.clear();
     self.running_plugin_commands.clear();
+    self.running_workspace_searches.clear();
     self.pending_cancellations.clear();
   }
 }

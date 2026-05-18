@@ -50,3 +50,9 @@ pub struct WorkspaceSearchResult {
   pub workspace: WorkspaceSummary,
   pub matches: Vec<WorkspaceSearchMatch>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSearchCancelRunningResult {
+  pub cancelled_count: usize,
+}
