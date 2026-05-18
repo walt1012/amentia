@@ -105,6 +105,7 @@ mod tests {
   fn prepare_environment_creates_inactive_sandbox_temporary_root() {
     let workspace = unique_temp_workspace("shell-sandbox-inactive-temp");
     let temporary_root = shell_sandbox_temp_root(&workspace);
+    fs::create_dir_all(&workspace).expect("workspace");
     let sandbox = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "processOnly".to_string(),
