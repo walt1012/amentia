@@ -90,27 +90,16 @@ enum LocalModelIntegrity {
       )
       try validateGGUFMagic(at: URL(fileURLWithPath: path), displayName: item.displayName)
       try validateExpectedSHA256(item.sha256, displayName: item.displayName)
-      if LocalModelVerificationStampStore.hasVerifiedModel(
-        modelID: item.id,
-        path: path,
-        expectedSHA256: item.sha256,
-        localMetadata: localMetadata
-      ) {
-        return true
-      }
-
-      let actualSHA256 = try sha256Hex(at: URL(fileURLWithPath: path))
-      guard actualSHA256.caseInsensitiveCompare(item.sha256) == .orderedSame else {
-        LocalModelVerificationStampStore.forgetVerifiedModel(modelID: item.id)
-        return false
-      }
-      LocalModelVerificationStampStore.rememberVerifiedModel(
+      let hasTrustedStamp = LocalModelVerificationStampStore.hasVerifiedModel(
         modelID: item.id,
         path: path,
         expectedSHA256: item.sha256,
         localMetadata: localMetadata
       )
-      return true
+      if !hasTrustedStamp {
+        LocalModelVerificationStampStore.forgetVerifiedModel(modelID: item.id)
+      }
+      return hasTrustedStamp
     } catch {
       LocalModelVerificationStampStore.forgetVerifiedModel(modelID: item.id)
       return false

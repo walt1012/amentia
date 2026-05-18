@@ -4,6 +4,7 @@ use super::test_support::{
 use super::*;
 use pith_protocol::methods;
 use serde_json::json;
+use std::ffi::OsString;
 use std::fs;
 
 #[test]
@@ -155,4 +156,82 @@ fn turn_start_prefers_workspace_file_over_fresh_web_search() {
   assert_eq!(items[2]["attributes"]["relativePath"], "Cargo.toml");
   assert_eq!(items[3]["kind"], "toolResult");
   assert!(items[3]["content"].as_str().unwrap().contains("0.1.0"));
+}
+
+#[test]
+fn turn_start_executes_web_search_with_fixture_client() {
+  let workspace = create_temp_workspace("web-search-fixture");
+  let fixture_path = workspace.join("search.html");
+  fs::write(
+    &fixture_path,
+    r#"
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith&amp;rut=abc" class='result-link'>Pith fixture result</a>
+      <td class='result-snippet'>Deterministic local web search result.</td>
+    "#,
+  )
+  .expect("write web search fixture");
+  let _env_guard = EnvVarGuard::set("PITH_WEB_SEARCH_FIXTURE_PATH", fixture_path.as_os_str());
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Fixture Web Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "web search for Pith local model"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[2]["kind"], "toolStart");
+  assert_eq!(items[2]["title"], "web_search");
+  assert_eq!(items[2]["attributes"]["client"], "fixture");
+  assert_eq!(items[3]["kind"], "toolResult");
+  assert_eq!(items[3]["title"], "web_search result");
+  assert_eq!(items[3]["attributes"]["resultCount"], "1");
+  assert!(items[3]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Pith fixture result"));
+}
+
+struct EnvVarGuard {
+  key: &'static str,
+  previous: Option<OsString>,
+}
+
+impl EnvVarGuard {
+  fn set(key: &'static str, value: &std::ffi::OsStr) -> Self {
+    let previous = std::env::var_os(key);
+    std::env::set_var(key, value);
+    Self { key, previous }
+  }
+}
+
+impl Drop for EnvVarGuard {
+  fn drop(&mut self) {
+    if let Some(previous) = self.previous.as_ref() {
+      std::env::set_var(self.key, previous);
+    } else {
+      std::env::remove_var(self.key);
+    }
+  }
 }

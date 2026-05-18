@@ -10,12 +10,11 @@ Planned uses:
 
 Current scripts:
 
-- `check_english_policy.py`: rejects CJK text in tracked source, documentation, and automation files
-- `package_macos_app.py`: builds and validates the x86_64 `Pith.app` package artifact in CI
-- `validate_model_pack.py`: checks the default model manifest and Swift local model catalog; add
-  `--remote` during release audits to compare Hugging Face size, checksum, and license metadata
-- `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, plugin, command,
-  hook, and connector protocol surfaces in GitHub Actions
+- `check_english_policy.py`: rejects source and documentation text that violates the repository English-only policy.
+- `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip.
+- `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
+- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI and verifies the process stays alive briefly.
+- `validate_model_pack.py`: validates local model pack metadata and first-use resource packaging; use `--remote` during release audits.
 
 These scripts are safe to run locally when a matching toolchain exists, but CI is the canonical
 execution environment.

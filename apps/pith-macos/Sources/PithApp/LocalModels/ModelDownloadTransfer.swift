@@ -7,6 +7,7 @@ struct ModelDownloadPaused: Error {
 final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
   private let targetURL: URL
   private let onProgress: (Int64, Int64) -> Void
+  private let stateQueue = DispatchQueue(label: "pith.model-download.transfer")
   private var continuation: CheckedContinuation<Void, Error>?
   private var session: URLSession?
   private var task: URLSessionDownloadTask?
@@ -20,12 +21,15 @@ final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
   func start(from sourceURL: URL, resumeData: Data?) async throws {
     try await withTaskCancellationHandler {
       try await withCheckedThrowingContinuation { continuation in
-        self.continuation = continuation
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        self.session = session
         let task = resumeData.map { session.downloadTask(withResumeData: $0) }
           ?? session.downloadTask(with: sourceURL)
-        self.task = task
+        self.stateQueue.sync {
+          self.continuation = continuation
+          self.session = session
+          self.task = task
+          self.pauseRequested = false
+        }
         task.resume()
       }
     } onCancel: {
@@ -34,8 +38,16 @@ final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
   }
 
   func pause() {
-    pauseRequested = true
-    task?.cancel(byProducingResumeData: { [weak self] resumeData in
+    let task = stateQueue.sync { () -> URLSessionDownloadTask? in
+      pauseRequested = true
+      return self.task
+    }
+    guard let task else {
+      complete(.failure(CancellationError()))
+      return
+    }
+
+    task.cancel(byProducingResumeData: { [weak self] resumeData in
       guard let self else {
         return
       }
@@ -50,8 +62,16 @@ final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
   }
 
   func cancel() {
-    pauseRequested = false
-    task?.cancel()
+    let task = stateQueue.sync { () -> URLSessionDownloadTask? in
+      pauseRequested = false
+      return self.task
+    }
+    guard let task else {
+      complete(.failure(CancellationError()))
+      return
+    }
+
+    task.cancel()
   }
 
   func urlSession(
@@ -114,7 +134,7 @@ final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
       return
     }
 
-    if pauseRequested {
+    if isPauseRequested() {
       if let resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data,
          !resumeData.isEmpty
       {
@@ -129,20 +149,38 @@ final class ModelDownloadTransfer: NSObject, URLSessionDownloadDelegate {
   }
 
   private func complete(_ result: Result<Void, Error>) {
-    guard let continuation else {
+    let completion = stateQueue.sync { () -> (
+      continuation: CheckedContinuation<Void, Error>?,
+      session: URLSession?
+    ) in
+      guard let continuation else {
+        return (nil, nil)
+      }
+
+      let session = self.session
+      self.continuation = nil
+      self.task = nil
+      self.session = nil
+      self.pauseRequested = false
+      return (continuation, session)
+    }
+    guard let continuation = completion.continuation else {
       return
     }
 
-    self.continuation = nil
-    task = nil
-    session?.invalidateAndCancel()
-    session = nil
+    completion.session?.invalidateAndCancel()
 
     switch result {
     case .success:
       continuation.resume()
     case .failure(let error):
       continuation.resume(throwing: error)
+    }
+  }
+
+  private func isPauseRequested() -> Bool {
+    stateQueue.sync {
+      pauseRequested
     }
   }
 }

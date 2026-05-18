@@ -17,6 +17,7 @@ NOTION_CREDENTIAL_LABEL = "Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "notion-smoke-token"
 LOCAL_CREDENTIAL_PROVIDER = "pith.localCredentialProvider"
 RUNTIME_STDERR_LOG_NAME = "runtime-smoke-stderr.log"
+WEB_SEARCH_FIXTURE_NAME = "web-search-fixture.html"
 DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
 DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
@@ -56,6 +57,19 @@ def runtime_stderr_tail(env: Mapping[str, str], max_lines: int = 80) -> str:
 
 def write_json_file(path: Path, value: dict) -> None:
   path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+
+
+def write_web_search_fixture(state_dir: Path) -> Path:
+  fixture_path = state_dir / WEB_SEARCH_FIXTURE_NAME
+  fixture_path.parent.mkdir(parents=True, exist_ok=True)
+  fixture_path.write_text(
+    """
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith&amp;rut=abc" class='result-link'>Pith fixture result</a>
+      <td class='result-snippet'>Deterministic local web search result.</td>
+    """,
+    encoding="utf-8",
+  )
+  return fixture_path
 
 
 def assert_model_bootstrap_metadata(model_bootstrap: dict) -> None:
@@ -599,6 +613,7 @@ def main() -> int:
   env = os.environ.copy()
   env["PITH_DATA_DIR"] = str(state_dir)
   env["PITH_PLUGIN_DIR"] = str(plugin_dir)
+  env["PITH_WEB_SEARCH_FIXTURE_PATH"] = str(write_web_search_fixture(state_dir))
   process = start_runtime(repo_root, env)
   success = False
 
@@ -694,8 +709,8 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["sandboxActive"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["webSearchTimeoutSeconds"] == "20"
     assert runtime_readiness["result"]["metrics"]["webSearchProvider"] == "DuckDuckGo Lite"
-    assert runtime_readiness["result"]["metrics"]["webSearchClient"] == "curl"
-    assert runtime_readiness["result"]["metrics"]["webSearchAvailable"] in {"true", "false"}
+    assert runtime_readiness["result"]["metrics"]["webSearchClient"] == "fixture"
+    assert runtime_readiness["result"]["metrics"]["webSearchAvailable"] == "true"
     assert "pluginCommandCount" in runtime_readiness["result"]["metrics"]
     assert "enabledPluginCommandCount" in runtime_readiness["result"]["metrics"]
     assert runtime_readiness["result"]["metrics"]["pendingApprovalCount"] == "0"

@@ -15,6 +15,8 @@ use crate::web_search_parser::parse_duckduckgo_lite_results;
 const WEB_SEARCH_PROVIDER: &str = "DuckDuckGo Lite";
 const WEB_SEARCH_ENDPOINT: &str = "https://lite.duckduckgo.com/lite/";
 const WEB_SEARCH_CLIENT: &str = "curl";
+const WEB_SEARCH_FIXTURE_CLIENT: &str = "fixture";
+const WEB_SEARCH_FIXTURE_PATH_ENV: &str = "PITH_WEB_SEARCH_FIXTURE_PATH";
 const WEB_SEARCH_CURL_TIMEOUT_SECONDS: &str = "15";
 const WEB_SEARCH_CONNECT_TIMEOUT_SECONDS: &str = "8";
 const WEB_SEARCH_MAX_BYTES: &str = "1048576";
@@ -39,6 +41,26 @@ pub fn web_search_timeout_seconds() -> u64 {
 }
 
 pub fn web_search_status() -> WebSearchStatus {
+  if let Some(fixture_path) = configured_web_search_fixture_path() {
+    let available = fixture_path.is_file();
+    return WebSearchStatus {
+      provider: WEB_SEARCH_PROVIDER.to_string(),
+      client: WEB_SEARCH_FIXTURE_CLIENT.to_string(),
+      available,
+      detail: if available {
+        format!(
+          "Built-in web search uses a deterministic fixture at {}.",
+          fixture_path.display()
+        )
+      } else {
+        format!(
+          "Built-in web search fixture was configured, but {} was not found.",
+          fixture_path.display()
+        )
+      },
+    };
+  }
+
   let command_path = curl_command_path();
   let available = command_path.is_some();
   WebSearchStatus {
@@ -75,6 +97,10 @@ where
     return Ok(vec![]);
   }
 
+  if let Some(fixture_path) = configured_web_search_fixture_path() {
+    return web_search_from_fixture(&fixture_path, max_results, is_cancelled);
+  }
+
   let url = format!(
     "{}?q={}",
     WEB_SEARCH_ENDPOINT,
@@ -97,6 +123,34 @@ where
   }
 
   let html = String::from_utf8_lossy(&output.stdout);
+  Ok(parse_duckduckgo_lite_results(
+    &html,
+    max_results,
+    WEB_SEARCH_PROVIDER,
+  ))
+}
+
+fn web_search_from_fixture<F>(
+  fixture_path: &Path,
+  max_results: usize,
+  is_cancelled: F,
+) -> Result<Vec<WebSearchResult>>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("web search cancelled");
+  }
+  let html = std::fs::read_to_string(fixture_path).with_context(|| {
+    format!(
+      "failed to read web search fixture at {}",
+      fixture_path.display()
+    )
+  })?;
+  if is_cancelled() {
+    bail!("web search cancelled");
+  }
+
   Ok(parse_duckduckgo_lite_results(
     &html,
     max_results,
@@ -178,6 +232,10 @@ fn curl_command_path() -> Option<String> {
   fallback_curl_path().map(str::to_string)
 }
 
+fn configured_web_search_fixture_path() -> Option<PathBuf> {
+  env::var_os(WEB_SEARCH_FIXTURE_PATH_ENV).map(PathBuf::from)
+}
+
 #[cfg(target_os = "macos")]
 fn fallback_curl_path() -> Option<&'static str> {
   let path = "/usr/bin/curl";
@@ -246,6 +304,10 @@ fn percent_encode(value: &str) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::ffi::OsString;
+  use std::sync::Mutex;
+
+  static WEB_SEARCH_ENV_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn query_encoding_preserves_utf8() {
@@ -267,10 +329,70 @@ mod tests {
 
   #[test]
   fn web_search_status_reports_provider_and_client() {
+    let _guard = WEB_SEARCH_ENV_LOCK.lock().expect("web search env lock");
+    let _env_guard = EnvVarGuard::remove(WEB_SEARCH_FIXTURE_PATH_ENV);
     let status = web_search_status();
 
     assert_eq!(status.provider, WEB_SEARCH_PROVIDER);
     assert_eq!(status.client, WEB_SEARCH_CLIENT);
     assert!(!status.detail.is_empty());
+  }
+
+  #[test]
+  fn web_search_fixture_runs_without_network() {
+    let _guard = WEB_SEARCH_ENV_LOCK.lock().expect("web search env lock");
+    let fixture_path = env::temp_dir().join(format!(
+      "pith-web-search-fixture-{}.html",
+      std::process::id()
+    ));
+    std::fs::write(
+      &fixture_path,
+      r#"
+        <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith&amp;rut=abc" class='result-link'>Pith fixture result</a>
+        <td class='result-snippet'>Deterministic local web search result.</td>
+      "#,
+    )
+    .expect("write web search fixture");
+    let _env_guard = EnvVarGuard::set(WEB_SEARCH_FIXTURE_PATH_ENV, fixture_path.as_os_str());
+
+    let status = web_search_status();
+    let results = web_search_with_cancellation("Pith local model", 5, || false)
+      .expect("fixture web search");
+
+    let _ = std::fs::remove_file(&fixture_path);
+    assert_eq!(status.client, WEB_SEARCH_FIXTURE_CLIENT);
+    assert!(status.available);
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].title, "Pith fixture result");
+    assert_eq!(results[0].url, "https://example.com/pith");
+  }
+
+  struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<OsString>,
+  }
+
+  impl EnvVarGuard {
+    fn set(key: &'static str, value: &std::ffi::OsStr) -> Self {
+      let previous = env::var_os(key);
+      env::set_var(key, value);
+      Self { key, previous }
+    }
+
+    fn remove(key: &'static str) -> Self {
+      let previous = env::var_os(key);
+      env::remove_var(key);
+      Self { key, previous }
+    }
+  }
+
+  impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+      if let Some(previous) = self.previous.as_ref() {
+        env::set_var(self.key, previous);
+      } else {
+        env::remove_var(self.key);
+      }
+    }
   }
 }
