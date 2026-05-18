@@ -2,9 +2,9 @@ use std::path::Path;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{
-  JsonRpcRequest, JsonRpcResponse, WorkspaceSearchCancelRunningResult, WorkspaceSearchMatch,
-  WorkspaceSearchCancelRunningParams, WorkspaceSearchParams, WorkspaceSearchResult,
-  WorkspaceSummary,
+  JsonRpcRequest, JsonRpcResponse, WorkspaceSearchCancelRunningParams,
+  WorkspaceSearchCancelRunningResult, WorkspaceSearchMatch, WorkspaceSearchParams,
+  WorkspaceSearchResult, WorkspaceSummary,
 };
 use pith_tools::search_files_with_cancellation;
 

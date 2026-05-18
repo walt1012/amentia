@@ -4,7 +4,9 @@ use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::TimelineItem;
 use serde::Deserialize;
 
-use super::plugin_command_runner::{PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult};
+use super::plugin_command_runner::{
+  PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
+};
 use super::plugin_command_types::PluginRunnerMemoryNoteDraft;
 
 const PLUGIN_RUNNER_LOG_PREVIEW_LIMIT: usize = 2048;
