@@ -216,14 +216,11 @@ pub fn prepare_workspace_temporary_root(
   temporary_root: &Path,
 ) -> Result<(), String> {
   let input_workspace_root = workspace_root.to_path_buf();
-  let workspace_root = workspace_root.canonicalize().map_err(|error| {
-    format!("Sandbox workspace root could not be resolved: {error}")
-  })?;
-  let temporary_root = temporary_root_for_canonical_workspace(
-    &input_workspace_root,
-    &workspace_root,
-    temporary_root,
-  );
+  let workspace_root = workspace_root
+    .canonicalize()
+    .map_err(|error| format!("Sandbox workspace root could not be resolved: {error}"))?;
+  let temporary_root =
+    temporary_root_for_canonical_workspace(&input_workspace_root, &workspace_root, temporary_root);
   if !temporary_root.starts_with(&workspace_root) {
     return Err("Sandbox temporary root must stay inside the selected workspace.".to_string());
   }
@@ -233,9 +230,8 @@ pub fn prepare_workspace_temporary_root(
 
   ensure_workspace_directory(&workspace_root, parent)?;
   clear_workspace_temporary_root(&temporary_root)?;
-  fs::create_dir(&temporary_root).map_err(|error| {
-    format!("Sandbox temporary directory could not be created: {error}")
-  })?;
+  fs::create_dir(&temporary_root)
+    .map_err(|error| format!("Sandbox temporary directory could not be created: {error}"))?;
   ensure_workspace_directory(&workspace_root, &temporary_root)
 }
 
@@ -292,9 +288,9 @@ pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
 }
 
 fn ensure_workspace_directory(workspace_root: &Path, directory: &Path) -> Result<(), String> {
-  let relative = directory.strip_prefix(workspace_root).map_err(|_| {
-    "Sandbox temporary path escapes the selected workspace.".to_string()
-  })?;
+  let relative = directory
+    .strip_prefix(workspace_root)
+    .map_err(|_| "Sandbox temporary path escapes the selected workspace.".to_string())?;
   let mut current = workspace_root.to_path_buf();
 
   for component in relative.components() {
@@ -364,9 +360,7 @@ fn clear_workspace_temporary_root(temporary_root: &Path) -> Result<(), String> {
     fs::remove_file(temporary_root)
   };
 
-  result.map_err(|error| {
-    format!("Sandbox temporary directory could not be cleared: {error}")
-  })
+  result.map_err(|error| format!("Sandbox temporary directory could not be cleared: {error}"))
 }
 
 fn temporary_root_for_canonical_workspace(

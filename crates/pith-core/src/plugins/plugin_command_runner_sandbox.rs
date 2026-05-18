@@ -228,8 +228,7 @@ mod tests {
     let temporary_root = plugin_runner_temp_root(&workspace_root, "notion/sync");
     let temporary_parent = temporary_root.parent().expect("temporary parent");
     fs::create_dir_all(&plugin_root).expect("plugin root");
-    fs::create_dir_all(temporary_parent.parent().expect("pith directory"))
-      .expect("pith directory");
+    fs::create_dir_all(temporary_parent.parent().expect("pith directory")).expect("pith directory");
     fs::create_dir_all(&outside).expect("outside");
     symlink(&outside, temporary_parent).expect("temporary parent symlink");
     let workspace = WorkspaceSummary {
