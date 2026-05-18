@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -43,13 +42,8 @@ impl PluginRunnerSandbox {
       )
     })?;
     let temporary_root = plugin_runner_temp_root(&workspace_root, plugin_id);
-    clear_runner_temporary_root(&temporary_root)?;
-    fs::create_dir_all(&temporary_root).map_err(|error| {
-      (
-        -32054,
-        format!("Plugin runner temporary directory could not be created: {error}"),
-      )
-    })?;
+    pith_sandbox::prepare_workspace_temporary_root(&workspace_root, &temporary_root)
+      .map_err(|message| (-32054, message))?;
 
     let policy = pith_sandbox::SandboxPolicy::workspace_read_write(workspace_root)
       .with_temporary_root(temporary_root.clone())
@@ -173,36 +167,10 @@ fn safe_plugin_id_segment(plugin_id: &str) -> String {
   }
 }
 
-fn clear_runner_temporary_root(temporary_root: &Path) -> std::result::Result<(), (i32, String)> {
-  let metadata = match fs::symlink_metadata(temporary_root) {
-    Ok(metadata) => metadata,
-    Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-    Err(error) => {
-      return Err((
-        -32054,
-        format!("Plugin runner temporary directory could not be inspected: {error}"),
-      ))
-    }
-  };
-
-  let result = if metadata.file_type().is_symlink() || metadata.is_file() {
-    fs::remove_file(temporary_root)
-  } else if metadata.is_dir() {
-    fs::remove_dir_all(temporary_root)
-  } else {
-    fs::remove_file(temporary_root)
-  };
-  result.map_err(|error| {
-    (
-      -32054,
-      format!("Plugin runner temporary directory could not be cleared: {error}"),
-    )
-  })
-}
-
 #[cfg(test)]
 mod tests {
   use std::collections::HashMap;
+  use std::fs;
   use std::time::{SystemTime, UNIX_EPOCH};
 
   use super::*;
@@ -244,6 +212,37 @@ mod tests {
 
     assert!(temporary_root.is_dir());
     assert!(outside_file.is_file());
+
+    let _ = fs::remove_dir_all(workspace_root);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn prepare_rejects_runner_temp_parent_symlink_escape() {
+    use std::os::unix::fs::symlink;
+
+    let workspace_root = unique_temp_workspace("plugin-runner-parent-symlink");
+    let plugin_root = workspace_root.join(".agents/plugins/notion");
+    let outside = unique_temp_workspace("plugin-runner-parent-outside");
+    let temporary_root = plugin_runner_temp_root(&workspace_root, "notion/sync");
+    let temporary_parent = temporary_root.parent().expect("temporary parent");
+    fs::create_dir_all(&plugin_root).expect("plugin root");
+    fs::create_dir_all(temporary_parent.parent().expect("pith directory"))
+      .expect("pith directory");
+    fs::create_dir_all(&outside).expect("outside");
+    symlink(&outside, temporary_parent).expect("temporary parent symlink");
+    let workspace = WorkspaceSummary {
+      root_path: workspace_root.display().to_string(),
+      display_name: "Test Workspace".to_string(),
+    };
+
+    let error = PluginRunnerSandbox::prepare(Some(&workspace), "notion/sync", &plugin_root, false)
+      .expect_err("parent symlink should fail");
+
+    assert_eq!(error.0, -32054);
+    assert!(error.1.contains("crosses a symlink"));
+    assert!(!outside.join("_notion_sync").exists());
 
     let _ = fs::remove_dir_all(workspace_root);
     let _ = fs::remove_dir_all(outside);

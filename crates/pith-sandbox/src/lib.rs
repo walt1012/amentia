@@ -1,4 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::io::ErrorKind;
+use std::path::{Component, Path, PathBuf};
 
 const MACOS_SANDBOX_EXEC_PATH: &str = "/usr/bin/sandbox-exec";
 
@@ -209,6 +211,34 @@ pub fn macos_sandbox_exec_path() -> &'static str {
   MACOS_SANDBOX_EXEC_PATH
 }
 
+pub fn prepare_workspace_temporary_root(
+  workspace_root: &Path,
+  temporary_root: &Path,
+) -> Result<(), String> {
+  let input_workspace_root = workspace_root.to_path_buf();
+  let workspace_root = workspace_root.canonicalize().map_err(|error| {
+    format!("Sandbox workspace root could not be resolved: {error}")
+  })?;
+  let temporary_root = temporary_root_for_canonical_workspace(
+    &input_workspace_root,
+    &workspace_root,
+    temporary_root,
+  );
+  if !temporary_root.starts_with(&workspace_root) {
+    return Err("Sandbox temporary root must stay inside the selected workspace.".to_string());
+  }
+  let parent = temporary_root
+    .parent()
+    .ok_or_else(|| "Sandbox temporary root does not have a parent directory.".to_string())?;
+
+  ensure_workspace_directory(&workspace_root, parent)?;
+  clear_workspace_temporary_root(&temporary_root)?;
+  fs::create_dir(&temporary_root).map_err(|error| {
+    format!("Sandbox temporary directory could not be created: {error}")
+  })?;
+  ensure_workspace_directory(&workspace_root, &temporary_root)
+}
+
 pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
   let workspace_root = seatbelt_string(policy.workspace_root());
   let writable_roots = policy
@@ -259,6 +289,99 @@ pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
   }
 
   profile.join("\n")
+}
+
+fn ensure_workspace_directory(workspace_root: &Path, directory: &Path) -> Result<(), String> {
+  let relative = directory.strip_prefix(workspace_root).map_err(|_| {
+    "Sandbox temporary path escapes the selected workspace.".to_string()
+  })?;
+  let mut current = workspace_root.to_path_buf();
+
+  for component in relative.components() {
+    match component {
+      Component::CurDir => continue,
+      Component::Normal(segment) => current.push(segment),
+      _ => {
+        return Err("Sandbox temporary path must stay inside the selected workspace.".to_string());
+      }
+    }
+
+    match fs::symlink_metadata(&current) {
+      Ok(metadata) if metadata.file_type().is_symlink() => {
+        return Err("Sandbox temporary path crosses a symlink.".to_string());
+      }
+      Ok(metadata) if !metadata.is_dir() => {
+        return Err(format!(
+          "Sandbox temporary path component is not a directory: {}",
+          current.display()
+        ));
+      }
+      Ok(_) => {}
+      Err(error) if error.kind() == ErrorKind::NotFound => {
+        fs::create_dir(&current).map_err(|error| {
+          format!("Sandbox temporary directory component could not be created: {error}")
+        })?;
+        let metadata = fs::symlink_metadata(&current).map_err(|error| {
+          format!("Sandbox temporary directory component could not be inspected: {error}")
+        })?;
+        if metadata.file_type().is_symlink() {
+          return Err("Sandbox temporary path crosses a symlink.".to_string());
+        }
+        if !metadata.is_dir() {
+          return Err(format!(
+            "Sandbox temporary path component is not a directory: {}",
+            current.display()
+          ));
+        }
+      }
+      Err(error) => {
+        return Err(format!(
+          "Sandbox temporary directory component could not be inspected: {error}"
+        ));
+      }
+    }
+  }
+
+  Ok(())
+}
+
+fn clear_workspace_temporary_root(temporary_root: &Path) -> Result<(), String> {
+  let metadata = match fs::symlink_metadata(temporary_root) {
+    Ok(metadata) => metadata,
+    Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
+    Err(error) => {
+      return Err(format!(
+        "Sandbox temporary directory could not be inspected: {error}"
+      ));
+    }
+  };
+
+  let result = if metadata.file_type().is_symlink() || metadata.is_file() {
+    fs::remove_file(temporary_root)
+  } else if metadata.is_dir() {
+    fs::remove_dir_all(temporary_root)
+  } else {
+    fs::remove_file(temporary_root)
+  };
+
+  result.map_err(|error| {
+    format!("Sandbox temporary directory could not be cleared: {error}")
+  })
+}
+
+fn temporary_root_for_canonical_workspace(
+  input_workspace_root: &Path,
+  canonical_workspace_root: &Path,
+  temporary_root: &Path,
+) -> PathBuf {
+  if temporary_root.starts_with(canonical_workspace_root) {
+    return temporary_root.to_path_buf();
+  }
+
+  temporary_root
+    .strip_prefix(input_workspace_root)
+    .map(|relative| canonical_workspace_root.join(relative))
+    .unwrap_or_else(|_| temporary_root.to_path_buf())
 }
 
 fn seatbelt_string(path: &Path) -> String {
@@ -357,6 +480,69 @@ mod tests {
     assert!(!write_section.contains("(subpath \"/dev\")"));
   }
 
+  #[test]
+  fn prepare_workspace_temporary_root_clears_existing_directory() {
+    let workspace = unique_temp_workspace("sandbox-temp-clear");
+    let temporary_root = workspace.join(".pith/tmp");
+    let stale_file = temporary_root.join("stale.txt");
+    fs::create_dir_all(&temporary_root).expect("temporary root");
+    fs::write(&stale_file, "stale").expect("stale file");
+
+    prepare_workspace_temporary_root(&workspace, &temporary_root).expect("prepare temp root");
+
+    assert!(temporary_root.is_dir());
+    assert!(!stale_file.exists());
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn prepare_workspace_temporary_root_removes_final_symlink_without_following() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("sandbox-temp-symlink");
+    let outside = unique_temp_workspace("sandbox-temp-outside");
+    let temporary_root = workspace.join(".pith/tmp");
+    let outside_file = outside.join("keep.txt");
+    fs::create_dir_all(temporary_root.parent().expect("temporary parent"))
+      .expect("temporary parent");
+    fs::create_dir_all(&outside).expect("outside");
+    fs::write(&outside_file, "keep").expect("outside file");
+    symlink(&outside, &temporary_root).expect("temporary root symlink");
+
+    prepare_workspace_temporary_root(&workspace, &temporary_root).expect("prepare temp root");
+
+    assert!(temporary_root.is_dir());
+    assert!(outside_file.is_file());
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn prepare_workspace_temporary_root_rejects_parent_symlink_escape() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("sandbox-temp-parent-symlink");
+    let outside = unique_temp_workspace("sandbox-temp-parent-outside");
+    let temporary_root = workspace.join(".pith/tmp/plugin");
+    let parent = temporary_root.parent().expect("temporary parent");
+    fs::create_dir_all(parent.parent().expect("pith directory")).expect("pith directory");
+    fs::create_dir_all(&outside).expect("outside");
+    symlink(&outside, parent).expect("temporary parent symlink");
+
+    let error = prepare_workspace_temporary_root(&workspace, &temporary_root)
+      .expect_err("parent symlink should fail");
+
+    assert!(error.contains("crosses a symlink"));
+    assert!(!outside.join("plugin").exists());
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
   #[cfg(target_os = "macos")]
   #[test]
   fn status_reports_workspace_temporary_root() {
@@ -410,5 +596,13 @@ mod tests {
       status.network_policy(),
       "network allowed by policy, not native-enforced"
     );
+  }
+
+  fn unique_temp_workspace(prefix: &str) -> PathBuf {
+    let nonce = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .expect("clock")
+      .as_nanos();
+    std::env::temp_dir().join(format!("pith-sandbox-{prefix}-{nonce}"))
   }
 }

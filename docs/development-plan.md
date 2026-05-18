@@ -72,18 +72,17 @@ Order of Work:
   plugin commands, and model activation request-scoped, cancellable, and
   visible without blocking unrelated read-only UI updates.
 - Native safety loop: keep workspace file tools symlink-safe, sandbox decisions
-  visible, plugin runner output untrusted by default, and recovery actions tied
-  to trusted runtime metadata.
+  visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
+  by default, and recovery actions tied to trusted runtime metadata.
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
   binary, model metadata, plugin manifests, no model weights, and launch smoke
   coverage.
 
 Immediate Next:
 
-- Finish readiness accuracy for plugin-backed Web Search and other optional
-  tools, so UI status matches actual permission gates.
-- Tighten sandbox diagnostics around plugin execution before adding broader
-  connector marketplace behavior.
+- Keep readiness accuracy aligned with plugin-backed tools and permission gates.
+- Continue tightening sandbox diagnostics around plugin execution before adding
+  broader connector marketplace behavior.
 - Keep plugin UI compact and progressive; do not expand the inspector into an
   always-visible admin console.
 - Continue architecture cleanup only when it clarifies ownership, failure
