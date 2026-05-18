@@ -352,8 +352,10 @@ mod tests {
   fn web_search_fixture_requires_explicit_test_gate() {
     let _guard = WEB_SEARCH_ENV_LOCK.lock().expect("web search env lock");
     let _enabled_guard = EnvVarGuard::remove(WEB_SEARCH_FIXTURE_ENABLED_ENV);
-    let _path_guard =
-      EnvVarGuard::set(WEB_SEARCH_FIXTURE_PATH_ENV, std::ffi::OsStr::new("/tmp/pith-fixture"));
+    let _path_guard = EnvVarGuard::set(
+      WEB_SEARCH_FIXTURE_PATH_ENV,
+      std::ffi::OsStr::new("/tmp/pith-fixture"),
+    );
 
     assert!(configured_web_search_fixture_path().is_none());
   }

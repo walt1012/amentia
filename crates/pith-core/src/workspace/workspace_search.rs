@@ -1,10 +1,10 @@
 use std::path::Path;
 
+use pith_model_runtime::GenerationCancellation;
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, WorkspaceSearchCancelRunningResult, WorkspaceSearchMatch,
   WorkspaceSearchParams, WorkspaceSearchResult, WorkspaceSummary,
 };
-use pith_model_runtime::GenerationCancellation;
 use pith_tools::search_files_with_cancellation;
 
 use crate::request_params::parse_required_params;
@@ -43,9 +43,7 @@ pub(crate) fn handle_workspace_search_cancel_running(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let cancelled_count = context
-    .execution_state
-    .cancel_running_workspace_searches();
+  let cancelled_count = context.execution_state.cancel_running_workspace_searches();
   JsonRpcResponse::success(
     request.id,
     &WorkspaceSearchCancelRunningResult { cancelled_count },
@@ -94,25 +92,23 @@ pub fn execute_prepared_workspace_search(
     cancellation,
   } = prepared;
 
-  let output = search_files_with_cancellation(
-    Path::new(&workspace.root_path),
-    &query,
-    max_results,
-    || cancellation.is_cancelled(),
-  )
-  .map(|matches| WorkspaceSearchResult {
-    query,
-    workspace,
-    matches: matches
-      .into_iter()
-      .map(|entry| WorkspaceSearchMatch {
-        relative_path: entry.relative_path,
-        line_number: entry.line_number,
-        line: entry.line,
+  let output =
+    search_files_with_cancellation(Path::new(&workspace.root_path), &query, max_results, || {
+      cancellation.is_cancelled()
+    })
+    .map(|matches| WorkspaceSearchResult {
+      query,
+      workspace,
+      matches: matches
+        .into_iter()
+        .map(|entry| WorkspaceSearchMatch {
+          relative_path: entry.relative_path,
+          line_number: entry.line_number,
+          line: entry.line,
+        })
+        .collect(),
       })
-      .collect(),
-  })
-  .map_err(|error| (-32041, error.to_string()));
+    .map_err(|error| (-32041, error.to_string()));
 
   CompletedWorkspaceSearch {
     request_id,

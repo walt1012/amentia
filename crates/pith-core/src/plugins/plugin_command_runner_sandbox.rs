@@ -281,7 +281,9 @@ mod tests {
       Some(temporary_root.as_str())
     );
     assert_eq!(
-      environment.get("PITH_PLUGIN_SANDBOX_TEMP").map(String::as_str),
+      environment
+        .get("PITH_PLUGIN_SANDBOX_TEMP")
+        .map(String::as_str),
       Some(temporary_root.as_str())
     );
 
