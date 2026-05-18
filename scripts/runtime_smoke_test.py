@@ -739,6 +739,73 @@ def main() -> int:
     assert notion_connector["authType"] == "oauth2"
     assert notion_connector["credentialStore"] == "local"
     assert notion_connector["authScopes"] == ["read_content", "insert_content"]
+    disabled_connector_authorize, _ = send_request(
+      process,
+      {
+        "id": 120,
+        "method": "plugin/connectorAuthorize",
+        "params": {
+          "connectorId": "notion-connector::notion",
+          "credentialLabel": "Smoke Notion",
+          "credentialSecret": "notion-smoke-token",
+        },
+      },
+    )
+    assert disabled_connector_authorize["error"]["code"] == -32056
+    assert disabled_connector_authorize["error"]["data"]["connectorStatus"] == "disabled"
+
+    notion_connector_enable, _ = send_request(
+      process,
+      {
+        "id": 121,
+        "method": "plugin/setEnabled",
+        "params": {
+          "pluginId": "notion-connector",
+          "enabled": True,
+        },
+      },
+    )
+    assert notion_connector_enable["result"]["plugin"]["enabled"] is True
+
+    authorized_connector, _ = send_request(
+      process,
+      {
+        "id": 122,
+        "method": "plugin/connectorAuthorize",
+        "params": {
+          "connectorId": "notion-connector::notion",
+          "credentialLabel": "Smoke Notion",
+          "credentialSecret": "notion-smoke-token",
+        },
+      },
+    )
+    authorized_notion = authorized_connector["result"]["connector"]
+    assert authorized_notion["status"] == "ready"
+    assert authorized_notion["authStatus"] == "authorized"
+    assert authorized_notion["credentialPresent"] is True
+    assert authorized_notion["credentialSecretPresent"] is True
+    assert authorized_notion["credentialProvider"] == "local"
+    assert authorized_notion["credentialHandle"] == "notion-connector::notion"
+    assert authorized_notion["credentialLabel"] == "Smoke Notion"
+    assert "notion-smoke-token" not in json.dumps(authorized_connector)
+
+    cleared_connector, _ = send_request(
+      process,
+      {
+        "id": 123,
+        "method": "plugin/connectorClearCredential",
+        "params": {
+          "connectorId": "notion-connector::notion",
+        },
+      },
+    )
+    cleared_notion = cleared_connector["result"]["connector"]
+    assert cleared_notion["status"] == "needsAuth"
+    assert cleared_notion["authStatus"] == "needsAuth"
+    assert cleared_notion["credentialPresent"] is False
+    assert cleared_notion["credentialSecretPresent"] is False
+    assert "credentialProvider" not in cleared_notion
+    assert "credentialHandle" not in cleared_notion
     hook_registry, _ = send_request(
       process,
       {
@@ -932,7 +999,7 @@ def main() -> int:
     assert refreshed_plugins["workspace-notes"]["enabled"] is True
     assert refreshed_plugins["shell-recorder"]["enabled"] is True
     assert refreshed_plugins["review-assistant"]["enabled"] is True
-    assert refreshed_plugins["notion-connector"]["enabled"] is False
+    assert refreshed_plugins["notion-connector"]["enabled"] is True
 
     turn, _ = send_request(
       process,
