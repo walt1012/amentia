@@ -790,23 +790,6 @@ def main() -> int:
     assert isinstance(authorized_notion["credentialUpdatedAt"], int)
     assert "notion-smoke-token" not in json.dumps(authorized_connector)
 
-    cleared_connector, _ = send_request(
-      process,
-      {
-        "id": 123,
-        "method": "plugin/connectorClearCredential",
-        "params": {
-          "connectorId": "notion-connector::notion",
-        },
-      },
-    )
-    cleared_notion = cleared_connector["result"]["connector"]
-    assert cleared_notion["status"] == "needsAuth"
-    assert cleared_notion["authStatus"] == "needsAuth"
-    assert cleared_notion["credentialPresent"] is False
-    assert cleared_notion["credentialSecretPresent"] is False
-    assert "credentialProvider" not in cleared_notion
-    assert "credentialHandle" not in cleared_notion
     hook_registry, _ = send_request(
       process,
       {
@@ -1001,6 +984,46 @@ def main() -> int:
     assert refreshed_plugins["shell-recorder"]["enabled"] is True
     assert refreshed_plugins["review-assistant"]["enabled"] is True
     assert refreshed_plugins["notion-connector"]["enabled"] is True
+
+    recovered_connector_registry, _ = send_request(
+      process,
+      {
+        "id": 57,
+        "method": "plugin/connectorRegistry",
+      },
+    )
+    recovered_notion = next(
+      connector
+      for connector in recovered_connector_registry["result"]["connectors"]
+      if connector["connectorId"] == "notion-connector::notion"
+    )
+    assert recovered_notion["status"] == "ready"
+    assert recovered_notion["authStatus"] == "authorized"
+    assert recovered_notion["credentialPresent"] is True
+    assert recovered_notion["credentialSecretPresent"] is True
+    assert recovered_notion["credentialProvider"] == "pith.localCredentialProvider"
+    assert recovered_notion["credentialHandle"] == "notion-connector::notion"
+    assert recovered_notion["credentialLabel"] == "Smoke Notion"
+    assert isinstance(recovered_notion["credentialUpdatedAt"], int)
+    assert "notion-smoke-token" not in json.dumps(recovered_connector_registry)
+
+    cleared_connector, _ = send_request(
+      process,
+      {
+        "id": 58,
+        "method": "plugin/connectorClearCredential",
+        "params": {
+          "connectorId": "notion-connector::notion",
+        },
+      },
+    )
+    cleared_notion = cleared_connector["result"]["connector"]
+    assert cleared_notion["status"] == "needsAuth"
+    assert cleared_notion["authStatus"] == "needsAuth"
+    assert cleared_notion["credentialPresent"] is False
+    assert cleared_notion["credentialSecretPresent"] is False
+    assert "credentialProvider" not in cleared_notion
+    assert "credentialHandle" not in cleared_notion
 
     turn, _ = send_request(
       process,
