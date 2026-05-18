@@ -784,9 +784,10 @@ def main() -> int:
     assert authorized_notion["authStatus"] == "authorized"
     assert authorized_notion["credentialPresent"] is True
     assert authorized_notion["credentialSecretPresent"] is True
-    assert authorized_notion["credentialProvider"] == "local"
+    assert authorized_notion["credentialProvider"] == "pith.localCredentialProvider"
     assert authorized_notion["credentialHandle"] == "notion-connector::notion"
     assert authorized_notion["credentialLabel"] == "Smoke Notion"
+    assert isinstance(authorized_notion["credentialUpdatedAt"], int)
     assert "notion-smoke-token" not in json.dumps(authorized_connector)
 
     cleared_connector, _ = send_request(
