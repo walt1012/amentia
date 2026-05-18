@@ -203,8 +203,7 @@ fn plugin_command_run_honors_pending_running_cancel_before_builtin_execution() {
       &["file.read", "file.write"],
     )],
   );
-  fs::write(workspace.join("README.md"), "Should not be captured\n")
-    .expect("write readme");
+  fs::write(workspace.join("README.md"), "Should not be captured\n").expect("write readme");
 
   let _ = handle_request(
     &mut context,
