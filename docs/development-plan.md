@@ -75,8 +75,8 @@ Order of Work:
   visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
   by default, and recovery actions tied to trusted runtime metadata.
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
-  binary, model metadata, plugin manifests, no model weights, and launch smoke
-  coverage.
+  binary, exact x86_64 architecture validation, model metadata, plugin
+  manifests, no model weights, and launch smoke coverage.
 
 Immediate Next:
 

@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import plistlib
+import re
 import shutil
 import stat
 import subprocess
@@ -573,10 +574,25 @@ def assert_only_x86_64_if_lipo_is_available(path: Path) -> None:
   if shutil.which("lipo") is None:
     return
   output = run(["lipo", "-info", str(path)], path.parent)
-  if "x86_64" not in output:
-    raise RuntimeError(f"Packaged binary is not x86_64: {path}: {output}")
-  if "arm64" in output:
-    raise RuntimeError(f"Packaged binary must not include arm64: {path}: {output}")
+  architectures = parse_lipo_architectures(output)
+  if architectures != {SUPPORTED_ARCH}:
+    actual = ", ".join(sorted(architectures)) or "unknown"
+    raise RuntimeError(
+      f"Packaged binary must contain only {SUPPORTED_ARCH}: {path}: {actual}: {output}"
+    )
+
+
+def parse_lipo_architectures(output: str) -> set[str]:
+  normalized = " ".join(output.strip().split())
+  for marker in (" is architecture: ", " are: "):
+    if marker in normalized:
+      architectures = normalized.rsplit(marker, 1)[1]
+      return {
+        architecture
+        for architecture in re.split(r"\s+", architectures.strip())
+        if architecture
+      }
+  raise RuntimeError(f"Could not parse lipo architecture output: {output}")
 
 
 def sign_app_bundle_if_available(app_path: Path) -> None:
