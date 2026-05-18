@@ -55,8 +55,8 @@ python3 scripts/package_macos_app.py
 ```
 
 CI runs this on `macos-15-intel`. The script builds the Swift shell for `x86_64`, builds
-`pith-runtime-bin`, assembles `Pith.app`, bundles model metadata and bundled plugin manifests next to
-the runtime executable, validates the app bundle structure, and emits
+`pith-runtime-bin`, assembles `Pith.app`, places executables under `Contents/MacOS`, bundles model
+metadata and bundled plugin manifests under `Contents/Resources`, validates the app bundle, and emits
 `artifacts/macos/Pith-macos-x86_64.zip`.
 
 CI also verifies that model weight files are not bundled and ad-hoc signs the app when `codesign` is

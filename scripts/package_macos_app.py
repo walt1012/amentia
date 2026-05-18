@@ -143,9 +143,9 @@ def package_app(
 
   copy_executable(app_binary, macos_path / APP_EXECUTABLE_NAME)
   copy_executable(runtime_binary, macos_path / RUNTIME_EXECUTABLE_NAME)
-  copy_tree_if_present(repo_root / "models", macos_path / "models")
-  copy_tree_if_present(repo_root / "plugins", macos_path / "plugins")
-  copy_llama_backend_if_present(repo_root, macos_path)
+  copy_tree_if_present(repo_root / "models", resources_path / "models")
+  copy_tree_if_present(repo_root / "plugins", resources_path / "plugins")
+  copy_llama_backend_if_present(repo_root, resources_path)
 
   validate_app_bundle(app_path)
   if not skip_ad_hoc_sign:
@@ -246,8 +246,14 @@ def validate_app_bundle(app_path: Path) -> None:
     app_path / "Contents" / "PkgInfo",
     app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME,
     app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME,
-    app_path / "Contents" / "MacOS" / "models" / "builtin" / "lfm2.5-350m" / "model-pack.json",
-    app_path / "Contents" / "MacOS" / "plugins" / "bundled",
+    app_path
+    / "Contents"
+    / "Resources"
+    / "models"
+    / "builtin"
+    / "lfm2.5-350m"
+    / "model-pack.json",
+    app_path / "Contents" / "Resources" / "plugins" / "bundled",
   ]
   for path in required_paths:
     if not path.exists():

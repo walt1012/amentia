@@ -55,12 +55,30 @@ enum RuntimeBridgeLocalEnvironment {
     var environment = ProcessInfo.processInfo.environment
     environment["PITH_DATA_DIR"] = storageDirectory().path
     environment["PITH_LOCAL_PLUGIN_DIR"] = pluginDirectory().path
+    applyBundleResourceEnvironment(to: &environment)
     if let activeModel = activeLocalModelSelection() {
       environment["PITH_MODEL_PACK_MANIFEST"] = activeModel.manifestPath
       environment["PITH_MODEL_PATH"] = activeModel.modelPath
       environment["PITH_LFM_MODEL_PATH"] = activeModel.modelPath
     }
     return environment
+  }
+
+  private static func applyBundleResourceEnvironment(to environment: inout [String: String]) {
+    guard let resourceURL = Bundle.main.resourceURL else {
+      return
+    }
+
+    let manager = FileManager.default
+    let modelsURL = resourceURL.appendingPathComponent("models", isDirectory: true)
+    if manager.fileExists(atPath: modelsURL.path) {
+      environment["PITH_MODEL_PACK_ROOT"] = resourceURL.path
+    }
+
+    let pluginsURL = resourceURL.appendingPathComponent("plugins", isDirectory: true)
+    if manager.fileExists(atPath: pluginsURL.path) {
+      environment["PITH_PLUGIN_DIR"] = pluginsURL.path
+    }
   }
 
   private static func activeLocalModelSelection() -> RuntimeBridgeActiveLocalModelSelection? {
