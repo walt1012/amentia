@@ -17,6 +17,15 @@ NOTION_CREDENTIAL_LABEL = "Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "notion-smoke-token"
 LOCAL_CREDENTIAL_PROVIDER = "pith.localCredentialProvider"
 RUNTIME_STDERR_LOG_NAME = "runtime-smoke-stderr.log"
+DEFAULT_MODEL_ID = "lfm2.5-350m"
+DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
+DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
+DEFAULT_MODEL_DOWNLOAD_URL = (
+  "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
+  "LFM2.5-350M-Q4_K_M.gguf"
+)
+DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
+DEFAULT_MODEL_SIZE_BYTES = 229312224
 
 
 def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
@@ -47,6 +56,27 @@ def runtime_stderr_tail(env: Mapping[str, str], max_lines: int = 80) -> str:
 
 def write_json_file(path: Path, value: dict) -> None:
   path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+
+
+def assert_model_bootstrap_metadata(model_bootstrap: dict) -> None:
+  result = model_bootstrap["result"]
+  manifest_path = Path(result["manifestPath"])
+  assert manifest_path.is_file()
+  if result["readmePath"] is not None:
+    assert Path(result["readmePath"]).is_file()
+
+  manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+  assert manifest["id"] == DEFAULT_MODEL_ID
+  assert manifest["display_name"] == DEFAULT_MODEL_DISPLAY_NAME
+  assert manifest["file_name"] == DEFAULT_MODEL_FILE_NAME
+  assert manifest["context_size"] == 4096
+  assert manifest["model_context_size"] == 32768
+  assert manifest["max_output_tokens"] == 160
+  assert manifest["backend"] == "llama.cpp"
+  assert manifest["download_url"] == DEFAULT_MODEL_DOWNLOAD_URL
+  assert manifest["sha256"] == DEFAULT_MODEL_SHA256
+  assert manifest["size_bytes"] == DEFAULT_MODEL_SIZE_BYTES
+  assert not (manifest_path.parent / DEFAULT_MODEL_FILE_NAME).exists()
 
 
 def stop_runtime(process: subprocess.Popen[str]) -> None:
@@ -564,22 +594,17 @@ def main() -> int:
         "method": "model/health",
       },
     )
-    assert model_health["result"]["displayName"] == "LFM2.5-350M Q4_K_M"
+    assert model_health["result"]["displayName"] == DEFAULT_MODEL_DISPLAY_NAME
     assert model_health["result"]["backend"] in {"unconfigured", "llama.cpp"}
     assert model_health["result"]["status"] in {"unavailable", "ready"}
     model_is_ready = model_health["result"]["status"] == "ready"
     assert model_health["result"]["source"] in {"default-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
     assert model_health["result"]["metrics"]["modelContextSize"] == "32768"
-    assert model_health["result"]["metrics"]["fileName"] == "LFM2.5-350M-Q4_K_M.gguf"
-    assert model_health["result"]["metrics"]["downloadUrl"].startswith(
-      "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
-    )
-    assert (
-      model_health["result"]["metrics"]["sha256"]
-      == "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
-    )
-    assert model_health["result"]["metrics"]["sizeBytes"] == "229312224"
+    assert model_health["result"]["metrics"]["fileName"] == DEFAULT_MODEL_FILE_NAME
+    assert model_health["result"]["metrics"]["downloadUrl"] == DEFAULT_MODEL_DOWNLOAD_URL
+    assert model_health["result"]["metrics"]["sha256"] == DEFAULT_MODEL_SHA256
+    assert model_health["result"]["metrics"]["sizeBytes"] == str(DEFAULT_MODEL_SIZE_BYTES)
     assert model_health["result"]["metrics"]["readiness"] in {
       "ready",
       "manifest_only",
@@ -644,9 +669,7 @@ def main() -> int:
         "method": "model/bootstrap",
       },
     )
-    assert Path(model_bootstrap["result"]["manifestPath"]).is_file()
-    if model_bootstrap["result"]["readmePath"] is not None:
-      assert Path(model_bootstrap["result"]["readmePath"]).is_file()
+    assert_model_bootstrap_metadata(model_bootstrap)
 
     memory_status, _ = send_request(
       process,
