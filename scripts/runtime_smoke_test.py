@@ -23,6 +23,22 @@ def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]
   )
 
 
+def stop_runtime(process: subprocess.Popen[str]) -> None:
+  if process.poll() is not None:
+    return
+  process.terminate()
+  process.wait(timeout=5)
+
+
+def restart_runtime(
+  process: subprocess.Popen[str],
+  repo_root: Path,
+  env: dict[str, str],
+) -> subprocess.Popen[str]:
+  stop_runtime(process)
+  return start_runtime(repo_root, env)
+
+
 def send_request(process: subprocess.Popen[str], payload: dict) -> tuple[dict, list[dict]]:
   assert process.stdin is not None
   assert process.stdout is not None
@@ -843,6 +859,64 @@ def main() -> int:
     assert thread_read["result"]["thread"]["id"] == "thread-1"
     assert thread_read["result"]["items"][0]["kind"] == "system"
 
+    process = restart_runtime(process, repo_root, env)
+    recovery_initialize, _ = send_request(
+      process,
+      {
+        "id": 51,
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "runtime-smoke-test",
+            "version": "0.1.0",
+          }
+        },
+      },
+    )
+    assert recovery_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+
+    recovered_workspace, _ = send_request(
+      process,
+      {
+        "id": 52,
+        "method": "workspace/current",
+      },
+    )
+    assert recovered_workspace["result"]["workspace"]["displayName"] == workspace_dir.name
+    assert recovered_workspace["result"]["workspace"]["rootPath"] == str(workspace_dir)
+
+    recovered_thread, _ = send_request(
+      process,
+      {
+        "id": 53,
+        "method": "thread/read",
+        "params": {
+          "threadId": "thread-1",
+        },
+      },
+    )
+    assert recovered_thread["result"]["thread"]["title"] == "Smoke Test Thread"
+    assert recovered_thread["result"]["items"][0]["kind"] == "system"
+
+    recovered_memory_status, _ = send_request(
+      process,
+      {
+        "id": 54,
+        "method": "memory/status",
+      },
+    )
+    assert recovered_memory_status["result"]["noteCount"] >= 2
+
+    recovered_readiness, _ = send_request(
+      process,
+      {
+        "id": 55,
+        "method": "runtime/readiness",
+      },
+    )
+    assert recovered_readiness["result"]["metrics"]["workspaceBound"] == "true"
+    assert recovered_readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
+
     turn, _ = send_request(
       process,
       {
@@ -958,9 +1032,7 @@ def main() -> int:
     assert write_turn["result"]["items"][4]["kind"] == "approvalRequested"
     approval_id = write_turn["result"]["pendingApprovals"][0]["id"]
 
-    process.terminate()
-    process.wait(timeout=5)
-    process = start_runtime(repo_root, env)
+    process = restart_runtime(process, repo_root, env)
 
     restarted_initialize, _ = send_request(
       process,
@@ -1131,8 +1203,7 @@ def main() -> int:
     assert_builtin_plugin_commands(process, 48)
     return 0
   finally:
-    process.terminate()
-    process.wait(timeout=5)
+    stop_runtime(process)
     if plugin_dir.exists():
       shutil.rmtree(plugin_dir)
     if plugin_import_dir.exists():
