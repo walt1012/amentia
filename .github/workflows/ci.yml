@@ -10,6 +10,10 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rust:
     runs-on: ubuntu-latest
@@ -21,6 +25,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            cargo-registry-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Cargo fmt
         run: cargo fmt --all -- --check
@@ -52,6 +66,14 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Cache Swift build output
+        uses: actions/cache@v4
+        with:
+          path: apps/pith-macos/.build
+          key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Sources/**/*.swift') }}
+          restore-keys: |
+            swift-build-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Build x86_64 Swift app executable
         shell: bash
         run: |
@@ -77,6 +99,17 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache macOS runtime build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            macos-runtime-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 runtime executable
         shell: bash
