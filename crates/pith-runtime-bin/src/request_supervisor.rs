@@ -116,7 +116,7 @@ impl RequestSupervisor {
 
   pub(crate) fn reap_finished(&mut self) {
     let mut handles = lock_handles(&self.handles);
-    reap_finished_handles(&mut *handles);
+    reap_finished_handles(&mut handles);
   }
 
   pub(crate) fn join_all(mut self) {
@@ -144,7 +144,7 @@ fn start_request_reaper(
     while running.load(Ordering::SeqCst) {
       thread::sleep(Duration::from_millis(500));
       let mut handles = lock_handles(&handles);
-      reap_finished_handles(&mut *handles);
+      reap_finished_handles(&mut handles);
     }
   })
 }
