@@ -79,6 +79,47 @@ def assert_model_bootstrap_metadata(model_bootstrap: dict) -> None:
   assert not (manifest_path.parent / DEFAULT_MODEL_FILE_NAME).exists()
 
 
+def readiness_checks(readiness: dict) -> dict[str, dict]:
+  return {check["id"]: check for check in readiness["result"]["checks"]}
+
+
+def assert_fresh_install_readiness(readiness: dict, model_is_ready: bool) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["localModel"]["status"] == ("ready" if model_is_ready else "setup_required")
+  assert checks["workspace"]["status"] == "setup_required"
+  assert checks["thread"]["status"] == "setup_required"
+  assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["workspaceBound"] == "false"
+  assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
+
+
+def assert_workspace_readiness(readiness: dict) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["workspace"]["status"] == "ready"
+  assert checks["thread"]["status"] == "setup_required"
+  assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["workspaceBound"] == "true"
+  assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
+
+
+def assert_thread_ready_for_first_request(readiness: dict) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["workspace"]["status"] == "ready"
+  assert checks["thread"]["status"] == "ready"
+  assert checks["firstRequest"]["status"] == "ready_to_send"
+  assert readiness["result"]["metrics"]["workspaceBound"] == "true"
+  assert readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
+
+
+def assert_first_request_sent(readiness: dict) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["firstRequest"]["status"] == "ready"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "true"
+
+
 def stop_runtime(process: subprocess.Popen[str]) -> None:
   if process.poll() is not None:
     return
@@ -630,7 +671,7 @@ def main() -> int:
     )
     assert runtime_readiness["result"]["status"] in {"setup_required", "ready"}
     assert runtime_readiness["result"]["summary"]
-    readiness_check_ids = {check["id"] for check in runtime_readiness["result"]["checks"]}
+    readiness_check_ids = set(readiness_checks(runtime_readiness))
     assert {
       "localModel",
       "workspace",
@@ -661,6 +702,7 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["runningTurnCount"] == "0"
     assert runtime_readiness["result"]["metrics"]["runningApprovalCount"] == "0"
     assert runtime_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
+    assert_fresh_install_readiness(runtime_readiness, model_is_ready)
 
     model_bootstrap, _ = send_request(
       process,
@@ -864,11 +906,7 @@ def main() -> int:
         "method": "runtime/readiness",
       },
     )
-    workspace_readiness_checks = {
-      check["id"]: check for check in workspace_readiness["result"]["checks"]
-    }
-    assert workspace_readiness["result"]["metrics"]["workspaceBound"] == "true"
-    assert workspace_readiness_checks["workspace"]["status"] == "ready"
+    assert_workspace_readiness(workspace_readiness)
 
     direct_workspace_search, _ = send_request(
       process,
@@ -954,6 +992,15 @@ def main() -> int:
     assert thread_read["result"]["thread"]["id"] == "thread-1"
     assert thread_read["result"]["items"][0]["kind"] == "system"
 
+    thread_readiness, _ = send_request(
+      process,
+      {
+        "id": 48,
+        "method": "runtime/readiness",
+      },
+    )
+    assert_thread_ready_for_first_request(thread_readiness)
+
     process = restart_runtime(process, repo_root, env)
     recovery_initialize, _ = send_request(
       process,
@@ -1009,8 +1056,7 @@ def main() -> int:
         "method": "runtime/readiness",
       },
     )
-    assert recovered_readiness["result"]["metrics"]["workspaceBound"] == "true"
-    assert recovered_readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
+    assert_thread_ready_for_first_request(recovered_readiness)
 
     recovered_plugin_refresh, _ = send_request(
       process,
@@ -1168,6 +1214,15 @@ def main() -> int:
       assert cancelled_thread["result"].get("activeTurnId") is None
     else:
       assert latest_assistant["attributes"]["streamingStatus"] == "completed"
+
+    first_request_readiness, _ = send_request(
+      process,
+      {
+        "id": 44,
+        "method": "runtime/readiness",
+      },
+    )
+    assert_first_request_sent(first_request_readiness)
 
     search_turn, _ = send_request(
       process,
