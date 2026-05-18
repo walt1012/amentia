@@ -224,7 +224,7 @@ fn validate_manifest_rejects_unsupported_mcp_transport() {
     transport: Some("http".to_string()),
   }];
 
-  let error = validate_manifest(&manifest).expect_err("remote MCP is not supported in M4");
+  let error = validate_manifest(&manifest).expect_err("remote MCP is not supported yet");
 
   assert!(error
     .to_string()

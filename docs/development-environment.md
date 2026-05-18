@@ -114,7 +114,7 @@ The runtime resolves bundled plugins in this order:
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 
-Milestone 4 development should keep plugin discovery separate from plugin execution. Discovery owns
+Plugin development should keep discovery separate from execution. Discovery owns
 manifest validation, registries, connector metadata, and enablement state. Execution owns bounded
 runners, auth policy, credential storage, cancellation, sandbox policy, output envelopes, and logs.
 
