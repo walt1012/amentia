@@ -759,6 +759,24 @@ def main() -> int:
     assert workspace_readiness["result"]["metrics"]["workspaceBound"] == "true"
     assert workspace_readiness_checks["workspace"]["status"] == "ready"
 
+    direct_workspace_search, _ = send_request(
+      process,
+      {
+        "id": 50,
+        "method": "workspace/search",
+        "params": {
+          "query": "Needle",
+          "maxResults": 5,
+        },
+      },
+    )
+    assert direct_workspace_search["result"]["query"] == "Needle"
+    assert direct_workspace_search["result"]["workspace"]["rootPath"] == str(workspace_dir)
+    assert any(
+      match["relativePath"] == "notes.txt" and match["lineNumber"] == 1
+      for match in direct_workspace_search["result"]["matches"]
+    )
+
     memory_status_after_workspace, _ = send_request(
       process,
       {
