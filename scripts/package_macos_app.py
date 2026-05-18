@@ -11,6 +11,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 
@@ -26,6 +27,12 @@ DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
   "models/builtin/lfm2.5-350m/model-pack.json"
 )
+REQUIRED_ZIP_ENTRIES = {
+  "Pith.app/Contents/Info.plist",
+  "Pith.app/Contents/MacOS/Pith",
+  "Pith.app/Contents/MacOS/pith-runtime-bin",
+  "Pith.app/Contents/Resources/PithPackage.json",
+}
 REQUIRED_PACKAGED_MODEL_FIELDS = {
   "id",
   "display_name",
@@ -627,6 +634,13 @@ def assert_zip_artifact(zip_path: Path) -> None:
     raise RuntimeError(f"macOS package artifact must be a zip file: {zip_path}")
   if zip_path.stat().st_size <= 0:
     raise RuntimeError(f"macOS package artifact is empty: {zip_path}")
+  with zipfile.ZipFile(zip_path) as archive:
+    names = set(archive.namelist())
+  missing_entries = sorted(REQUIRED_ZIP_ENTRIES.difference(names))
+  if missing_entries:
+    raise RuntimeError(
+      f"macOS package artifact is missing entries: {', '.join(missing_entries)}"
+    )
 
 
 def main() -> int:
