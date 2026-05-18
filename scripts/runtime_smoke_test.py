@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 
 
@@ -15,18 +16,33 @@ NOTION_CONNECTOR_ID = "notion-connector::notion"
 NOTION_CREDENTIAL_LABEL = "Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "notion-smoke-token"
 LOCAL_CREDENTIAL_PROVIDER = "pith.localCredentialProvider"
+RUNTIME_STDERR_LOG_NAME = "runtime-smoke-stderr.log"
 
 
 def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
-  return subprocess.Popen(
-    ["cargo", "run", "-p", "pith-runtime-bin"],
-    cwd=repo_root,
-    env=env,
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True,
-  )
+  stderr_path = runtime_stderr_path(env)
+  stderr_path.parent.mkdir(parents=True, exist_ok=True)
+  with stderr_path.open("a", encoding="utf-8") as stderr:
+    return subprocess.Popen(
+      ["cargo", "run", "-p", "pith-runtime-bin"],
+      cwd=repo_root,
+      env=env,
+      stdin=subprocess.PIPE,
+      stdout=subprocess.PIPE,
+      stderr=stderr,
+      text=True,
+    )
+
+
+def runtime_stderr_path(env: Mapping[str, str]) -> Path:
+  return Path(env["PITH_DATA_DIR"]) / RUNTIME_STDERR_LOG_NAME
+
+
+def runtime_stderr_tail(env: Mapping[str, str], max_lines: int = 80) -> str:
+  path = runtime_stderr_path(env)
+  if not path.is_file():
+    return ""
+  return "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:])
 
 
 def stop_runtime(process: subprocess.Popen[str]) -> None:
@@ -539,6 +555,7 @@ def main() -> int:
   env["PITH_DATA_DIR"] = str(state_dir)
   env["PITH_PLUGIN_DIR"] = str(plugin_dir)
   process = start_runtime(repo_root, env)
+  success = False
 
   try:
     initialize, _ = send_request(
@@ -1087,6 +1104,7 @@ def main() -> int:
       assert "Local model is not ready" in turn["error"]["message"]
       assert_plugin_install_remove(process, plugin_import_dir, 60)
       assert_builtin_plugin_commands(process, 70)
+      success = True
       return 0
 
     assert turn["result"]["items"][0]["kind"] == "userMessage"
@@ -1355,8 +1373,14 @@ def main() -> int:
 
     assert_plugin_install_remove(process, plugin_import_dir, 42)
     assert_builtin_plugin_commands(process, 48)
+    success = True
     return 0
   finally:
+    if not success:
+      stderr_tail = runtime_stderr_tail(env)
+      if stderr_tail:
+        print("runtime stderr tail:", file=sys.stderr)
+        print(stderr_tail, file=sys.stderr)
     stop_runtime(process)
     if plugin_dir.exists():
       shutil.rmtree(plugin_dir)
