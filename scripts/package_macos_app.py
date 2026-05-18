@@ -313,14 +313,25 @@ def assert_bundled_plugin_capability_files(plugin_root: Path, capabilities: set[
   for capability in capabilities:
     if capability.startswith("command:"):
       command_id = capability.removeprefix("command:")
+      assert_safe_capability_identifier(command_id, capability)
       command_path = plugin_root / "commands" / f"{command_id}.json"
       require_file(command_path, f"bundled plugin command {command_id}")
       read_json_object(command_path)
     elif capability.startswith("hook:"):
       hook_id = capability.removeprefix("hook:")
+      assert_safe_capability_identifier(hook_id, capability)
       hook_path = plugin_root / "hooks" / f"{hook_id}.json"
       require_file(hook_path, f"bundled plugin hook {hook_id}")
       read_json_object(hook_path)
+
+
+def assert_safe_capability_identifier(identifier: str, capability: str) -> None:
+  if (
+    not identifier.strip()
+    or identifier in {".", ".."}
+    or any(character in identifier for character in "/\\:")
+  ):
+    raise RuntimeError(f"Bundled plugin capability has unsafe identifier: {capability}")
 
 
 def assert_bundled_plugin_skill_files(plugin_root: Path, manifest: dict) -> None:
@@ -333,7 +344,27 @@ def assert_bundled_plugin_skill_files(plugin_root: Path, manifest: dict) -> None
     skill_path = skill.get("path")
     if not isinstance(skill_path, str) or not skill_path.strip():
       raise RuntimeError(f"Bundled plugin skill entry is missing path: {plugin_root}")
-    require_file(plugin_root / skill_path, f"bundled plugin skill {skill_path}")
+    require_file(
+      safe_plugin_resource_path(plugin_root, skill_path),
+      f"bundled plugin skill {skill_path}",
+    )
+
+
+def safe_plugin_resource_path(plugin_root: Path, relative_path: str) -> Path:
+  if "\\" in relative_path:
+    raise RuntimeError(f"Bundled plugin resource path must use forward slashes: {relative_path}")
+  candidate = Path(relative_path)
+  if candidate.is_absolute() or any(part in {"", ".", ".."} for part in candidate.parts):
+    raise RuntimeError(f"Bundled plugin resource path must stay inside plugin: {relative_path}")
+  resolved_root = plugin_root.resolve()
+  resolved_candidate = (plugin_root / candidate).resolve()
+  try:
+    resolved_candidate.relative_to(resolved_root)
+  except ValueError as error:
+    raise RuntimeError(
+      f"Bundled plugin resource path resolved outside plugin: {relative_path}"
+    ) from error
+  return resolved_candidate
 
 
 def read_json_object(path: Path) -> dict:
