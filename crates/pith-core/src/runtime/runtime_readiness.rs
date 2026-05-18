@@ -32,6 +32,10 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .unwrap_or_else(workspace_required_status);
   let web_search_status = web_search_status();
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
+  let plugin_command_count = context.plugin_state.command_capability_count();
+  let enabled_plugin_command_count = context
+    .plugin_state
+    .enabled_command_capability_count();
 
   let status = readiness_status(
     model_ready,
@@ -88,7 +92,12 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       ),
       native_sandbox_check(&sandbox_status),
       web_search_check(&web_search_status),
-      plugin_check(enabled_plugin_count, context.plugin_state.catalog_len()),
+      plugin_check(
+        enabled_plugin_count,
+        context.plugin_state.catalog_len(),
+        enabled_plugin_command_count,
+        plugin_command_count,
+      ),
       bounded_runtime_check(),
     ],
     metrics: readiness_metrics(ReadinessMetricsInput {
@@ -97,6 +106,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       model_pack_id: &model_health.pack_id,
       context_window: &context_window,
       enabled_plugin_count,
+      enabled_plugin_command_count,
+      plugin_command_count,
       sandbox_status: &sandbox_status,
       web_search_status: &web_search_status,
       workspace_thread_count,

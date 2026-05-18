@@ -105,6 +105,24 @@ impl RuntimePluginState {
       .count()
   }
 
+  pub(crate) fn command_capability_count(&self) -> usize {
+    self
+      .catalog
+      .iter()
+      .filter(|plugin| plugin.status == "ready")
+      .map(count_command_capabilities)
+      .sum()
+  }
+
+  pub(crate) fn enabled_command_capability_count(&self) -> usize {
+    self
+      .catalog
+      .iter()
+      .filter(|plugin| plugin.enabled && plugin.status == "ready")
+      .map(count_command_capabilities)
+      .sum()
+  }
+
   pub(crate) fn contains_plugin_id(&self, plugin_id: &str) -> bool {
     self.catalog.iter().any(|plugin| plugin.id == plugin_id)
   }
@@ -166,6 +184,14 @@ impl RuntimePluginState {
     plugin.enabled = enabled;
     Ok(plugin.clone())
   }
+}
+
+fn count_command_capabilities(plugin: &PluginCatalogEntry) -> usize {
+  plugin
+    .capabilities
+    .iter()
+    .filter(|capability| capability.starts_with("command:"))
+    .count()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

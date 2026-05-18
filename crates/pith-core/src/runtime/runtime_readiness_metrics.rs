@@ -22,6 +22,8 @@ pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) model_pack_id: &'a str,
   pub(super) context_window: &'a str,
   pub(super) enabled_plugin_count: usize,
+  pub(super) enabled_plugin_command_count: usize,
+  pub(super) plugin_command_count: usize,
   pub(super) sandbox_status: &'a NativeSandboxStatus,
   pub(super) web_search_status: &'a WebSearchStatus,
   pub(super) workspace_thread_count: usize,
@@ -36,6 +38,8 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     model_pack_id,
     context_window,
     enabled_plugin_count,
+    enabled_plugin_command_count,
+    plugin_command_count,
     sandbox_status,
     web_search_status,
     workspace_thread_count,
@@ -53,7 +57,13 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
   );
   insert_execution_metrics(&mut metrics, execution_counts);
   insert_memory_metrics(&mut metrics, context);
-  insert_plugin_metrics(&mut metrics, context, enabled_plugin_count);
+  insert_plugin_metrics(
+    &mut metrics,
+    context,
+    enabled_plugin_count,
+    enabled_plugin_command_count,
+    plugin_command_count,
+  );
   insert_sandbox_metrics(&mut metrics, sandbox_status);
   insert_tool_limit_metrics(&mut metrics);
   insert_web_search_metrics(&mut metrics, web_search_status);
@@ -138,6 +148,8 @@ fn insert_plugin_metrics(
   metrics: &mut HashMap<String, String>,
   context: &RuntimeContext,
   enabled_plugin_count: usize,
+  enabled_plugin_command_count: usize,
+  plugin_command_count: usize,
 ) {
   insert_metric(
     metrics,
@@ -148,6 +160,16 @@ fn insert_plugin_metrics(
     metrics,
     "enabledPluginCount",
     enabled_plugin_count.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "pluginCommandCount",
+    plugin_command_count.to_string(),
+  );
+  insert_metric(
+    metrics,
+    "enabledPluginCommandCount",
+    enabled_plugin_command_count.to_string(),
   );
 }
 

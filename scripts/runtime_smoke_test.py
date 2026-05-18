@@ -517,6 +517,7 @@ def main() -> int:
       "context",
       "executionControls",
       "nativeSandbox",
+      "webSearch",
       "plugins",
       "boundedRuntime",
     }.issubset(readiness_check_ids)
@@ -527,6 +528,12 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
     assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"
     assert runtime_readiness["result"]["metrics"]["sandboxActive"] in {"true", "false"}
+    assert runtime_readiness["result"]["metrics"]["webSearchTimeoutSeconds"] == "20"
+    assert runtime_readiness["result"]["metrics"]["webSearchProvider"] == "DuckDuckGo Lite"
+    assert runtime_readiness["result"]["metrics"]["webSearchClient"] == "curl"
+    assert runtime_readiness["result"]["metrics"]["webSearchAvailable"] in {"true", "false"}
+    assert "pluginCommandCount" in runtime_readiness["result"]["metrics"]
+    assert "enabledPluginCommandCount" in runtime_readiness["result"]["metrics"]
 
     model_bootstrap, _ = send_request(
       process,
@@ -596,6 +603,21 @@ def main() -> int:
       },
     )
     assert shell_recorder_enable["result"]["plugin"]["enabled"] is True
+
+    plugin_readiness, _ = send_request(
+      process,
+      {
+        "id": 43,
+        "method": "runtime/readiness",
+      },
+    )
+    plugin_checks = {
+      check["id"]: check for check in plugin_readiness["result"]["checks"]
+    }
+    assert plugin_checks["plugins"]["status"] == "ready"
+    assert "command capability" in plugin_checks["plugins"]["detail"]
+    assert int(plugin_readiness["result"]["metrics"]["pluginCommandCount"]) >= 3
+    assert int(plugin_readiness["result"]["metrics"]["enabledPluginCommandCount"]) >= 3
 
     capability_registry, _ = send_request(
       process,
