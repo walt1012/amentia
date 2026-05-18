@@ -33,7 +33,11 @@ def stop_runtime(process: subprocess.Popen[str]) -> None:
   if process.poll() is not None:
     return
   process.terminate()
-  process.wait(timeout=5)
+  try:
+    process.wait(timeout=5)
+  except subprocess.TimeoutExpired:
+    process.kill()
+    process.wait(timeout=5)
 
 
 def restart_runtime(
