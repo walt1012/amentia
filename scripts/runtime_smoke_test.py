@@ -186,6 +186,40 @@ def assert_builtin_plugin_commands(
     note["title"] == "Workspace Capture" and note["source"] == "plugin.workspace-notes"
     for note in memory_list_after_plugin["result"]["notes"]
   )
+  cancel_running, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 3,
+      "method": "turn/cancelRunning",
+      "params": {
+        "threadId": "thread-1",
+      },
+    },
+  )
+  assert cancel_running["result"]["threadId"] == "thread-1"
+
+  cancelled_command_turn, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 4,
+      "method": "plugin/commandRun",
+      "params": {
+        "threadId": "thread-1",
+        "commandId": "workspace-notes::workspace.capture-note",
+        "input": "Cancel before plugin execution",
+      },
+    },
+  )
+  assert cancelled_command_turn["result"]["items"][0]["kind"] == "pluginCommand"
+  assert cancelled_command_turn["result"]["items"][1]["kind"] == "warning"
+  assert (
+    cancelled_command_turn["result"]["items"][1]["attributes"]["pluginCommandStatus"]
+    == "cancelled"
+  )
+  assert (
+    cancelled_command_turn["result"]["items"][1]["attributes"]["pluginRunnerFailureKind"]
+    == "cancelled"
+  )
 
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
