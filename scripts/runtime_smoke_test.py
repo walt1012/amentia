@@ -917,6 +917,23 @@ def main() -> int:
     assert recovered_readiness["result"]["metrics"]["workspaceBound"] == "true"
     assert recovered_readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
 
+    recovered_plugin_refresh, _ = send_request(
+      process,
+      {
+        "id": 56,
+        "method": "plugin/refresh",
+      },
+    )
+    assert "stateWarning" not in recovered_plugin_refresh["result"]
+    refreshed_plugins = {
+      plugin["id"]: plugin
+      for plugin in recovered_plugin_refresh["result"]["plugins"]
+    }
+    assert refreshed_plugins["workspace-notes"]["enabled"] is True
+    assert refreshed_plugins["shell-recorder"]["enabled"] is True
+    assert refreshed_plugins["review-assistant"]["enabled"] is True
+    assert refreshed_plugins["notion-connector"]["enabled"] is False
+
     turn, _ = send_request(
       process,
       {
