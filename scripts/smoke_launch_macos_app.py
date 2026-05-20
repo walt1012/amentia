@@ -23,6 +23,7 @@ RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
 WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
+LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
 APP_STARTUP_TIMEOUT_SECONDS = 18.0
 APP_STABILITY_SECONDS = 2.0
 REQUIRED_BUNDLED_PLUGINS = {
@@ -116,6 +117,26 @@ def validate_app_bundle(app_path: Path) -> None:
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
   assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
+  validate_packaged_llama_backend_launch(app_path)
+
+
+def validate_packaged_llama_backend_launch(app_path: Path) -> None:
+  backend = app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli"
+  try:
+    completed = subprocess.run(
+      [str(backend), "--help"],
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      text=True,
+      timeout=LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS,
+    )
+  except subprocess.TimeoutExpired as error:
+    raise RuntimeError("Packaged llama.cpp backend did not respond to --help.") from error
+  if completed.returncode != 0:
+    raise RuntimeError(
+      "Packaged llama.cpp backend failed to launch. "
+      f"Exit {completed.returncode}. Output: {completed.stdout[-1000:]}"
+    )
 
 
 def packaged_runtime_path(app_path: Path) -> Path:
@@ -341,7 +362,7 @@ def validate_tooling_readiness(
   validate_readiness_check_status(
     checks,
     "nativeSandbox",
-    {"limited", "ready"} if workspace_open else {"limited", "setup_required"},
+    "ready" if workspace_open else {"limited", "setup_required"},
   )
 
   metrics = result["metrics"]
@@ -368,16 +389,28 @@ def validate_tooling_readiness(
       "Packaged runtime readiness reported unexpected web search client: "
       f"{metrics.get('webSearchClient')}"
     )
-  if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
-    raise RuntimeError(
-      "Packaged runtime readiness reported unexpected sandbox backend: "
-      f"{metrics.get('sandboxBackend')}"
-    )
-  if metrics.get("sandboxActive") not in {"true", "false"}:
-    raise RuntimeError(
-      "Packaged runtime readiness reported unexpected sandbox active state: "
-      f"{metrics.get('sandboxActive')}"
-    )
+  if workspace_open:
+    if metrics.get("sandboxBackend") != "macosSeatbelt":
+      raise RuntimeError(
+        "Packaged runtime readiness must use the native macOS sandbox after "
+        f"workspace open. Backend: {metrics.get('sandboxBackend')}"
+      )
+    if metrics.get("sandboxActive") != "true":
+      raise RuntimeError(
+        "Packaged runtime readiness must report an active native sandbox after "
+        f"workspace open. Active: {metrics.get('sandboxActive')}"
+      )
+  else:
+    if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
+      raise RuntimeError(
+        "Packaged runtime readiness reported unexpected sandbox backend: "
+        f"{metrics.get('sandboxBackend')}"
+      )
+    if metrics.get("sandboxActive") not in {"true", "false"}:
+      raise RuntimeError(
+        "Packaged runtime readiness reported unexpected sandbox active state: "
+        f"{metrics.get('sandboxActive')}"
+      )
 
 
 def validate_packaged_runtime_workspace_bootstrap(
@@ -497,8 +530,8 @@ def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
   return manifest_path, model_path
 
 
-def write_fake_llama_backend(support_dir: Path) -> Path:
-  backend_path = support_dir / "fake-llama-cli"
+def write_deterministic_llama_backend_fixture(support_dir: Path) -> Path:
+  backend_path = support_dir / "deterministic-llama-cli"
   backend_path.write_text(
     "#!/bin/sh\n"
     "printf '%s\\n' 'Packaged smoke local response.'\n",
@@ -557,7 +590,7 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
   with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
     support_dir = Path(support_root)
     manifest_path, model_path = write_smoke_model_pack(support_dir)
-    backend_path = write_fake_llama_backend(support_dir)
+    backend_path = write_deterministic_llama_backend_fixture(support_dir)
     web_search_fixture_path = write_web_search_fixture(support_dir)
     process = launch_runtime_process(
       app_path,

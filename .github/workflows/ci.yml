@@ -19,6 +19,7 @@ env:
   SWIFT_APP_BINARY: PithApp
   RUNTIME_BINARY: pith-runtime-bin
   LLAMA_BINARY: llama-cli
+  LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
   SWIFT_APP_ARTIFACT: PithApp-x86_64
   RUNTIME_ARTIFACT: pith-runtime-bin-x86_64
   LLAMA_ARTIFACT: llama-cli-x86_64
@@ -188,17 +189,32 @@ jobs:
   macos-llama-backend:
     name: macOS llama.cpp backend
     runs-on: macos-15-intel
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install llama.cpp backend
+      - name: Build pinned llama.cpp backend
         shell: bash
         run: |
           set -euo pipefail
-          brew list llama.cpp >/dev/null 2>&1 || brew install llama.cpp
-          backend="$(brew --prefix)/bin/llama-cli"
+          source_dir="$RUNNER_TEMP/llama.cpp"
+          build_dir="$RUNNER_TEMP/llama.cpp-build"
+          git init "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C "$source_dir" fetch --depth 1 origin "$LLAMA_CPP_REF"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          cmake \
+            -S "$source_dir" \
+            -B "$build_dir" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DGGML_NATIVE=OFF \
+            -DGGML_OPENMP=OFF \
+            -DLLAMA_CURL=OFF
+          cmake --build "$build_dir" --config Release --target llama-cli --parallel 3
+          backend="$(find "$build_dir" -type f -name llama-cli | head -n 1)"
           test -x "$backend"
           archs="$(lipo -archs "$backend" 2>/dev/null || true)"
           if [[ -n "$archs" && "$archs" != *"x86_64"* ]]; then

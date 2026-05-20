@@ -76,7 +76,11 @@ REQUIRED_INFO_PLIST_VALUES = {
   "NSSupportsSuddenTermination": True,
 }
 REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
-  "notion-connector": {"command:notion.prepare-page-draft"},
+  "notion-connector": {
+    "command:notion.prepare-page-draft",
+    "connector:notion",
+    "mcp_server:notion",
+  },
   "review-assistant": {"command:review.inspect-diff"},
   "shell-recorder": {"command:shell.summarize-session", "hook:shell.recorder"},
   "web-search": {"tool:web_search"},
@@ -527,6 +531,7 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
       raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
     assert_bundled_plugin_capability_files(plugin_root, capabilities)
     assert_bundled_plugin_skill_files(plugin_root, manifest)
+    assert_bundled_plugin_mcp_server_files(plugin_root, manifest, capabilities)
 
 
 def plugin_capabilities(manifest_path: Path, manifest: dict) -> set[str]:
@@ -585,6 +590,41 @@ def assert_bundled_plugin_skill_files(plugin_root: Path, manifest: dict) -> None
       safe_plugin_resource_path(plugin_root, skill_path),
       f"bundled plugin skill {skill_path}",
     )
+
+
+def assert_bundled_plugin_mcp_server_files(
+  plugin_root: Path,
+  manifest: dict,
+  capabilities: set[str],
+) -> None:
+  mcp_servers = manifest.get("mcpServers", [])
+  if not isinstance(mcp_servers, list):
+    raise RuntimeError(f"Bundled plugin mcpServers must be a list: {plugin_root}")
+  declared_server_ids = set()
+  for server in mcp_servers:
+    if not isinstance(server, dict):
+      raise RuntimeError(f"Bundled plugin MCP server entry must be an object: {plugin_root}")
+    server_id = server.get("id")
+    if not isinstance(server_id, str) or not server_id.strip():
+      raise RuntimeError(f"Bundled plugin MCP server entry is missing id: {plugin_root}")
+    declared_server_ids.add(server_id)
+    command = server.get("command")
+    if command is None:
+      continue
+    if not isinstance(command, str) or not command.strip():
+      raise RuntimeError(f"Bundled plugin MCP server command is invalid: {plugin_root}")
+    require_file(
+      safe_plugin_resource_path(plugin_root, command),
+      f"bundled plugin MCP server command {server_id}",
+    )
+    assert_executable(safe_plugin_resource_path(plugin_root, command))
+
+  for capability in capabilities:
+    if not capability.startswith("mcp_server:"):
+      continue
+    server_id = capability.removeprefix("mcp_server:")
+    if server_id not in declared_server_ids:
+      raise RuntimeError(f"Bundled plugin is missing MCP server declaration: {capability}")
 
 
 def safe_plugin_resource_path(plugin_root: Path, relative_path: str) -> Path:

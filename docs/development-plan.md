@@ -106,7 +106,7 @@ Current Status:
   readiness, deterministic first request coverage, fresh app-owned directory
   preparation, model manager
   download/resume/activation planning, packaged app launch smoke coverage, and
-  local inference backend dependency portability checks.
+  local inference backend dependency portability and launch checks.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.
@@ -116,6 +116,8 @@ Next Work:
 - Packaged first-run UI proof: launch fresh, guide model download or resume,
   activate one verified model, open a workspace, create a thread, send a first
   request, and recover without terminal help.
+- Real local inference proof: run a valid downloaded GGUF through the packaged
+  backend in CI when a small release-safe fixture is available.
 - Execution lane hardening: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation cancellable, visible, and non-blocking
   where the work is read-only.

@@ -63,11 +63,11 @@ python3 scripts/package_macos_app.py
 ```
 
 CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
-`pith-runtime-bin`, and llama.cpp backend build or run in parallel cached jobs,
-then a packaging job downloads the executable artifacts, assembles `Pith.app`,
-places executables under `Contents/MacOS`, bundles model metadata and bundled
-plugin manifests under `Contents/Resources`, validates the app bundle, and
-emits `artifacts/macos/Pith-macos-x86_64.zip`.
+`pith-runtime-bin`, and pinned llama.cpp backend build or run in parallel cached
+jobs, then a packaging job downloads the executable artifacts, assembles
+`Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
+and bundled plugin manifests under `Contents/Resources`, validates the app
+bundle, and emits `artifacts/macos/Pith-macos-x86_64.zip`.
 
 Package validation checks the product `Info.plist`, `PkgInfo`,
 `PithPackage.json`, x86_64-only binaries, first-use model download metadata,
@@ -78,6 +78,15 @@ and every bundled plugin manifest, must not contain symlinks or model weight
 files, and must not require external package manager paths at runtime. CI also
 ad-hoc signs the app when `codesign` is available. Distribution signing and
 notarization should be added only after identity and entitlements are finalized.
+
+Public distribution builds must pass:
+
+```bash
+python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
+```
+
+This gate requires Developer ID signing and Gatekeeper assessment. Ad-hoc signed
+CI artifacts are for internal validation only.
 
 ## Local Model Runtime
 
