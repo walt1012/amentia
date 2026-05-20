@@ -16,6 +16,11 @@ DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("app_path", type=Path, help="Path to Pith.app.")
+  parser.add_argument(
+    "--dmg-path",
+    type=Path,
+    help="Optional notarized DMG artifact to validate for public release.",
+  )
   return parser.parse_args()
 
 
@@ -34,6 +39,8 @@ def main() -> int:
         "Ad-hoc signed builds are valid for CI only, not public distribution."
       )
     run(["spctl", "--assess", "--type", "execute", "--verbose=4", str(app_path)])
+    if args.dmg_path:
+      validate_dmg(args.dmg_path.resolve())
   except Exception as error:
     print(f"macOS distribution validation failed: {error}", file=sys.stderr)
     return 1
@@ -49,6 +56,25 @@ def require_file(path: Path, label: str) -> None:
 def require_tool(name: str) -> None:
   if shutil.which(name) is None:
     raise FileNotFoundError(f"Required distribution validation tool is missing: {name}")
+
+
+def validate_dmg(dmg_path: Path) -> None:
+  require_file(dmg_path, "macOS release DMG")
+  require_tool("xcrun")
+  run(["codesign", "--verify", "--verbose=2", str(dmg_path)])
+  run(
+    [
+      "spctl",
+      "--assess",
+      "--type",
+      "open",
+      "--context",
+      "context:primary-signature",
+      "--verbose=4",
+      str(dmg_path),
+    ]
+  )
+  run(["xcrun", "stapler", "validate", str(dmg_path)])
 
 
 def run(command: list[str]) -> str:

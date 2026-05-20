@@ -25,6 +25,7 @@ env:
   RUNTIME_ARTIFACT: pith-runtime-bin-x86_64
   LLAMA_ARTIFACT: llama-cli-x86_64
   MACOS_APP_ARTIFACT: Pith-macos-x86_64
+  MACOS_DMG_NAME: Pith-macos-x86_64.dmg
 
 defaults:
   run:
@@ -371,9 +372,14 @@ jobs:
       - name: Smoke launch packaged macOS app
         run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
 
+      - name: Create internal macOS disk image
+        run: python3 scripts/create_macos_dmg.py artifacts/macos/Pith.app "artifacts/macos/$MACOS_DMG_NAME"
+
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.MACOS_APP_ARTIFACT }}
-          path: artifacts/macos/Pith-macos-x86_64.zip
+          path: |
+            artifacts/macos/Pith-macos-x86_64.zip
+            artifacts/macos/${{ env.MACOS_DMG_NAME }}
           if-no-files-found: error

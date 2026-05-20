@@ -67,7 +67,7 @@ CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
 jobs, then a packaging job downloads the executable artifacts, assembles
 `Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
 and bundled plugin manifests under `Contents/Resources`, validates the app
-bundle, and emits `artifacts/macos/Pith-macos-x86_64.zip`.
+bundle, and emits internal zip and DMG artifacts.
 
 Package validation checks the product `Info.plist`, `PkgInfo`,
 `PithPackage.json`, x86_64-only binaries, first-use model download metadata,
@@ -76,17 +76,40 @@ packaged resources and optional backend inputs, llama.cpp dependency
 portability, and zip contents. The zip must include the default model manifest
 and every bundled plugin manifest, must not contain symlinks or model weight
 files, and must not require external package manager paths at runtime. CI also
-ad-hoc signs the app when `codesign` is available. Distribution signing and
-notarization should be added only after identity and entitlements are finalized.
+ad-hoc signs the app when `codesign` is available. Internal CI artifacts prove
+the package shape, but they are not public release installers.
 
 Public distribution builds must pass:
 
 ```bash
-python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
+python3 scripts/validate_macos_distribution.py \
+  artifacts/macos/Pith.app \
+  --dmg-path artifacts/macos/Pith-v0.1.0-macos-x86_64.dmg
 ```
 
-This gate requires Developer ID signing and Gatekeeper assessment. Ad-hoc signed
-CI artifacts are for internal validation only.
+This gate requires Developer ID signing, Gatekeeper assessment, and notarization
+stapling. Ad-hoc signed CI artifacts are for internal validation only.
+
+## GitHub Release Distribution
+
+Users should download `Pith-<tag>-macos-x86_64.dmg` from the GitHub Release
+page, open it, and drag `Pith.app` to Applications. The release workflow runs
+only for `v*` tags or manual dispatch, signs the app with Developer ID,
+creates a DMG, signs and notarizes the DMG, staples the notarization ticket,
+validates the app and DMG, then uploads the DMG and SHA-256 checksum to the
+GitHub Release.
+
+Release publishing requires these repository secrets:
+
+- `MACOS_CERTIFICATE_P12_BASE64`
+- `MACOS_CERTIFICATE_PASSWORD`
+- `MACOS_DEVELOPER_ID_APPLICATION`
+- `APPLE_ID`
+- `APPLE_TEAM_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+
+The release workflow should fail rather than publish an unsigned or
+non-notarized installer.
 
 ## Local Model Runtime
 
