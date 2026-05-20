@@ -54,9 +54,8 @@ pub(crate) fn build_shell_output_context(
     input.budget_bytes,
     input.command,
   );
-  let was_compacted =
-    input.source_stdout_bytes > stdout_preview.len()
-      || input.source_stderr_bytes > stderr_preview.len();
+  let was_compacted = input.source_stdout_bytes > stdout_preview.len()
+    || input.source_stderr_bytes > stderr_preview.len();
 
   ShellOutputContextResult {
     context: ShellOutputContext {
@@ -72,7 +71,10 @@ pub(crate) fn build_shell_output_context(
       artifacts_truncated: input.artifact.stdout_bytes < input.source_stdout_bytes
         || input.artifact.stderr_bytes < input.source_stderr_bytes,
       was_compacted,
-      artifact_directory: input.artifact.directory.map(|path| path.display().to_string()),
+      artifact_directory: input
+        .artifact
+        .directory
+        .map(|path| path.display().to_string()),
     },
     stdout_preview,
     stderr_preview,
