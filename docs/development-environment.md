@@ -17,9 +17,12 @@ Every push to `main` or `codex/**` runs the canonical CI suite:
 - Rust formatting with `cargo fmt --all -- --check`
 - Rust linting with `cargo clippy --workspace --all-targets -- -D warnings`
 - Rust tests with `cargo test --workspace`
+- x86_64 Swift app build
+- x86_64 Swift app logic tests
 - model pack manifest validation
 - runtime smoke coverage through `scripts/runtime_smoke_test.py`
 - signed-ready x86_64 macOS app bundle packaging on an Intel macOS runner
+- packaged app launch smoke coverage through `scripts/smoke_launch_macos_app.py`
 
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
@@ -54,11 +57,12 @@ The canonical package command is:
 python3 scripts/package_macos_app.py
 ```
 
-CI runs this on `macos-15-intel`. The Swift app executable and `pith-runtime-bin` build in
-parallel cached jobs, then a packaging job downloads both executables, assembles `Pith.app`,
-places executables under `Contents/MacOS`, bundles model metadata and bundled plugin manifests
-under `Contents/Resources`, validates the app bundle, and emits
-`artifacts/macos/Pith-macos-x86_64.zip`.
+CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
+`pith-runtime-bin`, and llama.cpp backend build or run in parallel cached jobs,
+then a packaging job downloads the executable artifacts, assembles `Pith.app`,
+places executables under `Contents/MacOS`, bundles model metadata and bundled
+plugin manifests under `Contents/Resources`, validates the app bundle, and
+emits `artifacts/macos/Pith-macos-x86_64.zip`.
 
 Package validation checks the product `Info.plist`, `PkgInfo`, `PithPackage.json`, x86_64-only
 binaries, first-use model download metadata, bundled plugin resource contracts, absence of model
