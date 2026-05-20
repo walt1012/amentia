@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import signal
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,16 @@ from pathlib import Path
 APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
+REQUIRED_DATABASE_TABLES = {
+  "approvals",
+  "memory_notes",
+  "plugin_connector_credentials",
+  "plugin_state",
+  "schema_migrations",
+  "threads",
+  "workspace_state",
+}
+REQUIRED_SCHEMA_VERSION = 9
 
 
 def parse_args() -> argparse.Namespace:
@@ -105,6 +116,28 @@ def validate_isolated_support_dir(support_dir: Path) -> None:
   storage_dir = support_dir / "storage"
   if not storage_dir.is_dir():
     raise RuntimeError(f"Packaged app did not create isolated storage: {storage_dir}")
+  validate_runtime_database(storage_dir / "pith.db")
+
+
+def validate_runtime_database(database_path: Path) -> None:
+  require_file(database_path)
+  with sqlite3.connect(f"file:{database_path}?mode=ro", uri=True) as connection:
+    schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
+    if schema_version != REQUIRED_SCHEMA_VERSION:
+      raise RuntimeError(
+        f"Packaged runtime database schema is {schema_version}, "
+        f"expected {REQUIRED_SCHEMA_VERSION}: {database_path}"
+      )
+    rows = connection.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table'"
+    ).fetchall()
+  tables = {row[0] for row in rows}
+  missing = sorted(REQUIRED_DATABASE_TABLES - tables)
+  if missing:
+    raise RuntimeError(
+      "Packaged runtime database is missing tables "
+      f"{', '.join(missing)}: {database_path}"
+    )
 
 
 def main() -> int:
