@@ -136,8 +136,7 @@ struct PipeCapture {
 
 impl PipeCapture {
   fn needs_artifact(&self, max_preview_bytes: usize) -> bool {
-    self.source_byte_count > max_preview_bytes
-      || self.artifact_byte_count < self.source_byte_count
+    self.source_byte_count > max_preview_bytes || self.artifact_byte_count < self.source_byte_count
   }
 }
 

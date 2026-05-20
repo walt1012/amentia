@@ -243,20 +243,19 @@ mod tests {
 
   #[test]
   fn shell_output_context_marks_stream_omissions_when_preview_was_bounded() {
-    let context =
-      build_shell_output_context(
-        "head preview",
-        "",
-        4096,
-        0,
-        128,
-        4096,
-        0,
-        4096,
-        None,
-        "cat log",
-      )
-      .context;
+    let context = build_shell_output_context(
+      "head preview",
+      "",
+      4096,
+      0,
+      128,
+      4096,
+      0,
+      4096,
+      None,
+      "cat log",
+    )
+    .context;
 
     assert!(context.was_compacted);
     assert_eq!(context.source_stdout_bytes, 4096);
