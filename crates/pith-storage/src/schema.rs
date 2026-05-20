@@ -168,7 +168,11 @@ pub(crate) fn ensure_schema(connection: &Connection) -> Result<()> {
         "ALTER TABLE plugin_connector_credentials ADD COLUMN credential_secret TEXT;",
       )?;
     } else if migration.version == 9 {
-      drop_column_if_present(&transaction, "plugin_connector_credentials", "credential_secret")?;
+      drop_column_if_present(
+        &transaction,
+        "plugin_connector_credentials",
+        "credential_secret",
+      )?;
     } else {
       transaction.execute_batch(migration.sql)?;
     }

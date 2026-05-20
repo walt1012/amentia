@@ -193,10 +193,8 @@ mod tests {
 
   #[test]
   fn model_web_search_candidate_keeps_external_questions_available_to_planner() {
-    let comparison = infer_model_web_search_intent(
-      "Compare Codex and Claude Code plugin systems",
-    )
-    .expect("candidate");
+    let comparison = infer_model_web_search_intent("Compare Codex and Claude Code plugin systems")
+      .expect("candidate");
     assert_eq!(comparison.routing_reason, "modelToolPlanning");
     assert_eq!(
       comparison.query,

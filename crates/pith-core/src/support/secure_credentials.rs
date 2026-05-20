@@ -138,9 +138,8 @@ mod platform {
     let secret = if password_data.is_null() {
       None
     } else {
-      let bytes = unsafe {
-        std::slice::from_raw_parts(password_data.cast::<u8>(), password_length as usize)
-      };
+      let bytes =
+        unsafe { std::slice::from_raw_parts(password_data.cast::<u8>(), password_length as usize) };
       String::from_utf8(bytes.to_vec()).ok()
     };
 
