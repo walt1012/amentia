@@ -7,12 +7,14 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 
 APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
+APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
 
 
 def parse_args() -> argparse.Namespace:
@@ -76,6 +78,35 @@ def validate_app_bundle(app_path: Path) -> None:
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
 
 
+def launch_app_process(app_path: Path, support_dir: Path) -> subprocess.Popen[str]:
+  environment = os.environ.copy()
+  environment[APP_SUPPORT_ENV_KEY] = str(support_dir)
+  return subprocess.Popen(
+    [str(app_path / "Contents" / "MacOS" / APP_PROCESS_NAME)],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    env=environment,
+  )
+
+
+def terminate_process(process: subprocess.Popen[str]) -> None:
+  if process.poll() is not None:
+    return
+  process.terminate()
+  try:
+    process.wait(timeout=5)
+  except subprocess.TimeoutExpired:
+    process.kill()
+    process.wait(timeout=5)
+
+
+def validate_isolated_support_dir(support_dir: Path) -> None:
+  storage_dir = support_dir / "storage"
+  if not storage_dir.is_dir():
+    raise RuntimeError(f"Packaged app did not create isolated storage: {storage_dir}")
+
+
 def main() -> int:
   args = parse_args()
   if sys.platform != "darwin":
@@ -84,65 +115,47 @@ def main() -> int:
 
   app_path = args.app_path.resolve()
   validate_app_bundle(app_path)
-  before_pids = process_ids(APP_PROCESS_NAME)
   before_runtime_pids = process_ids(RUNTIME_PROCESS_NAME)
-  open_process = subprocess.Popen(
-    ["/usr/bin/open", "-n", "-W", str(app_path)],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True,
-  )
-  launched_pids: set[int] = set()
-  launched_runtime_pids: set[int] = set()
-  deadline = time.monotonic() + args.duration
-  try:
-    while time.monotonic() < deadline:
-      if open_process.poll() is not None:
-        stdout, stderr = open_process.communicate()
-        raise RuntimeError(
-          "Packaged app exited before the launch smoke window.\n"
-          f"stdout:\n{stdout[-2000:]}\n"
-          f"stderr:\n{stderr[-2000:]}"
-        )
-      launched_pids = process_ids(APP_PROCESS_NAME) - before_pids
-      launched_runtime_pids = process_ids(RUNTIME_PROCESS_NAME) - before_runtime_pids
-      if launched_pids:
-        if not launched_runtime_pids:
-          time.sleep(0.2)
-          launched_runtime_pids = process_ids(RUNTIME_PROCESS_NAME) - before_runtime_pids
-        if not launched_runtime_pids:
-          continue
-        time.sleep(max(0.0, deadline - time.monotonic()))
-        if open_process.poll() is not None:
-          stdout, stderr = open_process.communicate()
+  with tempfile.TemporaryDirectory(prefix="pith-app-smoke-") as support_root:
+    support_dir = Path(support_root)
+    app_process = launch_app_process(app_path, support_dir)
+    launched_runtime_pids: set[int] = set()
+    deadline = time.monotonic() + args.duration
+    try:
+      while time.monotonic() < deadline:
+        if app_process.poll() is not None:
+          stdout, stderr = app_process.communicate()
           raise RuntimeError(
-            "Packaged app launched but exited during the smoke window.\n"
+            "Packaged app exited before the launch smoke window.\n"
             f"stdout:\n{stdout[-2000:]}\n"
             f"stderr:\n{stderr[-2000:]}"
           )
-        if launched_runtime_pids.isdisjoint(process_ids(RUNTIME_PROCESS_NAME)):
-          raise RuntimeError("Packaged runtime exited during the smoke window.")
-        print(
-          "Packaged app launch smoke passed with app PIDs "
-          f"{sorted(launched_pids)} and runtime PIDs {sorted(launched_runtime_pids)}"
-        )
-        return 0
-      time.sleep(0.2)
+        launched_runtime_pids = process_ids(RUNTIME_PROCESS_NAME) - before_runtime_pids
+        if launched_runtime_pids:
+          time.sleep(max(0.0, deadline - time.monotonic()))
+          if app_process.poll() is not None:
+            stdout, stderr = app_process.communicate()
+            raise RuntimeError(
+              "Packaged app launched but exited during the smoke window.\n"
+              f"stdout:\n{stdout[-2000:]}\n"
+              f"stderr:\n{stderr[-2000:]}"
+            )
+          if launched_runtime_pids.isdisjoint(process_ids(RUNTIME_PROCESS_NAME)):
+            raise RuntimeError("Packaged runtime exited during the smoke window.")
+          validate_isolated_support_dir(support_dir)
+          print(
+            "Packaged app launch smoke passed with app PID "
+            f"{app_process.pid}, runtime PIDs {sorted(launched_runtime_pids)}, "
+            f"and isolated support root {support_dir}"
+          )
+          return 0
+        time.sleep(0.2)
 
-    if launched_pids:
-      raise RuntimeError("Packaged app launched but did not start pith-runtime-bin.")
-    raise RuntimeError("Packaged app did not appear as a running Pith process.")
-  finally:
-    if launched_runtime_pids:
-      terminate_processes(RUNTIME_PROCESS_NAME, launched_runtime_pids)
-    if launched_pids:
-      terminate_processes(APP_PROCESS_NAME, launched_pids)
-    if open_process.poll() is None:
-      open_process.terminate()
-      try:
-        open_process.wait(timeout=5)
-      except subprocess.TimeoutExpired:
-        open_process.kill()
+      raise RuntimeError("Packaged app did not start pith-runtime-bin.")
+    finally:
+      terminate_process(app_process)
+      if launched_runtime_pids:
+        terminate_processes(RUNTIME_PROCESS_NAME, launched_runtime_pids)
 
 
 if __name__ == "__main__":

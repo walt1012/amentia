@@ -15,13 +15,11 @@ enum RuntimeBridgeLocalEnvironment {
   ]
 
   static func localPluginInstallRootPath() -> String {
-    pluginDirectory().path
+    AppSupportDirectories.pluginInstallDirectory().path
   }
 
   static func localModelStorageRootPath() -> String {
-    storageDirectory()
-      .appendingPathComponent("models", isDirectory: true)
-      .path
+    AppSupportDirectories.localModelStorageDirectory().path
   }
 
   static func activeLocalModelPath() -> String? {
@@ -58,8 +56,8 @@ enum RuntimeBridgeLocalEnvironment {
   static func runtimeEnvironment() -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
     stripRuntimeOnlyTestEnvironment(from: &environment)
-    environment["PITH_DATA_DIR"] = storageDirectory().path
-    environment["PITH_LOCAL_PLUGIN_DIR"] = pluginDirectory().path
+    environment["PITH_DATA_DIR"] = AppSupportDirectories.storageDirectory().path
+    environment["PITH_LOCAL_PLUGIN_DIR"] = AppSupportDirectories.pluginInstallDirectory().path
     applyBundleResourceEnvironment(to: &environment)
     if let activeModel = activeLocalModelSelection() {
       environment["PITH_MODEL_PACK_MANIFEST"] = activeModel.manifestPath
@@ -136,25 +134,6 @@ enum RuntimeBridgeLocalEnvironment {
     return RuntimeBridgeActiveLocalModelSelection(manifestPath: manifestPath, modelPath: modelPath)
   }
 
-  private static func storageDirectory() -> URL {
-    let baseDirectory =
-      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-
-    return baseDirectory
-      .appendingPathComponent("Pith", isDirectory: true)
-      .appendingPathComponent("storage", isDirectory: true)
-  }
-
-  private static func pluginDirectory() -> URL {
-    let baseDirectory =
-      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-
-    return baseDirectory
-      .appendingPathComponent("Pith", isDirectory: true)
-      .appendingPathComponent("plugins", isDirectory: true)
-  }
 }
 
 extension RuntimeBridge {

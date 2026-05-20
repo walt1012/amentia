@@ -98,9 +98,9 @@ Order of Work:
 
 Immediate Next:
 
-- Prove the first-run loop in the packaged app: runtime autostart, model
-  download/resume, activation, backend discovery, workspace bootstrap, and the
-  first local request.
+- Prove the first-run loop in the packaged app: isolated app support state,
+  runtime autostart, model download/resume, activation, workspace bootstrap,
+  and the first local request.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
 - Tighten plugin runner, connector, sandbox, and retry diagnostics only where
