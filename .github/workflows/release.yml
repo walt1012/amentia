@@ -41,6 +41,7 @@ defaults:
     shell: bash
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -49,7 +50,7 @@ concurrency:
 
 jobs:
   release-dmg:
-    name: Build signed notarized DMG
+    name: Build release DMG
     runs-on: macos-15-intel
     timeout-minutes: 90
     env:
@@ -68,13 +69,37 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
-      - name: Validate release inputs and secrets
+      - name: Validate release tag and CI gate
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [[ "$RELEASE_TAG" != v* ]]; then
-            echo "::error title=Invalid release tag::Release tags must start with v, got $RELEASE_TAG"
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,2}$ ]]; then
+            echo "::error title=Invalid release tag::Use tags like v0.1.0, got $RELEASE_TAG"
             exit 1
           fi
+          release_version="${RELEASE_TAG#v}"
+          release_sha="$(git rev-parse HEAD)"
+          echo "PITH_RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
+          echo "PITH_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+
+          successful_ci_count="$(
+            gh run list \
+              --workflow CI \
+              --commit "$release_sha" \
+              --status success \
+              --json conclusion,headSha \
+              --limit 20 \
+              --jq '[.[] | select(.headSha == "'"$release_sha"'" and .conclusion == "success")] | length'
+          )"
+          if [[ "$successful_ci_count" == "0" ]]; then
+            echo "::error title=Release CI gate::The release commit $release_sha does not have a successful CI run. Run CI for this commit before publishing a release."
+            exit 1
+          fi
+
+      - name: Determine release signing mode
+        run: |
+          set -euo pipefail
           missing=()
           for name in \
             APPLE_APP_SPECIFIC_PASSWORD \
@@ -89,11 +114,14 @@ jobs:
           done
           if (( ${#missing[@]} > 0 )); then
             joined="$(IFS=', '; echo "${missing[*]}")"
-            echo "::error title=Missing release secrets::Configure these repository secrets before publishing a macOS release: $joined"
-            exit 1
+            echo "::warning title=Developer ID unavailable::Building a draft ad-hoc DMG because these release secrets are missing: $joined"
+            echo "PITH_RELEASE_SIGNING_MODE=ad-hoc" >> "$GITHUB_ENV"
+          else
+            echo "PITH_RELEASE_SIGNING_MODE=developer-id" >> "$GITHUB_ENV"
           fi
 
       - name: Import Developer ID certificate
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           keychain_path="$RUNNER_TEMP/pith-release.keychain-db"
@@ -199,18 +227,25 @@ jobs:
           mkdir -p "$PREBUILT_ARTIFACT_DIR"
           cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
 
-      - name: Package unsigned app bundle
+      - name: Package release app bundle
         run: |
           set -euo pipefail
-          python3 scripts/package_macos_app.py \
+          package_args=(
             --skip-build \
-            --skip-ad-hoc-sign \
             --no-zip \
+            --version "$PITH_RELEASE_VERSION" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
             --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          )
+          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+            package_args+=(--skip-ad-hoc-sign)
+          fi
+          python3 scripts/package_macos_app.py "${package_args[@]}"
 
       - name: Sign app for public distribution
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           python3 scripts/sign_macos_app_for_distribution.py \
@@ -218,21 +253,29 @@ jobs:
             --identity "$MACOS_DEVELOPER_ID_APPLICATION"
           python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
 
-      - name: Smoke launch signed app
+      - name: Smoke launch release app
         run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
 
-      - name: Create signed DMG
+      - name: Create release DMG
         run: |
           set -euo pipefail
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
-          python3 scripts/create_macos_dmg.py artifacts/macos/Pith.app "$dmg_path"
-          codesign \
-            --force \
-            --timestamp \
-            --sign "$MACOS_DEVELOPER_ID_APPLICATION" \
-            "$dmg_path"
+          python3 scripts/create_macos_dmg.py \
+            artifacts/macos/Pith.app \
+            "$dmg_path" \
+            --smoke-launch-script scripts/smoke_launch_macos_app.py
+          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+            codesign \
+              --force \
+              --timestamp \
+              --sign "$MACOS_DEVELOPER_ID_APPLICATION" \
+              "$dmg_path"
+          else
+            echo "Created ad-hoc DMG for draft release; Developer ID signing was not available."
+          fi
 
       - name: Notarize and staple DMG
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
@@ -245,17 +288,28 @@ jobs:
           python3 scripts/validate_macos_distribution.py \
             artifacts/macos/Pith.app \
             --dmg-path "$dmg_path"
+
+      - name: Create release checksum
+        run: |
+          set -euo pipefail
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
           shasum -a 256 "$dmg_path" > "$dmg_path.sha256"
 
       - name: Create release notes
         run: |
           set -euo pipefail
+          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+            trust_note="Developer ID signed and notarized."
+          else
+            trust_note="Draft ad-hoc build. Public releases need Developer ID signing and notarization before users should install by default."
+          fi
           cat > release-notes.md <<EOF
           Pith $RELEASE_TAG
 
           - macOS 12+ x86_64 DMG installer.
           - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
           - Model weights are not bundled; first launch guides the user to download one verified local model.
+          - $trust_note
           EOF
 
       - name: Publish GitHub Release
@@ -264,7 +318,7 @@ jobs:
         run: |
           set -euo pipefail
           release_args=(--title "Pith $RELEASE_TAG" --notes-file release-notes.md)
-          if [[ "$RELEASE_DRAFT" == "true" ]]; then
+          if [[ "$RELEASE_DRAFT" == "true" || "$PITH_RELEASE_SIGNING_MODE" != "developer-id" ]]; then
             release_args+=(--draft)
           fi
           if [[ "$RELEASE_PRERELEASE" == "true" ]]; then

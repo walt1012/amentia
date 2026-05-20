@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
+PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,6 +31,7 @@ def main() -> int:
   app_path = args.app_path.resolve()
   try:
     require_file(app_path / "Contents" / "Info.plist", "Info.plist")
+    validate_package_manifest(app_path)
     require_tool("codesign")
     require_tool("spctl")
     run(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(app_path)])
@@ -75,6 +78,17 @@ def validate_dmg(dmg_path: Path) -> None:
     ]
   )
   run(["xcrun", "stapler", "validate", str(dmg_path)])
+
+
+def validate_package_manifest(app_path: Path) -> None:
+  manifest_path = app_path / PACKAGE_MANIFEST_RELATIVE_PATH
+  require_file(manifest_path, "PithPackage.json")
+  manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+  if manifest.get("signing") != "developer-id":
+    raise RuntimeError(
+      "Public distribution builds must record developer-id signing in "
+      f"{manifest_path}"
+    )
 
 
 def run(command: list[str]) -> str:

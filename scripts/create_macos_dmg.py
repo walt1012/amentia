@@ -25,6 +25,11 @@ def parse_args() -> argparse.Namespace:
     default=DEFAULT_VOLUME_NAME,
     help="Mounted disk image volume name.",
   )
+  parser.add_argument(
+    "--smoke-launch-script",
+    type=Path,
+    help="Optional packaged app smoke script to run against the app inside the mounted DMG.",
+  )
   return parser.parse_args()
 
 
@@ -44,7 +49,10 @@ def main() -> int:
       applications_link = staging_dir / APPLICATIONS_LINK_NAME
       applications_link.symlink_to("/Applications", target_is_directory=True)
       create_dmg(staging_dir, dmg_path, args.volume_name)
-    validate_dmg(dmg_path)
+    validate_dmg(
+      dmg_path,
+      args.smoke_launch_script.resolve() if args.smoke_launch_script else None,
+    )
   except Exception as error:
     print(f"macOS DMG creation failed: {error}", file=sys.stderr)
     return 1
@@ -56,6 +64,11 @@ def main() -> int:
 def require_tool(name: str) -> None:
   if shutil.which(name) is None:
     raise FileNotFoundError(f"Required macOS packaging tool is missing: {name}")
+
+
+def require_file(path: Path) -> None:
+  if not path.is_file():
+    raise FileNotFoundError(f"Required file is missing: {path}")
 
 
 def require_app(app_path: Path) -> None:
@@ -94,7 +107,7 @@ def create_dmg(staging_dir: Path, dmg_path: Path, volume_name: str) -> None:
   )
 
 
-def validate_dmg(dmg_path: Path) -> None:
+def validate_dmg(dmg_path: Path, smoke_launch_script: Path | None = None) -> None:
   if not dmg_path.is_file():
     raise FileNotFoundError(f"Missing DMG artifact: {dmg_path}")
   if dmg_path.suffix.lower() != ".dmg":
@@ -126,6 +139,9 @@ def validate_dmg(dmg_path: Path) -> None:
         raise RuntimeError("macOS DMG must include an Applications symlink")
       if applications_link.readlink() != Path("/Applications"):
         raise RuntimeError("macOS DMG Applications symlink must point to /Applications")
+      if smoke_launch_script is not None:
+        require_file(smoke_launch_script)
+        run([sys.executable, str(smoke_launch_script), str(mountpoint / APP_NAME)])
     finally:
       if attached:
         run(["hdiutil", "detach", str(mountpoint)])

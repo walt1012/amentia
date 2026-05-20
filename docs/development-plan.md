@@ -96,8 +96,8 @@ Workstreams:
   binary, self-contained local inference backend, exact x86_64 architecture
   validation, model metadata, plugin manifests, no model weights, parallel
   cached executable builds, Swift model-manager proof tests, packaged runtime
-  protocol probes, launch smoke coverage, and a signed notarized DMG release
-  path for users.
+  protocol probes, launch smoke coverage, release-versioned metadata, mounted-DMG
+  launch proof, and a Developer ID upgrade path for public releases.
 
 Current Status:
 
@@ -109,8 +109,9 @@ Current Status:
   download/resume/activation planning, packaged app launch smoke coverage, and
   local inference backend dependency portability and launch checks. CI is split
   into parallel policy, Rust, Swift, runtime, cached backend, and packaging
-  gates so speed does not weaken release proof. Release tags produce the user
-  installer path as a Developer ID signed, notarized DMG.
+  gates so speed does not weaken release proof. Release tags publish a draft
+  ad-hoc DMG when Developer ID secrets are missing, and a signed, notarized DMG
+  when Developer ID credentials are configured.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.
@@ -142,8 +143,9 @@ M5 Exit Gate:
 - CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact
   with model metadata, plugin manifests, and a self-contained local inference
   backend, but no model weights.
-- Release tags publish a signed and notarized `Pith-<tag>-macos-x86_64.dmg`
-  installer plus checksum to GitHub Releases.
+- Release tags publish `Pith-<tag>-macos-x86_64.dmg` plus checksum to GitHub
+  Releases; unsigned/ad-hoc outputs stay draft-only, while Developer ID
+  releases are signed, notarized, stapled, and ready for normal users.
 
 ## Not Now
 

@@ -31,6 +31,8 @@ LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
 SUPPORTED_ARCH = "x86_64"
+VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$")
+SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
@@ -64,9 +66,7 @@ REQUIRED_INFO_PLIST_VALUES = {
   "CFBundleInfoDictionaryVersion": "6.0",
   "CFBundleName": APP_NAME,
   "CFBundlePackageType": "APPL",
-  "CFBundleShortVersionString": DEFAULT_VERSION,
   "CFBundleSupportedPlatforms": ["MacOSX"],
-  "CFBundleVersion": DEFAULT_VERSION,
   "LSApplicationCategoryType": "public.app-category.developer-tools",
   "LSArchitecturePriority": [SUPPORTED_ARCH],
   "LSMinimumSystemVersion": "12.0",
@@ -161,6 +161,17 @@ def parse_args() -> argparse.Namespace:
     help="Skip free ad-hoc codesign verification. CI should keep this enabled.",
   )
   parser.add_argument(
+    "--version",
+    default=os.environ.get("PITH_RELEASE_VERSION", DEFAULT_VERSION),
+    help="App bundle version, normally derived from the release tag without the leading v.",
+  )
+  parser.add_argument(
+    "--signing-mode",
+    default="ad-hoc",
+    choices=sorted(SIGNING_MODES),
+    help="Signing state recorded in PithPackage.json.",
+  )
+  parser.add_argument(
     "--stage-llama-backend",
     type=Path,
     help="Stage a portable llama.cpp backend directory and exit.",
@@ -212,10 +223,17 @@ def package_app(
   runtime_binary: Path,
   llama_binary: Path | None,
   arch: str,
+  version: str,
+  signing_mode: str,
   skip_ad_hoc_sign: bool,
   no_zip: bool,
 ) -> Path | None:
   validate_swift_package_rules(repo_root)
+  version = normalize_version(version)
+  if signing_mode not in SIGNING_MODES:
+    raise RuntimeError(f"Unsupported signing mode: {signing_mode}")
+  if signing_mode == "ad-hoc" and skip_ad_hoc_sign:
+    signing_mode = "unsigned"
 
   app_path = dist_dir / f"{APP_NAME}.app"
   contents_path = app_path / "Contents"
@@ -226,8 +244,8 @@ def package_app(
   macos_path.mkdir(parents=True)
   resources_path.mkdir(parents=True)
 
-  write_info_plist(contents_path / "Info.plist")
-  write_package_manifest(resources_path / "PithPackage.json", arch)
+  write_info_plist(contents_path / "Info.plist", version)
+  write_package_manifest(resources_path / "PithPackage.json", arch, version, signing_mode)
   (contents_path / "PkgInfo").write_text("APPL????\n", encoding="utf-8")
 
   copy_executable(app_binary, macos_path / APP_EXECUTABLE_NAME)
@@ -236,7 +254,7 @@ def package_app(
   copy_tree_if_present(repo_root / "plugins", resources_path / "plugins")
   copy_required_llama_backend(repo_root, resources_path, llama_binary)
 
-  validate_app_bundle(app_path, arch)
+  validate_app_bundle(app_path, arch, version, signing_mode)
   if not skip_ad_hoc_sign:
     sign_app_bundle_if_available(app_path)
     validate_app_signature_if_available(app_path)
@@ -272,16 +290,33 @@ def validate_swift_package_rules(repo_root: Path) -> None:
       raise RuntimeError(f"Swift package is missing {label}: {package_path}")
 
 
-def write_info_plist(path: Path) -> None:
+def normalize_version(version: str) -> str:
+  normalized = version.strip()
+  if normalized.startswith("v"):
+    normalized = normalized[1:]
+  if not VERSION_PATTERN.fullmatch(normalized):
+    raise RuntimeError(
+      "App version must be one to three dot-separated non-negative integers, "
+      f"got {version!r}"
+    )
+  return normalized
+
+
+def write_info_plist(path: Path, version: str) -> None:
+  info = {
+    **REQUIRED_INFO_PLIST_VALUES,
+    "CFBundleShortVersionString": version,
+    "CFBundleVersion": version,
+  }
   with path.open("wb") as file:
-    plistlib.dump(REQUIRED_INFO_PLIST_VALUES, file, sort_keys=True)
+    plistlib.dump(info, file, sort_keys=True)
 
 
-def write_package_manifest(path: Path, arch: str) -> None:
+def write_package_manifest(path: Path, arch: str, version: str, signing_mode: str) -> None:
   manifest = {
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
-    "bundleVersion": DEFAULT_VERSION,
+    "bundleVersion": version,
     "minimumSystemVersion": "12.0",
     "architecture": arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
@@ -294,7 +329,7 @@ def write_package_manifest(path: Path, arch: str) -> None:
     "modelWeightsBundled": False,
     "modelMetadataBundled": True,
     "bundledPluginsIncluded": True,
-    "signing": "ad-hoc when codesign is available",
+    "signing": signing_mode,
   }
   path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -347,7 +382,12 @@ def copy_required_llama_backend(
   )
 
 
-def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
+def validate_app_bundle(
+  app_path: Path,
+  expected_arch: str,
+  expected_version: str,
+  expected_signing_mode: str,
+) -> None:
   required_paths = [
     app_path / "Contents" / "Info.plist",
     app_path / "Contents" / "Resources" / "PithPackage.json",
@@ -371,9 +411,14 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
     / LLAMA_BACKEND_RELATIVE_PARENT
     / LLAMA_BACKEND_EXECUTABLE_NAME
   )
-  assert_info_plist_matches_product_rules(app_path)
+  assert_info_plist_matches_product_rules(app_path, expected_version)
   assert_pkg_info_matches_app_bundle(app_path)
-  assert_package_manifest_matches_bundle(app_path, expected_arch)
+  assert_package_manifest_matches_bundle(
+    app_path,
+    expected_arch,
+    expected_version,
+    expected_signing_mode,
+  )
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(
@@ -406,7 +451,7 @@ def assert_llama_backend_dependencies_match_arch(app_path: Path) -> None:
     assert_only_x86_64_if_lipo_is_available(dylib)
 
 
-def assert_info_plist_matches_product_rules(app_path: Path) -> None:
+def assert_info_plist_matches_product_rules(app_path: Path, expected_version: str) -> None:
   info_path = app_path / "Contents" / "Info.plist"
   with info_path.open("rb") as file:
     info = plistlib.load(file)
@@ -418,6 +463,11 @@ def assert_info_plist_matches_product_rules(app_path: Path) -> None:
       raise RuntimeError(
         f"Info.plist field {field} must be {expected_value!r}: {info_path}"
       )
+  for field in ("CFBundleShortVersionString", "CFBundleVersion"):
+    if info.get(field) != expected_version:
+      raise RuntimeError(
+        f"Info.plist field {field} must be {expected_version!r}: {info_path}"
+      )
 
 
 def assert_pkg_info_matches_app_bundle(app_path: Path) -> None:
@@ -427,13 +477,18 @@ def assert_pkg_info_matches_app_bundle(app_path: Path) -> None:
     raise RuntimeError(f"PkgInfo must identify a macOS application bundle: {pkg_info_path}")
 
 
-def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -> None:
+def assert_package_manifest_matches_bundle(
+  app_path: Path,
+  expected_arch: str,
+  expected_version: str,
+  expected_signing_mode: str,
+) -> None:
   manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
   manifest = read_json_object(manifest_path)
   expected_values = {
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
-    "bundleVersion": DEFAULT_VERSION,
+    "bundleVersion": expected_version,
     "minimumSystemVersion": "12.0",
     "architecture": expected_arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
@@ -443,7 +498,7 @@ def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
     "modelDelivery": "in-app-download",
-    "signing": "ad-hoc when codesign is available",
+    "signing": expected_signing_mode,
   }
   for field, expected_value in expected_values.items():
     if manifest.get(field) != expected_value:
@@ -855,6 +910,8 @@ def main() -> int:
       runtime_binary,
       args.llama_binary.resolve() if args.llama_binary else None,
       args.arch,
+      args.version,
+      args.signing_mode,
       args.skip_ad_hoc_sign,
       args.no_zip,
     )

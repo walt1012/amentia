@@ -16,6 +16,7 @@ from macos_llama_backend import (
 from package_macos_app import (
   LLAMA_BACKEND_RELATIVE_PARENT,
   copy_required_llama_backend,
+  normalize_version,
   parse_lipo_architectures,
 )
 
@@ -26,6 +27,16 @@ def assert_equal(actual: object, expected: object) -> None:
 
 
 def main() -> int:
+  assert_equal(normalize_version("0.1.0"), "0.1.0")
+  assert_equal(normalize_version("v1.2.3"), "1.2.3")
+  assert_equal(normalize_version("12.34"), "12.34")
+  try:
+    normalize_version("v1.2.3-beta")
+  except RuntimeError:
+    pass
+  else:
+    raise AssertionError("prerelease suffixes should stay out of Info.plist versions")
+
   assert_equal(
     parse_lipo_architectures("Non-fat file: Pith is architecture: x86_64"),
     {"x86_64"},
