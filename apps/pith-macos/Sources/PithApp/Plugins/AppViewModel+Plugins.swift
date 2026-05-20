@@ -28,11 +28,17 @@ extension AppViewModel {
       return
     }
 
+    let timelineThreadID = selectedThreadID
     pluginLifecycleOperations.cancel()
     updatePluginState { state in
       state.resetLifecycleOperation()
     }
-    runtimeDetail = "Plugin operation cancelled."
+    appendPluginStatusEntry(
+      to: timelineThreadID,
+      TimelineEventPresenter.pluginLifecycleCancelled(),
+      detail: TimelineEventPresenter.pluginLifecycleCancelledDetail,
+      preview: TimelineEventPresenter.cancelledPluginLifecyclePreview
+    )
   }
 
   func canRefreshPlugins() -> Bool {
@@ -99,6 +105,22 @@ extension AppViewModel {
       state.apply(pluginRefresh)
     }
     await refreshRuntimeReadiness()
+  }
+
+  @discardableResult
+  func refreshPluginStateIfCurrent(operationID: UUID) async -> Bool {
+    let pluginRefresh = await PluginLifecycleCoordinator.refreshState(using: runtimeBridge)
+    guard !Task.isCancelled,
+          isCurrentPluginLifecycleOperation(operationID)
+    else {
+      return false
+    }
+
+    updatePluginState { state in
+      state.apply(pluginRefresh)
+    }
+    await refreshRuntimeReadiness()
+    return !Task.isCancelled && isCurrentPluginLifecycleOperation(operationID)
   }
 
   func pluginActionSnapshot() -> PluginActionSnapshot {

@@ -104,6 +104,26 @@ jobs:
           path: artifacts/prebuilt/PithApp
           if-no-files-found: error
 
+  swift-tests:
+    runs-on: macos-15-intel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Cache Swift test output
+        uses: actions/cache@v4
+        with:
+          path: apps/pith-macos/.build
+          key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Sources/**/*.swift', 'apps/pith-macos/Tests/**/*.swift') }}
+          restore-keys: |
+            swift-test-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Test x86_64 Swift app logic
+        run: swift test --package-path apps/pith-macos --arch x86_64
+
   macos-runtime:
     runs-on: macos-15-intel
     steps:

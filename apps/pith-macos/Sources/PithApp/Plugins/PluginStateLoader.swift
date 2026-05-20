@@ -2,8 +2,15 @@ import Foundation
 
 enum PluginStateLoader {
   static func refresh(using runtimeBridge: RuntimeBridge) async -> PluginStateRefresh {
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+
     let catalogRefresh = await load("catalog refresh") {
       try await runtimeBridge.refreshPluginCatalog()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
     }
     let pluginLoad: (
       value: [RuntimeBridge.RuntimePlugin]?,
@@ -21,14 +28,26 @@ enum PluginStateLoader {
         try await runtimeBridge.listPlugins()
       }
     }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
     let registryLoad = await load("capability registry") {
       try await runtimeBridge.pluginCapabilityRegistry()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
     }
     let commandLoad = await load("command registry") {
       try await runtimeBridge.listPluginCommands()
     }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
     let connectorLoad = await load("connector registry") {
       try await runtimeBridge.listPluginConnectors()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
     }
     let hookLoad = await load("hook registry") {
       try await runtimeBridge.listPluginHooks()
@@ -68,15 +87,41 @@ enum PluginStateLoader {
     _ label: String,
     operation: () async throws -> T
   ) async -> (value: T?, diagnostic: String?, recoveryAttributes: [String: String]) {
+    guard !Task.isCancelled else {
+      return (nil, nil, [:])
+    }
+
     do {
-      return (try await operation(), nil, [:])
+      let value = try await operation()
+      guard !Task.isCancelled else {
+        return (nil, nil, [:])
+      }
+      return (value, nil, [:])
+    } catch is CancellationError {
+      return (nil, nil, [:])
     } catch {
+      guard !Task.isCancelled else {
+        return (nil, nil, [:])
+      }
       return (
         nil,
         "\(label): \(error.localizedDescription)",
         runtimeRecoveryAttributes(from: error)
       )
     }
+  }
+
+  private static func emptyRefresh() -> PluginStateRefresh {
+    PluginStateRefresh(
+      plugins: nil,
+      registrySummary: nil,
+      capabilities: nil,
+      connectors: nil,
+      commands: nil,
+      hooks: nil,
+      diagnostics: [],
+      refreshRecoveryAttributes: [:]
+    )
   }
 
   private static func runtimeRecoveryAttributes(from error: Error) -> [String: String] {

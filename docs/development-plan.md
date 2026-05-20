@@ -96,20 +96,20 @@ Order of Work:
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
   binary, bundled local inference backend, exact x86_64 architecture
   validation, model metadata, plugin manifests, no model weights, parallel
-  cached executable builds, packaged runtime protocol probes, and launch smoke
-  coverage.
+  cached executable builds, Swift model-manager proof tests, packaged runtime
+  protocol probes, and launch smoke coverage.
 
 Immediate Next:
 
 - Finish first-run proof in the packaged app: packaged runtime protocol health,
   isolated app support state, runtime database initialization, workspace
-  bootstrap, workspace search, thread creation, and deterministic first local
-  request coverage are in CI; next close the real in-app model
-  download/resume/activation path.
+  bootstrap, workspace search, thread creation, deterministic first local
+  request coverage, and model-manager download/resume/activation planning are
+  in CI; next close any remaining live packaged UI seams found by smoke tests.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
-- Tighten plugin runner, connector, lifecycle cancellation, sandbox, and retry
-  diagnostics only where they unblock real local plugin execution.
+- Tighten plugin runner, connector, sandbox, and retry diagnostics only where
+  they unblock real local plugin execution.
 - Keep connector credentials out of SQLite; macOS uses Keychain-backed secrets
   with database metadata only.
 - Keep UI and architecture compact; refactor only when ownership, failure

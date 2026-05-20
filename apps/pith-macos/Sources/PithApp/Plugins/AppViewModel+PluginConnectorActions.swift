@@ -38,10 +38,7 @@ extension AppViewModel {
           credentialLabel: credentialInput.label,
           credentialSecret: credentialInput.secret
         )
-        await refreshPluginState()
-        guard !Task.isCancelled,
-              isCurrentPluginLifecycleOperation(operationID)
-        else {
+        guard await refreshPluginStateIfCurrent(operationID: operationID) else {
           return
         }
         focusAfterConnectorAuthorization(pluginID: connector.pluginID)
@@ -92,10 +89,7 @@ extension AppViewModel {
         let connector = try await runtimeBridge.clearPluginConnectorCredential(
           connectorID: connectorID
         )
-        await refreshPluginState()
-        guard !Task.isCancelled,
-              isCurrentPluginLifecycleOperation(operationID)
-        else {
+        guard await refreshPluginStateIfCurrent(operationID: operationID) else {
           return
         }
         pluginManagerSection = .connectors

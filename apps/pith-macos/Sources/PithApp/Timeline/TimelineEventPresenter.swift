@@ -9,6 +9,7 @@ enum TimelineEventPresenter {
   static let pluginCommandNeedsConnectorAuthDetail =
     "Authorize the required connector before running this plugin command."
   static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
+  static let pluginLifecycleCancelledDetail = "Plugin lifecycle operation cancelled."
   static let pluginCommandBlockedDefaultDetail =
     "Local plugin command is blocked. Inspect the blocked item for the repair hint."
   static let pluginCommandFailedDetail =
@@ -19,6 +20,7 @@ enum TimelineEventPresenter {
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
   static let cancelledPluginCommandPreview = "Cancelled plugin command"
+  static let cancelledPluginLifecyclePreview = "Plugin operation cancelled"
   static let cancellingPluginCommandPreview = "Cancelling plugin command"
   static let blockedPluginCommandPreview = "Plugin command blocked"
   static let failedPluginCommandPreview = "Plugin command failed"
@@ -308,6 +310,17 @@ enum TimelineEventPresenter {
         diagnosticBody,
       ].joined(separator: "\n"),
       attributes: attributes
+    )
+  }
+
+  static func pluginLifecycleCancelled() -> TimelineEntry {
+    TimelineEntryFactory.warning(
+      title: "Plugin Operation Cancelled",
+      body: "The current plugin lifecycle operation was cancelled before it finished.",
+      attributes: [
+        "pluginLifecycleOperation": "lifecycle",
+        "pluginLifecycleStatus": "cancelled",
+      ]
     )
   }
 

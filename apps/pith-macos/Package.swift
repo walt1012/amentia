@@ -17,5 +17,10 @@ let package = Package(
       name: "PithApp",
       path: "Sources/PithApp"
     ),
+    .testTarget(
+      name: "PithAppTests",
+      dependencies: ["PithApp"],
+      path: "Tests/PithAppTests"
+    ),
   ]
 )

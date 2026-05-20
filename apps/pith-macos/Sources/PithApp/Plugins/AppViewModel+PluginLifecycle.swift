@@ -20,10 +20,7 @@ extension AppViewModel {
       defer {
         finishPluginLifecycleOperation(operationID)
       }
-      await refreshPluginState()
-      guard !Task.isCancelled,
-            isCurrentPluginLifecycleOperation(operationID)
-      else {
+      guard await refreshPluginStateIfCurrent(operationID: operationID) else {
         return
       }
 
@@ -99,10 +96,7 @@ extension AppViewModel {
           preview: preview,
           runtimeBridge: runtimeBridge
         )
-        await refreshPluginState()
-        guard !Task.isCancelled,
-              isCurrentPluginLifecycleOperation(operationID)
-        else {
+        guard await refreshPluginStateIfCurrent(operationID: operationID) else {
           return
         }
         focusPluginManagerSection(
@@ -157,10 +151,7 @@ extension AppViewModel {
           enabled: enabled,
           runtimeBridge: runtimeBridge
         )
-        await refreshPluginState()
-        guard !Task.isCancelled,
-              isCurrentPluginLifecycleOperation(operationID)
-        else {
+        guard await refreshPluginStateIfCurrent(operationID: operationID) else {
           return
         }
         focusPluginManagerSection(
@@ -223,10 +214,7 @@ extension AppViewModel {
           plugin: plugin,
           runtimeBridge: runtimeBridge
         )
-        await refreshPluginState()
-        guard !Task.isCancelled,
-              isCurrentPluginLifecycleOperation(operationID)
-        else {
+        guard await refreshPluginStateIfCurrent(operationID: operationID) else {
           return
         }
         appendPluginStatusEntry(
