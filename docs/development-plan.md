@@ -94,13 +94,15 @@ Order of Work:
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
   binary, bundled local inference backend, exact x86_64 architecture
   validation, model metadata, plugin manifests, no model weights, parallel
-  cached executable builds, and launch/runtime smoke coverage.
+  cached executable builds, packaged runtime protocol probes, and launch smoke
+  coverage.
 
 Immediate Next:
 
 - Prove the first-run loop in the packaged app: isolated app support state,
-  runtime autostart, runtime database initialization, model download/resume,
-  activation, workspace bootstrap, and the first local request.
+  runtime autostart, packaged runtime protocol health, runtime database
+  initialization, model download/resume, activation, workspace bootstrap, and
+  the first local request.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
 - Tighten plugin runner, connector, sandbox, and retry diagnostics only where
