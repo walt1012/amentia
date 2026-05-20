@@ -101,8 +101,8 @@ Immediate Next:
 
 - Prove the first-run loop in the packaged app: isolated app support state,
   runtime autostart, packaged runtime protocol health, runtime database
-  initialization, model download/resume, activation, workspace bootstrap, and
-  the first local request.
+  initialization, model download/resume, activation, workspace bootstrap, thread
+  creation, and the first local request.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
 - Tighten plugin runner, connector, sandbox, and retry diagnostics only where

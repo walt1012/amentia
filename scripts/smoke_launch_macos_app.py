@@ -236,12 +236,15 @@ def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
   return f"\nRuntime stderr:\n{stderr[-2000:]}"
 
 
-def validate_runtime_readiness(readiness: dict) -> None:
+def validate_runtime_readiness(
+  readiness: dict,
+  expected_statuses: dict[str, str] | None = None,
+) -> None:
   result = readiness["result"]
   if result["status"] != "setup_required":
     raise RuntimeError(f"Fresh packaged runtime readiness was {result['status']}.")
   checks = {check["id"]: check for check in result["checks"]}
-  expected_statuses = {
+  expected_statuses = expected_statuses or {
     "localModel": "setup_required",
     "workspace": "setup_required",
     "thread": "setup_required",
@@ -256,6 +259,61 @@ def validate_runtime_readiness(readiness: dict) -> None:
         f"Packaged runtime readiness check {check_id} was {actual_status}, "
         f"expected {expected_status}."
       )
+
+
+def validate_packaged_runtime_workspace_bootstrap(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  workspace_dir = support_dir / "workspace"
+  workspace_dir.mkdir()
+  (workspace_dir / "README.md").write_text(
+    "# Packaged Runtime Smoke\n\nWorkspace bootstrap check.\n",
+    encoding="utf-8",
+  )
+
+  workspace_open = send_runtime_request(
+    process,
+    5,
+    "workspace/open",
+    {
+      "path": str(workspace_dir),
+    },
+  )
+  workspace = workspace_open["result"]["workspace"]
+  if workspace["displayName"] != "workspace":
+    raise RuntimeError(
+      f"Packaged runtime opened workspace as {workspace['displayName']}."
+    )
+
+  thread_start = send_runtime_request(
+    process,
+    6,
+    "thread/start",
+    {
+      "title": "Packaged Runtime Smoke",
+    },
+  )
+  if thread_start["result"]["thread"]["id"] != "thread-1":
+    raise RuntimeError("Packaged runtime did not create the first thread.")
+
+  thread_readiness = send_runtime_request(process, 7, "runtime/readiness")
+  validate_runtime_readiness(
+    thread_readiness,
+    {
+      "localModel": "setup_required",
+      "workspace": "ready",
+      "thread": "ready",
+      "firstRequest": "ready_to_send",
+      "plugins": "ready",
+      "boundedRuntime": "ready",
+    },
+  )
+
+  thread_list = send_runtime_request(process, 8, "thread/list")
+  threads = thread_list["result"]["threads"]
+  if len(threads) != 1 or threads[0]["title"] != "Packaged Runtime Smoke":
+    raise RuntimeError("Packaged runtime did not persist the smoke thread.")
 
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:
@@ -295,6 +353,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
         )
 
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
+      validate_packaged_runtime_workspace_bootstrap(process, support_dir)
       validate_runtime_database(support_dir / "storage" / "pith.db")
       print(
         "Packaged runtime protocol smoke passed with model metadata and plugins "
