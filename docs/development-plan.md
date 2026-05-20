@@ -2,9 +2,10 @@
 
 ## North Star
 
-Pith is a small, strong, local-first macOS agent app for controlled local work.
-It should feel native, focused, recoverable, and capable without becoming a
-generic chatbot, terminal skin, hosted-model frontend, or feature zoo.
+Pith is a small, strong, local-first macOS agent app that people can actually
+use for controlled local work. It should feel native, focused, recoverable, and
+capable without becoming a prototype, generic chatbot, terminal skin,
+hosted-model frontend, or feature zoo.
 
 ## Product Rules
 
@@ -17,6 +18,20 @@ generic chatbot, terminal skin, hosted-model frontend, or feature zoo.
   layer; no generic local RAG yet.
 - Repository: English-only source, docs, commits, branches, and PR text.
 - Foundation: free and open source.
+
+## Daily-Use Standard
+
+- A normal user can install, launch, download a model, open a workspace, send a
+  request, review results, and recover from common failures without using a
+  terminal.
+- Every core action must have clear in-app state: ready, running, blocked,
+  failed, cancelled, or recovered.
+- Failure messages must explain the next useful action, not expose internal
+  implementation details as the primary user experience.
+- Runtime, model, plugin, web search, sandbox, and packaging work is complete
+  only when it holds together in the packaged macOS app.
+- Developer convenience must not replace product readiness; CI and scripts
+  prove the app path, but the app experience is the product.
 
 ## Architecture Boundaries
 
@@ -60,8 +75,9 @@ Closed capabilities:
 
 ## Current Milestone: M5 Daily Driver Hardening
 
-M5 turns the working local agent platform into a dependable daily-driver app
-without expanding into a feature zoo.
+M5 turns the working local agent platform into a dependable daily-driver macOS
+app: first launch, model setup, workspace work, recovery, packaging, and plugins
+must hold together as one usable product without expanding into a feature zoo.
 
 Order of Work:
 
@@ -70,8 +86,7 @@ Order of Work:
   model, runtime, web search, plugin, or sandbox readiness is missing.
 - Agent execution loop: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation request-scoped, cancellable, and
-  visible without blocking unrelated read-only UI updates; runtime workers must
-  be reaped without waiting for another user request.
+  visible without blocking unrelated read-only UI updates.
 - Native safety loop: keep workspace file tools symlink-safe, sandbox decisions
   visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
   by default, and recovery actions tied to trusted runtime metadata.
@@ -82,19 +97,22 @@ Order of Work:
 
 Immediate Next:
 
-- Keep readiness accuracy aligned with plugin-backed tools and permission gates.
-- Continue tightening plugin execution diagnostics around sandbox setup phases
-  before adding broader connector marketplace behavior.
-- Keep plugin UI compact and progressive; do not expand the inspector into an
-  always-visible admin console.
-- Continue architecture cleanup only when it clarifies ownership, failure
-  boundaries, or cancellation behavior.
+- Close first-run recovery gaps across model download, activation, runtime
+  relaunch, workspace bootstrap, and the first local request.
+- Keep execution visibility accurate for every lane: turns, approvals,
+  workspace search, web search, plugin commands, and model activation.
+- Tighten plugin runner, connector, sandbox, and retry diagnostics only where
+  they unblock real local plugin execution.
+- Keep UI and architecture compact; refactor only when ownership, failure
+  boundaries, or cancellation behavior become clearer.
 
 M5 Exit Gate:
 
 - A fresh install can download a model, open a workspace, use web search, run a
   plugin command, and recover from model/runtime/plugin failures in-app.
 - Sandbox and approval decisions are visible, bounded, and reversible.
+- The packaged app can be used for a short real workflow without manual CLI
+  setup, hidden required files, or unexplained blocked states.
 - CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact
   with model metadata and plugin manifests, but no model weights.
 

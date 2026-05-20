@@ -743,7 +743,7 @@ def main() -> int:
     memory_list, _ = send_request(
       process,
       {
-        "id": 23,
+        "id": 125,
         "method": "memory/list",
       },
     )

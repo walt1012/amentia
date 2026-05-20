@@ -1,6 +1,8 @@
 # Pith
 
 `Pith` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
+It is intended to be a real daily-use desktop app, not a prototype or a thin
+terminal wrapper.
 
 The product goal is to combine:
 
@@ -16,6 +18,9 @@ The repository is intentionally English-only.
 
 - Build a native `macOS` application named `Pith` for `macOS 12+` on `x86_64` only.
 - Keep the app lightweight and intentionally small while preserving a strong local agent loop.
+- Make the first-run path usable end to end: download a model, open a workspace, start work,
+  recover from failures, and keep going without manual setup.
+- Judge features by packaged-app usability, not by whether an internal API or script exists.
 - Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
 - Keep the default intelligence path fully local with no required external model API.
 - Treat `LFM2.5-350M` as the default first-use model while keeping small GGUF alternatives available.
