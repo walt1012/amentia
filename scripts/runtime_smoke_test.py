@@ -29,6 +29,10 @@ DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd
 DEFAULT_MODEL_SIZE_BYTES = 229312224
 
 
+def secure_credentials_persist_across_runtime_restart() -> bool:
+  return sys.platform == "darwin"
+
+
 def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
   stderr_path = runtime_stderr_path(env)
   stderr_path.parent.mkdir(parents=True, exist_ok=True)
@@ -378,11 +382,15 @@ def assert_notion_connector_disabled(connector: dict) -> None:
   assert connector["credentialStore"] == "local"
   assert connector["authScopes"] == ["read_content", "insert_content"]
 
-def assert_notion_connector_authorized(connector: dict) -> None:
+def assert_notion_connector_authorized(
+  connector: dict,
+  *,
+  credential_secret_present: bool = True,
+) -> None:
   assert connector["status"] == "ready"
   assert connector["authStatus"] == "authorized"
   assert connector["credentialPresent"] is True
-  assert connector["credentialSecretPresent"] is True
+  assert connector["credentialSecretPresent"] is credential_secret_present
   assert connector["credentialProvider"] == LOCAL_CREDENTIAL_PROVIDER
   assert connector["credentialHandle"] == NOTION_CONNECTOR_ID
   assert connector["credentialLabel"] == NOTION_CREDENTIAL_LABEL
@@ -1104,7 +1112,10 @@ def main() -> int:
       recovered_connector_registry["result"]["connectors"],
       NOTION_CONNECTOR_ID,
     )
-    assert_notion_connector_authorized(recovered_notion)
+    assert_notion_connector_authorized(
+      recovered_notion,
+      credential_secret_present=secure_credentials_persist_across_runtime_restart(),
+    )
     assert_notion_secret_not_leaked(recovered_connector_registry)
 
     cleared_connector, _ = send_request(
