@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 extension AppViewModel {
-  func refreshPlugins() async {
+  func refreshPlugins() {
     guard canRefreshPlugins() else {
       runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
       return
@@ -16,26 +16,34 @@ extension AppViewModel {
     }
     let timelineThreadID = selectedThreadID
 
-    defer {
-      finishPluginLifecycleOperation(operationID)
-    }
-    await refreshPluginState()
+    let task = Task { @MainActor in
+      defer {
+        finishPluginLifecycleOperation(operationID)
+      }
+      await refreshPluginState()
+      guard !Task.isCancelled,
+            isCurrentPluginLifecycleOperation(operationID)
+      else {
+        return
+      }
 
-    let snapshot = pluginDashboardSnapshot
-    let hasDiagnostics = !snapshot.diagnostics.isEmpty
-    appendPluginStatusEntry(
-      to: timelineThreadID,
-      TimelineEventPresenter.pluginCatalogRefreshed(
-        pluginSummary: pluginCountSummary(),
-        surfaceSummary: pluginSurfaceSummary(),
-        diagnostics: snapshot.diagnostics,
-        recoveryAttributes: snapshot.refreshRecoveryAttributes
-      ),
-      detail: hasDiagnostics
-        ? "Plugin catalog refreshed with diagnostics."
-        : "Plugin catalog refreshed.",
-      preview: hasDiagnostics ? "Plugin refresh diagnostics" : "Plugins refreshed"
-    )
+      let snapshot = pluginDashboardSnapshot
+      let hasDiagnostics = !snapshot.diagnostics.isEmpty
+      appendPluginStatusEntry(
+        to: timelineThreadID,
+        TimelineEventPresenter.pluginCatalogRefreshed(
+          pluginSummary: pluginCountSummary(),
+          surfaceSummary: pluginSurfaceSummary(),
+          diagnostics: snapshot.diagnostics,
+          recoveryAttributes: snapshot.refreshRecoveryAttributes
+        ),
+        detail: hasDiagnostics
+          ? "Plugin catalog refreshed with diagnostics."
+          : "Plugin catalog refreshed.",
+        preview: hasDiagnostics ? "Plugin refresh diagnostics" : "Plugins refreshed"
+      )
+    }
+    bindPluginLifecycleTask(task, operationID: operationID)
   }
 
   func installPlugin() {
@@ -55,7 +63,7 @@ extension AppViewModel {
     }
     let timelineThreadID = selectedThreadID
 
-    Task {
+    let task = Task { @MainActor in
       defer {
         finishPluginLifecycleOperation(operationID)
       }
@@ -66,6 +74,11 @@ extension AppViewModel {
           runtimeBridge: runtimeBridge,
           installRootPath: runtimeBridge.localPluginInstallRootPath()
         )
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         guard preview.canInstall else {
           let detail = preview.installBlocker ?? "Plugin cannot be installed yet."
           appendPluginStatusEntry(
@@ -87,6 +100,11 @@ extension AppViewModel {
           runtimeBridge: runtimeBridge
         )
         await refreshPluginState()
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         focusPluginManagerSection(
           capabilities: installedPlugin.capabilities,
           permissions: installedPlugin.permissions
@@ -100,6 +118,11 @@ extension AppViewModel {
           preview: "Plugin installed"
         )
       } catch {
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         appendPluginInstallFailure(
           to: timelineThreadID,
           error: error,
@@ -108,6 +131,7 @@ extension AppViewModel {
         )
       }
     }
+    bindPluginLifecycleTask(task, operationID: operationID)
   }
 
   func setPluginEnabled(pluginID: String, enabled: Bool) {
@@ -123,7 +147,7 @@ extension AppViewModel {
     }
     let timelineThreadID = selectedThreadID
 
-    Task {
+    let task = Task { @MainActor in
       defer {
         finishPluginLifecycleOperation(operationID)
       }
@@ -134,6 +158,11 @@ extension AppViewModel {
           runtimeBridge: runtimeBridge
         )
         await refreshPluginState()
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         focusPluginManagerSection(
           capabilities: updatedPlugin.capabilities,
           permissions: updatedPlugin.permissions
@@ -145,6 +174,11 @@ extension AppViewModel {
           preview: enabled ? "Plugin enabled" : "Plugin disabled"
         )
       } catch {
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginUpdateFailed(
@@ -157,6 +191,7 @@ extension AppViewModel {
         )
       }
     }
+    bindPluginLifecycleTask(task, operationID: operationID)
   }
 
   func removePlugin(pluginID: String) {
@@ -179,7 +214,7 @@ extension AppViewModel {
     }
     let timelineThreadID = selectedThreadID
 
-    Task {
+    let task = Task { @MainActor in
       defer {
         finishPluginLifecycleOperation(operationID)
       }
@@ -189,6 +224,11 @@ extension AppViewModel {
           runtimeBridge: runtimeBridge
         )
         await refreshPluginState()
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginRemoved(removedPlugin),
@@ -196,6 +236,11 @@ extension AppViewModel {
           preview: "Plugin removed"
         )
       } catch {
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error),
@@ -204,6 +249,7 @@ extension AppViewModel {
         )
       }
     }
+    bindPluginLifecycleTask(task, operationID: operationID)
   }
 
   private func appendPluginInstallFailure(

@@ -6,6 +6,9 @@ on:
       - main
       - "codex/**"
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 3 * * 1"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -56,6 +59,16 @@ jobs:
 
       - name: Runtime smoke test
         run: python3 scripts/runtime_smoke_test.py
+
+  model-catalog-remote:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit remote model catalog metadata
+        run: python3 scripts/validate_model_pack.py --remote
 
   swift-app:
     runs-on: macos-15-intel

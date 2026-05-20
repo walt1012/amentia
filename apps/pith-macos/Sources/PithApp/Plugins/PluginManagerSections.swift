@@ -109,9 +109,7 @@ private struct PluginAccessSection: View {
               viewModel.revealPluginManifest(pluginID: plugin.id)
             },
             onRefresh: {
-              Task {
-                await viewModel.refreshPlugins()
-              }
+              viewModel.refreshPlugins()
             },
             onRemove: {
               viewModel.removePlugin(pluginID: plugin.id)
@@ -164,9 +162,7 @@ private struct PluginCommandsSection: View {
               viewModel.revealPluginSourcePath(command.sourcePath)
             },
             onRefresh: {
-              Task {
-                await viewModel.refreshPlugins()
-              }
+              viewModel.refreshPlugins()
             }
           )
         }
@@ -240,9 +236,7 @@ private struct PluginHooksSection: View {
               viewModel.revealPluginSourcePath(hook.sourcePath)
             },
             onRefresh: {
-              Task {
-                await viewModel.refreshPlugins()
-              }
+              viewModel.refreshPlugins()
             }
           )
         }

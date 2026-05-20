@@ -16,7 +16,23 @@ extension AppViewModel {
   }
 
   func hasPluginLifecycleOperation() -> Bool {
-    pluginDashboardSnapshot.hasLifecycleOperation
+    pluginDashboardSnapshot.hasLifecycleOperation || pluginLifecycleOperations.isActive
+  }
+
+  func canCancelPluginLifecycleOperation() -> Bool {
+    hasPluginLifecycleOperation()
+  }
+
+  func cancelPluginLifecycleOperation() {
+    guard canCancelPluginLifecycleOperation() else {
+      return
+    }
+
+    pluginLifecycleOperations.cancel()
+    updatePluginState { state in
+      state.resetLifecycleOperation()
+    }
+    runtimeDetail = "Plugin operation cancelled."
   }
 
   func canRefreshPlugins() -> Bool {
@@ -99,14 +115,28 @@ extension AppViewModel {
   }
 
   func beginPluginLifecycleOperation(detail: String) -> UUID? {
-    var operationID: UUID?
+    guard let operationID = pluginLifecycleOperations.begin() else {
+      return nil
+    }
+    var accepted = false
     updatePluginState { state in
-      operationID = state.beginLifecycleOperation()
+      accepted = state.beginLifecycleOperation(operationID: operationID)
     }
-    if operationID != nil {
-      runtimeDetail = detail
+    guard accepted else {
+      pluginLifecycleOperations.finish(operationID)
+      return nil
     }
+
+    runtimeDetail = detail
     return operationID
+  }
+
+  func bindPluginLifecycleTask(_ task: Task<Void, Never>, operationID: UUID) {
+    pluginLifecycleOperations.bind(task: task, operationID: operationID)
+  }
+
+  func isCurrentPluginLifecycleOperation(_ operationID: UUID) -> Bool {
+    pluginLifecycleOperations.isCurrent(operationID)
   }
 
   func focusPluginManagerSection(capabilities: [String], permissions: [String]) {
@@ -117,6 +147,7 @@ extension AppViewModel {
   }
 
   func finishPluginLifecycleOperation(_ operationID: UUID) {
+    pluginLifecycleOperations.finish(operationID)
     updatePluginState { state in
       state.finishLifecycleOperation(operationID)
     }

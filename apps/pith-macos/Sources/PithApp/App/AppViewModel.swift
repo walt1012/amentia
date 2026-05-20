@@ -25,6 +25,7 @@ final class AppViewModel: ObservableObject {
   let workspaceSearchSession = WorkspaceSearchSession()
   let localModelMetadataCoordinator = LocalModelMetadataCoordinator()
   let localModelActivationCoordinator = LocalModelActivationCoordinator()
+  let pluginLifecycleOperations = PluginLifecycleOperationCoordinator()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator
   let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
 

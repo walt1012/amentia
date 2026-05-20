@@ -28,7 +28,7 @@ extension AppViewModel {
     }
     let timelineThreadID = selectedThreadID
 
-    Task {
+    let task = Task { @MainActor in
       defer {
         finishPluginLifecycleOperation(operationID)
       }
@@ -39,6 +39,11 @@ extension AppViewModel {
           credentialSecret: credentialInput.secret
         )
         await refreshPluginState()
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         focusAfterConnectorAuthorization(pluginID: connector.pluginID)
         appendPluginStatusEntry(
           to: timelineThreadID,
@@ -47,6 +52,11 @@ extension AppViewModel {
           preview: "Connector authorized"
         )
       } catch {
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error),
@@ -55,6 +65,7 @@ extension AppViewModel {
         )
       }
     }
+    bindPluginLifecycleTask(task, operationID: operationID)
   }
 
   func clearPluginConnectorCredential(connectorID: String) {
@@ -73,7 +84,7 @@ extension AppViewModel {
     }
     let timelineThreadID = selectedThreadID
 
-    Task {
+    let task = Task { @MainActor in
       defer {
         finishPluginLifecycleOperation(operationID)
       }
@@ -82,6 +93,11 @@ extension AppViewModel {
           connectorID: connectorID
         )
         await refreshPluginState()
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         pluginManagerSection = .connectors
         appendPluginStatusEntry(
           to: timelineThreadID,
@@ -90,6 +106,11 @@ extension AppViewModel {
           preview: "Connector credential cleared"
         )
       } catch {
+        guard !Task.isCancelled,
+              isCurrentPluginLifecycleOperation(operationID)
+        else {
+          return
+        }
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorCredentialClearFailed(
@@ -101,6 +122,7 @@ extension AppViewModel {
         )
       }
     }
+    bindPluginLifecycleTask(task, operationID: operationID)
   }
 
   private func focusAfterConnectorAuthorization(pluginID: String) {

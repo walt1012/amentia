@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import selectors
@@ -133,7 +134,11 @@ def launch_app_process(app_path: Path, support_dir: Path) -> subprocess.Popen[st
   )
 
 
-def launch_runtime_process(app_path: Path, support_dir: Path) -> subprocess.Popen[str]:
+def launch_runtime_process(
+  app_path: Path,
+  support_dir: Path,
+  extra_environment: dict[str, str] | None = None,
+) -> subprocess.Popen[str]:
   resources_path = bundled_resource_path(app_path)
   environment = os.environ.copy()
   environment["PITH_DATA_DIR"] = str(support_dir / "storage")
@@ -143,6 +148,8 @@ def launch_runtime_process(app_path: Path, support_dir: Path) -> subprocess.Pope
   environment["PITH_LLAMACPP_PATH"] = str(
     resources_path / "tools" / "llama.cpp" / "llama-cli"
   )
+  if extra_environment:
+    environment.update(extra_environment)
   return subprocess.Popen(
     [str(packaged_runtime_path(app_path))],
     stdin=subprocess.PIPE,
@@ -259,10 +266,13 @@ def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
 def validate_runtime_readiness(
   readiness: dict,
   expected_statuses: dict[str, str] | None = None,
+  expected_status: str = "setup_required",
 ) -> None:
   result = readiness["result"]
-  if result["status"] != "setup_required":
-    raise RuntimeError(f"Fresh packaged runtime readiness was {result['status']}.")
+  if result["status"] != expected_status:
+    raise RuntimeError(
+      f"Packaged runtime readiness was {result['status']}, expected {expected_status}."
+    )
   checks = {check["id"]: check for check in result["checks"]}
   expected_statuses = expected_statuses or {
     "localModel": "setup_required",
@@ -284,6 +294,8 @@ def validate_runtime_readiness(
 def validate_packaged_runtime_workspace_bootstrap(
   process: subprocess.Popen[str],
   support_dir: Path,
+  local_model_status: str = "setup_required",
+  expected_status: str = "setup_required",
 ) -> None:
   workspace_dir = support_dir / "workspace"
   workspace_dir.mkdir()
@@ -321,13 +333,14 @@ def validate_packaged_runtime_workspace_bootstrap(
   validate_runtime_readiness(
     thread_readiness,
     {
-      "localModel": "setup_required",
+      "localModel": local_model_status,
       "workspace": "ready",
       "thread": "ready",
       "firstRequest": "ready_to_send",
       "plugins": "ready",
       "boundedRuntime": "ready",
     },
+    expected_status=expected_status,
   )
 
   thread_list = send_runtime_request(process, 8, "thread/list")
@@ -365,6 +378,115 @@ def validate_packaged_runtime_workspace_search(process: subprocess.Popen[str]) -
     raise RuntimeError(
       "Packaged runtime workspace search did not find the smoke README."
     )
+
+
+def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
+  model_dir = support_dir / "model-pack" / "smoke-local-model"
+  model_dir.mkdir(parents=True)
+  model_path = model_dir / "smoke-local-model.gguf"
+  model_bytes = b"GGUFpackaged smoke local model fixture\n"
+  model_path.write_bytes(model_bytes)
+  manifest = {
+    "id": "packaged-smoke-local-model",
+    "display_name": "Packaged Smoke Local Model",
+    "file_name": model_path.name,
+    "context_size": 512,
+    "model_context_size": 512,
+    "max_output_tokens": 32,
+    "backend": "llama.cpp",
+    "license": "test-fixture",
+    "homepage": "https://example.com/pith-smoke-model",
+    "download_url": "https://example.com/pith-smoke-model.gguf",
+    "sha256": hashlib.sha256(model_bytes).hexdigest(),
+    "size_bytes": len(model_bytes),
+  }
+  manifest_path = model_dir / "model-pack.json"
+  manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+  return manifest_path, model_path
+
+
+def write_fake_llama_backend(support_dir: Path) -> Path:
+  backend_path = support_dir / "fake-llama-cli"
+  backend_path.write_text(
+    "#!/bin/sh\n"
+    "printf '%s\\n' 'Packaged smoke local response.'\n",
+    encoding="utf-8",
+  )
+  backend_path.chmod(0o755)
+  return backend_path
+
+
+def validate_packaged_first_local_request(app_path: Path) -> None:
+  with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
+    support_dir = Path(support_root)
+    manifest_path, model_path = write_smoke_model_pack(support_dir)
+    backend_path = write_fake_llama_backend(support_dir)
+    process = launch_runtime_process(
+      app_path,
+      support_dir,
+      {
+        "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
+        "PITH_MODEL_PATH": str(model_path),
+        "PITH_LFM_MODEL_PATH": str(model_path),
+        "PITH_LLAMACPP_PATH": str(backend_path),
+      },
+    )
+    try:
+      initialize = send_runtime_request(
+        process,
+        20,
+        "initialize",
+        {
+          "clientInfo": {
+            "name": "packaged-first-request-smoke",
+            "version": "0.1.0",
+          }
+        },
+      )
+      if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+        raise RuntimeError("Packaged first-request initialize returned the wrong server name.")
+
+      model_health = send_runtime_request(process, 21, "model/health")
+      if model_health["result"]["status"] != "ready":
+        raise RuntimeError(
+          "Packaged first-request smoke did not resolve a ready local model: "
+          f"{model_health['result']}"
+        )
+
+      validate_packaged_runtime_workspace_bootstrap(
+        process,
+        support_dir,
+        local_model_status="ready",
+        expected_status="ready",
+      )
+      turn = send_runtime_request(
+        process,
+        22,
+        "turn/start",
+        {
+          "threadId": "thread-1",
+          "message": "Read README.md",
+        },
+      )
+      items = turn["result"]["items"]
+      if not any(item["kind"] == "assistantMessage" for item in items):
+        raise RuntimeError("Packaged first local request did not produce an assistant item.")
+      first_request_readiness = send_runtime_request(process, 23, "runtime/readiness")
+      checks = {
+        check["id"]: check["status"]
+        for check in first_request_readiness["result"]["checks"]
+      }
+      if checks.get("firstRequest") != "ready":
+        raise RuntimeError(
+          "Packaged first local request did not mark firstRequest ready: "
+          f"{checks.get('firstRequest')}"
+        )
+      print(
+        "Packaged first local request smoke passed with deterministic local model "
+        f"under {support_dir}"
+      )
+    finally:
+      terminate_process(process)
 
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:
@@ -406,6 +528,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)
       validate_runtime_database(support_dir / "storage" / "pith.db")
+      validate_packaged_first_local_request(app_path)
       print(
         "Packaged runtime protocol smoke passed with model metadata and plugins "
         f"under {support_dir}"

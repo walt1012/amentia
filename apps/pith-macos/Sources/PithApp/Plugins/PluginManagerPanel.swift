@@ -15,10 +15,15 @@ struct PluginManagerPanel: View {
 
         Spacer()
 
-        Button("Refresh") {
-          Task {
-            await viewModel.refreshPlugins()
+        if viewModel.hasPluginLifecycleOperation() {
+          Button("Cancel") {
+            viewModel.cancelPluginLifecycleOperation()
           }
+          .font(.caption2)
+        }
+
+        Button("Refresh") {
+          viewModel.refreshPlugins()
         }
         .font(.caption2)
         .disabled(!viewModel.canRefreshPlugins())

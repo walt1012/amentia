@@ -89,14 +89,13 @@ struct PluginRuntimeState {
     refreshRecoveryAttributes = refresh.refreshRecoveryAttributes
   }
 
-  mutating func beginLifecycleOperation() -> UUID? {
+  mutating func beginLifecycleOperation(operationID: UUID) -> Bool {
     guard lifecycleOperationID == nil else {
-      return nil
+      return false
     }
 
-    let operationID = UUID()
     lifecycleOperationID = operationID
-    return operationID
+    return true
   }
 
   mutating func finishLifecycleOperation(_ operationID: UUID) {
@@ -104,6 +103,10 @@ struct PluginRuntimeState {
       return
     }
 
+    lifecycleOperationID = nil
+  }
+
+  mutating func resetLifecycleOperation() {
     lifecycleOperationID = nil
   }
 

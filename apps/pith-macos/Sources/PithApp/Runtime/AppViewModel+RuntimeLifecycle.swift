@@ -113,6 +113,10 @@ extension AppViewModel {
       threadCreationCoordinator.cancel()
       threadHistoryLoadCoordinator.cancel()
       localModelMetadataCoordinator.cancel()
+      pluginLifecycleOperations.cancel()
+      updatePluginState { state in
+        state.resetLifecycleOperation()
+      }
       resetWorkspaceSearch()
     }
 

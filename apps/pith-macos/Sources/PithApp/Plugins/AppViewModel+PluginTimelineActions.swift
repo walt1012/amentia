@@ -77,7 +77,7 @@ extension AppViewModel {
       return
     }
 
-    await refreshPlugins()
+    refreshPlugins()
   }
 
   func revealPluginManifest(pluginID: String) {

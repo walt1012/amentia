@@ -101,16 +101,15 @@ Order of Work:
 
 Immediate Next:
 
-- Prove the first-run loop in the packaged app: isolated app support state,
-  runtime autostart, packaged runtime protocol health, runtime database
-  initialization, model download/resume, activation, workspace bootstrap,
-  workspace search, thread creation, and the first local request.
+- Finish first-run proof in the packaged app: packaged runtime protocol health,
+  isolated app support state, runtime database initialization, workspace
+  bootstrap, workspace search, thread creation, and deterministic first local
+  request coverage are in CI; next close the real in-app model
+  download/resume/activation path.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
-- Tighten plugin runner, connector, sandbox, and retry diagnostics only where
-  they unblock real local plugin execution.
-- Keep plugin UI thin by moving execution and lifecycle operations into focused
-  coordinators instead of growing ViewModel extensions.
+- Tighten plugin runner, connector, lifecycle cancellation, sandbox, and retry
+  diagnostics only where they unblock real local plugin execution.
 - Keep connector credentials out of SQLite; macOS uses Keychain-backed secrets
   with database metadata only.
 - Keep UI and architecture compact; refactor only when ownership, failure

@@ -18,7 +18,19 @@ enum RuntimeBridgeRequestPolicy {
   }
 
   static func shouldStopRuntimeAfterCancelledRequest(method: String) -> Bool {
-    method == "turn/start" || method == "plugin/commandRun"
+    switch method {
+    case "turn/start",
+         "plugin/commandRun",
+         "plugin/inspect",
+         "plugin/install",
+         "plugin/setEnabled",
+         "plugin/remove",
+         "plugin/connectorAuthorize",
+         "plugin/connectorClearCredential":
+      return true
+    default:
+      return false
+    }
   }
 
   static func shouldStopRuntimeAfterTimedOutRequest(method: String) -> Bool {
