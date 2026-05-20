@@ -491,7 +491,7 @@ extension AppViewModel {
     )
   }
 
-  private func appendPluginStatusEntry(
+  func appendPluginStatusEntry(
     to threadID: String?,
     _ entry: TimelineEntry,
     detail: String,
