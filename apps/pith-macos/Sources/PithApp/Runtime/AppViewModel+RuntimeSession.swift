@@ -6,6 +6,10 @@ extension AppViewModel {
     SessionActionPlanner.runtimeLaunchButtonTitle(sessionActionSnapshot())
   }
 
+  func shouldShowRuntimeLaunchToolbarAction() -> Bool {
+    runtimeState == .disconnected || runtimeState == .failed
+  }
+
   func runtimeStatusSummary() -> String {
     RuntimeHeaderPresenter.statusSummary(runtimeHeaderSnapshot())
   }

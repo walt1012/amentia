@@ -11,7 +11,9 @@ struct ContentView: View {
     }
     .toolbar {
       ToolbarItemGroup {
-        if viewModel.canLaunchRuntime() {
+        if viewModel.shouldShowRuntimeLaunchToolbarAction(),
+           viewModel.canLaunchRuntime()
+        {
           Button(viewModel.runtimeLaunchButtonTitle()) {
             viewModel.launchRuntime()
           }
