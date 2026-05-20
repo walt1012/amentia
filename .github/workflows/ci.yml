@@ -20,10 +20,15 @@ env:
   RUNTIME_BINARY: pith-runtime-bin
   LLAMA_BINARY: llama-cli
   LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
+  LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
   SWIFT_APP_ARTIFACT: PithApp-x86_64
   RUNTIME_ARTIFACT: pith-runtime-bin-x86_64
   LLAMA_ARTIFACT: llama-cli-x86_64
   MACOS_APP_ARTIFACT: Pith-macos-x86_64
+
+defaults:
+  run:
+    shell: bash
 
 permissions:
   actions: read
@@ -34,37 +39,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  rust:
-    name: Rust checks
+  repository-policy:
+    name: Repository policy checks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: cargo-registry-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.toml', 'crates/**/Cargo.toml') }}
-          restore-keys: |
-            cargo-registry-${{ runner.os }}-${{ runner.arch }}-
-
-      - name: Cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: Cargo clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: Cargo test
-        run: cargo test --workspace
+      - name: Compile Python automation
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/*.py \
+            plugins/bundled/notion-connector/bin/notion-mcp-dry-run.py
 
       - name: Validate model pack manifest
         run: python3 scripts/validate_model_pack.py
@@ -74,6 +65,42 @@ jobs:
 
       - name: Test packaging helpers
         run: python3 scripts/test_package_macos_app.py
+
+  rust:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies and build output
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Cargo test
+        run: cargo test --workspace
 
       - name: Runtime smoke test
         run: python3 scripts/runtime_smoke_test.py
@@ -86,6 +113,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
@@ -97,6 +127,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Show Swift version
         run: swift --version
@@ -105,12 +138,11 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/pith-macos/.build
-          key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Sources/**/*.swift') }}
+          key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
           restore-keys: |
             swift-build-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 Swift app executable
-        shell: bash
         run: |
           set -euo pipefail
           swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
@@ -133,6 +165,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Show Swift version
         run: swift --version
@@ -141,7 +176,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/pith-macos/.build
-          key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Sources/**/*.swift', 'apps/pith-macos/Tests/**/*.swift') }}
+          key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift', 'apps/pith-macos/Tests/**/*.swift') }}
           restore-keys: |
             swift-test-${{ runner.os }}-${{ runner.arch }}-
 
@@ -155,6 +190,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -166,12 +204,11 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: macos-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.toml', 'crates/**/Cargo.toml') }}
+          key: macos-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
           restore-keys: |
             macos-runtime-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 runtime executable
-        shell: bash
         run: |
           set -euo pipefail
           cargo build -p pith-runtime-bin --release
@@ -193,9 +230,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Cache pinned llama.cpp backend
+        id: llama_cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.LLAMA_BACKEND_CACHE_DIR }}
+          key: llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1
+
+      - name: Restore cached llama.cpp backend
+        if: steps.llama_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
 
       - name: Build pinned llama.cpp backend
-        shell: bash
+        if: steps.llama_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           source_dir="$RUNNER_TEMP/llama.cpp"
@@ -216,16 +270,24 @@ jobs:
           fi
           backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
           test -x "$backend"
-          archs="$(lipo -archs "$backend" 2>/dev/null || true)"
+          rm -rf "$LLAMA_BACKEND_CACHE_DIR"
+          mkdir -p "$LLAMA_BACKEND_CACHE_DIR"
+          python3 scripts/package_macos_app.py \
+            --stage-llama-backend "$backend" \
+            --stage-llama-output "$LLAMA_BACKEND_CACHE_DIR"
+          chmod +x "$LLAMA_BACKEND_CACHE_DIR/$LLAMA_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Validate staged llama.cpp backend
+        run: |
+          set -euo pipefail
+          test -x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          archs="$(lipo -archs "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" 2>/dev/null || true)"
           if [[ -n "$archs" && "$archs" != *"x86_64"* ]]; then
             echo "::error title=llama.cpp backend architecture::Expected x86_64 llama-cli, got $archs"
             exit 1
           fi
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          python3 scripts/package_macos_app.py \
-            --stage-llama-backend "$backend" \
-            --stage-llama-output "$PREBUILT_ARTIFACT_DIR"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
           otool -L "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" > "$PREBUILT_ARTIFACT_DIR/llama-dependencies.txt"
           if [ -d "$PREBUILT_ARTIFACT_DIR/lib" ]; then
             find "$PREBUILT_ARTIFACT_DIR/lib" -type f -name '*.dylib' -print0 \
@@ -245,7 +307,7 @@ jobs:
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
           if-no-files-found: error
 
-  swift:
+  macos-package:
     name: Package macOS app
     runs-on: macos-15-intel
     timeout-minutes: 30
@@ -257,17 +319,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Download prebuilt artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          gh run download "$GITHUB_RUN_ID" --name "$SWIFT_APP_ARTIFACT" --dir "$PREBUILT_ARTIFACT_DIR"
-          gh run download "$GITHUB_RUN_ID" --name "$RUNTIME_ARTIFACT" --dir "$PREBUILT_ARTIFACT_DIR"
-          gh run download "$GITHUB_RUN_ID" --name "$LLAMA_ARTIFACT" --dir "$PREBUILT_ARTIFACT_DIR"
+      - name: Download Swift app executable
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ env.SWIFT_APP_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+
+      - name: Download runtime executable
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ env.RUNTIME_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+
+      - name: Download llama.cpp backend
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ env.LLAMA_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
       - name: Restore executable permissions
         run: |
@@ -277,7 +349,6 @@ jobs:
             "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
 
       - name: Build x86_64 macOS app bundle
-        shell: bash
         run: |
           set +e
           python3 scripts/package_macos_app.py \

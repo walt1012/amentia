@@ -21,3 +21,7 @@ Current scripts:
 
 These scripts are safe to run locally when a matching toolchain exists, but CI is the canonical
 execution environment.
+
+CI keeps fast policy checks, Rust checks, Swift builds, runtime builds, the pinned llama.cpp backend,
+and macOS packaging as separate gates. The llama.cpp backend is cached by pinned source revision, but
+the packaged app smoke test still validates the staged backend before release artifacts are uploaded.

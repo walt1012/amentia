@@ -106,7 +106,9 @@ Current Status:
   readiness, deterministic first request coverage, fresh app-owned directory
   preparation, model manager
   download/resume/activation planning, packaged app launch smoke coverage, and
-  local inference backend dependency portability and launch checks.
+  local inference backend dependency portability and launch checks. CI is split
+  into parallel policy, Rust, Swift, runtime, cached backend, and packaging
+  gates so speed does not weaken release proof.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.
@@ -155,5 +157,7 @@ M5 Exit Gate:
 - CI is hygiene, not a milestone.
 - Remote CI is the source of truth for Rust fmt, clippy, tests, smoke coverage,
   model manifest validation, and macOS app packaging.
+- Prefer parallel jobs, pinned external inputs, and narrow caches over weaker
+  checks.
 - Keep commits scoped and fix CI from logs, not guesses.
 - Split modules only when ownership or failure boundaries become clearer.
