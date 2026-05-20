@@ -63,6 +63,8 @@ extension AppViewModel {
     }
 
     switch action {
+    case .launchRuntime:
+      launchRuntime()
     case .setupModel:
       runModelSetupCalloutAction()
     case .openWorkspace:
@@ -99,35 +101,19 @@ extension AppViewModel {
   }
 
   func runtimePrimaryActionTitle() -> String? {
-    let snapshot = sessionActionSnapshot()
-    return SessionActionPlanner.runtimePrimaryActionTitle(
-      for: SessionActionPlanner.runtimePrimaryAction(snapshot),
-      snapshot: snapshot
-    )
+    SessionActionPlanner.runtimePrimaryActionTitle(sessionActionSnapshot())
   }
 
   func canRunRuntimePrimaryAction() -> Bool {
-    let snapshot = sessionActionSnapshot()
-    return SessionActionPlanner.canRunRuntimePrimaryAction(
-      SessionActionPlanner.runtimePrimaryAction(snapshot),
-      snapshot: snapshot
-    )
+    SessionActionPlanner.canRunRuntimePrimaryAction(sessionActionSnapshot())
   }
 
   func runRuntimePrimaryAction() {
-    let snapshot = sessionActionSnapshot()
-    guard let action = SessionActionPlanner.runtimePrimaryAction(snapshot),
-          SessionActionPlanner.canRunRuntimePrimaryAction(action, snapshot: snapshot)
-    else {
+    guard canRunRuntimePrimaryAction() else {
       return
     }
 
-    switch action {
-    case .launchRuntime:
-      launchRuntime()
-    case .cancelTurn:
-      cancelActiveTurn()
-    }
+    cancelActiveTurn()
   }
 
   func canLaunchRuntime() -> Bool {
@@ -136,14 +122,17 @@ extension AppViewModel {
 
   func canOpenWorkspace() -> Bool {
     SessionActionPlanner.canOpenWorkspace(sessionActionSnapshot())
+      && !workspaceOpenCoordinator.isOpening
   }
 
   func canCreateThread() -> Bool {
     SessionActionPlanner.canCreateThread(sessionActionSnapshot())
+      && !threadCreationCoordinator.isCreating
   }
 
   func canInstallPlugin() -> Bool {
     SessionActionPlanner.canInstallPlugin(sessionActionSnapshot())
+      && !hasPluginLifecycleOperation()
   }
 
   func canSendDraftMessage() -> Bool {

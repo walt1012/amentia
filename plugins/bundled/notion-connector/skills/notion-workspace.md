@@ -7,4 +7,4 @@ Current contract:
 - Keep all analysis local until the user explicitly connects a Notion account.
 - Treat Notion writes as network-enabled plugin actions that require approval.
 - Prefer concise page outlines, decision logs, and task lists over long chat transcripts.
-- Do not assume credentials exist; check the connector auth state first once runtime auth support is implemented.
+- Do not assume credentials exist; check the runtime connector auth state before preparing Notion actions.

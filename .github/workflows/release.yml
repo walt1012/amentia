@@ -1,0 +1,287 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build, for example v0.1.0."
+        required: true
+        type: string
+      draft:
+        description: "Create or update the GitHub Release as a draft."
+        required: false
+        default: true
+        type: boolean
+      prerelease:
+        description: "Mark the GitHub Release as a prerelease."
+        required: false
+        default: false
+        type: boolean
+
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+  SWIFT_PACKAGE_PATH: apps/pith-macos
+  PREBUILT_ARTIFACT_DIR: artifacts/prebuilt
+  SWIFT_APP_BINARY: PithApp
+  RUNTIME_BINARY: pith-runtime-bin
+  LLAMA_BINARY: llama-cli
+  LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
+  LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
+  RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release-dmg:
+    name: Build signed notarized DMG
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    env:
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-pith
+      MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_DEVELOPER_ID_APPLICATION: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Validate release inputs and secrets
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_TAG" != v* ]]; then
+            echo "::error title=Invalid release tag::Release tags must start with v, got $RELEASE_TAG"
+            exit 1
+          fi
+          missing=()
+          for name in \
+            APPLE_APP_SPECIFIC_PASSWORD \
+            APPLE_ID \
+            APPLE_TEAM_ID \
+            MACOS_CERTIFICATE_P12_BASE64 \
+            MACOS_CERTIFICATE_PASSWORD \
+            MACOS_DEVELOPER_ID_APPLICATION; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            joined="$(IFS=', '; echo "${missing[*]}")"
+            echo "::error title=Missing release secrets::Configure these repository secrets before publishing a macOS release: $joined"
+            exit 1
+          fi
+
+      - name: Import Developer ID certificate
+        run: |
+          set -euo pipefail
+          keychain_path="$RUNNER_TEMP/pith-release.keychain-db"
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          printf '%s' "$MACOS_CERTIFICATE_P12_BASE64" | base64 -D > "$certificate_path"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security import "$certificate_path" \
+            -k "$keychain_path" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/productsign
+          security list-keychains -d user -s "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$keychain_path"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies and build output
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: release-cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            release-cargo-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache Swift build output
+        uses: actions/cache@v5
+        with:
+          path: apps/pith-macos/.build
+          key: release-swift-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          restore-keys: |
+            release-swift-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build Swift app executable
+        run: |
+          set -euo pipefail
+          swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
+          bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$bin_path/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+
+      - name: Build runtime executable
+        run: |
+          set -euo pipefail
+          cargo build -p pith-runtime-bin --release
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "target/release/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+
+      - name: Cache pinned llama.cpp backend
+        id: llama_cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.LLAMA_BACKEND_CACHE_DIR }}
+          key: release-llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1
+
+      - name: Restore cached llama.cpp backend
+        if: steps.llama_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Build pinned llama.cpp backend
+        if: steps.llama_cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/llama.cpp"
+          build_dir="$RUNNER_TEMP/llama.cpp-build"
+          git init "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C "$source_dir" fetch --depth 1 origin "$LLAMA_CPP_REF"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          cmake \
+            -S "$source_dir" \
+            -B "$build_dir" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DBUILD_SHARED_LIBS=OFF
+          if ! cmake --build "$build_dir" --config Release --parallel 3 > "$RUNNER_TEMP/llama-build.log" 2>&1; then
+            tail -n 160 "$RUNNER_TEMP/llama-build.log"
+            exit 1
+          fi
+          backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
+          test -x "$backend"
+          rm -rf "$LLAMA_BACKEND_CACHE_DIR"
+          mkdir -p "$LLAMA_BACKEND_CACHE_DIR"
+          python3 scripts/package_macos_app.py \
+            --stage-llama-backend "$backend" \
+            --stage-llama-output "$LLAMA_BACKEND_CACHE_DIR"
+          chmod +x "$LLAMA_BACKEND_CACHE_DIR/$LLAMA_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Package unsigned app bundle
+        run: |
+          set -euo pipefail
+          python3 scripts/package_macos_app.py \
+            --skip-build \
+            --skip-ad-hoc-sign \
+            --no-zip \
+            --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
+            --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
+            --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+
+      - name: Sign app for public distribution
+        run: |
+          set -euo pipefail
+          python3 scripts/sign_macos_app_for_distribution.py \
+            artifacts/macos/Pith.app \
+            --identity "$MACOS_DEVELOPER_ID_APPLICATION"
+          python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
+
+      - name: Smoke launch signed app
+        run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
+
+      - name: Create signed DMG
+        run: |
+          set -euo pipefail
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          python3 scripts/create_macos_dmg.py artifacts/macos/Pith.app "$dmg_path"
+          codesign \
+            --force \
+            --timestamp \
+            --sign "$MACOS_DEVELOPER_ID_APPLICATION" \
+            "$dmg_path"
+
+      - name: Notarize and staple DMG
+        run: |
+          set -euo pipefail
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          xcrun notarytool submit "$dmg_path" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+          xcrun stapler staple "$dmg_path"
+          python3 scripts/validate_macos_distribution.py \
+            artifacts/macos/Pith.app \
+            --dmg-path "$dmg_path"
+          shasum -a 256 "$dmg_path" > "$dmg_path.sha256"
+
+      - name: Create release notes
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<EOF
+          Pith $RELEASE_TAG
+
+          - macOS 12+ x86_64 DMG installer.
+          - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
+          - Model weights are not bundled; first launch guides the user to download one verified local model.
+          EOF
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_args=(--title "Pith $RELEASE_TAG" --notes-file release-notes.md)
+          if [[ "$RELEASE_DRAFT" == "true" ]]; then
+            release_args+=(--draft)
+          fi
+          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+            release_args+=(--prerelease)
+          fi
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" "${release_args[@]}"
+          else
+            gh release create "$RELEASE_TAG" "${release_args[@]}"
+          fi
+          gh release upload "$RELEASE_TAG" \
+            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \
+            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            --clobber
+
+      - name: Cleanup release keychain
+        if: always()
+        run: |
+          keychain_path="$RUNNER_TEMP/pith-release.keychain-db"
+          security delete-keychain "$keychain_path" >/dev/null 2>&1 || true

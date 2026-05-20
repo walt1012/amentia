@@ -44,11 +44,11 @@ enum TimelineEntryFactory {
         ]
       ),
       TimelineEntry(
-        id: "welcome-local-first-agent-loop",
+        id: "welcome-local-first-work",
         kind: .assistantMessage,
-        title: "Local-First Agent Loop",
+        title: "Local-First Work",
         body:
-          "Pith runs the core agent loop against local workspaces and does not call external model APIs for core responses.",
+          "Pith works against local workspaces and does not call external model APIs for core responses.",
         attributes: [
           "model": "local"
         ]

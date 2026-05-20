@@ -2,6 +2,14 @@ import Foundation
 
 @MainActor
 extension AppViewModel {
+  func startDailyUseSessionIfNeeded() {
+    guard runtimeState == .disconnected else {
+      return
+    }
+
+    launchRuntime(launchDetail: "Preparing local runtime for daily use")
+  }
+
   func launchRuntime(launchDetail: String = "Launching local runtime") {
     guard runtimeState != .launching else {
       return
@@ -16,8 +24,10 @@ extension AppViewModel {
     updateRuntimeConnectionState { state in
       state.clearLastFailureDetail()
     }
+    let launchToken = runtimeLaunchCoordinator.begin()
+    let failureThreadID = selectedThreadID
 
-    Task {
+    let task = Task {
       do {
         let bootstrap = try await RuntimeLaunchBootstrapLoader.load(
           runtimeBridge: runtimeBridge,
@@ -26,15 +36,30 @@ extension AppViewModel {
           isRestorablePath: isRestorableWorkspacePath,
           clearStoredWorkspace: AppPreferences.clearLastWorkspacePath
         )
+        guard runtimeLaunchCoordinator.isCurrent(launchToken) else {
+          return
+        }
         try await applyRuntimeLaunchBootstrap(bootstrap)
+        guard runtimeLaunchCoordinator.isCurrent(launchToken) else {
+          return
+        }
+        runtimeLaunchCoordinator.finish(launchToken)
         announceFirstRequestReadyIfNeeded()
       } catch {
-        applyRuntimeLaunchFailure(error)
+        guard runtimeLaunchCoordinator.isCurrent(launchToken) else {
+          return
+        }
+        runtimeLaunchCoordinator.finish(launchToken)
+        applyRuntimeLaunchFailure(error, timelineThreadID: failureThreadID)
       }
     }
+    runtimeLaunchCoordinator.bind(task: task, token: launchToken)
   }
 
-  func refreshModelHealthState(serverLabel: String? = nil) async {
+  func refreshModelHealthState(
+    serverLabel: String? = nil,
+    announcesFirstRequestReady: Bool = true
+  ) async {
     let modelRefresh = await RuntimeStateLoader.refreshModelHealth(
       using: runtimeBridge,
       serverLabel: serverLabel
@@ -47,7 +72,9 @@ extension AppViewModel {
     }
     refreshLocalModelCatalog()
     await refreshRuntimeReadiness()
-    announceFirstRequestReadyIfNeeded()
+    if announcesFirstRequestReady {
+      announceFirstRequestReadyIfNeeded()
+    }
   }
 
   func refreshRuntimeReadiness() async {
@@ -79,12 +106,32 @@ extension AppViewModel {
         state.activeTurnID = nil
         state.activeTurnThreadID = nil
       }
-      pendingTurnRequest.clear()
+      localExecutionRequests.clearAll()
+      turnCancellationCoordinator.cancel()
+      runtimeLaunchCoordinator.cancel()
+      workspaceOpenCoordinator.cancel()
+      threadCreationCoordinator.cancel()
+      threadHistoryLoadCoordinator.cancel()
+      localModelMetadataCoordinator.cancel()
+      pluginLifecycleOperations.cancel()
+      updatePluginState { state in
+        state.resetLifecycleOperation()
+      }
+      resetWorkspaceSearch()
     }
 
     if plan.clearsModelReadinessState {
       updateLocalModelReadinessState { state in
         state.clearRuntimeReadiness()
+      }
+    }
+
+    if plan.clearsRuntimeDerivedState {
+      updateMemoryState { state in
+        state.resetRuntimeData()
+      }
+      updatePluginState { state in
+        state.reset()
       }
     }
 
@@ -101,7 +148,8 @@ extension AppViewModel {
 
     runtimeState = .ready
     await refreshModelHealthState(
-      serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)"
+      serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)",
+      announcesFirstRequestReady: false
     )
     applyMemoryStateRefresh(bootstrap.memoryRefresh, clearsMissing: true)
     await refreshPluginState()
@@ -154,7 +202,7 @@ extension AppViewModel {
     }
   }
 
-  private func applyRuntimeLaunchFailure(_ error: Error) {
+  private func applyRuntimeLaunchFailure(_ error: Error, timelineThreadID: ThreadSummary.ID?) {
     runtimeState = .failed
     runtimeDetail = error.localizedDescription
     updateLocalModelReadinessState { state in
@@ -167,7 +215,7 @@ extension AppViewModel {
       state.reset()
     }
     appendEntry(
-      to: selectedThreadID,
+      to: timelineThreadID,
       TimelineEventPresenter.runtimeLaunchFailed(error: error)
     )
   }
@@ -176,5 +224,33 @@ extension AppViewModel {
     var isDirectory = ObjCBool(false)
     return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
       && isDirectory.boolValue
+  }
+}
+
+struct RuntimeLaunchRequestToken: Equatable {
+  fileprivate let id: UUID
+}
+
+final class RuntimeLaunchCoordinator {
+  private let taskSlot = CancellableTaskSlot()
+
+  func begin() -> RuntimeLaunchRequestToken {
+    RuntimeLaunchRequestToken(id: taskSlot.replace())
+  }
+
+  func bind(task: Task<Void, Never>, token: RuntimeLaunchRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: RuntimeLaunchRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: RuntimeLaunchRequestToken) {
+    taskSlot.finish(token.id)
+  }
+
+  func cancel() {
+    taskSlot.cancel()
   }
 }

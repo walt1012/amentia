@@ -35,7 +35,7 @@ pub(crate) use runtime::{
 };
 
 mod support;
-pub(crate) use support::text_utils;
+pub(crate) use support::{secure_credentials, text_utils};
 
 mod workspace;
 pub(crate) use workspace::workspace_search;
@@ -48,6 +48,10 @@ pub use plugin_commands::{
   prepare_plugin_command_run,
 };
 pub use plugins::plugin_command_types::{CompletedPluginCommandRun, PreparedPluginCommandRun};
+pub use plugins::plugin_lifecycle_refresh::{
+  complete_prepared_plugin_refresh, execute_prepared_plugin_refresh, prepare_plugin_refresh,
+  CompletedPluginRefresh, PreparedPluginRefresh,
+};
 pub use request_dispatch::handle_request;
 pub use turn_requests::{
   complete_prepared_turn_start, execute_prepared_turn_start, prepare_turn_start,
@@ -62,3 +66,31 @@ pub use workspace_search::{
 mod test_support;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_approval_shell;
+#[cfg(test)]
+mod tests_approval_write;
+#[cfg(test)]
+mod tests_memory_context;
+#[cfg(test)]
+mod tests_plugin_command_execution;
+#[cfg(test)]
+mod tests_plugin_connector_smoke;
+#[cfg(test)]
+mod tests_plugin_lifecycle;
+#[cfg(test)]
+mod tests_plugin_mcp_output;
+#[cfg(test)]
+mod tests_plugin_permissions;
+#[cfg(test)]
+mod tests_plugin_registry;
+#[cfg(test)]
+mod tests_runtime_surface;
+#[cfg(test)]
+mod tests_turn_lifecycle;
+#[cfg(test)]
+mod tests_turn_web_search;
+#[cfg(test)]
+mod tests_turn_workspace_tools;
+#[cfg(test)]
+mod tests_workspace_state;

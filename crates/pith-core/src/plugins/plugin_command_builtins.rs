@@ -11,7 +11,7 @@ pub(super) struct BuiltinPluginCommandResult {
   pub(super) content: String,
 }
 
-pub(super) fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
+pub(crate) fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
   matches!(
     execution_kind,
     Some(

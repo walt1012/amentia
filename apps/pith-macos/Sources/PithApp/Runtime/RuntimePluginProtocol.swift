@@ -4,8 +4,24 @@ struct PluginListResult: Codable {
   let plugins: [RuntimePluginPayload]
 }
 
+struct PluginRefreshResult: Codable {
+  let plugins: [RuntimePluginPayload]
+  let stateWarning: String?
+}
+
 struct PluginInstallParams: Codable {
   let sourcePath: String
+}
+
+struct PluginInspectParams: Codable {
+  let sourcePath: String
+}
+
+struct PluginInspectResult: Codable {
+  let plugin: RuntimePluginPayload
+  let installStatus: String
+  let installBlocker: String?
+  let installRepairHint: String?
 }
 
 struct PluginInstallResult: Codable {
@@ -33,6 +49,26 @@ struct PluginCommandRegistryResult: Codable {
 
 struct PluginConnectorRegistryResult: Codable {
   let connectors: [RuntimePluginConnectorPayload]
+}
+
+struct PluginConnectorCredentialParams: Codable {
+  let connectorId: String
+  let credentialLabel: String?
+  let credentialSecret: String?
+
+  init(
+    connectorId: String,
+    credentialLabel: String? = nil,
+    credentialSecret: String? = nil
+  ) {
+    self.connectorId = connectorId
+    self.credentialLabel = credentialLabel
+    self.credentialSecret = credentialSecret
+  }
+}
+
+struct PluginConnectorCredentialResult: Codable {
+  let connector: RuntimePluginConnectorPayload
 }
 
 struct PluginHookRegistryResult: Codable {
@@ -64,8 +100,37 @@ struct RuntimePluginCommandPayload: Codable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let execution: RuntimePluginCommandExecutionPayload?
   let executionKind: String?
   let memorySummary: String?
+  let runStatus: String
+  let runBlocker: String?
+  let runRepairHint: String?
+  let declaredConnectorIds: [String]?
+  let requiredConnectorIds: [String]
+  let approvalRequired: Bool?
+  let approvalReason: String?
+}
+
+struct RuntimePluginCommandExecutionPayload: Codable {
+  let kind: String
+  let driver: String
+  let entrypoint: String?
+  let input: RuntimePluginCommandEnvelopePayload?
+  let output: RuntimePluginCommandEnvelopePayload?
+  let supported: Bool
+}
+
+struct RuntimePluginCommandEnvelopePayload: Codable {
+  let envelope: String
+  let fields: [RuntimePluginCommandEnvelopeFieldPayload]
+}
+
+struct RuntimePluginCommandEnvelopeFieldPayload: Codable {
+  let name: String
+  let kind: String
+  let required: Bool
+  let description: String?
 }
 
 struct RuntimePluginConnectorPayload: Codable {
@@ -83,6 +148,14 @@ struct RuntimePluginConnectorPayload: Codable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let authStatus: String
+  let credentialPresent: Bool
+  let credentialSecretPresent: Bool
+  let credentialProvider: String?
+  let credentialHandle: String?
+  let credentialLabel: String?
+  let authorizedAt: Int?
+  let credentialUpdatedAt: Int?
 }
 
 struct RuntimePluginHookPayload: Codable {
@@ -94,6 +167,9 @@ struct RuntimePluginHookPayload: Codable {
   let pluginDisplayName: String
   let permissions: [String]
   let sourcePath: String
+  let status: String?
+  let runBlocker: String?
+  let runRepairHint: String?
   let memorySummary: String?
 }
 
@@ -128,4 +204,149 @@ struct PluginCommandRunParams: Codable {
   let threadId: String
   let commandId: String
   let input: String?
+}
+
+extension RuntimeBridge {
+  struct RuntimePlugin {
+    let id: String
+    let name: String
+    let version: String
+    let displayName: String
+    let status: String
+    let description: String
+    let authorName: String?
+    let enabled: Bool
+    let defaultEnabled: Bool
+    let capabilities: [String]
+    let permissions: [String]
+    let manifestPath: String
+    let provenance: String
+    let validationError: String?
+    let validationHint: String?
+  }
+
+  struct RuntimePluginInspection {
+    let plugin: RuntimePlugin
+    let installStatus: String
+    let installBlocker: String?
+    let installRepairHint: String?
+
+    var canInstall: Bool {
+      installStatus == "ready" && installBlocker == nil
+    }
+  }
+
+  struct RuntimePluginRefresh {
+    let plugins: [RuntimePlugin]
+    let stateWarning: String?
+  }
+
+  struct RuntimePluginRemoval {
+    let pluginID: String
+    let displayName: String
+    let removedPath: String
+  }
+
+  struct RuntimePluginCapabilityRegistry {
+    let capabilities: [RuntimePluginCapability]
+    let summary: RuntimePluginCapabilityRegistrySummary
+  }
+
+  struct RuntimePluginCapabilityRegistrySummary {
+    let enabledPluginCount: Int
+    let totalCapabilityCount: Int
+    let capabilityCountsByKind: [String: Int]
+  }
+
+  struct RuntimePluginCapability {
+    let capabilityID: String
+    let kind: String
+    let identifier: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let manifestPath: String
+    let metadata: [String: String]
+  }
+
+  struct RuntimePluginCommand {
+    let commandID: String
+    let title: String
+    let description: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let execution: RuntimePluginCommandExecution?
+    let executionKind: String?
+    let memorySummary: String?
+    let runStatus: String
+    let runBlocker: String?
+    let runRepairHint: String?
+    let declaredConnectorIds: [String]
+    let requiredConnectorIds: [String]
+    let approvalRequired: Bool
+    let approvalReason: String?
+  }
+
+  struct RuntimePluginCommandExecution {
+    let kind: String
+    let driver: String
+    let entrypoint: String?
+    let input: RuntimePluginCommandEnvelope?
+    let output: RuntimePluginCommandEnvelope?
+    let supported: Bool
+  }
+
+  struct RuntimePluginCommandEnvelope {
+    let envelope: String
+    let fields: [RuntimePluginCommandEnvelopeField]
+  }
+
+  struct RuntimePluginCommandEnvelopeField {
+    let name: String
+    let kind: String
+    let required: Bool
+    let description: String?
+  }
+
+  struct RuntimePluginConnector {
+    let connectorID: String
+    let displayName: String
+    let service: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let enabled: Bool
+    let status: String
+    let permissions: [String]
+    let manifestPath: String
+    let homepage: String?
+    let authType: String?
+    let authRequired: Bool
+    let authScopes: [String]
+    let credentialStore: String?
+    let authStatus: String
+    let credentialPresent: Bool
+    let credentialSecretPresent: Bool
+    let credentialProvider: String?
+    let credentialHandle: String?
+    let credentialLabel: String?
+    let authorizedAt: Int?
+    let credentialUpdatedAt: Int?
+  }
+
+  struct RuntimePluginHook {
+    let hookID: String
+    let title: String
+    let description: String
+    let event: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let status: String
+    let runBlocker: String?
+    let runRepairHint: String?
+    let memorySummary: String?
+  }
 }

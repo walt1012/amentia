@@ -33,8 +33,15 @@ enum LocalModelDownloadStateStore {
 
     let targetURL = URL(fileURLWithPath: model.installPath)
     let manager = FileManager.default
-    if manager.fileExists(atPath: targetURL.path) {
-      try? manager.removeItem(at: targetURL)
+    guard manager.fileExists(atPath: targetURL.path) else {
+      return
     }
+
+    if (try? LocalModelCatalog.validateDownloadedModel(model)) != nil {
+      return
+    }
+
+    try? manager.removeItem(at: targetURL)
+    LocalModelVerificationStampStore.forgetVerifiedModel(modelID: model.id)
   }
 }

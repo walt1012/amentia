@@ -3,6 +3,7 @@ pub(crate) use super::local_response_formatting::{
   format_web_search_result,
 };
 pub(crate) use super::local_response_summaries::{
-  build_plan_item, summarize_denied_approval, summarize_directory_result, summarize_file_result,
-  summarize_search_result, summarize_shell_result, summarize_web_search_result,
+  build_plan_item, summarize_declined_web_search_candidate, summarize_denied_approval,
+  summarize_directory_result, summarize_file_result, summarize_search_result,
+  summarize_shell_result, summarize_web_search_result,
 };

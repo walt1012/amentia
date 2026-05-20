@@ -8,7 +8,7 @@ This document describes the CI-first development baseline for `Pith`.
 
 Local Rust, Swift, and Python toolchains are optional. The repository does not require contributors
 to install local validation toolchains before pushing. GitHub Actions is the source of truth for
-formatting, linting, tests, smoke coverage, and the native macOS package build.
+formatting, linting, tests, smoke coverage, and the native macOS app package.
 
 ## Remote Checks
 
@@ -17,9 +17,17 @@ Every push to `main` or `codex/**` runs the canonical CI suite:
 - Rust formatting with `cargo fmt --all -- --check`
 - Rust linting with `cargo clippy --workspace --all-targets -- -D warnings`
 - Rust tests with `cargo test --workspace`
+- x86_64 Swift app build
+- x86_64 Swift app logic tests
 - model pack manifest validation
 - runtime smoke coverage through `scripts/runtime_smoke_test.py`
-- Swift package build on an Intel macOS runner
+- signed-ready x86_64 macOS app bundle packaging on an Intel macOS runner
+- packaged app launch smoke coverage through `scripts/smoke_launch_macos_app.py`
+
+CI jobs use read-only repository permissions, explicit timeouts, stable artifact
+names, and parallel build lanes. The final macOS package job depends on the
+Swift app build, Swift tests, runtime build, and llama.cpp backend lane before it
+assembles a distributable app artifact.
 
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
@@ -45,6 +53,63 @@ export PITH_RUNTIME_PATH="$(pwd)/target/debug/pith-runtime-bin"
 cd apps/pith-macos
 swift run
 ```
+
+## macOS App Packaging
+
+The canonical package command is:
+
+```bash
+python3 scripts/package_macos_app.py
+```
+
+CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
+`pith-runtime-bin`, and pinned llama.cpp backend build or run in parallel cached
+jobs, then a packaging job downloads the executable artifacts, assembles
+`Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
+and bundled plugin manifests under `Contents/Resources`, validates the app
+bundle, and emits internal zip and DMG artifacts.
+
+Package validation checks the product `Info.plist`, `PkgInfo`,
+`PithPackage.json`, x86_64-only binaries, first-use model download metadata,
+bundled plugin resource contracts, absence of model weights, symlink-free
+packaged resources and optional backend inputs, llama.cpp dependency
+portability, and zip contents. The zip must include the default model manifest
+and every bundled plugin manifest, must not contain symlinks or model weight
+files, and must not require external package manager paths at runtime. CI also
+ad-hoc signs the app when `codesign` is available. Internal CI artifacts prove
+the package shape, but they are not public release installers.
+
+Public distribution builds must pass:
+
+```bash
+python3 scripts/validate_macos_distribution.py \
+  artifacts/macos/Pith.app \
+  --dmg-path artifacts/macos/Pith-v0.1.0-macos-x86_64.dmg
+```
+
+This gate requires Developer ID signing, Gatekeeper assessment, and notarization
+stapling. Ad-hoc signed CI artifacts are for internal validation only.
+
+## GitHub Release Distribution
+
+Users should download `Pith-<tag>-macos-x86_64.dmg` from the GitHub Release
+page, open it, and drag `Pith.app` to Applications. The release workflow runs
+only for `v*` tags or manual dispatch, signs the app with Developer ID,
+creates a DMG, signs and notarizes the DMG, staples the notarization ticket,
+validates the app and DMG, then uploads the DMG and SHA-256 checksum to the
+GitHub Release.
+
+Release publishing requires these repository secrets:
+
+- `MACOS_CERTIFICATE_P12_BASE64`
+- `MACOS_CERTIFICATE_PASSWORD`
+- `MACOS_DEVELOPER_ID_APPLICATION`
+- `APPLE_ID`
+- `APPLE_TEAM_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+
+The release workflow should fail rather than publish an unsigned or
+non-notarized installer.
 
 ## Local Model Runtime
 
@@ -95,13 +160,19 @@ The runtime resolves bundled plugins in this order:
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 
-Milestone 1 uses a built-in memory module in the runtime, so the plugin root can stay empty until the plugin milestone.
+Plugin development should keep discovery separate from execution. Discovery owns
+manifest validation, registries, connector metadata, and enablement state. Execution owns bounded
+runners, auth policy, credential storage, cancellation, sandbox policy, output envelopes, and logs.
+
+The minimal runner surface starts with plugin-bundle-scoped `stdio` entrypoints bound to the native
+sandbox policy. Runner success and failure paths should expose sandbox, exit, stdout, and stderr
+diagnostics before new connector surfaces are added.
 
 ## GitHub Actions Notes
 
 The workflow uses:
 
 - `ubuntu-latest` for Rust checks
-- `macos-15-intel` for the native Swift package build
+- `macos-15-intel` for the native x86_64 app bundle package
 
 This is intentional because the product target is Intel macOS and GitHub retired the `macos-13` runner image in late 2025.

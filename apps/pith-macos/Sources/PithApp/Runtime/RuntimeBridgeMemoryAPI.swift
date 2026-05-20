@@ -1,6 +1,22 @@
 import Foundation
 
 extension RuntimeBridge {
+  struct RuntimeMemoryStatus {
+    let noteCount: Int
+    let latestTitle: String?
+    let summary: String
+  }
+
+  struct RuntimeMemoryNote {
+    let id: String
+    let title: String
+    let body: String
+    let scope: String
+    let source: String
+    let createdAt: Int
+    let tags: [String]
+  }
+
   func memoryStatus() async throws -> RuntimeMemoryStatus {
     let response: JSONRPCResponse<MemoryStatusResult> = try await sendRequest(
       method: "memory/status",
@@ -52,4 +68,33 @@ extension RuntimeBridge {
       tags: result.note.tags
     )
   }
+}
+
+struct MemoryStatusResult: Codable {
+  let noteCount: Int
+  let latestTitle: String?
+  let summary: String
+}
+
+struct MemoryListResult: Codable {
+  let notes: [RuntimeMemoryNotePayload]
+}
+
+struct MemoryCreateParams: Codable {
+  let title: String
+  let body: String
+}
+
+struct MemoryCreateResult: Codable {
+  let note: RuntimeMemoryNotePayload
+}
+
+struct RuntimeMemoryNotePayload: Codable {
+  let id: String
+  let title: String
+  let body: String
+  let scope: String
+  let source: String
+  let createdAt: Int
+  let tags: [String]
 }

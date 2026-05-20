@@ -22,5 +22,6 @@ model-packs/**/*.gguf
 model-packs/**/*.bin
 model-packs/**/*.safetensors
 artifacts/
+.ci-cache/
 logs/
 traces/

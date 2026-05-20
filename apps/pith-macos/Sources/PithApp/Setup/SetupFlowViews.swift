@@ -122,11 +122,6 @@ private struct SetupModelOptionRow: View {
         Text(fit)
           .font(.caption2)
           .foregroundColor(.secondary)
-
-        Text(metadata)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
       }
       .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -145,12 +140,7 @@ private struct SetupModelOptionRow: View {
 
   private var detail: String {
     let size = formattedByteCount(model.sizeBytes)
-    let context = "\(model.contextSize) runtime / \(model.modelContextSize) model context"
-    return "\(size) | \(model.license) | \(context) | \(model.maxOutputTokens) output"
-  }
-
-  private var metadata: String {
-    LocalModelDisplayPresenter.firstUseMetadata(model)
+    return "\(size) | \(model.license)"
   }
 
   private var fit: String {

@@ -202,15 +202,15 @@ extension AppViewModel {
   }
 
   func shouldShowModelDownloadProgress() -> Bool {
-    LocalModelStatusPresenter.shouldShowDownloadProgress(localModelStatusSnapshot())
+    LocalModelDownloadStatusPresenter.shouldShowDownloadProgress(localModelStatusSnapshot())
   }
 
   func modelDownloadProgressValue() -> Double? {
-    LocalModelStatusPresenter.downloadProgressValue(localModelStatusSnapshot())
+    LocalModelDownloadStatusPresenter.downloadProgressValue(localModelStatusSnapshot())
   }
 
   func modelDownloadProgressSummary() -> String {
-    LocalModelStatusPresenter.downloadProgressSummary(localModelStatusSnapshot())
+    LocalModelDownloadStatusPresenter.downloadProgressSummary(localModelStatusSnapshot())
   }
 
   func localModelStatusSummary(_ model: LocalModelSummary) -> String {

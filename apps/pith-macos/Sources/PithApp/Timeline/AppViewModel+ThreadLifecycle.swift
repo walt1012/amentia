@@ -7,18 +7,36 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard let requestToken = threadCreationCoordinator.begin() else {
+      return
+    }
+    let failureThreadID = selectedThreadID
+    let title = "Thread \(threads.count + 1)"
+
+    let task = Task {
+      defer {
+        threadCreationCoordinator.finish(requestToken)
+      }
       do {
-        let thread = try await runtimeBridge.startThread(title: "Thread \(threads.count + 1)")
+        let thread = try await runtimeBridge.startThread(title: title)
+        guard threadCreationCoordinator.isCurrent(requestToken) else {
+          return
+        }
         await applyCreatedThread(thread)
         announceFirstRequestReadyIfNeeded()
       } catch {
+        guard !Task.isCancelled,
+              threadCreationCoordinator.isCurrent(requestToken)
+        else {
+          return
+        }
         appendEntry(
-          to: selectedThreadID,
+          to: failureThreadID,
           TimelineEventPresenter.threadCreationFailed(error: error)
         )
       }
     }
+    threadCreationCoordinator.bind(task: task, token: requestToken)
   }
 
   func selectThread(id: String?) {
@@ -31,13 +49,35 @@ extension AppViewModel {
           let threadID = id,
           !threadID.hasPrefix("local-")
     else {
+      threadHistoryLoadCoordinator.cancel()
       return
     }
 
-    Task {
-      await loadThreadHistory(threadID: threadID)
-      announceFirstRequestReadyIfNeeded()
+    let requestToken = threadHistoryLoadCoordinator.begin(threadID: threadID)
+    let task = Task {
+      defer {
+        threadHistoryLoadCoordinator.finish(requestToken)
+      }
+      do {
+        let result = try await runtimeBridge.readThread(threadID: requestToken.threadID)
+        guard threadHistoryLoadCoordinator.isCurrent(requestToken) else {
+          return
+        }
+        applyLoadedThreadHistory(result)
+        announceFirstRequestReadyIfNeeded()
+      } catch {
+        guard !Task.isCancelled,
+              threadHistoryLoadCoordinator.isCurrent(requestToken)
+        else {
+          return
+        }
+        appendEntry(
+          to: requestToken.threadID,
+          TimelineEventPresenter.threadLoadFailed(error: error)
+        )
+      }
     }
+    threadHistoryLoadCoordinator.bind(task: task, token: requestToken)
   }
 
   func refreshWorkspaceThreadSelection(
@@ -115,15 +155,7 @@ extension AppViewModel {
   func loadThreadHistory(threadID: String) async {
     do {
       let result = try await runtimeBridge.readThread(threadID: threadID)
-      let entries = TimelineEntryFactory.runtimeEntries(
-        from: result.items,
-        existingEntries: timelineState.threadTimelines[threadID],
-        fallbackTitle: threadTitle(for: threadID)
-      )
-      applyThreadEntries(threadID: threadID, entries: entries)
-      updatePendingApprovals(threadID: threadID, approvals: result.pendingApprovals)
-      updateActiveTurn(threadID: threadID, activeTurnID: result.activeTurnID)
-      refreshThreadPreview(threadID: threadID, preview: result.status)
+      applyLoadedThreadHistory(result)
     } catch {
       appendEntry(
         to: threadID,
@@ -162,6 +194,18 @@ extension AppViewModel {
     )
   }
 
+  private func applyLoadedThreadHistory(_ result: RuntimeBridge.RuntimeThreadState) {
+    let entries = TimelineEntryFactory.runtimeEntries(
+      from: result.items,
+      existingEntries: timelineState.threadTimelines[result.id],
+      fallbackTitle: threadTitle(for: result.id)
+    )
+    applyThreadEntries(threadID: result.id, entries: entries)
+    updatePendingApprovals(threadID: result.id, approvals: result.pendingApprovals)
+    updateActiveTurn(threadID: result.id, activeTurnID: result.activeTurnID)
+    refreshThreadPreview(threadID: result.id, preview: result.status)
+  }
+
   private func applyWorkspaceThreadSelection(_ workspaceThreads: [ThreadSummary]) {
     updateTimelineState { state in
       state.applyWorkspaceThreads(workspaceThreads)
@@ -176,5 +220,73 @@ extension AppViewModel {
 
   private func threadTitle(for threadID: String) -> String {
     timelineState.threadTitle(for: threadID)
+  }
+}
+
+struct ThreadCreationRequestToken: Equatable {
+  fileprivate let id: UUID
+}
+
+final class ThreadCreationCoordinator {
+  private let taskSlot = CancellableTaskSlot()
+
+  var isCreating: Bool {
+    taskSlot.isActive
+  }
+
+  func begin() -> ThreadCreationRequestToken? {
+    guard let requestID = taskSlot.begin() else {
+      return nil
+    }
+
+    return ThreadCreationRequestToken(id: requestID)
+  }
+
+  func bind(task: Task<Void, Never>, token: ThreadCreationRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: ThreadCreationRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: ThreadCreationRequestToken) {
+    taskSlot.finish(token.id)
+  }
+
+  func cancel() {
+    taskSlot.cancel()
+  }
+}
+
+struct ThreadHistoryLoadRequestToken: Equatable {
+  fileprivate let id: UUID
+  let threadID: String
+}
+
+final class ThreadHistoryLoadCoordinator {
+  private let taskSlot = CancellableTaskSlot()
+
+  func begin(threadID: String) -> ThreadHistoryLoadRequestToken {
+    ThreadHistoryLoadRequestToken(
+      id: taskSlot.replace(),
+      threadID: threadID
+    )
+  }
+
+  func bind(task: Task<Void, Never>, token: ThreadHistoryLoadRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: ThreadHistoryLoadRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: ThreadHistoryLoadRequestToken) {
+    taskSlot.finish(token.id)
+  }
+
+  func cancel() {
+    taskSlot.cancel()
   }
 }

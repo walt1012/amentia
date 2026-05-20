@@ -1,5 +1,17 @@
 import Foundation
 
+struct WorkspaceSummary: Hashable {
+  let rootPath: String
+  let displayName: String
+}
+
+struct WorkspaceSearchMatchSummary: Identifiable, Hashable {
+  let id: String
+  let relativePath: String
+  let lineNumber: Int
+  let line: String
+}
+
 struct WorkspaceSearchSnapshot {
   let runtimeState: RuntimeBridge.ConnectionState
   let hasWorkspace: Bool
@@ -9,6 +21,7 @@ struct WorkspaceSearchSnapshot {
 
 struct WorkspaceSearchRequestToken {
   let id: UUID
+  let runtimeRequestID: String
   let query: String
   let status: String
 }
@@ -32,6 +45,7 @@ struct WorkspaceSearchRuntimeState {
   }
 
   mutating func begin(_ token: WorkspaceSearchRequestToken) {
+    results = []
     isSearching = true
     status = token.status
   }
@@ -65,7 +79,9 @@ struct WorkspaceSearchRuntimeState {
 }
 
 final class WorkspaceSearchSession {
-  private var activeRequestID: UUID?
+  private let taskSlot = CancellableTaskSlot()
+  private var activeQuery: String?
+  private var activeRuntimeRequestID: String?
 
   static func trimmedQuery(_ query: String) -> String {
     query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -74,7 +90,6 @@ final class WorkspaceSearchSession {
   static func canSearch(_ snapshot: WorkspaceSearchSnapshot) -> Bool {
     snapshot.runtimeState == .ready
       && snapshot.hasWorkspace
-      && !snapshot.isSearching
       && !trimmedQuery(snapshot.query).isEmpty
   }
 
@@ -96,33 +111,64 @@ final class WorkspaceSearchSession {
   }
 
   func begin(query: String) -> WorkspaceSearchRequestToken {
-    let requestID = UUID()
-    activeRequestID = requestID
+    let requestID = taskSlot.replace()
+    let runtimeRequestID = requestID.uuidString
+    activeQuery = query
+    activeRuntimeRequestID = runtimeRequestID
     return WorkspaceSearchRequestToken(
       id: requestID,
+      runtimeRequestID: runtimeRequestID,
       query: query,
       status: "Searching for \"\(query)\"..."
     )
   }
 
-  func isCurrent(_ token: WorkspaceSearchRequestToken) -> Bool {
-    activeRequestID == token.id
+  func runtimeRequestIDForActiveSearch() -> String? {
+    activeRuntimeRequestID
   }
 
-  func finish() {
-    activeRequestID = nil
+  func canStart(query: String) -> Bool {
+    activeQuery != query
+  }
+
+  func bind(task: Task<Void, Never>, token: WorkspaceSearchRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: WorkspaceSearchRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: WorkspaceSearchRequestToken) {
+    guard isCurrent(token) else {
+      return
+    }
+
+    clearActiveSearch()
   }
 
   func resetStatus(hasWorkspace: Bool) -> String {
-    activeRequestID = nil
+    cancelActiveSearch()
     return hasWorkspace
       ? "Search the open workspace by text."
       : "Open a workspace before searching."
   }
 
   func changedQueryStatus() -> String {
-    activeRequestID = nil
+    clearActiveSearch()
     return "Query changed. Press Return to search again."
+  }
+
+  private func cancelActiveSearch() {
+    taskSlot.cancel()
+    activeQuery = nil
+    activeRuntimeRequestID = nil
+  }
+
+  private func clearActiveSearch() {
+    activeQuery = nil
+    activeRuntimeRequestID = nil
+    taskSlot.clear()
   }
 
   static func successStatus(query: String, matchCount: Int) -> String {

@@ -1,22 +1,6 @@
 import Foundation
 
 enum LocalModelDisplayPresenter {
-  static func sourceName(_ sourceURL: URL) -> String {
-    sourceName(host: sourceURL.host)
-  }
-
-  static func sourceName(_ sourceURLString: String) -> String {
-    sourceName(host: URL(string: sourceURLString)?.host)
-  }
-
-  static func firstUseMetadata(_ model: LocalModelSummary) -> String {
-    if model.downloaded {
-      return "Ready locally. Use this model without another download."
-    }
-
-    return "Source: \(sourceName(model.homepage))"
-  }
-
   static func firstUseFit(_ model: LocalModelSummary, defaultModelID: String) -> String {
     if model.id == defaultModelID {
       return "Default path: fastest first setup and the lightest local loop."
@@ -28,16 +12,12 @@ enum LocalModelDisplayPresenter {
 
     return "Catalog candidate: lightweight, local, and verified before activation."
   }
+}
 
-  private static func sourceName(host: String?) -> String {
-    guard let host else {
-      return "open-source catalog"
-    }
-
-    if host == "huggingface.co" {
-      return "Hugging Face"
-    }
-
-    return host
+enum LocalModelByteFormatter {
+  static func string(_ byteCount: Int64) -> String {
+    let formatter = ByteCountFormatter()
+    formatter.countStyle = .file
+    return formatter.string(fromByteCount: byteCount)
   }
 }

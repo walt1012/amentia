@@ -16,11 +16,6 @@ struct PreparedDraftTurn {
   let message: String
 }
 
-enum RuntimePrimaryAction {
-  case launchRuntime
-  case cancelTurn
-}
-
 enum SessionActionPlanner {
   static func runtimeLaunchButtonTitle(_ snapshot: SessionActionSnapshot) -> String {
     switch snapshot.runtimeState {
@@ -33,49 +28,12 @@ enum SessionActionPlanner {
     }
   }
 
-  static func shouldShowRuntimeToolbarAction(_ snapshot: SessionActionSnapshot) -> Bool {
-    snapshot.runtimeState == .disconnected || snapshot.runtimeState == .failed
+  static func runtimePrimaryActionTitle(_ snapshot: SessionActionSnapshot) -> String? {
+    canCancelActiveTurn(snapshot) ? "Cancel Execution" : nil
   }
 
-  static func runtimePrimaryAction(_ snapshot: SessionActionSnapshot) -> RuntimePrimaryAction? {
-    switch snapshot.runtimeState {
-    case .disconnected, .failed, .launching:
-      return .launchRuntime
-    case .ready:
-      return snapshot.hasCancelableTurn ? .cancelTurn : nil
-    }
-  }
-
-  static func runtimePrimaryActionTitle(
-    for action: RuntimePrimaryAction?,
-    snapshot: SessionActionSnapshot
-  ) -> String? {
-    guard let action else {
-      return nil
-    }
-
-    switch action {
-    case .launchRuntime:
-      return runtimeLaunchButtonTitle(snapshot)
-    case .cancelTurn:
-      return "Cancel Turn"
-    }
-  }
-
-  static func canRunRuntimePrimaryAction(
-    _ action: RuntimePrimaryAction?,
-    snapshot: SessionActionSnapshot
-  ) -> Bool {
-    guard let action else {
-      return false
-    }
-
-    switch action {
-    case .launchRuntime:
-      return canLaunchRuntime(snapshot)
-    case .cancelTurn:
-      return canCancelActiveTurn(snapshot)
-    }
+  static func canRunRuntimePrimaryAction(_ snapshot: SessionActionSnapshot) -> Bool {
+    canCancelActiveTurn(snapshot)
   }
 
   static func canLaunchRuntime(_ snapshot: SessionActionSnapshot) -> Bool {

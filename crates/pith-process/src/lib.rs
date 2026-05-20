@@ -74,7 +74,15 @@ where
   let started_at = Instant::now();
 
   loop {
-    if let Some(status) = child.try_wait()? {
+    let child_status = match child.try_wait() {
+      Ok(status) => status,
+      Err(error) => {
+        terminate_process_group_or_child(child, termination_grace_period);
+        return Err(error);
+      }
+    };
+
+    if let Some(status) = child_status {
       return Ok(ChildWaitResult {
         status,
         reason: ChildExitReason::Completed,
@@ -105,15 +113,7 @@ where
 pub fn configure_process_group(process: &mut Command) {
   use std::os::unix::process::CommandExt;
 
-  unsafe {
-    process.pre_exec(|| {
-      if setpgid(0, 0) == 0 {
-        Ok(())
-      } else {
-        Err(std::io::Error::last_os_error())
-      }
-    });
-  }
+  process.process_group(0);
 }
 
 #[cfg(not(unix))]
@@ -134,15 +134,20 @@ pub fn terminate_process_group_or_child(child: &mut Child, grace_period: Duratio
 #[cfg(unix)]
 fn terminate_unix_process_group(child: &mut Child, grace_period: Duration) {
   let process_group_id = -(child.id() as i32);
-  unsafe {
-    kill(process_group_id, SIGTERM);
+  if !send_unix_signal(process_group_id, SIGTERM) {
+    let _ = child.kill();
   }
+
   thread::sleep(grace_period);
-  if matches!(child.try_wait(), Ok(None)) {
-    unsafe {
-      kill(process_group_id, SIGKILL);
-    }
+
+  if matches!(child.try_wait(), Ok(None)) && !send_unix_signal(process_group_id, SIGKILL) {
+    let _ = child.kill();
   }
+}
+
+#[cfg(unix)]
+fn send_unix_signal(pid: i32, signal: i32) -> bool {
+  unsafe { kill(pid, signal) == 0 }
 }
 
 #[cfg(unix)]
@@ -153,7 +158,6 @@ const SIGKILL: i32 = 9;
 #[cfg(unix)]
 extern "C" {
   fn kill(pid: i32, sig: i32) -> i32;
-  fn setpgid(pid: i32, pgid: i32) -> i32;
 }
 
 #[cfg(test)]

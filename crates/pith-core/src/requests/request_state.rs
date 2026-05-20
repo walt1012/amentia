@@ -8,6 +8,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::intent_inference;
+use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
 use crate::plugin_hooks::PluginHookMemoryCapture;
 
 #[derive(Debug)]
@@ -60,6 +61,14 @@ pub(crate) enum PreparedTurnAction {
     command: String,
     approval_id: Option<String>,
   },
+  PluginCommand {
+    snapshot: Box<PluginCommandSnapshot>,
+  },
+  PluginCommandRouteFailed {
+    command_id: String,
+    message: String,
+    attributes: HashMap<String, String>,
+  },
   ReadFile {
     relative_path: String,
   },
@@ -67,6 +76,7 @@ pub(crate) enum PreparedTurnAction {
     query: String,
   },
   WebSearch(intent_inference::WebSearchIntent),
+  WebSearchCandidate(intent_inference::WebSearchIntent),
   ListWorkspace,
 }
 
@@ -77,6 +87,7 @@ pub(crate) struct TurnStartExecutionOutput {
   pub(crate) items: Vec<TimelineItem>,
   pub(crate) pending_approval: Option<PendingApproval>,
   pub(crate) pending_active_turn: Option<ActiveTurn>,
+  pub(crate) plugin_command_output: Option<PluginCommandOutput>,
 }
 
 #[derive(Debug)]
@@ -85,9 +96,11 @@ pub(crate) struct PreparedApprovalSnapshot {
   pub(crate) decision: String,
   pub(crate) workspace: WorkspaceSummary,
   pub(crate) model_runtime: LocalModelRuntime,
+  pub(crate) cancellation: GenerationCancellation,
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
   pub(crate) plugins: Vec<PluginCatalogEntry>,
+  pub(crate) approved_plugin_command: Option<PluginCommandSnapshot>,
 }
 
 #[derive(Debug)]
@@ -98,4 +111,5 @@ pub(crate) struct ApprovalExecutionOutput {
   pub(crate) items: Vec<TimelineItem>,
   pub(crate) memory_event: Option<MemoryEvent>,
   pub(crate) hook_memory_captures: Vec<PluginHookMemoryCapture>,
+  pub(crate) approved_plugin_command_output: Option<PluginCommandOutput>,
 }

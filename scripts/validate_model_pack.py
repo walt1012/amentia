@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 
@@ -60,9 +64,11 @@ CATALOG_INVARIANT_KEYS = {
   "maxOutputTokens",
   "license",
 }
+REMOTE_METADATA_TIMEOUT_SECONDS = 30
 
 
 def main() -> int:
+  args = parse_args()
   if not MANIFEST_PATH.is_file():
     raise SystemExit(f"model manifest missing: {MANIFEST_PATH}")
   if not README_PATH.is_file():
@@ -86,6 +92,8 @@ def main() -> int:
 
   swift_catalog_entries = load_swift_catalog_entries()
   validate_swift_catalog_entries(swift_catalog_entries)
+  if args.remote:
+    validate_remote_catalog_entries(swift_catalog_entries)
   swift_catalog = next(
     entry for entry in swift_catalog_entries
     if entry["id"] == "lfm2.5-350m"
@@ -113,7 +121,24 @@ def main() -> int:
     )
 
   print("model pack manifest is valid")
+  if args.remote:
+    print("remote model catalog metadata is valid")
   return 0
+
+
+def parse_args() -> argparse.Namespace:
+  parser = argparse.ArgumentParser(
+    description="Validate local model manifests and Swift catalog metadata."
+  )
+  parser.add_argument(
+    "--remote",
+    action="store_true",
+    help=(
+      "Check Hugging Face HEAD/API metadata for size, checksum, and license. "
+      "This is intended for release audits, not mandatory CI."
+    ),
+  )
+  return parser.parse_args()
 
 
 def load_swift_catalog_entries() -> list[dict[str, object]]:
@@ -213,6 +238,130 @@ def validate_swift_catalog_entries(entries: list[dict[str, object]]) -> None:
       raise SystemExit(
         f"Swift model catalog {model_id} maxOutputTokens must not exceed contextSize"
       )
+
+
+def validate_remote_catalog_entries(entries: list[dict[str, object]]) -> None:
+  for entry in entries:
+    model_id = str(entry["id"])
+    headers = remote_download_headers(str(entry["downloadURL"]), model_id)
+    validate_remote_download_metadata(entry, headers)
+    validate_remote_license_metadata(entry)
+
+
+def remote_download_headers(
+  download_url: str,
+  model_id: str,
+) -> urllib.response.addinfourl:
+  request = urllib.request.Request(
+    download_url,
+    method="HEAD",
+    headers={"User-Agent": "pith-model-audit"},
+  )
+  opener = urllib.request.build_opener(NoRedirectHandler)
+  try:
+    return opener.open(request, timeout=REMOTE_METADATA_TIMEOUT_SECONDS).headers
+  except urllib.error.HTTPError as error:
+    if error.code in {301, 302, 303, 307, 308}:
+      return error.headers
+    raise SystemExit(
+      f"remote model catalog {model_id} download metadata failed: HTTP {error.code}"
+    ) from error
+  except urllib.error.URLError as error:
+    raise SystemExit(
+      f"remote model catalog {model_id} download metadata failed: {error.reason}"
+    ) from error
+
+
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+  def redirect_request(self, req, fp, code, msg, headers, newurl):
+    return None
+
+
+def validate_remote_download_metadata(
+  entry: dict[str, object],
+  headers: urllib.response.addinfourl,
+) -> None:
+  model_id = str(entry["id"])
+  linked_size = headers.get("X-Linked-Size")
+  linked_etag = headers.get("X-Linked-ETag")
+
+  if not linked_size:
+    raise SystemExit(f"remote model catalog {model_id} missing X-Linked-Size")
+  if not linked_etag:
+    raise SystemExit(f"remote model catalog {model_id} missing X-Linked-ETag")
+
+  try:
+    remote_size = int(linked_size)
+  except ValueError as error:
+    raise SystemExit(
+      f"remote model catalog {model_id} X-Linked-Size is invalid: {linked_size}"
+    ) from error
+  if remote_size != int(entry["sizeBytes"]):
+    raise SystemExit(
+      f"remote model catalog {model_id} size mismatch: "
+      f"{remote_size} != {entry['sizeBytes']}"
+    )
+
+  remote_sha256 = linked_etag.strip().strip('"').lower()
+  if remote_sha256 != str(entry["sha256"]):
+    raise SystemExit(
+      f"remote model catalog {model_id} checksum mismatch: "
+      f"{remote_sha256} != {entry['sha256']}"
+    )
+
+
+def validate_remote_license_metadata(entry: dict[str, object]) -> None:
+  model_id = str(entry["id"])
+  repo_id = hugging_face_repo_id(str(entry["homepage"]))
+  api_url = f"https://huggingface.co/api/models/{repo_id}"
+  data = remote_json(api_url, model_id)
+  card_data = data.get("cardData") or {}
+  tags = data.get("tags") or []
+  catalog_license = str(entry["license"]).lower()
+  remote_license_values = {
+    str(card_data.get("license", "")).lower(),
+    str(card_data.get("license_name", "")).lower(),
+  }
+  remote_license_values.update(
+    tag.removeprefix("license:").lower()
+    for tag in tags
+    if isinstance(tag, str) and tag.startswith("license:")
+  )
+
+  if catalog_license not in remote_license_values:
+    raise SystemExit(
+      f"remote model catalog {model_id} license mismatch: "
+      f"{catalog_license} not in {sorted(remote_license_values)}"
+    )
+
+
+def hugging_face_repo_id(homepage: str) -> str:
+  parsed = urllib.parse.urlparse(homepage)
+  path_parts = [part for part in parsed.path.split("/") if part]
+  if parsed.netloc != "huggingface.co" or len(path_parts) < 2:
+    raise SystemExit(f"unsupported Hugging Face homepage: {homepage}")
+  return "/".join(path_parts[:2])
+
+
+def remote_json(api_url: str, model_id: str) -> dict[str, object]:
+  request = urllib.request.Request(
+    api_url,
+    headers={"User-Agent": "pith-model-audit"},
+  )
+  try:
+    with urllib.request.urlopen(
+      request,
+      timeout=REMOTE_METADATA_TIMEOUT_SECONDS,
+    ) as response:
+      return json.loads(response.read().decode("utf-8"))
+  except urllib.error.HTTPError as error:
+    raise SystemExit(
+      f"remote model catalog {model_id} API metadata failed: HTTP {error.code}"
+    ) from error
+  except urllib.error.URLError as error:
+    raise SystemExit(
+      f"remote model catalog {model_id} API metadata failed: {error.reason}"
+    ) from error
 
 
 if __name__ == "__main__":

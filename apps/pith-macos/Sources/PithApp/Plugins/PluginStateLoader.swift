@@ -1,71 +1,70 @@
 import Foundation
 
-struct PluginStateRefresh {
-  let plugins: [PluginSummary]?
-  let registrySummary: PluginCapabilityRegistrySummary?
-  let capabilities: [PluginCapabilitySummary]?
-  let connectors: [PluginConnectorSummary]?
-  let commands: [PluginCommandSummary]?
-  let hooks: [PluginHookSummary]?
-}
-
-struct PluginRuntimeState {
-  var plugins: [PluginSummary]
-  var registrySummary: PluginCapabilityRegistrySummary?
-  var capabilities: [PluginCapabilitySummary]
-  var connectors: [PluginConnectorSummary]
-  var commands: [PluginCommandSummary]
-  var hooks: [PluginHookSummary]
-
-  init(
-    plugins: [PluginSummary] = [],
-    registrySummary: PluginCapabilityRegistrySummary? = nil,
-    capabilities: [PluginCapabilitySummary] = [],
-    connectors: [PluginConnectorSummary] = [],
-    commands: [PluginCommandSummary] = [],
-    hooks: [PluginHookSummary] = []
-  ) {
-    self.plugins = plugins
-    self.registrySummary = registrySummary
-    self.capabilities = capabilities
-    self.connectors = connectors
-    self.commands = commands
-    self.hooks = hooks
-  }
-
-  mutating func apply(_ refresh: PluginStateRefresh) {
-    if let plugins = refresh.plugins {
-      self.plugins = plugins
-    }
-    if let registrySummary = refresh.registrySummary {
-      self.registrySummary = registrySummary
-    }
-    if let capabilities = refresh.capabilities {
-      self.capabilities = capabilities
-    }
-    if let connectors = refresh.connectors {
-      self.connectors = connectors
-    }
-    if let commands = refresh.commands {
-      self.commands = commands
-    }
-    if let hooks = refresh.hooks {
-      self.hooks = hooks
-    }
-  }
-
-  mutating func reset() {
-    self = PluginRuntimeState()
-  }
-}
-
 enum PluginStateLoader {
   static func refresh(using runtimeBridge: RuntimeBridge) async -> PluginStateRefresh {
-    let runtimePlugins = try? await runtimeBridge.listPlugins()
-    let runtimeRegistry = try? await runtimeBridge.pluginCapabilityRegistry()
-    let runtimeCommands = try? await runtimeBridge.listPluginCommands()
-    let runtimeConnectors = try? await runtimeBridge.listPluginConnectors()
-    let runtimeHooks = try? await runtimeBridge.listPluginHooks()
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+
+    let catalogRefresh = await load("catalog refresh") {
+      try await runtimeBridge.refreshPluginCatalog()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+    let pluginLoad: (
+      value: [RuntimeBridge.RuntimePlugin]?,
+      diagnostic: String?,
+      recoveryAttributes: [String: String]
+    )
+    if let refresh = catalogRefresh.value {
+      pluginLoad = (
+        refresh.plugins,
+        refresh.stateWarning.map { "catalog state: \($0)" },
+        [:]
+      )
+    } else {
+      pluginLoad = await load("catalog") {
+        try await runtimeBridge.listPlugins()
+      }
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+    let registryLoad = await load("capability registry") {
+      try await runtimeBridge.pluginCapabilityRegistry()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+    let commandLoad = await load("command registry") {
+      try await runtimeBridge.listPluginCommands()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+    let connectorLoad = await load("connector registry") {
+      try await runtimeBridge.listPluginConnectors()
+    }
+    guard !Task.isCancelled else {
+      return emptyRefresh()
+    }
+    let hookLoad = await load("hook registry") {
+      try await runtimeBridge.listPluginHooks()
+    }
+    let runtimePlugins = pluginLoad.value
+    let runtimeRegistry = registryLoad.value
+    let runtimeCommands = commandLoad.value
+    let runtimeConnectors = connectorLoad.value
+    let runtimeHooks = hookLoad.value
+    let diagnostics = [
+      catalogRefresh.diagnostic,
+      pluginLoad.diagnostic,
+      registryLoad.diagnostic,
+      commandLoad.diagnostic,
+      connectorLoad.diagnostic,
+      hookLoad.diagnostic,
+    ].compactMap { $0 }
 
     let plugins = runtimePlugins.map { plugins in
       plugins.map { RuntimeSummaryMapper.pluginSummary(from: $0) }
@@ -78,8 +77,59 @@ enum PluginStateLoader {
       capabilities: registryState.capabilities,
       connectors: mappedConnectors(runtimeConnectors, pluginsLoaded: runtimePlugins != nil),
       commands: mappedCommands(runtimeCommands, pluginsLoaded: runtimePlugins != nil),
-      hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil)
+      hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil),
+      diagnostics: diagnostics,
+      refreshRecoveryAttributes: catalogRefresh.recoveryAttributes
     )
+  }
+
+  private static func load<T>(
+    _ label: String,
+    operation: () async throws -> T
+  ) async -> (value: T?, diagnostic: String?, recoveryAttributes: [String: String]) {
+    guard !Task.isCancelled else {
+      return (nil, nil, [:])
+    }
+
+    do {
+      let value = try await operation()
+      guard !Task.isCancelled else {
+        return (nil, nil, [:])
+      }
+      return (value, nil, [:])
+    } catch is CancellationError {
+      return (nil, nil, [:])
+    } catch {
+      guard !Task.isCancelled else {
+        return (nil, nil, [:])
+      }
+      return (
+        nil,
+        "\(label): \(error.localizedDescription)",
+        runtimeRecoveryAttributes(from: error)
+      )
+    }
+  }
+
+  private static func emptyRefresh() -> PluginStateRefresh {
+    PluginStateRefresh(
+      plugins: nil,
+      registrySummary: nil,
+      capabilities: nil,
+      connectors: nil,
+      commands: nil,
+      hooks: nil,
+      diagnostics: [],
+      refreshRecoveryAttributes: [:]
+    )
+  }
+
+  private static func runtimeRecoveryAttributes(from error: Error) -> [String: String] {
+    guard let runtimeError = error as? RuntimeBridge.RuntimeError else {
+      return [:]
+    }
+
+    return runtimeError.recoveryAttributes
   }
 
   private static func buildRegistryState(

@@ -1,12 +1,12 @@
 import Foundation
 
-enum LocalModelDownloadCompletionMode {
+enum LocalModelDownloadCompletionMode: Sendable {
   case downloadedOnly
   case activated
   case waitingForTurn
 }
 
-struct LocalModelDownloadCompletionPlan {
+struct LocalModelDownloadCompletionPlan: Sendable {
   let mode: LocalModelDownloadCompletionMode
   let runtimeDetail: String
   let timelineBody: String
@@ -80,7 +80,7 @@ enum LocalModelDownloadCompletionPlanner {
   }
 }
 
-struct LocalModelDownloadFinalizationPlan {
+struct LocalModelDownloadFinalizationPlan: Sendable {
   let canActivateNow: Bool
   let preparedActivation: PreparedLocalModelActivation?
 
@@ -93,9 +93,12 @@ enum LocalModelDownloadFinalizer {
   static func prepare(
     model: LocalModelSummary,
     activationRequested: Bool,
-    hasActiveOrPendingTurn: Bool
+    hasActiveOrPendingTurn: Bool,
+    validatesDownloadedModel: Bool = true
   ) throws -> LocalModelDownloadFinalizationPlan {
-    try LocalModelActivationPreparer.validateDownloadedModel(model)
+    if validatesDownloadedModel {
+      try LocalModelActivationPreparer.validateDownloadedModel(model)
+    }
 
     let canActivateNow = !hasActiveOrPendingTurn
     guard activationRequested && canActivateNow else {

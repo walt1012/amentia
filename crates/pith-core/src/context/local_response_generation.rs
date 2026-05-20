@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use pith_model_runtime::{GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole};
 
-use crate::context_compaction::{merge_observation_attributes, PromptObservation};
+use crate::context_compaction::{
+  compact_generation_prompt, merge_generation_prompt_attributes, merge_observation_attributes,
+  PromptObservation,
+};
 use crate::context_memory_pack::{merge_memory_context_attributes, MemoryContextPack};
 
 pub(super) fn generate_local_summary(
@@ -13,9 +16,13 @@ pub(super) fn generate_local_summary(
   observation: Option<&PromptObservation>,
   cancellation: Option<&GenerationCancellation>,
 ) -> (String, HashMap<String, String>) {
+  let prompt = compact_generation_prompt(
+    &format!("{prompt}\nDeterministic observation:\n{observation_summary}"),
+    memory_context,
+  );
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Summarizer,
-    prompt: format!("{prompt}\nDeterministic observation:\n{observation_summary}"),
+    prompt: prompt.text.clone(),
     max_tokens: 160,
     cancellation: cancellation.cloned(),
   });
@@ -26,6 +33,7 @@ pub(super) fn generate_local_summary(
     ("modelStatus".to_string(), result.status),
   ]);
   merge_memory_context_attributes(&mut attributes, memory_context);
+  merge_generation_prompt_attributes(&mut attributes, &prompt);
   if let Some(observation) = observation {
     merge_observation_attributes(&mut attributes, observation);
   }

@@ -1,89 +1,25 @@
 import AppKit
 import SwiftUI
 
-struct DiffDetailView: View {
-  let summary: String
-  let lines: [DiffLineSummary]
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(summary)
-        .font(.caption.weight(.semibold))
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
-
-      ScrollView(.horizontal) {
-        VStack(alignment: .leading, spacing: 2) {
-          ForEach(lines) { line in
-            DiffLineRow(line: line)
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
-}
-
-private struct DiffLineRow: View {
-  let line: DiffLineSummary
-
-  var body: some View {
-    HStack(alignment: .top, spacing: 8) {
-      Text("\(line.lineNumber)")
-        .font(.system(.caption2, design: .monospaced))
-        .foregroundColor(.secondary)
-        .frame(width: 34, alignment: .trailing)
-
-      Text(line.text.isEmpty ? " " : line.text)
-        .font(.system(.caption, design: .monospaced))
-        .foregroundColor(foregroundColor)
-        .textSelection(.enabled)
-    }
-    .padding(.vertical, 2)
-    .padding(.horizontal, 6)
-    .background(backgroundColor)
-    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-  }
-
-  private var foregroundColor: Color {
-    switch line.kind {
-    case .addition:
-      return .green
-    case .deletion:
-      return .red
-    case .hunk:
-      return .blue
-    case .metadata:
-      return .secondary
-    case .context:
-      return .primary
-    }
-  }
-
-  private var backgroundColor: Color {
-    switch line.kind {
-    case .addition:
-      return Color.green.opacity(0.10)
-    case .deletion:
-      return Color.red.opacity(0.10)
-    case .hunk:
-      return Color.blue.opacity(0.10)
-    case .metadata:
-      return Color.secondary.opacity(0.08)
-    case .context:
-      return Color.clear
-    }
-  }
-}
-
 struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
   let showsApprovalActions: Bool
+  let showsPluginEnableAction: Bool
+  let showsPluginAuthorizeAction: Bool
+  let showsPluginInputAction: Bool
+  let showsPluginRetryAction: Bool
+  let showsPluginSourceAction: Bool
+  let showsPluginRefreshAction: Bool
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
+  let onEnablePlugin: () -> Void
+  let onAuthorizePluginConnector: () -> Void
+  let onRunPluginCommandWithInput: () -> Void
+  let onRetry: () -> Void
+  let onRevealPluginSource: () -> Void
+  let onRefreshPlugins: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -133,17 +69,61 @@ struct TimelineCard: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
-      if showsApprovalActions {
+      if showsActionRow {
         HStack(spacing: 12) {
-          Button("Approve") {
-            onApprove()
-          }
-          .buttonStyle(.borderedProminent)
+          if showsApprovalActions {
+            Button("Approve") {
+              onApprove()
+            }
+            .buttonStyle(.borderedProminent)
 
-          Button("Deny") {
-            onDeny()
+            Button("Deny") {
+              onDeny()
+            }
+            .buttonStyle(.bordered)
           }
-          .buttonStyle(.bordered)
+
+          if showsPluginEnableAction {
+            Button("Enable Plugin") {
+              onEnablePlugin()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
+          if showsPluginAuthorizeAction {
+            Button("Authorize Connector") {
+              onAuthorizePluginConnector()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
+          if showsPluginInputAction {
+            Button("Run with Input") {
+              onRunPluginCommandWithInput()
+            }
+            .buttonStyle(.bordered)
+          }
+
+          if showsPluginRetryAction {
+            Button(pluginRetryTitle) {
+              onRetry()
+            }
+            .buttonStyle(.bordered)
+          }
+
+          if showsPluginSourceAction {
+            Button("Reveal Source") {
+              onRevealPluginSource()
+            }
+            .buttonStyle(.bordered)
+          }
+
+          if showsPluginRefreshAction {
+            Button("Refresh Plugins") {
+              onRefreshPlugins()
+            }
+            .buttonStyle(.bordered)
+          }
         }
         .padding(.top, 4)
       }
@@ -177,6 +157,24 @@ struct TimelineCard: View {
     default:
       return Color(NSColor.controlBackgroundColor)
     }
+  }
+
+  private var showsActionRow: Bool {
+    showsApprovalActions
+      || showsPluginEnableAction
+      || showsPluginAuthorizeAction
+      || showsPluginInputAction
+      || showsPluginRetryAction
+      || showsPluginSourceAction
+      || showsPluginRefreshAction
+  }
+
+  private var pluginRetryTitle: String {
+    if entry.attributes["commandInput"] != nil {
+      return "Retry with Input"
+    }
+
+    return "Retry"
   }
 
   private var kindLabel: String {

@@ -3,44 +3,97 @@ use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 
-use crate::bounded_file::read_text_prefix;
+use crate::bounded_file::read_text_prefix_with_cancellation;
 use crate::paths::{
   canonical_workspace_root, relative_path_string, resolve_workspace_path, sanitize_relative_path,
   validate_workspace_write_parent, validate_workspace_write_target,
 };
 use crate::types::{DirectoryEntry, ReadFileResult};
 
+const LIST_DIRECTORY_MAX_SCANNED_ENTRIES: usize = 5_000;
+const WRITE_FILE_MAX_BYTES: usize = 1024 * 1024;
+
+pub fn list_directory_max_scanned_entries() -> usize {
+  LIST_DIRECTORY_MAX_SCANNED_ENTRIES
+}
+
+pub fn write_file_max_bytes() -> usize {
+  WRITE_FILE_MAX_BYTES
+}
+
 pub fn list_directory(
   workspace_root: &Path,
   relative_path: Option<&str>,
   limit: usize,
 ) -> Result<Vec<DirectoryEntry>> {
+  list_directory_with_cancellation(workspace_root, relative_path, limit, || false)
+}
+
+pub fn list_directory_with_cancellation<F>(
+  workspace_root: &Path,
+  relative_path: Option<&str>,
+  limit: usize,
+  is_cancelled: F,
+) -> Result<Vec<DirectoryEntry>>
+where
+  F: Fn() -> bool,
+{
+  list_directory_with_entry_limit(
+    workspace_root,
+    relative_path,
+    limit,
+    LIST_DIRECTORY_MAX_SCANNED_ENTRIES,
+    is_cancelled,
+  )
+}
+
+fn list_directory_with_entry_limit<F>(
+  workspace_root: &Path,
+  relative_path: Option<&str>,
+  limit: usize,
+  max_scanned_entries: usize,
+  is_cancelled: F,
+) -> Result<Vec<DirectoryEntry>>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("directory listing cancelled");
+  }
   let target = resolve_workspace_path(workspace_root, relative_path.unwrap_or("."), true)?;
   let workspace_root = canonical_workspace_root(workspace_root)?;
 
-  let mut entries = fs::read_dir(&target)
+  let mut entries = Vec::new();
+  for (scanned_entries, entry) in fs::read_dir(&target)
     .with_context(|| format!("failed to read directory {}", target.display()))?
     .filter_map(|entry| entry.ok())
-    .map(|entry| {
-      let path = entry.path();
-      let metadata = fs::symlink_metadata(&path)
-        .with_context(|| format!("failed to read metadata for {}", path.display()))?;
-      let entry_type = if metadata.file_type().is_symlink() {
-        "symlink"
-      } else if metadata.is_dir() {
-        "directory"
-      } else {
-        "file"
-      };
-      let relative_path = relative_path_string(&workspace_root, &path)?;
+    .enumerate()
+  {
+    if is_cancelled() {
+      bail!("directory listing cancelled");
+    }
+    if scanned_entries >= max_scanned_entries {
+      bail!("directory listing scanned too many entries; open a narrower folder");
+    }
 
-      Ok(DirectoryEntry {
-        name: entry.file_name().to_string_lossy().into_owned(),
-        relative_path,
-        entry_type: entry_type.to_string(),
-      })
-    })
-    .collect::<Result<Vec<_>>>()?;
+    let path = entry.path();
+    let metadata = fs::symlink_metadata(&path)
+      .with_context(|| format!("failed to read metadata for {}", path.display()))?;
+    let entry_type = if metadata.file_type().is_symlink() {
+      "symlink"
+    } else if metadata.is_dir() {
+      "directory"
+    } else {
+      "file"
+    };
+    let relative_path = relative_path_string(&workspace_root, &path)?;
+
+    entries.push(DirectoryEntry {
+      name: entry.file_name().to_string_lossy().into_owned(),
+      relative_path,
+      entry_type: entry_type.to_string(),
+    });
+  }
 
   entries.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
   if entries.len() > limit {
@@ -55,9 +108,29 @@ pub fn read_file(
   relative_path: &str,
   max_bytes: usize,
 ) -> Result<ReadFileResult> {
+  read_file_with_cancellation(workspace_root, relative_path, max_bytes, || false)
+}
+
+pub fn read_file_with_cancellation<F>(
+  workspace_root: &Path,
+  relative_path: &str,
+  max_bytes: usize,
+  is_cancelled: F,
+) -> Result<ReadFileResult>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("file read cancelled");
+  }
   let target = resolve_workspace_path(workspace_root, relative_path, false)?;
   let workspace_root = canonical_workspace_root(workspace_root)?;
-  let preview = read_text_prefix(&target, max_bytes)?;
+  let metadata = fs::metadata(&target)
+    .with_context(|| format!("failed to read metadata for {}", target.display()))?;
+  if !metadata.is_file() {
+    bail!("workspace path is not a regular file");
+  }
+  let preview = read_text_prefix_with_cancellation(&target, max_bytes, &is_cancelled)?;
 
   Ok(ReadFileResult {
     relative_path: relative_path_string(&workspace_root, &target)?,
@@ -67,6 +140,10 @@ pub fn read_file(
 }
 
 pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> Result<String> {
+  if content.len() > WRITE_FILE_MAX_BYTES {
+    bail!("workspace write content exceeds the maximum allowed size");
+  }
+
   let workspace_root = canonical_workspace_root(workspace_root)?;
   let sanitized_relative_path = sanitize_relative_path(relative_path)?;
   let target = workspace_root.join(&sanitized_relative_path);
@@ -194,6 +271,38 @@ mod tests {
   }
 
   #[test]
+  fn list_directory_stops_when_cancelled() {
+    let workspace = unique_temp_workspace("list-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("inside.txt"), "visible").expect("inside file");
+
+    let error =
+      list_directory_with_cancellation(&workspace, None, 10, || true).expect_err("cancelled");
+
+    assert!(error.to_string().contains("directory listing cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn list_directory_stops_at_entry_budget() {
+    let workspace = unique_temp_workspace("list-budget");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("one.txt"), "one").expect("one file");
+    fs::write(workspace.join("two.txt"), "two").expect("two file");
+    fs::write(workspace.join("three.txt"), "three").expect("three file");
+
+    let error =
+      list_directory_with_entry_limit(&workspace, None, 10, 2, || false).expect_err("entry budget");
+
+    assert!(error
+      .to_string()
+      .contains("directory listing scanned too many entries"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
   fn read_file_uses_bounded_preview() {
     let workspace = unique_temp_workspace("read-bounded");
     fs::create_dir_all(&workspace).expect("workspace");
@@ -203,6 +312,36 @@ mod tests {
 
     assert_eq!(result.content.len(), 128);
     assert!(result.is_truncated);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn read_file_stops_when_cancelled() {
+    let workspace = unique_temp_workspace("read-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("inside.txt"), "visible").expect("inside file");
+
+    let error =
+      read_file_with_cancellation(&workspace, "inside.txt", 128, || true).expect_err("cancelled");
+
+    assert!(error.to_string().contains("file read cancelled"));
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn write_file_rejects_large_payload() {
+    let workspace = unique_temp_workspace("write-large");
+    fs::create_dir_all(&workspace).expect("workspace");
+    let content = "x".repeat(write_file_max_bytes() + 1);
+
+    let error = write_file(&workspace, "large.txt", &content).expect_err("large payload");
+
+    assert!(error
+      .to_string()
+      .contains("workspace write content exceeds"));
+    assert!(!workspace.join("large.txt").exists());
 
     let _ = fs::remove_dir_all(workspace);
   }

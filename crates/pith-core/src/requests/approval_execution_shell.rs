@@ -2,25 +2,29 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_memory::{MemoryEvent, MemoryNote};
-use pith_model_runtime::LocalModelRuntime;
+use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
-use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::run_shell;
+use pith_protocol::WorkspaceSummary;
+use pith_tools::run_shell_with_cancellation;
 
 use crate::approval_types::PendingApproval;
 use crate::local_responses::{format_shell_result, summarize_shell_result};
 use crate::plugin_hooks::build_shell_completed_hook_items;
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
+use crate::turn::turn_tool_limits::SHELL_OUTPUT_PREVIEW_MAX_BYTES;
 use crate::turn_tool_provenance::workspace_tool_attributes;
 
 use super::approval_execution_events::ApprovalExecutionEvents;
-use super::approval_execution_timeline::{assistant_item, tool_start_item, warning_item};
+use super::approval_execution_timeline::{
+  assistant_item, tool_result_item, tool_start_item, warning_item,
+};
 
 pub(super) fn append_approved_shell_execution(
   events: &mut ApprovalExecutionEvents,
   approval: &PendingApproval,
   workspace: &WorkspaceSummary,
   model_runtime: &LocalModelRuntime,
+  cancellation: &GenerationCancellation,
   memory_notes: &[MemoryNote],
   permission_sources: &HashMap<String, Vec<String>>,
   plugins: &[PluginCatalogEntry],
@@ -52,11 +56,20 @@ pub(super) fn append_approved_shell_execution(
       [
         ("approvalId".to_string(), approval.id.clone()),
         ("command".to_string(), command.clone()),
+        (
+          "maxOutputBytes".to_string(),
+          SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+        ),
       ],
     )),
   ));
 
-  match run_shell(Path::new(&workspace.root_path), &command, 4096) {
+  match run_shell_with_cancellation(
+    Path::new(&workspace.root_path),
+    &command,
+    SHELL_OUTPUT_PREVIEW_MAX_BYTES,
+    || cancellation.is_cancelled(),
+  ) {
     Ok(result) => {
       events.set_memory_event(MemoryEvent::ShellCommandRan {
         workspace_display_name: workspace.display_name.clone(),
@@ -67,13 +80,12 @@ pub(super) fn append_approved_shell_execution(
         memory_notes,
         &workspace.display_name,
         &result,
-        None,
+        Some(cancellation),
       );
-      events.push_item(TimelineItem {
-        kind: "toolResult".to_string(),
-        title: "run_shell result".to_string(),
-        content: format_shell_result(&result),
-        attributes: Some({
+      events.push_item(tool_result_item(
+        "run_shell result",
+        format_shell_result(&result),
+        Some({
           let mut attributes = workspace_tool_attributes(
             "run_shell",
             workspace,
@@ -81,13 +93,19 @@ pub(super) fn append_approved_shell_execution(
               ("approvalId".to_string(), approval.id.clone()),
               ("command".to_string(), command.clone()),
               ("exitCode".to_string(), result.exit_code.to_string()),
+              ("timedOut".to_string(), result.timed_out.to_string()),
+              ("cancelled".to_string(), result.cancelled.to_string()),
+              (
+                "maxOutputBytes".to_string(),
+                SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+              ),
             ],
           );
           attributes.extend(result.sandbox.attributes());
           attributes.extend(result.output_context.attributes());
           attributes
         }),
-      });
+      ));
       events.push_item(assistant_item(summary, Some(summary_attributes)));
       let (hook_items, memory_captures) =
         build_shell_completed_hook_items(plugins, workspace, &command, &result);

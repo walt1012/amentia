@@ -1,9 +1,11 @@
 import Foundation
 
 struct SetupCalloutActionSnapshot {
+  let runtimeState: RuntimeBridge.ConnectionState
   let isLocalModelReady: Bool
   let hasWorkspace: Bool
   let hasRuntimeThreadSelection: Bool
+  let canLaunchRuntime: Bool
   let canRunModelSetupAction: Bool
   let canRunModelSetupSecondaryAction: Bool
   let canOpenWorkspace: Bool
@@ -11,6 +13,7 @@ struct SetupCalloutActionSnapshot {
 }
 
 enum SetupCalloutAction {
+  case launchRuntime
   case setupModel
   case openWorkspace
   case createThread
@@ -23,6 +26,10 @@ enum SetupCalloutSecondaryAction {
 enum SetupCalloutActionPlanner {
   static func primaryAction(_ snapshot: SetupCalloutActionSnapshot) -> SetupCalloutAction? {
     if !snapshot.isLocalModelReady {
+      if snapshot.runtimeState == .disconnected || snapshot.runtimeState == .failed {
+        return .launchRuntime
+      }
+
       return .setupModel
     }
     if !snapshot.hasWorkspace {
@@ -50,6 +57,8 @@ enum SetupCalloutActionPlanner {
     }
 
     switch action {
+    case .launchRuntime:
+      return snapshot.canLaunchRuntime
     case .setupModel:
       return snapshot.canRunModelSetupAction
     case .openWorkspace:

@@ -86,8 +86,64 @@ struct TurnCancelRunningParams: Codable {
 }
 
 struct TurnCancelResult: Codable {
-  let turnId: String
+  let turnId: String?
   let threadId: String
   let items: [RuntimeTimelineItem]
   let activeTurnId: String?
+}
+
+extension RuntimeBridge {
+  struct RuntimeThreadSummary {
+    let id: String
+    let title: String
+    let status: String
+    let workspaceRootPath: String?
+    let workspaceDisplayName: String?
+  }
+
+  struct RuntimeTurnResult {
+    let turnID: String
+    let threadID: String
+    let items: [RuntimeTimelineItemResult]
+    let pendingApprovals: [RuntimeApproval]
+    let activeTurnID: String?
+  }
+
+  struct RuntimeThreadState {
+    let id: String
+    let title: String
+    let status: String
+    let items: [RuntimeTimelineItemResult]
+    let pendingApprovals: [RuntimeApproval]
+    let activeTurnID: String?
+  }
+
+  struct RuntimeTimelineItemResult {
+    let kind: String
+    let title: String
+    let content: String
+    let attributes: [String: String]
+  }
+
+  struct RuntimeApproval {
+    let id: String
+    let threadID: String
+    let action: String
+    let title: String
+    let relativePath: String
+  }
+
+  struct RuntimeApprovalResponse {
+    let approvalID: String
+    let threadID: String
+    let items: [RuntimeTimelineItemResult]
+    let pendingApprovals: [RuntimeApproval]
+  }
+
+  struct RuntimeCancellationResult {
+    let turnID: String?
+    let threadID: String
+    let items: [RuntimeTimelineItemResult]
+    let activeTurnID: String?
+  }
 }

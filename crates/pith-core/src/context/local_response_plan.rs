@@ -4,6 +4,7 @@ use pith_memory::MemoryNote;
 use pith_model_runtime::{GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole};
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
+use crate::context_compaction::{compact_generation_prompt, merge_generation_prompt_attributes};
 use crate::context_memory_pack::{
   format_memory_context_prompt, merge_memory_context_attributes, pack_memory_notes_for_context,
 };
@@ -30,15 +31,16 @@ pub(crate) fn build_plan_item(
       )
     })
     .unwrap_or_else(|| "Workspace: unavailable.".to_string());
+  let prompt = compact_generation_prompt(
+    &format!(
+      "You are the local planner for Pith.\n{workspace_context}\n{}\nUser request: {message}\nCandidate local action: {plan_hint}\nWrite one concise English sentence describing the next action Pith should take.",
+      format_memory_context_prompt(&memory_context)
+    ),
+    &memory_context,
+  );
   let result = model_runtime.generate(GenerateRequest {
     role: ModelRole::Planner,
-    prompt: format!(
-      "You are the local planner for Pith.\n{}\n{}\nUser request: {}\nCandidate local action: {}\nWrite one concise English sentence describing the next action Pith should take.",
-      workspace_context,
-      format_memory_context_prompt(&memory_context),
-      message,
-      plan_hint
-    ),
+    prompt: prompt.text.clone(),
     max_tokens: 80,
     cancellation: cancellation.cloned(),
   });
@@ -55,6 +57,7 @@ pub(crate) fn build_plan_item(
     );
   }
   merge_memory_context_attributes(&mut attributes, &memory_context);
+  merge_generation_prompt_attributes(&mut attributes, &prompt);
 
   TimelineItem {
     kind: "plan".to_string(),

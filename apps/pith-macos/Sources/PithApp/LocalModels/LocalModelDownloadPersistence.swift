@@ -1,6 +1,6 @@
 import Foundation
 
-struct ModelDownloadProgress: Hashable {
+struct ModelDownloadProgress: Hashable, Sendable {
   let modelID: String
   let displayName: String
   var bytesReceived: Int64
@@ -105,13 +105,7 @@ extension LocalModelCatalog {
   }
 
   private static func pausedDownloadResumeDataURL() -> URL {
-    let baseDirectory =
-      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-
-    return baseDirectory
-      .appendingPathComponent("Pith", isDirectory: true)
-      .appendingPathComponent("model-downloads", isDirectory: true)
+    AppSupportDirectories.modelDownloadDirectory()
       .appendingPathComponent("resume.data")
   }
 }

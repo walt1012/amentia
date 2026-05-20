@@ -38,6 +38,10 @@ extension AppViewModel {
     TimelineInspectorPresenter.selectedEntryMemorySummary(timelineInspectorSnapshot())
   }
 
+  func selectedEntryPluginSummary() -> String? {
+    TimelineInspectorPresenter.selectedEntryPluginSummary(timelineInspectorSnapshot())
+  }
+
   func selectedEntrySandboxSummary() -> String? {
     TimelineInspectorPresenter.selectedEntrySandboxSummary(timelineInspectorSnapshot())
   }

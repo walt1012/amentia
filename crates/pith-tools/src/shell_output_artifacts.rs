@@ -15,6 +15,14 @@ pub(crate) fn shell_output_artifact_directory() -> Result<PathBuf> {
   create_shell_output_artifact_run_directory(&root)
 }
 
+pub fn shell_output_artifact_root_path() -> String {
+  shell_output_artifact_root().display().to_string()
+}
+
+pub fn shell_output_artifact_retained_runs() -> usize {
+  SHELL_OUTPUT_ARTIFACT_RETAINED_RUNS
+}
+
 pub(crate) fn discard_shell_output_artifact_directory(artifact_directory: &Path) {
   let Ok(metadata) = fs::symlink_metadata(artifact_directory) else {
     return;
@@ -242,6 +250,12 @@ mod tests {
     assert!(run_directory.starts_with(&root));
 
     let _ = fs::remove_dir_all(root);
+  }
+
+  #[test]
+  fn shell_output_artifact_status_reports_root_and_retention() {
+    assert!(!shell_output_artifact_root_path().is_empty());
+    assert_eq!(shell_output_artifact_retained_runs(), 20);
   }
 
   #[cfg(unix)]

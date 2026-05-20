@@ -21,6 +21,11 @@ struct WorkspaceCurrentResult: Codable {
 struct WorkspaceSearchParams: Codable {
   let query: String
   let maxResults: Int
+  let clientRequestId: String?
+}
+
+struct WorkspaceSearchCancelRunningParams: Codable {
+  let clientRequestId: String?
 }
 
 struct WorkspaceSearchResult: Codable {
@@ -29,8 +34,26 @@ struct WorkspaceSearchResult: Codable {
   let matches: [WorkspaceSearchMatchPayload]
 }
 
+struct WorkspaceSearchCancelRunningResult: Codable {
+  let cancelledCount: Int
+}
+
 struct WorkspaceSearchMatchPayload: Codable {
   let relativePath: String
   let lineNumber: Int
   let line: String
+}
+
+extension RuntimeBridge {
+  struct RuntimeWorkspace {
+    let rootPath: String
+    let displayName: String
+    let threadCount: Int
+  }
+
+  struct RuntimeWorkspaceSearchMatch {
+    let relativePath: String
+    let lineNumber: Int
+    let line: String
+  }
 }

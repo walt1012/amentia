@@ -14,6 +14,7 @@ enum PluginInstallDialogPresenter {
       Manifest: \(preview.manifestPath)
       Install Path: \(preview.installPath)
       Default Enabled: \(preview.defaultEnabled ? "Yes" : "No")
+      Surface: \(preview.surfaceSummary.summary)
       Permissions: \(summaryLine(preview.permissions, empty: "none"))
       Capabilities: \(summaryLine(preview.capabilities, empty: "none"))
 
@@ -45,8 +46,28 @@ enum PluginInstallDialogPresenter {
   static func repairHint(for error: Error) -> String {
     let message = error.localizedDescription
 
+    if message.contains("\nHint:") || message.contains("\nRepair Hint:") {
+      return ""
+    }
+
     if message.contains("does not contain pith-plugin.json") {
       return "Choose a plugin folder that contains pith-plugin.json, or select the manifest file directly."
+    }
+
+    if message.contains("must be a plugin directory or pith-plugin.json file") {
+      return "Choose the plugin directory itself or its pith-plugin.json file."
+    }
+
+    if message.contains("is already installed") {
+      return "Remove the existing local plugin first, or change the plugin name before installing this copy."
+    }
+
+    if message.contains("cannot contain nested pith-plugin.json manifests") {
+      return "Remove nested plugin bundles before installing. Install each plugin as its own top-level folder."
+    }
+
+    if message.contains("cannot contain symbolic links") {
+      return "Replace symlinks with real files or directories so the local plugin bundle is self-contained."
     }
 
     if message.contains("Select a plugin folder or a pith-plugin.json manifest") {
@@ -61,6 +82,13 @@ enum PluginInstallDialogPresenter {
       || message.contains("is missing")
     {
       return "Check that pith-plugin.json is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
+    }
+
+    if message.contains("failed to create plugin install root")
+      || message.contains("failed to create")
+      || message.contains("failed to copy")
+    {
+      return "Check local disk permissions and free space, then try installing again."
     }
 
     return ""

@@ -7,9 +7,11 @@ use super::runtime_persistence::RuntimePersistenceState;
 use super::runtime_persistence_records::{pending_approval, stored_thread};
 use crate::runtime_execution::RuntimeExecutionState;
 use crate::runtime_memory::RuntimeMemoryState;
+use crate::runtime_plugins::PluginConnectorCredentialState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_threads::RuntimeThreadState;
 use crate::runtime_workspace::RuntimeWorkspaceState;
+use crate::secure_credentials;
 
 pub(crate) struct RuntimePersistenceBootstrap {
   pub(crate) persistence_state: RuntimePersistenceState,
@@ -19,6 +21,7 @@ pub(crate) struct RuntimePersistenceBootstrap {
   pub(crate) execution_state: RuntimeExecutionState,
   pub(crate) sequence_state: RuntimeSequenceState,
   pub(crate) plugin_states: HashMap<String, bool>,
+  pub(crate) plugin_connector_credentials: HashMap<String, PluginConnectorCredentialState>,
 }
 
 pub(super) fn load_bootstrap(store: RuntimeStore) -> Result<RuntimePersistenceBootstrap> {
@@ -27,6 +30,15 @@ pub(super) fn load_bootstrap(store: RuntimeStore) -> Result<RuntimePersistenceBo
   let persisted_pending_approvals = store.load_pending_approvals()?;
   let persisted_memory_notes = store.load_memory_notes(128)?;
   let persisted_plugin_states = store.load_plugin_states()?;
+  let persisted_plugin_connector_credentials = store
+    .load_plugin_connector_credentials()?
+    .into_iter()
+    .map(|credential| {
+      let mut state = PluginConnectorCredentialState::from(credential);
+      state.credential_secret = secure_credentials::load_connector_secret(&state.connector_id);
+      (state.connector_id.clone(), state)
+    })
+    .collect();
   let next_thread_number = persisted_threads.len() + 1;
   let next_approval_number = store.next_approval_sequence()?;
   let next_memory_number = store.next_memory_sequence()?;
@@ -47,6 +59,7 @@ pub(super) fn load_bootstrap(store: RuntimeStore) -> Result<RuntimePersistenceBo
     ),
     sequence_state: RuntimeSequenceState::new(next_thread_number, next_approval_number),
     plugin_states: persisted_plugin_states,
+    plugin_connector_credentials: persisted_plugin_connector_credentials,
   })
 }
 
@@ -60,7 +73,7 @@ mod tests {
 
   use pith_memory::MemoryNote;
   use pith_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
-  use pith_storage::{StoredApprovalRecord, StoredThreadRecord};
+  use pith_storage::{StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord};
 
   fn create_temp_directory(label: &str) -> std::path::PathBuf {
     let unique = SystemTime::now()
@@ -124,6 +137,16 @@ mod tests {
     store
       .save_plugin_enabled("notion", true)
       .expect("save plugin state");
+    store
+      .save_plugin_connector_credential(&StoredPluginConnectorCredential {
+        connector_id: "notion-connector::notion".to_string(),
+        plugin_id: "notion-connector".to_string(),
+        credential_store: "local".to_string(),
+        credential_label: "Notion authorization marker".to_string(),
+        authorized_at: 6,
+        updated_at: 6,
+      })
+      .expect("save connector credential");
 
     let mut bootstrap = RuntimePersistenceState::load_bootstrap(store).expect("load bootstrap");
 
@@ -144,6 +167,13 @@ mod tests {
     );
     assert_eq!(bootstrap.memory_state.note_count(), 1);
     assert_eq!(bootstrap.plugin_states.get("notion"), Some(&true));
+    assert_eq!(
+      bootstrap
+        .plugin_connector_credentials
+        .get("notion-connector::notion")
+        .map(|credential| credential.credential_store.as_str()),
+      Some("local")
+    );
     assert_eq!(bootstrap.sequence_state.next_approval_id(), "approval-4");
 
     fs::remove_dir_all(root).expect("cleanup temp directory");

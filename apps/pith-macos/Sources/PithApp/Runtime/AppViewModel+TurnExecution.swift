@@ -17,7 +17,7 @@ extension AppViewModel {
 
     let task = Task {
       defer {
-        pendingTurnRequest.clear(requestID: requestID)
+        localExecutionRequests.clearLocalWorkRequest(requestID: requestID)
       }
       do {
         let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
@@ -30,7 +30,7 @@ extension AppViewModel {
         applyPendingTurnFailure(threadID: threadID, message: message, error: error)
       }
     }
-    pendingTurnRequest.bind(task: task, requestID: requestID)
+    localExecutionRequests.bindLocalWorkRequest(task: task, requestID: requestID)
   }
 
   func respondToApproval(approvalID: String, decision: String) {
@@ -40,7 +40,21 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard !localExecutionRequests.isApprovalExecutionPending else {
+      return
+    }
+
+    let approvalThreadID = self.selectedThreadID
+    let requestID = approvalThreadID.map {
+      localExecutionRequests.beginApprovalExecution(threadID: $0)
+    }
+
+    let task = Task {
+      defer {
+        if let requestID {
+          localExecutionRequests.clearApprovalExecution(requestID: requestID)
+        }
+      }
       do {
         let result = try await runtimeBridge.respondToApproval(
           approvalID: approvalID,
@@ -48,11 +62,15 @@ extension AppViewModel {
         )
         await applyApprovalResponse(result)
       } catch {
+        runtimeDetail = TimelineEventPresenter.approvalResponseFailedDetail(error: error)
         appendEntry(
-          to: selectedThreadID,
+          to: approvalThreadID ?? selectedThreadID,
           TimelineEventPresenter.approvalResponseFailed(error: error)
         )
       }
+    }
+    if let requestID {
+      localExecutionRequests.bindApprovalExecution(task: task, requestID: requestID)
     }
   }
 
@@ -61,13 +79,33 @@ extension AppViewModel {
       return
     }
 
-    if let pendingThreadID = requestPendingTurnCancellation() {
+    if let pendingCancellation = requestPendingTurnCancellation() {
       Task {
         do {
-          _ = try await runtimeBridge.cancelRunningTurn(threadID: pendingThreadID)
+          _ = try await runtimeBridge.cancelRunningExecution(threadID: pendingCancellation.threadID)
         } catch {
+          localExecutionRequests.restoreLocalWorkCancellationRequest(
+            threadID: pendingCancellation.threadID
+          )
+          runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
           appendEntry(
-            to: pendingThreadID,
+            to: pendingCancellation.threadID,
+            TimelineEventPresenter.turnCancelFailed(error: error)
+          )
+        }
+      }
+      return
+    }
+
+    if let approvalThreadID = requestPendingApprovalCancellation() {
+      Task {
+        do {
+          _ = try await runtimeBridge.cancelRunningExecution(threadID: approvalThreadID)
+        } catch {
+          localExecutionRequests.restoreApprovalCancellationRequest(threadID: approvalThreadID)
+          runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
+          appendEntry(
+            to: approvalThreadID,
             TimelineEventPresenter.turnCancelFailed(error: error)
           )
         }
@@ -81,115 +119,47 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard let requestToken = turnCancellationCoordinator.begin() else {
+      return
+    }
+    runtimeDetail = TimelineEventPresenter.cancellingTurnDetail
+    refreshThreadPreview(
+      threadID: activeTurnThreadID,
+      preview: TimelineEventPresenter.cancellingResponsePreview
+    )
+
+    let task = Task {
+      defer {
+        turnCancellationCoordinator.finish(requestToken)
+      }
       do {
         let result = try await runtimeBridge.cancelTurn(turnID: activeTurnID)
+        guard turnCancellationCoordinator.isCurrent(requestToken) else {
+          return
+        }
         await applyTurnCancellation(result, previewThreadID: activeTurnThreadID)
       } catch {
+        guard !Task.isCancelled,
+              turnCancellationCoordinator.isCurrent(requestToken)
+        else {
+          return
+        }
+        runtimeDetail = TimelineEventPresenter.turnCancelFailedDetail(error: error)
         appendEntry(
           to: activeTurnThreadID,
           TimelineEventPresenter.turnCancelFailed(error: error)
         )
       }
     }
+    turnCancellationCoordinator.bind(task: task, token: requestToken)
   }
 
   func hasActiveOrPendingTurn() -> Bool {
-    activeTurnID != nil || pendingTurnRequest.isPending
+    activeTurnID != nil || localExecutionRequests.hasPendingExecution
   }
 
-  func applyRuntimeTurnResult(
-    _ result: RuntimeBridge.RuntimeTurnResult,
-    refreshMemory: Bool = false
-  ) async {
-    appendItemsToTimeline(threadID: result.threadID, items: result.items)
-    updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
-    updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
-    let wasCancelled = result.items.contains {
-      $0.attributes["streamingStatus"] == "cancelled"
-    }
-    if wasCancelled {
-      runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
-    }
-    let preview = wasCancelled
-      ? TimelineEventPresenter.cancelledResponsePreview
-      : TimelineEventPresenter.turnPreview(
-        turnID: result.turnID,
-        activeTurnID: result.activeTurnID
-      )
-    refreshThreadPreview(
-      threadID: result.threadID,
-      preview: preview
-    )
-
-    if refreshMemory {
-      await refreshMemoryState()
-    }
-  }
-
-  private func beginPendingLocalTurn(threadID: String) -> UUID {
-    draftMessage = ""
-    runtimeDetail = TimelineEventPresenter.generatingLocalResponseDetail
-    return pendingTurnRequest.begin(threadID: threadID)
-  }
-
-  private func applyPendingTurnCancellation(threadID: String) {
-    runtimeDetail = TimelineEventPresenter.pendingTurnCancelledDetail
-    refreshThreadPreview(
-      threadID: threadID,
-      preview: TimelineEventPresenter.cancelledResponsePreview
-    )
-    appendEntry(
-      to: threadID,
-      TimelineEventPresenter.pendingTurnCancelled()
-    )
-  }
-
-  private func applyPendingTurnFailure(
-    threadID: String,
-    message: String,
-    error: Error
-  ) {
-    if draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      draftMessage = message
-    }
-    runtimeDetail = error.localizedDescription
-    appendEntry(
-      to: threadID,
-      TimelineEventPresenter.turnFailed(error: error)
-    )
-  }
-
-  private func applyApprovalResponse(_ result: RuntimeBridge.RuntimeApprovalResponse) async {
-    appendItemsToTimeline(threadID: result.threadID, items: result.items)
-    updatePendingApprovals(threadID: result.threadID, approvals: result.pendingApprovals)
-    await refreshMemoryState()
-    await loadThreadHistory(threadID: result.threadID)
-  }
-
-  private func applyTurnCancellation(
-    _ result: RuntimeBridge.RuntimeTurnCancellation,
-    previewThreadID: String
-  ) async {
-    appendItemsToTimeline(threadID: result.threadID, items: result.items)
-    updateActiveTurn(threadID: result.threadID, activeTurnID: result.activeTurnID)
-    refreshThreadPreview(
-      threadID: previewThreadID,
-      preview: TimelineEventPresenter.cancelledResponsePreview
-    )
-    await loadThreadHistory(threadID: result.threadID)
-  }
-
-  private func requestPendingTurnCancellation() -> String? {
-    guard let threadID = pendingTurnRequest.threadID else {
-      return nil
-    }
-
-    runtimeDetail = TimelineEventPresenter.cancellingTurnDetail
-    refreshThreadPreview(
-      threadID: threadID,
-      preview: TimelineEventPresenter.cancellingResponsePreview
-    )
-    return threadID
+  func hasCancelableLocalExecution() -> Bool {
+    (timelineState.hasCancelableRuntimeTurn && !turnCancellationCoordinator.isCancelling)
+      || localExecutionRequests.canCancelPendingExecution
   }
 }

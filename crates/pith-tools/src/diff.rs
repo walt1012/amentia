@@ -1,35 +1,65 @@
+use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 
-use crate::bounded_file::{read_text_prefix, text_prefix};
+use crate::bounded_file::{read_text_prefix_with_cancellation, text_prefix};
 use crate::paths::{
   canonical_workspace_root, sanitize_relative_path, validate_workspace_write_target,
 };
 
 const DIFF_PREVIEW_MAX_BYTES: usize = 128 * 1024;
 
+pub fn diff_preview_max_bytes() -> usize {
+  DIFF_PREVIEW_MAX_BYTES
+}
+
 pub fn generate_diff(
   workspace_root: &Path,
   relative_path: &str,
   next_content: &str,
 ) -> Result<String> {
+  generate_diff_with_cancellation(workspace_root, relative_path, next_content, || false)
+}
+
+pub fn generate_diff_with_cancellation<F>(
+  workspace_root: &Path,
+  relative_path: &str,
+  next_content: &str,
+  is_cancelled: F,
+) -> Result<String>
+where
+  F: Fn() -> bool,
+{
+  if is_cancelled() {
+    bail!("diff generation cancelled");
+  }
   let workspace_root = canonical_workspace_root(workspace_root)?;
   let sanitized_relative_path = sanitize_relative_path(relative_path)?;
   let target = workspace_root.join(&sanitized_relative_path);
 
   validate_workspace_write_target(&workspace_root, &target)?;
-  if target.is_dir() {
-    bail!("workspace path points to a directory");
-  }
 
-  let previous_preview = if target.is_file() {
-    read_text_prefix(&target, DIFF_PREVIEW_MAX_BYTES)
-  } else {
-    Ok(text_prefix("", DIFF_PREVIEW_MAX_BYTES))
+  let previous_preview = match fs::metadata(&target) {
+    Ok(metadata) if metadata.is_dir() => bail!("workspace path points to a directory"),
+    Ok(metadata) if metadata.is_file() => {
+      read_text_prefix_with_cancellation(&target, DIFF_PREVIEW_MAX_BYTES, &is_cancelled)
+    }
+    Ok(_) => bail!("workspace path is not a regular file"),
+    Err(error) if error.kind() == ErrorKind::NotFound => {
+      Ok(text_prefix("", DIFF_PREVIEW_MAX_BYTES))
+    }
+    Err(error) => {
+      return Err(error)
+        .with_context(|| format!("failed to read metadata for {}", target.display()));
+    }
   };
   let previous_preview =
     previous_preview.with_context(|| format!("failed to read file {}", target.display()))?;
+  if is_cancelled() {
+    bail!("diff generation cancelled");
+  }
   let next_preview = text_prefix(next_content, DIFF_PREVIEW_MAX_BYTES);
   let mut diff = build_unified_diff(
     &sanitized_relative_path,
@@ -165,6 +195,20 @@ mod tests {
 
     assert!(diff.contains("diff preview truncated"));
     assert!(diff.len() < 300_000);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn generate_diff_stops_when_cancelled() {
+    let workspace = unique_temp_workspace("diff-cancel");
+    fs::create_dir_all(&workspace).expect("workspace");
+    fs::write(workspace.join("target.txt"), "old content").expect("target file");
+
+    let error = generate_diff_with_cancellation(&workspace, "target.txt", "new content", || true)
+      .expect_err("cancelled");
+
+    assert!(error.to_string().contains("diff generation cancelled"));
 
     let _ = fs::remove_dir_all(workspace);
   }

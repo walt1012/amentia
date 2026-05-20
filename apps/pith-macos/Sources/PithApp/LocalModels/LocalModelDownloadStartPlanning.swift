@@ -71,21 +71,15 @@ enum LocalModelDownloadStartPlanner {
         updatedAt: now,
         isResuming: isResuming
       ),
-      runtimeDetail: "\(verb) \(model.displayName) (\(formattedByteCount(model.sizeBytes)))...",
+      runtimeDetail: "\(verb) \(model.displayName) (\(LocalModelByteFormatter.string(model.sizeBytes)))...",
       timelineTitle: isResuming ? "Local Model Download Continued" : "Local Model Download Started",
       timelineBody:
         "\(model.displayName) download \(eventVerb) from \(sourceURL.absoluteString).",
       attributes: [
         "downloadUrl": sourceURL.absoluteString,
         "result": isResuming ? "continued" : "started",
-        "size": formattedByteCount(model.sizeBytes),
+        "size": LocalModelByteFormatter.string(model.sizeBytes),
       ]
     )
-  }
-
-  private static func formattedByteCount(_ byteCount: Int64) -> String {
-    let formatter = ByteCountFormatter()
-    formatter.countStyle = .file
-    return formatter.string(fromByteCount: byteCount)
   }
 }

@@ -30,7 +30,12 @@ impl RuntimeContext {
       memory_state: bootstrap.memory_state,
       thread_state: bootstrap.thread_state,
       workspace_state: bootstrap.workspace_state,
-      plugin_state: RuntimePluginState::new(plugin_roots, plugin_install_root, plugins),
+      plugin_state: RuntimePluginState::new(
+        plugin_roots,
+        plugin_install_root,
+        plugins,
+        bootstrap.plugin_connector_credentials,
+      ),
       execution_state: bootstrap.execution_state,
       sequence_state: bootstrap.sequence_state,
     })
@@ -50,10 +55,20 @@ impl RuntimeContext {
         plugin_roots.clone(),
         plugin_install_root,
         load_plugin_catalog(&plugin_roots).unwrap_or_default(),
+        Default::default(),
       ),
       execution_state: RuntimeExecutionState::empty(),
       sequence_state: RuntimeSequenceState::new(1, 1),
     }
+  }
+
+  pub fn cancel_running_work(&mut self) {
+    self.execution_state.cancel_running_work();
+  }
+
+  pub fn recover_after_request_panic(&mut self) -> Result<()> {
+    self.execution_state.clear_running_work_after_recovery();
+    self.persist_runtime_state()
   }
 }
 

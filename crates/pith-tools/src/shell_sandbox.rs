@@ -1,7 +1,6 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use crate::types::ShellSandboxSummary;
 
@@ -34,6 +33,7 @@ fn shell_sandbox_summary_from_status(
   ShellSandboxSummary {
     mode: status.mode,
     backend: status.backend,
+    available: status.available,
     active: status.active,
     network_allowed: status.network_allowed,
     temporary_root: status.temporary_root,
@@ -58,64 +58,16 @@ pub(crate) fn shell_sandbox_temp_root(workspace_root: &Path) -> PathBuf {
 
 pub(crate) fn prepare_shell_sandbox_environment(
   workspace_root: &Path,
-  sandbox: &ShellSandboxSummary,
+  _sandbox: &ShellSandboxSummary,
 ) -> Result<()> {
-  if sandbox.active {
-    let temporary_root = shell_sandbox_temp_root(workspace_root);
-    clear_sandbox_temporary_root(&temporary_root)?;
-    fs::create_dir_all(&temporary_root).with_context(|| {
-      format!(
-        "failed to create sandbox temporary directory {}",
-        temporary_root.display()
-      )
-    })?;
-  }
-
-  Ok(())
-}
-
-fn clear_sandbox_temporary_root(temporary_root: &Path) -> Result<()> {
-  let metadata = match fs::symlink_metadata(temporary_root) {
-    Ok(metadata) => metadata,
-    Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-    Err(error) => {
-      return Err(error).with_context(|| {
-        format!(
-          "failed to inspect sandbox temporary directory {}",
-          temporary_root.display()
-        )
-      });
-    }
-  };
-
-  if metadata.file_type().is_symlink() || metadata.is_file() {
-    fs::remove_file(temporary_root).with_context(|| {
-      format!(
-        "failed to clear sandbox temporary path {}",
-        temporary_root.display()
-      )
-    })?;
-  } else if metadata.is_dir() {
-    fs::remove_dir_all(temporary_root).with_context(|| {
-      format!(
-        "failed to clear sandbox temporary directory {}",
-        temporary_root.display()
-      )
-    })?;
-  } else {
-    fs::remove_file(temporary_root).with_context(|| {
-      format!(
-        "failed to clear sandbox temporary path {}",
-        temporary_root.display()
-      )
-    })?;
-  }
-
-  Ok(())
+  let temporary_root = shell_sandbox_temp_root(workspace_root);
+  pith_sandbox::prepare_workspace_temporary_root(workspace_root, &temporary_root)
+    .map_err(anyhow::Error::msg)
 }
 
 #[cfg(test)]
 mod tests {
+  use std::fs;
   use std::time::{SystemTime, UNIX_EPOCH};
 
   use super::*;
@@ -130,6 +82,7 @@ mod tests {
     let sandbox = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "macosSeatbelt".to_string(),
+      available: true,
       active: true,
       network_allowed: false,
       temporary_root: Some(temporary_root.display().to_string()),
@@ -144,6 +97,29 @@ mod tests {
 
     assert!(temporary_root.is_dir());
     assert!(!stale_file.exists());
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn prepare_environment_creates_inactive_sandbox_temporary_root() {
+    let workspace = unique_temp_workspace("shell-sandbox-inactive-temp");
+    let temporary_root = shell_sandbox_temp_root(&workspace);
+    fs::create_dir_all(&workspace).expect("workspace");
+    let sandbox = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "processOnly".to_string(),
+      available: false,
+      active: false,
+      network_allowed: false,
+      temporary_root: Some(temporary_root.display().to_string()),
+      writable_roots: vec![workspace.display().to_string()],
+      detail: "test sandbox".to_string(),
+    };
+
+    prepare_shell_sandbox_environment(&workspace, &sandbox).expect("prepare sandbox");
+
+    assert!(temporary_root.is_dir());
 
     let _ = fs::remove_dir_all(workspace);
   }
@@ -164,6 +140,7 @@ mod tests {
     let sandbox = ShellSandboxSummary {
       mode: "workspaceReadWrite".to_string(),
       backend: "macosSeatbelt".to_string(),
+      available: true,
       active: true,
       network_allowed: false,
       temporary_root: Some(temporary_root.display().to_string()),
@@ -178,6 +155,42 @@ mod tests {
 
     assert!(temporary_root.is_dir());
     assert!(outside_file.is_file());
+
+    let _ = fs::remove_dir_all(workspace);
+    let _ = fs::remove_dir_all(outside);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn prepare_environment_rejects_parent_symlink_escape() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = unique_temp_workspace("shell-sandbox-parent-symlink");
+    let outside = unique_temp_workspace("shell-sandbox-parent-outside");
+    let temporary_root = shell_sandbox_temp_root(&workspace);
+    let parent = temporary_root.parent().expect("temporary parent");
+    fs::create_dir_all(parent.parent().expect("pith directory")).expect("pith directory");
+    fs::create_dir_all(&outside).expect("outside");
+    symlink(&outside, parent).expect("temporary parent symlink");
+    let sandbox = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "macosSeatbelt".to_string(),
+      available: true,
+      active: true,
+      network_allowed: false,
+      temporary_root: Some(temporary_root.display().to_string()),
+      writable_roots: vec![
+        workspace.display().to_string(),
+        temporary_root.display().to_string(),
+      ],
+      detail: "test sandbox".to_string(),
+    };
+
+    let error = prepare_shell_sandbox_environment(&workspace, &sandbox)
+      .expect_err("parent symlink should fail");
+
+    assert!(error.to_string().contains("crosses a symlink"));
+    assert!(!outside.join("sandbox-tmp").exists());
 
     let _ = fs::remove_dir_all(workspace);
     let _ = fs::remove_dir_all(outside);

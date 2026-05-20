@@ -1,5 +1,21 @@
 import Foundation
 
+struct MemoryStatusSummary: Hashable {
+  let noteCount: Int
+  let latestTitle: String?
+  let summary: String
+}
+
+struct MemoryNoteSummary: Identifiable, Hashable {
+  let id: String
+  let title: String
+  let body: String
+  let scope: String
+  let source: String
+  let createdAt: Int
+  let tags: [String]
+}
+
 struct MemoryStateRefresh {
   let status: MemoryStatusSummary?
   let notes: [MemoryNoteSummary]?
@@ -10,17 +26,24 @@ struct MemoryRuntimeState {
   var notes: [MemoryNoteSummary]
   var noteTitle: String
   var noteBody: String
+  private var saveOperationID: UUID?
 
   init(
     status: MemoryStatusSummary? = nil,
     notes: [MemoryNoteSummary] = [],
     noteTitle: String = "",
-    noteBody: String = ""
+    noteBody: String = "",
+    saveOperationID: UUID? = nil
   ) {
     self.status = status
     self.notes = notes
     self.noteTitle = noteTitle
     self.noteBody = noteBody
+    self.saveOperationID = saveOperationID
+  }
+
+  var isSavingNote: Bool {
+    saveOperationID != nil
   }
 
   mutating func apply(_ refresh: MemoryStateRefresh, clearsMissing: Bool) {
@@ -37,9 +60,28 @@ struct MemoryRuntimeState {
     noteBody = ""
   }
 
+  mutating func beginSaveOperation() -> UUID? {
+    guard saveOperationID == nil else {
+      return nil
+    }
+
+    let operationID = UUID()
+    saveOperationID = operationID
+    return operationID
+  }
+
+  mutating func finishSaveOperation(_ operationID: UUID) {
+    guard saveOperationID == operationID else {
+      return
+    }
+
+    saveOperationID = nil
+  }
+
   mutating func resetRuntimeData() {
     status = nil
     notes = []
+    saveOperationID = nil
   }
 }
 

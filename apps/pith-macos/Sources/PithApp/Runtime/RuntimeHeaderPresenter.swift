@@ -23,7 +23,7 @@ enum RuntimeHeaderPresenter {
     case .launching:
       return "Starting the local runtime and reconnecting app state..."
     case .failed:
-      return "Runtime stopped. Relaunch to recover the local agent loop."
+      return "Runtime stopped. Relaunch to recover local work."
     case .ready:
       if !snapshot.isLocalModelReady {
         return snapshot.modelSetupSummary
@@ -32,17 +32,17 @@ enum RuntimeHeaderPresenter {
         return "Model is ready. Open a workspace to bind tools to a project."
       }
       if snapshot.hasActiveTurn {
-        return "Pith is streaming locally. Cancel only if the turn is no longer useful."
+        return "Pith is running locally. Cancel only if the execution is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
-        return "Select or create a thread to start local agent work."
+        return "Select or create a thread to start local work."
       }
       if snapshot.isWaitingForFirstMessage {
         return snapshot.hasDraftMessage
           ? "First local request is drafted. Send it to finish setup."
           : "Ready for the first local request."
       }
-      return "Ready for local agent work."
+      return "Ready for local work."
     }
   }
 

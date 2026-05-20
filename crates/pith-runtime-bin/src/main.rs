@@ -1,4 +1,5 @@
 mod notification_loop;
+mod request_router;
 mod request_supervisor;
 mod runtime_io;
 mod runtime_lock;
@@ -11,16 +12,10 @@ use std::sync::{
 
 use anyhow::Result;
 use notification_loop::start_notification_loop;
-use pith_core::{
-  complete_prepared_approval_respond, complete_prepared_plugin_command_run,
-  complete_prepared_turn_start, complete_prepared_workspace_search,
-  execute_prepared_approval_respond, execute_prepared_plugin_command_run,
-  execute_prepared_turn_start, execute_prepared_workspace_search, handle_request,
-  prepare_approval_respond, prepare_plugin_command_run, prepare_turn_start,
-  prepare_workspace_search, RuntimeContext,
-};
-use pith_protocol::{methods, JsonRpcRequest, JsonRpcResponse};
-use request_supervisor::{RequestLane, RequestSupervisor};
+use pith_core::RuntimeContext;
+use pith_protocol::{JsonRpcRequest, JsonRpcResponse};
+use request_router::route_runtime_request;
+use request_supervisor::RequestSupervisor;
 use runtime_io::RuntimeOutput;
 use runtime_lock::lock_context;
 
@@ -51,58 +46,13 @@ fn main() -> Result<()> {
       }
     };
 
-    if request.method == methods::TURN_START {
-      request_supervisor.spawn_prepared_request(
-        RequestLane::LocalExecution,
-        request,
-        prepare_turn_start,
-        execute_prepared_turn_start,
-        complete_prepared_turn_start,
-      );
-      continue;
-    }
-
-    if request.method == methods::APPROVAL_RESPOND {
-      request_supervisor.spawn_prepared_request(
-        RequestLane::LocalExecution,
-        request,
-        prepare_approval_respond,
-        execute_prepared_approval_respond,
-        complete_prepared_approval_respond,
-      );
-      continue;
-    }
-
-    if request.method == methods::PLUGIN_COMMAND_RUN {
-      request_supervisor.spawn_prepared_request(
-        RequestLane::LocalExecution,
-        request,
-        prepare_plugin_command_run,
-        execute_prepared_plugin_command_run,
-        complete_prepared_plugin_command_run,
-      );
-      continue;
-    }
-
-    if request.method == methods::WORKSPACE_SEARCH {
-      request_supervisor.spawn_prepared_request(
-        RequestLane::Independent,
-        request,
-        prepare_workspace_search,
-        execute_prepared_workspace_search,
-        |_context, completed| complete_prepared_workspace_search(completed),
-      );
-      continue;
-    }
-
-    let response = {
-      let mut locked_context = lock_context(&context);
-      handle_request(&mut locked_context, request)
-    };
-
-    output.write_json(&response)?;
+    route_runtime_request(request, &mut request_supervisor, &context, &output)?;
   }
 
+  {
+    let mut locked_context = lock_context(&context);
+    locked_context.cancel_running_work();
+  }
   running.store(false, Ordering::SeqCst);
   let _ = notification_thread.join();
   request_supervisor.join_all();

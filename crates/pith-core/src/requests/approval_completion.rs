@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use pith_protocol::{ApprovalRespondResult, JsonRpcResponse, TimelineItem};
 
 use crate::approval_state::approvals_for_thread;
+use crate::plugin_commands::PluginCommandOutput;
 use crate::plugin_hooks::capture_plugin_hook_memory;
+use crate::plugins::plugin_command_memory::capture_plugin_command_output_memory;
 use crate::request_state::{ApprovalExecutionOutput, CompletedApprovalRespond};
 use crate::runtime_context::RuntimeContext;
 use crate::thread_summary::refresh_thread_summary_note;
@@ -19,7 +21,11 @@ pub fn complete_prepared_approval_respond(
     mut items,
     memory_event,
     hook_memory_captures,
+    approved_plugin_command_output,
   } = completed.output;
+  context
+    .execution_state
+    .remove_running_approval(&approval.id);
 
   let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
     return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
@@ -70,6 +76,20 @@ pub fn complete_prepared_approval_respond(
     }
   }
 
+  if let Some(plugin_output) = approved_plugin_command_output {
+    let plugin_memory_items = complete_approved_plugin_command_memory(context, plugin_output);
+    if !plugin_memory_items.is_empty() {
+      if let Some(thread) = context.thread_state.find_mut(&approval.thread_id) {
+        thread.append_items(plugin_memory_items.clone());
+      }
+      items.extend(plugin_memory_items);
+
+      if let Err(error) = context.persist_runtime_state() {
+        return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
+      }
+    }
+  }
+
   if let Err(error) = refresh_thread_summary_note(context, &approval.thread_id) {
     return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
   }
@@ -84,5 +104,21 @@ pub fn complete_prepared_approval_respond(
       items,
       pending_approvals,
     },
+  )
+}
+
+fn complete_approved_plugin_command_memory(
+  context: &mut RuntimeContext,
+  output: PluginCommandOutput,
+) -> Vec<TimelineItem> {
+  capture_plugin_command_output_memory(
+    context,
+    &output.thread_id,
+    &output.command,
+    output.workspace.as_ref(),
+    output.input.as_deref(),
+    &output.items,
+    output.capture_memory,
+    &output.runner_memory_notes,
   )
 }

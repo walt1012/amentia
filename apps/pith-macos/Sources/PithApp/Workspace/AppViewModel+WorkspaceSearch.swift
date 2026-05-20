@@ -3,7 +3,9 @@ import Foundation
 @MainActor
 extension AppViewModel {
   func canSearchWorkspace() -> Bool {
-    WorkspaceSearchSession.canSearch(workspaceSearchSnapshot())
+    let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
+    return WorkspaceSearchSession.canSearch(workspaceSearchSnapshot())
+      && workspaceSearchSession.canStart(query: query)
   }
 
   func searchWorkspace() {
@@ -12,14 +14,29 @@ extension AppViewModel {
     }
 
     let query = WorkspaceSearchSession.trimmedQuery(workspaceSearchQuery)
+    let runningSearchIDToCancel = workspaceSearchSession.runtimeRequestIDForActiveSearch()
     let requestToken = workspaceSearchSession.begin(query: query)
 
     updateWorkspaceSearchState { state in
       state.begin(requestToken)
     }
-    Task {
+    let task = Task {
+      defer {
+        workspaceSearchSession.finish(requestToken)
+      }
       do {
-        let matches = try await runtimeBridge.searchWorkspace(query: requestToken.query)
+        if let runningSearchIDToCancel {
+          _ = try? await runtimeBridge.cancelWorkspaceSearch(
+            clientRequestId: runningSearchIDToCancel
+          )
+          guard workspaceSearchSession.isCurrent(requestToken) else {
+            return
+          }
+        }
+        let matches = try await runtimeBridge.searchWorkspace(
+          query: requestToken.query,
+          clientRequestId: requestToken.runtimeRequestID
+        )
         guard workspaceSearchSession.isCurrent(requestToken) else {
           return
         }
@@ -56,8 +73,8 @@ extension AppViewModel {
           )
         }
       }
-      workspaceSearchSession.finish()
     }
+    workspaceSearchSession.bind(task: task, token: requestToken)
   }
 
   func clearWorkspaceSearch() {
@@ -92,6 +109,7 @@ extension AppViewModel {
   }
 
   func resetWorkspaceSearch() {
+    cancelRuntimeWorkspaceSearch(workspaceSearchSession.runtimeRequestIDForActiveSearch())
     let resetStatus = workspaceSearchSession.resetStatus(hasWorkspace: workspace != nil)
     updateWorkspaceSearchState { state in
       state.reset(status: resetStatus)
@@ -102,6 +120,16 @@ extension AppViewModel {
     let changedStatus = workspaceSearchSession.changedQueryStatus()
     updateWorkspaceSearchState { state in
       state.finishWithChangedQuery(status: changedStatus)
+    }
+  }
+
+  private func cancelRuntimeWorkspaceSearch(_ runtimeRequestID: String?) {
+    guard let runtimeRequestID else {
+      return
+    }
+
+    Task {
+      _ = try? await runtimeBridge.cancelWorkspaceSearch(clientRequestId: runtimeRequestID)
     }
   }
 }

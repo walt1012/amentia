@@ -4,7 +4,8 @@ import Foundation
 extension AppViewModel {
   func canDownloadRecommendedModel(modelID: String) -> Bool {
     guard let model = localModel(for: modelID),
-          !model.downloaded
+          !model.downloaded,
+          !localModelActivationCoordinator.isActivating
     else {
       return false
     }
@@ -15,6 +16,7 @@ extension AppViewModel {
   func canActivateRecommendedModel(modelID: String) -> Bool {
     guard runtimeState != .launching,
           !hasActiveOrPendingTurn(),
+          !localModelActivationCoordinator.isActivating,
           !modelDownloadCoordinator.isDownloading,
           !modelDownloadState.hasPausedDownload
     else {
@@ -30,6 +32,7 @@ extension AppViewModel {
   func canResetActiveLocalModel() -> Bool {
     runtimeState != .launching
       && !hasActiveOrPendingTurn()
+      && !localModelActivationCoordinator.isActivating
       && !modelDownloadCoordinator.isDownloading
       && runtimeBridge.activeLocalModelPath() != nil
   }
@@ -70,6 +73,11 @@ extension AppViewModel {
   }
 
   func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
+    guard !localModelActivationCoordinator.isActivating else {
+      runtimeDetail = "Finish the current model selection check before downloading another model."
+      return
+    }
+
     guard let model = localModel(for: modelID) else {
       runtimeDetail = "The selected local model is unavailable."
       return
@@ -113,155 +121,84 @@ extension AppViewModel {
   }
 
   func activateRecommendedModel(modelID: String) {
+    guard runtimeState != .launching else {
+      runtimeDetail = "Wait for the local runtime launch to finish before switching models."
+      return
+    }
     guard !hasActiveOrPendingTurn() else {
       runtimeDetail = "Finish or cancel the current local turn before switching models."
       return
     }
+    guard !modelDownloadCoordinator.isDownloading,
+          !modelDownloadState.hasPausedDownload
+    else {
+      runtimeDetail = "Finish the current model download before switching models."
+      return
+    }
+    guard let requestID = localModelActivationCoordinator.begin() else {
+      runtimeDetail = "Finish the current model selection check before switching models."
+      return
+    }
 
     guard let model = localModel(for: modelID) else {
+      localModelActivationCoordinator.finish(requestID)
       runtimeDetail = "The selected local model is unavailable."
       return
     }
 
     guard model.downloaded else {
+      localModelActivationCoordinator.finish(requestID)
       runtimeDetail = "Download \(model.displayName) before using it."
       return
     }
 
-    do {
-      let preparedActivation = try LocalModelActivationPreparer.prepare(model: model)
-      runtimeBridge.configureActiveLocalModel(
-        manifestPath: preparedActivation.manifestPath,
-        modelPath: model.installPath
-      )
-      selectedSetupModelID = model.id
-      refreshLocalModelCatalog()
-      applyLocalModelActivationPlan(
-        LocalModelActivationPlanner.selectionPlan(
-          model: model,
-          manifestPath: preparedActivation.manifestPath
+    runtimeDetail = "Verifying \(model.displayName) before selection..."
+    let task = Task {
+      defer {
+        localModelActivationCoordinator.finish(requestID)
+      }
+      do {
+        let preparedActivation = try await LocalModelActivationPreparer.prepareInBackground(
+          model: model
         )
-      )
-    } catch {
-      applyLocalModelActivationFailure(
-        LocalModelActivationPlanner.failurePlan(error: error),
-        model: model
-      )
+        guard localModelActivationCoordinator.isCurrent(requestID) else {
+          return
+        }
+        guard !hasActiveOrPendingTurn() else {
+          runtimeDetail = "Finish or cancel the current local turn before switching models."
+          return
+        }
+        runtimeBridge.configureActiveLocalModel(
+          manifestPath: preparedActivation.manifestPath,
+          modelPath: model.installPath
+        )
+        selectedSetupModelID = model.id
+        refreshLocalModelCatalog()
+        applyLocalModelActivationPlan(
+          LocalModelActivationPlanner.selectionPlan(
+            model: model,
+            manifestPath: preparedActivation.manifestPath
+          )
+        )
+      } catch {
+        applyLocalModelActivationFailure(
+          LocalModelActivationPlanner.failurePlan(error: error),
+          model: model
+        )
+      }
     }
+    localModelActivationCoordinator.bind(task: task, requestID: requestID)
   }
 
   func resetActiveLocalModel() {
-    guard !hasActiveOrPendingTurn() else {
-      runtimeDetail = "Finish or cancel the current local turn before resetting model selection."
+    guard canResetActiveLocalModel() else {
+      runtimeDetail =
+        "Finish runtime launch, model download, model selection check, or active local work before resetting model selection."
       return
     }
 
     runtimeBridge.clearActiveLocalModel()
     refreshLocalModelCatalog()
     applyLocalModelActivationPlan(LocalModelActivationPlanner.resetPlan())
-  }
-
-  func revealRecommendedModel(modelID: String) {
-    guard let model = localModel(for: modelID) else {
-      runtimeDetail = "The selected local model is unavailable."
-      return
-    }
-
-    runtimeDetail = FileRevealService.revealFilePath(
-      model.installPath,
-      successDetail: "Revealed \(model.displayName)."
-    )
-  }
-
-  func revealSuggestedModelDirectory() {
-    runtimeDetail = FileRevealService.revealSuggestedPath(
-      metricKey: "suggestedModelPath",
-      modelHealth: modelHealth,
-      successDetail: "Opened the suggested local model folder."
-    )
-  }
-
-  func canRevealSuggestedModelDirectory() -> Bool {
-    FileRevealService.hasSuggestedPath(metricKey: "suggestedModelPath", modelHealth: modelHealth)
-  }
-
-  func revealSuggestedBinaryDirectory() {
-    runtimeDetail = FileRevealService.revealSuggestedPath(
-      metricKey: "suggestedBinaryPath",
-      modelHealth: modelHealth,
-      successDetail: "Opened the suggested llama.cpp binary folder."
-    )
-  }
-
-  func canRevealSuggestedBinaryDirectory() -> Bool {
-    FileRevealService.hasSuggestedPath(metricKey: "suggestedBinaryPath", modelHealth: modelHealth)
-  }
-
-  func canDownloadLocalModel() -> Bool {
-    LocalModelSelectedActionPlanner.canRun(selectedLocalModelAction())
-  }
-
-  func downloadLocalModel() {
-    switch selectedLocalModelAction() {
-    case .activate(let modelID):
-      activateRecommendedModel(modelID: modelID)
-    case .download(let modelID):
-      downloadRecommendedModel(modelID: modelID, activateAfterDownload: true)
-    case .blocked(let detail):
-      runtimeDetail = detail
-    }
-  }
-
-  func canBootstrapModelPackMetadata() -> Bool {
-    runtimeState == .ready && !modelDownloadCoordinator.isDownloading
-  }
-
-  func bootstrapModelPackMetadata() {
-    guard canBootstrapModelPackMetadata() else {
-      runtimeDetail = "Launch the runtime before preparing local model metadata."
-      return
-    }
-
-    Task {
-      do {
-        let result = try await runtimeBridge.bootstrapModelPack()
-        await refreshModelHealthState()
-        let copiedSummary = result.copiedFiles.isEmpty
-          ? "Pack metadata was already present."
-          : "Prepared \(result.copiedFiles.count) local model metadata file(s)."
-        runtimeDetail = "\(copiedSummary) Manifest: \(result.manifestPath)"
-      } catch {
-        runtimeDetail = "Model metadata bootstrap failed: \(error.localizedDescription)"
-      }
-    }
-  }
-
-  func runLocalModelPrimaryAction(_ action: LocalModelPrimaryAction?) {
-    guard let action else {
-      return
-    }
-
-    switch action {
-    case .pauseDownload:
-      pauseModelDownload()
-    case .continueDownload(let modelID):
-      downloadRecommendedModel(modelID: modelID, activateAfterDownload: !isLocalModelReady())
-    case .downloadSelectedModel:
-      downloadLocalModel()
-    case .blockedDownload:
-      break
-    case .bootstrapModelPackMetadata:
-      bootstrapModelPackMetadata()
-    }
-  }
-
-  func selectedSetupModelDownloadBlockedDetail() -> String? {
-    guard let model = selectedSetupModel(),
-          !model.downloaded
-    else {
-      return nil
-    }
-
-    return localModelDownloadRequestPlan(for: model).blockedDetail
   }
 }

@@ -17,6 +17,9 @@ enum TimelineSandboxBadgePresenter {
         : "Sandbox Active"
       return TimelineSandboxBadgeSummary(label: label, tone: .ready)
     }
+    if attributes["sandboxAvailable"] == "false" {
+      return TimelineSandboxBadgeSummary(label: "Sandbox Unavailable", tone: .warning)
+    }
 
     return TimelineSandboxBadgeSummary(label: "Sandbox Limited", tone: .warning)
   }

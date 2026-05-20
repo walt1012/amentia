@@ -7,6 +7,9 @@
     "name": "Pith"
   },
   "capabilities": [
+    "command:notion.prepare-page-draft",
+    "connector:notion",
+    "mcp_server:notion",
     "prompt_pack:notion.workspace"
   ],
   "permissions": [
@@ -23,7 +26,8 @@
   "mcpServers": [
     {
       "id": "notion",
-      "transport": "stdio"
+      "transport": "stdio",
+      "command": "bin/notion-mcp-dry-run.py"
     }
   ],
   "appConnectors": [
@@ -41,7 +45,7 @@
       "read_content",
       "insert_content"
     ],
-    "credentialStore": "keychain"
+    "credentialStore": "local"
   },
   "defaultEnabled": false
 }

@@ -9,10 +9,13 @@ struct AppLaunchState {
   let runtimeDetail: String
 
   static func make(runtimeBridge: RuntimeBridge) -> Self {
+    let appSupportSetupDetail = AppSupportDirectories.prepareAppOwnedDirectories()
     let welcomeState = TimelineSessionState.welcomeState()
+    let activeModelPath = runtimeBridge.activeLocalModelPath()
+    let activeModelInvalidationDetail = runtimeBridge.consumeActiveLocalModelInvalidationDetail()
     let localModels = LocalModelCatalog.summaries(
       storageRootPath: runtimeBridge.localModelStorageRootPath(),
-      activeModelPath: runtimeBridge.activeLocalModelPath()
+      activeModelPath: activeModelPath
     )
     let pausedDownload = LocalModelCatalog.loadPausedDownload(matching: localModels)
     let selectedSetupModelID =
@@ -23,9 +26,11 @@ struct AppLaunchState {
       from: pausedDownload,
       localModels: localModels
     )
-    let runtimeDetail = pausedDownload == nil
-      ? "Runtime not launched"
-      : "Runtime not launched | paused model download available"
+    let runtimeDetail = launchRuntimeDetail(
+      pausedDownload: pausedDownload,
+      activeModelInvalidationDetail: activeModelInvalidationDetail,
+      appSupportSetupDetail: appSupportSetupDetail
+    )
 
     return AppLaunchState(
       welcomeState: welcomeState,
@@ -35,5 +40,23 @@ struct AppLaunchState {
       modelDownloadProgress: modelDownloadProgress,
       runtimeDetail: runtimeDetail
     )
+  }
+
+  private static func launchRuntimeDetail(
+    pausedDownload: PersistedModelDownload?,
+    activeModelInvalidationDetail: String?,
+    appSupportSetupDetail: String?
+  ) -> String {
+    var details = ["Runtime not launched"]
+    if pausedDownload != nil {
+      details.append("paused model download available")
+    }
+    if let activeModelInvalidationDetail {
+      details.append(activeModelInvalidationDetail)
+    }
+    if let appSupportSetupDetail {
+      details.append(appSupportSetupDetail)
+    }
+    return details.joined(separator: " | ")
   }
 }

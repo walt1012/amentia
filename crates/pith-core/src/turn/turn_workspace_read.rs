@@ -2,9 +2,12 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::read_file;
+use pith_tools::read_file_with_cancellation;
 
-use super::turn_tool_provenance::workspace_tool_attributes;
+use super::turn_tool_limits::READ_FILE_PREVIEW_MAX_BYTES;
+use super::turn_workspace_timeline::{
+  workspace_tool_failed_items, workspace_tool_result_item, workspace_tool_start_item,
+};
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{build_plan_item, format_file_result, summarize_file_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
@@ -52,29 +55,39 @@ pub(super) fn execute_read_turn(
     return;
   }
 
-  items.push(TimelineItem {
-    kind: "toolStart".to_string(),
-    title: "read_file".to_string(),
-    content: relative_path.to_string(),
-    attributes: Some(workspace_tool_attributes(
-      "read_file",
-      workspace,
-      [("relativePath".to_string(), relative_path.to_string())],
-    )),
-  });
+  items.push(workspace_tool_start_item(
+    "read_file",
+    relative_path.to_string(),
+    workspace,
+    [
+      ("relativePath".to_string(), relative_path.to_string()),
+      (
+        "maxBytes".to_string(),
+        READ_FILE_PREVIEW_MAX_BYTES.to_string(),
+      ),
+    ],
+  ));
 
-  match read_file(Path::new(&workspace.root_path), relative_path, 4096) {
+  match read_file_with_cancellation(
+    Path::new(&workspace.root_path),
+    relative_path,
+    READ_FILE_PREVIEW_MAX_BYTES,
+    || snapshot.cancellation.is_cancelled(),
+  ) {
     Ok(result) => {
-      items.push(TimelineItem {
-        kind: "toolResult".to_string(),
-        title: "read_file result".to_string(),
-        content: format_file_result(&result),
-        attributes: Some(workspace_tool_attributes(
-          "read_file",
-          workspace,
-          [("relativePath".to_string(), relative_path.to_string())],
-        )),
-      });
+      items.push(workspace_tool_result_item(
+        "read_file",
+        format_file_result(&result),
+        workspace,
+        [
+          ("relativePath".to_string(), relative_path.to_string()),
+          (
+            "maxBytes".to_string(),
+            READ_FILE_PREVIEW_MAX_BYTES.to_string(),
+          ),
+          ("isTruncated".to_string(), result.is_truncated.to_string()),
+        ],
+      ));
       let (summary, summary_attributes) = summarize_file_result(
         &snapshot.model_runtime,
         &snapshot.memory_notes,
@@ -99,25 +112,22 @@ pub(super) fn execute_read_turn(
       );
     }
     Err(error) => {
-      items.push(TimelineItem {
-        kind: "warning".to_string(),
-        title: "read_file failed".to_string(),
-        content: error.to_string(),
-        attributes: Some(workspace_tool_attributes(
-          "read_file",
-          workspace,
-          [("relativePath".to_string(), relative_path.to_string())],
-        )),
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: format!(
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
+      items.extend(workspace_tool_failed_items(
+        "read_file",
+        error.to_string(),
+        format!(
           "Pith could not inspect that file in {}. Try another path inside the workspace.",
           workspace.display_name
         ),
-        attributes: None,
-      });
+        workspace,
+        [("relativePath".to_string(), relative_path.to_string())],
+      ));
     }
   }
 }

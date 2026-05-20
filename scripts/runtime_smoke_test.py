@@ -8,19 +8,154 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 
 
+NOTION_CONNECTOR_ID = "notion-connector::notion"
+NOTION_CREDENTIAL_LABEL = "Smoke Notion"
+NOTION_CREDENTIAL_SECRET = "notion-smoke-token"
+LOCAL_CREDENTIAL_PROVIDER = "pith.localCredentialProvider"
+RUNTIME_STDERR_LOG_NAME = "runtime-smoke-stderr.log"
+WEB_SEARCH_FIXTURE_NAME = "web-search-fixture.html"
+DEFAULT_MODEL_ID = "lfm2.5-350m"
+DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
+DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
+DEFAULT_MODEL_DOWNLOAD_URL = (
+  "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
+  "LFM2.5-350M-Q4_K_M.gguf"
+)
+DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
+DEFAULT_MODEL_SIZE_BYTES = 229312224
+
+
+def secure_credentials_persist_across_runtime_restart() -> bool:
+  return sys.platform == "darwin"
+
+
 def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]:
-  return subprocess.Popen(
-    ["cargo", "run", "-p", "pith-runtime-bin"],
-    cwd=repo_root,
-    env=env,
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True,
+  stderr_path = runtime_stderr_path(env)
+  stderr_path.parent.mkdir(parents=True, exist_ok=True)
+  with stderr_path.open("a", encoding="utf-8") as stderr:
+    return subprocess.Popen(
+      ["cargo", "run", "-p", "pith-runtime-bin"],
+      cwd=repo_root,
+      env=env,
+      stdin=subprocess.PIPE,
+      stdout=subprocess.PIPE,
+      stderr=stderr,
+      text=True,
+    )
+
+
+def runtime_stderr_path(env: Mapping[str, str]) -> Path:
+  return Path(env["PITH_DATA_DIR"]) / RUNTIME_STDERR_LOG_NAME
+
+
+def runtime_stderr_tail(env: Mapping[str, str], max_lines: int = 80) -> str:
+  path = runtime_stderr_path(env)
+  if not path.is_file():
+    return ""
+  return "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:])
+
+
+def write_json_file(path: Path, value: dict) -> None:
+  path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+
+
+def write_web_search_fixture(state_dir: Path) -> Path:
+  fixture_path = state_dir / WEB_SEARCH_FIXTURE_NAME
+  fixture_path.parent.mkdir(parents=True, exist_ok=True)
+  fixture_path.write_text(
+    """
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith&amp;rut=abc" class='result-link'>Pith fixture result</a>
+      <td class='result-snippet'>Deterministic local web search result.</td>
+    """,
+    encoding="utf-8",
   )
+  return fixture_path
+
+
+def assert_model_bootstrap_metadata(model_bootstrap: dict) -> None:
+  result = model_bootstrap["result"]
+  manifest_path = Path(result["manifestPath"])
+  assert manifest_path.is_file()
+  if result["readmePath"] is not None:
+    assert Path(result["readmePath"]).is_file()
+
+  manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+  assert manifest["id"] == DEFAULT_MODEL_ID
+  assert manifest["display_name"] == DEFAULT_MODEL_DISPLAY_NAME
+  assert manifest["file_name"] == DEFAULT_MODEL_FILE_NAME
+  assert manifest["context_size"] == 4096
+  assert manifest["model_context_size"] == 32768
+  assert manifest["max_output_tokens"] == 160
+  assert manifest["backend"] == "llama.cpp"
+  assert manifest["download_url"] == DEFAULT_MODEL_DOWNLOAD_URL
+  assert manifest["sha256"] == DEFAULT_MODEL_SHA256
+  assert manifest["size_bytes"] == DEFAULT_MODEL_SIZE_BYTES
+  assert not (manifest_path.parent / DEFAULT_MODEL_FILE_NAME).exists()
+
+
+def readiness_checks(readiness: dict) -> dict[str, dict]:
+  return {check["id"]: check for check in readiness["result"]["checks"]}
+
+
+def assert_fresh_install_readiness(readiness: dict, model_is_ready: bool) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["localModel"]["status"] == ("ready" if model_is_ready else "setup_required")
+  assert checks["workspace"]["status"] == "setup_required"
+  assert checks["thread"]["status"] == "setup_required"
+  assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["workspaceBound"] == "false"
+  assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
+
+
+def assert_workspace_readiness(readiness: dict) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["workspace"]["status"] == "ready"
+  assert checks["thread"]["status"] == "setup_required"
+  assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["workspaceBound"] == "true"
+  assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
+
+
+def assert_thread_ready_for_first_request(readiness: dict) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["workspace"]["status"] == "ready"
+  assert checks["thread"]["status"] == "ready"
+  assert checks["firstRequest"]["status"] == "ready_to_send"
+  assert readiness["result"]["metrics"]["workspaceBound"] == "true"
+  assert readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
+
+
+def assert_first_request_sent(readiness: dict) -> None:
+  checks = readiness_checks(readiness)
+  assert checks["firstRequest"]["status"] == "ready"
+  assert readiness["result"]["metrics"]["firstRequestSent"] == "true"
+
+
+def stop_runtime(process: subprocess.Popen[str]) -> None:
+  if process.poll() is not None:
+    return
+  process.terminate()
+  try:
+    process.wait(timeout=5)
+  except subprocess.TimeoutExpired:
+    process.kill()
+    process.wait(timeout=5)
+
+
+def restart_runtime(
+  process: subprocess.Popen[str],
+  repo_root: Path,
+  env: dict[str, str],
+) -> subprocess.Popen[str]:
+  stop_runtime(process)
+  return start_runtime(repo_root, env)
 
 
 def send_request(process: subprocess.Popen[str], payload: dict) -> tuple[dict, list[dict]]:
@@ -48,10 +183,24 @@ def assert_plugin_install_remove(
   plugin_import_dir: Path,
   request_id_start: int,
 ) -> None:
-  plugin_install, _ = send_request(
+  plugin_inspect, _ = send_request(
     process,
     {
       "id": request_id_start,
+      "method": "plugin/inspect",
+      "params": {
+        "sourcePath": str(plugin_import_dir / "focus-review"),
+      },
+    },
+  )
+  assert plugin_inspect["result"]["plugin"]["id"] == "focus-review"
+  assert plugin_inspect["result"]["plugin"]["provenance"] == "local"
+  assert plugin_inspect["result"]["installStatus"] == "ready"
+
+  plugin_install, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 1,
       "method": "plugin/install",
       "params": {
         "sourcePath": str(plugin_import_dir / "focus-review"),
@@ -61,10 +210,23 @@ def assert_plugin_install_remove(
   assert plugin_install["result"]["plugin"]["id"] == "focus-review"
   assert plugin_install["result"]["plugin"]["provenance"] == "local"
 
+  duplicate_plugin_inspect, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 2,
+      "method": "plugin/inspect",
+      "params": {
+        "sourcePath": str(plugin_import_dir / "focus-review"),
+      },
+    },
+  )
+  assert duplicate_plugin_inspect["result"]["installStatus"] == "alreadyInstalled"
+  assert "already installed" in duplicate_plugin_inspect["result"]["installBlocker"]
+
   plugin_list_after_install, _ = send_request(
     process,
     {
-      "id": request_id_start + 1,
+      "id": request_id_start + 3,
       "method": "plugin/list",
     },
   )
@@ -79,7 +241,7 @@ def assert_plugin_install_remove(
   plugin_remove, _ = send_request(
     process,
     {
-      "id": request_id_start + 2,
+      "id": request_id_start + 4,
       "method": "plugin/remove",
       "params": {
         "manifestPath": installed_plugin["manifestPath"],
@@ -92,7 +254,7 @@ def assert_plugin_install_remove(
   plugin_list_after_remove, _ = send_request(
     process,
     {
-      "id": request_id_start + 3,
+      "id": request_id_start + 5,
       "method": "plugin/list",
     },
   )
@@ -159,6 +321,91 @@ def assert_builtin_plugin_commands(
     note["title"] == "Workspace Capture" and note["source"] == "plugin.workspace-notes"
     for note in memory_list_after_plugin["result"]["notes"]
   )
+  cancel_running, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 3,
+      "method": "turn/cancelRunning",
+      "params": {
+        "threadId": "thread-1",
+      },
+    },
+  )
+  assert cancel_running["result"]["threadId"] == "thread-1"
+
+  cancelled_command_turn, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 4,
+      "method": "plugin/commandRun",
+      "params": {
+        "threadId": "thread-1",
+        "commandId": "workspace-notes::workspace.capture-note",
+        "input": "Cancel before plugin execution",
+      },
+    },
+  )
+  assert cancelled_command_turn["result"]["items"][0]["kind"] == "pluginCommand"
+  assert cancelled_command_turn["result"]["items"][1]["kind"] == "warning"
+  assert (
+    cancelled_command_turn["result"]["items"][1]["attributes"]["pluginCommandStatus"]
+    == "cancelled"
+  )
+  assert (
+    cancelled_command_turn["result"]["items"][1]["attributes"]["pluginRunnerFailureKind"]
+    == "cancelled"
+  )
+  post_cancel_readiness, _ = send_request(
+    process,
+    {
+      "id": request_id_start + 5,
+      "method": "runtime/readiness",
+    },
+  )
+  post_cancel_checks = {
+    check["id"]: check for check in post_cancel_readiness["result"]["checks"]
+  }
+  assert post_cancel_checks["executionControls"]["status"] == "ready"
+  assert post_cancel_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
+  assert post_cancel_readiness["result"]["metrics"]["runningWorkspaceSearchCount"] == "0"
+
+def connector_by_id(connectors: list[dict], connector_id: str) -> dict:
+  return next(
+    connector
+    for connector in connectors
+    if connector["connectorId"] == connector_id
+  )
+
+def assert_notion_connector_disabled(connector: dict) -> None:
+  assert connector["status"] == "disabled"
+  assert connector["authType"] == "oauth2"
+  assert connector["credentialStore"] == "local"
+  assert connector["authScopes"] == ["read_content", "insert_content"]
+
+def assert_notion_connector_authorized(
+  connector: dict,
+  *,
+  credential_secret_present: bool = True,
+) -> None:
+  assert connector["status"] == "ready"
+  assert connector["authStatus"] == "authorized"
+  assert connector["credentialPresent"] is True
+  assert connector["credentialSecretPresent"] is credential_secret_present
+  assert connector["credentialProvider"] == LOCAL_CREDENTIAL_PROVIDER
+  assert connector["credentialHandle"] == NOTION_CONNECTOR_ID
+  assert connector["credentialLabel"] == NOTION_CREDENTIAL_LABEL
+  assert isinstance(connector["credentialUpdatedAt"], int)
+
+def assert_notion_connector_cleared(connector: dict) -> None:
+  assert connector["status"] == "needsAuth"
+  assert connector["authStatus"] == "needsAuth"
+  assert connector["credentialPresent"] is False
+  assert connector["credentialSecretPresent"] is False
+  assert "credentialProvider" not in connector
+  assert "credentialHandle" not in connector
+
+def assert_notion_secret_not_leaked(payload: dict) -> None:
+  assert NOTION_CREDENTIAL_SECRET not in json.dumps(payload)
 
 def main() -> int:
   repo_root = Path(__file__).resolve().parent.parent
@@ -182,221 +429,191 @@ def main() -> int:
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant" / "commands").mkdir(parents=True, exist_ok=True)
-  (plugin_dir / "workspace-notes" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "workspace-notes",
-        "version": "0.1.0",
-        "displayName": "Workspace Notes",
-        "description": "Captures reusable workspace notes and preferences for local threads.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:workspace.capture-note",
-          "prompt_pack:workspace.notes",
-          "settings:workspace.preferences",
-        ],
-        "permissions": [
-          "file.read",
-          "file.write",
-        ],
-        "defaultEnabled": True,
+  write_json_file(
+    plugin_dir / "workspace-notes" / "pith-plugin.json",
+    {
+      "name": "workspace-notes",
+      "version": "0.1.0",
+      "displayName": "Workspace Notes",
+      "description": "Captures reusable workspace notes and preferences for local threads.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:workspace.capture-note",
+        "prompt_pack:workspace.notes",
+        "settings:workspace.preferences",
+      ],
+      "permissions": [
+        "file.read",
+        "file.write",
+      ],
+      "defaultEnabled": True,
+    },
   )
-  (plugin_dir / "notion-connector" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "notion-connector",
-        "version": "0.1.0",
-        "displayName": "Notion Connector",
-        "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [],
-        "permissions": [
-          "network.outbound",
-          "mcp.connect",
-        ],
-        "mcpServers": [
-          {
-            "id": "notion",
-            "transport": "stdio",
-          },
-        ],
-        "appConnectors": [
-          {
-            "id": "notion",
-            "displayName": "Notion",
-            "service": "notion",
-            "homepage": "https://www.notion.so",
-          },
-        ],
-        "authPolicy": {
-          "type": "oauth2",
-          "required": True,
-          "scopes": [
-            "read_content",
-            "insert_content",
-          ],
-          "credentialStore": "keychain",
-        },
-        "defaultEnabled": False,
+  write_json_file(
+    plugin_dir / "notion-connector" / "pith-plugin.json",
+    {
+      "name": "notion-connector",
+      "version": "0.1.0",
+      "displayName": "Notion Connector",
+      "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [],
+      "permissions": [
+        "network.outbound",
+        "mcp.connect",
+      ],
+      "mcpServers": [
+        {
+          "id": "notion",
+          "transport": "stdio",
+        },
+      ],
+      "appConnectors": [
+        {
+          "id": "notion",
+          "displayName": "Notion",
+          "service": "notion",
+          "homepage": "https://www.notion.so",
+        },
+      ],
+      "authPolicy": {
+        "type": "oauth2",
+        "required": True,
+        "scopes": [
+          "read_content",
+          "insert_content",
+        ],
+        "credentialStore": "local",
+      },
+      "defaultEnabled": False,
+    },
   )
-  (plugin_dir / "workspace-notes" / "commands" / "workspace.capture-note.json").write_text(
-    json.dumps(
-      {
-        "title": "Capture Workspace Note",
-        "description": "Read the workspace README and prepare a concise note candidate.",
-        "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
-        "execution": {
-          "kind": "builtin.workspaceReadmeNote",
-        },
-        "memory": {
-          "noteTitle": "Workspace Capture",
-          "noteSource": "plugin.workspace-notes",
-          "noteTags": ["workspace", "preference", "plugin"],
-        },
+  write_json_file(
+    plugin_dir / "workspace-notes" / "commands" / "workspace.capture-note.json",
+    {
+      "title": "Capture Workspace Note",
+      "description": "Read the workspace README and prepare a concise note candidate.",
+      "prompt": "Read README.md and summarize the most reusable workspace detail as a concise note candidate.",
+      "execution": {
+        "kind": "builtin.workspaceReadmeNote",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "memory": {
+        "noteTitle": "Workspace Capture",
+        "noteSource": "plugin.workspace-notes",
+        "noteTags": ["workspace", "preference", "plugin"],
+      },
+    },
   )
-  (plugin_dir / "shell-recorder" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "shell-recorder",
-        "version": "0.1.0",
-        "displayName": "Shell Recorder",
-        "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:shell.summarize-session",
-          "hook:shell.recorder",
-          "tool:shell.timeline",
-        ],
-        "permissions": [
-          "shell.exec",
-        ],
-        "defaultEnabled": False,
+  write_json_file(
+    plugin_dir / "shell-recorder" / "pith-plugin.json",
+    {
+      "name": "shell-recorder",
+      "version": "0.1.0",
+      "displayName": "Shell Recorder",
+      "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:shell.summarize-session",
+        "hook:shell.recorder",
+        "tool:shell.timeline",
+      ],
+      "permissions": [
+        "shell.exec",
+      ],
+      "defaultEnabled": False,
+    },
   )
-  (plugin_dir / "shell-recorder" / "commands" / "shell.summarize-session.json").write_text(
-    json.dumps(
-      {
-        "title": "Summarize Shell Session",
-        "description": "Ask Pith to explain recent shell work in a compact summary.",
-        "prompt": "Summarize the most relevant recent shell activity for this workspace.",
-        "execution": {
-          "kind": "builtin.shellSessionSummary",
-        },
+  write_json_file(
+    plugin_dir / "shell-recorder" / "commands" / "shell.summarize-session.json",
+    {
+      "title": "Summarize Shell Session",
+      "description": "Ask Pith to explain recent shell work in a compact summary.",
+      "prompt": "Summarize the most relevant recent shell activity for this workspace.",
+      "execution": {
+        "kind": "builtin.shellSessionSummary",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+    },
   )
-  (plugin_dir / "shell-recorder" / "hooks" / "shell.recorder.json").write_text(
-    json.dumps(
-      {
-        "title": "Record Shell Completion",
-        "description": "Capture a compact shell completion note in the thread timeline.",
-        "event": "shell.completed",
-        "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
-        "memory": {
-          "noteTitle": "Shell Completion",
-          "noteSource": "plugin.shell-recorder",
-          "noteTags": ["shell", "hook", "plugin"],
-        },
+  write_json_file(
+    plugin_dir / "shell-recorder" / "hooks" / "shell.recorder.json",
+    {
+      "title": "Record Shell Completion",
+      "description": "Capture a compact shell completion note in the thread timeline.",
+      "event": "shell.completed",
+      "messageTemplate": "Shell Recorder observed `{{command}}` in {{workspaceName}} with exit code {{exitCode}}. stdout: {{stdoutPreview}} stderr: {{stderrPreview}}",
+      "memory": {
+        "noteTitle": "Shell Completion",
+        "noteSource": "plugin.shell-recorder",
+        "noteTags": ["shell", "hook", "plugin"],
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+    },
   )
-  (plugin_dir / "review-assistant" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "review-assistant",
-        "version": "0.1.0",
-        "displayName": "Review Assistant",
-        "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:review.inspect-diff",
-          "prompt_pack:review.prompts",
-          "tool:diff.summaries",
-        ],
-        "permissions": [
-          "file.read",
-          "model.invoke",
-        ],
-        "defaultEnabled": True,
+  write_json_file(
+    plugin_dir / "review-assistant" / "pith-plugin.json",
+    {
+      "name": "review-assistant",
+      "version": "0.1.0",
+      "displayName": "Review Assistant",
+      "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:review.inspect-diff",
+        "prompt_pack:review.prompts",
+        "tool:diff.summaries",
+      ],
+      "permissions": [
+        "file.read",
+        "model.invoke",
+      ],
+      "defaultEnabled": True,
+    },
   )
-  (plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json").write_text(
-    json.dumps(
-      {
-        "title": "Inspect Current Diff",
-        "description": "Ask Pith to review the active workspace diff with a code review mindset.",
-        "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
-        "execution": {
-          "kind": "builtin.reviewDiffSummary",
-        },
+  write_json_file(
+    plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json",
+    {
+      "title": "Inspect Current Diff",
+      "description": "Ask Pith to review the active workspace diff with a code review mindset.",
+      "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
+      "execution": {
+        "kind": "builtin.reviewDiffSummary",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+    },
   )
   (plugin_import_dir / "focus-review" / "commands").mkdir(parents=True, exist_ok=True)
-  (plugin_import_dir / "focus-review" / "pith-plugin.json").write_text(
-    json.dumps(
-      {
-        "name": "focus-review",
-        "version": "0.1.0",
-        "displayName": "Focus Review",
-        "description": "Installs into the local plugin catalog during the runtime smoke test.",
-        "author": {
-          "name": "Pith",
-        },
-        "capabilities": [
-          "command:focus.review",
-        ],
-        "permissions": [
-          "file.read",
-        ],
-        "defaultEnabled": True,
+  write_json_file(
+    plugin_import_dir / "focus-review" / "pith-plugin.json",
+    {
+      "name": "focus-review",
+      "version": "0.1.0",
+      "displayName": "Focus Review",
+      "description": "Installs into the local plugin catalog during the runtime smoke test.",
+      "author": {
+        "name": "Pith",
       },
-      indent=2,
-    ),
-    encoding="utf-8",
+      "capabilities": [
+        "command:focus.review",
+      ],
+      "permissions": [
+        "file.read",
+      ],
+      "defaultEnabled": True,
+    },
   )
-  (plugin_import_dir / "focus-review" / "commands" / "focus.review.json").write_text(
-    json.dumps(
-      {
-        "title": "Focus Review",
-        "description": "Prepare a focused local review summary.",
-        "prompt": "Review the latest local changes and keep the summary focused on the most important issues.",
-      },
-      indent=2,
-    ),
-    encoding="utf-8",
+  write_json_file(
+    plugin_import_dir / "focus-review" / "commands" / "focus.review.json",
+    {
+      "title": "Focus Review",
+      "description": "Prepare a focused local review summary.",
+      "prompt": "Review the latest local changes and keep the summary focused on the most important issues.",
+    },
   )
   workspace_dir.mkdir(parents=True, exist_ok=True)
   (workspace_dir / "README.md").write_text("# Pith\nMilestone 1 smoke test\n", encoding="utf-8")
@@ -405,7 +622,10 @@ def main() -> int:
   env = os.environ.copy()
   env["PITH_DATA_DIR"] = str(state_dir)
   env["PITH_PLUGIN_DIR"] = str(plugin_dir)
+  env["PITH_ENABLE_WEB_SEARCH_FIXTURE"] = "1"
+  env["PITH_WEB_SEARCH_FIXTURE_PATH"] = str(write_web_search_fixture(state_dir))
   process = start_runtime(repo_root, env)
+  success = False
 
   try:
     initialize, _ = send_request(
@@ -440,22 +660,17 @@ def main() -> int:
         "method": "model/health",
       },
     )
-    assert model_health["result"]["displayName"] == "LFM2.5-350M Q4_K_M"
+    assert model_health["result"]["displayName"] == DEFAULT_MODEL_DISPLAY_NAME
     assert model_health["result"]["backend"] in {"unconfigured", "llama.cpp"}
     assert model_health["result"]["status"] in {"unavailable", "ready"}
     model_is_ready = model_health["result"]["status"] == "ready"
     assert model_health["result"]["source"] in {"default-manifest", "environment", "path-scan"}
     assert model_health["result"]["metrics"]["contextSize"] == "4096"
     assert model_health["result"]["metrics"]["modelContextSize"] == "32768"
-    assert model_health["result"]["metrics"]["fileName"] == "LFM2.5-350M-Q4_K_M.gguf"
-    assert model_health["result"]["metrics"]["downloadUrl"].startswith(
-      "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
-    )
-    assert (
-      model_health["result"]["metrics"]["sha256"]
-      == "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
-    )
-    assert model_health["result"]["metrics"]["sizeBytes"] == "229312224"
+    assert model_health["result"]["metrics"]["fileName"] == DEFAULT_MODEL_FILE_NAME
+    assert model_health["result"]["metrics"]["downloadUrl"] == DEFAULT_MODEL_DOWNLOAD_URL
+    assert model_health["result"]["metrics"]["sha256"] == DEFAULT_MODEL_SHA256
+    assert model_health["result"]["metrics"]["sizeBytes"] == str(DEFAULT_MODEL_SIZE_BYTES)
     assert model_health["result"]["metrics"]["readiness"] in {
       "ready",
       "manifest_only",
@@ -481,7 +696,7 @@ def main() -> int:
     )
     assert runtime_readiness["result"]["status"] in {"setup_required", "ready"}
     assert runtime_readiness["result"]["summary"]
-    readiness_check_ids = {check["id"] for check in runtime_readiness["result"]["checks"]}
+    readiness_check_ids = set(readiness_checks(runtime_readiness))
     assert {
       "localModel",
       "workspace",
@@ -490,6 +705,7 @@ def main() -> int:
       "context",
       "executionControls",
       "nativeSandbox",
+      "webSearch",
       "plugins",
       "boundedRuntime",
     }.issubset(readiness_check_ids)
@@ -499,7 +715,20 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["shellTimeoutSeconds"] == "120"
     assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
     assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"
+    assert runtime_readiness["result"]["metrics"]["sandboxAvailable"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["sandboxActive"] in {"true", "false"}
+    assert runtime_readiness["result"]["metrics"]["webSearchTimeoutSeconds"] == "20"
+    assert runtime_readiness["result"]["metrics"]["webSearchProvider"] == "DuckDuckGo Lite"
+    assert runtime_readiness["result"]["metrics"]["webSearchClient"] == "fixture"
+    assert runtime_readiness["result"]["metrics"]["webSearchAvailable"] == "true"
+    assert "pluginCommandCount" in runtime_readiness["result"]["metrics"]
+    assert "enabledPluginCommandCount" in runtime_readiness["result"]["metrics"]
+    assert runtime_readiness["result"]["metrics"]["pendingApprovalCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningTurnCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningApprovalCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningPluginCommandCount"] == "0"
+    assert runtime_readiness["result"]["metrics"]["runningWorkspaceSearchCount"] == "0"
+    assert_fresh_install_readiness(runtime_readiness, model_is_ready)
 
     model_bootstrap, _ = send_request(
       process,
@@ -508,9 +737,7 @@ def main() -> int:
         "method": "model/bootstrap",
       },
     )
-    assert Path(model_bootstrap["result"]["manifestPath"]).is_file()
-    if model_bootstrap["result"]["readmePath"] is not None:
-      assert Path(model_bootstrap["result"]["readmePath"]).is_file()
+    assert_model_bootstrap_metadata(model_bootstrap)
 
     memory_status, _ = send_request(
       process,
@@ -524,7 +751,7 @@ def main() -> int:
     memory_list, _ = send_request(
       process,
       {
-        "id": 23,
+        "id": 125,
         "method": "memory/list",
       },
     )
@@ -570,6 +797,21 @@ def main() -> int:
     )
     assert shell_recorder_enable["result"]["plugin"]["enabled"] is True
 
+    plugin_readiness, _ = send_request(
+      process,
+      {
+        "id": 43,
+        "method": "runtime/readiness",
+      },
+    )
+    plugin_checks = {
+      check["id"]: check for check in plugin_readiness["result"]["checks"]
+    }
+    assert plugin_checks["plugins"]["status"] == "ready"
+    assert "command capability" in plugin_checks["plugins"]["detail"]
+    assert int(plugin_readiness["result"]["metrics"]["pluginCommandCount"]) >= 3
+    assert int(plugin_readiness["result"]["metrics"]["enabledPluginCommandCount"]) >= 3
+
     capability_registry, _ = send_request(
       process,
       {
@@ -614,15 +856,52 @@ def main() -> int:
       },
     )
     connectors = connector_registry["result"]["connectors"]
-    notion_connector = next(
-      connector
-      for connector in connectors
-      if connector["connectorId"] == "notion-connector::notion"
+    notion_connector = connector_by_id(connectors, NOTION_CONNECTOR_ID)
+    assert_notion_connector_disabled(notion_connector)
+    disabled_connector_authorize, _ = send_request(
+      process,
+      {
+        "id": 120,
+        "method": "plugin/connectorAuthorize",
+        "params": {
+          "connectorId": NOTION_CONNECTOR_ID,
+          "credentialLabel": NOTION_CREDENTIAL_LABEL,
+          "credentialSecret": NOTION_CREDENTIAL_SECRET,
+        },
+      },
     )
-    assert notion_connector["status"] == "disabled"
-    assert notion_connector["authType"] == "oauth2"
-    assert notion_connector["credentialStore"] == "keychain"
-    assert notion_connector["authScopes"] == ["read_content", "insert_content"]
+    assert disabled_connector_authorize["error"]["code"] == -32056
+    assert disabled_connector_authorize["error"]["data"]["connectorStatus"] == "disabled"
+
+    notion_connector_enable, _ = send_request(
+      process,
+      {
+        "id": 121,
+        "method": "plugin/setEnabled",
+        "params": {
+          "pluginId": "notion-connector",
+          "enabled": True,
+        },
+      },
+    )
+    assert notion_connector_enable["result"]["plugin"]["enabled"] is True
+
+    authorized_connector, _ = send_request(
+      process,
+      {
+        "id": 122,
+        "method": "plugin/connectorAuthorize",
+        "params": {
+          "connectorId": NOTION_CONNECTOR_ID,
+          "credentialLabel": NOTION_CREDENTIAL_LABEL,
+          "credentialSecret": NOTION_CREDENTIAL_SECRET,
+        },
+      },
+    )
+    authorized_notion = authorized_connector["result"]["connector"]
+    assert_notion_connector_authorized(authorized_notion)
+    assert_notion_secret_not_leaked(authorized_connector)
+
     hook_registry, _ = send_request(
       process,
       {
@@ -653,11 +932,25 @@ def main() -> int:
         "method": "runtime/readiness",
       },
     )
-    workspace_readiness_checks = {
-      check["id"]: check for check in workspace_readiness["result"]["checks"]
-    }
-    assert workspace_readiness["result"]["metrics"]["workspaceBound"] == "true"
-    assert workspace_readiness_checks["workspace"]["status"] == "ready"
+    assert_workspace_readiness(workspace_readiness)
+
+    direct_workspace_search, _ = send_request(
+      process,
+      {
+        "id": 50,
+        "method": "workspace/search",
+        "params": {
+          "query": "Needle",
+          "maxResults": 5,
+        },
+      },
+    )
+    assert direct_workspace_search["result"]["query"] == "Needle"
+    assert direct_workspace_search["result"]["workspace"]["rootPath"] == str(workspace_dir)
+    assert any(
+      match["relativePath"] == "notes.txt" and match["lineNumber"] == 1
+      for match in direct_workspace_search["result"]["matches"]
+    )
 
     memory_status_after_workspace, _ = send_request(
       process,
@@ -725,6 +1018,148 @@ def main() -> int:
     assert thread_read["result"]["thread"]["id"] == "thread-1"
     assert thread_read["result"]["items"][0]["kind"] == "system"
 
+    thread_readiness, _ = send_request(
+      process,
+      {
+        "id": 48,
+        "method": "runtime/readiness",
+      },
+    )
+    assert_thread_ready_for_first_request(thread_readiness)
+
+    process = restart_runtime(process, repo_root, env)
+    recovery_initialize, _ = send_request(
+      process,
+      {
+        "id": 51,
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "runtime-smoke-test",
+            "version": "0.1.0",
+          }
+        },
+      },
+    )
+    assert recovery_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+
+    recovered_workspace, _ = send_request(
+      process,
+      {
+        "id": 52,
+        "method": "workspace/current",
+      },
+    )
+    assert recovered_workspace["result"]["workspace"]["displayName"] == workspace_dir.name
+    assert recovered_workspace["result"]["workspace"]["rootPath"] == str(workspace_dir)
+
+    recovered_thread, _ = send_request(
+      process,
+      {
+        "id": 53,
+        "method": "thread/read",
+        "params": {
+          "threadId": "thread-1",
+        },
+      },
+    )
+    assert recovered_thread["result"]["thread"]["title"] == "Smoke Test Thread"
+    assert recovered_thread["result"]["items"][0]["kind"] == "system"
+
+    recovered_memory_status, _ = send_request(
+      process,
+      {
+        "id": 54,
+        "method": "memory/status",
+      },
+    )
+    assert recovered_memory_status["result"]["noteCount"] >= 2
+
+    recovered_readiness, _ = send_request(
+      process,
+      {
+        "id": 55,
+        "method": "runtime/readiness",
+      },
+    )
+    assert_thread_ready_for_first_request(recovered_readiness)
+
+    recovered_plugin_refresh, _ = send_request(
+      process,
+      {
+        "id": 56,
+        "method": "plugin/refresh",
+      },
+    )
+    assert "stateWarning" not in recovered_plugin_refresh["result"]
+    refreshed_plugins = {
+      plugin["id"]: plugin
+      for plugin in recovered_plugin_refresh["result"]["plugins"]
+    }
+    assert refreshed_plugins["workspace-notes"]["enabled"] is True
+    assert refreshed_plugins["shell-recorder"]["enabled"] is True
+    assert refreshed_plugins["review-assistant"]["enabled"] is True
+    assert refreshed_plugins["notion-connector"]["enabled"] is True
+
+    recovered_connector_registry, _ = send_request(
+      process,
+      {
+        "id": 57,
+        "method": "plugin/connectorRegistry",
+      },
+    )
+    recovered_notion = connector_by_id(
+      recovered_connector_registry["result"]["connectors"],
+      NOTION_CONNECTOR_ID,
+    )
+    assert_notion_connector_authorized(
+      recovered_notion,
+      credential_secret_present=secure_credentials_persist_across_runtime_restart(),
+    )
+    assert_notion_secret_not_leaked(recovered_connector_registry)
+
+    cleared_connector, _ = send_request(
+      process,
+      {
+        "id": 58,
+        "method": "plugin/connectorClearCredential",
+        "params": {
+          "connectorId": NOTION_CONNECTOR_ID,
+        },
+      },
+    )
+    cleared_notion = cleared_connector["result"]["connector"]
+    assert_notion_connector_cleared(cleared_notion)
+
+    process = restart_runtime(process, repo_root, env)
+    cleared_recovery_initialize, _ = send_request(
+      process,
+      {
+        "id": 59,
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "runtime-smoke-test",
+            "version": "0.1.0",
+          }
+        },
+      },
+    )
+    assert cleared_recovery_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+
+    cleared_recovery_registry, _ = send_request(
+      process,
+      {
+        "id": 124,
+        "method": "plugin/connectorRegistry",
+      },
+    )
+    cleared_recovered_notion = connector_by_id(
+      cleared_recovery_registry["result"]["connectors"],
+      NOTION_CONNECTOR_ID,
+    )
+    assert_notion_connector_cleared(cleared_recovered_notion)
+
     turn, _ = send_request(
       process,
       {
@@ -741,6 +1176,7 @@ def main() -> int:
       assert "Local model is not ready" in turn["error"]["message"]
       assert_plugin_install_remove(process, plugin_import_dir, 60)
       assert_builtin_plugin_commands(process, 70)
+      success = True
       return 0
 
     assert turn["result"]["items"][0]["kind"] == "userMessage"
@@ -808,6 +1244,15 @@ def main() -> int:
     else:
       assert latest_assistant["attributes"]["streamingStatus"] == "completed"
 
+    first_request_readiness, _ = send_request(
+      process,
+      {
+        "id": 44,
+        "method": "runtime/readiness",
+      },
+    )
+    assert_first_request_sent(first_request_readiness)
+
     search_turn, _ = send_request(
       process,
       {
@@ -840,9 +1285,7 @@ def main() -> int:
     assert write_turn["result"]["items"][4]["kind"] == "approvalRequested"
     approval_id = write_turn["result"]["pendingApprovals"][0]["id"]
 
-    process.terminate()
-    process.wait(timeout=5)
-    process = start_runtime(repo_root, env)
+    process = restart_runtime(process, repo_root, env)
 
     restarted_initialize, _ = send_request(
       process,
@@ -948,6 +1391,10 @@ def main() -> int:
     )
     assert shell_turn["result"]["items"][2]["kind"] == "approvalRequested"
     assert shell_turn["result"]["items"][2]["attributes"]["sandboxMode"] == "workspaceReadWrite"
+    assert shell_turn["result"]["items"][2]["attributes"]["sandboxAvailable"] in {
+      "true",
+      "false",
+    }
     assert shell_turn["result"]["items"][2]["attributes"]["sandboxActive"] in {
       "true",
       "false",
@@ -972,6 +1419,10 @@ def main() -> int:
     assert shell_approval["result"]["items"][2]["attributes"]["sandboxBackend"] in {
       "macosSeatbelt",
       "processOnly",
+    }
+    assert shell_approval["result"]["items"][2]["attributes"]["sandboxAvailable"] in {
+      "true",
+      "false",
     }
     assert shell_approval["result"]["items"][2]["attributes"]["sandboxActive"] in {
       "true",
@@ -1003,14 +1454,21 @@ def main() -> int:
 
     assert_plugin_install_remove(process, plugin_import_dir, 42)
     assert_builtin_plugin_commands(process, 48)
+    success = True
     return 0
   finally:
-    process.terminate()
-    process.wait(timeout=5)
+    if not success:
+      stderr_tail = runtime_stderr_tail(env)
+      if stderr_tail:
+        print("runtime stderr tail:", file=sys.stderr)
+        print(stderr_tail, file=sys.stderr)
+    stop_runtime(process)
     if plugin_dir.exists():
       shutil.rmtree(plugin_dir)
     if plugin_import_dir.exists():
       shutil.rmtree(plugin_import_dir)
+    if state_dir.exists():
+      shutil.rmtree(state_dir)
     if workspace_dir.exists():
       shutil.rmtree(workspace_dir)
 

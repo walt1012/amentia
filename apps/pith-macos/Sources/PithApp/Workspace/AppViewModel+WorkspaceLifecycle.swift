@@ -11,21 +11,43 @@ extension AppViewModel {
       return
     }
 
-    Task {
+    guard let requestToken = workspaceOpenCoordinator.begin(
+      previousRuntimeDetail: runtimeDetail
+    ) else {
+      return
+    }
+    let failureThreadID = selectedThreadID
+    runtimeDetail = "Opening workspace..."
+
+    let task = Task {
       do {
         let bootstrap = try await WorkspaceOpenBootstrapLoader.load(
           runtimeBridge: runtimeBridge,
           path: url.path
         )
+        guard workspaceOpenCoordinator.isCurrent(requestToken) else {
+          return
+        }
         try await applyWorkspaceOpenBootstrap(bootstrap)
+        guard workspaceOpenCoordinator.isCurrent(requestToken) else {
+          return
+        }
+        restoreRuntimeDetailAfterWorkspaceOpen(requestToken)
+        workspaceOpenCoordinator.finish(requestToken)
         announceFirstRequestReadyIfNeeded()
       } catch {
+        guard workspaceOpenCoordinator.isCurrent(requestToken) else {
+          return
+        }
+        restoreRuntimeDetailAfterWorkspaceOpen(requestToken)
+        workspaceOpenCoordinator.finish(requestToken)
         appendEntry(
-          to: selectedThreadID,
+          to: failureThreadID,
           TimelineEventPresenter.workspaceOpenFailed(error: error)
         )
       }
     }
+    workspaceOpenCoordinator.bind(task: task, token: requestToken)
   }
 
   private func applyWorkspaceOpenBootstrap(_ bootstrap: WorkspaceOpenBootstrap) async throws {
@@ -49,5 +71,15 @@ extension AppViewModel {
       to: selectedThreadID,
       TimelineEventPresenter.workspaceOpened(workspace)
     )
+  }
+
+  private func restoreRuntimeDetailAfterWorkspaceOpen(_ token: WorkspaceOpenRequestToken) {
+    guard runtimeState == .ready else {
+      return
+    }
+
+    runtimeDetail = modelDownloadCoordinator.isDownloading
+      ? modelDownloadProgressSummary()
+      : token.previousRuntimeDetail
   }
 }

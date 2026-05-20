@@ -2,9 +2,12 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::search_files;
+use pith_tools::search_files_with_cancellation;
 
-use super::turn_tool_provenance::workspace_tool_attributes;
+use super::turn_tool_limits::SEARCH_FILES_RESULT_LIMIT;
+use super::turn_workspace_timeline::{
+  workspace_tool_failed_items, workspace_tool_result_item, workspace_tool_start_item,
+};
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
 use crate::local_responses::{build_plan_item, format_search_result, summarize_search_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
@@ -52,32 +55,39 @@ pub(super) fn execute_search_turn(
     return;
   }
 
-  items.push(TimelineItem {
-    kind: "toolStart".to_string(),
-    title: "search_files".to_string(),
-    content: query.to_string(),
-    attributes: Some(workspace_tool_attributes(
-      "search_files",
-      workspace,
-      [("query".to_string(), query.to_string())],
-    )),
-  });
+  items.push(workspace_tool_start_item(
+    "search_files",
+    query.to_string(),
+    workspace,
+    [
+      ("query".to_string(), query.to_string()),
+      (
+        "maxResults".to_string(),
+        SEARCH_FILES_RESULT_LIMIT.to_string(),
+      ),
+    ],
+  ));
 
-  match search_files(Path::new(&workspace.root_path), query, 12) {
+  match search_files_with_cancellation(
+    Path::new(&workspace.root_path),
+    query,
+    SEARCH_FILES_RESULT_LIMIT,
+    || snapshot.cancellation.is_cancelled(),
+  ) {
     Ok(matches) => {
-      items.push(TimelineItem {
-        kind: "toolResult".to_string(),
-        title: "search_files result".to_string(),
-        content: format_search_result(query, &matches),
-        attributes: Some(workspace_tool_attributes(
-          "search_files",
-          workspace,
-          [
-            ("query".to_string(), query.to_string()),
-            ("resultCount".to_string(), matches.len().to_string()),
-          ],
-        )),
-      });
+      items.push(workspace_tool_result_item(
+        "search_files",
+        format_search_result(query, &matches),
+        workspace,
+        [
+          ("query".to_string(), query.to_string()),
+          ("resultCount".to_string(), matches.len().to_string()),
+          (
+            "maxResults".to_string(),
+            SEARCH_FILES_RESULT_LIMIT.to_string(),
+          ),
+        ],
+      ));
       let (summary, summary_attributes) = summarize_search_result(
         &snapshot.model_runtime,
         &snapshot.memory_notes,
@@ -102,25 +112,22 @@ pub(super) fn execute_search_turn(
       );
     }
     Err(error) => {
-      items.push(TimelineItem {
-        kind: "warning".to_string(),
-        title: "search_files failed".to_string(),
-        content: error.to_string(),
-        attributes: Some(workspace_tool_attributes(
-          "search_files",
-          workspace,
-          [("query".to_string(), query.to_string())],
-        )),
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: format!(
+      if snapshot.cancellation.is_cancelled() {
+        items.extend(crate::turn_streaming::build_turn_cancelled_items(
+          &snapshot.turn_id,
+        ));
+        return;
+      }
+      items.extend(workspace_tool_failed_items(
+        "search_files",
+        error.to_string(),
+        format!(
           "Pith could not search {} yet. Try a shorter query or re-open the workspace.",
           workspace.display_name
         ),
-        attributes: None,
-      });
+        workspace,
+        [("query".to_string(), query.to_string())],
+      ));
     }
   }
 }

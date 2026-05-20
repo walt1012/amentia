@@ -15,10 +15,12 @@ extension AppViewModel {
   }
 
   func refreshLocalModelCatalog() {
+    let configuredActiveModelPath = runtimeBridge.activeLocalModelPath()
+    let activeModelInvalidationDetail = runtimeBridge.consumeActiveLocalModelInvalidationDetail()
     let refreshPlan = LocalModelCatalogRefreshPlanner.plan(
       LocalModelCatalogRefreshSnapshot(
         storageRootPath: runtimeBridge.localModelStorageRootPath(),
-        configuredActiveModelPath: runtimeBridge.activeLocalModelPath(),
+        configuredActiveModelPath: configuredActiveModelPath,
         runtimeModelPath: modelHealth?.modelPath,
         selectedSetupModelID: selectedSetupModelID
       )
@@ -28,6 +30,9 @@ extension AppViewModel {
     }
     updateLocalModelReadinessState { state in
       state.applyCatalogRefresh(refreshPlan)
+    }
+    if let activeModelInvalidationDetail {
+      runtimeDetail = activeModelInvalidationDetail
     }
     AppPreferences.storeSelectedSetupModelID(refreshPlan.selectedSetupModelID)
   }

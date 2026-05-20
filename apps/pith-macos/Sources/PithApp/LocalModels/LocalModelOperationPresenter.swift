@@ -72,7 +72,7 @@ enum LocalModelOperationPresenter {
 
     let role = model.id == defaultModelID ? "Default" : "Recommended alternative"
     let status = model.downloaded ? "downloaded" : "not downloaded"
-    return "\(role): \(model.description) \(formattedByteCount(model.sizeBytes)) | \(model.license) | \(status). The first-use catalog is intentionally small, and Pith runs one active model at a time."
+    return "\(role): \(model.description) \(LocalModelByteFormatter.string(model.sizeBytes)) | \(model.license) | \(status). The first-use catalog is intentionally small, and Pith runs one active model at a time."
   }
 
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
@@ -95,14 +95,8 @@ enum LocalModelOperationPresenter {
     }
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
-    let localSize = formattedByteCount(snapshot.downloadedLocalSizeBytes)
+    let localSize = LocalModelByteFormatter.string(snapshot.downloadedLocalSizeBytes)
     return "Active: \(activeModel) | \(snapshot.downloadedModelCount)/\(snapshot.totalModelCount) downloaded | \(localSize)"
-  }
-
-  private static func formattedByteCount(_ byteCount: Int64) -> String {
-    let formatter = ByteCountFormatter()
-    formatter.countStyle = .file
-    return formatter.string(fromByteCount: byteCount)
   }
 
   private static func readySetupGuidance(
@@ -199,7 +193,7 @@ enum LocalModelOperationPresenter {
   }
 
   private static func modelDetail(_ model: LocalModelSummary) -> String {
-    let size = formattedByteCount(model.sizeBytes)
+    let size = LocalModelByteFormatter.string(model.sizeBytes)
     let context = "\(model.contextSize) runtime / \(model.modelContextSize) model context"
     return "\(size) | \(model.license) | \(context)"
   }

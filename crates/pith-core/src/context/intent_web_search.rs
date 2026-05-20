@@ -18,6 +18,8 @@ pub(crate) fn infer_explicit_web_search_intent(message: &str) -> Option<WebSearc
     "search web for ",
     "search the web for ",
     "search online for ",
+    "browse the web for ",
+    "check online for ",
     "look up online ",
   ] {
     if let Some(index) = lowercased_message.find(keyword) {
@@ -33,6 +35,18 @@ pub(crate) fn infer_explicit_web_search_intent(message: &str) -> Option<WebSearc
     }
   }
 
+  if let Some(index) = lowercased_message.find("look up ") {
+    let query = trimmed[index + "look up ".len()..]
+      .trim()
+      .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
+    if !query.is_empty() && !has_local_workspace_signal(&query.to_lowercase()) {
+      return Some(WebSearchIntent {
+        query: query.to_string(),
+        routing_reason: "explicitWebSearchRequest",
+      });
+    }
+  }
+
   None
 }
 
@@ -45,27 +59,73 @@ pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIn
   }
 
   let lowercased_message = trimmed.to_lowercase();
-  let has_freshness_signal = [
+  let has_freshness_signal = has_fresh_public_information_signal(&lowercased_message);
+  let has_local_signal = has_local_workspace_signal(&lowercased_message);
+
+  if has_freshness_signal && !has_local_signal {
+    Some(WebSearchIntent {
+      query: trimmed.to_string(),
+      routing_reason: "freshPublicInformation",
+    })
+  } else {
+    None
+  }
+}
+
+pub(crate) fn infer_model_web_search_intent(message: &str) -> Option<WebSearchIntent> {
+  let trimmed = message
+    .trim()
+    .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
+  if trimmed.is_empty() {
+    return None;
+  }
+
+  let lowercased_message = trimmed.to_lowercase();
+  if has_local_workspace_signal(&lowercased_message) {
+    return None;
+  }
+
+  Some(WebSearchIntent {
+    query: trimmed.to_string(),
+    routing_reason: "modelToolPlanning",
+  })
+}
+
+fn has_fresh_public_information_signal(message: &str) -> bool {
+  [
     "latest",
     "current",
     "today",
-    "now",
+    "right now",
+    "as of",
+    "up to date",
+    "up-to-date",
+    "this week",
+    "this month",
     "recent",
     "news",
     "release",
     "released",
     "version",
     "price",
+    "stock",
+    "exchange rate",
     "schedule",
     "score",
     "weather",
+    "ceo",
+    "president",
     "who is",
     "what is the newest",
     "what is the current",
+    "newest",
   ]
   .iter()
-  .any(|signal| lowercased_message.contains(signal));
-  let has_local_signal = [
+  .any(|signal| message.contains(signal))
+}
+
+fn has_local_workspace_signal(message: &str) -> bool {
+  [
     "workspace",
     "repo",
     "repository",
@@ -84,16 +144,7 @@ pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIn
     "pyproject.toml",
   ]
   .iter()
-  .any(|signal| lowercased_message.contains(signal));
-
-  if has_freshness_signal && !has_local_signal {
-    Some(WebSearchIntent {
-      query: trimmed.to_string(),
-      routing_reason: "freshPublicInformation",
-    })
-  } else {
-    None
-  }
+  .any(|signal| message.contains(signal))
 }
 
 #[cfg(test)]
@@ -112,6 +163,12 @@ mod tests {
 
     let plugins = infer_explicit_web_search_intent("websearch pith plugins").expect("intent");
     assert_eq!(plugins.query, "pith plugins");
+    let browser = infer_explicit_web_search_intent("browse the web for Pith").expect("intent");
+    assert_eq!(browser.query, "Pith");
+    let online = infer_explicit_web_search_intent("check online for LFM2.5").expect("intent");
+    assert_eq!(online.query, "LFM2.5");
+    let lookup = infer_explicit_web_search_intent("look up Liquid AI").expect("lookup intent");
+    assert_eq!(lookup.query, "Liquid AI");
     assert!(infer_explicit_web_search_intent("look up README.md").is_none());
     assert!(infer_explicit_web_search_intent("search RuntimeContext").is_none());
   }
@@ -121,8 +178,29 @@ mod tests {
     let release =
       infer_fresh_web_search_intent("What is the latest LFM2.5 release?").expect("intent");
     assert_eq!(release.query, "What is the latest LFM2.5 release");
+    let ceo = infer_fresh_web_search_intent("Who is the CEO of Liquid AI?").expect("intent");
+    assert_eq!(ceo.routing_reason, "freshPublicInformation");
+    let stock =
+      infer_fresh_web_search_intent("What is Apple's stock price today?").expect("intent");
+    assert_eq!(stock.query, "What is Apple's stock price today");
+    let current =
+      infer_fresh_web_search_intent("Is the LFM2.5 model list up to date?").expect("intent");
+    assert_eq!(current.routing_reason, "freshPublicInformation");
     assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
     assert!(infer_fresh_web_search_intent("What version is in Cargo.toml?").is_none());
+    assert!(infer_fresh_web_search_intent("How should I proceed now?").is_none());
+  }
+
+  #[test]
+  fn model_web_search_candidate_keeps_external_questions_available_to_planner() {
+    let comparison = infer_model_web_search_intent("Compare Codex and Claude Code plugin systems")
+      .expect("candidate");
+    assert_eq!(comparison.routing_reason, "modelToolPlanning");
+    assert_eq!(
+      comparison.query,
+      "Compare Codex and Claude Code plugin systems"
+    );
+    assert!(infer_model_web_search_intent("Explain this repo architecture").is_none());
   }
 
   #[test]

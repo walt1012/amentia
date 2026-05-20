@@ -11,6 +11,14 @@ struct RuntimeReadinessSnapshot {
   let hasActiveTurn: Bool
   let isWaitingForFirstMessage: Bool
   let hasDraftMessage: Bool
+  let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
+}
+
+struct ReadinessStepSummary: Identifiable, Hashable {
+  let id: String
+  let label: String
+  let detail: String
+  let tone: StatusTone
 }
 
 enum RuntimeReadinessPresenter {
@@ -21,6 +29,7 @@ enum RuntimeReadinessPresenter {
       workspaceStep(snapshot),
       threadStep(snapshot),
       firstRequestStep(snapshot),
+      toolsStep(snapshot),
     ]
   }
 
@@ -133,6 +142,23 @@ enum RuntimeReadinessPresenter {
       label: "First Request",
       detail: "Prompt",
       tone: .warning
+    )
+  }
+
+  private static func toolsStep(_ snapshot: RuntimeReadinessSnapshot) -> ReadinessStepSummary {
+    guard snapshot.runtimeState == .ready else {
+      return ReadinessStepSummary(id: "tools", label: "Tools", detail: "Waiting", tone: .neutral)
+    }
+
+    guard RuntimeToolReadinessPresenter.hasToolChecks(snapshot.runtimeReadinessChecks) else {
+      return ReadinessStepSummary(id: "tools", label: "Tools", detail: "Waiting", tone: .neutral)
+    }
+
+    return ReadinessStepSummary(
+      id: "tools",
+      label: "Tools",
+      detail: RuntimeToolReadinessPresenter.timelineDetail(snapshot.runtimeReadinessChecks),
+      tone: RuntimeToolReadinessPresenter.timelineTone(snapshot.runtimeReadinessChecks)
     )
   }
 }

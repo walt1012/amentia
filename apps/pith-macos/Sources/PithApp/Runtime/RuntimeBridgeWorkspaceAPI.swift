@@ -33,10 +33,18 @@ extension RuntimeBridge {
     )
   }
 
-  func searchWorkspace(query: String, maxResults: Int = 24) async throws -> [RuntimeWorkspaceSearchMatch] {
+  func searchWorkspace(
+    query: String,
+    maxResults: Int = 24,
+    clientRequestId: String? = nil
+  ) async throws -> [RuntimeWorkspaceSearchMatch] {
     let response: JSONRPCResponse<WorkspaceSearchResult> = try await sendRequest(
       method: "workspace/search",
-      params: WorkspaceSearchParams(query: query, maxResults: maxResults)
+      params: WorkspaceSearchParams(
+        query: query,
+        maxResults: maxResults,
+        clientRequestId: clientRequestId
+      )
     )
     let result = try responseResult(from: response)
 
@@ -47,5 +55,15 @@ extension RuntimeBridge {
         line: match.line
       )
     }
+  }
+
+  func cancelWorkspaceSearch(clientRequestId: String) async throws -> Int {
+    let response: JSONRPCResponse<WorkspaceSearchCancelRunningResult> = try await sendRequest(
+      method: "workspace/searchCancelRunning",
+      params: WorkspaceSearchCancelRunningParams(clientRequestId: clientRequestId)
+    )
+    let result = try responseResult(from: response)
+
+    return result.cancelledCount
   }
 }

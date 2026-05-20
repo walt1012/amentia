@@ -126,8 +126,45 @@ enum RuntimeSummaryMapper {
       pluginDisplayName: command.pluginDisplayName,
       permissions: command.permissions,
       sourcePath: command.sourcePath,
+      execution: command.execution.map {
+        PluginCommandExecutionSummary(
+          kind: $0.kind,
+          driver: $0.driver,
+          entrypoint: $0.entrypoint,
+          input: pluginCommandEnvelopeSummary(from: $0.input),
+          output: pluginCommandEnvelopeSummary(from: $0.output),
+          supported: $0.supported
+        )
+      },
       executionKind: command.executionKind,
-      memorySummary: command.memorySummary
+      memorySummary: command.memorySummary,
+      runStatus: command.runStatus,
+      runBlocker: command.runBlocker,
+      runRepairHint: command.runRepairHint,
+      declaredConnectorIds: command.declaredConnectorIds,
+      requiredConnectorIds: command.requiredConnectorIds,
+      approvalRequired: command.approvalRequired,
+      approvalReason: command.approvalReason
+    )
+  }
+
+  private static func pluginCommandEnvelopeSummary(
+    from envelope: RuntimeBridge.RuntimePluginCommandEnvelope?
+  ) -> PluginCommandEnvelopeSummary? {
+    guard let envelope else {
+      return nil
+    }
+
+    return PluginCommandEnvelopeSummary(
+      envelope: envelope.envelope,
+      fields: envelope.fields.map {
+        PluginCommandEnvelopeFieldSummary(
+          name: $0.name,
+          kind: $0.kind,
+          required: $0.required,
+          description: $0.description
+        )
+      }
     )
   }
 
@@ -148,7 +185,15 @@ enum RuntimeSummaryMapper {
       authType: connector.authType,
       authRequired: connector.authRequired,
       authScopes: connector.authScopes,
-      credentialStore: connector.credentialStore
+      credentialStore: connector.credentialStore,
+      authStatus: connector.authStatus,
+      credentialPresent: connector.credentialPresent,
+      credentialSecretPresent: connector.credentialSecretPresent,
+      credentialProvider: connector.credentialProvider,
+      credentialHandle: connector.credentialHandle,
+      credentialLabel: connector.credentialLabel,
+      authorizedAt: connector.authorizedAt,
+      credentialUpdatedAt: connector.credentialUpdatedAt
     )
   }
 
@@ -162,6 +207,9 @@ enum RuntimeSummaryMapper {
       pluginDisplayName: hook.pluginDisplayName,
       permissions: hook.permissions,
       sourcePath: hook.sourcePath,
+      status: hook.status,
+      runBlocker: hook.runBlocker,
+      runRepairHint: hook.runRepairHint,
       memorySummary: hook.memorySummary
     )
   }

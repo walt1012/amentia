@@ -12,10 +12,20 @@ final class AppViewModel: ObservableObject {
   @Published var modelDownloadState: LocalModelDownloadRuntimeState
   @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
+  @Published var pluginManagerSection: PluginManagerSection
 
   let runtimeBridge: RuntimeBridge
-  let pendingTurnRequest = PendingTurnRequestState()
+  let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
+  let workspaceOpenCoordinator = WorkspaceOpenCoordinator()
+  let threadCreationCoordinator = ThreadCreationCoordinator()
+  let threadHistoryLoadCoordinator = ThreadHistoryLoadCoordinator()
+  let localExecutionRequests = LocalExecutionRequestCoordinator()
+  let turnCancellationCoordinator = TurnCancellationCoordinator()
+  let runtimeRelaunchCoordinator = RuntimeRelaunchCoordinator()
   let workspaceSearchSession = WorkspaceSearchSession()
+  let localModelMetadataCoordinator = LocalModelMetadataCoordinator()
+  let localModelActivationCoordinator = LocalModelActivationCoordinator()
+  let pluginLifecycleOperations = PluginLifecycleOperationCoordinator()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator
   let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
 
@@ -42,6 +52,7 @@ final class AppViewModel: ObservableObject {
     )
     self.memoryState = MemoryRuntimeState()
     self.pluginState = PluginRuntimeState()
+    self.pluginManagerSection = .catalog
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData
     )
@@ -226,6 +237,14 @@ final class AppViewModel: ObservableObject {
     pluginState.hooks
   }
 
+  var pluginDashboardSnapshot: PluginDashboardSnapshot {
+    pluginState.dashboardSnapshot
+  }
+
+  func pluginSummary(pluginID: String) -> PluginSummary? {
+    pluginState.plugin(id: pluginID)
+  }
+
   var memoryStatus: MemoryStatusSummary? {
     memoryState.status
   }
@@ -254,6 +273,10 @@ final class AppViewModel: ObservableObject {
         state.noteBody = newValue
       }
     }
+  }
+
+  var isSavingMemoryNote: Bool {
+    memoryState.isSavingNote
   }
 
   func updateWorkspaceSearchState(

@@ -27,7 +27,7 @@ enum InspectorSessionPresenter {
       return "Runtime Needs Relaunch"
     case .ready:
       if snapshot.hasActiveTurn {
-        return "Local Turn Running"
+        return "Local Execution Running"
       }
       if !snapshot.isLocalModelReady {
         return "Model Setup Needed"
@@ -52,10 +52,10 @@ enum InspectorSessionPresenter {
     case .launching:
       return "Pith is reconnecting local model, workspace, thread, memory, and plugin state."
     case .failed:
-      return "Use the relaunch action in the timeline header to recover the local agent loop."
+      return "Use the relaunch action in the timeline header to recover the local runtime."
     case .ready:
       if snapshot.hasActiveTurn {
-        return "Pith is streaming locally. Keep review focused on the timeline unless the turn should be cancelled."
+        return "Pith is running locally. Keep review focused on the timeline unless the execution should be cancelled."
       }
       if !snapshot.isLocalModelReady {
         return "Complete the model step from the timeline callout before starting agent work."
@@ -84,7 +84,7 @@ enum InspectorSessionPresenter {
     let modelSummary = snapshot.isLocalModelReady ? "Model ready" : "Model pending"
     let readinessSummary =
       snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
-    let toolSummary = webSearchReadinessSummary(snapshot.runtimeReadinessChecks)
+    let toolSummary = RuntimeToolReadinessPresenter.inspectorSummary(snapshot.runtimeReadinessChecks)
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
     return [readinessSummary, toolSummary, workspaceSummary, threadSummary]
@@ -107,20 +107,4 @@ enum InspectorSessionPresenter {
     }
   }
 
-  private static func webSearchReadinessSummary(_ checks: [RuntimeReadinessCheckSummary]) -> String? {
-    guard let check = checks.first(where: { $0.id == "webSearch" }) else {
-      return nil
-    }
-
-    switch check.status {
-    case "ready":
-      return nil
-    case "limited":
-      return "Web search limited"
-    case "setup_required":
-      return "Web search setup"
-    default:
-      return "Web search \(check.status)"
-    }
-  }
 }

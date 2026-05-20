@@ -2,6 +2,7 @@ use pith_memory::MemoryEvent;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 
 use crate::approval_types::PendingApproval;
+use crate::plugin_commands::PluginCommandOutput;
 use crate::plugin_hooks::PluginHookMemoryCapture;
 use crate::request_state::ApprovalExecutionOutput;
 
@@ -9,6 +10,7 @@ pub(super) struct ApprovalExecutionEvents {
   items: Vec<TimelineItem>,
   memory_event: Option<MemoryEvent>,
   hook_memory_captures: Vec<PluginHookMemoryCapture>,
+  approved_plugin_command_output: Option<PluginCommandOutput>,
 }
 
 impl ApprovalExecutionEvents {
@@ -17,6 +19,7 @@ impl ApprovalExecutionEvents {
       items: vec![],
       memory_event: None,
       hook_memory_captures: vec![],
+      approved_plugin_command_output: None,
     }
   }
 
@@ -39,6 +42,10 @@ impl ApprovalExecutionEvents {
     self.hook_memory_captures.extend(captures);
   }
 
+  pub(super) fn set_approved_plugin_command_output(&mut self, output: PluginCommandOutput) {
+    self.approved_plugin_command_output = Some(output);
+  }
+
   pub(super) fn into_output(
     self,
     approval: PendingApproval,
@@ -52,6 +59,7 @@ impl ApprovalExecutionEvents {
       items: self.items,
       memory_event: self.memory_event,
       hook_memory_captures: self.hook_memory_captures,
+      approved_plugin_command_output: self.approved_plugin_command_output,
     }
   }
 }

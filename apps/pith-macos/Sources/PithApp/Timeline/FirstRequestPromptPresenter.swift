@@ -30,7 +30,7 @@ enum FirstRequestPromptPresenter {
       ComposerSuggestionSummary(
         id: mapWorkspaceID,
         title: "Map Workspace",
-        message: "Map \(workspaceName) briefly. Return: 1. key folders, 2. runtime flow, 3. one safe next step."
+        message: "Map \(workspaceName) briefly. Return: 1. key folders, 2. project flow, 3. one safe next step."
       ),
       ComposerSuggestionSummary(
         id: reviewChangesID,

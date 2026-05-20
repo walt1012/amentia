@@ -1,16 +1,22 @@
 import Foundation
 
 final class RuntimeBridge {
-  private(set) var connectionState: ConnectionState = .disconnected
+  var connectionState: ConnectionState {
+    currentConnectionState()
+  }
   var onThreadUpdated: ThreadUpdatedHandler?
   var onConnectionStateChanged: ConnectionStateHandler?
 
+  private let connectionStateQueue = DispatchQueue(label: "pith.runtime.bridge.connection-state")
+  private var connectionStateValue: ConnectionState = .disconnected
+  private let processStateQueue = DispatchQueue(label: "pith.runtime.bridge.process-state")
   private var processSession: RuntimeBridgeProcessSession?
   private let messageDispatcher = RuntimeBridgeMessageDispatcher()
   private let pendingResponses = RuntimeBridgePendingResponses()
+  private let requestWriter = RuntimeBridgeRequestWriter()
 
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
-    if processSession?.isRunning != true {
+    if currentProcessSession()?.isRunning != true {
       resetProcessState()
       try launchProcess()
     }
@@ -24,11 +30,23 @@ final class RuntimeBridge {
       )
     )
 
-    let response: JSONRPCResponse<InitializeResult> = try await sendRequest(
-      method: "initialize",
-      params: initializeParams
-    )
-    let result = try responseResult(from: response)
+    let result: InitializeResult
+    do {
+      let response: JSONRPCResponse<InitializeResult> = try await sendRequest(
+        method: "initialize",
+        params: initializeParams
+      )
+      result = try responseResult(from: response)
+    } catch {
+      guard connectionState != .failed else {
+        throw error
+      }
+
+      let detail = stopRuntimeAfterRequestBoundary(
+        detail: "Runtime initialization failed: \(error.localizedDescription)"
+      )
+      throw RuntimeError.rpc(detail)
+    }
 
     updateConnectionState(.ready, detail: "\(result.serverInfo.name) \(result.serverInfo.version)")
 
@@ -36,29 +54,6 @@ final class RuntimeBridge {
       serverName: result.serverInfo.name,
       serverVersion: result.serverInfo.version
     )
-  }
-
-  func localPluginInstallRootPath() -> String {
-    RuntimeBridgeLocalEnvironment.localPluginInstallRootPath()
-  }
-
-  func localModelStorageRootPath() -> String {
-    RuntimeBridgeLocalEnvironment.localModelStorageRootPath()
-  }
-
-  func activeLocalModelPath() -> String? {
-    RuntimeBridgeLocalEnvironment.activeLocalModelPath()
-  }
-
-  func configureActiveLocalModel(manifestPath: String, modelPath: String) {
-    RuntimeBridgeLocalEnvironment.configureActiveLocalModel(
-      manifestPath: manifestPath,
-      modelPath: modelPath
-    )
-  }
-
-  func clearActiveLocalModel() {
-    RuntimeBridgeLocalEnvironment.clearActiveLocalModel()
   }
 
   func stopRuntime(detail: String = "Runtime stopped.") {
@@ -69,26 +64,39 @@ final class RuntimeBridge {
 
   private func launchProcess() throws {
     let executableURL = try resolveRuntimeURL()
-    processSession = try RuntimeBridgeProcessSession(
+    let session = try RuntimeBridgeProcessSession(
       executableURL: executableURL,
-      environment: runtimeEnvironment(),
-      onLine: { [weak self] data in
-        self?.handleIncomingMessage(data)
+      environment: runtimeEnvironment()
+    )
+    storeProcessSession(session)
+    session.startObserving(
+      onLine: { [weak self] processIdentifier, data in
+        self?.handleIncomingMessage(
+          processIdentifier: processIdentifier,
+          data: data
+        )
       },
       onReadError: { [weak self] processIdentifier, error in
-        self?.failPendingResponses(with: error)
-        self?.handleProcessTermination(
+        self?.handleProcessReadError(
           processIdentifier: processIdentifier,
-          detail: "Runtime disconnected."
+          error: error
         )
       },
       onTermination: { [weak self] processIdentifier, detail in
         self?.handleProcessTermination(processIdentifier: processIdentifier, detail: detail)
       }
     )
+    guard isCurrentProcessSession(session.identifier), session.isRunning else {
+      detachProcessSession(matching: session.identifier)?.stop()
+      throw RuntimeError.rpc("Runtime exited before initialization.")
+    }
   }
 
-  private func handleIncomingMessage(_ data: Data) {
+  private func handleIncomingMessage(processIdentifier: ObjectIdentifier, data: Data) {
+    guard isCurrentProcessSession(processIdentifier) else {
+      return
+    }
+
     switch messageDispatcher.decode(data) {
     case .response(let responseID, let data):
       let continuation = takePendingResponse(requestID: responseID)
@@ -112,7 +120,9 @@ final class RuntimeBridge {
     let seconds = RuntimeBridgeRequestPolicy.timeoutSeconds(from: timeoutNanoseconds)
     let error = RuntimeError.requestTimedOut(method: method, seconds: seconds)
     continuation.resume(throwing: error)
-    stopRuntimeAfterRequestTimeout(method: method, seconds: seconds)
+    if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterTimedOutRequest(method: method) {
+      stopRuntimeAfterRequestTimeout(method: method, seconds: seconds)
+    }
   }
 
   private func handleRequestCancellation(requestID: Int, method: String) {
@@ -141,34 +151,102 @@ final class RuntimeBridge {
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
-  private func stopRuntimeAfterRequestBoundary(detail: String) {
+  @discardableResult
+  private func stopRuntimeAfterRequestBoundary(detail: String) -> String {
+    let detail = runtimeFailureDetail(detail)
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.failed, detail: detail)
+    return detail
   }
 
   private func failPendingResponses(with error: Error) {
     pendingResponses.failAll(with: error)
   }
 
-  private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
-    guard processSession?.identifier == processIdentifier else {
+  private func handleProcessReadError(processIdentifier: ObjectIdentifier, error: Error) {
+    guard let session = detachProcessSession(matching: processIdentifier) else {
       return
     }
 
+    let detail = runtimeFailureDetail("Runtime disconnected.", session: session)
     failPendingResponses(with: RuntimeError.rpc(detail))
-    resetProcessState()
+    session.stop()
     updateConnectionState(.failed, detail: detail)
   }
 
+  private func handleProcessTermination(processIdentifier: ObjectIdentifier, detail: String) {
+    guard let session = detachProcessSession(matching: processIdentifier) else {
+      return
+    }
+
+    let detail = runtimeFailureDetail(detail, session: session)
+    failPendingResponses(with: RuntimeError.rpc(detail))
+    session.stop()
+    updateConnectionState(.failed, detail: detail)
+  }
+
+  private func runtimeFailureDetail(
+    _ detail: String,
+    session: RuntimeBridgeProcessSession? = nil
+  ) -> String {
+    guard let summary = (session ?? currentProcessSession())?.recentErrorSummary else {
+      return detail
+    }
+
+    return "\(detail) Runtime stderr: \(summary)"
+  }
+
   private func resetProcessState() {
-    processSession?.stop()
-    processSession = nil
+    let session = detachProcessSession()
+    session?.stop()
+  }
+
+  private func currentProcessSession() -> RuntimeBridgeProcessSession? {
+    processStateQueue.sync {
+      processSession
+    }
+  }
+
+  private func storeProcessSession(_ session: RuntimeBridgeProcessSession) {
+    processStateQueue.sync {
+      processSession = session
+    }
+  }
+
+  private func isCurrentProcessSession(_ processIdentifier: ObjectIdentifier) -> Bool {
+    processStateQueue.sync {
+      processSession?.identifier == processIdentifier
+    }
+  }
+
+  private func detachProcessSession(
+    matching processIdentifier: ObjectIdentifier? = nil
+  ) -> RuntimeBridgeProcessSession? {
+    processStateQueue.sync {
+      guard let session = processSession else {
+        return nil
+      }
+      if let processIdentifier, session.identifier != processIdentifier {
+        return nil
+      }
+
+      processSession = nil
+      return session
+    }
   }
 
   private func updateConnectionState(_ state: ConnectionState, detail: String) {
-    connectionState = state
+    connectionStateQueue.sync {
+      connectionStateValue = state
+    }
     onConnectionStateChanged?(state, detail)
+  }
+
+  private func currentConnectionState() -> ConnectionState {
+    connectionStateQueue.sync {
+      connectionStateValue
+    }
   }
 
   private func resolveRuntimeURL() throws -> URL {
@@ -197,11 +275,18 @@ final class RuntimeBridge {
     method: String,
     params: Params
   ) async throws -> JSONRPCResponse<ResultType> {
-    guard let inputHandle = processSession?.inputHandle else {
+    guard let inputHandle = currentProcessSession()?.inputHandle else {
       throw RuntimeError.runtimePipeUnavailable
     }
 
     let requestID = pendingResponses.reserveRequestID()
+    let request = JSONRPCRequest(
+      id: requestID,
+      method: method,
+      params: params
+    )
+    let encoder = JSONEncoder()
+    let payload = try encoder.encode(request) + Data([0x0A])
     let timeoutNanoseconds = RuntimeBridgeRequestPolicy.timeoutNanoseconds(for: method)
     let timeoutTask = Task { [weak self] in
       do {
@@ -226,17 +311,9 @@ final class RuntimeBridge {
           pendingResponses.store(continuation, requestID: requestID)
 
           do {
-            let request = JSONRPCRequest(
-              id: requestID,
-              method: method,
-              params: params
-            )
-            let encoder = JSONEncoder()
-            let payload = try encoder.encode(request) + Data([0x0A])
-            try inputHandle.write(contentsOf: payload)
+            try requestWriter.write(payload, to: inputHandle)
           } catch {
-            let pending = takePendingResponse(requestID: requestID)
-            pending?.resume(throwing: error)
+            stopRuntimeAfterRequestWriteFailure(method: method, error: error)
           }
         }
       }, onCancel: {
@@ -253,18 +330,11 @@ final class RuntimeBridge {
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
   }
 
-  func responseResult<ResultType: Decodable>(
-    from response: JSONRPCResponse<ResultType>
-  ) throws -> ResultType {
-    if let error = response.error {
-      throw RuntimeError.rpc(error.message)
-    }
-
-    guard let result = response.result else {
-      throw RuntimeError.invalidResponse
-    }
-
-    return result
+  private func stopRuntimeAfterRequestWriteFailure(method: String, error: Error) {
+    let detail =
+      "Runtime request \(method) could not be written: \(error.localizedDescription). " +
+      "Relaunch the local runtime to continue."
+    stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
 }

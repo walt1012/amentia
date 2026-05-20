@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 
 use crate::io::read_manifest;
 use crate::types::{PluginCatalogEntry, PluginRemovalRecord};
-use crate::validation::validate_manifest;
+use crate::validation::{validate_manifest, validation_hint_for_error};
 
 pub fn install_plugin_bundle(
   source_path: &Path,
@@ -31,7 +31,10 @@ pub fn install_plugin_bundle(
     );
   }
 
-  copy_directory(&source_root, &destination_root)?;
+  if let Err(error) = copy_directory(&source_root, &destination_root) {
+    let _ = fs::remove_dir_all(&destination_root);
+    return Err(error);
+  }
   Ok(crate::catalog::load_plugin_entry(
     destination_root.join("pith-plugin.json"),
   ))
@@ -39,9 +42,14 @@ pub fn install_plugin_bundle(
 
 pub fn inspect_plugin_bundle(source_path: &Path) -> Result<PluginCatalogEntry> {
   let source_root = resolve_plugin_source_root(source_path)?;
+  ensure_single_root_manifest(&source_root)?;
   let source_manifest_path = source_root.join("pith-plugin.json");
   let manifest = read_manifest(&source_manifest_path)?;
-  validate_manifest(&manifest)?;
+  if let Err(error) = validate_manifest(&manifest) {
+    let message = error.to_string();
+    let hint = validation_hint_for_error(&message);
+    anyhow::bail!("{message}\nHint: {hint}");
+  }
   Ok(crate::catalog::load_plugin_entry(source_manifest_path))
 }
 
@@ -65,6 +73,12 @@ pub fn remove_local_plugin_bundle(
   if !plugin_root.starts_with(&resolved_install_root) {
     anyhow::bail!(
       "plugin removal is only supported for locally installed plugins under {}",
+      resolved_install_root.display()
+    );
+  }
+  if plugin_root.parent() != Some(resolved_install_root.as_path()) {
+    anyhow::bail!(
+      "plugin removal is only supported for plugin directories directly under {}",
       resolved_install_root.display()
     );
   }
@@ -111,6 +125,47 @@ fn resolve_plugin_source_root(path: &Path) -> Result<PathBuf> {
   anyhow::bail!("plugin source must be a plugin directory or pith-plugin.json file");
 }
 
+fn ensure_single_root_manifest(source_root: &Path) -> Result<()> {
+  let root_manifest = source_root.join("pith-plugin.json");
+  reject_nested_plugin_manifests(source_root, &root_manifest)
+}
+
+fn reject_nested_plugin_manifests(directory: &Path, root_manifest: &Path) -> Result<()> {
+  for entry in fs::read_dir(directory)
+    .with_context(|| format!("failed to read plugin directory {}", directory.display()))?
+  {
+    let entry = entry.with_context(|| format!("failed to inspect {}", directory.display()))?;
+    let entry_path = entry.path();
+    let metadata = fs::symlink_metadata(&entry_path)
+      .with_context(|| format!("failed to inspect plugin path {}", entry_path.display()))?;
+    let file_type = metadata.file_type();
+
+    if file_type.is_symlink() {
+      continue;
+    }
+
+    if metadata.is_dir() {
+      reject_nested_plugin_manifests(&entry_path, root_manifest)?;
+      continue;
+    }
+
+    if metadata.is_file()
+      && entry_path != root_manifest
+      && entry_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name == "pith-plugin.json")
+    {
+      anyhow::bail!(
+        "plugin bundles cannot contain nested pith-plugin.json manifests: {}",
+        entry_path.display()
+      );
+    }
+  }
+
+  Ok(())
+}
+
 fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
   fs::create_dir_all(destination)
     .with_context(|| format!("failed to create {}", destination.display()))?;
@@ -121,10 +176,20 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
     let entry = entry.with_context(|| format!("failed to inspect {}", source.display()))?;
     let entry_path = entry.path();
     let destination_path = destination.join(entry.file_name());
+    let metadata = fs::symlink_metadata(&entry_path)
+      .with_context(|| format!("failed to inspect plugin path {}", entry_path.display()))?;
+    let file_type = metadata.file_type();
 
-    if entry_path.is_dir() {
+    if file_type.is_symlink() {
+      anyhow::bail!(
+        "plugin bundles cannot contain symbolic links: {}",
+        entry_path.display()
+      );
+    }
+
+    if metadata.is_dir() {
       copy_directory(&entry_path, &destination_path)?;
-    } else {
+    } else if metadata.is_file() {
       fs::copy(&entry_path, &destination_path).with_context(|| {
         format!(
           "failed to copy {} to {}",
@@ -132,6 +197,11 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
           destination_path.display()
         )
       })?;
+    } else {
+      anyhow::bail!(
+        "plugin bundles cannot contain unsupported file type: {}",
+        entry_path.display()
+      );
     }
   }
 

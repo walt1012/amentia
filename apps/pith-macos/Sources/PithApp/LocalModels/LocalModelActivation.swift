@@ -1,6 +1,6 @@
 import Foundation
 
-struct LocalModelActivationPlan {
+struct LocalModelActivationPlan: Sendable {
   let timelineTitle: String
   let timelineBody: String
   let attributes: [String: String]
@@ -8,13 +8,13 @@ struct LocalModelActivationPlan {
   let relaunchIdleDetail: String
 }
 
-struct LocalModelActivationFailurePlan {
+struct LocalModelActivationFailurePlan: Sendable {
   let runtimeDetail: String
   let removesModelFile: Bool
   let refreshesCatalog: Bool
 }
 
-struct PreparedLocalModelActivation {
+struct PreparedLocalModelActivation: Sendable {
   let manifestPath: String
 }
 
@@ -34,6 +34,20 @@ enum LocalModelActivationPreparer {
   static func prepare(model: LocalModelSummary) throws -> PreparedLocalModelActivation {
     try validateDownloadedModel(model)
     return PreparedLocalModelActivation(manifestPath: try writeManifest(for: model))
+  }
+
+  static func prepareInBackground(
+    model: LocalModelSummary
+  ) async throws -> PreparedLocalModelActivation {
+    try await withCheckedThrowingContinuation { continuation in
+      DispatchQueue.global(qos: .utility).async {
+        do {
+          continuation.resume(returning: try prepare(model: model))
+        } catch {
+          continuation.resume(throwing: error)
+        }
+      }
+    }
   }
 
   static func validateDownloadedModel(_ model: LocalModelSummary) throws {

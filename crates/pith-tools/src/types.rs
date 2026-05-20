@@ -51,6 +51,7 @@ pub struct ShellCommandResult {
   pub stderr: String,
   pub was_truncated: bool,
   pub timed_out: bool,
+  pub cancelled: bool,
   pub sandbox: ShellSandboxSummary,
   pub output_context: ShellOutputContext,
 }
@@ -59,6 +60,7 @@ pub struct ShellCommandResult {
 pub struct ShellSandboxSummary {
   pub mode: String,
   pub backend: String,
+  pub available: bool,
   pub active: bool,
   pub network_allowed: bool,
   pub temporary_root: Option<String>,
@@ -74,6 +76,10 @@ pub struct ShellOutputContext {
   pub retained_stdout_bytes: usize,
   pub retained_stderr_bytes: usize,
   pub budget_bytes: usize,
+  pub artifact_stdout_bytes: usize,
+  pub artifact_stderr_bytes: usize,
+  pub artifact_max_bytes_per_stream: usize,
+  pub artifacts_truncated: bool,
   pub was_compacted: bool,
   pub artifact_directory: Option<String>,
 }
@@ -87,18 +93,17 @@ impl ShellSandboxSummary {
     }
   }
 
+  pub fn network_policy(&self) -> &'static str {
+    pith_sandbox::network_policy_label(self.active, self.network_allowed)
+  }
+
   pub fn display_line(&self) -> String {
-    let network_state = if self.network_allowed {
-      "network allowed"
-    } else {
-      "network denied"
-    };
     format!(
       "Sandbox: {} via {} ({}, {})",
       self.mode,
       self.backend,
       self.state(),
-      network_state
+      self.network_policy()
     )
   }
 
@@ -106,10 +111,15 @@ impl ShellSandboxSummary {
     let mut attributes = HashMap::from([
       ("sandboxMode".to_string(), self.mode.clone()),
       ("sandboxBackend".to_string(), self.backend.clone()),
+      ("sandboxAvailable".to_string(), self.available.to_string()),
       ("sandboxActive".to_string(), self.active.to_string()),
       (
         "sandboxNetworkAllowed".to_string(),
         self.network_allowed.to_string(),
+      ),
+      (
+        "sandboxNetworkPolicy".to_string(),
+        self.network_policy().to_string(),
       ),
       ("sandboxDetail".to_string(), self.detail.clone()),
     ]);
@@ -179,15 +189,24 @@ impl ShellOutputContext {
       }
       _ => "not needed".to_string(),
     };
+    let artifact_detail = if self.artifacts_truncated {
+      format!(
+        "; artifact files capped at {} bytes per stream",
+        self.artifact_max_bytes_per_stream
+      )
+    } else {
+      String::new()
+    };
     format!(
-      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifacts: {}",
+      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifacts: {}{}",
       self.mode,
       self.retained_stdout_bytes,
       self.source_stdout_bytes,
       self.retained_stderr_bytes,
       self.source_stderr_bytes,
       self.savings_percent(),
-      artifact
+      artifact,
+      artifact_detail
     )
   }
 
@@ -213,6 +232,22 @@ impl ShellOutputContext {
       (
         "sandboxOutputBudgetBytes".to_string(),
         self.budget_bytes.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactStdoutBytes".to_string(),
+        self.artifact_stdout_bytes.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactStderrBytes".to_string(),
+        self.artifact_stderr_bytes.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactMaxBytesPerStream".to_string(),
+        self.artifact_max_bytes_per_stream.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactsTruncated".to_string(),
+        self.artifacts_truncated.to_string(),
       ),
       (
         "sandboxOutputCompacted".to_string(),
@@ -248,6 +283,48 @@ mod tests {
   use super::*;
 
   #[test]
+  fn shell_sandbox_summary_reports_network_enforcement_scope() {
+    let inactive = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "processOnly".to_string(),
+      available: false,
+      active: false,
+      network_allowed: false,
+      temporary_root: None,
+      writable_roots: Vec::new(),
+      detail: "Native sandbox unavailable.".to_string(),
+    };
+
+    assert_eq!(
+      inactive.network_policy(),
+      "network denied by policy, not native-enforced"
+    );
+    assert!(inactive.display_line().contains("not native-enforced"));
+    assert_eq!(
+      inactive.attributes()["sandboxNetworkPolicy"],
+      "network denied by policy, not native-enforced"
+    );
+    assert_eq!(inactive.attributes()["sandboxAvailable"], "false");
+
+    let active = ShellSandboxSummary {
+      mode: "workspaceReadWrite".to_string(),
+      backend: "macosSeatbelt".to_string(),
+      available: true,
+      active: true,
+      network_allowed: false,
+      temporary_root: None,
+      writable_roots: Vec::new(),
+      detail: "Native sandbox active.".to_string(),
+    };
+
+    assert_eq!(active.network_policy(), "network denied");
+    assert_eq!(
+      active.attributes()["sandboxNetworkPolicy"],
+      "network denied"
+    );
+  }
+
+  #[test]
   fn shell_output_context_reports_context_savings() {
     let context = ShellOutputContext {
       mode: "sandboxOutputPreview".to_string(),
@@ -256,6 +333,10 @@ mod tests {
       retained_stdout_bytes: 100,
       retained_stderr_bytes: 50,
       budget_bytes: 256,
+      artifact_stdout_bytes: 900,
+      artifact_stderr_bytes: 100,
+      artifact_max_bytes_per_stream: 4096,
+      artifacts_truncated: false,
       was_compacted: true,
       artifact_directory: Some("/tmp/pith/run-1".to_string()),
     };

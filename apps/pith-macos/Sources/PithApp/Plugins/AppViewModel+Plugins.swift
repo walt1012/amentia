@@ -2,190 +2,61 @@ import Foundation
 
 @MainActor
 extension AppViewModel {
-  func installPlugin() {
-    guard canInstallPlugin() else {
+  func appendPluginStatusEntry(
+    to threadID: String?,
+    _ entry: TimelineEntry,
+    detail: String,
+    preview: String
+  ) {
+    runtimeDetail = detail
+    if let threadID {
+      refreshThreadPreview(threadID: threadID, preview: preview)
+    }
+    appendEntry(to: threadID, entry)
+  }
+
+  func hasPluginLifecycleOperation() -> Bool {
+    pluginDashboardSnapshot.hasLifecycleOperation || pluginLifecycleOperations.isActive
+  }
+
+  func canCancelPluginLifecycleOperation() -> Bool {
+    hasPluginLifecycleOperation()
+  }
+
+  func cancelPluginLifecycleOperation() {
+    guard canCancelPluginLifecycleOperation() else {
       return
     }
 
-    guard let url = AppFilePicker.choosePluginSource() else {
-      return
+    let timelineThreadID = selectedThreadID
+    pluginLifecycleOperations.cancel()
+    updatePluginState { state in
+      state.resetLifecycleOperation()
+    }
+    appendPluginStatusEntry(
+      to: timelineThreadID,
+      TimelineEventPresenter.pluginLifecycleCancelled(),
+      detail: TimelineEventPresenter.pluginLifecycleCancelledDetail,
+      preview: TimelineEventPresenter.cancelledPluginLifecyclePreview
+    )
+  }
+
+  func canRefreshPlugins() -> Bool {
+    pluginRefreshDisabledReason() == nil
+  }
+
+  func pluginRefreshDisabledReason() -> String? {
+    if runtimeState != .ready {
+      return "Runtime is not ready."
+    }
+    if hasActiveOrPendingTurn() {
+      return "Finish or cancel the active task first."
+    }
+    if hasPluginLifecycleOperation() {
+      return "Finish the current plugin operation first."
     }
 
-    let preview: PluginInstallPreview
-    do {
-      preview = try PluginInstallInspector.preview(
-        for: url,
-        installRootPath: runtimeBridge.localPluginInstallRootPath()
-      )
-    } catch {
-      let repairHint = PluginInstallDialogPresenter.repairHint(for: error)
-      appendEntry(
-        to: selectedThreadID,
-        TimelineEventPresenter.pluginInstallPreviewFailed(
-          error: error,
-          repairHint: repairHint
-        )
-      )
-      return
-    }
-
-    guard PluginInstallDialogPresenter.confirmInstall(preview: preview) else {
-      runtimeDetail = "Plugin install was cancelled."
-      return
-    }
-
-    Task {
-      do {
-        let installedPlugin = try await runtimeBridge.installPlugin(sourcePath: preview.sourcePath)
-        await refreshPluginState()
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview)
-        )
-      } catch {
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.pluginInstallFailed(error: error)
-        )
-      }
-    }
-  }
-
-  func setPluginEnabled(pluginID: String, enabled: Bool) {
-    guard canSetPluginEnabled(pluginID: pluginID) else {
-      return
-    }
-
-    Task {
-      do {
-        let updatedPlugin = try await runtimeBridge.setPluginEnabled(pluginID: pluginID, enabled: enabled)
-        await refreshPluginState()
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled)
-        )
-      } catch {
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.pluginUpdateFailed(pluginID: pluginID, error: error)
-        )
-      }
-    }
-  }
-
-  func removePlugin(pluginID: String) {
-    guard canRemovePlugin(pluginID: pluginID),
-          let plugin = plugins.first(where: { $0.id == pluginID })
-    else {
-      return
-    }
-
-    guard PluginInstallDialogPresenter.confirmRemoval(plugin: plugin) else {
-      runtimeDetail = "Plugin removal was cancelled."
-      return
-    }
-
-    Task {
-      do {
-        let removedPlugin = try await runtimeBridge.removePlugin(manifestPath: plugin.manifestPath)
-        await refreshPluginState()
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.pluginRemoved(removedPlugin)
-        )
-      } catch {
-        appendEntry(
-          to: selectedThreadID,
-          TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error)
-        )
-      }
-    }
-  }
-
-  func runPluginCommand(commandID: String) {
-    let snapshot = pluginActionSnapshot()
-    if PluginActionPlanner.commandNeedsExecutionContract(commandID: commandID, snapshot: snapshot) {
-      runtimeDetail = TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
-      return
-    }
-
-    guard PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot),
-          let threadID = selectedThreadID
-    else {
-      return
-    }
-
-    runtimeDetail = TimelineEventPresenter.runningPluginCommandDetail
-    let requestID = pendingTurnRequest.begin(threadID: threadID)
-
-    let task = Task {
-      defer {
-        pendingTurnRequest.clear(requestID: requestID)
-      }
-      do {
-        let result = try await runtimeBridge.runPluginCommand(threadID: threadID, commandID: commandID)
-        await applyRuntimeTurnResult(result, refreshMemory: true)
-      } catch {
-        if Task.isCancelled {
-          runtimeDetail = TimelineEventPresenter.pendingPluginCommandCancelledDetail
-          refreshThreadPreview(
-            threadID: threadID,
-            preview: TimelineEventPresenter.cancelledPluginCommandPreview
-          )
-          appendEntry(
-            to: threadID,
-            TimelineEventPresenter.pluginCommandCancelled()
-          )
-          return
-        }
-        runtimeDetail = error.localizedDescription
-        appendEntry(
-          to: threadID,
-          TimelineEventPresenter.pluginCommandFailed(error: error)
-        )
-      }
-    }
-    pendingTurnRequest.bind(task: task, requestID: requestID)
-  }
-
-  func canRunPluginCommand(commandID: String) -> Bool {
-    PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: pluginActionSnapshot())
-  }
-
-  func pluginCountSummary() -> String {
-    PluginDashboardPresenter.pluginCountSummary(pluginDashboardSnapshot())
-  }
-
-  func localPluginCountSummary() -> String {
-    PluginDashboardPresenter.localPluginCountSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginDetailSummary() -> String {
-    PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginPermissionCountSummary() -> String {
-    PluginDashboardPresenter.permissionCountSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginPermissionDetailSummary() -> String {
-    PluginDashboardPresenter.permissionDetailSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginPermissionPreview() -> [PluginSummary] {
-    PluginDashboardPresenter.permissionPreview(pluginDashboardSnapshot())
-  }
-
-  func invalidPluginCountSummary() -> String {
-    PluginDashboardPresenter.invalidPluginCountSummary(pluginDashboardSnapshot())
-  }
-
-  func invalidPluginDetailSummary() -> String {
-    PluginDashboardPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot())
-  }
-
-  func invalidPlugins() -> [PluginSummary] {
-    PluginDashboardPresenter.invalidPlugins(pluginDashboardSnapshot())
+    return nil
   }
 
   func isRemovablePlugin(_ plugin: PluginSummary) -> Bool {
@@ -200,86 +71,107 @@ extension AppViewModel {
     PluginActionPlanner.canRemove(pluginID: pluginID, snapshot: pluginActionSnapshot())
   }
 
-  func revealPluginManifest(pluginID: String) {
-    guard let plugin = plugins.first(where: { $0.id == pluginID }) else {
-      runtimeDetail = "Plugin manifest path is unavailable."
-      return
-    }
-
-    runtimeDetail = FileRevealService.revealFilePath(
-      plugin.manifestPath,
-      successDetail: "Revealed \(plugin.displayName) manifest."
+  func canAuthorizePluginConnector(connectorID: String) -> Bool {
+    PluginActionPlanner.canAuthorizeConnector(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
     )
   }
 
-  func pluginRegistryCountSummary() -> String {
-    PluginDashboardPresenter.registryCountSummary(pluginDashboardSnapshot())
+  func pluginConnectorAuthorizeDisabledReason(connectorID: String) -> String? {
+    PluginActionPlanner.connectorAuthorizeDisabledReason(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
   }
 
-  func pluginRegistryDetailSummary() -> String {
-    PluginDashboardPresenter.registryDetailSummary(pluginDashboardSnapshot())
+  func canClearPluginConnectorCredential(connectorID: String) -> Bool {
+    PluginActionPlanner.canClearConnectorCredential(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
   }
 
-  func pluginCapabilityPreview() -> [PluginCapabilitySummary] {
-    PluginDashboardPresenter.capabilityPreview(pluginDashboardSnapshot())
-  }
-
-  func pluginConnectorCountSummary() -> String {
-    PluginDashboardPresenter.connectorCountSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginConnectorDetailSummary() -> String {
-    PluginDashboardPresenter.connectorDetailSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginConnectorPreview() -> [PluginConnectorSummary] {
-    PluginDashboardPresenter.connectorPreview(pluginDashboardSnapshot())
-  }
-
-  func pluginCommandCountSummary() -> String {
-    PluginDashboardPresenter.commandCountSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginCommandDetailSummary() -> String {
-    PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginHookCountSummary() -> String {
-    PluginDashboardPresenter.hookCountSummary(pluginDashboardSnapshot())
-  }
-
-  func pluginHookDetailSummary() -> String {
-    PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot())
+  func pluginConnectorClearDisabledReason(connectorID: String) -> String? {
+    PluginActionPlanner.connectorClearCredentialDisabledReason(
+      connectorID: connectorID,
+      snapshot: pluginActionSnapshot()
+    )
   }
 
   func refreshPluginState() async {
-    let pluginRefresh = await PluginStateLoader.refresh(using: runtimeBridge)
+    let pluginRefresh = await PluginLifecycleCoordinator.refreshState(using: runtimeBridge)
     updatePluginState { state in
       state.apply(pluginRefresh)
     }
     await refreshRuntimeReadiness()
   }
 
+  @discardableResult
+  func refreshPluginStateIfCurrent(operationID: UUID) async -> Bool {
+    let pluginRefresh = await PluginLifecycleCoordinator.refreshState(using: runtimeBridge)
+    guard !Task.isCancelled,
+          isCurrentPluginLifecycleOperation(operationID)
+    else {
+      return false
+    }
+
+    updatePluginState { state in
+      state.apply(pluginRefresh)
+    }
+    await refreshRuntimeReadiness()
+    return !Task.isCancelled && isCurrentPluginLifecycleOperation(operationID)
+  }
+
   func pluginActionSnapshot() -> PluginActionSnapshot {
     PluginActionSnapshot(
       runtimeState: runtimeState,
-      isLocalModelReady: isLocalModelReady(),
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       selectedThreadID: selectedThreadID,
       hasActiveOrPendingTurn: hasActiveOrPendingTurn(),
+      hasLifecycleOperation: hasPluginLifecycleOperation(),
       plugins: plugins,
+      connectors: pluginConnectors,
       commands: pluginCommands
     )
   }
 
-  private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
-    PluginDashboardSnapshot(
-      plugins: plugins,
-      registrySummary: pluginCapabilityRegistrySummary,
-      capabilities: pluginCapabilities,
-      connectors: pluginConnectors,
-      commands: pluginCommands,
-      hooks: pluginHooks
+  func beginPluginLifecycleOperation(detail: String) -> UUID? {
+    guard let operationID = pluginLifecycleOperations.begin() else {
+      return nil
+    }
+    var accepted = false
+    updatePluginState { state in
+      accepted = state.beginLifecycleOperation(operationID: operationID)
+    }
+    guard accepted else {
+      pluginLifecycleOperations.finish(operationID)
+      return nil
+    }
+
+    runtimeDetail = detail
+    return operationID
+  }
+
+  func bindPluginLifecycleTask(_ task: Task<Void, Never>, operationID: UUID) {
+    pluginLifecycleOperations.bind(task: task, operationID: operationID)
+  }
+
+  func isCurrentPluginLifecycleOperation(_ operationID: UUID) -> Bool {
+    pluginLifecycleOperations.isCurrent(operationID)
+  }
+
+  func focusPluginManagerSection(capabilities: [String], permissions: [String]) {
+    pluginManagerSection = PluginSurfaceClassifier.preferredSection(
+      capabilities: capabilities,
+      permissions: permissions
     )
+  }
+
+  func finishPluginLifecycleOperation(_ operationID: UUID) {
+    pluginLifecycleOperations.finish(operationID)
+    updatePluginState { state in
+      state.finishLifecycleOperation(operationID)
+    }
   }
 }

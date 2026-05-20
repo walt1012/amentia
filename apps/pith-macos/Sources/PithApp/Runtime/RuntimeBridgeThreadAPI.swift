@@ -83,14 +83,14 @@ extension RuntimeBridge {
     )
   }
 
-  func cancelTurn(turnID: String) async throws -> RuntimeTurnCancellation {
+  func cancelTurn(turnID: String) async throws -> RuntimeCancellationResult {
     let response: JSONRPCResponse<TurnCancelResult> = try await sendRequest(
       method: "turn/cancel",
       params: TurnCancelParams(turnId: turnID)
     )
     let result = try responseResult(from: response)
 
-    return RuntimeTurnCancellation(
+    return RuntimeCancellationResult(
       turnID: result.turnId,
       threadID: result.threadId,
       items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
@@ -98,14 +98,14 @@ extension RuntimeBridge {
     )
   }
 
-  func cancelRunningTurn(threadID: String) async throws -> RuntimeTurnCancellation {
+  func cancelRunningExecution(threadID: String) async throws -> RuntimeCancellationResult {
     let response: JSONRPCResponse<TurnCancelResult> = try await sendRequest(
       method: "turn/cancelRunning",
       params: TurnCancelRunningParams(threadId: threadID)
     )
     let result = try responseResult(from: response)
 
-    return RuntimeTurnCancellation(
+    return RuntimeCancellationResult(
       turnID: result.turnId,
       threadID: result.threadId,
       items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),

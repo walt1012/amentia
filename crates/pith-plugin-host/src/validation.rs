@@ -23,7 +23,8 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
   "mcp.connect",
 ];
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
-const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "keychain"];
+const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "local"];
+const KNOWN_MCP_TRANSPORTS: [&str; 1] = ["stdio"];
 
 pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("failed to parse plugin manifest") {
@@ -52,8 +53,10 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
 
   if validation_error.contains("relative path segment")
     || validation_error.contains("path separators")
+    || validation_error.contains("must not contain `:`")
+    || validation_error.contains("must not contain whitespace")
   {
-    return "Use stable plugin identifiers without path separators, for example `notion-connector`."
+    return "Use stable plugin identifiers without spaces, colons, or path separators, for example `notion-connector`."
       .to_string();
   }
 
@@ -64,9 +67,56 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       KNOWN_PERMISSIONS.join(", ")
     );
   }
+  if validation_error.contains("plugin auth policy type")
+    && validation_error.contains("is not supported")
+  {
+    return format!(
+      "Use one of the supported auth policy types: {}.",
+      KNOWN_AUTH_TYPES.join(", ")
+    );
+  }
+  if validation_error.contains("plugin auth policy type `none` must not require credentials") {
+    return "Set auth policy `required` to false, or switch to `api_key` or `oauth2` with `credentialStore: local`."
+      .to_string();
+  }
+  if validation_error.contains("plugin auth policy type `none` must not declare scopes") {
+    return "Remove auth scopes for `none`, or switch to an authenticated policy with `credentialStore: local`."
+      .to_string();
+  }
+  if validation_error.contains("plugin auth policy type `none` must use credential store `none`") {
+    return "Use `credentialStore: none` for auth-free connectors, or switch to an authenticated policy with `credentialStore: local`."
+      .to_string();
+  }
+  if validation_error.contains("must include a non-empty display name") {
+    return "Add a human-readable connector displayName so Pith can show the connector clearly."
+      .to_string();
+  }
+  if validation_error.contains("must include a non-empty service") {
+    return "Add a stable connector service such as `notion`, `github`, or another lowercase service key."
+      .to_string();
+  }
+  if validation_error.contains("plugin credential store")
+    && validation_error.contains("is not supported")
+  {
+    return format!(
+      "Use one of the supported credential stores: {}.",
+      KNOWN_CREDENTIAL_STORES.join(", ")
+    );
+  }
+  if validation_error.contains("plugin auth policy credential store is required") {
+    return "Declare `credentialStore: local` for authenticated connectors, or use auth policy type `none` with credential store `none`."
+      .to_string();
+  }
+  if validation_error.contains("plugin MCP server transport")
+    && validation_error.contains("is not supported")
+  {
+    return format!(
+      "Use one of the supported MCP transports: {}.",
+      KNOWN_MCP_TRANSPORTS.join(", ")
+    );
+  }
 
-  "Review the manifest schema, then fix the reported field or value and reload the plugin catalog."
-    .to_string()
+  "Review the manifest schema, fix the reported field or value, then refresh plugins.".to_string()
 }
 
 pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
@@ -88,6 +138,7 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         capability
       );
     }
+    validate_manifest_identifier("capability", identifier)?;
   }
 
   for skill in &manifest.skills {
@@ -99,6 +150,14 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
 
   for server in &manifest.mcp_servers {
     validate_manifest_identifier("mcp server", &server.id)?;
+    if let Some(transport) = server.transport.as_ref() {
+      if !KNOWN_MCP_TRANSPORTS.contains(&transport.as_str()) {
+        anyhow::bail!(
+          "plugin MCP server transport `{}` is not supported",
+          transport
+        );
+      }
+    }
     if let Some(command) = server.command.as_ref() {
       if command.trim().is_empty() {
         anyhow::bail!(
@@ -111,6 +170,12 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
 
   for connector in &manifest.app_connectors {
     validate_manifest_identifier("connector", &connector.id)?;
+    if connector.display_name.trim().is_empty() {
+      anyhow::bail!(
+        "plugin connector `{}` must include a non-empty display name",
+        connector.id
+      );
+    }
     if connector.service.trim().is_empty() {
       anyhow::bail!(
         "plugin connector `{}` must include a non-empty service",
@@ -125,6 +190,34 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         "plugin auth policy type `{}` is not supported",
         auth_policy.auth_type
       );
+    }
+    if auth_policy.auth_type == "none" {
+      if auth_policy.required {
+        anyhow::bail!("plugin auth policy type `none` must not require credentials");
+      }
+      if !auth_policy.scopes.is_empty() {
+        anyhow::bail!("plugin auth policy type `none` must not declare scopes");
+      }
+      if let Some(credential_store) = auth_policy.credential_store.as_ref() {
+        if credential_store != "none" {
+          anyhow::bail!("plugin auth policy type `none` must use credential store `none`");
+        }
+      }
+    } else {
+      match auth_policy.credential_store.as_deref() {
+        Some("local") => {}
+        Some("none") => {
+          anyhow::bail!(
+            "plugin auth policy credential store is required for authenticated connectors"
+          );
+        }
+        None => {
+          anyhow::bail!(
+            "plugin auth policy credential store is required for authenticated connectors"
+          );
+        }
+        Some(_) => {}
+      }
     }
     if let Some(credential_store) = auth_policy.credential_store.as_ref() {
       if !KNOWN_CREDENTIAL_STORES.contains(&credential_store.as_str()) {
@@ -171,6 +264,9 @@ fn validate_manifest_identifier(kind: &str, identifier: &str) -> Result<()> {
   }
   if identifier.contains(':') {
     anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain `:`");
+  }
+  if identifier.chars().any(char::is_whitespace) {
+    anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain whitespace");
   }
   Ok(())
 }

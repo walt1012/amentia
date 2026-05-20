@@ -64,7 +64,7 @@ pub(crate) fn handle_turn_cancel(
   JsonRpcResponse::success(
     request.id,
     &TurnCancelResult {
-      turn_id: params.turn_id,
+      turn_id: Some(params.turn_id),
       thread_id: active_turn_snapshot.thread_id().to_string(),
       items,
       active_turn_id: context
@@ -88,10 +88,17 @@ pub(crate) fn handle_turn_cancel_running(
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
   }
 
-  let (turn_id, thread_id) = context
+  let cancellation = context
     .execution_state
-    .request_running_turn_cancel_for_thread(&params.thread_id)
-    .unwrap_or_else(|| ("".to_string(), params.thread_id.clone()));
+    .request_running_cancel_for_thread(&params.thread_id);
+  let thread_id = cancellation
+    .as_ref()
+    .map(|cancellation| cancellation.thread_id().to_string())
+    .unwrap_or_else(|| params.thread_id.clone());
+  let turn_id = cancellation
+    .as_ref()
+    .and_then(|cancellation| cancellation.turn_id())
+    .map(str::to_string);
 
   JsonRpcResponse::success(
     request.id,

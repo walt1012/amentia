@@ -6,8 +6,8 @@ extension AppViewModel {
     SessionActionPlanner.runtimeLaunchButtonTitle(sessionActionSnapshot())
   }
 
-  func shouldShowRuntimeToolbarAction() -> Bool {
-    SessionActionPlanner.shouldShowRuntimeToolbarAction(sessionActionSnapshot())
+  func shouldShowRuntimeLaunchToolbarAction() -> Bool {
+    runtimeState == .disconnected || runtimeState == .failed
   }
 
   func runtimeStatusSummary() -> String {
@@ -70,7 +70,7 @@ extension AppViewModel {
   }
 
   func shouldShowSetupCallout() -> Bool {
-    runtimeState == .ready
+    runtimeState != .launching
       && (!isLocalModelReady() || workspace == nil || !hasRuntimeThreadSelection())
   }
 

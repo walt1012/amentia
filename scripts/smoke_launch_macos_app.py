@@ -1,0 +1,802 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import selectors
+import signal
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+from macos_llama_backend import assert_portable_llama_backend
+
+
+APP_PROCESS_NAME = "Pith"
+RUNTIME_PROCESS_NAME = "pith-runtime-bin"
+APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
+WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
+RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
+LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
+APP_STARTUP_TIMEOUT_SECONDS = 18.0
+APP_STABILITY_SECONDS = 2.0
+REQUIRED_BUNDLED_PLUGINS = {
+  "notion-connector",
+  "review-assistant",
+  "shell-recorder",
+  "web-search",
+  "workspace-notes",
+}
+REQUIRED_DATABASE_TABLES = {
+  "approvals",
+  "memory_notes",
+  "plugin_connector_credentials",
+  "plugin_state",
+  "schema_migrations",
+  "threads",
+  "workspace_state",
+}
+REQUIRED_SCHEMA_VERSION = 9
+
+
+def parse_args() -> argparse.Namespace:
+  parser = argparse.ArgumentParser(
+    description="Smoke launch a packaged Pith.app on macOS."
+  )
+  parser.add_argument("app_path", type=Path, help="Path to the packaged Pith.app bundle.")
+  parser.add_argument(
+    "--duration",
+    type=float,
+    default=None,
+    help="Deprecated alias for --stability-duration.",
+  )
+  parser.add_argument(
+    "--startup-timeout",
+    type=float,
+    default=APP_STARTUP_TIMEOUT_SECONDS,
+    help="Seconds to wait for the packaged app to launch its runtime.",
+  )
+  parser.add_argument(
+    "--stability-duration",
+    type=float,
+    default=APP_STABILITY_SECONDS,
+    help="Seconds the app and launched runtime must remain alive after startup.",
+  )
+  return parser.parse_args()
+
+
+def require_file(path: Path) -> None:
+  if not path.is_file():
+    raise FileNotFoundError(f"Required packaged app file is missing: {path}")
+
+
+def process_ids(name: str) -> set[int]:
+  result = subprocess.run(
+    ["/usr/bin/pgrep", "-x", name],
+    check=False,
+    capture_output=True,
+    text=True,
+  )
+  if result.returncode not in {0, 1}:
+    raise RuntimeError(result.stderr.strip() or f"pgrep failed for {name}")
+  return {
+    int(line)
+    for line in result.stdout.splitlines()
+    if line.strip().isdigit()
+  }
+
+
+def terminate_processes(process_name: str, process_ids_to_stop: set[int]) -> None:
+  for pid in process_ids_to_stop:
+    try:
+      os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+      pass
+  deadline = time.monotonic() + 5
+  while time.monotonic() < deadline:
+    if process_ids_to_stop.isdisjoint(process_ids(process_name)):
+      return
+    time.sleep(0.2)
+  for pid in process_ids_to_stop:
+    try:
+      os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+      pass
+
+
+def validate_app_bundle(app_path: Path) -> None:
+  require_file(app_path / "Contents" / "Info.plist")
+  require_file(app_path / "Contents" / "MacOS" / "Pith")
+  require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
+  require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
+  require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
+  assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
+  validate_packaged_llama_backend_launch(app_path)
+
+
+def validate_packaged_llama_backend_launch(app_path: Path) -> None:
+  backend = app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli"
+  try:
+    completed = subprocess.run(
+      [str(backend), "--help"],
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      text=True,
+      timeout=LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS,
+    )
+  except subprocess.TimeoutExpired as error:
+    raise RuntimeError("Packaged llama.cpp backend did not respond to --help.") from error
+  if completed.returncode != 0:
+    raise RuntimeError(
+      "Packaged llama.cpp backend failed to launch. "
+      f"Exit {completed.returncode}. Output: {completed.stdout[-1000:]}"
+    )
+
+
+def packaged_runtime_path(app_path: Path) -> Path:
+  return app_path / "Contents" / "MacOS" / RUNTIME_PROCESS_NAME
+
+
+def bundled_resource_path(app_path: Path) -> Path:
+  return app_path / "Contents" / "Resources"
+
+
+def launch_app_process(app_path: Path, support_dir: Path) -> subprocess.Popen[str]:
+  environment = os.environ.copy()
+  environment[APP_SUPPORT_ENV_KEY] = str(support_dir)
+  return subprocess.Popen(
+    [str(app_path / "Contents" / "MacOS" / APP_PROCESS_NAME)],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    env=environment,
+  )
+
+
+def launch_runtime_process(
+  app_path: Path,
+  support_dir: Path,
+  extra_environment: dict[str, str] | None = None,
+) -> subprocess.Popen[str]:
+  resources_path = bundled_resource_path(app_path)
+  environment = os.environ.copy()
+  environment["PITH_DATA_DIR"] = str(support_dir / "storage")
+  environment["PITH_LOCAL_PLUGIN_DIR"] = str(support_dir / "plugins")
+  environment["PITH_MODEL_PACK_ROOT"] = str(resources_path)
+  environment["PITH_PLUGIN_DIR"] = str(resources_path / "plugins")
+  environment["PITH_LLAMACPP_PATH"] = str(
+    resources_path / "tools" / "llama.cpp" / "llama-cli"
+  )
+  if extra_environment:
+    environment.update(extra_environment)
+  return subprocess.Popen(
+    [str(packaged_runtime_path(app_path))],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    env=environment,
+  )
+
+
+def terminate_process(process: subprocess.Popen[str]) -> None:
+  if process.poll() is not None:
+    return
+  process.terminate()
+  try:
+    process.wait(timeout=5)
+  except subprocess.TimeoutExpired:
+    process.kill()
+    process.wait(timeout=5)
+
+
+def terminate_process_with_output(process: subprocess.Popen[str]) -> tuple[str, str]:
+  terminate_process(process)
+  stdout, stderr = process.communicate(timeout=1)
+  return stdout or "", stderr or ""
+
+
+def validate_isolated_support_dir(support_dir: Path) -> None:
+  required_directories = [
+    support_dir,
+    support_dir / "storage",
+    support_dir / "storage" / "models",
+    support_dir / "plugins",
+    support_dir / "model-downloads",
+  ]
+  for directory in required_directories:
+    if not directory.is_dir():
+      raise RuntimeError(f"Packaged app did not prepare app-owned directory: {directory}")
+    if directory.is_symlink():
+      raise RuntimeError(f"Packaged app support directory must not be a symlink: {directory}")
+
+  model_weights = sorted(
+    path
+    for path in support_dir.rglob("*")
+    if path.is_file() and path.suffix.lower() == ".gguf"
+  )
+  if model_weights:
+    raise RuntimeError(
+      "Fresh packaged app launch unexpectedly created model weight files: "
+      f"{', '.join(str(path) for path in model_weights)}"
+    )
+
+  storage_dir = support_dir / "storage"
+  validate_runtime_database(storage_dir / "pith.db")
+
+
+def validate_runtime_database(database_path: Path) -> None:
+  require_file(database_path)
+  with sqlite3.connect(f"file:{database_path}?mode=ro", uri=True) as connection:
+    schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
+    if schema_version != REQUIRED_SCHEMA_VERSION:
+      raise RuntimeError(
+        f"Packaged runtime database schema is {schema_version}, "
+        f"expected {REQUIRED_SCHEMA_VERSION}: {database_path}"
+      )
+    rows = connection.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table'"
+    ).fetchall()
+  tables = {row[0] for row in rows}
+  missing = sorted(REQUIRED_DATABASE_TABLES - tables)
+  if missing:
+    raise RuntimeError(
+      "Packaged runtime database is missing tables "
+      f"{', '.join(missing)}: {database_path}"
+    )
+
+
+def send_runtime_request(
+  process: subprocess.Popen[str],
+  request_id: int,
+  method: str,
+  params: dict | None = None,
+) -> dict:
+  if process.stdin is None or process.stdout is None:
+    raise RuntimeError("Packaged runtime pipes are unavailable.")
+
+  payload = {
+    "id": request_id,
+    "method": method,
+  }
+  if params is not None:
+    payload["params"] = params
+
+  process.stdin.write(json.dumps(payload) + "\n")
+  process.stdin.flush()
+
+  while True:
+    line = read_runtime_line(process, method)
+    if not line:
+      raise RuntimeError(
+        f"Packaged runtime exited before responding to {method}."
+        f"{runtime_stderr_detail(process)}"
+      )
+    message = json.loads(line)
+    if message.get("id") == request_id:
+      if "error" in message:
+        raise RuntimeError(f"Packaged runtime {method} failed: {message['error']}")
+      return message
+
+
+def read_runtime_line(process: subprocess.Popen[str], method: str) -> str:
+  if process.stdout is None:
+    raise RuntimeError("Packaged runtime stdout is unavailable.")
+
+  with selectors.DefaultSelector() as selector:
+    selector.register(process.stdout, selectors.EVENT_READ)
+    events = selector.select(timeout=RUNTIME_REQUEST_TIMEOUT_SECONDS)
+  if not events:
+    raise RuntimeError(
+      f"Packaged runtime did not respond to {method} within "
+      f"{RUNTIME_REQUEST_TIMEOUT_SECONDS:.0f}s.{runtime_stderr_detail(process)}"
+    )
+
+  return process.stdout.readline()
+
+
+def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
+  if process.poll() is None or process.stderr is None:
+    return ""
+  stderr = process.stderr.read().strip()
+  if not stderr:
+    return ""
+  return f"\nRuntime stderr:\n{stderr[-2000:]}"
+
+
+def validate_runtime_readiness(
+  readiness: dict,
+  expected_statuses: dict[str, str | set[str]] | None = None,
+  expected_status: str = "setup_required",
+  workspace_open: bool = False,
+) -> None:
+  result = readiness["result"]
+  if result["status"] != expected_status:
+    raise RuntimeError(
+      f"Packaged runtime readiness was {result['status']}, expected {expected_status}."
+    )
+  checks = {check["id"]: check for check in result["checks"]}
+  expected_statuses = expected_statuses or {
+    "localModel": "setup_required",
+    "workspace": "setup_required",
+    "thread": "setup_required",
+    "firstRequest": "waiting",
+    "context": "ready",
+    "executionControls": "ready",
+    "plugins": "ready",
+    "boundedRuntime": "ready",
+  }
+  for check_id, expected_status in expected_statuses.items():
+    validate_readiness_check_status(checks, check_id, expected_status)
+  validate_tooling_readiness(result, checks, workspace_open=workspace_open)
+
+
+def validate_readiness_check_status(
+  checks: dict[str, dict],
+  check_id: str,
+  expected_status: str | set[str],
+) -> None:
+  actual_status = checks.get(check_id, {}).get("status")
+  allowed_statuses = {expected_status} if isinstance(expected_status, str) else expected_status
+  if actual_status not in allowed_statuses:
+    expected = ", ".join(sorted(allowed_statuses))
+    raise RuntimeError(
+      f"Packaged runtime readiness check {check_id} was {actual_status}, "
+      f"expected one of {expected}."
+    )
+
+
+def validate_tooling_readiness(
+  result: dict,
+  checks: dict[str, dict],
+  workspace_open: bool,
+) -> None:
+  validate_readiness_check_status(checks, "executionControls", "ready")
+  validate_readiness_check_status(checks, "webSearch", "ready")
+  validate_readiness_check_status(
+    checks,
+    "nativeSandbox",
+    "ready" if workspace_open else {"limited", "setup_required"},
+  )
+
+  metrics = result["metrics"]
+  expected_metrics = {
+    "webSearchTimeoutSeconds": "20",
+    "webSearchProvider": "DuckDuckGo Lite",
+    "webSearchAvailable": "true",
+    "webSearchPermissionGranted": "true",
+    "sandboxMode": "workspaceReadWrite",
+    "sandboxNetworkAllowed": "false",
+  }
+  for key, expected_value in expected_metrics.items():
+    actual_value = metrics.get(key)
+    if actual_value != expected_value:
+      raise RuntimeError(
+        f"Packaged runtime readiness metric {key} was {actual_value}, "
+        f"expected {expected_value}."
+      )
+
+  if "Web Search" not in metrics.get("webSearchPermissionSources", ""):
+    raise RuntimeError("Packaged runtime readiness did not attribute Web Search permission.")
+  if metrics.get("webSearchClient") not in {"curl", "fixture"}:
+    raise RuntimeError(
+      "Packaged runtime readiness reported unexpected web search client: "
+      f"{metrics.get('webSearchClient')}"
+    )
+  if workspace_open:
+    if metrics.get("sandboxBackend") != "macosSeatbelt":
+      raise RuntimeError(
+        "Packaged runtime readiness must use the native macOS sandbox after "
+        f"workspace open. Backend: {metrics.get('sandboxBackend')}"
+      )
+    if metrics.get("sandboxActive") != "true":
+      raise RuntimeError(
+        "Packaged runtime readiness must report an active native sandbox after "
+        f"workspace open. Active: {metrics.get('sandboxActive')}"
+      )
+  else:
+    if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
+      raise RuntimeError(
+        "Packaged runtime readiness reported unexpected sandbox backend: "
+        f"{metrics.get('sandboxBackend')}"
+      )
+    if metrics.get("sandboxActive") not in {"true", "false"}:
+      raise RuntimeError(
+        "Packaged runtime readiness reported unexpected sandbox active state: "
+        f"{metrics.get('sandboxActive')}"
+      )
+
+
+def validate_packaged_runtime_workspace_bootstrap(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+  local_model_status: str = "setup_required",
+  expected_status: str = "setup_required",
+) -> None:
+  workspace_dir = support_dir / "workspace"
+  workspace_dir.mkdir()
+  (workspace_dir / "README.md").write_text(
+    "# Packaged Runtime Smoke\n\nWorkspace bootstrap check.\n",
+    encoding="utf-8",
+  )
+
+  workspace_open = send_runtime_request(
+    process,
+    5,
+    "workspace/open",
+    {
+      "path": str(workspace_dir),
+    },
+  )
+  workspace = workspace_open["result"]["workspace"]
+  if workspace["displayName"] != "workspace":
+    raise RuntimeError(
+      f"Packaged runtime opened workspace as {workspace['displayName']}."
+    )
+
+  thread_start = send_runtime_request(
+    process,
+    6,
+    "thread/start",
+    {
+      "title": "Packaged Runtime Smoke",
+    },
+  )
+  if thread_start["result"]["thread"]["id"] != "thread-1":
+    raise RuntimeError("Packaged runtime did not create the first thread.")
+
+  thread_readiness = send_runtime_request(process, 7, "runtime/readiness")
+  validate_runtime_readiness(
+    thread_readiness,
+    {
+      "localModel": local_model_status,
+      "workspace": "ready",
+      "thread": "ready",
+      "firstRequest": "ready_to_send",
+      "context": "ready",
+      "executionControls": "ready",
+      "plugins": "ready",
+      "boundedRuntime": "ready",
+    },
+    expected_status=expected_status,
+    workspace_open=True,
+  )
+
+  thread_list = send_runtime_request(process, 8, "thread/list")
+  threads = thread_list["result"]["threads"]
+  if len(threads) != 1 or threads[0]["title"] != "Packaged Runtime Smoke":
+    raise RuntimeError("Packaged runtime did not persist the smoke thread.")
+
+  validate_packaged_runtime_workspace_search(process)
+
+
+def validate_packaged_runtime_workspace_search(process: subprocess.Popen[str]) -> None:
+  search = send_runtime_request(
+    process,
+    9,
+    "workspace/search",
+    {
+      "query": "bootstrap",
+      "maxResults": 5,
+      "clientRequestId": "packaged-smoke-search",
+    },
+  )
+  result = search["result"]
+  if result["query"] != "bootstrap":
+    raise RuntimeError(
+      f"Packaged runtime workspace search query was {result['query']}."
+    )
+
+  matches = result["matches"]
+  if not any(
+    match["relativePath"] == "README.md"
+    and match["lineNumber"] == 3
+    and "Workspace bootstrap check." in match["line"]
+    for match in matches
+  ):
+    raise RuntimeError(
+      "Packaged runtime workspace search did not find the smoke README."
+    )
+
+
+def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
+  model_dir = support_dir / "model-pack" / "smoke-local-model"
+  model_dir.mkdir(parents=True)
+  model_path = model_dir / "smoke-local-model.gguf"
+  model_bytes = b"GGUFpackaged smoke local model fixture\n"
+  model_path.write_bytes(model_bytes)
+  manifest = {
+    "id": "packaged-smoke-local-model",
+    "display_name": "Packaged Smoke Local Model",
+    "file_name": model_path.name,
+    "context_size": 512,
+    "model_context_size": 512,
+    "max_output_tokens": 32,
+    "backend": "llama.cpp",
+    "license": "test-fixture",
+    "homepage": "https://example.com/pith-smoke-model",
+    "download_url": "https://example.com/pith-smoke-model.gguf",
+    "sha256": hashlib.sha256(model_bytes).hexdigest(),
+    "size_bytes": len(model_bytes),
+  }
+  manifest_path = model_dir / "model-pack.json"
+  manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+  return manifest_path, model_path
+
+
+def write_deterministic_llama_backend_fixture(support_dir: Path) -> Path:
+  backend_path = support_dir / "deterministic-llama-cli"
+  backend_path.write_text(
+    "#!/bin/sh\n"
+    "printf '%s\\n' 'Packaged smoke local response.'\n",
+    encoding="utf-8",
+  )
+  backend_path.chmod(0o755)
+  return backend_path
+
+
+def write_web_search_fixture(support_dir: Path) -> Path:
+  fixture_path = support_dir / WEB_SEARCH_FIXTURE_NAME
+  fixture_path.write_text(
+    """
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith-packaged-smoke&amp;rut=abc" class='result-link'>Pith packaged web search fixture</a>
+      <td class='result-snippet'>Deterministic packaged web search result.</td>
+    """,
+    encoding="utf-8",
+  )
+  return fixture_path
+
+
+def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
+  web_turn = send_runtime_request(
+    process,
+    24,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": "Search the web for Pith packaged smoke fixture",
+    },
+  )
+  items = web_turn["result"]["items"]
+  if not any(item["kind"] == "toolStart" and item["title"] == "web_search" for item in items):
+    raise RuntimeError("Packaged first-run smoke did not start web_search.")
+
+  result_item = next(
+    (
+      item
+      for item in items
+      if item["kind"] == "toolResult" and item["title"] == "web_search result"
+    ),
+    None,
+  )
+  if result_item is None:
+    raise RuntimeError("Packaged first-run smoke did not produce a web_search result.")
+  if "Pith packaged web search fixture" not in result_item["content"]:
+    raise RuntimeError(
+      "Packaged first-run smoke did not use the web search fixture result. "
+      f"Result content: {result_item['content'][:500]}"
+    )
+  if not any(item["kind"] == "assistantMessage" for item in items):
+    raise RuntimeError("Packaged web search turn did not produce an assistant item.")
+
+
+def validate_packaged_first_local_request(app_path: Path) -> None:
+  with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
+    support_dir = Path(support_root)
+    manifest_path, model_path = write_smoke_model_pack(support_dir)
+    backend_path = write_deterministic_llama_backend_fixture(support_dir)
+    web_search_fixture_path = write_web_search_fixture(support_dir)
+    process = launch_runtime_process(
+      app_path,
+      support_dir,
+      {
+        "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
+        "PITH_MODEL_PATH": str(model_path),
+        "PITH_LFM_MODEL_PATH": str(model_path),
+        "PITH_LLAMACPP_PATH": str(backend_path),
+        "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
+        "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
+      },
+    )
+    try:
+      initialize = send_runtime_request(
+        process,
+        20,
+        "initialize",
+        {
+          "clientInfo": {
+            "name": "packaged-first-request-smoke",
+            "version": "0.1.0",
+          }
+        },
+      )
+      if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+        raise RuntimeError("Packaged first-request initialize returned the wrong server name.")
+
+      model_health = send_runtime_request(process, 21, "model/health")
+      if model_health["result"]["status"] != "ready":
+        raise RuntimeError(
+          "Packaged first-request smoke did not resolve a ready local model: "
+          f"{model_health['result']}"
+        )
+
+      validate_packaged_runtime_workspace_bootstrap(
+        process,
+        support_dir,
+        local_model_status="ready",
+        expected_status="ready",
+      )
+      turn = send_runtime_request(
+        process,
+        22,
+        "turn/start",
+        {
+          "threadId": "thread-1",
+          "message": "Read README.md",
+        },
+      )
+      items = turn["result"]["items"]
+      if not any(item["kind"] == "assistantMessage" for item in items):
+        raise RuntimeError("Packaged first local request did not produce an assistant item.")
+      first_request_readiness = send_runtime_request(process, 23, "runtime/readiness")
+      checks = {
+        check["id"]: check["status"]
+        for check in first_request_readiness["result"]["checks"]
+      }
+      if checks.get("firstRequest") != "ready":
+        raise RuntimeError(
+          "Packaged first local request did not mark firstRequest ready: "
+          f"{checks.get('firstRequest')}"
+        )
+      validate_packaged_web_search_turn(process)
+      print(
+        "Packaged first local request smoke passed with deterministic local model "
+        f"under {support_dir}"
+      )
+    finally:
+      terminate_process(process)
+
+
+def validate_packaged_runtime_protocol(app_path: Path) -> None:
+  with tempfile.TemporaryDirectory(prefix="pith-runtime-protocol-") as support_root:
+    support_dir = Path(support_root)
+    process = launch_runtime_process(app_path, support_dir)
+    try:
+      initialize = send_runtime_request(
+        process,
+        1,
+        "initialize",
+        {
+          "clientInfo": {
+            "name": "packaged-runtime-smoke",
+            "version": "0.1.0",
+          }
+        },
+      )
+      if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+        raise RuntimeError("Packaged runtime initialize returned the wrong server name.")
+
+      bootstrap = send_runtime_request(process, 2, "model/bootstrap")
+      manifest_path = Path(bootstrap["result"]["manifestPath"])
+      require_file(manifest_path)
+      if manifest_path.suffix != ".json":
+        raise RuntimeError(f"Packaged runtime copied an invalid model manifest: {manifest_path}")
+      if (manifest_path.parent / "LFM2.5-350M-Q4_K_M.gguf").exists():
+        raise RuntimeError("Packaged runtime smoke unexpectedly found bundled model weights.")
+
+      plugin_list = send_runtime_request(process, 3, "plugin/list")
+      plugin_ids = {plugin["id"] for plugin in plugin_list["result"]["plugins"]}
+      missing_plugins = sorted(REQUIRED_BUNDLED_PLUGINS - plugin_ids)
+      if missing_plugins:
+        raise RuntimeError(
+          "Packaged runtime is missing bundled plugins "
+          f"{', '.join(missing_plugins)}."
+        )
+
+      validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
+      validate_packaged_runtime_workspace_bootstrap(process, support_dir)
+      validate_runtime_database(support_dir / "storage" / "pith.db")
+      validate_packaged_first_local_request(app_path)
+      print(
+        "Packaged runtime protocol smoke passed with model metadata and plugins "
+        f"under {support_dir}"
+      )
+    finally:
+      terminate_process(process)
+
+
+def validate_app_runtime_stability(
+  app_process: subprocess.Popen[str],
+  launched_runtime_pids: set[int],
+  stability_duration: float,
+) -> None:
+  stability_deadline = time.monotonic() + stability_duration
+  while time.monotonic() < stability_deadline:
+    if app_process.poll() is not None:
+      stdout, stderr = app_process.communicate()
+      raise RuntimeError(
+        "Packaged app launched the runtime but exited during the smoke window.\n"
+        f"stdout:\n{stdout[-2000:]}\n"
+        f"stderr:\n{stderr[-2000:]}"
+      )
+    if launched_runtime_pids.isdisjoint(process_ids(RUNTIME_PROCESS_NAME)):
+      raise RuntimeError("Packaged runtime exited during the smoke window.")
+    time.sleep(0.2)
+
+
+def print_packaged_app_success(
+  app_process: subprocess.Popen[str],
+  launched_runtime_pids: set[int],
+  support_dir: Path,
+) -> None:
+  print(
+    "Packaged app launch smoke passed with app PID "
+    f"{app_process.pid}, runtime PIDs {sorted(launched_runtime_pids)}, "
+    f"and isolated support root {support_dir}"
+  )
+
+
+def main() -> int:
+  args = parse_args()
+  if sys.platform != "darwin":
+    print("Skipping macOS app launch smoke outside Darwin.")
+    return 0
+
+  app_path = args.app_path.resolve()
+  validate_app_bundle(app_path)
+  validate_packaged_runtime_protocol(app_path)
+  before_runtime_pids = process_ids(RUNTIME_PROCESS_NAME)
+  stability_duration = (
+    args.duration if args.duration is not None else args.stability_duration
+  )
+  with tempfile.TemporaryDirectory(prefix="pith-app-smoke-") as support_root:
+    support_dir = Path(support_root)
+    app_process = launch_app_process(app_path, support_dir)
+    launched_runtime_pids: set[int] = set()
+    startup_deadline = time.monotonic() + args.startup_timeout
+    try:
+      while time.monotonic() < startup_deadline:
+        if app_process.poll() is not None:
+          stdout, stderr = app_process.communicate()
+          raise RuntimeError(
+            "Packaged app exited before launching the runtime.\n"
+            f"stdout:\n{stdout[-2000:]}\n"
+            f"stderr:\n{stderr[-2000:]}"
+          )
+        launched_runtime_pids = process_ids(RUNTIME_PROCESS_NAME) - before_runtime_pids
+        if launched_runtime_pids:
+          validate_app_runtime_stability(
+            app_process,
+            launched_runtime_pids,
+            stability_duration,
+          )
+          validate_isolated_support_dir(support_dir)
+          print_packaged_app_success(app_process, launched_runtime_pids, support_dir)
+          return 0
+        time.sleep(0.2)
+
+      stdout, stderr = terminate_process_with_output(app_process)
+      raise RuntimeError(
+        "Packaged app did not start pith-runtime-bin within "
+        f"{args.startup_timeout:.0f}s.\n"
+        f"stdout:\n{stdout[-2000:]}\n"
+        f"stderr:\n{stderr[-2000:]}"
+      )
+    finally:
+      terminate_process(app_process)
+      if launched_runtime_pids:
+        terminate_processes(RUNTIME_PROCESS_NAME, launched_runtime_pids)
+
+
+if __name__ == "__main__":
+  try:
+    raise SystemExit(main())
+  except Exception as error:
+    print(f"macOS app launch smoke failed: {error}", file=sys.stderr)
+    raise SystemExit(1)

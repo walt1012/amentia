@@ -1,6 +1,6 @@
 # Contributing
 
-This repository has completed the Milestone 1 local agent baseline for `Pith`.
+This repository is in Milestone 3 daily-driver hardening for `Pith`.
 
 ## Project Rules
 
@@ -48,15 +48,17 @@ If a change affects plugin permissions or command discovery, treat these four su
 - runtime smoke coverage
 - bundled plugin sample data
 
-## Milestone 1 Baseline
+## Current Baseline
 
-The current repository target is a stable local agent loop:
+The current repository target is a stable local daily-driver loop:
 
 - native macOS shell with sidebar, timeline, composer, and inspector
 - Rust runtime process over `stdio`
 - thread, turn, streaming, and cancellation flow
-- filesystem, shell, diff, and approval-gated write tools
+- filesystem, shell, web search, diff, and approval-gated write tools
 - SQLite-backed persistence and built-in memory
-- local model health inspection and pack metadata bootstrap
+- first-use local model download, verification, activation, and health inspection
+- native sandbox diagnostics and bounded subprocess execution
+- plugin metadata, discovery, permissions, and visibility foundations
 
-Later milestones can expand plugin management, desktop polish, and multi-agent behavior on top of this baseline.
+Milestone 4 can add real plugin execution contracts and third-party connectors after Milestone 3 is stable.
