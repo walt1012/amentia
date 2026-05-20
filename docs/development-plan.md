@@ -102,8 +102,9 @@ Current Status:
 
 - Proven in CI: packaged runtime protocol health, isolated app support state,
   runtime database initialization, workspace bootstrap, workspace search, thread
-  creation, web search readiness, sandbox readiness, deterministic first request
-  coverage, fresh app-owned directory preparation, model manager
+  creation, web search readiness, packaged web search execution, sandbox
+  readiness, deterministic first request coverage, fresh app-owned directory
+  preparation, model manager
   download/resume/activation planning, and packaged app launch smoke coverage.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin

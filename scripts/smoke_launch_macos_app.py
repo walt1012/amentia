@@ -19,6 +19,7 @@ from pathlib import Path
 APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
+WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 APP_STARTUP_TIMEOUT_SECONDS = 18.0
 APP_STABILITY_SECONDS = 2.0
@@ -499,11 +500,54 @@ def write_fake_llama_backend(support_dir: Path) -> Path:
   return backend_path
 
 
+def write_web_search_fixture(support_dir: Path) -> Path:
+  fixture_path = support_dir / WEB_SEARCH_FIXTURE_NAME
+  fixture_path.write_text(
+    """
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith-packaged-smoke&amp;rut=abc" class='result-link'>Pith packaged web search fixture</a>
+      <td class='result-snippet'>Deterministic packaged web search result.</td>
+    """,
+    encoding="utf-8",
+  )
+  return fixture_path
+
+
+def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
+  web_turn = send_runtime_request(
+    process,
+    24,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": "Search the web for Pith packaged smoke fixture",
+    },
+  )
+  items = web_turn["result"]["items"]
+  if not any(item["kind"] == "toolStart" and item["title"] == "web_search" for item in items):
+    raise RuntimeError("Packaged first-run smoke did not start web_search.")
+
+  result_item = next(
+    (
+      item
+      for item in items
+      if item["kind"] == "toolResult" and item["title"] == "web_search result"
+    ),
+    None,
+  )
+  if result_item is None:
+    raise RuntimeError("Packaged first-run smoke did not produce a web_search result.")
+  if "Pith packaged web search fixture" not in result_item["content"]:
+    raise RuntimeError("Packaged first-run smoke did not use the web search fixture result.")
+  if not any(item["kind"] == "assistantMessage" for item in items):
+    raise RuntimeError("Packaged web search turn did not produce an assistant item.")
+
+
 def validate_packaged_first_local_request(app_path: Path) -> None:
   with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
     support_dir = Path(support_root)
     manifest_path, model_path = write_smoke_model_pack(support_dir)
     backend_path = write_fake_llama_backend(support_dir)
+    web_search_fixture_path = write_web_search_fixture(support_dir)
     process = launch_runtime_process(
       app_path,
       support_dir,
@@ -512,6 +556,7 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
         "PITH_MODEL_PATH": str(model_path),
         "PITH_LFM_MODEL_PATH": str(model_path),
         "PITH_LLAMACPP_PATH": str(backend_path),
+        "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
       },
     )
     try:
@@ -564,6 +609,7 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
           "Packaged first local request did not mark firstRequest ready: "
           f"{checks.get('firstRequest')}"
         )
+      validate_packaged_web_search_turn(process)
       print(
         "Packaged first local request smoke passed with deterministic local model "
         f"under {support_dir}"
