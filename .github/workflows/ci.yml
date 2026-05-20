@@ -25,6 +25,7 @@ env:
   MACOS_APP_ARTIFACT: Pith-macos-x86_64
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -225,23 +226,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Download Swift app executable
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.SWIFT_APP_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
-
-      - name: Download runtime executable
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.RUNTIME_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
-
-      - name: Download llama.cpp backend
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.LLAMA_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+      - name: Download prebuilt artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          gh run download "$GITHUB_RUN_ID" --name "$SWIFT_APP_ARTIFACT" --dir "$PREBUILT_ARTIFACT_DIR"
+          gh run download "$GITHUB_RUN_ID" --name "$RUNTIME_ARTIFACT" --dir "$PREBUILT_ARTIFACT_DIR"
+          gh run download "$GITHUB_RUN_ID" --name "$LLAMA_ARTIFACT" --dir "$PREBUILT_ARTIFACT_DIR"
 
       - name: Restore executable permissions
         run: |
