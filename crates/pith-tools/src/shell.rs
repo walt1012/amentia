@@ -5,7 +5,9 @@ use anyhow::{bail, Context, Result};
 use crate::paths::canonical_workspace_root;
 use crate::shell_execution::{run_shell_with_timeout, shell_command_timeout};
 use crate::shell_output_artifacts::shell_output_artifact_directory;
-use crate::shell_output_context::build_shell_output_context;
+use crate::shell_output_context::{
+  build_shell_output_context, ShellOutputArtifactContext, ShellOutputContextInput,
+};
 use crate::shell_sandbox::{
   prepare_shell_sandbox_environment, shell_sandbox_plan,
   shell_sandbox_status as build_shell_sandbox_status,
@@ -82,18 +84,20 @@ where
   }
   let stdout_source_bytes = output.stdout_source_bytes.max(stdout.len());
   let stderr_source_bytes = output.stderr_source_bytes.max(stderr.len());
-  let output_context = build_shell_output_context(
-    &stdout,
-    &stderr,
-    stdout_source_bytes,
-    stderr_source_bytes,
-    max_output_bytes,
-    output.stdout_artifact_bytes,
-    output.stderr_artifact_bytes,
-    output.artifact_max_bytes_per_stream,
-    output.artifact_directory.as_deref(),
-    trimmed_command,
-  );
+  let output_context = build_shell_output_context(ShellOutputContextInput {
+    stdout: &stdout,
+    stderr: &stderr,
+    source_stdout_bytes: stdout_source_bytes,
+    source_stderr_bytes: stderr_source_bytes,
+    budget_bytes: max_output_bytes,
+    artifact: ShellOutputArtifactContext {
+      stdout_bytes: output.stdout_artifact_bytes,
+      stderr_bytes: output.stderr_artifact_bytes,
+      max_bytes_per_stream: output.artifact_max_bytes_per_stream,
+      directory: output.artifact_directory.as_deref(),
+    },
+    command: trimmed_command,
+  });
 
   Ok(ShellCommandResult {
     command: trimmed_command.to_string(),

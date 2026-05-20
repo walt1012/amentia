@@ -22,40 +22,57 @@ pub(crate) struct ShellOutputContextResult {
   pub(crate) context: ShellOutputContext,
 }
 
+pub(crate) struct ShellOutputContextInput<'a> {
+  pub(crate) stdout: &'a str,
+  pub(crate) stderr: &'a str,
+  pub(crate) source_stdout_bytes: usize,
+  pub(crate) source_stderr_bytes: usize,
+  pub(crate) budget_bytes: usize,
+  pub(crate) artifact: ShellOutputArtifactContext<'a>,
+  pub(crate) command: &'a str,
+}
+
+pub(crate) struct ShellOutputArtifactContext<'a> {
+  pub(crate) stdout_bytes: usize,
+  pub(crate) stderr_bytes: usize,
+  pub(crate) max_bytes_per_stream: usize,
+  pub(crate) directory: Option<&'a Path>,
+}
+
 pub(crate) fn build_shell_output_context(
-  stdout: &str,
-  stderr: &str,
-  source_stdout_bytes: usize,
-  source_stderr_bytes: usize,
-  budget_bytes: usize,
-  artifact_stdout_bytes: usize,
-  artifact_stderr_bytes: usize,
-  artifact_max_bytes_per_stream: usize,
-  artifact_directory: Option<&Path>,
-  command: &str,
+  input: ShellOutputContextInput<'_>,
 ) -> ShellOutputContextResult {
-  let stdout_preview =
-    compact_output_for_context(stdout, source_stdout_bytes, budget_bytes, command);
-  let stderr_preview =
-    compact_output_for_context(stderr, source_stderr_bytes, budget_bytes, command);
+  let stdout_preview = compact_output_for_context(
+    input.stdout,
+    input.source_stdout_bytes,
+    input.budget_bytes,
+    input.command,
+  );
+  let stderr_preview = compact_output_for_context(
+    input.stderr,
+    input.source_stderr_bytes,
+    input.budget_bytes,
+    input.command,
+  );
   let was_compacted =
-    source_stdout_bytes > stdout_preview.len() || source_stderr_bytes > stderr_preview.len();
+    input.source_stdout_bytes > stdout_preview.len()
+      || input.source_stderr_bytes > stderr_preview.len();
 
   ShellOutputContextResult {
     context: ShellOutputContext {
       mode: SHELL_OUTPUT_CONTEXT_MODE.to_string(),
-      source_stdout_bytes,
-      source_stderr_bytes,
+      source_stdout_bytes: input.source_stdout_bytes,
+      source_stderr_bytes: input.source_stderr_bytes,
       retained_stdout_bytes: stdout_preview.len(),
       retained_stderr_bytes: stderr_preview.len(),
-      budget_bytes,
-      artifact_stdout_bytes,
-      artifact_stderr_bytes,
-      artifact_max_bytes_per_stream,
-      artifacts_truncated: artifact_stdout_bytes < source_stdout_bytes
-        || artifact_stderr_bytes < source_stderr_bytes,
+      budget_bytes: input.budget_bytes,
+      artifact_stdout_bytes: input.artifact.stdout_bytes,
+      artifact_stderr_bytes: input.artifact.stderr_bytes,
+      artifact_max_bytes_per_stream: input.artifact.max_bytes_per_stream,
+      artifacts_truncated: input.artifact.stdout_bytes < input.source_stdout_bytes
+        || input.artifact.stderr_bytes < input.source_stderr_bytes,
       was_compacted,
-      artifact_directory: artifact_directory.map(|path| path.display().to_string()),
+      artifact_directory: input.artifact.directory.map(|path| path.display().to_string()),
     },
     stdout_preview,
     stderr_preview,
@@ -220,18 +237,20 @@ mod tests {
   fn shell_output_context_reports_app_owned_artifact_path() {
     let artifact_directory = PathBuf::from("/tmp/pith-artifacts/run-1");
 
-    let context = build_shell_output_context(
-      "preview",
-      "",
-      4096,
-      0,
-      1024,
-      4096,
-      0,
-      4096,
-      Some(&artifact_directory),
-      "cat package.json",
-    )
+    let context = build_shell_output_context(ShellOutputContextInput {
+      stdout: "preview",
+      stderr: "",
+      source_stdout_bytes: 4096,
+      source_stderr_bytes: 0,
+      budget_bytes: 1024,
+      artifact: ShellOutputArtifactContext {
+        stdout_bytes: 4096,
+        stderr_bytes: 0,
+        max_bytes_per_stream: 4096,
+        directory: Some(&artifact_directory),
+      },
+      command: "cat package.json",
+    })
     .context;
 
     assert!(context.was_compacted);
@@ -243,18 +262,20 @@ mod tests {
 
   #[test]
   fn shell_output_context_marks_stream_omissions_when_preview_was_bounded() {
-    let context = build_shell_output_context(
-      "head preview",
-      "",
-      4096,
-      0,
-      128,
-      4096,
-      0,
-      4096,
-      None,
-      "cat log",
-    )
+    let context = build_shell_output_context(ShellOutputContextInput {
+      stdout: "head preview",
+      stderr: "",
+      source_stdout_bytes: 4096,
+      source_stderr_bytes: 0,
+      budget_bytes: 128,
+      artifact: ShellOutputArtifactContext {
+        stdout_bytes: 4096,
+        stderr_bytes: 0,
+        max_bytes_per_stream: 4096,
+        directory: None,
+      },
+      command: "cat log",
+    })
     .context;
 
     assert!(context.was_compacted);
