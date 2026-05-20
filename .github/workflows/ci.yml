@@ -210,8 +210,11 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=x86_64 \
             -DBUILD_SHARED_LIBS=OFF
-          cmake --build "$build_dir" --config Release --parallel 3
-          backend="$(find "$build_dir" -type f \\( -name llama-cli -o -name main \\) | head -n 1)"
+          if ! cmake --build "$build_dir" --config Release --parallel 3 > "$RUNNER_TEMP/llama-build.log" 2>&1; then
+            tail -n 160 "$RUNNER_TEMP/llama-build.log"
+            exit 1
+          fi
+          backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
           test -x "$backend"
           archs="$(lipo -archs "$backend" 2>/dev/null || true)"
           if [[ -n "$archs" && "$archs" != *"x86_64"* ]]; then
