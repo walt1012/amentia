@@ -360,6 +360,11 @@ def validate_tooling_readiness(
 
   if "Web Search" not in metrics.get("webSearchPermissionSources", ""):
     raise RuntimeError("Packaged runtime readiness did not attribute Web Search permission.")
+  if metrics.get("webSearchClient") not in {"curl", "fixture"}:
+    raise RuntimeError(
+      "Packaged runtime readiness reported unexpected web search client: "
+      f"{metrics.get('webSearchClient')}"
+    )
   if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
     raise RuntimeError(
       "Packaged runtime readiness reported unexpected sandbox backend: "
@@ -537,7 +542,10 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
   if result_item is None:
     raise RuntimeError("Packaged first-run smoke did not produce a web_search result.")
   if "Pith packaged web search fixture" not in result_item["content"]:
-    raise RuntimeError("Packaged first-run smoke did not use the web search fixture result.")
+    raise RuntimeError(
+      "Packaged first-run smoke did not use the web search fixture result. "
+      f"Result content: {result_item['content'][:500]}"
+    )
   if not any(item["kind"] == "assistantMessage" for item in items):
     raise RuntimeError("Packaged web search turn did not produce an assistant item.")
 
@@ -556,6 +564,7 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
         "PITH_MODEL_PATH": str(model_path),
         "PITH_LFM_MODEL_PATH": str(model_path),
         "PITH_LLAMACPP_PATH": str(backend_path),
+        "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
         "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
       },
     )
