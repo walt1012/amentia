@@ -88,6 +88,9 @@ where
     stdout_source_bytes,
     stderr_source_bytes,
     max_output_bytes,
+    output.stdout_artifact_bytes,
+    output.stderr_artifact_bytes,
+    output.artifact_max_bytes_per_stream,
     output.artifact_directory.as_deref(),
     trimmed_command,
   );

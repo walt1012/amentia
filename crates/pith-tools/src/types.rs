@@ -76,6 +76,10 @@ pub struct ShellOutputContext {
   pub retained_stdout_bytes: usize,
   pub retained_stderr_bytes: usize,
   pub budget_bytes: usize,
+  pub artifact_stdout_bytes: usize,
+  pub artifact_stderr_bytes: usize,
+  pub artifact_max_bytes_per_stream: usize,
+  pub artifacts_truncated: bool,
   pub was_compacted: bool,
   pub artifact_directory: Option<String>,
 }
@@ -185,15 +189,24 @@ impl ShellOutputContext {
       }
       _ => "not needed".to_string(),
     };
+    let artifact_detail = if self.artifacts_truncated {
+      format!(
+        "; artifact files capped at {} bytes per stream",
+        self.artifact_max_bytes_per_stream
+      )
+    } else {
+      String::new()
+    };
     format!(
-      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifacts: {}",
+      "Context: {} retained {}/{} stdout bytes and {}/{} stderr bytes; saved {}%; artifacts: {}{}",
       self.mode,
       self.retained_stdout_bytes,
       self.source_stdout_bytes,
       self.retained_stderr_bytes,
       self.source_stderr_bytes,
       self.savings_percent(),
-      artifact
+      artifact,
+      artifact_detail
     )
   }
 
@@ -219,6 +232,22 @@ impl ShellOutputContext {
       (
         "sandboxOutputBudgetBytes".to_string(),
         self.budget_bytes.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactStdoutBytes".to_string(),
+        self.artifact_stdout_bytes.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactStderrBytes".to_string(),
+        self.artifact_stderr_bytes.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactMaxBytesPerStream".to_string(),
+        self.artifact_max_bytes_per_stream.to_string(),
+      ),
+      (
+        "sandboxOutputArtifactsTruncated".to_string(),
+        self.artifacts_truncated.to_string(),
       ),
       (
         "sandboxOutputCompacted".to_string(),
@@ -304,6 +333,10 @@ mod tests {
       retained_stdout_bytes: 100,
       retained_stderr_bytes: 50,
       budget_bytes: 256,
+      artifact_stdout_bytes: 900,
+      artifact_stderr_bytes: 100,
+      artifact_max_bytes_per_stream: 4096,
+      artifacts_truncated: false,
       was_compacted: true,
       artifact_directory: Some("/tmp/pith/run-1".to_string()),
     };

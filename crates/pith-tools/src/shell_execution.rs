@@ -12,6 +12,7 @@ use crate::shell_output_artifacts::discard_shell_output_artifact_directory;
 
 const SHELL_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const SHELL_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const SHELL_OUTPUT_ARTIFACT_MAX_BYTES_PER_STREAM: usize = 4 * 1024 * 1024;
 
 pub(crate) fn shell_command_timeout() -> Duration {
   SHELL_COMMAND_TIMEOUT
@@ -48,6 +49,7 @@ pub(crate) fn run_shell_with_timeout(
       reader,
       artifact_directory.join("stdout.txt"),
       max_output_bytes,
+      SHELL_OUTPUT_ARTIFACT_MAX_BYTES_PER_STREAM,
     )
   });
   let stderr_reader = child.stderr.take().map(|reader| {
@@ -55,6 +57,7 @@ pub(crate) fn run_shell_with_timeout(
       reader,
       artifact_directory.join("stderr.txt"),
       max_output_bytes,
+      SHELL_OUTPUT_ARTIFACT_MAX_BYTES_PER_STREAM,
     )
   });
   let wait = match wait_for_child(
@@ -85,7 +88,7 @@ pub(crate) fn run_shell_with_timeout(
     }
   };
   let artifact_directory =
-    if stdout.source_byte_count > max_output_bytes || stderr.source_byte_count > max_output_bytes {
+    if stdout.needs_artifact(max_output_bytes) || stderr.needs_artifact(max_output_bytes) {
       Some(artifact_directory)
     } else {
       discard_shell_output_artifact_directory(&artifact_directory);
@@ -102,6 +105,9 @@ pub(crate) fn run_shell_with_timeout(
     stderr: stderr.preview,
     stdout_source_bytes: stdout.source_byte_count,
     stderr_source_bytes: stderr.source_byte_count,
+    stdout_artifact_bytes: stdout.artifact_byte_count,
+    stderr_artifact_bytes: stderr.artifact_byte_count,
+    artifact_max_bytes_per_stream: SHELL_OUTPUT_ARTIFACT_MAX_BYTES_PER_STREAM,
     artifact_directory,
     timed_out,
     cancelled,
@@ -114,6 +120,9 @@ pub(crate) struct ShellOutput {
   pub(crate) stderr: Vec<u8>,
   pub(crate) stdout_source_bytes: usize,
   pub(crate) stderr_source_bytes: usize,
+  pub(crate) stdout_artifact_bytes: usize,
+  pub(crate) stderr_artifact_bytes: usize,
+  pub(crate) artifact_max_bytes_per_stream: usize,
   pub(crate) artifact_directory: Option<PathBuf>,
   pub(crate) timed_out: bool,
   pub(crate) cancelled: bool,
@@ -122,12 +131,21 @@ pub(crate) struct ShellOutput {
 struct PipeCapture {
   preview: Vec<u8>,
   source_byte_count: usize,
+  artifact_byte_count: usize,
+}
+
+impl PipeCapture {
+  fn needs_artifact(&self, max_preview_bytes: usize) -> bool {
+    self.source_byte_count > max_preview_bytes
+      || self.artifact_byte_count < self.source_byte_count
+  }
 }
 
 fn read_pipe_in_background<R>(
   mut reader: R,
   artifact_path: PathBuf,
   max_preview_bytes: usize,
+  max_artifact_bytes: usize,
 ) -> thread::JoinHandle<Result<PipeCapture>>
 where
   R: Read + Send + 'static,
@@ -142,6 +160,7 @@ where
       .open(artifact_path)?;
     let mut preview = Vec::with_capacity(max_preview_bytes.min(64 * 1024));
     let mut source_byte_count = 0;
+    let mut artifact_byte_count = 0;
     let mut buffer = [0_u8; 8192];
 
     loop {
@@ -150,8 +169,13 @@ where
         break;
       }
 
-      artifact.write_all(&buffer[..bytes_read])?;
       source_byte_count += bytes_read;
+      let remaining_artifact = max_artifact_bytes.saturating_sub(artifact_byte_count);
+      if remaining_artifact > 0 {
+        let retained_bytes = bytes_read.min(remaining_artifact);
+        artifact.write_all(&buffer[..retained_bytes])?;
+        artifact_byte_count += retained_bytes;
+      }
       let remaining_preview = max_preview_bytes.saturating_sub(preview.len());
       if remaining_preview > 0 {
         preview.extend_from_slice(&buffer[..bytes_read.min(remaining_preview)]);
@@ -161,6 +185,7 @@ where
     Ok(PipeCapture {
       preview,
       source_byte_count,
+      artifact_byte_count,
     })
   })
 }
@@ -174,12 +199,14 @@ fn join_pipe_reader(
       Err(_) => Ok(PipeCapture {
         preview: vec![],
         source_byte_count: 0,
+        artifact_byte_count: 0,
       }),
     })
     .unwrap_or_else(|| {
       Ok(PipeCapture {
         preview: vec![],
         source_byte_count: 0,
+        artifact_byte_count: 0,
       })
     })
 }
@@ -294,12 +321,38 @@ mod tests {
       input,
       artifact_path.clone(),
       128,
+      8192,
     )))
     .expect("pipe capture");
 
     assert_eq!(capture.source_byte_count, 4096);
     assert_eq!(capture.preview.len(), 128);
+    assert_eq!(capture.artifact_byte_count, 4096);
     assert_eq!(fs::read(artifact_path).expect("artifact").len(), 4096);
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn pipe_reader_caps_artifact_while_draining_full_output() {
+    let workspace = unique_temp_workspace("pipe-cap");
+    fs::create_dir_all(&workspace).expect("workspace");
+    let artifact_path = workspace.join("stdout.txt");
+    let input = std::io::Cursor::new(vec![b'x'; 4096]);
+
+    let capture = join_pipe_reader(Some(read_pipe_in_background(
+      input,
+      artifact_path.clone(),
+      128,
+      1024,
+    )))
+    .expect("pipe capture");
+
+    assert_eq!(capture.source_byte_count, 4096);
+    assert_eq!(capture.preview.len(), 128);
+    assert_eq!(capture.artifact_byte_count, 1024);
+    assert!(capture.needs_artifact(128));
+    assert_eq!(fs::read(artifact_path).expect("artifact").len(), 1024);
 
     let _ = fs::remove_dir_all(workspace);
   }

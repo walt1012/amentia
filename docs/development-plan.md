@@ -87,10 +87,12 @@ Order of Work:
   sandbox readiness is missing.
 - Agent execution loop: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation request-scoped, cancellable, and
-  visible without blocking unrelated read-only UI updates.
+  visible without blocking unrelated read-only UI updates; shell artifacts stay
+  bounded even when subprocess output is noisy.
 - Native safety loop: keep workspace file tools symlink-safe, sandbox decisions
   visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
-  by default, and recovery actions tied to trusted runtime metadata.
+  by default, runtime launch environment app-owned, and recovery actions tied
+  to trusted runtime metadata.
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
   binary, bundled local inference backend, exact x86_64 architecture
   validation, model metadata, plugin manifests, no model weights, parallel
@@ -107,6 +109,8 @@ Immediate Next:
   workspace search, web search, plugin commands, and model activation.
 - Tighten plugin runner, connector, sandbox, and retry diagnostics only where
   they unblock real local plugin execution.
+- Keep plugin UI thin by moving execution and lifecycle operations into focused
+  coordinators instead of growing ViewModel extensions.
 - Keep connector credentials out of SQLite; macOS uses Keychain-backed secrets
   with database metadata only.
 - Keep UI and architecture compact; refactor only when ownership, failure

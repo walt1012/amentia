@@ -201,11 +201,16 @@ enum TimelineInspectorPresenter {
     if let artifactDirectory = entry.attributes["sandboxOutputArtifactDirectory"] {
       lines.append("Artifact: \(artifactDirectory)")
     }
+    if entry.attributes["sandboxOutputArtifactsTruncated"] == "true",
+       let artifactLimit = entry.attributes["sandboxOutputArtifactMaxBytesPerStream"]
+    {
+      lines.append("Artifact cap: \(artifactLimit) bytes per stream")
+    }
     if let stdoutArtifact = entry.attributes["sandboxOutputStdoutArtifactPath"] {
-      lines.append("Full stdout: \(stdoutArtifact)")
+      lines.append("Captured stdout: \(stdoutArtifact)")
     }
     if let stderrArtifact = entry.attributes["sandboxOutputStderrArtifactPath"] {
-      lines.append("Full stderr: \(stderrArtifact)")
+      lines.append("Captured stderr: \(stderrArtifact)")
     }
 
     return lines.joined(separator: "\n")

@@ -28,6 +28,9 @@ pub(crate) fn build_shell_output_context(
   source_stdout_bytes: usize,
   source_stderr_bytes: usize,
   budget_bytes: usize,
+  artifact_stdout_bytes: usize,
+  artifact_stderr_bytes: usize,
+  artifact_max_bytes_per_stream: usize,
   artifact_directory: Option<&Path>,
   command: &str,
 ) -> ShellOutputContextResult {
@@ -46,6 +49,11 @@ pub(crate) fn build_shell_output_context(
       retained_stdout_bytes: stdout_preview.len(),
       retained_stderr_bytes: stderr_preview.len(),
       budget_bytes,
+      artifact_stdout_bytes,
+      artifact_stderr_bytes,
+      artifact_max_bytes_per_stream,
+      artifacts_truncated: artifact_stdout_bytes < source_stdout_bytes
+        || artifact_stderr_bytes < source_stderr_bytes,
       was_compacted,
       artifact_directory: artifact_directory.map(|path| path.display().to_string()),
     },
@@ -218,6 +226,9 @@ mod tests {
       4096,
       0,
       1024,
+      4096,
+      0,
+      4096,
       Some(&artifact_directory),
       "cat package.json",
     )
@@ -233,7 +244,19 @@ mod tests {
   #[test]
   fn shell_output_context_marks_stream_omissions_when_preview_was_bounded() {
     let context =
-      build_shell_output_context("head preview", "", 4096, 0, 128, None, "cat log").context;
+      build_shell_output_context(
+        "head preview",
+        "",
+        4096,
+        0,
+        128,
+        4096,
+        0,
+        4096,
+        None,
+        "cat log",
+      )
+      .context;
 
     assert!(context.was_compacted);
     assert_eq!(context.source_stdout_bytes, 4096);
