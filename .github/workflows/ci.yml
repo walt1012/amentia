@@ -12,6 +12,18 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  SWIFT_PACKAGE_PATH: apps/pith-macos
+  PREBUILT_ARTIFACT_DIR: artifacts/prebuilt
+  SWIFT_APP_BINARY: PithApp
+  RUNTIME_BINARY: pith-runtime-bin
+  LLAMA_BINARY: llama-cli
+  SWIFT_APP_ARTIFACT: PithApp-x86_64
+  RUNTIME_ARTIFACT: pith-runtime-bin-x86_64
+  LLAMA_ARTIFACT: llama-cli-x86_64
+  MACOS_APP_ARTIFACT: Pith-macos-x86_64
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,7 +31,9 @@ concurrency:
 
 jobs:
   rust:
+    name: Rust checks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,7 +75,9 @@ jobs:
         run: python3 scripts/runtime_smoke_test.py
 
   model-catalog-remote:
+    name: Remote model catalog audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
@@ -71,7 +87,9 @@ jobs:
         run: python3 scripts/validate_model_pack.py --remote
 
   swift-app:
+    name: Swift app build
     runs-on: macos-15-intel
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,21 +109,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          swift build --package-path apps/pith-macos -c release --arch x86_64
-          bin_path="$(swift build --package-path apps/pith-macos -c release --arch x86_64 --show-bin-path)"
-          mkdir -p artifacts/prebuilt
-          cp "$bin_path/PithApp" artifacts/prebuilt/PithApp
-          chmod +x artifacts/prebuilt/PithApp
+          swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
+          bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$bin_path/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
 
       - name: Upload Swift app executable
         uses: actions/upload-artifact@v4
         with:
-          name: PithApp-x86_64
-          path: artifacts/prebuilt/PithApp
+          name: ${{ env.SWIFT_APP_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.SWIFT_APP_BINARY }}
           if-no-files-found: error
 
   swift-tests:
+    name: Swift app tests
     runs-on: macos-15-intel
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -122,10 +142,12 @@ jobs:
             swift-test-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Test x86_64 Swift app logic
-        run: swift test --package-path apps/pith-macos --arch x86_64
+        run: swift test --package-path "$SWIFT_PACKAGE_PATH" --arch x86_64
 
   macos-runtime:
+    name: macOS runtime build
     runs-on: macos-15-intel
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -149,19 +171,21 @@ jobs:
         run: |
           set -euo pipefail
           cargo build -p pith-runtime-bin --release
-          mkdir -p artifacts/prebuilt
-          cp target/release/pith-runtime-bin artifacts/prebuilt/pith-runtime-bin
-          chmod +x artifacts/prebuilt/pith-runtime-bin
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "target/release/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
 
       - name: Upload runtime executable
         uses: actions/upload-artifact@v4
         with:
-          name: pith-runtime-bin-x86_64
-          path: artifacts/prebuilt/pith-runtime-bin
+          name: ${{ env.RUNTIME_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.RUNTIME_BINARY }}
           if-no-files-found: error
 
   macos-llama-backend:
+    name: macOS llama.cpp backend
     runs-on: macos-15-intel
+    timeout-minutes: 30
     steps:
       - name: Install llama.cpp backend
         shell: bash
@@ -175,21 +199,24 @@ jobs:
             echo "::error title=llama.cpp backend architecture::Expected x86_64 llama-cli, got $archs"
             exit 1
           fi
-          mkdir -p artifacts/prebuilt
-          cp "$backend" artifacts/prebuilt/llama-cli
-          chmod +x artifacts/prebuilt/llama-cli
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$backend" "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
 
       - name: Upload llama.cpp backend
         uses: actions/upload-artifact@v4
         with:
-          name: llama-cli-x86_64
-          path: artifacts/prebuilt/llama-cli
+          name: ${{ env.LLAMA_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.LLAMA_BINARY }}
           if-no-files-found: error
 
   swift:
+    name: Package macOS app
     runs-on: macos-15-intel
+    timeout-minutes: 30
     needs:
       - swift-app
+      - swift-tests
       - macos-runtime
       - macos-llama-backend
     steps:
@@ -199,23 +226,27 @@ jobs:
       - name: Download Swift app executable
         uses: actions/download-artifact@v4
         with:
-          name: PithApp-x86_64
-          path: artifacts/prebuilt
+          name: ${{ env.SWIFT_APP_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
       - name: Download runtime executable
         uses: actions/download-artifact@v4
         with:
-          name: pith-runtime-bin-x86_64
-          path: artifacts/prebuilt
+          name: ${{ env.RUNTIME_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
       - name: Download llama.cpp backend
         uses: actions/download-artifact@v4
         with:
-          name: llama-cli-x86_64
-          path: artifacts/prebuilt
+          name: ${{ env.LLAMA_ARTIFACT }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
       - name: Restore executable permissions
-        run: chmod +x artifacts/prebuilt/PithApp artifacts/prebuilt/pith-runtime-bin artifacts/prebuilt/llama-cli
+        run: |
+          chmod +x \
+            "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
+            "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
+            "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
 
       - name: Build x86_64 macOS app bundle
         shell: bash
@@ -223,9 +254,9 @@ jobs:
           set +e
           python3 scripts/package_macos_app.py \
             --skip-build \
-            --app-binary artifacts/prebuilt/PithApp \
-            --runtime-binary artifacts/prebuilt/pith-runtime-bin \
-            --llama-binary artifacts/prebuilt/llama-cli \
+            --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
+            --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
+            --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" \
             2>&1 | tee macos-package.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
@@ -244,6 +275,6 @@ jobs:
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Pith-macos-x86_64
+          name: ${{ env.MACOS_APP_ARTIFACT }}
           path: artifacts/macos/Pith-macos-x86_64.zip
           if-no-files-found: error

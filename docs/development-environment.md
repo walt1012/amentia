@@ -24,6 +24,11 @@ Every push to `main` or `codex/**` runs the canonical CI suite:
 - signed-ready x86_64 macOS app bundle packaging on an Intel macOS runner
 - packaged app launch smoke coverage through `scripts/smoke_launch_macos_app.py`
 
+CI jobs use read-only repository permissions, explicit timeouts, stable artifact
+names, and parallel build lanes. The final macOS package job depends on the
+Swift app build, Swift tests, runtime build, and llama.cpp backend lane before it
+assembles a distributable app artifact.
+
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
 
