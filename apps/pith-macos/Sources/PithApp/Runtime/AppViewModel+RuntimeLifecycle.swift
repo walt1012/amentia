@@ -2,6 +2,14 @@ import Foundation
 
 @MainActor
 extension AppViewModel {
+  func startDailyUseSessionIfNeeded() {
+    guard runtimeState == .disconnected else {
+      return
+    }
+
+    launchRuntime(launchDetail: "Preparing local runtime for daily use")
+  }
+
   func launchRuntime(launchDetail: String = "Launching local runtime") {
     guard runtimeState != .launching else {
       return

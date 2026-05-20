@@ -81,9 +81,10 @@ must hold together as one usable product without expanding into a feature zoo.
 
 Order of Work:
 
-- First-run daily loop: download or resume a model, activate it, open a
-  workspace, create a thread, send the first request, and recover in-app when
-  model, runtime, web search, plugin, or sandbox readiness is missing.
+- First-run daily loop: auto-start the local runtime, download or resume a
+  model, activate it, open a workspace, create a thread, send the first
+  request, and recover in-app when model, runtime, web search, plugin, or
+  sandbox readiness is missing.
 - Agent execution loop: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation request-scoped, cancellable, and
   visible without blocking unrelated read-only UI updates.
@@ -97,8 +98,8 @@ Order of Work:
 
 Immediate Next:
 
-- Close first-run recovery gaps across model download, activation, runtime
-  relaunch, workspace bootstrap, and the first local request.
+- Prove the first-run loop in the packaged app: runtime autostart, model
+  download/resume, activation, workspace bootstrap, and the first local request.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
 - Tighten plugin runner, connector, sandbox, and retry diagnostics only where

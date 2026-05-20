@@ -33,6 +33,21 @@ struct PithApp: App {
         .keyboardShortcut("o", modifiers: [.command])
         .disabled(!viewModel.canOpenWorkspace())
 
+        if let modelActionTitle = viewModel.modelSetupCalloutActionTitle() {
+          Button(modelActionTitle) {
+            viewModel.runModelSetupCalloutAction()
+          }
+          .keyboardShortcut("m", modifiers: [.command, .shift])
+          .disabled(!viewModel.canRunModelSetupCalloutAction())
+        }
+
+        if let modelSecondaryActionTitle = viewModel.modelSetupCalloutSecondaryActionTitle() {
+          Button(modelSecondaryActionTitle) {
+            viewModel.runSetupCalloutSecondaryAction()
+          }
+          .disabled(!viewModel.canRunSetupCalloutSecondaryAction())
+        }
+
         Button("Install Plugin") {
           viewModel.installPlugin()
         }

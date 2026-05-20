@@ -10,21 +10,36 @@ struct ContentView: View {
       InspectorPane(viewModel: viewModel)
     }
     .toolbar {
-      ToolbarItem {
+      ToolbarItemGroup {
+        if viewModel.canLaunchRuntime() {
+          Button(viewModel.runtimeLaunchButtonTitle()) {
+            viewModel.launchRuntime()
+          }
+        }
+
+        if let modelActionTitle = viewModel.modelSetupCalloutActionTitle(),
+           viewModel.canRunModelSetupCalloutAction()
+        {
+          Button(modelActionTitle) {
+            viewModel.runModelSetupCalloutAction()
+          }
+        }
+
         if viewModel.canOpenWorkspace() {
           Button("Open Workspace") {
             viewModel.openWorkspace()
           }
         }
-      }
 
-      ToolbarItem {
         if viewModel.canCreateThread() {
           Button("New Thread") {
             viewModel.createThread()
           }
         }
       }
+    }
+    .onAppear {
+      viewModel.startDailyUseSessionIfNeeded()
     }
   }
 
