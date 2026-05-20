@@ -127,11 +127,38 @@ jobs:
           path: artifacts/prebuilt/pith-runtime-bin
           if-no-files-found: error
 
+  macos-llama-backend:
+    runs-on: macos-15-intel
+    steps:
+      - name: Install llama.cpp backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew list llama.cpp >/dev/null 2>&1 || brew install llama.cpp
+          backend="$(brew --prefix)/bin/llama-cli"
+          test -x "$backend"
+          archs="$(lipo -archs "$backend" 2>/dev/null || true)"
+          if [[ -n "$archs" && "$archs" != *"x86_64"* ]]; then
+            echo "::error title=llama.cpp backend architecture::Expected x86_64 llama-cli, got $archs"
+            exit 1
+          fi
+          mkdir -p artifacts/prebuilt
+          cp "$backend" artifacts/prebuilt/llama-cli
+          chmod +x artifacts/prebuilt/llama-cli
+
+      - name: Upload llama.cpp backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: llama-cli-x86_64
+          path: artifacts/prebuilt/llama-cli
+          if-no-files-found: error
+
   swift:
     runs-on: macos-15-intel
     needs:
       - swift-app
       - macos-runtime
+      - macos-llama-backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -148,8 +175,14 @@ jobs:
           name: pith-runtime-bin-x86_64
           path: artifacts/prebuilt
 
+      - name: Download llama.cpp backend
+        uses: actions/download-artifact@v4
+        with:
+          name: llama-cli-x86_64
+          path: artifacts/prebuilt
+
       - name: Restore executable permissions
-        run: chmod +x artifacts/prebuilt/PithApp artifacts/prebuilt/pith-runtime-bin
+        run: chmod +x artifacts/prebuilt/PithApp artifacts/prebuilt/pith-runtime-bin artifacts/prebuilt/llama-cli
 
       - name: Build x86_64 macOS app bundle
         shell: bash
@@ -159,6 +192,7 @@ jobs:
             --skip-build \
             --app-binary artifacts/prebuilt/PithApp \
             --runtime-binary artifacts/prebuilt/pith-runtime-bin \
+            --llama-binary artifacts/prebuilt/llama-cli \
             2>&1 | tee macos-package.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then

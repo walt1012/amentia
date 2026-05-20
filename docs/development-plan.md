@@ -92,18 +92,21 @@ Order of Work:
   visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
   by default, and recovery actions tied to trusted runtime metadata.
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
-  binary, exact x86_64 architecture validation, model metadata, plugin
-  manifests, no model weights, parallel cached executable builds, and launch
-  smoke coverage.
+  binary, bundled local inference backend, exact x86_64 architecture
+  validation, model metadata, plugin manifests, no model weights, parallel
+  cached executable builds, and launch/runtime smoke coverage.
 
 Immediate Next:
 
 - Prove the first-run loop in the packaged app: runtime autostart, model
-  download/resume, activation, workspace bootstrap, and the first local request.
+  download/resume, activation, backend discovery, workspace bootstrap, and the
+  first local request.
 - Keep execution visibility accurate for every lane: turns, approvals,
   workspace search, web search, plugin commands, and model activation.
 - Tighten plugin runner, connector, sandbox, and retry diagnostics only where
   they unblock real local plugin execution.
+- Keep connector credentials out of SQLite; macOS uses Keychain-backed secrets
+  with database metadata only.
 - Keep UI and architecture compact; refactor only when ownership, failure
   boundaries, or cancellation behavior become clearer.
 
@@ -115,7 +118,8 @@ M5 Exit Gate:
 - The packaged app can be used for a short real workflow without manual CLI
   setup, hidden required files, or unexplained blocked states.
 - CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact
-  with model metadata and plugin manifests, but no model weights.
+  with model metadata, plugin manifests, and a local inference backend, but no
+  model weights.
 
 ## Not Now
 
@@ -123,7 +127,8 @@ M5 Exit Gate:
 - No multi-agent workflows.
 - No generic document RAG or local vector database.
 - No broad connector marketplace.
-- No manifest-declared Keychain credentials until native Keychain storage exists.
+- No connector marketplace until secure connector execution is proven with
+  native credential storage.
 - No remote MCP transport until bounded local execution supports it.
 - No cosmetic refactor that only moves code around.
 - No large UI expansion before plugin execution is real.

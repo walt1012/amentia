@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct PithApp: App {
+  @NSApplicationDelegateAdaptor(PithAppDelegate.self) private var appDelegate
   @StateObject private var viewModel = AppViewModel()
 
   var body: some Scene {

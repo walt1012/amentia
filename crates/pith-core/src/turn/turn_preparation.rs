@@ -6,8 +6,8 @@ use pith_protocol::WorkspaceSummary;
 
 use super::turn_plugin_routing::infer_explicit_plugin_command_route;
 use crate::intent_inference::{
-  infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_requested_file_path,
-  infer_search_query, infer_shell_command, infer_write_intent,
+  infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_model_web_search_intent,
+  infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
 };
 use crate::plugin_commands::prepare_plugin_command_turn_snapshot;
 use crate::plugin_permissions::permission_is_granted;
@@ -58,6 +58,9 @@ pub(crate) fn prepare_turn_action(
     if let Some(intent) = infer_fresh_web_search_intent(message) {
       return PreparedTurnAction::WebSearchCandidate(intent);
     }
+    if let Some(intent) = infer_model_web_search_intent(message) {
+      return PreparedTurnAction::WebSearchCandidate(intent);
+    }
     return PreparedTurnAction::NoWorkspace;
   };
   let workspace_root = Path::new(&workspace.root_path);
@@ -89,6 +92,9 @@ pub(crate) fn prepare_turn_action(
   }
 
   if let Some(intent) = infer_fresh_web_search_intent(message) {
+    return PreparedTurnAction::WebSearchCandidate(intent);
+  }
+  if let Some(intent) = infer_model_web_search_intent(message) {
     return PreparedTurnAction::WebSearchCandidate(intent);
   }
 

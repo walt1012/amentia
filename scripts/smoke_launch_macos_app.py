@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 APP_PROCESS_NAME = "Pith"
+RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,7 +50,7 @@ def process_ids(name: str) -> set[int]:
   }
 
 
-def terminate_processes(process_ids_to_stop: set[int]) -> None:
+def terminate_processes(process_name: str, process_ids_to_stop: set[int]) -> None:
   for pid in process_ids_to_stop:
     try:
       os.kill(pid, signal.SIGTERM)
@@ -57,7 +58,7 @@ def terminate_processes(process_ids_to_stop: set[int]) -> None:
       pass
   deadline = time.monotonic() + 5
   while time.monotonic() < deadline:
-    if process_ids_to_stop.isdisjoint(process_ids(APP_PROCESS_NAME)):
+    if process_ids_to_stop.isdisjoint(process_ids(process_name)):
       return
     time.sleep(0.2)
   for pid in process_ids_to_stop:
@@ -71,6 +72,7 @@ def validate_app_bundle(app_path: Path) -> None:
   require_file(app_path / "Contents" / "Info.plist")
   require_file(app_path / "Contents" / "MacOS" / "Pith")
   require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
+  require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
 
 
@@ -83,6 +85,7 @@ def main() -> int:
   app_path = args.app_path.resolve()
   validate_app_bundle(app_path)
   before_pids = process_ids(APP_PROCESS_NAME)
+  before_runtime_pids = process_ids(RUNTIME_PROCESS_NAME)
   open_process = subprocess.Popen(
     ["/usr/bin/open", "-n", "-W", str(app_path)],
     stdout=subprocess.PIPE,
@@ -90,6 +93,7 @@ def main() -> int:
     text=True,
   )
   launched_pids: set[int] = set()
+  launched_runtime_pids: set[int] = set()
   deadline = time.monotonic() + args.duration
   try:
     while time.monotonic() < deadline:
@@ -101,7 +105,13 @@ def main() -> int:
           f"stderr:\n{stderr[-2000:]}"
         )
       launched_pids = process_ids(APP_PROCESS_NAME) - before_pids
+      launched_runtime_pids = process_ids(RUNTIME_PROCESS_NAME) - before_runtime_pids
       if launched_pids:
+        if not launched_runtime_pids:
+          time.sleep(0.2)
+          launched_runtime_pids = process_ids(RUNTIME_PROCESS_NAME) - before_runtime_pids
+        if not launched_runtime_pids:
+          continue
         time.sleep(max(0.0, deadline - time.monotonic()))
         if open_process.poll() is not None:
           stdout, stderr = open_process.communicate()
@@ -110,14 +120,23 @@ def main() -> int:
             f"stdout:\n{stdout[-2000:]}\n"
             f"stderr:\n{stderr[-2000:]}"
           )
-        print(f"Packaged app launch smoke passed with PIDs: {sorted(launched_pids)}")
+        if launched_runtime_pids.isdisjoint(process_ids(RUNTIME_PROCESS_NAME)):
+          raise RuntimeError("Packaged runtime exited during the smoke window.")
+        print(
+          "Packaged app launch smoke passed with app PIDs "
+          f"{sorted(launched_pids)} and runtime PIDs {sorted(launched_runtime_pids)}"
+        )
         return 0
       time.sleep(0.2)
 
+    if launched_pids:
+      raise RuntimeError("Packaged app launched but did not start pith-runtime-bin.")
     raise RuntimeError("Packaged app did not appear as a running Pith process.")
   finally:
+    if launched_runtime_pids:
+      terminate_processes(RUNTIME_PROCESS_NAME, launched_runtime_pids)
     if launched_pids:
-      terminate_processes(launched_pids)
+      terminate_processes(APP_PROCESS_NAME, launched_pids)
     if open_process.poll() is None:
       open_process.terminate()
       try:

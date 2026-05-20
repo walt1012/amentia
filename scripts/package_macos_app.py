@@ -20,6 +20,8 @@ APP_NAME = "Pith"
 APP_EXECUTABLE_NAME = "Pith"
 SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
+LLAMA_BACKEND_EXECUTABLE_NAME = "llama-cli"
+LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
 SUPPORTED_ARCH = "x86_64"
@@ -124,6 +126,11 @@ def parse_args() -> argparse.Namespace:
     help="Use an existing pith-runtime-bin instead of building one.",
   )
   parser.add_argument(
+    "--llama-binary",
+    type=Path,
+    help="Use an existing llama.cpp llama-cli backend for packaged local inference.",
+  )
+  parser.add_argument(
     "--app-binary",
     type=Path,
     help="Use an existing PithApp executable instead of the default Swift build output.",
@@ -183,6 +190,7 @@ def package_app(
   dist_dir: Path,
   app_binary: Path,
   runtime_binary: Path,
+  llama_binary: Path | None,
   arch: str,
   skip_ad_hoc_sign: bool,
   no_zip: bool,
@@ -206,7 +214,7 @@ def package_app(
   copy_executable(runtime_binary, macos_path / RUNTIME_EXECUTABLE_NAME)
   copy_tree_if_present(repo_root / "models", resources_path / "models")
   copy_tree_if_present(repo_root / "plugins", resources_path / "plugins")
-  copy_llama_backend_if_present(repo_root, resources_path)
+  copy_required_llama_backend(repo_root, resources_path, llama_binary)
 
   validate_app_bundle(app_path, arch)
   if not skip_ad_hoc_sign:
@@ -257,6 +265,9 @@ def write_package_manifest(path: Path, arch: str) -> None:
     "minimumSystemVersion": "12.0",
     "architecture": arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
+    "backendExecutable": (
+      LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME
+    ).as_posix(),
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
     "modelDelivery": "in-app-download",
@@ -291,21 +302,34 @@ def assert_copy_source_has_no_symlinks(source: Path) -> None:
     raise RuntimeError(f"Packaged resources must not contain symlinks: {symlink}")
 
 
-def copy_llama_backend_if_present(repo_root: Path, macos_path: Path) -> None:
+def copy_required_llama_backend(
+  repo_root: Path,
+  resources_path: Path,
+  provided_backend: Path | None,
+) -> Path:
   candidates = [
+    provided_backend,
     repo_root / "third_party" / "llama.cpp" / "llama-cli",
     repo_root / "tools" / "llama.cpp" / "llama-cli",
   ]
   for candidate in candidates:
+    if candidate is None:
+      continue
     if not candidate.is_file():
       continue
     if candidate.is_symlink():
       raise RuntimeError(f"Packaged llama.cpp backend must not be a symlink: {candidate}")
-    relative_parent = candidate.parent.relative_to(repo_root)
-    target_directory = macos_path / relative_parent
+    target_directory = resources_path / LLAMA_BACKEND_RELATIVE_PARENT
     target_directory.mkdir(parents=True, exist_ok=True)
-    copy_executable(candidate, target_directory / candidate.name)
-    return
+    packaged_backend = target_directory / LLAMA_BACKEND_EXECUTABLE_NAME
+    copy_executable(candidate, packaged_backend)
+    return packaged_backend
+
+  searched = ", ".join(str(candidate) for candidate in candidates if candidate is not None)
+  raise FileNotFoundError(
+    "Missing llama.cpp backend for packaged local inference. "
+    f"Pass --llama-binary or place llama-cli at one of: {searched}"
+  )
 
 
 def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
@@ -315,6 +339,7 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
     app_path / "Contents" / "PkgInfo",
     app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME,
     app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME,
+    app_path / "Contents" / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME,
     app_path / "Contents" / "Resources" / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
     app_path / "Contents" / "Resources" / "plugins" / "bundled",
   ]
@@ -324,11 +349,25 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
 
   assert_executable(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_executable(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
+  assert_executable(
+    app_path
+    / "Contents"
+    / "Resources"
+    / LLAMA_BACKEND_RELATIVE_PARENT
+    / LLAMA_BACKEND_EXECUTABLE_NAME
+  )
   assert_info_plist_matches_product_rules(app_path)
   assert_pkg_info_matches_app_bundle(app_path)
   assert_package_manifest_matches_bundle(app_path, expected_arch)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
+  assert_only_x86_64_if_lipo_is_available(
+    app_path
+    / "Contents"
+    / "Resources"
+    / LLAMA_BACKEND_RELATIVE_PARENT
+    / LLAMA_BACKEND_EXECUTABLE_NAME
+  )
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
@@ -365,6 +404,9 @@ def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -
     "minimumSystemVersion": "12.0",
     "architecture": expected_arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
+    "backendExecutable": (
+      LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME
+    ).as_posix(),
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
     "modelDelivery": "in-app-download",
@@ -683,6 +725,10 @@ def required_zip_entries() -> set[str]:
   entries.add(
     f"Pith.app/Contents/Resources/{DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()}"
   )
+  entries.add(
+    "Pith.app/Contents/Resources/"
+    f"{(LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME).as_posix()}"
+  )
   for plugin_id in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES:
     entries.add(
       f"Pith.app/Contents/Resources/plugins/bundled/{plugin_id}/pith-plugin.json"
@@ -727,6 +773,7 @@ def main() -> int:
       dist_dir,
       app_binary,
       runtime_binary,
+      args.llama_binary.resolve() if args.llama_binary else None,
       args.arch,
       args.skip_ad_hoc_sign,
       args.no_zip,

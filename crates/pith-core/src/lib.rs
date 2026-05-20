@@ -35,7 +35,7 @@ pub(crate) use runtime::{
 };
 
 mod support;
-pub(crate) use support::text_utils;
+pub(crate) use support::{secure_credentials, text_utils};
 
 mod workspace;
 pub(crate) use workspace::workspace_search;

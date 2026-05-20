@@ -144,14 +144,14 @@ fn install_hint(
         .unwrap_or_else(|| suggested_binary.display().to_string())
     ),
     "binary_missing" => format!(
-      "Install llama.cpp CLI at {} or set PITH_LLAMACPP_PATH. Current model candidate: {}.",
+      "Repair the packaged local inference backend or reinstall Pith. Expected llama.cpp backend: {}. Current model candidate: {}.",
       suggested_binary.display(),
       model_path
         .map(display_path)
         .unwrap_or_else(|| suggested_model.display().to_string())
     ),
     "manifest_only" => format!(
-      "Keep the manifest at {} and place {} beside it. Then install llama.cpp CLI at {} or set PITH_MODEL_PACK_MANIFEST, PITH_MODEL_PATH, and PITH_LLAMACPP_PATH.",
+      "Keep the manifest at {} and download {} in-app. If the backend is missing, repair or reinstall Pith. Expected backend: {}.",
       manifest_path
         .map(display_path)
         .unwrap_or_else(|| suggested_manifest.display().to_string()),
@@ -159,7 +159,7 @@ fn install_hint(
       suggested_binary.display()
     ),
     "misconfigured" => format!(
-      "Resolved candidates exist but local inference is not ready. Verify the manifest at {}, model at {}, and llama.cpp CLI at {}.",
+      "Resolved candidates exist but local inference is not ready. Verify the manifest at {}, model at {}, and packaged backend at {}.",
       manifest_path
         .map(display_path)
         .unwrap_or_else(|| suggested_manifest.display().to_string()),
@@ -171,9 +171,9 @@ fn install_hint(
         .unwrap_or_else(|| suggested_binary.display().to_string())
     ),
     _ => format!(
-      "Add model-pack.json at {}, place {} beside it, and install llama.cpp CLI at {}. You can also set PITH_MODEL_PACK_MANIFEST, PITH_MODEL_PATH, and PITH_LLAMACPP_PATH directly.",
-      suggested_manifest.display(),
+      "Use the in-app model manager to download {}. If the backend is missing, repair or reinstall Pith. Expected manifest: {}. Expected backend: {}.",
       file_name,
+      suggested_manifest.display(),
       suggested_binary.display()
     ),
   }
@@ -206,19 +206,19 @@ pub(crate) fn missing_runtime_detail(
       binary_path.display()
     ),
     (None, Some(model_path), Some(manifest_path)) => format!(
-      "Local model runtime is unavailable because the llama.cpp CLI binary is not configured or missing. Model candidate: {}. Manifest: {}.",
+      "Local model runtime is unavailable because the packaged llama.cpp backend is missing. Model candidate: {}. Manifest: {}.",
       model_path.display(),
       manifest_path.display()
     ),
     (None, Some(model_path), None) => format!(
-      "Local model runtime is unavailable because the llama.cpp CLI binary is not configured or missing. Model candidate: {}.",
+      "Local model runtime is unavailable because the packaged llama.cpp backend is missing. Model candidate: {}.",
       model_path.display()
     ),
     (None, None, Some(manifest_path)) => format!(
-      "Local model runtime is unavailable because no llama.cpp CLI binary or resolved local model file is configured yet. Manifest: {}.",
+      "Local model runtime is unavailable because no packaged llama.cpp backend or resolved local model file is configured yet. Manifest: {}.",
       manifest_path.display()
     ),
-    (None, None, None) => "Local model runtime is unavailable because no llama.cpp CLI binary or local model pack is configured yet.".to_string(),
+    (None, None, None) => "Local model runtime is unavailable because no packaged llama.cpp backend or local model pack is configured yet.".to_string(),
   }
 }
 

@@ -72,6 +72,25 @@ pub(crate) fn infer_fresh_web_search_intent(message: &str) -> Option<WebSearchIn
   }
 }
 
+pub(crate) fn infer_model_web_search_intent(message: &str) -> Option<WebSearchIntent> {
+  let trimmed = message
+    .trim()
+    .trim_matches(&['"', '\'', '.', '?', '!', '`'][..]);
+  if trimmed.is_empty() {
+    return None;
+  }
+
+  let lowercased_message = trimmed.to_lowercase();
+  if has_local_workspace_signal(&lowercased_message) {
+    return None;
+  }
+
+  Some(WebSearchIntent {
+    query: trimmed.to_string(),
+    routing_reason: "modelToolPlanning",
+  })
+}
+
 fn has_fresh_public_information_signal(message: &str) -> bool {
   [
     "latest",
@@ -170,6 +189,20 @@ mod tests {
     assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
     assert!(infer_fresh_web_search_intent("What version is in Cargo.toml?").is_none());
     assert!(infer_fresh_web_search_intent("How should I proceed now?").is_none());
+  }
+
+  #[test]
+  fn model_web_search_candidate_keeps_external_questions_available_to_planner() {
+    let comparison = infer_model_web_search_intent(
+      "Compare Codex and Claude Code plugin systems",
+    )
+    .expect("candidate");
+    assert_eq!(comparison.routing_reason, "modelToolPlanning");
+    assert_eq!(
+      comparison.query,
+      "Compare Codex and Claude Code plugin systems"
+    );
+    assert!(infer_model_web_search_intent("Explain this repo architecture").is_none());
   }
 
   #[test]

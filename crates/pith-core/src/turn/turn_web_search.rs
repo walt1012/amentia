@@ -46,7 +46,7 @@ pub(super) fn model_confirms_web_search_candidate(
   });
 
   if response.status != "ready" {
-    return true;
+    return intent.routing_reason != "modelToolPlanning";
   }
 
   let decision = response.text.trim().to_ascii_uppercase();

@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 
 use crate::time::current_timestamp;
 
-const SCHEMA_VERSION: i64 = 8;
+const SCHEMA_VERSION: i64 = 9;
 
 #[derive(Debug, Clone, Copy)]
 struct SchemaMigration {
@@ -12,7 +12,7 @@ struct SchemaMigration {
   sql: &'static str,
 }
 
-const SCHEMA_MIGRATIONS: [SchemaMigration; 8] = [
+const SCHEMA_MIGRATIONS: [SchemaMigration; 9] = [
   SchemaMigration {
     version: 1,
     name: "initial_workspace_and_threads",
@@ -120,6 +120,14 @@ const SCHEMA_MIGRATIONS: [SchemaMigration; 8] = [
       ALTER TABLE plugin_connector_credentials ADD COLUMN credential_secret TEXT;
     ",
   },
+  SchemaMigration {
+    version: 9,
+    name: "plugin_connector_secret_retired",
+    sql: "
+      UPDATE plugin_connector_credentials SET credential_secret = NULL;
+      ALTER TABLE plugin_connector_credentials DROP COLUMN credential_secret;
+    ",
+  },
 ];
 
 pub(crate) fn ensure_schema(connection: &Connection) -> Result<()> {
@@ -159,6 +167,8 @@ pub(crate) fn ensure_schema(connection: &Connection) -> Result<()> {
         "credential_secret",
         "ALTER TABLE plugin_connector_credentials ADD COLUMN credential_secret TEXT;",
       )?;
+    } else if migration.version == 9 {
+      drop_column_if_present(&transaction, "plugin_connector_credentials", "credential_secret")?;
     } else {
       transaction.execute_batch(migration.sql)?;
     }
@@ -196,6 +206,15 @@ fn add_column_if_missing(
   }
 
   connection.execute_batch(sql)?;
+  Ok(())
+}
+
+fn drop_column_if_present(connection: &Connection, table: &str, column: &str) -> Result<()> {
+  if !table_has_column(connection, table, column)? {
+    return Ok(());
+  }
+
+  connection.execute_batch(&format!("ALTER TABLE {table} DROP COLUMN {column};"))?;
   Ok(())
 }
 

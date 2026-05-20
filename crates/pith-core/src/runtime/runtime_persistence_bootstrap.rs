@@ -11,6 +11,7 @@ use crate::runtime_plugins::PluginConnectorCredentialState;
 use crate::runtime_sequences::RuntimeSequenceState;
 use crate::runtime_threads::RuntimeThreadState;
 use crate::runtime_workspace::RuntimeWorkspaceState;
+use crate::secure_credentials;
 
 pub(crate) struct RuntimePersistenceBootstrap {
   pub(crate) persistence_state: RuntimePersistenceState,
@@ -33,10 +34,9 @@ pub(super) fn load_bootstrap(store: RuntimeStore) -> Result<RuntimePersistenceBo
     .load_plugin_connector_credentials()?
     .into_iter()
     .map(|credential| {
-      (
-        credential.connector_id.clone(),
-        PluginConnectorCredentialState::from(credential),
-      )
+      let mut state = PluginConnectorCredentialState::from(credential);
+      state.credential_secret = secure_credentials::load_connector_secret(&state.connector_id);
+      (state.connector_id.clone(), state)
     })
     .collect();
   let next_thread_number = persisted_threads.len() + 1;
@@ -143,7 +143,6 @@ mod tests {
         plugin_id: "notion-connector".to_string(),
         credential_store: "local".to_string(),
         credential_label: "Notion authorization marker".to_string(),
-        credential_secret: None,
         authorized_at: 6,
         updated_at: 6,
       })

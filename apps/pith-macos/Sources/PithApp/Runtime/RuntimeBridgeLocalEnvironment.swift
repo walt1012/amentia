@@ -90,6 +90,14 @@ enum RuntimeBridgeLocalEnvironment {
     if manager.fileExists(atPath: pluginsURL.path) {
       environment["PITH_PLUGIN_DIR"] = pluginsURL.path
     }
+
+    let bundledLlamaURL = resourceURL
+      .appendingPathComponent("tools", isDirectory: true)
+      .appendingPathComponent("llama.cpp", isDirectory: true)
+      .appendingPathComponent("llama-cli", isDirectory: false)
+    if manager.fileExists(atPath: bundledLlamaURL.path) {
+      environment["PITH_LLAMACPP_PATH"] = bundledLlamaURL.path
+    }
   }
 
   private static func activeLocalModelSelection() -> RuntimeBridgeActiveLocalModelSelection? {

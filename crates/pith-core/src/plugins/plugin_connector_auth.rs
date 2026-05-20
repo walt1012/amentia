@@ -10,6 +10,7 @@ use serde_json::{json, Value};
 use crate::protocol_adapters::build_protocol_connector_registry;
 use crate::request_params::parse_required_params;
 use crate::runtime_plugins::PluginConnectorCredentialState;
+use crate::secure_credentials;
 use crate::RuntimeContext;
 
 const MISSING_CONNECTOR_REPAIR_HINT: &str =
@@ -86,23 +87,41 @@ pub(crate) fn handle_plugin_connector_authorize(
       );
     }
   };
+  let credential_secret = normalized_credential_secret(params.credential_secret.as_deref());
+  if let Some(secret) = credential_secret.as_deref() {
+    if let Err(error) = secure_credentials::save_connector_secret(&params.connector_id, secret) {
+      return connector_error_response(
+        request.id,
+        -32010,
+        &params.connector_id,
+        Some(&connector.plugin_id),
+        error.to_string(),
+        "credentialStoreError",
+        AUTHORIZE_STORE_REPAIR_HINT,
+      );
+    }
+  }
   let credential = PluginConnectorCredentialState {
     connector_id: connector.connector_id.clone(),
     plugin_id: connector.plugin_id.clone(),
-    credential_store: connector
-      .credential_store
-      .clone()
-      .unwrap_or_else(|| "local".to_string()),
+    credential_store: connector.credential_store.clone().unwrap_or_else(|| {
+      if cfg!(target_os = "macos") {
+        "macOS Keychain".to_string()
+      } else {
+        "runtime session".to_string()
+      }
+    }),
     credential_label: params
       .credential_label
       .clone()
       .unwrap_or_else(|| format!("{} authorization marker", connector.display_name)),
-    credential_secret: normalized_credential_secret(params.credential_secret.as_deref()),
+    credential_secret,
     authorized_at: timestamp,
     updated_at: timestamp,
   };
 
   if let Err(error) = context.persist_plugin_connector_credential(&credential) {
+    let _ = secure_credentials::delete_connector_secret(&params.connector_id);
     return connector_error_response(
       request.id,
       -32010,
@@ -144,6 +163,17 @@ pub(crate) fn handle_plugin_connector_clear_credential(
       );
     }
   };
+  if let Err(error) = secure_credentials::delete_connector_secret(&params.connector_id) {
+    return connector_error_response(
+      request.id,
+      -32010,
+      &params.connector_id,
+      Some(&connector.plugin_id),
+      error.to_string(),
+      "credentialStoreError",
+      CLEAR_STORE_REPAIR_HINT,
+    );
+  }
   if let Err(error) = context.delete_plugin_connector_credential(&params.connector_id) {
     return connector_error_response(
       request.id,

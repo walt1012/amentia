@@ -5,6 +5,7 @@ use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginRemoveParams, PluginR
 
 use super::plugin_lifecycle_recovery::{plugin_lifecycle_error_response, PluginLifecycleRecovery};
 use crate::request_params::parse_required_params;
+use crate::secure_credentials;
 use crate::RuntimeContext;
 
 pub(crate) fn handle_plugin_remove(
@@ -34,6 +35,19 @@ pub(crate) fn handle_plugin_remove(
     };
 
   let mut cleanup_error = None;
+  let connector_ids = context
+    .plugin_state
+    .connector_entries()
+    .into_iter()
+    .filter(|connector| connector.plugin_id == removed_plugin.plugin_id)
+    .map(|connector| connector.connector_id)
+    .collect::<Vec<_>>();
+  for connector_id in connector_ids {
+    if let Err(error) = secure_credentials::delete_connector_secret(&connector_id) {
+      cleanup_error = Some(error);
+      break;
+    }
+  }
   if let Err(error) =
     context.delete_plugin_connector_credentials_for_plugin(&removed_plugin.plugin_id)
   {

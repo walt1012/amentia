@@ -3,7 +3,16 @@
 
 from __future__ import annotations
 
-from package_macos_app import parse_lipo_architectures
+import stat
+import tempfile
+from pathlib import Path
+
+from package_macos_app import (
+  LLAMA_BACKEND_EXECUTABLE_NAME,
+  LLAMA_BACKEND_RELATIVE_PARENT,
+  copy_required_llama_backend,
+  parse_lipo_architectures,
+)
 
 
 def assert_equal(actual: object, expected: object) -> None:
@@ -28,6 +37,31 @@ def main() -> int:
     pass
   else:
     raise AssertionError("invalid lipo output should fail")
+
+  with tempfile.TemporaryDirectory(prefix="pith-package-test-") as root:
+    root_path = Path(root)
+    source_backend = root_path / "llama-cli"
+    source_backend.write_text("#!/bin/sh\n", encoding="utf-8")
+    source_backend.chmod(source_backend.stat().st_mode | stat.S_IXUSR)
+    packaged_backend = copy_required_llama_backend(
+      root_path,
+      root_path / "Resources",
+      source_backend,
+    )
+    assert_equal(
+      packaged_backend,
+      root_path / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME,
+    )
+    if not packaged_backend.is_file():
+      raise AssertionError("packaged llama backend should exist")
+
+  with tempfile.TemporaryDirectory(prefix="pith-package-missing-backend-") as root:
+    try:
+      copy_required_llama_backend(Path(root), Path(root) / "Resources", None)
+    except FileNotFoundError:
+      pass
+    else:
+      raise AssertionError("missing llama backend should fail packaging")
   print("package helper tests passed")
   return 0
 
