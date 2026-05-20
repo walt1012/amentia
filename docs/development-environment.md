@@ -75,9 +75,9 @@ bundled plugin resource contracts, absence of model weights, symlink-free
 packaged resources and optional backend inputs, llama.cpp dependency
 portability, and zip contents. The zip must include the default model manifest
 and every bundled plugin manifest, must not contain symlinks or model weight
-files, and must not require Homebrew paths at runtime. CI also ad-hoc signs the
-app when `codesign` is available. Distribution signing and notarization should
-be added only after identity and entitlements are finalized.
+files, and must not require external package manager paths at runtime. CI also
+ad-hoc signs the app when `codesign` is available. Distribution signing and
+notarization should be added only after identity and entitlements are finalized.
 
 ## Local Model Runtime
 

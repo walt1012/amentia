@@ -10,7 +10,7 @@ from pathlib import Path
 from macos_llama_backend import (
   LLAMA_BACKEND_EXECUTABLE_NAME,
   LLAMA_BACKEND_LIB_DIRECTORY_NAME,
-  is_forbidden_runtime_dependency,
+  is_packaged_backend_dependency,
   parse_otool_dependencies,
 )
 from package_macos_app import (
@@ -51,8 +51,12 @@ def main() -> int:
     ),
     ["/usr/lib/libSystem.B.dylib", "@executable_path/lib/libllama.dylib"],
   )
-  if not is_forbidden_runtime_dependency("/usr/local/opt/llama.cpp/lib/libllama.dylib"):
-    raise AssertionError("Homebrew dependency paths should be rejected")
+  if not is_packaged_backend_dependency("@executable_path/lib/libllama.dylib", True):
+    raise AssertionError("backend dependencies should allow packaged executable paths")
+  if not is_packaged_backend_dependency("@loader_path/libggml.dylib", False):
+    raise AssertionError("dylib dependencies should allow packaged loader paths")
+  if is_packaged_backend_dependency("/external/package-manager/lib/libllama.dylib", True):
+    raise AssertionError("absolute non-system dependency paths should be rejected")
 
   with tempfile.TemporaryDirectory(prefix="pith-package-test-") as root:
     root_path = Path(root)

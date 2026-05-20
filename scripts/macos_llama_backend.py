@@ -12,8 +12,6 @@ from pathlib import Path
 LLAMA_BACKEND_EXECUTABLE_NAME = "llama-cli"
 LLAMA_BACKEND_LIB_DIRECTORY_NAME = "lib"
 SYSTEM_DYLIB_PREFIXES = ("/usr/lib/", "/System/Library/")
-FORBIDDEN_DYLIB_PREFIXES = ("/usr/local/", "/opt/homebrew/", "/opt/local/")
-FORBIDDEN_DYLIB_MARKERS = ("/Cellar/", "/Homebrew/")
 
 
 def stage_llama_backend(source_backend: Path, target_directory: Path) -> Path:
@@ -59,10 +57,10 @@ def parse_otool_dependencies(output: str) -> list[str]:
   return dependencies
 
 
-def is_forbidden_runtime_dependency(dependency: str) -> bool:
-  return dependency.startswith(FORBIDDEN_DYLIB_PREFIXES) or any(
-    marker in dependency for marker in FORBIDDEN_DYLIB_MARKERS
-  )
+def is_packaged_backend_dependency(dependency: str, is_backend: bool) -> bool:
+  if is_backend:
+    return dependency.startswith("@executable_path/lib/")
+  return dependency.startswith("@loader_path/")
 
 
 def require_file(path: Path, label: str) -> None:
@@ -259,14 +257,10 @@ def assert_portable_macho_dependencies(
   for dependency in dependencies:
     if is_system_dylib(dependency):
       continue
-    if is_forbidden_runtime_dependency(dependency):
-      raise RuntimeError(f"Packaged llama.cpp dependency is not portable: {binary}: {dependency}")
-    if is_backend and dependency.startswith("@executable_path/lib/"):
+    if is_packaged_backend_dependency(dependency, is_backend):
       target = backend_directory / LLAMA_BACKEND_LIB_DIRECTORY_NAME / Path(dependency).name
-      require_file(target, f"packaged llama.cpp dependency {dependency}")
-      continue
-    if not is_backend and dependency.startswith("@loader_path/"):
-      target = binary.parent / dependency.removeprefix("@loader_path/")
+      if not is_backend:
+        target = binary.parent / dependency.removeprefix("@loader_path/")
       require_file(target, f"packaged llama.cpp dependency {dependency}")
       continue
     raise RuntimeError(f"Packaged llama.cpp dependency is not portable: {binary}: {dependency}")
