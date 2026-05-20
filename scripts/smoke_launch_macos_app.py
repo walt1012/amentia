@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import selectors
 import signal
 import sqlite3
 import subprocess
@@ -17,6 +18,7 @@ from pathlib import Path
 APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
+RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 REQUIRED_BUNDLED_PLUGINS = {
   "notion-connector",
   "review-assistant",
@@ -196,14 +198,64 @@ def send_runtime_request(
   process.stdin.flush()
 
   while True:
-    line = process.stdout.readline()
+    line = read_runtime_line(process, method)
     if not line:
-      raise RuntimeError(f"Packaged runtime exited before responding to {method}.")
+      raise RuntimeError(
+        f"Packaged runtime exited before responding to {method}."
+        f"{runtime_stderr_detail(process)}"
+      )
     message = json.loads(line)
     if message.get("id") == request_id:
       if "error" in message:
         raise RuntimeError(f"Packaged runtime {method} failed: {message['error']}")
       return message
+
+
+def read_runtime_line(process: subprocess.Popen[str], method: str) -> str:
+  if process.stdout is None:
+    raise RuntimeError("Packaged runtime stdout is unavailable.")
+
+  with selectors.DefaultSelector() as selector:
+    selector.register(process.stdout, selectors.EVENT_READ)
+    events = selector.select(timeout=RUNTIME_REQUEST_TIMEOUT_SECONDS)
+  if not events:
+    raise RuntimeError(
+      f"Packaged runtime did not respond to {method} within "
+      f"{RUNTIME_REQUEST_TIMEOUT_SECONDS:.0f}s.{runtime_stderr_detail(process)}"
+    )
+
+  return process.stdout.readline()
+
+
+def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
+  if process.poll() is None or process.stderr is None:
+    return ""
+  stderr = process.stderr.read().strip()
+  if not stderr:
+    return ""
+  return f"\nRuntime stderr:\n{stderr[-2000:]}"
+
+
+def validate_runtime_readiness(readiness: dict) -> None:
+  result = readiness["result"]
+  if result["status"] != "setup_required":
+    raise RuntimeError(f"Fresh packaged runtime readiness was {result['status']}.")
+  checks = {check["id"]: check for check in result["checks"]}
+  expected_statuses = {
+    "localModel": "setup_required",
+    "workspace": "setup_required",
+    "thread": "setup_required",
+    "firstRequest": "waiting",
+    "plugins": "ready",
+    "boundedRuntime": "ready",
+  }
+  for check_id, expected_status in expected_statuses.items():
+    actual_status = checks.get(check_id, {}).get("status")
+    if actual_status != expected_status:
+      raise RuntimeError(
+        f"Packaged runtime readiness check {check_id} was {actual_status}, "
+        f"expected {expected_status}."
+      )
 
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:
@@ -242,6 +294,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
           f"{', '.join(missing_plugins)}."
         )
 
+      validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_runtime_database(support_dir / "storage" / "pith.db")
       print(
         "Packaged runtime protocol smoke passed with model metadata and plugins "
