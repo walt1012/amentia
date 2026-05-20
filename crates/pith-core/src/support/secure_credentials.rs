@@ -44,6 +44,10 @@ mod platform {
     ) -> OSStatus;
     fn SecKeychainItemDelete(item_ref: SecKeychainItemRef) -> OSStatus;
     fn SecKeychainItemFreeContent(attr_list: *mut c_void, data: *mut c_void) -> OSStatus;
+  }
+
+  #[link(name = "CoreFoundation", kind = "framework")]
+  unsafe extern "C" {
     fn CFRelease(cf: *const c_void);
   }
 
