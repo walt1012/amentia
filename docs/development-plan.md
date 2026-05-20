@@ -93,10 +93,10 @@ Workstreams:
   by default, runtime launch environment app-owned, and recovery actions tied
   to trusted runtime metadata.
 - Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
-  binary, bundled local inference backend, exact x86_64 architecture
-  validation, model metadata, plugin manifests, no model weights, parallel
-  cached executable builds, Swift model-manager proof tests, packaged runtime
-  protocol probes, and launch smoke coverage.
+  binary, bundled Homebrew-free local inference backend, exact x86_64
+  architecture validation, model metadata, plugin manifests, no model weights,
+  parallel cached executable builds, Swift model-manager proof tests, packaged
+  runtime protocol probes, and launch smoke coverage.
 
 Current Status:
 
@@ -105,7 +105,8 @@ Current Status:
   creation, web search readiness, packaged web search execution, sandbox
   readiness, deterministic first request coverage, fresh app-owned directory
   preparation, model manager
-  download/resume/activation planning, and packaged app launch smoke coverage.
+  download/resume/activation planning, packaged app launch smoke coverage, and
+  local inference backend dependency portability checks.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.
@@ -133,8 +134,8 @@ M5 Exit Gate:
 - The packaged app can be used for a short real workflow without manual CLI
   setup, hidden required files, or unexplained blocked states.
 - CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact
-  with model metadata, plugin manifests, and a local inference backend, but no
-  model weights.
+  with model metadata, plugin manifests, and a Homebrew-free local inference
+  backend, but no model weights.
 
 ## Not Now
 

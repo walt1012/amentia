@@ -15,12 +15,18 @@ import sys
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from macos_llama_backend import (
+  LLAMA_BACKEND_EXECUTABLE_NAME,
+  LLAMA_BACKEND_LIB_DIRECTORY_NAME,
+  assert_portable_llama_backend,
+  stage_llama_backend,
+)
+
 
 APP_NAME = "Pith"
 APP_EXECUTABLE_NAME = "Pith"
 SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
-LLAMA_BACKEND_EXECUTABLE_NAME = "llama-cli"
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
@@ -149,6 +155,16 @@ def parse_args() -> argparse.Namespace:
     "--skip-ad-hoc-sign",
     action="store_true",
     help="Skip free ad-hoc codesign verification. CI should keep this enabled.",
+  )
+  parser.add_argument(
+    "--stage-llama-backend",
+    type=Path,
+    help="Stage a portable llama.cpp backend directory and exit.",
+  )
+  parser.add_argument(
+    "--stage-llama-output",
+    type=Path,
+    help="Output directory for --stage-llama-backend.",
   )
   return parser.parse_args()
 
@@ -317,13 +333,8 @@ def copy_required_llama_backend(
       continue
     if not candidate.is_file():
       continue
-    if candidate.is_symlink():
-      raise RuntimeError(f"Packaged llama.cpp backend must not be a symlink: {candidate}")
     target_directory = resources_path / LLAMA_BACKEND_RELATIVE_PARENT
-    target_directory.mkdir(parents=True, exist_ok=True)
-    packaged_backend = target_directory / LLAMA_BACKEND_EXECUTABLE_NAME
-    copy_executable(candidate, packaged_backend)
-    return packaged_backend
+    return stage_llama_backend(candidate, target_directory)
 
   searched = ", ".join(str(candidate) for candidate in candidates if candidate is not None)
   raise FileNotFoundError(
@@ -368,9 +379,27 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
     / LLAMA_BACKEND_RELATIVE_PARENT
     / LLAMA_BACKEND_EXECUTABLE_NAME
   )
+  assert_portable_llama_backend(
+    app_path / "Contents" / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT
+  )
+  assert_llama_backend_dependencies_match_arch(app_path)
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
+
+
+def assert_llama_backend_dependencies_match_arch(app_path: Path) -> None:
+  lib_directory = (
+    app_path
+    / "Contents"
+    / "Resources"
+    / LLAMA_BACKEND_RELATIVE_PARENT
+    / LLAMA_BACKEND_LIB_DIRECTORY_NAME
+  )
+  if not lib_directory.is_dir():
+    return
+  for dylib in sorted(lib_directory.glob("*.dylib")):
+    assert_only_x86_64_if_lipo_is_available(dylib)
 
 
 def assert_info_plist_matches_product_rules(app_path: Path) -> None:
@@ -755,10 +784,21 @@ def assert_zip_entries_are_safe(zip_path: Path, infos: list[zipfile.ZipInfo]) ->
 def main() -> int:
   args = parse_args()
   repo_root = args.repo_root.resolve()
-  dist_dir = (repo_root / args.dist_dir).resolve()
-  dist_dir.mkdir(parents=True, exist_ok=True)
 
   try:
+    if args.stage_llama_backend:
+      output_directory = (
+        args.stage_llama_output.resolve()
+        if args.stage_llama_output
+        else repo_root / "artifacts" / "llama-backend"
+      )
+      staged_backend = stage_llama_backend(args.stage_llama_backend.resolve(), output_directory)
+      print(f"Staged llama.cpp backend: {staged_backend}")
+      return 0
+
+    dist_dir = (repo_root / args.dist_dir).resolve()
+    dist_dir.mkdir(parents=True, exist_ok=True)
+
     if args.skip_build:
       app_binary = args.app_binary or repo_root / "apps" / "pith-macos" / ".build" / args.configuration / SWIFT_EXECUTABLE_NAME
       runtime_binary = args.runtime_binary or repo_root / "target" / args.configuration / RUNTIME_EXECUTABLE_NAME

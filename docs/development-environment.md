@@ -69,12 +69,15 @@ places executables under `Contents/MacOS`, bundles model metadata and bundled
 plugin manifests under `Contents/Resources`, validates the app bundle, and
 emits `artifacts/macos/Pith-macos-x86_64.zip`.
 
-Package validation checks the product `Info.plist`, `PkgInfo`, `PithPackage.json`, x86_64-only
-binaries, first-use model download metadata, bundled plugin resource contracts, absence of model
-weights, symlink-free packaged resources and optional backend inputs, and zip contents. The zip must
-include the default model manifest and every bundled plugin manifest, and must not contain symlinks
-or model weight files. CI also ad-hoc signs the app when `codesign` is available. Distribution
-signing and notarization should be added only after identity and entitlements are finalized.
+Package validation checks the product `Info.plist`, `PkgInfo`,
+`PithPackage.json`, x86_64-only binaries, first-use model download metadata,
+bundled plugin resource contracts, absence of model weights, symlink-free
+packaged resources and optional backend inputs, llama.cpp dependency
+portability, and zip contents. The zip must include the default model manifest
+and every bundled plugin manifest, must not contain symlinks or model weight
+files, and must not require Homebrew paths at runtime. CI also ad-hoc signs the
+app when `codesign` is available. Distribution signing and notarization should
+be added only after identity and entitlements are finalized.
 
 ## Local Model Runtime
 

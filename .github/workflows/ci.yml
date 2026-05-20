@@ -190,6 +190,9 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Install llama.cpp backend
         shell: bash
         run: |
@@ -203,14 +206,27 @@ jobs:
             exit 1
           fi
           mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp "$backend" "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          python3 scripts/package_macos_app.py \
+            --stage-llama-backend "$backend" \
+            --stage-llama-output "$PREBUILT_ARTIFACT_DIR"
           chmod +x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          otool -L "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" > "$PREBUILT_ARTIFACT_DIR/llama-dependencies.txt"
+          if [ -d "$PREBUILT_ARTIFACT_DIR/lib" ]; then
+            find "$PREBUILT_ARTIFACT_DIR/lib" -type f -name '*.dylib' -print0 \
+              | while IFS= read -r -d '' dylib; do
+                  {
+                    echo
+                    echo "$dylib"
+                    otool -L "$dylib"
+                  } >> "$PREBUILT_ARTIFACT_DIR/llama-dependencies.txt"
+                done
+          fi
 
       - name: Upload llama.cpp backend
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.LLAMA_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.LLAMA_BINARY }}
+          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
           if-no-files-found: error
 
   swift:

@@ -15,6 +15,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from macos_llama_backend import assert_portable_llama_backend
+
 
 APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
@@ -113,6 +115,7 @@ def validate_app_bundle(app_path: Path) -> None:
   require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
+  assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
 
 
 def packaged_runtime_path(app_path: Path) -> Path:

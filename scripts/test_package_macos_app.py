@@ -7,8 +7,13 @@ import stat
 import tempfile
 from pathlib import Path
 
-from package_macos_app import (
+from macos_llama_backend import (
   LLAMA_BACKEND_EXECUTABLE_NAME,
+  LLAMA_BACKEND_LIB_DIRECTORY_NAME,
+  is_forbidden_runtime_dependency,
+  parse_otool_dependencies,
+)
+from package_macos_app import (
   LLAMA_BACKEND_RELATIVE_PARENT,
   copy_required_llama_backend,
   parse_lipo_architectures,
@@ -37,12 +42,26 @@ def main() -> int:
     pass
   else:
     raise AssertionError("invalid lipo output should fail")
+  assert_equal(
+    parse_otool_dependencies(
+      """/tmp/llama-cli:
+\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1.0.0)
+\t@executable_path/lib/libllama.dylib (compatibility version 0.0.0, current version 0.0.0)
+"""
+    ),
+    ["/usr/lib/libSystem.B.dylib", "@executable_path/lib/libllama.dylib"],
+  )
+  if not is_forbidden_runtime_dependency("/usr/local/opt/llama.cpp/lib/libllama.dylib"):
+    raise AssertionError("Homebrew dependency paths should be rejected")
 
   with tempfile.TemporaryDirectory(prefix="pith-package-test-") as root:
     root_path = Path(root)
     source_backend = root_path / "llama-cli"
     source_backend.write_text("#!/bin/sh\n", encoding="utf-8")
     source_backend.chmod(source_backend.stat().st_mode | stat.S_IXUSR)
+    source_lib = root_path / LLAMA_BACKEND_LIB_DIRECTORY_NAME
+    source_lib.mkdir()
+    (source_lib / "libllama.dylib").write_text("placeholder", encoding="utf-8")
     packaged_backend = copy_required_llama_backend(
       root_path,
       root_path / "Resources",
@@ -54,6 +73,10 @@ def main() -> int:
     )
     if not packaged_backend.is_file():
       raise AssertionError("packaged llama backend should exist")
+    if not (
+      packaged_backend.parent / LLAMA_BACKEND_LIB_DIRECTORY_NAME / "libllama.dylib"
+    ).is_file():
+      raise AssertionError("packaged llama backend should include sibling dylib bundle")
 
   with tempfile.TemporaryDirectory(prefix="pith-package-missing-backend-") as root:
     try:
