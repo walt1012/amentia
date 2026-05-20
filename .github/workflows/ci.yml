@@ -11,7 +11,9 @@ on:
     - cron: "37 3 * * 1"
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
   SWIFT_PACKAGE_PATH: apps/pith-macos
   PREBUILT_ARTIFACT_DIR: artifacts/prebuilt
   SWIFT_APP_BINARY: PithApp
@@ -36,7 +38,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -44,7 +46,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache Cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -81,7 +83,7 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
@@ -92,13 +94,13 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Show Swift version
         run: swift --version
 
       - name: Cache Swift build output
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: apps/pith-macos/.build
           key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Sources/**/*.swift') }}
@@ -116,7 +118,7 @@ jobs:
           chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
 
       - name: Upload Swift app executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SWIFT_APP_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.SWIFT_APP_BINARY }}
@@ -128,13 +130,13 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Show Swift version
         run: swift --version
 
       - name: Cache Swift test output
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: apps/pith-macos/.build
           key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Sources/**/*.swift', 'apps/pith-macos/Tests/**/*.swift') }}
@@ -150,13 +152,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache macOS runtime build output
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -176,7 +178,7 @@ jobs:
           chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
 
       - name: Upload runtime executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.RUNTIME_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.RUNTIME_BINARY }}
@@ -204,7 +206,7 @@ jobs:
           chmod +x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
 
       - name: Upload llama.cpp backend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.LLAMA_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.LLAMA_BINARY }}
@@ -221,22 +223,22 @@ jobs:
       - macos-llama-backend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Swift app executable
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.SWIFT_APP_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
       - name: Download runtime executable
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.RUNTIME_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
       - name: Download llama.cpp backend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.LLAMA_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
@@ -273,7 +275,7 @@ jobs:
         run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
 
       - name: Upload macOS app artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.MACOS_APP_ARTIFACT }}
           path: artifacts/macos/Pith-macos-x86_64.zip
