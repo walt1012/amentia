@@ -315,6 +315,37 @@ def validate_packaged_runtime_workspace_bootstrap(
   if len(threads) != 1 or threads[0]["title"] != "Packaged Runtime Smoke":
     raise RuntimeError("Packaged runtime did not persist the smoke thread.")
 
+  validate_packaged_runtime_workspace_search(process)
+
+
+def validate_packaged_runtime_workspace_search(process: subprocess.Popen[str]) -> None:
+  search = send_runtime_request(
+    process,
+    9,
+    "workspace/search",
+    {
+      "query": "bootstrap",
+      "maxResults": 5,
+      "clientRequestId": "packaged-smoke-search",
+    },
+  )
+  result = search["result"]
+  if result["query"] != "bootstrap":
+    raise RuntimeError(
+      f"Packaged runtime workspace search query was {result['query']}."
+    )
+
+  matches = result["matches"]
+  if not any(
+    match["relativePath"] == "README.md"
+    and match["lineNumber"] == 3
+    and "Workspace bootstrap check." in match["line"]
+    for match in matches
+  ):
+    raise RuntimeError(
+      "Packaged runtime workspace search did not find the smoke README."
+    )
+
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:
   with tempfile.TemporaryDirectory(prefix="pith-runtime-protocol-") as support_root:
