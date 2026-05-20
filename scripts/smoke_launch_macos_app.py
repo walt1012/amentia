@@ -178,9 +178,31 @@ def terminate_process_with_output(process: subprocess.Popen[str]) -> tuple[str, 
 
 
 def validate_isolated_support_dir(support_dir: Path) -> None:
+  required_directories = [
+    support_dir,
+    support_dir / "storage",
+    support_dir / "storage" / "models",
+    support_dir / "plugins",
+    support_dir / "model-downloads",
+  ]
+  for directory in required_directories:
+    if not directory.is_dir():
+      raise RuntimeError(f"Packaged app did not prepare app-owned directory: {directory}")
+    if directory.is_symlink():
+      raise RuntimeError(f"Packaged app support directory must not be a symlink: {directory}")
+
+  model_weights = sorted(
+    path
+    for path in support_dir.rglob("*")
+    if path.is_file() and path.suffix.lower() == ".gguf"
+  )
+  if model_weights:
+    raise RuntimeError(
+      "Fresh packaged app launch unexpectedly created model weight files: "
+      f"{', '.join(str(path) for path in model_weights)}"
+    )
+
   storage_dir = support_dir / "storage"
-  if not storage_dir.is_dir():
-    raise RuntimeError(f"Packaged app did not create isolated storage: {storage_dir}")
   validate_runtime_database(storage_dir / "pith.db")
 
 
