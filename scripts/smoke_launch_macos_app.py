@@ -287,8 +287,9 @@ def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
 
 def validate_runtime_readiness(
   readiness: dict,
-  expected_statuses: dict[str, str] | None = None,
+  expected_statuses: dict[str, str | set[str]] | None = None,
   expected_status: str = "setup_required",
+  workspace_open: bool = False,
 ) -> None:
   result = readiness["result"]
   if result["status"] != expected_status:
@@ -301,16 +302,73 @@ def validate_runtime_readiness(
     "workspace": "setup_required",
     "thread": "setup_required",
     "firstRequest": "waiting",
+    "context": "ready",
+    "executionControls": "ready",
     "plugins": "ready",
     "boundedRuntime": "ready",
   }
   for check_id, expected_status in expected_statuses.items():
-    actual_status = checks.get(check_id, {}).get("status")
-    if actual_status != expected_status:
+    validate_readiness_check_status(checks, check_id, expected_status)
+  validate_tooling_readiness(result, checks, workspace_open=workspace_open)
+
+
+def validate_readiness_check_status(
+  checks: dict[str, dict],
+  check_id: str,
+  expected_status: str | set[str],
+) -> None:
+  actual_status = checks.get(check_id, {}).get("status")
+  allowed_statuses = {expected_status} if isinstance(expected_status, str) else expected_status
+  if actual_status not in allowed_statuses:
+    expected = ", ".join(sorted(allowed_statuses))
+    raise RuntimeError(
+      f"Packaged runtime readiness check {check_id} was {actual_status}, "
+      f"expected one of {expected}."
+    )
+
+
+def validate_tooling_readiness(
+  result: dict,
+  checks: dict[str, dict],
+  workspace_open: bool,
+) -> None:
+  validate_readiness_check_status(checks, "executionControls", "ready")
+  validate_readiness_check_status(checks, "webSearch", "ready")
+  validate_readiness_check_status(
+    checks,
+    "nativeSandbox",
+    {"limited", "ready"} if workspace_open else {"limited", "setup_required"},
+  )
+
+  metrics = result["metrics"]
+  expected_metrics = {
+    "webSearchTimeoutSeconds": "20",
+    "webSearchProvider": "DuckDuckGo Lite",
+    "webSearchAvailable": "true",
+    "webSearchPermissionGranted": "true",
+    "sandboxMode": "workspaceReadWrite",
+    "sandboxNetworkAllowed": "false",
+  }
+  for key, expected_value in expected_metrics.items():
+    actual_value = metrics.get(key)
+    if actual_value != expected_value:
       raise RuntimeError(
-        f"Packaged runtime readiness check {check_id} was {actual_status}, "
-        f"expected {expected_status}."
+        f"Packaged runtime readiness metric {key} was {actual_value}, "
+        f"expected {expected_value}."
       )
+
+  if "Web Search" not in metrics.get("webSearchPermissionSources", ""):
+    raise RuntimeError("Packaged runtime readiness did not attribute Web Search permission.")
+  if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
+    raise RuntimeError(
+      "Packaged runtime readiness reported unexpected sandbox backend: "
+      f"{metrics.get('sandboxBackend')}"
+    )
+  if metrics.get("sandboxActive") not in {"true", "false"}:
+    raise RuntimeError(
+      "Packaged runtime readiness reported unexpected sandbox active state: "
+      f"{metrics.get('sandboxActive')}"
+    )
 
 
 def validate_packaged_runtime_workspace_bootstrap(
@@ -359,10 +417,13 @@ def validate_packaged_runtime_workspace_bootstrap(
       "workspace": "ready",
       "thread": "ready",
       "firstRequest": "ready_to_send",
+      "context": "ready",
+      "executionControls": "ready",
       "plugins": "ready",
       "boundedRuntime": "ready",
     },
     expected_status=expected_status,
+    workspace_open=True,
   )
 
   thread_list = send_runtime_request(process, 8, "thread/list")
