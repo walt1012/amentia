@@ -94,6 +94,20 @@ enum LocalModelCatalog {
     }
   }
 
+  static func isVerifiedInstalledSelectionInBackground(
+    storageRootPath: String,
+    modelPath: String,
+    manifestPath: String
+  ) async -> Bool {
+    await Task.detached(priority: .utility) {
+      isVerifiedInstalledSelection(
+        storageRootPath: storageRootPath,
+        modelPath: modelPath,
+        manifestPath: manifestPath
+      )
+    }.value
+  }
+
   private static func verifiedInstalledModel(
     storageRootPath: String,
     modelPath: String

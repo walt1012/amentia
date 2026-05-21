@@ -325,15 +325,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          final_draft="false"
-          if [[ "$RELEASE_DRAFT" == "true" || ( "$PITH_RELEASE_SIGNING_MODE" != "developer-id" && "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" != "true" ) ]]; then
-            final_draft="true"
-          fi
-          final_prerelease="false"
-          if [[ "$RELEASE_PRERELEASE" == "true" || "$PITH_RELEASE_SIGNING_MODE" != "developer-id" ]]; then
-            final_prerelease="true"
-          fi
-
           release_title="Pith $RELEASE_TAG"
           release_exists="false"
           existing_draft=""
@@ -342,13 +333,26 @@ jobs:
             existing_draft="$(python3 -c 'import json, sys; print(str(json.loads(sys.argv[1])["draft"]).lower())' "$release_json")"
           fi
 
+          python3 scripts/release_state.py \
+            --title "$release_title" \
+            --notes-file release-notes.md \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --requested-draft "$RELEASE_DRAFT" \
+            --requested-prerelease "$RELEASE_PRERELEASE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --release-exists "$release_exists" \
+            --existing-draft "$existing_draft" \
+            --state-output release-state.json \
+            --env-output release-state.env
+          source release-state.env
+
           if [[ "$release_exists" == "true" ]]; then
             gh release edit "$RELEASE_TAG" \
               --title "$release_title" \
               --notes-file release-notes.md
           else
             create_args=(--title "$release_title" --notes-file release-notes.md --draft)
-            if [[ "$final_prerelease" == "true" ]]; then
+            if [[ "$PITH_RELEASE_STATE_PRERELEASE" == "true" ]]; then
               create_args+=(--prerelease)
             fi
             gh release create "$RELEASE_TAG" "${create_args[@]}"
@@ -359,32 +363,11 @@ jobs:
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
             --clobber
 
-          desired_draft="$final_draft"
-          if [[ "$release_exists" == "true" && "$existing_draft" == "false" && "$RELEASE_DRAFT" != "true" ]]; then
-            desired_draft="false"
-          fi
-
-          if [[ "$desired_draft" == "true" ]]; then
+          if [[ "$PITH_RELEASE_STATE_DRAFT" == "true" ]]; then
             echo "Release $RELEASE_TAG kept as draft."
           fi
 
           release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
-          python3 - "$release_title" "$final_prerelease" "$desired_draft" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          title = sys.argv[1]
-          prerelease = sys.argv[2] == "true"
-          draft = sys.argv[3] == "true"
-          payload = {
-            "name": title,
-            "body": Path("release-notes.md").read_text(),
-            "draft": draft,
-            "prerelease": prerelease,
-          }
-          Path("release-state.json").write_text(json.dumps(payload), encoding="utf-8")
-          PY
           gh api \
             -X PATCH \
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \

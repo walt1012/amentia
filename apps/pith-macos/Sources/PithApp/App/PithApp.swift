@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @main
 struct PithApp: App {
@@ -9,6 +10,7 @@ struct PithApp: App {
     WindowGroup {
       ContentView(viewModel: viewModel)
         .frame(minWidth: 1120, minHeight: 720)
+        .background(MainWindowMarker())
     }
     .commands {
       CommandGroup(replacing: .newItem) {
@@ -72,6 +74,22 @@ struct PithApp: App {
     }
     Settings {
       SettingsView()
+    }
+  }
+}
+
+private struct MainWindowMarker: NSViewRepresentable {
+  func makeNSView(context: Context) -> NSView {
+    NSView(frame: .zero)
+  }
+
+  func updateNSView(_ nsView: NSView, context: Context) {
+    DispatchQueue.main.async {
+      guard let window = nsView.window else {
+        return
+      }
+
+      PithAppDelegate.registerMainWindow(window)
     }
   }
 }

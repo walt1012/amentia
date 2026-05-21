@@ -2,11 +2,19 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::process::{ExitStatus, Stdio};
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread::{self, JoinHandle};
+use std::time::Instant;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_plugin_host::{
   PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry, PluginManifest,
   PluginMcpServerManifest,
+};
+use pith_process::{
+  join_bounded_pipe_reader, join_pipe_writer, read_bounded_pipe_in_background,
+  terminate_process_group_or_child, write_pipe_in_background, BoundedPipeOutput,
 };
 use pith_protocol::WorkspaceSummary;
 use serde::Deserialize;
@@ -14,10 +22,13 @@ use serde_json::{json, Value};
 
 use super::plugin_command_runner::{
   command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
-  insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes, merged_attributes,
-  plugin_root_for_command, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
-  plugin_runner_setup_phase_attributes, run_stdio_runner, runner_entrypoint_setup_blocker,
-  safe_entrypoint_path, PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
+  insert_log_preview, insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes,
+  insert_stdin_writer_attributes, merged_attributes, plugin_root_for_command,
+  plugin_runner_input_bytes, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
+  plugin_runner_setup_phase_attributes, runner_entrypoint_setup_blocker, safe_entrypoint_path,
+  stderr_suffix, validate_runner_entrypoint, PluginRunnerFailure, PluginRunnerProcessOutput,
+  PluginRunnerResult, PluginRunnerRunResult, PLUGIN_RUNNER_GRACE_PERIOD,
+  PLUGIN_RUNNER_OUTPUT_LIMIT, PLUGIN_RUNNER_POLL_INTERVAL, PLUGIN_RUNNER_TIMEOUT,
 };
 use super::plugin_command_runner_output::plugin_runner_output;
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
@@ -209,7 +220,7 @@ pub(super) fn run_mcp_plugin_command(
     connector_refs,
   );
 
-  let output = run_stdio_runner(
+  let output = run_mcp_stdio_session(
     command,
     &sandbox,
     &entrypoint_path,
@@ -218,6 +229,7 @@ pub(super) fn run_mcp_plugin_command(
     connector_refs,
     cancellation,
     &runner_context_attributes,
+    &target,
   )?;
   mcp_runner_output(
     command,
@@ -226,6 +238,349 @@ pub(super) fn run_mcp_plugin_command(
     &output.stdout,
     merged_attributes(runner_context_attributes, output.attributes),
   )
+}
+
+fn run_mcp_stdio_session(
+  command: &HostPluginCommandEntry,
+  sandbox: &PluginRunnerSandbox,
+  entrypoint_path: &Path,
+  args: &[String],
+  input_payload: &str,
+  connector_refs: &[PluginConnectorExecutionRef],
+  cancellation: &GenerationCancellation,
+  sandbox_attributes: &HashMap<String, String>,
+  target: &PluginMcpTarget,
+) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
+  let mut runner_attributes = sandbox_attributes.clone();
+  validate_runner_entrypoint(command, entrypoint_path, &mut runner_attributes)?;
+
+  let mut process = sandbox.build_command(entrypoint_path);
+  process.args(args);
+  process
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .env("PITH_PLUGIN_COMMAND_ID", &command.command_id)
+    .env("PITH_PLUGIN_ID", &command.plugin_id)
+    .env("PITH_PLUGIN_SANDBOX_DETAIL", sandbox.detail())
+    .env("PITH_PLUGIN_SOURCE_PATH", &command.source_path);
+  for connector in connector_refs {
+    let Some(secret) = connector.credential_secret.as_deref() else {
+      continue;
+    };
+    let Some(env_key) = connector.credential_provider.env_key.as_deref() else {
+      continue;
+    };
+    process.env(env_key, secret);
+  }
+
+  let mut child = process.spawn().map_err(|error| {
+    PluginRunnerFailure::new(
+      -32054,
+      format!(
+        "Plugin command `{}` failed to start MCP server `{}`: {error}",
+        command.command_id, target.server_id
+      ),
+      runner_attributes.clone(),
+    )
+    .boxed()
+  })?;
+
+  let (stdout_line_sender, stdout_lines) = mpsc::channel();
+  let stdout_reader = child
+    .stdout
+    .take()
+    .map(|reader| read_mcp_stdout_lines_in_background(reader, stdout_line_sender));
+  let stderr_reader = child
+    .stderr
+    .take()
+    .map(|reader| read_bounded_pipe_in_background(reader, PLUGIN_RUNNER_OUTPUT_LIMIT));
+  let stdin_writer = child
+    .stdin
+    .take()
+    .map(|writer| write_pipe_in_background(writer, plugin_runner_input_bytes(input_payload)));
+
+  let wait = wait_for_mcp_tool_response(&mut child, &stdout_lines, cancellation).map_err(|error| {
+    PluginRunnerFailure::new(
+      -32054,
+      format!(
+        "Plugin command `{}` failed while running MCP server `{}`: {error}",
+        command.command_id, target.server_id
+      ),
+      runner_attributes.clone(),
+    )
+    .boxed()
+  })?;
+  let stdin_output = join_pipe_writer(stdin_writer);
+  let stdout_output = join_bounded_pipe_reader(stdout_reader);
+  let stderr_output = join_bounded_pipe_reader(stderr_reader);
+  let stdout = String::from_utf8_lossy(&stdout_output.bytes)
+    .trim()
+    .to_string();
+  let stderr = String::from_utf8_lossy(&stderr_output.bytes)
+    .trim()
+    .to_string();
+  let mut output_attributes = mcp_session_output_attributes(&wait, &stdout_output, &stderr_output);
+  insert_stdin_writer_attributes(&mut output_attributes, &stdin_output);
+  insert_log_preview(&mut output_attributes, "pluginRunnerStdoutPreview", &stdout);
+  insert_log_preview(&mut output_attributes, "pluginRunnerStderrPreview", &stderr);
+  let failure_attributes = merged_attributes(runner_attributes.clone(), output_attributes.clone());
+
+  match wait.reason {
+    PluginMcpSessionStopReason::Cancelled => {
+      return Err(
+        PluginRunnerFailure::with_output(
+          -32055,
+          format!(
+            "Plugin command `{}` MCP server `{}` was cancelled.",
+            command.command_id, target.server_id
+          ),
+          stdout,
+          stderr,
+          failure_attributes,
+        )
+        .boxed(),
+      )
+    }
+    PluginMcpSessionStopReason::TimedOut => {
+      return Err(
+        PluginRunnerFailure::with_output(
+          -32056,
+          format!(
+            "Plugin command `{}` MCP server `{}` timed out after {} seconds.",
+            command.command_id,
+            target.server_id,
+            PLUGIN_RUNNER_TIMEOUT.as_secs()
+          ),
+          stdout,
+          stderr,
+          failure_attributes,
+        )
+        .boxed(),
+      )
+    }
+    PluginMcpSessionStopReason::ToolResponse => {}
+    PluginMcpSessionStopReason::ChildExit => {
+      if let Some(error) = stdin_output.error_message {
+        return Err(
+          PluginRunnerFailure::with_output(
+            -32054,
+            format!(
+              "Plugin command `{}` MCP server `{}` failed to receive input: {error}",
+              command.command_id, target.server_id
+            ),
+            stdout,
+            stderr,
+            failure_attributes,
+          )
+          .boxed(),
+        );
+      }
+      if !wait.status.success() {
+        return Err(
+          PluginRunnerFailure::with_output(
+            -32054,
+            format!(
+              "Plugin command `{}` MCP server `{}` exited with status {}.{}",
+              command.command_id,
+              target.server_id,
+              wait.status,
+              stderr_suffix(&stderr)
+            ),
+            stdout,
+            stderr,
+            failure_attributes,
+          )
+          .boxed(),
+        );
+      }
+    }
+  }
+
+  Ok(PluginRunnerProcessOutput {
+    stdout,
+    attributes: merged_attributes(runner_attributes, output_attributes),
+  })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PluginMcpSessionStopReason {
+  ToolResponse,
+  ChildExit,
+  TimedOut,
+  Cancelled,
+}
+
+struct PluginMcpSessionWait {
+  status: ExitStatus,
+  reason: PluginMcpSessionStopReason,
+}
+
+fn wait_for_mcp_tool_response(
+  child: &mut std::process::Child,
+  stdout_lines: &Receiver<String>,
+  cancellation: &GenerationCancellation,
+) -> std::io::Result<PluginMcpSessionWait> {
+  let started_at = Instant::now();
+  let mut scan = PluginMcpOutputScan::empty();
+
+  loop {
+    drain_mcp_stdout_lines(stdout_lines, &mut scan);
+    if scan.tool_response.is_some() {
+      terminate_process_group_or_child(child, PLUGIN_RUNNER_GRACE_PERIOD);
+      return Ok(PluginMcpSessionWait {
+        status: child.wait()?,
+        reason: PluginMcpSessionStopReason::ToolResponse,
+      });
+    }
+
+    if let Some(status) = child.try_wait()? {
+      return Ok(PluginMcpSessionWait {
+        status,
+        reason: PluginMcpSessionStopReason::ChildExit,
+      });
+    }
+
+    if cancellation.is_cancelled() {
+      terminate_process_group_or_child(child, PLUGIN_RUNNER_GRACE_PERIOD);
+      return Ok(PluginMcpSessionWait {
+        status: child.wait()?,
+        reason: PluginMcpSessionStopReason::Cancelled,
+      });
+    }
+
+    if started_at.elapsed() >= PLUGIN_RUNNER_TIMEOUT {
+      terminate_process_group_or_child(child, PLUGIN_RUNNER_GRACE_PERIOD);
+      return Ok(PluginMcpSessionWait {
+        status: child.wait()?,
+        reason: PluginMcpSessionStopReason::TimedOut,
+      });
+    }
+
+    thread::sleep(PLUGIN_RUNNER_POLL_INTERVAL);
+  }
+}
+
+fn drain_mcp_stdout_lines(receiver: &Receiver<String>, scan: &mut PluginMcpOutputScan) {
+  while let Ok(line) = receiver.try_recv() {
+    scan.observe_line(&line);
+  }
+}
+
+fn read_mcp_stdout_lines_in_background<R>(
+  mut reader: R,
+  sender: Sender<String>,
+) -> JoinHandle<BoundedPipeOutput>
+where
+  R: Read + Send + 'static,
+{
+  thread::spawn(move || {
+    let mut bytes = Vec::with_capacity(PLUGIN_RUNNER_OUTPUT_LIMIT.min(64 * 1024));
+    let mut source_byte_count = 0;
+    let mut buffer = [0_u8; 8192];
+    let mut line = Vec::new();
+    let mut line_truncated = false;
+
+    while let Ok(bytes_read) = reader.read(&mut buffer) {
+      if bytes_read == 0 {
+        break;
+      }
+
+      source_byte_count += bytes_read;
+      let remaining_output = PLUGIN_RUNNER_OUTPUT_LIMIT.saturating_sub(bytes.len());
+      if remaining_output > 0 {
+        bytes.extend_from_slice(&buffer[..bytes_read.min(remaining_output)]);
+      }
+
+      for byte in &buffer[..bytes_read] {
+        if line.len() < PLUGIN_RUNNER_OUTPUT_LIMIT {
+          line.push(*byte);
+        } else {
+          line_truncated = true;
+        }
+        if *byte == b'\n' {
+          send_mcp_stdout_line(&sender, &line, line_truncated);
+          line.clear();
+          line_truncated = false;
+        }
+      }
+    }
+
+    if !line.is_empty() {
+      send_mcp_stdout_line(&sender, &line, line_truncated);
+    }
+
+    BoundedPipeOutput {
+      bytes,
+      source_byte_count,
+    }
+  })
+}
+
+fn send_mcp_stdout_line(sender: &Sender<String>, line: &[u8], truncated: bool) {
+  let mut text = String::from_utf8_lossy(line).to_string();
+  if truncated {
+    text.push_str("[truncated]");
+  }
+  let _ = sender.send(text);
+}
+
+fn mcp_session_output_attributes(
+  wait: &PluginMcpSessionWait,
+  stdout: &BoundedPipeOutput,
+  stderr: &BoundedPipeOutput,
+) -> HashMap<String, String> {
+  HashMap::from([
+    (
+      "pluginRunnerExitReason".to_string(),
+      mcp_session_stop_reason_label(wait.reason).to_string(),
+    ),
+    (
+      "pluginRunnerExitStatus".to_string(),
+      wait.status.to_string(),
+    ),
+    (
+      "pluginRunnerExitCode".to_string(),
+      wait
+        .status
+        .code()
+        .map(|code| code.to_string())
+        .unwrap_or_else(|| "unknown".to_string()),
+    ),
+    (
+      "pluginRunnerStdoutRetainedBytes".to_string(),
+      stdout.bytes.len().to_string(),
+    ),
+    (
+      "pluginRunnerStdoutSourceBytes".to_string(),
+      stdout.source_byte_count.to_string(),
+    ),
+    (
+      "pluginRunnerStdoutTruncated".to_string(),
+      (stdout.bytes.len() < stdout.source_byte_count).to_string(),
+    ),
+    (
+      "pluginRunnerStderrRetainedBytes".to_string(),
+      stderr.bytes.len().to_string(),
+    ),
+    (
+      "pluginRunnerStderrSourceBytes".to_string(),
+      stderr.source_byte_count.to_string(),
+    ),
+    (
+      "pluginRunnerStderrTruncated".to_string(),
+      (stderr.bytes.len() < stderr.source_byte_count).to_string(),
+    ),
+  ])
+}
+
+fn mcp_session_stop_reason_label(reason: PluginMcpSessionStopReason) -> &'static str {
+  match reason {
+    PluginMcpSessionStopReason::ToolResponse => "toolResponse",
+    PluginMcpSessionStopReason::ChildExit => "completed",
+    PluginMcpSessionStopReason::TimedOut => "timedOut",
+    PluginMcpSessionStopReason::Cancelled => "cancelled",
+  }
 }
 
 fn merge_setup_failure(
@@ -697,6 +1052,31 @@ impl PluginMcpOutputScan {
     }
   }
 
+  fn observe_line(&mut self, line: &str) {
+    let line = line.trim();
+    if line.is_empty() {
+      return;
+    }
+
+    self.output_line_count += 1;
+    match serde_json::from_str::<PluginMcpJsonRpcEnvelope>(line) {
+      Ok(response) => {
+        self.json_response_count += 1;
+        let response_id = response.id.as_ref();
+        if is_mcp_initialize_response_id(response_id) {
+          self.initialize_response_seen = true;
+        }
+        if is_mcp_tool_response_id(response_id) {
+          self.tool_response = Some(response);
+        }
+      }
+      Err(_) => {
+        self.invalid_json_line_count += 1;
+        self.last_invalid_json_preview = Some(bounded_mcp_invalid_json_preview(line));
+      }
+    }
+  }
+
   fn insert_attributes(&self, attributes: &mut HashMap<String, String>) {
     attributes.insert(
       "mcpInitializeResponseSeen".to_string(),
@@ -731,23 +1111,7 @@ fn scan_mcp_output(output: &str) -> PluginMcpOutputScan {
     .map(str::trim)
     .filter(|line| !line.is_empty())
   {
-    scan.output_line_count += 1;
-    match serde_json::from_str::<PluginMcpJsonRpcEnvelope>(line) {
-      Ok(response) => {
-        scan.json_response_count += 1;
-        let response_id = response.id.as_ref();
-        if is_mcp_initialize_response_id(response_id) {
-          scan.initialize_response_seen = true;
-        }
-        if is_mcp_tool_response_id(response_id) {
-          scan.tool_response = Some(response);
-        }
-      }
-      Err(_) => {
-        scan.invalid_json_line_count += 1;
-        scan.last_invalid_json_preview = Some(bounded_mcp_invalid_json_preview(line));
-      }
-    }
+    scan.observe_line(line);
   }
   scan
 }

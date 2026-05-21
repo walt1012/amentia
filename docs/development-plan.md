@@ -67,8 +67,9 @@ Closed capabilities:
   sandbox diagnostics, compact context packing, and progressive inspector
   surfaces.
 - Plugin registry, local install/remove, inspect-before-install, enable/disable,
-  connector auth, bounded `stdio` and MCP stdio runners, permission gates,
-  approval gates, output envelopes, repair hints, and retry flows.
+  connector auth, bounded `stdio` runners, response-aware MCP stdio sessions,
+  permission gates, approval gates, output envelopes, repair hints, and retry
+  flows.
 - Timeline trust boundaries for approvals, plugin runs, connector blockers,
   source reveal, refresh recovery, runtime status, and credential-safe metadata.
 
@@ -111,8 +112,12 @@ Current Status:
   into parallel policy, Rust, Swift, runtime, cached backend, and packaging
   gates so speed does not weaken release proof. Release tags default to a draft
   ad-hoc DMG when Developer ID secrets are missing, visible untrusted prerelease
-  reruns preserve their published state, and Developer ID credentials still
-  produce the trusted notarized DMG.
+  reruns preserve their published state through a tested release-state helper,
+  and Developer ID credentials still produce the trusted notarized DMG.
+- Hardened locally: plugin runner stdin no longer blocks pipe draining before
+  timeout/cancel supervision, MCP stdio sessions stop once the requested tool
+  response arrives, runtime launch verifies active models off the MainActor, and
+  the macOS shell guards the current single-runtime design with one main window.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.

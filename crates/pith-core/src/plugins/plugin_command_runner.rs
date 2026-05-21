@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fs::Metadata;
-use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
@@ -14,8 +13,9 @@ use pith_plugin_host::{
   PluginCommandExecutionEntry,
 };
 use pith_process::{
-  join_bounded_pipe_reader, read_bounded_pipe_in_background, terminate_process_group_or_child,
-  wait_for_child, BoundedPipeOutput, ChildExitReason, ChildWaitResult,
+  join_bounded_pipe_reader, join_pipe_writer, read_bounded_pipe_in_background,
+  terminate_process_group_or_child, wait_for_child, write_pipe_in_background, BoundedPipeOutput,
+  ChildExitReason, ChildWaitResult, PipeWriteOutput,
 };
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use serde_json::json;
@@ -25,10 +25,10 @@ use super::plugin_command_runner_output::{bounded_log_preview, plugin_runner_out
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::{PluginConnectorExecutionRef, PluginRunnerMemoryNoteDraft};
 
-const PLUGIN_RUNNER_TIMEOUT: Duration = Duration::from_secs(60);
-const PLUGIN_RUNNER_POLL_INTERVAL: Duration = Duration::from_millis(25);
-const PLUGIN_RUNNER_GRACE_PERIOD: Duration = Duration::from_millis(250);
-const PLUGIN_RUNNER_OUTPUT_LIMIT: usize = 64 * 1024;
+pub(super) const PLUGIN_RUNNER_TIMEOUT: Duration = Duration::from_secs(60);
+pub(super) const PLUGIN_RUNNER_POLL_INTERVAL: Duration = Duration::from_millis(25);
+pub(super) const PLUGIN_RUNNER_GRACE_PERIOD: Duration = Duration::from_millis(250);
+pub(super) const PLUGIN_RUNNER_OUTPUT_LIMIT: usize = 64 * 1024;
 const PLUGIN_RUNNER_SETUP_STATUS_KEY: &str = "pluginRunnerSetupStatus";
 
 pub(super) type PluginRunnerRunResult<T> = std::result::Result<T, Box<PluginRunnerFailure>>;
@@ -502,26 +502,6 @@ pub(super) fn run_stdio_runner(
     )
     .boxed()
   })?;
-  if let Some(mut stdin) = child.stdin.take() {
-    if let Err(error) = stdin
-      .write_all(input_payload.as_bytes())
-      .and_then(|_| stdin.write_all(b"\n"))
-    {
-      terminate_process_group_or_child(&mut child, PLUGIN_RUNNER_GRACE_PERIOD);
-      let _ = child.wait();
-      return Err(
-        PluginRunnerFailure::new(
-          -32054,
-          format!(
-            "Plugin command `{}` failed to receive input: {error}",
-            command.command_id
-          ),
-          runner_attributes.clone(),
-        )
-        .boxed(),
-      );
-    }
-  }
 
   let stdout_reader = child
     .stdout
@@ -531,6 +511,10 @@ pub(super) fn run_stdio_runner(
     .stderr
     .take()
     .map(|reader| read_bounded_pipe_in_background(reader, PLUGIN_RUNNER_OUTPUT_LIMIT));
+  let stdin_writer = child
+    .stdin
+    .take()
+    .map(|writer| write_pipe_in_background(writer, runner_input_bytes(input_payload)));
   let wait = wait_for_child(
     &mut child,
     PLUGIN_RUNNER_TIMEOUT,
@@ -549,6 +533,7 @@ pub(super) fn run_stdio_runner(
     )
     .boxed()
   })?;
+  let stdin_output = join_pipe_writer(stdin_writer);
   let stdout_output = join_bounded_pipe_reader(stdout_reader);
   let stderr_output = join_bounded_pipe_reader(stderr_reader);
   let stdout = String::from_utf8_lossy(&stdout_output.bytes)
@@ -558,6 +543,7 @@ pub(super) fn run_stdio_runner(
     .trim()
     .to_string();
   let mut output_attributes = runner_output_attributes(&wait, &stdout_output, &stderr_output);
+  insert_stdin_writer_attributes(&mut output_attributes, &stdin_output);
   insert_log_preview(&mut output_attributes, "pluginRunnerStdoutPreview", &stdout);
   insert_log_preview(&mut output_attributes, "pluginRunnerStderrPreview", &stderr);
   let failure_attributes = merged_attributes(runner_attributes.clone(), output_attributes.clone());
@@ -593,6 +579,21 @@ pub(super) fn run_stdio_runner(
     }
     ChildExitReason::Completed => {}
   }
+  if let Some(error) = stdin_output.error_message {
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!(
+          "Plugin command `{}` failed to receive input: {error}",
+          command.command_id
+        ),
+        stdout,
+        stderr,
+        failure_attributes,
+      )
+      .boxed(),
+    );
+  }
   if !wait.status.success() {
     return Err(
       PluginRunnerFailure::with_output(
@@ -617,7 +618,39 @@ pub(super) fn run_stdio_runner(
   })
 }
 
-fn validate_runner_entrypoint(
+fn runner_input_bytes(input_payload: &str) -> Vec<u8> {
+  let mut input = Vec::with_capacity(input_payload.len() + 1);
+  input.extend_from_slice(input_payload.as_bytes());
+  input.push(b'\n');
+  input
+}
+
+pub(super) fn insert_stdin_writer_attributes(
+  attributes: &mut HashMap<String, String>,
+  output: &PipeWriteOutput,
+) {
+  attributes.insert(
+    "pluginRunnerStdinBytesWritten".to_string(),
+    output.bytes_written.to_string(),
+  );
+  attributes.insert(
+    "pluginRunnerStdinWriteStatus".to_string(),
+    if output.error_message.is_some() {
+      "failed".to_string()
+    } else {
+      "completed".to_string()
+    },
+  );
+  if let Some(error) = output.error_message.as_ref() {
+    attributes.insert("pluginRunnerStdinWriteError".to_string(), error.clone());
+  }
+}
+
+pub(super) fn plugin_runner_input_bytes(input_payload: &str) -> Vec<u8> {
+  runner_input_bytes(input_payload)
+}
+
+pub(super) fn validate_runner_entrypoint(
   command: &HostPluginCommandEntry,
   entrypoint_path: &Path,
   attributes: &mut HashMap<String, String>,
@@ -813,7 +846,7 @@ pub(super) fn command_allows_network(command: &HostPluginCommandEntry) -> bool {
     .unwrap_or(true)
 }
 
-fn runner_output_attributes(
+pub(super) fn runner_output_attributes(
   wait: &ChildWaitResult,
   stdout: &BoundedPipeOutput,
   stderr: &BoundedPipeOutput,
@@ -870,7 +903,11 @@ fn child_exit_reason_label(reason: ChildExitReason) -> &'static str {
   }
 }
 
-fn insert_log_preview(attributes: &mut HashMap<String, String>, key: &str, content: &str) {
+pub(super) fn insert_log_preview(
+  attributes: &mut HashMap<String, String>,
+  key: &str,
+  content: &str,
+) {
   if content.trim().is_empty() {
     return;
   }
@@ -886,7 +923,7 @@ pub(super) fn merged_attributes(
   base
 }
 
-fn stderr_suffix(stderr: &str) -> String {
+pub(super) fn stderr_suffix(stderr: &str) -> String {
   if stderr.is_empty() {
     String::new()
   } else {

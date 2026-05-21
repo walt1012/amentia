@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 use std::process::{Child, Command, ExitStatus};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -7,6 +7,12 @@ use std::time::{Duration, Instant};
 pub struct BoundedPipeOutput {
   pub bytes: Vec<u8>,
   pub source_byte_count: usize,
+}
+
+#[derive(Debug, Default)]
+pub struct PipeWriteOutput {
+  pub bytes_written: usize,
+  pub error_message: Option<String>,
 }
 
 pub fn read_bounded_pipe_in_background<R>(
@@ -45,6 +51,36 @@ pub fn join_bounded_pipe_reader(
 ) -> BoundedPipeOutput {
   reader
     .and_then(|handle| handle.join().ok())
+    .unwrap_or_default()
+}
+
+pub fn write_pipe_in_background<W>(
+  mut writer: W,
+  bytes: Vec<u8>,
+) -> JoinHandle<PipeWriteOutput>
+where
+  W: Write + Send + 'static,
+{
+  thread::spawn(move || match writer.write_all(&bytes) {
+    Ok(()) => PipeWriteOutput {
+      bytes_written: bytes.len(),
+      error_message: None,
+    },
+    Err(error) => PipeWriteOutput {
+      bytes_written: 0,
+      error_message: Some(error.to_string()),
+    },
+  })
+}
+
+pub fn join_pipe_writer(writer: Option<JoinHandle<PipeWriteOutput>>) -> PipeWriteOutput {
+  writer
+    .map(|handle| {
+      handle.join().unwrap_or_else(|_| PipeWriteOutput {
+        bytes_written: 0,
+        error_message: Some("input writer panicked".to_string()),
+      })
+    })
     .unwrap_or_default()
 }
 
@@ -179,6 +215,17 @@ mod tests {
 
     assert!(output.bytes.is_empty());
     assert_eq!(output.source_byte_count, 0);
+  }
+
+  #[test]
+  fn pipe_writer_reports_written_bytes() {
+    let output = join_pipe_writer(Some(write_pipe_in_background(
+      Vec::<u8>::new(),
+      b"input".to_vec(),
+    )));
+
+    assert_eq!(output.bytes_written, 5);
+    assert!(output.error_message.is_none());
   }
 
   #[cfg(unix)]

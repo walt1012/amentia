@@ -18,7 +18,8 @@ final class RuntimeBridge {
   func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
     if currentProcessSession()?.isRunning != true {
       resetProcessState()
-      try launchProcess()
+      let environment = await runtimeEnvironment()
+      try launchProcess(environment: environment)
     }
 
     updateConnectionState(.launching, detail: launchDetail)
@@ -72,11 +73,11 @@ final class RuntimeBridge {
     return trimmedVersion.isEmpty ? fallbackVersion : trimmedVersion
   }
 
-  private func launchProcess() throws {
+  private func launchProcess(environment: [String: String]) throws {
     let executableURL = try resolveRuntimeURL()
     let session = try RuntimeBridgeProcessSession(
       executableURL: executableURL,
-      environment: runtimeEnvironment()
+      environment: environment
     )
     storeProcessSession(session)
     session.startObserving(
@@ -277,8 +278,8 @@ final class RuntimeBridge {
     throw RuntimeError.runtimePathMissing
   }
 
-  private func runtimeEnvironment() -> [String: String] {
-    RuntimeBridgeLocalEnvironment.runtimeEnvironment()
+  private func runtimeEnvironment() async -> [String: String] {
+    await RuntimeBridgeLocalEnvironment.runtimeEnvironment()
   }
 
   func sendRequest<Params: Encodable, ResultType: Decodable>(

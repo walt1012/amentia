@@ -20,7 +20,8 @@ enum RuntimeBridgeLocalEnvironment {
   }
 
   static func activeLocalModelPath() -> String? {
-    activeLocalModelSelection()?.modelPath
+    let defaults = UserDefaults.standard
+    return defaults.string(forKey: activeModelPathKey)
   }
 
   static func configureActiveLocalModel(manifestPath: String, modelPath: String) {
@@ -50,12 +51,12 @@ enum RuntimeBridgeLocalEnvironment {
     }
   }
 
-  static func runtimeEnvironment() -> [String: String] {
+  static func runtimeEnvironment() async -> [String: String] {
     var environment = sanitizedInheritedEnvironment()
     environment["PITH_DATA_DIR"] = AppSupportDirectories.storageDirectory().path
     environment["PITH_LOCAL_PLUGIN_DIR"] = AppSupportDirectories.pluginInstallDirectory().path
     applyBundleResourceEnvironment(to: &environment)
-    if let activeModel = activeLocalModelSelection() {
+    if let activeModel = await activeLocalModelSelection() {
       environment["PITH_MODEL_PACK_MANIFEST"] = activeModel.manifestPath
       environment["PITH_MODEL_PATH"] = activeModel.modelPath
       environment["PITH_LFM_MODEL_PATH"] = activeModel.modelPath
@@ -97,7 +98,7 @@ enum RuntimeBridgeLocalEnvironment {
     }
   }
 
-  private static func activeLocalModelSelection() -> RuntimeBridgeActiveLocalModelSelection? {
+  private static func activeLocalModelSelection() async -> RuntimeBridgeActiveLocalModelSelection? {
     let defaults = UserDefaults.standard
     guard let manifestPath = defaults.string(forKey: activeModelManifestPathKey),
           !manifestPath.isEmpty,
@@ -118,7 +119,7 @@ enum RuntimeBridgeLocalEnvironment {
       return nil
     }
 
-    guard LocalModelCatalog.isVerifiedInstalledSelection(
+    guard await LocalModelCatalog.isVerifiedInstalledSelectionInBackground(
       storageRootPath: localModelStorageRootPath(),
       modelPath: modelPath,
       manifestPath: manifestPath
