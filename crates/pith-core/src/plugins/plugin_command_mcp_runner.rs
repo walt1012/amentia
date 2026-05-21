@@ -221,17 +221,17 @@ pub(super) fn run_mcp_plugin_command(
     connector_refs,
   );
 
-  let output = run_mcp_stdio_session(
+  let output = run_mcp_stdio_session(PluginMcpSessionRequest {
     command,
-    &sandbox,
-    &entrypoint_path,
-    &server.args,
-    &input_payload,
+    sandbox: &sandbox,
+    entrypoint_path: &entrypoint_path,
+    args: &server.args,
+    input_payload: &input_payload,
     connector_refs,
     cancellation,
-    &runner_context_attributes,
-    &target,
-  )?;
+    sandbox_attributes: &runner_context_attributes,
+    target: &target,
+  })?;
   mcp_runner_output(
     command,
     &execution.kind,
@@ -241,31 +241,37 @@ pub(super) fn run_mcp_plugin_command(
   )
 }
 
-fn run_mcp_stdio_session(
-  command: &HostPluginCommandEntry,
-  sandbox: &PluginRunnerSandbox,
-  entrypoint_path: &Path,
-  args: &[String],
-  input_payload: &str,
-  connector_refs: &[PluginConnectorExecutionRef],
-  cancellation: &GenerationCancellation,
-  sandbox_attributes: &HashMap<String, String>,
-  target: &PluginMcpTarget,
-) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
-  let mut runner_attributes = sandbox_attributes.clone();
-  validate_runner_entrypoint(command, entrypoint_path, &mut runner_attributes)?;
+struct PluginMcpSessionRequest<'a> {
+  command: &'a HostPluginCommandEntry,
+  sandbox: &'a PluginRunnerSandbox,
+  entrypoint_path: &'a Path,
+  args: &'a [String],
+  input_payload: &'a str,
+  connector_refs: &'a [PluginConnectorExecutionRef],
+  cancellation: &'a GenerationCancellation,
+  sandbox_attributes: &'a HashMap<String, String>,
+  target: &'a PluginMcpTarget,
+}
 
-  let mut process = sandbox.build_command(entrypoint_path);
-  process.args(args);
+fn run_mcp_stdio_session(
+  request: PluginMcpSessionRequest<'_>,
+) -> PluginRunnerRunResult<PluginRunnerProcessOutput> {
+  let command = request.command;
+  let target = request.target;
+  let mut runner_attributes = request.sandbox_attributes.clone();
+  validate_runner_entrypoint(command, request.entrypoint_path, &mut runner_attributes)?;
+
+  let mut process = request.sandbox.build_command(request.entrypoint_path);
+  process.args(request.args);
   process
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .env("PITH_PLUGIN_COMMAND_ID", &command.command_id)
     .env("PITH_PLUGIN_ID", &command.plugin_id)
-    .env("PITH_PLUGIN_SANDBOX_DETAIL", sandbox.detail())
+    .env("PITH_PLUGIN_SANDBOX_DETAIL", request.sandbox.detail())
     .env("PITH_PLUGIN_SOURCE_PATH", &command.source_path);
-  for connector in connector_refs {
+  for connector in request.connector_refs {
     let Some(secret) = connector.credential_secret.as_deref() else {
       continue;
     };
@@ -301,10 +307,12 @@ fn run_mcp_stdio_session(
   let stdin_writer = child
     .stdin
     .take()
-    .map(|writer| write_pipe_in_background(writer, plugin_runner_input_bytes(input_payload)));
+    .map(|writer| {
+      write_pipe_in_background(writer, plugin_runner_input_bytes(request.input_payload))
+    });
 
   let wait =
-    wait_for_mcp_tool_response(&mut child, &stdout_lines, cancellation).map_err(|error| {
+    wait_for_mcp_tool_response(&mut child, &stdout_lines, request.cancellation).map_err(|error| {
       PluginRunnerFailure::with_output(
         -32054,
         format!(
