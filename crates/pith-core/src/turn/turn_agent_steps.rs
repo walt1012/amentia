@@ -61,7 +61,10 @@ impl AgentStepRecord {
         self.invocation.kind.as_str().to_string(),
       );
       attributes.insert("agentToolName".to_string(), self.invocation.name.clone());
-      if matches!(phase, AgentStepPhase::ToolCall | AgentStepPhase::Observation) {
+      if matches!(
+        phase,
+        AgentStepPhase::ToolCall | AgentStepPhase::Observation
+      ) {
         attributes.insert("toolCallId".to_string(), self.invocation.call_id.clone());
       }
     }
@@ -132,9 +135,7 @@ impl AgentStepPhase {
 
 fn tool_kind_for_action(action: &PreparedTurnAction) -> AgentToolKind {
   match action {
-    PreparedTurnAction::Write { .. } | PreparedTurnAction::ReadFile { .. } => {
-      AgentToolKind::File
-    }
+    PreparedTurnAction::Write { .. } | PreparedTurnAction::ReadFile { .. } => AgentToolKind::File,
     PreparedTurnAction::Shell { .. } => AgentToolKind::Shell,
     PreparedTurnAction::PluginCommand { snapshot } => {
       if snapshot.uses_connector() {
@@ -173,9 +174,7 @@ fn item_phase(item: &TimelineItem) -> AgentStepPhase {
   match item.kind.as_str() {
     "plan" => AgentStepPhase::Plan,
     "toolStart" | "pluginCommand" => AgentStepPhase::ToolCall,
-    "toolResult" | "pluginResult" | "diffArtifact" | "warning" => {
-      AgentStepPhase::Observation
-    }
+    "toolResult" | "pluginResult" | "diffArtifact" | "warning" => AgentStepPhase::Observation,
     "approvalRequested" => AgentStepPhase::ApprovalPause,
     "assistantMessage" => AgentStepPhase::Final,
     _ => AgentStepPhase::Observation,

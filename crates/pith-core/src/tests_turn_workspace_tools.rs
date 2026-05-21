@@ -52,7 +52,10 @@ fn turn_start_reads_a_requested_workspace_file() {
   let items = result["items"].as_array().expect("items");
 
   assert_eq!(items[1]["kind"], "plan");
-  assert_eq!(items[1]["attributes"]["agentStepId"], "thread-1-turn-1-step-1");
+  assert_eq!(
+    items[1]["attributes"]["agentStepId"],
+    "thread-1-turn-1-step-1"
+  );
   assert_eq!(items[1]["attributes"]["agentStepPhase"], "plan");
   assert_eq!(items[1]["attributes"]["agentToolName"], "read_file");
   assert_eq!(items[1]["attributes"]["responseRole"], "planner");
