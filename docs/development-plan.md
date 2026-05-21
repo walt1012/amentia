@@ -165,6 +165,9 @@ Active status:
 - Done: workspace, shell-after-approval, Web Search, plugin, and connector
   timeline items share local tool schema attributes while keeping legacy UI
   fields.
+- Done: turn execution now delegates each prepared action through a step
+  dispatcher with explicit continue/stop control, so the next loop increment can
+  iterate tool steps without growing the top-level turn reducer.
 - Not done: the normal turn path still executes one prepared action, not a real
   Plan/Act/Observe loop.
 - Not done: the bundled Notion connector is still a dry-run MCP server.
