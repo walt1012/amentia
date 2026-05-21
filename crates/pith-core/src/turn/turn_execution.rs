@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
 
-use super::turn_agent_steps::{AgentStepOutcome, AgentStepRecord};
+use super::turn_agent_loop::AgentLoopCoordinator;
 use super::turn_approval_execution::{execute_shell_turn, execute_write_turn};
 use super::turn_web_search::{
   execute_web_search_candidate_local_answer, model_confirms_web_search_candidate,
@@ -28,7 +28,8 @@ pub(crate) fn execute_prepared_turn_snapshot(
   let mut plugin_command_output = None;
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
   let step_start_index = items.len();
-  let agent_step = AgentStepRecord::from_turn_action(&snapshot.turn_id, 1, &action);
+  let agent_loop = AgentLoopCoordinator::new(&snapshot.turn_id);
+  let agent_step = agent_loop.begin_compatibility_step(&action);
 
   match action {
     PreparedTurnAction::Write {
@@ -167,12 +168,12 @@ pub(crate) fn execute_prepared_turn_snapshot(
     PreparedTurnAction::NoWorkspace => execute_no_workspace_turn(&snapshot, &mut items),
   }
 
-  let step_outcome = AgentStepOutcome::from_items(
-    &items[step_start_index..],
+  agent_loop.finish_compatibility_step(
+    &agent_step,
+    &mut items[step_start_index..],
     pending_approval.is_some(),
     pending_active_turn.is_some(),
   );
-  agent_step.tag_items(&mut items[step_start_index..], step_outcome);
 
   TurnStartExecutionOutput {
     thread_id: snapshot.thread_id,

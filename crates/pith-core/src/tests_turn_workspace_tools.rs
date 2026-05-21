@@ -56,6 +56,15 @@ fn turn_start_reads_a_requested_workspace_file() {
     items[1]["attributes"]["agentStepId"],
     "thread-1-turn-1-step-1"
   );
+  assert_eq!(
+    items[1]["attributes"]["agentLoopId"],
+    "thread-1-turn-1-loop-1"
+  );
+  assert_eq!(items[1]["attributes"]["agentLoopMaxSteps"], "3");
+  assert_eq!(
+    items[1]["attributes"]["agentLoopMode"],
+    "compatibilitySingleAction"
+  );
   assert_eq!(items[1]["attributes"]["agentStepPhase"], "plan");
   assert_eq!(items[1]["attributes"]["agentToolName"], "read_file");
   assert_eq!(items[1]["attributes"]["responseRole"], "planner");

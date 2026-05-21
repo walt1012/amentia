@@ -152,8 +152,8 @@ Implementation sequence:
 Active status:
 
 - Loop foundation has started: current single-action turns carry stable agent
-  step, typed local-tool, tool-call status, and Web Search source metadata
-  before the coordinator takes over.
+  loop, step, typed local-tool, tool-call status, and Web Search source
+  metadata while the compatibility coordinator prepares for multi-step turns.
 
 M6 exit gate:
 

@@ -49,6 +49,7 @@ fn turn_start_web_search_uses_enabled_web_search_permission() {
 
   assert_eq!(items[0]["kind"], "userMessage");
   assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(items[1]["attributes"]["agentLoopSchema"], "pith.agentLoop.v1");
   assert_eq!(items[1]["attributes"]["agentToolKind"], "web");
   assert_eq!(items[1]["attributes"]["agentToolName"], "web_search");
   assert_eq!(items[2]["kind"], "warning");
@@ -251,6 +252,7 @@ fn turn_start_executes_web_search_with_fixture_client() {
   assert_eq!(items[2]["kind"], "toolStart");
   assert_eq!(items[2]["title"], "web_search");
   assert_eq!(items[2]["attributes"]["agentStepPhase"], "toolCall");
+  assert_eq!(items[2]["attributes"]["agentLoopStepCount"], "1");
   assert_eq!(items[2]["attributes"]["agentToolKind"], "web");
   assert_eq!(items[2]["attributes"]["client"], "fixture");
   assert_eq!(items[3]["kind"], "toolResult");
