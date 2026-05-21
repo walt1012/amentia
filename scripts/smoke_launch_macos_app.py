@@ -430,15 +430,43 @@ def validate_tooling_readiness(
         "Packaged runtime readiness reported unexpected sandbox backend after "
         f"workspace open. Backend: {metrics.get('sandboxBackend')}"
       )
-    if metrics.get("sandboxBackend") == "macosSeatbelt" and metrics.get("sandboxActive") != "true":
+    native_sandbox_check = checks.get("nativeSandbox")
+    native_sandbox_status = (
+      native_sandbox_check.get("status")
+      if isinstance(native_sandbox_check, dict)
+      else None
+    )
+    if (
+      metrics.get("sandboxBackend") == "macosSeatbelt"
+      and metrics.get("sandboxActive") != "true"
+    ):
       raise RuntimeError(
         "Packaged runtime readiness must report an active native sandbox after "
         f"workspace open. Active: {metrics.get('sandboxActive')}"
       )
-    if metrics.get("sandboxBackend") == "processOnly" and metrics.get("sandboxActive") != "false":
+    if (
+      metrics.get("sandboxBackend") == "macosSeatbelt"
+      and native_sandbox_status != "ready"
+    ):
+      raise RuntimeError(
+        "Packaged runtime readiness must mark native sandbox ready when the "
+        f"macosSeatbelt backend is active. Status: {native_sandbox_status}"
+      )
+    if (
+      metrics.get("sandboxBackend") == "processOnly"
+      and metrics.get("sandboxActive") != "false"
+    ):
       raise RuntimeError(
         "Packaged runtime readiness must report inactive native sandbox when "
         f"falling back to process-only. Active: {metrics.get('sandboxActive')}"
+      )
+    if (
+      metrics.get("sandboxBackend") == "processOnly"
+      and native_sandbox_status != "limited"
+    ):
+      raise RuntimeError(
+        "Packaged runtime readiness must mark native sandbox limited when "
+        f"falling back to process-only. Status: {native_sandbox_status}"
       )
   else:
     if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:

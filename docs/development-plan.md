@@ -77,7 +77,8 @@ Closed capabilities:
   workspace bootstrap/search, deterministic first local request, web search,
   bundled MCP plugin command execution, connector authorization, approval
   recovery, runner memory capture, launch smoke coverage, internal DMG shape,
-  release-state safety, and the Developer ID upgrade path.
+  release-state safety, native sandbox fallback proof, and the Developer ID
+  upgrade path.
 
 ## Current Milestone: M6 Agent Loop and Real Connectors
 

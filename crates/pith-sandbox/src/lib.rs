@@ -6,6 +6,11 @@ use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 #[cfg(target_os = "macos")]
 use std::sync::OnceLock;
+#[cfg(target_os = "macos")]
+use std::time::Duration;
+
+#[cfg(target_os = "macos")]
+use pith_process::{configure_process_group, wait_for_child, ChildExitReason};
 
 const MACOS_SANDBOX_EXEC_PATH: &str = "/usr/bin/sandbox-exec";
 
@@ -211,7 +216,9 @@ fn probe_macos_sandbox_exec() -> bool {
     return false;
   }
 
-  Command::new(MACOS_SANDBOX_EXEC_PATH)
+  let mut command = Command::new(MACOS_SANDBOX_EXEC_PATH);
+  configure_process_group(&mut command);
+  let Ok(mut child) = command
     .arg("-p")
     .arg(macos_sandbox_probe_profile())
     .arg("/bin/sh")
@@ -220,8 +227,21 @@ fn probe_macos_sandbox_exec() -> bool {
     .stdin(Stdio::null())
     .stdout(Stdio::null())
     .stderr(Stdio::null())
-    .status()
-    .is_ok_and(|status| status.success())
+    .spawn()
+  else {
+    return false;
+  };
+
+  wait_for_child(
+    &mut child,
+    Duration::from_secs(2),
+    Duration::from_millis(20),
+    Duration::from_millis(50),
+    || false,
+  )
+  .is_ok_and(|wait| {
+    wait.reason == ChildExitReason::Completed && wait.status.success()
+  })
 }
 
 #[cfg(target_os = "macos")]

@@ -31,4 +31,6 @@ Public GitHub Releases should upload the notarized `Pith-<tag>-macos-x86_64.dmg`
 and checksum. If Developer ID credentials are unavailable, the release workflow
 defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
 an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
-path, but it must not be promoted as a normal trusted installer.
+path, but it must not be promoted as a normal trusted installer. The release
+state helper rejects accidental ad-hoc updates to an already-public release
+unless that untrusted prerelease path was explicitly requested.

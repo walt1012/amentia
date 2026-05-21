@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,13 +35,31 @@ def plan_release_state(
   existing_draft: bool | None,
 ) -> ReleaseState:
   is_developer_id = signing_mode == "developer-id"
+  if release_exists and existing_draft is None:
+    raise ValueError("Existing GitHub Release draft state is required.")
+  if (
+    not is_developer_id
+    and not allow_untrusted_ad_hoc
+    and release_exists
+    and existing_draft is False
+  ):
+    raise ValueError(
+      "Refusing to update a public GitHub Release with an ad-hoc DMG. "
+      "Run with publish_untrusted_ad_hoc=true or configure Developer ID signing."
+    )
+
   final_draft = requested_draft or (
     not is_developer_id and not allow_untrusted_ad_hoc
   )
   final_prerelease = requested_prerelease or not is_developer_id
 
   desired_draft = final_draft
-  if release_exists and existing_draft is False and not requested_draft:
+  if (
+    is_developer_id
+    and release_exists
+    and existing_draft is False
+    and not requested_draft
+  ):
     desired_draft = False
 
   return ReleaseState(draft=desired_draft, prerelease=final_prerelease)
@@ -73,20 +92,24 @@ def main() -> int:
   parser.add_argument("--env-output", required=True)
   args = parser.parse_args()
 
-  release_exists = parse_bool(args.release_exists)
-  existing_draft = (
-    parse_bool(args.existing_draft)
-    if args.existing_draft.strip()
-    else None
-  )
-  state = plan_release_state(
-    signing_mode=args.signing_mode,
-    requested_draft=parse_bool(args.requested_draft),
-    requested_prerelease=parse_bool(args.requested_prerelease),
-    allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
-    release_exists=release_exists,
-    existing_draft=existing_draft,
-  )
+  try:
+    release_exists = parse_bool(args.release_exists)
+    existing_draft = (
+      parse_bool(args.existing_draft)
+      if args.existing_draft.strip()
+      else None
+    )
+    state = plan_release_state(
+      signing_mode=args.signing_mode,
+      requested_draft=parse_bool(args.requested_draft),
+      requested_prerelease=parse_bool(args.requested_prerelease),
+      allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
+      release_exists=release_exists,
+      existing_draft=existing_draft,
+    )
+  except ValueError as error:
+    print(f"release state planning failed: {error}", file=sys.stderr)
+    return 1
 
   notes = Path(args.notes_file).read_text(encoding="utf-8")
   Path(args.state_output).write_text(

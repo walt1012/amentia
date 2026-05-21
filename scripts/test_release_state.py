@@ -32,6 +32,36 @@ def assert_state(
     )
 
 
+def assert_rejects_public_ad_hoc_without_explicit_publish() -> None:
+  try:
+    plan_release_state(
+      signing_mode="ad-hoc",
+      requested_draft=False,
+      requested_prerelease=False,
+      allow_untrusted_ad_hoc=False,
+      release_exists=True,
+      existing_draft=False,
+    )
+  except ValueError:
+    return
+  raise AssertionError("public ad-hoc release updates should be rejected")
+
+
+def assert_rejects_unknown_existing_release_state() -> None:
+  try:
+    plan_release_state(
+      signing_mode="developer-id",
+      requested_draft=False,
+      requested_prerelease=False,
+      allow_untrusted_ad_hoc=False,
+      release_exists=True,
+      existing_draft=None,
+    )
+  except ValueError:
+    return
+  raise AssertionError("existing release updates require known draft state")
+
+
 def main() -> int:
   assert_state(
     signing_mode="developer-id",
@@ -63,11 +93,13 @@ def main() -> int:
     expected_draft=False,
     expected_prerelease=True,
   )
+  assert_rejects_unknown_existing_release_state()
+  assert_rejects_public_ad_hoc_without_explicit_publish()
   assert_state(
     signing_mode="ad-hoc",
     requested_draft=False,
     requested_prerelease=False,
-    allow_untrusted_ad_hoc=False,
+    allow_untrusted_ad_hoc=True,
     release_exists=True,
     existing_draft=False,
     expected_draft=False,

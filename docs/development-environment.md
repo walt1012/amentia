@@ -125,10 +125,12 @@ Release publishing requires these repository secrets:
 - `APPLE_APP_SPECIFIC_PASSWORD`
 
 The release workflow must never publish an ad-hoc or non-notarized installer as
-a normal trusted release. Without Developer ID secrets, it should default to a
-draft release; with explicit maintainer intent, it may publish an untrusted
-ad-hoc prerelease for users who accept the Gatekeeper warning path. With
-Developer ID secrets, it should publish the signed, notarized, stapled DMG.
+a normal trusted release. Without Developer ID secrets, it defaults to a draft
+release and refuses to update an already-public release unless
+`publish_untrusted_ad_hoc=true` is set explicitly. With that maintainer intent,
+it may publish an untrusted ad-hoc prerelease for users who accept the
+Gatekeeper warning path. With Developer ID secrets, it publishes the signed,
+notarized, stapled DMG.
 
 ## Local Model Runtime
 
