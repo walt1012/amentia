@@ -75,9 +75,8 @@ Not yet aligned:
 
 - Agent loop: Pith still routes most turns to one prepared action instead of a
   model-guided Plan/Act/Observe loop.
-- Tool contract: file, search, web search, shell, plugin, and Git actions are
-  still exposed through separate reducers instead of one typed local tool
-  contract.
+- Tool contract: timeline items now share one local tool schema, but execution
+  still runs through separate reducers instead of one loop-owned dispatcher.
 - Real connectors: the Notion connector is still a safe dry-run proof, not a
   real external-service workflow.
 - Source-grounded answers: Web Search results are visible in the timeline, but
@@ -130,34 +129,45 @@ results, plugins, and connectors.
 
 Current review snapshot:
 
-- Keep the current app, runtime, model, sandbox, packaging, and plugin
-  foundations; they are useful and no large rewrite is justified.
-- Do not add more branches to the old single-action router except as temporary
-  compatibility behind the new loop.
+- Runtime supervision, model validation, sandbox boundaries, package delivery,
+  workspace path safety, Web Search, and memory ranking are structurally sound;
+  no broad rewrite is justified there.
+- The main M6 blocker is architectural, not cosmetic: normal turns still use
+  `compatibilitySingleAction`, and the Notion connector still proves metadata
+  rather than a real external-service path.
+- The macOS app is now a composition root with focused feature files. Keep
+  splitting only when ownership or failure boundaries improve; do not split just
+  to shrink line counts.
+- The large plugin execution test file should be split by behavior after the
+  loop and connector proof, so tests remain readable without interrupting the
+  product-critical path.
 - Do not broaden into generic RAG, multi-agent orchestration, marketplace work,
   or cosmetic module splitting during M6.
 
 Implementation sequence:
 
-1. Loop foundation: define one typed local tool invocation/result envelope,
-   persist compact agent step records, and add a bounded request-scoped loop
-   coordinator with step caps, budgets, cancellation, and recovery.
-2. Tool migration: run read, search, Web Search, shell, write approval, plugin
-   command, connector, and workspace-change actions through that loop. Keep the
-   existing router as the first planner only until each branch is migrated.
-3. Cowork proof: make Web Search final answers source-attributed, replace the
-   Notion dry-run with one real credential-safe MCP connector path, then add the
-   minimal status, diff/review, apply-selected-changes, and handoff flow.
+1. Replace the compatibility coordinator with a request-scoped loop dispatcher
+   that can execute up to three bounded steps, feed observations back into the
+   next decision, stop on cancellation, and resume approvals in the same step.
+2. Move tools into the dispatcher in this order: workspace read/search, Web
+   Search, shell/write approval, plugin command, connector command, and
+   workspace-change review/apply.
+3. Prove cowork value with source-attributed Web Search answers, one real
+   credential-safe Notion MCP connector path, and a minimal review/apply/handoff
+   workflow for local workspace changes.
 
 Active status:
 
-- Loop foundation has started: current single-action turns carry stable agent
-  loop, step, typed local-tool, tool-call status, and Web Search source
-  metadata while the compatibility coordinator prepares for multi-step turns.
-- Approval resume is now part of the same agent step metadata path, so approved
-  or denied tool work does not become detached timeline output.
-- Workspace, shell-after-approval, Web Search, plugin, and connector timeline
-  items now share local tool schema attributes while keeping legacy UI fields.
+- Done: single-action turns carry stable loop, step, local-tool, tool-call
+  status, and Web Search source metadata.
+- Done: approval resume preserves the same agent step metadata, so approved or
+  denied tool work does not become detached timeline output.
+- Done: workspace, shell-after-approval, Web Search, plugin, and connector
+  timeline items share local tool schema attributes while keeping legacy UI
+  fields.
+- Not done: the normal turn path still executes one prepared action, not a real
+  Plan/Act/Observe loop.
+- Not done: the bundled Notion connector is still a dry-run MCP server.
 
 M6 exit gate:
 
