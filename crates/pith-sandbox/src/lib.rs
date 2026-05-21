@@ -267,6 +267,8 @@ pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
     "  (subpath \"/bin\")".to_string(),
     "  (subpath \"/sbin\")".to_string(),
     "  (subpath \"/etc\")".to_string(),
+    "  (subpath \"/private/etc\")".to_string(),
+    "  (subpath \"/private/var/db\")".to_string(),
     "  (subpath \"/dev\")".to_string(),
   ];
   for readable_root in &readable_roots {
@@ -418,6 +420,21 @@ mod tests {
     let profile = macos_seatbelt_profile(&policy);
 
     assert!(profile.contains("(allow network*)"));
+  }
+
+  #[test]
+  fn profile_allows_read_only_macos_runtime_roots() {
+    let policy = SandboxPolicy::workspace_read_write("/Users/example/work");
+    let profile = macos_seatbelt_profile(&policy);
+
+    assert!(profile.contains("(subpath \"/private/etc\")"));
+    assert!(profile.contains("(subpath \"/private/var/db\")"));
+    let write_section = profile
+      .split("(allow file-write*")
+      .nth(1)
+      .expect("write section");
+    assert!(!write_section.contains("(subpath \"/private/etc\")"));
+    assert!(!write_section.contains("(subpath \"/private/var/db\")"));
   }
 
   #[test]
