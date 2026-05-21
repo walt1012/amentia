@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use pith_model_runtime::GenerationCancellation;
-use pith_plugin_host::{
-  PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry,
-};
+use pith_plugin_host::{PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry};
 use pith_protocol::WorkspaceSummary;
 
 use super::plugin_command_mcp_output::mcp_runner_output;
