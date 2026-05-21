@@ -54,10 +54,7 @@ pub fn join_bounded_pipe_reader(
     .unwrap_or_default()
 }
 
-pub fn write_pipe_in_background<W>(
-  mut writer: W,
-  bytes: Vec<u8>,
-) -> JoinHandle<PipeWriteOutput>
+pub fn write_pipe_in_background<W>(mut writer: W, bytes: Vec<u8>) -> JoinHandle<PipeWriteOutput>
 where
   W: Write + Send + 'static,
 {

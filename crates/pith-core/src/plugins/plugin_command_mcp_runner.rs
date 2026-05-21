@@ -21,14 +21,15 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::plugin_command_runner::{
-  command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
-  insert_log_preview, insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes,
-  insert_stdin_writer_attributes, merged_attributes, plugin_root_for_command,
-  plugin_runner_input_bytes, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
-  plugin_runner_setup_phase_attributes, runner_entrypoint_setup_blocker, safe_entrypoint_path,
-  stderr_suffix, validate_runner_entrypoint, PluginRunnerFailure, PluginRunnerProcessOutput,
-  PluginRunnerResult, PluginRunnerRunResult, PLUGIN_RUNNER_GRACE_PERIOD,
-  PLUGIN_RUNNER_OUTPUT_LIMIT, PLUGIN_RUNNER_POLL_INTERVAL, PLUGIN_RUNNER_TIMEOUT,
+  command_allows_network, insert_connector_runner_attributes, insert_log_preview,
+  insert_plugin_root_attribute, insert_resolved_entrypoint_attribute,
+  insert_runner_input_value_attributes, insert_stdin_writer_attributes, merged_attributes,
+  plugin_root_for_command, plugin_runner_input_bytes, plugin_runner_setup_attributes,
+  plugin_runner_setup_failed_attributes, plugin_runner_setup_phase_attributes,
+  runner_entrypoint_setup_blocker, safe_entrypoint_path, stderr_suffix, validate_runner_entrypoint,
+  PluginRunnerFailure, PluginRunnerProcessOutput, PluginRunnerResult, PluginRunnerRunResult,
+  PLUGIN_RUNNER_GRACE_PERIOD, PLUGIN_RUNNER_OUTPUT_LIMIT, PLUGIN_RUNNER_POLL_INTERVAL,
+  PLUGIN_RUNNER_TIMEOUT,
 };
 use super::plugin_command_runner_output::plugin_runner_output;
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
@@ -300,17 +301,18 @@ fn run_mcp_stdio_session(
     .take()
     .map(|writer| write_pipe_in_background(writer, plugin_runner_input_bytes(input_payload)));
 
-  let wait = wait_for_mcp_tool_response(&mut child, &stdout_lines, cancellation).map_err(|error| {
-    PluginRunnerFailure::new(
-      -32054,
-      format!(
-        "Plugin command `{}` failed while running MCP server `{}`: {error}",
-        command.command_id, target.server_id
-      ),
-      runner_attributes.clone(),
-    )
-    .boxed()
-  })?;
+  let wait =
+    wait_for_mcp_tool_response(&mut child, &stdout_lines, cancellation).map_err(|error| {
+      PluginRunnerFailure::new(
+        -32054,
+        format!(
+          "Plugin command `{}` failed while running MCP server `{}`: {error}",
+          command.command_id, target.server_id
+        ),
+        runner_attributes.clone(),
+      )
+      .boxed()
+    })?;
   let stdin_output = join_pipe_writer(stdin_writer);
   let stdout_output = join_bounded_pipe_reader(stdout_reader);
   let stderr_output = join_bounded_pipe_reader(stderr_reader);
