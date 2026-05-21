@@ -304,15 +304,12 @@ fn run_mcp_stdio_session(
     .stderr
     .take()
     .map(|reader| read_bounded_pipe_in_background(reader, PLUGIN_RUNNER_OUTPUT_LIMIT));
-  let stdin_writer = child
-    .stdin
-    .take()
-    .map(|writer| {
-      write_pipe_in_background(writer, plugin_runner_input_bytes(request.input_payload))
-    });
+  let stdin_writer = child.stdin.take().map(|writer| {
+    write_pipe_in_background(writer, plugin_runner_input_bytes(request.input_payload))
+  });
 
-  let wait =
-    wait_for_mcp_tool_response(&mut child, &stdout_lines, request.cancellation).map_err(|error| {
+  let wait = wait_for_mcp_tool_response(&mut child, &stdout_lines, request.cancellation).map_err(
+    |error| {
       PluginRunnerFailure::with_output(
         -32054,
         format!(
@@ -324,7 +321,8 @@ fn run_mcp_stdio_session(
         runner_attributes.clone(),
       )
       .boxed()
-    })?;
+    },
+  )?;
   let stdin_output = join_pipe_writer(stdin_writer);
   let stdout_output = join_bounded_pipe_reader(stdout_reader);
   let stderr_output = join_bounded_pipe_reader(stderr_reader);
