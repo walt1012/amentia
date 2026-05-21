@@ -53,14 +53,14 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestones 1-4 are closed on the active development branch. The current focus is Milestone 5:
-daily-driver hardening for the first-run model download, workspace flow, web search, sandbox,
-approvals, plugin recovery, and x86_64 macOS package path.
+Milestones 1-5 are closed on the active development branch. Pith now has the
+daily-driver foundation: first-use model setup, workspace flow, web search,
+sandbox, approvals, plugin recovery, and the x86_64 macOS package path.
 
-The active branch includes guided local model choice, download, and activation, pause/continue/cancel
-with persisted recovery state, workspace-bound thread filtering, bounded shell/model/web-search
-execution, native sandbox diagnostics, progressive inspector disclosure, typed plugin command
-contracts, and bounded local `stdio` or MCP stdio plugin runners.
+The current focus is Milestone 6: a bounded local agent loop. The next product
+gap is moving from one prepared action per turn to a small Plan/Act/Observe
+loop that can use tools repeatedly, pause for approvals, resume safely, and keep
+the timeline understandable.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 

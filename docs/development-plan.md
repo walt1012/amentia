@@ -58,7 +58,7 @@ owns durable records.
 
 ## Foundation Already Closed
 
-Milestones 1-4 are closed. Keep their details in git history, not in this plan.
+Milestones 1-5 are closed. Keep their details in git history, not in this plan.
 
 Closed capabilities:
 
@@ -72,90 +72,86 @@ Closed capabilities:
   flows.
 - Timeline trust boundaries for approvals, plugin runs, connector blockers,
   source reveal, refresh recovery, runtime status, and credential-safe metadata.
+- Daily-driver package proof: CI validates the x86_64 macOS app bundle, bundled
+  runtime protocol, first-use model metadata, app-owned support directories,
+  workspace bootstrap/search, deterministic first local request, web search,
+  bundled MCP plugin command execution, connector authorization, approval
+  recovery, runner memory capture, launch smoke coverage, internal DMG shape,
+  release-state safety, and the Developer ID upgrade path.
 
-## Current Milestone: M5 Daily Driver Hardening
+## Current Milestone: M6 Agent Loop and Real Connectors
 
-M5 turns the working local agent platform into a dependable daily-driver macOS
-app: first launch, model setup, workspace work, recovery, packaging, and plugins
-must hold together as one usable product without expanding into a feature zoo.
+M6 upgrades Pith from a safe single-action local assistant into a small,
+auditable agent that can plan, use tools repeatedly, observe results, and stop
+cleanly. The goal is not to copy Codex or Claude feature-for-feature; it is to
+keep Pith native, local-first, and small while closing the biggest product gap:
+the agent loop.
 
 Workstreams:
 
-- First-run daily loop: auto-start the local runtime, download or resume a
-  model, activate it, open a workspace, create a thread, send the first
-  request, and recover in-app when model, runtime, web search, plugin, or
-  sandbox readiness is missing.
-- Agent execution loop: keep turns, approvals, workspace search, web search,
-  plugin commands, and model activation request-scoped, cancellable, and
-  visible without blocking unrelated read-only UI updates; shell artifacts stay
-  bounded even when subprocess output is noisy.
-- Native safety loop: keep workspace file tools symlink-safe, sandbox decisions
-  visible, sandbox temporary roots symlink-safe, plugin runner output untrusted
-  by default, runtime launch environment app-owned, and recovery actions tied
-  to trusted runtime metadata.
-- Package loop: keep the x86_64 macOS 12 app bundle signed-ready with runtime
-  binary, self-contained local inference backend, exact x86_64 architecture
-  validation, model metadata, plugin manifests, no model weights, parallel
-  cached executable builds, Swift model-manager proof tests, packaged runtime
-  protocol probes, launch smoke coverage, release-versioned metadata, mounted-DMG
-  launch proof, and a Developer ID upgrade path for public releases.
+- Bounded agent loop: replace the single heuristic turn router with a
+  request-scoped Plan/Act/Observe loop that has a strict step cap, cancellation,
+  tool budgets, approval pauses, recovery items, and readable timeline state.
+- Tool contracts: make file read/write, search, web search, shell, plugin
+  command, and future Git actions available through one typed local tool
+  contract instead of one-off routing branches.
+- Real connector proof: graduate the Notion-style connector from dry-run proof
+  to one real local MCP connector path with credential handling, sandbox
+  visibility, safe failure modes, and no secret leakage.
+- Source-grounded retrieval: keep Web Search as the retrieval layer, but improve
+  source attribution, result inspection, and citation-ready summaries before
+  considering any generic local RAG.
+- Minimal Git loop: add only the daily-driver Git surface Pith needs first:
+  status, diff, stage selected changes, commit message draft, and optional
+  worktree isolation. Avoid becoming a full terminal or Git client.
 
 Current Status:
 
-- CI now proves the x86_64 app bundle shape, packaged runtime protocol,
-  app-owned support state, workspace bootstrap/search, web search, sandbox
-  readiness, model manager planning, app launch smoke coverage, release-state
-  safety, and portable local inference backend checks.
-- Recent hardening closed the most dangerous daily-driver gaps: bounded plugin
-  stdin/stdout/stderr handling, MCP session stop-after-response behavior,
-  MCP runner target/session/output boundaries, off-MainActor model verification
-  before runtime launch, and one main window for the current single-runtime
-  design.
-- Remaining M5 risk is product proof, not feature count: a fresh user must be
-  able to download one verified model, open a workspace, run a real request,
-  use web search and a local plugin command, and recover without terminal help.
+- Pith has a solid local-first app foundation: model manager, sandbox,
+  approvals, recovery, workspace tools, web search, plugin manifests, local MCP
+  stdio execution, packaging, release gates, and CI smoke coverage.
+- The main gap versus Codex and Claude is now the agent loop: most turns still
+  resolve to one prepared action before execution instead of model-guided
+  multi-step tool use.
+- The plugin stack is structurally ready for real connectors, but the bundled
+  Notion connector is still a safe dry-run proof.
 
 Next Work:
 
-- Packaged first-run UI proof: launch fresh, guide model download or resume,
-  activate one verified model, open a workspace, create a thread, send a first
-  request, and recover without terminal help.
-- Real local inference proof: run a valid downloaded GGUF through the packaged
-  backend in CI when a small release-safe fixture is available; activation and
-  runtime launch must revalidate model integrity before execution.
-- Plugin execution proof: exercise a real MCP stdio command in the packaged app
-  path, then improve diagnostics, auth recovery, and sandbox visibility only
-  where they make third-party connectors more usable.
-- Execution lane hardening: keep turns, approvals, workspace search, web search,
-  plugin commands, and model activation cancellable, visible, and non-blocking
-  where the work is read-only.
+- Define the typed local tool contract and a compact agent step record.
+- Move turn planning behind a bounded agent-loop coordinator while preserving
+  existing single-action behavior as the first implementation path.
+- Add timeline output for each agent step: plan, tool call, observation,
+  approval pause, cancellation, and final answer.
+- Add one real connector proof after the loop can call plugin tools naturally.
+- Add the minimal Git surface only after the loop can observe diffs and feed
+  them back into planning.
 
 Architecture Watchlist:
 
-- Keep `AppViewModel`, timeline presenters, runtime request routing, and plugin
-  runner modules split by ownership and failure boundary, not cosmetic file
-  size.
+- Keep `AppViewModel`, timeline presenters, runtime request routing, agent loop,
+  and plugin runner modules split by ownership and failure boundary, not
+  cosmetic file size.
 - Keep MCP target resolution, stdio session supervision, and output/protocol
   parsing separate as connector support grows.
 - Do not split Swift files further unless a domain owner, state owner, or
   failure boundary becomes clearer.
 - Keep release and CI policy in tested scripts and reusable workflow steps, not
   growing inline shell blocks.
+- Do not let M6 become generic RAG, multi-agent orchestration, browser
+  automation, or marketplace work.
 
-M5 Exit Gate:
+M6 Exit Gate:
 
-- A fresh install can download a model, open a workspace, use web search, run a
-  plugin command, and recover from model/runtime/plugin failures in-app.
-- Sandbox and approval decisions are visible, bounded, and reversible.
-- The packaged app can be used for a short real workflow without manual CLI
-  setup, hidden required files, or unexplained blocked states.
-- CI produces a validated, ad-hoc signed x86_64 macOS 12 app bundle artifact
-  with model metadata, plugin manifests, and a self-contained local inference
-  backend, but no model weights.
-- Release tags publish `Pith-<tag>-macos-x86_64.dmg` plus checksum to GitHub
-  Releases; ad-hoc outputs are draft by default or explicit untrusted
-  prereleases, while Developer ID releases are signed, notarized, stapled, and
-  ready for normal users.
+- A single user request can run at least three bounded agent steps across two
+  tool types, then produce a final answer with visible observations.
+- Cancelling the turn stops pending model/tool work and leaves a coherent
+  timeline state.
+- Approval-paused tools can resume the same agent step after approval without
+  losing workspace, memory, or connector context.
+- Web search results carry source attribution into the final answer.
+- One real connector command works through the same agent loop and remains
+  sandboxed, bounded, and credential-safe.
 
 ## Not Now
 

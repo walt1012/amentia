@@ -22,6 +22,11 @@ APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
 WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
+NOTION_CONNECTOR_ID = "notion-connector::notion"
+NOTION_PLUGIN_ID = "notion-connector"
+NOTION_COMMAND_ID = "notion-connector::notion.prepare-page-draft"
+NOTION_CREDENTIAL_LABEL = "Packaged Smoke Notion"
+NOTION_CREDENTIAL_SECRET = "packaged-smoke-token"
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
 APP_STARTUP_TIMEOUT_SECONDS = 18.0
@@ -586,6 +591,103 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
     raise RuntimeError("Packaged web search turn did not produce an assistant item.")
 
 
+def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None:
+  enable = send_runtime_request(
+    process,
+    25,
+    "plugin/setEnabled",
+    {
+      "pluginId": NOTION_PLUGIN_ID,
+      "enabled": True,
+    },
+  )
+  if enable["result"]["plugin"]["id"] != NOTION_PLUGIN_ID:
+    raise RuntimeError("Packaged plugin smoke enabled the wrong plugin.")
+  if enable["result"]["plugin"]["enabled"] is not True:
+    raise RuntimeError("Packaged plugin smoke did not enable the Notion connector.")
+
+  authorize = send_runtime_request(
+    process,
+    26,
+    "plugin/connectorAuthorize",
+    {
+      "connectorId": NOTION_CONNECTOR_ID,
+      "credentialLabel": NOTION_CREDENTIAL_LABEL,
+      "credentialSecret": NOTION_CREDENTIAL_SECRET,
+    },
+  )
+  if NOTION_CREDENTIAL_SECRET in json.dumps(authorize):
+    raise RuntimeError("Packaged plugin smoke leaked the connector credential secret.")
+  connector = authorize["result"]["connector"]
+  if connector["connectorId"] != NOTION_CONNECTOR_ID:
+    raise RuntimeError("Packaged plugin smoke authorized the wrong connector.")
+  if connector["status"] != "ready" or connector["authStatus"] != "authorized":
+    raise RuntimeError(
+      "Packaged plugin smoke connector did not become ready after authorization."
+    )
+
+  command = send_runtime_request(
+    process,
+    27,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_COMMAND_ID,
+      "input": "Prepare a packaged smoke page draft from this workspace.",
+    },
+  )
+  pending_approvals = command["result"]["pendingApprovals"]
+  if len(pending_approvals) != 1:
+    raise RuntimeError(
+      "Packaged MCP plugin command should request one connector-backed approval."
+    )
+  approval = pending_approvals[0]
+  if approval["action"] != "run_plugin_command":
+    raise RuntimeError("Packaged MCP plugin command requested the wrong approval.")
+  if approval["relativePath"] != f"plugin:{NOTION_PLUGIN_ID}":
+    raise RuntimeError("Packaged MCP plugin approval is not scoped to the plugin.")
+  if not any(
+    item["kind"] == "approvalRequested"
+    and item.get("attributes", {}).get("commandId") == NOTION_COMMAND_ID
+    for item in command["result"]["items"]
+  ):
+    raise RuntimeError("Packaged MCP plugin approval did not expose the command id.")
+
+  approved = send_runtime_request(
+    process,
+    28,
+    "approval/respond",
+    {
+      "approvalId": approval["id"],
+      "decision": "approved",
+    },
+  )
+  items = approved["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Page Draft"
+    and "Prepared a local Notion page draft" in item["content"]
+    and item.get("attributes", {}).get("mode") == "dryRun"
+    for item in items
+  ):
+    raise RuntimeError("Packaged MCP plugin command did not return the dry-run page draft.")
+  if not any(
+    item["kind"] == "system"
+    and item["title"] == "Plugin Memory Note Saved"
+    and item.get("attributes", {}).get("memoryNoteTitle") == "Notion Draft Prepared"
+    for item in items
+  ):
+    raise RuntimeError("Packaged MCP plugin command did not capture runner memory.")
+
+  memory_list = send_runtime_request(process, 29, "memory/list")
+  if not any(
+    note["title"] == "Notion Draft Prepared"
+    and note["source"] == "plugin.notion-connector"
+    for note in memory_list["result"]["notes"]
+  ):
+    raise RuntimeError("Packaged MCP plugin command memory was not persisted.")
+
+
 def validate_packaged_first_local_request(app_path: Path) -> None:
   with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
     support_dir = Path(support_root)
@@ -653,8 +755,9 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
         raise RuntimeError(
           "Packaged first local request did not mark firstRequest ready: "
           f"{checks.get('firstRequest')}"
-        )
+      )
       validate_packaged_web_search_turn(process)
+      validate_packaged_mcp_plugin_command(process)
       print(
         "Packaged first local request smoke passed with deterministic local model "
         f"under {support_dir}"

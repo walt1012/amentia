@@ -16,7 +16,7 @@ Current scripts:
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
 - `sign_macos_app_for_distribution.py`: signs `Pith.app` with Developer ID and Hardened Runtime before notarized release packaging.
-- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, workspace bootstrap, workspace search, packaged web search execution, sandbox readiness, thread creation, and runtime database initialization.
+- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, workspace bootstrap, workspace search, deterministic first local request, packaged web search execution, bundled MCP plugin command execution, connector authorization and approval, sandbox readiness, thread creation, runner memory capture, and runtime database initialization.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `validate_macos_distribution.py`: checks Developer ID signing, Gatekeeper assessment, and optional notarized DMG validation for public macOS distribution builds.
 - `validate_model_pack.py`: validates local model pack metadata and first-use resource packaging; use `--remote` during release audits.
