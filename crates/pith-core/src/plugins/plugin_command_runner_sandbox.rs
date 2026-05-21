@@ -120,7 +120,12 @@ fn build_sandboxed_command(
   if pith_sandbox::native_sandbox_available() {
     let profile = pith_sandbox::macos_seatbelt_profile(policy);
     let mut command = Command::new(pith_sandbox::macos_sandbox_exec_path());
-    command.arg("-p").arg(profile).arg(entrypoint_path);
+    command.arg("-p").arg(profile);
+    if should_run_entrypoint_with_shell(entrypoint_path) {
+      command.arg("/bin/sh").arg(entrypoint_path);
+    } else {
+      command.arg(entrypoint_path);
+    }
     configure_process_group(&mut command);
     return command;
   }
@@ -140,6 +145,13 @@ fn build_process_command(entrypoint_path: &Path) -> Command {
   let mut command = Command::new(entrypoint_path);
   configure_process_group(&mut command);
   command
+}
+
+fn should_run_entrypoint_with_shell(entrypoint_path: &Path) -> bool {
+  entrypoint_path
+    .extension()
+    .and_then(|extension| extension.to_str())
+    .is_some_and(|extension| extension.eq_ignore_ascii_case("sh"))
 }
 
 fn plugin_runner_temp_root(workspace_root: &Path, plugin_id: &str) -> PathBuf {
@@ -184,6 +196,14 @@ mod tests {
       "com.example.plugin"
     );
     assert_eq!(safe_plugin_id_segment("notion-sync"), "notion-sync");
+  }
+
+  #[test]
+  fn shell_entrypoints_use_system_shell_under_native_sandbox() {
+    assert!(should_run_entrypoint_with_shell(Path::new("runner.sh")));
+    assert!(should_run_entrypoint_with_shell(Path::new("RUNNER.SH")));
+    assert!(!should_run_entrypoint_with_shell(Path::new("runner.py")));
+    assert!(!should_run_entrypoint_with_shell(Path::new("runner")));
   }
 
   #[cfg(unix)]
