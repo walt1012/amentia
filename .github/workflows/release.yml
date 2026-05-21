@@ -20,6 +20,11 @@ on:
         required: false
         default: false
         type: boolean
+      publish_untrusted_ad_hoc:
+        description: "Allow a visible ad-hoc, non-notarized prerelease when Developer ID secrets are unavailable."
+        required: false
+        default: false
+        type: boolean
 
 env:
   GIT_CONFIG_COUNT: "1"
@@ -35,6 +40,7 @@ env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
   RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
   RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+  RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
 
 defaults:
   run:
@@ -300,6 +306,8 @@ jobs:
           set -euo pipefail
           if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
             trust_note="Developer ID signed and notarized."
+          elif [[ "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" == "true" && "$RELEASE_DRAFT" != "true" ]]; then
+            trust_note="Untrusted ad-hoc prerelease. This DMG is not notarized; macOS Gatekeeper will block first launch until the user manually chooses Open Anyway in Privacy & Security."
           else
             trust_note="Draft ad-hoc build. Public releases need Developer ID signing and notarization before users should install by default."
           fi
@@ -318,10 +326,10 @@ jobs:
         run: |
           set -euo pipefail
           release_args=(--title "Pith $RELEASE_TAG" --notes-file release-notes.md)
-          if [[ "$RELEASE_DRAFT" == "true" || "$PITH_RELEASE_SIGNING_MODE" != "developer-id" ]]; then
+          if [[ "$RELEASE_DRAFT" == "true" || ( "$PITH_RELEASE_SIGNING_MODE" != "developer-id" && "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" != "true" ) ]]; then
             release_args+=(--draft)
           fi
-          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+          if [[ "$RELEASE_PRERELEASE" == "true" || "$PITH_RELEASE_SIGNING_MODE" != "developer-id" ]]; then
             release_args+=(--prerelease)
           fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then

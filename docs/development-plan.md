@@ -109,9 +109,10 @@ Current Status:
   download/resume/activation planning, packaged app launch smoke coverage, and
   local inference backend dependency portability and launch checks. CI is split
   into parallel policy, Rust, Swift, runtime, cached backend, and packaging
-  gates so speed does not weaken release proof. Release tags publish a draft
-  ad-hoc DMG when Developer ID secrets are missing, and a signed, notarized DMG
-  when Developer ID credentials are configured.
+  gates so speed does not weaken release proof. Release tags default to a draft
+  ad-hoc DMG when Developer ID secrets are missing; a manual workflow can publish
+  an explicit untrusted prerelease DMG for users who accept Gatekeeper manual
+  approval, and Developer ID credentials still produce the trusted notarized DMG.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.
@@ -144,8 +145,9 @@ M5 Exit Gate:
   with model metadata, plugin manifests, and a self-contained local inference
   backend, but no model weights.
 - Release tags publish `Pith-<tag>-macos-x86_64.dmg` plus checksum to GitHub
-  Releases; unsigned/ad-hoc outputs stay draft-only, while Developer ID
-  releases are signed, notarized, stapled, and ready for normal users.
+  Releases; ad-hoc outputs are draft by default or explicit untrusted
+  prereleases, while Developer ID releases are signed, notarized, stapled, and
+  ready for normal users.
 
 ## Not Now
 

@@ -88,7 +88,8 @@ python3 scripts/validate_macos_distribution.py \
 ```
 
 This gate requires Developer ID signing, Gatekeeper assessment, and notarization
-stapling. Ad-hoc signed CI artifacts are for internal validation only.
+stapling. Ad-hoc signed CI artifacts prove the package shape, but they are not
+trusted macOS installers.
 
 ## GitHub Release Distribution
 
@@ -100,9 +101,11 @@ only for `v*` tags or manual dispatch and supports two distribution modes:
   staples the notarization ticket, validates the app and DMG, then publishes the
   DMG and SHA-256 checksum to a normal GitHub Release.
 - Ad-hoc mode builds the same x86_64 DMG shape when Developer ID secrets are
-  missing, but the workflow forces the GitHub Release to remain a draft. This is
-  only for internal validation or trusted tester previews, not public
-  distribution.
+  missing. Tag-triggered builds and ordinary manual runs stay draft-only, but a
+  manual run can publish a visible untrusted prerelease when
+  `publish_untrusted_ad_hoc=true` and `draft=false` are both set. That release
+  must remain marked as a prerelease and must explain that macOS Gatekeeper will
+  require manual user approval before first launch.
 
 Release publishing requires these repository secrets:
 
@@ -114,9 +117,10 @@ Release publishing requires these repository secrets:
 - `APPLE_APP_SPECIFIC_PASSWORD`
 
 The release workflow must never publish an ad-hoc or non-notarized installer as
-a normal public release. Without Developer ID secrets, it should produce a draft
-release only; with Developer ID secrets, it should publish the signed,
-notarized, stapled DMG.
+a normal trusted release. Without Developer ID secrets, it should default to a
+draft release; with explicit maintainer intent, it may publish an untrusted
+ad-hoc prerelease for users who accept the Gatekeeper warning path. With
+Developer ID secrets, it should publish the signed, notarized, stapled DMG.
 
 ## Local Model Runtime
 

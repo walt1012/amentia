@@ -29,5 +29,6 @@ and macOS packaging as separate gates. The llama.cpp backend is cached by pinned
 the packaged app smoke test still validates the staged backend before release artifacts are uploaded.
 Public GitHub Releases should upload the notarized `Pith-<tag>-macos-x86_64.dmg`
 and checksum. If Developer ID credentials are unavailable, the release workflow
-may upload an ad-hoc DMG to a draft release only; do not promote that artifact
-as a normal public installer.
+defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
+an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
+path, but it must not be promoted as a normal trusted installer.
