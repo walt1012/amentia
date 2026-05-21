@@ -63,7 +63,10 @@ mod tests {
       [("query".to_string(), "pith release".to_string())],
     );
 
-    assert_eq!(attributes.get("tool").map(String::as_str), Some("web_search"));
+    assert_eq!(
+      attributes.get("tool").map(String::as_str),
+      Some("web_search")
+    );
     assert_eq!(
       attributes.get("toolName").map(String::as_str),
       Some("web_search")

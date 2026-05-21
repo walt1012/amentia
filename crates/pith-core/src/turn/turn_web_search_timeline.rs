@@ -144,10 +144,7 @@ mod tests {
       attributes.get("toolSchema").map(String::as_str),
       Some("pith.localTool.v1")
     );
-    assert_eq!(
-      attributes.get("toolKind").map(String::as_str),
-      Some("web")
-    );
+    assert_eq!(attributes.get("toolKind").map(String::as_str), Some("web"));
     assert_eq!(
       attributes.get("provider").map(String::as_str),
       Some("Example Search")
