@@ -1,3 +1,4 @@
+pub(crate) mod approval_agent_context;
 pub(crate) mod approval_completion;
 pub(crate) mod approval_execution;
 pub(crate) mod approval_execution_approved;

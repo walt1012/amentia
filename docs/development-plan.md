@@ -154,6 +154,8 @@ Active status:
 - Loop foundation has started: current single-action turns carry stable agent
   loop, step, typed local-tool, tool-call status, and Web Search source
   metadata while the compatibility coordinator prepares for multi-step turns.
+- Approval resume is now part of the same agent step metadata path, so approved
+  or denied tool work does not become detached timeline output.
 
 M6 exit gate:
 

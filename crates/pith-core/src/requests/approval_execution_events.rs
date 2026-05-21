@@ -4,6 +4,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::PluginCommandOutput;
 use crate::plugin_hooks::PluginHookMemoryCapture;
+use crate::requests::approval_agent_context::ApprovalAgentContext;
 use crate::request_state::ApprovalExecutionOutput;
 
 pub(super) struct ApprovalExecutionEvents {
@@ -44,6 +45,10 @@ impl ApprovalExecutionEvents {
 
   pub(super) fn set_approved_plugin_command_output(&mut self, output: PluginCommandOutput) {
     self.approved_plugin_command_output = Some(output);
+  }
+
+  pub(super) fn tag_agent_context(&mut self, agent_context: &ApprovalAgentContext) {
+    agent_context.tag_items(&mut self.items);
   }
 
   pub(super) fn into_output(

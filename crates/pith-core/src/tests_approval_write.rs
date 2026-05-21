@@ -58,6 +58,18 @@ fn approval_respond_writes_file_after_approval() {
     .unwrap()
     .contains("+++ b/docs/output.txt"));
   assert_eq!(turn_items[4]["kind"], "approvalRequested");
+  let approval_step_id = turn_items[4]["attributes"]["agentStepId"]
+    .as_str()
+    .expect("approval step id")
+    .to_string();
+  let approval_loop_id = turn_items[4]["attributes"]["agentLoopId"]
+    .as_str()
+    .expect("approval loop id")
+    .to_string();
+  let approval_tool_call_id = turn_items[2]["attributes"]["toolCallId"]
+    .as_str()
+    .expect("approval tool call id")
+    .to_string();
   let approval_id = turn_result["pendingApprovals"][0]["id"]
     .as_str()
     .expect("approval id")
@@ -83,12 +95,46 @@ fn approval_respond_writes_file_after_approval() {
   let items = approval_result["items"].as_array().expect("approval items");
 
   assert_eq!(items[0]["kind"], "approvalResolved");
+  assert_eq!(
+    items[0]["attributes"]["agentStepId"].as_str(),
+    Some(approval_step_id.as_str())
+  );
+  assert_eq!(
+    items[0]["attributes"]["agentLoopId"].as_str(),
+    Some(approval_loop_id.as_str())
+  );
+  assert_eq!(
+    items[0]["attributes"]["agentStepPhase"],
+    "approvalResume"
+  );
+  assert_eq!(items[0]["attributes"]["agentStepStatus"], "completed");
+  assert_eq!(items[0]["attributes"]["agentStepResume"], "true");
   assert_eq!(items[1]["title"], "write_file");
   assert_eq!(items[1]["attributes"]["tool"], "write_file");
   assert_eq!(items[1]["attributes"]["relativePath"], "docs/output.txt");
   assert_eq!(items[1]["attributes"]["maxBytes"], "1048576");
+  assert_eq!(
+    items[1]["attributes"]["agentStepId"].as_str(),
+    Some(approval_step_id.as_str())
+  );
+  assert_eq!(items[1]["attributes"]["agentStepPhase"], "toolCall");
+  assert_eq!(
+    items[1]["attributes"]["toolCallId"].as_str(),
+    Some(approval_tool_call_id.as_str())
+  );
+  assert_eq!(items[1]["attributes"]["toolCallStatus"], "started");
   assert_eq!(items[2]["attributes"]["tool"], "write_file");
   assert_eq!(items[2]["attributes"]["bytesWritten"], "26");
   assert_eq!(items[2]["attributes"]["maxBytes"], "1048576");
+  assert_eq!(
+    items[2]["attributes"]["agentStepId"].as_str(),
+    Some(approval_step_id.as_str())
+  );
+  assert_eq!(items[2]["attributes"]["agentStepPhase"], "observation");
+  assert_eq!(
+    items[2]["attributes"]["toolCallId"].as_str(),
+    Some(approval_tool_call_id.as_str())
+  );
+  assert_eq!(items[2]["attributes"]["toolCallStatus"], "completed");
   assert_eq!(written_content, "Approval protected content");
 }

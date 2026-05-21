@@ -10,6 +10,7 @@ use crate::approval_types::PendingApproval;
 use crate::intent_inference;
 use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
 use crate::plugin_hooks::PluginHookMemoryCapture;
+use crate::requests::approval_agent_context::ApprovalAgentContext;
 
 #[derive(Debug)]
 pub struct PreparedTurnStart {
@@ -95,6 +96,7 @@ pub(crate) struct PreparedApprovalSnapshot {
   pub(crate) approval: PendingApproval,
   pub(crate) decision: String,
   pub(crate) workspace: WorkspaceSummary,
+  pub(crate) agent_context: ApprovalAgentContext,
   pub(crate) model_runtime: LocalModelRuntime,
   pub(crate) cancellation: GenerationCancellation,
   pub(crate) memory_notes: Vec<MemoryNote>,
