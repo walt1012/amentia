@@ -239,9 +239,7 @@ fn probe_macos_sandbox_exec() -> bool {
     Duration::from_millis(50),
     || false,
   )
-  .is_ok_and(|wait| {
-    wait.reason == ChildExitReason::Completed && wait.status.success()
-  })
+  .is_ok_and(|wait| wait.reason == ChildExitReason::Completed && wait.status.success())
 }
 
 #[cfg(target_os = "macos")]
