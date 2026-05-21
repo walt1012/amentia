@@ -24,7 +24,7 @@ pub(crate) fn summarize_search_result(
     return generate_local_summary(
       model_runtime,
       format!(
-        "You are Pith, a concise local coding agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
+        "You are Pith, a concise local cowork agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
         format_memory_context_prompt(&memory_context)
       ),
       format!(
@@ -55,7 +55,7 @@ pub(crate) fn summarize_search_result(
   let observation =
     compact_prompt_observation(&format_search_result(query, matches), &memory_context);
   let prompt = format!(
-    "You are Pith, a concise local coding agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
+    "You are Pith, a concise local cowork agent. Summarize a workspace search in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}\nMatches:\n{}",
     format_memory_context_prompt(&memory_context),
     observation.text
   );

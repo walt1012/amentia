@@ -45,7 +45,7 @@ pub(crate) fn summarize_shell_result(
   };
   let observation = compact_prompt_observation(&format_shell_result(result), &memory_context);
   let prompt = format!(
-    "You are Pith, a concise local coding agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nResult Preview:\n{}",
+    "You are Pith, a concise local cowork agent. Summarize a shell command result in one or two sentences.\nWorkspace: {workspace_name}\n{}\nResult Preview:\n{}",
     format_memory_context_prompt(&memory_context),
     observation.text
   );

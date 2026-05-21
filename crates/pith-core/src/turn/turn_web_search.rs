@@ -34,7 +34,7 @@ pub(super) fn model_confirms_web_search_candidate(
       "Choose whether Pith should use web_search before answering.\n\
        Return exactly WEB_SEARCH or NO_SEARCH.\n\
        Use WEB_SEARCH for current public facts, external docs, prices, news, releases, weather, schedules, or explicit online lookup.\n\
-       Use NO_SEARCH for local workspace, codebase, file, repo, or reasoning tasks.\n\
+       Use NO_SEARCH for local workspace, files, repo state, connector state, or reasoning tasks.\n\
        User request: {}\n\
        Candidate reason: {}\n\
        Decision:",

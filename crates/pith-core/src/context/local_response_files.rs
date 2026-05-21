@@ -36,7 +36,7 @@ pub(crate) fn summarize_file_result(
   );
   let observation = compact_prompt_observation(&result.content, &memory_context);
   let prompt = format!(
-    "You are Pith, a concise local coding agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
+    "You are Pith, a concise local cowork agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
     format_memory_context_prompt(&memory_context),
     result.relative_path,
     observation.text
@@ -71,7 +71,7 @@ pub(crate) fn summarize_directory_result(
     return generate_local_summary(
       model_runtime,
       format!(
-        "You are Pith, a concise local coding agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
+        "You are Pith, a concise local cowork agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
         format_memory_context_prompt(&memory_context)
       ),
       format!(
@@ -100,7 +100,7 @@ pub(crate) fn summarize_directory_result(
   );
   let observation = compact_prompt_observation(&format_directory_result(entries), &memory_context);
   let prompt = format!(
-    "You are Pith, a concise local coding agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
+    "You are Pith, a concise local cowork agent. Summarize a root directory inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nEntries:\n{}",
     format_memory_context_prompt(&memory_context),
     observation.text
   );

@@ -67,7 +67,7 @@ REQUIRED_INFO_PLIST_VALUES = {
   "CFBundleName": APP_NAME,
   "CFBundlePackageType": "APPL",
   "CFBundleSupportedPlatforms": ["MacOSX"],
-  "LSApplicationCategoryType": "public.app-category.developer-tools",
+  "LSApplicationCategoryType": "public.app-category.productivity",
   "LSArchitecturePriority": [SUPPORTED_ARCH],
   "LSMinimumSystemVersion": "12.0",
   "NSHighResolutionCapable": True,

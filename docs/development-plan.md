@@ -2,13 +2,16 @@
 
 ## North Star
 
-Pith is a small, strong, local-first macOS agent app for real daily work. It
+Pith is a small, strong, local-first macOS cowork agent for real daily work. It
 should feel native, focused, recoverable, and capable without becoming a
-terminal skin, hosted-model frontend, generic chatbot, or feature zoo.
+terminal skin, coding-only assistant, hosted-model frontend, generic chatbot,
+or feature zoo.
 
 ## Non-Negotiables
 
 - Product: `Pith`, macOS 12+, `x86_64` only.
+- Purpose: cowork first; coding is one useful workflow, not the product
+  boundary.
 - Intelligence: local model by default; no required external model API.
 - First use: in-app model download, defaulting to `LFM2.5-350M`.
 - Runtime: one active local model at a time.
@@ -79,8 +82,9 @@ Not yet aligned:
   real external-service workflow.
 - Source-grounded answers: Web Search results are visible in the timeline, but
   final answers need stronger source attribution and citation-ready wording.
-- Git workflow: Pith has review-diff support, but not the minimal daily-driver
-  status, diff, stage, and commit loop.
+- Workspace change workflow: Pith has review-diff support, but it does not yet
+  have a general cowork flow for reviewing, applying, syncing, and explaining
+  changes across local files and connectors.
 
 Do not copy blindly:
 
@@ -116,17 +120,19 @@ Closed capabilities:
   coverage, internal DMG shape, release-state safety, native sandbox fallback,
   and Developer ID upgrade path.
 
-## Current Milestone: M6 Agent Loop and Real Connectors
+## Current Milestone: M6 Cowork Agent Loop and Real Connectors
 
-M6 should make Pith feel like a real local agent instead of a polished
+M6 should make Pith feel like a real local cowork partner instead of a polished
 single-action assistant. The goal is a compact, auditable loop that can plan,
 call tools, observe results, pause for approval, resume, cancel, and produce a
-source-grounded final answer.
+source-grounded final answer across files, web results, plugins, and
+connectors.
 
 Ordered work:
 
 - Typed tool contract: define one local tool invocation/result envelope for
-  read, write, search, web search, shell, plugin command, and Git actions.
+  read, write, search, web search, shell, plugin command, connector, and
+  workspace-change actions.
 - Agent step record: persist compact step state for plan, tool call,
   observation, approval pause, cancellation, and final answer.
 - Bounded loop coordinator: run a request-scoped Plan/Act/Observe loop with a
@@ -138,9 +144,9 @@ Ordered work:
 - Real connector proof: replace the Notion dry-run with one real local MCP
   connector path that is credential-safe, bounded, sandbox-visible, and
   failure-readable.
-- Minimal Git loop: add status, diff, stage selected changes, commit message
-  draft, and optional worktree isolation only after the loop can observe tool
-  results naturally.
+- Minimal change loop: add status, diff/review, apply selected changes, and
+  summary/draft handoff only after the loop can observe tool results naturally.
+  Git can be one backend for this, not the whole product direction.
 
 M6 exit gate:
 
@@ -154,16 +160,18 @@ M6 exit gate:
 - One real connector command works through the same loop and remains sandboxed,
   bounded, and credential-safe.
 
-## Next Milestone: M7 Practical Coding Workflow
+## Next Milestone: M7 Practical Cowork Workflows
 
-M7 starts only after M6 exits. It should make Pith useful for day-to-day coding
-tasks rather than adding broad platform features.
+M7 starts only after M6 exits. It should make Pith useful for day-to-day
+cowork tasks rather than adding broad platform features.
 
-- Workspace-aware code editing loop with safe diffs and reviewable writes.
-- Minimal Git review and commit flow in the app.
+- Workspace-aware editing loop with safe diffs and reviewable writes for notes,
+  docs, config, and code.
+- Practical handoff flows: summarize work, draft next actions, prepare connector
+  updates, and optionally package local changes for Git-backed workspaces.
 - Better context compaction for long sessions and small local models.
 - Connector hardening based on the M6 real connector proof.
-- Packaged app UX polish only where it directly helps daily coding work.
+- Packaged app UX polish only where it directly helps daily cowork work.
 
 ## Engineering Discipline
 
