@@ -123,30 +123,31 @@ Closed capabilities:
 ## Current Milestone: M6 Cowork Agent Loop and Real Connectors
 
 M6 should make Pith feel like a real local cowork partner instead of a polished
-single-action assistant. The goal is a compact, auditable loop that can plan,
-call tools, observe results, pause for approval, resume, cancel, and produce a
-source-grounded final answer across files, web results, plugins, and
-connectors.
+single-action assistant. The implementation target is one compact, auditable
+Plan/Act/Observe loop that can call tools, observe results, pause for approval,
+resume, cancel, and produce a source-grounded final answer across files, web
+results, plugins, and connectors.
 
-Ordered work:
+Current review snapshot:
 
-- Typed tool contract: define one local tool invocation/result envelope for
-  read, write, search, web search, shell, plugin command, connector, and
-  workspace-change actions.
-- Agent step record: persist compact step state for plan, tool call,
-  observation, approval pause, cancellation, and final answer.
-- Bounded loop coordinator: run a request-scoped Plan/Act/Observe loop with a
-  strict step cap, tool budgets, cancellation, and recovery.
-- Compatibility path: keep the current single-action router as the first tool
-  planner behind the new loop, then replace routing branch-by-branch.
-- Web Search attribution: carry result titles, URLs, and source summaries into
-  the final answer, not only the timeline.
-- Real connector proof: replace the Notion dry-run with one real local MCP
-  connector path that is credential-safe, bounded, sandbox-visible, and
-  failure-readable.
-- Minimal change loop: add status, diff/review, apply selected changes, and
-  summary/draft handoff only after the loop can observe tool results naturally.
-  Git can be one backend for this, not the whole product direction.
+- Keep the current app, runtime, model, sandbox, packaging, and plugin
+  foundations; they are useful and no large rewrite is justified.
+- Do not add more branches to the old single-action router except as temporary
+  compatibility behind the new loop.
+- Do not broaden into generic RAG, multi-agent orchestration, marketplace work,
+  or cosmetic module splitting during M6.
+
+Implementation sequence:
+
+1. Loop foundation: define one typed local tool invocation/result envelope,
+   persist compact agent step records, and add a bounded request-scoped loop
+   coordinator with step caps, budgets, cancellation, and recovery.
+2. Tool migration: run read, search, Web Search, shell, write approval, plugin
+   command, connector, and workspace-change actions through that loop. Keep the
+   existing router as the first planner only until each branch is migrated.
+3. Cowork proof: make Web Search final answers source-attributed, replace the
+   Notion dry-run with one real credential-safe MCP connector path, then add the
+   minimal status, diff/review, apply-selected-changes, and handoff flow.
 
 M6 exit gate:
 
