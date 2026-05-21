@@ -6,6 +6,7 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use super::plugin_command_recovery_hints::runner_failure_recovery_hint;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 use crate::context_memory_pack::{merge_memory_context_attributes, MemoryContextPack};
+use crate::turn_tool_provenance::{local_tool_attributes, LOCAL_TOOL_SCHEMA};
 
 const PLUGIN_FAILURE_LOG_PREVIEW_LIMIT: usize = 2048;
 
@@ -16,15 +17,19 @@ pub(super) fn build_plugin_command_timeline_item(
   memory_context: &MemoryContextPack,
   connector_refs: &[PluginConnectorExecutionRef],
 ) -> TimelineItem {
-  let mut attributes = HashMap::from([
-    ("commandId".to_string(), command.command_id.clone()),
-    ("pluginId".to_string(), command.plugin_id.clone()),
-    (
-      "pluginDisplayName".to_string(),
-      command.plugin_display_name.clone(),
-    ),
-    ("sourcePath".to_string(), command.source_path.clone()),
-  ]);
+  let mut attributes = local_tool_attributes(
+    plugin_tool_kind(connector_refs),
+    &command.command_id,
+    [
+      ("commandId".to_string(), command.command_id.clone()),
+      ("pluginId".to_string(), command.plugin_id.clone()),
+      (
+        "pluginDisplayName".to_string(),
+        command.plugin_display_name.clone(),
+      ),
+      ("sourcePath".to_string(), command.source_path.clone()),
+    ],
+  );
   if let Some(workspace) = workspace {
     attributes.insert(
       "workspaceDisplayName".to_string(),
@@ -140,12 +145,16 @@ pub(super) fn build_plugin_result_timeline_item(
     kind: "pluginResult".to_string(),
     title: format!("{} Result", command.title),
     content,
-    attributes: Some(HashMap::from([
-      ("pluginId".to_string(), command.plugin_id.clone()),
-      ("commandId".to_string(), command.command_id.clone()),
-      ("executionKind".to_string(), execution_kind.to_string()),
-      ("sourcePath".to_string(), command.source_path.clone()),
-    ])),
+    attributes: Some(local_tool_attributes(
+      "plugin",
+      &command.command_id,
+      [
+        ("pluginId".to_string(), command.plugin_id.clone()),
+        ("commandId".to_string(), command.command_id.clone()),
+        ("executionKind".to_string(), execution_kind.to_string()),
+        ("sourcePath".to_string(), command.source_path.clone()),
+      ],
+    )),
   }
 }
 
@@ -208,6 +217,13 @@ pub(super) fn build_plugin_failure_timeline_item(
   let failure_kind = plugin_runner_failure_kind(code, &attributes);
   let recovery_hint = runner_failure_recovery_hint(failure_kind, &attributes);
   attributes.extend(HashMap::from([
+    ("tool".to_string(), command.command_id.clone()),
+    ("toolName".to_string(), command.command_id.clone()),
+    (
+      "toolKind".to_string(),
+      plugin_tool_kind(connector_refs).to_string(),
+    ),
+    ("toolSchema".to_string(), LOCAL_TOOL_SCHEMA.to_string()),
     ("pluginId".to_string(), command.plugin_id.clone()),
     ("commandId".to_string(), command.command_id.clone()),
     (
@@ -252,6 +268,14 @@ pub(super) fn build_plugin_failure_timeline_item(
     title: format!("{} {title_status}", command.title),
     content,
     attributes: Some(attributes),
+  }
+}
+
+fn plugin_tool_kind(connector_refs: &[PluginConnectorExecutionRef]) -> &'static str {
+  if connector_refs.is_empty() {
+    "plugin"
+  } else {
+    "connector"
   }
 }
 
@@ -393,6 +417,39 @@ mod tests {
     assert_eq!(
       attributes.get("connectorServices").map(String::as_str),
       Some("notion")
+    );
+    assert_eq!(
+      attributes.get("toolSchema").map(String::as_str),
+      Some("pith.localTool.v1")
+    );
+    assert_eq!(
+      attributes.get("toolKind").map(String::as_str),
+      Some("connector")
+    );
+    assert_eq!(
+      attributes.get("toolName").map(String::as_str),
+      Some("test-plugin::run")
+    );
+  }
+
+  #[test]
+  fn plugin_result_item_uses_local_tool_contract() {
+    let command = test_command();
+    let item =
+      build_plugin_result_timeline_item(&command, "stdio.test", "Plugin completed.".to_string());
+    let attributes = item.attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes.get("toolSchema").map(String::as_str),
+      Some("pith.localTool.v1")
+    );
+    assert_eq!(
+      attributes.get("toolKind").map(String::as_str),
+      Some("plugin")
+    );
+    assert_eq!(
+      attributes.get("toolName").map(String::as_str),
+      Some("test-plugin::run")
     );
   }
 

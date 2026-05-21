@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use pith_protocol::TimelineItem;
 
 use crate::request_state::PreparedTurnAction;
-
-const LOCAL_TOOL_SCHEMA: &str = "pith.localTool.v1";
+use crate::turn_tool_provenance::LOCAL_TOOL_SCHEMA;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AgentStepRecord {

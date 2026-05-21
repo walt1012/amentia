@@ -156,6 +156,8 @@ Active status:
   metadata while the compatibility coordinator prepares for multi-step turns.
 - Approval resume is now part of the same agent step metadata path, so approved
   or denied tool work does not become detached timeline output.
+- Workspace, shell-after-approval, Web Search, plugin, and connector timeline
+  items now share local tool schema attributes while keeping legacy UI fields.
 
 M6 exit gate:
 

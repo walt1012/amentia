@@ -4,6 +4,7 @@ use pith_protocol::TimelineItem;
 use pith_tools::{web_search_timeout_seconds, WebSearchStatus};
 
 use super::turn_tool_limits::WEB_SEARCH_RESULT_LIMIT;
+use super::turn_tool_provenance::web_tool_attributes;
 use crate::intent_inference::WebSearchIntent;
 
 pub(super) fn web_search_start_item(
@@ -81,29 +82,31 @@ fn web_search_attributes(
   intent: &WebSearchIntent,
   status: &WebSearchStatus,
 ) -> HashMap<String, String> {
-  HashMap::from([
-    ("tool".to_string(), "web_search".to_string()),
-    ("query".to_string(), intent.query.clone()),
-    (
-      "maxResults".to_string(),
-      WEB_SEARCH_RESULT_LIMIT.to_string(),
-    ),
-    ("provider".to_string(), status.provider.clone()),
-    ("client".to_string(), status.client.clone()),
-    ("networkAccess".to_string(), "true".to_string()),
-    (
-      "routingReason".to_string(),
-      intent.routing_reason.to_string(),
-    ),
-    (
-      "timeoutSeconds".to_string(),
-      web_search_timeout_seconds().to_string(),
-    ),
-    (
-      "webSearchAvailable".to_string(),
-      status.available.to_string(),
-    ),
-  ])
+  web_tool_attributes(
+    "web_search",
+    [
+      ("query".to_string(), intent.query.clone()),
+      (
+        "maxResults".to_string(),
+        WEB_SEARCH_RESULT_LIMIT.to_string(),
+      ),
+      ("provider".to_string(), status.provider.clone()),
+      ("client".to_string(), status.client.clone()),
+      ("networkAccess".to_string(), "true".to_string()),
+      (
+        "routingReason".to_string(),
+        intent.routing_reason.to_string(),
+      ),
+      (
+        "timeoutSeconds".to_string(),
+        web_search_timeout_seconds().to_string(),
+      ),
+      (
+        "webSearchAvailable".to_string(),
+        status.available.to_string(),
+      ),
+    ],
+  )
 }
 
 fn with_web_search_result_count(
@@ -136,6 +139,14 @@ mod tests {
     assert_eq!(
       attributes.get("tool").map(String::as_str),
       Some("web_search")
+    );
+    assert_eq!(
+      attributes.get("toolSchema").map(String::as_str),
+      Some("pith.localTool.v1")
+    );
+    assert_eq!(
+      attributes.get("toolKind").map(String::as_str),
+      Some("web")
     );
     assert_eq!(
       attributes.get("provider").map(String::as_str),
