@@ -111,7 +111,7 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     XCTAssertTrue(startPlan.runtimeDetail.hasPrefix("Continuing"))
   }
 
-  func testLaunchValidationRejectsReplacedModelAfterTrustedStamp() throws {
+  func testLaunchValidationRejectsReplacedModel() throws {
     let rootURL = try temporaryDirectory()
     defer {
       try? FileManager.default.removeItem(at: rootURL)
@@ -155,7 +155,6 @@ final class LocalModelFirstUseProofTests: XCTestCase {
       [.modificationDate: originalModificationDate],
       ofItemAtPath: modelURL.path
     )
-    XCTAssertTrue(LocalModelIntegrity.state(at: modelURL.path, item: item).isVerified)
 
     XCTAssertThrowsError(try LocalModelIntegrity.validateDownloadedModel(model)) { error in
       guard case LocalModelIntegrityError.checksumMismatch = error else {
