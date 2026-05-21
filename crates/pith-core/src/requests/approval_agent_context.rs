@@ -257,7 +257,10 @@ mod tests {
         ("approvalId".to_string(), id.to_string()),
         ("agentStepId".to_string(), step_id.to_string()),
         ("agentLoopId".to_string(), loop_id.to_string()),
-        ("agentToolSchema".to_string(), "pith.localTool.v1".to_string()),
+        (
+          "agentToolSchema".to_string(),
+          "pith.localTool.v1".to_string(),
+        ),
       ])),
     }
   }

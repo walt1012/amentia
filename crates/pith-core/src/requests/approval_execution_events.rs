@@ -4,8 +4,8 @@ use pith_protocol::{TimelineItem, WorkspaceSummary};
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::PluginCommandOutput;
 use crate::plugin_hooks::PluginHookMemoryCapture;
-use crate::requests::approval_agent_context::ApprovalAgentContext;
 use crate::request_state::ApprovalExecutionOutput;
+use crate::requests::approval_agent_context::ApprovalAgentContext;
 
 pub(super) struct ApprovalExecutionEvents {
   items: Vec<TimelineItem>,

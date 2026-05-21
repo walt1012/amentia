@@ -103,10 +103,7 @@ fn approval_respond_writes_file_after_approval() {
     items[0]["attributes"]["agentLoopId"].as_str(),
     Some(approval_loop_id.as_str())
   );
-  assert_eq!(
-    items[0]["attributes"]["agentStepPhase"],
-    "approvalResume"
-  );
+  assert_eq!(items[0]["attributes"]["agentStepPhase"], "approvalResume");
   assert_eq!(items[0]["attributes"]["agentStepStatus"], "completed");
   assert_eq!(items[0]["attributes"]["agentStepResume"], "true");
   assert_eq!(items[1]["title"], "write_file");
