@@ -110,9 +110,9 @@ Current Status:
   local inference backend dependency portability and launch checks. CI is split
   into parallel policy, Rust, Swift, runtime, cached backend, and packaging
   gates so speed does not weaken release proof. Release tags default to a draft
-  ad-hoc DMG when Developer ID secrets are missing; a manual workflow can publish
-  an explicit untrusted prerelease DMG for users who accept Gatekeeper manual
-  approval, and Developer ID credentials still produce the trusted notarized DMG.
+  ad-hoc DMG when Developer ID secrets are missing, visible untrusted prerelease
+  reruns preserve their published state, and Developer ID credentials still
+  produce the trusted notarized DMG.
 - Remaining M5 product work: prove the live first-run app path, keep execution
   cancellation/status accurate across every lane, and make real local plugin
   execution feel recoverable rather than experimental.
@@ -123,7 +123,8 @@ Next Work:
   activate one verified model, open a workspace, create a thread, send a first
   request, and recover without terminal help.
 - Real local inference proof: run a valid downloaded GGUF through the packaged
-  backend in CI when a small release-safe fixture is available.
+  backend in CI when a small release-safe fixture is available; activation and
+  runtime launch must revalidate model integrity before execution.
 - Execution lane hardening: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation cancellable, visible, and non-blocking
   where the work is read-only.

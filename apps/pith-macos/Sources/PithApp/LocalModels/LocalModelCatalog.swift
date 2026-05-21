@@ -82,7 +82,16 @@ enum LocalModelCatalog {
       return false
     }
 
-    return manifest == packManifest(for: model)
+    guard manifest == packManifest(for: model) else {
+      return false
+    }
+
+    do {
+      try validateDownloadedModel(model)
+      return true
+    } catch {
+      return false
+    }
   }
 
   private static func verifiedInstalledModel(

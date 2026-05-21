@@ -335,15 +335,23 @@ jobs:
           fi
 
           release_title="Pith $RELEASE_TAG"
-          release_args=(--title "$release_title" --notes-file release-notes.md --draft)
-          if [[ "$final_prerelease" == "true" ]]; then
-            release_args+=(--prerelease)
+          release_exists="false"
+          existing_draft=""
+          if release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" 2>/dev/null)"; then
+            release_exists="true"
+            existing_draft="$(python3 -c 'import json, sys; print(str(json.loads(sys.argv[1])["draft"]).lower())' "$release_json")"
           fi
 
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" "${release_args[@]}"
+          if [[ "$release_exists" == "true" ]]; then
+            gh release edit "$RELEASE_TAG" \
+              --title "$release_title" \
+              --notes-file release-notes.md
           else
-            gh release create "$RELEASE_TAG" "${release_args[@]}"
+            create_args=(--title "$release_title" --notes-file release-notes.md --draft)
+            if [[ "$final_prerelease" == "true" ]]; then
+              create_args+=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" "${create_args[@]}"
           fi
 
           gh release upload "$RELEASE_TAG" \
@@ -351,23 +359,28 @@ jobs:
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
             --clobber
 
-          if [[ "$final_draft" == "true" ]]; then
+          desired_draft="$final_draft"
+          if [[ "$release_exists" == "true" && "$existing_draft" == "false" && "$RELEASE_DRAFT" != "true" ]]; then
+            desired_draft="false"
+          fi
+
+          if [[ "$desired_draft" == "true" ]]; then
             echo "Release $RELEASE_TAG kept as draft."
-            exit 0
           fi
 
           release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
-          python3 - "$release_title" "$final_prerelease" <<'PY'
+          python3 - "$release_title" "$final_prerelease" "$desired_draft" <<'PY'
           import json
           import sys
           from pathlib import Path
 
           title = sys.argv[1]
           prerelease = sys.argv[2] == "true"
+          draft = sys.argv[3] == "true"
           payload = {
             "name": title,
             "body": Path("release-notes.md").read_text(),
-            "draft": False,
+            "draft": draft,
             "prerelease": prerelease,
           }
           Path("release-state.json").write_text(json.dumps(payload), encoding="utf-8")

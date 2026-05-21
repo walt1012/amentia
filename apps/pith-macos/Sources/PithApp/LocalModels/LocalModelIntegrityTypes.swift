@@ -2,7 +2,17 @@ import Foundation
 
 struct LocalModelFileMetadata {
   let sizeBytes: Int64
+  let creationDate: Date?
   let modificationDate: Date?
+  let systemFileNumber: UInt64?
+
+  var creationMilliseconds: Int64 {
+    guard let creationDate else {
+      return 0
+    }
+
+    return Int64(creationDate.timeIntervalSince1970 * 1000)
+  }
 
   var modificationMilliseconds: Int64 {
     guard let modificationDate else {
