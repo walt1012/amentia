@@ -54,9 +54,8 @@ jobs:
       - name: Compile Python automation
         run: |
           set -euo pipefail
-          python3 -m py_compile \
-            scripts/*.py \
-            plugins/bundled/notion-connector/bin/notion-mcp-dry-run.py
+          mapfile -d '' python_files < <(find scripts plugins/bundled -name '*.py' -print0)
+          python3 -m py_compile "${python_files[@]}"
 
       - name: Validate model pack manifest
         run: python3 scripts/validate_model_pack.py
