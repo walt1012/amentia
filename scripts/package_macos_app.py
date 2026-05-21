@@ -778,8 +778,6 @@ def sign_app_bundle_if_available(app_path: Path) -> None:
       "--deep",
       "--sign",
       "-",
-      "--options",
-      "runtime",
       str(app_path),
     ],
     app_path.parent,
