@@ -4,6 +4,7 @@ pub(crate) mod active_turns;
 pub(crate) mod approval_state;
 pub(crate) mod approval_types;
 pub(crate) mod turn_actions;
+pub(crate) mod turn_agent_steps;
 pub(crate) mod turn_approval_execution;
 pub(crate) mod turn_approval_shell;
 pub(crate) mod turn_approval_write;

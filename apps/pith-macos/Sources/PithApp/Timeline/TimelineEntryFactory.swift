@@ -158,6 +158,12 @@ enum TimelineEntryFactory {
     if let turnID = item.attributes["turnId"] {
       return "turn:\(turnID):\(item.kind):\(item.title)"
     }
+    if let agentStepID = item.attributes["agentStepId"] {
+      return "agent-step:\(agentStepID):\(item.kind):\(item.title)"
+    }
+    if let toolCallID = item.attributes["toolCallId"] {
+      return "tool-call:\(toolCallID):\(item.kind):\(item.title)"
+    }
     return "runtime:\(index):\(item.kind):\(item.title)"
   }
 }

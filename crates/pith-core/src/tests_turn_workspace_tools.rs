@@ -52,10 +52,18 @@ fn turn_start_reads_a_requested_workspace_file() {
   let items = result["items"].as_array().expect("items");
 
   assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(items[1]["attributes"]["agentStepId"], "thread-1-turn-1-step-1");
+  assert_eq!(items[1]["attributes"]["agentStepPhase"], "plan");
+  assert_eq!(items[1]["attributes"]["agentToolName"], "read_file");
   assert_eq!(items[1]["attributes"]["responseRole"], "planner");
   assert_eq!(items[1]["attributes"]["memoryNoteCount"], "1");
   assert_eq!(items[1]["attributes"]["memoryNoteIds"], "memory-1");
   assert_eq!(items[2]["kind"], "toolStart");
+  assert_eq!(items[2]["attributes"]["agentStepPhase"], "toolCall");
+  assert_eq!(
+    items[2]["attributes"]["toolCallId"],
+    "thread-1-turn-1-step-1-tool-1"
+  );
   assert_eq!(items[2]["attributes"]["tool"], "read_file");
   assert_eq!(items[2]["attributes"]["relativePath"], "README.md");
   assert_eq!(items[2]["attributes"]["maxBytes"], "4096");
@@ -64,10 +72,13 @@ fn turn_start_reads_a_requested_workspace_file() {
     workspace.file_name().unwrap().to_str().unwrap()
   );
   assert_eq!(items[3]["kind"], "toolResult");
+  assert_eq!(items[3]["attributes"]["agentStepPhase"], "observation");
   assert_eq!(items[3]["attributes"]["tool"], "read_file");
   assert_eq!(items[3]["attributes"]["maxBytes"], "4096");
   assert_eq!(items[3]["attributes"]["isTruncated"], "false");
   assert_eq!(items[4]["kind"], "assistantMessage");
+  assert_eq!(items[4]["attributes"]["agentStepStatus"], "streaming");
+  assert_eq!(items[4]["attributes"]["agentStepPhase"], "final");
   assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
   assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
   assert_eq!(items[4]["attributes"]["observationTruncated"], "false");
@@ -142,6 +153,8 @@ fn turn_start_searches_workspace_content() {
 
   assert_eq!(items[2]["kind"], "toolStart");
   assert_eq!(items[2]["title"], "search_files");
+  assert_eq!(items[2]["attributes"]["agentToolKind"], "workspace");
+  assert_eq!(items[2]["attributes"]["agentToolName"], "search_files");
   assert_eq!(items[2]["attributes"]["tool"], "search_files");
   assert_eq!(items[2]["attributes"]["query"], "Search target");
   assert_eq!(items[2]["attributes"]["maxResults"], "12");

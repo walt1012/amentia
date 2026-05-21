@@ -149,6 +149,11 @@ Implementation sequence:
    Notion dry-run with one real credential-safe MCP connector path, then add the
    minimal status, diff/review, apply-selected-changes, and handoff flow.
 
+Active status:
+
+- Loop foundation has started: current single-action turns carry stable agent
+  step and tool-call metadata before the coordinator takes over.
+
 M6 exit gate:
 
 - One user request can run at least three bounded agent steps across two tool

@@ -41,6 +41,10 @@ impl PluginCommandSnapshot {
   pub(crate) fn command_id(&self) -> &str {
     &self.command.command_id
   }
+
+  pub(crate) fn uses_connector(&self) -> bool {
+    !self.connector_refs.is_empty()
+  }
 }
 
 #[derive(Debug, Clone)]
