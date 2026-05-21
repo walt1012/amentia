@@ -94,10 +94,15 @@ stapling. Ad-hoc signed CI artifacts are for internal validation only.
 
 Users should download `Pith-<tag>-macos-x86_64.dmg` from the GitHub Release
 page, open it, and drag `Pith.app` to Applications. The release workflow runs
-only for `v*` tags or manual dispatch, signs the app with Developer ID,
-creates a DMG, signs and notarizes the DMG, staples the notarization ticket,
-validates the app and DMG, then uploads the DMG and SHA-256 checksum to the
-GitHub Release.
+only for `v*` tags or manual dispatch and supports two distribution modes:
+
+- Developer ID mode signs the app, creates a DMG, signs and notarizes the DMG,
+  staples the notarization ticket, validates the app and DMG, then publishes the
+  DMG and SHA-256 checksum to a normal GitHub Release.
+- Ad-hoc mode builds the same x86_64 DMG shape when Developer ID secrets are
+  missing, but the workflow forces the GitHub Release to remain a draft. This is
+  only for internal validation or trusted tester previews, not public
+  distribution.
 
 Release publishing requires these repository secrets:
 
@@ -108,8 +113,10 @@ Release publishing requires these repository secrets:
 - `APPLE_TEAM_ID`
 - `APPLE_APP_SPECIFIC_PASSWORD`
 
-The release workflow should fail rather than publish an unsigned or
-non-notarized installer.
+The release workflow must never publish an ad-hoc or non-notarized installer as
+a normal public release. Without Developer ID secrets, it should produce a draft
+release only; with Developer ID secrets, it should publish the signed,
+notarized, stapled DMG.
 
 ## Local Model Runtime
 

@@ -26,7 +26,7 @@ final class RuntimeBridge {
     let initializeParams = InitializeParams(
       clientInfo: ClientInfo(
         name: "pith-macos",
-        version: "0.1.0"
+        version: appBundleVersion()
       )
     )
 
@@ -60,6 +60,16 @@ final class RuntimeBridge {
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.disconnected, detail: detail)
+  }
+
+  private func appBundleVersion() -> String {
+    let fallbackVersion = "0.1.0"
+    guard let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String else {
+      return fallbackVersion
+    }
+
+    let trimmedVersion = version.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmedVersion.isEmpty ? fallbackVersion : trimmedVersion
   }
 
   private func launchProcess() throws {
