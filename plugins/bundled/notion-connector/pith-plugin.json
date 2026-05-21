@@ -27,7 +27,7 @@
     {
       "id": "notion",
       "transport": "stdio",
-      "command": "bin/notion-mcp-dry-run.py"
+      "command": "bin/notion-mcp-dry-run.sh"
     }
   ],
   "appConnectors": [

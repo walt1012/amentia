@@ -315,6 +315,36 @@ def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
   return f"\nRuntime stderr:\n{stderr[-2000:]}"
 
 
+def timeline_item_summary(items: list[dict]) -> str:
+  summaries = []
+  interesting_keys = {
+    "commandId",
+    "executionKind",
+    "mcpProtocolStatus",
+    "pluginCommandStatus",
+    "pluginRunnerFailureKind",
+    "pluginRunnerRecoveryHint",
+    "pluginRunnerStderrPreview",
+    "pluginRunnerStdoutPreview",
+  }
+  for item in items:
+    attributes = item.get("attributes", {})
+    interesting_attributes = {
+      key: value
+      for key, value in attributes.items()
+      if key in interesting_keys
+    }
+    summaries.append(
+      {
+        "kind": item.get("kind"),
+        "title": item.get("title"),
+        "content": item.get("content", "")[:240],
+        "attributes": interesting_attributes,
+      }
+    )
+  return json.dumps(summaries, sort_keys=True)
+
+
 def validate_runtime_readiness(
   readiness: dict,
   expected_statuses: dict[str, str | set[str]] | None = None,
@@ -670,14 +700,20 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
     and item.get("attributes", {}).get("mode") == "dryRun"
     for item in items
   ):
-    raise RuntimeError("Packaged MCP plugin command did not return the dry-run page draft.")
+    raise RuntimeError(
+      "Packaged MCP plugin command did not return the dry-run page draft. "
+      f"Items: {timeline_item_summary(items)}"
+    )
   if not any(
     item["kind"] == "system"
     and item["title"] == "Plugin Memory Note Saved"
     and item.get("attributes", {}).get("memoryNoteTitle") == "Notion Draft Prepared"
     for item in items
   ):
-    raise RuntimeError("Packaged MCP plugin command did not capture runner memory.")
+    raise RuntimeError(
+      "Packaged MCP plugin command did not capture runner memory. "
+      f"Items: {timeline_item_summary(items)}"
+    )
 
   memory_list = send_runtime_request(process, 29, "memory/list")
   if not any(
