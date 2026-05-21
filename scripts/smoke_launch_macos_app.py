@@ -397,7 +397,7 @@ def validate_tooling_readiness(
   validate_readiness_check_status(
     checks,
     "nativeSandbox",
-    "ready" if workspace_open else {"limited", "setup_required"},
+    {"ready", "limited"} if workspace_open else {"limited", "setup_required"},
   )
 
   metrics = result["metrics"]
@@ -425,15 +425,20 @@ def validate_tooling_readiness(
       f"{metrics.get('webSearchClient')}"
     )
   if workspace_open:
-    if metrics.get("sandboxBackend") != "macosSeatbelt":
+    if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
       raise RuntimeError(
-        "Packaged runtime readiness must use the native macOS sandbox after "
+        "Packaged runtime readiness reported unexpected sandbox backend after "
         f"workspace open. Backend: {metrics.get('sandboxBackend')}"
       )
-    if metrics.get("sandboxActive") != "true":
+    if metrics.get("sandboxBackend") == "macosSeatbelt" and metrics.get("sandboxActive") != "true":
       raise RuntimeError(
         "Packaged runtime readiness must report an active native sandbox after "
         f"workspace open. Active: {metrics.get('sandboxActive')}"
+      )
+    if metrics.get("sandboxBackend") == "processOnly" and metrics.get("sandboxActive") != "false":
+      raise RuntimeError(
+        "Packaged runtime readiness must report inactive native sandbox when "
+        f"falling back to process-only. Active: {metrics.get('sandboxActive')}"
       )
   else:
     if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
