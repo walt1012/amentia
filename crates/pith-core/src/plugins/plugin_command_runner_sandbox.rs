@@ -147,6 +147,7 @@ fn build_process_command(entrypoint_path: &Path) -> Command {
   command
 }
 
+#[cfg(target_os = "macos")]
 fn should_run_entrypoint_with_shell(entrypoint_path: &Path) -> bool {
   entrypoint_path
     .extension()
@@ -198,6 +199,7 @@ mod tests {
     assert_eq!(safe_plugin_id_segment("notion-sync"), "notion-sync");
   }
 
+  #[cfg(target_os = "macos")]
   #[test]
   fn shell_entrypoints_use_system_shell_under_native_sandbox() {
     assert!(should_run_entrypoint_with_shell(Path::new("runner.sh")));
