@@ -13,9 +13,8 @@ use pith_plugin_host::{
   PluginCommandExecutionEntry,
 };
 use pith_process::{
-  join_bounded_pipe_reader, join_pipe_writer, read_bounded_pipe_in_background,
-  wait_for_child, write_pipe_in_background, BoundedPipeOutput, ChildExitReason, ChildWaitResult,
-  PipeWriteOutput,
+  join_bounded_pipe_reader, join_pipe_writer, read_bounded_pipe_in_background, wait_for_child,
+  write_pipe_in_background, BoundedPipeOutput, ChildExitReason, ChildWaitResult, PipeWriteOutput,
 };
 use pith_protocol::{TimelineItem, WorkspaceSummary};
 use serde_json::json;
