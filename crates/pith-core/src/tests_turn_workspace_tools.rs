@@ -67,6 +67,7 @@ fn turn_start_reads_a_requested_workspace_file() {
     items[2]["attributes"]["toolCallId"],
     "thread-1-turn-1-step-1-tool-1"
   );
+  assert_eq!(items[2]["attributes"]["toolCallStatus"], "started");
   assert_eq!(items[2]["attributes"]["tool"], "read_file");
   assert_eq!(items[2]["attributes"]["relativePath"], "README.md");
   assert_eq!(items[2]["attributes"]["maxBytes"], "4096");
@@ -76,6 +77,7 @@ fn turn_start_reads_a_requested_workspace_file() {
   );
   assert_eq!(items[3]["kind"], "toolResult");
   assert_eq!(items[3]["attributes"]["agentStepPhase"], "observation");
+  assert_eq!(items[3]["attributes"]["toolCallStatus"], "completed");
   assert_eq!(items[3]["attributes"]["tool"], "read_file");
   assert_eq!(items[3]["attributes"]["maxBytes"], "4096");
   assert_eq!(items[3]["attributes"]["isTruncated"], "false");

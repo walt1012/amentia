@@ -256,8 +256,19 @@ fn turn_start_executes_web_search_with_fixture_client() {
   assert_eq!(items[3]["kind"], "toolResult");
   assert_eq!(items[3]["title"], "web_search result");
   assert_eq!(items[3]["attributes"]["agentStepPhase"], "observation");
+  assert_eq!(items[3]["attributes"]["toolCallStatus"], "completed");
   assert_eq!(items[3]["attributes"]["resultCount"], "1");
   assert!(items[3]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Pith fixture result"));
+  assert_eq!(items[4]["kind"], "assistantMessage");
+  assert_eq!(items[4]["attributes"]["sourceAttribution"], "web_search");
+  assert_eq!(
+    items[4]["attributes"]["sourceUrls"],
+    "https://example.com/pith"
+  );
+  assert!(items[4]["attributes"]["sourceTitles"]
     .as_str()
     .unwrap()
     .contains("Pith fixture result"));

@@ -4,6 +4,8 @@ use pith_protocol::TimelineItem;
 
 use crate::request_state::PreparedTurnAction;
 
+const LOCAL_TOOL_SCHEMA: &str = "pith.localTool.v1";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AgentStepRecord {
   step_id: String,
@@ -56,6 +58,7 @@ impl AgentStepRecord {
       attributes.insert("agentStepIndex".to_string(), self.step_index.to_string());
       attributes.insert("agentStepPhase".to_string(), phase.as_str().to_string());
       attributes.insert("agentStepStatus".to_string(), outcome.as_str().to_string());
+      attributes.insert("agentToolSchema".to_string(), LOCAL_TOOL_SCHEMA.to_string());
       attributes.insert(
         "agentToolKind".to_string(),
         self.invocation.kind.as_str().to_string(),
@@ -66,6 +69,10 @@ impl AgentStepRecord {
         AgentStepPhase::ToolCall | AgentStepPhase::Observation
       ) {
         attributes.insert("toolCallId".to_string(), self.invocation.call_id.clone());
+        attributes.insert(
+          "toolCallStatus".to_string(),
+          tool_call_status(phase, outcome).to_string(),
+        );
       }
     }
   }
@@ -181,6 +188,19 @@ fn item_phase(item: &TimelineItem) -> AgentStepPhase {
   }
 }
 
+fn tool_call_status(phase: AgentStepPhase, outcome: AgentStepOutcome) -> &'static str {
+  if matches!(phase, AgentStepPhase::ToolCall) {
+    return "started";
+  }
+
+  match outcome {
+    AgentStepOutcome::ApprovalPaused => "approvalPaused",
+    AgentStepOutcome::Cancelled => "cancelled",
+    AgentStepOutcome::Completed | AgentStepOutcome::Streaming => "completed",
+    AgentStepOutcome::Failed => "failed",
+  }
+}
+
 fn is_cancelled_item(item: &TimelineItem) -> bool {
   item
     .attributes
@@ -246,12 +266,24 @@ mod tests {
       Some("turn-1-step-1-tool-1".to_string())
     );
     assert_eq!(
+      attribute(&items[1], "toolCallStatus"),
+      Some("started".to_string())
+    );
+    assert_eq!(
       attribute(&items[2], "agentStepPhase"),
       Some("observation".to_string())
     );
     assert_eq!(
+      attribute(&items[2], "toolCallStatus"),
+      Some("completed".to_string())
+    );
+    assert_eq!(
       attribute(&items[3], "agentStepStatus"),
       Some("streaming".to_string())
+    );
+    assert_eq!(
+      attribute(&items[3], "agentToolSchema"),
+      Some("pith.localTool.v1".to_string())
     );
   }
 

@@ -84,12 +84,54 @@ pub(crate) fn summarize_web_search_result(
     observation.text
   );
 
-  generate_local_summary(
+  let (summary, mut attributes) = generate_local_summary(
     model_runtime,
     prompt,
     observation_summary,
     &memory_context,
     Some(&observation),
     cancellation,
-  )
+  );
+  merge_web_search_source_attributes(&mut attributes, results);
+
+  (source_grounded_summary(summary, results), attributes)
+}
+
+fn merge_web_search_source_attributes(
+  attributes: &mut HashMap<String, String>,
+  results: &[WebSearchResult],
+) {
+  let sources = results.iter().take(3).collect::<Vec<_>>();
+  attributes.insert("sourceCount".to_string(), sources.len().to_string());
+  attributes.insert(
+    "sourceTitles".to_string(),
+    sources
+      .iter()
+      .map(|result| result.title.as_str())
+      .collect::<Vec<_>>()
+      .join("\n"),
+  );
+  attributes.insert(
+    "sourceUrls".to_string(),
+    sources
+      .iter()
+      .map(|result| result.url.as_str())
+      .collect::<Vec<_>>()
+      .join("\n"),
+  );
+  attributes.insert("sourceAttribution".to_string(), "web_search".to_string());
+}
+
+fn source_grounded_summary(summary: String, results: &[WebSearchResult]) -> String {
+  let sources = results.iter().take(3).collect::<Vec<_>>();
+  if sources.is_empty() || sources.iter().any(|source| summary.contains(&source.url)) {
+    return summary;
+  }
+
+  let source_line = sources
+    .iter()
+    .map(|source| format!("{} ({})", source.title, source.url))
+    .collect::<Vec<_>>()
+    .join("; ");
+  format!("{}\n\nSources: {}", summary.trim_end(), source_line)
 }
