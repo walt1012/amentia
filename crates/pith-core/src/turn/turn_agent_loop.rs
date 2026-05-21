@@ -34,11 +34,8 @@ impl AgentLoopCoordinator {
     has_pending_approval: bool,
     has_pending_active_turn: bool,
   ) {
-    let outcome = AgentStepOutcome::from_items(
-      items,
-      has_pending_approval,
-      has_pending_active_turn,
-    );
+    let outcome =
+      AgentStepOutcome::from_items(items, has_pending_approval, has_pending_active_turn);
     step.tag_items(items, outcome);
     self.tag_loop_items(items);
   }
@@ -48,7 +45,10 @@ impl AgentLoopCoordinator {
       let attributes = item.attributes.get_or_insert_with(HashMap::new);
       attributes.insert("agentLoopId".to_string(), self.loop_id.clone());
       attributes.insert("agentLoopSchema".to_string(), LOOP_SCHEMA.to_string());
-      attributes.insert("agentLoopMode".to_string(), "compatibilitySingleAction".to_string());
+      attributes.insert(
+        "agentLoopMode".to_string(),
+        "compatibilitySingleAction".to_string(),
+      );
       attributes.insert("agentLoopMaxSteps".to_string(), self.max_steps.to_string());
       attributes.insert("agentLoopStepCount".to_string(), "1".to_string());
     }

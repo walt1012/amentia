@@ -49,7 +49,10 @@ fn turn_start_web_search_uses_enabled_web_search_permission() {
 
   assert_eq!(items[0]["kind"], "userMessage");
   assert_eq!(items[1]["kind"], "plan");
-  assert_eq!(items[1]["attributes"]["agentLoopSchema"], "pith.agentLoop.v1");
+  assert_eq!(
+    items[1]["attributes"]["agentLoopSchema"],
+    "pith.agentLoop.v1"
+  );
   assert_eq!(items[1]["attributes"]["agentToolKind"], "web");
   assert_eq!(items[1]["attributes"]["agentToolName"], "web_search");
   assert_eq!(items[2]["kind"], "warning");
