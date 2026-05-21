@@ -276,12 +276,14 @@ fn run_mcp_stdio_session(
   }
 
   let mut child = process.spawn().map_err(|error| {
-    PluginRunnerFailure::new(
+    PluginRunnerFailure::with_output(
       -32054,
       format!(
         "Plugin command `{}` failed to start MCP server `{}`: {error}",
         command.command_id, target.server_id
       ),
+      String::new(),
+      String::new(),
       runner_attributes.clone(),
     )
     .boxed()
@@ -303,12 +305,14 @@ fn run_mcp_stdio_session(
 
   let wait =
     wait_for_mcp_tool_response(&mut child, &stdout_lines, cancellation).map_err(|error| {
-      PluginRunnerFailure::new(
+      PluginRunnerFailure::with_output(
         -32054,
         format!(
           "Plugin command `{}` failed while running MCP server `{}`: {error}",
           command.command_id, target.server_id
         ),
+        String::new(),
+        String::new(),
         runner_attributes.clone(),
       )
       .boxed()
