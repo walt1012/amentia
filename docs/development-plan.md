@@ -2,10 +2,9 @@
 
 ## North Star
 
-Pith is a small, strong, local-first macOS agent app that people can actually
-use for controlled local work. It should feel native, focused, recoverable, and
-capable without becoming a prototype, generic chatbot, terminal skin,
-hosted-model frontend, or feature zoo.
+Pith is a small, strong, local-first macOS agent app for real daily work. It
+should feel native, focused, recoverable, and capable without becoming a
+terminal skin, hosted-model frontend, generic chatbot, or feature zoo.
 
 ## Non-Negotiables
 
@@ -14,24 +13,21 @@ hosted-model frontend, or feature zoo.
 - First use: in-app model download, defaulting to `LFM2.5-350M`.
 - Runtime: one active local model at a time.
 - Plugins: real local capabilities, not prompt templates.
-- Retrieval: the default-enabled Web Search plugin is the active retrieval
-  layer; no generic local RAG yet.
+- Retrieval: default-enabled Web Search is the active retrieval layer; no
+  generic local document RAG yet.
 - Repository: English-only source, docs, commits, branches, and PR text.
 - Foundation: free, open source, native, and lightweight.
 
-## Daily-Use Standard
+## Product Standard
 
-- A normal user can install, launch, download a model, open a workspace, send a
-  request, review results, and recover from common failures without using a
-  terminal.
-- Every core action must have clear in-app state: ready, running, blocked,
-  failed, cancelled, or recovered.
-- Failure messages must explain the next useful action, not expose internal
-  implementation details as the primary user experience.
-- Runtime, model, plugin, web search, sandbox, and packaging work is complete
-  only when it holds together in the packaged macOS app.
-- Developer convenience must not replace product readiness; CI and scripts
-  prove the app path, but the app experience is the product.
+- A normal user can install the app, launch it, download a model, open a
+  workspace, send a request, review results, and recover from common failures
+  without using a terminal.
+- Every core action has clear in-app state: ready, running, blocked, failed,
+  cancelled, or recovered.
+- Runtime, model, plugin, web search, sandbox, and packaging work counts as
+  done only when it holds together in the packaged macOS app.
+- CI proves the app path, but the app experience is the product.
 
 ## Architecture Boundaries
 
@@ -56,114 +52,118 @@ hosted-model frontend, or feature zoo.
 Memory and storage do not conflict: memory owns meaning and ranking; storage
 owns durable records.
 
-## Foundation Already Closed
+## Codex and Claude Alignment
+
+Matched foundation:
+
+- Native local execution shape: workspace tools, shell execution, approvals,
+  cancellation, sandbox diagnostics, and recovery.
+- Local-first model path: first-use download, verified activation, bounded
+  inference, and no required hosted model API.
+- Retrieval baseline: Web Search is available as a first-class tool with
+  bounded execution and explicit network permission.
+- Extensibility baseline: plugin manifests, local install/remove,
+  enable/disable, permission gates, connector credentials, bounded runners,
+  and MCP stdio session handling.
+- Product delivery path: x86_64 app bundle, DMG workflow, release-state safety,
+  and packaged smoke coverage.
+
+Not yet aligned:
+
+- Agent loop: Pith still routes most turns to one prepared action instead of a
+  model-guided Plan/Act/Observe loop.
+- Tool contract: file, search, web search, shell, plugin, and Git actions are
+  still exposed through separate reducers instead of one typed local tool
+  contract.
+- Real connectors: the Notion connector is still a safe dry-run proof, not a
+  real external-service workflow.
+- Source-grounded answers: Web Search results are visible in the timeline, but
+  final answers need stronger source attribution and citation-ready wording.
+- Git workflow: Pith has review-diff support, but not the minimal daily-driver
+  status, diff, stage, and commit loop.
+
+Do not copy blindly:
+
+- No hosted model dependency.
+- No multi-agent orchestration before the single agent loop is excellent.
+- No generic local vector database before Web Search and workspace context are
+  reliable.
+- No marketplace or remote MCP transport until local connector execution is
+  safe and useful.
+- No cosmetic refactor that only moves code around.
+
+## Closed Foundation
 
 Milestones 1-5 are closed. Keep their details in git history, not in this plan.
 
 Closed capabilities:
 
 - Local model setup, resumable downloads, verified single-model activation,
-  runtime recovery, bounded shell/model work, workspace-safe tools, web search,
+  runtime recovery, bounded shell/model work, workspace-safe tools, Web Search,
   sandbox diagnostics, compact context packing, and progressive inspector
   surfaces.
-- Plugin registry, local install/remove, inspect-before-install, enable/disable,
-  connector auth, bounded `stdio` runners, response-aware MCP stdio sessions,
-  permission gates, approval gates, output envelopes, repair hints, and retry
-  flows.
+- Plugin registry, inspect-before-install, enable/disable, connector auth,
+  bounded `stdio` runners, MCP stdio sessions, permission gates, approval
+  gates, output envelopes, repair hints, retry flows, and runner memory
+  capture.
 - Timeline trust boundaries for approvals, plugin runs, connector blockers,
-  source reveal, refresh recovery, runtime status, and credential-safe metadata.
-- Daily-driver package proof: CI validates the x86_64 macOS app bundle, bundled
-  runtime protocol, first-use model metadata, app-owned support directories,
-  workspace bootstrap/search, deterministic first local request, web search,
-  bundled MCP plugin command execution, connector authorization, approval
-  recovery, runner memory capture, launch smoke coverage, internal DMG shape,
-  release-state safety, native sandbox fallback proof, and the Developer ID
-  upgrade path.
+  source reveal, refresh recovery, runtime status, and credential-safe
+  metadata.
+- Daily-driver package proof: CI validates the app bundle, bundled runtime
+  protocol, first-use model metadata, app support directories, workspace
+  bootstrap/search, deterministic first request, Web Search, bundled MCP plugin
+  command execution, connector authorization, approval recovery, launch smoke
+  coverage, internal DMG shape, release-state safety, native sandbox fallback,
+  and Developer ID upgrade path.
 
 ## Current Milestone: M6 Agent Loop and Real Connectors
 
-M6 upgrades Pith from a safe single-action local assistant into a small,
-auditable agent that can plan, use tools repeatedly, observe results, and stop
-cleanly. The goal is not to copy Codex or Claude feature-for-feature; it is to
-keep Pith native, local-first, and small while closing the biggest product gap:
-the agent loop.
+M6 should make Pith feel like a real local agent instead of a polished
+single-action assistant. The goal is a compact, auditable loop that can plan,
+call tools, observe results, pause for approval, resume, cancel, and produce a
+source-grounded final answer.
 
-Workstreams:
+Ordered work:
 
-- Bounded agent loop: replace the single heuristic turn router with a
-  request-scoped Plan/Act/Observe loop that has a strict step cap, cancellation,
-  tool budgets, approval pauses, recovery items, and readable timeline state.
-- Tool contracts: make file read/write, search, web search, shell, plugin
-  command, and future Git actions available through one typed local tool
-  contract instead of one-off routing branches.
-- Real connector proof: graduate the Notion-style connector from dry-run proof
-  to one real local MCP connector path with credential handling, sandbox
-  visibility, safe failure modes, and no secret leakage.
-- Source-grounded retrieval: keep Web Search as the retrieval layer, but improve
-  source attribution, result inspection, and citation-ready summaries before
-  considering any generic local RAG.
-- Minimal Git loop: add only the daily-driver Git surface Pith needs first:
-  status, diff, stage selected changes, commit message draft, and optional
-  worktree isolation. Avoid becoming a full terminal or Git client.
+- Typed tool contract: define one local tool invocation/result envelope for
+  read, write, search, web search, shell, plugin command, and Git actions.
+- Agent step record: persist compact step state for plan, tool call,
+  observation, approval pause, cancellation, and final answer.
+- Bounded loop coordinator: run a request-scoped Plan/Act/Observe loop with a
+  strict step cap, tool budgets, cancellation, and recovery.
+- Compatibility path: keep the current single-action router as the first tool
+  planner behind the new loop, then replace routing branch-by-branch.
+- Web Search attribution: carry result titles, URLs, and source summaries into
+  the final answer, not only the timeline.
+- Real connector proof: replace the Notion dry-run with one real local MCP
+  connector path that is credential-safe, bounded, sandbox-visible, and
+  failure-readable.
+- Minimal Git loop: add status, diff, stage selected changes, commit message
+  draft, and optional worktree isolation only after the loop can observe tool
+  results naturally.
 
-Current Status:
+M6 exit gate:
 
-- Pith has a solid local-first app foundation: model manager, sandbox,
-  approvals, recovery, workspace tools, web search, plugin manifests, local MCP
-  stdio execution, packaging, release gates, and CI smoke coverage.
-- The main gap versus Codex and Claude is now the agent loop: most turns still
-  resolve to one prepared action before execution instead of model-guided
-  multi-step tool use.
-- The plugin stack is structurally ready for real connectors, but the bundled
-  Notion connector is still a safe dry-run proof.
-
-Next Work:
-
-- Define the typed local tool contract and a compact agent step record.
-- Move turn planning behind a bounded agent-loop coordinator while preserving
-  existing single-action behavior as the first implementation path.
-- Add timeline output for each agent step: plan, tool call, observation,
-  approval pause, cancellation, and final answer.
-- Add one real connector proof after the loop can call plugin tools naturally.
-- Add the minimal Git surface only after the loop can observe diffs and feed
-  them back into planning.
-
-Architecture Watchlist:
-
-- Keep `AppViewModel`, timeline presenters, runtime request routing, agent loop,
-  and plugin runner modules split by ownership and failure boundary, not
-  cosmetic file size.
-- Keep MCP target resolution, stdio session supervision, and output/protocol
-  parsing separate as connector support grows.
-- Do not split Swift files further unless a domain owner, state owner, or
-  failure boundary becomes clearer.
-- Keep release and CI policy in tested scripts and reusable workflow steps, not
-  growing inline shell blocks.
-- Do not let M6 become generic RAG, multi-agent orchestration, browser
-  automation, or marketplace work.
-
-M6 Exit Gate:
-
-- A single user request can run at least three bounded agent steps across two
-  tool types, then produce a final answer with visible observations.
+- One user request can run at least three bounded agent steps across two tool
+  types and then produce a final answer with visible observations.
 - Cancelling the turn stops pending model/tool work and leaves a coherent
   timeline state.
-- Approval-paused tools can resume the same agent step after approval without
+- Approval-paused tools resume the same agent step after approval without
   losing workspace, memory, or connector context.
-- Web search results carry source attribution into the final answer.
-- One real connector command works through the same agent loop and remains
-  sandboxed, bounded, and credential-safe.
+- Web Search final answers include source attribution.
+- One real connector command works through the same loop and remains sandboxed,
+  bounded, and credential-safe.
 
-## Not Now
+## Next Milestone: M7 Practical Coding Workflow
 
-- No hosted model dependency.
-- No multi-agent workflows.
-- No generic document RAG or local vector database.
-- No connector marketplace until secure connector execution is proven with
-  native credential storage.
-- No remote MCP transport until bounded local execution supports it.
-- No cosmetic refactor that only moves code around.
-- No large UI expansion before plugin execution is real.
+M7 starts only after M6 exits. It should make Pith useful for day-to-day coding
+tasks rather than adding broad platform features.
+
+- Workspace-aware code editing loop with safe diffs and reviewable writes.
+- Minimal Git review and commit flow in the app.
+- Better context compaction for long sessions and small local models.
+- Connector hardening based on the M6 real connector proof.
+- Packaged app UX polish only where it directly helps daily coding work.
 
 ## Engineering Discipline
 
