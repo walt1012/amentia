@@ -102,25 +102,18 @@ Workstreams:
 
 Current Status:
 
-- Proven in CI: packaged runtime protocol health, isolated app support state,
-  runtime database initialization, workspace bootstrap, workspace search, thread
-  creation, web search readiness, packaged web search execution, sandbox
-  readiness, deterministic first request coverage, fresh app-owned directory
-  preparation, model manager
-  download/resume/activation planning, packaged app launch smoke coverage, and
-  local inference backend dependency portability and launch checks. CI is split
-  into parallel policy, Rust, Swift, runtime, cached backend, and packaging
-  gates so speed does not weaken release proof. Release tags default to a draft
-  ad-hoc DMG when Developer ID secrets are missing, visible untrusted prerelease
-  reruns preserve their published state through a tested release-state helper,
-  and Developer ID credentials still produce the trusted notarized DMG.
-- Hardened locally: plugin runner stdin no longer blocks pipe draining before
-  timeout/cancel supervision, MCP stdio sessions stop once the requested tool
-  response arrives, runtime launch verifies active models off the MainActor, and
-  the macOS shell guards the current single-runtime design with one main window.
-- Remaining M5 product work: prove the live first-run app path, keep execution
-  cancellation/status accurate across every lane, and make real local plugin
-  execution feel recoverable rather than experimental.
+- CI now proves the x86_64 app bundle shape, packaged runtime protocol,
+  app-owned support state, workspace bootstrap/search, web search, sandbox
+  readiness, model manager planning, app launch smoke coverage, release-state
+  safety, and portable local inference backend checks.
+- Recent hardening closed the most dangerous daily-driver gaps: bounded plugin
+  stdin/stdout/stderr handling, MCP session stop-after-response behavior,
+  MCP runner target/session/output boundaries, off-MainActor model verification
+  before runtime launch, and one main window for the current single-runtime
+  design.
+- Remaining M5 risk is product proof, not feature count: a fresh user must be
+  able to download one verified model, open a workspace, run a real request,
+  use web search and a local plugin command, and recover without terminal help.
 
 Next Work:
 
@@ -130,15 +123,24 @@ Next Work:
 - Real local inference proof: run a valid downloaded GGUF through the packaged
   backend in CI when a small release-safe fixture is available; activation and
   runtime launch must revalidate model integrity before execution.
+- Plugin execution proof: exercise a real MCP stdio command in the packaged app
+  path, then improve diagnostics, auth recovery, and sandbox visibility only
+  where they make third-party connectors more usable.
 - Execution lane hardening: keep turns, approvals, workspace search, web search,
   plugin commands, and model activation cancellable, visible, and non-blocking
   where the work is read-only.
-- Plugin execution polish: improve runner diagnostics, connector auth recovery,
-  sandbox visibility, and retry flows only when they improve real local plugin
-  execution.
-- Architecture guardrails: keep `AppViewModel`, timeline presenters, runtime
-  request routing, and plugin runner modules split by ownership and failure
-  boundary, not by cosmetic file size.
+
+Architecture Watchlist:
+
+- Keep `AppViewModel`, timeline presenters, runtime request routing, and plugin
+  runner modules split by ownership and failure boundary, not cosmetic file
+  size.
+- Keep MCP target resolution, stdio session supervision, and output/protocol
+  parsing separate as connector support grows.
+- Do not split Swift files further unless a domain owner, state owner, or
+  failure boundary becomes clearer.
+- Keep release and CI policy in tested scripts and reusable workflow steps, not
+  growing inline shell blocks.
 
 M5 Exit Gate:
 
