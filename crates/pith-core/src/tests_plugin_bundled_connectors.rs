@@ -58,7 +58,7 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
 }
 
 #[test]
-fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
+fn bundled_notion_connector_natural_turn_resumes_the_same_agent_step() {
   let (mut context, workspace) =
     setup_authorized_notion_context("bundled-notion-turn-loop", "Bundled Notion Turn Thread");
 
@@ -68,7 +68,7 @@ fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
       methods::TURN_START,
       Some(json!({
         "threadId": "thread-1",
-        "message": format!("/plugin {NOTION_COMMAND_ID} Prepare a project handoff page")
+        "message": "Prepare a Notion page draft for this project handoff."
       })),
     ),
   );

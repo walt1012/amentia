@@ -1,3 +1,6 @@
+const NOTION_PAGE_DRAFT_COMMAND_ID: &str = "notion-connector::notion.prepare-page-draft";
+const NATURAL_NOTION_DRAFT_REASON: &str = "naturalNotionDraftCommand";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ExplicitPluginCommandRoute {
   pub(crate) command_id: String,
@@ -30,6 +33,21 @@ pub(crate) fn infer_explicit_plugin_command_route(
   None
 }
 
+pub(crate) fn infer_natural_plugin_command_route(
+  message: &str,
+) -> Option<ExplicitPluginCommandRoute> {
+  let normalized = message.to_ascii_lowercase();
+  if !normalized.contains("notion") || !looks_like_notion_draft_request(&normalized) {
+    return None;
+  }
+
+  Some(ExplicitPluginCommandRoute {
+    command_id: NOTION_PAGE_DRAFT_COMMAND_ID.to_string(),
+    input: Some(message.trim().to_string()).filter(|input| !input.is_empty()),
+    routing_reason: NATURAL_NOTION_DRAFT_REASON,
+  })
+}
+
 fn explicit_plugin_prefixes() -> [(&'static str, &'static str); 5] {
   [
     ("/plugin ", "slashPluginCommand"),
@@ -38,6 +56,19 @@ fn explicit_plugin_prefixes() -> [(&'static str, &'static str); 5] {
     ("use plugin command ", "explicitPluginCommand"),
     ("use plugin ", "explicitPluginCommand"),
   ]
+}
+
+fn looks_like_notion_draft_request(normalized: &str) -> bool {
+  let action_match = [
+    "prepare", "draft", "create", "make", "compose", "summarize", "summary",
+  ]
+  .iter()
+  .any(|term| normalized.contains(term));
+  let artifact_match = ["page", "note", "handoff", "brief", "update"]
+    .iter()
+    .any(|term| normalized.contains(term));
+
+  action_match && artifact_match
 }
 
 fn strip_case_insensitive_prefix<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
@@ -97,7 +128,31 @@ mod tests {
 
   #[test]
   fn ignores_natural_language_plugin_mentions() {
-    assert!(infer_explicit_plugin_command_route("Can a notion plugin help this thread?").is_none());
+    let route = infer_explicit_plugin_command_route("Can a notion plugin help this thread?");
+
+    assert!(route.is_none());
+  }
+
+  #[test]
+  fn detects_natural_notion_page_draft_request() {
+    let route = infer_natural_plugin_command_route(
+      "Prepare a Notion page draft for this project handoff.",
+    )
+    .expect("route");
+
+    assert_eq!(route.command_id, NOTION_PAGE_DRAFT_COMMAND_ID);
+    assert_eq!(
+      route.input.as_deref(),
+      Some("Prepare a Notion page draft for this project handoff.")
+    );
+    assert_eq!(route.routing_reason, "naturalNotionDraftCommand");
+  }
+
+  #[test]
+  fn ignores_natural_notion_lookup_request() {
+    let route = infer_natural_plugin_command_route("What is new in Notion?");
+
+    assert!(route.is_none());
   }
 
   #[test]

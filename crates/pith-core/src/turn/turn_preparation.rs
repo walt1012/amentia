@@ -4,7 +4,10 @@ use std::path::Path;
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::WorkspaceSummary;
 
-use super::turn_plugin_routing::infer_explicit_plugin_command_route;
+use super::turn_plugin_routing::{
+  ExplicitPluginCommandRoute, infer_explicit_plugin_command_route,
+  infer_natural_plugin_command_route,
+};
 use crate::intent_inference::{
   infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_model_web_search_intent,
   infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
@@ -27,31 +30,11 @@ pub(crate) fn prepare_turn_action(
   }
 
   if let Some(route) = infer_explicit_plugin_command_route(message) {
-    let command_id = route.command_id;
-    let input = route.input;
-    let route_input = input.clone();
-    let routing_reason = route.routing_reason;
-    return match prepare_plugin_command_turn_snapshot(
-      context,
-      thread_id,
-      workspace.cloned(),
-      &command_id,
-      input,
-      cancellation,
-    ) {
-      Ok(snapshot) => PreparedTurnAction::PluginCommand {
-        snapshot: Box::new(snapshot),
-      },
-      Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
-        attributes: error.route_failure_attributes(
-          &command_id,
-          routing_reason,
-          route_input.as_deref(),
-        ),
-        command_id,
-        message: error.message().to_string(),
-      },
-    };
+    return prepare_plugin_route_action(context, thread_id, workspace, route, cancellation);
+  }
+
+  if let Some(route) = infer_natural_plugin_command_route(message) {
+    return prepare_plugin_route_action(context, thread_id, workspace, route, cancellation);
   }
 
   let Some(workspace) = workspace else {
@@ -66,8 +49,8 @@ pub(crate) fn prepare_turn_action(
   let workspace_root = Path::new(&workspace.root_path);
 
   if let Some(intent) = infer_write_intent(message) {
-    let approval_id =
-      permission_is_granted(permission_sources, "file.write").then(|| reserve_approval_id(context));
+    let approval_id = permission_is_granted(permission_sources, "file.write")
+      .then(|| reserve_approval_id(context));
     return PreparedTurnAction::Write {
       intent,
       approval_id,
@@ -75,8 +58,8 @@ pub(crate) fn prepare_turn_action(
   }
 
   if let Some(command) = infer_shell_command(message) {
-    let approval_id =
-      permission_is_granted(permission_sources, "shell.exec").then(|| reserve_approval_id(context));
+    let approval_id = permission_is_granted(permission_sources, "shell.exec")
+      .then(|| reserve_approval_id(context));
     return PreparedTurnAction::Shell {
       command,
       approval_id,
@@ -104,4 +87,38 @@ pub(crate) fn prepare_turn_action(
 
 fn reserve_approval_id(context: &mut RuntimeContext) -> String {
   context.sequence_state.next_approval_id()
+}
+
+fn prepare_plugin_route_action(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+  workspace: Option<&WorkspaceSummary>,
+  route: ExplicitPluginCommandRoute,
+  cancellation: GenerationCancellation,
+) -> PreparedTurnAction {
+  let command_id = route.command_id;
+  let input = route.input;
+  let route_input = input.clone();
+  let routing_reason = route.routing_reason;
+  match prepare_plugin_command_turn_snapshot(
+    context,
+    thread_id,
+    workspace.cloned(),
+    &command_id,
+    input,
+    cancellation,
+  ) {
+    Ok(snapshot) => PreparedTurnAction::PluginCommand {
+      snapshot: Box::new(snapshot),
+    },
+    Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
+      attributes: error.route_failure_attributes(
+        &command_id,
+        routing_reason,
+        route_input.as_deref(),
+      ),
+      command_id,
+      message: error.message().to_string(),
+    },
+  }
 }
