@@ -63,8 +63,11 @@ fn turn_start_reads_a_requested_workspace_file() {
   assert_eq!(items[1]["attributes"]["agentLoopMaxSteps"], "3");
   assert_eq!(
     items[1]["attributes"]["agentLoopMode"],
-    "compatibilitySingleAction"
+    "dispatcherLoop"
   );
+  assert_eq!(items[1]["attributes"]["agentLoopStepCount"], "1");
+  assert_eq!(items[1]["attributes"]["agentLoopBudgetRemaining"], "2");
+  assert_eq!(items[1]["attributes"]["agentLoopStopReason"], "streaming");
   assert_eq!(items[1]["attributes"]["agentStepPhase"], "plan");
   assert_eq!(items[1]["attributes"]["agentToolName"], "read_file");
   assert_eq!(items[1]["attributes"]["responseRole"], "planner");

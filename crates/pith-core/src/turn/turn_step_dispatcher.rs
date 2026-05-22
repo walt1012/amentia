@@ -18,7 +18,7 @@ use crate::plugin_commands::{
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum TurnStepControl {
+pub(crate) enum TurnStepControl {
   Continue,
   Stop,
 }

@@ -64,17 +64,18 @@ Current state:
   and Web Search source metadata.
 - Done: approval resume preserves the same agent step metadata.
 - Done: prepared actions execute through a turn step dispatcher.
+- Done: normal turns now use dispatcher loop metadata with step count, stop
+  reason, remaining budget, and observation count.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
-- Gap: the normal turn path still runs one prepared action with
-  `compatibilitySingleAction`.
+- Gap: the normal turn path still runs only one prepared action.
 - Gap: the bundled Notion connector is still a dry-run MCP proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 
 1. Real loop runner: step budget of three, indexed steps, observation capture,
-   stop reasons, cancellation checks, and approval pause/resume.
+   cancellation checks, and approval pause/resume.
 2. Planner integration: keep the heuristic first planner, but let the loop
    choose the next action from the previous observation.
 3. Tool migration: workspace read/search and Web Search first, then shell/write

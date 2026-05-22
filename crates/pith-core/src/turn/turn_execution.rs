@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
 
-use super::turn_agent_loop::AgentLoopCoordinator;
+use super::turn_agent_loop::{AgentLoopCoordinator, AgentLoopStopReason};
 use super::turn_step_dispatcher::TurnStepDispatcher;
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
 
@@ -21,7 +21,7 @@ pub(crate) fn execute_prepared_turn_snapshot(
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
   let step_start_index = items.len();
   let agent_loop = AgentLoopCoordinator::new(&snapshot.turn_id);
-  let agent_step = agent_loop.begin_compatibility_step(&action);
+  let agent_step = agent_loop.begin_step(1, &action);
 
   {
     let mut dispatcher = TurnStepDispatcher::new(
@@ -33,10 +33,18 @@ pub(crate) fn execute_prepared_turn_snapshot(
     );
     dispatcher.execute(action);
   }
+  let stop_reason = AgentLoopStopReason::from_step_state(
+    &items[step_start_index..],
+    snapshot.cancellation.is_cancelled(),
+    pending_approval.is_some(),
+    pending_active_turn.is_some(),
+  );
 
-  agent_loop.finish_compatibility_step(
+  agent_loop.finish_step(
     &agent_step,
     &mut items[step_start_index..],
+    1,
+    stop_reason,
     pending_approval.is_some(),
     pending_active_turn.is_some(),
   );
