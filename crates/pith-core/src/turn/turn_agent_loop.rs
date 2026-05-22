@@ -414,7 +414,9 @@ mod tests {
 
     let next_action = observation.planned_next_action().expect("next action");
 
-    let PreparedTurnAction::ReadFile { relative_path } = next_action;
-    assert_eq!(relative_path, "README.md");
+    match next_action {
+      PreparedTurnAction::ReadFile { relative_path } => assert_eq!(relative_path, "README.md"),
+      other => panic!("unexpected next action: {other:?}"),
+    }
   }
 }
