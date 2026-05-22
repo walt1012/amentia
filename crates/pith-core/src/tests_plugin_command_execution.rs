@@ -507,7 +507,10 @@ fn turn_start_routes_natural_workspace_note_through_plugin_execution() {
     .unwrap()
     .contains("Natural plugin routing"));
   assert_eq!(items[3]["kind"], "assistantMessage");
-  assert_eq!(items[3]["attributes"]["pluginCommandHandoff"], "pluginCommand");
+  assert_eq!(
+    items[3]["attributes"]["pluginCommandHandoff"],
+    "pluginCommand"
+  );
   assert!(items
     .iter()
     .any(|item| item["title"] == "Memory Note Saved"));
