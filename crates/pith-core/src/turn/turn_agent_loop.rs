@@ -414,11 +414,7 @@ mod tests {
 
     let next_action = observation.planned_next_action().expect("next action");
 
-    assert_eq!(
-      next_action,
-      PreparedTurnAction::ReadFile {
-        relative_path: "README.md".to_string(),
-      }
-    );
+    let PreparedTurnAction::ReadFile { relative_path } = next_action;
+    assert_eq!(relative_path, "README.md");
   }
 }
