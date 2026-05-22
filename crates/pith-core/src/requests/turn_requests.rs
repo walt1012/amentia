@@ -153,12 +153,6 @@ pub fn complete_prepared_turn_start(
     return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
   }
 
-  if active_turn_id.is_none() {
-    if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
-      return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
-    }
-  }
-
   if let Some(plugin_output) = plugin_command_output {
     let memory_items = capture_plugin_command_output_memory(
       context,
@@ -178,9 +172,12 @@ pub fn complete_prepared_turn_start(
       if let Err(error) = context.persist_runtime_state() {
         return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
       }
-      if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
-        return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
-      }
+    }
+  }
+
+  if active_turn_id.is_none() {
+    if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
+      return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
     }
   }
 
