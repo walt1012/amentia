@@ -75,12 +75,14 @@ Not yet aligned:
 
 - Agent loop: Pith still routes most turns to one prepared action instead of a
   model-guided Plan/Act/Observe loop.
-- Tool contract: timeline items now share one local tool schema, but execution
-  still runs through separate reducers instead of one loop-owned dispatcher.
+- Tool contract: timeline items share one local tool schema and prepared
+  actions run through a step dispatcher, but the dispatcher is not yet driven by
+  a multi-step loop.
 - Real connectors: the Notion connector is still a safe dry-run proof, not a
   real external-service workflow.
-- Source-grounded answers: Web Search results are visible in the timeline, but
-  final answers need stronger source attribution and citation-ready wording.
+- Source-grounded cowork answers: Web Search final messages carry source
+  metadata, but citations still need to flow through the multi-step loop and
+  connector/workspace handoff.
 - Workspace change workflow: Pith has review-diff support, but it does not yet
   have a general cowork flow for reviewing, applying, syncing, and explaining
   changes across local files and connectors.
@@ -135,6 +137,8 @@ Current review snapshot:
 - The main M6 blocker is architectural, not cosmetic: normal turns still use
   `compatibilitySingleAction`, and the Notion connector still proves metadata
   rather than a real external-service path.
+- The new turn step dispatcher is the right seam. The next work should make the
+  loop iterate that dispatcher, not add more one-off turn reducers.
 - The macOS app is now a composition root with focused feature files. Keep
   splitting only when ownership or failure boundaries improve; do not split just
   to shrink line counts.
@@ -146,15 +150,16 @@ Current review snapshot:
 
 Implementation sequence:
 
-1. Replace the compatibility coordinator with a request-scoped loop dispatcher
-   that can execute up to three bounded steps, feed observations back into the
-   next decision, stop on cancellation, and resume approvals in the same step.
-2. Move tools into the dispatcher in this order: workspace read/search, Web
-   Search, shell/write approval, plugin command, connector command, and
-   workspace-change review/apply.
-3. Prove cowork value with source-attributed Web Search answers, one real
-   credential-safe Notion MCP connector path, and a minimal review/apply/handoff
-   workflow for local workspace changes.
+1. Promote the compatibility coordinator into a real request-scoped loop:
+   indexed steps, loop mode, step count, observation capture, cancellation
+   checks, approval pause/resume, and a hard three-step budget.
+2. Drive the existing step dispatcher from that loop for workspace read/search
+   and Web Search first, then shell/write approvals, plugin commands, connector
+   commands, and workspace-change review/apply.
+3. Prove cowork value with one request that can search/read, optionally use Web
+   Search, produce cited observations, and finish with a concise handoff.
+4. Replace the Notion dry-run with one real credential-safe MCP connector path
+   after the loop can pause, resume, and attribute connector observations.
 
 Active status:
 
@@ -168,6 +173,8 @@ Active status:
 - Done: turn execution now delegates each prepared action through a step
   dispatcher with explicit continue/stop control, so the next loop increment can
   iterate tool steps without growing the top-level turn reducer.
+- Done: Web Search summaries persist source attribution, source titles, and
+  source URLs on the final assistant item.
 - Not done: the normal turn path still executes one prepared action, not a real
   Plan/Act/Observe loop.
 - Not done: the bundled Notion connector is still a dry-run MCP server.

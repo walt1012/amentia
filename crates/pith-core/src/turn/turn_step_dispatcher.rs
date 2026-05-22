@@ -121,21 +121,11 @@ impl<'a> TurnStepDispatcher<'a> {
         }
       }
       PreparedTurnAction::WebSearch(intent) => {
-        execute_web_search_turn(
-          self.snapshot,
-          &intent,
-          self.items,
-          self.pending_active_turn,
-        );
+        execute_web_search_turn(self.snapshot, &intent, self.items, self.pending_active_turn);
       }
       PreparedTurnAction::WebSearchCandidate(intent) => {
         if model_confirms_web_search_candidate(self.snapshot, &intent) {
-          execute_web_search_turn(
-            self.snapshot,
-            &intent,
-            self.items,
-            self.pending_active_turn,
-          );
+          execute_web_search_turn(self.snapshot, &intent, self.items, self.pending_active_turn);
         } else {
           execute_web_search_candidate_local_answer(
             self.snapshot,
@@ -147,7 +137,12 @@ impl<'a> TurnStepDispatcher<'a> {
       }
       PreparedTurnAction::ListWorkspace => {
         if let Some(workspace) = self.snapshot.workspace.as_ref() {
-          execute_list_turn(self.snapshot, workspace, self.items, self.pending_active_turn);
+          execute_list_turn(
+            self.snapshot,
+            workspace,
+            self.items,
+            self.pending_active_turn,
+          );
         } else {
           execute_no_workspace_turn(self.snapshot, self.items);
         }
