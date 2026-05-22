@@ -103,18 +103,19 @@ Current state:
   seam.
 - Done: observation-driven shell and write follow-up now enter the same
   permission and approval path instead of bypassing user review.
+- Done: plugin-emitted shell and write follow-up observations are covered by
+  end-to-end turn tests, including approval pause behavior.
 - Gap: planner integration covers safe observation follow-up and approval
   request paths, but not connector command chaining or review/apply.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 
-1. Planner integration: expand observation-based next actions into review/apply
-   paths.
-2. Tool migration: plugin commands, connector commands, and review/apply.
-3. Connector loop integration: use connector handoffs as planner input for
+1. Connector loop integration: use connector handoffs as planner input for
    follow-up actions and generalize connector command routing beyond Notion.
-4. Cowork proof: one request can search/read or use Web Search, cite sources,
+2. Review/apply flow: convert review observations into safe diffs and approval
+   requests.
+3. Cowork proof: one request can search/read or use Web Search, cite sources,
    explain observations, and finish with a concise handoff.
 
 M6 exit criteria:
