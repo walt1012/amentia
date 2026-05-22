@@ -198,6 +198,7 @@ impl AgentLoopObservation {
     }
   }
 
+  #[cfg(test)]
   pub(crate) fn planned_next_action(&self) -> Option<PreparedTurnAction> {
     self.planned_next_action_with_approvals(&HashMap::new(), &mut VecDeque::new())
   }
