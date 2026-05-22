@@ -729,12 +729,14 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
   if not any(
     item["kind"] == "pluginResult"
     and item["title"] == "Notion Page Draft"
-    and "Prepared a local Notion page draft" in item["content"]
-    and item.get("attributes", {}).get("mode") == "dryRun"
+    and "Prepared a credential-scoped local Notion page draft" in item["content"]
+    and item.get("attributes", {}).get("targetService") == "notion"
+    and item.get("attributes", {}).get("draftMode") == "localDraft"
+    and item.get("attributes", {}).get("remoteWrite") == "false"
     for item in items
   ):
     raise RuntimeError(
-      "Packaged MCP plugin command did not return the dry-run page draft. "
+      "Packaged MCP plugin command did not return the local Notion page draft. "
       f"Items: {timeline_item_summary(items)}"
     )
   if not any(
