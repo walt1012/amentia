@@ -168,10 +168,7 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
     draft_item["attributes"]["sourceArtifactPreviewProvided"],
     "true"
   );
-  assert_eq!(
-    draft_item["attributes"]["sourceArtifactTruncated"],
-    "false"
-  );
+  assert_eq!(draft_item["attributes"]["sourceArtifactTruncated"], "false");
   assert!(draft_item["content"]
     .as_str()
     .expect("draft content")
