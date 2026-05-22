@@ -38,7 +38,7 @@ Memory owns meaning and ranking. Storage owns durable records.
 
 ## Closed Foundation
 
-Milestones 1-5 are closed. Keep details in git history, not in this plan.
+Milestones 1-6 are closed. Keep details in git history, not in this plan.
 
 Closed capabilities:
 
@@ -51,64 +51,44 @@ Closed capabilities:
 - Package proof: x86_64 app bundle, internal DMG workflow, packaged smoke
   coverage, release-state safety, native sandbox fallback, and unsigned
   distribution path with optional Developer ID upgrade later.
+- Cowork loop: bounded Plan/Act/Observe execution, Web Search retrieval,
+  connector-backed plugin commands, approval pause/resume, safe review-summary
+  writes, and structured handoff metadata.
 
-## Current Milestone: M6 Cowork Agent Loop
+## Current Milestone: M7 Practical Cowork
 
-Goal: replace the polished single-action assistant with one compact,
-auditable Plan/Act/Observe loop that can call tools, observe results, pause for
-approval, resume, cancel, and produce source-grounded cowork output.
+Goal: turn the proven loop into everyday cowork flows that help users draft,
+review, save, hand off, and continue real work without memorizing commands.
 
 Current state:
 
-- Loop core: request-scoped dispatcher, stable step metadata, three-step
-  budget, cancellation, approval pause/resume, and observation counts are in
-  place.
-- Workspace tools: list, search, read, shell, and write can run through the
-  same bounded loop, with writes and shell commands gated by approval.
-- Retrieval: Web Search is the active retrieval layer and surfaces visible
-  source attribution.
-- Plugins/connectors: bundled local commands, connector-backed MCP stdio
-  execution, credential-scoped approval, natural connector routing, command
-  chaining, and memory capture are proven.
-- Review/apply: review observations can request a saved summary through safe
-  diff preview and approval instead of writing directly.
-- Handoff: workspace summaries, Web Search answers, connector outputs,
-  approved writes, and approved shell commands now close with structured
-  cowork handoff metadata.
-- Remaining M6 gap: one final exit validation pass should verify the whole
-  loop as a practical cowork story, not only isolated tool paths.
+- Done: natural saved-artifact requests such as handoffs, notes, summaries,
+  plans, and briefs enter the same safe diff and approval path as explicit
+  writes.
+- Active gap: editing and handoff flows still need better continuation after an
+  approved write.
 
-M6 work order:
+M7 work order:
 
-1. Connector loop integration: use connector handoffs as planner input for
-   follow-up actions and generalize connector command routing beyond Notion.
-2. Review/apply flow: convert review observations into safe diffs and approval
-   requests.
-3. Cowork proof: one request can search/read or use Web Search, cite sources,
-   explain observations, and finish with a concise handoff.
+1. Make natural editing and saved-artifact requests feel safe, reviewable, and
+   obvious.
+2. Continue from approved writes into concise next-step handoffs.
+3. Harden connector updates around real cowork tasks, not demo commands.
+4. Keep UI polish focused on clarity around setup, approvals, sources, and
+   saved work.
 
-M6 exit criteria:
+M7 exit criteria:
 
-- One user request can run at least three bounded steps across at least two
-  tool types.
-- Cancellation stops pending model/tool work and leaves a coherent timeline.
-- Approval-paused tools resume the same step without losing workspace, memory,
-  or connector context.
-- Web Search answers include visible source attribution.
-- One connector command works through the same loop and remains sandboxed,
-  bounded, and credential-safe.
+- Users can save or update notes, handoffs, summaries, and docs without command
+  syntax.
+- Approved writes end with a useful continuation handoff.
+- Connector actions are practical enough for Notion-like third-party services.
+- The packaged macOS app path remains green in CI.
 
-## Next Milestone: M7 Practical Cowork
+## Next Milestone: M8 Release Candidate
 
-Start M7 only after M6 exits.
-
-- Workspace-aware editing loop with safe diffs and reviewable writes for notes,
-  docs, config, and code.
-- Practical handoff flows: summarize work, draft next actions, prepare
-  connector updates, and optionally package local changes for Git workspaces.
-- Better context compaction for long sessions and small local models.
-- Connector hardening based on the M6 real connector proof.
-- App polish only where it improves daily cowork clarity.
+- Tighten install, first-run, unsigned distribution, crash recovery, and real
+  user smoke coverage.
 
 ## Guardrails
 
