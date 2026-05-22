@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use pith_protocol::TimelineItem;
 
 use super::turn_agent_steps::{AgentStepOutcome, AgentStepRecord};
+use crate::intent_inference::WebSearchIntent;
 use crate::request_state::PreparedTurnAction;
 
 pub(crate) const LOOP_MAX_STEPS: usize = 3;
@@ -109,7 +110,13 @@ struct AgentLoopLastObservation {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum AgentLoopPlannedAction {
+  ListWorkspace,
   ReadFile { relative_path: String },
+  Search { query: String },
+  WebSearch {
+    query: String,
+    routing_reason: &'static str,
+  },
 }
 
 impl AgentLoopObservation {
@@ -184,9 +191,20 @@ impl AgentLoopObservation {
       .planned_next_action
       .as_ref()
       .map(|action| match action {
+        AgentLoopPlannedAction::ListWorkspace => PreparedTurnAction::ListWorkspace,
         AgentLoopPlannedAction::ReadFile { relative_path } => PreparedTurnAction::ReadFile {
           relative_path: relative_path.clone(),
         },
+        AgentLoopPlannedAction::Search { query } => PreparedTurnAction::Search {
+          query: query.clone(),
+        },
+        AgentLoopPlannedAction::WebSearch {
+          query,
+          routing_reason,
+        } => PreparedTurnAction::WebSearch(WebSearchIntent {
+          query: query.clone(),
+          routing_reason: *routing_reason,
+        }),
       })
   }
 }
@@ -274,10 +292,29 @@ fn observation_tool_name(attributes: &HashMap<String, String>) -> Option<String>
 fn planned_action_from_item(item: &TimelineItem) -> Option<AgentLoopPlannedAction> {
   let attributes = item.attributes.as_ref()?;
   match attributes.get("nextAction").map(String::as_str) {
+    Some("list_directory" | "list_workspace") => Some(AgentLoopPlannedAction::ListWorkspace),
     Some("read_file") => Some(AgentLoopPlannedAction::ReadFile {
       relative_path: attributes.get("nextRelativePath")?.clone(),
     }),
+    Some("search" | "search_files") => Some(AgentLoopPlannedAction::Search {
+      query: attributes.get("nextQuery")?.clone(),
+    }),
+    Some("web_search") => Some(AgentLoopPlannedAction::WebSearch {
+      query: attributes.get("nextQuery")?.clone(),
+      routing_reason: normalized_next_routing_reason(
+        attributes.get("nextRoutingReason"),
+      ),
+    }),
     _ => None,
+  }
+}
+
+fn normalized_next_routing_reason(value: Option<&String>) -> &'static str {
+  match value.map(String::as_str) {
+    Some("explicitWebSearchRequest") => "explicitWebSearchRequest",
+    Some("freshPublicInformation") => "freshPublicInformation",
+    Some("modelToolPlanning") => "modelToolPlanning",
+    _ => "observationNextAction",
   }
 }
 
@@ -416,6 +453,55 @@ mod tests {
 
     match next_action {
       PreparedTurnAction::ReadFile { relative_path } => assert_eq!(relative_path, "README.md"),
+      other => panic!("unexpected next action: {other:?}"),
+    }
+  }
+
+  #[test]
+  fn observation_summary_recovers_search_next_action() {
+    let observation = AgentLoopObservation::from_items(&[TimelineItem {
+      kind: "pluginResult".to_string(),
+      title: "Plugin Result".to_string(),
+      content: String::new(),
+      attributes: Some(HashMap::from([
+        ("tool".to_string(), "workspace-notes".to_string()),
+        ("nextAction".to_string(), "search_files".to_string()),
+        ("nextQuery".to_string(), "model catalog".to_string()),
+      ])),
+    }]);
+
+    let next_action = observation.planned_next_action().expect("next action");
+
+    match next_action {
+      PreparedTurnAction::Search { query } => assert_eq!(query, "model catalog"),
+      other => panic!("unexpected next action: {other:?}"),
+    }
+  }
+
+  #[test]
+  fn observation_summary_recovers_web_search_next_action() {
+    let observation = AgentLoopObservation::from_items(&[TimelineItem {
+      kind: "pluginResult".to_string(),
+      title: "Plugin Result".to_string(),
+      content: String::new(),
+      attributes: Some(HashMap::from([
+        ("tool".to_string(), "notion.prepare-page-draft".to_string()),
+        ("nextAction".to_string(), "web_search".to_string()),
+        ("nextQuery".to_string(), "latest small GGUF model".to_string()),
+        (
+          "nextRoutingReason".to_string(),
+          "freshPublicInformation".to_string(),
+        ),
+      ])),
+    }]);
+
+    let next_action = observation.planned_next_action().expect("next action");
+
+    match next_action {
+      PreparedTurnAction::WebSearch(intent) => {
+        assert_eq!(intent.query, "latest small GGUF model");
+        assert_eq!(intent.routing_reason, "freshPublicInformation");
+      }
       other => panic!("unexpected next action: {other:?}"),
     }
   }

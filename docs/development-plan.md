@@ -98,16 +98,19 @@ Current state:
   so future tools can continue through the same planner seam.
 - Done: natural Review Diff requests are covered by the turn/plugin integration
   path, not only by routing unit tests.
-- Gap: planner integration covers safe workspace observation paths, but not
-  shell/write approvals, connector command follow-up, or review/apply.
+- Done: observation-driven planner follow-up now supports list workspace,
+  read file, workspace search, and Web Search actions from the same metadata
+  seam.
+- Gap: planner integration covers safe observation follow-up paths, but not
+  shell/write approvals, connector command chaining, or review/apply.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 
-1. Planner integration: expand observation-based next actions beyond the safe
-   search-to-read path.
-2. Tool migration: Web Search next, then shell/write
-   approvals, plugin commands, connector commands, and review/apply.
+1. Planner integration: expand observation-based next actions into approval
+   and review/apply paths.
+2. Tool migration: shell/write approvals, plugin commands, connector commands,
+   and review/apply.
 3. Connector loop integration: use connector handoffs as planner input for
    follow-up actions and generalize connector command routing beyond Notion.
 4. Cowork proof: one request can search/read or use Web Search, cite sources,
