@@ -107,6 +107,6 @@ impl<'a> TurnLoopRunner<'a> {
       return None;
     }
 
-    planned_next_action
+    planned_next_action.or_else(|| observation.planned_next_action())
   }
 }

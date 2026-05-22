@@ -97,6 +97,7 @@ pub(crate) struct AgentLoopObservation {
   successful_observation_count: usize,
   failure_count: usize,
   last_successful_observation: Option<AgentLoopLastObservation>,
+  planned_next_action: Option<AgentLoopPlannedAction>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,12 +107,18 @@ struct AgentLoopLastObservation {
   tool: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum AgentLoopPlannedAction {
+  ReadFile { relative_path: String },
+}
+
 impl AgentLoopObservation {
   pub(crate) fn from_items(items: &[TimelineItem]) -> Self {
     let mut observation_count = 0;
     let mut successful_observation_count = 0;
     let mut failure_count = 0;
     let mut last_successful_observation = None;
+    let mut planned_next_action = None;
 
     for item in items {
       if is_observation_item(item) {
@@ -122,6 +129,7 @@ impl AgentLoopObservation {
       } else if is_observation_item(item) {
         successful_observation_count += 1;
         last_successful_observation = Some(last_observation_from_item(item));
+        planned_next_action = planned_action_from_item(item).or(planned_next_action);
       }
     }
 
@@ -130,6 +138,7 @@ impl AgentLoopObservation {
       successful_observation_count,
       failure_count,
       last_successful_observation,
+      planned_next_action,
     }
   }
 
@@ -168,6 +177,14 @@ impl AgentLoopObservation {
     if let Some(tool) = last_observation.tool.as_ref() {
       attributes.insert("agentLoopLastObservationTool".to_string(), tool.clone());
     }
+  }
+
+  pub(crate) fn planned_next_action(&self) -> Option<PreparedTurnAction> {
+    self.planned_next_action.as_ref().map(|action| match action {
+      AgentLoopPlannedAction::ReadFile { relative_path } => PreparedTurnAction::ReadFile {
+        relative_path: relative_path.clone(),
+      },
+    })
   }
 }
 
@@ -249,6 +266,16 @@ fn observation_tool_name(attributes: &HashMap<String, String>) -> Option<String>
     .get("tool")
     .or_else(|| attributes.get("commandId"))
     .cloned()
+}
+
+fn planned_action_from_item(item: &TimelineItem) -> Option<AgentLoopPlannedAction> {
+  let attributes = item.attributes.as_ref()?;
+  match attributes.get("nextAction").map(String::as_str) {
+    Some("read_file") => Some(AgentLoopPlannedAction::ReadFile {
+      relative_path: attributes.get("nextRelativePath")?.clone(),
+    }),
+    _ => None,
+  }
 }
 
 #[cfg(test)]
@@ -366,6 +393,29 @@ mod tests {
         .get("agentLoopLastObservationTool")
         .map(String::as_str),
       Some("read_file")
+    );
+  }
+
+  #[test]
+  fn observation_summary_recovers_planned_next_action() {
+    let observation = AgentLoopObservation::from_items(&[TimelineItem {
+      kind: "toolResult".to_string(),
+      title: "search_files result".to_string(),
+      content: String::new(),
+      attributes: Some(HashMap::from([
+        ("tool".to_string(), "search_files".to_string()),
+        ("nextAction".to_string(), "read_file".to_string()),
+        ("nextRelativePath".to_string(), "README.md".to_string()),
+      ])),
+    }]);
+
+    let next_action = observation.planned_next_action().expect("next action");
+
+    assert_eq!(
+      next_action,
+      PreparedTurnAction::ReadFile {
+        relative_path: "README.md".to_string(),
+      }
     );
   }
 }

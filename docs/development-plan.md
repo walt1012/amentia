@@ -94,6 +94,8 @@ Current state:
   plugin execution and approval-resumed connector output.
 - Done: agent loop observations now expose successful/failure counts and the
   last successful observation tool for planner follow-up.
+- Done: the loop can recover standard `nextAction` metadata from observations,
+  so future tools can continue through the same planner seam.
 - Done: natural Review Diff requests are covered by the turn/plugin integration
   path, not only by routing unit tests.
 - Gap: planner integration covers safe workspace observation paths, but not
