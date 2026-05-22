@@ -220,11 +220,7 @@ impl AgentLoopObservation {
         },
         AgentLoopPlannedAction::Shell { command } => PreparedTurnAction::Shell {
           command: command.clone(),
-          approval_id: next_approval_id(
-            permission_sources,
-            reserved_approval_ids,
-            "shell.exec",
-          ),
+          approval_id: next_approval_id(permission_sources, reserved_approval_ids, "shell.exec"),
         },
         AgentLoopPlannedAction::WebSearch {
           query,
@@ -241,11 +237,7 @@ impl AgentLoopObservation {
             relative_path: relative_path.clone(),
             content: content.clone(),
           },
-          approval_id: next_approval_id(
-            permission_sources,
-            reserved_approval_ids,
-            "file.write",
-          ),
+          approval_id: next_approval_id(permission_sources, reserved_approval_ids, "file.write"),
         },
       })
   }
@@ -609,7 +601,10 @@ mod tests {
         ("tool".to_string(), "workspace-notes".to_string()),
         ("nextAction".to_string(), "write_file".to_string()),
         ("nextRelativePath".to_string(), "notes/today.md".to_string()),
-        ("nextContent".to_string(), "Ship the cowork loop.".to_string()),
+        (
+          "nextContent".to_string(),
+          "Ship the cowork loop.".to_string(),
+        ),
       ])),
     }]);
     let mut approval_ids = ["approval-2".to_string()].into_iter().collect();

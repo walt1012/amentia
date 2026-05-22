@@ -40,11 +40,7 @@ impl<'a> TurnLoopRunner<'a> {
       pending_active_turn,
       pending_approval,
       plugin_command_output,
-      reserved_approval_ids: snapshot
-        .reserved_approval_ids
-        .iter()
-        .cloned()
-        .collect(),
+      reserved_approval_ids: snapshot.reserved_approval_ids.iter().cloned().collect(),
     }
   }
 
