@@ -99,6 +99,93 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
   (source_root, catalog_entry)
 }
 
+#[cfg(unix)]
+fn create_next_action_stdio_runner_plugin(
+  label: &str,
+  plugin_name: &str,
+  output_json: &str,
+  permissions: &[&str],
+) -> (std::path::PathBuf, PluginCatalogEntry) {
+  use std::os::unix::fs::PermissionsExt;
+
+  let source_root = create_temp_plugin_bundle(label, plugin_name, "Follow-up Runner");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  let command_name = format!("{plugin_name}.run");
+  fs::write(
+    &plugin_manifest,
+    format!(
+      r#"{{
+  "name": "{plugin_name}",
+  "version": "0.1.0",
+  "displayName": "Follow-up Runner",
+  "description": "Emits next-action observations for the agent loop.",
+  "author": {{ "name": "Pith" }},
+  "capabilities": ["command:{command_name}"],
+  "permissions": [{}],
+  "defaultEnabled": true
+}}"#,
+      permissions
+        .iter()
+        .map(|permission| format!(r#""{permission}""#))
+        .collect::<Vec<_>>()
+        .join(", ")
+    ),
+  )
+  .expect("write follow-up plugin manifest");
+  fs::write(
+    source_root.join("commands").join(format!("{command_name}.json")),
+    r#"{
+  "title": "Emit Follow-up",
+  "description": "Emit a next action observation.",
+  "prompt": "Emit a next action for the agent loop.",
+  "execution": {
+    "kind": "stdio.followUp",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write follow-up command manifest");
+  fs::write(
+    &runner_path,
+    format!(
+      r#"#!/bin/sh
+cat >/dev/null
+cat <<'JSON'
+{output_json}
+JSON
+"#
+    ),
+  )
+  .expect("write follow-up runner");
+  let mut file_permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  file_permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, file_permissions).expect("set runner permissions");
+  let catalog_entry = PluginCatalogEntry {
+    id: plugin_name.to_string(),
+    name: plugin_name.to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Follow-up Runner".to_string(),
+    status: "ready".to_string(),
+    description: "Emits next-action observations for the agent loop.".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec![format!("command:{command_name}")],
+    permissions: permissions
+      .iter()
+      .map(|permission| permission.to_string())
+      .collect(),
+    manifest_path: plugin_manifest.display().to_string(),
+    provenance: "test".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+  (source_root, catalog_entry)
+}
+
 #[test]
 fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   let mut context = RuntimeContext::new_in_memory();
@@ -582,6 +669,187 @@ fn turn_start_routes_natural_review_diff_through_plugin_execution() {
     "pluginCommand"
   );
   assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_plugin_shell_follow_up_to_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-shell-follow-up");
+  let output_json = r#"{
+  "items": [
+    {
+      "kind": "pluginResult",
+      "title": "Shell Follow-up",
+      "content": "Request shell inspection through the agent loop.",
+      "attributes": {
+        "nextAction": "run_shell",
+        "nextCommand": "git status --short"
+      }
+    }
+  ]
+}"#;
+  let (plugin_root, plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-shell-follow-up-plugin",
+    "follow-shell",
+    output_json,
+    &["file.read", "shell.exec"],
+  );
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Shell Follow-up Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin follow-shell::follow-shell.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let plugin_observation = items
+    .iter()
+    .find(|item| item["title"] == "Shell Follow-up")
+    .expect("plugin shell observation");
+  assert_eq!(plugin_observation["attributes"]["nextAction"], "run_shell");
+  let approval = items
+    .iter()
+    .find(|item| item["kind"] == "approvalRequested")
+    .expect("shell approval");
+  assert_eq!(approval["attributes"]["action"], "run_shell");
+  assert_eq!(approval["attributes"]["command"], "git status --short");
+  assert_eq!(
+    approval["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("approvals")
+      .len(),
+    1
+  );
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_plugin_write_follow_up_to_diff_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-write-follow-up");
+  fs::write(workspace.join("README.md"), "Before\n").expect("write readme");
+  let output_json = r#"{
+  "items": [
+    {
+      "kind": "pluginResult",
+      "title": "Write Follow-up",
+      "content": "Request a file update through the agent loop.",
+      "attributes": {
+        "nextAction": "write_file",
+        "nextRelativePath": "README.md",
+        "nextContent": "After\n"
+      }
+    }
+  ]
+}"#;
+  let (plugin_root, plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-write-follow-up-plugin",
+    "follow-write",
+    output_json,
+    &["file.read", "file.write"],
+  );
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Write Follow-up Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin follow-write::follow-write.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let plugin_observation = items
+    .iter()
+    .find(|item| item["title"] == "Write Follow-up")
+    .expect("plugin write observation");
+  assert_eq!(plugin_observation["attributes"]["nextAction"], "write_file");
+  let diff = items
+    .iter()
+    .find(|item| item["kind"] == "diffArtifact")
+    .expect("diff artifact");
+  assert_eq!(diff["attributes"]["relativePath"], "README.md");
+  let approval = items
+    .iter()
+    .find(|item| item["kind"] == "approvalRequested")
+    .expect("write approval");
+  assert_eq!(approval["attributes"]["action"], "write_file");
+  assert_eq!(approval["attributes"]["relativePath"], "README.md");
+  assert_eq!(
+    approval["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("approvals")
+      .len(),
+    1
+  );
 }
 
 #[test]
