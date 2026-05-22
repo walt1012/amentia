@@ -11,6 +11,7 @@ use crate::intent_inference;
 use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
 use crate::plugin_hooks::PluginHookMemoryCapture;
 use crate::requests::approval_agent_context::ApprovalAgentContext;
+use crate::runtime_plugins::RuntimePluginState;
 
 #[derive(Debug)]
 pub struct PreparedTurnStart {
@@ -47,6 +48,7 @@ pub(crate) struct PreparedTurnSnapshot {
   pub(crate) model_runtime: LocalModelRuntime,
   pub(crate) cancellation: GenerationCancellation,
   pub(crate) memory_notes: Vec<MemoryNote>,
+  pub(crate) plugin_state: RuntimePluginState,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
   pub(crate) reserved_approval_ids: Vec<String>,
   pub(crate) action: PreparedTurnAction,
@@ -89,7 +91,7 @@ pub(crate) struct TurnStartExecutionOutput {
   pub(crate) items: Vec<TimelineItem>,
   pub(crate) pending_approval: Option<PendingApproval>,
   pub(crate) pending_active_turn: Option<ActiveTurn>,
-  pub(crate) plugin_command_output: Option<PluginCommandOutput>,
+  pub(crate) plugin_command_outputs: Vec<PluginCommandOutput>,
 }
 
 #[derive(Debug)]

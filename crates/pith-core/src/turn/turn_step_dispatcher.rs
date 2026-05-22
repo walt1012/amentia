@@ -52,7 +52,7 @@ pub(super) struct TurnStepDispatcher<'a> {
   items: &'a mut Vec<TimelineItem>,
   pending_active_turn: &'a mut Option<ActiveTurn>,
   pending_approval: &'a mut Option<PendingApproval>,
-  plugin_command_output: &'a mut Option<PluginCommandOutput>,
+  plugin_command_outputs: &'a mut Vec<PluginCommandOutput>,
 }
 
 impl<'a> TurnStepDispatcher<'a> {
@@ -61,14 +61,14 @@ impl<'a> TurnStepDispatcher<'a> {
     items: &'a mut Vec<TimelineItem>,
     pending_active_turn: &'a mut Option<ActiveTurn>,
     pending_approval: &'a mut Option<PendingApproval>,
-    plugin_command_output: &'a mut Option<PluginCommandOutput>,
+    plugin_command_outputs: &'a mut Vec<PluginCommandOutput>,
   ) -> Self {
     Self {
       snapshot,
       items,
       pending_active_turn,
       pending_approval,
-      plugin_command_output,
+      plugin_command_outputs,
     }
   }
 
@@ -213,7 +213,7 @@ impl<'a> TurnStepDispatcher<'a> {
         let should_capture_memory = output.capture_memory;
         self.items.extend(output.items.clone());
         if should_capture_memory {
-          *self.plugin_command_output = Some(output);
+          self.plugin_command_outputs.push(output);
         }
       }
       Err((code, message)) => {

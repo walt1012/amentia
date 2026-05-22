@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 use pith_plugin_host::{build_connector_registry, PluginCatalogEntry, PluginConnectorEntry};
 use pith_storage::StoredPluginConnectorCredential;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) struct PluginConnectorCredentialState {
   pub(crate) connector_id: String,
   pub(crate) plugin_id: String,
@@ -13,6 +14,24 @@ pub(crate) struct PluginConnectorCredentialState {
   pub(crate) credential_secret: Option<String>,
   pub(crate) authorized_at: i64,
   pub(crate) updated_at: i64,
+}
+
+impl fmt::Debug for PluginConnectorCredentialState {
+  fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    formatter
+      .debug_struct("PluginConnectorCredentialState")
+      .field("connector_id", &self.connector_id)
+      .field("plugin_id", &self.plugin_id)
+      .field("credential_store", &self.credential_store)
+      .field("credential_label", &self.credential_label)
+      .field(
+        "credential_secret",
+        &self.credential_secret.as_ref().map(|_| "<redacted>"),
+      )
+      .field("authorized_at", &self.authorized_at)
+      .field("updated_at", &self.updated_at)
+      .finish()
+  }
 }
 
 impl From<StoredPluginConnectorCredential> for PluginConnectorCredentialState {

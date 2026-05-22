@@ -105,8 +105,11 @@ Current state:
   permission and approval path instead of bypassing user review.
 - Done: plugin-emitted shell and write follow-up observations are covered by
   end-to-end turn tests, including approval pause behavior.
-- Gap: planner integration covers safe observation follow-up and approval
-  request paths, but not connector command chaining or review/apply.
+- Done: plugin observations can chain into a follow-up plugin command using
+  frozen turn context, keeping connector/auth/readiness checks inside the same
+  bounded loop.
+- Gap: connector command chaining has the execution seam, but still needs a
+  broader non-Notion routing proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:

@@ -110,7 +110,7 @@ struct AgentLoopLastObservation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum AgentLoopPlannedAction {
+pub(crate) enum AgentLoopPlannedAction {
   ListWorkspace,
   ReadFile {
     relative_path: String,
@@ -128,6 +128,10 @@ enum AgentLoopPlannedAction {
   WriteFile {
     relative_path: String,
     content: String,
+  },
+  PluginCommand {
+    command_id: String,
+    input: Option<String>,
   },
 }
 
@@ -203,44 +207,47 @@ impl AgentLoopObservation {
     self.planned_next_action_with_approvals(&HashMap::new(), &mut VecDeque::new())
   }
 
+  pub(crate) fn planned_action(&self) -> Option<&AgentLoopPlannedAction> {
+    self.planned_next_action.as_ref()
+  }
+
   pub(crate) fn planned_next_action_with_approvals(
     &self,
     permission_sources: &HashMap<String, Vec<String>>,
     reserved_approval_ids: &mut VecDeque<String>,
   ) -> Option<PreparedTurnAction> {
-    self
-      .planned_next_action
-      .as_ref()
-      .map(|action| match action {
-        AgentLoopPlannedAction::ListWorkspace => PreparedTurnAction::ListWorkspace,
-        AgentLoopPlannedAction::ReadFile { relative_path } => PreparedTurnAction::ReadFile {
+    let action = self.planned_next_action.as_ref()?;
+    match action {
+      AgentLoopPlannedAction::ListWorkspace => Some(PreparedTurnAction::ListWorkspace),
+      AgentLoopPlannedAction::ReadFile { relative_path } => Some(PreparedTurnAction::ReadFile {
+        relative_path: relative_path.clone(),
+      }),
+      AgentLoopPlannedAction::Search { query } => Some(PreparedTurnAction::Search {
+        query: query.clone(),
+      }),
+      AgentLoopPlannedAction::Shell { command } => Some(PreparedTurnAction::Shell {
+        command: command.clone(),
+        approval_id: next_approval_id(permission_sources, reserved_approval_ids, "shell.exec"),
+      }),
+      AgentLoopPlannedAction::WebSearch {
+        query,
+        routing_reason,
+      } => Some(PreparedTurnAction::WebSearch(WebSearchIntent {
+        query: query.clone(),
+        routing_reason,
+      })),
+      AgentLoopPlannedAction::WriteFile {
+        relative_path,
+        content,
+      } => Some(PreparedTurnAction::Write {
+        intent: WriteIntent {
           relative_path: relative_path.clone(),
+          content: content.clone(),
         },
-        AgentLoopPlannedAction::Search { query } => PreparedTurnAction::Search {
-          query: query.clone(),
-        },
-        AgentLoopPlannedAction::Shell { command } => PreparedTurnAction::Shell {
-          command: command.clone(),
-          approval_id: next_approval_id(permission_sources, reserved_approval_ids, "shell.exec"),
-        },
-        AgentLoopPlannedAction::WebSearch {
-          query,
-          routing_reason,
-        } => PreparedTurnAction::WebSearch(WebSearchIntent {
-          query: query.clone(),
-          routing_reason,
-        }),
-        AgentLoopPlannedAction::WriteFile {
-          relative_path,
-          content,
-        } => PreparedTurnAction::Write {
-          intent: WriteIntent {
-            relative_path: relative_path.clone(),
-            content: content.clone(),
-          },
-          approval_id: next_approval_id(permission_sources, reserved_approval_ids, "file.write"),
-        },
-      })
+        approval_id: next_approval_id(permission_sources, reserved_approval_ids, "file.write"),
+      }),
+      AgentLoopPlannedAction::PluginCommand { .. } => None,
+    }
   }
 }
 
@@ -344,6 +351,10 @@ fn planned_action_from_item(item: &TimelineItem) -> Option<AgentLoopPlannedActio
     Some("write_file") => Some(AgentLoopPlannedAction::WriteFile {
       relative_path: attributes.get("nextRelativePath")?.clone(),
       content: attributes.get("nextContent")?.clone(),
+    }),
+    Some("plugin_command") => Some(AgentLoopPlannedAction::PluginCommand {
+      command_id: attributes.get("nextCommandId")?.clone(),
+      input: attributes.get("nextCommandInput").cloned(),
     }),
     _ => None,
   }
@@ -623,6 +634,34 @@ mod tests {
         assert_eq!(intent.relative_path, "notes/today.md");
         assert_eq!(intent.content, "Ship the cowork loop.");
         assert_eq!(approval_id.as_deref(), Some("approval-2"));
+      }
+      other => panic!("unexpected next action: {other:?}"),
+    }
+  }
+
+  #[test]
+  fn observation_summary_recovers_plugin_command_next_action() {
+    let observation = AgentLoopObservation::from_items(&[TimelineItem {
+      kind: "pluginResult".to_string(),
+      title: "Plugin Result".to_string(),
+      content: String::new(),
+      attributes: Some(HashMap::from([
+        ("tool".to_string(), "source-plugin.run".to_string()),
+        ("nextAction".to_string(), "plugin_command".to_string()),
+        (
+          "nextCommandId".to_string(),
+          "target-plugin::target-plugin.run".to_string(),
+        ),
+        ("nextCommandInput".to_string(), "draft handoff".to_string()),
+      ])),
+    }]);
+
+    let next_action = observation.planned_action().expect("next action");
+
+    match next_action {
+      AgentLoopPlannedAction::PluginCommand { command_id, input } => {
+        assert_eq!(command_id, "target-plugin::target-plugin.run");
+        assert_eq!(input.as_deref(), Some("draft handoff"));
       }
       other => panic!("unexpected next action: {other:?}"),
     }

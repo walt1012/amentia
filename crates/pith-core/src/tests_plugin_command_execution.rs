@@ -854,6 +854,146 @@ fn turn_start_routes_plugin_write_follow_up_to_diff_approval() {
   );
 }
 
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_plugin_command_follow_up_through_loop() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-command-follow-up");
+  let source_output_json = r#"{
+  "items": [
+    {
+      "kind": "pluginResult",
+      "title": "Plugin Command Follow-up",
+      "content": "Request a second plugin command through the agent loop.",
+      "attributes": {
+        "nextAction": "plugin_command",
+        "nextCommandId": "follow-target::follow-target.run",
+        "nextCommandInput": "handoff payload"
+      }
+    }
+  ],
+  "memoryNotes": [
+    {
+      "title": "Source Handoff Memory",
+      "body": "Source plugin memory should survive chained plugin execution.",
+      "source": "plugin.follow-source",
+      "tags": ["chain", "source"]
+    }
+  ]
+}"#;
+  let target_output_json = r#"{
+  "content": "Target plugin received the handoff payload.",
+  "memoryNotes": [
+    {
+      "title": "Target Handoff Memory",
+      "body": "Target plugin memory should be captured after a chained command.",
+      "source": "plugin.follow-target",
+      "tags": ["chain", "target"]
+    }
+  ]
+}"#;
+  let (source_root, source_plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-command-follow-up-source",
+    "follow-source",
+    source_output_json,
+    &["file.read"],
+  );
+  let (target_root, target_plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-command-follow-up-target",
+    "follow-target",
+    target_output_json,
+    &["file.read"],
+  );
+  replace_plugin_catalog(&mut context, vec![source_plugin, target_plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Command Follow-up Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin follow-source::follow-source.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&source_root).expect("cleanup source plugin root");
+  fs::remove_dir_all(&target_root).expect("cleanup target plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let source_observation = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Command Follow-up")
+    .expect("source plugin observation");
+  assert_eq!(source_observation["attributes"]["nextAction"], "plugin_command");
+  assert_eq!(
+    source_observation["attributes"]["nextCommandId"],
+    "follow-target::follow-target.run"
+  );
+  let target_command = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "pluginCommand"
+        && item["attributes"]["commandId"] == "follow-target::follow-target.run"
+    })
+    .expect("target plugin command");
+  assert_eq!(target_command["attributes"]["agentStepIndex"], "2");
+  assert_eq!(target_command["attributes"]["agentToolKind"], "plugin");
+  let target_result = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "pluginResult"
+        && item["attributes"]["commandId"] == "follow-target::follow-target.run"
+    })
+    .expect("target plugin result");
+  assert!(target_result["content"]
+    .as_str()
+    .expect("target content")
+    .contains("Target plugin received"));
+  assert_eq!(
+    target_result["attributes"]["agentLoopStopReason"],
+    "completed"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("approvals")
+      .len(),
+    0
+  );
+  let memory_titles = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .map(|note| note.title)
+    .collect::<Vec<_>>();
+  assert!(memory_titles.contains(&"Source Handoff Memory".to_string()));
+  assert!(memory_titles.contains(&"Target Handoff Memory".to_string()));
+}
+
 #[test]
 fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();

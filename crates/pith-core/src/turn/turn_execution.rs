@@ -17,7 +17,7 @@ pub(crate) fn execute_prepared_turn_snapshot(
   }];
   let mut pending_active_turn = None;
   let mut pending_approval = None;
-  let mut plugin_command_output = None;
+  let mut plugin_command_outputs = vec![];
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
   {
     let mut runner = TurnLoopRunner::new(
@@ -25,7 +25,7 @@ pub(crate) fn execute_prepared_turn_snapshot(
       &mut items,
       &mut pending_active_turn,
       &mut pending_approval,
-      &mut plugin_command_output,
+      &mut plugin_command_outputs,
     );
     let loop_summary = runner.run(action);
     debug_assert!(
@@ -40,7 +40,7 @@ pub(crate) fn execute_prepared_turn_snapshot(
     items,
     pending_approval,
     pending_active_turn,
-    plugin_command_output,
+    plugin_command_outputs,
   }
 }
 
@@ -81,6 +81,6 @@ pub(crate) fn build_recovered_turn_output(
     ],
     pending_approval: None,
     pending_active_turn: None,
-    plugin_command_output: None,
+    plugin_command_outputs: vec![],
   }
 }

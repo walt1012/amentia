@@ -2,11 +2,13 @@ use std::collections::VecDeque;
 
 use pith_protocol::TimelineItem;
 
-use super::turn_agent_loop::{AgentLoopCoordinator, AgentLoopObservation, AgentLoopStopReason};
+use super::turn_agent_loop::{
+  AgentLoopCoordinator, AgentLoopObservation, AgentLoopPlannedAction, AgentLoopStopReason,
+};
 use super::turn_step_dispatcher::{TurnStepControl, TurnStepDispatcher, TurnStepResult};
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
-use crate::plugin_commands::PluginCommandOutput;
+use crate::plugin_commands::{prepare_plugin_command_follow_up_snapshot, PluginCommandOutput};
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,7 +23,7 @@ pub(crate) struct TurnLoopRunner<'a> {
   items: &'a mut Vec<TimelineItem>,
   pending_active_turn: &'a mut Option<ActiveTurn>,
   pending_approval: &'a mut Option<PendingApproval>,
-  plugin_command_output: &'a mut Option<PluginCommandOutput>,
+  plugin_command_outputs: &'a mut Vec<PluginCommandOutput>,
   reserved_approval_ids: VecDeque<String>,
 }
 
@@ -31,7 +33,7 @@ impl<'a> TurnLoopRunner<'a> {
     items: &'a mut Vec<TimelineItem>,
     pending_active_turn: &'a mut Option<ActiveTurn>,
     pending_approval: &'a mut Option<PendingApproval>,
-    plugin_command_output: &'a mut Option<PluginCommandOutput>,
+    plugin_command_outputs: &'a mut Vec<PluginCommandOutput>,
   ) -> Self {
     Self {
       snapshot,
@@ -39,7 +41,7 @@ impl<'a> TurnLoopRunner<'a> {
       items,
       pending_active_turn,
       pending_approval,
-      plugin_command_output,
+      plugin_command_outputs,
       reserved_approval_ids: snapshot.reserved_approval_ids.iter().cloned().collect(),
     }
   }
@@ -96,7 +98,7 @@ impl<'a> TurnLoopRunner<'a> {
       self.items,
       self.pending_active_turn,
       self.pending_approval,
-      self.plugin_command_output,
+      self.plugin_command_outputs,
     );
     dispatcher.execute(action)
   }
@@ -114,9 +116,50 @@ impl<'a> TurnLoopRunner<'a> {
       return planned_next_action;
     }
 
-    observation.planned_next_action_with_approvals(
-      &self.snapshot.permission_sources,
-      &mut self.reserved_approval_ids,
-    )
+    let Some(planned_action) = observation.planned_action() else {
+      return None;
+    };
+
+    match planned_action {
+      AgentLoopPlannedAction::PluginCommand { command_id, input } => {
+        Some(self.prepare_plugin_command_follow_up(command_id, input.clone()))
+      }
+      _ => observation.planned_next_action_with_approvals(
+        &self.snapshot.permission_sources,
+        &mut self.reserved_approval_ids,
+      ),
+    }
+  }
+
+  fn prepare_plugin_command_follow_up(
+    &mut self,
+    command_id: &str,
+    input: Option<String>,
+  ) -> PreparedTurnAction {
+    let approval_id = self.reserved_approval_ids.pop_front();
+    match prepare_plugin_command_follow_up_snapshot(
+      &self.snapshot.plugin_state,
+      &self.snapshot.model_runtime,
+      &self.snapshot.memory_notes,
+      &self.snapshot.thread_id,
+      self.snapshot.workspace.clone(),
+      command_id,
+      input.clone(),
+      self.snapshot.cancellation.clone(),
+      approval_id,
+    ) {
+      Ok(snapshot) => PreparedTurnAction::PluginCommand {
+        snapshot: Box::new(snapshot),
+      },
+      Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
+        attributes: error.route_failure_attributes(
+          command_id,
+          "observationNextPluginCommand",
+          input.as_deref(),
+        ),
+        command_id: command_id.to_string(),
+        message: error.message().to_string(),
+      },
+    }
   }
 }
