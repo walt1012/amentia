@@ -7,8 +7,9 @@ use super::turn_web_search::{
   execute_web_search_candidate_local_answer, execute_web_search_turn,
   model_confirms_web_search_candidate,
 };
-use super::turn_workspace_execution::{execute_no_workspace_turn, execute_read_turn};
+use super::turn_workspace_execution::execute_no_workspace_turn;
 use super::turn_workspace_list::execute_list_observation_step;
+use super::turn_workspace_read::execute_read_observation_step;
 use super::turn_workspace_search::execute_search_observation_step;
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
@@ -117,17 +118,25 @@ impl<'a> TurnStepDispatcher<'a> {
         self.execute_plugin_command_route_failed(command_id, message, attributes);
       }
       PreparedTurnAction::ReadFile { relative_path } => {
-        if let Some(workspace) = self.snapshot.workspace.as_ref() {
-          execute_read_turn(
+        let next_action = if let Some(workspace) = self.snapshot.workspace.as_ref() {
+          execute_read_observation_step(
             self.snapshot,
             workspace,
             &relative_path,
             self.items,
             self.pending_active_turn,
-          );
+          )
+          .map(|relative_path| PreparedTurnAction::ReadFile { relative_path })
         } else {
           execute_no_workspace_turn(self.snapshot, self.items);
-        }
+          None
+        };
+        let control = self.control_after_step();
+        return if let Some(next_action) = next_action {
+          TurnStepResult::with_next_action(control, next_action)
+        } else {
+          TurnStepResult::new(control)
+        };
       }
       PreparedTurnAction::Search { query } => {
         let next_action = if let Some(workspace) = self.snapshot.workspace.as_ref() {

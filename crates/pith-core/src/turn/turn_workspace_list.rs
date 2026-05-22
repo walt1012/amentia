@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::{list_directory_with_cancellation, DirectoryEntry};
+use pith_tools::list_directory_with_cancellation;
 
 use super::turn_tool_limits::LIST_DIRECTORY_RESULT_LIMIT;
+use super::turn_workspace_entry_points::preferred_entry_point;
 use super::turn_workspace_timeline::{
   workspace_tool_failed_items, workspace_tool_result_item, workspace_tool_start_item,
 };
@@ -159,53 +160,4 @@ fn list_result_attributes(
   }
 
   attributes
-}
-
-fn preferred_entry_point(entries: &[DirectoryEntry], message: &str) -> Option<String> {
-  if !should_read_entry_point_after_list(message) {
-    return None;
-  }
-
-  [
-    "README.md",
-    "README",
-    "README.txt",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "Cargo.toml",
-    "Package.swift",
-    "package.json",
-    "pyproject.toml",
-  ]
-  .iter()
-  .find_map(|candidate| {
-    entries
-      .iter()
-      .find(|entry| {
-        entry.entry_type == "file" && entry.relative_path.eq_ignore_ascii_case(candidate)
-      })
-      .map(|entry| entry.relative_path.clone())
-  })
-}
-
-fn should_read_entry_point_after_list(message: &str) -> bool {
-  let lowercased = message.to_lowercase();
-  let wants_overview = [
-    "analyze",
-    "explain",
-    "inspect",
-    "overview",
-    "review",
-    "summarize",
-    "understand",
-    "what is",
-    "what's",
-  ]
-  .iter()
-  .any(|signal| lowercased.contains(signal));
-  let list_only = ["list", "show files", "show the files"]
-    .iter()
-    .any(|signal| lowercased.contains(signal));
-
-  wants_overview && !list_only
 }

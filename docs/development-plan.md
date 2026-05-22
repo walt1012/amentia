@@ -72,6 +72,8 @@ Current state:
   is the clear search result.
 - Done: project overview requests can list the workspace and then read the
   best root entry point without auto-reading on list-only requests.
+- Done: project overview can continue into a root manifest after reading an
+  entry point, proving three bounded steps across workspace and file tools.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
 - Done: fresh public requests route to Web Search before workspace search even

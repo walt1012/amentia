@@ -22,6 +22,7 @@ pub(crate) mod turn_tool_provenance;
 pub(crate) mod turn_web_search;
 pub(crate) mod turn_web_search_timeline;
 pub(crate) mod turn_workspace_execution;
+pub(crate) mod turn_workspace_entry_points;
 pub(crate) mod turn_workspace_fallback;
 pub(crate) mod turn_workspace_list;
 pub(crate) mod turn_workspace_read;

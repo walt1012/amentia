@@ -263,7 +263,7 @@ fn turn_start_reads_single_file_search_result_as_second_step() {
 }
 
 #[test]
-fn turn_start_reads_entry_point_after_project_overview() {
+fn turn_start_reads_entry_point_and_manifest_after_project_overview() {
   let mut context = RuntimeContext::new_in_memory();
   enable_full_access_plugin(&mut context);
   let workspace = create_temp_workspace("overview-then-read");
@@ -272,6 +272,11 @@ fn turn_start_reads_entry_point_after_project_overview() {
     "# Pith Overview\nThis project is a local cowork app.\n",
   )
   .expect("write readme");
+  fs::write(
+    workspace.join("Cargo.toml"),
+    "[package]\nname = \"pith-overview\"\n",
+  )
+  .expect("write cargo manifest");
   fs::write(workspace.join("notes.txt"), "Side note\n").expect("write notes");
 
   let _ = handle_request(
@@ -320,12 +325,24 @@ fn turn_start_reads_entry_point_after_project_overview() {
   assert_eq!(items[5]["title"], "read_file");
   assert_eq!(items[5]["attributes"]["relativePath"], "README.md");
   assert_eq!(items[6]["kind"], "toolResult");
+  assert_eq!(items[6]["attributes"]["nextAction"], "read_file");
+  assert_eq!(items[6]["attributes"]["nextRelativePath"], "Cargo.toml");
+  assert_eq!(items[6]["attributes"]["agentLoopStopReason"], "completed");
   assert!(items[6]["content"]
     .as_str()
     .unwrap()
     .contains("local cowork app"));
-  assert_eq!(items[7]["kind"], "assistantMessage");
-  assert_eq!(items[7]["attributes"]["agentLoopStepCount"], "2");
+  assert_eq!(items[8]["kind"], "toolStart");
+  assert_eq!(items[8]["title"], "read_file");
+  assert_eq!(items[8]["attributes"]["relativePath"], "Cargo.toml");
+  assert_eq!(items[8]["attributes"]["agentStepIndex"], "3");
+  assert_eq!(items[9]["kind"], "toolResult");
+  assert!(items[9]["content"]
+    .as_str()
+    .unwrap()
+    .contains("pith-overview"));
+  assert_eq!(items[10]["kind"], "assistantMessage");
+  assert_eq!(items[10]["attributes"]["agentLoopStepCount"], "3");
 }
 
 #[test]
