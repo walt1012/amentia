@@ -8,7 +8,9 @@ use super::turn_agent_loop::{
 use super::turn_step_dispatcher::{TurnStepControl, TurnStepDispatcher, TurnStepResult};
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
-use crate::plugin_commands::{prepare_plugin_command_follow_up_snapshot, PluginCommandOutput};
+use crate::plugin_commands::{
+  prepare_plugin_command_follow_up_snapshot, PluginCommandFollowUpRequest, PluginCommandOutput,
+};
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,9 +118,7 @@ impl<'a> TurnLoopRunner<'a> {
       return planned_next_action;
     }
 
-    let Some(planned_action) = observation.planned_action() else {
-      return None;
-    };
+    let planned_action = observation.planned_action()?;
 
     match planned_action {
       AgentLoopPlannedAction::PluginCommand { command_id, input } => {
@@ -137,17 +137,17 @@ impl<'a> TurnLoopRunner<'a> {
     input: Option<String>,
   ) -> PreparedTurnAction {
     let approval_id = self.reserved_approval_ids.pop_front();
-    match prepare_plugin_command_follow_up_snapshot(
-      &self.snapshot.plugin_state,
-      &self.snapshot.model_runtime,
-      &self.snapshot.memory_notes,
-      &self.snapshot.thread_id,
-      self.snapshot.workspace.clone(),
+    match prepare_plugin_command_follow_up_snapshot(PluginCommandFollowUpRequest {
+      plugin_state: &self.snapshot.plugin_state,
+      model_runtime: &self.snapshot.model_runtime,
+      memory_notes: &self.snapshot.memory_notes,
+      thread_id: &self.snapshot.thread_id,
+      workspace: self.snapshot.workspace.clone(),
       command_id,
-      input.clone(),
-      self.snapshot.cancellation.clone(),
+      input: input.clone(),
+      cancellation: self.snapshot.cancellation.clone(),
       approval_id,
-    ) {
+    }) {
       Ok(snapshot) => PreparedTurnAction::PluginCommand {
         snapshot: Box::new(snapshot),
       },

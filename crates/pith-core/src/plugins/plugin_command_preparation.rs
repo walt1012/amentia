@@ -108,17 +108,32 @@ pub(crate) fn prepare_plugin_command_turn_snapshot(
   )
 }
 
+pub(crate) struct PluginCommandFollowUpRequest<'a> {
+  pub(crate) plugin_state: &'a RuntimePluginState,
+  pub(crate) model_runtime: &'a LocalModelRuntime,
+  pub(crate) memory_notes: &'a [MemoryNote],
+  pub(crate) thread_id: &'a str,
+  pub(crate) workspace: Option<WorkspaceSummary>,
+  pub(crate) command_id: &'a str,
+  pub(crate) input: Option<String>,
+  pub(crate) cancellation: GenerationCancellation,
+  pub(crate) approval_id: Option<String>,
+}
+
 pub(crate) fn prepare_plugin_command_follow_up_snapshot(
-  plugin_state: &RuntimePluginState,
-  model_runtime: &LocalModelRuntime,
-  memory_notes: &[MemoryNote],
-  thread_id: &str,
-  workspace: Option<WorkspaceSummary>,
-  command_id: &str,
-  input: Option<String>,
-  cancellation: GenerationCancellation,
-  approval_id: Option<String>,
+  request: PluginCommandFollowUpRequest<'_>,
 ) -> std::result::Result<PluginCommandSnapshot, PluginCommandPreparationError> {
+  let PluginCommandFollowUpRequest {
+    plugin_state,
+    model_runtime,
+    memory_notes,
+    thread_id,
+    workspace,
+    command_id,
+    input,
+    cancellation,
+    approval_id,
+  } = request;
   let command = resolve_plugin_command_from_state(plugin_state, command_id)?;
   let readiness = command_readiness(&command, plugin_state);
   if !readiness.is_ready() {
