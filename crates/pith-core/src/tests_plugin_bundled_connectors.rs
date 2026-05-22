@@ -115,10 +115,14 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
     .find(|item| item["title"] == "Notion Page Draft")
     .expect("notion draft item");
   assert_eq!(draft_item["kind"], "pluginResult");
-  assert_eq!(draft_item["attributes"]["connector"], "notion");
-  assert_eq!(draft_item["attributes"]["mode"], "localDraft");
-  assert_eq!(draft_item["attributes"]["networkWrite"], "false");
+  assert_eq!(draft_item["attributes"]["targetService"], "notion");
+  assert_eq!(draft_item["attributes"]["draftMode"], "localDraft");
+  assert_eq!(draft_item["attributes"]["remoteWrite"], "false");
   assert_eq!(draft_item["attributes"]["credentialScoped"], "true");
+  assert_eq!(
+    draft_item["attributes"]["targetTool"],
+    "notion.preparePageDraft"
+  );
   assert_eq!(
     draft_item["attributes"]["pluginRunnerExecutionDriver"],
     "mcp"
