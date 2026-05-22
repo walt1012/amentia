@@ -186,7 +186,10 @@ fn natural_handoff_save_uses_write_approval() {
   let turn_result = turn_response.result.expect("turn result");
   let turn_items = turn_result["items"].as_array().expect("turn items");
   assert_eq!(turn_items[3]["kind"], "diffArtifact");
-  assert_eq!(turn_items[3]["attributes"]["relativePath"], "docs/handoff.md");
+  assert_eq!(
+    turn_items[3]["attributes"]["relativePath"],
+    "docs/handoff.md"
+  );
   assert_eq!(turn_items[4]["kind"], "approvalRequested");
   let approval_id = turn_result["pendingApprovals"][0]["id"]
     .as_str()
@@ -211,8 +214,9 @@ fn natural_handoff_save_uses_write_approval() {
   assert!(approval_response.error.is_none());
   assert_eq!(written_content, "Ship M7 carefully.");
   let approval_result = approval_response.result.expect("approval result");
-  let approval_items = approval_result["items"]
-    .as_array()
-    .expect("approval items");
-  assert_eq!(approval_items[3]["attributes"]["handoffKind"], "approvedWrite");
+  let approval_items = approval_result["items"].as_array().expect("approval items");
+  assert_eq!(
+    approval_items[3]["attributes"]["handoffKind"],
+    "approvedWrite"
+  );
 }
