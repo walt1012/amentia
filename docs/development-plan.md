@@ -67,8 +67,10 @@ Current state:
   writes.
 - Done: approved writes now end with structured continuation guidance tailored
   to saved files, notes, summaries, reviews, and handoffs.
-- Active gap: connector updates still need to consume those handoffs in a
-  practical third-party cowork flow.
+- Done: natural connector requests can carry saved artifact references such as
+  `docs/handoff.md` into a local Notion-style draft flow.
+- Active gap: connector actions are still local drafts; the next step is a
+  clear inspect-before-remote-write flow.
 
 M7 work order:
 

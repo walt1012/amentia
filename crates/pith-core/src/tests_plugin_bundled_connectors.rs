@@ -113,6 +113,70 @@ fn bundled_notion_connector_natural_turn_resumes_the_same_agent_step() {
   assert_eq!(handoff_item["attributes"]["agentLoopObservationCount"], "1");
 }
 
+#[test]
+fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
+  let (mut context, workspace) = setup_authorized_notion_context(
+    "bundled-notion-saved-handoff",
+    "Bundled Notion Saved Handoff Thread",
+  );
+  fs::create_dir_all(workspace.join("docs")).expect("create docs directory");
+  fs::write(
+    workspace.join("docs").join("handoff.md"),
+    "# Project Handoff\n\nShip the practical cowork connector path.",
+  )
+  .expect("write saved handoff");
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Prepare a Notion update from docs/handoff.md."
+      })),
+    ),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("turn items");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
+  assert_eq!(
+    items[1]["attributes"]["commandInput"],
+    "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md"
+  );
+  assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
+  assert_eq!(
+    items[2]["attributes"]["commandInput"],
+    "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md"
+  );
+
+  let approval_result = approve_pending(&mut context, &result);
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  let approved_items = approval_result["items"].as_array().expect("approval items");
+  let draft_item = approved_items
+    .iter()
+    .find(|item| item["title"] == "Notion Page Draft")
+    .expect("notion draft item");
+  assert_eq!(draft_item["attributes"]["sourceArtifact"], "docs/handoff.md");
+  assert!(draft_item["content"]
+    .as_str()
+    .expect("draft content")
+    .contains("docs/handoff.md"));
+  assert_local_draft_items(&context, approved_items);
+  assert_connector_handoff_items(approved_items);
+
+  let saved_note = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .find(|note| note.title == "Notion Draft Prepared")
+    .expect("saved notion draft memory note");
+  assert!(saved_note.body.contains("docs/handoff.md"));
+}
+
 fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace(label);

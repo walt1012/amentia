@@ -10,6 +10,8 @@ const NATURAL_CONNECTOR_COMMAND_REASON: &str = "naturalConnectorCommand";
 const NATURAL_NOTION_DRAFT_REASON: &str = "naturalNotionDraftCommand";
 const NATURAL_REVIEW_DIFF_REASON: &str = "naturalReviewDiffCommand";
 const NATURAL_WORKSPACE_NOTE_REASON: &str = "naturalWorkspaceNoteCommand";
+const CONNECTOR_SAVED_ARTIFACT_PREFIX: &str = "Saved artifact: ";
+const CONNECTOR_SAVED_ARTIFACT_MAX_LEN: usize = 240;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ExplicitPluginCommandRoute {
@@ -117,7 +119,7 @@ fn infer_natural_connector_command_route(
     })
     .map(|(_, command)| ExplicitPluginCommandRoute {
       command_id: command.command_id.clone(),
-      input: Some(trimmed.to_string()),
+      input: connector_command_input(trimmed),
       routing_reason: NATURAL_CONNECTOR_COMMAND_REASON,
     })
 }
@@ -245,6 +247,100 @@ fn action_terms() -> &'static [&'static str] {
     "update",
     "write",
   ]
+}
+
+fn connector_command_input(message: &str) -> Option<String> {
+  let trimmed = message.trim();
+  if trimmed.is_empty() {
+    return None;
+  }
+  if trimmed
+    .to_ascii_lowercase()
+    .contains(&CONNECTOR_SAVED_ARTIFACT_PREFIX.to_ascii_lowercase())
+  {
+    return Some(trimmed.to_string());
+  }
+
+  extract_saved_artifact_reference(trimmed)
+    .map(|path| format!("{trimmed}\n\n{CONNECTOR_SAVED_ARTIFACT_PREFIX}{path}"))
+    .or_else(|| Some(trimmed.to_string()))
+}
+
+fn extract_saved_artifact_reference(message: &str) -> Option<String> {
+  message
+    .split_whitespace()
+    .filter_map(saved_artifact_candidate)
+    .find(|candidate| is_saved_artifact_reference(candidate))
+}
+
+fn saved_artifact_candidate(raw: &str) -> Option<String> {
+  let trimmed = raw
+    .trim_matches(saved_artifact_edge_punctuation)
+    .trim_end_matches(saved_artifact_trailing_punctuation)
+    .replace('\\', "/");
+  (!trimmed.is_empty()).then_some(trimmed)
+}
+
+fn saved_artifact_edge_punctuation(character: char) -> bool {
+  matches!(
+    character,
+    '"' | '\'' | '`' | '(' | ')' | '[' | ']' | '{' | '}' | '<' | '>' | ',' | ';' | ':'
+  )
+}
+
+fn saved_artifact_trailing_punctuation(character: char) -> bool {
+  matches!(character, '.' | '!' | '?')
+}
+
+fn is_saved_artifact_reference(candidate: &str) -> bool {
+  if candidate.len() > CONNECTOR_SAVED_ARTIFACT_MAX_LEN
+    || candidate.starts_with('/')
+    || candidate.starts_with('~')
+    || candidate.contains("://")
+    || candidate.contains(':')
+  {
+    return false;
+  }
+  if candidate
+    .chars()
+    .any(|character| {
+      !character.is_ascii_alphanumeric() && !matches!(character, '/' | '.' | '_' | '-')
+    })
+  {
+    return false;
+  }
+  if candidate
+    .split('/')
+    .any(|segment| segment.is_empty() || segment == "." || segment == "..")
+  {
+    return false;
+  }
+
+  let normalized = candidate.to_ascii_lowercase();
+  let supported_extension = [".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".csv"]
+    .iter()
+    .any(|extension| normalized.ends_with(extension));
+  if !supported_extension {
+    return false;
+  }
+
+  candidate.contains('/') || looks_like_saved_artifact_name(&normalized)
+}
+
+fn looks_like_saved_artifact_name(normalized: &str) -> bool {
+  [
+    "artifact",
+    "brief",
+    "handoff",
+    "note",
+    "notes",
+    "plan",
+    "review",
+    "summary",
+    "update",
+  ]
+  .iter()
+  .any(|term| normalized.contains(term))
 }
 
 fn normalized_contains_term(normalized_message: &str, term: &str) -> bool {
@@ -408,6 +504,28 @@ mod tests {
     let route = infer_natural_builtin_plugin_command_route("What is new in Notion?");
 
     assert!(route.is_none());
+  }
+
+  #[test]
+  fn connector_input_marks_saved_artifact_reference() {
+    let input = connector_command_input("Prepare a Notion update from docs/handoff.md.")
+      .expect("connector input");
+
+    assert_eq!(
+      input,
+      "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md"
+    );
+  }
+
+  #[test]
+  fn saved_artifact_reference_rejects_urls_and_traversal() {
+    assert!(extract_saved_artifact_reference("Use https://example.com/handoff.md").is_none());
+    assert!(extract_saved_artifact_reference("Use ../handoff.md").is_none());
+    assert!(extract_saved_artifact_reference("Use C:\\temp\\handoff.md").is_none());
+    assert_eq!(
+      extract_saved_artifact_reference("Use handoff.md for the connector").as_deref(),
+      Some("handoff.md")
+    );
   }
 
   #[test]
