@@ -51,9 +51,7 @@ pub(crate) fn infer_natural_plugin_command_route(
     .or_else(|| infer_natural_builtin_plugin_command_route(message))
 }
 
-fn infer_natural_builtin_plugin_command_route(
-  message: &str,
-) -> Option<ExplicitPluginCommandRoute> {
+fn infer_natural_builtin_plugin_command_route(message: &str) -> Option<ExplicitPluginCommandRoute> {
   let trimmed = message.trim();
   let normalized = trimmed.to_ascii_lowercase();
   let (command_id, routing_reason) =
@@ -385,7 +383,7 @@ mod tests {
   fn detects_natural_workspace_note_request() {
     let route =
       infer_natural_builtin_plugin_command_route("Capture a workspace note for this project.")
-      .expect("route");
+        .expect("route");
 
     assert_eq!(route.command_id, WORKSPACE_NOTE_COMMAND_ID);
     assert_eq!(

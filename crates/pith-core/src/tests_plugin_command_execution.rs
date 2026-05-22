@@ -815,7 +815,10 @@ fn turn_start_routes_natural_non_notion_connector_command() {
     items[2]["attributes"]["pluginRunnerConnectorId"],
     "linear-runner::linear"
   );
-  assert_eq!(items[2]["attributes"]["pluginRunnerConnectorServices"], "linear");
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerConnectorServices"],
+    "linear"
+  );
   assert_eq!(result["activeTurnId"], serde_json::Value::Null);
   assert_eq!(
     result["pendingApprovals"]
