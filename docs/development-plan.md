@@ -60,59 +60,22 @@ approval, resume, cancel, and produce source-grounded cowork output.
 
 Current state:
 
-- Done: timeline items carry stable loop, step, local-tool, tool-call status,
-  and Web Search source metadata.
-- Done: approval resume preserves the same agent step metadata.
-- Done: prepared actions execute through a turn step dispatcher.
-- Done: normal turns now use dispatcher loop metadata with step count, stop
-  reason, remaining budget, and observation count.
-- Done: turn execution now runs through a request-scoped loop runner with a
-  hard three-step budget and a next-action seam.
-- Done: the loop can continue from workspace search to read_file when one file
-  is the clear search result.
-- Done: project overview requests can list the workspace and then read the
-  best root entry point without auto-reading on list-only requests.
-- Done: project overview can continue into a root manifest after reading an
-  entry point, proving three bounded steps across workspace and file tools.
-- Done: final file summaries now receive prior tool observations so multi-step
-  handoffs are grounded in the whole loop, not only the last file.
-- Done: Web Search final items persist source attribution, source titles, and
-  source URLs.
-- Done: fresh public requests route to Web Search before workspace search even
-  when a workspace is open.
-- Done: the bundled Notion connector now proves a credential-scoped local MCP
-  draft command with approval, structured output, and memory capture.
-- Done: connector approvals resumed from `turn/start` now keep the same agent
-  step and close with completed loop observation metadata.
-- Done: approved connector observations now produce a concise assistant
-  handoff, so the cowork loop ends with a readable next-state summary.
-- Done: natural Notion draft requests route into the bundled connector loop
-  without requiring users to memorize plugin command syntax.
-- Done: natural cowork requests can route Workspace Note capture and Review Diff
-  inspection through the same bounded plugin command path.
-- Done: plugin command handoffs now use one shared implementation for direct
-  plugin execution and approval-resumed connector output.
-- Done: agent loop observations now expose successful/failure counts and the
-  last successful observation tool for planner follow-up.
-- Done: the loop can recover standard `nextAction` metadata from observations,
-  so future tools can continue through the same planner seam.
-- Done: natural Review Diff requests are covered by the turn/plugin integration
-  path, not only by routing unit tests.
-- Done: observation-driven planner follow-up now supports list workspace,
-  read file, workspace search, and Web Search actions from the same metadata
-  seam.
-- Done: observation-driven shell and write follow-up now enter the same
-  permission and approval path instead of bypassing user review.
-- Done: plugin-emitted shell and write follow-up observations are covered by
-  end-to-end turn tests, including approval pause behavior.
-- Done: plugin observations can chain into a follow-up plugin command using
-  frozen turn context, keeping connector/auth/readiness checks inside the same
-  bounded loop.
-- Done: natural connector routing now uses installed plugin connector metadata
-  before falling back to built-in shortcuts, with a non-Notion Linear proof.
-- Done: review observations can request a saved review summary through the
-  same safe diff and approval path instead of writing directly.
-- Gap: workspace apply/handoff is not yet a general cowork flow.
+- Loop core: request-scoped dispatcher, stable step metadata, three-step
+  budget, cancellation, approval pause/resume, and observation counts are in
+  place.
+- Workspace tools: list, search, read, shell, and write can run through the
+  same bounded loop, with writes and shell commands gated by approval.
+- Retrieval: Web Search is the active retrieval layer and surfaces visible
+  source attribution.
+- Plugins/connectors: bundled local commands, connector-backed MCP stdio
+  execution, credential-scoped approval, natural connector routing, command
+  chaining, and memory capture are proven.
+- Review/apply: review observations can request a saved summary through safe
+  diff preview and approval instead of writing directly.
+- Handoff: multi-step file summaries, connector outputs, approved writes, and
+  approved shell commands now close with structured cowork handoff metadata.
+- Remaining M6 gap: one final exit pass should verify the whole loop as a
+  practical cowork story, not only isolated tool paths.
 
 M6 work order:
 

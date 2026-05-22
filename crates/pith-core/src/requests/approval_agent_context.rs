@@ -54,7 +54,7 @@ impl ApprovalAgentContext {
 
     let step_status = resumed_step_status(items);
     let loop_stop_reason = resumed_loop_stop_reason(step_status);
-    let loop_observation_count = resumed_loop_observation_count(items).to_string();
+    let observation_counts = resumed_loop_observation_counts(items);
     for item in items {
       let kind = item.kind.clone();
       let attributes = item.attributes.get_or_insert_with(HashMap::new);
@@ -73,7 +73,15 @@ impl ApprovalAgentContext {
       );
       attributes.insert(
         "agentLoopObservationCount".to_string(),
-        loop_observation_count.clone(),
+        observation_counts.total.to_string(),
+      );
+      attributes.insert(
+        "agentLoopSuccessfulObservationCount".to_string(),
+        observation_counts.successful.to_string(),
+      );
+      attributes.insert(
+        "agentLoopFailureCount".to_string(),
+        observation_counts.failed.to_string(),
       );
       if let Some(status) = resumed_tool_call_status(&kind) {
         attributes.insert("toolCallStatus".to_string(), status.to_string());
@@ -148,16 +156,46 @@ fn resumed_loop_stop_reason(step_status: &str) -> &'static str {
   }
 }
 
-fn resumed_loop_observation_count(items: &[TimelineItem]) -> usize {
-  items
-    .iter()
-    .filter(|item| {
-      matches!(
-        item.kind.as_str(),
-        "toolResult" | "pluginResult" | "diffArtifact" | "warning"
-      )
-    })
-    .count()
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct ResumedObservationCounts {
+  total: usize,
+  successful: usize,
+  failed: usize,
+}
+
+fn resumed_loop_observation_counts(items: &[TimelineItem]) -> ResumedObservationCounts {
+  let mut counts = ResumedObservationCounts::default();
+  for item in items {
+    if !is_resumed_observation(item) {
+      continue;
+    }
+    counts.total += 1;
+    if is_resumed_failure(item) {
+      counts.failed += 1;
+    } else {
+      counts.successful += 1;
+    }
+  }
+  counts
+}
+
+fn is_resumed_observation(item: &TimelineItem) -> bool {
+  matches!(
+    item.kind.as_str(),
+    "toolResult" | "pluginResult" | "diffArtifact" | "warning"
+  )
+}
+
+fn is_resumed_failure(item: &TimelineItem) -> bool {
+  if item.kind == "warning" {
+    return true;
+  }
+
+  item.attributes.as_ref().is_some_and(|attributes| {
+    attributes
+      .get("pluginCommandStatus")
+      .is_some_and(|status| status == "failed")
+  })
 }
 
 fn resumed_tool_call_status(kind: &str) -> Option<&'static str> {
@@ -290,8 +328,51 @@ mod tests {
       Some("1")
     );
     assert_eq!(
+      attributes
+        .get("agentLoopSuccessfulObservationCount")
+        .map(String::as_str),
+      Some("1")
+    );
+    assert_eq!(
+      attributes.get("agentLoopFailureCount").map(String::as_str),
+      Some("0")
+    );
+    assert_eq!(
       attributes.get("agentStepPhase").map(String::as_str),
       Some("observation")
+    );
+  }
+
+  #[test]
+  fn resumed_warning_counts_as_failed_observation() {
+    let context = ApprovalAgentContext {
+      attributes: HashMap::from([("agentStepId".to_string(), "step-1".to_string())]),
+    };
+    let mut items = vec![TimelineItem {
+      kind: "warning".to_string(),
+      title: "write_file failed".to_string(),
+      content: String::new(),
+      attributes: None,
+    }];
+
+    context.tag_items(&mut items);
+
+    let attributes = items[0].attributes.as_ref().expect("attributes");
+    assert_eq!(
+      attributes
+        .get("agentLoopObservationCount")
+        .map(String::as_str),
+      Some("1")
+    );
+    assert_eq!(
+      attributes
+        .get("agentLoopSuccessfulObservationCount")
+        .map(String::as_str),
+      Some("0")
+    );
+    assert_eq!(
+      attributes.get("agentLoopFailureCount").map(String::as_str),
+      Some("1")
     );
   }
 

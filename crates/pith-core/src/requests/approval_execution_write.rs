@@ -100,9 +100,34 @@ fn append_successful_write(
   ));
   events.push_item(assistant_item(
     format!(
-      "Pith wrote {} in {} after your approval.",
+      "Pith wrote {} in {} after your approval. The change is on disk and ready for the next cowork step.",
       relative_path, workspace.display_name
     ),
-    None,
+    Some(approved_write_handoff_attributes(
+      workspace,
+      approval,
+      content.len(),
+      &relative_path,
+    )),
   ));
+}
+
+fn approved_write_handoff_attributes(
+  workspace: &WorkspaceSummary,
+  approval: &PendingApproval,
+  bytes_written: usize,
+  relative_path: &str,
+) -> HashMap<String, String> {
+  HashMap::from([
+    ("responseRole".to_string(), "actionHandoff".to_string()),
+    ("handoffKind".to_string(), "approvedWrite".to_string()),
+    ("approvalId".to_string(), approval.id.clone()),
+    ("action".to_string(), approval.action.clone()),
+    ("relativePath".to_string(), relative_path.to_string()),
+    ("bytesWritten".to_string(), bytes_written.to_string()),
+    (
+      "workspaceDisplayName".to_string(),
+      workspace.display_name.clone(),
+    ),
+  ])
 }

@@ -107,6 +107,11 @@ fn approval_respond_runs_shell_after_approval() {
     items[3]["attributes"]["sandboxOutputContextMode"],
     "sandboxOutputPreview"
   );
+  assert_eq!(items[3]["attributes"]["handoffKind"], "approvedShell");
+  assert_eq!(items[3]["attributes"]["responseRole"], "actionHandoff");
+  assert_eq!(items[3]["attributes"]["command"], "ls");
+  assert_eq!(items[3]["attributes"]["agentLoopSuccessfulObservationCount"], "1");
+  assert_eq!(items[3]["attributes"]["agentLoopFailureCount"], "0");
   assert!(items.iter().any(|item| item["kind"] == "pluginHook"));
   assert!(items.iter().any(|item| {
     item["title"] == "Record Shell Completion"

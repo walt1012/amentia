@@ -133,5 +133,15 @@ fn approval_respond_writes_file_after_approval() {
     Some(approval_tool_call_id.as_str())
   );
   assert_eq!(items[2]["attributes"]["toolCallStatus"], "completed");
+  assert_eq!(items[3]["kind"], "assistantMessage");
+  assert_eq!(items[3]["attributes"]["handoffKind"], "approvedWrite");
+  assert_eq!(items[3]["attributes"]["responseRole"], "actionHandoff");
+  assert_eq!(items[3]["attributes"]["relativePath"], "docs/output.txt");
+  assert_eq!(items[3]["attributes"]["bytesWritten"], "26");
+  assert_eq!(
+    items[3]["attributes"]["agentLoopSuccessfulObservationCount"],
+    "1"
+  );
+  assert_eq!(items[3]["attributes"]["agentLoopFailureCount"], "0");
   assert_eq!(written_content, "Approval protected content");
 }

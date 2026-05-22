@@ -5,7 +5,7 @@ use pith_memory::{MemoryEvent, MemoryNote};
 use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::WorkspaceSummary;
-use pith_tools::run_shell_with_cancellation;
+use pith_tools::{run_shell_with_cancellation, ShellCommandResult};
 
 use crate::approval_types::PendingApproval;
 use crate::local_responses::{format_shell_result, summarize_shell_result};
@@ -82,6 +82,8 @@ pub(super) fn append_approved_shell_execution(
         &result,
         Some(cancellation),
       );
+      let summary_attributes =
+        approved_shell_handoff_attributes(summary_attributes, approval, &command, &result);
       events.push_item(tool_result_item(
         "run_shell result",
         format_shell_result(&result),
@@ -125,4 +127,23 @@ pub(super) fn append_approved_shell_execution(
       )),
     )),
   }
+}
+
+fn approved_shell_handoff_attributes(
+  mut attributes: HashMap<String, String>,
+  approval: &PendingApproval,
+  command: &str,
+  result: &ShellCommandResult,
+) -> HashMap<String, String> {
+  attributes.extend(HashMap::from([
+    ("responseRole".to_string(), "actionHandoff".to_string()),
+    ("handoffKind".to_string(), "approvedShell".to_string()),
+    ("approvalId".to_string(), approval.id.clone()),
+    ("action".to_string(), approval.action.clone()),
+    ("command".to_string(), command.to_string()),
+    ("exitCode".to_string(), result.exit_code.to_string()),
+    ("timedOut".to_string(), result.timed_out.to_string()),
+    ("cancelled".to_string(), result.cancelled.to_string()),
+  ]));
+  attributes
 }
