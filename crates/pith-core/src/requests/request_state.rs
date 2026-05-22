@@ -48,6 +48,7 @@ pub(crate) struct PreparedTurnSnapshot {
   pub(crate) cancellation: GenerationCancellation,
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
+  pub(crate) reserved_approval_ids: Vec<String>,
   pub(crate) action: PreparedTurnAction,
 }
 

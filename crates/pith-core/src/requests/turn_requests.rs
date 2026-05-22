@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use pith_model_runtime::GenerationCancellation;
@@ -5,11 +6,12 @@ use pith_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnStartR
 
 use crate::approval_state::approvals_for_thread;
 use crate::plugin_commands::capture_plugin_command_output_memory;
-use crate::plugin_permissions::granted_permission_sources;
+use crate::plugin_permissions::{granted_permission_sources, permission_is_granted};
 use crate::request_params::parse_required_params;
 use crate::request_state::{CompletedTurnStart, PreparedTurnSnapshot, PreparedTurnStart};
 use crate::runtime_context::RuntimeContext;
 use crate::thread_summary::refresh_thread_summary_note;
+use crate::turn::turn_agent_loop::LOOP_MAX_STEPS;
 use crate::turn_actions;
 
 pub(crate) fn handle_turn_start(
@@ -58,6 +60,7 @@ pub fn prepare_turn_start(
     &permission_sources,
     cancellation.clone(),
   );
+  let reserved_approval_ids = reserve_follow_up_approval_ids(context, &permission_sources);
   if context
     .execution_state
     .take_pending_running_cancel(&prepared_thread.thread_id)
@@ -83,6 +86,7 @@ pub fn prepare_turn_start(
       cancellation,
       memory_notes,
       permission_sources,
+      reserved_approval_ids,
       action,
     },
   })
@@ -90,6 +94,21 @@ pub fn prepare_turn_start(
 
 fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), String> {
   context.model_state.ensure_ready_for_turn()
+}
+
+fn reserve_follow_up_approval_ids(
+  context: &mut RuntimeContext,
+  permission_sources: &HashMap<String, Vec<String>>,
+) -> Vec<String> {
+  if !permission_is_granted(permission_sources, "file.write")
+    && !permission_is_granted(permission_sources, "shell.exec")
+  {
+    return vec![];
+  }
+
+  (0..LOOP_MAX_STEPS)
+    .map(|_| context.sequence_state.next_approval_id())
+    .collect()
 }
 
 pub fn execute_prepared_turn_start(prepared: PreparedTurnStart) -> CompletedTurnStart {

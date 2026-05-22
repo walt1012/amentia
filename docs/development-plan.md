@@ -101,16 +101,17 @@ Current state:
 - Done: observation-driven planner follow-up now supports list workspace,
   read file, workspace search, and Web Search actions from the same metadata
   seam.
-- Gap: planner integration covers safe observation follow-up paths, but not
-  shell/write approvals, connector command chaining, or review/apply.
+- Done: observation-driven shell and write follow-up now enter the same
+  permission and approval path instead of bypassing user review.
+- Gap: planner integration covers safe observation follow-up and approval
+  request paths, but not connector command chaining or review/apply.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 
-1. Planner integration: expand observation-based next actions into approval
-   and review/apply paths.
-2. Tool migration: shell/write approvals, plugin commands, connector commands,
-   and review/apply.
+1. Planner integration: expand observation-based next actions into review/apply
+   paths.
+2. Tool migration: plugin commands, connector commands, and review/apply.
 3. Connector loop integration: use connector handoffs as planner input for
    follow-up actions and generalize connector command routing beyond Notion.
 4. Cowork proof: one request can search/read or use Web Search, cite sources,

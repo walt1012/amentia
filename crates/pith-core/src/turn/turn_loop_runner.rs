@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use pith_protocol::TimelineItem;
 
 use super::turn_agent_loop::{AgentLoopCoordinator, AgentLoopObservation, AgentLoopStopReason};
@@ -20,6 +22,7 @@ pub(crate) struct TurnLoopRunner<'a> {
   pending_active_turn: &'a mut Option<ActiveTurn>,
   pending_approval: &'a mut Option<PendingApproval>,
   plugin_command_output: &'a mut Option<PluginCommandOutput>,
+  reserved_approval_ids: VecDeque<String>,
 }
 
 impl<'a> TurnLoopRunner<'a> {
@@ -37,6 +40,11 @@ impl<'a> TurnLoopRunner<'a> {
       pending_active_turn,
       pending_approval,
       plugin_command_output,
+      reserved_approval_ids: snapshot
+        .reserved_approval_ids
+        .iter()
+        .cloned()
+        .collect(),
     }
   }
 
@@ -77,7 +85,7 @@ impl<'a> TurnLoopRunner<'a> {
         break;
       }
 
-      next_action = self.next_action_after_step(step_count, &observation, step_result.next_action);
+      next_action = self.next_action_after_step(&observation, step_result.next_action);
     }
 
     TurnLoopRunSummary {
@@ -98,8 +106,7 @@ impl<'a> TurnLoopRunner<'a> {
   }
 
   fn next_action_after_step(
-    &self,
-    _step_count: usize,
+    &mut self,
     observation: &AgentLoopObservation,
     planned_next_action: Option<PreparedTurnAction>,
   ) -> Option<PreparedTurnAction> {
@@ -107,6 +114,13 @@ impl<'a> TurnLoopRunner<'a> {
       return None;
     }
 
-    planned_next_action.or_else(|| observation.planned_next_action())
+    if planned_next_action.is_some() {
+      return planned_next_action;
+    }
+
+    observation.planned_next_action_with_approvals(
+      &self.snapshot.permission_sources,
+      &mut self.reserved_approval_ids,
+    )
   }
 }

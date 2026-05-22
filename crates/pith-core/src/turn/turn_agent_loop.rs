@@ -1,9 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use pith_protocol::TimelineItem;
 
 use super::turn_agent_steps::{AgentStepOutcome, AgentStepRecord};
-use crate::intent_inference::WebSearchIntent;
+use crate::intent_inference::{WebSearchIntent, WriteIntent};
+use crate::plugin_permissions::permission_is_granted;
 use crate::request_state::PreparedTurnAction;
 
 pub(crate) const LOOP_MAX_STEPS: usize = 3;
@@ -117,9 +118,16 @@ enum AgentLoopPlannedAction {
   Search {
     query: String,
   },
+  Shell {
+    command: String,
+  },
   WebSearch {
     query: String,
     routing_reason: &'static str,
+  },
+  WriteFile {
+    relative_path: String,
+    content: String,
   },
 }
 
@@ -191,6 +199,14 @@ impl AgentLoopObservation {
   }
 
   pub(crate) fn planned_next_action(&self) -> Option<PreparedTurnAction> {
+    self.planned_next_action_with_approvals(&HashMap::new(), &mut VecDeque::new())
+  }
+
+  pub(crate) fn planned_next_action_with_approvals(
+    &self,
+    permission_sources: &HashMap<String, Vec<String>>,
+    reserved_approval_ids: &mut VecDeque<String>,
+  ) -> Option<PreparedTurnAction> {
     self
       .planned_next_action
       .as_ref()
@@ -202,6 +218,14 @@ impl AgentLoopObservation {
         AgentLoopPlannedAction::Search { query } => PreparedTurnAction::Search {
           query: query.clone(),
         },
+        AgentLoopPlannedAction::Shell { command } => PreparedTurnAction::Shell {
+          command: command.clone(),
+          approval_id: next_approval_id(
+            permission_sources,
+            reserved_approval_ids,
+            "shell.exec",
+          ),
+        },
         AgentLoopPlannedAction::WebSearch {
           query,
           routing_reason,
@@ -209,6 +233,20 @@ impl AgentLoopObservation {
           query: query.clone(),
           routing_reason,
         }),
+        AgentLoopPlannedAction::WriteFile {
+          relative_path,
+          content,
+        } => PreparedTurnAction::Write {
+          intent: WriteIntent {
+            relative_path: relative_path.clone(),
+            content: content.clone(),
+          },
+          approval_id: next_approval_id(
+            permission_sources,
+            reserved_approval_ids,
+            "file.write",
+          ),
+        },
       })
   }
 }
@@ -303,11 +341,30 @@ fn planned_action_from_item(item: &TimelineItem) -> Option<AgentLoopPlannedActio
     Some("search" | "search_files") => Some(AgentLoopPlannedAction::Search {
       query: attributes.get("nextQuery")?.clone(),
     }),
+    Some("run_shell" | "shell") => Some(AgentLoopPlannedAction::Shell {
+      command: attributes.get("nextCommand")?.clone(),
+    }),
     Some("web_search") => Some(AgentLoopPlannedAction::WebSearch {
       query: attributes.get("nextQuery")?.clone(),
       routing_reason: normalized_next_routing_reason(attributes.get("nextRoutingReason")),
     }),
+    Some("write_file") => Some(AgentLoopPlannedAction::WriteFile {
+      relative_path: attributes.get("nextRelativePath")?.clone(),
+      content: attributes.get("nextContent")?.clone(),
+    }),
     _ => None,
+  }
+}
+
+fn next_approval_id(
+  permission_sources: &HashMap<String, Vec<String>>,
+  reserved_approval_ids: &mut VecDeque<String>,
+  permission: &str,
+) -> Option<String> {
+  if permission_is_granted(permission_sources, permission) {
+    reserved_approval_ids.pop_front()
+  } else {
+    None
   }
 }
 
@@ -506,6 +563,70 @@ mod tests {
       PreparedTurnAction::WebSearch(intent) => {
         assert_eq!(intent.query, "latest small GGUF model");
         assert_eq!(intent.routing_reason, "freshPublicInformation");
+      }
+      other => panic!("unexpected next action: {other:?}"),
+    }
+  }
+
+  #[test]
+  fn observation_summary_recovers_shell_next_action_with_approval() {
+    let observation = AgentLoopObservation::from_items(&[TimelineItem {
+      kind: "pluginResult".to_string(),
+      title: "Plugin Result".to_string(),
+      content: String::new(),
+      attributes: Some(HashMap::from([
+        ("tool".to_string(), "review-assistant".to_string()),
+        ("nextAction".to_string(), "run_shell".to_string()),
+        ("nextCommand".to_string(), "git status --short".to_string()),
+      ])),
+    }]);
+    let mut approval_ids = ["approval-1".to_string()].into_iter().collect();
+    let permissions = HashMap::from([("shell.exec".to_string(), vec!["Test".to_string()])]);
+
+    let next_action = observation
+      .planned_next_action_with_approvals(&permissions, &mut approval_ids)
+      .expect("next action");
+
+    match next_action {
+      PreparedTurnAction::Shell {
+        command,
+        approval_id,
+      } => {
+        assert_eq!(command, "git status --short");
+        assert_eq!(approval_id.as_deref(), Some("approval-1"));
+      }
+      other => panic!("unexpected next action: {other:?}"),
+    }
+  }
+
+  #[test]
+  fn observation_summary_recovers_write_next_action_without_bypassing_approval() {
+    let observation = AgentLoopObservation::from_items(&[TimelineItem {
+      kind: "pluginResult".to_string(),
+      title: "Plugin Result".to_string(),
+      content: String::new(),
+      attributes: Some(HashMap::from([
+        ("tool".to_string(), "workspace-notes".to_string()),
+        ("nextAction".to_string(), "write_file".to_string()),
+        ("nextRelativePath".to_string(), "notes/today.md".to_string()),
+        ("nextContent".to_string(), "Ship the cowork loop.".to_string()),
+      ])),
+    }]);
+    let mut approval_ids = ["approval-2".to_string()].into_iter().collect();
+    let permissions = HashMap::from([("file.write".to_string(), vec!["Test".to_string()])]);
+
+    let next_action = observation
+      .planned_next_action_with_approvals(&permissions, &mut approval_ids)
+      .expect("next action");
+
+    match next_action {
+      PreparedTurnAction::Write {
+        intent,
+        approval_id,
+      } => {
+        assert_eq!(intent.relative_path, "notes/today.md");
+        assert_eq!(intent.content, "Ship the cowork loop.");
+        assert_eq!(approval_id.as_deref(), Some("approval-2"));
       }
       other => panic!("unexpected next action: {other:?}"),
     }
