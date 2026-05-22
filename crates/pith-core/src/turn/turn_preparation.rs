@@ -5,8 +5,8 @@ use pith_model_runtime::GenerationCancellation;
 use pith_protocol::WorkspaceSummary;
 
 use super::turn_plugin_routing::{
-  ExplicitPluginCommandRoute, infer_explicit_plugin_command_route,
-  infer_natural_plugin_command_route,
+  infer_explicit_plugin_command_route, infer_natural_plugin_command_route,
+  ExplicitPluginCommandRoute,
 };
 use crate::intent_inference::{
   infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_model_web_search_intent,
@@ -49,8 +49,8 @@ pub(crate) fn prepare_turn_action(
   let workspace_root = Path::new(&workspace.root_path);
 
   if let Some(intent) = infer_write_intent(message) {
-    let approval_id = permission_is_granted(permission_sources, "file.write")
-      .then(|| reserve_approval_id(context));
+    let approval_id =
+      permission_is_granted(permission_sources, "file.write").then(|| reserve_approval_id(context));
     return PreparedTurnAction::Write {
       intent,
       approval_id,
@@ -58,8 +58,8 @@ pub(crate) fn prepare_turn_action(
   }
 
   if let Some(command) = infer_shell_command(message) {
-    let approval_id = permission_is_granted(permission_sources, "shell.exec")
-      .then(|| reserve_approval_id(context));
+    let approval_id =
+      permission_is_granted(permission_sources, "shell.exec").then(|| reserve_approval_id(context));
     return PreparedTurnAction::Shell {
       command,
       approval_id,

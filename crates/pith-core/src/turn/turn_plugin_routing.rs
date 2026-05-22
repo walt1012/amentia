@@ -60,7 +60,13 @@ fn explicit_plugin_prefixes() -> [(&'static str, &'static str); 5] {
 
 fn looks_like_notion_draft_request(normalized: &str) -> bool {
   let action_match = [
-    "prepare", "draft", "create", "make", "compose", "summarize", "summary",
+    "prepare",
+    "draft",
+    "create",
+    "make",
+    "compose",
+    "summarize",
+    "summary",
   ]
   .iter()
   .any(|term| normalized.contains(term));
@@ -135,10 +141,9 @@ mod tests {
 
   #[test]
   fn detects_natural_notion_page_draft_request() {
-    let route = infer_natural_plugin_command_route(
-      "Prepare a Notion page draft for this project handoff.",
-    )
-    .expect("route");
+    let route =
+      infer_natural_plugin_command_route("Prepare a Notion page draft for this project handoff.")
+        .expect("route");
 
     assert_eq!(route.command_id, NOTION_PAGE_DRAFT_COMMAND_ID);
     assert_eq!(
