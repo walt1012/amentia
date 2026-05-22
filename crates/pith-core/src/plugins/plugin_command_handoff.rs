@@ -2,51 +2,97 @@ use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
 
-use crate::plugin_commands::PluginCommandOutput;
+use super::plugin_command_types::PluginCommandOutput;
 
 const HANDOFF_PREVIEW_LIMIT: usize = 360;
 
-pub(super) fn build_approved_plugin_handoff(output: &PluginCommandOutput) -> Option<TimelineItem> {
-  let observation = primary_observation(&output.items)?;
-  let observation_title = observation.title.trim();
-  let observation_preview = bounded_preview(&observation.content);
+pub(crate) fn ensure_plugin_command_handoff(
+  output: &mut PluginCommandOutput,
+  handoff_kind: &'static str,
+) {
+  let Some(observation) = primary_observation_summary(&output.items) else {
+    return;
+  };
+  let attributes = plugin_handoff_attributes(output, handoff_kind, &observation);
+  let target_item = last_command_assistant_item_mut(&mut output.items, &output.command.command_id);
+  if let Some(item) = target_item {
+    item
+      .attributes
+      .get_or_insert_with(HashMap::new)
+      .extend(attributes);
+    return;
+  }
+
+  output.items.push(TimelineItem {
+    kind: "assistantMessage".to_string(),
+    title: "Assistant".to_string(),
+    content: format!(
+      "{} completed. Observation: {}. {}",
+      output.command.title, observation.title, observation.preview
+    ),
+    attributes: Some(attributes),
+  });
+}
+
+#[derive(Debug, Clone)]
+struct PluginObservationSummary {
+  kind: String,
+  title: String,
+  preview: String,
+  attributes: Option<HashMap<String, String>>,
+}
+
+fn primary_observation_summary(items: &[TimelineItem]) -> Option<PluginObservationSummary> {
+  items
+    .iter()
+    .rev()
+    .find(|item| item.kind == "pluginResult" || item.kind == "toolResult")
+    .map(|item| PluginObservationSummary {
+      kind: item.kind.clone(),
+      title: item.title.trim().to_string(),
+      preview: bounded_preview(&item.content),
+      attributes: item.attributes.clone(),
+    })
+}
+
+fn plugin_handoff_attributes(
+  output: &PluginCommandOutput,
+  handoff_kind: &'static str,
+  observation: &PluginObservationSummary,
+) -> HashMap<String, String> {
   let mut attributes = HashMap::from([
     ("pluginId".to_string(), output.command.plugin_id.clone()),
     ("commandId".to_string(), output.command.command_id.clone()),
-    (
-      "pluginCommandHandoff".to_string(),
-      "approvedPluginCommand".to_string(),
-    ),
+    ("pluginCommandHandoff".to_string(), handoff_kind.to_string()),
     (
       "pluginCommandObservationKind".to_string(),
       observation.kind.clone(),
     ),
     (
       "pluginCommandObservationTitle".to_string(),
-      observation_title.to_string(),
+      observation.title.clone(),
     ),
   ]);
   if let Some(execution_kind) = output.command.execution_kind.as_ref() {
     attributes.insert("executionKind".to_string(), execution_kind.clone());
   }
-  copy_connector_attributes(&mut attributes, observation);
-
-  Some(TimelineItem {
-    kind: "assistantMessage".to_string(),
-    title: "Assistant".to_string(),
-    content: format!(
-      "{} completed. Observation: {}. {}",
-      output.command.title, observation_title, observation_preview
-    ),
-    attributes: Some(attributes),
-  })
+  copy_connector_attributes(&mut attributes, observation.attributes.as_ref());
+  attributes
 }
 
-fn primary_observation(items: &[TimelineItem]) -> Option<&TimelineItem> {
-  items
-    .iter()
-    .rev()
-    .find(|item| item.kind == "pluginResult" || item.kind == "toolResult")
+fn last_command_assistant_item_mut<'a>(
+  items: &'a mut [TimelineItem],
+  command_id: &str,
+) -> Option<&'a mut TimelineItem> {
+  items.iter_mut().rev().find(|item| {
+    item.kind == "assistantMessage"
+      && item
+        .attributes
+        .as_ref()
+        .and_then(|attributes| attributes.get("commandId"))
+        .map(|value| value == command_id)
+        .unwrap_or(false)
+  })
 }
 
 fn bounded_preview(content: &str) -> String {
@@ -61,8 +107,11 @@ fn bounded_preview(content: &str) -> String {
   preview
 }
 
-fn copy_connector_attributes(attributes: &mut HashMap<String, String>, observation: &TimelineItem) {
-  let Some(observation_attributes) = observation.attributes.as_ref() else {
+fn copy_connector_attributes(
+  attributes: &mut HashMap<String, String>,
+  observation_attributes: Option<&HashMap<String, String>>,
+) {
+  let Some(observation_attributes) = observation_attributes else {
     return;
   };
   for key in ["connectorId", "connectorIds", "connectorServices"] {
@@ -88,8 +137,8 @@ mod tests {
   use super::*;
 
   #[test]
-  fn approved_plugin_handoff_summarizes_primary_observation() {
-    let output = PluginCommandOutput {
+  fn plugin_handoff_summarizes_primary_observation() {
+    let mut output = PluginCommandOutput {
       thread_id: "thread-1".to_string(),
       command: test_command(),
       workspace: None,
@@ -116,7 +165,8 @@ mod tests {
       pending_approval: None,
     };
 
-    let item = build_approved_plugin_handoff(&output).expect("handoff item");
+    ensure_plugin_command_handoff(&mut output, "approvedPluginCommand");
+    let item = output.items.last().expect("handoff item");
     let attributes = item.attributes.as_ref().expect("attributes");
 
     assert_eq!(item.kind, "assistantMessage");
@@ -133,8 +183,47 @@ mod tests {
   }
 
   #[test]
-  fn approved_plugin_handoff_skips_outputs_without_observations() {
-    let output = PluginCommandOutput {
+  fn plugin_handoff_marks_existing_assistant_item() {
+    let mut output = PluginCommandOutput {
+      thread_id: "thread-1".to_string(),
+      command: test_command(),
+      workspace: None,
+      input: None,
+      items: vec![
+        TimelineItem {
+          kind: "pluginResult".to_string(),
+          title: "Notion Page Draft".to_string(),
+          content: "Prepared a local Notion page draft.".to_string(),
+          attributes: None,
+        },
+        TimelineItem {
+          kind: "assistantMessage".to_string(),
+          title: "Assistant".to_string(),
+          content: "Prepare Notion Page Draft completed.".to_string(),
+          attributes: Some(HashMap::from([(
+            "commandId".to_string(),
+            "notion-connector::notion.prepare-page-draft".to_string(),
+          )])),
+        },
+      ],
+      capture_memory: false,
+      runner_memory_notes: vec![],
+      pending_approval: None,
+    };
+
+    ensure_plugin_command_handoff(&mut output, "pluginCommand");
+
+    assert_eq!(output.items.len(), 2);
+    let attributes = output.items[1].attributes.as_ref().expect("attributes");
+    assert_eq!(
+      attributes.get("pluginCommandHandoff").map(String::as_str),
+      Some("pluginCommand")
+    );
+  }
+
+  #[test]
+  fn plugin_handoff_skips_outputs_without_observations() {
+    let mut output = PluginCommandOutput {
       thread_id: "thread-1".to_string(),
       command: test_command(),
       workspace: None,
@@ -150,7 +239,9 @@ mod tests {
       pending_approval: None,
     };
 
-    assert!(build_approved_plugin_handoff(&output).is_none());
+    ensure_plugin_command_handoff(&mut output, "pluginCommand");
+
+    assert_eq!(output.items.len(), 1);
   }
 
   fn test_command() -> HostPluginCommandEntry {

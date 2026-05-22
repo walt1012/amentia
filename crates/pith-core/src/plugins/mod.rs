@@ -7,6 +7,7 @@ pub(crate) mod plugin_command_builtins;
 pub(crate) mod plugin_command_completion;
 pub(crate) mod plugin_command_execution;
 pub(crate) mod plugin_command_git;
+pub(crate) mod plugin_command_handoff;
 pub(crate) mod plugin_command_mcp_output;
 pub(crate) mod plugin_command_mcp_runner;
 pub(crate) mod plugin_command_mcp_session;

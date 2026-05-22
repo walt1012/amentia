@@ -4,7 +4,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use pith_protocol::WorkspaceSummary;
 
 use crate::approval_types::PendingApproval;
-use crate::plugin_commands::execute_plugin_command_snapshot;
+use crate::plugin_commands::{ensure_plugin_command_handoff, execute_plugin_command_snapshot};
 use crate::request_state::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
   PreparedApprovalSnapshot,
@@ -13,7 +13,6 @@ use crate::request_state::{
 use super::approval_execution_approved::execute_approved_approval;
 use super::approval_execution_denied::execute_denied_approval;
 use super::approval_execution_timeline::warning_item;
-use super::approval_plugin_handoff::build_approved_plugin_handoff;
 
 pub fn execute_prepared_approval_respond(
   prepared: PreparedApprovalRespond,
@@ -68,9 +67,7 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
     if let Some(plugin_command) = approved_plugin_command {
       match execute_plugin_command_snapshot(plugin_command) {
         Ok(mut output) => {
-          if let Some(handoff) = build_approved_plugin_handoff(&output) {
-            output.items.push(handoff);
-          }
+          ensure_plugin_command_handoff(&mut output, "approvedPluginCommand");
           events.extend_items(output.items.clone());
           events.set_approved_plugin_command_output(output);
         }

@@ -14,7 +14,8 @@ use super::turn_workspace_search::execute_search_observation_step;
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::{
-  execute_plugin_command_snapshot, PluginCommandOutput, PluginCommandSnapshot,
+  ensure_plugin_command_handoff, execute_plugin_command_snapshot, PluginCommandOutput,
+  PluginCommandSnapshot,
 };
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot};
 
@@ -204,6 +205,10 @@ impl<'a> TurnStepDispatcher<'a> {
     let command_id = snapshot.command_id().to_string();
     match execute_plugin_command_snapshot(snapshot) {
       Ok(output) => {
+        let mut output = output;
+        if output.pending_approval.is_none() {
+          ensure_plugin_command_handoff(&mut output, "pluginCommand");
+        }
         *self.pending_approval = output.pending_approval.clone();
         let should_capture_memory = output.capture_memory;
         self.items.extend(output.items.clone());

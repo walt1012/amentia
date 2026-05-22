@@ -90,6 +90,8 @@ Current state:
   without requiring users to memorize plugin command syntax.
 - Done: natural cowork requests can route Workspace Note capture and Review Diff
   inspection through the same bounded plugin command path.
+- Done: plugin command handoffs now use one shared implementation for direct
+  plugin execution and approval-resumed connector output.
 - Gap: planner integration covers safe workspace observation paths, but not
   shell/write approvals, connector command follow-up, or review/apply.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
