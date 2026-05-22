@@ -10,6 +10,7 @@ const AGENT_CONTEXT_KEYS: &[&str] = &[
   "agentLoopMode",
   "agentLoopMaxSteps",
   "agentLoopStepCount",
+  "agentLoopBudgetRemaining",
   "agentStepId",
   "agentStepIndex",
   "agentToolSchema",
@@ -52,6 +53,8 @@ impl ApprovalAgentContext {
     }
 
     let step_status = resumed_step_status(items);
+    let loop_stop_reason = resumed_loop_stop_reason(step_status);
+    let loop_observation_count = resumed_loop_observation_count(items).to_string();
     for item in items {
       let kind = item.kind.clone();
       let attributes = item.attributes.get_or_insert_with(HashMap::new);
@@ -64,6 +67,14 @@ impl ApprovalAgentContext {
         resumed_phase(&kind).to_string(),
       );
       attributes.insert("agentStepStatus".to_string(), step_status.to_string());
+      attributes.insert(
+        "agentLoopStopReason".to_string(),
+        loop_stop_reason.to_string(),
+      );
+      attributes.insert(
+        "agentLoopObservationCount".to_string(),
+        loop_observation_count.clone(),
+      );
       if let Some(status) = resumed_tool_call_status(&kind) {
         attributes.insert("toolCallStatus".to_string(), status.to_string());
       }
@@ -130,6 +141,25 @@ fn resumed_step_status(items: &[TimelineItem]) -> &'static str {
   "completed"
 }
 
+fn resumed_loop_stop_reason(step_status: &str) -> &'static str {
+  match step_status {
+    "failed" => "failed",
+    _ => "completed",
+  }
+}
+
+fn resumed_loop_observation_count(items: &[TimelineItem]) -> usize {
+  items
+    .iter()
+    .filter(|item| {
+      matches!(
+        item.kind.as_str(),
+        "toolResult" | "pluginResult" | "diffArtifact" | "warning"
+      )
+    })
+    .count()
+}
+
 fn resumed_tool_call_status(kind: &str) -> Option<&'static str> {
   match kind {
     "toolStart" | "pluginCommand" => Some("started"),
@@ -187,6 +217,16 @@ mod tests {
       attributes.get("toolCallId").map(String::as_str),
       Some("call-1")
     );
+    assert_eq!(
+      attributes.get("agentLoopStopReason").map(String::as_str),
+      Some("completed")
+    );
+    assert_eq!(
+      attributes
+        .get("agentLoopObservationCount")
+        .map(String::as_str),
+      Some("0")
+    );
   }
 
   #[test]
@@ -210,6 +250,48 @@ mod tests {
     assert_eq!(
       attributes.get("agentStepStatus").map(String::as_str),
       Some("denied")
+    );
+    assert_eq!(
+      attributes.get("agentLoopStopReason").map(String::as_str),
+      Some("completed")
+    );
+  }
+
+  #[test]
+  fn approved_plugin_resume_counts_plugin_observations() {
+    let context = ApprovalAgentContext {
+      attributes: HashMap::from([("agentStepId".to_string(), "step-1".to_string())]),
+    };
+    let mut items = vec![
+      TimelineItem {
+        kind: "approvalResolved".to_string(),
+        title: "Approval Granted".to_string(),
+        content: String::new(),
+        attributes: Some(HashMap::from([(
+          "decision".to_string(),
+          "approved".to_string(),
+        )])),
+      },
+      TimelineItem {
+        kind: "pluginResult".to_string(),
+        title: "Plugin Result".to_string(),
+        content: "Plugin output.".to_string(),
+        attributes: None,
+      },
+    ];
+
+    context.tag_items(&mut items);
+
+    let attributes = items[1].attributes.as_ref().expect("attributes");
+    assert_eq!(
+      attributes
+        .get("agentLoopObservationCount")
+        .map(String::as_str),
+      Some("1")
+    );
+    assert_eq!(
+      attributes.get("agentStepPhase").map(String::as_str),
+      Some("observation")
     );
   }
 

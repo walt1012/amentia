@@ -5,17 +5,114 @@ use super::test_support::{
 };
 use super::*;
 use pith_protocol::methods;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::fs;
+use std::path::PathBuf;
+
+const NOTION_PLUGIN_ID: &str = "notion-connector";
+const NOTION_CONNECTOR_ID: &str = "notion-connector::notion";
+const NOTION_COMMAND_ID: &str = "notion-connector::notion.prepare-page-draft";
+const NOTION_SECRET: &str = "notion-local-token";
 
 #[test]
 fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
+  let (mut context, workspace) = setup_authorized_notion_context(
+    "bundled-notion-local-draft",
+    "Bundled Notion Connector Thread",
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": NOTION_COMMAND_ID,
+        "input": "Prepare a project handoff page"
+      })),
+    ),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "approvalRequested");
+  assert_eq!(
+    items[1]["attributes"]["connectorId"],
+    NOTION_CONNECTOR_ID
+  );
+  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
+  assert_eq!(
+    items[1]["attributes"]["executionKind"],
+    "mcp.notion.preparePageDraft"
+  );
+  assert_eq!(
+    result["pendingApprovals"][0]["title"],
+    "Run Prepare Notion Page Draft"
+  );
+
+  let approval_result = approve_pending(&mut context, &result);
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  let items = approval_result["items"].as_array().expect("approval items");
+  assert_local_draft_items(&context, items);
+}
+
+#[test]
+fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
+  let (mut context, workspace) = setup_authorized_notion_context(
+    "bundled-notion-turn-loop",
+    "Bundled Notion Turn Thread",
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": format!("/plugin {NOTION_COMMAND_ID} Prepare a project handoff page")
+      })),
+    ),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("turn items");
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
+  assert_eq!(items[1]["attributes"]["agentStepIndex"], "1");
+  assert_eq!(items[2]["kind"], "approvalRequested");
+  assert_eq!(items[2]["attributes"]["agentLoopStopReason"], "approvalPaused");
+  assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
+
+  let approval_result = approve_pending(&mut context, &result);
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  let approved_items = approval_result["items"]
+    .as_array()
+    .expect("approval items");
+  let draft_item = approved_items
+    .iter()
+    .find(|item| item["title"] == "Notion Page Draft")
+    .expect("notion draft item");
+  assert_eq!(draft_item["attributes"]["agentStepResume"], "true");
+  assert_eq!(draft_item["attributes"]["agentToolKind"], "connector");
+  assert_eq!(draft_item["attributes"]["agentStepIndex"], "1");
+  assert_eq!(draft_item["attributes"]["agentLoopStopReason"], "completed");
+  assert_eq!(draft_item["attributes"]["agentLoopObservationCount"], "1");
+  assert_local_draft_items(&context, approved_items);
+}
+
+fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {
   let mut context = RuntimeContext::new_in_memory();
-  let workspace = create_temp_workspace("bundled-notion-local-draft");
+  let workspace = create_temp_workspace(label);
   replace_plugin_catalog(
     &mut context,
     vec![bundled_manifest_plugin_entry(
-      "notion-connector",
+      NOTION_PLUGIN_ID,
       "Notion Connector",
       true,
       false,
@@ -29,7 +126,7 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
     )],
   );
 
-  let _ = handle_request(
+  let workspace_response = handle_request(
     &mut context,
     request(
       methods::WORKSPACE_OPEN,
@@ -38,64 +135,39 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
       })),
     ),
   );
-  let _ = handle_request(
+  assert!(workspace_response.error.is_none());
+  let thread_response = handle_request(
     &mut context,
     request(
       methods::THREAD_START,
       Some(json!({
-        "title": "Bundled Notion Connector Thread"
+        "title": title
       })),
     ),
   );
+  assert!(thread_response.error.is_none());
   let authorize_response = handle_request(
     &mut context,
     request(
       methods::PLUGIN_CONNECTOR_AUTHORIZE,
       Some(json!({
-        "connectorId": "notion-connector::notion",
-        "credentialSecret": "notion-local-token"
+        "connectorId": NOTION_CONNECTOR_ID,
+        "credentialSecret": NOTION_SECRET
       })),
     ),
   );
   assert!(authorize_response.error.is_none());
 
-  let response = handle_request(
-    &mut context,
-    request(
-      methods::PLUGIN_COMMAND_RUN,
-      Some(json!({
-        "threadId": "thread-1",
-        "commandId": "notion-connector::notion.prepare-page-draft",
-        "input": "Prepare a project handoff page"
-      })),
-    ),
-  );
+  (context, workspace)
+}
 
-  assert!(response.error.is_none());
-  let result = response.result.expect("command run result");
-  let items = result["items"].as_array().expect("items");
-  assert_eq!(items[0]["kind"], "pluginCommand");
-  assert_eq!(items[1]["kind"], "approvalRequested");
-  assert_eq!(
-    items[1]["attributes"]["connectorId"],
-    "notion-connector::notion"
-  );
-  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
-  assert_eq!(
-    items[1]["attributes"]["executionKind"],
-    "mcp.notion.preparePageDraft"
-  );
-  assert_eq!(
-    result["pendingApprovals"][0]["title"],
-    "Run Prepare Notion Page Draft"
-  );
+fn approve_pending(context: &mut RuntimeContext, result: &Value) -> Value {
   let approval_id = result["pendingApprovals"][0]["id"]
     .as_str()
     .expect("approval id")
     .to_string();
-
   let approval_response = handle_request(
-    &mut context,
+    context,
     request(
       methods::APPROVAL_RESPOND,
       Some(json!({
@@ -104,12 +176,11 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
       })),
     ),
   );
-
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-
   assert!(approval_response.error.is_none());
-  let approval_result = approval_response.result.expect("approval result");
-  let items = approval_result["items"].as_array().expect("approval items");
+  approval_response.result.expect("approval result")
+}
+
+fn assert_local_draft_items(context: &RuntimeContext, items: &[Value]) {
   let draft_item = items
     .iter()
     .find(|item| item["title"] == "Notion Page Draft")
@@ -150,7 +221,7 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
     .as_str()
     .expect("draft content")
     .contains("local Notion page draft"));
-  assert!(!draft_item.to_string().contains("notion-local-token"));
+  assert!(!draft_item.to_string().contains(NOTION_SECRET));
 
   let memory_item = items
     .iter()
