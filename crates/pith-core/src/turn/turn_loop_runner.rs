@@ -1,7 +1,7 @@
 use pith_protocol::TimelineItem;
 
 use super::turn_agent_loop::{AgentLoopCoordinator, AgentLoopObservation, AgentLoopStopReason};
-use super::turn_step_dispatcher::{TurnStepControl, TurnStepDispatcher};
+use super::turn_step_dispatcher::{TurnStepControl, TurnStepDispatcher, TurnStepResult};
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::PluginCommandOutput;
@@ -54,7 +54,7 @@ impl<'a> TurnLoopRunner<'a> {
       step_count += 1;
       let step_start_index = self.items.len();
       let agent_step = self.coordinator.begin_step(step_count, &action);
-      let control = self.dispatch_action(action);
+      let step_result = self.dispatch_action(action);
       let observation = AgentLoopObservation::from_items(&self.items[step_start_index..]);
       let stop_reason = AgentLoopStopReason::from_step_state(
         observation,
@@ -73,11 +73,12 @@ impl<'a> TurnLoopRunner<'a> {
       );
       final_stop_reason = Some(stop_reason);
 
-      if matches!(control, TurnStepControl::Stop) || !stop_reason.can_continue() {
+      if matches!(step_result.control, TurnStepControl::Stop) || !stop_reason.can_continue() {
         break;
       }
 
-      next_action = self.next_action_after_step(step_count, observation);
+      next_action =
+        self.next_action_after_step(step_count, observation, step_result.next_action);
     }
 
     TurnLoopRunSummary {
@@ -86,7 +87,7 @@ impl<'a> TurnLoopRunner<'a> {
     }
   }
 
-  fn dispatch_action(&mut self, action: PreparedTurnAction) -> TurnStepControl {
+  fn dispatch_action(&mut self, action: PreparedTurnAction) -> TurnStepResult {
     let mut dispatcher = TurnStepDispatcher::new(
       self.snapshot,
       self.items,
@@ -101,11 +102,12 @@ impl<'a> TurnLoopRunner<'a> {
     &self,
     _step_count: usize,
     observation: AgentLoopObservation,
+    planned_next_action: Option<PreparedTurnAction>,
   ) -> Option<PreparedTurnAction> {
     if !observation.can_inform_next_action() {
       return None;
     }
 
-    None
+    planned_next_action
   }
 }

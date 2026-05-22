@@ -68,17 +68,19 @@ Current state:
   reason, remaining budget, and observation count.
 - Done: turn execution now runs through a request-scoped loop runner with a
   hard three-step budget and a next-action seam.
+- Done: the loop can continue from workspace search to read_file when one file
+  is the clear search result.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
-- Gap: the loop runner does not yet choose a second action from observations.
+- Gap: planner integration only handles the safe search-to-read path.
 - Gap: the bundled Notion connector is still a dry-run MCP proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 
-1. Planner integration: keep the heuristic first planner, but let the loop
-   choose the next action from the previous observation.
-2. Tool migration: workspace read/search and Web Search first, then shell/write
+1. Planner integration: expand observation-based next actions beyond the safe
+   search-to-read path.
+2. Tool migration: Web Search next, then shell/write
    approvals, plugin commands, connector commands, and review/apply.
 3. Connector proof: replace the Notion dry-run with one credential-safe MCP
    command after connector observations can be attributed through the loop.

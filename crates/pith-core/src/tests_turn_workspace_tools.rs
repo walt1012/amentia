@@ -174,7 +174,9 @@ fn turn_start_searches_workspace_content() {
   assert_eq!(items[2]["attributes"]["maxResults"], "12");
   assert_eq!(items[3]["kind"], "toolResult");
   assert_eq!(items[3]["attributes"]["resultCount"], "2");
+  assert_eq!(items[3]["attributes"]["uniquePathCount"], "2");
   assert_eq!(items[3]["attributes"]["maxResults"], "12");
+  assert!(items[3]["attributes"].get("nextAction").is_none());
   assert!(items[3]["content"]
     .as_str()
     .unwrap()
@@ -183,4 +185,79 @@ fn turn_start_searches_workspace_content() {
     .as_str()
     .unwrap()
     .contains("docs/notes.txt:1"));
+  assert_eq!(items[4]["kind"], "assistantMessage");
+}
+
+#[test]
+fn turn_start_reads_single_file_search_result_as_second_step() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("search-then-read");
+  fs::write(
+    workspace.join("README.md"),
+    "# Pith\nUnique target lives here\nSecond line\n",
+  )
+  .expect("write readme");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Search Then Read Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Find Unique target"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[2]["kind"], "toolStart");
+  assert_eq!(items[2]["title"], "search_files");
+  assert_eq!(items[3]["kind"], "toolResult");
+  assert_eq!(items[3]["attributes"]["resultCount"], "1");
+  assert_eq!(items[3]["attributes"]["uniquePathCount"], "1");
+  assert_eq!(items[3]["attributes"]["nextAction"], "read_file");
+  assert_eq!(items[3]["attributes"]["nextRelativePath"], "README.md");
+  assert_eq!(items[3]["attributes"]["agentStepIndex"], "1");
+  assert_eq!(items[3]["attributes"]["agentLoopStepCount"], "1");
+  assert_eq!(items[3]["attributes"]["agentLoopStopReason"], "completed");
+  assert_eq!(items[5]["kind"], "toolStart");
+  assert_eq!(items[5]["title"], "read_file");
+  assert_eq!(items[5]["attributes"]["relativePath"], "README.md");
+  assert_eq!(items[5]["attributes"]["agentStepIndex"], "2");
+  assert_eq!(items[5]["attributes"]["agentLoopStepCount"], "2");
+  assert_eq!(items[5]["attributes"]["agentLoopBudgetRemaining"], "1");
+  assert_eq!(items[6]["kind"], "toolResult");
+  assert!(items[6]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Unique target lives here"));
+  assert_eq!(items[7]["kind"], "assistantMessage");
+  assert_eq!(items[7]["attributes"]["agentStepIndex"], "2");
+  assert_eq!(items[7]["attributes"]["agentLoopStopReason"], "streaming");
+  assert_eq!(result["activeTurnId"].as_str().unwrap(), "thread-1-turn-1");
 }

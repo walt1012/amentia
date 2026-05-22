@@ -8,8 +8,9 @@ use super::turn_web_search::{
   model_confirms_web_search_candidate,
 };
 use super::turn_workspace_execution::{
-  execute_list_turn, execute_no_workspace_turn, execute_read_turn, execute_search_turn,
+  execute_list_turn, execute_no_workspace_turn, execute_read_turn,
 };
+use super::turn_workspace_search::execute_search_observation_step;
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::{
@@ -21,6 +22,28 @@ use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot};
 pub(crate) enum TurnStepControl {
   Continue,
   Stop,
+}
+
+#[derive(Debug)]
+pub(crate) struct TurnStepResult {
+  pub(crate) control: TurnStepControl,
+  pub(crate) next_action: Option<PreparedTurnAction>,
+}
+
+impl TurnStepResult {
+  fn new(control: TurnStepControl) -> Self {
+    Self {
+      control,
+      next_action: None,
+    }
+  }
+
+  fn with_next_action(control: TurnStepControl, next_action: PreparedTurnAction) -> Self {
+    Self {
+      control,
+      next_action: Some(next_action),
+    }
+  }
 }
 
 pub(super) struct TurnStepDispatcher<'a> {
@@ -48,7 +71,7 @@ impl<'a> TurnStepDispatcher<'a> {
     }
   }
 
-  pub(super) fn execute(&mut self, action: PreparedTurnAction) -> TurnStepControl {
+  pub(super) fn execute(&mut self, action: PreparedTurnAction) -> TurnStepResult {
     match action {
       PreparedTurnAction::Write {
         intent,
@@ -108,17 +131,25 @@ impl<'a> TurnStepDispatcher<'a> {
         }
       }
       PreparedTurnAction::Search { query } => {
-        if let Some(workspace) = self.snapshot.workspace.as_ref() {
-          execute_search_turn(
+        let next_action = if let Some(workspace) = self.snapshot.workspace.as_ref() {
+          execute_search_observation_step(
             self.snapshot,
             workspace,
             &query,
             self.items,
             self.pending_active_turn,
-          );
+          )
+          .map(|relative_path| PreparedTurnAction::ReadFile { relative_path })
         } else {
           execute_no_workspace_turn(self.snapshot, self.items);
-        }
+          None
+        };
+        let control = self.control_after_step();
+        return if let Some(next_action) = next_action {
+          TurnStepResult::with_next_action(control, next_action)
+        } else {
+          TurnStepResult::new(control)
+        };
       }
       PreparedTurnAction::WebSearch(intent) => {
         execute_web_search_turn(self.snapshot, &intent, self.items, self.pending_active_turn);
@@ -150,7 +181,7 @@ impl<'a> TurnStepDispatcher<'a> {
       PreparedTurnAction::NoWorkspace => execute_no_workspace_turn(self.snapshot, self.items),
     }
 
-    self.control_after_step()
+    TurnStepResult::new(self.control_after_step())
   }
 
   fn execute_plugin_command(&mut self, snapshot: PluginCommandSnapshot) {
