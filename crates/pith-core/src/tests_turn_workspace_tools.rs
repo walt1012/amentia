@@ -61,10 +61,7 @@ fn turn_start_reads_a_requested_workspace_file() {
     "thread-1-turn-1-loop-1"
   );
   assert_eq!(items[1]["attributes"]["agentLoopMaxSteps"], "3");
-  assert_eq!(
-    items[1]["attributes"]["agentLoopMode"],
-    "dispatcherLoop"
-  );
+  assert_eq!(items[1]["attributes"]["agentLoopMode"], "dispatcherLoop");
   assert_eq!(items[1]["attributes"]["agentLoopStepCount"], "1");
   assert_eq!(items[1]["attributes"]["agentLoopBudgetRemaining"], "2");
   assert_eq!(items[1]["attributes"]["agentLoopStopReason"], "streaming");
