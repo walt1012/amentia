@@ -108,8 +108,8 @@ Current state:
 - Done: plugin observations can chain into a follow-up plugin command using
   frozen turn context, keeping connector/auth/readiness checks inside the same
   bounded loop.
-- Gap: connector command chaining has the execution seam, but still needs a
-  broader non-Notion routing proof.
+- Done: natural connector routing now uses installed plugin connector metadata
+  before falling back to built-in shortcuts, with a non-Notion Linear proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:

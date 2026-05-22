@@ -188,6 +188,88 @@ JSON
   (source_root, catalog_entry)
 }
 
+#[cfg(unix)]
+fn create_linear_stdio_runner_plugin(label: &str) -> (std::path::PathBuf, PluginCatalogEntry) {
+  use std::os::unix::fs::PermissionsExt;
+
+  let source_root = create_temp_plugin_bundle(label, "linear-runner", "Linear Runner");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "linear-runner",
+  "version": "0.1.0",
+  "displayName": "Linear Runner",
+  "description": "Connector-backed Linear command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:linear.update", "connector:linear"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "linear",
+      "displayName": "Linear",
+      "service": "linear",
+      "homepage": "https://linear.app"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write linear runner plugin manifest");
+  fs::write(
+    source_root.join("commands").join("linear.update.json"),
+    r#"{
+  "title": "Prepare Linear Update",
+  "description": "Prepare a Linear project update from the current cowork request.",
+  "prompt": "Prepare a concise Linear project update.",
+  "execution": {
+    "kind": "stdio.linearUpdate",
+    "entrypoint": "runner.sh",
+    "connectors": ["linear"]
+  }
+}"#,
+  )
+  .expect("write linear command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+payload=$(cat)
+case "$payload" in *'"connectorId":"linear-runner::linear"'*) connector_id=true;; *) connector_id=false;; esac
+case "$payload" in *'"service":"linear"'*) service=true;; *) service=false;; esac
+case "$payload" in *"Prepare a Linear project update"*) input=true;; *) input=false;; esac
+printf '{"content":"linear connector_id=%s service=%s input=%s","memoryNotes":[{"title":"Linear Update Draft","body":"Linear connector routing produced a project update draft.","source":"plugin.linear-runner","tags":["connector","linear"]}]}\n' "$connector_id" "$service" "$input"
+"#,
+  )
+  .expect("write linear runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  let catalog_entry = PluginCatalogEntry {
+    id: "linear-runner".to_string(),
+    name: "linear-runner".to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Linear Runner".to_string(),
+    status: "ready".to_string(),
+    description: "Connector-backed Linear command plugin".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec![
+      "command:linear.update".to_string(),
+      "connector:linear".to_string(),
+    ],
+    permissions: vec!["network.outbound".to_string()],
+    manifest_path: plugin_manifest.display().to_string(),
+    provenance: "test".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+  (source_root, catalog_entry)
+}
+
 #[test]
 fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   let mut context = RuntimeContext::new_in_memory();
@@ -671,6 +753,82 @@ fn turn_start_routes_natural_review_diff_through_plugin_execution() {
     "pluginCommand"
   );
   assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_natural_non_notion_connector_command() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-natural-linear-route");
+  let (plugin_root, plugin) = create_linear_stdio_runner_plugin("turn-natural-linear-plugin");
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Natural Linear Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Prepare a Linear project update for this handoff."
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&plugin_root).expect("cleanup linear plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    "linear-runner::linear.update"
+  );
+  assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert!(items[2]["content"]
+    .as_str()
+    .expect("linear content")
+    .contains("connector_id=true service=true input=true"));
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerConnectorId"],
+    "linear-runner::linear"
+  );
+  assert_eq!(items[2]["attributes"]["pluginRunnerConnectorServices"], "linear");
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("pending approvals")
+      .len(),
+    0
+  );
+  assert!(context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .any(|note| note.title == "Linear Update Draft"));
 }
 
 #[cfg(unix)]

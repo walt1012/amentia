@@ -1,6 +1,12 @@
+use pith_plugin_host::{
+  build_command_registry, build_connector_registry, PluginCatalogEntry,
+  PluginCommandEntry as HostPluginCommandEntry, PluginConnectorEntry as HostPluginConnectorEntry,
+};
+
 const NOTION_PAGE_DRAFT_COMMAND_ID: &str = "notion-connector::notion.prepare-page-draft";
 const REVIEW_DIFF_COMMAND_ID: &str = "review-assistant::review.inspect-diff";
 const WORKSPACE_NOTE_COMMAND_ID: &str = "workspace-notes::workspace.capture-note";
+const NATURAL_CONNECTOR_COMMAND_REASON: &str = "naturalConnectorCommand";
 const NATURAL_NOTION_DRAFT_REASON: &str = "naturalNotionDraftCommand";
 const NATURAL_REVIEW_DIFF_REASON: &str = "naturalReviewDiffCommand";
 const NATURAL_WORKSPACE_NOTE_REASON: &str = "naturalWorkspaceNoteCommand";
@@ -39,6 +45,14 @@ pub(crate) fn infer_explicit_plugin_command_route(
 
 pub(crate) fn infer_natural_plugin_command_route(
   message: &str,
+  plugins: &[PluginCatalogEntry],
+) -> Option<ExplicitPluginCommandRoute> {
+  infer_natural_connector_command_route(message, plugins)
+    .or_else(|| infer_natural_builtin_plugin_command_route(message))
+}
+
+fn infer_natural_builtin_plugin_command_route(
+  message: &str,
 ) -> Option<ExplicitPluginCommandRoute> {
   let trimmed = message.trim();
   let normalized = trimmed.to_ascii_lowercase();
@@ -58,6 +72,56 @@ pub(crate) fn infer_natural_plugin_command_route(
     input: Some(trimmed.to_string()).filter(|input| !input.is_empty()),
     routing_reason,
   })
+}
+
+fn infer_natural_connector_command_route(
+  message: &str,
+  plugins: &[PluginCatalogEntry],
+) -> Option<ExplicitPluginCommandRoute> {
+  let trimmed = message.trim();
+  if trimmed.is_empty() {
+    return None;
+  }
+  let normalized = normalize_match_text(trimmed);
+  let connectors = build_connector_registry(plugins);
+  if connectors.is_empty() {
+    return None;
+  }
+  let commands = build_command_registry(plugins);
+
+  commands
+    .iter()
+    .filter_map(|command| {
+      let scoped_connectors = command_scoped_connectors(command, &connectors);
+      if scoped_connectors.is_empty() {
+        return None;
+      }
+      let connector_score = scoped_connectors
+        .iter()
+        .map(|connector| connector_match_score(&normalized, connector))
+        .max()
+        .unwrap_or(0);
+      if connector_score == 0 {
+        return None;
+      }
+      let action_score = command_action_score(&normalized, command);
+      if action_score == 0 && !looks_like_connector_action_request(&normalized) {
+        return None;
+      }
+
+      Some((connector_score + action_score, command))
+    })
+    .max_by(|(left_score, left), (right_score, right)| {
+      left_score
+        .cmp(right_score)
+        .then_with(|| right.title.cmp(&left.title))
+        .then_with(|| right.command_id.cmp(&left.command_id))
+    })
+    .map(|(_, command)| ExplicitPluginCommandRoute {
+      command_id: command.command_id.clone(),
+      input: Some(trimmed.to_string()),
+      routing_reason: NATURAL_CONNECTOR_COMMAND_REASON,
+    })
 }
 
 fn explicit_plugin_prefixes() -> [(&'static str, &'static str); 5] {
@@ -87,6 +151,131 @@ fn looks_like_notion_draft_request(normalized: &str) -> bool {
     .any(|term| normalized.contains(term));
 
   action_match && artifact_match
+}
+
+fn command_scoped_connectors<'a>(
+  command: &HostPluginCommandEntry,
+  connectors: &'a [HostPluginConnectorEntry],
+) -> Vec<&'a HostPluginConnectorEntry> {
+  let plugin_connectors = connectors
+    .iter()
+    .filter(|connector| connector.plugin_id == command.plugin_id)
+    .collect::<Vec<_>>();
+  let Some(connector_ids) = command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.connector_ids.as_ref())
+  else {
+    return plugin_connectors;
+  };
+  if connector_ids.is_empty() {
+    return vec![];
+  }
+
+  plugin_connectors
+    .into_iter()
+    .filter(|connector| {
+      connector_ids.iter().any(|connector_id| {
+        let qualified = qualified_connector_id(&command.plugin_id, connector_id);
+        connector.connector_id.as_str() == connector_id.as_str()
+          || connector.connector_id.as_str() == qualified.as_str()
+      })
+    })
+    .collect()
+}
+
+fn connector_match_score(normalized_message: &str, connector: &HostPluginConnectorEntry) -> usize {
+  let mut score = 0;
+  for term in [
+    connector.service.as_str(),
+    connector.display_name.as_str(),
+    connector.plugin_display_name.as_str(),
+  ] {
+    if normalized_contains_term(normalized_message, term) {
+      score += 100;
+    }
+  }
+  score
+}
+
+fn command_action_score(normalized_message: &str, command: &HostPluginCommandEntry) -> usize {
+  let command_text = normalize_match_text(&format!(
+    "{} {} {}",
+    command.title, command.description, command.prompt
+  ));
+  action_terms()
+    .iter()
+    .filter(|term| {
+      normalized_message.contains(*term)
+        && (command_text.contains(*term) || command_looks_actionable(&command_text))
+    })
+    .count()
+    * 10
+}
+
+fn looks_like_connector_action_request(normalized: &str) -> bool {
+  action_terms().iter().any(|term| normalized.contains(*term))
+}
+
+fn command_looks_actionable(normalized_command_text: &str) -> bool {
+  action_terms()
+    .iter()
+    .any(|term| normalized_command_text.contains(*term))
+}
+
+fn action_terms() -> &'static [&'static str] {
+  &[
+    "brief",
+    "capture",
+    "compose",
+    "create",
+    "draft",
+    "find",
+    "handoff",
+    "list",
+    "make",
+    "prepare",
+    "query",
+    "record",
+    "review",
+    "save",
+    "search",
+    "send",
+    "summarize",
+    "summary",
+    "sync",
+    "update",
+    "write",
+  ]
+}
+
+fn normalized_contains_term(normalized_message: &str, term: &str) -> bool {
+  let normalized_term = normalize_match_text(term);
+  normalized_term.len() >= 3 && normalized_message.contains(&normalized_term)
+}
+
+fn normalize_match_text(value: &str) -> String {
+  value
+    .chars()
+    .map(|character| {
+      if character.is_ascii_alphanumeric() {
+        character.to_ascii_lowercase()
+      } else {
+        ' '
+      }
+    })
+    .collect::<String>()
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+fn qualified_connector_id(plugin_id: &str, connector_id: &str) -> String {
+  if connector_id.contains("::") {
+    connector_id.to_string()
+  } else {
+    format!("{plugin_id}::{connector_id}")
+  }
 }
 
 fn looks_like_workspace_note_capture_request(normalized: &str) -> bool {
@@ -179,9 +368,10 @@ mod tests {
 
   #[test]
   fn detects_natural_notion_page_draft_request() {
-    let route =
-      infer_natural_plugin_command_route("Prepare a Notion page draft for this project handoff.")
-        .expect("route");
+    let route = infer_natural_builtin_plugin_command_route(
+      "Prepare a Notion page draft for this project handoff.",
+    )
+    .expect("route");
 
     assert_eq!(route.command_id, NOTION_PAGE_DRAFT_COMMAND_ID);
     assert_eq!(
@@ -193,7 +383,8 @@ mod tests {
 
   #[test]
   fn detects_natural_workspace_note_request() {
-    let route = infer_natural_plugin_command_route("Capture a workspace note for this project.")
+    let route =
+      infer_natural_builtin_plugin_command_route("Capture a workspace note for this project.")
       .expect("route");
 
     assert_eq!(route.command_id, WORKSPACE_NOTE_COMMAND_ID);
@@ -206,7 +397,8 @@ mod tests {
 
   #[test]
   fn detects_natural_review_diff_request() {
-    let route = infer_natural_plugin_command_route("Review the current git diff.").expect("route");
+    let route =
+      infer_natural_builtin_plugin_command_route("Review the current git diff.").expect("route");
 
     assert_eq!(route.command_id, REVIEW_DIFF_COMMAND_ID);
     assert_eq!(route.input.as_deref(), Some("Review the current git diff."));
@@ -215,7 +407,7 @@ mod tests {
 
   #[test]
   fn ignores_natural_notion_lookup_request() {
-    let route = infer_natural_plugin_command_route("What is new in Notion?");
+    let route = infer_natural_builtin_plugin_command_route("What is new in Notion?");
 
     assert!(route.is_none());
   }

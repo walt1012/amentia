@@ -33,7 +33,7 @@ pub(crate) fn prepare_turn_action(
     return prepare_plugin_route_action(context, thread_id, workspace, route, cancellation);
   }
 
-  if let Some(route) = infer_natural_plugin_command_route(message) {
+  if let Some(route) = infer_natural_plugin_command_route(message, context.plugin_state.catalog()) {
     return prepare_plugin_route_action(context, thread_id, workspace, route, cancellation);
   }
 
