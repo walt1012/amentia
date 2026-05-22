@@ -72,6 +72,8 @@ Current state:
   is the clear search result.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
+- Done: fresh public requests route to Web Search before workspace search even
+  when a workspace is open.
 - Gap: planner integration only handles the safe search-to-read path.
 - Gap: the bundled Notion connector is still a dry-run MCP proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.

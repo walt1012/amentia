@@ -87,13 +87,14 @@ pub(crate) fn prepare_turn_action(
     return PreparedTurnAction::ReadFile { relative_path };
   }
 
+  if let Some(intent) = infer_fresh_web_search_intent(message) {
+    return PreparedTurnAction::WebSearchCandidate(intent);
+  }
+
   if let Some(query) = infer_search_query(message) {
     return PreparedTurnAction::Search { query };
   }
 
-  if let Some(intent) = infer_fresh_web_search_intent(message) {
-    return PreparedTurnAction::WebSearchCandidate(intent);
-  }
   if let Some(intent) = infer_model_web_search_intent(message) {
     return PreparedTurnAction::WebSearchCandidate(intent);
   }
