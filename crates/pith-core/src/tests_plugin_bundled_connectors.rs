@@ -160,7 +160,10 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
     .iter()
     .find(|item| item["title"] == "Notion Page Draft")
     .expect("notion draft item");
-  assert_eq!(draft_item["attributes"]["sourceArtifact"], "docs/handoff.md");
+  assert_eq!(
+    draft_item["attributes"]["sourceArtifact"],
+    "docs/handoff.md"
+  );
   assert!(draft_item["content"]
     .as_str()
     .expect("draft content")

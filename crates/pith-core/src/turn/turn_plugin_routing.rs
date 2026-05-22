@@ -301,12 +301,9 @@ fn is_saved_artifact_reference(candidate: &str) -> bool {
   {
     return false;
   }
-  if candidate
-    .chars()
-    .any(|character| {
-      !character.is_ascii_alphanumeric() && !matches!(character, '/' | '.' | '_' | '-')
-    })
-  {
+  if candidate.chars().any(|character| {
+    !character.is_ascii_alphanumeric() && !matches!(character, '/' | '.' | '_' | '-')
+  }) {
     return false;
   }
   if candidate
@@ -329,15 +326,7 @@ fn is_saved_artifact_reference(candidate: &str) -> bool {
 
 fn looks_like_saved_artifact_name(normalized: &str) -> bool {
   [
-    "artifact",
-    "brief",
-    "handoff",
-    "note",
-    "notes",
-    "plan",
-    "review",
-    "summary",
-    "update",
+    "artifact", "brief", "handoff", "note", "notes", "plan", "review", "summary", "update",
   ]
   .iter()
   .any(|term| normalized.contains(term))
