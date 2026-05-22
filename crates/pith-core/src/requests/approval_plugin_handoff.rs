@@ -6,9 +6,7 @@ use crate::plugin_commands::PluginCommandOutput;
 
 const HANDOFF_PREVIEW_LIMIT: usize = 360;
 
-pub(super) fn build_approved_plugin_handoff(
-  output: &PluginCommandOutput,
-) -> Option<TimelineItem> {
+pub(super) fn build_approved_plugin_handoff(output: &PluginCommandOutput) -> Option<TimelineItem> {
   let observation = primary_observation(&output.items)?;
   let observation_title = observation.title.trim();
   let observation_preview = bounded_preview(&observation.content);
@@ -63,10 +61,7 @@ fn bounded_preview(content: &str) -> String {
   preview
 }
 
-fn copy_connector_attributes(
-  attributes: &mut HashMap<String, String>,
-  observation: &TimelineItem,
-) {
+fn copy_connector_attributes(attributes: &mut HashMap<String, String>, observation: &TimelineItem) {
   let Some(observation_attributes) = observation.attributes.as_ref() else {
     return;
   };

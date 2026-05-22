@@ -106,7 +106,10 @@ fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
   assert_eq!(handoff_item["attributes"]["agentStepPhase"], "final");
   assert_eq!(handoff_item["attributes"]["agentStepIndex"], "1");
   assert_eq!(handoff_item["attributes"]["agentToolKind"], "connector");
-  assert_eq!(handoff_item["attributes"]["agentLoopStopReason"], "completed");
+  assert_eq!(
+    handoff_item["attributes"]["agentLoopStopReason"],
+    "completed"
+  );
   assert_eq!(handoff_item["attributes"]["agentLoopObservationCount"], "1");
 }
 
