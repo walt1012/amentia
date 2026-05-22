@@ -1,5 +1,9 @@
 const NOTION_PAGE_DRAFT_COMMAND_ID: &str = "notion-connector::notion.prepare-page-draft";
+const REVIEW_DIFF_COMMAND_ID: &str = "review-assistant::review.inspect-diff";
+const WORKSPACE_NOTE_COMMAND_ID: &str = "workspace-notes::workspace.capture-note";
 const NATURAL_NOTION_DRAFT_REASON: &str = "naturalNotionDraftCommand";
+const NATURAL_REVIEW_DIFF_REASON: &str = "naturalReviewDiffCommand";
+const NATURAL_WORKSPACE_NOTE_REASON: &str = "naturalWorkspaceNoteCommand";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ExplicitPluginCommandRoute {
@@ -36,15 +40,23 @@ pub(crate) fn infer_explicit_plugin_command_route(
 pub(crate) fn infer_natural_plugin_command_route(
   message: &str,
 ) -> Option<ExplicitPluginCommandRoute> {
-  let normalized = message.to_ascii_lowercase();
-  if !normalized.contains("notion") || !looks_like_notion_draft_request(&normalized) {
-    return None;
-  }
+  let trimmed = message.trim();
+  let normalized = trimmed.to_ascii_lowercase();
+  let (command_id, routing_reason) =
+    if normalized.contains("notion") && looks_like_notion_draft_request(&normalized) {
+      (NOTION_PAGE_DRAFT_COMMAND_ID, NATURAL_NOTION_DRAFT_REASON)
+    } else if looks_like_workspace_note_capture_request(&normalized) {
+      (WORKSPACE_NOTE_COMMAND_ID, NATURAL_WORKSPACE_NOTE_REASON)
+    } else if looks_like_review_diff_request(&normalized) {
+      (REVIEW_DIFF_COMMAND_ID, NATURAL_REVIEW_DIFF_REASON)
+    } else {
+      return None;
+    };
 
   Some(ExplicitPluginCommandRoute {
-    command_id: NOTION_PAGE_DRAFT_COMMAND_ID.to_string(),
-    input: Some(message.trim().to_string()).filter(|input| !input.is_empty()),
-    routing_reason: NATURAL_NOTION_DRAFT_REASON,
+    command_id: command_id.to_string(),
+    input: Some(trimmed.to_string()).filter(|input| !input.is_empty()),
+    routing_reason,
   })
 }
 
@@ -75,6 +87,32 @@ fn looks_like_notion_draft_request(normalized: &str) -> bool {
     .any(|term| normalized.contains(term));
 
   action_match && artifact_match
+}
+
+fn looks_like_workspace_note_capture_request(normalized: &str) -> bool {
+  let action_match = ["capture", "remember", "save", "store", "record"]
+    .iter()
+    .any(|term| normalized.contains(term));
+  let note_match = ["note", "memory", "preference", "context"]
+    .iter()
+    .any(|term| normalized.contains(term));
+  let scope_match = ["workspace", "project", "repo", "repository"]
+    .iter()
+    .any(|term| normalized.contains(term));
+
+  action_match && note_match && scope_match
+}
+
+fn looks_like_review_diff_request(normalized: &str) -> bool {
+  let action_match = ["review", "inspect", "check", "summarize"]
+    .iter()
+    .any(|term| normalized.contains(term));
+  let diff_match = normalized.contains("diff")
+    || normalized.contains("git changes")
+    || normalized.contains("local changes")
+    || normalized.contains("uncommitted");
+
+  action_match && diff_match
 }
 
 fn strip_case_insensitive_prefix<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
@@ -151,6 +189,29 @@ mod tests {
       Some("Prepare a Notion page draft for this project handoff.")
     );
     assert_eq!(route.routing_reason, "naturalNotionDraftCommand");
+  }
+
+  #[test]
+  fn detects_natural_workspace_note_request() {
+    let route =
+      infer_natural_plugin_command_route("Capture a workspace note for this project.")
+        .expect("route");
+
+    assert_eq!(route.command_id, WORKSPACE_NOTE_COMMAND_ID);
+    assert_eq!(
+      route.input.as_deref(),
+      Some("Capture a workspace note for this project.")
+    );
+    assert_eq!(route.routing_reason, "naturalWorkspaceNoteCommand");
+  }
+
+  #[test]
+  fn detects_natural_review_diff_request() {
+    let route = infer_natural_plugin_command_route("Review the current git diff.").expect("route");
+
+    assert_eq!(route.command_id, REVIEW_DIFF_COMMAND_ID);
+    assert_eq!(route.input.as_deref(), Some("Review the current git diff."));
+    assert_eq!(route.routing_reason, "naturalReviewDiffCommand");
   }
 
   #[test]

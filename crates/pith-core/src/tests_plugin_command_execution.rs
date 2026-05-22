@@ -437,9 +437,9 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
 }
 
 #[test]
-fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
+fn turn_start_routes_natural_workspace_note_through_plugin_execution() {
   let mut context = RuntimeContext::new_in_memory();
-  let workspace = create_temp_workspace("turn-plugin-command-route");
+  let workspace = create_temp_workspace("turn-natural-note-route");
   replace_plugin_catalog(
     &mut context,
     vec![bundled_manifest_plugin_entry(
@@ -456,7 +456,7 @@ fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
   );
   fs::write(
     workspace.join("README.md"),
-    "Workspace Route\nExplicit plugin routing\n",
+    "Workspace Route\nNatural plugin routing\n",
   )
   .expect("write readme");
 
@@ -485,7 +485,7 @@ fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
       methods::TURN_START,
       Some(json!({
         "threadId": "thread-1",
-        "message": "/plugin workspace-notes::workspace.capture-note"
+        "message": "Capture a workspace note for this project."
       })),
     ),
   );
@@ -505,7 +505,7 @@ fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
   assert!(items[2]["content"]
     .as_str()
     .unwrap()
-    .contains("Explicit plugin routing"));
+    .contains("Natural plugin routing"));
   assert_eq!(items[3]["kind"], "assistantMessage");
   assert!(items
     .iter()

@@ -88,8 +88,10 @@ Current state:
   handoff, so the cowork loop ends with a readable next-state summary.
 - Done: natural Notion draft requests route into the bundled connector loop
   without requiring users to memorize plugin command syntax.
+- Done: natural cowork requests can route Workspace Note capture and Review Diff
+  inspection through the same bounded plugin command path.
 - Gap: planner integration covers safe workspace observation paths, but not
-  shell/write approvals, plugin commands, connector commands, or review/apply.
+  shell/write approvals, connector command follow-up, or review/apply.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
@@ -99,7 +101,7 @@ M6 work order:
 2. Tool migration: Web Search next, then shell/write
    approvals, plugin commands, connector commands, and review/apply.
 3. Connector loop integration: use connector handoffs as planner input for
-   follow-up actions and extend natural connector routing beyond Notion.
+   follow-up actions and generalize connector command routing beyond Notion.
 4. Cowork proof: one request can search/read or use Web Search, cite sources,
    explain observations, and finish with a concise handoff.
 
