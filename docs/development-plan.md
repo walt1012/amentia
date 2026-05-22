@@ -65,8 +65,10 @@ Current state:
 - Done: natural saved-artifact requests such as handoffs, notes, summaries,
   plans, and briefs enter the same safe diff and approval path as explicit
   writes.
-- Active gap: editing and handoff flows still need better continuation after an
-  approved write.
+- Done: approved writes now end with structured continuation guidance tailored
+  to saved files, notes, summaries, reviews, and handoffs.
+- Active gap: connector updates still need to consume those handoffs in a
+  practical third-party cowork flow.
 
 M7 work order:
 

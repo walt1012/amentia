@@ -80,6 +80,7 @@ fn append_successful_write(
   content: &str,
   relative_path: String,
 ) {
+  let continuation = approved_write_continuation(&relative_path);
   events.set_memory_event(MemoryEvent::FileWritten {
     workspace_display_name: workspace.display_name.clone(),
     relative_path: relative_path.clone(),
@@ -100,16 +101,22 @@ fn append_successful_write(
   ));
   events.push_item(assistant_item(
     format!(
-      "Pith wrote {} in {} after your approval. The change is on disk and ready for the next cowork step.",
-      relative_path, workspace.display_name
+      "Pith wrote {} in {} after your approval. Next: {}",
+      relative_path, workspace.display_name, continuation.message
     ),
     Some(approved_write_handoff_attributes(
       workspace,
       approval,
       content.len(),
       &relative_path,
+      &continuation,
     )),
   ));
+}
+
+struct ApprovedWriteContinuation {
+  kind: &'static str,
+  message: String,
 }
 
 fn approved_write_handoff_attributes(
@@ -117,6 +124,7 @@ fn approved_write_handoff_attributes(
   approval: &PendingApproval,
   bytes_written: usize,
   relative_path: &str,
+  continuation: &ApprovedWriteContinuation,
 ) -> HashMap<String, String> {
   HashMap::from([
     ("responseRole".to_string(), "actionHandoff".to_string()),
@@ -126,8 +134,49 @@ fn approved_write_handoff_attributes(
     ("relativePath".to_string(), relative_path.to_string()),
     ("bytesWritten".to_string(), bytes_written.to_string()),
     (
+      "continuationKind".to_string(),
+      continuation.kind.to_string(),
+    ),
+    (
+      "continuationSuggestion".to_string(),
+      continuation.message.clone(),
+    ),
+    (
       "workspaceDisplayName".to_string(),
       workspace.display_name.clone(),
     ),
   ])
+}
+
+fn approved_write_continuation(relative_path: &str) -> ApprovedWriteContinuation {
+  let normalized = relative_path.to_ascii_lowercase();
+  let kind = if normalized.contains("handoff") {
+    "handoffSaved"
+  } else if normalized.contains("summary") || normalized.contains("review") {
+    "summarySaved"
+  } else if normalized.contains("note") {
+    "noteSaved"
+  } else {
+    "fileSaved"
+  };
+  let message = match kind {
+    "handoffSaved" => format!(
+      "review {}, then ask Pith to prepare a connector update or next-action list.",
+      relative_path
+    ),
+    "summarySaved" => format!(
+      "review {}, then ask Pith to turn it into follow-up tasks if needed.",
+      relative_path
+    ),
+    "noteSaved" => format!(
+      "review {}, then continue the thread when you want to use that context.",
+      relative_path
+    ),
+    _ => format!(
+      "review {}, then ask Pith to continue from the saved change.",
+      relative_path
+    ),
+  };
+
+  ApprovedWriteContinuation { kind, message }
 }

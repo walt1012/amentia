@@ -138,6 +138,11 @@ fn approval_respond_writes_file_after_approval() {
   assert_eq!(items[3]["attributes"]["responseRole"], "actionHandoff");
   assert_eq!(items[3]["attributes"]["relativePath"], "docs/output.txt");
   assert_eq!(items[3]["attributes"]["bytesWritten"], "26");
+  assert_eq!(items[3]["attributes"]["continuationKind"], "fileSaved");
+  assert!(items[3]["attributes"]["continuationSuggestion"]
+    .as_str()
+    .expect("continuation suggestion")
+    .contains("continue from the saved change"));
   assert_eq!(
     items[3]["attributes"]["agentLoopSuccessfulObservationCount"],
     "1"
@@ -219,4 +224,12 @@ fn natural_handoff_save_uses_write_approval() {
     approval_items[3]["attributes"]["handoffKind"],
     "approvedWrite"
   );
+  assert_eq!(
+    approval_items[3]["attributes"]["continuationKind"],
+    "handoffSaved"
+  );
+  assert!(approval_items[3]["content"]
+    .as_str()
+    .expect("handoff content")
+    .contains("prepare a connector update"));
 }
