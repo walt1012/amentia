@@ -5,7 +5,7 @@ use pith_protocol::TimelineItem;
 use super::turn_agent_steps::{AgentStepOutcome, AgentStepRecord};
 use crate::request_state::PreparedTurnAction;
 
-const LOOP_MAX_STEPS: usize = 3;
+pub(crate) const LOOP_MAX_STEPS: usize = 3;
 const LOOP_MODE: &str = "dispatcherLoop";
 const LOOP_SCHEMA: &str = "pith.agentLoop.v1";
 
@@ -24,6 +24,10 @@ impl AgentLoopCoordinator {
     }
   }
 
+  pub(crate) fn max_steps(&self) -> usize {
+    self.max_steps
+  }
+
   pub(crate) fn begin_step(
     &self,
     step_index: usize,
@@ -36,6 +40,7 @@ impl AgentLoopCoordinator {
     &self,
     step: &AgentStepRecord,
     items: &mut [TimelineItem],
+    observation: AgentLoopObservation,
     step_count: usize,
     stop_reason: AgentLoopStopReason,
     has_pending_approval: bool,
@@ -44,16 +49,16 @@ impl AgentLoopCoordinator {
     let outcome =
       AgentStepOutcome::from_items(items, has_pending_approval, has_pending_active_turn);
     step.tag_items(items, outcome);
-    self.tag_loop_items(items, step_count, stop_reason);
+    self.tag_loop_items(items, observation, step_count, stop_reason);
   }
 
   fn tag_loop_items(
     &self,
     items: &mut [TimelineItem],
+    observation: AgentLoopObservation,
     step_count: usize,
     stop_reason: AgentLoopStopReason,
   ) {
-    let observation_count = count_observations(items);
     for item in items {
       let attributes = item.attributes.get_or_insert_with(HashMap::new);
       attributes.insert("agentLoopId".to_string(), self.loop_id.clone());
@@ -71,9 +76,48 @@ impl AgentLoopCoordinator {
       );
       attributes.insert(
         "agentLoopObservationCount".to_string(),
-        observation_count.to_string(),
+        observation.count().to_string(),
       );
     }
+  }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AgentLoopObservation {
+  observation_count: usize,
+  failure_count: usize,
+}
+
+impl AgentLoopObservation {
+  pub(crate) fn from_items(items: &[TimelineItem]) -> Self {
+    let mut observation_count = 0;
+    let mut failure_count = 0;
+
+    for item in items {
+      if is_observation_item(item) {
+        observation_count += 1;
+      }
+      if is_failure_item(item) {
+        failure_count += 1;
+      }
+    }
+
+    Self {
+      observation_count,
+      failure_count,
+    }
+  }
+
+  pub(crate) fn can_inform_next_action(self) -> bool {
+    self.observation_count > 0 && self.failure_count == 0
+  }
+
+  fn count(self) -> usize {
+    self.observation_count
+  }
+
+  fn has_failure(self) -> bool {
+    self.failure_count > 0
   }
 }
 
@@ -84,11 +128,12 @@ pub(crate) enum AgentLoopStopReason {
   Completed,
   Failed,
   Streaming,
+  StepBudgetExhausted,
 }
 
 impl AgentLoopStopReason {
   pub(crate) fn from_step_state(
-    items: &[TimelineItem],
+    observation: AgentLoopObservation,
     cancellation_is_cancelled: bool,
     has_pending_approval: bool,
     has_pending_active_turn: bool,
@@ -99,7 +144,7 @@ impl AgentLoopStopReason {
       Self::ApprovalPaused
     } else if has_pending_active_turn {
       Self::Streaming
-    } else if items.iter().any(is_failure_observation) {
+    } else if observation.has_failure() {
       Self::Failed
     } else {
       Self::Completed
@@ -113,11 +158,23 @@ impl AgentLoopStopReason {
       Self::Completed => "completed",
       Self::Failed => "failed",
       Self::Streaming => "streaming",
+      Self::StepBudgetExhausted => "stepBudgetExhausted",
     }
+  }
+
+  pub(crate) fn can_continue(self) -> bool {
+    matches!(self, Self::Completed)
   }
 }
 
-fn is_failure_observation(item: &TimelineItem) -> bool {
+fn is_observation_item(item: &TimelineItem) -> bool {
+  matches!(
+    item.kind.as_str(),
+    "toolResult" | "pluginResult" | "diffArtifact" | "warning"
+  )
+}
+
+fn is_failure_item(item: &TimelineItem) -> bool {
   if item.kind == "warning" {
     return true;
   }
@@ -127,18 +184,6 @@ fn is_failure_observation(item: &TimelineItem) -> bool {
       .get("pluginCommandStatus")
       .is_some_and(|status| status == "failed")
   })
-}
-
-fn count_observations(items: &[TimelineItem]) -> usize {
-  items
-    .iter()
-    .filter(|item| {
-      matches!(
-        item.kind.as_str(),
-        "toolResult" | "pluginResult" | "diffArtifact" | "warning"
-      )
-    })
-    .count()
 }
 
 #[cfg(test)]
@@ -160,6 +205,7 @@ mod tests {
     coordinator.finish_step(
       &step,
       &mut items,
+      AgentLoopObservation::from_items(&[]),
       1,
       AgentLoopStopReason::Completed,
       false,
@@ -214,7 +260,12 @@ mod tests {
       attributes: None,
     }];
 
-    let reason = AgentLoopStopReason::from_step_state(&items, false, false, false);
+    let reason = AgentLoopStopReason::from_step_state(
+      AgentLoopObservation::from_items(&items),
+      false,
+      false,
+      false,
+    );
 
     assert_eq!(reason, AgentLoopStopReason::Failed);
   }

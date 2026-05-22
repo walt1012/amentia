@@ -11,6 +11,7 @@ pub(crate) mod turn_approval_shell;
 pub(crate) mod turn_approval_write;
 pub(crate) mod turn_cancel;
 pub(crate) mod turn_execution;
+pub(crate) mod turn_loop_runner;
 pub(crate) mod turn_plugin_routing;
 pub(crate) mod turn_preparation;
 pub(crate) mod turn_step_dispatcher;

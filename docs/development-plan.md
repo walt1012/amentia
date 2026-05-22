@@ -66,23 +66,23 @@ Current state:
 - Done: prepared actions execute through a turn step dispatcher.
 - Done: normal turns now use dispatcher loop metadata with step count, stop
   reason, remaining budget, and observation count.
+- Done: turn execution now runs through a request-scoped loop runner with a
+  hard three-step budget and a next-action seam.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
-- Gap: the normal turn path still runs only one prepared action.
+- Gap: the loop runner does not yet choose a second action from observations.
 - Gap: the bundled Notion connector is still a dry-run MCP proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 
-1. Real loop runner: step budget of three, indexed steps, observation capture,
-   cancellation checks, and approval pause/resume.
-2. Planner integration: keep the heuristic first planner, but let the loop
+1. Planner integration: keep the heuristic first planner, but let the loop
    choose the next action from the previous observation.
-3. Tool migration: workspace read/search and Web Search first, then shell/write
+2. Tool migration: workspace read/search and Web Search first, then shell/write
    approvals, plugin commands, connector commands, and review/apply.
-4. Connector proof: replace the Notion dry-run with one credential-safe MCP
+3. Connector proof: replace the Notion dry-run with one credential-safe MCP
    command after connector observations can be attributed through the loop.
-5. Cowork proof: one request can search/read or use Web Search, cite sources,
+4. Cowork proof: one request can search/read or use Web Search, cite sources,
    explain observations, and finish with a concise handoff.
 
 M6 exit criteria:

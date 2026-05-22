@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
 
-use super::turn_agent_loop::{AgentLoopCoordinator, AgentLoopStopReason};
-use super::turn_step_dispatcher::TurnStepDispatcher;
+use super::turn_agent_loop::{AgentLoopStopReason, LOOP_MAX_STEPS};
+use super::turn_loop_runner::TurnLoopRunner;
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
 
 pub(crate) fn execute_prepared_turn_snapshot(
@@ -19,35 +19,20 @@ pub(crate) fn execute_prepared_turn_snapshot(
   let mut pending_approval = None;
   let mut plugin_command_output = None;
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
-  let step_start_index = items.len();
-  let agent_loop = AgentLoopCoordinator::new(&snapshot.turn_id);
-  let agent_step = agent_loop.begin_step(1, &action);
-
   {
-    let mut dispatcher = TurnStepDispatcher::new(
+    let mut runner = TurnLoopRunner::new(
       &snapshot,
       &mut items,
       &mut pending_active_turn,
       &mut pending_approval,
       &mut plugin_command_output,
     );
-    dispatcher.execute(action);
+    let loop_summary = runner.run(action);
+    debug_assert!(
+      loop_summary.stop_reason != AgentLoopStopReason::StepBudgetExhausted
+        || loop_summary.step_count >= LOOP_MAX_STEPS
+    );
   }
-  let stop_reason = AgentLoopStopReason::from_step_state(
-    &items[step_start_index..],
-    snapshot.cancellation.is_cancelled(),
-    pending_approval.is_some(),
-    pending_active_turn.is_some(),
-  );
-
-  agent_loop.finish_step(
-    &agent_step,
-    &mut items[step_start_index..],
-    1,
-    stop_reason,
-    pending_approval.is_some(),
-    pending_active_turn.is_some(),
-  );
 
   TurnStartExecutionOutput {
     thread_id: snapshot.thread_id,
