@@ -77,8 +77,7 @@ impl<'a> TurnLoopRunner<'a> {
         break;
       }
 
-      next_action =
-        self.next_action_after_step(step_count, observation, step_result.next_action);
+      next_action = self.next_action_after_step(step_count, observation, step_result.next_action);
     }
 
     TurnLoopRunSummary {
