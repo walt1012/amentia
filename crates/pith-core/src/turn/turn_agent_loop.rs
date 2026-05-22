@@ -180,11 +180,14 @@ impl AgentLoopObservation {
   }
 
   pub(crate) fn planned_next_action(&self) -> Option<PreparedTurnAction> {
-    self.planned_next_action.as_ref().map(|action| match action {
-      AgentLoopPlannedAction::ReadFile { relative_path } => PreparedTurnAction::ReadFile {
-        relative_path: relative_path.clone(),
-      },
-    })
+    self
+      .planned_next_action
+      .as_ref()
+      .map(|action| match action {
+        AgentLoopPlannedAction::ReadFile { relative_path } => PreparedTurnAction::ReadFile {
+          relative_path: relative_path.clone(),
+        },
+      })
   }
 }
 
