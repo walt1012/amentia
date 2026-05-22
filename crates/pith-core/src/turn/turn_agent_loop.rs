@@ -207,7 +207,7 @@ impl AgentLoopObservation {
           routing_reason,
         } => PreparedTurnAction::WebSearch(WebSearchIntent {
           query: query.clone(),
-          routing_reason: *routing_reason,
+          routing_reason,
         }),
       })
   }
