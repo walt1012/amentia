@@ -134,7 +134,9 @@ fn create_next_action_stdio_runner_plugin(
   )
   .expect("write follow-up plugin manifest");
   fs::write(
-    source_root.join("commands").join(format!("{command_name}.json")),
+    source_root
+      .join("commands")
+      .join(format!("{command_name}.json")),
     r#"{
   "title": "Emit Follow-up",
   "description": "Emit a next action observation.",
