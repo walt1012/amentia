@@ -10,6 +10,7 @@ use super::turn_workspace_timeline::{
   workspace_tool_failed_items, workspace_tool_result_item, workspace_tool_start_item,
 };
 use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
+use crate::context_observation::collect_prior_observation_context;
 use crate::local_responses::{build_plan_item, format_file_result, summarize_file_result};
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
@@ -92,6 +93,7 @@ fn execute_read_step(
     || snapshot.cancellation.is_cancelled(),
   ) {
     Ok(result) => {
+      let prior_observations = collect_prior_observation_context(items);
       let next_read_path = follow_up_manifest_after_entry_point(
         &workspace.root_path,
         &result.relative_path,
@@ -117,6 +119,7 @@ fn execute_read_step(
         &snapshot.thread_title,
         &workspace.display_name,
         &result,
+        Some(&prior_observations),
         Some(&snapshot.cancellation),
       );
       if snapshot.cancellation.is_cancelled() {

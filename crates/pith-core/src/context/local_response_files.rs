@@ -6,7 +6,9 @@ use pith_tools::{DirectoryEntry, ReadFileResult};
 
 use super::local_response_formatting::format_directory_result;
 use super::local_response_generation::generate_local_summary;
-use crate::context_compaction::compact_prompt_observation;
+use crate::context_observation::{
+  compact_prompt_observation, merge_prior_observation_attributes, PriorObservationContext,
+};
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
 
 pub(crate) fn summarize_file_result(
@@ -16,6 +18,7 @@ pub(crate) fn summarize_file_result(
   thread_title: &str,
   workspace_name: &str,
   result: &ReadFileResult,
+  prior_observations: Option<&PriorObservationContext>,
   cancellation: Option<&GenerationCancellation>,
 ) -> (String, HashMap<String, String>) {
   let memory_context = pack_memory_notes_for_context(
@@ -30,26 +33,46 @@ pub(crate) fn summarize_file_result(
     .find(|line| !line.trim().is_empty())
     .unwrap_or("The file is empty.");
 
-  let observation_summary = format!(
-    "Pith inspected {} for {} in {}. First useful line: {}",
-    result.relative_path, thread_title, workspace_name, preview
-  );
+  let prior_observation_count = prior_observations
+    .map(|context| context.observation_count)
+    .unwrap_or_default();
+  let observation_summary = if prior_observation_count > 0 {
+    format!(
+      "Pith inspected {} for {} in {} after {} prior observation(s). First useful line: {}",
+      result.relative_path, thread_title, workspace_name, prior_observation_count, preview
+    )
+  } else {
+    format!(
+      "Pith inspected {} for {} in {}. First useful line: {}",
+      result.relative_path, thread_title, workspace_name, preview
+    )
+  };
   let observation = compact_prompt_observation(&result.content, &memory_context);
+  let prior_observation_prompt = prior_observations
+    .filter(|context| context.observation_count > 0)
+    .map(|context| format!("Prior observations:\n{}\n", context.text))
+    .unwrap_or_default();
   let prompt = format!(
-    "You are Pith, a concise local cowork agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nFile: {}\nPreview:\n{}",
+    "You are Pith, a concise local cowork agent. Summarize a file inspection in one or two sentences.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\n{}File: {}\nPreview:\n{}",
     format_memory_context_prompt(&memory_context),
+    prior_observation_prompt,
     result.relative_path,
     observation.text
   );
 
-  generate_local_summary(
+  let (summary, mut attributes) = generate_local_summary(
     model_runtime,
     prompt,
     observation_summary,
     &memory_context,
     Some(&observation),
     cancellation,
-  )
+  );
+  if let Some(prior_observations) = prior_observations {
+    merge_prior_observation_attributes(&mut attributes, prior_observations);
+  }
+
+  (summary, attributes)
 }
 
 pub(crate) fn summarize_directory_result(

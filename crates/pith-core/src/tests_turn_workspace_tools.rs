@@ -259,6 +259,7 @@ fn turn_start_reads_single_file_search_result_as_second_step() {
   assert_eq!(items[7]["kind"], "assistantMessage");
   assert_eq!(items[7]["attributes"]["agentStepIndex"], "2");
   assert_eq!(items[7]["attributes"]["agentLoopStopReason"], "streaming");
+  assert_eq!(items[7]["attributes"]["priorObservationCount"], "1");
   assert_eq!(result["activeTurnId"].as_str().unwrap(), "thread-1-turn-1");
 }
 
@@ -343,6 +344,11 @@ fn turn_start_reads_entry_point_and_manifest_after_project_overview() {
     .contains("pith-overview"));
   assert_eq!(items[10]["kind"], "assistantMessage");
   assert_eq!(items[10]["attributes"]["agentLoopStepCount"], "3");
+  assert_eq!(items[10]["attributes"]["priorObservationCount"], "2");
+  assert!(items[10]["attributes"]["priorObservationPaths"]
+    .as_str()
+    .unwrap()
+    .contains("README.md"));
 }
 
 #[test]

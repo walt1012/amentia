@@ -74,6 +74,8 @@ Current state:
   best root entry point without auto-reading on list-only requests.
 - Done: project overview can continue into a root manifest after reading an
   entry point, proving three bounded steps across workspace and file tools.
+- Done: final file summaries now receive prior tool observations so multi-step
+  handoffs are grounded in the whole loop, not only the last file.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
 - Done: fresh public requests route to Web Search before workspace search even
