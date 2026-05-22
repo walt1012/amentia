@@ -947,7 +947,10 @@ fn turn_start_routes_plugin_command_follow_up_through_loop() {
     .iter()
     .find(|item| item["title"] == "Plugin Command Follow-up")
     .expect("source plugin observation");
-  assert_eq!(source_observation["attributes"]["nextAction"], "plugin_command");
+  assert_eq!(
+    source_observation["attributes"]["nextAction"],
+    "plugin_command"
+  );
   assert_eq!(
     source_observation["attributes"]["nextCommandId"],
     "follow-target::follow-target.run"

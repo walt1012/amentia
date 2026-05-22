@@ -623,11 +623,7 @@ fn build_plugin_command_snapshot(
   draft: PluginCommandSnapshotDraft,
 ) -> PluginCommandSnapshot {
   let memory_notes = context.memory_state.snapshot_notes();
-  build_plugin_command_snapshot_from_parts(
-    context.model_state.runtime(),
-    &memory_notes,
-    draft,
-  )
+  build_plugin_command_snapshot_from_parts(context.model_state.runtime(), &memory_notes, draft)
 }
 
 fn build_plugin_command_snapshot_from_parts(
