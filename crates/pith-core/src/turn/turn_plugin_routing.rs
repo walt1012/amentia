@@ -193,9 +193,8 @@ mod tests {
 
   #[test]
   fn detects_natural_workspace_note_request() {
-    let route =
-      infer_natural_plugin_command_route("Capture a workspace note for this project.")
-        .expect("route");
+    let route = infer_natural_plugin_command_route("Capture a workspace note for this project.")
+      .expect("route");
 
     assert_eq!(route.command_id, WORKSPACE_NOTE_COMMAND_ID);
     assert_eq!(
