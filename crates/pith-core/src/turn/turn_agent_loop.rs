@@ -111,8 +111,12 @@ struct AgentLoopLastObservation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum AgentLoopPlannedAction {
   ListWorkspace,
-  ReadFile { relative_path: String },
-  Search { query: String },
+  ReadFile {
+    relative_path: String,
+  },
+  Search {
+    query: String,
+  },
   WebSearch {
     query: String,
     routing_reason: &'static str,
@@ -301,9 +305,7 @@ fn planned_action_from_item(item: &TimelineItem) -> Option<AgentLoopPlannedActio
     }),
     Some("web_search") => Some(AgentLoopPlannedAction::WebSearch {
       query: attributes.get("nextQuery")?.clone(),
-      routing_reason: normalized_next_routing_reason(
-        attributes.get("nextRoutingReason"),
-      ),
+      routing_reason: normalized_next_routing_reason(attributes.get("nextRoutingReason")),
     }),
     _ => None,
   }
@@ -487,7 +489,10 @@ mod tests {
       attributes: Some(HashMap::from([
         ("tool".to_string(), "notion.prepare-page-draft".to_string()),
         ("nextAction".to_string(), "web_search".to_string()),
-        ("nextQuery".to_string(), "latest small GGUF model".to_string()),
+        (
+          "nextQuery".to_string(),
+          "latest small GGUF model".to_string(),
+        ),
         (
           "nextRoutingReason".to_string(),
           "freshPublicInformation".to_string(),
