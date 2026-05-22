@@ -54,6 +54,7 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
 
   let items = approval_result["items"].as_array().expect("approval items");
   assert_local_draft_items(&context, items);
+  assert_connector_handoff_items(items);
 }
 
 #[test]
@@ -100,6 +101,13 @@ fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
   assert_eq!(draft_item["attributes"]["agentLoopStopReason"], "completed");
   assert_eq!(draft_item["attributes"]["agentLoopObservationCount"], "1");
   assert_local_draft_items(&context, approved_items);
+  let handoff_item = assert_connector_handoff_items(approved_items);
+  assert_eq!(handoff_item["attributes"]["agentStepResume"], "true");
+  assert_eq!(handoff_item["attributes"]["agentStepPhase"], "final");
+  assert_eq!(handoff_item["attributes"]["agentStepIndex"], "1");
+  assert_eq!(handoff_item["attributes"]["agentToolKind"], "connector");
+  assert_eq!(handoff_item["attributes"]["agentLoopStopReason"], "completed");
+  assert_eq!(handoff_item["attributes"]["agentLoopObservationCount"], "1");
 }
 
 fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {
@@ -237,4 +245,31 @@ fn assert_local_draft_items(context: &RuntimeContext, items: &[Value]) {
   assert!(saved_note
     .body
     .contains("credential-scoped local page draft"));
+}
+
+fn assert_connector_handoff_items(items: &[Value]) -> &Value {
+  let handoff_item = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "assistantMessage"
+        && item["attributes"]["pluginCommandHandoff"] == "approvedPluginCommand"
+    })
+    .expect("connector handoff item");
+  assert_eq!(handoff_item["attributes"]["pluginId"], NOTION_PLUGIN_ID);
+  assert_eq!(handoff_item["attributes"]["commandId"], NOTION_COMMAND_ID);
+  assert_eq!(handoff_item["attributes"]["connectorServices"], "notion");
+  assert_eq!(
+    handoff_item["attributes"]["pluginCommandObservationTitle"],
+    "Notion Page Draft"
+  );
+  assert!(handoff_item["content"]
+    .as_str()
+    .expect("handoff content")
+    .contains("Prepare Notion Page Draft completed"));
+  assert!(handoff_item["content"]
+    .as_str()
+    .expect("handoff content")
+    .contains("local Notion page draft"));
+  assert!(!handoff_item.to_string().contains(NOTION_SECRET));
+  handoff_item
 }

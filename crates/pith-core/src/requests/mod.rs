@@ -7,6 +7,7 @@ pub(crate) mod approval_execution_events;
 pub(crate) mod approval_execution_shell;
 pub(crate) mod approval_execution_timeline;
 pub(crate) mod approval_execution_write;
+pub(crate) mod approval_plugin_handoff;
 pub(crate) mod approval_requests;
 pub(crate) mod memory_requests;
 pub(crate) mod model_requests;
