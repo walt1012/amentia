@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use pith_protocol::{TimelineItem, WorkspaceSummary};
-use pith_tools::list_directory_with_cancellation;
+use pith_tools::{list_directory_with_cancellation, DirectoryEntry};
 
 use super::turn_tool_limits::LIST_DIRECTORY_RESULT_LIMIT;
 use super::turn_workspace_timeline::{
@@ -15,12 +15,21 @@ use crate::local_responses::{
 use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
 use crate::request_state::PreparedTurnSnapshot;
 
-pub(super) fn execute_list_turn(
+pub(super) fn execute_list_observation_step(
   snapshot: &PreparedTurnSnapshot,
   workspace: &WorkspaceSummary,
   items: &mut Vec<TimelineItem>,
   pending_active_turn: &mut Option<ActiveTurn>,
-) {
+) -> Option<String> {
+  execute_list_step(snapshot, workspace, items, pending_active_turn)
+}
+
+fn execute_list_step(
+  snapshot: &PreparedTurnSnapshot,
+  workspace: &WorkspaceSummary,
+  items: &mut Vec<TimelineItem>,
+  pending_active_turn: &mut Option<ActiveTurn>,
+) -> Option<String> {
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
@@ -43,7 +52,7 @@ pub(super) fn execute_list_turn(
     items.extend(crate::turn_streaming::build_turn_cancelled_items(
       &snapshot.turn_id,
     ));
-    return;
+    return None;
   }
   if !permission_is_granted(&snapshot.permission_sources, "file.read") {
     items.extend(build_permission_denied_items(
@@ -53,7 +62,7 @@ pub(super) fn execute_list_turn(
       &workspace.display_name,
       HashMap::new(),
     ));
-    return;
+    return None;
   }
 
   items.push(workspace_tool_start_item(
@@ -76,19 +85,16 @@ pub(super) fn execute_list_turn(
     || snapshot.cancellation.is_cancelled(),
   ) {
     Ok(entries) => {
+      let next_read_path = preferred_entry_point(&entries, &snapshot.message);
       items.push(workspace_tool_result_item(
         "list_directory",
         format_directory_result(&entries),
         workspace,
-        [
-          ("relativePath".to_string(), ".".to_string()),
-          ("entryCount".to_string(), entries.len().to_string()),
-          (
-            "maxResults".to_string(),
-            LIST_DIRECTORY_RESULT_LIMIT.to_string(),
-          ),
-        ],
+        list_result_attributes(entries.len(), next_read_path.as_deref()),
       ));
+      if next_read_path.is_some() {
+        return next_read_path;
+      }
       let (summary, summary_attributes) = summarize_directory_result(
         &snapshot.model_runtime,
         &snapshot.memory_notes,
@@ -102,7 +108,7 @@ pub(super) fn execute_list_turn(
         items.extend(crate::turn_streaming::build_turn_cancelled_items(
           &snapshot.turn_id,
         ));
-        return;
+        return None;
       }
       *pending_active_turn = start_streaming_assistant_turn(
         &snapshot.thread_id,
@@ -117,7 +123,7 @@ pub(super) fn execute_list_turn(
         items.extend(crate::turn_streaming::build_turn_cancelled_items(
           &snapshot.turn_id,
         ));
-        return;
+        return None;
       }
       items.extend(workspace_tool_failed_items(
         "list_directory",
@@ -131,4 +137,75 @@ pub(super) fn execute_list_turn(
       ));
     }
   }
+
+  None
+}
+
+fn list_result_attributes(
+  entry_count: usize,
+  next_read_path: Option<&str>,
+) -> Vec<(String, String)> {
+  let mut attributes = vec![
+    ("relativePath".to_string(), ".".to_string()),
+    ("entryCount".to_string(), entry_count.to_string()),
+    (
+      "maxResults".to_string(),
+      LIST_DIRECTORY_RESULT_LIMIT.to_string(),
+    ),
+  ];
+  if let Some(path) = next_read_path {
+    attributes.push(("nextAction".to_string(), "read_file".to_string()));
+    attributes.push(("nextRelativePath".to_string(), path.to_string()));
+  }
+
+  attributes
+}
+
+fn preferred_entry_point(entries: &[DirectoryEntry], message: &str) -> Option<String> {
+  if !should_read_entry_point_after_list(message) {
+    return None;
+  }
+
+  [
+    "README.md",
+    "README",
+    "README.txt",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "Cargo.toml",
+    "Package.swift",
+    "package.json",
+    "pyproject.toml",
+  ]
+  .iter()
+  .find_map(|candidate| {
+    entries
+      .iter()
+      .find(|entry| {
+        entry.entry_type == "file" && entry.relative_path.eq_ignore_ascii_case(candidate)
+      })
+      .map(|entry| entry.relative_path.clone())
+  })
+}
+
+fn should_read_entry_point_after_list(message: &str) -> bool {
+  let lowercased = message.to_lowercase();
+  let wants_overview = [
+    "analyze",
+    "explain",
+    "inspect",
+    "overview",
+    "review",
+    "summarize",
+    "understand",
+    "what is",
+    "what's",
+  ]
+  .iter()
+  .any(|signal| lowercased.contains(signal));
+  let list_only = ["list", "show files", "show the files"]
+    .iter()
+    .any(|signal| lowercased.contains(signal));
+
+  wants_overview && !list_only
 }

@@ -70,6 +70,8 @@ Current state:
   hard three-step budget and a next-action seam.
 - Done: the loop can continue from workspace search to read_file when one file
   is the clear search result.
+- Done: project overview requests can list the workspace and then read the
+  best root entry point without auto-reading on list-only requests.
 - Done: Web Search final items persist source attribution, source titles, and
   source URLs.
 - Done: fresh public requests route to Web Search before workspace search even
