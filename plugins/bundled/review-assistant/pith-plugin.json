@@ -13,6 +13,7 @@
   ],
   "permissions": [
     "file.read",
+    "file.write",
     "model.invoke"
   ],
   "defaultEnabled": true

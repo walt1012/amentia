@@ -755,6 +755,118 @@ fn turn_start_routes_natural_review_diff_through_plugin_execution() {
   assert_eq!(result["activeTurnId"], serde_json::Value::Null);
 }
 
+#[test]
+fn turn_start_routes_review_summary_save_through_write_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-review-save-route");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "review-assistant",
+      "Review Assistant",
+      true,
+      true,
+      &["command:review.inspect-diff"],
+      &["file.read", "file.write", "model.invoke"],
+    )],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Review Save Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Review the current git diff and save a review summary."
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  let items = turn_result["items"].as_array().expect("items");
+  let review_result = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "pluginResult"
+        && item["attributes"]["commandId"] == "review-assistant::review.inspect-diff"
+    })
+    .expect("review result");
+  assert_eq!(review_result["attributes"]["nextAction"], "write_file");
+  assert_eq!(
+    review_result["attributes"]["nextRelativePath"],
+    ".pith/review-summary.md"
+  );
+  assert_eq!(
+    review_result["attributes"]["reviewApplyMode"],
+    "approvalRequiredWrite"
+  );
+  let diff = items
+    .iter()
+    .find(|item| item["kind"] == "diffArtifact")
+    .expect("review summary diff");
+  assert_eq!(diff["attributes"]["relativePath"], ".pith/review-summary.md");
+  assert!(diff["content"]
+    .as_str()
+    .expect("diff content")
+    .contains("Pith Review Summary"));
+  let approval = items
+    .iter()
+    .find(|item| item["kind"] == "approvalRequested")
+    .expect("write approval");
+  assert_eq!(approval["attributes"]["action"], "write_file");
+  assert_eq!(
+    approval["attributes"]["relativePath"],
+    ".pith/review-summary.md"
+  );
+  assert_eq!(
+    approval["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
+  let approval_id = turn_result["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+
+  let written_summary = fs::read_to_string(workspace.join(".pith").join("review-summary.md"))
+    .expect("review summary");
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(approval_response.error.is_none());
+  assert!(written_summary.contains("Pith Review Summary"));
+  assert!(written_summary.contains("Review the current git diff and save a review summary."));
+}
+
 #[cfg(unix)]
 #[test]
 fn turn_start_routes_natural_non_notion_connector_command() {

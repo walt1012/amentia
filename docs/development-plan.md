@@ -110,7 +110,9 @@ Current state:
   bounded loop.
 - Done: natural connector routing now uses installed plugin connector metadata
   before falling back to built-in shortcuts, with a non-Notion Linear proof.
-- Gap: workspace review/apply/handoff is not yet a general cowork flow.
+- Done: review observations can request a saved review summary through the
+  same safe diff and approval path instead of writing directly.
+- Gap: workspace apply/handoff is not yet a general cowork flow.
 
 M6 work order:
 

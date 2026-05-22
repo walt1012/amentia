@@ -54,7 +54,7 @@ pub(crate) fn execute_plugin_command_snapshot(
         builtin_result.execution_kind,
         builtin_result.content,
         vec![],
-        HashMap::new(),
+        builtin_result.attributes,
       )
     } else {
       if let Some(permission_items) = plugin_command_permission_denied_items(

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use pith_memory::MemoryNote;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::WorkspaceSummary;
@@ -9,6 +11,7 @@ use super::plugin_builtin_shell::build_shell_session_summary_result;
 pub(super) struct BuiltinPluginCommandResult {
   pub(super) execution_kind: String,
   pub(super) content: String,
+  pub(super) attributes: HashMap<String, String>,
 }
 
 pub(crate) fn is_supported_builtin_execution(execution_kind: Option<&str>) -> bool {
@@ -35,10 +38,16 @@ pub(super) fn execute_builtin_plugin_command(
       ),
     )
   })?;
-  let content = match execution_kind {
-    "builtin.workspaceReadmeNote" => build_workspace_readme_note_result(command, workspace, input),
-    "builtin.shellSessionSummary" => build_shell_session_summary_result(memory_notes, workspace),
-    "builtin.reviewDiffSummary" => build_review_diff_summary_result(command, workspace),
+  let (content, attributes) = match execution_kind {
+    "builtin.workspaceReadmeNote" => (
+      build_workspace_readme_note_result(command, workspace, input),
+      HashMap::new(),
+    ),
+    "builtin.shellSessionSummary" => (
+      build_shell_session_summary_result(memory_notes, workspace),
+      HashMap::new(),
+    ),
+    "builtin.reviewDiffSummary" => build_review_diff_summary_result(command, workspace, input),
     _ => {
       return Err((
         -32053,
@@ -53,5 +62,6 @@ pub(super) fn execute_builtin_plugin_command(
   Ok(BuiltinPluginCommandResult {
     execution_kind: execution_kind.to_string(),
     content,
+    attributes,
   })
 }
