@@ -824,7 +824,10 @@ fn turn_start_routes_review_summary_save_through_write_approval() {
     .iter()
     .find(|item| item["kind"] == "diffArtifact")
     .expect("review summary diff");
-  assert_eq!(diff["attributes"]["relativePath"], ".pith/review-summary.md");
+  assert_eq!(
+    diff["attributes"]["relativePath"],
+    ".pith/review-summary.md"
+  );
   assert!(diff["content"]
     .as_str()
     .expect("diff content")
@@ -858,8 +861,8 @@ fn turn_start_routes_review_summary_save_through_write_approval() {
     ),
   );
 
-  let written_summary = fs::read_to_string(workspace.join(".pith").join("review-summary.md"))
-    .expect("review summary");
+  let written_summary =
+    fs::read_to_string(workspace.join(".pith").join("review-summary.md")).expect("review summary");
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
 
   assert!(approval_response.error.is_none());
