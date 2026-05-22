@@ -76,7 +76,10 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "approvalRequested");
-  assert_eq!(items[1]["attributes"]["connectorId"], "notion-connector::notion");
+  assert_eq!(
+    items[1]["attributes"]["connectorId"],
+    "notion-connector::notion"
+  );
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
   assert_eq!(
     items[1]["attributes"]["executionKind"],
