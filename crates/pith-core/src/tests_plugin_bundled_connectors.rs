@@ -38,10 +38,7 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[0]["kind"], "pluginCommand");
   assert_eq!(items[1]["kind"], "approvalRequested");
-  assert_eq!(
-    items[1]["attributes"]["connectorId"],
-    NOTION_CONNECTOR_ID
-  );
+  assert_eq!(items[1]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
   assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
   assert_eq!(
     items[1]["attributes"]["executionKind"],
@@ -61,10 +58,8 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
 
 #[test]
 fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
-  let (mut context, workspace) = setup_authorized_notion_context(
-    "bundled-notion-turn-loop",
-    "Bundled Notion Turn Thread",
-  );
+  let (mut context, workspace) =
+    setup_authorized_notion_context("bundled-notion-turn-loop", "Bundled Notion Turn Thread");
 
   let response = handle_request(
     &mut context,
@@ -85,15 +80,16 @@ fn bundled_notion_connector_turn_resumes_the_same_agent_step() {
   assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
   assert_eq!(items[1]["attributes"]["agentStepIndex"], "1");
   assert_eq!(items[2]["kind"], "approvalRequested");
-  assert_eq!(items[2]["attributes"]["agentLoopStopReason"], "approvalPaused");
+  assert_eq!(
+    items[2]["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
   assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
 
   let approval_result = approve_pending(&mut context, &result);
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
 
-  let approved_items = approval_result["items"]
-    .as_array()
-    .expect("approval items");
+  let approved_items = approval_result["items"].as_array().expect("approval items");
   let draft_item = approved_items
     .iter()
     .find(|item| item["title"] == "Notion Page Draft")
