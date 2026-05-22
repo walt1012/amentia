@@ -519,6 +519,72 @@ fn turn_start_routes_natural_workspace_note_through_plugin_execution() {
 }
 
 #[test]
+fn turn_start_routes_natural_review_diff_through_plugin_execution() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-natural-review-route");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "review-assistant",
+      "Review Assistant",
+      true,
+      true,
+      &["command:review.inspect-diff"],
+      &["file.read", "model.invoke"],
+    )],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Natural Review Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Review the current git diff."
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    "review-assistant::review.inspect-diff"
+  );
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert_eq!(items[3]["kind"], "assistantMessage");
+  assert_eq!(
+    items[3]["attributes"]["pluginCommandHandoff"],
+    "pluginCommand"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+}
+
+#[test]
 fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("bundled-plugin-results");

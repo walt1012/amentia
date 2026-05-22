@@ -57,7 +57,7 @@ impl<'a> TurnLoopRunner<'a> {
       let step_result = self.dispatch_action(action);
       let observation = AgentLoopObservation::from_items(&self.items[step_start_index..]);
       let stop_reason = AgentLoopStopReason::from_step_state(
-        observation,
+        &observation,
         self.snapshot.cancellation.is_cancelled(),
         self.pending_approval.is_some(),
         self.pending_active_turn.is_some(),
@@ -65,7 +65,7 @@ impl<'a> TurnLoopRunner<'a> {
       self.coordinator.finish_step(
         &agent_step,
         &mut self.items[step_start_index..],
-        observation,
+        &observation,
         step_count,
         stop_reason,
         self.pending_approval.is_some(),
@@ -77,7 +77,8 @@ impl<'a> TurnLoopRunner<'a> {
         break;
       }
 
-      next_action = self.next_action_after_step(step_count, observation, step_result.next_action);
+      next_action =
+        self.next_action_after_step(step_count, &observation, step_result.next_action);
     }
 
     TurnLoopRunSummary {
@@ -100,7 +101,7 @@ impl<'a> TurnLoopRunner<'a> {
   fn next_action_after_step(
     &self,
     _step_count: usize,
-    observation: AgentLoopObservation,
+    observation: &AgentLoopObservation,
     planned_next_action: Option<PreparedTurnAction>,
   ) -> Option<PreparedTurnAction> {
     if !observation.can_inform_next_action() {

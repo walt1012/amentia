@@ -40,7 +40,7 @@ impl AgentLoopCoordinator {
     &self,
     step: &AgentStepRecord,
     items: &mut [TimelineItem],
-    observation: AgentLoopObservation,
+    observation: &AgentLoopObservation,
     step_count: usize,
     stop_reason: AgentLoopStopReason,
     has_pending_approval: bool,
@@ -55,7 +55,7 @@ impl AgentLoopCoordinator {
   fn tag_loop_items(
     &self,
     items: &mut [TimelineItem],
-    observation: AgentLoopObservation,
+    observation: &AgentLoopObservation,
     step_count: usize,
     stop_reason: AgentLoopStopReason,
   ) {
@@ -78,20 +78,40 @@ impl AgentLoopCoordinator {
         "agentLoopObservationCount".to_string(),
         observation.count().to_string(),
       );
+      attributes.insert(
+        "agentLoopSuccessfulObservationCount".to_string(),
+        observation.success_count().to_string(),
+      );
+      attributes.insert(
+        "agentLoopFailureCount".to_string(),
+        observation.failure_count().to_string(),
+      );
+      observation.insert_last_observation_attributes(attributes);
     }
   }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AgentLoopObservation {
   observation_count: usize,
+  successful_observation_count: usize,
   failure_count: usize,
+  last_successful_observation: Option<AgentLoopLastObservation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AgentLoopLastObservation {
+  kind: String,
+  title: String,
+  tool: Option<String>,
 }
 
 impl AgentLoopObservation {
   pub(crate) fn from_items(items: &[TimelineItem]) -> Self {
     let mut observation_count = 0;
+    let mut successful_observation_count = 0;
     let mut failure_count = 0;
+    let mut last_successful_observation = None;
 
     for item in items {
       if is_observation_item(item) {
@@ -99,25 +119,55 @@ impl AgentLoopObservation {
       }
       if is_failure_item(item) {
         failure_count += 1;
+      } else if is_observation_item(item) {
+        successful_observation_count += 1;
+        last_successful_observation = Some(last_observation_from_item(item));
       }
     }
 
     Self {
       observation_count,
+      successful_observation_count,
       failure_count,
+      last_successful_observation,
     }
   }
 
-  pub(crate) fn can_inform_next_action(self) -> bool {
+  pub(crate) fn can_inform_next_action(&self) -> bool {
     self.observation_count > 0 && self.failure_count == 0
   }
 
-  fn count(self) -> usize {
+  fn count(&self) -> usize {
     self.observation_count
   }
 
-  fn has_failure(self) -> bool {
+  fn success_count(&self) -> usize {
+    self.successful_observation_count
+  }
+
+  fn failure_count(&self) -> usize {
+    self.failure_count
+  }
+
+  fn has_failure(&self) -> bool {
     self.failure_count > 0
+  }
+
+  fn insert_last_observation_attributes(&self, attributes: &mut HashMap<String, String>) {
+    let Some(last_observation) = self.last_successful_observation.as_ref() else {
+      return;
+    };
+    attributes.insert(
+      "agentLoopLastObservationKind".to_string(),
+      last_observation.kind.clone(),
+    );
+    attributes.insert(
+      "agentLoopLastObservationTitle".to_string(),
+      last_observation.title.clone(),
+    );
+    if let Some(tool) = last_observation.tool.as_ref() {
+      attributes.insert("agentLoopLastObservationTool".to_string(), tool.clone());
+    }
   }
 }
 
@@ -133,7 +183,7 @@ pub(crate) enum AgentLoopStopReason {
 
 impl AgentLoopStopReason {
   pub(crate) fn from_step_state(
-    observation: AgentLoopObservation,
+    observation: &AgentLoopObservation,
     cancellation_is_cancelled: bool,
     has_pending_approval: bool,
     has_pending_active_turn: bool,
@@ -186,6 +236,21 @@ fn is_failure_item(item: &TimelineItem) -> bool {
   })
 }
 
+fn last_observation_from_item(item: &TimelineItem) -> AgentLoopLastObservation {
+  AgentLoopLastObservation {
+    kind: item.kind.clone(),
+    title: item.title.clone(),
+    tool: item.attributes.as_ref().and_then(observation_tool_name),
+  }
+}
+
+fn observation_tool_name(attributes: &HashMap<String, String>) -> Option<String> {
+  attributes
+    .get("tool")
+    .or_else(|| attributes.get("commandId"))
+    .cloned()
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -205,7 +270,7 @@ mod tests {
     coordinator.finish_step(
       &step,
       &mut items,
-      AgentLoopObservation::from_items(&[]),
+      &AgentLoopObservation::from_items(&[]),
       1,
       AgentLoopStopReason::Completed,
       false,
@@ -261,12 +326,44 @@ mod tests {
     }];
 
     let reason = AgentLoopStopReason::from_step_state(
-      AgentLoopObservation::from_items(&items),
+      &AgentLoopObservation::from_items(&items),
       false,
       false,
       false,
     );
 
     assert_eq!(reason, AgentLoopStopReason::Failed);
+  }
+
+  #[test]
+  fn observation_summary_tracks_success_failure_and_last_tool() {
+    let observation = AgentLoopObservation::from_items(&[
+      TimelineItem {
+        kind: "toolResult".to_string(),
+        title: "read_file result".to_string(),
+        content: String::new(),
+        attributes: Some(HashMap::from([(
+          "tool".to_string(),
+          "read_file".to_string(),
+        )])),
+      },
+      TimelineItem {
+        kind: "warning".to_string(),
+        title: "Tool Failed".to_string(),
+        content: String::new(),
+        attributes: None,
+      },
+    ]);
+    let mut attributes = HashMap::new();
+
+    observation.insert_last_observation_attributes(&mut attributes);
+
+    assert_eq!(observation.count(), 2);
+    assert_eq!(observation.success_count(), 1);
+    assert_eq!(observation.failure_count(), 1);
+    assert_eq!(
+      attributes.get("agentLoopLastObservationTool").map(String::as_str),
+      Some("read_file")
+    );
   }
 }

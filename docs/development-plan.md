@@ -92,6 +92,10 @@ Current state:
   inspection through the same bounded plugin command path.
 - Done: plugin command handoffs now use one shared implementation for direct
   plugin execution and approval-resumed connector output.
+- Done: agent loop observations now expose successful/failure counts and the
+  last successful observation tool for planner follow-up.
+- Done: natural Review Diff requests are covered by the turn/plugin integration
+  path, not only by routing unit tests.
 - Gap: planner integration covers safe workspace observation paths, but not
   shell/write approvals, connector command follow-up, or review/apply.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
