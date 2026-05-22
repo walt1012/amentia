@@ -144,12 +144,12 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
   assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
   assert_eq!(
     items[1]["attributes"]["commandInput"],
-    "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md"
+    "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md\nSaved artifact preview: # Project Handoff Ship the practical cowork connector path.\nSaved artifact truncated: false"
   );
   assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
   assert_eq!(
     items[2]["attributes"]["commandInput"],
-    "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md"
+    "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md\nSaved artifact preview: # Project Handoff Ship the practical cowork connector path.\nSaved artifact truncated: false"
   );
 
   let approval_result = approve_pending(&mut context, &result);
@@ -164,10 +164,22 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
     draft_item["attributes"]["sourceArtifact"],
     "docs/handoff.md"
   );
+  assert_eq!(
+    draft_item["attributes"]["sourceArtifactPreviewProvided"],
+    "true"
+  );
+  assert_eq!(
+    draft_item["attributes"]["sourceArtifactTruncated"],
+    "false"
+  );
   assert!(draft_item["content"]
     .as_str()
     .expect("draft content")
     .contains("docs/handoff.md"));
+  assert!(draft_item["content"]
+    .as_str()
+    .expect("draft content")
+    .contains("Ship the practical cowork connector path."));
   assert_local_draft_items(&context, approved_items);
   assert_connector_handoff_items(approved_items);
 
@@ -178,6 +190,9 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
     .find(|note| note.title == "Notion Draft Prepared")
     .expect("saved notion draft memory note");
   assert!(saved_note.body.contains("docs/handoff.md"));
+  assert!(saved_note
+    .body
+    .contains("Ship the practical cowork connector path."));
 }
 
 fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {

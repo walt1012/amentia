@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use super::plugin_command_approval::{
   plugin_command_requires_user_approval, PLUGIN_COMMAND_APPROVAL_ACTION,
 };
+use super::plugin_command_artifacts::expand_connector_saved_artifact_input;
 use super::plugin_command_readiness::{command_readiness, PluginCommandReadiness};
 use super::plugin_command_timeline::build_plugin_command_timeline_item;
 use super::plugin_command_types::{
@@ -143,6 +144,7 @@ pub(crate) fn prepare_plugin_command_follow_up_snapshot(
   }
 
   let connector_refs = build_command_connector_refs(&command, plugin_state);
+  let input = expand_connector_saved_artifact_input(workspace.as_ref(), input, &connector_refs);
   if let Err(error) = validate_plugin_command_input_contract(
     &command,
     workspace.as_ref(),
@@ -436,6 +438,7 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
     .filter(|input| !input.is_empty())
     .map(str::to_string);
   let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  let input = expand_connector_saved_artifact_input(workspace.as_ref(), input, &connector_refs);
   if let Err(error) = validate_plugin_command_input_contract(
     &command,
     workspace.as_ref(),
@@ -480,6 +483,7 @@ fn prepare_plugin_command_snapshot_for_execution(
   }
 
   let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  let input = expand_connector_saved_artifact_input(workspace.as_ref(), input, &connector_refs);
   if let Err(error) = validate_plugin_command_input_contract(
     &command,
     workspace.as_ref(),

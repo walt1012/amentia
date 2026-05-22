@@ -11,6 +11,8 @@
 - Retrieval: Web Search is the active retrieval layer; no generic local
   document RAG until the cowork loop is excellent.
 - Plugins: real local capabilities and connectors, not prompt templates.
+- Git: use bounded system Git helpers for workspace review flows; do not embed
+  a Git engine unless the packaged app cannot meet real user needs without it.
 - Delivery: users install a downloadable macOS app package; CI proves the app
   path, but the app experience is the product.
 
@@ -69,6 +71,11 @@ Current state:
   to saved files, notes, summaries, reviews, and handoffs.
 - Done: natural connector requests can carry saved artifact references such as
   `docs/handoff.md` into a local Notion-style draft flow.
+- Done: saved artifact connector inputs include bounded, workspace-safe previews
+  before local drafts claim they are based on those files.
+- Active gap: tool and connector selection is still mostly lexical routing; M7
+  needs a small-model-friendly planning contract before more connectors are
+  added.
 - Active gap: connector actions are still local drafts; the next step is a
   clear inspect-before-remote-write flow.
 
@@ -77,8 +84,12 @@ M7 work order:
 1. Make natural editing and saved-artifact requests feel safe, reviewable, and
    obvious.
 2. Continue from approved writes into concise next-step handoffs.
-3. Harden connector updates around real cowork tasks, not demo commands.
-4. Keep UI polish focused on clarity around setup, approvals, sources, and
+3. Feed saved artifacts into connector drafts as bounded content, not only as
+   path labels.
+4. Add a compact tool-planning contract so the model can choose among safe
+   tools and connectors without growing brittle keyword routes.
+5. Harden connector updates around real cowork tasks, not demo commands.
+6. Keep UI polish focused on clarity around setup, approvals, sources, and
    saved work.
 
 M7 exit criteria:
@@ -86,13 +97,19 @@ M7 exit criteria:
 - Users can save or update notes, handoffs, summaries, and docs without command
   syntax.
 - Approved writes end with a useful continuation handoff.
-- Connector actions are practical enough for Notion-like third-party services.
+- Saved artifacts used by connectors are read through the same workspace safety
+  boundary as file tools.
+- Connector actions are practical enough for Notion-like third-party services,
+  including inspect-before-remote-write.
 - The packaged macOS app path remains green in CI.
 
 ## Next Milestone: M8 Release Candidate
 
 - Tighten install, first-run, unsigned distribution, crash recovery, and real
   user smoke coverage.
+- Promote MCP from one-shot command execution to persistent local sessions only
+  if third-party connector workflows need dynamic tool discovery or shared
+  session state.
 
 ## Guardrails
 
@@ -102,6 +119,8 @@ M7 exit criteria:
 - No multi-agent orchestration before the single cowork loop is excellent.
 - No marketplace or remote MCP transport until local connector execution is
   safe and useful.
+- No bundled Git runtime until bounded system Git proves insufficient for real
+  packaged users.
 - No cosmetic refactor that only moves code around.
 - English-only source, docs, commits, branches, and PR text.
 - Remote CI is the source of truth for Rust fmt, clippy, tests, smoke coverage,
