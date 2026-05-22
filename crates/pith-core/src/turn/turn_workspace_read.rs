@@ -94,11 +94,15 @@ fn execute_read_step(
   ) {
     Ok(result) => {
       let prior_observations = collect_prior_observation_context(items);
-      let next_read_path = follow_up_manifest_after_entry_point(
-        &workspace.root_path,
-        &result.relative_path,
-        &snapshot.message,
-      );
+      let next_read_path = if prior_observations.has_tool("list_directory") {
+        follow_up_manifest_after_entry_point(
+          &workspace.root_path,
+          &result.relative_path,
+          &snapshot.message,
+        )
+      } else {
+        None
+      };
       items.push(workspace_tool_result_item(
         "read_file",
         format_file_result(&result),

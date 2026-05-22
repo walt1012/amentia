@@ -37,6 +37,13 @@ pub struct PriorObservationContext {
   pub budget_char_count: usize,
   pub was_truncated: bool,
   pub relative_paths: Vec<String>,
+  pub tool_names: Vec<String>,
+}
+
+impl PriorObservationContext {
+  pub fn has_tool(&self, tool_name: &str) -> bool {
+    self.tool_names.iter().any(|tool| tool == tool_name)
+  }
 }
 
 pub fn compact_prompt_observation(
@@ -118,6 +125,7 @@ pub fn merge_observation_attributes(
 pub fn collect_prior_observation_context(items: &[TimelineItem]) -> PriorObservationContext {
   let mut blocks = Vec::new();
   let mut relative_paths = Vec::new();
+  let mut tool_names = Vec::new();
 
   for item in items.iter().filter(|item| is_prior_observation_item(item)) {
     let attributes = item.attributes.as_ref();
@@ -134,6 +142,9 @@ pub fn collect_prior_observation_context(items: &[TimelineItem]) -> PriorObserva
       .and_then(|attributes| attributes.get("tool"))
       .cloned()
       .unwrap_or_else(|| item.title.clone());
+    if !tool_names.iter().any(|known_tool| known_tool == &tool) {
+      tool_names.push(tool.clone());
+    }
     let content = item.content.trim();
     if content.is_empty() {
       blocks.push(format!("- {tool}: [empty observation]"));
@@ -165,6 +176,7 @@ pub fn collect_prior_observation_context(items: &[TimelineItem]) -> PriorObserva
     budget_char_count: PRIOR_OBSERVATION_CHAR_BUDGET,
     was_truncated,
     relative_paths,
+    tool_names,
   }
 }
 
@@ -346,6 +358,7 @@ mod tests {
 
     assert_eq!(context.observation_count, 1);
     assert_eq!(context.relative_paths, vec!["README.md".to_string()]);
+    assert!(context.has_tool("read_file"));
     assert!(context.text.contains("Overview"));
   }
 }

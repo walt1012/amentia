@@ -80,7 +80,8 @@ Current state:
   source URLs.
 - Done: fresh public requests route to Web Search before workspace search even
   when a workspace is open.
-- Gap: planner integration only handles the safe search-to-read path.
+- Gap: planner integration covers safe workspace observation paths, but not
+  shell/write approvals, plugin commands, connector commands, or review/apply.
 - Gap: the bundled Notion connector is still a dry-run MCP proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 

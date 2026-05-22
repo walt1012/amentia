@@ -352,6 +352,67 @@ fn turn_start_reads_entry_point_and_manifest_after_project_overview() {
 }
 
 #[test]
+fn turn_start_direct_readme_explanation_does_not_auto_read_manifest() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("direct-readme-explain");
+  fs::write(
+    workspace.join("README.md"),
+    "# Direct README\nOnly summarize this file.\n",
+  )
+  .expect("write readme");
+  fs::write(
+    workspace.join("Cargo.toml"),
+    "[package]\nname = \"should-not-read\"\n",
+  )
+  .expect("write cargo manifest");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Direct README Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Explain README.md"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[2]["kind"], "toolStart");
+  assert_eq!(items[2]["title"], "read_file");
+  assert_eq!(items[2]["attributes"]["relativePath"], "README.md");
+  assert_eq!(items[3]["kind"], "toolResult");
+  assert!(items[3]["attributes"].get("nextAction").is_none());
+  assert_eq!(items[4]["kind"], "assistantMessage");
+  assert_eq!(items[4]["attributes"]["agentLoopStepCount"], "1");
+}
+
+#[test]
 fn turn_start_list_workspace_does_not_auto_read_entry_point() {
   let mut context = RuntimeContext::new_in_memory();
   enable_full_access_plugin(&mut context);
