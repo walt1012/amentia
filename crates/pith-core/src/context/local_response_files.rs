@@ -5,7 +5,7 @@ use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_tools::{DirectoryEntry, ReadFileResult};
 
 use super::local_response_formatting::format_directory_result;
-use super::local_response_generation::generate_local_summary;
+use super::local_response_generation::{generate_local_summary, mark_cowork_handoff};
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
 use crate::context_observation::{
   compact_prompt_observation, merge_prior_observation_attributes, PriorObservationContext,
@@ -71,6 +71,7 @@ pub(crate) fn summarize_file_result(
   if let Some(prior_observations) = prior_observations {
     merge_prior_observation_attributes(&mut attributes, prior_observations);
   }
+  mark_cowork_handoff(&mut attributes, "workspaceFile");
 
   (summary, attributes)
 }
@@ -91,7 +92,7 @@ pub(crate) fn summarize_directory_result(
     &format!("{memory_query} workspace root"),
   );
   if entries.is_empty() {
-    return generate_local_summary(
+    let (summary, mut attributes) = generate_local_summary(
       model_runtime,
       format!(
         "You are Pith, a concise local cowork agent. Summarize an empty workspace root inspection.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}",
@@ -105,6 +106,8 @@ pub(crate) fn summarize_directory_result(
       None,
       cancellation,
     );
+    mark_cowork_handoff(&mut attributes, "workspaceDirectory");
+    return (summary, attributes);
   }
 
   let preview = entries
@@ -128,12 +131,14 @@ pub(crate) fn summarize_directory_result(
     observation.text
   );
 
-  generate_local_summary(
+  let (summary, mut attributes) = generate_local_summary(
     model_runtime,
     prompt,
     observation_summary,
     &memory_context,
     Some(&observation),
     cancellation,
-  )
+  );
+  mark_cowork_handoff(&mut attributes, "workspaceDirectory");
+  (summary, attributes)
 }

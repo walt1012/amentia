@@ -102,7 +102,8 @@ fn turn_start_reads_a_requested_workspace_file() {
   assert_eq!(items[4]["kind"], "assistantMessage");
   assert_eq!(items[4]["attributes"]["agentStepStatus"], "streaming");
   assert_eq!(items[4]["attributes"]["agentStepPhase"], "final");
-  assert_eq!(items[4]["attributes"]["responseRole"], "summarizer");
+  assert_eq!(items[4]["attributes"]["responseRole"], "coworkHandoff");
+  assert_eq!(items[4]["attributes"]["handoffKind"], "workspaceFile");
   assert_eq!(items[4]["attributes"]["memoryNoteCount"], "1");
   assert_eq!(items[4]["attributes"]["observationTruncated"], "false");
   assert_eq!(items[4]["attributes"]["observationBudgetChars"], "1843");
@@ -352,6 +353,8 @@ fn turn_start_reads_entry_point_and_manifest_after_project_overview() {
     .unwrap()
     .contains("pith-overview"));
   assert_eq!(items[10]["kind"], "assistantMessage");
+  assert_eq!(items[10]["attributes"]["responseRole"], "coworkHandoff");
+  assert_eq!(items[10]["attributes"]["handoffKind"], "workspaceFile");
   assert_eq!(items[10]["attributes"]["agentLoopStepCount"], "3");
   assert_eq!(items[10]["attributes"]["priorObservationCount"], "2");
   assert!(items[10]["attributes"]["priorObservationPaths"]

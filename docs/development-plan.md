@@ -72,10 +72,11 @@ Current state:
   chaining, and memory capture are proven.
 - Review/apply: review observations can request a saved summary through safe
   diff preview and approval instead of writing directly.
-- Handoff: multi-step file summaries, connector outputs, approved writes, and
-  approved shell commands now close with structured cowork handoff metadata.
-- Remaining M6 gap: one final exit pass should verify the whole loop as a
-  practical cowork story, not only isolated tool paths.
+- Handoff: workspace summaries, Web Search answers, connector outputs,
+  approved writes, and approved shell commands now close with structured
+  cowork handoff metadata.
+- Remaining M6 gap: one final exit validation pass should verify the whole
+  loop as a practical cowork story, not only isolated tool paths.
 
 M6 work order:
 

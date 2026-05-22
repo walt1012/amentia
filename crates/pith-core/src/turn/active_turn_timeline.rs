@@ -25,7 +25,9 @@ pub(crate) fn start_streaming_assistant_turn(
   attributes.insert("streamingStatus".to_string(), streaming_status.to_string());
   attributes.insert("streamedCharacters".to_string(), initial_chars.to_string());
   attributes.insert("totalCharacters".to_string(), total_chars.to_string());
-  attributes.insert("responseRole".to_string(), "summarizer".to_string());
+  attributes
+    .entry("responseRole".to_string())
+    .or_insert_with(|| "summarizer".to_string());
 
   items.push(TimelineItem {
     kind: "assistantMessage".to_string(),
@@ -135,5 +137,30 @@ mod tests {
   #[test]
   fn streaming_progress_label_caps_at_one_hundred() {
     assert_eq!(streaming_progress_label(250, 100), "100%");
+  }
+
+  #[test]
+  fn start_streaming_preserves_explicit_response_role() {
+    let mut items = vec![];
+    let mut attributes = HashMap::new();
+    attributes.insert("responseRole".to_string(), "coworkHandoff".to_string());
+
+    let active_turn = start_streaming_assistant_turn(
+      "thread-1",
+      "turn-1",
+      &mut items,
+      "short".to_string(),
+      attributes,
+    );
+
+    assert!(active_turn.is_none());
+    assert_eq!(
+      items[0]
+        .attributes
+        .as_ref()
+        .and_then(|attributes| attributes.get("responseRole"))
+        .map(String::as_str),
+      Some("coworkHandoff")
+    );
   }
 }

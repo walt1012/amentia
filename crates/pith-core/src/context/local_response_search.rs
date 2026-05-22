@@ -5,7 +5,7 @@ use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_tools::SearchMatch;
 
 use super::local_response_formatting::format_search_result;
-use super::local_response_generation::generate_local_summary;
+use super::local_response_generation::{generate_local_summary, mark_cowork_handoff};
 use crate::context_compaction::compact_prompt_observation;
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
 
@@ -21,7 +21,7 @@ pub(crate) fn summarize_search_result(
   let memory_context =
     pack_memory_notes_for_context(model_runtime, memory_notes, Some(workspace_name), query);
   if matches.is_empty() {
-    return generate_local_summary(
+    let (summary, mut attributes) = generate_local_summary(
       model_runtime,
       format!(
         "You are Pith, a concise local cowork agent. Summarize a search with no matches.\nThread: {thread_title}\nWorkspace: {workspace_name}\n{}\nQuery: {query}",
@@ -35,6 +35,8 @@ pub(crate) fn summarize_search_result(
       None,
       cancellation,
     );
+    mark_cowork_handoff(&mut attributes, "workspaceSearchNoMatches");
+    return (summary, attributes);
   }
 
   let preview = matches
@@ -60,12 +62,14 @@ pub(crate) fn summarize_search_result(
     observation.text
   );
 
-  generate_local_summary(
+  let (summary, mut attributes) = generate_local_summary(
     model_runtime,
     prompt,
     observation_summary,
     &memory_context,
     Some(&observation),
     cancellation,
-  )
+  );
+  mark_cowork_handoff(&mut attributes, "workspaceSearch");
+  (summary, attributes)
 }

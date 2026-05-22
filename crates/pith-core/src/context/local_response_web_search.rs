@@ -5,7 +5,7 @@ use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_tools::WebSearchResult;
 
 use super::local_response_formatting::format_web_search_result;
-use super::local_response_generation::generate_local_summary;
+use super::local_response_generation::{generate_local_summary, mark_cowork_handoff};
 use crate::context_compaction::compact_prompt_observation;
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
 use crate::intent_inference::WebSearchIntent;
@@ -51,7 +51,7 @@ pub(crate) fn summarize_web_search_result(
 ) -> (String, HashMap<String, String>) {
   let memory_context = pack_memory_notes_for_context(model_runtime, memory_notes, None, query);
   if results.is_empty() {
-    return generate_local_summary(
+    let (summary, mut attributes) = generate_local_summary(
       model_runtime,
       format!(
         "You are Pith, a concise local agent. Summarize a web search with no results.\nThread: {thread_title}\n{}\nQuery: {query}",
@@ -62,6 +62,8 @@ pub(crate) fn summarize_web_search_result(
       None,
       cancellation,
     );
+    mark_cowork_handoff(&mut attributes, "webSearchNoResults");
+    return (summary, attributes);
   }
 
   let preview = results
@@ -93,6 +95,7 @@ pub(crate) fn summarize_web_search_result(
     cancellation,
   );
   merge_web_search_source_attributes(&mut attributes, results);
+  mark_cowork_handoff(&mut attributes, "webSearchSources");
 
   (source_grounded_summary(summary, results), attributes)
 }
