@@ -362,7 +362,9 @@ mod tests {
     assert_eq!(observation.success_count(), 1);
     assert_eq!(observation.failure_count(), 1);
     assert_eq!(
-      attributes.get("agentLoopLastObservationTool").map(String::as_str),
+      attributes
+        .get("agentLoopLastObservationTool")
+        .map(String::as_str),
       Some("read_file")
     );
   }

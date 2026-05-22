@@ -88,7 +88,10 @@ fn turn_start_reads_a_requested_workspace_file() {
   assert_eq!(items[3]["attributes"]["agentStepPhase"], "observation");
   assert_eq!(items[3]["attributes"]["toolCallStatus"], "completed");
   assert_eq!(items[3]["attributes"]["tool"], "read_file");
-  assert_eq!(items[3]["attributes"]["agentLoopSuccessfulObservationCount"], "1");
+  assert_eq!(
+    items[3]["attributes"]["agentLoopSuccessfulObservationCount"],
+    "1"
+  );
   assert_eq!(items[3]["attributes"]["agentLoopFailureCount"], "0");
   assert_eq!(
     items[3]["attributes"]["agentLoopLastObservationTool"],
