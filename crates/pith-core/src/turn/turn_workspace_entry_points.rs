@@ -78,9 +78,15 @@ fn wants_workspace_overview(message: &str) -> bool {
 }
 
 fn is_entry_point(relative_path: &str) -> bool {
-  ["README.md", "README", "README.txt", "AGENTS.md", "CLAUDE.md"]
-    .iter()
-    .any(|candidate| relative_path.eq_ignore_ascii_case(candidate))
+  [
+    "README.md",
+    "README",
+    "README.txt",
+    "AGENTS.md",
+    "CLAUDE.md",
+  ]
+  .iter()
+  .any(|candidate| relative_path.eq_ignore_ascii_case(candidate))
 }
 
 #[cfg(test)]
@@ -89,7 +95,11 @@ mod tests {
 
   #[test]
   fn overview_requests_choose_readme_before_manifest() {
-    let entries = vec![entry("Cargo.toml"), entry("README.md"), entry("package.json")];
+    let entries = vec![
+      entry("Cargo.toml"),
+      entry("README.md"),
+      entry("package.json"),
+    ];
 
     assert_eq!(
       preferred_entry_point(&entries, "Explain this project").as_deref(),

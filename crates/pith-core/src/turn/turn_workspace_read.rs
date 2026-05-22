@@ -21,7 +21,13 @@ pub(super) fn execute_read_observation_step(
   items: &mut Vec<TimelineItem>,
   pending_active_turn: &mut Option<ActiveTurn>,
 ) -> Option<String> {
-  execute_read_step(snapshot, workspace, relative_path, items, pending_active_turn)
+  execute_read_step(
+    snapshot,
+    workspace,
+    relative_path,
+    items,
+    pending_active_turn,
+  )
 }
 
 fn execute_read_step(
