@@ -2,7 +2,7 @@
   "name": "notion-connector",
   "version": "0.1.0",
   "displayName": "Notion Connector",
-  "description": "Declares the Notion third-party connector surface for future MCP and OAuth-backed workspace integrations.",
+  "description": "Provides a credential-scoped local MCP command for preparing Notion-ready workspace drafts before any remote write.",
   "author": {
     "name": "Pith"
   },
@@ -27,7 +27,7 @@
     {
       "id": "notion",
       "transport": "stdio",
-      "command": "bin/notion-mcp-dry-run.sh"
+      "command": "bin/notion-mcp-local-draft.sh"
     }
   ],
   "appConnectors": [

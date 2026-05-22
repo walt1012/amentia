@@ -73,6 +73,8 @@ mod tests_approval_write;
 #[cfg(test)]
 mod tests_memory_context;
 #[cfg(test)]
+mod tests_plugin_bundled_connectors;
+#[cfg(test)]
 mod tests_plugin_command_execution;
 #[cfg(test)]
 mod tests_plugin_connector_smoke;

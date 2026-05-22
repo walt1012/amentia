@@ -80,9 +80,10 @@ Current state:
   source URLs.
 - Done: fresh public requests route to Web Search before workspace search even
   when a workspace is open.
+- Done: the bundled Notion connector now proves a credential-scoped local MCP
+  draft command with approval, structured output, and memory capture.
 - Gap: planner integration covers safe workspace observation paths, but not
   shell/write approvals, plugin commands, connector commands, or review/apply.
-- Gap: the bundled Notion connector is still a dry-run MCP proof.
 - Gap: workspace review/apply/handoff is not yet a general cowork flow.
 
 M6 work order:
@@ -91,8 +92,8 @@ M6 work order:
    search-to-read path.
 2. Tool migration: Web Search next, then shell/write
    approvals, plugin commands, connector commands, and review/apply.
-3. Connector proof: replace the Notion dry-run with one credential-safe MCP
-   command after connector observations can be attributed through the loop.
+3. Connector loop integration: route the Notion local draft command through the
+   same loop observations as workspace and Web Search tools.
 4. Cowork proof: one request can search/read or use Web Search, cite sources,
    explain observations, and finish with a concise handoff.
 
@@ -104,7 +105,7 @@ M6 exit criteria:
 - Approval-paused tools resume the same step without losing workspace, memory,
   or connector context.
 - Web Search answers include visible source attribution.
-- One real connector command works through the same loop and remains sandboxed,
+- One connector command works through the same loop and remains sandboxed,
   bounded, and credential-safe.
 
 ## Next Milestone: M7 Practical Cowork
