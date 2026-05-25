@@ -51,6 +51,7 @@ def main() -> int:
   require_contains(guide, "download one verified local model")
   require_contains(guide, "Open a workspace folder.")
   require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
+  require_contains(guide, "SHA-256 `.sha256` file")
   require_contains(guide, "verify the downloaded installer")
   require_contains(guide, "model delivery mode")
 

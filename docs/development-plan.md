@@ -86,42 +86,29 @@ Goal: prove Pith works as a real downloadable macOS app for non-developer users.
 
 Current state:
 
-- Done: first-use UI copy now frames setup completion as starting a cowork
-  session, not a coding-only prompt.
-- Done: packaged smoke naming now follows the same first cowork request path.
-- Done: packaged smoke now kills and restarts the runtime after the first
-  cowork flow, then verifies model, workspace, thread, and readiness recovery.
-- Done: packaged smoke now proves denied local writes do not touch disk,
-  approved local writes do, and approved work survives runtime recovery.
-- Done: packaged smoke now verifies first-use model metadata and proves the app
-  package does not bundle GGUF weights.
-- Done: CI internal DMGs now include and validate `README-FIRST.txt`, so the
-  daily package gate proves the same install guidance users see in releases.
-- Done: zip safety tests now cover model-weight leakage, path traversal, and
-  symlink entries, keeping the release zip aligned with the DMG safety bar.
-- Done: packaged smoke now runs against the app mounted from the internal DMG,
-  so CI proves the downloadable installer path instead of only the raw bundle.
-- Done: release checksum generation now uses a shared helper that writes
-  basename-only SHA-256 sidecars for both internal and public DMG artifacts.
-- Done: release smoke now runs through the DMG validation path, removing the
-  duplicate raw-bundle smoke from the public release workflow.
-- Done: packaged smoke now verifies the activated first-use model pack lives
-  under app-owned storage and matches manifest, GGUF, size, and SHA-256 data.
-- Done: internal and public release outputs now include a root install guide
-  asset and a machine-readable release manifest next to the DMG checksum.
+- Installer path is proven from mounted DMG, not only from raw app bundles.
+- Release assets include DMG, basename-only SHA-256 checksum,
+  `README-FIRST.txt`, and a machine-readable release manifest.
+- Release sidecars validate first-use user guidance, model delivery mode,
+  platform target, signing mode, and checksum integrity.
+- Packaged smoke covers first-use model metadata, app-owned model activation,
+  workspace opening, Web Search, approval-gated writes, runtime restart, and
+  recovery of model, workspace, thread, and readiness state.
+- Package gates reject bundled GGUF weights, unsafe zip entries, path
+  traversal, symlink leakage, and non-`x86_64` executable outputs.
+- CI structure is change-aware and guarded by workflow policy checks, but CI
+  details stay in `docs/development-environment.md` rather than this roadmap.
 
 M8 work order:
 
-- Tighten install, first-run, unsigned distribution, crash recovery, and real
-  user smoke coverage.
-- Prove the non-developer path: install the DMG, launch Pith, download one
-  verified model, open a workspace, use Web Search, approve work, and recover
-  from a runtime failure.
-- Add optional page fetch or source snapshots if M7 Web Search usage needs
-  stronger citation behavior than search-result attribution.
-- Promote MCP from one-shot command execution to persistent local sessions only
-  if third-party connector workflows need dynamic tool discovery or shared
-  session state.
+- Close unsigned install UX: make Gatekeeper copy, release notes, and app
+  first-run guidance consistent for ad-hoc prereleases.
+- Tighten first-run recovery: model download interruption, app relaunch,
+  runtime relaunch, and selected-model repair must remain obvious to users.
+- Add stronger Web Search source snapshots only if cowork tasks require more
+  evidence than search-result attribution.
+- Keep MCP one-shot until a real connector workflow proves persistent local
+  sessions are necessary.
 
 ## Guardrails
 

@@ -11,6 +11,14 @@ from pathlib import Path
 
 
 SUPPORTED_SIGNING_MODES = {"ad-hoc", "developer-id"}
+INSTALL_GUIDE_REQUIRED_PHRASES = (
+  "Drag Pith.app to Applications",
+  "download one verified local model",
+  "Open a workspace folder",
+  "Start a cowork session",
+  "SHA-256",
+  "release manifest",
+)
 
 
 def sha256_hex(path: Path) -> str:
@@ -45,8 +53,7 @@ def release_manifest(
 ) -> dict:
   validate_release_identity(tag, signing_mode)
   validate_checksum_file(artifact_path, checksum_path)
-  if not install_guide_path.is_file():
-    raise FileNotFoundError(f"Release install guide is missing: {install_guide_path}")
+  validate_install_guide(install_guide_path)
 
   return {
     "tag": tag,
@@ -124,6 +131,7 @@ def validate_release_manifest(
   if not manifest_path.is_file():
     raise FileNotFoundError(f"Release manifest is missing: {manifest_path}")
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+  validate_manifest_identity(manifest)
   artifacts = manifest.get("artifacts")
   if not isinstance(artifacts, list):
     raise RuntimeError("Release manifest must include an artifacts list")
@@ -135,6 +143,10 @@ def validate_release_manifest(
   artifact_entry = by_name.get(artifact_path.name)
   if artifact_entry is None:
     raise RuntimeError("Release manifest is missing the DMG artifact entry")
+  if artifact_entry.get("kind") != "dmg":
+    raise RuntimeError("Release manifest DMG entry kind is wrong")
+  if artifact_entry.get("sizeBytes") != artifact_path.stat().st_size:
+    raise RuntimeError("Release manifest DMG size does not match the artifact")
   if artifact_entry.get("sha256") != sha256_hex(artifact_path):
     raise RuntimeError("Release manifest DMG SHA-256 does not match the artifact")
   if artifact_entry.get("checksum") != checksum_path.name:
@@ -142,8 +154,11 @@ def validate_release_manifest(
   guide_entry = by_name.get(install_guide_path.name)
   if guide_entry is None:
     raise RuntimeError("Release manifest is missing the install guide entry")
-  if manifest.get("modelDelivery", {}).get("modelWeightsBundled") is not False:
-    raise RuntimeError("Release manifest must state that model weights are not bundled")
+  if guide_entry.get("kind") != "install-guide":
+    raise RuntimeError("Release manifest install guide entry kind is wrong")
+  if guide_entry.get("sizeBytes") != install_guide_path.stat().st_size:
+    raise RuntimeError("Release manifest install guide size does not match")
+  validate_install_guide(install_guide_path)
 
 
 def validate_release_identity(tag: str, signing_mode: str) -> None:
@@ -153,10 +168,58 @@ def validate_release_identity(tag: str, signing_mode: str) -> None:
     raise RuntimeError(f"Unsupported release signing mode: {signing_mode}")
 
 
+def validate_manifest_identity(manifest: dict) -> None:
+  if manifest.get("product") != "Pith":
+    raise RuntimeError("Release manifest product must be Pith")
+  platform = manifest.get("platform")
+  if not isinstance(platform, dict):
+    raise RuntimeError("Release manifest platform must be an object")
+  expected_platform = {
+    "os": "macOS",
+    "minimumVersion": "12.0",
+    "architecture": "x86_64",
+  }
+  for key, expected in expected_platform.items():
+    if platform.get(key) != expected:
+      raise RuntimeError(f"Release manifest platform {key} must be {expected}")
+
+  signing_mode = manifest.get("signingMode")
+  if signing_mode not in SUPPORTED_SIGNING_MODES:
+    raise RuntimeError("Release manifest signing mode is unsupported")
+  if manifest.get("trust") != release_trust(signing_mode):
+    raise RuntimeError("Release manifest trust does not match signing mode")
+
+  model_delivery = manifest.get("modelDelivery")
+  if not isinstance(model_delivery, dict):
+    raise RuntimeError("Release manifest model delivery must be an object")
+  if model_delivery.get("mode") != "in-app-download":
+    raise RuntimeError("Release manifest model delivery mode must be in-app-download")
+  if model_delivery.get("defaultModelId") != "lfm2.5-350m":
+    raise RuntimeError("Release manifest default model id must be lfm2.5-350m")
+  if model_delivery.get("modelWeightsBundled") is not False:
+    raise RuntimeError("Release manifest must state that model weights are not bundled")
+
+
 def release_trust(signing_mode: str) -> str:
   if signing_mode == "developer-id":
     return "developer-id-signed-notarized"
   return "ad-hoc-not-notarized"
+
+
+def validate_install_guide(install_guide_path: Path) -> None:
+  if not install_guide_path.is_file():
+    raise FileNotFoundError(f"Release install guide is missing: {install_guide_path}")
+  text = install_guide_path.read_text(encoding="utf-8")
+  missing = [
+    phrase
+    for phrase in INSTALL_GUIDE_REQUIRED_PHRASES
+    if phrase not in text
+  ]
+  if missing:
+    raise RuntimeError(
+      "Release install guide is missing required user guidance: "
+      + ", ".join(missing)
+    )
 
 
 def validate_checksum_file(artifact_path: Path, checksum_path: Path) -> None:

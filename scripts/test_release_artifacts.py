@@ -4,16 +4,19 @@
 from __future__ import annotations
 
 import tempfile
+import json
 from pathlib import Path
 
 from release_artifacts import (
   checksum_text,
   release_manifest,
   validate_checksum_file,
+  validate_install_guide,
   validate_release_manifest,
   write_checksum_file,
   write_release_manifest,
 )
+from release_text import install_guide as release_install_guide
 
 
 def assert_raises(action, message: str) -> None:
@@ -30,7 +33,10 @@ def main() -> int:
     artifact = root_path / "Pith-v0.1.0-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
     artifact.write_bytes(b"pith release artifact\n")
-    install_guide.write_text("Install Pith from this DMG.\n", encoding="utf-8")
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc"),
+      encoding="utf-8",
+    )
 
     text = checksum_text(artifact)
     if not text.endswith(f"  {artifact.name}\n"):
@@ -40,6 +46,7 @@ def main() -> int:
 
     checksum_path = write_checksum_file(artifact)
     validate_checksum_file(artifact, checksum_path)
+    validate_install_guide(install_guide)
 
     manifest = release_manifest(
       tag="v0.1.0",
@@ -68,6 +75,21 @@ def main() -> int:
       install_guide_path=install_guide,
     )
 
+    manifest_data = manifest_path.read_text(encoding="utf-8")
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["platform"]["architecture"] = "arm64"
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong release platform should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
     artifact.write_bytes(b"tampered release artifact\n")
     assert_raises(
       lambda: validate_checksum_file(artifact, checksum_path),
@@ -81,6 +103,15 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "tampered release artifact should fail release manifest validation",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
+    root_path = Path(root)
+    weak_guide = root_path / "README-FIRST.txt"
+    weak_guide.write_text("Install Pith from this DMG.\n", encoding="utf-8")
+    assert_raises(
+      lambda: validate_install_guide(weak_guide),
+      "weak install guide should fail release guidance validation",
     )
 
   print("release artifact tests passed")
