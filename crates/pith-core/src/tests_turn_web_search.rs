@@ -344,6 +344,7 @@ fn turn_start_executes_web_search_with_fixture_client() {
     "searchResultAttribution"
   );
   assert_eq!(items[4]["attributes"]["pageFetchPerformed"], "false");
+  assert_eq!(items[4]["attributes"]["sourceSnapshotAvailable"], "false");
   assert_eq!(
     items[4]["attributes"]["sourceUrls"],
     "https://example.com/pith"
@@ -352,10 +353,6 @@ fn turn_start_executes_web_search_with_fixture_client() {
     .as_str()
     .unwrap()
     .contains("Pith fixture result"));
-  assert!(items[4]["content"]
-    .as_str()
-    .unwrap()
-    .contains("Search-result attribution only"));
 }
 
 struct EnvVarGuard {
