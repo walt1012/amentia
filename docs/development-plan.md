@@ -93,6 +93,8 @@ Current state:
   cowork flow, then verifies model, workspace, thread, and readiness recovery.
 - Done: packaged smoke now proves denied local writes do not touch disk,
   approved local writes do, and approved work survives runtime recovery.
+- Done: packaged smoke now verifies first-use model metadata and proves the app
+  package does not bundle GGUF weights.
 
 M8 work order:
 

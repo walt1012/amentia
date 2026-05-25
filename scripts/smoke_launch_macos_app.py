@@ -27,6 +27,17 @@ NOTION_PLUGIN_ID = "notion-connector"
 NOTION_COMMAND_ID = "notion-connector::notion.prepare-page-draft"
 NOTION_CREDENTIAL_LABEL = "Packaged Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "packaged-smoke-token"
+DEFAULT_MODEL_ID = "lfm2.5-350m"
+DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
+DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
+DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path("models/builtin/lfm2.5-350m/model-pack.json")
+DEFAULT_MODEL_DOWNLOAD_URL = (
+  "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
+  "LFM2.5-350M-Q4_K_M.gguf"
+)
+DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
+DEFAULT_MODEL_SIZE_BYTES = 229312224
+PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
 APP_STARTUP_TIMEOUT_SECONDS = 18.0
@@ -81,6 +92,14 @@ def require_file(path: Path) -> None:
     raise FileNotFoundError(f"Required packaged app file is missing: {path}")
 
 
+def read_json_object(path: Path) -> dict:
+  require_file(path)
+  value = json.loads(path.read_text(encoding="utf-8"))
+  if not isinstance(value, dict):
+    raise RuntimeError(f"Expected JSON object in packaged file: {path}")
+  return value
+
+
 def process_ids(name: str) -> set[int]:
   result = subprocess.run(
     ["/usr/bin/pgrep", "-x", name],
@@ -121,8 +140,70 @@ def validate_app_bundle(app_path: Path) -> None:
   require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
+  validate_packaged_model_metadata(app_path)
   assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
   validate_packaged_llama_backend_launch(app_path)
+
+
+def validate_packaged_model_metadata(app_path: Path) -> None:
+  resources_path = bundled_resource_path(app_path)
+  package_manifest_path = resources_path / "PithPackage.json"
+  package_manifest = read_json_object(package_manifest_path)
+  expected_package_values = {
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
+    "modelDelivery": "in-app-download",
+    "modelWeightsBundled": False,
+    "modelMetadataBundled": True,
+  }
+  for field, expected_value in expected_package_values.items():
+    if package_manifest.get(field) != expected_value:
+      raise RuntimeError(
+        f"Packaged manifest field {field} must be {expected_value!r}."
+      )
+
+  model_manifest_path = resources_path / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH
+  validate_default_model_manifest(model_manifest_path)
+  bundled_weight_files = sorted(
+    path
+    for path in resources_path.rglob("*")
+    if path.is_file() and path.suffix.lower() in PROHIBITED_MODEL_SUFFIXES
+  )
+  if bundled_weight_files:
+    raise RuntimeError(
+      "Packaged app must not bundle model weight files: "
+      f"{', '.join(str(path) for path in bundled_weight_files)}"
+    )
+
+
+def validate_default_model_manifest(manifest_path: Path) -> None:
+  manifest = read_json_object(manifest_path)
+  expected_values = {
+    "id": DEFAULT_MODEL_ID,
+    "display_name": DEFAULT_MODEL_DISPLAY_NAME,
+    "file_name": DEFAULT_MODEL_FILE_NAME,
+    "context_size": 4096,
+    "model_context_size": 32768,
+    "max_output_tokens": 160,
+    "backend": "llama.cpp",
+    "download_url": DEFAULT_MODEL_DOWNLOAD_URL,
+    "sha256": DEFAULT_MODEL_SHA256,
+    "size_bytes": DEFAULT_MODEL_SIZE_BYTES,
+  }
+  for field, expected_value in expected_values.items():
+    if manifest.get(field) != expected_value:
+      raise RuntimeError(
+        f"Packaged default model field {field} must be {expected_value!r}: {manifest_path}"
+      )
+
+  homepage = manifest.get("homepage")
+  if not isinstance(homepage, str) or not homepage.startswith("https://"):
+    raise RuntimeError("Packaged default model homepage must be HTTPS.")
+  license_value = manifest.get("license")
+  if not isinstance(license_value, str) or not license_value:
+    raise RuntimeError("Packaged default model license must be present.")
+  if (manifest_path.parent / DEFAULT_MODEL_FILE_NAME).exists():
+    raise RuntimeError("Packaged default model weights must not be bundled.")
 
 
 def validate_packaged_llama_backend_launch(app_path: Path) -> None:
@@ -1065,11 +1146,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
 
       bootstrap = send_runtime_request(process, 2, "model/bootstrap")
       manifest_path = Path(bootstrap["result"]["manifestPath"])
-      require_file(manifest_path)
-      if manifest_path.suffix != ".json":
-        raise RuntimeError(f"Packaged runtime copied an invalid model manifest: {manifest_path}")
-      if (manifest_path.parent / "LFM2.5-350M-Q4_K_M.gguf").exists():
-        raise RuntimeError("Packaged runtime smoke unexpectedly found bundled model weights.")
+      validate_default_model_manifest(manifest_path)
 
       plugin_list = send_runtime_request(process, 3, "plugin/list")
       plugin_ids = {plugin["id"] for plugin in plugin_list["result"]["plugins"]}
