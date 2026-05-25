@@ -132,12 +132,12 @@ fn copy_observation_handoff_attributes(
   let Some(observation_attributes) = observation_attributes else {
     return;
   };
-  for key in OBSERVATION_HANDOFF_KEYS {
+  for key in OBSERVATION_HANDOFF_KEYS.iter().copied() {
     if let Some(value) = observation_attributes.get(key) {
       attributes.insert(key.to_string(), value.clone());
     }
   }
-  for (source_key, target_key) in RUNNER_CONNECTOR_HANDOFF_KEYS {
+  for (source_key, target_key) in RUNNER_CONNECTOR_HANDOFF_KEYS.iter().copied() {
     if let Some(value) = observation_attributes.get(source_key) {
       attributes.insert(target_key.to_string(), value.clone());
     }
