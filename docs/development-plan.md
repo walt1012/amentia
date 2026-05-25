@@ -89,22 +89,8 @@ Current state:
   any connector timeline item can claim a completed third-party write.
 - Done: completed remote-write claims must match the connector service actually
   bound to the runner invocation.
-- Active gap: connector write execution is still plugin-owned; Pith now provides
-  the inspection and approval boundary, but not a hosted Notion writer.
-
-Global review findings:
-
-- Keep M7 focused on trustworthy cowork execution: safe saved artifacts,
-  approval continuity, connector inspection, and remote-write proof.
-- Web Search is aligned as the active retrieval layer, but source-grounded
-  answers should grow toward optional page fetch or source snapshots before
-  Pith claims stronger citation behavior.
-- MCP is aligned at the manifest, permission, stdio runner, and output-contract
-  layers; persistent MCP sessions, resources, elicitation, and tool search
-  belong in M8 only if real connector workflows need them.
-- The packaged DMG path is credible for early users, but M8 must prove the
-  non-developer first-run path: install, launch, download a model, open a
-  workspace, run web retrieval, approve work, and recover from failure.
+- Active gap: connector write execution is still plugin-owned; Pith provides the
+  inspection, approval, and proof boundary, but not a hosted Notion writer.
 
 M7 work order:
 
@@ -113,8 +99,11 @@ M7 work order:
 2. Continue from approved writes into concise next-step handoffs.
 3. Feed saved artifacts into connector drafts as bounded content, not only as
    path labels.
-4. Harden connector updates around real cowork tasks, not demo commands.
-5. Keep UI polish focused on clarity around setup, approvals, sources, and
+4. Harden connector updates around real cowork tasks with approval continuity,
+   target-service proof, and clear remote-write status.
+5. Keep Web Search source grounding transparent; do not claim stronger citation
+   behavior until source snapshots or page fetch are implemented.
+6. Keep UI polish focused on clarity around setup, approvals, sources, and
    saved work.
 
 M7 exit criteria:
@@ -130,12 +119,19 @@ M7 exit criteria:
   including inspect-before-remote-write.
 - Connector runners cannot claim completed remote writes without target service,
   target tool, completed-stage evidence, and a matching bound connector service.
+- Web Search answers expose source attribution honestly without implying full
+  page-fetch verification.
 - The packaged macOS app path remains green in CI.
 
 ## Next Milestone: M8 Release Candidate
 
 - Tighten install, first-run, unsigned distribution, crash recovery, and real
   user smoke coverage.
+- Prove the non-developer path: install the DMG, launch Pith, download one
+  verified model, open a workspace, use Web Search, approve work, and recover
+  from a runtime failure.
+- Add optional page fetch or source snapshots if M7 Web Search usage needs
+  stronger citation behavior than search-result attribution.
 - Promote MCP from one-shot command execution to persistent local sessions only
   if third-party connector workflows need dynamic tool discovery or shared
   session state.
