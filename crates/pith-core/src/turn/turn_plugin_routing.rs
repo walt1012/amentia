@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use pith_plugin_host::{
   build_command_registry, build_connector_registry, PluginCatalogEntry,
   PluginCommandEntry as HostPluginCommandEntry, PluginConnectorEntry as HostPluginConnectorEntry,
@@ -18,6 +20,21 @@ pub(crate) struct ExplicitPluginCommandRoute {
   pub(crate) command_id: String,
   pub(crate) input: Option<String>,
   pub(crate) routing_reason: &'static str,
+  pub(crate) planning_attributes: HashMap<String, String>,
+}
+
+struct ConnectorCommandCandidate<'a> {
+  score: usize,
+  connector_score: usize,
+  action_score: usize,
+  command: &'a HostPluginCommandEntry,
+}
+
+struct ConnectorPlanningScores {
+  selected_score: usize,
+  selected_connector_score: usize,
+  selected_action_score: usize,
+  second_score: Option<usize>,
 }
 
 pub(crate) fn infer_explicit_plugin_command_route(
@@ -39,6 +56,13 @@ pub(crate) fn infer_explicit_plugin_command_route(
       command_id: command_id.to_string(),
       input: input.map(str::to_string),
       routing_reason,
+      planning_attributes: route_planning_attributes(
+        "explicitCommand",
+        routing_reason,
+        command_id,
+        1,
+        None,
+      ),
     });
   }
 
@@ -71,6 +95,13 @@ fn infer_natural_builtin_plugin_command_route(message: &str) -> Option<ExplicitP
     command_id: command_id.to_string(),
     input: Some(trimmed.to_string()).filter(|input| !input.is_empty()),
     routing_reason,
+    planning_attributes: route_planning_attributes(
+      "builtinNaturalCommand",
+      routing_reason,
+      command_id,
+      1,
+      None,
+    ),
   })
 }
 
@@ -89,7 +120,7 @@ fn infer_natural_connector_command_route(
   }
   let commands = build_command_registry(plugins);
 
-  commands
+  let mut candidates = commands
     .iter()
     .filter_map(|command| {
       let scoped_connectors = command_scoped_connectors(command, &connectors);
@@ -109,19 +140,96 @@ fn infer_natural_connector_command_route(
         return None;
       }
 
-      Some((connector_score + action_score, command))
+      Some(ConnectorCommandCandidate {
+        score: connector_score + action_score,
+        connector_score,
+        action_score,
+        command,
+      })
     })
-    .max_by(|(left_score, left), (right_score, right)| {
-      left_score
-        .cmp(right_score)
-        .then_with(|| right.title.cmp(&left.title))
-        .then_with(|| right.command_id.cmp(&left.command_id))
-    })
-    .map(|(_, command)| ExplicitPluginCommandRoute {
-      command_id: command.command_id.clone(),
-      input: connector_command_input(trimmed),
-      routing_reason: NATURAL_CONNECTOR_COMMAND_REASON,
-    })
+    .collect::<Vec<_>>();
+  candidates.sort_by(|left, right| {
+    right
+      .score
+      .cmp(&left.score)
+      .then_with(|| left.command.title.cmp(&right.command.title))
+      .then_with(|| left.command.command_id.cmp(&right.command.command_id))
+  });
+  let selected = candidates.first()?;
+  let second_score = candidates.get(1).map(|candidate| candidate.score);
+
+  Some(ExplicitPluginCommandRoute {
+    command_id: selected.command.command_id.clone(),
+    input: connector_command_input(trimmed),
+    routing_reason: NATURAL_CONNECTOR_COMMAND_REASON,
+    planning_attributes: route_planning_attributes(
+      "deterministicConnectorRanking",
+      NATURAL_CONNECTOR_COMMAND_REASON,
+      &selected.command.command_id,
+      candidates.len(),
+      Some(ConnectorPlanningScores {
+        selected_score: selected.score,
+        selected_connector_score: selected.connector_score,
+        selected_action_score: selected.action_score,
+        second_score,
+      }),
+    ),
+  })
+}
+
+fn route_planning_attributes(
+  mode: &str,
+  reason: &str,
+  command_id: &str,
+  candidate_count: usize,
+  scores: Option<ConnectorPlanningScores>,
+) -> HashMap<String, String> {
+  let mut attributes = HashMap::from([
+    ("toolPlanningMode".to_string(), mode.to_string()),
+    ("toolPlanningReason".to_string(), reason.to_string()),
+    (
+      "toolPlanningSelectedCommandId".to_string(),
+      command_id.to_string(),
+    ),
+    (
+      "toolPlanningCandidateCount".to_string(),
+      candidate_count.to_string(),
+    ),
+  ]);
+  let Some(scores) = scores else {
+    attributes.insert("toolPlanningSelectionState".to_string(), "direct".to_string());
+    return attributes;
+  };
+
+  attributes.insert(
+    "toolPlanningSelectedScore".to_string(),
+    scores.selected_score.to_string(),
+  );
+  attributes.insert(
+    "toolPlanningSelectedConnectorScore".to_string(),
+    scores.selected_connector_score.to_string(),
+  );
+  attributes.insert(
+    "toolPlanningSelectedActionScore".to_string(),
+    scores.selected_action_score.to_string(),
+  );
+  let selection_state = match scores.second_score {
+    Some(second_score) if second_score == scores.selected_score => {
+      attributes.insert("toolPlanningSecondScore".to_string(), second_score.to_string());
+      "deterministicTieBreak"
+    }
+    Some(second_score) => {
+      attributes.insert("toolPlanningSecondScore".to_string(), second_score.to_string());
+      "deterministicRanked"
+    }
+    None => "deterministicSingle",
+  };
+  attributes.insert(
+    "toolPlanningSelectionState".to_string(),
+    selection_state.to_string(),
+  );
+
+  attributes
 }
 
 fn explicit_plugin_prefixes() -> [(&'static str, &'static str); 5] {

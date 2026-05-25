@@ -921,6 +921,22 @@ fn turn_start_routes_natural_non_notion_connector_command() {
     "linear-runner::linear.update"
   );
   assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningMode"],
+    "deterministicConnectorRanking"
+  );
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningSelectedCommandId"],
+    "linear-runner::linear.update"
+  );
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningCandidateCount"],
+    "1"
+  );
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningSelectionState"],
+    "deterministicSingle"
+  );
   assert_eq!(items[2]["kind"], "pluginResult");
   assert!(items[2]["content"]
     .as_str()

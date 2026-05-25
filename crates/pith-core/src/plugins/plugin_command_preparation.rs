@@ -72,6 +72,7 @@ pub fn prepare_plugin_command_run(
     command,
     workspace,
     input,
+    HashMap::new(),
     cancellation.clone(),
     running_id.clone(),
   )
@@ -94,6 +95,7 @@ pub(crate) fn prepare_plugin_command_turn_snapshot(
   workspace: Option<WorkspaceSummary>,
   command_id: &str,
   input: Option<String>,
+  planning_attributes: HashMap<String, String>,
   cancellation: GenerationCancellation,
 ) -> std::result::Result<PluginCommandSnapshot, PluginCommandPreparationError> {
   let command = resolve_plugin_command(context, command_id)?;
@@ -104,6 +106,7 @@ pub(crate) fn prepare_plugin_command_turn_snapshot(
     command,
     workspace,
     input,
+    planning_attributes,
     cancellation,
     running_id,
   )
@@ -178,6 +181,7 @@ pub(crate) fn prepare_plugin_command_follow_up_snapshot(
       command,
       workspace,
       input,
+      planning_attributes: HashMap::new(),
       connector_refs,
       cancellation,
       running_id,
@@ -458,6 +462,7 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
       command,
       workspace,
       input,
+      planning_attributes: HashMap::new(),
       connector_refs,
       cancellation,
       running_id,
@@ -472,6 +477,7 @@ fn prepare_plugin_command_snapshot_for_execution(
   command: HostPluginCommandEntry,
   workspace: Option<WorkspaceSummary>,
   input: Option<String>,
+  planning_attributes: HashMap<String, String>,
   cancellation: GenerationCancellation,
   running_id: String,
 ) -> std::result::Result<PluginCommandSnapshot, PluginCommandPreparationError> {
@@ -504,6 +510,7 @@ fn prepare_plugin_command_snapshot_for_execution(
       command,
       workspace,
       input,
+      planning_attributes,
       connector_refs,
       cancellation,
       running_id,
@@ -631,6 +638,7 @@ struct PluginCommandSnapshotDraft {
   command: HostPluginCommandEntry,
   workspace: Option<WorkspaceSummary>,
   input: Option<String>,
+  planning_attributes: HashMap<String, String>,
   connector_refs: Vec<PluginConnectorExecutionRef>,
   cancellation: GenerationCancellation,
   running_id: String,
@@ -655,6 +663,7 @@ fn build_plugin_command_snapshot_from_parts(
     command,
     workspace,
     input,
+    planning_attributes,
     connector_refs,
     cancellation,
     running_id,
@@ -684,6 +693,7 @@ fn build_plugin_command_snapshot_from_parts(
     &command,
     workspace.as_ref(),
     input.as_deref(),
+    &planning_attributes,
     &memory_context,
     &connector_refs,
   );

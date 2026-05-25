@@ -75,8 +75,11 @@ Current state:
   before local drafts claim they are based on those files.
 - Done: initial tool selection now has a compact planning contract before
   execution preparation.
-- Active gap: connector selection still uses deterministic lexical scoring; M7
-  should add model-assisted disambiguation before broadening connector coverage.
+- Done: connector planning now records candidate count, scores, selected command,
+  and selection state on the timeline.
+- Active gap: connector selection still uses deterministic scoring; M7 should
+  add model-assisted disambiguation for ambiguous candidate sets before
+  broadening connector coverage.
 - Active gap: connector actions are still local drafts; the next step is a
   clear inspect-before-remote-write flow.
 

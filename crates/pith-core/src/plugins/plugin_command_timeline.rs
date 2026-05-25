@@ -14,6 +14,7 @@ pub(super) fn build_plugin_command_timeline_item(
   command: &HostPluginCommandEntry,
   workspace: Option<&WorkspaceSummary>,
   input: Option<&str>,
+  planning_attributes: &HashMap<String, String>,
   memory_context: &MemoryContextPack,
   connector_refs: &[PluginConnectorExecutionRef],
 ) -> TimelineItem {
@@ -30,6 +31,7 @@ pub(super) fn build_plugin_command_timeline_item(
       ("sourcePath".to_string(), command.source_path.clone()),
     ],
   );
+  attributes.extend(planning_attributes.clone());
   if let Some(workspace) = workspace {
     attributes.insert(
       "workspaceDisplayName".to_string(),

@@ -83,23 +83,29 @@ fn prepare_plugin_route_action(
   let input = route.input;
   let route_input = input.clone();
   let routing_reason = route.routing_reason;
+  let planning_attributes = route.planning_attributes;
   match prepare_plugin_command_turn_snapshot(
     context,
     thread_id,
     workspace.cloned(),
     &command_id,
     input,
+    planning_attributes.clone(),
     cancellation,
   ) {
     Ok(snapshot) => PreparedTurnAction::PluginCommand {
       snapshot: Box::new(snapshot),
     },
     Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
-      attributes: error.route_failure_attributes(
-        &command_id,
-        routing_reason,
-        route_input.as_deref(),
-      ),
+      attributes: {
+        let mut attributes = error.route_failure_attributes(
+          &command_id,
+          routing_reason,
+          route_input.as_deref(),
+        );
+        attributes.extend(planning_attributes);
+        attributes
+      },
       command_id,
       message: error.message().to_string(),
     },
