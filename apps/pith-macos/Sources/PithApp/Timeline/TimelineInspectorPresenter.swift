@@ -55,6 +55,12 @@ enum TimelineInspectorPresenter {
     if let sourceUrls = entry.attributes["sourceUrls"] {
       lines.append("URLs: \(sourceUrls)")
     }
+    if let snapshotKind = entry.attributes["sourceSnapshotKind"] {
+      lines.append("Snapshot kind: \(snapshotKind)")
+    }
+    if let snapshotHash = entry.attributes["sourceSnapshotHash"] {
+      lines.append("Snapshot hash: \(snapshotHash)")
+    }
     return lines.joined(separator: "\n")
   }
 

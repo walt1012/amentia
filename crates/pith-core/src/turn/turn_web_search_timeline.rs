@@ -112,6 +112,7 @@ fn web_search_attributes(
       ),
       ("pageFetchPerformed".to_string(), "false".to_string()),
       ("sourceSnapshotAvailable".to_string(), "false".to_string()),
+      ("sourceSnapshotKind".to_string(), "none".to_string()),
     ],
   )
 }
@@ -186,6 +187,10 @@ mod tests {
         .get("sourceSnapshotAvailable")
         .map(String::as_str),
       Some("false")
+    );
+    assert_eq!(
+      attributes.get("sourceSnapshotKind").map(String::as_str),
+      Some("none")
     );
     let timeout_seconds = web_search_timeout_seconds().to_string();
     assert_eq!(attributes.get("timeoutSeconds"), Some(&timeout_seconds));

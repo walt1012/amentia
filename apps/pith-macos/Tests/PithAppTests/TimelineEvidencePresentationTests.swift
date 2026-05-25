@@ -14,6 +14,19 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(badges.first?.tone, .active)
   }
 
+  func testWebSearchBadgeLabelsSearchResultSnapshotWithoutOverstatingFetchDepth() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "webSearchSourceMode": "searchResultAttribution",
+      "pageFetchPerformed": "false",
+      "sourceSnapshotAvailable": "true",
+      "sourceSnapshotKind": "searchResults",
+    ])
+
+    XCTAssertEqual(badges.count, 1)
+    XCTAssertEqual(badges.first?.label, "Search Snapshot")
+    XCTAssertEqual(badges.first?.tone, .active)
+  }
+
   func testRemoteWriteBadgeUsesPithDerivedStatus() {
     let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
       "remoteWriteStatus": "notSent",
@@ -35,7 +48,9 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "sourceAttribution": "web_search",
           "webSearchSourceMode": "searchResultAttribution",
           "pageFetchPerformed": "false",
-          "sourceSnapshotAvailable": "false",
+          "sourceSnapshotAvailable": "true",
+          "sourceSnapshotKind": "searchResults",
+          "sourceSnapshotHash": "abc123",
           "sourceTitles": "Pith",
           "sourceUrls": "https://example.com/pith",
         ]
@@ -47,9 +62,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       """
       Source mode: searchResultAttribution
       Page fetch: no
-      Source snapshot: no
+      Source snapshot: yes
       Titles: Pith
       URLs: https://example.com/pith
+      Snapshot kind: searchResults
+      Snapshot hash: abc123
       """
     )
   }

@@ -96,6 +96,8 @@ Current state:
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search, approval-gated writes, runtime restart, and
   recovery of model, workspace, thread, and readiness state.
+- Web Search now preserves a bounded search-result snapshot with a stable hash
+  while clearly reporting that page contents were not fetched.
 - The model manager now surfaces explicit first-run recovery guidance for
   paused downloads, runtime relaunch, downloaded-but-inactive models, and
   partial-file cleanup.
@@ -110,8 +112,8 @@ M8 work order:
 
 - Keep packaged smoke focused on real user journeys; add UI automation for
   visible recovery copy only after the app has a stable UI automation harness.
-- Add stronger Web Search source snapshots only if cowork tasks require more
-  evidence than search-result attribution.
+- Defer page fetch and page-content snapshots until cowork tasks require
+  evidence beyond search-result snapshots.
 - Keep MCP one-shot until a real connector workflow proves persistent local
   sessions are necessary.
 

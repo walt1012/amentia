@@ -18,10 +18,11 @@ enum TimelineEvidenceBadgePresenter {
       return nil
     }
 
-    if attributes["pageFetchPerformed"] == "true"
-      || attributes["sourceSnapshotAvailable"] == "true"
-    {
+    if attributes["pageFetchPerformed"] == "true" {
       return TimelineEvidenceBadgeSummary(label: "Verified Sources", tone: .ready)
+    }
+    if attributes["sourceSnapshotAvailable"] == "true" {
+      return TimelineEvidenceBadgeSummary(label: "Search Snapshot", tone: .active)
     }
 
     return TimelineEvidenceBadgeSummary(label: "Search Result Sources", tone: .active)

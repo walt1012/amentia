@@ -13,6 +13,7 @@ use crate::intent_inference::WebSearchIntent;
 pub(crate) const WEB_SEARCH_SOURCE_MODE: &str = "searchResultAttribution";
 pub(crate) const WEB_SEARCH_SOURCE_NOTE: &str =
   "Search-result attribution only; page contents were not fetched.";
+pub(crate) const WEB_SEARCH_SOURCE_SNAPSHOT_KIND: &str = "searchResults";
 
 pub(crate) fn summarize_declined_web_search_candidate(
   model_runtime: &LocalModelRuntime,
@@ -132,7 +133,55 @@ fn merge_web_search_source_attributes(
     WEB_SEARCH_SOURCE_MODE.to_string(),
   );
   attributes.insert("pageFetchPerformed".to_string(), "false".to_string());
-  attributes.insert("sourceSnapshotAvailable".to_string(), "false".to_string());
+  merge_web_search_source_snapshot_attributes(attributes, &sources);
+}
+
+fn merge_web_search_source_snapshot_attributes(
+  attributes: &mut HashMap<String, String>,
+  sources: &[&WebSearchResult],
+) {
+  let snapshot = format_web_search_source_snapshot(sources);
+  attributes.insert("sourceSnapshotAvailable".to_string(), "true".to_string());
+  attributes.insert(
+    "sourceSnapshotKind".to_string(),
+    WEB_SEARCH_SOURCE_SNAPSHOT_KIND.to_string(),
+  );
+  attributes.insert(
+    "sourceSnapshotResultCount".to_string(),
+    sources.len().to_string(),
+  );
+  attributes.insert(
+    "sourceSnapshotHash".to_string(),
+    stable_snapshot_hash(&snapshot),
+  );
+  attributes.insert("sourceSnapshot".to_string(), snapshot);
+}
+
+fn format_web_search_source_snapshot(sources: &[&WebSearchResult]) -> String {
+  sources
+    .iter()
+    .enumerate()
+    .map(|(index, result)| {
+      format!(
+        "{}. {}\nURL: {}\nSnippet: {}\nProvider: {}",
+        index + 1,
+        result.title,
+        result.url,
+        result.snippet,
+        result.source
+      )
+    })
+    .collect::<Vec<_>>()
+    .join("\n\n")
+}
+
+fn stable_snapshot_hash(snapshot: &str) -> String {
+  let mut hash: u64 = 0xcbf29ce484222325;
+  for byte in snapshot.as_bytes() {
+    hash ^= u64::from(*byte);
+    hash = hash.wrapping_mul(0x100000001b3);
+  }
+  format!("{hash:016x}")
 }
 
 fn source_grounded_summary(summary: String, results: &[WebSearchResult]) -> String {
@@ -161,7 +210,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn web_search_source_attributes_are_transparent_about_fetch_depth() {
+  fn web_search_source_attributes_include_search_result_snapshot() {
     let mut attributes = HashMap::new();
     merge_web_search_source_attributes(&mut attributes, &[result("Pith", "https://example.com")]);
 
@@ -181,8 +230,26 @@ mod tests {
       attributes
         .get("sourceSnapshotAvailable")
         .map(String::as_str),
-      Some("false")
+      Some("true")
     );
+    assert_eq!(
+      attributes.get("sourceSnapshotKind").map(String::as_str),
+      Some("searchResults")
+    );
+    assert_eq!(
+      attributes
+        .get("sourceSnapshotResultCount")
+        .map(String::as_str),
+      Some("1")
+    );
+    assert!(attributes
+      .get("sourceSnapshotHash")
+      .map(|value| value.len() == 16)
+      .unwrap_or(false));
+    assert!(attributes
+      .get("sourceSnapshot")
+      .map(|value| value.contains("Snippet"))
+      .unwrap_or(false));
   }
 
   #[test]

@@ -344,7 +344,20 @@ fn turn_start_executes_web_search_with_fixture_client() {
     "searchResultAttribution"
   );
   assert_eq!(items[4]["attributes"]["pageFetchPerformed"], "false");
-  assert_eq!(items[4]["attributes"]["sourceSnapshotAvailable"], "false");
+  assert_eq!(items[4]["attributes"]["sourceSnapshotAvailable"], "true");
+  assert_eq!(items[4]["attributes"]["sourceSnapshotKind"], "searchResults");
+  assert_eq!(items[4]["attributes"]["sourceSnapshotResultCount"], "1");
+  assert!(items[4]["attributes"]["sourceSnapshot"]
+    .as_str()
+    .unwrap()
+    .contains("Deterministic local web search result."));
+  assert_eq!(
+    items[4]["attributes"]["sourceSnapshotHash"]
+      .as_str()
+      .unwrap()
+      .len(),
+    16
+  );
   assert_eq!(
     items[4]["attributes"]["sourceUrls"],
     "https://example.com/pith"
