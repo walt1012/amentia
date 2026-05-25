@@ -24,6 +24,7 @@ def main() -> int:
     draft=False,
   )
   require_contains(developer_notes, "Developer ID signed and notarized.")
+  require_contains(developer_notes, "SHA-256 checksum sidecar")
   require_not_contains(developer_notes, "Open Anyway")
 
   ad_hoc_notes = release_notes(
@@ -49,6 +50,7 @@ def main() -> int:
   require_contains(guide, "download one verified local model")
   require_contains(guide, "Open a workspace folder.")
   require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
+  require_contains(guide, "verify the downloaded installer")
 
   print("release text tests passed")
   return 0

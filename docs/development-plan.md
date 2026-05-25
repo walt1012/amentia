@@ -101,6 +101,12 @@ Current state:
   symlink entries, keeping the release zip aligned with the DMG safety bar.
 - Done: packaged smoke now runs against the app mounted from the internal DMG,
   so CI proves the downloadable installer path instead of only the raw bundle.
+- Done: release checksum generation now uses a shared helper that writes
+  basename-only SHA-256 sidecars for both internal and public DMG artifacts.
+- Done: release smoke now runs through the DMG validation path, removing the
+  duplicate raw-bundle smoke from the public release workflow.
+- Done: packaged smoke now verifies the activated first-use model pack lives
+  under app-owned storage and matches manifest, GGUF, size, and SHA-256 data.
 
 M8 work order:
 

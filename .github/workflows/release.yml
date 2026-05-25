@@ -259,9 +259,6 @@ jobs:
             --identity "$MACOS_DEVELOPER_ID_APPLICATION"
           python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
 
-      - name: Smoke launch release app
-        run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
-
       - name: Create release copy
         run: |
           set -euo pipefail
@@ -311,7 +308,9 @@ jobs:
         run: |
           set -euo pipefail
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
-          shasum -a 256 "$dmg_path" > "$dmg_path.sha256"
+          python3 scripts/release_artifacts.py \
+            --artifact "$dmg_path" \
+            --checksum-output "$dmg_path.sha256"
 
       - name: Publish GitHub Release
         env:

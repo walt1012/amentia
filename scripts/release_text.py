@@ -61,6 +61,7 @@ def release_notes(
 - macOS 12+ x86_64 DMG installer.
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model.
+- SHA-256 checksum sidecar is published next to the DMG.
 - {trust_note}
 """
 
@@ -83,6 +84,7 @@ Trust
 Notes
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
+- The `.sha256` file next to the DMG lets users verify the downloaded installer.
 - Only one local model runs at a time.
 - Short, specific first requests work best with the default small local model.
 """

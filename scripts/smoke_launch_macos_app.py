@@ -37,6 +37,8 @@ DEFAULT_MODEL_DOWNLOAD_URL = (
 )
 DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
 DEFAULT_MODEL_SIZE_BYTES = 229312224
+SMOKE_MODEL_ID = "packaged-smoke-local-model"
+SMOKE_MODEL_FILE_NAME = "smoke-local-model.gguf"
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
@@ -662,13 +664,13 @@ def validate_packaged_runtime_workspace_search(process: subprocess.Popen[str]) -
 
 
 def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
-  model_dir = support_dir / "model-pack" / "smoke-local-model"
+  model_dir = support_dir / "storage" / "models" / "builtin" / SMOKE_MODEL_ID
   model_dir.mkdir(parents=True)
-  model_path = model_dir / "smoke-local-model.gguf"
+  model_path = model_dir / SMOKE_MODEL_FILE_NAME
   model_bytes = b"GGUFpackaged smoke local model fixture\n"
   model_path.write_bytes(model_bytes)
   manifest = {
-    "id": "packaged-smoke-local-model",
+    "id": SMOKE_MODEL_ID,
     "display_name": "Packaged Smoke Local Model",
     "file_name": model_path.name,
     "context_size": 512,
@@ -683,7 +685,70 @@ def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
   }
   manifest_path = model_dir / "model-pack.json"
   manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+  validate_smoke_model_pack(manifest_path, model_path, support_dir)
   return manifest_path, model_path
+
+
+def validate_smoke_model_pack(manifest_path: Path, model_path: Path, support_dir: Path) -> None:
+  expected_model_root = (support_dir / "storage" / "models").resolve()
+  if expected_model_root not in model_path.resolve().parents:
+    raise RuntimeError("Packaged first-use smoke model must live under app-owned storage.")
+  if manifest_path.parent != model_path.parent:
+    raise RuntimeError("Packaged first-use smoke manifest must live next to the model file.")
+  if model_path.read_bytes()[:4] != b"GGUF":
+    raise RuntimeError("Packaged first-use smoke model is missing the GGUF header.")
+
+  manifest = read_json_object(manifest_path)
+  expected_values = {
+    "id": SMOKE_MODEL_ID,
+    "file_name": model_path.name,
+    "sha256": sha256_hex(model_path),
+    "size_bytes": model_path.stat().st_size,
+  }
+  for field, expected_value in expected_values.items():
+    if manifest.get(field) != expected_value:
+      raise RuntimeError(
+        f"Packaged first-use smoke model field {field} must be {expected_value!r}."
+      )
+
+
+def sha256_hex(path: Path) -> str:
+  return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_ready_smoke_model_health(
+  model_health: dict,
+  manifest_path: Path,
+  model_path: Path,
+) -> None:
+  result = model_health["result"]
+  if result["status"] != "ready":
+    raise RuntimeError(
+      "Packaged first cowork smoke did not resolve a ready local model: "
+      f"{result}"
+    )
+  if Path(result["manifestPath"]).resolve() != manifest_path.resolve():
+    raise RuntimeError("Packaged first cowork smoke used the wrong model manifest.")
+  if Path(result["modelPath"]).resolve() != model_path.resolve():
+    raise RuntimeError("Packaged first cowork smoke used the wrong model file.")
+
+  metrics = result["metrics"]
+  expected_metrics = {
+    "fileName": SMOKE_MODEL_FILE_NAME,
+    "sha256": sha256_hex(model_path),
+    "sizeBytes": str(model_path.stat().st_size),
+    "readiness": "ready",
+    "packReady": "true",
+    "modelPresent": "true",
+    "manifestPresent": "true",
+  }
+  for key, expected_value in expected_metrics.items():
+    actual_value = metrics.get(key)
+    if actual_value != expected_value:
+      raise RuntimeError(
+        f"Packaged first-use model metric {key} was {actual_value}, "
+        f"expected {expected_value}."
+      )
 
 
 def write_deterministic_llama_backend_fixture(support_dir: Path) -> Path:
@@ -997,11 +1062,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
         raise RuntimeError("Packaged first cowork initialize returned the wrong server name.")
 
       model_health = send_runtime_request(process, 21, "model/health")
-      if model_health["result"]["status"] != "ready":
-        raise RuntimeError(
-          "Packaged first cowork smoke did not resolve a ready local model: "
-          f"{model_health['result']}"
-        )
+      validate_ready_smoke_model_health(model_health, manifest_path, model_path)
 
       validate_packaged_runtime_workspace_bootstrap(
         process,
@@ -1039,6 +1100,8 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
         app_path,
         support_dir,
         runtime_environment,
+        manifest_path,
+        model_path,
       )
       print(
         "Packaged first cowork smoke passed with deterministic local model "
@@ -1053,6 +1116,8 @@ def validate_packaged_runtime_recovery(
   app_path: Path,
   support_dir: Path,
   runtime_environment: dict[str, str],
+  manifest_path: Path,
+  model_path: Path,
 ) -> subprocess.Popen[str]:
   kill_process(process)
   recovered_process = launch_runtime_process(app_path, support_dir, runtime_environment)
@@ -1072,11 +1137,7 @@ def validate_packaged_runtime_recovery(
       raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
 
     model_health = send_runtime_request(recovered_process, 35, "model/health")
-    if model_health["result"]["status"] != "ready":
-      raise RuntimeError(
-        "Packaged runtime recovery did not restore the ready local model: "
-        f"{model_health['result']}"
-      )
+    validate_ready_smoke_model_health(model_health, manifest_path, model_path)
 
     workspace_current = send_runtime_request(recovered_process, 36, "workspace/current")
     workspace = workspace_current["result"]["workspace"]

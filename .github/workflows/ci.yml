@@ -72,6 +72,9 @@ jobs:
       - name: Test release state helper
         run: python3 scripts/test_release_state.py
 
+      - name: Test release artifact helper
+        run: python3 scripts/test_release_artifacts.py
+
       - name: Test release text helper
         run: python3 scripts/test_release_text.py
 
@@ -397,6 +400,13 @@ jobs:
             --readme-file artifacts/macos/README-FIRST.txt \
             --smoke-launch-script scripts/smoke_launch_macos_app.py
 
+      - name: Create internal macOS checksum
+        run: |
+          set -euo pipefail
+          python3 scripts/release_artifacts.py \
+            --artifact "artifacts/macos/$MACOS_DMG_NAME" \
+            --checksum-output "artifacts/macos/$MACOS_DMG_NAME.sha256"
+
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
         with:
@@ -404,6 +414,7 @@ jobs:
           path: |
             artifacts/macos/Pith-macos-x86_64.zip
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
+            artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
             artifacts/macos/README-FIRST.txt
             artifacts/macos/internal-release-notes.md
           if-no-files-found: error
