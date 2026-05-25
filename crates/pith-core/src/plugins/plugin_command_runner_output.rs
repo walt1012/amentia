@@ -396,13 +396,30 @@ fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, Str
   match remote_write {
     "" | "false" => true,
     "true" => {
+      let Some(target_service) = plugin_runner_attribute_value(attributes, "targetService") else {
+        return false;
+      };
       plugin_runner_attribute_value(attributes, "remoteWriteStage")
         == Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
-        && plugin_runner_attribute_value(attributes, "targetService").is_some()
+        && plugin_runner_target_service_is_bound(attributes, target_service)
         && plugin_runner_attribute_value(attributes, "targetTool").is_some()
     }
     _ => false,
   }
+}
+
+fn plugin_runner_target_service_is_bound(
+  attributes: &HashMap<String, String>,
+  target_service: &str,
+) -> bool {
+  plugin_runner_attribute_value(attributes, "pluginRunnerConnectorServices")
+    .map(|services| {
+      services
+        .split(',')
+        .map(str::trim)
+        .any(|service| service == target_service)
+    })
+    .unwrap_or(false)
 }
 
 fn plugin_runner_attribute_value<'a>(
@@ -710,6 +727,11 @@ mod tests {
   #[test]
   fn output_contract_accepts_completed_remote_write_with_target_evidence() {
     let command = test_command();
+    let mut base_attributes = HashMap::new();
+    base_attributes.insert(
+      "pluginRunnerConnectorServices".to_string(),
+      "notion".to_string(),
+    );
     let output = r#"{
       "items": [
         {
@@ -726,7 +748,7 @@ mod tests {
       ]
     }"#;
 
-    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+    let result = match plugin_runner_output(&command, "stdio.test", output, base_attributes) {
       Ok(result) => result,
       Err(failure) => panic!(
         "completed remote write should be accepted: {}",
@@ -744,6 +766,79 @@ mod tests {
     assert_eq!(
       attributes.get("remoteWriteStage").map(String::as_str),
       Some("completed")
+    );
+  }
+
+  #[test]
+  fn output_contract_rejects_remote_write_without_bound_connector_service() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Complete",
+          "content": "The page was updated.",
+          "attributes": {
+            "remoteWrite": "true",
+            "remoteWriteStage": "completed",
+            "targetService": "notion",
+            "targetTool": "notion.updatePage"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("unbound remote write claim should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputInvalidTimelineItemCount")
+        .map(String::as_str),
+      Some("1")
+    );
+  }
+
+  #[test]
+  fn output_contract_rejects_remote_write_target_service_mismatch() {
+    let command = test_command();
+    let mut base_attributes = HashMap::new();
+    base_attributes.insert(
+      "pluginRunnerConnectorServices".to_string(),
+      "slack".to_string(),
+    );
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Complete",
+          "content": "The page was updated.",
+          "attributes": {
+            "remoteWrite": "true",
+            "remoteWriteStage": "completed",
+            "targetService": "notion",
+            "targetTool": "notion.updatePage"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, base_attributes) {
+      Ok(_) => panic!("mismatched remote write target should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputInvalidTimelineItemCount")
+        .map(String::as_str),
+      Some("1")
     );
   }
 
