@@ -728,7 +728,10 @@ mod tests {
 
     let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
       Ok(result) => result,
-      Err(failure) => panic!("completed remote write should be accepted: {}", failure.message),
+      Err(failure) => panic!(
+        "completed remote write should be accepted: {}",
+        failure.message
+      ),
     };
     let attributes = result.items[0].attributes.as_ref().expect("attributes");
 
