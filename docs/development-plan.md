@@ -95,6 +95,8 @@ Current state:
   page-fetch or source-snapshot verification.
 - Done: timeline cards and inspector summaries now expose source-depth and
   connector remote-write status without forcing users into raw attributes.
+- Done: release DMGs now include an install guide that explains first-use model
+  download and the Developer ID or ad-hoc Gatekeeper trust path.
 - Active gap: connector write execution is still plugin-owned; Pith provides the
   inspection, approval, and proof boundary, but not a hosted Notion writer.
 

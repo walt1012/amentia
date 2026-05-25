@@ -66,6 +66,9 @@ jobs:
       - name: Test packaging helpers
         run: python3 scripts/test_package_macos_app.py
 
+      - name: Test DMG staging helper
+        run: python3 scripts/test_create_macos_dmg.py
+
       - name: Test release state helper
         run: python3 scripts/test_release_state.py
 

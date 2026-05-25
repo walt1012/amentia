@@ -115,6 +115,11 @@ only for `v*` tags or manual dispatch and supports two distribution modes:
   must remain marked as a prerelease and must explain that macOS Gatekeeper will
   require manual user approval before first launch.
 
+Each release DMG includes `README-FIRST.txt` at the volume root. That file
+summarizes the install steps, first-use model download expectation, and the
+trust path for either Developer ID notarized builds or untrusted ad-hoc
+prereleases.
+
 Release publishing requires these repository secrets:
 
 - `MACOS_CERTIFICATE_P12_BASE64`

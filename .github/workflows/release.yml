@@ -262,6 +262,34 @@ jobs:
       - name: Smoke launch release app
         run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
 
+      - name: Create DMG install guide
+        run: |
+          set -euo pipefail
+          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+            trust_note="This build is Developer ID signed and notarized."
+            open_note="Open the DMG, drag Pith.app to Applications, then launch Pith."
+          else
+            trust_note="This build is ad-hoc signed and not notarized."
+            open_note="After dragging Pith.app to Applications, macOS may block first launch. Open System Settings > Privacy & Security and choose Open Anyway, or Control-click Pith.app and choose Open."
+          fi
+          cat > artifacts/macos/README-FIRST.txt <<EOF
+          Pith $RELEASE_TAG
+
+          Install
+          1. Open this DMG.
+          2. Drag Pith.app to Applications.
+          3. Launch Pith and download one verified local model when prompted.
+
+          Trust
+          $trust_note
+          $open_note
+
+          Notes
+          - Pith runs local model work on this Mac.
+          - Model weights are not bundled in the app package.
+          - Only one local model runs at a time.
+          EOF
+
       - name: Create release DMG
         run: |
           set -euo pipefail
@@ -269,6 +297,7 @@ jobs:
           python3 scripts/create_macos_dmg.py \
             artifacts/macos/Pith.app \
             "$dmg_path" \
+            --readme-file artifacts/macos/README-FIRST.txt \
             --smoke-launch-script scripts/smoke_launch_macos_app.py
           if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
             codesign \

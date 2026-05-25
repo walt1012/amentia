@@ -30,6 +30,11 @@ def parse_args() -> argparse.Namespace:
     type=Path,
     help="Optional packaged app smoke script to run against the app inside the mounted DMG.",
   )
+  parser.add_argument(
+    "--readme-file",
+    type=Path,
+    help="Optional plain-text install guide to copy into the DMG root.",
+  )
   return parser.parse_args()
 
 
@@ -45,9 +50,11 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="pith-dmg-") as temp_dir:
       staging_dir = Path(temp_dir) / "staging"
       staging_dir.mkdir()
-      copy_app_bundle(app_path, staging_dir / APP_NAME)
-      applications_link = staging_dir / APPLICATIONS_LINK_NAME
-      applications_link.symlink_to("/Applications", target_is_directory=True)
+      stage_dmg_contents(
+        app_path,
+        staging_dir,
+        args.readme_file.resolve() if args.readme_file else None,
+      )
       create_dmg(staging_dir, dmg_path, args.volume_name)
     validate_dmg(
       dmg_path,
@@ -84,6 +91,15 @@ def copy_app_bundle(source: Path, destination: Path) -> None:
     run(["ditto", str(source), str(destination)])
     return
   shutil.copytree(source, destination, symlinks=False)
+
+
+def stage_dmg_contents(app_path: Path, staging_dir: Path, readme_file: Path | None) -> None:
+  copy_app_bundle(app_path, staging_dir / APP_NAME)
+  applications_link = staging_dir / APPLICATIONS_LINK_NAME
+  applications_link.symlink_to("/Applications", target_is_directory=True)
+  if readme_file is not None:
+    require_file(readme_file)
+    shutil.copy2(readme_file, staging_dir / "README-FIRST.txt")
 
 
 def create_dmg(staging_dir: Path, dmg_path: Path, volume_name: str) -> None:
