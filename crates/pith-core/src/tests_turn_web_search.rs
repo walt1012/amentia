@@ -326,6 +326,11 @@ fn turn_start_executes_web_search_with_fixture_client() {
   assert_eq!(items[3]["attributes"]["agentStepPhase"], "observation");
   assert_eq!(items[3]["attributes"]["toolCallStatus"], "completed");
   assert_eq!(items[3]["attributes"]["resultCount"], "1");
+  assert_eq!(
+    items[3]["attributes"]["webSearchSourceMode"],
+    "searchResultAttribution"
+  );
+  assert_eq!(items[3]["attributes"]["pageFetchPerformed"], "false");
   assert!(items[3]["content"]
     .as_str()
     .unwrap()
@@ -335,6 +340,11 @@ fn turn_start_executes_web_search_with_fixture_client() {
   assert_eq!(items[4]["attributes"]["handoffKind"], "webSearchSources");
   assert_eq!(items[4]["attributes"]["sourceAttribution"], "web_search");
   assert_eq!(
+    items[4]["attributes"]["webSearchSourceMode"],
+    "searchResultAttribution"
+  );
+  assert_eq!(items[4]["attributes"]["pageFetchPerformed"], "false");
+  assert_eq!(
     items[4]["attributes"]["sourceUrls"],
     "https://example.com/pith"
   );
@@ -342,6 +352,10 @@ fn turn_start_executes_web_search_with_fixture_client() {
     .as_str()
     .unwrap()
     .contains("Pith fixture result"));
+  assert!(items[4]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Search-result attribution only"));
 }
 
 struct EnvVarGuard {

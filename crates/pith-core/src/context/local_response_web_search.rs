@@ -10,6 +10,10 @@ use crate::context_compaction::compact_prompt_observation;
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
 use crate::intent_inference::WebSearchIntent;
 
+pub(crate) const WEB_SEARCH_SOURCE_MODE: &str = "searchResultAttribution";
+pub(crate) const WEB_SEARCH_SOURCE_NOTE: &str =
+  "Search-result attribution only; page contents were not fetched.";
+
 pub(crate) fn summarize_declined_web_search_candidate(
   model_runtime: &LocalModelRuntime,
   memory_notes: &[MemoryNote],
@@ -123,18 +127,80 @@ fn merge_web_search_source_attributes(
       .join("\n"),
   );
   attributes.insert("sourceAttribution".to_string(), "web_search".to_string());
+  attributes.insert(
+    "webSearchSourceMode".to_string(),
+    WEB_SEARCH_SOURCE_MODE.to_string(),
+  );
+  attributes.insert("pageFetchPerformed".to_string(), "false".to_string());
+  attributes.insert("sourceSnapshotAvailable".to_string(), "false".to_string());
 }
 
 fn source_grounded_summary(summary: String, results: &[WebSearchResult]) -> String {
   let sources = results.iter().take(3).collect::<Vec<_>>();
-  if sources.is_empty() || sources.iter().any(|source| summary.contains(&source.url)) {
+  if sources.is_empty() {
     return summary;
   }
 
-  let source_line = sources
-    .iter()
-    .map(|source| format!("{} ({})", source.title, source.url))
-    .collect::<Vec<_>>()
-    .join("; ");
-  format!("{}\n\nSources: {}", summary.trim_end(), source_line)
+  let mut output = summary.trim_end().to_string();
+  if !sources.iter().any(|source| output.contains(&source.url)) {
+    let source_line = sources
+      .iter()
+      .map(|source| format!("{} ({})", source.title, source.url))
+      .collect::<Vec<_>>()
+      .join("; ");
+    output.push_str(&format!("\n\nSources: {source_line}"));
+  }
+  if !output.contains(WEB_SEARCH_SOURCE_NOTE) {
+    output.push_str(&format!("\n\nSource note: {WEB_SEARCH_SOURCE_NOTE}"));
+  }
+  output
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn web_search_source_attributes_are_transparent_about_fetch_depth() {
+    let mut attributes = HashMap::new();
+    merge_web_search_source_attributes(&mut attributes, &[result("Pith", "https://example.com")]);
+
+    assert_eq!(
+      attributes.get("sourceAttribution").map(String::as_str),
+      Some("web_search")
+    );
+    assert_eq!(
+      attributes.get("webSearchSourceMode").map(String::as_str),
+      Some("searchResultAttribution")
+    );
+    assert_eq!(
+      attributes.get("pageFetchPerformed").map(String::as_str),
+      Some("false")
+    );
+    assert_eq!(
+      attributes.get("sourceSnapshotAvailable").map(String::as_str),
+      Some("false")
+    );
+  }
+
+  #[test]
+  fn web_search_summary_adds_source_note_even_when_urls_are_present() {
+    let summary = source_grounded_summary(
+      "The relevant source is https://example.com.".to_string(),
+      &[result("Pith", "https://example.com")],
+    );
+
+    assert!(summary.contains("https://example.com"));
+    assert!(summary.contains(WEB_SEARCH_SOURCE_NOTE));
+    assert!(!summary.contains("Sources: Pith"));
+  }
+
+  fn result(title: &str, url: &str) -> WebSearchResult {
+    WebSearchResult {
+      title: title.to_string(),
+      url: url.to_string(),
+      snippet: "Snippet".to_string(),
+      source: "fixture".to_string(),
+    }
+  }
 }

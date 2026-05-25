@@ -89,6 +89,8 @@ Current state:
   any connector timeline item can claim a completed third-party write.
 - Done: completed remote-write claims must match the connector service actually
   bound to the runner invocation.
+- Done: Web Search handoffs now label search-result attribution separately from
+  page-fetch or source-snapshot verification.
 - Active gap: connector write execution is still plugin-owned; Pith provides the
   inspection, approval, and proof boundary, but not a hosted Notion writer.
 

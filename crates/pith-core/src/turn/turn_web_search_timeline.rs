@@ -5,6 +5,7 @@ use pith_tools::{web_search_timeout_seconds, WebSearchStatus};
 
 use super::turn_tool_limits::WEB_SEARCH_RESULT_LIMIT;
 use super::turn_tool_provenance::web_tool_attributes;
+use crate::context::local_response_web_search::WEB_SEARCH_SOURCE_MODE;
 use crate::intent_inference::WebSearchIntent;
 
 pub(super) fn web_search_start_item(
@@ -105,6 +106,15 @@ fn web_search_attributes(
         "webSearchAvailable".to_string(),
         status.available.to_string(),
       ),
+      (
+        "webSearchSourceMode".to_string(),
+        WEB_SEARCH_SOURCE_MODE.to_string(),
+      ),
+      ("pageFetchPerformed".to_string(), "false".to_string()),
+      (
+        "sourceSnapshotAvailable".to_string(),
+        "false".to_string(),
+      ),
     ],
   )
 }
@@ -165,6 +175,20 @@ mod tests {
     assert_eq!(
       attributes.get("webSearchAvailable").map(String::as_str),
       Some("true")
+    );
+    assert_eq!(
+      attributes.get("webSearchSourceMode").map(String::as_str),
+      Some("searchResultAttribution")
+    );
+    assert_eq!(
+      attributes.get("pageFetchPerformed").map(String::as_str),
+      Some("false")
+    );
+    assert_eq!(
+      attributes
+        .get("sourceSnapshotAvailable")
+        .map(String::as_str),
+      Some("false")
     );
     let timeout_seconds = web_search_timeout_seconds().to_string();
     assert_eq!(attributes.get("timeoutSeconds"), Some(&timeout_seconds));
