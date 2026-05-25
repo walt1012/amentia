@@ -345,7 +345,10 @@ fn turn_start_executes_web_search_with_fixture_client() {
   );
   assert_eq!(items[4]["attributes"]["pageFetchPerformed"], "false");
   assert_eq!(items[4]["attributes"]["sourceSnapshotAvailable"], "true");
-  assert_eq!(items[4]["attributes"]["sourceSnapshotKind"], "searchResults");
+  assert_eq!(
+    items[4]["attributes"]["sourceSnapshotKind"],
+    "searchResults"
+  );
   assert_eq!(items[4]["attributes"]["sourceSnapshotResultCount"], "1");
   assert!(items[4]["attributes"]["sourceSnapshot"]
     .as_str()
