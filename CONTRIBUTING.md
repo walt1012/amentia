@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is in Milestone 3 daily-driver hardening for `Pith`.
+This repository is in Milestone 7 practical cowork development for `Pith`.
 
 ## Project Rules
 
@@ -61,4 +61,7 @@ The current repository target is a stable local daily-driver loop:
 - native sandbox diagnostics and bounded subprocess execution
 - plugin metadata, discovery, permissions, and visibility foundations
 
-Milestone 4 can add real plugin execution contracts and third-party connectors after Milestone 3 is stable.
+The active milestone focuses on practical cowork flows: saved artifacts,
+approval continuity, connector inspection, and safe third-party handoffs. Keep
+broader persistent MCP sessions, marketplace work, and multi-agent orchestration
+out of scope until the single local cowork loop is excellent.

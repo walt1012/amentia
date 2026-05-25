@@ -48,8 +48,8 @@ Closed capabilities:
   recovery, bounded shell/model work, workspace-safe tools, Web Search, sandbox
   diagnostics, compact context packing, and progressive inspector surfaces.
 - Plugin registry, inspect-before-install, enable/disable, connector auth,
-  bounded runners, MCP stdio sessions, permission gates, approval gates, output
-  envelopes, repair hints, retry flows, and runner memory capture.
+  bounded runners, one-shot MCP stdio commands, permission gates, approval
+  gates, output envelopes, repair hints, retry flows, and runner memory capture.
 - Package proof: x86_64 app bundle, internal DMG workflow, packaged smoke
   coverage, release-state safety, native sandbox fallback, and unsigned
   distribution path with optional Developer ID upgrade later.
@@ -91,6 +91,20 @@ Current state:
   bound to the runner invocation.
 - Active gap: connector write execution is still plugin-owned; Pith now provides
   the inspection and approval boundary, but not a hosted Notion writer.
+
+Global review findings:
+
+- Keep M7 focused on trustworthy cowork execution: safe saved artifacts,
+  approval continuity, connector inspection, and remote-write proof.
+- Web Search is aligned as the active retrieval layer, but source-grounded
+  answers should grow toward optional page fetch or source snapshots before
+  Pith claims stronger citation behavior.
+- MCP is aligned at the manifest, permission, stdio runner, and output-contract
+  layers; persistent MCP sessions, resources, elicitation, and tool search
+  belong in M8 only if real connector workflows need them.
+- The packaged DMG path is credible for early users, but M8 must prove the
+  non-developer first-run path: install, launch, download a model, open a
+  workspace, run web retrieval, approve work, and recover from failure.
 
 M7 work order:
 
