@@ -20,13 +20,14 @@ Current scripts:
 - `release_text.py`: generates GitHub Release notes and the DMG root install guide from the release signing mode.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
 - `sign_macos_app_for_distribution.py`: signs `Pith.app` with Developer ID and Hardened Runtime before notarized release packaging.
-- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, first-use model metadata without bundled weights, app-owned model pack activation, workspace bootstrap, workspace search, deterministic first cowork request, packaged web search execution, workspace write denial and approval, bundled MCP plugin command execution, connector authorization and approval, sandbox readiness, thread creation, runner memory capture, runtime recovery, and runtime database initialization.
+- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, first-use model metadata without bundled weights, app-owned model pack activation, workspace bootstrap, workspace search, deterministic first cowork request, packaged Web Search execution with bounded source snapshots, workspace write denial and approval, bundled MCP plugin command execution, connector authorization and approval, sandbox readiness, thread creation, runner memory capture, runtime recovery, and runtime database initialization.
 - `test_create_macos_dmg.py`: checks DMG staging behavior that does not require macOS.
 - `test_ci_changes.py`: checks CI change-lane classification rules.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.
 - `test_release_text.py`: checks release notes and DMG install guide copy generation.
+- `test_smoke_launch_macos_app.py`: checks packaged app smoke validators that do not require macOS.
 - `validate_macos_distribution.py`: checks Developer ID signing, Gatekeeper assessment, and optional notarized DMG validation for public macOS distribution builds.
 - `validate_model_pack.py`: validates local model pack metadata and first-use resource packaging; use `--remote` during release audits.
 - `validate_workflows.py`: validates GitHub Actions structure so checkout credentials, artifact retention, CI lane splits, package dependencies, and release assets do not regress.

@@ -94,8 +94,9 @@ Current state:
 - The app reads packaged distribution metadata and presents the same
   Developer ID or ad-hoc Gatekeeper trust path that the DMG install guide uses.
 - Packaged smoke covers first-use model metadata, app-owned model activation,
-  workspace opening, Web Search, approval-gated writes, runtime restart, and
-  recovery of model, workspace, thread, and readiness state.
+  workspace opening, Web Search source snapshots, approval-gated writes,
+  runtime restart, and recovery of model, workspace, thread, and readiness
+  state.
 - Web Search now preserves a bounded search-result snapshot with a stable hash
   while clearly reporting that page contents were not fetched.
 - The model manager now surfaces explicit first-run recovery guidance for

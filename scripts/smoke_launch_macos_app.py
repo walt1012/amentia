@@ -22,6 +22,8 @@ APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
 WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
+WEB_SEARCH_SNAPSHOT_KIND = "searchResults"
+WEB_SEARCH_SNAPSHOT_HASH_LENGTH = 16
 NOTION_CONNECTOR_ID = "notion-connector::notion"
 NOTION_PLUGIN_ID = "notion-connector"
 NOTION_COMMAND_ID = "notion-connector::notion.prepare-page-draft"
@@ -416,6 +418,14 @@ def timeline_item_summary(items: list[dict]) -> str:
     "pluginRunnerRecoveryHint",
     "pluginRunnerStderrPreview",
     "pluginRunnerStdoutPreview",
+    "pageFetchPerformed",
+    "sourceSnapshotAvailable",
+    "sourceSnapshotHash",
+    "sourceSnapshotKind",
+    "sourceSnapshotResultCount",
+    "sourceTitles",
+    "sourceUrls",
+    "webSearchSourceMode",
   }
   for item in items:
     attributes = item.get("attributes", {})
@@ -805,6 +815,71 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
     )
   if not any(item["kind"] == "assistantMessage" for item in items):
     raise RuntimeError("Packaged web search turn did not produce an assistant item.")
+  validate_packaged_web_search_snapshot(items)
+
+
+def validate_packaged_web_search_snapshot(items: list[dict]) -> None:
+  assistant_item = next(
+    (
+      item
+      for item in items
+      if item["kind"] == "assistantMessage"
+      and item.get("attributes", {}).get("handoffKind") == "webSearchSources"
+    ),
+    None,
+  )
+  if assistant_item is None:
+    raise RuntimeError(
+      "Packaged web search turn did not produce a source handoff. "
+      f"Items: {timeline_item_summary(items)}"
+    )
+
+  attributes = assistant_item.get("attributes", {})
+  expected_attributes = {
+    "webSearchSourceMode": "searchResultAttribution",
+    "pageFetchPerformed": "false",
+    "sourceSnapshotAvailable": "true",
+    "sourceSnapshotKind": WEB_SEARCH_SNAPSHOT_KIND,
+    "sourceSnapshotResultCount": "1",
+  }
+  for key, expected_value in expected_attributes.items():
+    actual_value = attributes.get(key)
+    if actual_value != expected_value:
+      raise RuntimeError(
+        f"Packaged web search source attribute {key} was {actual_value!r}, "
+        f"expected {expected_value!r}. Items: {timeline_item_summary(items)}"
+      )
+
+  source_snapshot = attributes.get("sourceSnapshot", "")
+  required_snapshot_fragments = [
+    "Pith packaged web search fixture",
+    "https://example.com/pith-packaged-smoke",
+    "Deterministic packaged web search result.",
+    "fixture",
+  ]
+  for fragment in required_snapshot_fragments:
+    if fragment not in source_snapshot:
+      raise RuntimeError(
+        "Packaged web search source snapshot missed expected evidence. "
+        f"Missing: {fragment!r}. Snapshot: {source_snapshot[:500]}"
+      )
+
+  source_hash = attributes.get("sourceSnapshotHash", "")
+  if len(source_hash) != WEB_SEARCH_SNAPSHOT_HASH_LENGTH:
+    raise RuntimeError(
+      "Packaged web search source snapshot hash had unexpected length: "
+      f"{source_hash!r}"
+    )
+  if attributes.get("sourceUrls") != "https://example.com/pith-packaged-smoke":
+    raise RuntimeError(
+      "Packaged web search source URL was not preserved in the handoff. "
+      f"Attributes: {attributes}"
+    )
+  if attributes.get("sourceTitles") != "Pith packaged web search fixture":
+    raise RuntimeError(
+      "Packaged web search source title was not preserved in the handoff. "
+      f"Attributes: {attributes}"
+    )
 
 
 def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None:

@@ -137,6 +137,9 @@ jobs:
       - name: Test release text helper
         run: python3 scripts/test_release_text.py
 
+      - name: Test packaged smoke helper
+        run: python3 scripts/test_smoke_launch_macos_app.py
+
   rust-format:
     name: Rust format
     runs-on: ubuntu-latest
