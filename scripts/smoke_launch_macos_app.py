@@ -201,6 +201,13 @@ def terminate_process(process: subprocess.Popen[str]) -> None:
     process.wait(timeout=5)
 
 
+def kill_process(process: subprocess.Popen[str]) -> None:
+  if process.poll() is not None:
+    return
+  process.kill()
+  process.wait(timeout=5)
+
+
 def terminate_process_with_output(process: subprocess.Popen[str]) -> tuple[str, str]:
   terminate_process(process)
   stdout, stderr = process.communicate(timeout=1)
@@ -765,17 +772,18 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
     manifest_path, model_path = write_smoke_model_pack(support_dir)
     backend_path = write_deterministic_llama_backend_fixture(support_dir)
     web_search_fixture_path = write_web_search_fixture(support_dir)
+    runtime_environment = {
+      "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
+      "PITH_MODEL_PATH": str(model_path),
+      "PITH_LFM_MODEL_PATH": str(model_path),
+      "PITH_LLAMACPP_PATH": str(backend_path),
+      "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
+      "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
+    }
     process = launch_runtime_process(
       app_path,
       support_dir,
-      {
-        "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
-        "PITH_MODEL_PATH": str(model_path),
-        "PITH_LFM_MODEL_PATH": str(model_path),
-        "PITH_LLAMACPP_PATH": str(backend_path),
-        "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
-        "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
-      },
+      runtime_environment,
     )
     try:
       initialize = send_runtime_request(
@@ -829,12 +837,90 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
       )
       validate_packaged_web_search_turn(process)
       validate_packaged_mcp_plugin_command(process)
+      process = validate_packaged_runtime_recovery(
+        process,
+        app_path,
+        support_dir,
+        runtime_environment,
+      )
       print(
         "Packaged first cowork smoke passed with deterministic local model "
         f"under {support_dir}"
       )
     finally:
       terminate_process(process)
+
+
+def validate_packaged_runtime_recovery(
+  process: subprocess.Popen[str],
+  app_path: Path,
+  support_dir: Path,
+  runtime_environment: dict[str, str],
+) -> subprocess.Popen[str]:
+  kill_process(process)
+  recovered_process = launch_runtime_process(app_path, support_dir, runtime_environment)
+  try:
+    initialize = send_runtime_request(
+      recovered_process,
+      30,
+      "initialize",
+      {
+        "clientInfo": {
+          "name": "packaged-runtime-recovery-smoke",
+          "version": "0.1.0",
+        }
+      },
+    )
+    if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+      raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
+
+    model_health = send_runtime_request(recovered_process, 31, "model/health")
+    if model_health["result"]["status"] != "ready":
+      raise RuntimeError(
+        "Packaged runtime recovery did not restore the ready local model: "
+        f"{model_health['result']}"
+      )
+
+    workspace_current = send_runtime_request(recovered_process, 32, "workspace/current")
+    workspace = workspace_current["result"]["workspace"]
+    expected_workspace = str(support_dir / "workspace")
+    if workspace["rootPath"] != expected_workspace:
+      raise RuntimeError(
+        "Packaged runtime recovery restored the wrong workspace: "
+        f"{workspace['rootPath']}"
+      )
+
+    recovered_thread = send_runtime_request(
+      recovered_process,
+      33,
+      "thread/read",
+      {
+        "threadId": "thread-1",
+      },
+    )
+    if recovered_thread["result"]["thread"]["title"] != "Packaged Runtime Smoke":
+      raise RuntimeError("Packaged runtime recovery did not restore the smoke thread.")
+
+    recovered_readiness = send_runtime_request(recovered_process, 34, "runtime/readiness")
+    validate_runtime_readiness(
+      recovered_readiness,
+      {
+        "localModel": "ready",
+        "workspace": "ready",
+        "thread": "ready",
+        "firstRequest": "ready",
+        "context": "ready",
+        "executionControls": "ready",
+        "plugins": "ready",
+        "boundedRuntime": "ready",
+      },
+      expected_status="ready",
+      workspace_open=True,
+    )
+    return recovered_process
+  except Exception:
+    terminate_process(recovered_process)
+    raise
 
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:

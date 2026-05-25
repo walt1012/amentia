@@ -89,6 +89,8 @@ Current state:
 - Done: first-use UI copy now frames setup completion as starting a cowork
   session, not a coding-only prompt.
 - Done: packaged smoke naming now follows the same first cowork request path.
+- Done: packaged smoke now kills and restarts the runtime after the first
+  cowork flow, then verifies model, workspace, thread, and readiness recovery.
 
 M8 work order:
 
