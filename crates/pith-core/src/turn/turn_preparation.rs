@@ -1,17 +1,10 @@
 use std::collections::HashMap;
-use std::path::Path;
 
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::WorkspaceSummary;
 
-use super::turn_plugin_routing::{
-  infer_explicit_plugin_command_route, infer_natural_plugin_command_route,
-  ExplicitPluginCommandRoute,
-};
-use crate::intent_inference::{
-  infer_explicit_web_search_intent, infer_fresh_web_search_intent, infer_model_web_search_intent,
-  infer_requested_file_path, infer_search_query, infer_shell_command, infer_write_intent,
-};
+use super::turn_plugin_routing::ExplicitPluginCommandRoute;
+use super::turn_tool_planning::{plan_initial_turn_tool, InitialToolPlan};
 use crate::plugin_commands::prepare_plugin_command_turn_snapshot;
 use crate::plugin_permissions::permission_is_granted;
 use crate::request_state::PreparedTurnAction;
@@ -25,64 +18,54 @@ pub(crate) fn prepare_turn_action(
   permission_sources: &HashMap<String, Vec<String>>,
   cancellation: GenerationCancellation,
 ) -> PreparedTurnAction {
-  if let Some(intent) = infer_explicit_web_search_intent(message) {
-    return PreparedTurnAction::WebSearch(intent);
-  }
+  let plan = plan_initial_turn_tool(message, workspace, context.plugin_state.catalog());
+  materialize_initial_tool_plan(
+    context,
+    thread_id,
+    workspace,
+    permission_sources,
+    cancellation,
+    plan,
+  )
+}
 
-  if let Some(route) = infer_explicit_plugin_command_route(message) {
-    return prepare_plugin_route_action(context, thread_id, workspace, route, cancellation);
-  }
-
-  if let Some(route) = infer_natural_plugin_command_route(message, context.plugin_state.catalog()) {
-    return prepare_plugin_route_action(context, thread_id, workspace, route, cancellation);
-  }
-
-  let Some(workspace) = workspace else {
-    if let Some(intent) = infer_fresh_web_search_intent(message) {
-      return PreparedTurnAction::WebSearchCandidate(intent);
+fn materialize_initial_tool_plan(
+  context: &mut RuntimeContext,
+  thread_id: &str,
+  workspace: Option<&WorkspaceSummary>,
+  permission_sources: &HashMap<String, Vec<String>>,
+  cancellation: GenerationCancellation,
+  plan: InitialToolPlan,
+) -> PreparedTurnAction {
+  match plan {
+    InitialToolPlan::WebSearch { intent } => PreparedTurnAction::WebSearch(intent),
+    InitialToolPlan::PluginCommand { route } => {
+      prepare_plugin_route_action(context, thread_id, workspace, route, cancellation)
     }
-    if let Some(intent) = infer_model_web_search_intent(message) {
-      return PreparedTurnAction::WebSearchCandidate(intent);
+    InitialToolPlan::NoWorkspace => PreparedTurnAction::NoWorkspace,
+    InitialToolPlan::Write { intent } => {
+      let approval_id = permission_is_granted(permission_sources, "file.write")
+        .then(|| reserve_approval_id(context));
+      PreparedTurnAction::Write {
+        intent,
+        approval_id,
+      }
     }
-    return PreparedTurnAction::NoWorkspace;
-  };
-  let workspace_root = Path::new(&workspace.root_path);
-
-  if let Some(intent) = infer_write_intent(message) {
-    let approval_id =
-      permission_is_granted(permission_sources, "file.write").then(|| reserve_approval_id(context));
-    return PreparedTurnAction::Write {
-      intent,
-      approval_id,
-    };
+    InitialToolPlan::Shell { command } => {
+      let approval_id = permission_is_granted(permission_sources, "shell.exec")
+        .then(|| reserve_approval_id(context));
+      PreparedTurnAction::Shell {
+        command,
+        approval_id,
+      }
+    }
+    InitialToolPlan::ReadFile { relative_path } => PreparedTurnAction::ReadFile { relative_path },
+    InitialToolPlan::Search { query } => PreparedTurnAction::Search { query },
+    InitialToolPlan::WebSearchCandidate { intent } => {
+      PreparedTurnAction::WebSearchCandidate(intent)
+    }
+    InitialToolPlan::ListWorkspace => PreparedTurnAction::ListWorkspace,
   }
-
-  if let Some(command) = infer_shell_command(message) {
-    let approval_id =
-      permission_is_granted(permission_sources, "shell.exec").then(|| reserve_approval_id(context));
-    return PreparedTurnAction::Shell {
-      command,
-      approval_id,
-    };
-  }
-
-  if let Some(relative_path) = infer_requested_file_path(message, workspace_root) {
-    return PreparedTurnAction::ReadFile { relative_path };
-  }
-
-  if let Some(intent) = infer_fresh_web_search_intent(message) {
-    return PreparedTurnAction::WebSearchCandidate(intent);
-  }
-
-  if let Some(query) = infer_search_query(message) {
-    return PreparedTurnAction::Search { query };
-  }
-
-  if let Some(intent) = infer_model_web_search_intent(message) {
-    return PreparedTurnAction::WebSearchCandidate(intent);
-  }
-
-  PreparedTurnAction::ListWorkspace
 }
 
 fn reserve_approval_id(context: &mut RuntimeContext) -> String {

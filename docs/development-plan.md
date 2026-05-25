@@ -73,9 +73,10 @@ Current state:
   `docs/handoff.md` into a local Notion-style draft flow.
 - Done: saved artifact connector inputs include bounded, workspace-safe previews
   before local drafts claim they are based on those files.
-- Active gap: tool and connector selection is still mostly lexical routing; M7
-  needs a small-model-friendly planning contract before more connectors are
-  added.
+- Done: initial tool selection now has a compact planning contract before
+  execution preparation.
+- Active gap: connector selection still uses deterministic lexical scoring; M7
+  should add model-assisted disambiguation before broadening connector coverage.
 - Active gap: connector actions are still local drafts; the next step is a
   clear inspect-before-remote-write flow.
 
@@ -86,7 +87,7 @@ M7 work order:
 2. Continue from approved writes into concise next-step handoffs.
 3. Feed saved artifacts into connector drafts as bounded content, not only as
    path labels.
-4. Add a compact tool-planning contract so the model can choose among safe
+4. Extend the compact tool-planning contract so the model can disambiguate safe
    tools and connectors without growing brittle keyword routes.
 5. Harden connector updates around real cowork tasks, not demo commands.
 6. Keep UI polish focused on clarity around setup, approvals, sources, and

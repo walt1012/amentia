@@ -18,6 +18,7 @@ pub(crate) mod turn_step_dispatcher;
 pub(crate) mod turn_streaming;
 pub(crate) mod turn_streaming_progress;
 pub(crate) mod turn_tool_limits;
+pub(crate) mod turn_tool_planning;
 pub(crate) mod turn_tool_provenance;
 pub(crate) mod turn_web_search;
 pub(crate) mod turn_web_search_timeline;
