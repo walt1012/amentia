@@ -197,7 +197,10 @@ fn route_planning_attributes(
     ),
   ]);
   let Some(scores) = scores else {
-    attributes.insert("toolPlanningSelectionState".to_string(), "direct".to_string());
+    attributes.insert(
+      "toolPlanningSelectionState".to_string(),
+      "direct".to_string(),
+    );
     return attributes;
   };
 
@@ -215,11 +218,17 @@ fn route_planning_attributes(
   );
   let selection_state = match scores.second_score {
     Some(second_score) if second_score == scores.selected_score => {
-      attributes.insert("toolPlanningSecondScore".to_string(), second_score.to_string());
+      attributes.insert(
+        "toolPlanningSecondScore".to_string(),
+        second_score.to_string(),
+      );
       "deterministicTieBreak"
     }
     Some(second_score) => {
-      attributes.insert("toolPlanningSecondScore".to_string(), second_score.to_string());
+      attributes.insert(
+        "toolPlanningSecondScore".to_string(),
+        second_score.to_string(),
+      );
       "deterministicRanked"
     }
     None => "deterministicSingle",

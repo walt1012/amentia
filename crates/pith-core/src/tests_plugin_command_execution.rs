@@ -929,10 +929,7 @@ fn turn_start_routes_natural_non_notion_connector_command() {
     items[1]["attributes"]["toolPlanningSelectedCommandId"],
     "linear-runner::linear.update"
   );
-  assert_eq!(
-    items[1]["attributes"]["toolPlanningCandidateCount"],
-    "1"
-  );
+  assert_eq!(items[1]["attributes"]["toolPlanningCandidateCount"], "1");
   assert_eq!(
     items[1]["attributes"]["toolPlanningSelectionState"],
     "deterministicSingle"

@@ -98,11 +98,8 @@ fn prepare_plugin_route_action(
     },
     Err(error) => PreparedTurnAction::PluginCommandRouteFailed {
       attributes: {
-        let mut attributes = error.route_failure_attributes(
-          &command_id,
-          routing_reason,
-          route_input.as_deref(),
-        );
+        let mut attributes =
+          error.route_failure_attributes(&command_id, routing_reason, route_input.as_deref());
         attributes.extend(planning_attributes);
         attributes
       },
