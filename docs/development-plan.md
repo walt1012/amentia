@@ -91,9 +91,8 @@ Current state:
 - Done: packaged smoke naming now follows the same first cowork request path.
 - Done: packaged smoke now kills and restarts the runtime after the first
   cowork flow, then verifies model, workspace, thread, and readiness recovery.
-- Done: packaged smoke now proves a local workspace write approval before
-  plugin connector approval, then verifies that approved work survives runtime
-  recovery.
+- Done: packaged smoke now proves denied local writes do not touch disk,
+  approved local writes do, and approved work survives runtime recovery.
 
 M8 work order:
 

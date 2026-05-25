@@ -664,7 +664,7 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
 def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None:
   enable = send_runtime_request(
     process,
-    27,
+    29,
     "plugin/setEnabled",
     {
       "pluginId": NOTION_PLUGIN_ID,
@@ -678,7 +678,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   authorize = send_runtime_request(
     process,
-    28,
+    30,
     "plugin/connectorAuthorize",
     {
       "connectorId": NOTION_CONNECTOR_ID,
@@ -698,7 +698,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   command = send_runtime_request(
     process,
-    29,
+    31,
     "plugin/commandRun",
     {
       "threadId": "thread-1",
@@ -725,7 +725,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   approved = send_runtime_request(
     process,
-    30,
+    32,
     "approval/respond",
     {
       "approvalId": approval["id"],
@@ -757,7 +757,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
       f"Items: {timeline_item_summary(items)}"
     )
 
-  memory_list = send_runtime_request(process, 31, "memory/list")
+  memory_list = send_runtime_request(process, 33, "memory/list")
   if not any(
     note["title"] == "Notion Draft Prepared"
     and note["source"] == "plugin.notion-connector"
@@ -770,40 +770,17 @@ def validate_packaged_workspace_write_approval(
   process: subprocess.Popen[str],
   support_dir: Path,
 ) -> None:
-  write_turn = send_runtime_request(
+  validate_packaged_workspace_write_denial(process, support_dir)
+  approval = request_packaged_workspace_write(
     process,
-    25,
-    "turn/start",
-    {
-      "threadId": "thread-1",
-      "message": "Write docs/packaged-output.txt: Created from packaged approval flow",
-    },
+    27,
+    "docs/packaged-output.txt",
+    "Created from packaged approval flow",
   )
-  pending_approvals = write_turn["result"]["pendingApprovals"]
-  if len(pending_approvals) != 1:
-    raise RuntimeError(
-      "Packaged workspace write should request one approval. "
-      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
-    )
-
-  approval = pending_approvals[0]
-  if approval["action"] != "write_file":
-    raise RuntimeError("Packaged workspace write requested the wrong approval action.")
-  if approval["relativePath"] != "docs/packaged-output.txt":
-    raise RuntimeError("Packaged workspace write approval had the wrong path.")
-  if not any(
-    item["kind"] == "diffArtifact"
-    and "+++ b/docs/packaged-output.txt" in item["content"]
-    for item in write_turn["result"]["items"]
-  ):
-    raise RuntimeError(
-      "Packaged workspace write did not expose a diff before approval. "
-      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
-    )
 
   approved = send_runtime_request(
     process,
-    26,
+    28,
     "approval/respond",
     {
       "approvalId": approval["id"],
@@ -824,6 +801,84 @@ def validate_packaged_workspace_write_approval(
   output_path = support_dir / "workspace" / "docs" / "packaged-output.txt"
   if output_path.read_text(encoding="utf-8") != "Created from packaged approval flow":
     raise RuntimeError("Packaged workspace write approval wrote unexpected content.")
+
+
+def validate_packaged_workspace_write_denial(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  approval = request_packaged_workspace_write(
+    process,
+    25,
+    "docs/packaged-denied.txt",
+    "Denied packaged approval flow",
+  )
+
+  denied = send_runtime_request(
+    process,
+    26,
+    "approval/respond",
+    {
+      "approvalId": approval["id"],
+      "decision": "denied",
+    },
+  )
+  if not any(
+    item["kind"] == "approvalResolved"
+    and item["title"] == "Approval Denied"
+    and item.get("attributes", {}).get("decision") == "denied"
+    and item.get("attributes", {}).get("relativePath") == "docs/packaged-denied.txt"
+    for item in denied["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write denial did not resolve the approval as denied. "
+      f"Items: {timeline_item_summary(denied['result']['items'])}"
+    )
+  if any(item["title"] == "write_file result" for item in denied["result"]["items"]):
+    raise RuntimeError("Packaged workspace write denial still executed write_file.")
+
+  denied_path = support_dir / "workspace" / "docs" / "packaged-denied.txt"
+  if denied_path.exists():
+    raise RuntimeError("Packaged workspace write denial wrote a file.")
+
+
+def request_packaged_workspace_write(
+  process: subprocess.Popen[str],
+  request_id: int,
+  relative_path: str,
+  content: str,
+) -> dict:
+  write_turn = send_runtime_request(
+    process,
+    request_id,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": f"Write {relative_path}: {content}",
+    },
+  )
+  pending_approvals = write_turn["result"]["pendingApprovals"]
+  if len(pending_approvals) != 1:
+    raise RuntimeError(
+      "Packaged workspace write should request one approval. "
+      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
+    )
+
+  approval = pending_approvals[0]
+  if approval["action"] != "write_file":
+    raise RuntimeError("Packaged workspace write requested the wrong approval action.")
+  if approval["relativePath"] != relative_path:
+    raise RuntimeError("Packaged workspace write approval had the wrong path.")
+  if not any(
+    item["kind"] == "diffArtifact"
+    and f"+++ b/{relative_path}" in item["content"]
+    for item in write_turn["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write did not expose a diff before approval. "
+      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
+    )
+  return approval
 
 
 def validate_packaged_first_cowork_request(app_path: Path) -> None:
@@ -923,7 +978,7 @@ def validate_packaged_runtime_recovery(
   try:
     initialize = send_runtime_request(
       recovered_process,
-      32,
+      34,
       "initialize",
       {
         "clientInfo": {
@@ -935,14 +990,14 @@ def validate_packaged_runtime_recovery(
     if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
       raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
 
-    model_health = send_runtime_request(recovered_process, 33, "model/health")
+    model_health = send_runtime_request(recovered_process, 35, "model/health")
     if model_health["result"]["status"] != "ready":
       raise RuntimeError(
         "Packaged runtime recovery did not restore the ready local model: "
         f"{model_health['result']}"
       )
 
-    workspace_current = send_runtime_request(recovered_process, 34, "workspace/current")
+    workspace_current = send_runtime_request(recovered_process, 36, "workspace/current")
     workspace = workspace_current["result"]["workspace"]
     expected_workspace = (support_dir / "workspace").resolve()
     actual_workspace = Path(workspace["rootPath"]).resolve()
@@ -954,7 +1009,7 @@ def validate_packaged_runtime_recovery(
 
     recovered_thread = send_runtime_request(
       recovered_process,
-      35,
+      37,
       "thread/read",
       {
         "threadId": "thread-1",
@@ -967,7 +1022,7 @@ def validate_packaged_runtime_recovery(
     if recovered_output.read_text(encoding="utf-8") != "Created from packaged approval flow":
       raise RuntimeError("Packaged runtime recovery lost the approved workspace write.")
 
-    recovered_readiness = send_runtime_request(recovered_process, 36, "runtime/readiness")
+    recovered_readiness = send_runtime_request(recovered_process, 38, "runtime/readiness")
     validate_runtime_readiness(
       recovered_readiness,
       {
