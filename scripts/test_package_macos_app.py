@@ -16,6 +16,7 @@ from macos_llama_backend import (
 )
 from package_macos_app import (
   LLAMA_BACKEND_RELATIVE_PARENT,
+  assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
   copy_required_llama_backend,
   normalize_version,
@@ -78,6 +79,33 @@ def main() -> int:
     raise AssertionError("dylib dependencies should allow packaged loader paths")
   if is_packaged_backend_dependency("/external/package-manager/lib/libllama.dylib", True):
     raise AssertionError("absolute non-system dependency paths should be rejected")
+
+  with tempfile.TemporaryDirectory(prefix="pith-package-copy-") as root:
+    root_path = Path(root)
+    executable = root_path / "Pith.app" / "Contents" / "MacOS" / "Pith"
+    executable.parent.mkdir(parents=True)
+    executable.write_text(
+      "\n".join(
+        [
+          "Recovery: launch the runtime",
+          "paused downloads",
+          "selected model state are read from local storage",
+          "to keep resume data",
+          "cancel to clear the partial file",
+          "from saved resume data",
+          "reinstall metadata if readiness still fails",
+          "Open Anyway",
+          "Control-click Pith.app",
+        ]
+      ),
+      encoding="utf-8",
+    )
+    assert_packaged_app_copy_is_present(root_path / "Pith.app")
+    executable.write_text("Recovery: launch the runtime\n", encoding="utf-8")
+    assert_raises(
+      lambda: assert_packaged_app_copy_is_present(root_path / "Pith.app"),
+      "missing packaged recovery copy should fail package validation",
+    )
 
   assert_zip_entries_are_safe(
     Path("Pith-macos-x86_64.zip"),

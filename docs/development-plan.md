@@ -99,6 +99,8 @@ Current state:
 - The model manager now surfaces explicit first-run recovery guidance for
   paused downloads, runtime relaunch, downloaded-but-inactive models, and
   partial-file cleanup.
+- Package validation checks that the compiled app executable still contains the
+  first-run recovery and Gatekeeper trust copy required by the release path.
 - Package gates reject bundled GGUF weights, unsafe zip entries, path
   traversal, symlink leakage, and non-`x86_64` executable outputs.
 - CI structure is change-aware and guarded by workflow policy checks, but CI
@@ -106,8 +108,8 @@ Current state:
 
 M8 work order:
 
-- Add packaged smoke coverage for visible first-run recovery copy after model
-  download interruption and runtime relaunch.
+- Keep packaged smoke focused on real user journeys; add UI automation for
+  visible recovery copy only after the app has a stable UI automation harness.
 - Add stronger Web Search source snapshots only if cowork tasks require more
   evidence than search-result attribution.
 - Keep MCP one-shot until a real connector workflow proves persistent local

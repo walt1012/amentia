@@ -86,6 +86,17 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "web-search": {"tool:web_search"},
   "workspace-notes": {"command:workspace.capture-note"},
 }
+REQUIRED_APP_COPY_SNIPPETS = (
+  "Recovery: launch the runtime",
+  "paused downloads",
+  "selected model state are read from local storage",
+  "to keep resume data",
+  "cancel to clear the partial file",
+  "from saved resume data",
+  "reinstall metadata if readiness still fails",
+  "Open Anyway",
+  "Control-click Pith.app",
+)
 
 
 def run(command: list[str], cwd: Path) -> str:
@@ -432,6 +443,7 @@ def validate_app_bundle(
     app_path / "Contents" / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT
   )
   assert_llama_backend_dependencies_match_arch(app_path)
+  assert_packaged_app_copy_is_present(app_path)
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
@@ -568,6 +580,35 @@ def assert_packaged_model_manifest_is_downloadable(app_path: Path) -> None:
     raise RuntimeError("Packaged default model context_size exceeds model_context_size")
   if max_output_tokens > context_size:
     raise RuntimeError("Packaged default model max_output_tokens exceeds context_size")
+
+
+def assert_packaged_app_copy_is_present(app_path: Path) -> None:
+  executable_path = app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME
+  text = packaged_executable_text(executable_path)
+  missing = [
+    snippet
+    for snippet in REQUIRED_APP_COPY_SNIPPETS
+    if snippet not in text
+  ]
+  if missing:
+    raise RuntimeError(
+      "Packaged app executable is missing required user-facing copy: "
+      + ", ".join(missing)
+    )
+
+
+def packaged_executable_text(executable_path: Path) -> str:
+  require_file(executable_path, "packaged app executable")
+  try:
+    result = subprocess.run(
+      ["strings", str(executable_path)],
+      check=True,
+      capture_output=True,
+      text=True,
+    )
+    return result.stdout
+  except (FileNotFoundError, subprocess.CalledProcessError, UnicodeDecodeError):
+    return executable_path.read_bytes().decode("utf-8", errors="ignore")
 
 
 def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
