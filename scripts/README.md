@@ -11,7 +11,7 @@ Planned uses:
 Current scripts:
 
 - `check_english_policy.py`: rejects source and documentation text that violates the repository English-only policy.
-- `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`.
+- `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide when provided.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds.

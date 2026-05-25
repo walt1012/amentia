@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import stat
 import tempfile
+import zipfile
 from pathlib import Path
 
 from macos_llama_backend import (
@@ -15,6 +16,7 @@ from macos_llama_backend import (
 )
 from package_macos_app import (
   LLAMA_BACKEND_RELATIVE_PARENT,
+  assert_zip_entries_are_safe,
   copy_required_llama_backend,
   normalize_version,
   parse_lipo_architectures,
@@ -24,6 +26,14 @@ from package_macos_app import (
 def assert_equal(actual: object, expected: object) -> None:
   if actual != expected:
     raise AssertionError(f"expected {expected!r}, got {actual!r}")
+
+
+def assert_raises(action, message: str) -> None:
+  try:
+    action()
+  except RuntimeError:
+    return
+  raise AssertionError(message)
 
 
 def main() -> int:
@@ -68,6 +78,31 @@ def main() -> int:
     raise AssertionError("dylib dependencies should allow packaged loader paths")
   if is_packaged_backend_dependency("/external/package-manager/lib/libllama.dylib", True):
     raise AssertionError("absolute non-system dependency paths should be rejected")
+
+  assert_zip_entries_are_safe(
+    Path("Pith-macos-x86_64.zip"),
+    [zipfile.ZipInfo("Pith.app/Contents/Resources/models/builtin/model-pack.json")],
+  )
+  assert_raises(
+    lambda: assert_zip_entries_are_safe(
+      Path("Pith-macos-x86_64.zip"),
+      [zipfile.ZipInfo("Pith.app/Contents/Resources/models/builtin/local.gguf")],
+    ),
+    "zip model weights should be rejected",
+  )
+  assert_raises(
+    lambda: assert_zip_entries_are_safe(
+      Path("Pith-macos-x86_64.zip"),
+      [zipfile.ZipInfo("../Pith.app/Contents/Info.plist")],
+    ),
+    "zip path traversal should be rejected",
+  )
+  symlink_entry = zipfile.ZipInfo("Pith.app/Contents/Resources/link")
+  symlink_entry.external_attr = (stat.S_IFLNK | 0o777) << 16
+  assert_raises(
+    lambda: assert_zip_entries_are_safe(Path("Pith-macos-x86_64.zip"), [symlink_entry]),
+    "zip symlinks should be rejected",
+  )
 
   with tempfile.TemporaryDirectory(prefix="pith-package-test-") as root:
     root_path = Path(root)

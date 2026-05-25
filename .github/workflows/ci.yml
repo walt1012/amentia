@@ -377,11 +377,25 @@ jobs:
           fi
           exit "$status"
 
-      - name: Smoke launch packaged macOS app
-        run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
+      - name: Create internal release copy
+        run: |
+          set -euo pipefail
+          python3 scripts/release_text.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --signing-mode ad-hoc \
+            --allow-untrusted-ad-hoc false \
+            --draft true \
+            --install-guide-output artifacts/macos/README-FIRST.txt \
+            --notes-output artifacts/macos/internal-release-notes.md
 
       - name: Create internal macOS disk image
-        run: python3 scripts/create_macos_dmg.py artifacts/macos/Pith.app "artifacts/macos/$MACOS_DMG_NAME"
+        run: |
+          set -euo pipefail
+          python3 scripts/create_macos_dmg.py \
+            artifacts/macos/Pith.app \
+            "artifacts/macos/$MACOS_DMG_NAME" \
+            --readme-file artifacts/macos/README-FIRST.txt \
+            --smoke-launch-script scripts/smoke_launch_macos_app.py
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
@@ -390,4 +404,6 @@ jobs:
           path: |
             artifacts/macos/Pith-macos-x86_64.zip
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
+            artifacts/macos/README-FIRST.txt
+            artifacts/macos/internal-release-notes.md
           if-no-files-found: error

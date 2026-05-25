@@ -95,6 +95,12 @@ Current state:
   approved local writes do, and approved work survives runtime recovery.
 - Done: packaged smoke now verifies first-use model metadata and proves the app
   package does not bundle GGUF weights.
+- Done: CI internal DMGs now include and validate `README-FIRST.txt`, so the
+  daily package gate proves the same install guidance users see in releases.
+- Done: zip safety tests now cover model-weight leakage, path traversal, and
+  symlink entries, keeping the release zip aligned with the DMG safety bar.
+- Done: packaged smoke now runs against the app mounted from the internal DMG,
+  so CI proves the downloadable installer path instead of only the raw bundle.
 
 M8 work order:
 

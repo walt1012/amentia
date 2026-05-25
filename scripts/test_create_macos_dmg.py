@@ -6,7 +6,14 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from create_macos_dmg import APPLICATIONS_LINK_NAME, APP_NAME, stage_dmg_contents
+from create_macos_dmg import (
+  APPLICATIONS_LINK_NAME,
+  APP_NAME,
+  README_NAME,
+  stage_dmg_contents,
+  validate_install_readme_text,
+)
+from release_text import install_guide
 
 
 def require(condition: bool, message: str) -> None:
@@ -31,6 +38,7 @@ def can_create_symlink(root: Path) -> bool:
 
 
 def main() -> int:
+  validate_install_readme_text(install_guide("v0.1.0", "ad-hoc"))
   with tempfile.TemporaryDirectory(prefix="pith-dmg-stage-test-") as root:
     root_path = Path(root)
     if not can_create_symlink(root_path):
@@ -42,7 +50,7 @@ def main() -> int:
     readme_file = root_path / "install-readme.txt"
     create_fake_app(app_path)
     staging_dir.mkdir()
-    readme_file.write_text("Install Pith by dragging it to Applications.", encoding="utf-8")
+    readme_file.write_text(install_guide("v0.1.0", "ad-hoc"), encoding="utf-8")
 
     stage_dmg_contents(app_path, staging_dir, readme_file)
 
@@ -54,8 +62,8 @@ def main() -> int:
       "Applications shortcut points to the wrong target",
     )
     require(
-      (staging_dir / "README-FIRST.txt").read_text(encoding="utf-8")
-      == "Install Pith by dragging it to Applications.",
+      (staging_dir / README_NAME).read_text(encoding="utf-8")
+      == install_guide("v0.1.0", "ad-hoc"),
       "install readme was not staged",
     )
 
