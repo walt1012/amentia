@@ -32,6 +32,12 @@ change detection job keeps docs-only changes on fast policy checks while
 workflow, Rust, Swift, packaging, model, plugin, and release script changes
 still trigger the relevant heavy gates.
 
+The repository policy suite also runs `scripts/validate_workflows.py`. That
+check guards the workflow structure itself: checkout credentials stay disabled,
+artifact uploads keep bounded retention, Rust lanes stay split, package
+assembly does not wait behind Swift logic tests, and release jobs keep the CI
+gate plus the required DMG, checksum, install guide, and manifest assets.
+
 Rust formatting, clippy, tests, and runtime smoke run as separate jobs so
 failures surface earlier instead of waiting behind a single serial Rust lane.
 The final macOS package job depends only on executable-producing lanes: Swift

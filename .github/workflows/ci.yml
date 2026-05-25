@@ -119,6 +119,12 @@ jobs:
       - name: Test CI change classifier
         run: python3 scripts/test_ci_changes.py
 
+      - name: Validate workflow structure
+        run: python3 scripts/validate_workflows.py
+
+      - name: Test workflow structure policy
+        run: python3 scripts/test_validate_workflows.py
+
       - name: Test DMG staging helper
         run: python3 scripts/test_create_macos_dmg.py
 

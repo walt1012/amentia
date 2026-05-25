@@ -24,10 +24,13 @@ Current scripts:
 - `test_create_macos_dmg.py`: checks DMG staging behavior that does not require macOS.
 - `test_ci_changes.py`: checks CI change-lane classification rules.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
+- `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.
 - `test_release_text.py`: checks release notes and DMG install guide copy generation.
 - `validate_macos_distribution.py`: checks Developer ID signing, Gatekeeper assessment, and optional notarized DMG validation for public macOS distribution builds.
 - `validate_model_pack.py`: validates local model pack metadata and first-use resource packaging; use `--remote` during release audits.
+- `validate_workflows.py`: validates GitHub Actions structure so checkout credentials, artifact retention, CI lane splits, package dependencies, and release assets do not regress.
+- `test_validate_workflows.py`: checks workflow structure policy behavior without invoking GitHub Actions.
 
 These scripts are safe to run locally when a matching toolchain exists, but CI is the canonical
 execution environment.

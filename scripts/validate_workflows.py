@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""Validate GitHub Actions workflow structure for fast, safe CI."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+
+CI_WORKFLOW = ".github/workflows/ci.yml"
+RELEASE_WORKFLOW = ".github/workflows/release.yml"
+REQUIRED_CI_JOBS = (
+  "changes",
+  "repository-policy",
+  "rust-format",
+  "rust-clippy",
+  "rust-test",
+  "runtime-smoke",
+  "model-catalog-remote",
+  "swift-app",
+  "swift-tests",
+  "macos-runtime",
+  "macos-llama-backend",
+  "macos-package",
+)
+REQUIRED_CI_PACKAGE_ASSETS = (
+  "artifacts/macos/Pith-macos-x86_64.zip",
+  "artifacts/macos/${{ env.MACOS_DMG_NAME }}",
+  "artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256",
+  "artifacts/macos/README-FIRST.txt",
+  "artifacts/macos/internal-release-notes.md",
+  "artifacts/macos/internal-release-manifest.json",
+)
+REQUIRED_RELEASE_ASSETS = (
+  "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg",
+  "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256",
+  "artifacts/macos/README-FIRST.txt",
+  "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json",
+)
+
+
+@dataclass(frozen=True)
+class WorkflowIssue:
+  path: str
+  message: str
+
+
+def validate_workflows(root: Path) -> list[WorkflowIssue]:
+  issues: list[WorkflowIssue] = []
+  workflow_texts = read_required_workflows(root, issues)
+  for relative_path, text in workflow_texts.items():
+    issues.extend(validate_common_workflow_rules(relative_path, text))
+
+  ci_text = workflow_texts.get(CI_WORKFLOW)
+  if ci_text is not None:
+    issues.extend(validate_ci_workflow(ci_text))
+
+  release_text = workflow_texts.get(RELEASE_WORKFLOW)
+  if release_text is not None:
+    issues.extend(validate_release_workflow(release_text))
+  return issues
+
+
+def read_required_workflows(
+  root: Path,
+  issues: list[WorkflowIssue],
+) -> dict[str, str]:
+  workflow_texts: dict[str, str] = {}
+  for relative_path in (CI_WORKFLOW, RELEASE_WORKFLOW):
+    path = root / relative_path
+    if not path.exists():
+      issues.append(WorkflowIssue(relative_path, "required workflow is missing"))
+      continue
+    workflow_texts[relative_path] = path.read_text(encoding="utf-8")
+  return workflow_texts
+
+
+def validate_common_workflow_rules(
+  relative_path: str,
+  text: str,
+) -> list[WorkflowIssue]:
+  issues: list[WorkflowIssue] = []
+  blocks = step_blocks(text)
+  for block in blocks:
+    block_text = "\n".join(block)
+    if (
+      "uses: actions/checkout@" in block_text
+      and "persist-credentials: false" not in block_text
+    ):
+      issues.append(
+        WorkflowIssue(
+          relative_path,
+          "actions/checkout steps must set persist-credentials: false",
+        )
+      )
+    if (
+      "uses: actions/upload-artifact@" in block_text
+      and "retention-days:" not in block_text
+    ):
+      issues.append(
+        WorkflowIssue(
+          relative_path,
+          "actions/upload-artifact steps must set retention-days",
+        )
+      )
+
+  for job_name, block in job_blocks(text).items():
+    if "timeout-minutes:" not in block:
+      issues.append(
+        WorkflowIssue(relative_path, f"job {job_name} must set timeout-minutes")
+      )
+  return issues
+
+
+def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
+  issues: list[WorkflowIssue] = []
+  for job in REQUIRED_CI_JOBS:
+    if job not in job_blocks(text):
+      issues.append(WorkflowIssue(CI_WORKFLOW, f"required CI job {job} is missing"))
+
+  package_block = job_block(text, "macos-package")
+  if package_block:
+    if re.search(r"(?m)^\s+-\s+swift-tests\s*$", package_block):
+      issues.append(
+        WorkflowIssue(
+          CI_WORKFLOW,
+          "macos-package must not wait for swift-tests before artifact assembly",
+        )
+      )
+    for asset in REQUIRED_CI_PACKAGE_ASSETS:
+      if asset not in package_block:
+        issues.append(
+          WorkflowIssue(CI_WORKFLOW, f"macos-package upload is missing {asset}")
+        )
+  return issues
+
+
+def validate_release_workflow(text: str) -> list[WorkflowIssue]:
+  issues: list[WorkflowIssue] = []
+  release_block = job_block(text, "release-dmg")
+  if not release_block:
+    return [WorkflowIssue(RELEASE_WORKFLOW, "required release-dmg job is missing")]
+
+  required_gate_terms = ("gh run list", "--workflow CI", "--status success")
+  for term in required_gate_terms:
+    if term not in release_block:
+      issues.append(
+        WorkflowIssue(RELEASE_WORKFLOW, f"release CI gate is missing {term}")
+      )
+
+  if "shasum -a 256" in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "release checksum must use scripts/release_artifacts.py",
+      )
+    )
+  if "scripts/release_state.py" not in release_block:
+    issues.append(
+      WorkflowIssue(RELEASE_WORKFLOW, "release publish state helper is missing")
+    )
+  for asset in REQUIRED_RELEASE_ASSETS:
+    if asset not in release_block:
+      issues.append(
+        WorkflowIssue(RELEASE_WORKFLOW, f"release upload is missing {asset}")
+      )
+  return issues
+
+
+def step_blocks(text: str) -> list[list[str]]:
+  blocks: list[list[str]] = []
+  current: list[str] = []
+  for line in text.splitlines():
+    if re.match(r"^\s{6}-\s+name:", line):
+      if current:
+        blocks.append(current)
+      current = [line]
+    elif current:
+      current.append(line)
+  if current:
+    blocks.append(current)
+  return blocks
+
+
+def job_blocks(text: str) -> dict[str, str]:
+  blocks: dict[str, str] = {}
+  current_name: str | None = None
+  current_lines: list[str] = []
+  in_jobs = False
+  for line in text.splitlines():
+    if line == "jobs:":
+      in_jobs = True
+      continue
+    if not in_jobs:
+      continue
+    if line and not line.startswith(" "):
+      break
+    match = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", line)
+    if match:
+      if current_name is not None:
+        blocks[current_name] = "\n".join(current_lines)
+      current_name = match.group(1)
+      current_lines = [line]
+    elif current_name is not None:
+      current_lines.append(line)
+  if current_name is not None:
+    blocks[current_name] = "\n".join(current_lines)
+  return blocks
+
+
+def job_block(text: str, job_name: str) -> str:
+  return job_blocks(text).get(job_name, "")
+
+
+def main() -> int:
+  root = Path(__file__).resolve().parents[1]
+  issues = validate_workflows(root)
+  if issues:
+    for issue in issues:
+      print(f"{issue.path}: {issue.message}")
+    return 1
+  print("Workflow structure validation passed")
+  return 0
+
+
+if __name__ == "__main__":
+  raise SystemExit(main())
