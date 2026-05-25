@@ -12,7 +12,9 @@ formatting, linting, tests, smoke coverage, and the native macOS app package.
 
 ## Remote Checks
 
-Every push to `main` or `codex/**` runs the canonical CI suite:
+Every push to `main` or `codex/**` runs the repository policy suite. Code,
+packaging, model, plugin, workflow, scheduled, and manual runs fan out into the
+canonical heavy gates they affect:
 
 - Rust formatting with `cargo fmt --all -- --check`
 - Rust linting with `cargo clippy --workspace --all-targets -- -D warnings`
@@ -25,9 +27,17 @@ Every push to `main` or `codex/**` runs the canonical CI suite:
 - packaged app launch smoke coverage through `scripts/smoke_launch_macos_app.py`
 
 CI jobs use read-only repository permissions, explicit timeouts, stable artifact
-names, and parallel build lanes. The final macOS package job depends on the
-Swift app build, Swift tests, runtime build, and llama.cpp backend lane before it
-assembles a distributable app artifact.
+names, change-aware execution lanes, and parallel build lanes. A lightweight
+change detection job keeps docs-only changes on fast policy checks while
+workflow, Rust, Swift, packaging, model, plugin, and release script changes
+still trigger the relevant heavy gates.
+
+Rust formatting, clippy, tests, and runtime smoke run as separate jobs so
+failures surface earlier instead of waiting behind a single serial Rust lane.
+The final macOS package job depends only on executable-producing lanes: Swift
+app build, runtime build, and llama.cpp backend. Swift logic tests remain an
+independent required gate, but they no longer block artifact assembly when the
+Swift executable is already available.
 
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
@@ -67,7 +77,8 @@ CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
 jobs, then a packaging job downloads the executable artifacts, assembles
 `Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
 and bundled plugin manifests under `Contents/Resources`, validates the app
-bundle, and emits internal zip and DMG artifacts.
+bundle, and emits internal zip and DMG artifacts with bounded artifact
+retention.
 
 Package validation checks the product `Info.plist`, `PkgInfo`,
 `PithPackage.json`, x86_64-only binaries, first-use model download metadata,

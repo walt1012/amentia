@@ -40,6 +40,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Change detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.detect.outputs.rust }}
+      swift: ${{ steps.detect.outputs.swift }}
+      package: ${{ steps.detect.outputs.package }}
+      llama: ${{ steps.detect.outputs.llama }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Detect changed areas
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          PUSH_BEFORE_SHA: ${{ github.event.before || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "schedule" ]]; then
+            python3 scripts/ci_changes.py --all --github-output "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="$PUSH_BEFORE_SHA"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+          fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git rev-list --max-count=2 HEAD | tail -n 1)"
+          fi
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$base" || true
+          fi
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            python3 scripts/ci_changes.py --all --github-output "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only "$base" HEAD > changed-files.txt
+          python3 scripts/ci_changes.py \
+            --changed-files changed-files.txt \
+            --github-output "$GITHUB_OUTPUT"
+
   repository-policy:
     name: Repository policy checks
     runs-on: ubuntu-latest
@@ -66,6 +116,9 @@ jobs:
       - name: Test packaging helpers
         run: python3 scripts/test_package_macos_app.py
 
+      - name: Test CI change classifier
+        run: python3 scripts/test_ci_changes.py
+
       - name: Test DMG staging helper
         run: python3 scripts/test_create_macos_dmg.py
 
@@ -78,10 +131,12 @@ jobs:
       - name: Test release text helper
         run: python3 scripts/test_release_text.py
 
-  rust:
-    name: Rust checks
+  rust-format:
+    name: Rust format
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -92,7 +147,28 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt
+
+      - name: Cargo fmt
+        run: cargo fmt --all -- --check
+
+  rust-clippy:
+    name: Rust clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - name: Cache Cargo dependencies and build output
         uses: actions/cache@v5
@@ -105,14 +181,65 @@ jobs:
           restore-keys: |
             cargo-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: Cargo fmt
-        run: cargo fmt --all -- --check
-
       - name: Cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+  rust-test:
+    name: Rust tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies and build output
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Cargo test
         run: cargo test --workspace
+
+  runtime-smoke:
+    name: Runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies and build output
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Runtime smoke test
         run: python3 scripts/runtime_smoke_test.py
@@ -136,6 +263,8 @@ jobs:
     name: Swift app build
     runs-on: macos-15-intel
     timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.swift == 'true' || needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -169,11 +298,14 @@ jobs:
           name: ${{ env.SWIFT_APP_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.SWIFT_APP_BINARY }}
           if-no-files-found: error
+          retention-days: 14
 
   swift-tests:
     name: Swift app tests
     runs-on: macos-15-intel
     timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.swift == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -199,6 +331,8 @@ jobs:
     name: macOS runtime build
     runs-on: macos-15-intel
     timeout-minutes: 30
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' || needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -234,11 +368,14 @@ jobs:
           name: ${{ env.RUNTIME_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.RUNTIME_BINARY }}
           if-no-files-found: error
+          retention-days: 14
 
   macos-llama-backend:
     name: macOS llama.cpp backend
     runs-on: macos-15-intel
     timeout-minutes: 45
+    needs: changes
+    if: ${{ needs.changes.outputs.llama == 'true' || needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -318,16 +455,18 @@ jobs:
           name: ${{ env.LLAMA_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
           if-no-files-found: error
+          retention-days: 14
 
   macos-package:
     name: Package macOS app
     runs-on: macos-15-intel
     timeout-minutes: 30
     needs:
+      - changes
       - swift-app
-      - swift-tests
       - macos-runtime
       - macos-llama-backend
+    if: ${{ needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -423,3 +562,4 @@ jobs:
             artifacts/macos/internal-release-notes.md
             artifacts/macos/internal-release-manifest.json
           if-no-files-found: error
+          retention-days: 21
