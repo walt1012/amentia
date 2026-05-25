@@ -16,27 +16,13 @@ use crate::intent_inference::{
 #[derive(Debug)]
 pub(crate) enum InitialToolPlan {
   NoWorkspace,
-  Write {
-    intent: WriteIntent,
-  },
-  Shell {
-    command: String,
-  },
-  PluginCommand {
-    route: ExplicitPluginCommandRoute,
-  },
-  ReadFile {
-    relative_path: String,
-  },
-  Search {
-    query: String,
-  },
-  WebSearch {
-    intent: WebSearchIntent,
-  },
-  WebSearchCandidate {
-    intent: WebSearchIntent,
-  },
+  Write { intent: WriteIntent },
+  Shell { command: String },
+  PluginCommand { route: ExplicitPluginCommandRoute },
+  ReadFile { relative_path: String },
+  Search { query: String },
+  WebSearch { intent: WebSearchIntent },
+  WebSearchCandidate { intent: WebSearchIntent },
   ListWorkspace,
 }
 
