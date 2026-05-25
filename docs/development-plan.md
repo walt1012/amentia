@@ -77,9 +77,8 @@ Current state:
   execution preparation.
 - Done: connector planning now records candidate count, scores, selected command,
   and selection state on the timeline.
-- Active gap: connector selection still uses deterministic scoring; M7 should
-  add model-assisted disambiguation for ambiguous candidate sets before
-  broadening connector coverage.
+- Done: ambiguous connector candidate sets can ask the local planner for a
+  bounded command-id decision instead of adding more brittle keyword routes.
 - Active gap: connector actions are still local drafts; the next step is a
   clear inspect-before-remote-write flow.
 
@@ -90,10 +89,8 @@ M7 work order:
 2. Continue from approved writes into concise next-step handoffs.
 3. Feed saved artifacts into connector drafts as bounded content, not only as
    path labels.
-4. Extend the compact tool-planning contract so the model can disambiguate safe
-   tools and connectors without growing brittle keyword routes.
-5. Harden connector updates around real cowork tasks, not demo commands.
-6. Keep UI polish focused on clarity around setup, approvals, sources, and
+4. Harden connector updates around real cowork tasks, not demo commands.
+5. Keep UI polish focused on clarity around setup, approvals, sources, and
    saved work.
 
 M7 exit criteria:
@@ -103,6 +100,8 @@ M7 exit criteria:
 - Approved writes end with a useful continuation handoff.
 - Saved artifacts used by connectors are read through the same workspace safety
   boundary as file tools.
+- Ambiguous connector choices are resolved by a bounded local planner decision
+  and recorded as planning evidence.
 - Connector actions are practical enough for Notion-like third-party services,
   including inspect-before-remote-write.
 - The packaged macOS app path remains green in CI.

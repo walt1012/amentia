@@ -21,6 +21,15 @@ pub(crate) struct ExplicitPluginCommandRoute {
   pub(crate) input: Option<String>,
   pub(crate) routing_reason: &'static str,
   pub(crate) planning_attributes: HashMap<String, String>,
+  pub(crate) planning_candidates: Vec<PluginCommandRouteCandidate>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PluginCommandRouteCandidate {
+  pub(crate) command_id: String,
+  pub(crate) title: String,
+  pub(crate) description: String,
+  pub(crate) score: usize,
 }
 
 struct ConnectorCommandCandidate<'a> {
@@ -63,6 +72,7 @@ pub(crate) fn infer_explicit_plugin_command_route(
         1,
         None,
       ),
+      planning_candidates: Vec::new(),
     });
   }
 
@@ -102,6 +112,7 @@ fn infer_natural_builtin_plugin_command_route(message: &str) -> Option<ExplicitP
       1,
       None,
     ),
+    planning_candidates: Vec::new(),
   })
 }
 
@@ -174,7 +185,23 @@ fn infer_natural_connector_command_route(
         second_score,
       }),
     ),
+    planning_candidates: connector_route_candidates(&candidates),
   })
+}
+
+fn connector_route_candidates(
+  candidates: &[ConnectorCommandCandidate<'_>],
+) -> Vec<PluginCommandRouteCandidate> {
+  candidates
+    .iter()
+    .take(4)
+    .map(|candidate| PluginCommandRouteCandidate {
+      command_id: candidate.command.command_id.clone(),
+      title: candidate.command.title.clone(),
+      description: candidate.command.description.clone(),
+      score: candidate.score,
+    })
+    .collect()
 }
 
 fn route_planning_attributes(

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use pith_model_runtime::GenerationCancellation;
 use pith_protocol::WorkspaceSummary;
 
+use super::turn_plugin_disambiguation::maybe_disambiguate_plugin_route;
 use super::turn_plugin_routing::ExplicitPluginCommandRoute;
 use super::turn_tool_planning::{plan_initial_turn_tool, InitialToolPlan};
 use crate::plugin_commands::prepare_plugin_command_turn_snapshot;
@@ -24,6 +25,7 @@ pub(crate) fn prepare_turn_action(
     thread_id,
     workspace,
     permission_sources,
+    message,
     cancellation,
     plan,
   )
@@ -34,13 +36,14 @@ fn materialize_initial_tool_plan(
   thread_id: &str,
   workspace: Option<&WorkspaceSummary>,
   permission_sources: &HashMap<String, Vec<String>>,
+  message: &str,
   cancellation: GenerationCancellation,
   plan: InitialToolPlan,
 ) -> PreparedTurnAction {
   match plan {
     InitialToolPlan::WebSearch { intent } => PreparedTurnAction::WebSearch(intent),
     InitialToolPlan::PluginCommand { route } => {
-      prepare_plugin_route_action(context, thread_id, workspace, route, cancellation)
+      prepare_plugin_route_action(context, thread_id, workspace, message, route, cancellation)
     }
     InitialToolPlan::NoWorkspace => PreparedTurnAction::NoWorkspace,
     InitialToolPlan::Write { intent } => {
@@ -76,9 +79,11 @@ fn prepare_plugin_route_action(
   context: &mut RuntimeContext,
   thread_id: &str,
   workspace: Option<&WorkspaceSummary>,
+  message: &str,
   route: ExplicitPluginCommandRoute,
   cancellation: GenerationCancellation,
 ) -> PreparedTurnAction {
+  let route = maybe_disambiguate_plugin_route(context, message, route, &cancellation);
   let command_id = route.command_id;
   let input = route.input;
   let route_input = input.clone();
