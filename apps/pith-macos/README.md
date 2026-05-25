@@ -14,7 +14,7 @@ Primary goals:
 
 The app target is intentionally organized by product domain, not by helper type:
 
-- `App`: application shell, top-level view model, shared app models, and platform services.
+- `App`: application shell, top-level view model, shared app models, distribution trust copy, and platform services.
 - `Runtime`: stdio bridge, JSON-RPC protocol payloads, runtime launch, readiness, and state mapping.
 - `LocalModels`: first-use model setup, catalog, download, verification, activation, and model panel UI.
 - `Plugins`: plugin discovery, install state, manager UI, and action planning.

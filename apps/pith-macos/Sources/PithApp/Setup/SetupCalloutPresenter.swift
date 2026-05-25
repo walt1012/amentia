@@ -10,6 +10,7 @@ struct SetupCalloutSnapshot {
   let runtimeLaunchActionTitle: String
   let modelPrimaryActionTitle: String?
   let modelSecondaryActionTitle: String?
+  let distributionTrustSetupDetail: String?
 }
 
 enum SetupCalloutPresenter {
@@ -43,7 +44,10 @@ enum SetupCalloutPresenter {
 
   static func detail(_ snapshot: SetupCalloutSnapshot) -> String {
     if !snapshot.isLocalModelReady {
-      return snapshot.modelProgressDetail ?? snapshot.modelGuidance.detail
+      return appendDistributionTrustDetail(
+        snapshot.modelProgressDetail ?? snapshot.modelGuidance.detail,
+        snapshot: snapshot
+      )
     }
     if !snapshot.hasWorkspace {
       return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
@@ -53,6 +57,19 @@ enum SetupCalloutPresenter {
     }
 
     return "Ready"
+  }
+
+  private static func appendDistributionTrustDetail(
+    _ detail: String,
+    snapshot: SetupCalloutSnapshot
+  ) -> String {
+    guard let trustDetail = snapshot.distributionTrustSetupDetail,
+          snapshot.runtimeState == .disconnected || snapshot.runtimeState == .failed
+    else {
+      return detail
+    }
+
+    return "\(detail) \(trustDetail)"
   }
 
   static func tone(_ snapshot: SetupCalloutSnapshot) -> StatusTone {

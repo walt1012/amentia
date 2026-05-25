@@ -27,7 +27,7 @@ def release_trust_note(
     return (
       "Untrusted ad-hoc prerelease. This DMG is not notarized; macOS Gatekeeper "
       "will block first launch until the user manually chooses Open Anyway in "
-      "Privacy & Security."
+      "Privacy & Security or Control-clicks Pith.app and chooses Open."
     )
   return (
     "Draft ad-hoc build. Public releases need Developer ID signing and "

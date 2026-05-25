@@ -98,6 +98,8 @@ private struct SidebarEmptyState: View {
 }
 
 struct SettingsView: View {
+  private let distributionTrust = DistributionTrustPresenter.summary()
+
   var body: some View {
     Form {
       Section("Local Models") {
@@ -107,6 +109,11 @@ struct SettingsView: View {
 
       Section("Platform") {
         Text("Built for macOS 12+ on Intel.")
+      }
+
+      Section("Distribution") {
+        Text(distributionTrust.title)
+        Text(distributionTrust.detail)
       }
     }
     .padding(20)

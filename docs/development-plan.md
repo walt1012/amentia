@@ -91,6 +91,8 @@ Current state:
   `README-FIRST.txt`, and a machine-readable release manifest.
 - Release sidecars validate first-use user guidance, model delivery mode,
   platform target, signing mode, and checksum integrity.
+- The app reads packaged distribution metadata and presents the same
+  Developer ID or ad-hoc Gatekeeper trust path that the DMG install guide uses.
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search, approval-gated writes, runtime restart, and
   recovery of model, workspace, thread, and readiness state.
@@ -101,8 +103,6 @@ Current state:
 
 M8 work order:
 
-- Close unsigned install UX: make Gatekeeper copy, release notes, and app
-  first-run guidance consistent for ad-hoc prereleases.
 - Tighten first-run recovery: model download interruption, app relaunch,
   runtime relaunch, and selected-model repair must remain obvious to users.
 - Add stronger Web Search source snapshots only if cowork tasks require more

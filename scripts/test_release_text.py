@@ -36,6 +36,7 @@ def main() -> int:
   )
   require_contains(ad_hoc_notes, "Untrusted ad-hoc prerelease.")
   require_contains(ad_hoc_notes, "Open Anyway")
+  require_contains(ad_hoc_notes, "Control-clicks Pith.app")
 
   draft_notes = release_notes(
     "v0.1.0",

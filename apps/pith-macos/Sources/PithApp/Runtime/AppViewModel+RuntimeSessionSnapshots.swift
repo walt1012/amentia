@@ -98,7 +98,8 @@ extension AppViewModel {
       modelProgressDetail: modelProgressDetail,
       runtimeLaunchActionTitle: runtimeLaunchButtonTitle(),
       modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
-      modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
+      modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle(),
+      distributionTrustSetupDetail: DistributionTrustPresenter.summary().setupDetail
     )
   }
 
