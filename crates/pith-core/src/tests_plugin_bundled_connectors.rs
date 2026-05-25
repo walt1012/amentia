@@ -329,7 +329,10 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
     handoff_item["attributes"]["remoteWriteRequiresApproval"],
     "true"
   );
-  assert_eq!(handoff_item["attributes"]["sourceArtifact"], "docs/handoff.md");
+  assert_eq!(
+    handoff_item["attributes"]["sourceArtifact"],
+    "docs/handoff.md"
+  );
 
   let saved_note = context
     .memory_state

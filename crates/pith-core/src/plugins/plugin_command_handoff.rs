@@ -248,7 +248,10 @@ mod tests {
         content: "No remote write was sent.".to_string(),
         attributes: Some(HashMap::from([
           ("targetService".to_string(), "notion".to_string()),
-          ("targetTool".to_string(), "notion.inspectPageWrite".to_string()),
+          (
+            "targetTool".to_string(),
+            "notion.inspectPageWrite".to_string(),
+          ),
           ("remoteWrite".to_string(), "false".to_string()),
           (
             "remoteWriteStage".to_string(),
