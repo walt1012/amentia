@@ -100,13 +100,16 @@ mod tests {
   }
 
   #[test]
-  fn workspace_defaults_to_listing_when_no_specific_tool_matches() {
+  fn workspace_read_request_plans_read_file() {
     let workspace = WorkspaceSummary {
       root_path: ".".to_string(),
       display_name: "pith".to_string(),
     };
-    let plan = plan_initial_turn_tool("hello pith", Some(&workspace), &[]);
+    let plan = plan_initial_turn_tool("read README.md", Some(&workspace), &[]);
 
-    assert!(matches!(plan, InitialToolPlan::ListWorkspace));
+    match plan {
+      InitialToolPlan::ReadFile { relative_path } => assert_eq!(relative_path, "README.md"),
+      _ => panic!("expected read file plan"),
+    }
   }
 }
