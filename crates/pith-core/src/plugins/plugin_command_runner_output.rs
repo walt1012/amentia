@@ -19,6 +19,10 @@ const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
   &["pluginResult", "toolResult", "warning", "system"];
 const PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT: &str = "pith.connectorRemoteWrite.v1";
 const PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE: &str = "completed";
+const PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE: &str = "inspectBeforeWrite";
+const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED: &str = "completed";
+const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT: &str = "notSent";
+const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_PENDING: &str = "pending";
 
 struct PluginRunnerMemoryNoteSelection {
   notes: Vec<PluginRunnerMemoryNoteDraft>,
@@ -394,7 +398,10 @@ fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, Str
     .unwrap_or_default();
 
   match remote_write {
-    "" | "false" => true,
+    "" | "false" => {
+      plugin_runner_attribute_value(attributes, "remoteWriteStage")
+        != Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
+    }
     "true" => {
       let Some(target_service) = plugin_runner_attribute_value(attributes, "targetService") else {
         return false;
@@ -438,7 +445,32 @@ fn insert_plugin_runner_remote_write_contract(attributes: &mut HashMap<String, S
       "pluginRunnerRemoteWriteContract".to_string(),
       PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT.to_string(),
     );
+    attributes.insert(
+      "remoteWriteStatus".to_string(),
+      plugin_runner_remote_write_status(attributes).to_string(),
+    );
   }
+}
+
+fn plugin_runner_remote_write_status(attributes: &HashMap<String, String>) -> &'static str {
+  let remote_write = attributes
+    .get("remoteWrite")
+    .map(|value| value.trim())
+    .unwrap_or_default();
+  let remote_write_stage = plugin_runner_attribute_value(attributes, "remoteWriteStage");
+
+  if remote_write == "true"
+    && remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
+  {
+    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED;
+  }
+  if remote_write == "false" {
+    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT;
+  }
+  if remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE) {
+    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT;
+  }
+  PLUGIN_RUNNER_REMOTE_WRITE_STATUS_PENDING
 }
 
 fn plugin_runner_owned_attributes(attributes: HashMap<String, String>) -> HashMap<String, String> {
@@ -476,6 +508,7 @@ fn plugin_runner_reserved_attribute(key: &str) -> bool {
       | "runBlocker"
       | "runRepairHint"
       | "runStatus"
+      | "remoteWriteStatus"
       | "sourcePath"
       | "streamingStatus"
       | "turnId"
@@ -690,6 +723,10 @@ mod tests {
       attributes.get("remoteWrite").map(String::as_str),
       Some("false")
     );
+    assert_eq!(
+      attributes.get("remoteWriteStatus").map(String::as_str),
+      Some("notSent")
+    );
   }
 
   #[test]
@@ -766,6 +803,69 @@ mod tests {
     assert_eq!(
       attributes.get("remoteWriteStage").map(String::as_str),
       Some("completed")
+    );
+    assert_eq!(
+      attributes.get("remoteWriteStatus").map(String::as_str),
+      Some("completed")
+    );
+  }
+
+  #[test]
+  fn output_contract_rejects_completed_stage_without_remote_write() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Complete",
+          "content": "The page was updated.",
+          "attributes": {
+            "remoteWrite": "false",
+            "remoteWriteStage": "completed",
+            "targetService": "notion",
+            "targetTool": "notion.updatePage"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("completed stage without remote write should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+  }
+
+  #[test]
+  fn output_contract_owns_remote_write_status() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Inspection",
+          "content": "No remote write was sent.",
+          "attributes": {
+            "remoteWrite": "false",
+            "remoteWriteStage": "inspectBeforeWrite",
+            "remoteWriteStatus": "completed",
+            "targetService": "notion",
+            "targetTool": "notion.inspectPageWrite"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!("inspection item should be accepted: {}", failure.message),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes.get("remoteWriteStatus").map(String::as_str),
+      Some("notSent")
     );
   }
 

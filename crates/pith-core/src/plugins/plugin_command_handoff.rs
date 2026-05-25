@@ -14,6 +14,7 @@ const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
   "draftMode",
   "remoteWrite",
   "remoteWriteStage",
+  "remoteWriteStatus",
   "remoteWriteRequiresApproval",
   "sourceArtifact",
   "sourceArtifactPreviewProvided",
@@ -261,6 +262,7 @@ mod tests {
             "remoteWriteRequiresApproval".to_string(),
             "true".to_string(),
           ),
+          ("remoteWriteStatus".to_string(), "notSent".to_string()),
           ("sourceArtifact".to_string(), "docs/handoff.md".to_string()),
         ])),
       }],
@@ -285,6 +287,10 @@ mod tests {
         .get("remoteWriteRequiresApproval")
         .map(String::as_str),
       Some("true")
+    );
+    assert_eq!(
+      attributes.get("remoteWriteStatus").map(String::as_str),
+      Some("notSent")
     );
     assert_eq!(
       attributes.get("sourceArtifact").map(String::as_str),

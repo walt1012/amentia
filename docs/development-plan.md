@@ -89,6 +89,8 @@ Current state:
   any connector timeline item can claim a completed third-party write.
 - Done: completed remote-write claims must match the connector service actually
   bound to the runner invocation.
+- Done: connector remote-write status is derived by Pith from the validated
+  runner contract, not trusted from plugin-provided labels.
 - Done: Web Search handoffs now label search-result attribution separately from
   page-fetch or source-snapshot verification.
 - Active gap: connector write execution is still plugin-owned; Pith provides the
