@@ -883,8 +883,9 @@ def validate_packaged_runtime_recovery(
 
     workspace_current = send_runtime_request(recovered_process, 32, "workspace/current")
     workspace = workspace_current["result"]["workspace"]
-    expected_workspace = str(support_dir / "workspace")
-    if workspace["rootPath"] != expected_workspace:
+    expected_workspace = (support_dir / "workspace").resolve()
+    actual_workspace = Path(workspace["rootPath"]).resolve()
+    if actual_workspace != expected_workspace:
       raise RuntimeError(
         "Packaged runtime recovery restored the wrong workspace: "
         f"{workspace['rootPath']}"
