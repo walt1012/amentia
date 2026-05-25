@@ -79,8 +79,10 @@ Current state:
   and selection state on the timeline.
 - Done: ambiguous connector candidate sets can ask the local planner for a
   bounded command-id decision instead of adding more brittle keyword routes.
-- Active gap: connector actions are still local drafts; the next step is a
-  clear inspect-before-remote-write flow.
+- Done: Notion-style connector writes now have a separate inspection command
+  that is approval-gated before any remote-write-capable runner can proceed.
+- Active gap: connector write execution is still plugin-owned; Pith now provides
+  the inspection and approval boundary, but not a hosted Notion writer.
 
 M7 work order:
 

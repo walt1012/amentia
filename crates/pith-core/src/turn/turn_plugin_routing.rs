@@ -349,12 +349,18 @@ fn command_action_score(normalized_message: &str, command: &HostPluginCommandEnt
   ));
   action_terms()
     .iter()
-    .filter(|term| {
-      normalized_message.contains(*term)
-        && (command_text.contains(*term) || command_looks_actionable(&command_text))
+    .map(|term| {
+      if !normalized_message.contains(*term) {
+        0
+      } else if command_text.contains(*term) {
+        20
+      } else if command_looks_actionable(&command_text) {
+        10
+      } else {
+        0
+      }
     })
-    .count()
-    * 10
+    .sum()
 }
 
 fn looks_like_connector_action_request(normalized: &str) -> bool {
@@ -379,12 +385,14 @@ fn action_terms() -> &'static [&'static str] {
     "list",
     "make",
     "prepare",
+    "publish",
     "query",
     "record",
     "review",
     "save",
     "search",
     "send",
+    "post",
     "summarize",
     "summary",
     "sync",

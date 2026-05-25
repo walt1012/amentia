@@ -88,6 +88,9 @@ fn bundled_plugin_manifests_match_runtime_schema() {
   assert!(notion_capabilities
     .iter()
     .any(|capability| capability == "command:notion.prepare-page-draft"));
+  assert!(notion_capabilities
+    .iter()
+    .any(|capability| capability == "command:notion.inspect-page-write"));
 
   let notion_command = read_command_manifest(
     &bundled_root.join("notion-connector/commands/notion.prepare-page-draft.json"),
@@ -108,4 +111,17 @@ fn bundled_plugin_manifests_match_runtime_schema() {
     .expect("notion connector reference");
   assert_eq!(notion_connectors.len(), 1);
   assert_eq!(notion_connectors[0], "notion");
+
+  let notion_write_command = read_command_manifest(
+    &bundled_root.join("notion-connector/commands/notion.inspect-page-write.json"),
+  )
+  .expect("parse notion write inspection command manifest");
+  assert_eq!(notion_write_command.title, "Inspect Notion Page Write");
+  assert_eq!(
+    notion_write_command
+      .execution
+      .as_ref()
+      .map(|execution| execution.kind.as_str()),
+    Some("mcp.notion.inspectPageWrite")
+  );
 }

@@ -12,6 +12,7 @@ use std::path::PathBuf;
 const NOTION_PLUGIN_ID: &str = "notion-connector";
 const NOTION_CONNECTOR_ID: &str = "notion-connector::notion";
 const NOTION_COMMAND_ID: &str = "notion-connector::notion.prepare-page-draft";
+const NOTION_WRITE_INSPECTION_COMMAND_ID: &str = "notion-connector::notion.inspect-page-write";
 const NOTION_SECRET: &str = "notion-local-token";
 
 #[test]
@@ -192,6 +193,92 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
     .contains("Ship the practical cowork connector path."));
 }
 
+#[test]
+fn bundled_notion_connector_inspects_remote_write_after_approval() {
+  let (mut context, workspace) = setup_authorized_notion_context(
+    "bundled-notion-write-inspection",
+    "Bundled Notion Write Inspection Thread",
+  );
+  fs::create_dir_all(workspace.join("docs")).expect("create docs directory");
+  fs::write(
+    workspace.join("docs").join("handoff.md"),
+    "# Project Handoff\n\nPrepare a safe Notion update.",
+  )
+  .expect("write saved handoff");
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": NOTION_WRITE_INSPECTION_COMMAND_ID,
+        "input": "Publish a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md\nSaved artifact preview: # Project Handoff Prepare a safe Notion update.\nSaved artifact truncated: false"
+      })),
+    ),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "approvalRequested");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    NOTION_WRITE_INSPECTION_COMMAND_ID
+  );
+  assert_eq!(
+    items[1]["attributes"]["executionKind"],
+    "mcp.notion.inspectPageWrite"
+  );
+  assert_eq!(
+    result["pendingApprovals"][0]["title"],
+    "Run Inspect Notion Page Write"
+  );
+
+  let approval_result = approve_pending(&mut context, &result);
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  let approved_items = approval_result["items"].as_array().expect("approval items");
+  let inspection_item = approved_items
+    .iter()
+    .find(|item| item["title"] == "Notion Remote Write Inspection")
+    .expect("notion write inspection item");
+  assert_eq!(inspection_item["kind"], "pluginResult");
+  assert_eq!(inspection_item["attributes"]["targetService"], "notion");
+  assert_eq!(
+    inspection_item["attributes"]["draftMode"],
+    "remoteWriteInspection"
+  );
+  assert_eq!(inspection_item["attributes"]["remoteWrite"], "false");
+  assert_eq!(
+    inspection_item["attributes"]["remoteWriteStage"],
+    "inspectBeforeWrite"
+  );
+  assert_eq!(
+    inspection_item["attributes"]["remoteWriteRequiresApproval"],
+    "true"
+  );
+  assert_eq!(
+    inspection_item["attributes"]["targetTool"],
+    "notion.inspectPageWrite"
+  );
+  assert_eq!(inspection_item["attributes"]["sourceArtifact"], "docs/handoff.md");
+  assert!(inspection_item["content"]
+    .as_str()
+    .expect("inspection content")
+    .contains("No remote write was sent"));
+  assert!(!inspection_item.to_string().contains(NOTION_SECRET));
+
+  let saved_note = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .find(|note| note.title == "Notion Write Inspected")
+    .expect("saved notion inspection memory note");
+  assert!(saved_note.body.contains("docs/handoff.md"));
+}
+
 fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace(label);
@@ -204,6 +291,7 @@ fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext,
       false,
       &[
         "command:notion.prepare-page-draft",
+        "command:notion.inspect-page-write",
         "connector:notion",
         "mcp_server:notion",
         "prompt_pack:notion.workspace",

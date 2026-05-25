@@ -1,0 +1,16 @@
+{
+  "title": "Inspect Notion Page Write",
+  "description": "Inspect a Notion remote page write request before any external update is sent.",
+  "prompt": "Inspect the proposed Notion page write. Summarize the target, source context, and risk before any remote write is attempted. Do not send anything to Notion during inspection.",
+  "execution": {
+    "kind": "mcp.notion.inspectPageWrite",
+    "driver": "mcp",
+    "entrypoint": "notion.inspectPageWrite",
+    "connectors": ["notion"]
+  },
+  "memory": {
+    "noteTitle": "Notion Write Inspection",
+    "noteSource": "plugin.notion-connector",
+    "noteTags": ["connector", "notion", "inspection"]
+  }
+}
