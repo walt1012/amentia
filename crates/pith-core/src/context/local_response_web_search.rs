@@ -178,7 +178,9 @@ mod tests {
       Some("false")
     );
     assert_eq!(
-      attributes.get("sourceSnapshotAvailable").map(String::as_str),
+      attributes
+        .get("sourceSnapshotAvailable")
+        .map(String::as_str),
       Some("false")
     );
   }

@@ -111,10 +111,7 @@ fn web_search_attributes(
         WEB_SEARCH_SOURCE_MODE.to_string(),
       ),
       ("pageFetchPerformed".to_string(), "false".to_string()),
-      (
-        "sourceSnapshotAvailable".to_string(),
-        "false".to_string(),
-      ),
+      ("sourceSnapshotAvailable".to_string(), "false".to_string()),
     ],
   )
 }
