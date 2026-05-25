@@ -83,6 +83,8 @@ Current state:
   that is approval-gated before any remote-write-capable runner can proceed.
 - Done: natural publish/send/write connector requests route to inspection,
   while prepare/update requests stay on local drafts.
+- Done: connector inspection handoffs preserve remote-write stage, target tool,
+  and source artifact metadata for UI review and follow-up planning.
 - Active gap: connector write execution is still plugin-owned; Pith now provides
   the inspection and approval boundary, but not a hosted Notion writer.
 

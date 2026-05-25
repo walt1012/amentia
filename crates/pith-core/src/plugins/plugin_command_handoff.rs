@@ -5,6 +5,24 @@ use pith_protocol::TimelineItem;
 use super::plugin_command_types::PluginCommandOutput;
 
 const HANDOFF_PREVIEW_LIMIT: usize = 360;
+const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
+  "connectorId",
+  "connectorIds",
+  "connectorServices",
+  "targetService",
+  "targetTool",
+  "draftMode",
+  "remoteWrite",
+  "remoteWriteStage",
+  "remoteWriteRequiresApproval",
+  "sourceArtifact",
+  "sourceArtifactPreviewProvided",
+];
+const RUNNER_CONNECTOR_HANDOFF_KEYS: &[(&str, &str)] = &[
+  ("pluginRunnerConnectorId", "connectorId"),
+  ("pluginRunnerConnectorIds", "connectorIds"),
+  ("pluginRunnerConnectorServices", "connectorServices"),
+];
 
 pub(crate) fn ensure_plugin_command_handoff(
   output: &mut PluginCommandOutput,
@@ -76,7 +94,7 @@ fn plugin_handoff_attributes(
   if let Some(execution_kind) = output.command.execution_kind.as_ref() {
     attributes.insert("executionKind".to_string(), execution_kind.clone());
   }
-  copy_connector_attributes(&mut attributes, observation.attributes.as_ref());
+  copy_observation_handoff_attributes(&mut attributes, observation.attributes.as_ref());
   attributes
 }
 
@@ -107,23 +125,19 @@ fn bounded_preview(content: &str) -> String {
   preview
 }
 
-fn copy_connector_attributes(
+fn copy_observation_handoff_attributes(
   attributes: &mut HashMap<String, String>,
   observation_attributes: Option<&HashMap<String, String>>,
 ) {
   let Some(observation_attributes) = observation_attributes else {
     return;
   };
-  for key in ["connectorId", "connectorIds", "connectorServices"] {
+  for key in OBSERVATION_HANDOFF_KEYS {
     if let Some(value) = observation_attributes.get(key) {
       attributes.insert(key.to_string(), value.clone());
     }
   }
-  for (source_key, target_key) in [
-    ("pluginRunnerConnectorId", "connectorId"),
-    ("pluginRunnerConnectorIds", "connectorIds"),
-    ("pluginRunnerConnectorServices", "connectorServices"),
-  ] {
+  for (source_key, target_key) in RUNNER_CONNECTOR_HANDOFF_KEYS {
     if let Some(value) = observation_attributes.get(source_key) {
       attributes.insert(target_key.to_string(), value.clone());
     }
@@ -218,6 +232,60 @@ mod tests {
     assert_eq!(
       attributes.get("pluginCommandHandoff").map(String::as_str),
       Some("pluginCommand")
+    );
+  }
+
+  #[test]
+  fn plugin_handoff_preserves_remote_write_inspection_metadata() {
+    let mut output = PluginCommandOutput {
+      thread_id: "thread-1".to_string(),
+      command: test_command(),
+      workspace: None,
+      input: Some("Publish docs/handoff.md".to_string()),
+      items: vec![TimelineItem {
+        kind: "pluginResult".to_string(),
+        title: "Notion Remote Write Inspection".to_string(),
+        content: "No remote write was sent.".to_string(),
+        attributes: Some(HashMap::from([
+          ("targetService".to_string(), "notion".to_string()),
+          ("targetTool".to_string(), "notion.inspectPageWrite".to_string()),
+          ("remoteWrite".to_string(), "false".to_string()),
+          (
+            "remoteWriteStage".to_string(),
+            "inspectBeforeWrite".to_string(),
+          ),
+          (
+            "remoteWriteRequiresApproval".to_string(),
+            "true".to_string(),
+          ),
+          ("sourceArtifact".to_string(), "docs/handoff.md".to_string()),
+        ])),
+      }],
+      capture_memory: false,
+      runner_memory_notes: vec![],
+      pending_approval: None,
+    };
+
+    ensure_plugin_command_handoff(&mut output, "approvedPluginCommand");
+    let attributes = output
+      .items
+      .last()
+      .and_then(|item| item.attributes.as_ref())
+      .expect("handoff attributes");
+
+    assert_eq!(
+      attributes.get("remoteWriteStage").map(String::as_str),
+      Some("inspectBeforeWrite")
+    );
+    assert_eq!(
+      attributes
+        .get("remoteWriteRequiresApproval")
+        .map(String::as_str),
+      Some("true")
+    );
+    assert_eq!(
+      attributes.get("sourceArtifact").map(String::as_str),
+      Some("docs/handoff.md")
     );
   }
 

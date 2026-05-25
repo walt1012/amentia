@@ -320,6 +320,16 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
     .expect("inspection content")
     .contains("No remote write was sent"));
   assert!(!inspection_item.to_string().contains(NOTION_SECRET));
+  let handoff_item = assert_inspection_handoff_items(approved_items);
+  assert_eq!(
+    handoff_item["attributes"]["remoteWriteStage"],
+    "inspectBeforeWrite"
+  );
+  assert_eq!(
+    handoff_item["attributes"]["remoteWriteRequiresApproval"],
+    "true"
+  );
+  assert_eq!(handoff_item["attributes"]["sourceArtifact"], "docs/handoff.md");
 
   let saved_note = context
     .memory_state
@@ -491,6 +501,34 @@ fn assert_connector_handoff_items(items: &[Value]) -> &Value {
     .as_str()
     .expect("handoff content")
     .contains("local Notion page draft"));
+  assert!(!handoff_item.to_string().contains(NOTION_SECRET));
+  handoff_item
+}
+
+fn assert_inspection_handoff_items(items: &[Value]) -> &Value {
+  let handoff_item = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "assistantMessage"
+        && item["attributes"]["pluginCommandHandoff"] == "approvedPluginCommand"
+        && item["attributes"]["commandId"] == NOTION_WRITE_INSPECTION_COMMAND_ID
+    })
+    .expect("inspection handoff item");
+  assert_eq!(handoff_item["attributes"]["pluginId"], NOTION_PLUGIN_ID);
+  assert_eq!(
+    handoff_item["attributes"]["pluginCommandObservationTitle"],
+    "Notion Remote Write Inspection"
+  );
+  assert_eq!(handoff_item["attributes"]["targetService"], "notion");
+  assert_eq!(
+    handoff_item["attributes"]["targetTool"],
+    "notion.inspectPageWrite"
+  );
+  assert_eq!(handoff_item["attributes"]["remoteWrite"], "false");
+  assert!(handoff_item["content"]
+    .as_str()
+    .expect("handoff content")
+    .contains("No remote write was sent"));
   assert!(!handoff_item.to_string().contains(NOTION_SECRET));
   handoff_item
 }
