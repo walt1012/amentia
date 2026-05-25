@@ -13,6 +13,7 @@ from pathlib import Path
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
 PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
+SOURCE_COMMIT_HEX_LENGTH = 40
 
 
 def parse_args() -> argparse.Namespace:
@@ -87,6 +88,16 @@ def validate_package_manifest(app_path: Path) -> None:
   if manifest.get("signing") != "developer-id":
     raise RuntimeError(
       "Public distribution builds must record developer-id signing in "
+      f"{manifest_path}"
+    )
+  source_commit = manifest.get("sourceCommit", "")
+  if (
+    not isinstance(source_commit, str)
+    or len(source_commit) != SOURCE_COMMIT_HEX_LENGTH
+    or any(character not in "0123456789abcdef" for character in source_commit)
+  ):
+    raise RuntimeError(
+      "Public distribution builds must record a full source commit in "
       f"{manifest_path}"
     )
 

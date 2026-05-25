@@ -39,6 +39,7 @@ DEFAULT_MODEL_DOWNLOAD_URL = (
 )
 DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
 DEFAULT_MODEL_SIZE_BYTES = 229312224
+PACKAGED_SOURCE_COMMIT_HEX_LENGTH = 40
 SMOKE_MODEL_ID = "packaged-smoke-local-model"
 SMOKE_MODEL_FILE_NAME = "smoke-local-model.gguf"
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
@@ -165,6 +166,15 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
       raise RuntimeError(
         f"Packaged manifest field {field} must be {expected_value!r}."
       )
+  source_commit = package_manifest.get("sourceCommit", "")
+  if (
+    not isinstance(source_commit, str)
+    or len(source_commit) != PACKAGED_SOURCE_COMMIT_HEX_LENGTH
+    or any(character not in "0123456789abcdef" for character in source_commit)
+  ):
+    raise RuntimeError(
+      "Packaged manifest sourceCommit must be a full lowercase source hash."
+    )
 
   model_manifest_path = resources_path / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH
   validate_default_model_manifest(model_manifest_path)

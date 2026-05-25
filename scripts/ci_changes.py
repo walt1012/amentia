@@ -41,6 +41,7 @@ PACKAGE_PATTERNS = (
   "scripts/release_artifacts.py",
   "scripts/release_text.py",
   "scripts/smoke_launch_macos_app.py",
+  "scripts/validate_macos_distribution.py",
   "scripts/validate_model_pack.py",
 )
 

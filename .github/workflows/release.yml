@@ -240,6 +240,7 @@ jobs:
             --skip-build \
             --no-zip \
             --version "$PITH_RELEASE_VERSION" \
+            --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \

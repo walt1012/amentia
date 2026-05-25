@@ -6,6 +6,7 @@ struct DistributionPackageMetadata: Equatable {
   let minimumSystemVersion: String
   let modelDelivery: String
   let modelWeightsBundled: Bool
+  let sourceCommit: String
 
   static let current = load()
 
@@ -32,7 +33,8 @@ struct DistributionPackageMetadata: Equatable {
       architecture: string(manifest, "architecture", fallback: "unknown"),
       minimumSystemVersion: string(manifest, "minimumSystemVersion", fallback: "12.0"),
       modelDelivery: string(manifest, "modelDelivery", fallback: "in-app-download"),
-      modelWeightsBundled: bool(manifest, "modelWeightsBundled", fallback: false)
+      modelWeightsBundled: bool(manifest, "modelWeightsBundled", fallback: false),
+      sourceCommit: string(manifest, "sourceCommit", fallback: "development")
     )
   }
 
@@ -41,7 +43,8 @@ struct DistributionPackageMetadata: Equatable {
     architecture: "unknown",
     minimumSystemVersion: "12.0",
     modelDelivery: "in-app-download",
-    modelWeightsBundled: false
+    modelWeightsBundled: false,
+    sourceCommit: "development"
   )
 
   private static func string(
@@ -85,27 +88,28 @@ enum DistributionTrustPresenter {
       ? "model weights bundled"
       : "model weights are not bundled"
     let platform = "macOS \(metadata.minimumSystemVersion)+ \(metadata.architecture)"
+    let source = sourceSummary(metadata.sourceCommit)
 
     switch metadata.signing {
     case "developer-id":
       return DistributionTrustSummary(
         title: "Trusted Installer",
         summary: "Developer ID signed and notarized for \(platform).",
-        detail: "Install from the DMG, launch normally, then choose one verified local model. \(modelDelivery); \(weightPolicy).",
+        detail: "Install from the DMG, launch normally, then choose one verified local model. \(modelDelivery); \(weightPolicy); \(source).",
         setupDetail: nil
       )
     case "ad-hoc":
       return DistributionTrustSummary(
         title: "Untrusted Ad-Hoc Build",
         summary: "Ad-hoc signed and not notarized for \(platform).",
-        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(modelDelivery); \(weightPolicy).",
+        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(modelDelivery); \(weightPolicy); \(source).",
         setupDetail: "Installer trust: if macOS blocked first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open."
       )
     case "unsigned":
       return DistributionTrustSummary(
         title: "Unsigned Build",
         summary: "Unsigned local build for \(platform).",
-        detail: "Use this only for development or explicit testing. Public users should prefer Developer ID builds or clearly marked ad-hoc prereleases.",
+        detail: "Use this only for development or explicit testing. Public users should prefer Developer ID builds or clearly marked ad-hoc prereleases. \(source).",
         setupDetail: "Installer trust: this is an unsigned build, so macOS may require manual approval before first launch."
       )
     default:
@@ -116,5 +120,12 @@ enum DistributionTrustPresenter {
         setupDetail: nil
       )
     }
+  }
+
+  private static func sourceSummary(_ sourceCommit: String) -> String {
+    guard sourceCommit.count >= 12, sourceCommit != "development" else {
+      return "source: development"
+    }
+    return "source: \(sourceCommit.prefix(12))"
   }
 }

@@ -6,6 +6,7 @@ from __future__ import annotations
 import stat
 import tempfile
 import zipfile
+import json
 from pathlib import Path
 
 from macos_llama_backend import (
@@ -19,8 +20,10 @@ from package_macos_app import (
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
   copy_required_llama_backend,
+  normalize_source_commit,
   normalize_version,
   parse_lipo_architectures,
+  write_package_manifest,
 )
 
 
@@ -47,6 +50,29 @@ def main() -> int:
     pass
   else:
     raise AssertionError("prerelease suffixes should stay out of Info.plist versions")
+  assert_equal(normalize_source_commit("development"), "development")
+  assert_equal(
+    normalize_source_commit("ABCDEF0123456789ABCDEF0123456789ABCDEF01"),
+    "abcdef0123456789abcdef0123456789abcdef01",
+  )
+  assert_raises(
+    lambda: normalize_source_commit("short"),
+    "short source commits should fail package metadata validation",
+  )
+  with tempfile.TemporaryDirectory(prefix="pith-package-manifest-") as root:
+    manifest_path = Path(root) / "PithPackage.json"
+    write_package_manifest(
+      manifest_path,
+      "x86_64",
+      "1.2.3",
+      "abcdef0123456789abcdef0123456789abcdef01",
+      "ad-hoc",
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert_equal(
+      manifest["sourceCommit"],
+      "abcdef0123456789abcdef0123456789abcdef01",
+    )
 
   assert_equal(
     parse_lipo_architectures("Non-fat file: Pith is architecture: x86_64"),

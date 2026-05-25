@@ -92,7 +92,8 @@ Current state:
 - Release sidecars validate first-use user guidance, model delivery mode,
   platform target, signing mode, source commit, and checksum integrity.
 - The app reads packaged distribution metadata and presents the same
-  Developer ID or ad-hoc Gatekeeper trust path that the DMG install guide uses.
+  Developer ID or ad-hoc Gatekeeper trust path and source commit that the DMG
+  install guide and release manifest use.
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search source snapshots, approval-gated writes,
   runtime restart, and recovery of model, workspace, thread, and readiness

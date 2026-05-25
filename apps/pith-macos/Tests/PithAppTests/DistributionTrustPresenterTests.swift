@@ -10,6 +10,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(summary.title, "Untrusted Ad-Hoc Build")
     XCTAssertTrue(summary.detail.contains("Open Anyway"))
     XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
+    XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
     XCTAssertTrue(summary.setupDetail?.contains("Control-click Pith.app") == true)
   }
 
@@ -42,6 +43,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(parsed.minimumSystemVersion, "12.0")
     XCTAssertEqual(parsed.modelDelivery, "in-app-download")
     XCTAssertFalse(parsed.modelWeightsBundled)
+    XCTAssertEqual(parsed.sourceCommit, sourceCommit)
   }
 
   private func metadata(signing: String) throws -> DistributionPackageMetadata {
@@ -57,8 +59,11 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "minimumSystemVersion": "12.0",
       "modelDelivery": "in-app-download",
       "modelWeightsBundled": false,
+      "sourceCommit": "\(sourceCommit)",
       "signing": "\(signing)"
     }
     """.data(using: .utf8)!
   }
+
+  private let sourceCommit = "0123456789abcdef0123456789abcdef01234567"
 }

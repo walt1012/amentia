@@ -30,8 +30,14 @@ RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
+DEFAULT_SOURCE_COMMIT = (
+  os.environ.get("PITH_SOURCE_COMMIT")
+  or os.environ.get("GITHUB_SHA")
+  or "development"
+)
 SUPPORTED_ARCH = "x86_64"
 VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$")
+SOURCE_COMMIT_HEX_LENGTH = 40
 SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 DEFAULT_MODEL_ID = "lfm2.5-350m"
@@ -177,6 +183,11 @@ def parse_args() -> argparse.Namespace:
     help="App bundle version, normally derived from the release tag without the leading v.",
   )
   parser.add_argument(
+    "--source-commit",
+    default=DEFAULT_SOURCE_COMMIT,
+    help="Source commit recorded in PithPackage.json.",
+  )
+  parser.add_argument(
     "--signing-mode",
     default="ad-hoc",
     choices=sorted(SIGNING_MODES),
@@ -235,12 +246,14 @@ def package_app(
   llama_binary: Path | None,
   arch: str,
   version: str,
+  source_commit: str,
   signing_mode: str,
   skip_ad_hoc_sign: bool,
   no_zip: bool,
 ) -> Path | None:
   validate_swift_package_rules(repo_root)
   version = normalize_version(version)
+  source_commit = normalize_source_commit(source_commit)
   if signing_mode not in SIGNING_MODES:
     raise RuntimeError(f"Unsupported signing mode: {signing_mode}")
   if signing_mode == "ad-hoc" and skip_ad_hoc_sign:
@@ -256,7 +269,13 @@ def package_app(
   resources_path.mkdir(parents=True)
 
   write_info_plist(contents_path / "Info.plist", version)
-  write_package_manifest(resources_path / "PithPackage.json", arch, version, signing_mode)
+  write_package_manifest(
+    resources_path / "PithPackage.json",
+    arch,
+    version,
+    source_commit,
+    signing_mode,
+  )
   (contents_path / "PkgInfo").write_text("APPL????\n", encoding="utf-8")
 
   copy_executable(app_binary, macos_path / APP_EXECUTABLE_NAME)
@@ -265,7 +284,7 @@ def package_app(
   copy_tree_if_present(repo_root / "plugins", resources_path / "plugins")
   copy_required_llama_backend(repo_root, resources_path, llama_binary)
 
-  validate_app_bundle(app_path, arch, version, signing_mode)
+  validate_app_bundle(app_path, arch, version, source_commit, signing_mode)
   if not skip_ad_hoc_sign:
     sign_app_bundle_if_available(app_path)
     validate_app_signature_if_available(app_path)
@@ -313,6 +332,17 @@ def normalize_version(version: str) -> str:
   return normalized
 
 
+def normalize_source_commit(source_commit: str) -> str:
+  normalized = source_commit.strip().lower()
+  if normalized == "development":
+    return normalized
+  if len(normalized) != SOURCE_COMMIT_HEX_LENGTH:
+    raise RuntimeError("Source commit must be a full SHA-1 hash or development")
+  if any(character not in "0123456789abcdef" for character in normalized):
+    raise RuntimeError("Source commit must be lowercase hex or development")
+  return normalized
+
+
 def write_info_plist(path: Path, version: str) -> None:
   info = {
     **REQUIRED_INFO_PLIST_VALUES,
@@ -323,11 +353,19 @@ def write_info_plist(path: Path, version: str) -> None:
     plistlib.dump(info, file, sort_keys=True)
 
 
-def write_package_manifest(path: Path, arch: str, version: str, signing_mode: str) -> None:
+def write_package_manifest(
+  path: Path,
+  arch: str,
+  version: str,
+  source_commit: str,
+  signing_mode: str,
+) -> None:
+  source_commit = normalize_source_commit(source_commit)
   manifest = {
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
     "bundleVersion": version,
+    "sourceCommit": source_commit,
     "minimumSystemVersion": "12.0",
     "architecture": arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
@@ -397,6 +435,7 @@ def validate_app_bundle(
   app_path: Path,
   expected_arch: str,
   expected_version: str,
+  expected_source_commit: str,
   expected_signing_mode: str,
 ) -> None:
   required_paths = [
@@ -428,6 +467,7 @@ def validate_app_bundle(
     app_path,
     expected_arch,
     expected_version,
+    expected_source_commit,
     expected_signing_mode,
   )
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
@@ -493,6 +533,7 @@ def assert_package_manifest_matches_bundle(
   app_path: Path,
   expected_arch: str,
   expected_version: str,
+  expected_source_commit: str,
   expected_signing_mode: str,
 ) -> None:
   manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
@@ -501,6 +542,7 @@ def assert_package_manifest_matches_bundle(
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
     "bundleVersion": expected_version,
+    "sourceCommit": expected_source_commit,
     "minimumSystemVersion": "12.0",
     "architecture": expected_arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
@@ -950,6 +992,7 @@ def main() -> int:
       args.llama_binary.resolve() if args.llama_binary else None,
       args.arch,
       args.version,
+      args.source_commit,
       args.signing_mode,
       args.skip_ad_hoc_sign,
       args.no_zip,

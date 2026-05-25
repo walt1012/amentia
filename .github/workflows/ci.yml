@@ -140,6 +140,9 @@ jobs:
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
 
+      - name: Test distribution validator
+        run: python3 scripts/test_validate_macos_distribution.py
+
   rust-format:
     name: Rust format
     runs-on: ubuntu-latest
@@ -513,6 +516,7 @@ jobs:
           set +e
           python3 scripts/package_macos_app.py \
             --skip-build \
+            --source-commit "$GITHUB_SHA" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
             --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" \

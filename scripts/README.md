@@ -14,7 +14,7 @@ Current scripts:
 - `ci_changes.py`: classifies changed files into CI execution lanes so heavy macOS and Rust checks run only when relevant.
 - `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide when provided.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
-- `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging.
+- `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging, and records the source commit in `PithPackage.json`.
 - `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds.
 - `release_text.py`: generates GitHub Release notes and the DMG root install guide from the release signing mode.
@@ -32,6 +32,7 @@ Current scripts:
 - `validate_model_pack.py`: validates local model pack metadata and first-use resource packaging; use `--remote` during release audits.
 - `validate_workflows.py`: validates GitHub Actions structure so checkout credentials, artifact retention, CI lane splits, package dependencies, and release assets do not regress.
 - `test_validate_workflows.py`: checks workflow structure policy behavior without invoking GitHub Actions.
+- `test_validate_macos_distribution.py`: checks public distribution metadata policy without invoking signing tools.
 
 These scripts are safe to run locally when a matching toolchain exists, but CI is the canonical
 execution environment.

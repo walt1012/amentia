@@ -87,7 +87,8 @@ bundle, and emits internal zip and DMG artifacts with bounded artifact
 retention.
 
 Package validation checks the product `Info.plist`, `PkgInfo`,
-`PithPackage.json`, x86_64-only binaries, first-use model download metadata,
+`PithPackage.json`, source commit metadata, x86_64-only binaries, first-use
+model download metadata,
 bundled plugin resource contracts, absence of model weights, symlink-free
 packaged resources and optional backend inputs, llama.cpp dependency
 portability, and zip contents. The zip must include the default model manifest
