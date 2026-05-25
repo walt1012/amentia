@@ -263,7 +263,10 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
     inspection_item["attributes"]["targetTool"],
     "notion.inspectPageWrite"
   );
-  assert_eq!(inspection_item["attributes"]["sourceArtifact"], "docs/handoff.md");
+  assert_eq!(
+    inspection_item["attributes"]["sourceArtifact"],
+    "docs/handoff.md"
+  );
   assert!(inspection_item["content"]
     .as_str()
     .expect("inspection content")
