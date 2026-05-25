@@ -64,10 +64,9 @@ pub(crate) fn maybe_disambiguate_plugin_route(
     return route;
   };
 
-  route.planning_attributes.insert(
-    "toolPlanningModelDecision".to_string(),
-    command_id.clone(),
-  );
+  route
+    .planning_attributes
+    .insert("toolPlanningModelDecision".to_string(), command_id.clone());
   if command_id == route.command_id {
     route.planning_attributes.insert(
       "toolPlanningDisambiguation".to_string(),
