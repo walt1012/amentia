@@ -85,6 +85,8 @@ Current state:
   while prepare/update requests stay on local drafts.
 - Done: connector inspection handoffs preserve remote-write stage, target tool,
   and source artifact metadata for UI review and follow-up planning.
+- Done: plugin runner output now enforces a compact remote-write contract before
+  any connector timeline item can claim a completed third-party write.
 - Active gap: connector write execution is still plugin-owned; Pith now provides
   the inspection and approval boundary, but not a hosted Notion writer.
 
@@ -110,6 +112,8 @@ M7 exit criteria:
   and recorded as planning evidence.
 - Connector actions are practical enough for Notion-like third-party services,
   including inspect-before-remote-write.
+- Connector runners cannot claim completed remote writes without target service,
+  target tool, and completed-stage evidence.
 - The packaged macOS app path remains green in CI.
 
 ## Next Milestone: M8 Release Candidate

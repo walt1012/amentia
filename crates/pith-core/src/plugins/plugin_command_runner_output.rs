@@ -17,6 +17,8 @@ const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
 const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
 const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
   &["pluginResult", "toolResult", "warning", "system"];
+const PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT: &str = "pith.connectorRemoteWrite.v1";
+const PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE: &str = "completed";
 
 struct PluginRunnerMemoryNoteSelection {
   notes: Vec<PluginRunnerMemoryNoteDraft>,
@@ -368,6 +370,11 @@ fn plugin_runner_timeline_item(
     .entry("sourcePath".to_string())
     .or_insert_with(|| command.source_path.clone());
 
+  if !plugin_runner_remote_write_contract_is_valid(&attributes) {
+    return None;
+  }
+  insert_plugin_runner_remote_write_contract(&mut attributes);
+
   Some(TimelineItem {
     kind: kind.to_string(),
     title: title.to_string(),
@@ -378,6 +385,43 @@ fn plugin_runner_timeline_item(
 
 fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
   PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS.contains(&kind)
+}
+
+fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, String>) -> bool {
+  let remote_write = attributes
+    .get("remoteWrite")
+    .map(|value| value.trim())
+    .unwrap_or_default();
+
+  match remote_write {
+    "" | "false" => true,
+    "true" => {
+      plugin_runner_attribute_value(attributes, "remoteWriteStage")
+        == Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
+        && plugin_runner_attribute_value(attributes, "targetService").is_some()
+        && plugin_runner_attribute_value(attributes, "targetTool").is_some()
+    }
+    _ => false,
+  }
+}
+
+fn plugin_runner_attribute_value<'a>(
+  attributes: &'a HashMap<String, String>,
+  key: &str,
+) -> Option<&'a str> {
+  attributes
+    .get(key)
+    .map(|value| value.trim())
+    .filter(|value| !value.is_empty())
+}
+
+fn insert_plugin_runner_remote_write_contract(attributes: &mut HashMap<String, String>) {
+  if attributes.contains_key("remoteWrite") || attributes.contains_key("remoteWriteStage") {
+    attributes.insert(
+      "pluginRunnerRemoteWriteContract".to_string(),
+      PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT.to_string(),
+    );
+  }
 }
 
 fn plugin_runner_owned_attributes(attributes: HashMap<String, String>) -> HashMap<String, String> {
@@ -591,6 +635,118 @@ mod tests {
         .get("pluginRunnerOutputInvalidTimelineItemCount")
         .map(String::as_str),
       Some("1")
+    );
+  }
+
+  #[test]
+  fn output_contract_accepts_remote_write_inspection_items() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Inspection",
+          "content": "This is an inspection item and has not written remotely.",
+          "attributes": {
+            "remoteWrite": "false",
+            "remoteWriteStage": "inspectBeforeWrite",
+            "targetService": "notion",
+            "targetTool": "notion.inspectPageWrite"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!(
+        "inspection item should be accepted: {}",
+        failure.message
+      ),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes
+        .get("pluginRunnerRemoteWriteContract")
+        .map(String::as_str),
+      Some("pith.connectorRemoteWrite.v1")
+    );
+    assert_eq!(
+      attributes.get("remoteWrite").map(String::as_str),
+      Some("false")
+    );
+  }
+
+  #[test]
+  fn output_contract_rejects_unproven_remote_write_claims() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Complete",
+          "content": "The page was updated.",
+          "attributes": {
+            "remoteWrite": "true",
+            "targetService": "notion"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("unproven remote write claim should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputInvalidTimelineItemCount")
+        .map(String::as_str),
+      Some("1")
+    );
+  }
+
+  #[test]
+  fn output_contract_accepts_completed_remote_write_with_target_evidence() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Complete",
+          "content": "The page was updated.",
+          "attributes": {
+            "remoteWrite": "true",
+            "remoteWriteStage": "completed",
+            "targetService": "notion",
+            "targetTool": "notion.updatePage"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!(
+        "completed remote write should be accepted: {}",
+        failure.message
+      ),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes
+        .get("pluginRunnerRemoteWriteContract")
+        .map(String::as_str),
+      Some("pith.connectorRemoteWrite.v1")
+    );
+    assert_eq!(
+      attributes.get("remoteWriteStage").map(String::as_str),
+      Some("completed")
     );
   }
 
