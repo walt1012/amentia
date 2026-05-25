@@ -107,6 +107,8 @@ Current state:
   duplicate raw-bundle smoke from the public release workflow.
 - Done: packaged smoke now verifies the activated first-use model pack lives
   under app-owned storage and matches manifest, GGUF, size, and SHA-256 data.
+- Done: internal and public release outputs now include a root install guide
+  asset and a machine-readable release manifest next to the DMG checksum.
 
 M8 work order:
 

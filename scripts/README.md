@@ -14,7 +14,7 @@ Current scripts:
 - `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide when provided.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging.
-- `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files.
+- `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and release manifests.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds.
 - `release_text.py`: generates GitHub Release notes and the DMG root install guide from the release signing mode.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
@@ -33,8 +33,9 @@ execution environment.
 CI keeps fast policy checks, Rust checks, Swift builds, runtime builds, the pinned llama.cpp backend,
 and macOS packaging as separate gates. The llama.cpp backend is cached by pinned source revision, but
 the packaged app smoke test still validates the staged backend before release artifacts are uploaded.
-Public GitHub Releases should upload the notarized `Pith-<tag>-macos-x86_64.dmg`
-and checksum. If Developer ID credentials are unavailable, the release workflow
+Public GitHub Releases should upload the notarized
+`Pith-<tag>-macos-x86_64.dmg`, checksum, root install guide, and release
+manifest. If Developer ID credentials are unavailable, the release workflow
 defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
 an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
 path, but it must not be promoted as a normal trusted installer. The release

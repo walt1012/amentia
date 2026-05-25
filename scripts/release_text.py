@@ -62,6 +62,7 @@ def release_notes(
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model.
 - SHA-256 checksum sidecar is published next to the DMG.
+- README-FIRST.txt and the release manifest are published as separate assets for pre-install review.
 - {trust_note}
 """
 
@@ -85,6 +86,7 @@ Notes
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - The `.sha256` file next to the DMG lets users verify the downloaded installer.
+- The release manifest lists the DMG checksum, platform target, signing mode, and model delivery mode.
 - Only one local model runs at a time.
 - Short, specific first requests work best with the default small local model.
 """

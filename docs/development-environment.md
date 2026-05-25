@@ -107,7 +107,8 @@ only for `v*` tags or manual dispatch and supports two distribution modes:
 
 - Developer ID mode signs the app, creates a DMG, signs and notarizes the DMG,
   staples the notarization ticket, validates the app and DMG, then publishes the
-  DMG and SHA-256 checksum to a normal GitHub Release.
+  DMG, SHA-256 checksum, install guide, and release manifest to a normal GitHub
+  Release.
 - Ad-hoc mode builds the same x86_64 DMG shape when Developer ID secrets are
   missing. Tag-triggered builds and ordinary manual runs stay draft-only, but a
   manual run can publish a visible untrusted prerelease when
@@ -119,6 +120,10 @@ Each release DMG includes `README-FIRST.txt` at the volume root. That file
 summarizes the install steps, first-use model download, workspace opening,
 first cowork request, and the trust path for either Developer ID notarized
 builds or untrusted ad-hoc prereleases.
+
+The release page also publishes `README-FIRST.txt` and a release manifest as
+separate assets, so users and automation can inspect the platform target,
+signing mode, checksum, and model delivery mode before opening the DMG.
 
 Release publishing requires these repository secrets:
 

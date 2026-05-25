@@ -405,7 +405,11 @@ jobs:
           set -euo pipefail
           python3 scripts/release_artifacts.py \
             --artifact "artifacts/macos/$MACOS_DMG_NAME" \
-            --checksum-output "artifacts/macos/$MACOS_DMG_NAME.sha256"
+            --checksum-output "artifacts/macos/$MACOS_DMG_NAME.sha256" \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --signing-mode ad-hoc \
+            --install-guide artifacts/macos/README-FIRST.txt \
+            --manifest-output artifacts/macos/internal-release-manifest.json
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
@@ -417,4 +421,5 @@ jobs:
             artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
             artifacts/macos/README-FIRST.txt
             artifacts/macos/internal-release-notes.md
+            artifacts/macos/internal-release-manifest.json
           if-no-files-found: error
