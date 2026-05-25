@@ -90,7 +90,7 @@ Current state:
 - Release assets include DMG, basename-only SHA-256 checksum,
   `README-FIRST.txt`, and a machine-readable release manifest.
 - Release sidecars validate first-use user guidance, model delivery mode,
-  platform target, signing mode, and checksum integrity.
+  platform target, signing mode, source commit, and checksum integrity.
 - The app reads packaged distribution metadata and presents the same
   Developer ID or ad-hoc Gatekeeper trust path that the DMG install guide uses.
 - Packaged smoke covers first-use model metadata, app-owned model activation,

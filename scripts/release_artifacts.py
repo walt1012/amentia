@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 SUPPORTED_SIGNING_MODES = {"ad-hoc", "developer-id"}
+SOURCE_COMMIT_HEX_LENGTH = 40
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications",
   "download one verified local model",
@@ -46,17 +47,19 @@ def write_checksum_file(artifact_path: Path, checksum_path: Path | None = None) 
 def release_manifest(
   *,
   tag: str,
+  source_commit: str,
   signing_mode: str,
   artifact_path: Path,
   checksum_path: Path,
   install_guide_path: Path,
 ) -> dict:
-  validate_release_identity(tag, signing_mode)
+  validate_release_identity(tag, source_commit, signing_mode)
   validate_checksum_file(artifact_path, checksum_path)
   validate_install_guide(install_guide_path)
 
   return {
     "tag": tag,
+    "sourceCommit": source_commit,
     "product": "Pith",
     "platform": {
       "os": "macOS",
@@ -90,6 +93,7 @@ def release_manifest(
 def write_release_manifest(
   *,
   tag: str,
+  source_commit: str,
   signing_mode: str,
   artifact_path: Path,
   checksum_path: Path,
@@ -101,6 +105,7 @@ def write_release_manifest(
     json.dumps(
       release_manifest(
         tag=tag,
+        source_commit=source_commit,
         signing_mode=signing_mode,
         artifact_path=artifact_path,
         checksum_path=checksum_path,
@@ -161,14 +166,26 @@ def validate_release_manifest(
   validate_install_guide(install_guide_path)
 
 
-def validate_release_identity(tag: str, signing_mode: str) -> None:
+def validate_release_identity(tag: str, source_commit: str, signing_mode: str) -> None:
   if not tag.strip():
     raise RuntimeError("Release manifest tag is required")
+  validate_source_commit(source_commit)
   if signing_mode not in SUPPORTED_SIGNING_MODES:
     raise RuntimeError(f"Unsupported release signing mode: {signing_mode}")
 
 
+def validate_source_commit(source_commit: str) -> None:
+  if len(source_commit) != SOURCE_COMMIT_HEX_LENGTH:
+    raise RuntimeError("Release manifest source commit must be a full SHA-1 hash")
+  if any(character not in "0123456789abcdef" for character in source_commit):
+    raise RuntimeError("Release manifest source commit must be lowercase hex")
+
+
 def validate_manifest_identity(manifest: dict) -> None:
+  source_commit = manifest.get("sourceCommit")
+  if not isinstance(source_commit, str):
+    raise RuntimeError("Release manifest source commit is required")
+  validate_source_commit(source_commit)
   if manifest.get("product") != "Pith":
     raise RuntimeError("Release manifest product must be Pith")
   platform = manifest.get("platform")
@@ -247,6 +264,7 @@ def main() -> int:
   parser.add_argument("--manifest-output", type=Path)
   parser.add_argument("--install-guide", type=Path)
   parser.add_argument("--tag")
+  parser.add_argument("--source-commit")
   parser.add_argument("--signing-mode", choices=sorted(SUPPORTED_SIGNING_MODES))
   args = parser.parse_args()
 
@@ -257,12 +275,19 @@ def main() -> int:
     )
     manifest_path = None
     if args.manifest_output:
-      if not args.tag or not args.signing_mode or not args.install_guide:
+      if (
+        not args.tag
+        or not args.source_commit
+        or not args.signing_mode
+        or not args.install_guide
+      ):
         raise RuntimeError(
-          "--manifest-output requires --tag, --signing-mode, and --install-guide"
+          "--manifest-output requires --tag, --source-commit, --signing-mode, "
+          "and --install-guide"
         )
       manifest_path = write_release_manifest(
         tag=args.tag,
+        source_commit=args.source_commit,
         signing_mode=args.signing_mode,
         artifact_path=args.artifact.resolve(),
         checksum_path=checksum_path,

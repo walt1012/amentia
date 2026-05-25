@@ -312,6 +312,7 @@ jobs:
             --artifact "$dmg_path" \
             --checksum-output "$dmg_path.sha256" \
             --tag "$RELEASE_TAG" \
+            --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
             --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"

@@ -133,6 +133,13 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
         issues.append(
           WorkflowIssue(CI_WORKFLOW, f"macos-package upload is missing {asset}")
         )
+    if "--source-commit" not in package_block:
+      issues.append(
+        WorkflowIssue(
+          CI_WORKFLOW,
+          "macos-package release manifest must include --source-commit",
+        )
+      )
   return issues
 
 
@@ -159,6 +166,13 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   if "scripts/release_state.py" not in release_block:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release publish state helper is missing")
+    )
+  if "--source-commit" not in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "release manifest must include --source-commit",
+      )
     )
   for asset in REQUIRED_RELEASE_ASSETS:
     if asset not in release_block:

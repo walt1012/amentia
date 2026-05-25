@@ -19,6 +19,9 @@ from release_artifacts import (
 from release_text import install_guide as release_install_guide
 
 
+SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
 def assert_raises(action, message: str) -> None:
   try:
     action()
@@ -50,6 +53,7 @@ def main() -> int:
 
     manifest = release_manifest(
       tag="v0.1.0",
+      source_commit=SOURCE_COMMIT,
       signing_mode="ad-hoc",
       artifact_path=artifact,
       checksum_path=checksum_path,
@@ -57,11 +61,14 @@ def main() -> int:
     )
     if manifest["platform"]["architecture"] != "x86_64":
       raise AssertionError("release manifest should lock the macOS architecture")
+    if manifest["sourceCommit"] != SOURCE_COMMIT:
+      raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
 
     manifest_path = write_release_manifest(
       tag="v0.1.0",
+      source_commit=SOURCE_COMMIT,
       signing_mode="ad-hoc",
       artifact_path=artifact,
       checksum_path=checksum_path,
@@ -87,6 +94,20 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "wrong release platform should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["sourceCommit"] = "short"
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong source commit should fail release manifest validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
