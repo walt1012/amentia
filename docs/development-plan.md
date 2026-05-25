@@ -81,6 +81,8 @@ Current state:
   bounded command-id decision instead of adding more brittle keyword routes.
 - Done: Notion-style connector writes now have a separate inspection command
   that is approval-gated before any remote-write-capable runner can proceed.
+- Done: natural publish/send/write connector requests route to inspection,
+  while prepare/update requests stay on local drafts.
 - Active gap: connector write execution is still plugin-owned; Pith now provides
   the inspection and approval boundary, but not a hosted Notion writer.
 

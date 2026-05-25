@@ -14,6 +14,8 @@ const NATURAL_CONNECTOR_COMMAND_REASON: &str = "naturalConnectorCommand";
 const NATURAL_NOTION_DRAFT_REASON: &str = "naturalNotionDraftCommand";
 const NATURAL_REVIEW_DIFF_REASON: &str = "naturalReviewDiffCommand";
 const NATURAL_WORKSPACE_NOTE_REASON: &str = "naturalWorkspaceNoteCommand";
+const EXACT_ACTION_TERM_SCORE: usize = 30;
+const ACTIONABLE_COMMAND_FALLBACK_SCORE: usize = 5;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ExplicitPluginCommandRoute {
@@ -353,9 +355,9 @@ fn command_action_score(normalized_message: &str, command: &HostPluginCommandEnt
       if !normalized_message.contains(*term) {
         0
       } else if command_text.contains(*term) {
-        20
+        EXACT_ACTION_TERM_SCORE
       } else if command_looks_actionable(&command_text) {
-        10
+        ACTIONABLE_COMMAND_FALLBACK_SCORE
       } else {
         0
       }

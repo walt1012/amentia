@@ -143,6 +143,7 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
   let items = result["items"].as_array().expect("turn items");
   assert_eq!(items[1]["kind"], "pluginCommand");
   assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
+  assert_eq!(items[1]["attributes"]["commandId"], NOTION_COMMAND_ID);
   assert_eq!(
     items[1]["attributes"]["commandInput"],
     "Prepare a Notion update from docs/handoff.md.\n\nSaved artifact: docs/handoff.md\nSaved artifact preview: # Project Handoff Ship the practical cowork connector path.\nSaved artifact truncated: false"
@@ -191,6 +192,53 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
   assert!(saved_note
     .body
     .contains("Ship the practical cowork connector path."));
+}
+
+#[test]
+fn bundled_notion_connector_natural_publish_request_routes_to_write_inspection() {
+  let (mut context, workspace) = setup_authorized_notion_context(
+    "bundled-notion-natural-write-inspection",
+    "Bundled Notion Natural Write Inspection Thread",
+  );
+  fs::create_dir_all(workspace.join("docs")).expect("create docs directory");
+  fs::write(
+    workspace.join("docs").join("handoff.md"),
+    "# Project Handoff\n\nPrepare a safe Notion update.",
+  )
+  .expect("write saved handoff");
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Publish a Notion update from docs/handoff.md."
+      })),
+    ),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("turn items");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    NOTION_WRITE_INSPECTION_COMMAND_ID
+  );
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningSelectedCommandId"],
+    NOTION_WRITE_INSPECTION_COMMAND_ID
+  );
+  assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
+
+  let approval_result = approve_pending(&mut context, &result);
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  let approved_items = approval_result["items"].as_array().expect("approval items");
+  assert!(approved_items
+    .iter()
+    .any(|item| item["title"] == "Notion Remote Write Inspection"));
 }
 
 #[test]
