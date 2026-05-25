@@ -97,15 +97,15 @@ files, and must not require external package manager paths at runtime. CI also
 ad-hoc signs the app when `codesign` is available. Internal CI artifacts prove
 the package shape, but they are not public release installers.
 
-The packaged launch smoke is the M5 daily-driver proof. It launches the app with
-isolated support state, probes the bundled runtime, verifies first-use model
-metadata without model weights, opens a workspace, creates a thread, sends a
-deterministic cowork request through the packaged llama.cpp path, runs packaged
-web search from a fixture, executes a bundled MCP stdio plugin command through
-connector authorization and approval, verifies runner memory capture, and then
-checks app/runtime stability.
+The packaged launch smoke is the release-candidate daily-driver proof. It
+launches the app with isolated support state, probes the bundled runtime,
+verifies first-use model metadata without model weights, opens a workspace,
+creates a thread, sends a deterministic cowork request through the packaged
+llama.cpp path, runs packaged Web Search from a fixture, executes a bundled MCP
+stdio plugin command through connector authorization and approval, verifies
+runner memory capture, and then checks app/runtime stability.
 
-Public distribution builds must pass:
+Trusted Developer ID distribution builds must pass:
 
 ```bash
 python3 scripts/validate_macos_distribution.py \
@@ -114,8 +114,8 @@ python3 scripts/validate_macos_distribution.py \
 ```
 
 This gate requires Developer ID signing, Gatekeeper assessment, and notarization
-stapling. Ad-hoc signed CI artifacts prove the package shape, but they are not
-trusted macOS installers.
+stapling. Ad-hoc signed CI artifacts and explicit untrusted prereleases prove
+the package shape and user guidance, but they are not trusted macOS installers.
 
 ## GitHub Release Distribution
 

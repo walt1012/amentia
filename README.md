@@ -53,15 +53,19 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestones 1-6 are closed on the active development branch. Pith now has the
-daily-driver foundation: first-use model setup, workspace flow, Web Search,
-sandbox, approvals, plugin recovery, a bounded Plan/Act/Observe loop, and the
-x86_64 macOS package path.
+Milestones 1-7 are closed on the active development branch. Pith now has the
+daily-driver cowork foundation: first-use model setup, workspace flow, Web
+Search, sandbox, approvals, plugin recovery, saved artifacts, connector draft
+handoffs, a bounded Plan/Act/Observe loop, and the x86_64 macOS package path.
 
-The current focus is Milestone 7: practical cowork flows. The next product gap
-is making everyday work feel safe and obvious: save useful artifacts, continue
-from approved writes, feed saved artifacts into connector drafts, inspect
-third-party writes before execution, and keep the timeline understandable.
+The current focus is Milestone 8: release candidate closure. The active product
+gap is proving that a non-developer can download the DMG, understand the trust
+path, download the default model, open a workspace, run a grounded cowork
+request, review approvals, recover from runtime or model issues, and inspect
+source and package metadata.
+
+After M8, the next planned direction is Milestone 9: stronger cowork connector
+workflows, not more coding-only surface area.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 

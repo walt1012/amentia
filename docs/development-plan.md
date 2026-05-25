@@ -112,12 +112,36 @@ Current state:
 
 M8 work order:
 
+- Close M8 only when the release workflow, package metadata, source commit
+  traceability, first-run model path, workspace path, Web Search evidence,
+  approval-gated write path, connector smoke, and runtime recovery remain green
+  together in CI.
 - Keep packaged smoke focused on real user journeys; add UI automation for
   visible recovery copy only after the app has a stable UI automation harness.
 - Defer page fetch and page-content snapshots until cowork tasks require
   evidence beyond search-result snapshots.
 - Keep MCP one-shot until a real connector workflow proves persistent local
   sessions are necessary.
+
+## Next Milestone: M9 Cowork Connectors
+
+Goal: make Pith useful for real non-code cowork tasks without turning the app
+into a marketplace shell or a generic RAG product.
+
+Work order:
+
+- Prove one or two real connector workflows end to end, from user intent to
+  inspected draft, approval, execution proof, retry, and recovery.
+- Narrow connector permissions around explicit user-visible actions rather than
+  broad plugin trust.
+- Keep Web Search as the active retrieval layer and add stronger page evidence
+  only when connector tasks need it.
+- Keep saved artifacts and memory as lightweight context aids, not a local
+  document RAG system.
+- Preserve the small native UI: progressive disclosure, no always-open admin
+  panels, and no feature surface without a daily cowork use case.
+- Refactor only at ownership boundaries exposed by connector work; do not split
+  modules simply to reduce line counts.
 
 ## Guardrails
 
