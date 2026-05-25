@@ -97,6 +97,8 @@ Current state:
   connector remote-write status without forcing users into raw attributes.
 - Done: release DMGs now include an install guide that explains first-use model
   download and the Developer ID or ad-hoc Gatekeeper trust path.
+- Done: first-use model actions name the selected model directly, so fresh
+  installs see `Download LFM2.5-350M` instead of a generic selected-model action.
 - Active gap: connector write execution is still plugin-owned; Pith provides the
   inspection, approval, and proof boundary, but not a hosted Notion writer.
 

@@ -1,6 +1,13 @@
 import Foundation
 
 enum LocalModelDisplayPresenter {
+  static func actionName(_ model: LocalModelSummary) -> String {
+    model.displayName
+      .replacingOccurrences(of: " Q4_K_M", with: "")
+      .replacingOccurrences(of: " Q4_K_S", with: "")
+      .replacingOccurrences(of: " Q8_0", with: "")
+  }
+
   static func firstUseFit(_ model: LocalModelSummary, defaultModelID: String) -> String {
     if model.id == defaultModelID {
       return "Default path: fastest first setup and the lightest local loop."

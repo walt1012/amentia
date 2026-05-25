@@ -197,19 +197,22 @@ enum LocalModelStatusPresenter {
 
   static func defaultDownloadButtonTitle(_ snapshot: LocalModelStatusSnapshot) -> String {
     let setupModelID = snapshot.selectedSetupModel?.id ?? snapshot.selectedSetupModelID
+    let modelName = snapshot.selectedSetupModel.map(LocalModelDisplayPresenter.actionName)
     if snapshot.modelDownloadID == setupModelID {
-      return "Downloading Model"
+      return modelName.map { "Downloading \($0)" } ?? "Downloading Model"
     }
     if snapshot.pausedModelDownloadID == setupModelID {
-      return "Continue Model"
+      return modelName.map { "Continue \($0)" } ?? "Continue Model"
     }
     if let setupModel = snapshot.selectedSetupModel {
       if setupModel.active {
         return "Model Selected"
       }
       if setupModel.downloaded {
-        return "Use Downloaded Model"
+        return "Use \(LocalModelDisplayPresenter.actionName(setupModel))"
       }
+
+      return "Download \(LocalModelDisplayPresenter.actionName(setupModel))"
     }
 
     return "Download Selected"
