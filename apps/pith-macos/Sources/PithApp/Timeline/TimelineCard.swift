@@ -56,6 +56,16 @@ struct TimelineCard: View {
             .background(sandboxBadge.tone.color.opacity(0.12))
             .clipShape(Capsule())
         }
+
+        ForEach(evidenceBadges, id: \.self) { badge in
+          Text(badge.label)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(badge.tone.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(badge.tone.color.opacity(0.12))
+            .clipShape(Capsule())
+        }
       }
 
       if let streamingProgressValue {
@@ -290,6 +300,10 @@ struct TimelineCard: View {
 
   private var sandboxBadge: TimelineSandboxBadgeSummary? {
     TimelineSandboxBadgePresenter.badge(attributes: entry.attributes)
+  }
+
+  private var evidenceBadges: [TimelineEvidenceBadgeSummary] {
+    TimelineEvidenceBadgePresenter.badges(attributes: entry.attributes)
   }
 
   private func progressLabel() -> String? {

@@ -30,6 +30,34 @@ enum TimelineInspectorPresenter {
     return "\(entry.kind.rawValue)\n\(detail)"
   }
 
+  static func selectedEntrySourceSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
+    guard let entry = snapshot.selectedEntry else {
+      return nil
+    }
+
+    let hasWebSource = entry.attributes["webSearchSourceMode"] != nil
+      || entry.attributes["sourceAttribution"] == "web_search"
+    guard hasWebSource else {
+      return nil
+    }
+
+    let sourceMode = entry.attributes["webSearchSourceMode"] ?? "unknown"
+    let pageFetch = entry.attributes["pageFetchPerformed"] ?? "unknown"
+    let snapshotAvailable = entry.attributes["sourceSnapshotAvailable"] ?? "unknown"
+    var lines = [
+      "Source mode: \(sourceMode)",
+      "Page fetch: \(yesNo(pageFetch))",
+      "Source snapshot: \(yesNo(snapshotAvailable))",
+    ]
+    if let sourceTitles = entry.attributes["sourceTitles"] {
+      lines.append("Titles: \(sourceTitles)")
+    }
+    if let sourceUrls = entry.attributes["sourceUrls"] {
+      lines.append("URLs: \(sourceUrls)")
+    }
+    return lines.joined(separator: "\n")
+  }
+
   static func selectedDiffSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
     guard let entry = snapshot.selectedEntry, entry.kind == .diff else {
       return nil
@@ -131,6 +159,7 @@ enum TimelineInspectorPresenter {
       lines.append(connectorSummary)
     }
 
+    appendRemoteWriteSummary(entry, to: &lines)
     appendPluginConnectorRecoverySummary(entry, to: &lines)
     appendPluginRunSummary(entry, to: &lines)
     appendPluginInstallSummary(entry, to: &lines)
@@ -240,6 +269,9 @@ enum TimelineInspectorPresenter {
       "connectorIds",
       "connectorStatus",
       "connectorRepairHint",
+      "remoteWrite",
+      "remoteWriteStage",
+      "remoteWriteStatus",
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
@@ -281,6 +313,17 @@ enum TimelineInspectorPresenter {
 
   private static func firstAttribute(_ entry: TimelineEntry, keys: [String]) -> String? {
     keys.compactMap { key in entry.attributes[key] }.first
+  }
+
+  private static func yesNo(_ value: String) -> String {
+    switch value {
+    case "true":
+      return "yes"
+    case "false":
+      return "no"
+    default:
+      return value
+    }
   }
 
   private static func appendPluginInstallSummary(
@@ -330,6 +373,35 @@ enum TimelineInspectorPresenter {
     }
     if let repairHint = entry.attributes["connectorRepairHint"] {
       lines.append("Connector repair: \(repairHint)")
+    }
+  }
+
+  private static func appendRemoteWriteSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard entry.attributes["remoteWrite"] != nil
+      || entry.attributes["remoteWriteStage"] != nil
+      || entry.attributes["remoteWriteStatus"] != nil
+    else {
+      return
+    }
+
+    let status = entry.attributes["remoteWriteStatus"] ?? "unknown"
+    let stage = entry.attributes["remoteWriteStage"] ?? "unknown stage"
+    let sent = entry.attributes["remoteWrite"] ?? "unknown"
+    let targetService = entry.attributes["targetService"] ?? "unknown service"
+    let targetTool = entry.attributes["targetTool"] ?? "unknown tool"
+    lines.append(
+      "Remote write: \(status) | sent \(sent) | stage \(stage) | "
+        + "\(targetService) via \(targetTool)"
+    )
+
+    if let approvalRequired = entry.attributes["remoteWriteRequiresApproval"] {
+      lines.append("Remote approval required: \(approvalRequired)")
+    }
+    if let sourceArtifact = entry.attributes["sourceArtifact"] {
+      lines.append("Remote write source: \(sourceArtifact)")
     }
   }
 

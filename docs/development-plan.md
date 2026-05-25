@@ -93,6 +93,8 @@ Current state:
   runner contract, not trusted from plugin-provided labels.
 - Done: Web Search handoffs now label search-result attribution separately from
   page-fetch or source-snapshot verification.
+- Done: timeline cards and inspector summaries now expose source-depth and
+  connector remote-write status without forcing users into raw attributes.
 - Active gap: connector write execution is still plugin-owned; Pith provides the
   inspection, approval, and proof boundary, but not a hosted Notion writer.
 

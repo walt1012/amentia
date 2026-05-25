@@ -75,6 +75,13 @@ struct InspectorPane: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
+          if let sourceSummary = viewModel.selectedEntrySourceSummary() {
+            Text(sourceSummary)
+              .font(.caption)
+              .foregroundColor(.secondary)
+              .textSelection(.enabled)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
           DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
             Text(viewModel.selectedEntryMetadata())
               .font(.caption)
