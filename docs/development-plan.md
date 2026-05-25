@@ -132,6 +132,10 @@ M7 exit criteria:
 - Web Search answers expose source attribution honestly without implying full
   page-fetch verification.
 - The packaged macOS app path remains green in CI.
+- First-run starter prompts are cowork-first: map the workspace or plan the
+  next useful step, without forcing the user into a coding-only review flow.
+- Release install copy now carries the non-developer path through model
+  download, workspace opening, and the first cowork request.
 
 ## Next Milestone: M8 Release Candidate
 

@@ -9,7 +9,7 @@ extension AppViewModel {
   }
 
   func firstRequestCalloutTitle() -> String {
-    "First Local Request"
+    "Start Cowork Session"
   }
 
   func firstRequestCalloutSummary() -> String {
@@ -40,12 +40,12 @@ extension AppViewModel {
 
   func firstRequestCalloutSecondaryActionTitle() -> String? {
     FirstRequestPromptPresenter.secondaryActionTitle(
-      for: firstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
+      for: firstRequestSuggestion(id: FirstRequestPromptPresenter.planNextStepID)
     )
   }
 
   func canRunFirstRequestCalloutSecondaryAction() -> Bool {
-    firstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID) != nil
+    firstRequestSuggestion(id: FirstRequestPromptPresenter.planNextStepID) != nil
   }
 
   func runFirstRequestCalloutSecondaryAction() {
@@ -53,7 +53,7 @@ extension AppViewModel {
       return
     }
 
-    useFirstRequestSuggestion(id: FirstRequestPromptPresenter.reviewChangesID)
+    useFirstRequestSuggestion(id: FirstRequestPromptPresenter.planNextStepID)
   }
 
   func firstRequestSuggestion(id: String) -> ComposerSuggestionSummary? {

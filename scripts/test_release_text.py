@@ -47,6 +47,8 @@ def main() -> int:
   guide = install_guide("v0.1.0", "ad-hoc")
   require_contains(guide, "Control-click Pith.app and choose Open.")
   require_contains(guide, "download one verified local model")
+  require_contains(guide, "Open a workspace folder.")
+  require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
 
   print("release text tests passed")
   return 0

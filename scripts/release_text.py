@@ -73,6 +73,8 @@ Install
 1. Open this DMG.
 2. Drag Pith.app to Applications.
 3. Launch Pith and download one verified local model when prompted.
+4. Open a workspace folder.
+5. Start a cowork session with Map Workspace, Plan Next Step, or your own first request.
 
 Trust
 {trust_note}
@@ -82,6 +84,7 @@ Notes
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - Only one local model runs at a time.
+- Short, specific first requests work best with the default small local model.
 """
 
 

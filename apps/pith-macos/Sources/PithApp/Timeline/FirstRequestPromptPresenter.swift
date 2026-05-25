@@ -2,10 +2,10 @@ import Foundation
 
 enum FirstRequestPromptPresenter {
   static let mapWorkspaceID = "map-workspace"
-  static let reviewChangesID = "review-changes"
+  static let planNextStepID = "plan-next-step"
 
   static func calloutSummary() -> String {
-    "Core setup is ready. Pick a short starter prompt or type your own first local request."
+    "Core setup is ready. Ask Pith to map the workspace, plan one useful next step, or type your own request."
   }
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {
@@ -13,7 +13,7 @@ enum FirstRequestPromptPresenter {
       return "Choose a workspace before starting the first local request."
     }
 
-    return "Pith will use \(workspaceDisplayName) as the working context. Short first requests work best for the local model."
+    return "Pith will use \(workspaceDisplayName) as the working context. Short, specific cowork requests work best for the local model."
   }
 
   static func primaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
@@ -21,7 +21,7 @@ enum FirstRequestPromptPresenter {
   }
 
   static func secondaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
-    suggestion == nil ? nil : "Use Review Prompt"
+    suggestion == nil ? nil : "Use Next Step Prompt"
   }
 
   static func suggestions(workspaceDisplayName: String?) -> [ComposerSuggestionSummary] {
@@ -33,9 +33,9 @@ enum FirstRequestPromptPresenter {
         message: "Map \(workspaceName) briefly. Return: 1. key folders, 2. project flow, 3. one safe next step."
       ),
       ComposerSuggestionSummary(
-        id: reviewChangesID,
-        title: "Review Changes",
-        message: "Review current changes in \(workspaceName). Return only: 1. highest-risk issue, 2. missing test, 3. safe fix."
+        id: planNextStepID,
+        title: "Plan Next Step",
+        message: "Help me choose the next useful step in \(workspaceName). Return only: 1. current situation, 2. safest next action, 3. what you need from me."
       ),
     ]
   }

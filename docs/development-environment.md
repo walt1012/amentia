@@ -116,9 +116,9 @@ only for `v*` tags or manual dispatch and supports two distribution modes:
   require manual user approval before first launch.
 
 Each release DMG includes `README-FIRST.txt` at the volume root. That file
-summarizes the install steps, first-use model download expectation, and the
-trust path for either Developer ID notarized builds or untrusted ad-hoc
-prereleases.
+summarizes the install steps, first-use model download, workspace opening,
+first cowork request, and the trust path for either Developer ID notarized
+builds or untrusted ad-hoc prereleases.
 
 Release publishing requires these repository secrets:
 
