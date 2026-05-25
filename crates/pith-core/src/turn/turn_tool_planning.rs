@@ -83,6 +83,10 @@ pub(crate) fn plan_initial_turn_tool(
 
 #[cfg(test)]
 mod tests {
+  use std::fs;
+  use std::path::PathBuf;
+  use std::time::{SystemTime, UNIX_EPOCH};
+
   use super::*;
 
   #[test]
@@ -101,8 +105,11 @@ mod tests {
 
   #[test]
   fn workspace_read_request_plans_read_file() {
+    let workspace_root = unique_temp_workspace("planner-read");
+    fs::create_dir_all(&workspace_root).expect("workspace");
+    fs::write(workspace_root.join("README.md"), "hello").expect("readme");
     let workspace = WorkspaceSummary {
-      root_path: ".".to_string(),
+      root_path: workspace_root.display().to_string(),
       display_name: "pith".to_string(),
     };
     let plan = plan_initial_turn_tool("read README.md", Some(&workspace), &[]);
@@ -111,5 +118,14 @@ mod tests {
       InitialToolPlan::ReadFile { relative_path } => assert_eq!(relative_path, "README.md"),
       _ => panic!("expected read file plan"),
     }
+    let _ = fs::remove_dir_all(workspace_root);
+  }
+
+  fn unique_temp_workspace(prefix: &str) -> PathBuf {
+    let nonce = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("clock")
+      .as_nanos();
+    std::env::temp_dir().join(format!("pith-core-{prefix}-{nonce}"))
   }
 }
