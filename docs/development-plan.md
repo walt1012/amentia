@@ -96,6 +96,9 @@ Current state:
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search, approval-gated writes, runtime restart, and
   recovery of model, workspace, thread, and readiness state.
+- The model manager now surfaces explicit first-run recovery guidance for
+  paused downloads, runtime relaunch, downloaded-but-inactive models, and
+  partial-file cleanup.
 - Package gates reject bundled GGUF weights, unsafe zip entries, path
   traversal, symlink leakage, and non-`x86_64` executable outputs.
 - CI structure is change-aware and guarded by workflow policy checks, but CI
@@ -103,8 +106,8 @@ Current state:
 
 M8 work order:
 
-- Tighten first-run recovery: model download interruption, app relaunch,
-  runtime relaunch, and selected-model repair must remain obvious to users.
+- Add packaged smoke coverage for visible first-run recovery copy after model
+  download interruption and runtime relaunch.
 - Add stronger Web Search source snapshots only if cowork tasks require more
   evidence than search-result attribution.
 - Keep MCP one-shot until a real connector workflow proves persistent local

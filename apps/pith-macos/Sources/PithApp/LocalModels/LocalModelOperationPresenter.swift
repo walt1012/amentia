@@ -99,6 +99,20 @@ enum LocalModelOperationPresenter {
     return "Active: \(activeModel) | \(snapshot.downloadedModelCount)/\(snapshot.totalModelCount) downloaded | \(localSize)"
   }
 
+  static func recoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
+    switch snapshot.runtimeState {
+    case .disconnected:
+      return "Recovery: launch the runtime; model catalog, paused downloads, " +
+        "and selected model state are read from local storage."
+    case .launching:
+      return "Recovery: reconnecting local model state before showing the next action."
+    case .failed:
+      return "Recovery: relaunch the runtime; paused downloads and selected model choices remain local."
+    case .ready:
+      return readyRecoverySummary(snapshot)
+    }
+  }
+
   private static func readySetupGuidance(
     _ snapshot: LocalModelOperationSnapshot
   ) -> LocalModelSetupGuidance {
@@ -196,5 +210,41 @@ enum LocalModelOperationPresenter {
     let size = LocalModelByteFormatter.string(model.sizeBytes)
     let context = "\(model.contextSize) runtime / \(model.modelContextSize) model context"
     return "\(size) | \(model.license) | \(context)"
+  }
+
+  private static func readyRecoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
+    if let model = snapshot.downloadingModel {
+      return "Recovery: pause \(model.displayName) to keep resume data, " +
+        "or cancel to clear the partial file."
+    }
+
+    if let model = snapshot.pausedModel {
+      return "Recovery: continue \(model.displayName) from saved resume data, " +
+        "or cancel to remove the partial file."
+    }
+
+    if snapshot.hasActiveTurn {
+      return "Recovery: finish or cancel the current local turn before changing model setup."
+    }
+
+    if snapshot.isLocalModelReady {
+      let activeModel = snapshot.activeModelDisplayName ?? "the active model"
+      return "Recovery: \(activeModel) is selected; runtime relaunch will reuse this local model."
+    }
+
+    if let model = snapshot.selectedSetupModel, model.downloaded {
+      return "Recovery: use \(model.displayName) to activate it; reinstall metadata if readiness still fails."
+    }
+
+    if let blockedDetail = snapshot.selectedDownloadBlockedDetail {
+      return "Recovery: resolve this blocker, then retry the model download. \(blockedDetail)"
+    }
+
+    if let model = snapshot.selectedSetupModel {
+      return "Recovery: download \(model.displayName); paused downloads can continue, " +
+        "cancelled downloads clear partial files."
+    }
+
+    return "Recovery: install model metadata or relaunch the runtime to refresh the local catalog."
   }
 }

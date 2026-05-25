@@ -48,6 +48,45 @@ final class LocalModelPresenterTests: XCTestCase {
     )
   }
 
+  func testRecoverySummaryExplainsPausedDownloadChoices() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let summary = LocalModelOperationPresenter.recoverySummary(
+      operationSnapshot(pausedModel: selectedModel, selectedModel: selectedModel)
+    )
+
+    XCTAssertTrue(summary.contains("continue LFM2.5-350M Q4_K_M"))
+    XCTAssertTrue(summary.contains("cancel to remove the partial file"))
+  }
+
+  func testRecoverySummaryExplainsDownloadedModelRepair() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: true,
+      active: false
+    )
+    let summary = LocalModelOperationPresenter.recoverySummary(
+      operationSnapshot(selectedModel: selectedModel)
+    )
+
+    XCTAssertTrue(summary.contains("use Granite 4.0-H-350M Q4_K_M"))
+    XCTAssertTrue(summary.contains("reinstall metadata"))
+  }
+
+  func testRecoverySummaryExplainsRuntimeRelaunch() {
+    let summary = LocalModelOperationPresenter.recoverySummary(
+      operationSnapshot(runtimeState: .failed)
+    )
+
+    XCTAssertTrue(summary.contains("relaunch the runtime"))
+    XCTAssertTrue(summary.contains("selected model choices remain local"))
+  }
+
   private func statusSnapshot(
     selectedModel: LocalModelSummary,
     modelDownloadID: String? = nil,
@@ -62,6 +101,34 @@ final class LocalModelPresenterTests: XCTestCase {
       selectedSetupModelID: selectedModel.id,
       selectedSetupModel: selectedModel,
       hasActiveCatalogModel: false
+    )
+  }
+
+  private func operationSnapshot(
+    runtimeState: RuntimeBridge.ConnectionState = .ready,
+    isLocalModelReady: Bool = false,
+    hasActiveTurn: Bool = false,
+    downloadingModel: LocalModelSummary? = nil,
+    pausedModel: LocalModelSummary? = nil,
+    selectedModel: LocalModelSummary? = nil,
+    selectedDownloadBlockedDetail: String? = nil,
+    downloadedModelCount: Int = 0,
+    totalModelCount: Int = 2,
+    activeModelDisplayName: String? = nil,
+    downloadedLocalSizeBytes: Int64 = 0
+  ) -> LocalModelOperationSnapshot {
+    LocalModelOperationSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady,
+      hasActiveTurn: hasActiveTurn,
+      downloadingModel: downloadingModel,
+      pausedModel: pausedModel,
+      selectedSetupModel: selectedModel,
+      selectedDownloadBlockedDetail: selectedDownloadBlockedDetail,
+      downloadedModelCount: downloadedModelCount,
+      totalModelCount: totalModelCount,
+      activeModelDisplayName: activeModelDisplayName,
+      downloadedLocalSizeBytes: downloadedLocalSizeBytes
     )
   }
 

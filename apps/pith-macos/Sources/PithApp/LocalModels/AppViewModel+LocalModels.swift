@@ -197,6 +197,10 @@ extension AppViewModel {
     LocalModelOperationPresenter.managerSummary(localModelOperationSnapshot())
   }
 
+  func modelRecoverySummary() -> String {
+    LocalModelOperationPresenter.recoverySummary(localModelOperationSnapshot())
+  }
+
   func localModelManagerRuleSummary() -> String {
     LocalModelStatusPresenter.managerRuleSummary(localModelStatusSnapshot())
   }

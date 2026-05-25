@@ -23,6 +23,11 @@ struct LocalModelPanel: View {
           .foregroundColor(viewModel.isModelActionBlocking() ? .orange : .secondary)
       }
 
+      Text(viewModel.modelRecoverySummary())
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
       if viewModel.shouldShowModelDownloadProgress() {
         ModelDownloadProgressView(
           value: viewModel.modelDownloadProgressValue(),
