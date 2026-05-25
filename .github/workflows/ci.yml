@@ -72,6 +72,9 @@ jobs:
       - name: Test release state helper
         run: python3 scripts/test_release_state.py
 
+      - name: Test release text helper
+        run: python3 scripts/test_release_text.py
+
   rust:
     name: Rust checks
     runs-on: ubuntu-latest

@@ -262,33 +262,16 @@ jobs:
       - name: Smoke launch release app
         run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
 
-      - name: Create DMG install guide
+      - name: Create release copy
         run: |
           set -euo pipefail
-          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
-            trust_note="This build is Developer ID signed and notarized."
-            open_note="Open the DMG, drag Pith.app to Applications, then launch Pith."
-          else
-            trust_note="This build is ad-hoc signed and not notarized."
-            open_note="After dragging Pith.app to Applications, macOS may block first launch. Open System Settings > Privacy & Security and choose Open Anyway, or Control-click Pith.app and choose Open."
-          fi
-          cat > artifacts/macos/README-FIRST.txt <<EOF
-          Pith $RELEASE_TAG
-
-          Install
-          1. Open this DMG.
-          2. Drag Pith.app to Applications.
-          3. Launch Pith and download one verified local model when prompted.
-
-          Trust
-          $trust_note
-          $open_note
-
-          Notes
-          - Pith runs local model work on this Mac.
-          - Model weights are not bundled in the app package.
-          - Only one local model runs at a time.
-          EOF
+          python3 scripts/release_text.py \
+            --tag "$RELEASE_TAG" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --draft "$RELEASE_DRAFT" \
+            --install-guide-output artifacts/macos/README-FIRST.txt \
+            --notes-output release-notes.md
 
       - name: Create release DMG
         run: |
@@ -329,25 +312,6 @@ jobs:
           set -euo pipefail
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
           shasum -a 256 "$dmg_path" > "$dmg_path.sha256"
-
-      - name: Create release notes
-        run: |
-          set -euo pipefail
-          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
-            trust_note="Developer ID signed and notarized."
-          elif [[ "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" == "true" && "$RELEASE_DRAFT" != "true" ]]; then
-            trust_note="Untrusted ad-hoc prerelease. This DMG is not notarized; macOS Gatekeeper will block first launch until the user manually chooses Open Anyway in Privacy & Security."
-          else
-            trust_note="Draft ad-hoc build. Public releases need Developer ID signing and notarization before users should install by default."
-          fi
-          cat > release-notes.md <<EOF
-          Pith $RELEASE_TAG
-
-          - macOS 12+ x86_64 DMG installer.
-          - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
-          - Model weights are not bundled; first launch guides the user to download one verified local model.
-          - $trust_note
-          EOF
 
       - name: Publish GitHub Release
         env:
