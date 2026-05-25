@@ -157,9 +157,9 @@ enum TimelineEventPresenter {
 
   static func firstRequestReady() -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "First Request Ready",
+      title: "Cowork Session Ready",
       body:
-        "Runtime, local model, workspace, and thread are ready. Send one short local request to finish first-use setup.",
+        "Runtime, local model, workspace, and thread are ready. Send one short cowork request to finish first-use setup.",
       attributes: [
         "setup": "first-request"
       ]

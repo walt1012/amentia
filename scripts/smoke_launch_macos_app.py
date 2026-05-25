@@ -759,8 +759,8 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
     raise RuntimeError("Packaged MCP plugin command memory was not persisted.")
 
 
-def validate_packaged_first_local_request(app_path: Path) -> None:
-  with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
+def validate_packaged_first_cowork_request(app_path: Path) -> None:
+  with tempfile.TemporaryDirectory(prefix="pith-packaged-first-cowork-") as support_root:
     support_dir = Path(support_root)
     manifest_path, model_path = write_smoke_model_pack(support_dir)
     backend_path = write_deterministic_llama_backend_fixture(support_dir)
@@ -784,18 +784,18 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
         "initialize",
         {
           "clientInfo": {
-            "name": "packaged-first-request-smoke",
+            "name": "packaged-first-cowork-smoke",
             "version": "0.1.0",
           }
         },
       )
       if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
-        raise RuntimeError("Packaged first-request initialize returned the wrong server name.")
+        raise RuntimeError("Packaged first cowork initialize returned the wrong server name.")
 
       model_health = send_runtime_request(process, 21, "model/health")
       if model_health["result"]["status"] != "ready":
         raise RuntimeError(
-          "Packaged first-request smoke did not resolve a ready local model: "
+          "Packaged first cowork smoke did not resolve a ready local model: "
           f"{model_health['result']}"
         )
 
@@ -816,7 +816,7 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
       )
       items = turn["result"]["items"]
       if not any(item["kind"] == "assistantMessage" for item in items):
-        raise RuntimeError("Packaged first local request did not produce an assistant item.")
+        raise RuntimeError("Packaged first cowork request did not produce an assistant item.")
       first_request_readiness = send_runtime_request(process, 23, "runtime/readiness")
       checks = {
         check["id"]: check["status"]
@@ -824,13 +824,13 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
       }
       if checks.get("firstRequest") != "ready":
         raise RuntimeError(
-          "Packaged first local request did not mark firstRequest ready: "
+          "Packaged first cowork request did not mark firstRequest ready: "
           f"{checks.get('firstRequest')}"
       )
       validate_packaged_web_search_turn(process)
       validate_packaged_mcp_plugin_command(process)
       print(
-        "Packaged first local request smoke passed with deterministic local model "
+        "Packaged first cowork smoke passed with deterministic local model "
         f"under {support_dir}"
       )
     finally:
@@ -876,7 +876,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)
       validate_runtime_database(support_dir / "storage" / "pith.db")
-      validate_packaged_first_local_request(app_path)
+      validate_packaged_first_cowork_request(app_path)
       print(
         "Packaged runtime protocol smoke passed with model metadata and plugins "
         f"under {support_dir}"

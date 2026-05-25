@@ -38,7 +38,7 @@ enum TimelineEntryFactory {
         id: "welcome-start-local-setup",
         kind: .system,
         title: "Start Local Setup",
-        body: "Launch the runtime, choose a local model, open a workspace, create or select a thread, then send one short local request.",
+        body: "Launch the runtime, choose a local model, open a workspace, create or select a thread, then start a short cowork session.",
         attributes: [
           "path": "runtime -> model -> workspace -> thread -> first request"
         ]
@@ -62,7 +62,7 @@ enum TimelineEntryFactory {
         id: "default-thread-ready:\(title)",
         kind: .system,
         title: "Thread Ready",
-        body: "\(title) is ready after runtime, model, workspace, and thread setup. Send one short request to finish first-use setup.",
+        body: "\(title) is ready after runtime, model, workspace, and thread setup. Send one short cowork request to finish first-use setup.",
         attributes: [
           "setup": "runtime, model, workspace, thread, first request"
         ]

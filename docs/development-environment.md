@@ -82,7 +82,7 @@ the package shape, but they are not public release installers.
 The packaged launch smoke is the M5 daily-driver proof. It launches the app with
 isolated support state, probes the bundled runtime, verifies first-use model
 metadata without model weights, opens a workspace, creates a thread, sends a
-deterministic local request through the packaged llama.cpp path, runs packaged
+deterministic cowork request through the packaged llama.cpp path, runs packaged
 web search from a fixture, executes a bundled MCP stdio plugin command through
 connector authorization and approval, verifies runner memory capture, and then
 checks app/runtime stability.

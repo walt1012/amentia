@@ -39,8 +39,8 @@ enum RuntimeHeaderPresenter {
       }
       if snapshot.isWaitingForFirstMessage {
         return snapshot.hasDraftMessage
-          ? "First local request is drafted. Send it to finish setup."
-          : "Ready for the first local request."
+          ? "First cowork prompt is drafted. Send it to finish setup."
+          : "Ready to start the first cowork session."
       }
       return "Ready for local work."
     }

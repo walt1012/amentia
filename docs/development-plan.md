@@ -57,87 +57,40 @@ Closed capabilities:
   connector-backed plugin commands, approval pause/resume, safe review-summary
   writes, and structured handoff metadata.
 
-## Current Milestone: M7 Practical Cowork
+## Closed Milestone: M7 Practical Cowork
 
 Goal: turn the proven loop into everyday cowork flows that help users draft,
 review, save, hand off, and continue real work without memorizing commands.
 
-Current state:
+Closed state:
 
-- Done: natural saved-artifact requests such as handoffs, notes, summaries,
-  plans, and briefs enter the same safe diff and approval path as explicit
-  writes.
-- Done: approved writes now end with structured continuation guidance tailored
-  to saved files, notes, summaries, reviews, and handoffs.
-- Done: natural connector requests can carry saved artifact references such as
-  `docs/handoff.md` into a local Notion-style draft flow.
-- Done: saved artifact connector inputs include bounded, workspace-safe previews
-  before local drafts claim they are based on those files.
-- Done: initial tool selection now has a compact planning contract before
-  execution preparation.
-- Done: connector planning now records candidate count, scores, selected command,
-  and selection state on the timeline.
-- Done: ambiguous connector candidate sets can ask the local planner for a
-  bounded command-id decision instead of adding more brittle keyword routes.
-- Done: Notion-style connector writes now have a separate inspection command
-  that is approval-gated before any remote-write-capable runner can proceed.
-- Done: natural publish/send/write connector requests route to inspection,
-  while prepare/update requests stay on local drafts.
-- Done: connector inspection handoffs preserve remote-write stage, target tool,
-  and source artifact metadata for UI review and follow-up planning.
-- Done: plugin runner output now enforces a compact remote-write contract before
-  any connector timeline item can claim a completed third-party write.
-- Done: completed remote-write claims must match the connector service actually
-  bound to the runner invocation.
-- Done: connector remote-write status is derived by Pith from the validated
-  runner contract, not trusted from plugin-provided labels.
-- Done: Web Search handoffs now label search-result attribution separately from
-  page-fetch or source-snapshot verification.
-- Done: timeline cards and inspector summaries now expose source-depth and
-  connector remote-write status without forcing users into raw attributes.
-- Done: release DMGs now include an install guide that explains first-use model
-  download and the Developer ID or ad-hoc Gatekeeper trust path.
-- Done: first-use model actions name the selected model directly, so fresh
-  installs see `Download LFM2.5-350M` instead of a generic selected-model action.
-- Active gap: connector write execution is still plugin-owned; Pith provides the
-  inspection, approval, and proof boundary, but not a hosted Notion writer.
-
-M7 work order:
-
-1. Make natural editing and saved-artifact requests feel safe, reviewable, and
-   obvious.
-2. Continue from approved writes into concise next-step handoffs.
-3. Feed saved artifacts into connector drafts as bounded content, not only as
-   path labels.
-4. Harden connector updates around real cowork tasks with approval continuity,
-   target-service proof, and clear remote-write status.
-5. Keep Web Search source grounding transparent; do not claim stronger citation
-   behavior until source snapshots or page fetch are implemented.
-6. Keep UI polish focused on clarity around setup, approvals, sources, and
-   saved work.
-
-M7 exit criteria:
-
-- Users can save or update notes, handoffs, summaries, and docs without command
-  syntax.
-- Approved writes end with a useful continuation handoff.
-- Saved artifacts used by connectors are read through the same workspace safety
-  boundary as file tools.
-- Ambiguous connector choices are resolved by a bounded local planner decision
-  and recorded as planning evidence.
-- Connector actions are practical enough for Notion-like third-party services,
-  including inspect-before-remote-write.
-- Connector runners cannot claim completed remote writes without target service,
-  target tool, completed-stage evidence, and a matching bound connector service.
-- Web Search answers expose source attribution honestly without implying full
-  page-fetch verification.
-- The packaged macOS app path remains green in CI.
-- First-run starter prompts are cowork-first: map the workspace or plan the
-  next useful step, without forcing the user into a coding-only review flow.
-- Release install copy now carries the non-developer path through model
+- Natural saved-artifact requests, approved writes, and continuation handoffs
+  share the same safe diff and approval path.
+- Connector drafts can consume saved artifacts through bounded workspace-safe
+  previews, planning evidence, inspection gates, and remote-write proof.
+- Web Search source grounding is honest about search-result attribution versus
+  stronger page-fetch or snapshot verification.
+- Timeline cards and inspector summaries expose source depth, connector write
+  status, setup progress, and first-use actions without raw attribute hunting.
+- Release and first-use copy now carries the non-developer path through model
   download, workspace opening, and the first cowork request.
 
-## Next Milestone: M8 Release Candidate
+Remaining gap:
+
+- Connector write execution is still plugin-owned; Pith provides inspection,
+  approval, and proof boundaries, but not a hosted Notion writer.
+
+## Current Milestone: M8 Release Candidate
+
+Goal: prove Pith works as a real downloadable macOS app for non-developer users.
+
+Current state:
+
+- Done: first-use UI copy now frames setup completion as starting a cowork
+  session, not a coding-only prompt.
+- Done: packaged smoke naming now follows the same first cowork request path.
+
+M8 work order:
 
 - Tighten install, first-run, unsigned distribution, crash recovery, and real
   user smoke coverage.

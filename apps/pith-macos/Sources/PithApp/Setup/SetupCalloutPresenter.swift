@@ -35,7 +35,7 @@ enum SetupCalloutPresenter {
       return "Choose the project Pith should inspect, search, and edit locally."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create or select a thread before sending the first local request."
+      return "Create or select a thread before starting the first cowork session."
     }
 
     return "Pith is ready for local work."

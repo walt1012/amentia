@@ -43,8 +43,8 @@ enum ComposerStatusPresenter {
 
     if snapshot.isWaitingForFirstMessage {
       return snapshot.hasDraftMessage
-        ? "Review the first local request, then send"
-        : "Choose a starter prompt or type the first local request"
+        ? "Review the first cowork prompt, then send"
+        : "Choose a starter prompt or type the first cowork request"
     }
 
     return "Ask Pith to inspect files, review diffs, or make a safe local change"
@@ -77,9 +77,9 @@ enum ComposerStatusPresenter {
 
       if snapshot.isWaitingForFirstMessage {
         if snapshot.hasDraftMessage {
-          return "Review the starter prompt, then send the first local request."
+          return "Review the starter prompt, then start the cowork session."
         }
-        return "Choose a starter prompt or type a short local request."
+        return "Choose a starter prompt or type a short cowork request."
       }
 
       return "Ready for local work."

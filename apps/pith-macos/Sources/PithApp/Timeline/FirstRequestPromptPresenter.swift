@@ -10,7 +10,7 @@ enum FirstRequestPromptPresenter {
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {
     guard let workspaceDisplayName, !workspaceDisplayName.isEmpty else {
-      return "Choose a workspace before starting the first local request."
+      return "Choose a workspace before starting the first cowork session."
     }
 
     return "Pith will use \(workspaceDisplayName) as the working context. Short, specific cowork requests work best for the local model."

@@ -5,6 +5,9 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
   func testFirstRequestCopyFramesCoworkSession() {
     XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("plan one useful next step"))
     XCTAssertTrue(
+      FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: nil).contains("cowork session")
+    )
+    XCTAssertTrue(
       FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: "Pith").contains("cowork requests")
     )
   }
