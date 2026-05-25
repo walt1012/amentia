@@ -18,7 +18,7 @@ Current scripts:
 - `release_text.py`: generates GitHub Release notes and the DMG root install guide from the release signing mode.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
 - `sign_macos_app_for_distribution.py`: signs `Pith.app` with Developer ID and Hardened Runtime before notarized release packaging.
-- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, workspace bootstrap, workspace search, deterministic first cowork request, packaged web search execution, bundled MCP plugin command execution, connector authorization and approval, sandbox readiness, thread creation, runner memory capture, runtime recovery, and runtime database initialization.
+- `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, workspace bootstrap, workspace search, deterministic first cowork request, packaged web search execution, workspace write approval, bundled MCP plugin command execution, connector authorization and approval, sandbox readiness, thread creation, runner memory capture, runtime recovery, and runtime database initialization.
 - `test_create_macos_dmg.py`: checks DMG staging behavior that does not require macOS.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.

@@ -664,7 +664,7 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
 def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None:
   enable = send_runtime_request(
     process,
-    25,
+    27,
     "plugin/setEnabled",
     {
       "pluginId": NOTION_PLUGIN_ID,
@@ -678,7 +678,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   authorize = send_runtime_request(
     process,
-    26,
+    28,
     "plugin/connectorAuthorize",
     {
       "connectorId": NOTION_CONNECTOR_ID,
@@ -698,7 +698,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   command = send_runtime_request(
     process,
-    27,
+    29,
     "plugin/commandRun",
     {
       "threadId": "thread-1",
@@ -725,7 +725,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   approved = send_runtime_request(
     process,
-    28,
+    30,
     "approval/respond",
     {
       "approvalId": approval["id"],
@@ -757,13 +757,73 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
       f"Items: {timeline_item_summary(items)}"
     )
 
-  memory_list = send_runtime_request(process, 29, "memory/list")
+  memory_list = send_runtime_request(process, 31, "memory/list")
   if not any(
     note["title"] == "Notion Draft Prepared"
     and note["source"] == "plugin.notion-connector"
     for note in memory_list["result"]["notes"]
   ):
     raise RuntimeError("Packaged MCP plugin command memory was not persisted.")
+
+
+def validate_packaged_workspace_write_approval(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  write_turn = send_runtime_request(
+    process,
+    25,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": "Write docs/packaged-output.txt: Created from packaged approval flow",
+    },
+  )
+  pending_approvals = write_turn["result"]["pendingApprovals"]
+  if len(pending_approvals) != 1:
+    raise RuntimeError(
+      "Packaged workspace write should request one approval. "
+      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
+    )
+
+  approval = pending_approvals[0]
+  if approval["action"] != "write_file":
+    raise RuntimeError("Packaged workspace write requested the wrong approval action.")
+  if approval["relativePath"] != "docs/packaged-output.txt":
+    raise RuntimeError("Packaged workspace write approval had the wrong path.")
+  if not any(
+    item["kind"] == "diffArtifact"
+    and "+++ b/docs/packaged-output.txt" in item["content"]
+    for item in write_turn["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write did not expose a diff before approval. "
+      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
+    )
+
+  approved = send_runtime_request(
+    process,
+    26,
+    "approval/respond",
+    {
+      "approvalId": approval["id"],
+      "decision": "approved",
+    },
+  )
+  if not any(
+    item["kind"] == "toolResult"
+    and item["title"] == "write_file result"
+    and item.get("attributes", {}).get("relativePath") == "docs/packaged-output.txt"
+    for item in approved["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write approval did not execute write_file. "
+      f"Items: {timeline_item_summary(approved['result']['items'])}"
+    )
+
+  output_path = support_dir / "workspace" / "docs" / "packaged-output.txt"
+  if output_path.read_text(encoding="utf-8") != "Created from packaged approval flow":
+    raise RuntimeError("Packaged workspace write approval wrote unexpected content.")
 
 
 def validate_packaged_first_cowork_request(app_path: Path) -> None:
@@ -836,6 +896,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
           f"{checks.get('firstRequest')}"
       )
       validate_packaged_web_search_turn(process)
+      validate_packaged_workspace_write_approval(process, support_dir)
       validate_packaged_mcp_plugin_command(process)
       process = validate_packaged_runtime_recovery(
         process,
@@ -862,7 +923,7 @@ def validate_packaged_runtime_recovery(
   try:
     initialize = send_runtime_request(
       recovered_process,
-      30,
+      32,
       "initialize",
       {
         "clientInfo": {
@@ -874,14 +935,14 @@ def validate_packaged_runtime_recovery(
     if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
       raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
 
-    model_health = send_runtime_request(recovered_process, 31, "model/health")
+    model_health = send_runtime_request(recovered_process, 33, "model/health")
     if model_health["result"]["status"] != "ready":
       raise RuntimeError(
         "Packaged runtime recovery did not restore the ready local model: "
         f"{model_health['result']}"
       )
 
-    workspace_current = send_runtime_request(recovered_process, 32, "workspace/current")
+    workspace_current = send_runtime_request(recovered_process, 34, "workspace/current")
     workspace = workspace_current["result"]["workspace"]
     expected_workspace = (support_dir / "workspace").resolve()
     actual_workspace = Path(workspace["rootPath"]).resolve()
@@ -893,7 +954,7 @@ def validate_packaged_runtime_recovery(
 
     recovered_thread = send_runtime_request(
       recovered_process,
-      33,
+      35,
       "thread/read",
       {
         "threadId": "thread-1",
@@ -902,7 +963,11 @@ def validate_packaged_runtime_recovery(
     if recovered_thread["result"]["thread"]["title"] != "Packaged Runtime Smoke":
       raise RuntimeError("Packaged runtime recovery did not restore the smoke thread.")
 
-    recovered_readiness = send_runtime_request(recovered_process, 34, "runtime/readiness")
+    recovered_output = support_dir / "workspace" / "docs" / "packaged-output.txt"
+    if recovered_output.read_text(encoding="utf-8") != "Created from packaged approval flow":
+      raise RuntimeError("Packaged runtime recovery lost the approved workspace write.")
+
+    recovered_readiness = send_runtime_request(recovered_process, 36, "runtime/readiness")
     validate_runtime_readiness(
       recovered_readiness,
       {
