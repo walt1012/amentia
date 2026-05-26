@@ -485,7 +485,8 @@ fn plugin_runner_expected_workflow_id(command: &HostPluginCommandEntry) -> Optio
 
 fn plugin_runner_items_include_workflow(items: &[TimelineItem], workflow_id: &str) -> bool {
   items.iter().any(|item| {
-    item.attributes
+    item
+      .attributes
       .as_ref()
       .and_then(|attributes| plugin_runner_attribute_value(attributes, "connectorWorkflowId"))
       == Some(workflow_id)

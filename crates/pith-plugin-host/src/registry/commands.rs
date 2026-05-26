@@ -104,7 +104,7 @@ fn workflow_manifest_error(
   if execution
     .connector_ids
     .as_ref()
-    .map_or(true, |connectors| connectors.is_empty())
+    .is_none_or(|connectors| connectors.is_empty())
   {
     return Some(format!(
       "Plugin command `{identifier}` declares workflow `{workflow_id}` without a connector execution binding."
