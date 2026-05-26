@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONNECTOR_PATH = (
   ROOT / "plugins" / "bundled" / "notion-connector" / "bin" / "notion-mcp-local-draft.py"
 )
+PLUGIN_ROOT = ROOT / "plugins" / "bundled" / "notion-connector"
 PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 WORKFLOW_ID = "notion.create-page"
 
@@ -97,7 +98,40 @@ def assert_workflow(
       )
 
 
+def assert_manifest_workflow_coverage() -> None:
+  manifest = json.loads((PLUGIN_ROOT / "pith-plugin.json").read_text(encoding="utf-8"))
+  command_capabilities = sorted(
+    capability.removeprefix("command:")
+    for capability in manifest.get("capabilities", [])
+    if capability.startswith("command:")
+  )
+  command_files = sorted(path.stem for path in (PLUGIN_ROOT / "commands").glob("*.json"))
+  if command_capabilities != command_files:
+    raise AssertionError(
+      f"Notion command capabilities and files diverged: {command_capabilities} != {command_files}"
+    )
+
+  workflows = {
+    workflow.get("id"): workflow
+    for workflow in manifest.get("connectorWorkflows", [])
+    if isinstance(workflow, dict)
+  }
+  if WORKFLOW_ID not in workflows:
+    raise AssertionError(f"Notion manifest missed workflow {WORKFLOW_ID}")
+
+  for command_id in command_files:
+    command = json.loads(
+      (PLUGIN_ROOT / "commands" / f"{command_id}.json").read_text(encoding="utf-8")
+    )
+    execution = command.get("execution", {})
+    if execution.get("workflowId") != WORKFLOW_ID:
+      raise AssertionError(f"Notion command {command_id} is not bound to {WORKFLOW_ID}")
+    if "notion" not in execution.get("connectors", []):
+      raise AssertionError(f"Notion command {command_id} missed connector binding")
+
+
 def main() -> int:
+  assert_manifest_workflow_coverage()
   connector = load_connector()
 
   draft = connector.prepare_page_draft(

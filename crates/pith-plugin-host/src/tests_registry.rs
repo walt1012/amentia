@@ -193,7 +193,8 @@ fn build_capability_registry_reports_mcp_server_status() {
 fn build_connector_registry_lists_disabled_third_party_connectors() {
   let plugin_root = create_temp_plugin_root("connector-registry");
   let plugin_dir = plugin_root.join("notion-connector");
-  fs::create_dir_all(&plugin_dir).expect("create connector plugin dir");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create connector plugin dir");
   fs::write(
     plugin_dir.join("pith-plugin.json"),
     r#"{
@@ -202,7 +203,7 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
   "displayName": "Notion Connector",
   "description": "Connector plugin",
   "author": { "name": "Pith" },
-  "capabilities": [],
+  "capabilities": ["command:notion.prepare-page-draft"],
   "permissions": ["network.outbound", "mcp.connect"],
   "appConnectors": [
     {
@@ -232,6 +233,22 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
 }"#,
   )
   .expect("write connector manifest");
+  fs::write(
+    commands_dir.join("notion.prepare-page-draft.json"),
+    r#"{
+  "title": "Prepare Notion Page Draft",
+  "description": "Prepare a Notion page draft.",
+  "prompt": "Prepare the page draft.",
+  "execution": {
+    "kind": "mcp.notion.preparePageDraft",
+    "driver": "mcp",
+    "entrypoint": "notion.preparePageDraft",
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
   let plugins =
     discover_plugins_in_roots(std::slice::from_ref(&plugin_root)).expect("discover connector");
 
@@ -258,6 +275,10 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
   );
   assert_eq!(connectors[0].workflows[0].service, "notion");
   assert_eq!(connectors[0].workflows[0].action, "createPage");
+  assert_eq!(
+    connectors[0].workflows[0].command_ids,
+    vec!["notion-connector::notion.prepare-page-draft".to_string()]
+  );
 }
 
 #[test]
@@ -630,6 +651,10 @@ fn build_command_registry_accepts_declared_connector_workflow() {
   assert_eq!(
     workflow.statuses,
     vec!["prepared".to_string(), "completed".to_string()]
+  );
+  assert_eq!(
+    workflow.command_ids,
+    vec!["notion-runner::notion.publish-page".to_string()]
   );
 }
 

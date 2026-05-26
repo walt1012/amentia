@@ -255,7 +255,9 @@ private extension PluginConnectorSummary {
 
   var workflowSummary: String {
     let labels = workflows
-      .map { "\($0.displayName) / \($0.action)" }
+      .map { workflow in
+        "\(workflow.displayName) / \(workflow.action) / \(workflow.commandCoverageLabel)"
+      }
       .joined(separator: ", ")
     return "Workflows: \(labels)"
   }

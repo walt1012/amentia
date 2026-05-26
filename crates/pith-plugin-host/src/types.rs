@@ -97,6 +97,7 @@ pub struct PluginConnectorWorkflowEntry {
   pub action: String,
   pub stages: Vec<String>,
   pub statuses: Vec<String>,
+  pub command_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

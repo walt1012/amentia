@@ -131,6 +131,7 @@ struct RuntimePluginCommandWorkflowPayload: Codable {
   let action: String
   let stages: [String]
   let statuses: [String]
+  let commandIds: [String]?
 }
 
 struct RuntimePluginCommandEnvelopePayload: Codable {
@@ -179,6 +180,7 @@ struct RuntimePluginConnectorWorkflowPayload: Codable {
   let action: String
   let stages: [String]
   let statuses: [String]
+  let commandIds: [String]?
 }
 
 struct RuntimePluginHookPayload: Codable {
@@ -331,6 +333,7 @@ extension RuntimeBridge {
     let action: String
     let stages: [String]
     let statuses: [String]
+    let commandIDs: [String]
   }
 
   struct RuntimePluginCommandEnvelope {
@@ -379,6 +382,7 @@ extension RuntimeBridge {
     let action: String
     let stages: [String]
     let statuses: [String]
+    let commandIDs: [String]
   }
 
   struct RuntimePluginHook {

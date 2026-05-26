@@ -1407,6 +1407,7 @@ mod tests {
           "inspected".to_string(),
           "completed".to_string(),
         ],
+        command_ids: vec![],
       });
     command
   }

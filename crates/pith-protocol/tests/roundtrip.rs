@@ -337,6 +337,10 @@ fn plugin_connector_registry_round_trips() {
         action: "createPage".to_string(),
         stages: vec!["draftPrepared".to_string(), "completed".to_string()],
         statuses: vec!["prepared".to_string(), "completed".to_string()],
+        command_ids: vec![
+          "notion-connector::notion.prepare-page-draft".to_string(),
+          "notion-connector::notion.publish-page-draft".to_string(),
+        ],
       }],
       auth_status: "disabled".to_string(),
       credential_present: false,
@@ -364,10 +368,15 @@ fn plugin_connector_registry_round_trips() {
   assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
   assert_eq!(decoded.connectors[0].workflows.len(), 1);
   assert_eq!(decoded.connectors[0].workflows[0].action, "createPage");
+  assert_eq!(decoded.connectors[0].workflows[0].command_ids.len(), 2);
   assert!(value["connectors"][0].get("connectorId").is_some());
   assert_eq!(
     value["connectors"][0]["workflows"][0]["workflowId"],
     "notion.create-page"
+  );
+  assert_eq!(
+    value["connectors"][0]["workflows"][0]["commandIds"][0],
+    "notion-connector::notion.prepare-page-draft"
   );
   assert!(value["connectors"][0].get("authRequired").is_some());
   assert!(value["connectors"][0].get("credentialPresent").is_some());
@@ -532,6 +541,7 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
       action: "createPage".to_string(),
       stages: vec!["draftPrepared".to_string(), "completed".to_string()],
       statuses: vec!["prepared".to_string(), "completed".to_string()],
+      command_ids: vec![],
     }),
     input: PluginCommandEnvelopeSummary {
       envelope: "pith.plugin.command.input".to_string(),

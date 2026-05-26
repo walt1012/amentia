@@ -140,7 +140,8 @@ enum RuntimeSummaryMapper {
               service: $0.service,
               action: $0.action,
               stages: $0.stages,
-              statuses: $0.statuses
+              statuses: $0.statuses,
+              commandIDs: $0.commandIDs
             )
           },
           input: pluginCommandEnvelopeSummary(from: $0.input),
@@ -206,7 +207,8 @@ enum RuntimeSummaryMapper {
           service: $0.service,
           action: $0.action,
           stages: $0.stages,
-          statuses: $0.statuses
+          statuses: $0.statuses,
+          commandIDs: $0.commandIDs
         )
       },
       authStatus: connector.authStatus,

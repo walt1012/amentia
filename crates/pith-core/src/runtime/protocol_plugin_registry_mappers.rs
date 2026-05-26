@@ -67,6 +67,7 @@ pub(super) fn to_protocol_plugin_command(
           action: workflow.action.clone(),
           stages: workflow.stages.clone(),
           statuses: workflow.statuses.clone(),
+          command_ids: workflow.command_ids.clone(),
         }),
       input: to_protocol_plugin_command_envelope(&execution.input),
       output: to_protocol_plugin_command_envelope(&execution.output),
@@ -154,6 +155,7 @@ pub(super) fn to_protocol_plugin_connector(
         action: workflow.action,
         stages: workflow.stages,
         statuses: workflow.statuses,
+        command_ids: workflow.command_ids,
       })
       .collect(),
     auth_status,

@@ -10,6 +10,7 @@ use crate::types::{
 
 use super::capability_identifier_is_safe;
 use super::command_contract::command_execution_entry;
+use super::workflow_commands::connector_workflow_command_ids;
 
 pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginCommandEntry> {
   let mut commands = vec![];
@@ -22,7 +23,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       continue;
     };
     let workflow_entries = read_manifest(Path::new(&plugin.manifest_path))
-      .map(|manifest| connector_workflow_entries(&manifest))
+      .map(|manifest| connector_workflow_entries(plugin, &manifest, plugin_root))
       .unwrap_or_default();
 
     for capability in &plugin.capabilities {
@@ -147,7 +148,11 @@ fn bind_connector_workflow(
   None
 }
 
-fn connector_workflow_entries(manifest: &PluginManifest) -> Vec<PluginConnectorWorkflowEntry> {
+fn connector_workflow_entries(
+  plugin: &PluginCatalogEntry,
+  manifest: &PluginManifest,
+  plugin_root: &Path,
+) -> Vec<PluginConnectorWorkflowEntry> {
   manifest
     .connector_workflows
     .iter()
@@ -164,6 +169,7 @@ fn connector_workflow_entries(manifest: &PluginManifest) -> Vec<PluginConnectorW
         action: workflow.action.clone(),
         stages: workflow.stages.clone(),
         statuses: workflow.statuses.clone(),
+        command_ids: connector_workflow_command_ids(plugin, plugin_root, &workflow.id),
       })
     })
     .collect()

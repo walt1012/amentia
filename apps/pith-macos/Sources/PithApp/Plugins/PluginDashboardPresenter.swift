@@ -310,7 +310,9 @@ enum PluginDashboardPresenter {
     }
     if !connector.workflows.isEmpty {
       let workflowLabels = connector.workflows
-        .map { "\($0.displayName) / \($0.action)" }
+        .map { workflow in
+          "\(workflow.displayName) / \(workflow.action) / \(workflow.commandCoverageLabel)"
+        }
         .joined(separator: ", ")
       parts.append("workflows: \(workflowLabels)")
     }

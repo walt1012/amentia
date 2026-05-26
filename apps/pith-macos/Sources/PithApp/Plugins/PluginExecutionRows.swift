@@ -191,6 +191,7 @@ struct PluginCommandRow: View {
     var label = "\(execution.kind) via \(execution.driver) (\(suffix))"
     if let workflow = execution.workflow {
       label += " | workflow: \(workflow.displayName) / \(workflow.action)"
+      label += " / \(workflow.commandCoverageLabel)"
     } else if let workflowID = execution.workflowID {
       label += " | workflow: \(workflowID)"
     }

@@ -160,6 +160,8 @@ pub struct PluginConnectorWorkflowSummary {
   pub stages: Vec<String>,
   #[serde(default)]
   pub statuses: Vec<String>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub command_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -243,6 +245,8 @@ pub struct PluginCommandWorkflowSummary {
   pub stages: Vec<String>,
   #[serde(default)]
   pub statuses: Vec<String>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub command_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

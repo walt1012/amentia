@@ -107,7 +107,8 @@ extension RuntimeBridge {
                 service: workflow.service,
                 action: workflow.action,
                 stages: workflow.stages,
-                statuses: workflow.statuses
+                statuses: workflow.statuses,
+                commandIDs: workflow.commandIds ?? []
               )
             },
             input: RuntimePluginCommandEnvelopeMapper.map($0.input),
@@ -303,7 +304,8 @@ private extension RuntimeBridge {
           service: workflow.service,
           action: workflow.action,
           stages: workflow.stages,
-          statuses: workflow.statuses
+          statuses: workflow.statuses,
+          commandIDs: workflow.commandIds ?? []
         )
       },
       authStatus: connector.authStatus,

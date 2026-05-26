@@ -132,6 +132,13 @@ struct PluginConnectorWorkflowSummary: Hashable {
   let action: String
   let stages: [String]
   let statuses: [String]
+  let commandIDs: [String]
+
+  var commandCoverageLabel: String {
+    commandIDs.isEmpty
+      ? "no commands"
+      : "\(commandIDs.count) command\(commandIDs.count == 1 ? "" : "s")"
+  }
 }
 
 struct PluginCommandSummary: Identifiable, Hashable {
@@ -173,6 +180,13 @@ struct PluginCommandWorkflowSummary: Hashable {
   let action: String
   let stages: [String]
   let statuses: [String]
+  let commandIDs: [String]
+
+  var commandCoverageLabel: String {
+    commandIDs.isEmpty
+      ? "no commands"
+      : "\(commandIDs.count) command\(commandIDs.count == 1 ? "" : "s")"
+  }
 }
 
 struct PluginCommandEnvelopeSummary: Hashable {
