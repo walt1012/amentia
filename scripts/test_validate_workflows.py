@@ -110,6 +110,8 @@ jobs:
             exit 1
           fi
           gh run list --workflow CI --status success
+      - name: Audit remote model catalog metadata
+        run: python3 scripts/validate_model_pack.py --remote
       - name: Create release checksum
         run: |
           python3 scripts/release_artifacts.py \
@@ -205,6 +207,18 @@ def main() -> int:
       release=VALID_RELEASE.replace("--workflow CI", "--workflow Release"),
     )
     assert_issue(issue_messages(root), "release CI gate")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "      - name: Audit remote model catalog metadata\n"
+        "        run: python3 scripts/validate_model_pack.py --remote\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "validate_model_pack.py --remote")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

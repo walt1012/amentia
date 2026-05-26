@@ -2,13 +2,14 @@
   "name": "notion-connector",
   "version": "0.1.0",
   "displayName": "Notion Connector",
-  "description": "Provides credential-scoped local MCP commands for preparing Notion-ready drafts and inspecting remote writes before anything is sent.",
+  "description": "Provides credential-scoped local MCP commands for preparing Notion-ready drafts through a local Notion integration token.",
   "author": {
     "name": "Pith"
   },
   "capabilities": [
     "command:notion.prepare-page-draft",
     "command:notion.inspect-page-write",
+    "command:notion.publish-page-draft",
     "connector:notion",
     "mcp_server:notion",
     "prompt_pack:notion.workspace"
@@ -40,7 +41,7 @@
     }
   ],
   "authPolicy": {
-    "type": "oauth2",
+    "type": "api_key",
     "required": true,
     "scopes": [
       "read_content",

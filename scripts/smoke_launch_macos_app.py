@@ -27,6 +27,7 @@ WEB_SEARCH_SNAPSHOT_HASH_LENGTH = 16
 NOTION_CONNECTOR_ID = "notion-connector::notion"
 NOTION_PLUGIN_ID = "notion-connector"
 NOTION_COMMAND_ID = "notion-connector::notion.prepare-page-draft"
+NOTION_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 NOTION_CREDENTIAL_LABEL = "Packaged Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "packaged-smoke-token"
 DEFAULT_MODEL_ID = "lfm2.5-350m"
@@ -928,9 +929,17 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
       "Packaged plugin smoke connector did not become ready after authorization."
     )
 
+  command_registry = send_runtime_request(process, 31, "plugin/commandRegistry")
+  if not any(
+    command["commandId"] == NOTION_PUBLISH_COMMAND_ID
+    and command.get("execution", {}).get("kind") == "mcp.notion.publishPageDraft"
+    for command in command_registry["result"]["commands"]
+  ):
+    raise RuntimeError("Packaged plugin smoke did not expose the Notion publish command.")
+
   command = send_runtime_request(
     process,
-    31,
+    32,
     "plugin/commandRun",
     {
       "threadId": "thread-1",
@@ -957,7 +966,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
 
   approved = send_runtime_request(
     process,
-    32,
+    33,
     "approval/respond",
     {
       "approvalId": approval["id"],
@@ -989,7 +998,7 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
       f"Items: {timeline_item_summary(items)}"
     )
 
-  memory_list = send_runtime_request(process, 33, "memory/list")
+  memory_list = send_runtime_request(process, 34, "memory/list")
   if not any(
     note["title"] == "Notion Draft Prepared"
     and note["source"] == "plugin.notion-connector"

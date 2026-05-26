@@ -85,6 +85,8 @@ REQUIRED_INFO_PLIST_VALUES = {
 REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "notion-connector": {
     "command:notion.prepare-page-draft",
+    "command:notion.inspect-page-write",
+    "command:notion.publish-page-draft",
     "connector:notion",
     "mcp_server:notion",
   },

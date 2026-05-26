@@ -103,6 +103,9 @@ jobs:
             exit 1
           fi
 
+      - name: Audit remote model catalog metadata
+        run: python3 scripts/validate_model_pack.py --remote
+
       - name: Determine release signing mode
         run: |
           set -euo pipefail

@@ -91,6 +91,8 @@ Close M8 when:
   guide, manifest, source commit, first-run model path, workspace path, Web
   Search evidence, approval-gated write path, connector smoke, and runtime
   recovery together in CI.
+- Release builds run the remote model catalog audit before publishing so the
+  first-use download path is checked against current upstream metadata.
 - The release manifest remains enough for a user or maintainer to verify what
   was built, from which source commit, by which workflow run, and with which
   trust and sandbox posture.
@@ -104,19 +106,25 @@ into a marketplace shell or a generic RAG product.
 
 Work order:
 
-- Prove one real third-party connector workflow end to end: user intent,
-  inspected draft, approval, execution proof, retry, and recovery.
+- Make connector contracts honest first. The bundled Notion path starts with a
+  local integration token/API-key contract; do not claim OAuth until a browser
+  OAuth flow exists.
+- Replace the Notion draft-only runner with one real third-party workflow:
+  user intent, inspected draft, approval, execution, proof, retry, and recovery.
 - Treat connector success as a user-visible contract: what changed, where it
   changed, what proof exists, and how the user can recover.
-- Narrow connector permissions around explicit user-visible actions rather than
-  broad plugin trust.
-- Keep Web Search as the active retrieval layer; add stronger page evidence only
-  when connector tasks require it.
+- Keep Web Search as the active retrieval layer. Add bounded page evidence only
+  when a connector task needs stronger source proof.
+- Let connector workflows request a larger bounded step budget when needed;
+  keep the default cowork loop small.
 - Keep saved artifacts and memory as lightweight context aids, not a local
   document RAG system.
 - Preserve the small native UI: progressive disclosure, no always-open admin
   panels, and no feature surface without a daily cowork use case.
 - Refactor only at ownership or failure boundaries exposed by connector work.
+
+Current focus: finish the Notion create-page path by proving publish execution,
+remote proof display, retry, and recovery in packaged smoke.
 
 ## Guardrails
 

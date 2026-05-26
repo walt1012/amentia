@@ -378,7 +378,7 @@ def connector_by_id(connectors: list[dict], connector_id: str) -> dict:
 
 def assert_notion_connector_disabled(connector: dict) -> None:
   assert connector["status"] == "disabled"
-  assert connector["authType"] == "oauth2"
+  assert connector["authType"] == "api_key"
   assert connector["credentialStore"] == "local"
   assert connector["authScopes"] == ["read_content", "insert_content"]
 
@@ -457,7 +457,7 @@ def main() -> int:
       "name": "notion-connector",
       "version": "0.1.0",
       "displayName": "Notion Connector",
-      "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
+      "description": "Declares the Notion connector surface for MCP and local integration-token workspace integrations.",
       "author": {
         "name": "Pith",
       },
@@ -481,7 +481,7 @@ def main() -> int:
         },
       ],
       "authPolicy": {
-        "type": "oauth2",
+        "type": "api_key",
         "required": True,
         "scopes": [
           "read_content",

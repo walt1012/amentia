@@ -361,6 +361,7 @@ fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext,
       &[
         "command:notion.prepare-page-draft",
         "command:notion.inspect-page-write",
+        "command:notion.publish-page-draft",
         "connector:notion",
         "mcp_server:notion",
         "prompt_pack:notion.workspace",

@@ -91,6 +91,9 @@ fn bundled_plugin_manifests_match_runtime_schema() {
   assert!(notion_capabilities
     .iter()
     .any(|capability| capability == "command:notion.inspect-page-write"));
+  assert!(notion_capabilities
+    .iter()
+    .any(|capability| capability == "command:notion.publish-page-draft"));
 
   let notion_command = read_command_manifest(
     &bundled_root.join("notion-connector/commands/notion.prepare-page-draft.json"),
@@ -123,5 +126,18 @@ fn bundled_plugin_manifests_match_runtime_schema() {
       .as_ref()
       .map(|execution| execution.kind.as_str()),
     Some("mcp.notion.inspectPageWrite")
+  );
+
+  let notion_publish_command = read_command_manifest(
+    &bundled_root.join("notion-connector/commands/notion.publish-page-draft.json"),
+  )
+  .expect("parse notion publish command manifest");
+  assert_eq!(notion_publish_command.title, "Publish Notion Page Draft");
+  assert_eq!(
+    notion_publish_command
+      .execution
+      .as_ref()
+      .map(|execution| execution.kind.as_str()),
+    Some("mcp.notion.publishPageDraft")
   );
 }

@@ -185,6 +185,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "--workflow CI",
     "--status success",
     r"^v[0-9]+\.[0-9]+\.[0-9]+$",
+    "python3 scripts/validate_model_pack.py --remote",
   )
   for term in required_gate_terms:
     if term not in release_block:

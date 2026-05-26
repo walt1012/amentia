@@ -59,7 +59,7 @@ enum PluginConnectorCredentialDialogPresenter {
   }
 
   private static func credentialPrompt(_ connector: PluginConnectorSummary) -> String {
-    let authType = connector.authType ?? "local credential"
+    let authType = displayAuthType(connector.authType)
     let store = connector.credentialStore ?? "local"
     let scopes = connector.authScopes.isEmpty
       ? "No declared scopes."
@@ -68,6 +68,19 @@ enum PluginConnectorCredentialDialogPresenter {
       + "\(scopes) Credential store: \(store). "
       + "Secrets are passed to plugin runners through per-run environment bindings. "
       + "Leave the secret empty only when this connector uses marker-only authorization."
+  }
+
+  private static func displayAuthType(_ authType: String?) -> String {
+    switch authType {
+    case "api_key":
+      return "API key"
+    case "oauth2":
+      return "OAuth 2.0"
+    case let value? where !value.isEmpty:
+      return value
+    default:
+      return "local credential"
+    }
   }
 
   private static func confirmsMarkerOnlyAuthorization(
