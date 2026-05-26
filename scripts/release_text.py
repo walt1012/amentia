@@ -62,7 +62,7 @@ def release_notes(
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model.
 - SHA-256 checksum sidecar is published next to the DMG.
-- README-FIRST.txt and the release manifest are published as separate assets for pre-install review.
+- README-FIRST.txt and the release manifest are published as separate assets for pre-install review, including sidecar hashes.
 - {trust_note}
 """
 

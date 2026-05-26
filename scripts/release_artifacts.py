@@ -6,12 +6,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
 
 SUPPORTED_SIGNING_MODES = {"ad-hoc", "developer-id"}
 SOURCE_COMMIT_HEX_LENGTH = 40
+PUBLIC_TAG_PATTERN = re.compile(r"^v[0-9]+(\.[0-9]+){0,2}$")
+INTERNAL_CI_TAG_PATTERN = re.compile(r"^ci-[0-9a-f]{12,40}$")
+INSTALL_GUIDE_NAME = "README-FIRST.txt"
+INTERNAL_CI_DMG_NAME = "Pith-macos-x86_64.dmg"
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications",
   "download one verified local model",
@@ -54,11 +59,19 @@ def release_manifest(
   install_guide_path: Path,
 ) -> dict:
   validate_release_identity(tag, source_commit, signing_mode)
+  validate_release_asset_names(
+    tag=tag,
+    artifact_path=artifact_path,
+    checksum_path=checksum_path,
+    install_guide_path=install_guide_path,
+  )
   validate_checksum_file(artifact_path, checksum_path)
-  validate_install_guide(install_guide_path)
+  validate_install_guide_for_tag(install_guide_path, tag)
 
   return {
+    "schemaVersion": 1,
     "tag": tag,
+    "releaseKind": release_kind(tag),
     "sourceCommit": source_commit,
     "product": "Pith",
     "platform": {
@@ -145,6 +158,13 @@ def validate_release_manifest(
     raise FileNotFoundError(f"Release manifest is missing: {manifest_path}")
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
   validate_manifest_identity(manifest)
+  tag = manifest["tag"]
+  validate_release_asset_names(
+    tag=tag,
+    artifact_path=artifact_path,
+    checksum_path=checksum_path,
+    install_guide_path=install_guide_path,
+  )
   artifacts = manifest.get("artifacts")
   if not isinstance(artifacts, list):
     raise RuntimeError("Release manifest must include an artifacts list")
@@ -181,7 +201,7 @@ def validate_release_manifest(
     raise RuntimeError("Release manifest install guide size does not match")
   if guide_entry.get("sha256") != sha256_hex(install_guide_path):
     raise RuntimeError("Release manifest install guide SHA-256 does not match")
-  validate_install_guide(install_guide_path)
+  validate_install_guide_for_tag(install_guide_path, tag)
 
 
 def validate_manifest_artifacts(artifacts: list) -> dict[str, dict]:
@@ -201,11 +221,49 @@ def validate_manifest_artifacts(artifacts: list) -> dict[str, dict]:
 
 
 def validate_release_identity(tag: str, source_commit: str, signing_mode: str) -> None:
-  if not tag.strip():
-    raise RuntimeError("Release manifest tag is required")
+  release_kind(tag)
   validate_source_commit(source_commit)
   if signing_mode not in SUPPORTED_SIGNING_MODES:
     raise RuntimeError(f"Unsupported release signing mode: {signing_mode}")
+
+
+def release_kind(tag: str) -> str:
+  if not isinstance(tag, str) or not tag.strip():
+    raise RuntimeError("Release manifest tag is required")
+  if PUBLIC_TAG_PATTERN.fullmatch(tag):
+    return "public"
+  if INTERNAL_CI_TAG_PATTERN.fullmatch(tag):
+    return "internal-ci"
+  raise RuntimeError("Release manifest tag must be a public v* tag or internal ci-* tag")
+
+
+def validate_release_asset_names(
+  *,
+  tag: str,
+  artifact_path: Path,
+  checksum_path: Path,
+  install_guide_path: Path,
+) -> None:
+  expected_dmg_name = release_dmg_name(tag)
+  if artifact_path.name != expected_dmg_name:
+    raise RuntimeError(
+      f"Release DMG name must be {expected_dmg_name}: {artifact_path.name}"
+    )
+  expected_checksum_name = f"{artifact_path.name}.sha256"
+  if checksum_path.name != expected_checksum_name:
+    raise RuntimeError(
+      f"Release checksum name must be {expected_checksum_name}: {checksum_path.name}"
+    )
+  if install_guide_path.name != INSTALL_GUIDE_NAME:
+    raise RuntimeError(
+      f"Release install guide must be named {INSTALL_GUIDE_NAME}: {install_guide_path.name}"
+    )
+
+
+def release_dmg_name(tag: str) -> str:
+  if release_kind(tag) == "internal-ci":
+    return INTERNAL_CI_DMG_NAME
+  return f"Pith-{tag}-macos-x86_64.dmg"
 
 
 def validate_source_commit(source_commit: str) -> None:
@@ -216,6 +274,12 @@ def validate_source_commit(source_commit: str) -> None:
 
 
 def validate_manifest_identity(manifest: dict) -> None:
+  if manifest.get("schemaVersion") != 1:
+    raise RuntimeError("Release manifest schema version must be 1")
+  tag = manifest.get("tag")
+  kind = release_kind(tag)
+  if manifest.get("releaseKind") != kind:
+    raise RuntimeError("Release manifest kind does not match its tag")
   source_commit = manifest.get("sourceCommit")
   if not isinstance(source_commit, str):
     raise RuntimeError("Release manifest source commit is required")
@@ -271,6 +335,13 @@ def validate_install_guide(install_guide_path: Path) -> None:
       "Release install guide is missing required user guidance: "
       + ", ".join(missing)
     )
+
+
+def validate_install_guide_for_tag(install_guide_path: Path, tag: str) -> None:
+  validate_install_guide(install_guide_path)
+  text = install_guide_path.read_text(encoding="utf-8")
+  if f"Pith {tag}" not in text:
+    raise RuntimeError("Release install guide tag does not match the release manifest")
 
 
 def validate_checksum_file(artifact_path: Path, checksum_path: Path) -> None:

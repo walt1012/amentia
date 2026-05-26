@@ -91,7 +91,8 @@ Current state:
   `README-FIRST.txt`, and a machine-readable release manifest.
 - Release sidecars validate first-use user guidance, model delivery mode,
   platform target, signing mode, source commit, checksum sidecar integrity, and
-  install-guide integrity.
+  install-guide integrity, with public release asset names locked to the
+  release tag.
 - The app reads packaged distribution metadata and presents the same
   Developer ID or ad-hoc Gatekeeper trust path and source commit that the DMG
   install guide and release manifest use.

@@ -61,6 +61,10 @@ def main() -> int:
     )
     if manifest["platform"]["architecture"] != "x86_64":
       raise AssertionError("release manifest should lock the macOS architecture")
+    if manifest["schemaVersion"] != 1:
+      raise AssertionError("release manifest should record its schema version")
+    if manifest["releaseKind"] != "public":
+      raise AssertionError("public release tags should produce public manifests")
     if manifest["sourceCommit"] != SOURCE_COMMIT:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
@@ -93,6 +97,34 @@ def main() -> int:
     )
 
     manifest_data = manifest_path.read_text(encoding="utf-8")
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["schemaVersion"] = 2
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong release manifest schema version should fail validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["releaseKind"] = "internal-ci"
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong release manifest kind should fail validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
     tampered_manifest = json.loads(manifest_data)
     tampered_manifest["platform"]["architecture"] = "arm64"
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
@@ -168,6 +200,64 @@ def main() -> int:
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
+    wrong_artifact = root_path / "Pith-wrong-macos-x86_64.dmg"
+    wrong_artifact.write_bytes(b"pith release artifact\n")
+    wrong_checksum_path = write_checksum_file(wrong_artifact)
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=wrong_artifact,
+        checksum_path=wrong_checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "public release DMG names should match the release tag",
+    )
+
+    wrong_checksum = root_path / "Pith-v0.1.0-macos-x86_64.checksum"
+    wrong_checksum.write_text(checksum_text(artifact), encoding="utf-8")
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=wrong_checksum,
+        install_guide_path=install_guide,
+      ),
+      "release checksum names should match the DMG sidecar name",
+    )
+
+    wrong_guide = root_path / "INSTALL.txt"
+    wrong_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc"),
+      encoding="utf-8",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=wrong_guide,
+      ),
+      "release install guide names should be stable",
+    )
+
+    assert_raises(
+      lambda: release_manifest(
+        tag="latest",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "release tags should be public v* tags or internal ci-* tags",
+    )
+
     checksum_data = checksum_path.read_text(encoding="utf-8")
     checksum_path.write_text("0" * 64 + f"  {artifact.name}\n", encoding="utf-8")
     assert_raises(
@@ -213,6 +303,27 @@ def main() -> int:
       ),
       "tampered release artifact should fail release manifest validation",
     )
+
+  with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
+    root_path = Path(root)
+    artifact = root_path / "Pith-macos-x86_64.dmg"
+    install_guide = root_path / "README-FIRST.txt"
+    artifact.write_bytes(b"pith internal ci artifact\n")
+    install_guide.write_text(
+      release_install_guide("ci-0123456789ab", "ad-hoc"),
+      encoding="utf-8",
+    )
+    checksum_path = write_checksum_file(artifact)
+    manifest = release_manifest(
+      tag="ci-0123456789ab",
+      source_commit=SOURCE_COMMIT,
+      signing_mode="ad-hoc",
+      artifact_path=artifact,
+      checksum_path=checksum_path,
+      install_guide_path=install_guide,
+    )
+    if manifest["releaseKind"] != "internal-ci":
+      raise AssertionError("ci tags should produce internal release manifests")
 
   with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
     root_path = Path(root)
