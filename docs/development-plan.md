@@ -91,8 +91,9 @@ Current state:
   `README-FIRST.txt`, and a machine-readable release manifest.
 - Release sidecars validate first-use user guidance, model delivery mode,
   platform target, signing mode, source commit, checksum sidecar integrity, and
-  install-guide integrity, with manifest names and public release asset names
-  locked to the release tag and schema-versioned app package metadata.
+  install-guide integrity, with strict `vX.Y.Z` public release tags, manifest
+  names, public asset names, and schema-versioned app package metadata locked
+  together.
 - Release notes and `README-FIRST.txt` are generated and validated by the same
   copy contract before GitHub Release publication.
 - The app reads packaged distribution metadata and presents the same

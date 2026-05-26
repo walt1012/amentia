@@ -25,6 +25,7 @@ SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 def write_package_manifest(
   path: Path,
   *,
+  bundle_version: str = "0.1.0",
   source_commit: str = SOURCE_COMMIT,
   signing: str = "ad-hoc",
   model_delivery: str = "in-app-download",
@@ -34,7 +35,7 @@ def write_package_manifest(
       {
         "schemaVersion": 1,
         "appName": "Pith",
-        "bundleVersion": "0.1.0",
+        "bundleVersion": bundle_version,
         "minimumSystemVersion": "12.0",
         "architecture": "x86_64",
         "sourceCommit": source_commit,
@@ -345,7 +346,18 @@ def main() -> int:
         checksum_path=checksum_path,
         install_guide_path=install_guide,
       ),
-      "release tags should be public v* tags or internal ci-* tags",
+      "release tags should be public vX.Y.Z tags or internal ci-* tags",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v1.2",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "partial public release tags should fail validation",
     )
 
     checksum_data = checksum_path.read_text(encoding="utf-8")
@@ -394,6 +406,23 @@ def main() -> int:
         package_manifest_path=wrong_package_manifest,
       ),
       "release manifest should reject mismatched packaged app source commits",
+    )
+
+    wrong_package_manifest = write_package_manifest(
+      root_path / "WrongVersionPithPackage.json",
+      bundle_version="0.2.0",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject packaged app versions that do not match the tag",
     )
 
     wrong_package_manifest = write_package_manifest(root_path / "WrongSchemaPithPackage.json")

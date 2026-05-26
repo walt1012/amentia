@@ -120,8 +120,9 @@ the package shape and user guidance, but they are not trusted macOS installers.
 ## GitHub Release Distribution
 
 Users should download `Pith-<tag>-macos-x86_64.dmg` from the GitHub Release
-page, open it, and drag `Pith.app` to Applications. The release workflow runs
-only for `v*` tags or manual dispatch and supports two distribution modes:
+page, open it, and drag `Pith.app` to Applications. The release workflow
+publishes only strict `vX.Y.Z` product versions and supports two distribution
+modes:
 
 - Developer ID mode signs the app, creates a DMG, signs and notarizes the DMG,
   staples the notarization ticket, validates the app and DMG, then publishes the

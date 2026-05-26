@@ -16,6 +16,7 @@ Current scripts:
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging, and records schema-versioned package metadata in `PithPackage.json`.
 - `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, schema-versioned app package metadata, exact asset sets, and tag-locked names.
+- `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds, then revalidates release notes against the final publish state.
 - `release_text.py`: generates and validates GitHub Release notes and the DMG root install guide from the release signing mode.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
@@ -25,6 +26,7 @@ Current scripts:
 - `test_ci_changes.py`: checks CI change-lane classification rules.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
+- `test_release_identity.py`: checks shared product version and public release tag rules.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.
 - `test_release_text.py`: checks release notes and DMG install guide copy generation.
 - `test_smoke_launch_macos_app.py`: checks packaged app smoke validators that do not require macOS.

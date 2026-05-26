@@ -10,10 +10,12 @@ import re
 import sys
 from pathlib import Path
 
+from release_identity import product_version_from_tag
+from release_identity import validate_public_release_tag
+
 
 SUPPORTED_SIGNING_MODES = {"ad-hoc", "developer-id"}
 SOURCE_COMMIT_HEX_LENGTH = 40
-PUBLIC_TAG_PATTERN = re.compile(r"^v[0-9]+(\.[0-9]+){0,2}$")
 INTERNAL_CI_TAG_PATTERN = re.compile(r"^ci-[0-9a-f]{12,40}$")
 INSTALL_GUIDE_NAME = "README-FIRST.txt"
 INTERNAL_CI_DMG_NAME = "Pith-macos-x86_64.dmg"
@@ -73,6 +75,7 @@ def release_manifest(
     source_commit=source_commit,
     signing_mode=signing_mode,
   )
+  validate_package_version_matches_tag(tag, package_summary)
 
   manifest = {
     "schemaVersion": 1,
@@ -197,6 +200,7 @@ def validate_release_manifest(
     source_commit=manifest["sourceCommit"],
     signing_mode=manifest["signingMode"],
   )
+  validate_package_version_matches_tag(tag, package_summary)
   if package_summary is not None and manifest.get("appPackage") != package_summary:
     raise RuntimeError("Release manifest app package summary does not match PithPackage.json")
   artifact_entry = by_name.get(artifact_path.name)
@@ -292,6 +296,16 @@ def package_manifest_summary(
   }
 
 
+def validate_package_version_matches_tag(tag: str, package_summary: dict | None) -> None:
+  if package_summary is None or release_kind(tag) != "public":
+    return
+  expected_version = product_version_from_tag(tag)
+  if package_summary.get("bundleVersion") != expected_version:
+    raise RuntimeError(
+      "PithPackage.json bundleVersion must match the public release tag"
+    )
+
+
 def read_json_object(path: Path, label: str) -> dict:
   if not path.is_file():
     raise FileNotFoundError(f"{label} is missing: {path}")
@@ -311,11 +325,16 @@ def validate_release_identity(tag: str, source_commit: str, signing_mode: str) -
 def release_kind(tag: str) -> str:
   if not isinstance(tag, str) or not tag.strip():
     raise RuntimeError("Release manifest tag is required")
-  if PUBLIC_TAG_PATTERN.fullmatch(tag):
+  try:
+    validate_public_release_tag(tag)
     return "public"
+  except RuntimeError:
+    pass
   if INTERNAL_CI_TAG_PATTERN.fullmatch(tag):
     return "internal-ci"
-  raise RuntimeError("Release manifest tag must be a public v* tag or internal ci-* tag")
+  raise RuntimeError(
+    "Release manifest tag must be a public vX.Y.Z tag or internal ci-* tag"
+  )
 
 
 def validate_release_asset_names(

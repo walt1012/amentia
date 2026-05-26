@@ -21,6 +21,7 @@ from macos_llama_backend import (
   assert_portable_llama_backend,
   stage_llama_backend,
 )
+from release_identity import normalize_product_version
 
 
 APP_NAME = "Pith"
@@ -37,7 +38,6 @@ DEFAULT_SOURCE_COMMIT = (
   or "development"
 )
 SUPPORTED_ARCH = "x86_64"
-VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$")
 SOURCE_COMMIT_HEX_LENGTH = 40
 SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
@@ -322,15 +322,7 @@ def validate_swift_package_rules(repo_root: Path) -> None:
 
 
 def normalize_version(version: str) -> str:
-  normalized = version.strip()
-  if normalized.startswith("v"):
-    normalized = normalized[1:]
-  if not VERSION_PATTERN.fullmatch(normalized):
-    raise RuntimeError(
-      "App version must be one to three dot-separated non-negative integers, "
-      f"got {version!r}"
-    )
-  return normalized
+  return normalize_product_version(version)
 
 
 def normalize_source_commit(source_commit: str) -> str:

@@ -119,6 +119,20 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
     if job not in job_blocks(text):
       issues.append(WorkflowIssue(CI_WORKFLOW, f"required CI job {job} is missing"))
 
+  repository_policy_block = job_block(text, "repository-policy")
+  if repository_policy_block:
+    required_policy_commands = (
+      "python3 scripts/test_release_identity.py",
+    )
+    for term in required_policy_commands:
+      if term not in repository_policy_block:
+        issues.append(
+          WorkflowIssue(
+            CI_WORKFLOW,
+            f"repository-policy is missing {term}",
+          )
+        )
+
   package_block = job_block(text, "macos-package")
   if package_block:
     if re.search(r"(?m)^\s+-\s+swift-tests\s*$", package_block):
@@ -164,7 +178,12 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   if not release_block:
     return [WorkflowIssue(RELEASE_WORKFLOW, "required release-dmg job is missing")]
 
-  required_gate_terms = ("gh run list", "--workflow CI", "--status success")
+  required_gate_terms = (
+    "gh run list",
+    "--workflow CI",
+    "--status success",
+    r"^v[0-9]+\.[0-9]+\.[0-9]+$",
+  )
   for term in required_gate_terms:
     if term not in release_block:
       issues.append(

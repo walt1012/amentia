@@ -43,13 +43,14 @@ def assert_raises(action, message: str) -> None:
 def main() -> int:
   assert_equal(normalize_version("0.1.0"), "0.1.0")
   assert_equal(normalize_version("v1.2.3"), "1.2.3")
-  assert_equal(normalize_version("12.34"), "12.34")
-  try:
-    normalize_version("v1.2.3-beta")
-  except RuntimeError:
-    pass
-  else:
-    raise AssertionError("prerelease suffixes should stay out of Info.plist versions")
+  assert_raises(
+    lambda: normalize_version("12.34"),
+    "two-part versions should fail package metadata validation",
+  )
+  assert_raises(
+    lambda: normalize_version("v1.2.3-beta"),
+    "prerelease suffixes should stay out of Info.plist versions",
+  )
   assert_equal(normalize_source_commit("development"), "development")
   assert_equal(
     normalize_source_commit("ABCDEF0123456789ABCDEF0123456789ABCDEF01"),

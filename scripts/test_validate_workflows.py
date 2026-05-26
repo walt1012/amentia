@@ -34,6 +34,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - name: Test release identity helper
+        run: python3 scripts/test_release_identity.py
   rust-format:
     timeout-minutes: 10
   rust-clippy:
@@ -102,6 +104,9 @@ jobs:
           persist-credentials: false
       - name: Validate release tag and CI gate
         run: |
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            exit 1
+          fi
           gh run list --workflow CI --status success
       - name: Create release checksum
         run: |
@@ -163,6 +168,18 @@ def main() -> int:
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test release identity helper\n"
+        "        run: python3 scripts/test_release_identity.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_release_identity.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
     write_workflows(root, ci=VALID_CI.replace("          retention-days: 21\n", ""))
     assert_issue(issue_messages(root), "retention-days")
 
@@ -203,6 +220,19 @@ def main() -> int:
       release=VALID_RELEASE.replace('          --tag "$RELEASE_TAG"\n', ""),
     )
     assert_issue(issue_messages(root), "release state helper")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+$ ]]; then\n'
+        '            exit 1\n'
+        '          fi\n',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "^v[0-9]+")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
