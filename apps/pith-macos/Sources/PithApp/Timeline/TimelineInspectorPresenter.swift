@@ -278,6 +278,9 @@ enum TimelineInspectorPresenter {
       "remoteWrite",
       "remoteWriteStage",
       "remoteWriteStatus",
+      "nextCommandId",
+      "nextCommandInput",
+      "nextCommandLabel",
       "retryCommandId",
       "retryInput",
       "sourcePath",
@@ -410,6 +413,13 @@ enum TimelineInspectorPresenter {
     }
     if let sourceArtifact = entry.attributes["sourceArtifact"] {
       lines.append("Remote write source: \(sourceArtifact)")
+    }
+    if let nextCommandID = entry.attributes["nextCommandId"] {
+      let label = entry.attributes["nextCommandLabel"] ?? "Continue"
+      lines.append("Next command: \(label) | \(nextCommandID)")
+    }
+    if let nextCommandInput = entry.attributes["nextCommandInput"] {
+      lines.append("Next input: \(nextCommandInput)")
     }
     if let proofStatus = entry.attributes["remoteProofStatus"] {
       lines.append("Remote proof: \(proofStatus)")

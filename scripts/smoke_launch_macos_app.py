@@ -1076,6 +1076,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("targetService") == "notion"
     and item.get("attributes", {}).get("draftMode") == "localDraft"
     and item.get("attributes", {}).get("remoteWrite") == "false"
+    and item.get("attributes", {}).get("nextCommandId") == NOTION_PUBLISH_COMMAND_ID
+    and item.get("attributes", {}).get("nextCommandLabel") == "Publish to Notion"
     for item in items
   ):
     raise RuntimeError(

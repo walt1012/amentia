@@ -143,6 +143,9 @@ jobs:
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
 
+      - name: Test Notion connector contract
+        run: python3 scripts/test_notion_connector_contract.py
+
       - name: Test distribution validator
         run: python3 scripts/test_validate_macos_distribution.py
 

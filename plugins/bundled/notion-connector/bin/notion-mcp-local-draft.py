@@ -113,6 +113,7 @@ def prepare_page_draft(arguments: dict[str, Any]) -> dict[str, Any]:
           "sourceArtifact": source,
           "sourceArtifactPreviewProvided": str(bool(preview)).lower(),
           "sourceArtifactTruncated": truncated,
+          **publish_follow_up_attributes(),
         },
       )
     ],
@@ -157,6 +158,7 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": source,
           "sourceArtifactPreviewProvided": str(preview_provided).lower(),
+          **publish_follow_up_attributes(),
         },
       )
     ],
@@ -373,6 +375,15 @@ def publish_retry_needed(
 
 def retry_input_json(input_data: dict[str, str]) -> str:
   return json.dumps(input_data, ensure_ascii=False, sort_keys=True)
+
+
+def publish_follow_up_attributes() -> dict[str, str]:
+  return {
+    "nextCommand": "notion.publish-page-draft",
+    "nextCommandId": DEFAULT_PUBLISH_COMMAND_ID,
+    "nextCommandLabel": "Publish to Notion",
+    "nextCommandInputRequired": "true",
+  }
 
 
 def notion_children(body: str) -> list[dict[str, Any]]:

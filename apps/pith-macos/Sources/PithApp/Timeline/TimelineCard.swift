@@ -9,6 +9,7 @@ struct TimelineCard: View {
   let showsPluginAuthorizeAction: Bool
   let showsPluginInputAction: Bool
   let showsPluginRetryAction: Bool
+  let showsPluginFollowUpAction: Bool
   let showsPluginSourceAction: Bool
   let showsPluginRefreshAction: Bool
   let onSelect: () -> Void
@@ -18,6 +19,7 @@ struct TimelineCard: View {
   let onAuthorizePluginConnector: () -> Void
   let onRunPluginCommandWithInput: () -> Void
   let onRetry: () -> Void
+  let onRunPluginFollowUp: () -> Void
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
 
@@ -121,6 +123,13 @@ struct TimelineCard: View {
             .buttonStyle(.bordered)
           }
 
+          if showsPluginFollowUpAction {
+            Button(pluginFollowUpTitle) {
+              onRunPluginFollowUp()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
           if showsPluginSourceAction {
             Button("Reveal Source") {
               onRevealPluginSource()
@@ -175,6 +184,7 @@ struct TimelineCard: View {
       || showsPluginAuthorizeAction
       || showsPluginInputAction
       || showsPluginRetryAction
+      || showsPluginFollowUpAction
       || showsPluginSourceAction
       || showsPluginRefreshAction
   }
@@ -185,6 +195,15 @@ struct TimelineCard: View {
     }
 
     return "Retry"
+  }
+
+  private var pluginFollowUpTitle: String {
+    let title = entry.attributes["nextCommandLabel"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    if let title, !title.isEmpty {
+      return title
+    }
+    return "Continue"
   }
 
   private var kindLabel: String {

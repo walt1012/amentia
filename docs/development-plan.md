@@ -125,8 +125,9 @@ Work order:
 - Refactor only at ownership or failure boundaries exposed by connector work.
 
 Current focus: finish the Notion create-page path by tightening user-facing
-retry controls; packaged smoke now proves publish execution, retry guidance,
-retry input handoff, remote proof, publish memory, and restart recovery.
+retry and follow-up controls; packaged smoke now proves publish execution,
+draft-to-publish handoff, retry guidance, retry input handoff, remote proof,
+publish memory, and restart recovery.
 
 ## Guardrails
 

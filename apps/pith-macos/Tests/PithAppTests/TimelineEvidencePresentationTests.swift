@@ -98,6 +98,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "remoteProofStatus": "notRequested",
           "retryCommandId": "notion-connector::notion.publish-page-draft",
           "retryInput": "{\"parentPageId\":\"page\"}",
+          "nextCommandId": "notion-connector::notion.publish-page-draft",
+          "nextCommandLabel": "Publish to Notion",
           "targetService": "notion",
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": "docs/handoff.md",
@@ -109,6 +111,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Remote approval required: true") == true)
     XCTAssertTrue(summary?.contains("Remote write source: docs/handoff.md") == true)
     XCTAssertTrue(summary?.contains("Remote proof: notRequested") == true)
+    XCTAssertTrue(
+      summary?.contains(
+        "Next command: Publish to Notion | notion-connector::notion.publish-page-draft"
+      ) == true
+    )
     XCTAssertTrue(
       summary?.contains("Retry command: notion-connector::notion.publish-page-draft") == true
     )

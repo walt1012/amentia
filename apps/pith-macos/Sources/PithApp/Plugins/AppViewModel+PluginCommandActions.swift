@@ -100,6 +100,46 @@ extension AppViewModel {
     runPluginCommand(commandID: commandID, input: pluginRetryInput(from: entry))
   }
 
+  func canRunPluginFollowUp(from entry: TimelineEntry) -> Bool {
+    guard let commandID = pluginFollowUpCommandID(from: entry),
+          let command = pluginCommands.first(where: { $0.id == commandID })
+    else {
+      return false
+    }
+
+    let snapshot = pluginActionSnapshot()
+    if pluginFollowUpInput(from: entry) != nil {
+      return PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot)
+    }
+    if command.acceptsPlainInput {
+      return PluginActionPlanner.canRunCommandWithInput(
+        commandID: commandID,
+        snapshot: snapshot
+      )
+    }
+
+    return PluginActionPlanner.directCommandRunDisabledReason(
+      commandID: commandID,
+      snapshot: snapshot
+    ) == nil
+  }
+
+  func runPluginFollowUp(from entry: TimelineEntry) {
+    guard canRunPluginFollowUp(from: entry),
+          let commandID = pluginFollowUpCommandID(from: entry)
+    else {
+      runtimeDetail = "Plugin follow-up is unavailable."
+      return
+    }
+
+    pluginManagerSection = .commands
+    if let input = pluginFollowUpInput(from: entry) {
+      runPluginCommand(commandID: commandID, input: input)
+    } else {
+      runPluginCommandWithInput(commandID: commandID)
+    }
+  }
+
   func canRunPluginCommand(commandID: String) -> Bool {
     PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: pluginActionSnapshot())
   }

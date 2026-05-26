@@ -140,6 +140,18 @@ extension AppViewModel {
     .first { !$0.isEmpty }
   }
 
+  func pluginFollowUpCommandID(from entry: TimelineEntry) -> String? {
+    let commandID = entry.attributes["nextCommandId"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return commandID?.isEmpty == false ? commandID : nil
+  }
+
+  func pluginFollowUpInput(from entry: TimelineEntry) -> String? {
+    let input = entry.attributes["nextCommandInput"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return input?.isEmpty == false ? input : nil
+  }
+
   private func pluginSourcePath(from entry: TimelineEntry) -> String? {
     let explicitPath = [
       "pluginRunnerResolvedEntrypoint",
