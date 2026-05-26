@@ -3,7 +3,12 @@
 
 from __future__ import annotations
 
-from release_text import install_guide, release_notes
+from release_text import (
+  install_guide,
+  release_notes,
+  validate_install_guide,
+  validate_release_notes,
+)
 
 
 def require_contains(text: str, expected: str) -> None:
@@ -28,6 +33,13 @@ def main() -> int:
   require_contains(developer_notes, "release manifest")
   require_contains(developer_notes, "sidecar hashes")
   require_not_contains(developer_notes, "Open Anyway")
+  validate_release_notes(
+    developer_notes,
+    tag="v0.1.0",
+    signing_mode="developer-id",
+    allow_untrusted_ad_hoc=False,
+    draft=False,
+  )
 
   ad_hoc_notes = release_notes(
     "v0.1.0",
@@ -38,6 +50,13 @@ def main() -> int:
   require_contains(ad_hoc_notes, "Untrusted ad-hoc prerelease.")
   require_contains(ad_hoc_notes, "Open Anyway")
   require_contains(ad_hoc_notes, "Control-clicks Pith.app")
+  validate_release_notes(
+    ad_hoc_notes,
+    tag="v0.1.0",
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=True,
+    draft=False,
+  )
 
   draft_notes = release_notes(
     "v0.1.0",
@@ -47,6 +66,13 @@ def main() -> int:
   )
   require_contains(draft_notes, "Draft ad-hoc build.")
   require_not_contains(draft_notes, "Untrusted ad-hoc prerelease.")
+  validate_release_notes(
+    draft_notes,
+    tag="v0.1.0",
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=False,
+    draft=True,
+  )
 
   guide = install_guide("v0.1.0", "ad-hoc")
   require_contains(guide, "Control-click Pith.app and choose Open.")
@@ -58,6 +84,7 @@ def main() -> int:
   require_contains(guide, "sidecar hashes")
   require_contains(guide, "source commit")
   require_contains(guide, "model delivery mode")
+  validate_install_guide(guide, tag="v0.1.0", signing_mode="ad-hoc")
 
   print("release text tests passed")
   return 0

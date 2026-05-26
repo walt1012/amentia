@@ -334,6 +334,7 @@ jobs:
 
           python3 scripts/release_state.py \
             --title "$release_title" \
+            --tag "$RELEASE_TAG" \
             --notes-file release-notes.md \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --requested-draft "$RELEASE_DRAFT" \

@@ -182,6 +182,14 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release publish state helper is missing")
     )
+  elif not command_window_contains(
+    release_block,
+    "scripts/release_state.py",
+    '--tag "$RELEASE_TAG"',
+  ):
+    issues.append(
+      WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --tag")
+    )
   if "--source-commit" not in release_block:
     issues.append(
       WorkflowIssue(
@@ -255,6 +263,13 @@ def job_blocks(text: str) -> dict[str, str]:
 
 def job_block(text: str, job_name: str) -> str:
   return job_blocks(text).get(job_name, "")
+
+
+def command_window_contains(text: str, anchor: str, term: str) -> bool:
+  start = text.find(anchor)
+  if start == -1:
+    return False
+  return term in text[start:start + 800]
 
 
 def main() -> int:

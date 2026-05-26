@@ -3,7 +3,15 @@
 
 from __future__ import annotations
 
+import sys
+from contextlib import redirect_stderr
+from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from release_state import main as release_state_main
 from release_state import plan_release_state
+from release_text import release_notes
 
 
 def assert_state(
@@ -62,6 +70,52 @@ def assert_rejects_unknown_existing_release_state() -> None:
   raise AssertionError("existing release updates require known draft state")
 
 
+def assert_rejects_tampered_release_notes() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    notes_file.write_text(
+      release_notes("v0.1.0", "developer-id", False, False).replace(
+        "README-FIRST.txt",
+        "install guide",
+      ),
+      encoding="utf-8",
+    )
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith v0.1.0",
+        "--tag",
+        "v0.1.0",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "developer-id",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "false",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+      ]
+      with redirect_stderr(StringIO()):
+        exit_code = release_state_main()
+      if exit_code == 0:
+        raise AssertionError("tampered release notes should be rejected")
+    finally:
+      sys.argv = original_argv
+
+
 def main() -> int:
   assert_state(
     signing_mode="developer-id",
@@ -95,6 +149,7 @@ def main() -> int:
   )
   assert_rejects_unknown_existing_release_state()
   assert_rejects_public_ad_hoc_without_explicit_publish()
+  assert_rejects_tampered_release_notes()
   assert_state(
     signing_mode="ad-hoc",
     requested_draft=False,

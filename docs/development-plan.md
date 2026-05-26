@@ -93,6 +93,8 @@ Current state:
   platform target, signing mode, source commit, checksum sidecar integrity, and
   install-guide integrity, with manifest names and public release asset names
   locked to the release tag and schema-versioned app package metadata.
+- Release notes and `README-FIRST.txt` are generated and validated by the same
+  copy contract before GitHub Release publication.
 - The app reads packaged distribution metadata and presents the same
   Developer ID or ad-hoc Gatekeeper trust path and source commit that the DMG
   install guide and release manifest use.

@@ -115,6 +115,7 @@ jobs:
       - name: Publish GitHub Release
         run: |
           python3 scripts/release_state.py
+          --tag "$RELEASE_TAG"
           gh release upload "$RELEASE_TAG" \\
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \\
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
@@ -194,6 +195,14 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "release checksum")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace('          --tag "$RELEASE_TAG"\n', ""),
+    )
+    assert_issue(issue_messages(root), "release state helper")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

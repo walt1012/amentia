@@ -7,6 +7,26 @@ import argparse
 from pathlib import Path
 
 
+RELEASE_NOTES_REQUIRED_PHRASES = (
+  "macOS 12+ x86_64 DMG installer.",
+  "Model weights are not bundled",
+  "SHA-256 checksum sidecar",
+  "README-FIRST.txt",
+  "release manifest",
+  "sidecar hashes",
+)
+INSTALL_GUIDE_REQUIRED_PHRASES = (
+  "Drag Pith.app to Applications.",
+  "download one verified local model",
+  "Open a workspace folder.",
+  "Start a cowork session",
+  "SHA-256 `.sha256` file",
+  "sidecar hashes",
+  "source commit",
+  "model delivery mode",
+)
+
+
 def parse_bool(value: str) -> bool:
   normalized = value.strip().lower()
   if normalized in {"1", "true", "yes", "on"}:
@@ -67,6 +87,21 @@ def release_notes(
 """
 
 
+def validate_release_notes(
+  text: str,
+  *,
+  tag: str,
+  signing_mode: str,
+  allow_untrusted_ad_hoc: bool,
+  draft: bool,
+) -> None:
+  require_phrases(text, (f"Pith {tag}", *RELEASE_NOTES_REQUIRED_PHRASES), "release notes")
+  trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
+  require_phrases(text, (trust_note,), "release notes")
+  if signing_mode == "developer-id" and "Open Anyway" in text:
+    raise RuntimeError("Developer ID release notes must not mention manual Gatekeeper override")
+
+
 def install_guide(tag: str, signing_mode: str) -> str:
   trust_note, open_note = install_trust_section(signing_mode)
   return f"""Pith {tag}
@@ -92,6 +127,25 @@ Notes
 """
 
 
+def validate_install_guide(text: str, *, tag: str, signing_mode: str) -> None:
+  trust_note, open_note = install_trust_section(signing_mode)
+  require_phrases(
+    text,
+    (f"Pith {tag}", *INSTALL_GUIDE_REQUIRED_PHRASES, trust_note, open_note),
+    "install guide",
+  )
+
+
+def require_phrases(text: str, phrases: tuple[str, ...], label: str) -> None:
+  missing = [
+    phrase
+    for phrase in phrases
+    if phrase not in text
+  ]
+  if missing:
+    raise RuntimeError(f"{label} is missing required copy: {', '.join(missing)}")
+
+
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--tag", required=True)
@@ -104,14 +158,18 @@ def main() -> int:
 
   allow_untrusted_ad_hoc = parse_bool(args.allow_untrusted_ad_hoc)
   draft = parse_bool(args.draft)
-  Path(args.install_guide_output).write_text(
-    install_guide(args.tag, args.signing_mode),
-    encoding="utf-8",
+  guide_text = install_guide(args.tag, args.signing_mode)
+  notes_text = release_notes(args.tag, args.signing_mode, allow_untrusted_ad_hoc, draft)
+  validate_install_guide(guide_text, tag=args.tag, signing_mode=args.signing_mode)
+  validate_release_notes(
+    notes_text,
+    tag=args.tag,
+    signing_mode=args.signing_mode,
+    allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+    draft=draft,
   )
-  Path(args.notes_output).write_text(
-    release_notes(args.tag, args.signing_mode, allow_untrusted_ad_hoc, draft),
-    encoding="utf-8",
-  )
+  Path(args.install_guide_output).write_text(guide_text, encoding="utf-8")
+  Path(args.notes_output).write_text(notes_text, encoding="utf-8")
   return 0
 
 

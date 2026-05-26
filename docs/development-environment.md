@@ -137,7 +137,8 @@ only for `v*` tags or manual dispatch and supports two distribution modes:
 Each release DMG includes `README-FIRST.txt` at the volume root. That file
 summarizes the install steps, first-use model download, workspace opening,
 first cowork request, and the trust path for either Developer ID notarized
-builds or untrusted ad-hoc prereleases.
+builds or untrusted ad-hoc prereleases. The release workflow validates the
+same copy again before publishing GitHub Release notes.
 
 The release page also publishes `README-FIRST.txt` and a release manifest as
 separate assets, so users and automation can inspect the platform target,

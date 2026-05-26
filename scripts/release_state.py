@@ -9,6 +9,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from release_text import validate_release_notes
+
 
 @dataclass(frozen=True)
 class ReleaseState:
@@ -81,6 +83,7 @@ def write_env(path: Path, state: ReleaseState) -> None:
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--title", required=True)
+  parser.add_argument("--tag", required=True)
   parser.add_argument("--notes-file", required=True)
   parser.add_argument("--signing-mode", required=True, choices=["developer-id", "ad-hoc"])
   parser.add_argument("--requested-draft", required=True)
@@ -112,6 +115,17 @@ def main() -> int:
     return 1
 
   notes = Path(args.notes_file).read_text(encoding="utf-8")
+  try:
+    validate_release_notes(
+      notes,
+      tag=args.tag,
+      signing_mode=args.signing_mode,
+      allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
+      draft=state.draft,
+    )
+  except RuntimeError as error:
+    print(f"release state planning failed: {error}", file=sys.stderr)
+    return 1
   Path(args.state_output).write_text(
     json.dumps(
       {
