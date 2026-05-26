@@ -140,6 +140,20 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
           "macos-package release manifest must include --source-commit",
         )
       )
+    required_release_artifact_args = (
+      '--tag "ci-${GITHUB_SHA::12}"',
+      '--signing-mode ad-hoc',
+      '--install-guide artifacts/macos/README-FIRST.txt',
+      '--manifest-output artifacts/macos/internal-release-manifest.json',
+    )
+    for term in required_release_artifact_args:
+      if term not in package_block:
+        issues.append(
+          WorkflowIssue(
+            CI_WORKFLOW,
+            f"macos-package release manifest is missing {term}",
+          )
+        )
   return issues
 
 
@@ -174,6 +188,20 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         "release manifest must include --source-commit",
       )
     )
+  required_release_artifact_args = (
+    '--tag "$RELEASE_TAG"',
+    '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
+    '--install-guide artifacts/macos/README-FIRST.txt',
+    '--manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
+  )
+  for term in required_release_artifact_args:
+    if term not in release_block:
+      issues.append(
+        WorkflowIssue(
+          RELEASE_WORKFLOW,
+          f"release manifest is missing {term}",
+        )
+      )
   for asset in REQUIRED_RELEASE_ASSETS:
     if asset not in release_block:
       issues.append(

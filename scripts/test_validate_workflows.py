@@ -63,7 +63,11 @@ jobs:
       - name: Create internal macOS checksum
         run: |
           python3 scripts/release_artifacts.py \
-            --source-commit "$GITHUB_SHA"
+            --tag "ci-${GITHUB_SHA::12}" \
+            --source-commit "$GITHUB_SHA" \
+            --signing-mode ad-hoc \
+            --install-guide artifacts/macos/README-FIRST.txt \
+            --manifest-output artifacts/macos/internal-release-manifest.json
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
         with:
@@ -101,7 +105,11 @@ jobs:
       - name: Create release checksum
         run: |
           python3 scripts/release_artifacts.py \
-            --source-commit "$PITH_RELEASE_SHA"
+            --tag "$RELEASE_TAG" \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --install-guide artifacts/macos/README-FIRST.txt \
+            --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
       - name: Publish GitHub Release
         run: |
           python3 scripts/release_state.py
@@ -189,7 +197,7 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
-      ci=VALID_CI.replace('            --source-commit "$GITHUB_SHA"\n', ""),
+      ci=VALID_CI.replace('--source-commit "$GITHUB_SHA"', ""),
     )
     assert_issue(issue_messages(root), "macos-package release manifest")
 
@@ -197,9 +205,31 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
-      release=VALID_RELEASE.replace('            --source-commit "$PITH_RELEASE_SHA"\n', ""),
+      ci=VALID_CI.replace(
+        "            --manifest-output artifacts/macos/internal-release-manifest.json\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "internal-release-manifest.json")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace('--source-commit "$PITH_RELEASE_SHA"', ""),
     )
     assert_issue(issue_messages(root), "release manifest must include")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '            --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"\n',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "Pith-$RELEASE_TAG-release-manifest.json")
 
   print("Workflow policy validation tests passed")
   return 0

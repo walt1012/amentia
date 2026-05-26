@@ -121,6 +121,7 @@ def write_release_manifest(
   install_guide_path: Path,
   output_path: Path,
 ) -> Path:
+  validate_release_manifest_name(tag, output_path)
   output_path.parent.mkdir(parents=True, exist_ok=True)
   output_path.write_text(
     json.dumps(
@@ -159,6 +160,7 @@ def validate_release_manifest(
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
   validate_manifest_identity(manifest)
   tag = manifest["tag"]
+  validate_release_manifest_name(tag, manifest_path)
   validate_release_asset_names(
     tag=tag,
     artifact_path=artifact_path,
@@ -170,6 +172,13 @@ def validate_release_manifest(
     raise RuntimeError("Release manifest must include an artifacts list")
   validate_checksum_file(artifact_path, checksum_path)
   by_name = validate_manifest_artifacts(artifacts)
+  expected_artifact_names = {
+    artifact_path.name,
+    checksum_path.name,
+    install_guide_path.name,
+  }
+  if set(by_name) != expected_artifact_names:
+    raise RuntimeError("Release manifest artifacts must exactly match release assets")
   artifact_entry = by_name.get(artifact_path.name)
   if artifact_entry is None:
     raise RuntimeError("Release manifest is missing the DMG artifact entry")
@@ -260,10 +269,24 @@ def validate_release_asset_names(
     )
 
 
+def validate_release_manifest_name(tag: str, manifest_path: Path) -> None:
+  expected_name = release_manifest_name(tag)
+  if manifest_path.name != expected_name:
+    raise RuntimeError(
+      f"Release manifest name must be {expected_name}: {manifest_path.name}"
+    )
+
+
 def release_dmg_name(tag: str) -> str:
   if release_kind(tag) == "internal-ci":
     return INTERNAL_CI_DMG_NAME
   return f"Pith-{tag}-macos-x86_64.dmg"
+
+
+def release_manifest_name(tag: str) -> str:
+  if release_kind(tag) == "internal-ci":
+    return "internal-release-manifest.json"
+  return f"Pith-{tag}-release-manifest.json"
 
 
 def validate_source_commit(source_commit: str) -> None:

@@ -80,6 +80,18 @@ def main() -> int:
     if "sha256" not in manifest_artifacts[install_guide.name]:
       raise AssertionError("install guide manifest entry should be hashable")
 
+    assert_raises(
+      lambda: write_release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        output_path=root_path / "release-manifest.json",
+      ),
+      "public release manifest file names should match the release tag",
+    )
     manifest_path = write_release_manifest(
       tag="v0.1.0",
       source_commit=SOURCE_COMMIT,
@@ -87,7 +99,7 @@ def main() -> int:
       artifact_path=artifact,
       checksum_path=checksum_path,
       install_guide_path=install_guide,
-      output_path=root_path / "release-manifest.json",
+      output_path=root_path / "Pith-v0.1.0-release-manifest.json",
     )
     validate_release_manifest(
       manifest_path,
@@ -197,6 +209,26 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "non-object release artifact entries should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["artifacts"].append(
+      {
+        "name": "extra.txt",
+        "kind": "extra",
+        "sizeBytes": 0,
+      }
+    )
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "extra release manifest artifacts should fail validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
@@ -314,6 +346,18 @@ def main() -> int:
       encoding="utf-8",
     )
     checksum_path = write_checksum_file(artifact)
+    assert_raises(
+      lambda: write_release_manifest(
+        tag="ci-0123456789ab",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        output_path=root_path / "release-manifest.json",
+      ),
+      "internal release manifest file names should be stable",
+    )
     manifest = release_manifest(
       tag="ci-0123456789ab",
       source_commit=SOURCE_COMMIT,
