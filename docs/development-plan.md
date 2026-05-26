@@ -124,9 +124,9 @@ Work order:
   panels, and no feature surface without a daily cowork use case.
 - Refactor only at ownership or failure boundaries exposed by connector work.
 
-Current focus: finish the Notion create-page path by adding user-directed retry
-for failed publishes; packaged smoke now proves publish execution, remote proof,
-publish memory, and restart recovery.
+Current focus: finish the Notion create-page path by tightening user-facing
+retry controls after packaged smoke proved publish execution, retry guidance,
+remote proof, publish memory, and restart recovery.
 
 ## Guardrails
 

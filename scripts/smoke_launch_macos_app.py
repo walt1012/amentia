@@ -72,6 +72,7 @@ REQUIRED_SCHEMA_VERSION = 9
 class FakeNotionApiServer:
   def __init__(self) -> None:
     self.requests: list[dict[str, object]] = []
+    self.fail_next_pages = 0
     self._server: http.server.ThreadingHTTPServer | None = None
     self._thread: threading.Thread | None = None
 
@@ -101,6 +102,13 @@ class FakeNotionApiServer:
           return
         if not owner.requests[-1]["hasAuthorization"]:
           self.send_json(401, {"error": "missing authorization"})
+          return
+        if owner.fail_next_pages > 0:
+          owner.fail_next_pages -= 1
+          self.send_json(
+            503,
+            {"error": "temporary outage", "message": "retry later"},
+          )
           return
 
         self.send_json(
@@ -146,6 +154,9 @@ class FakeNotionApiServer:
     if not self.requests:
       raise RuntimeError("Fake Notion API did not receive a request.")
     return self.requests[-1]
+
+  def fail_next_page_create(self) -> None:
+    self.fail_next_pages += 1
 
 
 def parse_args() -> argparse.Namespace:
@@ -1090,9 +1101,63 @@ def validate_packaged_mcp_plugin_command(
   ):
     raise RuntimeError("Packaged MCP plugin command memory was not persisted.")
 
-  publish = send_runtime_request(
+  notion_api.fail_next_page_create()
+  failed_publish = send_runtime_request(
     process,
     35,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": json.dumps(
+        {
+          "parentPageId": "packaged-smoke-parent",
+          "title": "Packaged Smoke Retry Page",
+          "body": "This first publish should report a retryable failure.",
+        }
+      ),
+    },
+  )
+  failed_publish_approvals = failed_publish["result"]["pendingApprovals"]
+  if len(failed_publish_approvals) != 1:
+    raise RuntimeError("Packaged Notion failed publish should request one approval.")
+
+  failed_published = send_runtime_request(
+    process,
+    36,
+    "approval/respond",
+    {
+      "approvalId": failed_publish_approvals[0]["id"],
+      "decision": "approved",
+    },
+  )
+  failed_items = failed_published["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Publish Needs Retry"
+    and item.get("attributes", {}).get("targetService") == "notion"
+    and item.get("attributes", {}).get("remoteWrite") == "false"
+    and item.get("attributes", {}).get("remoteWriteStage") == "failedBeforeProof"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "unconfirmed"
+    and item.get("attributes", {}).get("publishRetryable") == "true"
+    and item.get("attributes", {}).get("remoteProofStatus") == "missing"
+    for item in failed_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion failed publish did not return retry guidance. "
+      f"Items: {timeline_item_summary(failed_items)}"
+    )
+  failed_publish_memory_list = send_runtime_request(process, 37, "memory/list")
+  if not any(
+    note["title"] == "Notion Publish Retry Needed"
+    and note["source"] == "plugin.notion-connector"
+    for note in failed_publish_memory_list["result"]["notes"]
+  ):
+    raise RuntimeError("Packaged Notion failed publish memory was not persisted.")
+
+  publish = send_runtime_request(
+    process,
+    38,
     "plugin/commandRun",
     {
       "threadId": "thread-1",
@@ -1121,7 +1186,7 @@ def validate_packaged_mcp_plugin_command(
 
   published = send_runtime_request(
     process,
-    36,
+    39,
     "approval/respond",
     {
       "approvalId": publish_approval["id"],
@@ -1165,7 +1230,7 @@ def validate_packaged_mcp_plugin_command(
   if not isinstance(title, dict):
     raise RuntimeError("Packaged Notion publish omitted the title property.")
 
-  publish_memory_list = send_runtime_request(process, 37, "memory/list")
+  publish_memory_list = send_runtime_request(process, 40, "memory/list")
   if not any(
     note["title"] == "Notion Page Published"
     and note["source"] == "plugin.notion-connector"
@@ -1431,6 +1496,12 @@ def validate_packaged_runtime_recovery(
       raise RuntimeError("Packaged runtime recovery lost the approved workspace write.")
 
     recovered_memory = send_runtime_request(recovered_process, 54, "memory/list")
+    if not any(
+      note["title"] == "Notion Publish Retry Needed"
+      and note["source"] == "plugin.notion-connector"
+      for note in recovered_memory["result"]["notes"]
+    ):
+      raise RuntimeError("Packaged runtime recovery lost the Notion retry memory.")
     if not any(
       note["title"] == "Notion Page Published"
       and note["source"] == "plugin.notion-connector"

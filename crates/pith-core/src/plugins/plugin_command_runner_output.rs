@@ -19,10 +19,12 @@ const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
   &["pluginResult", "toolResult", "warning", "system"];
 const PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT: &str = "pith.connectorRemoteWrite.v1";
 const PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE: &str = "completed";
+const PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE: &str = "failedBeforeProof";
 const PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE: &str = "inspectBeforeWrite";
 const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED: &str = "completed";
 const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT: &str = "notSent";
 const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_PENDING: &str = "pending";
+const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_UNCONFIRMED: &str = "unconfirmed";
 
 struct PluginRunnerMemoryNoteSelection {
   notes: Vec<PluginRunnerMemoryNoteDraft>,
@@ -464,6 +466,9 @@ fn plugin_runner_remote_write_status(attributes: &HashMap<String, String>) -> &'
   {
     return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED;
   }
+  if remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE) {
+    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_UNCONFIRMED;
+  }
   if remote_write == "false" {
     return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT;
   }
@@ -866,6 +871,38 @@ mod tests {
     assert_eq!(
       attributes.get("remoteWriteStatus").map(String::as_str),
       Some("notSent")
+    );
+  }
+
+  #[test]
+  fn output_contract_marks_failed_remote_write_proof_as_unconfirmed() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Remote Write Needs Retry",
+          "content": "The remote write did not return proof.",
+          "attributes": {
+            "remoteWrite": "false",
+            "remoteWriteStage": "failedBeforeProof",
+            "remoteWriteStatus": "notSent",
+            "targetService": "notion",
+            "targetTool": "notion.createPage"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!("retry item should be accepted: {}", failure.message),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes.get("remoteWriteStatus").map(String::as_str),
+      Some("unconfirmed")
     );
   }
 

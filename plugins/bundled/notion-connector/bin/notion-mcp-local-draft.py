@@ -181,16 +181,20 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
     "target_page_id",
   )
   if not parent_page_id:
-    return mcp_tool_error(
+    return publish_retry_needed(
       request_id,
+      input_data,
       "Publish requires `parentPageId` in the command input. No remote write was sent.",
+      "missingParentPageId",
     )
 
   token = notion_token(arguments)
   if not token:
-    return mcp_tool_error(
+    return publish_retry_needed(
       request_id,
+      input_data,
       "Publish requires an authorized Notion integration token. No remote write was sent.",
+      "missingCredential",
     )
 
   title = string_value(input_data, "title", "pageTitle", "page_title") or "Pith Draft"
@@ -201,7 +205,12 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
   try:
     response = notion_post("/pages", token, payload)
   except NotionApiError as error:
-    return mcp_tool_error(request_id, error.safe_message)
+    return publish_retry_needed(
+      request_id,
+      input_data,
+      error.safe_message,
+      error.reason,
+    )
 
   page_id = str(response.get("id", ""))
   page_url = str(response.get("url", ""))
@@ -261,19 +270,31 @@ def notion_post(path: str, token: str, payload: dict[str, Any]) -> dict[str, Any
       return json.loads(response.read().decode("utf-8"))
   except urllib.error.HTTPError as error:
     detail = bounded_error_detail(error.read().decode("utf-8", errors="replace"))
+    message = (
+      f"Notion create page failed with HTTP {error.code}: {detail}. "
+      "No remote write proof was accepted."
+    )
     raise NotionApiError(
-      f"Notion create page failed with HTTP {error.code}: {detail}. No remote write proof was accepted."
+      message,
+      f"http{error.code}",
     ) from error
   except urllib.error.URLError as error:
+    detail = bounded_error_detail(str(error))
+    message = (
+      f"Notion create page failed before completion: {detail}. "
+      "No remote write proof was accepted."
+    )
     raise NotionApiError(
-      f"Notion create page failed before completion: {bounded_error_detail(str(error))}. No remote write proof was accepted."
+      message,
+      "connectionError",
     ) from error
 
 
 class NotionApiError(Exception):
-  def __init__(self, safe_message: str) -> None:
+  def __init__(self, safe_message: str, reason: str) -> None:
     super().__init__(safe_message)
     self.safe_message = safe_message
+    self.reason = reason
 
 
 def notion_create_page_payload(parent_page_id: str, title: str, body: str) -> dict[str, Any]:
@@ -289,6 +310,62 @@ def notion_create_page_payload(parent_page_id: str, title: str, body: str) -> di
   if children:
     payload["children"] = children
   return payload
+
+
+def publish_retry_needed(
+  request_id: Any,
+  input_data: dict[str, str],
+  reason: str,
+  reason_code: str,
+) -> dict[str, Any]:
+  parent_page_id = string_value(
+    input_data,
+    "parentPageId",
+    "parent_page_id",
+    "pageId",
+    "page_id",
+    "targetPageId",
+    "target_page_id",
+  ) or ""
+  blocked_before_write = reason_code in {"missingParentPageId", "missingCredential"}
+  content = (
+    f"{reason} Review the target page, credential, and content, then run "
+    "`notion.publish-page-draft` again when you are ready."
+  )
+  attributes = {
+    "targetService": "notion",
+    "draftMode": "remoteWrite",
+    "remoteWrite": "false",
+    "remoteWriteStage": "blockedBeforeWrite" if blocked_before_write else "failedBeforeProof",
+    "remoteWriteRequiresApproval": "true",
+    "credentialScoped": "true",
+    "targetTool": "notion.createPage",
+    "remoteProofKind": "notionApiResponse",
+    "remoteProofStatus": "notRequested" if blocked_before_write else "missing",
+    "publishRetryable": "true",
+    "publishFailureReason": reason_code,
+    "retryCommand": "notion.publish-page-draft",
+    "notionParentPageId": parent_page_id,
+  }
+  return mcp_success(
+    request_id,
+    {
+      "items": [
+        plugin_result(
+          "Notion Publish Needs Retry",
+          content,
+          attributes,
+        )
+      ],
+      "memoryNotes": [
+        memory_note(
+          "Notion Publish Retry Needed",
+          f"Pith could not confirm a Notion page publish. Reason: {reason_code}.",
+          ["connector", "notion", "retry-needed"],
+        )
+      ],
+    },
+  )
 
 
 def notion_children(body: str) -> list[dict[str, Any]]:
