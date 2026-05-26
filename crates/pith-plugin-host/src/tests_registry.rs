@@ -252,7 +252,10 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
   assert_eq!(connectors[0].credential_store.as_deref(), Some("local"));
   assert_eq!(connectors[0].workflows.len(), 1);
   assert_eq!(connectors[0].workflows[0].workflow_id, "notion.create-page");
-  assert_eq!(connectors[0].workflows[0].display_name, "Notion Create Page");
+  assert_eq!(
+    connectors[0].workflows[0].display_name,
+    "Notion Create Page"
+  );
   assert_eq!(connectors[0].workflows[0].service, "notion");
   assert_eq!(connectors[0].workflows[0].action, "createPage");
 }
