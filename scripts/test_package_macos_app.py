@@ -75,6 +75,10 @@ def main() -> int:
       manifest["sourceCommit"],
       "abcdef0123456789abcdef0123456789abcdef01",
     )
+    assert_equal(manifest["sandboxMode"], "workspaceReadWrite")
+    assert_equal(manifest["sandboxBackend"], "runtime-detected")
+    assert_equal(manifest["sandboxFallback"], "processOnlyWhenNativeUnavailable")
+    assert_equal(manifest["sandboxNetworkDefault"], "disabled")
 
   assert_equal(
     parse_lipo_architectures("Non-fat file: Pith is architecture: x86_64"),

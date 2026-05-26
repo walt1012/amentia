@@ -7,6 +7,10 @@ struct DistributionPackageMetadata: Equatable {
   let minimumSystemVersion: String
   let modelDelivery: String
   let modelWeightsBundled: Bool
+  let sandboxMode: String
+  let sandboxBackend: String
+  let sandboxFallback: String
+  let sandboxNetworkDefault: String
   let sourceCommit: String
 
   static let current = load()
@@ -39,6 +43,14 @@ struct DistributionPackageMetadata: Equatable {
       minimumSystemVersion: string(manifest, "minimumSystemVersion", fallback: "12.0"),
       modelDelivery: string(manifest, "modelDelivery", fallback: "in-app-download"),
       modelWeightsBundled: bool(manifest, "modelWeightsBundled", fallback: false),
+      sandboxMode: string(manifest, "sandboxMode", fallback: "workspaceReadWrite"),
+      sandboxBackend: string(manifest, "sandboxBackend", fallback: "runtime-detected"),
+      sandboxFallback: string(
+        manifest,
+        "sandboxFallback",
+        fallback: "processOnlyWhenNativeUnavailable"
+      ),
+      sandboxNetworkDefault: string(manifest, "sandboxNetworkDefault", fallback: "disabled"),
       sourceCommit: string(manifest, "sourceCommit", fallback: "development")
     )
   }
@@ -50,6 +62,10 @@ struct DistributionPackageMetadata: Equatable {
     minimumSystemVersion: "12.0",
     modelDelivery: "in-app-download",
     modelWeightsBundled: false,
+    sandboxMode: "workspaceReadWrite",
+    sandboxBackend: "runtime-detected",
+    sandboxFallback: "processOnlyWhenNativeUnavailable",
+    sandboxNetworkDefault: "disabled",
     sourceCommit: "development"
   )
 
@@ -105,6 +121,7 @@ enum DistributionTrustPresenter {
       ? "model weights bundled"
       : "model weights are not bundled"
     let platform = "macOS \(metadata.minimumSystemVersion)+ \(metadata.architecture)"
+    let sandbox = sandboxSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
 
     switch metadata.signing {
@@ -112,14 +129,14 @@ enum DistributionTrustPresenter {
       return DistributionTrustSummary(
         title: "Trusted Installer",
         summary: "Developer ID signed and notarized for \(platform).",
-        detail: "Install from the DMG, launch normally, then choose one verified local model. \(modelDelivery); \(weightPolicy); \(source).",
+        detail: "Install from the DMG, launch normally, then choose one verified local model. \(modelDelivery); \(weightPolicy); \(sandbox); \(source).",
         setupDetail: nil
       )
     case "ad-hoc":
       return DistributionTrustSummary(
         title: "Untrusted Ad-Hoc Build",
         summary: "Ad-hoc signed and not notarized for \(platform).",
-        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(modelDelivery); \(weightPolicy); \(source).",
+        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(modelDelivery); \(weightPolicy); \(sandbox); \(source).",
         setupDetail: "Installer trust: if macOS blocked first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open."
       )
     case "unsigned":
@@ -144,5 +161,18 @@ enum DistributionTrustPresenter {
       return "source: development"
     }
     return "source: \(sourceCommit.prefix(12))"
+  }
+
+  private static func sandboxSummary(_ metadata: DistributionPackageMetadata) -> String {
+    guard metadata.sandboxMode == "workspaceReadWrite" else {
+      return "sandbox mode: \(metadata.sandboxMode)"
+    }
+    let fallback = metadata.sandboxFallback == "processOnlyWhenNativeUnavailable"
+      ? "process-only fallback is shown when native sandbox is unavailable"
+      : "fallback: \(metadata.sandboxFallback)"
+    let network = metadata.sandboxNetworkDefault == "disabled"
+      ? "network off by default"
+      : "network default: \(metadata.sandboxNetworkDefault)"
+    return "workspace sandbox checks run at runtime; \(fallback); \(network)"
   }
 }

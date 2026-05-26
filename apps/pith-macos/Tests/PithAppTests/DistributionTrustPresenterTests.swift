@@ -10,6 +10,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(summary.title, "Untrusted Ad-Hoc Build")
     XCTAssertTrue(summary.detail.contains("Open Anyway"))
     XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
+    XCTAssertTrue(summary.detail.contains("process-only fallback"))
     XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
     XCTAssertTrue(summary.setupDetail?.contains("Control-click Pith.app") == true)
   }
@@ -44,6 +45,10 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(parsed.minimumSystemVersion, "12.0")
     XCTAssertEqual(parsed.modelDelivery, "in-app-download")
     XCTAssertFalse(parsed.modelWeightsBundled)
+    XCTAssertEqual(parsed.sandboxMode, "workspaceReadWrite")
+    XCTAssertEqual(parsed.sandboxBackend, "runtime-detected")
+    XCTAssertEqual(parsed.sandboxFallback, "processOnlyWhenNativeUnavailable")
+    XCTAssertEqual(parsed.sandboxNetworkDefault, "disabled")
     XCTAssertEqual(parsed.sourceCommit, sourceCommit)
   }
 
@@ -68,6 +73,10 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "minimumSystemVersion": "12.0",
       "modelDelivery": "in-app-download",
       "modelWeightsBundled": false,
+      "sandboxMode": "workspaceReadWrite",
+      "sandboxBackend": "runtime-detected",
+      "sandboxFallback": "processOnlyWhenNativeUnavailable",
+      "sandboxNetworkDefault": "disabled",
       "schemaVersion": \(schemaVersion),
       "sourceCommit": "\(sourceCommit)",
       "signing": "\(signing)"

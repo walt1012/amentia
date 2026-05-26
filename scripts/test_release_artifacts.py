@@ -29,6 +29,7 @@ def write_package_manifest(
   source_commit: str = SOURCE_COMMIT,
   signing: str = "ad-hoc",
   model_delivery: str = "in-app-download",
+  sandbox_mode: str = "workspaceReadWrite",
 ) -> Path:
   path.write_text(
     json.dumps(
@@ -43,6 +44,10 @@ def write_package_manifest(
         "modelDelivery": model_delivery,
         "defaultModelId": "lfm2.5-350m",
         "modelWeightsBundled": False,
+        "sandboxMode": sandbox_mode,
+        "sandboxBackend": "runtime-detected",
+        "sandboxFallback": "processOnlyWhenNativeUnavailable",
+        "sandboxNetworkDefault": "disabled",
       },
       indent=2,
       sort_keys=True,
@@ -102,6 +107,8 @@ def main() -> int:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
+    if manifest["sandbox"]["fallback"] != "processOnlyWhenNativeUnavailable":
+      raise AssertionError("release manifest should disclose the sandbox fallback")
     if manifest["appPackage"]["sourceCommit"] != SOURCE_COMMIT:
       raise AssertionError("release manifest should summarize packaged app source")
     if manifest["appPackage"]["signing"] != "ad-hoc":
@@ -110,6 +117,8 @@ def main() -> int:
       raise AssertionError("release manifest should summarize package schema version")
     if "sha256" not in manifest["appPackage"]:
       raise AssertionError("release manifest should hash the package manifest")
+    if manifest["appPackage"]["sandboxMode"] != "workspaceReadWrite":
+      raise AssertionError("release manifest should summarize packaged sandbox mode")
     manifest_artifacts = {
       item["name"]: item
       for item in manifest["artifacts"]
@@ -474,6 +483,23 @@ def main() -> int:
         package_manifest_path=wrong_package_manifest,
       ),
       "release manifest should reject wrong packaged app model delivery",
+    )
+
+    wrong_package_manifest = write_package_manifest(
+      root_path / "WrongSandboxPithPackage.json",
+      sandbox_mode="none",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject wrong packaged sandbox metadata",
     )
 
     artifact.write_bytes(b"tampered release artifact\n")

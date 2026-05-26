@@ -116,6 +116,9 @@ Current state:
 - The app reads packaged distribution metadata and presents the same
   Developer ID or ad-hoc Gatekeeper trust path and source commit that the DMG
   install guide and release manifest use.
+- Package metadata, release sidecars, distribution validation, and app trust
+  copy now disclose runtime-detected sandbox availability and process-only
+  fallback instead of implying hard sandbox protection.
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search source snapshots, approval-gated writes,
   runtime restart, and recovery of model, workspace, thread, and readiness
@@ -138,9 +141,6 @@ M8 work order:
   checksum, install guide, manifest, source commit, first-run model path,
   workspace path, Web Search evidence, approval-gated write path, connector
   smoke, and runtime recovery together in CI.
-- Surface sandbox availability and fallback mode in the release-candidate path;
-  do not imply hard sandbox protection when only process-level bounds are
-  active.
 - Keep packaged smoke focused on real user journeys; add UI automation for
   visible recovery copy only after the app has a stable UI automation harness.
 - Defer page fetch and page-content snapshots until cowork tasks require

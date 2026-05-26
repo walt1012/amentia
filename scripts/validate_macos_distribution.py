@@ -95,6 +95,18 @@ def validate_package_manifest(app_path: Path) -> None:
       "Public distribution builds must record developer-id signing in "
       f"{manifest_path}"
     )
+  expected_sandbox_values = {
+    "sandboxMode": "workspaceReadWrite",
+    "sandboxBackend": "runtime-detected",
+    "sandboxFallback": "processOnlyWhenNativeUnavailable",
+    "sandboxNetworkDefault": "disabled",
+  }
+  for field, expected in expected_sandbox_values.items():
+    if manifest.get(field) != expected:
+      raise RuntimeError(
+        f"Public distribution builds must record {field} as {expected} in "
+        f"{manifest_path}"
+      )
   source_commit = manifest.get("sourceCommit", "")
   if (
     not isinstance(source_commit, str)

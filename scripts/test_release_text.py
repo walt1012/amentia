@@ -32,6 +32,8 @@ def main() -> int:
   require_contains(developer_notes, "SHA-256 checksum sidecar")
   require_contains(developer_notes, "release manifest")
   require_contains(developer_notes, "sidecar hashes")
+  require_contains(developer_notes, "Native sandbox is used when available")
+  require_contains(developer_notes, "process-only fallback")
   require_not_contains(developer_notes, "Open Anyway")
   validate_release_notes(
     developer_notes,
@@ -84,6 +86,8 @@ def main() -> int:
   require_contains(guide, "sidecar hashes")
   require_contains(guide, "source commit")
   require_contains(guide, "model delivery mode")
+  require_contains(guide, "sandbox status")
+  require_contains(guide, "process-only fallback")
   validate_install_guide(guide, tag="v0.1.0", signing_mode="ad-hoc")
 
   print("release text tests passed")

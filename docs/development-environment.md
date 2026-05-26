@@ -91,11 +91,12 @@ Package validation checks the product `Info.plist`, `PkgInfo`,
 model download metadata,
 bundled plugin resource contracts, absence of model weights, symlink-free
 packaged resources and optional backend inputs, llama.cpp dependency
-portability, and zip contents. The zip must include the default model manifest
-and every bundled plugin manifest, must not contain symlinks or model weight
-files, and must not require external package manager paths at runtime. CI also
-ad-hoc signs the app when `codesign` is available. Internal CI artifacts prove
-the package shape, but they are not public release installers.
+portability, sandbox fallback metadata, and zip contents. The zip must include
+the default model manifest and every bundled plugin manifest, must not contain
+symlinks or model weight files, and must not require external package manager
+paths at runtime. CI also ad-hoc signs the app when `codesign` is available.
+Internal CI artifacts prove the package shape, but they are not public release
+installers.
 
 The packaged launch smoke is the release-candidate daily-driver proof. It
 launches the app with isolated support state, probes the bundled runtime,
@@ -144,8 +145,8 @@ same copy again before publishing GitHub Release notes.
 The release page also publishes `README-FIRST.txt` and a release manifest as
 separate assets, so users and automation can inspect the platform target,
 signing mode, source commit, checksum, sidecar hashes, exact asset set, asset
-names, schema-versioned app package metadata, and model delivery mode before
-opening the DMG.
+names, schema-versioned app package metadata, model delivery mode, and sandbox
+fallback contract before opening the DMG.
 
 Release publishing requires these repository secrets:
 

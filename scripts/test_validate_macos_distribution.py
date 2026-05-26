@@ -30,6 +30,10 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
         "schemaVersion": 1,
         "signing": signing,
         "sourceCommit": source_commit,
+        "sandboxMode": "workspaceReadWrite",
+        "sandboxBackend": "runtime-detected",
+        "sandboxFallback": "processOnlyWhenNativeUnavailable",
+        "sandboxNetworkDefault": "disabled",
       }
     ),
     encoding="utf-8",
@@ -68,6 +72,18 @@ def main() -> int:
     assert_raises(
       lambda: validate_package_manifest(app_path),
       "public distribution should require package schema version 1",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+    app_path = Path(root) / "Pith.app"
+    write_manifest(app_path, "developer-id", SOURCE_COMMIT)
+    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["sandboxFallback"] = "none"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_package_manifest(app_path),
+      "public distribution should require sandbox fallback metadata",
     )
 
   print("macOS distribution validator tests passed")

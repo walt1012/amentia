@@ -24,9 +24,17 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "download one verified local model",
   "Open a workspace folder",
   "Start a cowork session",
+  "sandbox status",
+  "process-only fallback",
   "SHA-256",
   "release manifest",
 )
+SANDBOX_CONTRACT = {
+  "mode": "workspaceReadWrite",
+  "backend": "runtime-detected",
+  "fallback": "processOnlyWhenNativeUnavailable",
+  "networkDefault": "disabled",
+}
 
 
 def sha256_hex(path: Path) -> str:
@@ -95,6 +103,7 @@ def release_manifest(
       "defaultModelId": "lfm2.5-350m",
       "modelWeightsBundled": False,
     },
+    "sandbox": dict(SANDBOX_CONTRACT),
     "artifacts": [
       {
         "name": artifact_path.name,
@@ -272,6 +281,10 @@ def package_manifest_summary(
     "modelDelivery": "in-app-download",
     "defaultModelId": "lfm2.5-350m",
     "modelWeightsBundled": False,
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
   }
   for field, expected in expected_values.items():
     if package_manifest.get(field) != expected:
@@ -293,6 +306,10 @@ def package_manifest_summary(
     "modelDelivery": "in-app-download",
     "defaultModelId": "lfm2.5-350m",
     "modelWeightsBundled": False,
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
   }
 
 
@@ -427,6 +444,15 @@ def validate_manifest_identity(manifest: dict) -> None:
     raise RuntimeError("Release manifest default model id must be lfm2.5-350m")
   if model_delivery.get("modelWeightsBundled") is not False:
     raise RuntimeError("Release manifest must state that model weights are not bundled")
+  validate_sandbox_contract(manifest.get("sandbox"), "Release manifest sandbox")
+
+
+def validate_sandbox_contract(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} must be an object")
+  for field, expected in SANDBOX_CONTRACT.items():
+    if value.get(field) != expected:
+      raise RuntimeError(f"{label} {field} must be {expected}")
 
 
 def release_trust(signing_mode: str) -> str:

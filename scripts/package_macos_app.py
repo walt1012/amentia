@@ -372,6 +372,10 @@ def write_package_manifest(
     "modelWeightsBundled": False,
     "modelMetadataBundled": True,
     "bundledPluginsIncluded": True,
+    "sandboxMode": "workspaceReadWrite",
+    "sandboxBackend": "runtime-detected",
+    "sandboxFallback": "processOnlyWhenNativeUnavailable",
+    "sandboxNetworkDefault": "disabled",
     "signing": signing_mode,
   }
   path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -547,6 +551,10 @@ def assert_package_manifest_matches_bundle(
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
     "modelDelivery": "in-app-download",
+    "sandboxMode": "workspaceReadWrite",
+    "sandboxBackend": "runtime-detected",
+    "sandboxFallback": "processOnlyWhenNativeUnavailable",
+    "sandboxNetworkDefault": "disabled",
     "signing": expected_signing_mode,
   }
   for field, expected_value in expected_values.items():
