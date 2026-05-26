@@ -113,6 +113,7 @@ struct PluginConnectorSummary: Identifiable, Hashable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let workflows: [PluginConnectorWorkflowSummary]
   let authStatus: String
   let credentialPresent: Bool
   let credentialSecretPresent: Bool
@@ -121,6 +122,16 @@ struct PluginConnectorSummary: Identifiable, Hashable {
   let credentialLabel: String?
   let authorizedAt: Int?
   let credentialUpdatedAt: Int?
+}
+
+struct PluginConnectorWorkflowSummary: Hashable {
+  let workflowID: String
+  let displayName: String
+  let connectorID: String
+  let service: String
+  let action: String
+  let stages: [String]
+  let statuses: [String]
 }
 
 struct PluginCommandSummary: Identifiable, Hashable {

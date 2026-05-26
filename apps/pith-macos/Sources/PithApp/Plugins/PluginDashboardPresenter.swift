@@ -308,6 +308,12 @@ enum PluginDashboardPresenter {
         parts.append("repair: authorize connector")
       }
     }
+    if !connector.workflows.isEmpty {
+      let workflowLabels = connector.workflows
+        .map { "\($0.displayName) / \($0.action)" }
+        .joined(separator: ", ")
+      parts.append("workflows: \(workflowLabels)")
+    }
 
     return parts.joined(separator: " | ")
   }

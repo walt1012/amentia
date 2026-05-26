@@ -4,11 +4,11 @@ use pith_protocol::{
   PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
   PluginCommandWorkflowSummary, PluginConnectorCredentialParams, PluginConnectorCredentialResult,
-  PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
-  PluginHookSummary, PluginInspectParams, PluginInspectResult, PluginInstallParams,
-  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
-  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  PluginConnectorRegistryResult, PluginConnectorSummary, PluginConnectorWorkflowSummary,
+  PluginHookRegistryResult, PluginHookSummary, PluginInspectParams, PluginInspectResult,
+  PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
+  PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -329,6 +329,15 @@ fn plugin_connector_registry_round_trips() {
       auth_required: true,
       auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
       credential_store: Some("local".to_string()),
+      workflows: vec![PluginConnectorWorkflowSummary {
+        workflow_id: "notion.create-page".to_string(),
+        display_name: "Notion Create Page".to_string(),
+        connector_id: "notion".to_string(),
+        service: "notion".to_string(),
+        action: "createPage".to_string(),
+        stages: vec!["draftPrepared".to_string(), "completed".to_string()],
+        statuses: vec!["prepared".to_string(), "completed".to_string()],
+      }],
       auth_status: "disabled".to_string(),
       credential_present: false,
       credential_secret_present: false,
@@ -353,7 +362,13 @@ fn plugin_connector_registry_round_trips() {
   assert_eq!(decoded.connectors[0].status, "disabled");
   assert_eq!(decoded.connectors[0].auth_status, "disabled");
   assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
+  assert_eq!(decoded.connectors[0].workflows.len(), 1);
+  assert_eq!(decoded.connectors[0].workflows[0].action, "createPage");
   assert!(value["connectors"][0].get("connectorId").is_some());
+  assert_eq!(
+    value["connectors"][0]["workflows"][0]["workflowId"],
+    "notion.create-page"
+  );
   assert!(value["connectors"][0].get("authRequired").is_some());
   assert!(value["connectors"][0].get("credentialPresent").is_some());
   assert!(value["connectors"][0]
@@ -384,6 +399,7 @@ fn plugin_connector_credential_payloads_round_trip() {
       auth_required: true,
       auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
       credential_store: Some("local".to_string()),
+      workflows: vec![],
       auth_status: "authorized".to_string(),
       credential_present: true,
       credential_secret_present: true,

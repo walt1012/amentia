@@ -218,6 +218,16 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
     "scopes": ["read_content", "insert_content"],
     "credentialStore": "local"
   },
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "stages": ["draftPrepared", "completed"],
+      "statuses": ["prepared", "completed"]
+    }
+  ],
   "defaultEnabled": false
 }"#,
   )
@@ -240,6 +250,11 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
     vec!["read_content".to_string(), "insert_content".to_string()]
   );
   assert_eq!(connectors[0].credential_store.as_deref(), Some("local"));
+  assert_eq!(connectors[0].workflows.len(), 1);
+  assert_eq!(connectors[0].workflows[0].workflow_id, "notion.create-page");
+  assert_eq!(connectors[0].workflows[0].display_name, "Notion Create Page");
+  assert_eq!(connectors[0].workflows[0].service, "notion");
+  assert_eq!(connectors[0].workflows[0].action, "createPage");
 }
 
 #[test]

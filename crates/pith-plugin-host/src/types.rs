@@ -52,6 +52,7 @@ pub struct PluginConnectorEntry {
   pub auth_required: bool,
   pub auth_scopes: Vec<String>,
   pub credential_store: Option<String>,
+  pub workflows: Vec<PluginConnectorWorkflowEntry>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

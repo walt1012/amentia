@@ -131,6 +131,8 @@ pub struct PluginConnectorSummary {
   pub auth_scopes: Vec<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub credential_store: Option<String>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub workflows: Vec<PluginConnectorWorkflowSummary>,
   pub auth_status: String,
   pub credential_present: bool,
   pub credential_secret_present: bool,
@@ -144,6 +146,20 @@ pub struct PluginConnectorSummary {
   pub authorized_at: Option<i64>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub credential_updated_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorWorkflowSummary {
+  pub workflow_id: String,
+  pub display_name: String,
+  pub connector_id: String,
+  pub service: String,
+  pub action: String,
+  #[serde(default)]
+  pub stages: Vec<String>,
+  #[serde(default)]
+  pub statuses: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

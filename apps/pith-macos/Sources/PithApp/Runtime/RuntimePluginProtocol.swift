@@ -160,6 +160,7 @@ struct RuntimePluginConnectorPayload: Codable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let workflows: [RuntimePluginConnectorWorkflowPayload]?
   let authStatus: String
   let credentialPresent: Bool
   let credentialSecretPresent: Bool
@@ -168,6 +169,16 @@ struct RuntimePluginConnectorPayload: Codable {
   let credentialLabel: String?
   let authorizedAt: Int?
   let credentialUpdatedAt: Int?
+}
+
+struct RuntimePluginConnectorWorkflowPayload: Codable {
+  let workflowId: String
+  let displayName: String
+  let connectorId: String
+  let service: String
+  let action: String
+  let stages: [String]
+  let statuses: [String]
 }
 
 struct RuntimePluginHookPayload: Codable {
@@ -349,6 +360,7 @@ extension RuntimeBridge {
     let authRequired: Bool
     let authScopes: [String]
     let credentialStore: String?
+    let workflows: [RuntimePluginConnectorWorkflow]
     let authStatus: String
     let credentialPresent: Bool
     let credentialSecretPresent: Bool
@@ -357,6 +369,16 @@ extension RuntimeBridge {
     let credentialLabel: String?
     let authorizedAt: Int?
     let credentialUpdatedAt: Int?
+  }
+
+  struct RuntimePluginConnectorWorkflow {
+    let workflowID: String
+    let displayName: String
+    let connectorID: String
+    let service: String
+    let action: String
+    let stages: [String]
+    let statuses: [String]
   }
 
   struct RuntimePluginHook {

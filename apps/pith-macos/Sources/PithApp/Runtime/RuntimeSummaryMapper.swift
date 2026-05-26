@@ -198,6 +198,17 @@ enum RuntimeSummaryMapper {
       authRequired: connector.authRequired,
       authScopes: connector.authScopes,
       credentialStore: connector.credentialStore,
+      workflows: connector.workflows.map {
+        PluginConnectorWorkflowSummary(
+          workflowID: $0.workflowID,
+          displayName: $0.displayName,
+          connectorID: $0.connectorID,
+          service: $0.service,
+          action: $0.action,
+          stages: $0.stages,
+          statuses: $0.statuses
+        )
+      },
       authStatus: connector.authStatus,
       credentialPresent: connector.credentialPresent,
       credentialSecretPresent: connector.credentialSecretPresent,

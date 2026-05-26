@@ -1045,7 +1045,7 @@ mod tests {
             "connectorWorkflowId": "notion.create-page",
             "connectorWorkflowName": "Notion Create Page",
             "connectorWorkflowService": "notion",
-            "connectorWorkflowAction": "preparePageDraft",
+            "connectorWorkflowAction": "createPage",
             "connectorWorkflowStage": "draftPrepared",
             "connectorWorkflowStatus": "prepared",
             "connectorWorkflowTarget": "workspace",

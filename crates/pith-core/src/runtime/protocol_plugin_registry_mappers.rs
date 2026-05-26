@@ -8,7 +8,7 @@ use pith_plugin_host::{
 use pith_protocol::{
   PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
   PluginCommandExecutionSummary, PluginCommandSummary, PluginCommandWorkflowSummary,
-  PluginConnectorSummary, PluginHookSummary,
+  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookSummary,
 };
 
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -143,6 +143,19 @@ pub(super) fn to_protocol_plugin_connector(
     auth_required: connector.auth_required,
     auth_scopes: connector.auth_scopes,
     credential_store: connector.credential_store,
+    workflows: connector
+      .workflows
+      .into_iter()
+      .map(|workflow| PluginConnectorWorkflowSummary {
+        workflow_id: workflow.workflow_id,
+        display_name: workflow.display_name,
+        connector_id: workflow.connector_id,
+        service: workflow.service,
+        action: workflow.action,
+        stages: workflow.stages,
+        statuses: workflow.statuses,
+      })
+      .collect(),
     auth_status,
     credential_present,
     credential_secret_present,

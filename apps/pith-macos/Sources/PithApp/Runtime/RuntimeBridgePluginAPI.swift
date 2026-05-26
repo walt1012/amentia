@@ -295,6 +295,17 @@ private extension RuntimeBridge {
       authRequired: connector.authRequired,
       authScopes: connector.authScopes,
       credentialStore: connector.credentialStore,
+      workflows: (connector.workflows ?? []).map { workflow in
+        RuntimePluginConnectorWorkflow(
+          workflowID: workflow.workflowId,
+          displayName: workflow.displayName,
+          connectorID: workflow.connectorId,
+          service: workflow.service,
+          action: workflow.action,
+          stages: workflow.stages,
+          statuses: workflow.statuses
+        )
+      },
       authStatus: connector.authStatus,
       credentialPresent: connector.credentialPresent,
       credentialSecretPresent: connector.credentialSecretPresent,

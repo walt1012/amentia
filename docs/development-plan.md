@@ -128,8 +128,9 @@ Current focus: make connector workflows declarative and reusable. The Notion
 create-page path now declares a manifest workflow, commands bind to `workflowId`,
 commands receive the manifest workflow shape, runner output must match declared
 action/stage/status/service proof, and the app can display the workflow binding.
-Next, turn this into the narrow template for additional cowork connectors
-without adding marketplace complexity.
+Connector registry now exposes workflow capabilities directly so the next
+connector can follow the same narrow contract without adding marketplace
+complexity.
 
 ## Guardrails
 

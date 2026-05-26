@@ -161,6 +161,13 @@ struct PluginConnectorRow: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
+      if !connector.workflows.isEmpty {
+        Text(connector.workflowSummary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if let actionBlocker {
         Text("Connector blocker: \(actionBlocker)")
           .font(.caption2)
@@ -244,6 +251,13 @@ private extension PluginConnectorSummary {
     let binding = credentialBinding
     return "Auth: \(type) | \(authStatus) | \(required) | \(scopes) "
       + "| store: \(store) | credential: \(binding) | \(credential)"
+  }
+
+  var workflowSummary: String {
+    let labels = workflows
+      .map { "\($0.displayName) / \($0.action)" }
+      .joined(separator: ", ")
+    return "Workflows: \(labels)"
   }
 
   private var credentialBinding: String {
