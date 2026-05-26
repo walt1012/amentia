@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.server
 import json
 import os
 import selectors
@@ -12,6 +13,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -65,6 +67,85 @@ REQUIRED_DATABASE_TABLES = {
   "workspace_state",
 }
 REQUIRED_SCHEMA_VERSION = 9
+
+
+class FakeNotionApiServer:
+  def __init__(self) -> None:
+    self.requests: list[dict[str, object]] = []
+    self._server: http.server.ThreadingHTTPServer | None = None
+    self._thread: threading.Thread | None = None
+
+  def __enter__(self) -> "FakeNotionApiServer":
+    owner = self
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+      def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(length)
+        try:
+          payload = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+          self.send_json(400, {"error": "invalid json"})
+          return
+
+        owner.requests.append(
+          {
+            "path": self.path,
+            "payload": payload,
+            "hasAuthorization": self.headers.get("Authorization", "").startswith("Bearer "),
+            "notionVersion": self.headers.get("Notion-Version", ""),
+          }
+        )
+        if self.path != "/v1/pages":
+          self.send_json(404, {"error": "unexpected path"})
+          return
+        if not owner.requests[-1]["hasAuthorization"]:
+          self.send_json(401, {"error": "missing authorization"})
+          return
+
+        self.send_json(
+          200,
+          {
+            "id": "packaged-smoke-notion-page",
+            "url": "https://www.notion.so/packaged-smoke-notion-page",
+          },
+        )
+
+      def send_json(self, status: int, payload: dict[str, object]) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+      def log_message(self, _format: str, *args: object) -> None:
+        return
+
+    self._server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+    self._thread.start()
+    return self
+
+  def __exit__(self, _exc_type: object, _exc: object, _traceback: object) -> None:
+    if self._server:
+      self._server.shutdown()
+      self._server.server_close()
+    if self._thread:
+      self._thread.join(timeout=5)
+
+  @property
+  def api_base(self) -> str:
+    if not self._server:
+      raise RuntimeError("Fake Notion API server is not running.")
+    host, port = self._server.server_address
+    return f"http://{host}:{port}/v1"
+
+  @property
+  def last_request(self) -> dict[str, object]:
+    if not self.requests:
+      raise RuntimeError("Fake Notion API did not receive a request.")
+    return self.requests[-1]
 
 
 def parse_args() -> argparse.Namespace:
@@ -894,7 +975,10 @@ def validate_packaged_web_search_snapshot(items: list[dict]) -> None:
     )
 
 
-def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None:
+def validate_packaged_mcp_plugin_command(
+  process: subprocess.Popen[str],
+  notion_api: FakeNotionApiServer,
+) -> None:
   enable = send_runtime_request(
     process,
     29,
@@ -1005,6 +1089,89 @@ def validate_packaged_mcp_plugin_command(process: subprocess.Popen[str]) -> None
     for note in memory_list["result"]["notes"]
   ):
     raise RuntimeError("Packaged MCP plugin command memory was not persisted.")
+
+  publish = send_runtime_request(
+    process,
+    35,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": json.dumps(
+        {
+          "parentPageId": "packaged-smoke-parent",
+          "title": "Packaged Smoke Page",
+          "body": "Created from packaged smoke after user approval.",
+        }
+      ),
+    },
+  )
+  publish_approvals = publish["result"]["pendingApprovals"]
+  if len(publish_approvals) != 1:
+    raise RuntimeError("Packaged Notion publish should request one approval.")
+  publish_approval = publish_approvals[0]
+  if publish_approval["action"] != "run_plugin_command":
+    raise RuntimeError("Packaged Notion publish requested the wrong approval.")
+  if not any(
+    item["kind"] == "approvalRequested"
+    and item.get("attributes", {}).get("commandId") == NOTION_PUBLISH_COMMAND_ID
+    for item in publish["result"]["items"]
+  ):
+    raise RuntimeError("Packaged Notion publish did not expose the command id.")
+
+  published = send_runtime_request(
+    process,
+    36,
+    "approval/respond",
+    {
+      "approvalId": publish_approval["id"],
+      "decision": "approved",
+    },
+  )
+  published_items = published["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Page Published"
+    and item.get("attributes", {}).get("targetService") == "notion"
+    and item.get("attributes", {}).get("remoteWrite") == "true"
+    and item.get("attributes", {}).get("remoteWriteStage") == "completed"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "completed"
+    and item.get("attributes", {}).get("remoteProofKind") == "notionApiResponse"
+    and item.get("attributes", {}).get("notionPageId") == "packaged-smoke-notion-page"
+    for item in published_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion publish did not return completed remote proof. "
+      f"Items: {timeline_item_summary(published_items)}"
+    )
+
+  publish_request = notion_api.last_request
+  if publish_request["path"] != "/v1/pages":
+    raise RuntimeError("Packaged Notion publish called the wrong API path.")
+  if publish_request["hasAuthorization"] is not True:
+    raise RuntimeError("Packaged Notion publish did not send an authorization header.")
+  if publish_request["notionVersion"] != "2026-03-11":
+    raise RuntimeError("Packaged Notion publish used the wrong Notion API version.")
+  payload = publish_request["payload"]
+  if not isinstance(payload, dict):
+    raise RuntimeError("Packaged Notion publish sent an invalid payload.")
+  parent = payload.get("parent")
+  if not isinstance(parent, dict) or parent.get("page_id") != "packaged-smoke-parent":
+    raise RuntimeError("Packaged Notion publish sent the wrong parent page id.")
+  properties = payload.get("properties")
+  if not isinstance(properties, dict):
+    raise RuntimeError("Packaged Notion publish omitted page properties.")
+  title = properties.get("title")
+  if not isinstance(title, dict):
+    raise RuntimeError("Packaged Notion publish omitted the title property.")
+
+  publish_memory_list = send_runtime_request(process, 37, "memory/list")
+  if not any(
+    note["title"] == "Notion Page Published"
+    and note["source"] == "plugin.notion-connector"
+    for note in publish_memory_list["result"]["notes"]
+  ):
+    raise RuntimeError("Packaged Notion publish memory was not persisted.")
 
 
 def validate_packaged_workspace_write_approval(
@@ -1123,7 +1290,10 @@ def request_packaged_workspace_write(
 
 
 def validate_packaged_first_cowork_request(app_path: Path) -> None:
-  with tempfile.TemporaryDirectory(prefix="pith-packaged-first-cowork-") as support_root:
+  with (
+    tempfile.TemporaryDirectory(prefix="pith-packaged-first-cowork-") as support_root,
+    FakeNotionApiServer() as notion_api,
+  ):
     support_dir = Path(support_root)
     manifest_path, model_path = write_smoke_model_pack(support_dir)
     backend_path = write_deterministic_llama_backend_fixture(support_dir)
@@ -1135,6 +1305,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
       "PITH_LLAMACPP_PATH": str(backend_path),
       "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
       "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
+      "PITH_NOTION_API_BASE": notion_api.api_base,
     }
     process = launch_runtime_process(
       app_path,
@@ -1189,7 +1360,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
       )
       validate_packaged_web_search_turn(process)
       validate_packaged_workspace_write_approval(process, support_dir)
-      validate_packaged_mcp_plugin_command(process)
+      validate_packaged_mcp_plugin_command(process, notion_api)
       process = validate_packaged_runtime_recovery(
         process,
         app_path,
@@ -1219,7 +1390,7 @@ def validate_packaged_runtime_recovery(
   try:
     initialize = send_runtime_request(
       recovered_process,
-      34,
+      50,
       "initialize",
       {
         "clientInfo": {
@@ -1231,10 +1402,10 @@ def validate_packaged_runtime_recovery(
     if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
       raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
 
-    model_health = send_runtime_request(recovered_process, 35, "model/health")
+    model_health = send_runtime_request(recovered_process, 51, "model/health")
     validate_ready_smoke_model_health(model_health, manifest_path, model_path)
 
-    workspace_current = send_runtime_request(recovered_process, 36, "workspace/current")
+    workspace_current = send_runtime_request(recovered_process, 52, "workspace/current")
     workspace = workspace_current["result"]["workspace"]
     expected_workspace = (support_dir / "workspace").resolve()
     actual_workspace = Path(workspace["rootPath"]).resolve()
@@ -1246,7 +1417,7 @@ def validate_packaged_runtime_recovery(
 
     recovered_thread = send_runtime_request(
       recovered_process,
-      37,
+      53,
       "thread/read",
       {
         "threadId": "thread-1",
@@ -1259,7 +1430,15 @@ def validate_packaged_runtime_recovery(
     if recovered_output.read_text(encoding="utf-8") != "Created from packaged approval flow":
       raise RuntimeError("Packaged runtime recovery lost the approved workspace write.")
 
-    recovered_readiness = send_runtime_request(recovered_process, 38, "runtime/readiness")
+    recovered_memory = send_runtime_request(recovered_process, 54, "memory/list")
+    if not any(
+      note["title"] == "Notion Page Published"
+      and note["source"] == "plugin.notion-connector"
+      for note in recovered_memory["result"]["notes"]
+    ):
+      raise RuntimeError("Packaged runtime recovery lost the Notion publish memory.")
+
+    recovered_readiness = send_runtime_request(recovered_process, 55, "runtime/readiness")
     validate_runtime_readiness(
       recovered_readiness,
       {

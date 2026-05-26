@@ -80,7 +80,8 @@ Done:
   source commit, sandbox fallback, and workflow proof.
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search source snapshots, approval-gated writes,
-  connector smoke, runtime restart, and recovery of readiness state.
+  connector draft/publish proof, runtime restart, and recovery of readiness
+  state.
 - Package gates reject bundled model weights, unsafe zip entries, path
   traversal, symlink leakage, non-`x86_64` outputs, and untracked release asset
   drift.
@@ -123,8 +124,9 @@ Work order:
   panels, and no feature surface without a daily cowork use case.
 - Refactor only at ownership or failure boundaries exposed by connector work.
 
-Current focus: finish the Notion create-page path by proving publish execution,
-remote proof display, retry, and recovery in packaged smoke.
+Current focus: finish the Notion create-page path by adding user-directed retry
+for failed publishes; packaged smoke now proves publish execution, remote proof,
+publish memory, and restart recovery.
 
 ## Guardrails
 

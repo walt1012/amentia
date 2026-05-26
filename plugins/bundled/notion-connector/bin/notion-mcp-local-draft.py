@@ -12,7 +12,10 @@ import urllib.request
 from typing import Any
 
 
-NOTION_API_BASE = "https://api.notion.com/v1"
+NOTION_API_BASE = os.environ.get(
+  "PITH_NOTION_API_BASE",
+  "https://api.notion.com/v1",
+).rstrip("/")
 NOTION_VERSION = os.environ.get("PITH_NOTION_VERSION", "2026-03-11")
 HTTP_TIMEOUT_SECONDS = 30
 MAX_BODY_CHARS = 20_000
