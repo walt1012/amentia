@@ -259,6 +259,7 @@ def package_manifest_summary(
     return None
   package_manifest = read_json_object(package_manifest_path, "PithPackage.json")
   expected_values = {
+    "schemaVersion": 1,
     "appName": "Pith",
     "minimumSystemVersion": "12.0",
     "architecture": "x86_64",
@@ -278,6 +279,8 @@ def package_manifest_summary(
     raise RuntimeError(f"PithPackage.json bundleVersion is required: {package_manifest_path}")
   return {
     "manifest": package_manifest_path.name,
+    "schemaVersion": 1,
+    "sha256": sha256_hex(package_manifest_path),
     "bundleVersion": bundle_version,
     "sourceCommit": source_commit,
     "signing": signing_mode,

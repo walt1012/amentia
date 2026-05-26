@@ -27,6 +27,7 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
   manifest_path.write_text(
     json.dumps(
       {
+        "schemaVersion": 1,
         "signing": signing,
         "sourceCommit": source_commit,
       }
@@ -55,6 +56,18 @@ def main() -> int:
     assert_raises(
       lambda: validate_package_manifest(app_path),
       "public distribution should require full source commit metadata",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+    app_path = Path(root) / "Pith.app"
+    write_manifest(app_path, "developer-id", SOURCE_COMMIT)
+    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["schemaVersion"] = 2
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_package_manifest(app_path),
+      "public distribution should require package schema version 1",
     )
 
   print("macOS distribution validator tests passed")

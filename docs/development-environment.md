@@ -142,7 +142,8 @@ builds or untrusted ad-hoc prereleases.
 The release page also publishes `README-FIRST.txt` and a release manifest as
 separate assets, so users and automation can inspect the platform target,
 signing mode, source commit, checksum, sidecar hashes, exact asset set, asset
-names, app package metadata, and model delivery mode before opening the DMG.
+names, schema-versioned app package metadata, and model delivery mode before
+opening the DMG.
 
 Release publishing requires these repository secrets:
 

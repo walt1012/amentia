@@ -32,6 +32,7 @@ def write_package_manifest(
   path.write_text(
     json.dumps(
       {
+        "schemaVersion": 1,
         "appName": "Pith",
         "bundleVersion": "0.1.0",
         "minimumSystemVersion": "12.0",
@@ -104,6 +105,10 @@ def main() -> int:
       raise AssertionError("release manifest should summarize packaged app source")
     if manifest["appPackage"]["signing"] != "ad-hoc":
       raise AssertionError("release manifest should summarize packaged app signing")
+    if manifest["appPackage"]["schemaVersion"] != 1:
+      raise AssertionError("release manifest should summarize package schema version")
+    if "sha256" not in manifest["appPackage"]:
+      raise AssertionError("release manifest should hash the package manifest")
     manifest_artifacts = {
       item["name"]: item
       for item in manifest["artifacts"]
@@ -389,6 +394,23 @@ def main() -> int:
         package_manifest_path=wrong_package_manifest,
       ),
       "release manifest should reject mismatched packaged app source commits",
+    )
+
+    wrong_package_manifest = write_package_manifest(root_path / "WrongSchemaPithPackage.json")
+    wrong_package_data = json.loads(wrong_package_manifest.read_text(encoding="utf-8"))
+    wrong_package_data["schemaVersion"] = 2
+    wrong_package_manifest.write_text(json.dumps(wrong_package_data), encoding="utf-8")
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject unsupported packaged app schema versions",
     )
 
     wrong_package_manifest = write_package_manifest(

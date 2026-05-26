@@ -1,6 +1,7 @@
 import Foundation
 
 struct DistributionPackageMetadata: Equatable {
+  let schemaVersion: Int
   let signing: String
   let architecture: String
   let minimumSystemVersion: String
@@ -27,8 +28,12 @@ struct DistributionPackageMetadata: Equatable {
     else {
       return nil
     }
+    guard int(manifest, "schemaVersion", fallback: 0) == 1 else {
+      return nil
+    }
 
     return DistributionPackageMetadata(
+      schemaVersion: int(manifest, "schemaVersion", fallback: 1),
       signing: string(manifest, "signing", fallback: "development"),
       architecture: string(manifest, "architecture", fallback: "unknown"),
       minimumSystemVersion: string(manifest, "minimumSystemVersion", fallback: "12.0"),
@@ -39,6 +44,7 @@ struct DistributionPackageMetadata: Equatable {
   }
 
   static let development = DistributionPackageMetadata(
+    schemaVersion: 0,
     signing: "development",
     architecture: "unknown",
     minimumSystemVersion: "12.0",
@@ -64,6 +70,17 @@ struct DistributionPackageMetadata: Equatable {
     fallback: Bool
   ) -> Bool {
     guard let value = manifest[key] as? Bool else {
+      return fallback
+    }
+    return value
+  }
+
+  private static func int(
+    _ manifest: [String: Any],
+    _ key: String,
+    fallback: Int
+  ) -> Int {
+    guard let value = manifest[key] as? Int else {
       return fallback
     }
     return value

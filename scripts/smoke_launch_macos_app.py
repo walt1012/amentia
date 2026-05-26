@@ -155,6 +155,7 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
   package_manifest_path = resources_path / "PithPackage.json"
   package_manifest = read_json_object(package_manifest_path)
   expected_package_values = {
+    "schemaVersion": 1,
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
     "modelDelivery": "in-app-download",

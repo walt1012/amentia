@@ -85,6 +85,11 @@ def validate_package_manifest(app_path: Path) -> None:
   manifest_path = app_path / PACKAGE_MANIFEST_RELATIVE_PATH
   require_file(manifest_path, "PithPackage.json")
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+  if manifest.get("schemaVersion") != 1:
+    raise RuntimeError(
+      "Public distribution builds must record PithPackage schema version 1 in "
+      f"{manifest_path}"
+    )
   if manifest.get("signing") != "developer-id":
     raise RuntimeError(
       "Public distribution builds must record developer-id signing in "

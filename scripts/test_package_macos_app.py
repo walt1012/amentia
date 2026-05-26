@@ -69,6 +69,7 @@ def main() -> int:
       "ad-hoc",
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert_equal(manifest["schemaVersion"], 1)
     assert_equal(
       manifest["sourceCommit"],
       "abcdef0123456789abcdef0123456789abcdef01",

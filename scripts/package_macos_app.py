@@ -30,6 +30,7 @@ RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
+PACKAGE_MANIFEST_SCHEMA_VERSION = 1
 DEFAULT_SOURCE_COMMIT = (
   os.environ.get("PITH_SOURCE_COMMIT")
   or os.environ.get("GITHUB_SHA")
@@ -362,6 +363,7 @@ def write_package_manifest(
 ) -> None:
   source_commit = normalize_source_commit(source_commit)
   manifest = {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
     "bundleVersion": version,
@@ -539,6 +541,7 @@ def assert_package_manifest_matches_bundle(
   manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
   manifest = read_json_object(manifest_path)
   expected_values = {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
     "bundleVersion": expected_version,

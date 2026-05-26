@@ -39,11 +39,20 @@ final class DistributionTrustPresenterTests: XCTestCase {
     )
 
     XCTAssertEqual(parsed.signing, "ad-hoc")
+    XCTAssertEqual(parsed.schemaVersion, 1)
     XCTAssertEqual(parsed.architecture, "x86_64")
     XCTAssertEqual(parsed.minimumSystemVersion, "12.0")
     XCTAssertEqual(parsed.modelDelivery, "in-app-download")
     XCTAssertFalse(parsed.modelWeightsBundled)
     XCTAssertEqual(parsed.sourceCommit, sourceCommit)
+  }
+
+  func testManifestParsingRejectsUnknownPackageSchema() {
+    XCTAssertNil(
+      DistributionPackageMetadata.fromManifestData(
+        manifestData(signing: "ad-hoc", schemaVersion: 2)
+      )
+    )
   }
 
   private func metadata(signing: String) throws -> DistributionPackageMetadata {
@@ -52,13 +61,14 @@ final class DistributionTrustPresenterTests: XCTestCase {
     )
   }
 
-  private func manifestData(signing: String) -> Data {
+  private func manifestData(signing: String, schemaVersion: Int = 1) -> Data {
     """
     {
       "architecture": "x86_64",
       "minimumSystemVersion": "12.0",
       "modelDelivery": "in-app-download",
       "modelWeightsBundled": false,
+      "schemaVersion": \(schemaVersion),
       "sourceCommit": "\(sourceCommit)",
       "signing": "\(signing)"
     }
