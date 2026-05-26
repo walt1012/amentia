@@ -5,6 +5,8 @@
 - Pith is a small, strong, local-first macOS cowork agent for real daily work.
 - Target: `Pith`, macOS 12+, `x86_64` only.
 - Purpose: cowork first; coding is one workflow, not the product boundary.
+- Benchmark: learn Codex and Claude Code at the tool, approval, sandbox,
+  context, and connector boundaries; do not copy a coding-only product shape.
 - Intelligence: local model by default; no required hosted model API.
 - First use: in-app verified GGUF download, defaulting to `LFM2.5-350M`.
 - Runtime: one active local model at a time.
@@ -37,6 +39,21 @@
   connector metadata, and bundle lifecycle.
 
 Memory owns meaning and ranking. Storage owns durable records.
+
+## Benchmark Alignment
+
+Pith should feel comparable to Codex and Claude Code where daily work depends
+on trust and tool use, while staying smaller and more local.
+
+- Match the durable parts: workspace-scoped context, bounded file and shell
+  tools, Web Search retrieval, reviewable diffs, approvals, sandbox status,
+  session continuity, and MCP-style local connectors.
+- Differ intentionally: local-first inference, cowork-first tasks, small model
+  constraints, no required hosted model API, and no marketplace shell before a
+  real connector workflow is excellent.
+- Current gaps: prove one public release-candidate download path, make sandbox
+  fallback status visible before risky actions, and prove one real third-party
+  connector from draft to approval to execution proof.
 
 ## Closed Foundation
 
@@ -117,10 +134,13 @@ Current state:
 
 M8 work order:
 
-- Close M8 only when the release workflow, package metadata, source commit
-  traceability, first-run model path, workspace path, Web Search evidence,
-  approval-gated write path, connector smoke, and runtime recovery remain green
-  together in CI.
+- Close M8 only after a release-candidate workflow proves the downloadable DMG,
+  checksum, install guide, manifest, source commit, first-run model path,
+  workspace path, Web Search evidence, approval-gated write path, connector
+  smoke, and runtime recovery together in CI.
+- Surface sandbox availability and fallback mode in the release-candidate path;
+  do not imply hard sandbox protection when only process-level bounds are
+  active.
 - Keep packaged smoke focused on real user journeys; add UI automation for
   visible recovery copy only after the app has a stable UI automation harness.
 - Defer page fetch and page-content snapshots until cowork tasks require
@@ -135,8 +155,10 @@ into a marketplace shell or a generic RAG product.
 
 Work order:
 
-- Prove one or two real connector workflows end to end, from user intent to
+- Prove one real third-party connector workflow end to end, from user intent to
   inspected draft, approval, execution proof, retry, and recovery.
+- Treat connector success as a user-visible contract: what changed, where it
+  changed, what proof exists, and how the user can recover or retry.
 - Narrow connector permissions around explicit user-visible actions rather than
   broad plugin trust.
 - Keep Web Search as the active retrieval layer and add stronger page evidence
