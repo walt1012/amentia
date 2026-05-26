@@ -71,8 +71,10 @@ def assert_publish_follow_up(item: dict) -> None:
 def assert_workflow(
   item: dict,
   *,
+  action: str,
   stage: str,
   status: str,
+  target: str,
   proof: str,
 ) -> None:
   attributes = item.get("attributes")
@@ -82,8 +84,10 @@ def assert_workflow(
     "connectorWorkflowId": WORKFLOW_ID,
     "connectorWorkflowName": "Notion Create Page",
     "connectorWorkflowService": "notion",
+    "connectorWorkflowAction": action,
     "connectorWorkflowStage": stage,
     "connectorWorkflowStatus": status,
+    "connectorWorkflowTarget": target,
     "connectorWorkflowProof": proof,
   }
   for key, value in expected.items():
@@ -109,15 +113,24 @@ def main() -> int:
   )
   draft_item = first_item(draft)
   assert_publish_follow_up(draft_item)
-  assert_workflow(draft_item, stage="draftPrepared", status="prepared", proof="localDraft")
+  assert_workflow(
+    draft_item,
+    action="preparePageDraft",
+    stage="draftPrepared",
+    status="prepared",
+    target="docs/handoff.md",
+    proof="localDraft",
+  )
 
   inspection = connector.inspect_page_write({"input": "Saved artifact: docs/handoff.md"})
   inspection_item = first_item(inspection)
   assert_publish_follow_up(inspection_item)
   assert_workflow(
     inspection_item,
+    action="inspectPageWrite",
     stage="inspectBeforeWrite",
     status="inspected",
+    target="docs/handoff.md",
     proof="inspection",
   )
 
@@ -143,12 +156,25 @@ def main() -> int:
     raise AssertionError(f"Notion retry did not preserve publish input: {retry_input}")
   assert_workflow(
     retry_item,
+    action="createPage",
     stage="blockedBeforeWrite",
     status="retryNeeded",
+    target="page-123",
     proof="notRequested",
   )
   if retry_attributes.get("connectorWorkflowRecovery") != "retry":
     raise AssertionError(f"Notion retry missed workflow recovery: {retry_attributes}")
+
+  missing_parent_retry = connector.publish_page_draft(2, {"input": "{}"})
+  missing_parent_item = response_first_item(missing_parent_retry)
+  assert_workflow(
+    missing_parent_item,
+    action="createPage",
+    stage="blockedBeforeWrite",
+    status="retryNeeded",
+    target="missingParentPageId",
+    proof="notRequested",
+  )
 
   print("notion connector contract tests passed")
   return 0

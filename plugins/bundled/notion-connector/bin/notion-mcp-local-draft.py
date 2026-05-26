@@ -378,7 +378,7 @@ def publish_retry_needed(
       stage="blockedBeforeWrite" if blocked_before_write else "failedBeforeProof",
       status="retryNeeded",
       action="createPage",
-      target=parent_page_id,
+      target=parent_page_id or reason_code,
       proof="notRequested" if blocked_before_write else "missing",
       recovery="retry",
     ),

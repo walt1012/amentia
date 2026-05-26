@@ -17,6 +17,9 @@ const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
 const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
 const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
   &["pluginResult", "toolResult", "warning", "system"];
+const PLUGIN_RUNNER_CONNECTOR_WORKFLOW_CONTRACT: &str = "pith.connectorWorkflow.v1";
+const PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES: &[&str] =
+  &["completed", "inspected", "prepared", "retryNeeded"];
 const PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT: &str = "pith.connectorRemoteWrite.v1";
 const PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE: &str = "completed";
 const PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE: &str = "failedBeforeProof";
@@ -379,7 +382,11 @@ fn plugin_runner_timeline_item(
   if !plugin_runner_remote_write_contract_is_valid(&attributes) {
     return None;
   }
+  if !plugin_runner_connector_workflow_contract_is_valid(&attributes) {
+    return None;
+  }
   insert_plugin_runner_remote_write_contract(&mut attributes);
+  insert_plugin_runner_connector_workflow_contract(&mut attributes);
 
   Some(TimelineItem {
     kind: kind.to_string(),
@@ -391,6 +398,39 @@ fn plugin_runner_timeline_item(
 
 fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
   PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS.contains(&kind)
+}
+
+fn plugin_runner_connector_workflow_contract_is_valid(
+  attributes: &HashMap<String, String>,
+) -> bool {
+  if !plugin_runner_has_connector_workflow(attributes) {
+    return true;
+  }
+
+  let required_keys = [
+    "connectorWorkflowId",
+    "connectorWorkflowService",
+    "connectorWorkflowAction",
+    "connectorWorkflowStage",
+    "connectorWorkflowStatus",
+    "connectorWorkflowTarget",
+    "connectorWorkflowProof",
+  ];
+  if required_keys
+    .iter()
+    .any(|key| plugin_runner_attribute_value(attributes, key).is_none())
+  {
+    return false;
+  }
+
+  let Some(status) = plugin_runner_attribute_value(attributes, "connectorWorkflowStatus") else {
+    return false;
+  };
+  PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES.contains(&status)
+}
+
+fn plugin_runner_has_connector_workflow(attributes: &HashMap<String, String>) -> bool {
+  attributes.keys().any(|key| key.starts_with("connectorWorkflow"))
 }
 
 fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, String>) -> bool {
@@ -450,6 +490,15 @@ fn insert_plugin_runner_remote_write_contract(attributes: &mut HashMap<String, S
     attributes.insert(
       "remoteWriteStatus".to_string(),
       plugin_runner_remote_write_status(attributes).to_string(),
+    );
+  }
+}
+
+fn insert_plugin_runner_connector_workflow_contract(attributes: &mut HashMap<String, String>) {
+  if plugin_runner_has_connector_workflow(attributes) {
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowContract".to_string(),
+      PLUGIN_RUNNER_CONNECTOR_WORKFLOW_CONTRACT.to_string(),
     );
   }
 }
@@ -886,8 +935,12 @@ mod tests {
           "attributes": {
             "connectorWorkflowId": "notion.create-page",
             "connectorWorkflowName": "Notion Create Page",
+            "connectorWorkflowService": "notion",
+            "connectorWorkflowAction": "preparePageDraft",
             "connectorWorkflowStage": "draftPrepared",
-            "connectorWorkflowStatus": "prepared"
+            "connectorWorkflowStatus": "prepared",
+            "connectorWorkflowTarget": "workspace",
+            "connectorWorkflowProof": "localDraft"
           }
         }
       ]
@@ -911,6 +964,44 @@ mod tests {
         .get("connectorWorkflowStatus")
         .map(String::as_str),
       Some("prepared")
+    );
+    assert_eq!(
+      attributes
+        .get("pluginRunnerConnectorWorkflowContract")
+        .map(String::as_str),
+      Some("pith.connectorWorkflow.v1")
+    );
+  }
+
+  #[test]
+  fn output_contract_rejects_incomplete_connector_workflow_metadata() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Connector Workflow",
+          "content": "Prepared a connector workflow.",
+          "attributes": {
+            "connectorWorkflowId": "notion.create-page",
+            "connectorWorkflowStatus": "prepared"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("incomplete connector workflow metadata should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputInvalidTimelineItemCount")
+        .map(String::as_str),
+      Some("1")
     );
   }
 

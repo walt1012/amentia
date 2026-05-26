@@ -1082,6 +1082,8 @@ def validate_packaged_mcp_plugin_command(
     and "parentPageId" in item.get("attributes", {}).get("nextCommandInputTemplate", "")
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "prepared"
+    and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
+    == "pith.connectorWorkflow.v1"
     for item in items
   ):
     raise RuntimeError(
@@ -1152,6 +1154,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "retryNeeded"
     and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"
+    and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
+    == "pith.connectorWorkflow.v1"
     for item in failed_items
   ):
     raise RuntimeError(
@@ -1217,6 +1221,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
     and item.get("attributes", {}).get("connectorWorkflowProof") == "notionApiResponse"
+    and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
+    == "pith.connectorWorkflow.v1"
     for item in published_items
   ):
     raise RuntimeError(
