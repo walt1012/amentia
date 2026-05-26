@@ -3,12 +3,12 @@ use pith_protocol::{
   PluginCapabilityRegistration, PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
   PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
-  PluginCommandWorkflowSummary,
-  PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
-  PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInspectParams,
-  PluginInspectResult, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
-  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginCommandWorkflowSummary, PluginConnectorCredentialParams, PluginConnectorCredentialResult,
+  PluginConnectorRegistryResult, PluginConnectorSummary, PluginHookRegistryResult,
+  PluginHookSummary, PluginInspectParams, PluginInspectResult, PluginInstallParams,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
+  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -576,7 +576,10 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
   assert_eq!(decoded.entrypoint.as_deref(), Some("bin/notion-sync"));
   assert_eq!(decoded.workflow_id.as_deref(), Some("notion.create-page"));
   assert_eq!(
-    decoded.workflow.as_ref().map(|workflow| workflow.service.as_str()),
+    decoded
+      .workflow
+      .as_ref()
+      .map(|workflow| workflow.service.as_str()),
     Some("notion")
   );
   assert_eq!(decoded.input.fields.len(), 3);

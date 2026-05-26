@@ -62,7 +62,10 @@ pub(super) fn build_plugin_command_timeline_item(
       "connectorWorkflowName".to_string(),
       workflow.display_name.clone(),
     );
-    attributes.insert("connectorWorkflowAction".to_string(), workflow.action.clone());
+    attributes.insert(
+      "connectorWorkflowAction".to_string(),
+      workflow.action.clone(),
+    );
     attributes.insert(
       "connectorWorkflowService".to_string(),
       workflow.service.clone(),

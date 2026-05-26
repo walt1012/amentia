@@ -5,8 +5,7 @@ use anyhow::Error;
 use crate::io::{read_command_manifest, read_manifest};
 use crate::manifest::PluginManifest;
 use crate::types::{
-  PluginCatalogEntry, PluginCommandEntry, PluginCommandExecutionEntry,
-  PluginConnectorWorkflowEntry,
+  PluginCatalogEntry, PluginCommandEntry, PluginCommandExecutionEntry, PluginConnectorWorkflowEntry,
 };
 
 use super::capability_identifier_is_safe;
@@ -110,10 +109,7 @@ fn bind_connector_workflow(
   if workflow_id.is_empty() {
     return None;
   }
-  if matches!(
-    execution.connector_ids.as_ref(),
-    None | Some(connectors) if connectors.is_empty()
-  ) {
+  if execution.connector_ids.as_ref().map_or(true, Vec::is_empty) {
     return Some(format!(
       "Plugin command `{identifier}` declares workflow `{workflow_id}` without a connector execution binding."
     ));
@@ -136,15 +132,11 @@ fn bind_connector_workflow(
       "Plugin command `{identifier}` references workflow `{workflow_id}` without a connectorWorkflows contract."
     ));
   };
-  if !execution
-    .connector_ids
-    .as_ref()
-    .is_some_and(|connectors| {
-      connectors
-        .iter()
-        .any(|connector| connector == &workflow.connector_id)
-    })
-  {
+  if !execution.connector_ids.as_ref().is_some_and(|connectors| {
+    connectors
+      .iter()
+      .any(|connector| connector == &workflow.connector_id)
+  }) {
     return Some(format!(
       "Plugin command `{identifier}` workflow `{workflow_id}` is not bound to connector `{}`.",
       workflow.connector_id
