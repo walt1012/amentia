@@ -1305,7 +1305,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
       "PITH_LLAMACPP_PATH": str(backend_path),
       "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
       "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
-      "PITH_NOTION_API_BASE": notion_api.api_base,
+      "PITH_PLUGIN_RUNNER_ENV_PITH_TEST_NOTION_API_BASE": notion_api.api_base,
     }
     process = launch_runtime_process(
       app_path,

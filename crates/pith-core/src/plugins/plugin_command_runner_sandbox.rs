@@ -7,6 +7,8 @@ use pith_protocol::WorkspaceSummary;
 
 const PLUGIN_RUNNER_TEMP_DIR: &str = ".pith/plugin-runner-tmp";
 const PLUGIN_RUNNER_SAFE_PATH: &str = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+const PLUGIN_RUNNER_ENV_FORWARD_PREFIX: &str = "PITH_PLUGIN_RUNNER_ENV_";
+const PLUGIN_RUNNER_TEST_ENV_PREFIX: &str = "PITH_TEST_";
 
 pub(super) struct PluginRunnerSandbox {
   policy: pith_sandbox::SandboxPolicy,
@@ -109,7 +111,32 @@ impl PluginRunnerSandbox {
       .env("TMP", &self.temporary_root)
       .env("TEMP", &self.temporary_root)
       .env("PITH_PLUGIN_SANDBOX_TEMP", &self.temporary_root);
+    for (key, value) in forwarded_plugin_runner_environment() {
+      command.env(key, value);
+    }
   }
+}
+
+fn forwarded_plugin_runner_environment() -> Vec<(String, String)> {
+  std::env::vars()
+    .filter_map(|(key, value)| {
+      let forwarded_key = key.strip_prefix(PLUGIN_RUNNER_ENV_FORWARD_PREFIX)?;
+      if plugin_runner_forwarded_env_key_is_safe(forwarded_key) {
+        Some((forwarded_key.to_string(), value))
+      } else {
+        None
+      }
+    })
+    .collect()
+}
+
+fn plugin_runner_forwarded_env_key_is_safe(key: &str) -> bool {
+  !key.is_empty()
+    && key.len() <= 80
+    && key.starts_with(PLUGIN_RUNNER_TEST_ENV_PREFIX)
+    && key.chars().all(|character| {
+      character.is_ascii_uppercase() || character.is_ascii_digit() || character == '_'
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -274,6 +301,14 @@ mod tests {
 
   #[test]
   fn build_command_uses_explicit_safe_environment() {
+    let _forwarded = EnvVarGuard::set(
+      "PITH_PLUGIN_RUNNER_ENV_PITH_TEST_NOTION_API_BASE",
+      "http://127.0.0.1:49152/v1",
+    );
+    let _unsafe_forwarded = EnvVarGuard::set(
+      "PITH_PLUGIN_RUNNER_ENV_PATH",
+      "/tmp/not-allowed",
+    );
     let workspace_root = unique_temp_workspace("plugin-runner-env");
     let plugin_root = workspace_root.join(".agents/plugins/env");
     fs::create_dir_all(&plugin_root).expect("plugin root");
@@ -309,8 +344,37 @@ mod tests {
         .map(String::as_str),
       Some(temporary_root.as_str())
     );
+    assert_eq!(
+      environment
+        .get("PITH_TEST_NOTION_API_BASE")
+        .map(String::as_str),
+      Some("http://127.0.0.1:49152/v1")
+    );
 
     let _ = fs::remove_dir_all(workspace_root);
+  }
+
+  struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<std::ffi::OsString>,
+  }
+
+  impl EnvVarGuard {
+    fn set(key: &'static str, value: &str) -> Self {
+      let previous = std::env::var_os(key);
+      std::env::set_var(key, value);
+      Self { key, previous }
+    }
+  }
+
+  impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+      if let Some(previous) = self.previous.as_ref() {
+        std::env::set_var(self.key, previous);
+      } else {
+        std::env::remove_var(self.key);
+      }
+    }
   }
 
   fn unique_temp_workspace(prefix: &str) -> PathBuf {

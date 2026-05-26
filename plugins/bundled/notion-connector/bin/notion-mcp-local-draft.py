@@ -13,7 +13,7 @@ from typing import Any
 
 
 NOTION_API_BASE = os.environ.get(
-  "PITH_NOTION_API_BASE",
+  "PITH_TEST_NOTION_API_BASE",
   "https://api.notion.com/v1",
 ).rstrip("/")
 NOTION_VERSION = os.environ.get("PITH_NOTION_VERSION", "2026-03-11")
