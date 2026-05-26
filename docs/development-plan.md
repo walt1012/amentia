@@ -1,31 +1,38 @@
 # Pith Development Plan
 
-## Product Direction
+## North Star
 
-- Pith is a small, strong, local-first macOS cowork agent for real daily work.
-- Target: `Pith`, macOS 12+, `x86_64` only.
-- Purpose: cowork first; coding is one workflow, not the product boundary.
-- Benchmark: learn Codex and Claude Code at the tool, approval, sandbox,
-  context, and connector boundaries; do not copy a coding-only product shape.
-- Intelligence: local model by default; no required hosted model API.
+Pith is a small, strong, local-first macOS cowork agent for real daily work.
+
+- Product: `Pith`, macOS 12+, `x86_64` only.
+- Purpose: cowork first; coding is one workflow, not the boundary.
+- Intelligence: local model by default, no required hosted model API, one active
+  local model at a time.
 - First use: in-app verified GGUF download, defaulting to `LFM2.5-350M`.
-- Runtime: one active local model at a time.
-- Retrieval: Web Search is the active retrieval layer; no generic local
-  document RAG until the cowork loop is excellent.
+- Retrieval: Web Search is the active retrieval layer; no generic local document
+  RAG until the cowork loop is excellent.
 - Plugins: real local capabilities and connectors, not prompt templates.
-- Git: use bounded system Git helpers for workspace review flows; do not embed
-  a Git engine unless the packaged app cannot meet real user needs without it.
 - Delivery: users install a downloadable macOS app package; CI proves the app
   path, but the app experience is the product.
 
-## Architecture Map
+## Product Shape
 
-- `apps/pith-macos`: native UI, setup, approvals, timeline, model manager,
-  inspector, and app-facing state.
-- `crates/pith-runtime-bin`: JSON-RPC process, request routing, request
-  supervision, notifications, and runtime lock boundaries.
+Learn from Codex and Claude Code at the durable boundaries: workspace context,
+bounded file and shell tools, Web Search retrieval, reviewable diffs, approvals,
+sandbox status, session continuity, and MCP-style local connectors.
+
+Pith should differ intentionally: local-first inference, cowork-first tasks,
+small-model constraints, no required hosted model API, and no marketplace shell
+before a real connector workflow is excellent.
+
+## Architecture Boundaries
+
+- `apps/pith-macos`: native UI, setup, timeline, approvals, model manager, and
+  app-facing state.
+- `crates/pith-runtime-bin`: JSON-RPC process, request routing, notifications,
+  request supervision, and lock boundaries.
 - `crates/pith-core`: orchestration, turn lifecycle, permissions, context,
-  memory usage, and plugin execution.
+  memory use, and plugin execution.
 - `crates/pith-tools`: bounded workspace tools, shell, Web Search, compaction,
   and path safety.
 - `crates/pith-sandbox`: native sandbox policy and diagnostics.
@@ -40,113 +47,55 @@
 
 Memory owns meaning and ranking. Storage owns durable records.
 
-## Benchmark Alignment
-
-Pith should feel comparable to Codex and Claude Code where daily work depends
-on trust and tool use, while staying smaller and more local.
-
-- Match the durable parts: workspace-scoped context, bounded file and shell
-  tools, Web Search retrieval, reviewable diffs, approvals, sandbox status,
-  session continuity, and MCP-style local connectors.
-- Differ intentionally: local-first inference, cowork-first tasks, small model
-  constraints, no required hosted model API, and no marketplace shell before a
-  real connector workflow is excellent.
-- Current gaps: prove one public release-candidate download path, make sandbox
-  fallback status visible before risky actions, and prove one real third-party
-  connector from draft to approval to execution proof.
-
 ## Closed Foundation
 
-Milestones 1-6 are closed. Keep details in git history, not in this plan.
+Milestones 1-7 are closed. Keep implementation detail in git history, not in
+this roadmap.
 
 Closed capabilities:
 
 - First-use model setup, resumable downloads, verified activation, runtime
-  recovery, bounded shell/model work, workspace-safe tools, Web Search, sandbox
-  diagnostics, compact context packing, and progressive inspector surfaces.
+  recovery, bounded model/shell work, workspace-safe tools, Web Search,
+  sandbox diagnostics, compact context packing, and progressive UI surfaces.
 - Plugin registry, inspect-before-install, enable/disable, connector auth,
   bounded runners, one-shot MCP stdio commands, permission gates, approval
-  gates, output envelopes, repair hints, retry flows, and runner memory capture.
-- Package proof: x86_64 app bundle, internal DMG workflow, packaged smoke
-  coverage, release-state safety, native sandbox fallback, and unsigned
+  gates, output envelopes, retry flows, and runner memory capture.
+- Practical cowork loop: bounded Plan/Act/Observe execution, Web Search
+  retrieval, connector-backed plugin commands, approval pause/resume, safe
+  review-summary writes, saved artifacts, and structured handoff metadata.
+- Package proof: x86_64 app bundle, internal DMG workflow, mounted-DMG smoke,
+  release-state safety, native sandbox fallback disclosure, and unsigned
   distribution path with optional Developer ID upgrade later.
-- Cowork loop: bounded Plan/Act/Observe execution, Web Search retrieval,
-  connector-backed plugin commands, approval pause/resume, safe review-summary
-  writes, and structured handoff metadata.
-
-## Closed Milestone: M7 Practical Cowork
-
-Goal: turn the proven loop into everyday cowork flows that help users draft,
-review, save, hand off, and continue real work without memorizing commands.
-
-Closed state:
-
-- Natural saved-artifact requests, approved writes, and continuation handoffs
-  share the same safe diff and approval path.
-- Connector drafts can consume saved artifacts through bounded workspace-safe
-  previews, planning evidence, inspection gates, and remote-write proof.
-- Web Search source grounding is honest about search-result attribution versus
-  stronger page-fetch or snapshot verification.
-- Timeline cards and inspector summaries expose source depth, connector write
-  status, setup progress, and first-use actions without raw attribute hunting.
-- Release and first-use copy now carries the non-developer path through model
-  download, workspace opening, and the first cowork request.
-
-Remaining gap:
-
-- Connector write execution is still plugin-owned; Pith provides inspection,
-  approval, and proof boundaries, but not a hosted Notion writer.
 
 ## Current Milestone: M8 Release Candidate
 
 Goal: prove Pith works as a real downloadable macOS app for non-developer users.
 
-Current state:
+Done:
 
-- Installer path is proven from mounted DMG, not only from raw app bundles.
-- Release assets include DMG, basename-only SHA-256 checksum,
-  `README-FIRST.txt`, and a machine-readable release manifest.
-- Release sidecars validate first-use user guidance, model delivery mode,
-  platform target, signing mode, source commit, checksum sidecar integrity, and
-  install-guide integrity, with strict `vX.Y.Z` public release tags, manifest
-  names, public asset names, schema-versioned app package metadata, and
-  workflow proof locked together.
-- Release notes and `README-FIRST.txt` are generated and validated by the same
-  copy contract before GitHub Release publication.
-- The app reads packaged distribution metadata and presents the same
-  Developer ID or ad-hoc Gatekeeper trust path and source commit that the DMG
-  install guide and release manifest use.
-- Package metadata, release sidecars, distribution validation, and app trust
-  copy now disclose runtime-detected sandbox availability and process-only
-  fallback instead of implying hard sandbox protection.
+- Release assets are DMG, basename-only SHA-256 checksum, `README-FIRST.txt`,
+  and a machine-readable release manifest.
+- Package metadata, release sidecars, install copy, app trust copy, distribution
+  validation, and workflow policy now agree on model delivery, signing mode,
+  source commit, sandbox fallback, and workflow proof.
 - Packaged smoke covers first-use model metadata, app-owned model activation,
   workspace opening, Web Search source snapshots, approval-gated writes,
-  runtime restart, and recovery of model, workspace, thread, and readiness
-  state.
-- Web Search now preserves a bounded search-result snapshot with a stable hash
-  while clearly reporting that page contents were not fetched.
-- The model manager now surfaces explicit first-run recovery guidance for
-  paused downloads, runtime relaunch, downloaded-but-inactive models, and
-  partial-file cleanup.
-- Package validation checks that the compiled app executable still contains the
-  first-run recovery and Gatekeeper trust copy required by the release path.
-- Package gates reject bundled GGUF weights, unsafe zip entries, path
-  traversal, symlink leakage, and non-`x86_64` executable outputs.
-- CI structure is change-aware and guarded by workflow policy checks, but CI
-  details stay in `docs/development-environment.md` rather than this roadmap.
+  connector smoke, runtime restart, and recovery of readiness state.
+- Package gates reject bundled model weights, unsafe zip entries, path
+  traversal, symlink leakage, non-`x86_64` outputs, and untracked release asset
+  drift.
 
-M8 work order:
+Close M8 when:
 
-- Close M8 only after a release-candidate workflow proves the downloadable DMG,
-  checksum, install guide, manifest, source commit, first-run model path,
-  workspace path, Web Search evidence, approval-gated write path, connector
-  smoke, and runtime recovery together in CI.
-- Keep packaged smoke focused on real user journeys; add UI automation for
-  visible recovery copy only after the app has a stable UI automation harness.
-- Defer page fetch and page-content snapshots until cowork tasks require
-  evidence beyond search-result snapshots.
-- Keep MCP one-shot until a real connector workflow proves persistent local
-  sessions are necessary.
+- A release-candidate workflow proves the downloadable DMG, checksum, install
+  guide, manifest, source commit, first-run model path, workspace path, Web
+  Search evidence, approval-gated write path, connector smoke, and runtime
+  recovery together in CI.
+- The release manifest remains enough for a user or maintainer to verify what
+  was built, from which source commit, by which workflow run, and with which
+  trust and sandbox posture.
+- Packaged smoke stays focused on real user journeys. Add UI automation only
+  when the app has a stable UI automation harness.
 
 ## Next Milestone: M9 Cowork Connectors
 
@@ -155,20 +104,19 @@ into a marketplace shell or a generic RAG product.
 
 Work order:
 
-- Prove one real third-party connector workflow end to end, from user intent to
+- Prove one real third-party connector workflow end to end: user intent,
   inspected draft, approval, execution proof, retry, and recovery.
 - Treat connector success as a user-visible contract: what changed, where it
-  changed, what proof exists, and how the user can recover or retry.
+  changed, what proof exists, and how the user can recover.
 - Narrow connector permissions around explicit user-visible actions rather than
   broad plugin trust.
-- Keep Web Search as the active retrieval layer and add stronger page evidence
-  only when connector tasks need it.
+- Keep Web Search as the active retrieval layer; add stronger page evidence only
+  when connector tasks require it.
 - Keep saved artifacts and memory as lightweight context aids, not a local
   document RAG system.
 - Preserve the small native UI: progressive disclosure, no always-open admin
   panels, and no feature surface without a daily cowork use case.
-- Refactor only at ownership boundaries exposed by connector work; do not split
-  modules simply to reduce line counts.
+- Refactor only at ownership or failure boundaries exposed by connector work.
 
 ## Guardrails
 
@@ -176,12 +124,11 @@ Work order:
 - No generic local vector database before Web Search and workspace context are
   reliable.
 - No multi-agent orchestration before the single cowork loop is excellent.
-- No marketplace or remote MCP transport until local connector execution is
-  safe and useful.
+- No marketplace or remote MCP transport until local connector execution is safe
+  and useful.
 - No bundled Git runtime until bounded system Git proves insufficient for real
   packaged users.
 - No cosmetic refactor that only moves code around.
 - English-only source, docs, commits, branches, and PR text.
 - Remote CI is the source of truth for Rust fmt, clippy, tests, smoke coverage,
   model manifest validation, and macOS app packaging.
-- Split modules only when ownership or failure boundaries become clearer.
