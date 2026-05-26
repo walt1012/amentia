@@ -121,6 +121,53 @@ def main() -> int:
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["artifacts"].append({"name": "../Pith.dmg", "kind": "dmg"})
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "unsafe release artifact names should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["artifacts"].append(
+      {
+        "name": artifact.name,
+        "kind": "duplicate",
+      }
+    )
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "duplicate release artifact names should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["artifacts"].append("Pith.dmg")
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "non-object release artifact entries should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
     checksum_data = checksum_path.read_text(encoding="utf-8")
     checksum_path.write_text("0" * 64 + f"  {artifact.name}\n", encoding="utf-8")
     assert_raises(

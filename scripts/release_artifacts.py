@@ -149,11 +149,7 @@ def validate_release_manifest(
   if not isinstance(artifacts, list):
     raise RuntimeError("Release manifest must include an artifacts list")
   validate_checksum_file(artifact_path, checksum_path)
-  by_name = {
-    item.get("name"): item
-    for item in artifacts
-    if isinstance(item, dict)
-  }
+  by_name = validate_manifest_artifacts(artifacts)
   artifact_entry = by_name.get(artifact_path.name)
   if artifact_entry is None:
     raise RuntimeError("Release manifest is missing the DMG artifact entry")
@@ -186,6 +182,22 @@ def validate_release_manifest(
   if guide_entry.get("sha256") != sha256_hex(install_guide_path):
     raise RuntimeError("Release manifest install guide SHA-256 does not match")
   validate_install_guide(install_guide_path)
+
+
+def validate_manifest_artifacts(artifacts: list) -> dict[str, dict]:
+  by_name: dict[str, dict] = {}
+  for item in artifacts:
+    if not isinstance(item, dict):
+      raise RuntimeError("Release manifest artifact entries must be objects")
+    name = item.get("name")
+    if not isinstance(name, str) or not name.strip():
+      raise RuntimeError("Release manifest artifact entries must include names")
+    if name in {".", ".."} or "/" in name or "\\" in name:
+      raise RuntimeError("Release manifest artifact names must be basenames")
+    if name in by_name:
+      raise RuntimeError("Release manifest artifact names must be unique")
+    by_name[name] = item
+  return by_name
 
 
 def validate_release_identity(tag: str, source_commit: str, signing_mode: str) -> None:
