@@ -70,6 +70,8 @@ jobs:
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
             --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
@@ -116,6 +118,8 @@ jobs:
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
             --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
       - name: Publish GitHub Release
         run: |
@@ -257,6 +261,14 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
+      ci=VALID_CI.replace('--workflow-run-id "$GITHUB_RUN_ID"', ""),
+    )
+    assert_issue(issue_messages(root), "workflow-run-id")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
       ci=VALID_CI.replace(
         "            --manifest-output artifacts/macos/internal-release-manifest.json\n",
         "",
@@ -282,6 +294,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "PithPackage.json")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "workflow-run-url")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

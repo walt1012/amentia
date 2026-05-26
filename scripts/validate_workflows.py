@@ -159,6 +159,8 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--signing-mode ad-hoc',
       '--install-guide artifacts/macos/README-FIRST.txt',
       '--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json',
+      '--workflow-run-id "$GITHUB_RUN_ID"',
+      '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
       '--manifest-output artifacts/macos/internal-release-manifest.json',
     )
     for term in required_release_artifact_args:
@@ -221,6 +223,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
     '--install-guide artifacts/macos/README-FIRST.txt',
     '--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json',
+    '--workflow-run-id "$GITHUB_RUN_ID"',
+    '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
     '--manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
   )
   for term in required_release_artifact_args:

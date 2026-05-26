@@ -146,7 +146,9 @@ The release page also publishes `README-FIRST.txt` and a release manifest as
 separate assets, so users and automation can inspect the platform target,
 signing mode, source commit, checksum, sidecar hashes, exact asset set, asset
 names, schema-versioned app package metadata, model delivery mode, and sandbox
-fallback contract before opening the DMG.
+fallback contract before opening the DMG. The release manifest also records the
+GitHub Actions run that enforced the source-commit CI gate and mounted-DMG
+packaged smoke before upload.
 
 Release publishing requires these repository secrets:
 

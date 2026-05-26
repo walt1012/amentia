@@ -35,6 +35,14 @@ SANDBOX_CONTRACT = {
   "fallback": "processOnlyWhenNativeUnavailable",
   "networkDefault": "disabled",
 }
+VERIFICATION_CONTRACT = {
+  "ciGate": "successful-ci-required-for-source-commit",
+  "packagedSmoke": "mounted-dmg-before-upload",
+  "checksum": "sha256-sidecar",
+  "installGuide": INSTALL_GUIDE_NAME,
+  "assetSet": "dmg-checksum-install-guide-manifest",
+}
+GITHUB_RUN_ID_PATTERN = re.compile(r"^[1-9][0-9]*$")
 
 
 def sha256_hex(path: Path) -> str:
@@ -67,6 +75,8 @@ def release_manifest(
   artifact_path: Path,
   checksum_path: Path,
   install_guide_path: Path,
+  workflow_run_id: str,
+  workflow_run_url: str,
   package_manifest_path: Path | None = None,
 ) -> dict:
   validate_release_identity(tag, source_commit, signing_mode)
@@ -104,6 +114,10 @@ def release_manifest(
       "modelWeightsBundled": False,
     },
     "sandbox": dict(SANDBOX_CONTRACT),
+    "verification": release_verification(
+      workflow_run_id=workflow_run_id,
+      workflow_run_url=workflow_run_url,
+    ),
     "artifacts": [
       {
         "name": artifact_path.name,
@@ -141,6 +155,8 @@ def write_release_manifest(
   checksum_path: Path,
   install_guide_path: Path,
   output_path: Path,
+  workflow_run_id: str,
+  workflow_run_url: str,
   package_manifest_path: Path | None = None,
 ) -> Path:
   validate_release_manifest_name(tag, output_path)
@@ -155,6 +171,8 @@ def write_release_manifest(
         checksum_path=checksum_path,
         install_guide_path=install_guide_path,
         package_manifest_path=package_manifest_path,
+        workflow_run_id=workflow_run_id,
+        workflow_run_url=workflow_run_url,
       ),
       indent=2,
       sort_keys=True,
@@ -445,6 +463,10 @@ def validate_manifest_identity(manifest: dict) -> None:
   if model_delivery.get("modelWeightsBundled") is not False:
     raise RuntimeError("Release manifest must state that model weights are not bundled")
   validate_sandbox_contract(manifest.get("sandbox"), "Release manifest sandbox")
+  validate_verification_contract(
+    manifest.get("verification"),
+    "Release manifest verification",
+  )
 
 
 def validate_sandbox_contract(value: object, label: str) -> None:
@@ -453,6 +475,42 @@ def validate_sandbox_contract(value: object, label: str) -> None:
   for field, expected in SANDBOX_CONTRACT.items():
     if value.get(field) != expected:
       raise RuntimeError(f"{label} {field} must be {expected}")
+
+
+def release_verification(
+  *,
+  workflow_run_id: str,
+  workflow_run_url: str,
+) -> dict:
+  validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
+  return {
+    **VERIFICATION_CONTRACT,
+    "workflowRunId": workflow_run_id,
+    "workflowRunUrl": workflow_run_url,
+  }
+
+
+def validate_verification_contract(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} must be an object")
+  for field, expected in VERIFICATION_CONTRACT.items():
+    if value.get(field) != expected:
+      raise RuntimeError(f"{label} {field} must be {expected}")
+  workflow_run_id = value.get("workflowRunId")
+  workflow_run_url = value.get("workflowRunUrl")
+  if not isinstance(workflow_run_id, str) or not isinstance(workflow_run_url, str):
+    raise RuntimeError(f"{label} must include workflow run metadata")
+  validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
+
+
+def validate_workflow_run_metadata(workflow_run_id: str, workflow_run_url: str) -> None:
+  if GITHUB_RUN_ID_PATTERN.fullmatch(workflow_run_id) is None:
+    raise RuntimeError("Release manifest workflow run id must be a GitHub Actions run id")
+  expected_suffix = f"/actions/runs/{workflow_run_id}"
+  if not workflow_run_url.startswith("https://github.com/") or not workflow_run_url.endswith(
+    expected_suffix
+  ):
+    raise RuntimeError("Release manifest workflow run URL must match the run id")
 
 
 def release_trust(signing_mode: str) -> str:
@@ -512,6 +570,8 @@ def main() -> int:
   parser.add_argument("--tag")
   parser.add_argument("--source-commit")
   parser.add_argument("--signing-mode", choices=sorted(SUPPORTED_SIGNING_MODES))
+  parser.add_argument("--workflow-run-id")
+  parser.add_argument("--workflow-run-url")
   args = parser.parse_args()
 
   try:
@@ -527,10 +587,13 @@ def main() -> int:
         or not args.signing_mode
         or not args.install_guide
         or not args.package_manifest
+        or not args.workflow_run_id
+        or not args.workflow_run_url
       ):
         raise RuntimeError(
           "--manifest-output requires --tag, --source-commit, --signing-mode, "
-          "--install-guide, and --package-manifest"
+          "--install-guide, --package-manifest, --workflow-run-id, and "
+          "--workflow-run-url"
         )
       manifest_path = write_release_manifest(
         tag=args.tag,
@@ -540,6 +603,8 @@ def main() -> int:
         checksum_path=checksum_path,
         install_guide_path=args.install_guide.resolve(),
         package_manifest_path=args.package_manifest.resolve(),
+        workflow_run_id=args.workflow_run_id,
+        workflow_run_url=args.workflow_run_url,
         output_path=args.manifest_output.resolve(),
       )
   except Exception as error:

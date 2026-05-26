@@ -9,17 +9,35 @@ from pathlib import Path
 
 from release_artifacts import (
   checksum_text,
-  release_manifest,
+  release_manifest as build_release_manifest,
   validate_checksum_file,
   validate_install_guide,
   validate_release_manifest,
   write_checksum_file,
-  write_release_manifest,
+  write_release_manifest as build_write_release_manifest,
 )
 from release_text import install_guide as release_install_guide
 
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+WORKFLOW_RUN_ID = "123456789"
+WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
+
+
+def release_manifest(**kwargs) -> dict:
+  return build_release_manifest(
+    workflow_run_id=WORKFLOW_RUN_ID,
+    workflow_run_url=WORKFLOW_RUN_URL,
+    **kwargs,
+  )
+
+
+def write_release_manifest(**kwargs) -> Path:
+  return build_write_release_manifest(
+    workflow_run_id=WORKFLOW_RUN_ID,
+    workflow_run_url=WORKFLOW_RUN_URL,
+    **kwargs,
+  )
 
 
 def write_package_manifest(
@@ -109,6 +127,10 @@ def main() -> int:
       raise AssertionError("release manifest should not claim bundled model weights")
     if manifest["sandbox"]["fallback"] != "processOnlyWhenNativeUnavailable":
       raise AssertionError("release manifest should disclose the sandbox fallback")
+    if manifest["verification"]["workflowRunId"] != WORKFLOW_RUN_ID:
+      raise AssertionError("release manifest should record the workflow run id")
+    if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":
+      raise AssertionError("release manifest should record the packaged smoke proof")
     if manifest["appPackage"]["sourceCommit"] != SOURCE_COMMIT:
       raise AssertionError("release manifest should summarize packaged app source")
     if manifest["appPackage"]["signing"] != "ad-hoc":
@@ -187,6 +209,20 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "wrong release manifest kind should fail validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["verification"]["workflowRunUrl"] = "https://example.com/run"
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong release workflow run URL should fail validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
