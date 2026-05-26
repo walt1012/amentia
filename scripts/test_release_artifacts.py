@@ -65,6 +65,16 @@ def main() -> int:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
+    manifest_artifacts = {
+      item["name"]: item
+      for item in manifest["artifacts"]
+    }
+    if manifest_artifacts[checksum_path.name]["kind"] != "checksum":
+      raise AssertionError("release manifest should include the checksum sidecar")
+    if manifest_artifacts[checksum_path.name]["checks"] != artifact.name:
+      raise AssertionError("checksum sidecar should target the DMG basename")
+    if "sha256" not in manifest_artifacts[install_guide.name]:
+      raise AssertionError("install guide manifest entry should be hashable")
 
     manifest_path = write_release_manifest(
       tag="v0.1.0",
@@ -110,6 +120,37 @@ def main() -> int:
       "wrong source commit should fail release manifest validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    checksum_data = checksum_path.read_text(encoding="utf-8")
+    checksum_path.write_text("0" * 64 + f"  {artifact.name}\n", encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "tampered release checksum should fail release manifest validation",
+    )
+    checksum_path.write_text(checksum_data, encoding="utf-8")
+
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "developer-id"),
+      encoding="utf-8",
+    )
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "tampered install guide should fail release manifest validation",
+    )
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc"),
+      encoding="utf-8",
+    )
 
     artifact.write_bytes(b"tampered release artifact\n")
     assert_raises(

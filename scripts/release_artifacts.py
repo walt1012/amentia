@@ -82,9 +82,17 @@ def release_manifest(
         "checksum": checksum_path.name,
       },
       {
+        "name": checksum_path.name,
+        "kind": "checksum",
+        "sizeBytes": checksum_path.stat().st_size,
+        "sha256": sha256_hex(checksum_path),
+        "checks": artifact_path.name,
+      },
+      {
         "name": install_guide_path.name,
         "kind": "install-guide",
         "sizeBytes": install_guide_path.stat().st_size,
+        "sha256": sha256_hex(install_guide_path),
       },
     ],
   }
@@ -140,6 +148,7 @@ def validate_release_manifest(
   artifacts = manifest.get("artifacts")
   if not isinstance(artifacts, list):
     raise RuntimeError("Release manifest must include an artifacts list")
+  validate_checksum_file(artifact_path, checksum_path)
   by_name = {
     item.get("name"): item
     for item in artifacts
@@ -156,6 +165,17 @@ def validate_release_manifest(
     raise RuntimeError("Release manifest DMG SHA-256 does not match the artifact")
   if artifact_entry.get("checksum") != checksum_path.name:
     raise RuntimeError("Release manifest DMG checksum file name is wrong")
+  checksum_entry = by_name.get(checksum_path.name)
+  if checksum_entry is None:
+    raise RuntimeError("Release manifest is missing the checksum artifact entry")
+  if checksum_entry.get("kind") != "checksum":
+    raise RuntimeError("Release manifest checksum entry kind is wrong")
+  if checksum_entry.get("checks") != artifact_path.name:
+    raise RuntimeError("Release manifest checksum entry target is wrong")
+  if checksum_entry.get("sizeBytes") != checksum_path.stat().st_size:
+    raise RuntimeError("Release manifest checksum size does not match")
+  if checksum_entry.get("sha256") != sha256_hex(checksum_path):
+    raise RuntimeError("Release manifest checksum SHA-256 does not match")
   guide_entry = by_name.get(install_guide_path.name)
   if guide_entry is None:
     raise RuntimeError("Release manifest is missing the install guide entry")
@@ -163,6 +183,8 @@ def validate_release_manifest(
     raise RuntimeError("Release manifest install guide entry kind is wrong")
   if guide_entry.get("sizeBytes") != install_guide_path.stat().st_size:
     raise RuntimeError("Release manifest install guide size does not match")
+  if guide_entry.get("sha256") != sha256_hex(install_guide_path):
+    raise RuntimeError("Release manifest install guide SHA-256 does not match")
   validate_install_guide(install_guide_path)
 
 
