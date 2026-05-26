@@ -14,6 +14,7 @@ CONNECTOR_PATH = (
   ROOT / "plugins" / "bundled" / "notion-connector" / "bin" / "notion-mcp-local-draft.py"
 )
 PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
+WORKFLOW_ID = "notion.create-page"
 
 
 def load_connector() -> ModuleType:
@@ -67,6 +68,31 @@ def assert_publish_follow_up(item: dict) -> None:
     raise AssertionError(f"Notion follow-up should leave parentPageId empty: {template}")
 
 
+def assert_workflow(
+  item: dict,
+  *,
+  stage: str,
+  status: str,
+  proof: str,
+) -> None:
+  attributes = item.get("attributes")
+  if not isinstance(attributes, dict):
+    raise AssertionError(f"Plugin item missed attributes: {item}")
+  expected = {
+    "connectorWorkflowId": WORKFLOW_ID,
+    "connectorWorkflowName": "Notion Create Page",
+    "connectorWorkflowService": "notion",
+    "connectorWorkflowStage": stage,
+    "connectorWorkflowStatus": status,
+    "connectorWorkflowProof": proof,
+  }
+  for key, value in expected.items():
+    if attributes.get(key) != value:
+      raise AssertionError(
+        f"Expected {key}={value!r} in Notion workflow attributes, got {attributes}"
+      )
+
+
 def main() -> int:
   connector = load_connector()
 
@@ -81,10 +107,19 @@ def main() -> int:
       )
     }
   )
-  assert_publish_follow_up(first_item(draft))
+  draft_item = first_item(draft)
+  assert_publish_follow_up(draft_item)
+  assert_workflow(draft_item, stage="draftPrepared", status="prepared", proof="localDraft")
 
   inspection = connector.inspect_page_write({"input": "Saved artifact: docs/handoff.md"})
-  assert_publish_follow_up(first_item(inspection))
+  inspection_item = first_item(inspection)
+  assert_publish_follow_up(inspection_item)
+  assert_workflow(
+    inspection_item,
+    stage="inspectBeforeWrite",
+    status="inspected",
+    proof="inspection",
+  )
 
   retry = connector.publish_page_draft(
     1,
@@ -106,6 +141,14 @@ def main() -> int:
   retry_input = json.loads(retry_attributes.get("retryInput", "{}"))
   if retry_input.get("parentPageId") != "page-123":
     raise AssertionError(f"Notion retry did not preserve publish input: {retry_input}")
+  assert_workflow(
+    retry_item,
+    stage="blockedBeforeWrite",
+    status="retryNeeded",
+    proof="notRequested",
+  )
+  if retry_attributes.get("connectorWorkflowRecovery") != "retry":
+    raise AssertionError(f"Notion retry missed workflow recovery: {retry_attributes}")
 
   print("notion connector contract tests passed")
   return 0

@@ -517,7 +517,7 @@ fn plugin_runner_reserved_attribute(key: &str) -> bool {
       | "sourcePath"
       | "streamingStatus"
       | "turnId"
-  ) || key.starts_with("connector")
+  ) || (key.starts_with("connector") && !key.starts_with("connectorWorkflow"))
     || key.starts_with("mcp")
     || key.starts_with("pluginRunner")
     || key.starts_with("sandbox")
@@ -871,6 +871,44 @@ mod tests {
     assert_eq!(
       attributes.get("remoteWriteStatus").map(String::as_str),
       Some("notSent")
+    );
+  }
+
+  #[test]
+  fn output_contract_preserves_connector_workflow_metadata() {
+    let command = test_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Connector Workflow",
+          "content": "Prepared a connector workflow.",
+          "attributes": {
+            "connectorWorkflowId": "notion.create-page",
+            "connectorWorkflowName": "Notion Create Page",
+            "connectorWorkflowStage": "draftPrepared",
+            "connectorWorkflowStatus": "prepared"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!(
+        "connector workflow metadata should be accepted: {}",
+        failure.message
+      ),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes.get("connectorWorkflowId").map(String::as_str),
+      Some("notion.create-page")
+    );
+    assert_eq!(
+      attributes.get("connectorWorkflowStatus").map(String::as_str),
+      Some("prepared")
     );
   }
 

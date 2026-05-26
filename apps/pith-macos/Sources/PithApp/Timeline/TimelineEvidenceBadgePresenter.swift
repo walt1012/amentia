@@ -7,7 +7,10 @@ struct TimelineEvidenceBadgeSummary: Hashable {
 
 enum TimelineEvidenceBadgePresenter {
   static func badges(attributes: [String: String]) -> [TimelineEvidenceBadgeSummary] {
-    [webSearchBadge(attributes: attributes), remoteWriteBadge(attributes: attributes)]
+    [
+      webSearchBadge(attributes: attributes),
+      connectorWorkflowBadge(attributes: attributes) ?? remoteWriteBadge(attributes: attributes),
+    ]
       .compactMap { $0 }
   }
 
@@ -46,6 +49,27 @@ enum TimelineEvidenceBadgePresenter {
       return TimelineEvidenceBadgeSummary(label: "Remote Write Pending", tone: .active)
     default:
       return TimelineEvidenceBadgeSummary(label: "Remote Write Unknown", tone: .warning)
+    }
+  }
+
+  private static func connectorWorkflowBadge(
+    attributes: [String: String]
+  ) -> TimelineEvidenceBadgeSummary? {
+    guard let status = attributes["connectorWorkflowStatus"] else {
+      return nil
+    }
+
+    switch status {
+    case "completed":
+      return TimelineEvidenceBadgeSummary(label: "Connector Done", tone: .ready)
+    case "retryNeeded":
+      return TimelineEvidenceBadgeSummary(label: "Connector Retry Needed", tone: .warning)
+    case "inspected":
+      return TimelineEvidenceBadgeSummary(label: "Connector Inspected", tone: .active)
+    case "prepared":
+      return TimelineEvidenceBadgeSummary(label: "Connector Prepared", tone: .active)
+    default:
+      return TimelineEvidenceBadgeSummary(label: "Connector Workflow", tone: .active)
     }
   }
 }

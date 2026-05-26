@@ -18,6 +18,15 @@ const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
   "remoteWriteRequiresApproval",
   "sourceArtifact",
   "sourceArtifactPreviewProvided",
+  "connectorWorkflowId",
+  "connectorWorkflowName",
+  "connectorWorkflowService",
+  "connectorWorkflowAction",
+  "connectorWorkflowStage",
+  "connectorWorkflowStatus",
+  "connectorWorkflowTarget",
+  "connectorWorkflowProof",
+  "connectorWorkflowRecovery",
 ];
 const RUNNER_CONNECTOR_HANDOFF_KEYS: &[(&str, &str)] = &[
   ("pluginRunnerConnectorId", "connectorId"),
@@ -264,6 +273,18 @@ mod tests {
           ),
           ("remoteWriteStatus".to_string(), "notSent".to_string()),
           ("sourceArtifact".to_string(), "docs/handoff.md".to_string()),
+          (
+            "connectorWorkflowId".to_string(),
+            "notion.create-page".to_string(),
+          ),
+          (
+            "connectorWorkflowStage".to_string(),
+            "inspectBeforeWrite".to_string(),
+          ),
+          (
+            "connectorWorkflowStatus".to_string(),
+            "inspected".to_string(),
+          ),
         ])),
       }],
       capture_memory: false,
@@ -295,6 +316,14 @@ mod tests {
     assert_eq!(
       attributes.get("sourceArtifact").map(String::as_str),
       Some("docs/handoff.md")
+    );
+    assert_eq!(
+      attributes.get("connectorWorkflowId").map(String::as_str),
+      Some("notion.create-page")
+    );
+    assert_eq!(
+      attributes.get("connectorWorkflowStatus").map(String::as_str),
+      Some("inspected")
     );
   }
 

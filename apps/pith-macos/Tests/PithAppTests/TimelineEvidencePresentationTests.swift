@@ -47,6 +47,28 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
+  func testConnectorWorkflowBadgeSupersedesRemoteWriteDraftNoise() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "connectorWorkflowStatus": "prepared",
+      "remoteWriteStatus": "notSent",
+    ])
+
+    XCTAssertEqual(badges.count, 1)
+    XCTAssertEqual(badges.first?.label, "Connector Prepared")
+    XCTAssertEqual(badges.first?.tone, .active)
+  }
+
+  func testConnectorWorkflowBadgeFlagsRetryNeeded() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "connectorWorkflowStatus": "retryNeeded",
+      "remoteWriteStatus": "unconfirmed",
+    ])
+
+    XCTAssertEqual(badges.count, 1)
+    XCTAssertEqual(badges.first?.label, "Connector Retry Needed")
+    XCTAssertEqual(badges.first?.tone, .warning)
+  }
+
   func testInspectorSummarizesWebSearchSourceDepth() {
     let summary = TimelineInspectorPresenter.selectedEntrySourceSummary(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
@@ -102,6 +124,14 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "nextCommandLabel": "Publish to Notion",
           "nextCommandInputHint": "Fill parentPageId before publishing.",
           "nextCommandInputTemplate": "{\"parentPageId\":\"\",\"title\":\"Draft\"}",
+          "connectorWorkflowId": "notion.create-page",
+          "connectorWorkflowName": "Notion Create Page",
+          "connectorWorkflowService": "notion",
+          "connectorWorkflowAction": "inspectPageWrite",
+          "connectorWorkflowStage": "inspectBeforeWrite",
+          "connectorWorkflowStatus": "inspected",
+          "connectorWorkflowTarget": "docs/handoff.md",
+          "connectorWorkflowProof": "inspection",
           "targetService": "notion",
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": "docs/handoff.md",
@@ -113,6 +143,13 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Remote approval required: true") == true)
     XCTAssertTrue(summary?.contains("Remote write source: docs/handoff.md") == true)
     XCTAssertTrue(summary?.contains("Remote proof: notRequested") == true)
+    XCTAssertTrue(
+      summary?.contains(
+        "Notion Create Page: inspected | stage inspectBeforeWrite | notion inspectPageWrite"
+      ) == true
+    )
+    XCTAssertTrue(summary?.contains("Workflow target: docs/handoff.md") == true)
+    XCTAssertTrue(summary?.contains("Workflow proof: inspection") == true)
     XCTAssertTrue(
       summary?.contains(
         "Next command: Publish to Notion | notion-connector::notion.publish-page-draft"

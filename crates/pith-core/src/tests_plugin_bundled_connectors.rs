@@ -319,6 +319,14 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
     inspection_item["attributes"]["sourceArtifact"],
     "docs/handoff.md"
   );
+  assert_eq!(
+    inspection_item["attributes"]["connectorWorkflowId"],
+    "notion.create-page"
+  );
+  assert_eq!(
+    inspection_item["attributes"]["connectorWorkflowStatus"],
+    "inspected"
+  );
   assert!(inspection_item["content"]
     .as_str()
     .expect("inspection content")
@@ -337,6 +345,14 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
   assert_eq!(
     handoff_item["attributes"]["sourceArtifact"],
     "docs/handoff.md"
+  );
+  assert_eq!(
+    handoff_item["attributes"]["connectorWorkflowId"],
+    "notion.create-page"
+  );
+  assert_eq!(
+    handoff_item["attributes"]["connectorWorkflowStatus"],
+    "inspected"
   );
 
   let saved_note = context

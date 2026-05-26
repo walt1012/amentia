@@ -1080,6 +1080,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("nextCommandLabel") == "Publish to Notion"
     and "parentPageId" in item.get("attributes", {}).get("nextCommandInputHint", "")
     and "parentPageId" in item.get("attributes", {}).get("nextCommandInputTemplate", "")
+    and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
+    and item.get("attributes", {}).get("connectorWorkflowStatus") == "prepared"
     for item in items
   ):
     raise RuntimeError(
@@ -1147,6 +1149,9 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("remoteProofStatus") == "missing"
     and item.get("attributes", {}).get("retryCommandId") == NOTION_PUBLISH_COMMAND_ID
     and "packaged-smoke-parent" in item.get("attributes", {}).get("retryInput", "")
+    and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
+    and item.get("attributes", {}).get("connectorWorkflowStatus") == "retryNeeded"
+    and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"
     for item in failed_items
   ):
     raise RuntimeError(
@@ -1209,6 +1214,9 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("remoteWriteStatus") == "completed"
     and item.get("attributes", {}).get("remoteProofKind") == "notionApiResponse"
     and item.get("attributes", {}).get("notionPageId") == "packaged-smoke-notion-page"
+    and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
+    and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
+    and item.get("attributes", {}).get("connectorWorkflowProof") == "notionApiResponse"
     for item in published_items
   ):
     raise RuntimeError(

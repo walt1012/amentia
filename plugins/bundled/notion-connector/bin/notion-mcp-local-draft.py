@@ -114,6 +114,13 @@ def prepare_page_draft(arguments: dict[str, Any]) -> dict[str, Any]:
           "sourceArtifact": source,
           "sourceArtifactPreviewProvided": str(bool(preview)).lower(),
           "sourceArtifactTruncated": truncated,
+          **connector_workflow_attributes(
+            stage="draftPrepared",
+            status="prepared",
+            action="preparePageDraft",
+            target=source,
+            proof="localDraft",
+          ),
           **publish_follow_up_attributes(draft_title, content),
         },
       )
@@ -160,6 +167,13 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": source,
           "sourceArtifactPreviewProvided": str(preview_provided).lower(),
+          **connector_workflow_attributes(
+            stage="inspectBeforeWrite",
+            status="inspected",
+            action="inspectPageWrite",
+            target=source,
+            proof="inspection",
+          ),
           **publish_follow_up_attributes(draft_title, content),
         },
       )
@@ -244,6 +258,13 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
             "remoteProofKind": "notionApiResponse",
             "remoteProofStatus": "success",
             "bodyTruncated": str(truncated).lower(),
+            **connector_workflow_attributes(
+              stage="completed",
+              status="completed",
+              action="createPage",
+              target=page_url or page_id,
+              proof="notionApiResponse",
+            ),
           },
         )
       ],
@@ -353,6 +374,14 @@ def publish_retry_needed(
     "retryCommandId": os.environ.get("PITH_PLUGIN_COMMAND_ID", DEFAULT_PUBLISH_COMMAND_ID),
     "retryInput": retry_input_json(input_data),
     "notionParentPageId": parent_page_id,
+    **connector_workflow_attributes(
+      stage="blockedBeforeWrite" if blocked_before_write else "failedBeforeProof",
+      status="retryNeeded",
+      action="createPage",
+      target=parent_page_id,
+      proof="notRequested" if blocked_before_write else "missing",
+      recovery="retry",
+    ),
   }
   return mcp_success(
     request_id,
@@ -377,6 +406,30 @@ def publish_retry_needed(
 
 def retry_input_json(input_data: dict[str, str]) -> str:
   return json.dumps(input_data, ensure_ascii=False, sort_keys=True)
+
+
+def connector_workflow_attributes(
+  *,
+  stage: str,
+  status: str,
+  action: str,
+  target: str,
+  proof: str,
+  recovery: str = "",
+) -> dict[str, str]:
+  attributes = {
+    "connectorWorkflowId": "notion.create-page",
+    "connectorWorkflowName": "Notion Create Page",
+    "connectorWorkflowService": "notion",
+    "connectorWorkflowAction": action,
+    "connectorWorkflowStage": stage,
+    "connectorWorkflowStatus": status,
+    "connectorWorkflowTarget": target,
+    "connectorWorkflowProof": proof,
+  }
+  if recovery:
+    attributes["connectorWorkflowRecovery"] = recovery
+  return attributes
 
 
 def publish_follow_up_attributes(title: str, body: str) -> dict[str, str]:

@@ -165,6 +165,7 @@ enum TimelineInspectorPresenter {
       lines.append(connectorSummary)
     }
 
+    appendConnectorWorkflowSummary(entry, to: &lines)
     appendRemoteWriteSummary(entry, to: &lines)
     appendPluginConnectorRecoverySummary(entry, to: &lines)
     appendPluginRunSummary(entry, to: &lines)
@@ -275,6 +276,15 @@ enum TimelineInspectorPresenter {
       "connectorIds",
       "connectorStatus",
       "connectorRepairHint",
+      "connectorWorkflowId",
+      "connectorWorkflowName",
+      "connectorWorkflowService",
+      "connectorWorkflowAction",
+      "connectorWorkflowStage",
+      "connectorWorkflowStatus",
+      "connectorWorkflowTarget",
+      "connectorWorkflowProof",
+      "connectorWorkflowRecovery",
       "remoteWrite",
       "remoteWriteStage",
       "remoteWriteStatus",
@@ -386,6 +396,34 @@ enum TimelineInspectorPresenter {
     }
     if let repairHint = entry.attributes["connectorRepairHint"] {
       lines.append("Connector repair: \(repairHint)")
+    }
+  }
+
+  private static func appendConnectorWorkflowSummary(
+    _ entry: TimelineEntry,
+    to lines: inout [String]
+  ) {
+    guard entry.attributes["connectorWorkflowId"] != nil
+      || entry.attributes["connectorWorkflowStatus"] != nil
+    else {
+      return
+    }
+
+    let name = entry.attributes["connectorWorkflowName"] ?? "Connector workflow"
+    let status = entry.attributes["connectorWorkflowStatus"] ?? "unknown"
+    let stage = entry.attributes["connectorWorkflowStage"] ?? "unknown stage"
+    let service = entry.attributes["connectorWorkflowService"] ?? "unknown service"
+    let action = entry.attributes["connectorWorkflowAction"] ?? "unknown action"
+    lines.append("\(name): \(status) | stage \(stage) | \(service) \(action)")
+
+    if let target = entry.attributes["connectorWorkflowTarget"] {
+      lines.append("Workflow target: \(target)")
+    }
+    if let proof = entry.attributes["connectorWorkflowProof"] {
+      lines.append("Workflow proof: \(proof)")
+    }
+    if let recovery = entry.attributes["connectorWorkflowRecovery"] {
+      lines.append("Workflow recovery: \(recovery)")
     }
   }
 
