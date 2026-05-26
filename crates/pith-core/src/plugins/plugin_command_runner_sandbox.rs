@@ -305,10 +305,7 @@ mod tests {
       "PITH_PLUGIN_RUNNER_ENV_PITH_TEST_NOTION_API_BASE",
       "http://127.0.0.1:49152/v1",
     );
-    let _unsafe_forwarded = EnvVarGuard::set(
-      "PITH_PLUGIN_RUNNER_ENV_PATH",
-      "/tmp/not-allowed",
-    );
+    let _unsafe_forwarded = EnvVarGuard::set("PITH_PLUGIN_RUNNER_ENV_PATH", "/tmp/not-allowed");
     let workspace_root = unique_temp_workspace("plugin-runner-env");
     let plugin_root = workspace_root.join(".agents/plugins/env");
     fs::create_dir_all(&plugin_root).expect("plugin root");
