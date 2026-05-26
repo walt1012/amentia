@@ -3,6 +3,7 @@ use pith_protocol::{
   PluginCapabilityRegistration, PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
   PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
+  PluginCommandWorkflowSummary,
   PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
   PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInspectParams,
   PluginInspectResult, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
@@ -430,6 +431,7 @@ fn plugin_command_registry_round_trips() {
         driver: "builtin".to_string(),
         entrypoint: None,
         workflow_id: None,
+        workflow: None,
         input: PluginCommandEnvelopeSummary {
           envelope: "pith.plugin.command.input".to_string(),
           fields: vec![PluginCommandEnvelopeFieldSummary {
@@ -506,6 +508,15 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
     driver: "stdio".to_string(),
     entrypoint: Some("bin/notion-sync".to_string()),
     workflow_id: Some("notion.create-page".to_string()),
+    workflow: Some(PluginCommandWorkflowSummary {
+      workflow_id: "notion.create-page".to_string(),
+      display_name: "Notion Create Page".to_string(),
+      connector_id: "notion".to_string(),
+      service: "notion".to_string(),
+      action: "createPage".to_string(),
+      stages: vec!["draftPrepared".to_string(), "completed".to_string()],
+      statuses: vec!["prepared".to_string(), "completed".to_string()],
+    }),
     input: PluginCommandEnvelopeSummary {
       envelope: "pith.plugin.command.input".to_string(),
       fields: vec![
@@ -552,6 +563,8 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
   let value = serde_json::to_value(&execution).expect("serialize plugin execution");
   assert!(value.get("entrypoint").is_some());
   assert_eq!(value["workflowId"], "notion.create-page");
+  assert_eq!(value["workflow"]["displayName"], "Notion Create Page");
+  assert_eq!(value["workflow"]["action"], "createPage");
   assert!(value.get("supported").is_some());
   assert_eq!(value["input"]["fields"][0]["name"], "threadId");
   assert_eq!(value["output"]["fields"][1]["name"], "memoryNotes");
@@ -562,6 +575,10 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
   assert_eq!(decoded.driver, "stdio");
   assert_eq!(decoded.entrypoint.as_deref(), Some("bin/notion-sync"));
   assert_eq!(decoded.workflow_id.as_deref(), Some("notion.create-page"));
+  assert_eq!(
+    decoded.workflow.as_ref().map(|workflow| workflow.service.as_str()),
+    Some("notion")
+  );
   assert_eq!(decoded.input.fields.len(), 3);
   assert_eq!(decoded.output.fields.len(), 2);
   assert!(decoded.supported);

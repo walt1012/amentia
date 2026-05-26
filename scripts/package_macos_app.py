@@ -727,6 +727,7 @@ def assert_bundled_plugin_connector_workflows(
     if isinstance(connector, dict) and isinstance(connector.get("id"), str)
   }
   workflow_ids = set()
+  workflow_connectors = {}
   for workflow in workflows:
     if not isinstance(workflow, dict):
       raise RuntimeError(f"Bundled connector workflow must be an object: {plugin_root}")
@@ -749,6 +750,7 @@ def assert_bundled_plugin_connector_workflows(
     if not isinstance(statuses, list) or not statuses:
       raise RuntimeError(f"Bundled connector workflow is missing statuses: {workflow_id}")
     workflow_ids.add(workflow_id)
+    workflow_connectors[workflow_id] = connector_id
     if f"connector_workflow:{workflow_id}" not in capabilities:
       raise RuntimeError(
         f"Bundled connector workflow is missing capability: {workflow_id}"
@@ -777,6 +779,16 @@ def assert_bundled_plugin_connector_workflows(
     if isinstance(workflow_id, str) and workflow_id.strip() and workflow_id not in workflow_ids:
       raise RuntimeError(
         f"Bundled command {command_id} references undeclared workflow: {workflow_id}"
+      )
+    connectors = execution.get("connectors", [])
+    if (
+      isinstance(workflow_id, str)
+      and workflow_id.strip()
+      and isinstance(connectors, list)
+      and workflow_connectors.get(workflow_id) not in connectors
+    ):
+      raise RuntimeError(
+        f"Bundled command {command_id} workflow is not bound to its connector: {workflow_id}"
       )
 
 

@@ -117,9 +117,20 @@ struct RuntimePluginCommandExecutionPayload: Codable {
   let driver: String
   let entrypoint: String?
   let workflowId: String?
+  let workflow: RuntimePluginCommandWorkflowPayload?
   let input: RuntimePluginCommandEnvelopePayload?
   let output: RuntimePluginCommandEnvelopePayload?
   let supported: Bool
+}
+
+struct RuntimePluginCommandWorkflowPayload: Codable {
+  let workflowId: String
+  let displayName: String
+  let connectorId: String
+  let service: String
+  let action: String
+  let stages: [String]
+  let statuses: [String]
 }
 
 struct RuntimePluginCommandEnvelopePayload: Codable {
@@ -295,9 +306,20 @@ extension RuntimeBridge {
     let driver: String
     let entrypoint: String?
     let workflowID: String?
+    let workflow: RuntimePluginCommandWorkflow?
     let input: RuntimePluginCommandEnvelope?
     let output: RuntimePluginCommandEnvelope?
     let supported: Bool
+  }
+
+  struct RuntimePluginCommandWorkflow {
+    let workflowID: String
+    let displayName: String
+    let connectorID: String
+    let service: String
+    let action: String
+    let stages: [String]
+    let statuses: [String]
   }
 
   struct RuntimePluginCommandEnvelope {

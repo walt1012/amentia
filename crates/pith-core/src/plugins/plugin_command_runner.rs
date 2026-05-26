@@ -322,6 +322,28 @@ pub(super) fn plugin_runner_setup_attributes(
       workflow_id.to_string(),
     );
   }
+  if let Some(workflow) = execution.workflow.as_ref() {
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowName".to_string(),
+      workflow.display_name.clone(),
+    );
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowAction".to_string(),
+      workflow.action.clone(),
+    );
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowService".to_string(),
+      workflow.service.clone(),
+    );
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowStages".to_string(),
+      workflow.stages.join(", "),
+    );
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowStatuses".to_string(),
+      workflow.statuses.join(", "),
+    );
+  }
   insert_envelope_attributes(&mut attributes, "pluginRunnerInput", &execution.input);
   insert_envelope_attributes(&mut attributes, "pluginRunnerOutput", &execution.output);
   attributes

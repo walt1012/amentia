@@ -99,6 +99,17 @@ extension RuntimeBridge {
             driver: $0.driver,
             entrypoint: $0.entrypoint,
             workflowID: $0.workflowId,
+            workflow: $0.workflow.map { workflow in
+              RuntimePluginCommandWorkflow(
+                workflowID: workflow.workflowId,
+                displayName: workflow.displayName,
+                connectorID: workflow.connectorId,
+                service: workflow.service,
+                action: workflow.action,
+                stages: workflow.stages,
+                statuses: workflow.statuses
+              )
+            },
             input: RuntimePluginCommandEnvelopeMapper.map($0.input),
             output: RuntimePluginCommandEnvelopeMapper.map($0.output),
             supported: $0.supported

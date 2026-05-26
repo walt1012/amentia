@@ -7,7 +7,8 @@ use pith_plugin_host::{
 };
 use pith_protocol::{
   PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
-  PluginCommandExecutionSummary, PluginCommandSummary, PluginConnectorSummary, PluginHookSummary,
+  PluginCommandExecutionSummary, PluginCommandSummary, PluginCommandWorkflowSummary,
+  PluginConnectorSummary, PluginHookSummary,
 };
 
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -55,6 +56,18 @@ pub(super) fn to_protocol_plugin_command(
       driver: execution.driver.clone(),
       entrypoint: execution.entrypoint.clone(),
       workflow_id: execution.workflow_id.clone(),
+      workflow: execution
+        .workflow
+        .as_ref()
+        .map(|workflow| PluginCommandWorkflowSummary {
+          workflow_id: workflow.workflow_id.clone(),
+          display_name: workflow.display_name.clone(),
+          connector_id: workflow.connector_id.clone(),
+          service: workflow.service.clone(),
+          action: workflow.action.clone(),
+          stages: workflow.stages.clone(),
+          statuses: workflow.statuses.clone(),
+        }),
       input: to_protocol_plugin_command_envelope(&execution.input),
       output: to_protocol_plugin_command_envelope(&execution.output),
       supported,

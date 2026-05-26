@@ -2,8 +2,12 @@ use std::path::Path;
 
 use anyhow::Error;
 
-use crate::io::read_command_manifest;
-use crate::types::{PluginCatalogEntry, PluginCommandEntry};
+use crate::io::{read_command_manifest, read_manifest};
+use crate::manifest::PluginManifest;
+use crate::types::{
+  PluginCatalogEntry, PluginCommandEntry, PluginCommandExecutionEntry,
+  PluginConnectorWorkflowEntry,
+};
 
 use super::capability_identifier_is_safe;
 use super::command_contract::command_execution_entry;
@@ -18,6 +22,9 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
     let Some(plugin_root) = Path::new(&plugin.manifest_path).parent() else {
       continue;
     };
+    let workflow_entries = read_manifest(Path::new(&plugin.manifest_path))
+      .map(|manifest| connector_workflow_entries(&manifest))
+      .unwrap_or_default();
 
     for capability in &plugin.capabilities {
       let Some((kind, identifier)) = capability.split_once(':') else {
@@ -49,8 +56,9 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         .memory
         .as_ref()
         .map(|memory| memory.note_title.clone());
-      let execution = command.execution.as_ref().and_then(command_execution_entry);
-      let manifest_error = workflow_manifest_error(plugin, identifier, execution.as_ref());
+      let mut execution = command.execution.as_ref().and_then(command_execution_entry);
+      let manifest_error =
+        bind_connector_workflow(plugin, identifier, execution.as_mut(), &workflow_entries);
       let execution_kind = execution.as_ref().map(|execution| execution.kind.clone());
       let memory_note_source = command
         .memory
@@ -91,21 +99,21 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
   commands
 }
 
-fn workflow_manifest_error(
+fn bind_connector_workflow(
   plugin: &PluginCatalogEntry,
   identifier: &str,
-  execution: Option<&crate::types::PluginCommandExecutionEntry>,
+  execution: Option<&mut PluginCommandExecutionEntry>,
+  workflows: &[PluginConnectorWorkflowEntry],
 ) -> Option<String> {
   let execution = execution?;
   let workflow_id = execution.workflow_id.as_deref()?.trim();
   if workflow_id.is_empty() {
     return None;
   }
-  if execution
-    .connector_ids
-    .as_ref()
-    .is_none_or(|connectors| connectors.is_empty())
-  {
+  if matches!(
+    execution.connector_ids.as_ref(),
+    None | Some(connectors) if connectors.is_empty()
+  ) {
     return Some(format!(
       "Plugin command `{identifier}` declares workflow `{workflow_id}` without a connector execution binding."
     ));
@@ -120,8 +128,53 @@ fn workflow_manifest_error(
       "Plugin command `{identifier}` references undeclared connector workflow `{workflow_id}`."
     ));
   }
+  let Some(workflow) = workflows
+    .iter()
+    .find(|workflow| workflow.workflow_id == workflow_id)
+  else {
+    return Some(format!(
+      "Plugin command `{identifier}` references workflow `{workflow_id}` without a connectorWorkflows contract."
+    ));
+  };
+  if !execution
+    .connector_ids
+    .as_ref()
+    .is_some_and(|connectors| {
+      connectors
+        .iter()
+        .any(|connector| connector == &workflow.connector_id)
+    })
+  {
+    return Some(format!(
+      "Plugin command `{identifier}` workflow `{workflow_id}` is not bound to connector `{}`.",
+      workflow.connector_id
+    ));
+  }
+  execution.workflow = Some(workflow.clone());
 
   None
+}
+
+fn connector_workflow_entries(manifest: &PluginManifest) -> Vec<PluginConnectorWorkflowEntry> {
+  manifest
+    .connector_workflows
+    .iter()
+    .filter_map(|workflow| {
+      let connector = manifest
+        .app_connectors
+        .iter()
+        .find(|connector| connector.id == workflow.connector_id)?;
+      Some(PluginConnectorWorkflowEntry {
+        workflow_id: workflow.id.clone(),
+        display_name: workflow.display_name.clone(),
+        connector_id: workflow.connector_id.clone(),
+        service: connector.service.clone(),
+        action: workflow.action.clone(),
+        stages: workflow.stages.clone(),
+        statuses: workflow.statuses.clone(),
+      })
+    })
+    .collect()
 }
 
 fn invalid_command_entry(

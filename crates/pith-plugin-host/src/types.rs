@@ -81,8 +81,21 @@ pub struct PluginCommandExecutionEntry {
   pub entrypoint: Option<String>,
   pub connector_ids: Option<Vec<String>>,
   pub workflow_id: Option<String>,
+  pub workflow: Option<PluginConnectorWorkflowEntry>,
   pub input: PluginCommandEnvelopeEntry,
   pub output: PluginCommandEnvelopeEntry,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorWorkflowEntry {
+  pub workflow_id: String,
+  pub display_name: String,
+  pub connector_id: String,
+  pub service: String,
+  pub action: String,
+  pub stages: Vec<String>,
+  pub statuses: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

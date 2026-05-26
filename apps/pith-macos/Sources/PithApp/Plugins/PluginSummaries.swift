@@ -148,9 +148,20 @@ struct PluginCommandExecutionSummary: Hashable {
   let driver: String
   let entrypoint: String?
   let workflowID: String?
+  let workflow: PluginCommandWorkflowSummary?
   let input: PluginCommandEnvelopeSummary?
   let output: PluginCommandEnvelopeSummary?
   let supported: Bool
+}
+
+struct PluginCommandWorkflowSummary: Hashable {
+  let workflowID: String
+  let displayName: String
+  let connectorID: String
+  let service: String
+  let action: String
+  let stages: [String]
+  let statuses: [String]
 }
 
 struct PluginCommandEnvelopeSummary: Hashable {

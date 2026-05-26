@@ -208,9 +208,25 @@ pub struct PluginCommandExecutionSummary {
   pub entrypoint: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub workflow_id: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workflow: Option<PluginCommandWorkflowSummary>,
   pub input: PluginCommandEnvelopeSummary,
   pub output: PluginCommandEnvelopeSummary,
   pub supported: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginCommandWorkflowSummary {
+  pub workflow_id: String,
+  pub display_name: String,
+  pub connector_id: String,
+  pub service: String,
+  pub action: String,
+  #[serde(default)]
+  pub stages: Vec<String>,
+  #[serde(default)]
+  pub statuses: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

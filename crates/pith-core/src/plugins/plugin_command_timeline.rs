@@ -53,6 +53,21 @@ pub(super) fn build_plugin_command_timeline_item(
   {
     attributes.insert("connectorWorkflowId".to_string(), workflow_id.to_string());
   }
+  if let Some(workflow) = command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.workflow.as_ref())
+  {
+    attributes.insert(
+      "connectorWorkflowName".to_string(),
+      workflow.display_name.clone(),
+    );
+    attributes.insert("connectorWorkflowAction".to_string(), workflow.action.clone());
+    attributes.insert(
+      "connectorWorkflowService".to_string(),
+      workflow.service.clone(),
+    );
+  }
   insert_connector_context_attributes(&mut attributes, connector_refs);
   merge_memory_context_attributes(&mut attributes, memory_context);
 

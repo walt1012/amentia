@@ -17,6 +17,7 @@ from macos_llama_backend import (
 )
 from package_macos_app import (
   LLAMA_BACKEND_RELATIVE_PARENT,
+  assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
   copy_required_llama_backend,
@@ -111,6 +112,63 @@ def main() -> int:
     raise AssertionError("dylib dependencies should allow packaged loader paths")
   if is_packaged_backend_dependency("/external/package-manager/lib/libllama.dylib", True):
     raise AssertionError("absolute non-system dependency paths should be rejected")
+
+  notion_manifest = {
+    "appConnectors": [{"id": "notion", "service": "notion"}],
+    "connectorWorkflows": [
+      {
+        "id": "notion.create-page",
+        "connectorId": "notion",
+        "action": "createPage",
+        "stages": ["draftPrepared"],
+        "statuses": ["prepared"],
+      }
+    ],
+  }
+  workflow_capabilities = {
+    "command:notion.prepare-page-draft",
+    "connector:notion",
+    "connector_workflow:notion.create-page",
+  }
+  with tempfile.TemporaryDirectory(prefix="pith-package-plugin-workflow-") as root:
+    plugin_root = Path(root)
+    commands_dir = plugin_root / "commands"
+    commands_dir.mkdir()
+    (commands_dir / "notion.prepare-page-draft.json").write_text(
+      json.dumps(
+        {
+          "execution": {
+            "workflowId": "notion.create-page",
+            "connectors": ["notion"],
+          }
+        }
+      ),
+      encoding="utf-8",
+    )
+    assert_bundled_plugin_connector_workflows(
+      plugin_root,
+      notion_manifest,
+      workflow_capabilities,
+    )
+    (commands_dir / "notion.prepare-page-draft.json").write_text(
+      json.dumps(
+        {
+          "execution": {
+            "workflowId": "notion.create-page",
+            "connectors": ["slack"],
+          }
+        }
+      ),
+      encoding="utf-8",
+    )
+    assert_raises(
+      lambda: assert_bundled_plugin_connector_workflows(
+        plugin_root,
+        notion_manifest,
+        workflow_capabilities,
+      ),
+      "command workflow must be bound to the declared connector",
+    )
 
   with tempfile.TemporaryDirectory(prefix="pith-package-copy-") as root:
     root_path = Path(root)

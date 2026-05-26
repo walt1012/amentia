@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+use pith_plugin_host::{
+  PluginCommandEntry as HostPluginCommandEntry, PluginConnectorWorkflowEntry,
+};
 use pith_protocol::TimelineItem;
 use serde::Deserialize;
 
@@ -445,24 +447,41 @@ fn plugin_runner_connector_workflow_contract_is_valid(
     return false;
   }
 
+  let Some(workflow_id) = plugin_runner_attribute_value(attributes, "connectorWorkflowId") else {
+    return false;
+  };
+  let Some(service) = plugin_runner_attribute_value(attributes, "connectorWorkflowService") else {
+    return false;
+  };
+  let Some(action) = plugin_runner_attribute_value(attributes, "connectorWorkflowAction") else {
+    return false;
+  };
+  let Some(stage) = plugin_runner_attribute_value(attributes, "connectorWorkflowStage") else {
+    return false;
+  };
   let Some(status) = plugin_runner_attribute_value(attributes, "connectorWorkflowStatus") else {
     return false;
   };
-  if !PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES.contains(&status) {
+
+  let Some(workflow) = plugin_runner_expected_workflow(command) else {
+    if let Some(expected_workflow_id) = plugin_runner_expected_workflow_id(command) {
+      if workflow_id != expected_workflow_id {
+        return false;
+      }
+    }
+    return PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES.contains(&status)
+      && plugin_runner_connector_service_is_bound(attributes, service);
+  };
+  if workflow_id != workflow.workflow_id.as_str()
+    || service != workflow.service.as_str()
+    || action != workflow.action.as_str()
+    || !plugin_runner_workflow_list_contains(&workflow.stages, stage)
+    || !plugin_runner_workflow_list_contains(&workflow.statuses, status)
+  {
     return false;
   }
-
-  if let Some(workflow_id) = plugin_runner_expected_workflow_id(command) {
-    if plugin_runner_attribute_value(attributes, "connectorWorkflowId") != Some(workflow_id) {
-      return false;
-    }
-  }
-  if let Some(service) = plugin_runner_attribute_value(attributes, "connectorWorkflowService") {
-    if attributes.contains_key("pluginRunnerConnectorServices")
-      && !plugin_runner_target_service_is_bound(attributes, service)
-    {
-      return false;
-    }
+  if !plugin_runner_connector_service_is_bound(attributes, service) {
+    return false;
   }
 
   true
@@ -475,12 +494,29 @@ fn plugin_runner_has_connector_workflow(attributes: &HashMap<String, String>) ->
 }
 
 fn plugin_runner_expected_workflow_id(command: &HostPluginCommandEntry) -> Option<&str> {
+  if let Some(workflow) = plugin_runner_expected_workflow(command) {
+    return Some(workflow.workflow_id.as_str());
+  }
+
   command
     .execution
     .as_ref()
     .and_then(|execution| execution.workflow_id.as_deref())
     .map(str::trim)
     .filter(|workflow_id| !workflow_id.is_empty())
+}
+
+fn plugin_runner_expected_workflow(
+  command: &HostPluginCommandEntry,
+) -> Option<&PluginConnectorWorkflowEntry> {
+  command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.workflow.as_ref())
+}
+
+fn plugin_runner_workflow_list_contains(values: &[String], expected: &str) -> bool {
+  values.iter().any(|value| value == expected)
 }
 
 fn plugin_runner_items_include_workflow(items: &[TimelineItem], workflow_id: &str) -> bool {
@@ -491,6 +527,14 @@ fn plugin_runner_items_include_workflow(items: &[TimelineItem], workflow_id: &st
       .and_then(|attributes| plugin_runner_attribute_value(attributes, "connectorWorkflowId"))
       == Some(workflow_id)
   })
+}
+
+fn plugin_runner_connector_service_is_bound(
+  attributes: &HashMap<String, String>,
+  service: &str,
+) -> bool {
+  !attributes.contains_key("pluginRunnerConnectorServices")
+    || plugin_runner_target_service_is_bound(attributes, service)
 }
 
 fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, String>) -> bool {
@@ -640,6 +684,7 @@ mod tests {
     PluginCommandEntry as HostPluginCommandEntry,
     PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
     PluginCommandExecutionEntry as HostPluginCommandExecutionEntry,
+    PluginConnectorWorkflowEntry as HostPluginConnectorWorkflowEntry,
   };
 
   use super::plugin_runner_output;
@@ -1130,6 +1175,81 @@ mod tests {
   }
 
   #[test]
+  fn output_contract_enforces_manifest_workflow_stage_and_action() {
+    let command = test_bound_workflow_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Connector Workflow",
+          "content": "Prepared a connector workflow.",
+          "attributes": {
+            "connectorWorkflowId": "notion.create-page",
+            "connectorWorkflowName": "Notion Create Page",
+            "connectorWorkflowService": "notion",
+            "connectorWorkflowAction": "archivePage",
+            "connectorWorkflowStage": "archived",
+            "connectorWorkflowStatus": "completed",
+            "connectorWorkflowTarget": "workspace",
+            "connectorWorkflowProof": "localDraft"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("undeclared workflow action and stage should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputStatus")
+        .map(String::as_str),
+      Some("missingConnectorWorkflow")
+    );
+  }
+
+  #[test]
+  fn output_contract_accepts_manifest_workflow_shape() {
+    let command = test_bound_workflow_command();
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Connector Workflow",
+          "content": "Prepared a connector workflow.",
+          "attributes": {
+            "connectorWorkflowId": "notion.create-page",
+            "connectorWorkflowName": "Notion Create Page",
+            "connectorWorkflowService": "notion",
+            "connectorWorkflowAction": "createPage",
+            "connectorWorkflowStage": "draftPrepared",
+            "connectorWorkflowStatus": "prepared",
+            "connectorWorkflowTarget": "workspace",
+            "connectorWorkflowProof": "localDraft"
+          }
+        }
+      ]
+    }"#;
+
+    let result = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(result) => result,
+      Err(failure) => panic!("declared workflow shape should pass: {}", failure.message),
+    };
+    let attributes = result.items[0].attributes.as_ref().expect("attributes");
+
+    assert_eq!(
+      attributes
+        .get("pluginRunnerConnectorWorkflowContract")
+        .map(String::as_str),
+      Some("pith.connectorWorkflow.v1")
+    );
+  }
+
+  #[test]
   fn output_contract_marks_failed_remote_write_proof_as_unconfirmed() {
     let command = test_command();
     let output = r#"{
@@ -1261,9 +1381,33 @@ mod tests {
       entrypoint: Some("bin/test-runner".to_string()),
       connector_ids: Some(vec!["notion".to_string()]),
       workflow_id: Some(workflow_id.to_string()),
+      workflow: None,
       input: empty_envelope("pith.plugin.command.input"),
       output: empty_envelope("pith.plugin.command.output"),
     });
+    command
+  }
+
+  fn test_bound_workflow_command() -> HostPluginCommandEntry {
+    let mut command = test_workflow_command("notion.create-page");
+    command.execution.as_mut().expect("execution").workflow =
+      Some(HostPluginConnectorWorkflowEntry {
+        workflow_id: "notion.create-page".to_string(),
+        display_name: "Notion Create Page".to_string(),
+        connector_id: "notion".to_string(),
+        service: "notion".to_string(),
+        action: "createPage".to_string(),
+        stages: vec![
+          "draftPrepared".to_string(),
+          "inspectBeforeWrite".to_string(),
+          "completed".to_string(),
+        ],
+        statuses: vec![
+          "prepared".to_string(),
+          "inspected".to_string(),
+          "completed".to_string(),
+        ],
+      });
     command
   }
 

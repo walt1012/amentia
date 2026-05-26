@@ -39,6 +39,7 @@ pub(super) fn command_execution_entry(
       .map(str::trim)
       .filter(|workflow_id| !workflow_id.is_empty())
       .map(str::to_string),
+    workflow: None,
     input: command_envelope_entry(execution.input.as_ref(), default_input_envelope()),
     output: command_envelope_entry(execution.output.as_ref(), default_output_envelope()),
   })
