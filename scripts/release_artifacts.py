@@ -57,6 +57,7 @@ def release_manifest(
   artifact_path: Path,
   checksum_path: Path,
   install_guide_path: Path,
+  package_manifest_path: Path | None = None,
 ) -> dict:
   validate_release_identity(tag, source_commit, signing_mode)
   validate_release_asset_names(
@@ -67,8 +68,13 @@ def release_manifest(
   )
   validate_checksum_file(artifact_path, checksum_path)
   validate_install_guide_for_tag(install_guide_path, tag)
+  package_summary = package_manifest_summary(
+    package_manifest_path,
+    source_commit=source_commit,
+    signing_mode=signing_mode,
+  )
 
-  return {
+  manifest = {
     "schemaVersion": 1,
     "tag": tag,
     "releaseKind": release_kind(tag),
@@ -109,6 +115,9 @@ def release_manifest(
       },
     ],
   }
+  if package_summary is not None:
+    manifest["appPackage"] = package_summary
+  return manifest
 
 
 def write_release_manifest(
@@ -120,6 +129,7 @@ def write_release_manifest(
   checksum_path: Path,
   install_guide_path: Path,
   output_path: Path,
+  package_manifest_path: Path | None = None,
 ) -> Path:
   validate_release_manifest_name(tag, output_path)
   output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,6 +142,7 @@ def write_release_manifest(
         artifact_path=artifact_path,
         checksum_path=checksum_path,
         install_guide_path=install_guide_path,
+        package_manifest_path=package_manifest_path,
       ),
       indent=2,
       sort_keys=True,
@@ -144,6 +155,7 @@ def write_release_manifest(
     artifact_path=artifact_path,
     checksum_path=checksum_path,
     install_guide_path=install_guide_path,
+    package_manifest_path=package_manifest_path,
   )
   return output_path
 
@@ -154,6 +166,7 @@ def validate_release_manifest(
   artifact_path: Path,
   checksum_path: Path,
   install_guide_path: Path,
+  package_manifest_path: Path | None = None,
 ) -> None:
   if not manifest_path.is_file():
     raise FileNotFoundError(f"Release manifest is missing: {manifest_path}")
@@ -179,6 +192,13 @@ def validate_release_manifest(
   }
   if set(by_name) != expected_artifact_names:
     raise RuntimeError("Release manifest artifacts must exactly match release assets")
+  package_summary = package_manifest_summary(
+    package_manifest_path,
+    source_commit=manifest["sourceCommit"],
+    signing_mode=manifest["signingMode"],
+  )
+  if package_summary is not None and manifest.get("appPackage") != package_summary:
+    raise RuntimeError("Release manifest app package summary does not match PithPackage.json")
   artifact_entry = by_name.get(artifact_path.name)
   if artifact_entry is None:
     raise RuntimeError("Release manifest is missing the DMG artifact entry")
@@ -227,6 +247,55 @@ def validate_manifest_artifacts(artifacts: list) -> dict[str, dict]:
       raise RuntimeError("Release manifest artifact names must be unique")
     by_name[name] = item
   return by_name
+
+
+def package_manifest_summary(
+  package_manifest_path: Path | None,
+  *,
+  source_commit: str,
+  signing_mode: str,
+) -> dict | None:
+  if package_manifest_path is None:
+    return None
+  package_manifest = read_json_object(package_manifest_path, "PithPackage.json")
+  expected_values = {
+    "appName": "Pith",
+    "minimumSystemVersion": "12.0",
+    "architecture": "x86_64",
+    "sourceCommit": source_commit,
+    "signing": signing_mode,
+    "modelDelivery": "in-app-download",
+    "defaultModelId": "lfm2.5-350m",
+    "modelWeightsBundled": False,
+  }
+  for field, expected in expected_values.items():
+    if package_manifest.get(field) != expected:
+      raise RuntimeError(
+        f"PithPackage.json field {field} must be {expected!r}: {package_manifest_path}"
+      )
+  bundle_version = package_manifest.get("bundleVersion")
+  if not isinstance(bundle_version, str) or not bundle_version.strip():
+    raise RuntimeError(f"PithPackage.json bundleVersion is required: {package_manifest_path}")
+  return {
+    "manifest": package_manifest_path.name,
+    "bundleVersion": bundle_version,
+    "sourceCommit": source_commit,
+    "signing": signing_mode,
+    "architecture": "x86_64",
+    "minimumSystemVersion": "12.0",
+    "modelDelivery": "in-app-download",
+    "defaultModelId": "lfm2.5-350m",
+    "modelWeightsBundled": False,
+  }
+
+
+def read_json_object(path: Path, label: str) -> dict:
+  if not path.is_file():
+    raise FileNotFoundError(f"{label} is missing: {path}")
+  data = json.loads(path.read_text(encoding="utf-8"))
+  if not isinstance(data, dict):
+    raise RuntimeError(f"{label} must be a JSON object: {path}")
+  return data
 
 
 def validate_release_identity(tag: str, source_commit: str, signing_mode: str) -> None:
@@ -391,6 +460,7 @@ def main() -> int:
   parser.add_argument("--checksum-output", type=Path)
   parser.add_argument("--manifest-output", type=Path)
   parser.add_argument("--install-guide", type=Path)
+  parser.add_argument("--package-manifest", type=Path)
   parser.add_argument("--tag")
   parser.add_argument("--source-commit")
   parser.add_argument("--signing-mode", choices=sorted(SUPPORTED_SIGNING_MODES))
@@ -408,10 +478,11 @@ def main() -> int:
         or not args.source_commit
         or not args.signing_mode
         or not args.install_guide
+        or not args.package_manifest
       ):
         raise RuntimeError(
           "--manifest-output requires --tag, --source-commit, --signing-mode, "
-          "and --install-guide"
+          "--install-guide, and --package-manifest"
         )
       manifest_path = write_release_manifest(
         tag=args.tag,
@@ -420,6 +491,7 @@ def main() -> int:
         artifact_path=args.artifact.resolve(),
         checksum_path=checksum_path,
         install_guide_path=args.install_guide.resolve(),
+        package_manifest_path=args.package_manifest.resolve(),
         output_path=args.manifest_output.resolve(),
       )
   except Exception as error:

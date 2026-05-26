@@ -144,6 +144,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--tag "ci-${GITHUB_SHA::12}"',
       '--signing-mode ad-hoc',
       '--install-guide artifacts/macos/README-FIRST.txt',
+      '--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json',
       '--manifest-output artifacts/macos/internal-release-manifest.json',
     )
     for term in required_release_artifact_args:
@@ -192,6 +193,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--tag "$RELEASE_TAG"',
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
     '--install-guide artifacts/macos/README-FIRST.txt',
+    '--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json',
     '--manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
   )
   for term in required_release_artifact_args:

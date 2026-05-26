@@ -67,6 +67,7 @@ jobs:
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
+            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
             --manifest-output artifacts/macos/internal-release-manifest.json
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
@@ -109,6 +110,7 @@ jobs:
             --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
+            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
             --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
       - name: Publish GitHub Release
         run: |
@@ -206,6 +208,17 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
+        "--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "PithPackage.json")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
         "            --manifest-output artifacts/macos/internal-release-manifest.json\n",
         "",
       ),
@@ -219,6 +232,17 @@ def main() -> int:
       release=VALID_RELEASE.replace('--source-commit "$PITH_RELEASE_SHA"', ""),
     )
     assert_issue(issue_messages(root), "release manifest must include")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "PithPackage.json")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

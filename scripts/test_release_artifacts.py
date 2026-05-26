@@ -22,6 +22,35 @@ from release_text import install_guide as release_install_guide
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
+def write_package_manifest(
+  path: Path,
+  *,
+  source_commit: str = SOURCE_COMMIT,
+  signing: str = "ad-hoc",
+  model_delivery: str = "in-app-download",
+) -> Path:
+  path.write_text(
+    json.dumps(
+      {
+        "appName": "Pith",
+        "bundleVersion": "0.1.0",
+        "minimumSystemVersion": "12.0",
+        "architecture": "x86_64",
+        "sourceCommit": source_commit,
+        "signing": signing,
+        "modelDelivery": model_delivery,
+        "defaultModelId": "lfm2.5-350m",
+        "modelWeightsBundled": False,
+      },
+      indent=2,
+      sort_keys=True,
+    )
+    + "\n",
+    encoding="utf-8",
+  )
+  return path
+
+
 def assert_raises(action, message: str) -> None:
   try:
     action()
@@ -35,6 +64,7 @@ def main() -> int:
     root_path = Path(root)
     artifact = root_path / "Pith-v0.1.0-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
+    package_manifest = write_package_manifest(root_path / "PithPackage.json")
     artifact.write_bytes(b"pith release artifact\n")
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc"),
@@ -58,6 +88,7 @@ def main() -> int:
       artifact_path=artifact,
       checksum_path=checksum_path,
       install_guide_path=install_guide,
+      package_manifest_path=package_manifest,
     )
     if manifest["platform"]["architecture"] != "x86_64":
       raise AssertionError("release manifest should lock the macOS architecture")
@@ -69,6 +100,10 @@ def main() -> int:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
+    if manifest["appPackage"]["sourceCommit"] != SOURCE_COMMIT:
+      raise AssertionError("release manifest should summarize packaged app source")
+    if manifest["appPackage"]["signing"] != "ad-hoc":
+      raise AssertionError("release manifest should summarize packaged app signing")
     manifest_artifacts = {
       item["name"]: item
       for item in manifest["artifacts"]
@@ -88,6 +123,7 @@ def main() -> int:
         artifact_path=artifact,
         checksum_path=checksum_path,
         install_guide_path=install_guide,
+        package_manifest_path=package_manifest,
         output_path=root_path / "release-manifest.json",
       ),
       "public release manifest file names should match the release tag",
@@ -99,6 +135,7 @@ def main() -> int:
       artifact_path=artifact,
       checksum_path=checksum_path,
       install_guide_path=install_guide,
+      package_manifest_path=package_manifest,
       output_path=root_path / "Pith-v0.1.0-release-manifest.json",
     )
     validate_release_manifest(
@@ -106,6 +143,7 @@ def main() -> int:
       artifact_path=artifact,
       checksum_path=checksum_path,
       install_guide_path=install_guide,
+      package_manifest_path=package_manifest,
     )
 
     manifest_data = manifest_path.read_text(encoding="utf-8")
@@ -162,6 +200,21 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "wrong source commit should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["appPackage"]["signing"] = "developer-id"
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=package_manifest,
+      ),
+      "wrong release app package summary should fail validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
@@ -321,6 +374,57 @@ def main() -> int:
       encoding="utf-8",
     )
 
+    wrong_package_manifest = write_package_manifest(
+      root_path / "WrongSourcePithPackage.json",
+      source_commit="abcdef0123456789abcdef0123456789abcdef01",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject mismatched packaged app source commits",
+    )
+
+    wrong_package_manifest = write_package_manifest(
+      root_path / "WrongSigningPithPackage.json",
+      signing="developer-id",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject mismatched packaged app signing",
+    )
+
+    wrong_package_manifest = write_package_manifest(
+      root_path / "WrongModelDeliveryPithPackage.json",
+      model_delivery="bundled",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject wrong packaged app model delivery",
+    )
+
     artifact.write_bytes(b"tampered release artifact\n")
     assert_raises(
       lambda: validate_checksum_file(artifact, checksum_path),
@@ -340,6 +444,7 @@ def main() -> int:
     root_path = Path(root)
     artifact = root_path / "Pith-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
+    package_manifest = write_package_manifest(root_path / "PithPackage.json")
     artifact.write_bytes(b"pith internal ci artifact\n")
     install_guide.write_text(
       release_install_guide("ci-0123456789ab", "ad-hoc"),
@@ -354,6 +459,7 @@ def main() -> int:
         artifact_path=artifact,
         checksum_path=checksum_path,
         install_guide_path=install_guide,
+        package_manifest_path=package_manifest,
         output_path=root_path / "release-manifest.json",
       ),
       "internal release manifest file names should be stable",
@@ -365,6 +471,7 @@ def main() -> int:
       artifact_path=artifact,
       checksum_path=checksum_path,
       install_guide_path=install_guide,
+      package_manifest_path=package_manifest,
     )
     if manifest["releaseKind"] != "internal-ci":
       raise AssertionError("ci tags should produce internal release manifests")

@@ -562,6 +562,7 @@ jobs:
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
+            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
             --manifest-output artifacts/macos/internal-release-manifest.json
 
       - name: Upload macOS app artifact
