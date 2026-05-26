@@ -429,6 +429,7 @@ fn plugin_command_registry_round_trips() {
         kind: "builtin.workspaceReadmeNote".to_string(),
         driver: "builtin".to_string(),
         entrypoint: None,
+        workflow_id: None,
         input: PluginCommandEnvelopeSummary {
           envelope: "pith.plugin.command.input".to_string(),
           fields: vec![PluginCommandEnvelopeFieldSummary {
@@ -504,6 +505,7 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
     kind: "stdio.notionSync".to_string(),
     driver: "stdio".to_string(),
     entrypoint: Some("bin/notion-sync".to_string()),
+    workflow_id: Some("notion.create-page".to_string()),
     input: PluginCommandEnvelopeSummary {
       envelope: "pith.plugin.command.input".to_string(),
       fields: vec![
@@ -549,6 +551,7 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
 
   let value = serde_json::to_value(&execution).expect("serialize plugin execution");
   assert!(value.get("entrypoint").is_some());
+  assert_eq!(value["workflowId"], "notion.create-page");
   assert!(value.get("supported").is_some());
   assert_eq!(value["input"]["fields"][0]["name"], "threadId");
   assert_eq!(value["output"]["fields"][1]["name"], "memoryNotes");
@@ -558,6 +561,7 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
 
   assert_eq!(decoded.driver, "stdio");
   assert_eq!(decoded.entrypoint.as_deref(), Some("bin/notion-sync"));
+  assert_eq!(decoded.workflow_id.as_deref(), Some("notion.create-page"));
   assert_eq!(decoded.input.fields.len(), 3);
   assert_eq!(decoded.output.fields.len(), 2);
   assert!(decoded.supported);

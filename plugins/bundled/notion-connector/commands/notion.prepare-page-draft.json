@@ -6,7 +6,8 @@
     "kind": "mcp.notion.preparePageDraft",
     "driver": "mcp",
     "entrypoint": "notion.preparePageDraft",
-    "connectors": ["notion"]
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page"
   },
   "memory": {
     "noteTitle": "Notion Page Draft",

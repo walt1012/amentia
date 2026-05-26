@@ -11,6 +11,7 @@
     "command:notion.inspect-page-write",
     "command:notion.publish-page-draft",
     "connector:notion",
+    "connector_workflow:notion.create-page",
     "mcp_server:notion",
     "prompt_pack:notion.workspace"
   ],
@@ -38,6 +39,26 @@
       "displayName": "Notion",
       "service": "notion",
       "homepage": "https://www.notion.so"
+    }
+  ],
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "stages": [
+        "draftPrepared",
+        "inspectBeforeWrite",
+        "completed",
+        "failedBeforeProof"
+      ],
+      "statuses": [
+        "prepared",
+        "inspected",
+        "completed",
+        "retryNeeded"
+      ]
     }
   ],
   "authPolicy": {

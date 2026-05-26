@@ -49,7 +49,7 @@ Memory owns meaning and ranking. Storage owns durable records.
 
 ## Closed Foundation
 
-Milestones 1-7 are closed. Keep implementation detail in git history, not in
+Milestones 1-8 are closed. Keep implementation detail in git history, not in
 this roadmap.
 
 Closed capabilities:
@@ -67,7 +67,7 @@ Closed capabilities:
   release-state safety, native sandbox fallback disclosure, and unsigned
   distribution path with optional Developer ID upgrade later.
 
-## Current Milestone: M8 Release Candidate
+## Closed Milestone: M8 Release Candidate
 
 Goal: prove Pith works as a real downloadable macOS app for non-developer users.
 
@@ -86,7 +86,7 @@ Done:
   traversal, symlink leakage, non-`x86_64` outputs, and untracked release asset
   drift.
 
-Close M8 when:
+Keep M8 healthy by preserving these release gates:
 
 - A release-candidate workflow proves the downloadable DMG, checksum, install
   guide, manifest, source commit, first-run model path, workspace path, Web
@@ -100,7 +100,7 @@ Close M8 when:
 - Packaged smoke stays focused on real user journeys. Add UI automation only
   when the app has a stable UI automation harness.
 
-## Next Milestone: M9 Cowork Connectors
+## Current Milestone: M9 Cowork Connectors
 
 Goal: make Pith useful for real non-code cowork tasks without turning the app
 into a marketplace shell or a generic RAG product.
@@ -124,11 +124,11 @@ Work order:
   panels, and no feature surface without a daily cowork use case.
 - Refactor only at ownership or failure boundaries exposed by connector work.
 
-Current focus: graduate the Notion create-page path into a reusable connector
-workflow contract; packaged smoke now proves publish execution, runner-enforced
-workflow metadata, draft-to-publish handoff, guided publish input templates,
-retry guidance, retry input handoff, remote proof, publish memory, and restart
-recovery.
+Current focus: make connector workflows declarative and reusable. The Notion
+create-page path now declares a manifest workflow, commands bind to `workflowId`,
+runner output must return matching workflow proof, and the app can display the
+workflow binding. Next, turn this into the narrow template for additional
+cowork connectors without adding marketplace complexity.
 
 ## Guardrails
 

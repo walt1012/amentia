@@ -131,6 +131,7 @@ enum RuntimeSummaryMapper {
           kind: $0.kind,
           driver: $0.driver,
           entrypoint: $0.entrypoint,
+          workflowID: $0.workflowID,
           input: pluginCommandEnvelopeSummary(from: $0.input),
           output: pluginCommandEnvelopeSummary(from: $0.output),
           supported: $0.supported

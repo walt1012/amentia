@@ -123,6 +123,8 @@ pub(super) fn plugin_runner_output(
   let (items, invalid_item_count) =
     plugin_runner_timeline_items(command, execution_kind, &attributes, envelope.items);
   let memory_note_selection = plugin_runner_memory_notes(envelope.memory_notes);
+  let missing_workflow_item = plugin_runner_expected_workflow_id(command)
+    .is_some_and(|workflow_id| !plugin_runner_items_include_workflow(&items, workflow_id));
   insert_plugin_runner_output_attributes(
     &mut attributes,
     &content,
@@ -132,6 +134,25 @@ pub(super) fn plugin_runner_output(
     memory_note_selection.invalid_count,
     memory_note_selection.truncated_count,
   );
+  if missing_workflow_item {
+    attributes.insert(
+      "pluginRunnerOutputStatus".to_string(),
+      "missingConnectorWorkflow".to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!(
+          "Plugin command `{}` is bound to a connector workflow but did not return a valid workflow timeline item.",
+          command.command_id
+        ),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
   if invalid_item_count > 0 || memory_note_selection.invalid_count > 0 {
     attributes.insert(
       "pluginRunnerOutputStatus".to_string(),
@@ -382,7 +403,7 @@ fn plugin_runner_timeline_item(
   if !plugin_runner_remote_write_contract_is_valid(&attributes) {
     return None;
   }
-  if !plugin_runner_connector_workflow_contract_is_valid(&attributes) {
+  if !plugin_runner_connector_workflow_contract_is_valid(command, &attributes) {
     return None;
   }
   insert_plugin_runner_remote_write_contract(&mut attributes);
@@ -401,6 +422,7 @@ fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
 }
 
 fn plugin_runner_connector_workflow_contract_is_valid(
+  command: &HostPluginCommandEntry,
   attributes: &HashMap<String, String>,
 ) -> bool {
   if !plugin_runner_has_connector_workflow(attributes) {
@@ -426,13 +448,48 @@ fn plugin_runner_connector_workflow_contract_is_valid(
   let Some(status) = plugin_runner_attribute_value(attributes, "connectorWorkflowStatus") else {
     return false;
   };
-  PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES.contains(&status)
+  if !PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES.contains(&status) {
+    return false;
+  }
+
+  if let Some(workflow_id) = plugin_runner_expected_workflow_id(command) {
+    if plugin_runner_attribute_value(attributes, "connectorWorkflowId") != Some(workflow_id) {
+      return false;
+    }
+  }
+  if let Some(service) = plugin_runner_attribute_value(attributes, "connectorWorkflowService") {
+    if attributes.contains_key("pluginRunnerConnectorServices")
+      && !plugin_runner_target_service_is_bound(attributes, service)
+    {
+      return false;
+    }
+  }
+
+  true
 }
 
 fn plugin_runner_has_connector_workflow(attributes: &HashMap<String, String>) -> bool {
   attributes
     .keys()
     .any(|key| key.starts_with("connectorWorkflow"))
+}
+
+fn plugin_runner_expected_workflow_id(command: &HostPluginCommandEntry) -> Option<&str> {
+  command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.workflow_id.as_deref())
+    .map(str::trim)
+    .filter(|workflow_id| !workflow_id.is_empty())
+}
+
+fn plugin_runner_items_include_workflow(items: &[TimelineItem], workflow_id: &str) -> bool {
+  items.iter().any(|item| {
+    item.attributes
+      .as_ref()
+      .and_then(|attributes| plugin_runner_attribute_value(attributes, "connectorWorkflowId"))
+      == Some(workflow_id)
+  })
 }
 
 fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, String>) -> bool {
@@ -578,7 +635,11 @@ fn plugin_runner_reserved_attribute(key: &str) -> bool {
 mod tests {
   use std::collections::HashMap;
 
-  use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
+  use pith_plugin_host::{
+    PluginCommandEntry as HostPluginCommandEntry,
+    PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
+    PluginCommandExecutionEntry as HostPluginCommandExecutionEntry,
+  };
 
   use super::plugin_runner_output;
 
@@ -1008,6 +1069,66 @@ mod tests {
   }
 
   #[test]
+  fn output_contract_rejects_unbound_connector_workflow_id() {
+    let command = test_workflow_command("notion.create-page");
+    let output = r#"{
+      "items": [
+        {
+          "kind": "pluginResult",
+          "title": "Connector Workflow",
+          "content": "Prepared a connector workflow.",
+          "attributes": {
+            "connectorWorkflowId": "slack.send-message",
+            "connectorWorkflowName": "Slack Send Message",
+            "connectorWorkflowService": "slack",
+            "connectorWorkflowAction": "sendMessage",
+            "connectorWorkflowStage": "messagePrepared",
+            "connectorWorkflowStatus": "prepared",
+            "connectorWorkflowTarget": "workspace",
+            "connectorWorkflowProof": "localDraft"
+          }
+        }
+      ]
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("workflow id mismatch should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputStatus")
+        .map(String::as_str),
+      Some("missingConnectorWorkflow")
+    );
+  }
+
+  #[test]
+  fn output_contract_requires_workflow_item_for_workflow_command() {
+    let command = test_workflow_command("notion.create-page");
+    let output = r#"{
+      "content": "The connector command finished without workflow proof."
+    }"#;
+
+    let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
+      Ok(_) => panic!("workflow command output without workflow item should fail"),
+      Err(failure) => failure,
+    };
+
+    assert_eq!(failure.code, -32054);
+    assert_eq!(
+      failure
+        .attributes
+        .get("pluginRunnerOutputStatus")
+        .map(String::as_str),
+      Some("missingConnectorWorkflow")
+    );
+  }
+
+  #[test]
   fn output_contract_marks_failed_remote_write_proof_as_unconfirmed() {
     let command = test_command();
     let output = r#"{
@@ -1128,6 +1249,27 @@ mod tests {
       memory_note_title: None,
       memory_note_source: None,
       memory_note_tags: vec![],
+    }
+  }
+
+  fn test_workflow_command(workflow_id: &str) -> HostPluginCommandEntry {
+    let mut command = test_command();
+    command.execution = Some(HostPluginCommandExecutionEntry {
+      kind: "stdio.test".to_string(),
+      driver: "stdio".to_string(),
+      entrypoint: Some("bin/test-runner".to_string()),
+      connector_ids: Some(vec!["notion".to_string()]),
+      workflow_id: Some(workflow_id.to_string()),
+      input: empty_envelope("pith.plugin.command.input"),
+      output: empty_envelope("pith.plugin.command.output"),
+    });
+    command
+  }
+
+  fn empty_envelope(envelope: &str) -> HostPluginCommandEnvelopeEntry {
+    HostPluginCommandEnvelopeEntry {
+      envelope: envelope.to_string(),
+      fields: vec![],
     }
   }
 }

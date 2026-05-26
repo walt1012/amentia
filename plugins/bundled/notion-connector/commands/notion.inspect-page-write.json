@@ -6,7 +6,8 @@
     "kind": "mcp.notion.inspectPageWrite",
     "driver": "mcp",
     "entrypoint": "notion.inspectPageWrite",
-    "connectors": ["notion"]
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page"
   },
   "memory": {
     "noteTitle": "Notion Write Inspection",

@@ -44,6 +44,15 @@ pub(super) fn build_plugin_command_timeline_item(
   if let Some(execution_kind) = command.execution_kind.as_ref() {
     attributes.insert("executionKind".to_string(), execution_kind.clone());
   }
+  if let Some(workflow_id) = command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.workflow_id.as_deref())
+    .map(str::trim)
+    .filter(|workflow_id| !workflow_id.is_empty())
+  {
+    attributes.insert("connectorWorkflowId".to_string(), workflow_id.to_string());
+  }
   insert_connector_context_attributes(&mut attributes, connector_refs);
   merge_memory_context_attributes(&mut attributes, memory_context);
 

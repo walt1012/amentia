@@ -20,8 +20,8 @@ mod validation;
 pub use catalog::{discover_plugins, discover_plugins_in_roots};
 pub use lifecycle::{inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle};
 pub use manifest::{
-  PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor, PluginManifest,
-  PluginMcpServerManifest, PluginSkillManifest,
+  PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor,
+  PluginConnectorWorkflowManifest, PluginManifest, PluginMcpServerManifest, PluginSkillManifest,
 };
 pub use paths::{configured_plugin_install_root, configured_plugin_roots, default_plugin_root};
 pub use registry::{

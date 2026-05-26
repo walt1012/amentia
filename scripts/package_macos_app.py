@@ -88,6 +88,7 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
     "command:notion.inspect-page-write",
     "command:notion.publish-page-draft",
     "connector:notion",
+    "connector_workflow:notion.create-page",
     "mcp_server:notion",
   },
   "review-assistant": {"command:review.inspect-diff"},
@@ -673,6 +674,7 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
       missing = ", ".join(sorted(missing_capabilities))
       raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
     assert_bundled_plugin_capability_files(plugin_root, capabilities)
+    assert_bundled_plugin_connector_workflows(plugin_root, manifest, capabilities)
     assert_bundled_plugin_skill_files(plugin_root, manifest)
     assert_bundled_plugin_mcp_server_files(plugin_root, manifest, capabilities)
 
@@ -708,6 +710,74 @@ def assert_bundled_plugin_capability_files(plugin_root: Path, capabilities: set[
       hook_path = plugin_root / "hooks" / f"{hook_id}.json"
       require_file(hook_path, f"bundled plugin hook {hook_id}")
       read_json_object(hook_path)
+
+
+def assert_bundled_plugin_connector_workflows(
+  plugin_root: Path,
+  manifest: dict,
+  capabilities: set[str],
+) -> None:
+  workflows = manifest.get("connectorWorkflows", [])
+  if not isinstance(workflows, list):
+    raise RuntimeError(f"Bundled plugin connectorWorkflows must be a list: {plugin_root}")
+
+  connector_ids = {
+    connector.get("id")
+    for connector in manifest.get("appConnectors", [])
+    if isinstance(connector, dict) and isinstance(connector.get("id"), str)
+  }
+  workflow_ids = set()
+  for workflow in workflows:
+    if not isinstance(workflow, dict):
+      raise RuntimeError(f"Bundled connector workflow must be an object: {plugin_root}")
+    workflow_id = workflow.get("id")
+    connector_id = workflow.get("connectorId")
+    action = workflow.get("action")
+    stages = workflow.get("stages")
+    statuses = workflow.get("statuses")
+    if not isinstance(workflow_id, str) or not workflow_id.strip():
+      raise RuntimeError(f"Bundled connector workflow is missing id: {plugin_root}")
+    assert_safe_capability_identifier(workflow_id, f"connector_workflow:{workflow_id}")
+    if connector_id not in connector_ids:
+      raise RuntimeError(
+        f"Bundled connector workflow references an undeclared connector: {workflow_id}"
+      )
+    if not isinstance(action, str) or not action.strip():
+      raise RuntimeError(f"Bundled connector workflow is missing action: {workflow_id}")
+    if not isinstance(stages, list) or not stages:
+      raise RuntimeError(f"Bundled connector workflow is missing stages: {workflow_id}")
+    if not isinstance(statuses, list) or not statuses:
+      raise RuntimeError(f"Bundled connector workflow is missing statuses: {workflow_id}")
+    workflow_ids.add(workflow_id)
+    if f"connector_workflow:{workflow_id}" not in capabilities:
+      raise RuntimeError(
+        f"Bundled connector workflow is missing capability: {workflow_id}"
+      )
+
+  for capability in capabilities:
+    if capability.startswith("connector_workflow:"):
+      workflow_id = capability.removeprefix("connector_workflow:")
+      if workflow_id not in workflow_ids:
+        raise RuntimeError(
+          f"Bundled connector workflow capability has no declaration: {capability}"
+        )
+
+  for capability in capabilities:
+    if not capability.startswith("command:"):
+      continue
+    command_id = capability.removeprefix("command:")
+    command_path = plugin_root / "commands" / f"{command_id}.json"
+    if not command_path.exists():
+      continue
+    command = read_json_object(command_path)
+    execution = command.get("execution", {})
+    if not isinstance(execution, dict):
+      continue
+    workflow_id = execution.get("workflowId")
+    if isinstance(workflow_id, str) and workflow_id.strip() and workflow_id not in workflow_ids:
+      raise RuntimeError(
+        f"Bundled command {command_id} references undeclared workflow: {workflow_id}"
+      )
 
 
 def assert_safe_capability_identifier(identifier: str, capability: str) -> None:

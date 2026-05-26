@@ -311,6 +311,17 @@ pub(super) fn plugin_runner_setup_attributes(
   {
     attributes.insert("pluginRunnerEntrypoint".to_string(), entrypoint.to_string());
   }
+  if let Some(workflow_id) = execution
+    .workflow_id
+    .as_deref()
+    .map(str::trim)
+    .filter(|workflow_id| !workflow_id.is_empty())
+  {
+    attributes.insert(
+      "pluginRunnerConnectorWorkflowId".to_string(),
+      workflow_id.to_string(),
+    );
+  }
   insert_envelope_attributes(&mut attributes, "pluginRunnerInput", &execution.input);
   insert_envelope_attributes(&mut attributes, "pluginRunnerOutput", &execution.output);
   attributes

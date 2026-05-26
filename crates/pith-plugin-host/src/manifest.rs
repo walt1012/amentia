@@ -26,6 +26,8 @@ pub struct PluginManifest {
   #[serde(default)]
   pub app_connectors: Vec<PluginAppConnectorManifest>,
   #[serde(default)]
+  pub connector_workflows: Vec<PluginConnectorWorkflowManifest>,
+  #[serde(default)]
   pub auth_policy: Option<PluginAuthPolicyManifest>,
   pub default_enabled: bool,
 }
@@ -58,6 +60,19 @@ pub struct PluginAppConnectorManifest {
   pub service: String,
   #[serde(default)]
   pub homepage: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginConnectorWorkflowManifest {
+  pub id: String,
+  pub display_name: String,
+  pub connector_id: String,
+  pub action: String,
+  #[serde(default)]
+  pub stages: Vec<String>,
+  #[serde(default)]
+  pub statuses: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,6 +110,8 @@ pub(crate) struct PluginCommandExecutionManifest {
   pub(crate) entrypoint: Option<String>,
   #[serde(default)]
   pub(crate) connectors: Option<Vec<String>>,
+  #[serde(default)]
+  pub(crate) workflow_id: Option<String>,
   #[serde(default)]
   pub(crate) input: Option<PluginCommandEnvelopeManifest>,
   #[serde(default)]

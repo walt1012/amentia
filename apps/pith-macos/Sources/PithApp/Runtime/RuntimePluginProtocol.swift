@@ -116,6 +116,7 @@ struct RuntimePluginCommandExecutionPayload: Codable {
   let kind: String
   let driver: String
   let entrypoint: String?
+  let workflowId: String?
   let input: RuntimePluginCommandEnvelopePayload?
   let output: RuntimePluginCommandEnvelopePayload?
   let supported: Bool
@@ -293,6 +294,7 @@ extension RuntimeBridge {
     let kind: String
     let driver: String
     let entrypoint: String?
+    let workflowID: String?
     let input: RuntimePluginCommandEnvelope?
     let output: RuntimePluginCommandEnvelope?
     let supported: Bool

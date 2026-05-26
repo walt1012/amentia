@@ -50,6 +50,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         .as_ref()
         .map(|memory| memory.note_title.clone());
       let execution = command.execution.as_ref().and_then(command_execution_entry);
+      let manifest_error = workflow_manifest_error(plugin, identifier, execution.as_ref());
       let execution_kind = execution.as_ref().map(|execution| execution.kind.clone());
       let memory_note_source = command
         .memory
@@ -72,7 +73,7 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
         source_path: command_path.display().to_string(),
         execution,
         execution_kind,
-        manifest_error: None,
+        manifest_error,
         memory_note_title,
         memory_note_source,
         memory_note_tags,
@@ -88,6 +89,39 @@ pub fn build_command_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginComma
       .then_with(|| left.command_id.cmp(&right.command_id))
   });
   commands
+}
+
+fn workflow_manifest_error(
+  plugin: &PluginCatalogEntry,
+  identifier: &str,
+  execution: Option<&crate::types::PluginCommandExecutionEntry>,
+) -> Option<String> {
+  let execution = execution?;
+  let workflow_id = execution.workflow_id.as_deref()?.trim();
+  if workflow_id.is_empty() {
+    return None;
+  }
+  if execution
+    .connector_ids
+    .as_ref()
+    .map_or(true, |connectors| connectors.is_empty())
+  {
+    return Some(format!(
+      "Plugin command `{identifier}` declares workflow `{workflow_id}` without a connector execution binding."
+    ));
+  }
+  let workflow_capability = format!("connector_workflow:{workflow_id}");
+  if !plugin
+    .capabilities
+    .iter()
+    .any(|capability| capability == &workflow_capability)
+  {
+    return Some(format!(
+      "Plugin command `{identifier}` references undeclared connector workflow `{workflow_id}`."
+    ));
+  }
+
+  None
 }
 
 fn invalid_command_entry(

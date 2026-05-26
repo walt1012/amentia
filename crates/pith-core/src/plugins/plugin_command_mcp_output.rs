@@ -212,6 +212,25 @@ pub(super) fn mcp_runner_output(
     );
     return plugin_runner_output(command, execution_kind, &content, attributes);
   }
+  if mcp_command_requires_connector_workflow(command) {
+    attributes.insert(
+      "mcpProtocolStatus".to_string(),
+      "missingConnectorWorkflowOutput".to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!(
+          "MCP command `{}` is bound to a connector workflow and must return a Pith output envelope.",
+          command.command_id
+        ),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
 
   Ok(PluginRunnerResult {
     execution_kind: execution_kind.to_string(),
@@ -220,6 +239,15 @@ pub(super) fn mcp_runner_output(
     memory_notes: vec![],
     attributes,
   })
+}
+
+fn mcp_command_requires_connector_workflow(command: &HostPluginCommandEntry) -> bool {
+  command
+    .execution
+    .as_ref()
+    .and_then(|execution| execution.workflow_id.as_deref())
+    .map(str::trim)
+    .is_some_and(|workflow_id| !workflow_id.is_empty())
 }
 
 impl PluginMcpOutputScan {

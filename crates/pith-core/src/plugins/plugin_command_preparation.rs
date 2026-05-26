@@ -863,6 +863,7 @@ mod tests {
       driver: "stdio".to_string(),
       entrypoint: Some("runner.sh".to_string()),
       connector_ids: None,
+      workflow_id: None,
       input: pith_plugin_host::PluginCommandEnvelopeEntry {
         envelope: "pith.plugin.command.input".to_string(),
         fields: vec![pith_plugin_host::PluginCommandEnvelopeFieldEntry {
@@ -885,6 +886,7 @@ mod tests {
       driver: "stdio".to_string(),
       entrypoint: Some("runner.sh".to_string()),
       connector_ids: Some(vec!["notion".to_string()]),
+      workflow_id: Some("notion.create-page".to_string()),
       input: pith_plugin_host::PluginCommandEnvelopeEntry {
         envelope: "pith.plugin.command.input".to_string(),
         fields: vec![],

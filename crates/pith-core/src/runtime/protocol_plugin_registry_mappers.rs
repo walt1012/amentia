@@ -54,6 +54,7 @@ pub(super) fn to_protocol_plugin_command(
       kind: execution.kind.clone(),
       driver: execution.driver.clone(),
       entrypoint: execution.entrypoint.clone(),
+      workflow_id: execution.workflow_id.clone(),
       input: to_protocol_plugin_command_envelope(&execution.input),
       output: to_protocol_plugin_command_envelope(&execution.output),
       supported,

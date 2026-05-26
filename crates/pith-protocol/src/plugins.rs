@@ -206,6 +206,8 @@ pub struct PluginCommandExecutionSummary {
   pub driver: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub entrypoint: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workflow_id: Option<String>,
   pub input: PluginCommandEnvelopeSummary,
   pub output: PluginCommandEnvelopeSummary,
   pub supported: bool,

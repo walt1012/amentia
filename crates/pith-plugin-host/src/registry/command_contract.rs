@@ -33,6 +33,12 @@ pub(super) fn command_execution_entry(
       .connectors
       .as_deref()
       .map(normalized_connector_ids),
+    workflow_id: execution
+      .workflow_id
+      .as_deref()
+      .map(str::trim)
+      .filter(|workflow_id| !workflow_id.is_empty())
+      .map(str::to_string),
     input: command_envelope_entry(execution.input.as_ref(), default_input_envelope()),
     output: command_envelope_entry(execution.output.as_ref(), default_output_envelope()),
   })
