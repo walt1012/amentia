@@ -117,7 +117,7 @@ def prepare_page_draft(arguments: dict[str, Any]) -> dict[str, Any]:
           **connector_workflow_attributes(
             stage="draftPrepared",
             status="prepared",
-            action="preparePageDraft",
+            action="createPage",
             target=source,
             proof="localDraft",
           ),
@@ -170,7 +170,7 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
           **connector_workflow_attributes(
             stage="inspectBeforeWrite",
             status="inspected",
-            action="inspectPageWrite",
+            action="createPage",
             target=source,
             proof="inspection",
           ),

@@ -109,7 +109,7 @@ fn bind_connector_workflow(
   if workflow_id.is_empty() {
     return None;
   }
-  if execution.connector_ids.as_ref().map_or(true, Vec::is_empty) {
+  if execution.connector_ids.as_ref().is_none_or(Vec::is_empty) {
     return Some(format!(
       "Plugin command `{identifier}` declares workflow `{workflow_id}` without a connector execution binding."
     ));

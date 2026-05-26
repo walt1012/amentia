@@ -115,7 +115,7 @@ def main() -> int:
   assert_publish_follow_up(draft_item)
   assert_workflow(
     draft_item,
-    action="preparePageDraft",
+    action="createPage",
     stage="draftPrepared",
     status="prepared",
     target="docs/handoff.md",
@@ -127,7 +127,7 @@ def main() -> int:
   assert_publish_follow_up(inspection_item)
   assert_workflow(
     inspection_item,
-    action="inspectPageWrite",
+    action="createPage",
     stage="inspectBeforeWrite",
     status="inspected",
     target="docs/handoff.md",

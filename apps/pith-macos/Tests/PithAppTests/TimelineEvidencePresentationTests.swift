@@ -127,7 +127,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "connectorWorkflowId": "notion.create-page",
           "connectorWorkflowName": "Notion Create Page",
           "connectorWorkflowService": "notion",
-          "connectorWorkflowAction": "inspectPageWrite",
+          "connectorWorkflowAction": "createPage",
           "connectorWorkflowStage": "inspectBeforeWrite",
           "connectorWorkflowStatus": "inspected",
           "connectorWorkflowTarget": "docs/handoff.md",
@@ -145,7 +145,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Remote proof: notRequested") == true)
     XCTAssertTrue(
       summary?.contains(
-        "Notion Create Page: inspected | stage inspectBeforeWrite | notion inspectPageWrite"
+        "Notion Create Page: inspected | stage inspectBeforeWrite | notion createPage"
       ) == true
     )
     XCTAssertTrue(summary?.contains("Workflow target: docs/handoff.md") == true)
