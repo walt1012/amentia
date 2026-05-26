@@ -126,8 +126,8 @@ Work order:
 
 Current focus: finish the Notion create-page path by tightening user-facing
 retry and follow-up controls; packaged smoke now proves publish execution,
-draft-to-publish handoff, retry guidance, retry input handoff, remote proof,
-publish memory, and restart recovery.
+draft-to-publish handoff, guided publish input templates, retry guidance, retry
+input handoff, remote proof, publish memory, and restart recovery.
 
 ## Guardrails
 

@@ -152,6 +152,18 @@ extension AppViewModel {
     return input?.isEmpty == false ? input : nil
   }
 
+  func pluginFollowUpInputTemplate(from entry: TimelineEntry) -> String? {
+    let input = entry.attributes["nextCommandInputTemplate"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return input?.isEmpty == false ? input : nil
+  }
+
+  func pluginFollowUpInputHint(from entry: TimelineEntry) -> String? {
+    let hint = entry.attributes["nextCommandInputHint"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return hint?.isEmpty == false ? hint : nil
+  }
+
   private func pluginSourcePath(from entry: TimelineEntry) -> String? {
     let explicitPath = [
       "pluginRunnerResolvedEntrypoint",

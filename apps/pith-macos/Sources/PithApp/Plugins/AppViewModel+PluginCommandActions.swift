@@ -7,6 +7,18 @@ extension AppViewModel {
   }
 
   func runPluginCommandWithInput(commandID: String) {
+    runPluginCommandWithInput(
+      commandID: commandID,
+      initialInput: nil,
+      informativeText: nil
+    )
+  }
+
+  private func runPluginCommandWithInput(
+    commandID: String,
+    initialInput: String?,
+    informativeText: String?
+  ) {
     guard let command = pluginCommands.first(where: { $0.id == commandID }) else {
       runtimeDetail = "Plugin command is not loaded."
       return
@@ -31,7 +43,11 @@ extension AppViewModel {
       appendBlockedPluginCommand(command, detail: detail)
       return
     }
-    guard let input = PluginCommandInputDialogPresenter.commandInput(command: command) else {
+    guard let input = PluginCommandInputDialogPresenter.commandInput(
+      command: command,
+      initialValue: initialInput,
+      informativeText: informativeText
+    ) else {
       runtimeDetail = "Plugin command input was cancelled."
       return
     }
@@ -136,7 +152,11 @@ extension AppViewModel {
     if let input = pluginFollowUpInput(from: entry) {
       runPluginCommand(commandID: commandID, input: input)
     } else {
-      runPluginCommandWithInput(commandID: commandID)
+      runPluginCommandWithInput(
+        commandID: commandID,
+        initialInput: pluginFollowUpInputTemplate(from: entry),
+        informativeText: pluginFollowUpInputHint(from: entry)
+      )
     }
   }
 

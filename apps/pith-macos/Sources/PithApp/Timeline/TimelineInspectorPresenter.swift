@@ -280,6 +280,8 @@ enum TimelineInspectorPresenter {
       "remoteWriteStatus",
       "nextCommandId",
       "nextCommandInput",
+      "nextCommandInputHint",
+      "nextCommandInputTemplate",
       "nextCommandLabel",
       "retryCommandId",
       "retryInput",
@@ -420,6 +422,12 @@ enum TimelineInspectorPresenter {
     }
     if let nextCommandInput = entry.attributes["nextCommandInput"] {
       lines.append("Next input: \(nextCommandInput)")
+    }
+    if let nextCommandInputTemplate = entry.attributes["nextCommandInputTemplate"] {
+      lines.append("Next input template: \(nextCommandInputTemplate)")
+    }
+    if let nextCommandInputHint = entry.attributes["nextCommandInputHint"] {
+      lines.append("Next input hint: \(nextCommandInputHint)")
     }
     if let proofStatus = entry.attributes["remoteProofStatus"] {
       lines.append("Remote proof: \(proofStatus)")

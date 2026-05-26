@@ -57,6 +57,14 @@ def assert_publish_follow_up(item: dict) -> None:
       raise AssertionError(
         f"Expected {key}={value!r} in Notion follow-up attributes, got {attributes}"
       )
+  if "parentPageId" not in attributes.get("nextCommandInputHint", ""):
+    raise AssertionError(f"Notion follow-up missed input hint: {attributes}")
+  template = json.loads(attributes.get("nextCommandInputTemplate", "{}"))
+  for key in ["parentPageId", "title", "body"]:
+    if key not in template or not isinstance(template[key], str):
+      raise AssertionError(f"Notion follow-up missed {key} template: {template}")
+  if template["parentPageId"] != "":
+    raise AssertionError(f"Notion follow-up should leave parentPageId empty: {template}")
 
 
 def main() -> int:

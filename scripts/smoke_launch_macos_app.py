@@ -1078,6 +1078,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("remoteWrite") == "false"
     and item.get("attributes", {}).get("nextCommandId") == NOTION_PUBLISH_COMMAND_ID
     and item.get("attributes", {}).get("nextCommandLabel") == "Publish to Notion"
+    and "parentPageId" in item.get("attributes", {}).get("nextCommandInputHint", "")
+    and "parentPageId" in item.get("attributes", {}).get("nextCommandInputTemplate", "")
     for item in items
   ):
     raise RuntimeError(

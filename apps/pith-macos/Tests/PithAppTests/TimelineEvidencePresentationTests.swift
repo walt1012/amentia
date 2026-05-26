@@ -100,6 +100,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "retryInput": "{\"parentPageId\":\"page\"}",
           "nextCommandId": "notion-connector::notion.publish-page-draft",
           "nextCommandLabel": "Publish to Notion",
+          "nextCommandInputHint": "Fill parentPageId before publishing.",
+          "nextCommandInputTemplate": "{\"parentPageId\":\"\",\"title\":\"Draft\"}",
           "targetService": "notion",
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": "docs/handoff.md",
@@ -114,6 +116,14 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(
       summary?.contains(
         "Next command: Publish to Notion | notion-connector::notion.publish-page-draft"
+      ) == true
+    )
+    XCTAssertTrue(
+      summary?.contains("Next input hint: Fill parentPageId before publishing.") == true
+    )
+    XCTAssertTrue(
+      summary?.contains(
+        "Next input template: {\"parentPageId\":\"\",\"title\":\"Draft\"}"
       ) == true
     )
     XCTAssertTrue(

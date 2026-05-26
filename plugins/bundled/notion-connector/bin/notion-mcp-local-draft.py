@@ -99,6 +99,7 @@ def prepare_page_draft(arguments: dict[str, Any]) -> dict[str, Any]:
     memory_body = (
       "The Notion connector prepared a credential-scoped local page draft without a remote write."
     )
+  draft_title = "Pith Notion Draft" if source == "workspace" else f"Pith draft from {source}"
   return {
     "items": [
       plugin_result(
@@ -113,7 +114,7 @@ def prepare_page_draft(arguments: dict[str, Any]) -> dict[str, Any]:
           "sourceArtifact": source,
           "sourceArtifactPreviewProvided": str(bool(preview)).lower(),
           "sourceArtifactTruncated": truncated,
-          **publish_follow_up_attributes(),
+          **publish_follow_up_attributes(draft_title, content),
         },
       )
     ],
@@ -143,6 +144,7 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
       "write was sent. Review the target page, content, and credential scope before "
       "running the publish command."
     )
+  draft_title = "Pith Notion Publish" if source == "workspace" else f"Pith publish from {source}"
   return {
     "items": [
       plugin_result(
@@ -158,7 +160,7 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": source,
           "sourceArtifactPreviewProvided": str(preview_provided).lower(),
-          **publish_follow_up_attributes(),
+          **publish_follow_up_attributes(draft_title, content),
         },
       )
     ],
@@ -377,13 +379,31 @@ def retry_input_json(input_data: dict[str, str]) -> str:
   return json.dumps(input_data, ensure_ascii=False, sort_keys=True)
 
 
-def publish_follow_up_attributes() -> dict[str, str]:
+def publish_follow_up_attributes(title: str, body: str) -> dict[str, str]:
   return {
     "nextCommand": "notion.publish-page-draft",
     "nextCommandId": DEFAULT_PUBLISH_COMMAND_ID,
     "nextCommandLabel": "Publish to Notion",
+    "nextCommandInputHint": (
+      "Fill parentPageId before publishing. Pith will request approval before any "
+      "remote Notion write."
+    ),
+    "nextCommandInputTemplate": publish_input_template(title, body),
     "nextCommandInputRequired": "true",
   }
+
+
+def publish_input_template(title: str, body: str) -> str:
+  body, _ = bounded_body(body)
+  return json.dumps(
+    {
+      "parentPageId": "",
+      "title": title[:200],
+      "body": body,
+    },
+    ensure_ascii=False,
+    indent=2,
+  )
 
 
 def notion_children(body: str) -> list[dict[str, Any]]:
