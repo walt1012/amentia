@@ -907,7 +907,9 @@ mod tests {
       Some("notion.create-page")
     );
     assert_eq!(
-      attributes.get("connectorWorkflowStatus").map(String::as_str),
+      attributes
+        .get("connectorWorkflowStatus")
+        .map(String::as_str),
       Some("prepared")
     );
   }
