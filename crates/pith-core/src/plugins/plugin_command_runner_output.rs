@@ -430,7 +430,9 @@ fn plugin_runner_connector_workflow_contract_is_valid(
 }
 
 fn plugin_runner_has_connector_workflow(attributes: &HashMap<String, String>) -> bool {
-  attributes.keys().any(|key| key.starts_with("connectorWorkflow"))
+  attributes
+    .keys()
+    .any(|key| key.starts_with("connectorWorkflow"))
 }
 
 fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, String>) -> bool {
