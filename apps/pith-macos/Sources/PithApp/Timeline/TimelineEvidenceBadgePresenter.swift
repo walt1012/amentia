@@ -40,6 +40,8 @@ enum TimelineEvidenceBadgePresenter {
       return TimelineEvidenceBadgeSummary(label: "Remote Write Done", tone: .ready)
     case "notSent":
       return TimelineEvidenceBadgeSummary(label: "Remote Write Not Sent", tone: .warning)
+    case "unconfirmed":
+      return TimelineEvidenceBadgeSummary(label: "Remote Write Unconfirmed", tone: .warning)
     case "pending":
       return TimelineEvidenceBadgeSummary(label: "Remote Write Pending", tone: .active)
     default:

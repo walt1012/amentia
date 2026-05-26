@@ -113,6 +113,31 @@ extension AppViewModel {
 
   func isPluginCommandRetryableEntry(_ entry: TimelineEntry) -> Bool {
     isPluginCommandIssueEntry(entry)
+      || entry.attributes["retryCommandId"] != nil
+      || pluginRetryInput(from: entry) != nil
+      || entry.attributes["publishRetryable"] == "true"
+  }
+
+  func pluginRetryCommandID(from entry: TimelineEntry) -> String? {
+    [
+      "retryCommandId",
+      "commandId",
+    ]
+    .compactMap { key in
+      entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    .first { !$0.isEmpty }
+  }
+
+  func pluginRetryInput(from entry: TimelineEntry) -> String? {
+    [
+      "retryInput",
+      "commandInput",
+    ]
+    .compactMap { key in
+      entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    .first { !$0.isEmpty }
   }
 
   private func pluginSourcePath(from entry: TimelineEntry) -> String? {

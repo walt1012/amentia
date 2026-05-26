@@ -278,6 +278,8 @@ enum TimelineInspectorPresenter {
       "remoteWrite",
       "remoteWriteStage",
       "remoteWriteStatus",
+      "retryCommandId",
+      "retryInput",
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
@@ -408,6 +410,15 @@ enum TimelineInspectorPresenter {
     }
     if let sourceArtifact = entry.attributes["sourceArtifact"] {
       lines.append("Remote write source: \(sourceArtifact)")
+    }
+    if let proofStatus = entry.attributes["remoteProofStatus"] {
+      lines.append("Remote proof: \(proofStatus)")
+    }
+    if let retryCommandID = entry.attributes["retryCommandId"] {
+      lines.append("Retry command: \(retryCommandID)")
+    }
+    if let retryInput = entry.attributes["retryInput"] {
+      lines.append("Retry input: \(retryInput)")
     }
   }
 

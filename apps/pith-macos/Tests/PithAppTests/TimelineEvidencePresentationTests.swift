@@ -37,6 +37,16 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
+  func testRemoteWriteBadgeLabelsUnconfirmedWritesHonestly() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "remoteWriteStatus": "unconfirmed",
+    ])
+
+    XCTAssertEqual(badges.count, 1)
+    XCTAssertEqual(badges.first?.label, "Remote Write Unconfirmed")
+    XCTAssertEqual(badges.first?.tone, .warning)
+  }
+
   func testInspectorSummarizesWebSearchSourceDepth() {
     let summary = TimelineInspectorPresenter.selectedEntrySourceSummary(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
@@ -85,6 +95,9 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "remoteWriteStage": "inspectBeforeWrite",
           "remoteWriteStatus": "notSent",
           "remoteWriteRequiresApproval": "true",
+          "remoteProofStatus": "notRequested",
+          "retryCommandId": "notion-connector::notion.publish-page-draft",
+          "retryInput": "{\"parentPageId\":\"page\"}",
           "targetService": "notion",
           "targetTool": "notion.inspectPageWrite",
           "sourceArtifact": "docs/handoff.md",
@@ -95,5 +108,10 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Remote write: notSent") == true)
     XCTAssertTrue(summary?.contains("Remote approval required: true") == true)
     XCTAssertTrue(summary?.contains("Remote write source: docs/handoff.md") == true)
+    XCTAssertTrue(summary?.contains("Remote proof: notRequested") == true)
+    XCTAssertTrue(
+      summary?.contains("Retry command: notion-connector::notion.publish-page-draft") == true
+    )
+    XCTAssertTrue(summary?.contains("Retry input: {\"parentPageId\":\"page\"}") == true)
   }
 }

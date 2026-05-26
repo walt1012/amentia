@@ -21,6 +21,7 @@ HTTP_TIMEOUT_SECONDS = 30
 MAX_BODY_CHARS = 20_000
 MAX_PARAGRAPHS = 20
 RICH_TEXT_CHUNK_SIZE = 1_900
+DEFAULT_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 
 
 def main() -> int:
@@ -345,6 +346,8 @@ def publish_retry_needed(
     "publishRetryable": "true",
     "publishFailureReason": reason_code,
     "retryCommand": "notion.publish-page-draft",
+    "retryCommandId": os.environ.get("PITH_PLUGIN_COMMAND_ID", DEFAULT_PUBLISH_COMMAND_ID),
+    "retryInput": retry_input_json(input_data),
     "notionParentPageId": parent_page_id,
   }
   return mcp_success(
@@ -366,6 +369,10 @@ def publish_retry_needed(
       ],
     },
   )
+
+
+def retry_input_json(input_data: dict[str, str]) -> str:
+  return json.dumps(input_data, ensure_ascii=False, sort_keys=True)
 
 
 def notion_children(body: str) -> list[dict[str, Any]]:

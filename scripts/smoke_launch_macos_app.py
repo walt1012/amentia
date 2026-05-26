@@ -1141,6 +1141,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("remoteWriteStatus") == "unconfirmed"
     and item.get("attributes", {}).get("publishRetryable") == "true"
     and item.get("attributes", {}).get("remoteProofStatus") == "missing"
+    and item.get("attributes", {}).get("retryCommandId") == NOTION_PUBLISH_COMMAND_ID
+    and "packaged-smoke-parent" in item.get("attributes", {}).get("retryInput", "")
     for item in failed_items
   ):
     raise RuntimeError(

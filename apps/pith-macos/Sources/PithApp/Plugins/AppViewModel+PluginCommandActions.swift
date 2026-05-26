@@ -45,13 +45,13 @@ extension AppViewModel {
 
   func canRetryPluginCommand(from entry: TimelineEntry) -> Bool {
     guard isPluginCommandRetryableEntry(entry),
-          let commandID = entry.attributes["commandId"]
+          let commandID = pluginRetryCommandID(from: entry)
     else {
       return false
     }
 
     let snapshot = pluginActionSnapshot()
-    if entry.attributes["commandInput"] == nil {
+    if pluginRetryInput(from: entry) == nil {
       return PluginActionPlanner.directCommandRunDisabledReason(
         commandID: commandID,
         snapshot: snapshot
@@ -62,9 +62,9 @@ extension AppViewModel {
   }
 
   func canRunPluginCommandWithInput(from entry: TimelineEntry) -> Bool {
-    guard isPluginCommandIssueEntry(entry),
-          entry.attributes["commandInput"] == nil,
-          let commandID = entry.attributes["commandId"],
+    guard (isPluginCommandIssueEntry(entry) || isPluginCommandRetryableEntry(entry)),
+          pluginRetryInput(from: entry) == nil,
+          let commandID = pluginRetryCommandID(from: entry),
           let command = pluginCommands.first(where: { $0.id == commandID }),
           command.requiresPlainInput
     else {
@@ -79,7 +79,7 @@ extension AppViewModel {
 
   func runPluginCommandWithInput(from entry: TimelineEntry) {
     guard canRunPluginCommandWithInput(from: entry),
-          let commandID = entry.attributes["commandId"]
+          let commandID = pluginRetryCommandID(from: entry)
     else {
       runtimeDetail = "Plugin command input run is unavailable."
       return
@@ -90,14 +90,14 @@ extension AppViewModel {
 
   func retryPluginCommand(from entry: TimelineEntry) {
     guard canRetryPluginCommand(from: entry),
-          let commandID = entry.attributes["commandId"]
+          let commandID = pluginRetryCommandID(from: entry)
     else {
       runtimeDetail = "Plugin command retry is unavailable."
       return
     }
 
     pluginManagerSection = .commands
-    runPluginCommand(commandID: commandID, input: entry.attributes["commandInput"])
+    runPluginCommand(commandID: commandID, input: pluginRetryInput(from: entry))
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {

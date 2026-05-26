@@ -180,7 +180,7 @@ struct TimelineCard: View {
   }
 
   private var pluginRetryTitle: String {
-    if entry.attributes["commandInput"] != nil {
+    if entry.attributes["retryInput"] != nil || entry.attributes["commandInput"] != nil {
       return "Retry with Input"
     }
 
