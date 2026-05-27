@@ -161,12 +161,9 @@ enum TimelineInspectorPresenter {
       lines.append("Approval: \(action) | \(approvalID)")
     }
 
-    if let connectorSummary = connectorSummary(entry) {
-      lines.append(connectorSummary)
-    }
-
-    appendConnectorWorkflowSummary(entry, to: &lines)
-    appendRemoteWriteSummary(entry, to: &lines)
+    lines.append(contentsOf: TimelineConnectorEvidencePresenter.summaryLines(
+      attributes: entry.attributes
+    ))
     appendPluginConnectorRecoverySummary(entry, to: &lines)
     appendPluginRunSummary(entry, to: &lines)
     appendPluginInstallSummary(entry, to: &lines)
@@ -272,23 +269,6 @@ enum TimelineInspectorPresenter {
       "runBlocker",
       "runRepairHint",
       "commandInput",
-      "connectorId",
-      "connectorIds",
-      "connectorStatus",
-      "connectorRepairHint",
-      "connectorWorkflowId",
-      "connectorWorkflowName",
-      "connectorWorkflowService",
-      "connectorWorkflowAction",
-      "connectorWorkflowStage",
-      "connectorWorkflowStatus",
-      "connectorWorkflowTarget",
-      "connectorWorkflowProof",
-      "connectorWorkflowRecovery",
-      "remoteWrite",
-      "remoteWriteStage",
-      "remoteWriteStatus",
-      "notionBlockCount",
       "nextCommandId",
       "nextCommandInput",
       "nextCommandInputHint",
@@ -301,44 +281,7 @@ enum TimelineInspectorPresenter {
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
-  }
-
-  private static func connectorSummary(_ entry: TimelineEntry) -> String? {
-    guard let connectorIDs = firstAttribute(entry, keys: [
-      "connectorId",
-      "connectorIds",
-      "pluginRunnerConnectorId",
-      "pluginRunnerConnectorIds",
-    ]) else {
-      return nil
-    }
-
-    let services = firstAttribute(entry, keys: [
-      "connectorService",
-      "connectorServices",
-      "pluginRunnerConnectorServices",
-    ]) ?? "unknown service"
-    let stores = firstAttribute(entry, keys: [
-      "credentialStore",
-      "connectorCredentialStores",
-      "pluginRunnerConnectorStores",
-    ]) ?? "unknown store"
-    let providers = firstAttribute(entry, keys: [
-      "credentialProvider",
-      "connectorCredentialProviders",
-      "pluginRunnerCredentialProviders",
-    ]) ?? "unknown provider"
-    let bindings = firstAttribute(entry, keys: [
-      "credentialBinding",
-      "connectorSecretBindings",
-      "pluginRunnerSecretBindings",
-    ]) ?? "unknown binding"
-    return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers) "
-      + "| \(bindings)"
-  }
-
-  private static func firstAttribute(_ entry: TimelineEntry, keys: [String]) -> String? {
-    keys.compactMap { key in entry.attributes[key] }.first
+      || TimelineConnectorEvidencePresenter.hasEvidence(attributes: entry.attributes)
   }
 
   private static func yesNo(_ value: String) -> String {
@@ -399,112 +342,6 @@ enum TimelineInspectorPresenter {
     }
     if let repairHint = entry.attributes["connectorRepairHint"] {
       lines.append("Connector repair: \(repairHint)")
-    }
-  }
-
-  private static func appendConnectorWorkflowSummary(
-    _ entry: TimelineEntry,
-    to lines: inout [String]
-  ) {
-    guard entry.attributes["connectorWorkflowId"] != nil
-      || entry.attributes["connectorWorkflowStatus"] != nil
-    else {
-      return
-    }
-
-    let name = entry.attributes["connectorWorkflowName"] ?? "Connector workflow"
-    let status = entry.attributes["connectorWorkflowStatus"] ?? "unknown"
-    let stage = entry.attributes["connectorWorkflowStage"] ?? "unknown stage"
-    let service = entry.attributes["connectorWorkflowService"] ?? "unknown service"
-    let action = entry.attributes["connectorWorkflowAction"] ?? "unknown action"
-    lines.append("\(name): \(status) | stage \(stage) | \(service) \(action)")
-
-    if let target = entry.attributes["connectorWorkflowTarget"] {
-      lines.append("Workflow target: \(target)")
-    }
-    if let proof = entry.attributes["connectorWorkflowProof"] {
-      lines.append("Workflow proof: \(proof)")
-    }
-    if let recovery = entry.attributes["connectorWorkflowRecovery"] {
-      lines.append("Workflow recovery: \(recovery)")
-    }
-  }
-
-  private static func appendRemoteWriteSummary(
-    _ entry: TimelineEntry,
-    to lines: inout [String]
-  ) {
-    guard entry.attributes["remoteWrite"] != nil
-      || entry.attributes["remoteWriteStage"] != nil
-      || entry.attributes["remoteWriteStatus"] != nil
-    else {
-      return
-    }
-
-    let status = entry.attributes["remoteWriteStatus"] ?? "unknown"
-    let stage = entry.attributes["remoteWriteStage"] ?? "unknown stage"
-    let sent = entry.attributes["remoteWrite"] ?? "unknown"
-    let targetService = entry.attributes["targetService"] ?? "unknown service"
-    let targetTool = entry.attributes["targetTool"] ?? "unknown tool"
-    lines.append(
-      "Remote write: \(status) | sent \(sent) | stage \(stage) | "
-        + "\(targetService) via \(targetTool)"
-    )
-
-    if let approvalRequired = entry.attributes["remoteWriteRequiresApproval"] {
-      lines.append("Remote approval required: \(approvalRequired)")
-    }
-    if let sourceArtifact = entry.attributes["sourceArtifact"] {
-      lines.append("Remote write source: \(sourceArtifact)")
-    }
-    if let nextCommandID = entry.attributes["nextCommandId"] {
-      let label = entry.attributes["nextCommandLabel"] ?? "Continue"
-      lines.append("Next command: \(label) | \(nextCommandID)")
-    }
-    if let nextCommandInput = entry.attributes["nextCommandInput"] {
-      lines.append("Next input: \(nextCommandInput)")
-    }
-    if let nextCommandInputTemplate = entry.attributes["nextCommandInputTemplate"] {
-      lines.append("Next input template: \(nextCommandInputTemplate)")
-    }
-    if let nextCommandInputHint = entry.attributes["nextCommandInputHint"] {
-      lines.append("Next input hint: \(nextCommandInputHint)")
-    }
-    if entry.attributes["remoteProofStatus"] != nil || entry.attributes["remoteProofKind"] != nil {
-      let proofStatus = entry.attributes["remoteProofStatus"] ?? "unknown"
-      let proofKind = entry.attributes["remoteProofKind"] ?? "unknown proof"
-      lines.append("Remote proof: \(proofStatus) | \(proofKind)")
-    }
-    if let pageID = entry.attributes["notionPageId"] {
-      let pageURL = entry.attributes["notionPageUrl"] ?? "no URL"
-      lines.append("Notion page: \(pageID) | \(pageURL)")
-    }
-    if let parentPageID = entry.attributes["notionParentPageId"] {
-      lines.append("Notion parent: \(parentPageID)")
-    }
-    if let titleTruncated = entry.attributes["titleTruncated"] {
-      lines.append("Title truncated: \(titleTruncated)")
-    }
-    if let bodyTruncated = entry.attributes["bodyTruncated"] {
-      lines.append("Body truncated: \(bodyTruncated)")
-    }
-    if let blockCount = entry.attributes["notionBlockCount"] {
-      lines.append("Notion blocks: \(blockCount)")
-    }
-    if let failureReason = entry.attributes["publishFailureReason"] {
-      lines.append("Publish failure: \(failureReason)")
-    }
-    if let retryCommandID = entry.attributes["retryCommandId"] {
-      lines.append("Retry command: \(retryCommandID)")
-    }
-    if let retryInputEditable = entry.attributes["retryInputEditable"] {
-      lines.append("Retry input editable: \(retryInputEditable)")
-    }
-    if let retryInputHint = entry.attributes["retryInputHint"] {
-      lines.append("Retry input hint: \(retryInputHint)")
-    }
-    if let retryInput = entry.attributes["retryInput"] {
-      lines.append("Retry input: \(retryInput)")
     }
   }
 

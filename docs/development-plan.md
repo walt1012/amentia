@@ -104,6 +104,9 @@ Current state:
 - Connector workflow contracts are reusable across manifest workflow,
   command bindings, output envelopes, proof attributes, bounded step budget,
   and CI checks.
+- Connector proof evidence now has a generic timeline path for proof ID, URL,
+  title, action title, workflow state, remote write state, retry, and service
+  adapters.
 - Web Search remains the retrieval layer. Saved artifacts and memory are
   context aids, not a local document RAG product.
 

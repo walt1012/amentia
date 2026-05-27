@@ -18,6 +18,11 @@ const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
   "remoteWriteRequiresApproval",
   "remoteProofKind",
   "remoteProofStatus",
+  "remoteProofId",
+  "remoteProofUrl",
+  "remoteProofTitle",
+  "remoteProofActionTitle",
+  "remoteProofCopyTitle",
   "notionPageId",
   "notionPageUrl",
   "notionParentPageId",
@@ -371,6 +376,64 @@ mod tests {
     assert_eq!(
       attributes.get("notionBlockCount").map(String::as_str),
       Some("4")
+    );
+  }
+
+  #[test]
+  fn plugin_handoff_preserves_generic_remote_proof_metadata() {
+    let mut output = PluginCommandOutput {
+      thread_id: "thread-1".to_string(),
+      command: test_command(),
+      workspace: None,
+      input: Some("Send a connector message".to_string()),
+      items: vec![TimelineItem {
+        kind: "pluginResult".to_string(),
+        title: "Remote Write Complete".to_string(),
+        content: "The connector returned a trusted proof link.".to_string(),
+        attributes: Some(HashMap::from([
+          ("targetService".to_string(), "slack".to_string()),
+          ("targetTool".to_string(), "slack.sendMessage".to_string()),
+          ("remoteWrite".to_string(), "true".to_string()),
+          ("remoteWriteStage".to_string(), "completed".to_string()),
+          ("remoteWriteStatus".to_string(), "completed".to_string()),
+          ("remoteProofKind".to_string(), "messageApiResponse".to_string()),
+          ("remoteProofStatus".to_string(), "success".to_string()),
+          ("remoteProofId".to_string(), "message-123".to_string()),
+          (
+            "remoteProofUrl".to_string(),
+            "https://slack.com/app_redirect?channel=C123&message_ts=1".to_string(),
+          ),
+          ("remoteProofTitle".to_string(), "Slack message sent".to_string()),
+          ("remoteProofActionTitle".to_string(), "Open Slack Message".to_string()),
+        ])),
+      }],
+      capture_memory: false,
+      runner_memory_notes: vec![],
+      pending_approval: None,
+    };
+
+    ensure_plugin_command_handoff(&mut output, "approvedPluginCommand");
+    let attributes = output
+      .items
+      .last()
+      .and_then(|item| item.attributes.as_ref())
+      .expect("handoff attributes");
+
+    assert_eq!(
+      attributes.get("remoteProofId").map(String::as_str),
+      Some("message-123")
+    );
+    assert_eq!(
+      attributes.get("remoteProofUrl").map(String::as_str),
+      Some("https://slack.com/app_redirect?channel=C123&message_ts=1")
+    );
+    assert_eq!(
+      attributes.get("remoteProofTitle").map(String::as_str),
+      Some("Slack message sent")
+    );
+    assert_eq!(
+      attributes.get("remoteProofActionTitle").map(String::as_str),
+      Some("Open Slack Message")
     );
   }
 

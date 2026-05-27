@@ -237,6 +237,41 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(summary?.detail, "Page: page-123 | Parent: parent-456 | Body complete | Blocks: 4")
   }
 
+  func testGenericConnectorProofDoesNotNeedNotionAttributes() {
+    let attributes = [
+      "remoteWrite": "true",
+      "remoteWriteStage": "completed",
+      "remoteWriteStatus": "completed",
+      "remoteProofKind": "messageApiResponse",
+      "remoteProofStatus": "success",
+      "remoteProofId": "message-123",
+      "remoteProofUrl": "https://slack.com/app_redirect?channel=C123&message_ts=1",
+      "remoteProofTitle": "Slack message sent",
+      "remoteProofActionTitle": "Open Slack Message",
+      "targetService": "slack",
+      "targetTool": "slack.sendMessage",
+    ]
+
+    let summary = TimelineInspectorPresenter.selectedEntryPluginSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .assistantMessage,
+        title: "Assistant",
+        body: "Sent Slack message.",
+        attributes: attributes
+      ))
+    )
+    let action = TimelineExternalActionPresenter.primaryAction(attributes: attributes)
+    let proof = TimelineExternalActionPresenter.proofSummary(attributes: attributes)
+
+    XCTAssertTrue(summary?.contains("Remote proof ID: message-123") == true)
+    XCTAssertTrue(summary?.contains("Remote proof URL: https://slack.com/app_redirect") == true)
+    XCTAssertFalse(summary?.contains("Notion page") == true)
+    XCTAssertEqual(action?.title, "Open Slack Message")
+    XCTAssertEqual(proof?.title, "Slack message sent")
+    XCTAssertTrue(proof?.detail.contains("ID: message-123") == true)
+  }
+
   func testExternalActionRejectsUntrustedOrIncompleteProof() {
     XCTAssertNil(TimelineExternalActionPresenter.primaryAction(attributes: [
       "remoteProofKind": "notionApiResponse",
