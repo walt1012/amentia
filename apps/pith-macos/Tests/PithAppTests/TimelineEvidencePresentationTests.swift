@@ -191,6 +191,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "notionPageId": "page-123",
           "notionPageUrl": "https://www.notion.so/page-123",
           "notionParentPageId": "parent-456",
+          "titleTruncated": "true",
           "bodyTruncated": "false",
           "notionBlockCount": "4",
           "targetService": "notion",
@@ -204,6 +205,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       summary?.contains("Notion page: page-123 | https://www.notion.so/page-123") == true
     )
     XCTAssertTrue(summary?.contains("Notion parent: parent-456") == true)
+    XCTAssertTrue(summary?.contains("Title truncated: true") == true)
     XCTAssertTrue(summary?.contains("Body truncated: false") == true)
     XCTAssertTrue(summary?.contains("Notion blocks: 4") == true)
   }

@@ -142,7 +142,9 @@ def assert_publish_success(
   expected_parent_id: str = VALID_PARENT_PAGE_ID,
   raw_input: str | None = None,
   expected_title: str = "Published by test",
+  expected_payload_title: str | None = None,
   expected_block_count: str = "5",
+  expected_title_truncated: str = "false",
   expected_body_truncated: str = "false",
 ) -> None:
   captured: dict[str, object] = {}
@@ -210,6 +212,7 @@ def assert_publish_success(
     "notionPageId": "page-success-123",
     "notionPageUrl": "https://www.notion.so/page-success-123",
     "notionParentPageId": expected_parent_id,
+    "titleTruncated": expected_title_truncated,
     "bodyTruncated": expected_body_truncated,
     "notionBlockCount": expected_block_count,
   }
@@ -226,14 +229,16 @@ def assert_publish_success(
   )
   if captured.get("path") != "/pages" or captured.get("token") != "secret-token":
     raise AssertionError(f"Notion publish called the wrong target: {captured}")
+  expected_payload_title = expected_payload_title or expected_title
   memory_notes = structured.get("memoryNotes", [])
   if not isinstance(memory_notes, list) or len(memory_notes) != 1:
     raise AssertionError(f"Notion publish missed memory note: {structured}")
   memory_body = memory_notes[0].get("body", "")
   expected_memory_parts = [
-    expected_title,
+    expected_payload_title,
     "https://www.notion.so/page-success-123",
     expected_parent_id,
+    f"Title truncated: {expected_title_truncated}.",
     f"Body truncated: {expected_body_truncated}.",
     f"Blocks: {expected_block_count}.",
   ]
@@ -246,7 +251,7 @@ def assert_publish_success(
   if payload.get("parent", {}).get("page_id") != expected_parent_id:
     raise AssertionError(f"Notion publish used the wrong parent: {payload}")
   title = payload.get("properties", {}).get("title", {}).get("title", [])
-  if not title or title[0].get("text", {}).get("content") != expected_title:
+  if not title or title[0].get("text", {}).get("content") != expected_payload_title:
     raise AssertionError(f"Notion publish used the wrong title: {payload}")
   expected_child_count = int(expected_block_count)
   children = payload.get("children", [])
@@ -533,6 +538,22 @@ def main() -> int:
     expected_parent_id=VALID_PARENT_PAGE_ID,
     expected_title="Inline Body",
     expected_block_count="2",
+  )
+  long_title = "Pith Long Title " * 20
+  assert_publish_success(
+    connector,
+    raw_input=json.dumps(
+      {
+        "parentPageId": VALID_PARENT_PAGE_ID,
+        "title": long_title,
+        "body": "Long title proof should reflect the actual payload title.",
+      },
+      sort_keys=True,
+    ),
+    expected_title=long_title,
+    expected_payload_title=long_title[:200],
+    expected_title_truncated="true",
+    expected_block_count="1",
   )
   assert_publish_success(
     connector,

@@ -20,6 +20,7 @@ NOTION_VERSION = os.environ.get("PITH_NOTION_VERSION", "2026-03-11")
 HTTP_TIMEOUT_SECONDS = 30
 MAX_BODY_CHARS = 20_000
 MAX_NOTION_BLOCKS = 20
+MAX_TITLE_CHARS = 200
 RICH_TEXT_CHUNK_SIZE = 1_900
 DEFAULT_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 
@@ -226,7 +227,8 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
       "missingCredential",
     )
 
-  title = string_value(input_data, "title", "pageTitle", "page_title") or "Pith Draft"
+  raw_title = string_value(input_data, "title", "pageTitle", "page_title") or "Pith Draft"
+  title, title_truncated = bounded_title(raw_title)
   body = string_value(input_data, "body", "content", "markdown", "text") or ""
   body, body_truncated = bounded_body(body)
   payload, blocks_truncated = notion_create_page_payload(parent_page_id, title, body)
@@ -276,6 +278,7 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
             "notionParentPageId": parent_page_id,
             "remoteProofKind": "notionApiResponse",
             "remoteProofStatus": "success",
+            "titleTruncated": str(title_truncated).lower(),
             "bodyTruncated": str(truncated).lower(),
             "notionBlockCount": str(block_count),
             **connector_workflow_attributes(
@@ -293,8 +296,8 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
           "Notion Page Published",
           (
             f"Pith created Notion page `{title}` at {page_url} under parent page "
-            f"{parent_page_id}. Body truncated: {str(truncated).lower()}. "
-            f"Blocks: {block_count}."
+            f"{parent_page_id}. Title truncated: {str(title_truncated).lower()}. "
+            f"Body truncated: {str(truncated).lower()}. Blocks: {block_count}."
           ),
           ["connector", "notion", "published"],
         )
@@ -379,7 +382,7 @@ def notion_create_page_payload(
     "parent": {"page_id": parent_page_id},
     "properties": {
       "title": {
-        "title": [{"type": "text", "text": {"content": title[:200]}}],
+        "title": [{"type": "text", "text": {"content": title}}],
       }
     },
   }
@@ -566,10 +569,11 @@ def publish_follow_up_attributes(title: str, body: str) -> dict[str, str]:
 
 def publish_input_template(title: str, body: str) -> str:
   body, _ = bounded_body(body)
+  title, _ = bounded_title(title)
   return json.dumps(
     {
       "parentPageId": "",
-      "title": title[:200],
+      "title": title,
       "body": body,
     },
     ensure_ascii=False,
@@ -784,6 +788,13 @@ def bounded_body(body: str) -> tuple[str, bool]:
   if len(body) <= MAX_BODY_CHARS:
     return body, False
   return body[:MAX_BODY_CHARS], True
+
+
+def bounded_title(title: str) -> tuple[str, bool]:
+  text = title.strip() or "Pith Draft"
+  if len(text) <= MAX_TITLE_CHARS:
+    return text, False
+  return text[:MAX_TITLE_CHARS], True
 
 
 def bounded_error_detail(value: str) -> str:

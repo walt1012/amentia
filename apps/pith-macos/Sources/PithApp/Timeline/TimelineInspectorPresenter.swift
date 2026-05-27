@@ -482,6 +482,9 @@ enum TimelineInspectorPresenter {
     if let parentPageID = entry.attributes["notionParentPageId"] {
       lines.append("Notion parent: \(parentPageID)")
     }
+    if let titleTruncated = entry.attributes["titleTruncated"] {
+      lines.append("Title truncated: \(titleTruncated)")
+    }
     if let bodyTruncated = entry.attributes["bodyTruncated"] {
       lines.append("Body truncated: \(bodyTruncated)")
     }

@@ -1331,6 +1331,7 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("notionPageUrl")
     == "https://www.notion.so/packaged-smoke-notion-page"
     and item.get("attributes", {}).get("notionParentPageId") == NOTION_PARENT_PAGE_ID
+    and item.get("attributes", {}).get("titleTruncated") == "false"
     and item.get("attributes", {}).get("bodyTruncated") == "false"
     and item.get("attributes", {}).get("notionBlockCount") == "4"
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
@@ -1376,6 +1377,7 @@ def validate_packaged_mcp_plugin_command(
     note["title"] == "Notion Page Published"
     and note["source"] == "plugin.notion-connector"
     and "https://www.notion.so/packaged-smoke-notion-page" in note["body"]
+    and "Title truncated: false." in note["body"]
     and "Body truncated: false." in note["body"]
     and "Blocks: 4." in note["body"]
     for note in publish_memory_list["result"]["notes"]
