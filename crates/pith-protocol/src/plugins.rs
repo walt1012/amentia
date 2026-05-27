@@ -258,6 +258,17 @@ pub struct PluginChannelOutboundPreviewResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginChannelOutboundRequestParams {
+  pub thread_id: String,
+  pub channel_id: String,
+  pub external_conversation_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub reply_to_external_message_id: Option<String>,
+  pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginConnectorCredentialParams {
   pub connector_id: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]

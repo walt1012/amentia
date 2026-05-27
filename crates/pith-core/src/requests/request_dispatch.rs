@@ -29,6 +29,9 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::PLUGIN_CHANNEL_OUTBOUND_PREVIEW => {
       plugin_requests::handle_plugin_channel_outbound_preview(context, request)
     }
+    methods::PLUGIN_CHANNEL_OUTBOUND_REQUEST => {
+      plugin_requests::handle_plugin_channel_outbound_request(context, request)
+    }
     methods::PLUGIN_COMMAND_REGISTRY => {
       plugin_requests::handle_plugin_command_registry(context, request)
     }

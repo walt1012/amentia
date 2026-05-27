@@ -2,6 +2,7 @@ pub(crate) mod approval_agent_context;
 pub(crate) mod approval_completion;
 pub(crate) mod approval_execution;
 pub(crate) mod approval_execution_approved;
+pub(crate) mod approval_execution_channel;
 pub(crate) mod approval_execution_denied;
 pub(crate) mod approval_execution_events;
 pub(crate) mod approval_execution_shell;

@@ -31,6 +31,11 @@ pub(crate) fn summarize_denied_approval(
       "Pith skipped the plugin command `{}` because the approval was denied.",
       command
     )
+  } else if action == "send_channel_message" {
+    format!(
+      "Pith skipped sending the channel message to {} because the approval was denied.",
+      relative_path
+    )
   } else {
     format!(
       "Pith skipped writing {} because the approval was denied.",

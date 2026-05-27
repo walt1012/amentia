@@ -10,6 +10,7 @@ pub const PLUGIN_CAPABILITY_REGISTRY: &str = "plugin/capabilityRegistry";
 pub const PLUGIN_CHANNEL_REGISTRY: &str = "plugin/channelRegistry";
 pub const PLUGIN_CHANNEL_INBOUND_PREVIEW: &str = "plugin/channelInboundPreview";
 pub const PLUGIN_CHANNEL_OUTBOUND_PREVIEW: &str = "plugin/channelOutboundPreview";
+pub const PLUGIN_CHANNEL_OUTBOUND_REQUEST: &str = "plugin/channelOutboundRequest";
 pub const PLUGIN_COMMAND_REGISTRY: &str = "plugin/commandRegistry";
 pub const PLUGIN_COMMAND_RUN: &str = "plugin/commandRun";
 pub const PLUGIN_CONNECTOR_AUTHORIZE: &str = "plugin/connectorAuthorize";

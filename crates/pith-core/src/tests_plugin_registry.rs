@@ -5,7 +5,7 @@ use super::test_support::{
 };
 use super::*;
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
-use pith_plugin_host::PluginCatalogEntry;
+use pith_plugin_host::{PluginCatalogEntry, PluginChannelEntry};
 use pith_protocol::methods;
 use pith_storage::RuntimeStore;
 use serde_json::json;
@@ -1764,6 +1764,86 @@ fn plugin_channel_outbound_preview_requires_conversation_id() {
     error.data.expect("channel outbound error data")["status"],
     "invalidEnvelope"
   );
+}
+
+#[test]
+fn plugin_channel_outbound_request_rejects_pending_weixin_adapter() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "weixin-channel",
+      "Weixin Channel",
+      false,
+      false,
+      &["channel:weixin"],
+      &["network.outbound"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_OUTBOUND_REQUEST,
+      Some(json!({
+        "threadId": "thread-1",
+        "channelId": "weixin-channel::weixin",
+        "externalConversationId": "chat-123",
+        "replyToExternalMessageId": "msg-456",
+        "text": "Here is the short summary."
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("channel outbound request error");
+  assert_eq!(error.code, -32058);
+  let data = error.data.expect("channel outbound request error data");
+  assert_eq!(data["channelId"], "weixin-channel::weixin");
+  assert_eq!(data["status"], "channelAdapterPending");
+  assert_eq!(data["service"], "weixin");
+  assert_eq!(data["protocol"], "openclaw-weixin");
+}
+
+#[test]
+fn channel_outbound_approval_request_carries_send_context() {
+  let channel = PluginChannelEntry {
+    channel_id: "weixin-channel::weixin".to_string(),
+    display_name: "Weixin".to_string(),
+    service: "weixin".to_string(),
+    protocol: "openclaw-weixin".to_string(),
+    adapter_status: "ready".to_string(),
+    adapter_available: true,
+    activation_blocker: None,
+    plugin_id: "weixin-channel".to_string(),
+    plugin_display_name: "Weixin Channel".to_string(),
+    enabled: true,
+    status: "ready".to_string(),
+    permissions: vec!["network.outbound".to_string()],
+    manifest_path: "plugins/bundled/weixin-channel/pith-plugin.json".to_string(),
+    homepage: Some("https://github.com/Tencent/openclaw-weixin".to_string()),
+  };
+
+  let (approval, items) =
+    crate::plugins::plugin_channel_messages::build_channel_outbound_approval_request(
+      "approval-9".to_string(),
+      "thread-1",
+      &channel,
+      "chat-123",
+      Some("msg-456"),
+      "Here is the short summary.",
+    );
+
+  assert_eq!(approval.action, "send_channel_message");
+  assert_eq!(approval.relative_path, "channel:weixin-channel::weixin");
+  assert_eq!(approval.content.as_deref(), Some("Here is the short summary."));
+  assert_eq!(items.len(), 2);
+  assert_eq!(items[0].kind, "approvalRequested");
+  let attributes = items[0].attributes.as_ref().expect("approval attributes");
+  assert_eq!(attributes["approvalId"], "approval-9");
+  assert_eq!(attributes["channelId"], "weixin-channel::weixin");
+  assert_eq!(attributes["replyToExternalMessageId"], "msg-456");
+  assert_eq!(attributes["channelMessage"], "Here is the short summary.");
 }
 
 #[test]

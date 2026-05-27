@@ -99,6 +99,14 @@ struct PluginChannelOutboundPreviewParams: Codable {
   let text: String
 }
 
+struct PluginChannelOutboundRequestParams: Codable {
+  let threadId: String
+  let channelId: String
+  let externalConversationId: String
+  let replyToExternalMessageId: String?
+  let text: String
+}
+
 struct PluginChannelOutboundPreviewResult: Codable {
   let channelId: String
   let service: String

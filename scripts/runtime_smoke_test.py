@@ -940,6 +940,23 @@ def main() -> int:
     assert weixin_outbound_preview["error"]["code"] == -32058
     assert weixin_outbound_preview["error"]["data"]["status"] == "channelAdapterPending"
     assert weixin_outbound_preview["error"]["data"]["adapterStatus"] == "pending"
+    weixin_outbound_request, _ = send_request(
+      process,
+      {
+        "id": 47,
+        "method": "plugin/channelOutboundRequest",
+        "params": {
+          "threadId": "thread-1",
+          "channelId": "weixin-channel::weixin",
+          "externalConversationId": "chat-123",
+          "replyToExternalMessageId": "msg-456",
+          "text": "Here is the short summary.",
+        },
+      },
+    )
+    assert weixin_outbound_request["error"]["code"] == -32058
+    assert weixin_outbound_request["error"]["data"]["status"] == "channelAdapterPending"
+    assert weixin_outbound_request["error"]["data"]["adapterStatus"] == "pending"
     weixin_enable, _ = send_request(
       process,
       {

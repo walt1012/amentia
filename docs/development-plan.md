@@ -154,6 +154,8 @@ Current state:
   enter the cowork loop.
 - A matching outbound channel preview RPC gates Pith-authored replies before
   any channel adapter can send them.
+- Outbound channel requests now have a side-effecting approval entry point for
+  future ready adapters, while pending Weixin stays blocked.
 
 Exit criteria:
 

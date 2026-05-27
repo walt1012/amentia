@@ -218,6 +218,34 @@ extension RuntimeBridge {
     )
   }
 
+  func requestPluginChannelOutbound(
+    threadID: String,
+    channelID: String,
+    externalConversationID: String,
+    replyToExternalMessageID: String? = nil,
+    text: String
+  ) async throws -> RuntimeTurnResult {
+    let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
+      method: "plugin/channelOutboundRequest",
+      params: PluginChannelOutboundRequestParams(
+        threadId: threadID,
+        channelId: channelID,
+        externalConversationId: externalConversationID,
+        replyToExternalMessageId: replyToExternalMessageID,
+        text: text
+      )
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimeTurnResult(
+      turnID: result.turnId,
+      threadID: result.threadId,
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:)),
+      pendingApprovals: result.pendingApprovals.map(RuntimeBridgePayloadMapper.approval(from:)),
+      activeTurnID: result.activeTurnId
+    )
+  }
+
   func authorizePluginConnector(
     connectorID: String,
     credentialLabel: String? = nil,
