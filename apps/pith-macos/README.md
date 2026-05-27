@@ -27,6 +27,10 @@ New macOS app code should land in the domain that owns the product behavior. Avo
 helper files at the target root; if a boundary is unclear, prefer tightening the owning domain model
 before extracting another file.
 
+Connector UI should render generic workflow, approval, proof, retry, and evidence concepts first.
+Keep service-specific proof copy in narrow presenter helpers or connector attributes so adding the
+next connector does not turn timeline presentation into a service-specific switchboard.
+
 ## Local Runtime Bridge
 
 For local development, point the app at a built runtime executable with:

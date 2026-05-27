@@ -25,6 +25,10 @@ Pith should differ intentionally: local-first inference, cowork-first tasks,
 small-model constraints, no required hosted model API, and no marketplace shell
 before one connector workflow is excellent.
 
+Do not copy heavyweight surfaces just because Codex or Claude Code have them.
+Pith should adapt the useful loop: understand context, choose a bounded tool,
+show evidence, ask before writes, preserve memory, and recover cleanly.
+
 ## Architecture Boundaries
 
 - `apps/pith-macos`: native UI, setup, timeline, approvals, model manager, and
@@ -46,6 +50,10 @@ before one connector workflow is excellent.
   connector metadata, and bundle lifecycle.
 
 Memory owns meaning and ranking. Storage owns durable records.
+
+Connector evidence should stay generic at the protocol and timeline layers.
+Service-specific details belong in connector output attributes and narrow
+presenter adapters, not in broad app or runtime control flow.
 
 ## Foundation State
 
@@ -99,6 +107,16 @@ Current state:
 - Web Search remains the retrieval layer. Saved artifacts and memory are
   context aids, not a local document RAG product.
 
+Review status:
+
+- Codex/Claude alignment is strongest at the durable boundaries: workspace
+  scope, approval-gated writes, bounded tools, Web Search, sandbox visibility,
+  session memory, and MCP-style connector execution.
+- Pith's deliberate difference remains correct: cowork-first local work with a
+  small model, not a hosted coding agent clone.
+- The main M10 risk is presentation coupling. Timeline proof and evidence
+  rendering must be kept generic before adding another connector.
+
 M9 exit criteria:
 
 - Notion setup explains local integration tokens, required scopes, shared
@@ -107,12 +125,16 @@ M9 exit criteria:
   publish, proof, retry, and memory capture.
 - The app keeps connector UI progressive: show readiness, repair, workflow,
   and proof only when needed.
+- Connector proof presentation handles generic workflow and remote-write
+  evidence without baking new service logic into broad timeline presenters.
 - Packaged smoke proves connector path, Web Search evidence, workspace
   approval, runtime recovery, and unsigned DMG install path together.
 
 Next order:
 
 - Finish Notion reliability and packaged proof before adding connector breadth.
+- Freeze the reusable connector evidence contract before implementing the next
+  service.
 - Start a second connector only when it has a narrow cowork use case with the
   same inspect, approval, proof, retry, and smoke contracts.
 
@@ -123,6 +145,8 @@ marketplace shell.
 
 Candidate scope:
 
+- Start by extracting any reusable connector proof presentation boundary needed
+  by M9, then add the second connector.
 - Pick one narrow daily workflow, not a broad platform clone.
 - Reuse M9 contracts exactly: local credential, manifest workflow, bounded
   runner, inspect-before-write, approval, proof, retry, and packaged smoke.
