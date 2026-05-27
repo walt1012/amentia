@@ -1123,7 +1123,7 @@ def validate_packaged_mcp_plugin_command(
       "commandId": NOTION_PUBLISH_COMMAND_ID,
       "input": json.dumps(
         {
-          "parentPageId": "packaged-smoke-parent",
+          "parentPageId": NOTION_PARENT_PAGE_URL,
           "title": "Packaged Smoke Retry Page",
           "body": "This first publish should report a retryable failure.",
         }
@@ -1156,7 +1156,7 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("retryCommandId") == NOTION_PUBLISH_COMMAND_ID
     and item.get("attributes", {}).get("retryInputEditable") == "false"
     and "retry" in item.get("attributes", {}).get("retryInputHint", "").lower()
-    and "packaged-smoke-parent" in item.get("attributes", {}).get("retryInput", "")
+    and NOTION_PARENT_PAGE_ID in item.get("attributes", {}).get("retryInput", "")
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "retryNeeded"
     and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"

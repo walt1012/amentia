@@ -119,6 +119,8 @@ Current review:
   looping the same failed command.
 - Aligned: Notion publish accepts copied page URLs as parent targets and
   normalizes them before the API write, keeping setup practical for real users.
+- Aligned: Notion publish now blocks malformed parent targets locally and
+  returns editable retry input before any remote write attempt.
 - Aligned: successful Notion proof now shows a compact result summary plus
   native open/copy actions without expanding the connector UI surface.
 - Aligned: connector workflow rules now have a reusable bundled-contract check,

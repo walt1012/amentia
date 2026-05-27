@@ -200,13 +200,22 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
     "target_page_id",
   )
   parent_page_id = normalize_notion_page_id(raw_parent_page_id)
-  if not parent_page_id:
+  if not raw_parent_page_id:
     return publish_retry_needed(
       request_id,
       input_data,
       "Publish requires `parentPageId` in the command input. No remote write was sent.",
       "missingParentPageId",
     )
+  if not parent_page_id:
+    return publish_retry_needed(
+      request_id,
+      input_data,
+      "Publish requires a valid Notion parent page ID or URL. No remote write was sent.",
+      "invalidParentPageId",
+    )
+
+  input_data["parentPageId"] = parent_page_id
 
   token = notion_token(arguments)
   if not token:
@@ -355,7 +364,7 @@ def normalize_notion_page_id(value: str | None) -> str:
   if compact_match:
     return hyphenated_notion_page_id(compact_match.group(1).lower())
 
-  return text
+  return ""
 
 
 def hyphenated_notion_page_id(value: str) -> str:
@@ -385,7 +394,11 @@ def publish_retry_needed(
     "targetPageId",
     "target_page_id",
   ) or ""
-  blocked_before_write = reason_code in {"missingParentPageId", "missingCredential"}
+  blocked_before_write = reason_code in {
+    "invalidParentPageId",
+    "missingParentPageId",
+    "missingCredential",
+  }
   content = (
     f"{reason} Review the target page, credential, and content, then run "
     "`notion.publish-page-draft` again when you are ready."
@@ -405,7 +418,7 @@ def publish_retry_needed(
     "retryCommand": "notion.publish-page-draft",
     "retryCommandId": os.environ.get("PITH_PLUGIN_COMMAND_ID", DEFAULT_PUBLISH_COMMAND_ID),
     "retryInput": retry_input_json(input_data, reason_code),
-    "retryInputEditable": str(reason_code == "missingParentPageId").lower(),
+    "retryInputEditable": str(retry_input_should_be_editable(reason_code)).lower(),
     "retryInputHint": retry_input_hint(reason_code),
     "notionParentPageId": parent_page_id,
     **connector_workflow_attributes(
@@ -440,11 +453,15 @@ def publish_retry_needed(
 
 def retry_input_json(input_data: dict[str, str], reason_code: str) -> str:
   retry_input = dict(input_data)
-  if reason_code == "missingParentPageId":
+  if retry_input_should_be_editable(reason_code):
     retry_input.setdefault("parentPageId", "")
     retry_input.setdefault("title", "Pith Draft")
     retry_input.setdefault("body", "")
   return json.dumps(retry_input, ensure_ascii=False, sort_keys=True)
+
+
+def retry_input_should_be_editable(reason_code: str) -> bool:
+  return reason_code in {"invalidParentPageId", "missingParentPageId"}
 
 
 def retry_input_hint(reason_code: str) -> str:
@@ -452,6 +469,11 @@ def retry_input_hint(reason_code: str) -> str:
     return (
       "Add parentPageId or a Notion page URL for a page shared with the local "
       "integration, then run the publish command again."
+    )
+  if reason_code == "invalidParentPageId":
+    return (
+      "Replace parentPageId with a 32-character Notion page ID, UUID, or page URL "
+      "for a page shared with the local integration."
     )
   if reason_code == "missingCredential":
     return "Authorize the Notion connector, then retry with the preserved input."

@@ -17,6 +17,8 @@ CONNECTOR_PATH = (
 PLUGIN_ROOT = ROOT / "plugins" / "bundled" / "notion-connector"
 PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 WORKFLOW_ID = "notion.create-page"
+VALID_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
+VALID_PARENT_PAGE_URL = "https://www.notion.so/Pith-Test-11112222333344445555666677778888?pvs=4"
 
 
 def load_connector() -> ModuleType:
@@ -136,8 +138,8 @@ def assert_manifest_workflow_coverage() -> None:
 def assert_publish_success(
   connector: ModuleType,
   *,
-  parent_input: str = "parent-123",
-  expected_parent_id: str = "parent-123",
+  parent_input: str = VALID_PARENT_PAGE_ID,
+  expected_parent_id: str = VALID_PARENT_PAGE_ID,
 ) -> None:
   captured: dict[str, object] = {}
   previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
@@ -259,7 +261,7 @@ def main() -> int:
     {
       "input": json.dumps(
         {
-          "parentPageId": "page-123",
+          "parentPageId": VALID_PARENT_PAGE_ID,
           "title": "Retry me",
           "body": "No token is present, so this should be retryable.",
         },
@@ -272,20 +274,83 @@ def main() -> int:
   if retry_attributes.get("retryCommandId") != PUBLISH_COMMAND_ID:
     raise AssertionError(f"Notion retry missed command handoff: {retry_attributes}")
   retry_input = json.loads(retry_attributes.get("retryInput", "{}"))
-  if retry_input.get("parentPageId") != "page-123":
+  if retry_input.get("parentPageId") != VALID_PARENT_PAGE_ID:
     raise AssertionError(f"Notion retry did not preserve publish input: {retry_input}")
   assert_workflow(
     retry_item,
     action="createPage",
     stage="blockedBeforeWrite",
     status="retryNeeded",
-    target="page-123",
+    target=VALID_PARENT_PAGE_ID,
     proof="notRequested",
   )
   if retry_attributes.get("connectorWorkflowRecovery") != "retry":
     raise AssertionError(f"Notion retry missed workflow recovery: {retry_attributes}")
   if retry_attributes.get("retryInputEditable") != "false":
     raise AssertionError(f"Notion credential retry should not force input editing: {retry_attributes}")
+
+  invalid_parent_called_remote = False
+  previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
+  os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
+
+  def fail_if_invalid_parent_reaches_remote(_path: str, _token: str, _payload: dict) -> dict:
+    nonlocal invalid_parent_called_remote
+    invalid_parent_called_remote = True
+    raise AssertionError("Invalid Notion parent should be blocked before the API call")
+
+  connector.notion_post = fail_if_invalid_parent_reaches_remote
+  try:
+    invalid_parent_retry = connector.publish_page_draft(
+      2,
+      {
+        "input": json.dumps(
+          {
+            "parentPageId": "not-a-notion-page",
+            "title": "Fix my target",
+            "body": "This should be blocked before any remote write.",
+          },
+          sort_keys=True,
+        ),
+        "connectors": [
+          {
+            "service": "notion",
+            "credentialProvider": {
+              "provider": "env",
+              "envKey": "PITH_TEST_NOTION_TOKEN",
+            },
+          }
+        ],
+      },
+    )
+  finally:
+    if previous_token is None:
+      os.environ.pop("PITH_TEST_NOTION_TOKEN", None)
+    else:
+      os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
+  invalid_parent_item = response_first_item(invalid_parent_retry)
+  invalid_parent_attributes = invalid_parent_item.get("attributes", {})
+  if invalid_parent_called_remote:
+    raise AssertionError("Notion invalid parent reached the remote API path")
+  assert_workflow(
+    invalid_parent_item,
+    action="createPage",
+    stage="blockedBeforeWrite",
+    status="retryNeeded",
+    target="not-a-notion-page",
+    proof="notRequested",
+  )
+  if invalid_parent_attributes.get("publishFailureReason") != "invalidParentPageId":
+    raise AssertionError(
+      f"Notion invalid parent retry missed failure reason: {invalid_parent_attributes}"
+    )
+  if invalid_parent_attributes.get("retryInputEditable") != "true":
+    raise AssertionError(
+      f"Notion invalid parent retry should reopen editable input: {invalid_parent_attributes}"
+    )
+  if "32-character Notion page ID" not in invalid_parent_attributes.get("retryInputHint", ""):
+    raise AssertionError(
+      f"Notion invalid parent retry missed precise guidance: {invalid_parent_attributes}"
+    )
 
   missing_parent_retry = connector.publish_page_draft(2, {"input": "{}"})
   missing_parent_item = response_first_item(missing_parent_retry)
@@ -315,11 +380,8 @@ def main() -> int:
   assert_publish_success(connector)
   assert_publish_success(
     connector,
-    parent_input=(
-      "https://www.notion.so/Pith-Test-"
-      "11112222333344445555666677778888?pvs=4"
-    ),
-    expected_parent_id="11112222-3333-4444-5555-666677778888",
+    parent_input=VALID_PARENT_PAGE_URL,
+    expected_parent_id=VALID_PARENT_PAGE_ID,
   )
 
   print("notion connector contract tests passed")

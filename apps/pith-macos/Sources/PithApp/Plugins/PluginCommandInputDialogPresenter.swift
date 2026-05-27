@@ -49,7 +49,7 @@ enum PluginCommandInputDialogPresenter {
       ?? fieldDescription
       ?? "Pass a short text input to this plugin command."
     if isNotionPublishCommand(command) {
-      prompt += "\n\nRequired: parentPageId or a Notion page URL, title, and body. The parent page must be shared with the Notion integration before publishing. Pith still requests approval before the remote write."
+      prompt += "\n\nRequired: a valid parentPageId or Notion page URL, title, and body. The parent page must be shared with the Notion integration before publishing. Pith still requests approval before the remote write."
     }
     return prompt
   }
