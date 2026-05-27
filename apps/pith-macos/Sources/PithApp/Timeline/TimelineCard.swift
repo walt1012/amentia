@@ -110,7 +110,7 @@ struct TimelineCard: View {
           }
 
           if showsPluginInputAction {
-            Button("Run with Input") {
+            Button(pluginInputTitle) {
               onRunPluginCommandWithInput()
             }
             .buttonStyle(.bordered)
@@ -190,11 +190,18 @@ struct TimelineCard: View {
   }
 
   private var pluginRetryTitle: String {
+    if entry.attributes["retryInputEditable"] == "true" {
+      return "Retry After Editing"
+    }
     if entry.attributes["retryInput"] != nil || entry.attributes["commandInput"] != nil {
       return "Retry with Input"
     }
 
     return "Retry"
+  }
+
+  private var pluginInputTitle: String {
+    entry.attributes["retryInputEditable"] == "true" ? "Edit Retry Input" : "Run with Input"
   }
 
   private var pluginFollowUpTitle: String {

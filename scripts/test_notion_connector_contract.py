@@ -279,9 +279,12 @@ def main() -> int:
   )
   if retry_attributes.get("connectorWorkflowRecovery") != "retry":
     raise AssertionError(f"Notion retry missed workflow recovery: {retry_attributes}")
+  if retry_attributes.get("retryInputEditable") != "false":
+    raise AssertionError(f"Notion credential retry should not force input editing: {retry_attributes}")
 
   missing_parent_retry = connector.publish_page_draft(2, {"input": "{}"})
   missing_parent_item = response_first_item(missing_parent_retry)
+  missing_parent_attributes = missing_parent_item.get("attributes", {})
   assert_workflow(
     missing_parent_item,
     action="createPage",
@@ -290,6 +293,20 @@ def main() -> int:
     target="missingParentPageId",
     proof="notRequested",
   )
+  if missing_parent_attributes.get("retryInputEditable") != "true":
+    raise AssertionError(
+      f"Notion missing parent retry should reopen editable input: {missing_parent_attributes}"
+    )
+  missing_parent_retry_input = json.loads(missing_parent_attributes.get("retryInput", "{}"))
+  for key in ["parentPageId", "title", "body"]:
+    if key not in missing_parent_retry_input:
+      raise AssertionError(
+        f"Notion missing parent retry missed editable {key}: {missing_parent_retry_input}"
+      )
+  if "parentPageId" not in missing_parent_attributes.get("retryInputHint", ""):
+    raise AssertionError(
+      f"Notion missing parent retry missed input guidance: {missing_parent_attributes}"
+    )
   assert_publish_success(connector)
 
   print("notion connector contract tests passed")

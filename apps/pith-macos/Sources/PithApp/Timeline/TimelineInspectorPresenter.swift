@@ -295,6 +295,8 @@ enum TimelineInspectorPresenter {
       "nextCommandLabel",
       "retryCommandId",
       "retryInput",
+      "retryInputEditable",
+      "retryInputHint",
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
@@ -487,6 +489,12 @@ enum TimelineInspectorPresenter {
     }
     if let retryCommandID = entry.attributes["retryCommandId"] {
       lines.append("Retry command: \(retryCommandID)")
+    }
+    if let retryInputEditable = entry.attributes["retryInputEditable"] {
+      lines.append("Retry input editable: \(retryInputEditable)")
+    }
+    if let retryInputHint = entry.attributes["retryInputHint"] {
+      lines.append("Retry input hint: \(retryInputHint)")
     }
     if let retryInput = entry.attributes["retryInput"] {
       lines.append("Retry input: \(retryInput)")

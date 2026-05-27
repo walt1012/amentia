@@ -140,6 +140,16 @@ extension AppViewModel {
     .first { !$0.isEmpty }
   }
 
+  func pluginRetryInputEditable(from entry: TimelineEntry) -> Bool {
+    entry.attributes["retryInputEditable"] == "true"
+  }
+
+  func pluginRetryInputHint(from entry: TimelineEntry) -> String? {
+    let hint = entry.attributes["retryInputHint"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return hint?.isEmpty == false ? hint : nil
+  }
+
   func pluginFollowUpCommandID(from entry: TimelineEntry) -> String? {
     let commandID = entry.attributes["nextCommandId"]?
       .trimmingCharacters(in: .whitespacesAndNewlines)

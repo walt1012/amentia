@@ -121,6 +121,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "remoteProofStatus": "notRequested",
           "retryCommandId": "notion-connector::notion.publish-page-draft",
           "retryInput": "{\"parentPageId\":\"page\"}",
+          "retryInputEditable": "true",
+          "retryInputHint": "Add parentPageId before retrying.",
           "nextCommandId": "notion-connector::notion.publish-page-draft",
           "nextCommandLabel": "Publish to Notion",
           "nextCommandInputHint": "Fill parentPageId before publishing.",
@@ -167,6 +169,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(
       summary?.contains("Retry command: notion-connector::notion.publish-page-draft") == true
     )
+    XCTAssertTrue(summary?.contains("Retry input editable: true") == true)
+    XCTAssertTrue(summary?.contains("Retry input hint: Add parentPageId before retrying.") == true)
     XCTAssertTrue(summary?.contains("Retry input: {\"parentPageId\":\"page\"}") == true)
   }
 

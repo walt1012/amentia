@@ -372,7 +372,9 @@ def publish_retry_needed(
     "publishFailureReason": reason_code,
     "retryCommand": "notion.publish-page-draft",
     "retryCommandId": os.environ.get("PITH_PLUGIN_COMMAND_ID", DEFAULT_PUBLISH_COMMAND_ID),
-    "retryInput": retry_input_json(input_data),
+    "retryInput": retry_input_json(input_data, reason_code),
+    "retryInputEditable": str(reason_code == "missingParentPageId").lower(),
+    "retryInputHint": retry_input_hint(reason_code),
     "notionParentPageId": parent_page_id,
     **connector_workflow_attributes(
       stage="blockedBeforeWrite" if blocked_before_write else "failedBeforeProof",
@@ -404,8 +406,24 @@ def publish_retry_needed(
   )
 
 
-def retry_input_json(input_data: dict[str, str]) -> str:
-  return json.dumps(input_data, ensure_ascii=False, sort_keys=True)
+def retry_input_json(input_data: dict[str, str], reason_code: str) -> str:
+  retry_input = dict(input_data)
+  if reason_code == "missingParentPageId":
+    retry_input.setdefault("parentPageId", "")
+    retry_input.setdefault("title", "Pith Draft")
+    retry_input.setdefault("body", "")
+  return json.dumps(retry_input, ensure_ascii=False, sort_keys=True)
+
+
+def retry_input_hint(reason_code: str) -> str:
+  if reason_code == "missingParentPageId":
+    return (
+      "Add parentPageId for a Notion page shared with the local integration, "
+      "then run the publish command again."
+    )
+  if reason_code == "missingCredential":
+    return "Authorize the Notion connector, then retry with the preserved input."
+  return "Review the preserved input and retry after the remote issue is resolved."
 
 
 def connector_workflow_attributes(

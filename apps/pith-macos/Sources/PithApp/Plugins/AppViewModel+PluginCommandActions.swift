@@ -67,6 +67,9 @@ extension AppViewModel {
     }
 
     let snapshot = pluginActionSnapshot()
+    if pluginRetryInputEditable(from: entry) {
+      return false
+    }
     if pluginRetryInput(from: entry) == nil {
       return PluginActionPlanner.directCommandRunDisabledReason(
         commandID: commandID,
@@ -79,11 +82,14 @@ extension AppViewModel {
 
   func canRunPluginCommandWithInput(from entry: TimelineEntry) -> Bool {
     guard (isPluginCommandIssueEntry(entry) || isPluginCommandRetryableEntry(entry)),
-          pluginRetryInput(from: entry) == nil,
           let commandID = pluginRetryCommandID(from: entry),
           let command = pluginCommands.first(where: { $0.id == commandID }),
           command.requiresPlainInput
     else {
+      return false
+    }
+
+    guard pluginRetryInput(from: entry) == nil || pluginRetryInputEditable(from: entry) else {
       return false
     }
 
@@ -101,7 +107,11 @@ extension AppViewModel {
       return
     }
 
-    runPluginCommandWithInput(commandID: commandID)
+    runPluginCommandWithInput(
+      commandID: commandID,
+      initialInput: pluginRetryInput(from: entry),
+      informativeText: pluginRetryInputHint(from: entry)
+    )
   }
 
   func retryPluginCommand(from entry: TimelineEntry) {

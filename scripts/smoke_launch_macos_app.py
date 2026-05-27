@@ -1150,6 +1150,8 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("publishRetryable") == "true"
     and item.get("attributes", {}).get("remoteProofStatus") == "missing"
     and item.get("attributes", {}).get("retryCommandId") == NOTION_PUBLISH_COMMAND_ID
+    and item.get("attributes", {}).get("retryInputEditable") == "false"
+    and "retry" in item.get("attributes", {}).get("retryInputHint", "").lower()
     and "packaged-smoke-parent" in item.get("attributes", {}).get("retryInput", "")
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "retryNeeded"
@@ -1170,9 +1172,52 @@ def validate_packaged_mcp_plugin_command(
   ):
     raise RuntimeError("Packaged Notion failed publish memory was not persisted.")
 
-  publish = send_runtime_request(
+  missing_parent_publish = send_runtime_request(
     process,
     38,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": "{}",
+    },
+  )
+  missing_parent_approvals = missing_parent_publish["result"]["pendingApprovals"]
+  if len(missing_parent_approvals) != 1:
+    raise RuntimeError("Packaged Notion missing-parent publish should request one approval.")
+  missing_parent_result = send_runtime_request(
+    process,
+    39,
+    "approval/respond",
+    {
+      "approvalId": missing_parent_approvals[0]["id"],
+      "decision": "approved",
+    },
+  )
+  missing_parent_items = missing_parent_result["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Publish Needs Retry"
+    and item.get("attributes", {}).get("remoteWriteStage") == "blockedBeforeWrite"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "notSent"
+    and item.get("attributes", {}).get("remoteProofStatus") == "notRequested"
+    and item.get("attributes", {}).get("publishFailureReason") == "missingParentPageId"
+    and item.get("attributes", {}).get("retryInputEditable") == "true"
+    and "parentPageId" in item.get("attributes", {}).get("retryInput", "")
+    and "title" in item.get("attributes", {}).get("retryInput", "")
+    and "parentPageId" in item.get("attributes", {}).get("retryInputHint", "")
+    and item.get("attributes", {}).get("connectorWorkflowTarget") == "missingParentPageId"
+    and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"
+    for item in missing_parent_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion missing-parent publish did not return editable retry guidance. "
+      f"Items: {timeline_item_summary(missing_parent_items)}"
+    )
+
+  publish = send_runtime_request(
+    process,
+    40,
     "plugin/commandRun",
     {
       "threadId": "thread-1",
@@ -1201,7 +1246,7 @@ def validate_packaged_mcp_plugin_command(
 
   published = send_runtime_request(
     process,
-    39,
+    41,
     "approval/respond",
     {
       "approvalId": publish_approval["id"],
@@ -1254,7 +1299,7 @@ def validate_packaged_mcp_plugin_command(
   if not isinstance(title, dict):
     raise RuntimeError("Packaged Notion publish omitted the title property.")
 
-  publish_memory_list = send_runtime_request(process, 40, "memory/list")
+  publish_memory_list = send_runtime_request(process, 42, "memory/list")
   if not any(
     note["title"] == "Notion Page Published"
     and note["source"] == "plugin.notion-connector"

@@ -111,6 +111,9 @@ Current review:
   approval, publish, proof, retry, command coverage, and bounded loop budget.
 - Aligned: Notion setup and publish input now guide the local integration token,
   shared parent-page requirement, and approval-before-write behavior.
+- Aligned: Notion retry distinguishes preserved-input retries from editable
+  missing-parent recovery, so users can repair the publish input instead of
+  looping the same failed command.
 - Aligned: connector workflow rules now have a reusable bundled-contract check,
   not only a Notion-specific smoke path.
 - Aligned: Web Search remains the retrieval layer; saved artifacts and memory
