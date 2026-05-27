@@ -291,7 +291,11 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
       "memoryNotes": [
         memory_note(
           "Notion Page Published",
-          f"Pith created Notion page `{title}` under parent page {parent_page_id}.",
+          (
+            f"Pith created Notion page `{title}` at {page_url} under parent page "
+            f"{parent_page_id}. Body truncated: {str(truncated).lower()}. "
+            f"Blocks: {block_count}."
+          ),
           ["connector", "notion", "published"],
         )
       ],
@@ -690,11 +694,12 @@ def parse_key_value_text(text: str) -> dict[str, str]:
     if match:
       key = normalize_input_key(match.group(1))
       value = match.group(2).strip()
-      if key == "body" and not value:
+      if key == "body":
+        if value:
+          body_lines.append(value)
         body_mode = True
         continue
       data[key] = value
-      body_mode = key == "body"
       continue
   if body_lines:
     data["body"] = "\n".join(body_lines).strip()

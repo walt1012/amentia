@@ -200,6 +200,7 @@ def assert_publish_success(
     else:
       os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
   item = response_first_item(response)
+  structured = response.get("result", {}).get("structuredContent", {})
   attributes = item.get("attributes", {})
   expected = {
     "remoteWrite": "true",
@@ -225,6 +226,20 @@ def assert_publish_success(
   )
   if captured.get("path") != "/pages" or captured.get("token") != "secret-token":
     raise AssertionError(f"Notion publish called the wrong target: {captured}")
+  memory_notes = structured.get("memoryNotes", [])
+  if not isinstance(memory_notes, list) or len(memory_notes) != 1:
+    raise AssertionError(f"Notion publish missed memory note: {structured}")
+  memory_body = memory_notes[0].get("body", "")
+  expected_memory_parts = [
+    expected_title,
+    "https://www.notion.so/page-success-123",
+    expected_parent_id,
+    f"Body truncated: {expected_body_truncated}.",
+    f"Blocks: {expected_block_count}.",
+  ]
+  for expected_part in expected_memory_parts:
+    if expected_part not in memory_body:
+      raise AssertionError(f"Notion publish memory missed {expected_part!r}: {memory_notes}")
   payload = captured.get("payload")
   if not isinstance(payload, dict):
     raise AssertionError(f"Notion publish payload was not a dict: {captured}")
@@ -504,6 +519,20 @@ def main() -> int:
     expected_parent_id=VALID_PARENT_PAGE_ID,
     expected_title="Alias Parent",
     expected_block_count="1",
+  )
+  assert_publish_success(
+    connector,
+    raw_input="\n".join(
+      [
+        f"notion_url: {VALID_PARENT_PAGE_URL}",
+        "title: Inline Body",
+        "body: Inline first paragraph",
+        "- Inline follow-up",
+      ]
+    ),
+    expected_parent_id=VALID_PARENT_PAGE_ID,
+    expected_title="Inline Body",
+    expected_block_count="2",
   )
   assert_publish_success(
     connector,

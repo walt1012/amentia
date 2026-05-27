@@ -1286,8 +1286,7 @@ def validate_packaged_mcp_plugin_command(
         [
           f"parent: {NOTION_PARENT_PAGE_URL}",
           "title: Packaged Smoke Page",
-          "body:",
-          "# Packaged Smoke Page",
+          "body: # Packaged Smoke Page",
           "",
           "Created from packaged smoke after user approval.",
           "",
@@ -1376,6 +1375,9 @@ def validate_packaged_mcp_plugin_command(
   if not any(
     note["title"] == "Notion Page Published"
     and note["source"] == "plugin.notion-connector"
+    and "https://www.notion.so/packaged-smoke-notion-page" in note["body"]
+    and "Body truncated: false." in note["body"]
+    and "Blocks: 4." in note["body"]
     for note in publish_memory_list["result"]["notes"]
   ):
     raise RuntimeError("Packaged Notion publish memory was not persisted.")

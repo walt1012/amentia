@@ -86,10 +86,12 @@ Current state:
   packaged smoke.
 - Notion publish accepts page IDs and copied page URLs, validates malformed
   targets locally, accepts forgiving parent aliases, preserves lightweight page
-  structure, reports content truncation, requires trusted remote proof, and
-  exposes proof attributes in the timeline.
+  structure from forgiving text input, reports content truncation, requires
+  trusted remote proof, and exposes proof attributes in the timeline.
 - Notion API-key authorization requires a local secret and explains token,
   scope, parent-page sharing, and non-OAuth setup before publish.
+- Published Notion memory captures proof URL, parent, truncation state, and
+  block count so later cowork turns can continue from the real remote result.
 - Connector workflow contracts are reusable across manifest workflow,
   command bindings, output envelopes, proof attributes, bounded step budget,
   and CI checks.
