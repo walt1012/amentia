@@ -129,6 +129,7 @@ struct RuntimePluginCommandWorkflowPayload: Codable {
   let connectorId: String
   let service: String
   let action: String
+  let maxAgentSteps: Int?
   let stages: [String]
   let statuses: [String]
   let commandIds: [String]?
@@ -178,6 +179,7 @@ struct RuntimePluginConnectorWorkflowPayload: Codable {
   let connectorId: String
   let service: String
   let action: String
+  let maxAgentSteps: Int?
   let stages: [String]
   let statuses: [String]
   let commandIds: [String]?
@@ -331,6 +333,7 @@ extension RuntimeBridge {
     let connectorID: String
     let service: String
     let action: String
+    let maxAgentSteps: Int?
     let stages: [String]
     let statuses: [String]
     let commandIDs: [String]
@@ -380,6 +383,7 @@ extension RuntimeBridge {
     let connectorID: String
     let service: String
     let action: String
+    let maxAgentSteps: Int?
     let stages: [String]
     let statuses: [String]
     let commandIDs: [String]

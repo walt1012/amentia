@@ -33,6 +33,7 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     display_name: "Workspace Publish".to_string(),
     connector_id: "workspace.connector".to_string(),
     action: "publishPage".to_string(),
+    max_agent_steps: Some(4),
     stages: vec!["draft".to_string(), "published".to_string()],
     statuses: vec!["prepared".to_string(), "completed".to_string()],
   }];
@@ -403,6 +404,7 @@ fn validate_manifest_rejects_connector_workflow_without_connector() {
     display_name: "Notion Create Page".to_string(),
     connector_id: "notion".to_string(),
     action: "createPage".to_string(),
+    max_agent_steps: None,
     stages: vec!["draftPrepared".to_string()],
     statuses: vec!["prepared".to_string()],
   }];
@@ -445,6 +447,7 @@ fn validate_manifest_rejects_connector_workflow_without_lifecycle_shape() {
     display_name: "Notion Create Page".to_string(),
     connector_id: "notion".to_string(),
     action: "createPage".to_string(),
+    max_agent_steps: None,
     stages: vec![],
     statuses: vec!["prepared".to_string()],
   }];
@@ -454,4 +457,31 @@ fn validate_manifest_rejects_connector_workflow_without_lifecycle_shape() {
   assert!(error
     .to_string()
     .contains("must declare at least one stage"));
+}
+
+#[test]
+fn validate_manifest_rejects_unbounded_connector_workflow_steps() {
+  let mut manifest = manifest(
+    vec!["connector:notion", "connector_workflow:notion.create-page"],
+    vec!["network.outbound"],
+  );
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.connector_workflows = vec![PluginConnectorWorkflowManifest {
+    id: "notion.create-page".to_string(),
+    display_name: "Notion Create Page".to_string(),
+    connector_id: "notion".to_string(),
+    action: "createPage".to_string(),
+    max_agent_steps: Some(9),
+    stages: vec!["draftPrepared".to_string()],
+    statuses: vec!["prepared".to_string()],
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("workflow step budget should be bounded");
+
+  assert!(error.to_string().contains("maxAgentSteps"));
 }

@@ -118,6 +118,8 @@ def assert_manifest_workflow_coverage() -> None:
   }
   if WORKFLOW_ID not in workflows:
     raise AssertionError(f"Notion manifest missed workflow {WORKFLOW_ID}")
+  if workflows[WORKFLOW_ID].get("maxAgentSteps") != 5:
+    raise AssertionError(f"Notion workflow should request a 5-step bounded loop: {workflows}")
 
   for command_id in command_files:
     command = json.loads(

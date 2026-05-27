@@ -130,6 +130,7 @@ struct PluginConnectorWorkflowSummary: Hashable {
   let connectorID: String
   let service: String
   let action: String
+  let maxAgentSteps: Int?
   let stages: [String]
   let statuses: [String]
   let commandIDs: [String]
@@ -138,6 +139,15 @@ struct PluginConnectorWorkflowSummary: Hashable {
     commandIDs.isEmpty
       ? "no commands"
       : "\(commandIDs.count) command\(commandIDs.count == 1 ? "" : "s")"
+  }
+
+  var stepBudgetLabel: String? {
+    maxAgentSteps.map { "up to \($0) steps" }
+  }
+
+  var workflowLabel: String {
+    ([displayName, action, commandCoverageLabel] + [stepBudgetLabel].compactMap { $0 })
+      .joined(separator: " / ")
   }
 }
 
@@ -178,6 +188,7 @@ struct PluginCommandWorkflowSummary: Hashable {
   let connectorID: String
   let service: String
   let action: String
+  let maxAgentSteps: Int?
   let stages: [String]
   let statuses: [String]
   let commandIDs: [String]
@@ -186,6 +197,15 @@ struct PluginCommandWorkflowSummary: Hashable {
     commandIDs.isEmpty
       ? "no commands"
       : "\(commandIDs.count) command\(commandIDs.count == 1 ? "" : "s")"
+  }
+
+  var stepBudgetLabel: String? {
+    maxAgentSteps.map { "up to \($0) steps" }
+  }
+
+  var workflowLabel: String {
+    ([displayName, action, commandCoverageLabel] + [stepBudgetLabel].compactMap { $0 })
+      .joined(separator: " / ")
   }
 }
 

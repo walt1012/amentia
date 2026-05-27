@@ -139,6 +139,7 @@ enum RuntimeSummaryMapper {
               connectorID: $0.connectorID,
               service: $0.service,
               action: $0.action,
+              maxAgentSteps: $0.maxAgentSteps,
               stages: $0.stages,
               statuses: $0.statuses,
               commandIDs: $0.commandIDs
@@ -206,6 +207,7 @@ enum RuntimeSummaryMapper {
           connectorID: $0.connectorID,
           service: $0.service,
           action: $0.action,
+          maxAgentSteps: $0.maxAgentSteps,
           stages: $0.stages,
           statuses: $0.statuses,
           commandIDs: $0.commandIDs

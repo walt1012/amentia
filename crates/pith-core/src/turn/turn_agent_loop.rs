@@ -8,6 +8,7 @@ use crate::plugin_permissions::permission_is_granted;
 use crate::request_state::PreparedTurnAction;
 
 pub(crate) const LOOP_MAX_STEPS: usize = 3;
+pub(crate) const LOOP_MAX_EXTENDED_STEPS: usize = 8;
 const LOOP_MODE: &str = "dispatcherLoop";
 const LOOP_SCHEMA: &str = "pith.agentLoop.v1";
 
@@ -19,15 +20,25 @@ pub(crate) struct AgentLoopCoordinator {
 
 impl AgentLoopCoordinator {
   pub(crate) fn new(turn_id: &str) -> Self {
+    Self::new_with_max_steps(turn_id, LOOP_MAX_STEPS)
+  }
+
+  pub(crate) fn new_with_max_steps(turn_id: &str, max_steps: usize) -> Self {
     Self {
       loop_id: format!("{turn_id}-loop-1"),
-      max_steps: LOOP_MAX_STEPS,
+      max_steps: max_steps.clamp(1, LOOP_MAX_EXTENDED_STEPS),
       turn_id: turn_id.to_string(),
     }
   }
 
   pub(crate) fn max_steps(&self) -> usize {
     self.max_steps
+  }
+
+  pub(crate) fn allow_max_steps(&mut self, max_steps: usize) {
+    self.max_steps = self
+      .max_steps
+      .max(max_steps.clamp(1, LOOP_MAX_EXTENDED_STEPS));
   }
 
   pub(crate) fn begin_step(

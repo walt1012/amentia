@@ -335,6 +335,7 @@ fn plugin_connector_registry_round_trips() {
         connector_id: "notion".to_string(),
         service: "notion".to_string(),
         action: "createPage".to_string(),
+        max_agent_steps: Some(5),
         stages: vec!["draftPrepared".to_string(), "completed".to_string()],
         statuses: vec!["prepared".to_string(), "completed".to_string()],
         command_ids: vec![
@@ -368,6 +369,7 @@ fn plugin_connector_registry_round_trips() {
   assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
   assert_eq!(decoded.connectors[0].workflows.len(), 1);
   assert_eq!(decoded.connectors[0].workflows[0].action, "createPage");
+  assert_eq!(decoded.connectors[0].workflows[0].max_agent_steps, Some(5));
   assert_eq!(decoded.connectors[0].workflows[0].command_ids.len(), 2);
   assert!(value["connectors"][0].get("connectorId").is_some());
   assert_eq!(
@@ -539,6 +541,7 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
       connector_id: "notion".to_string(),
       service: "notion".to_string(),
       action: "createPage".to_string(),
+      max_agent_steps: Some(5),
       stages: vec!["draftPrepared".to_string(), "completed".to_string()],
       statuses: vec!["prepared".to_string(), "completed".to_string()],
       command_ids: vec![],

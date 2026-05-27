@@ -26,6 +26,8 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
 const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "local"];
 const KNOWN_MCP_TRANSPORTS: [&str; 1] = ["stdio"];
+const MIN_CONNECTOR_WORKFLOW_AGENT_STEPS: usize = 1;
+const MAX_CONNECTOR_WORKFLOW_AGENT_STEPS: usize = 8;
 
 pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("failed to parse plugin manifest") {
@@ -112,6 +114,12 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
     && validation_error.contains("must declare at least one")
   {
     return "Declare the connector workflow stages and statuses that runner output is allowed to report."
+      .to_string();
+  }
+  if validation_error.contains("plugin connector workflow")
+    && validation_error.contains("maxAgentSteps")
+  {
+    return "Set maxAgentSteps to a bounded value between 1 and 8, or omit it to use the default loop budget."
       .to_string();
   }
   if validation_error.contains("plugin credential store")
@@ -235,6 +243,18 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         "plugin connector workflow `{}` must declare at least one status",
         workflow.id
       );
+    }
+    if let Some(max_agent_steps) = workflow.max_agent_steps {
+      if !(MIN_CONNECTOR_WORKFLOW_AGENT_STEPS..=MAX_CONNECTOR_WORKFLOW_AGENT_STEPS)
+        .contains(&max_agent_steps)
+      {
+        anyhow::bail!(
+          "plugin connector workflow `{}` maxAgentSteps must be between {} and {}",
+          workflow.id,
+          MIN_CONNECTOR_WORKFLOW_AGENT_STEPS,
+          MAX_CONNECTOR_WORKFLOW_AGENT_STEPS
+        );
+      }
     }
     for stage in &workflow.stages {
       validate_manifest_identifier("connector workflow stage", stage)?;

@@ -19,6 +19,7 @@ pub(crate) fn execute_prepared_turn_snapshot(
   let mut pending_approval = None;
   let mut plugin_command_outputs = vec![];
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
+  let max_steps = turn_action_max_steps(&action);
   {
     let mut runner = TurnLoopRunner::new(
       &snapshot,
@@ -26,11 +27,12 @@ pub(crate) fn execute_prepared_turn_snapshot(
       &mut pending_active_turn,
       &mut pending_approval,
       &mut plugin_command_outputs,
+      max_steps,
     );
     let loop_summary = runner.run(action);
     debug_assert!(
       loop_summary.stop_reason != AgentLoopStopReason::StepBudgetExhausted
-        || loop_summary.step_count >= LOOP_MAX_STEPS
+        || loop_summary.step_count >= max_steps
     );
   }
 
@@ -41,6 +43,15 @@ pub(crate) fn execute_prepared_turn_snapshot(
     pending_approval,
     pending_active_turn,
     plugin_command_outputs,
+  }
+}
+
+fn turn_action_max_steps(action: &PreparedTurnAction) -> usize {
+  match action {
+    PreparedTurnAction::PluginCommand { snapshot } => snapshot
+      .workflow_max_agent_steps()
+      .unwrap_or(LOOP_MAX_STEPS),
+    _ => LOOP_MAX_STEPS,
   }
 }
 

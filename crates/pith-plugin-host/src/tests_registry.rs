@@ -225,6 +225,7 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
       "displayName": "Notion Create Page",
       "connectorId": "notion",
       "action": "createPage",
+      "maxAgentSteps": 5,
       "stages": ["draftPrepared", "completed"],
       "statuses": ["prepared", "completed"]
     }
@@ -275,6 +276,7 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
   );
   assert_eq!(connectors[0].workflows[0].service, "notion");
   assert_eq!(connectors[0].workflows[0].action, "createPage");
+  assert_eq!(connectors[0].workflows[0].max_agent_steps, Some(5));
   assert_eq!(
     connectors[0].workflows[0].command_ids,
     vec!["notion-connector::notion.prepare-page-draft".to_string()]
@@ -603,6 +605,7 @@ fn build_command_registry_accepts_declared_connector_workflow() {
       "displayName": "Notion Create Page",
       "connectorId": "notion",
       "action": "createPage",
+      "maxAgentSteps": 5,
       "stages": ["draftPrepared", "completed"],
       "statuses": ["prepared", "completed"]
     }
@@ -644,6 +647,7 @@ fn build_command_registry_accepts_declared_connector_workflow() {
   assert_eq!(workflow.connector_id, "notion");
   assert_eq!(workflow.service, "notion");
   assert_eq!(workflow.action, "createPage");
+  assert_eq!(workflow.max_agent_steps, Some(5));
   assert_eq!(
     workflow.stages,
     vec!["draftPrepared".to_string(), "completed".to_string()]

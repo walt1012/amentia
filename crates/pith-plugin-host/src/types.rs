@@ -95,6 +95,7 @@ pub struct PluginConnectorWorkflowEntry {
   pub connector_id: String,
   pub service: String,
   pub action: String,
+  pub max_agent_steps: Option<usize>,
   pub stages: Vec<String>,
   pub statuses: Vec<String>,
   pub command_ids: Vec<String>,

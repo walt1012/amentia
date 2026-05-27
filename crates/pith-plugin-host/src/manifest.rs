@@ -70,6 +70,8 @@ pub struct PluginConnectorWorkflowManifest {
   pub connector_id: String,
   pub action: String,
   #[serde(default)]
+  pub max_agent_steps: Option<usize>,
+  #[serde(default)]
   pub stages: Vec<String>,
   #[serde(default)]
   pub statuses: Vec<String>,

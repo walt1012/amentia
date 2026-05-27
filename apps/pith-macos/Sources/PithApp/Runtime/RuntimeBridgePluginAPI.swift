@@ -106,6 +106,7 @@ extension RuntimeBridge {
                 connectorID: workflow.connectorId,
                 service: workflow.service,
                 action: workflow.action,
+                maxAgentSteps: workflow.maxAgentSteps,
                 stages: workflow.stages,
                 statuses: workflow.statuses,
                 commandIDs: workflow.commandIds ?? []
@@ -303,6 +304,7 @@ private extension RuntimeBridge {
           connectorID: workflow.connectorId,
           service: workflow.service,
           action: workflow.action,
+          maxAgentSteps: workflow.maxAgentSteps,
           stages: workflow.stages,
           statuses: workflow.statuses,
           commandIDs: workflow.commandIds ?? []

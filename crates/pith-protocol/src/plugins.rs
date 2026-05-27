@@ -156,6 +156,8 @@ pub struct PluginConnectorWorkflowSummary {
   pub connector_id: String,
   pub service: String,
   pub action: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub max_agent_steps: Option<usize>,
   #[serde(default)]
   pub stages: Vec<String>,
   #[serde(default)]
@@ -241,6 +243,8 @@ pub struct PluginCommandWorkflowSummary {
   pub connector_id: String,
   pub service: String,
   pub action: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub max_agent_steps: Option<usize>,
   #[serde(default)]
   pub stages: Vec<String>,
   #[serde(default)]

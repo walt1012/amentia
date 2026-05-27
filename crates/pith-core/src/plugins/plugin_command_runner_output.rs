@@ -1397,6 +1397,7 @@ mod tests {
         connector_id: "notion".to_string(),
         service: "notion".to_string(),
         action: "createPage".to_string(),
+        max_agent_steps: Some(5),
         stages: vec![
           "draftPrepared".to_string(),
           "inspectBeforeWrite".to_string(),

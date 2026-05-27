@@ -47,6 +47,7 @@
       "displayName": "Notion Create Page",
       "connectorId": "notion",
       "action": "createPage",
+      "maxAgentSteps": 5,
       "stages": [
         "draftPrepared",
         "inspectBeforeWrite",

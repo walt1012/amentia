@@ -36,10 +36,11 @@ impl<'a> TurnLoopRunner<'a> {
     pending_active_turn: &'a mut Option<ActiveTurn>,
     pending_approval: &'a mut Option<PendingApproval>,
     plugin_command_outputs: &'a mut Vec<PluginCommandOutput>,
+    max_steps: usize,
   ) -> Self {
     Self {
       snapshot,
-      coordinator: AgentLoopCoordinator::new(&snapshot.turn_id),
+      coordinator: AgentLoopCoordinator::new_with_max_steps(&snapshot.turn_id, max_steps),
       items,
       pending_active_turn,
       pending_approval,
@@ -115,12 +116,13 @@ impl<'a> TurnLoopRunner<'a> {
     }
 
     if planned_next_action.is_some() {
+      self.allow_workflow_budget(planned_next_action.as_ref());
       return planned_next_action;
     }
 
     let planned_action = observation.planned_action()?;
 
-    match planned_action {
+    let next_action = match planned_action {
       AgentLoopPlannedAction::PluginCommand { command_id, input } => {
         Some(self.prepare_plugin_command_follow_up(command_id, input.clone()))
       }
@@ -128,6 +130,17 @@ impl<'a> TurnLoopRunner<'a> {
         &self.snapshot.permission_sources,
         &mut self.reserved_approval_ids,
       ),
+    };
+    self.allow_workflow_budget(next_action.as_ref());
+    next_action
+  }
+
+  fn allow_workflow_budget(&mut self, action: Option<&PreparedTurnAction>) {
+    let Some(PreparedTurnAction::PluginCommand { snapshot }) = action else {
+      return;
+    };
+    if let Some(max_steps) = snapshot.workflow_max_agent_steps() {
+      self.coordinator.allow_max_steps(max_steps);
     }
   }
 

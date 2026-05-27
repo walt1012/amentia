@@ -53,6 +53,7 @@ pub fn build_connector_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginCon
           connector_id: workflow.connector_id.clone(),
           service: connector.service.clone(),
           action: workflow.action.clone(),
+          max_agent_steps: workflow.max_agent_steps,
           stages: workflow.stages.clone(),
           statuses: workflow.statuses.clone(),
           command_ids: connector_workflow_command_ids(plugin, plugin_root, &workflow.id),
