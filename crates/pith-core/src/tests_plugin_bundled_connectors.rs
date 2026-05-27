@@ -635,7 +635,10 @@ fn assert_local_slack_draft_items(context: &RuntimeContext, items: &[Value]) {
     "mcp"
   );
   assert_eq!(draft_item["attributes"]["mcpServerId"], "slack");
-  assert_eq!(draft_item["attributes"]["mcpToolName"], "prepareMessageDraft");
+  assert_eq!(
+    draft_item["attributes"]["mcpToolName"],
+    "prepareMessageDraft"
+  );
   assert_eq!(
     draft_item["attributes"]["mcpServerCommand"],
     "bin/slack-mcp-local-message.sh"
