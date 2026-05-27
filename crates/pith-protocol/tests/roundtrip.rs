@@ -463,7 +463,10 @@ fn plugin_channel_inbound_preview_payloads_round_trip() {
   assert_eq!(params_value["channelId"], "weixin-channel::weixin");
   assert_eq!(params_value["externalConversationId"], "chat-123");
   assert_eq!(decoded_params.sender_label.as_deref(), Some("Ada"));
-  assert_eq!(result_value["normalizedText"], "Please summarize this note.");
+  assert_eq!(
+    result_value["normalizedText"],
+    "Please summarize this note."
+  );
   assert_eq!(decoded_result.status, "accepted");
   assert!(decoded_result.accepted);
 }
