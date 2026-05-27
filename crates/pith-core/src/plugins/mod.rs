@@ -27,6 +27,7 @@ pub(crate) mod plugin_command_text;
 pub(crate) mod plugin_command_timeline;
 pub(crate) mod plugin_command_types;
 pub(crate) mod plugin_commands;
+pub(crate) mod plugin_channel_inbound;
 pub(crate) mod plugin_connector_auth;
 pub(crate) mod plugin_connector_execution_refs;
 pub(crate) mod plugin_connector_requirements;

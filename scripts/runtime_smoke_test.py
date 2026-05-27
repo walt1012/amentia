@@ -907,6 +907,23 @@ def main() -> int:
     assert weixin_channel["adapterAvailable"] is False
     assert "openclaw-weixin" in weixin_channel["activationBlocker"]
     assert weixin_channel["status"] == "disabled"
+    weixin_inbound_preview, _ = send_request(
+      process,
+      {
+        "id": 45,
+        "method": "plugin/channelInboundPreview",
+        "params": {
+          "channelId": "weixin-channel::weixin",
+          "externalConversationId": "chat-123",
+          "externalMessageId": "msg-456",
+          "senderLabel": "Ada",
+          "text": "Please summarize this note.",
+        },
+      },
+    )
+    assert weixin_inbound_preview["error"]["code"] == -32058
+    assert weixin_inbound_preview["error"]["data"]["status"] == "channelAdapterPending"
+    assert weixin_inbound_preview["error"]["data"]["adapterStatus"] == "pending"
     weixin_enable, _ = send_request(
       process,
       {

@@ -150,6 +150,8 @@ Current state:
   Weixin path is visible as a disabled channel, not a fake ready connector.
 - Pith remains the agent runtime. Weixin work is a channel adapter that can
   deliver messages into Pith and return approved responses.
+- A generic inbound channel preview RPC gates external messages before they can
+  enter the cowork loop.
 
 Exit criteria:
 

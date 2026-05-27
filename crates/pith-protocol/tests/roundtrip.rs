@@ -1,6 +1,7 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, JsonRpcResponse,
   PluginCapabilityRegistration, PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
+  PluginChannelInboundPreviewParams, PluginChannelInboundPreviewResult,
   PluginChannelRegistryResult, PluginChannelSummary, PluginCommandEnvelopeFieldSummary,
   PluginCommandEnvelopeSummary, PluginCommandExecutionSummary, PluginCommandRegistryResult,
   PluginCommandRunParams, PluginCommandSummary, PluginCommandWorkflowSummary,
@@ -426,6 +427,45 @@ fn plugin_channel_registry_round_trips() {
   assert!(value["channels"][0].get("channelId").is_some());
   assert_eq!(value["channels"][0]["protocol"], "openclaw-weixin");
   assert_eq!(value["channels"][0]["adapterStatus"], "pending");
+}
+
+#[test]
+fn plugin_channel_inbound_preview_payloads_round_trip() {
+  let params = PluginChannelInboundPreviewParams {
+    channel_id: "weixin-channel::weixin".to_string(),
+    external_conversation_id: "chat-123".to_string(),
+    external_message_id: "msg-456".to_string(),
+    sender_label: Some("Ada".to_string()),
+    text: "Please summarize this note.".to_string(),
+    received_at: Some(1_780_000_000),
+  };
+  let result = PluginChannelInboundPreviewResult {
+    channel_id: params.channel_id.clone(),
+    service: "weixin".to_string(),
+    protocol: "openclaw-weixin".to_string(),
+    plugin_id: "weixin-channel".to_string(),
+    plugin_display_name: "Weixin Channel".to_string(),
+    external_conversation_id: params.external_conversation_id.clone(),
+    external_message_id: params.external_message_id.clone(),
+    sender_label: params.sender_label.clone(),
+    normalized_text: params.text.clone(),
+    status: "accepted".to_string(),
+    accepted: true,
+  };
+
+  let params_value = serde_json::to_value(&params).expect("serialize inbound params");
+  let result_value = serde_json::to_value(&result).expect("serialize inbound result");
+  let decoded_params: PluginChannelInboundPreviewParams =
+    serde_json::from_value(params_value.clone()).expect("deserialize inbound params");
+  let decoded_result: PluginChannelInboundPreviewResult =
+    serde_json::from_value(result_value.clone()).expect("deserialize inbound result");
+
+  assert_eq!(params_value["channelId"], "weixin-channel::weixin");
+  assert_eq!(params_value["externalConversationId"], "chat-123");
+  assert_eq!(decoded_params.sender_label.as_deref(), Some("Ada"));
+  assert_eq!(result_value["normalizedText"], "Please summarize this note.");
+  assert_eq!(decoded_result.status, "accepted");
+  assert!(decoded_result.accepted);
 }
 
 #[test]

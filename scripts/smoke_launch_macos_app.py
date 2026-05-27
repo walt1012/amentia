@@ -499,6 +499,39 @@ def send_runtime_request(
       return message
 
 
+def send_runtime_request_expect_error(
+  process: subprocess.Popen[str],
+  request_id: int,
+  method: str,
+  params: dict | None = None,
+) -> dict:
+  if process.stdin is None or process.stdout is None:
+    raise RuntimeError("Packaged runtime pipes are unavailable.")
+
+  payload = {
+    "id": request_id,
+    "method": method,
+  }
+  if params is not None:
+    payload["params"] = params
+
+  process.stdin.write(json.dumps(payload) + "\n")
+  process.stdin.flush()
+
+  while True:
+    line = read_runtime_line(process, method)
+    if not line:
+      raise RuntimeError(
+        f"Packaged runtime exited before responding to {method}."
+        f"{runtime_stderr_detail(process)}"
+      )
+    message = json.loads(line)
+    if message.get("id") == request_id:
+      if "error" not in message:
+        raise RuntimeError(f"Packaged runtime {method} unexpectedly succeeded.")
+      return message
+
+
 def read_runtime_line(process: subprocess.Popen[str], method: str) -> str:
   if process.stdout is None:
     raise RuntimeError("Packaged runtime stdout is unavailable.")
@@ -1723,6 +1756,20 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
         raise RuntimeError("Packaged Weixin channel should remain adapter pending.")
       if weixin_channel["adapterAvailable"] is not False:
         raise RuntimeError("Packaged Weixin channel should not be activatable yet.")
+      inbound_preview = send_runtime_request_expect_error(
+        process,
+        126,
+        "plugin/channelInboundPreview",
+        {
+          "channelId": "weixin-channel::weixin",
+          "externalConversationId": "chat-123",
+          "externalMessageId": "msg-456",
+          "senderLabel": "Ada",
+          "text": "Please summarize this note.",
+        },
+      )
+      if inbound_preview["error"]["data"]["status"] != "channelAdapterPending":
+        raise RuntimeError("Packaged Weixin inbound preview should require an adapter.")
 
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)

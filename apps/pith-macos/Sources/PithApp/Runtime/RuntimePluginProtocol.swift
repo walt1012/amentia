@@ -55,6 +55,43 @@ struct PluginChannelRegistryResult: Codable {
   let channels: [RuntimePluginChannelPayload]
 }
 
+struct PluginChannelInboundPreviewParams: Codable {
+  let channelId: String
+  let externalConversationId: String
+  let externalMessageId: String
+  let senderLabel: String?
+  let text: String
+  let receivedAt: Int?
+}
+
+struct PluginChannelInboundPreviewResult: Codable {
+  let channelId: String
+  let service: String
+  let protocolName: String
+  let pluginId: String
+  let pluginDisplayName: String
+  let externalConversationId: String
+  let externalMessageId: String
+  let senderLabel: String?
+  let normalizedText: String
+  let status: String
+  let accepted: Bool
+
+  private enum CodingKeys: String, CodingKey {
+    case channelId
+    case service
+    case protocolName = "protocol"
+    case pluginId
+    case pluginDisplayName
+    case externalConversationId
+    case externalMessageId
+    case senderLabel
+    case normalizedText
+    case status
+    case accepted
+  }
+}
+
 struct PluginConnectorCredentialParams: Codable {
   let connectorId: String
   let credentialLabel: String?
@@ -442,6 +479,20 @@ extension RuntimeBridge {
     let permissions: [String]
     let manifestPath: String
     let homepage: String?
+  }
+
+  struct RuntimePluginChannelInboundPreview {
+    let channelID: String
+    let service: String
+    let protocolName: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let externalConversationID: String
+    let externalMessageID: String
+    let senderLabel: String?
+    let normalizedText: String
+    let status: String
+    let accepted: Bool
   }
 
   struct RuntimePluginHook {

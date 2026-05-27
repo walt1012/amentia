@@ -1606,6 +1606,101 @@ fn plugin_channel_registry_lists_disabled_weixin_channel() {
 }
 
 #[test]
+fn plugin_channel_inbound_preview_rejects_pending_weixin_adapter() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "weixin-channel",
+      "Weixin Channel",
+      false,
+      false,
+      &["channel:weixin"],
+      &["network.outbound"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_INBOUND_PREVIEW,
+      Some(json!({
+        "channelId": "weixin-channel::weixin",
+        "externalConversationId": "chat-123",
+        "externalMessageId": "msg-456",
+        "senderLabel": "Ada",
+        "text": "Please summarize this note."
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("channel inbound preview error");
+  assert_eq!(error.code, -32058);
+  let data = error.data.expect("channel inbound error data");
+  assert_eq!(data["channelId"], "weixin-channel::weixin");
+  assert_eq!(data["status"], "channelAdapterPending");
+  assert_eq!(data["service"], "weixin");
+  assert_eq!(data["protocol"], "openclaw-weixin");
+  assert_eq!(data["adapterStatus"], "pending");
+  assert_eq!(data["adapterAvailable"], false);
+}
+
+#[test]
+fn plugin_channel_inbound_preview_rejects_unknown_channel() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_INBOUND_PREVIEW,
+      Some(json!({
+        "channelId": "missing::weixin",
+        "externalConversationId": "chat-123",
+        "externalMessageId": "msg-456",
+        "text": "Hello"
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("unknown channel inbound error");
+  assert_eq!(error.code, -32060);
+  assert_eq!(
+    error.data.expect("channel inbound error data")["status"],
+    "notFound"
+  );
+}
+
+#[test]
+fn plugin_channel_inbound_preview_requires_external_message_key() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_INBOUND_PREVIEW,
+      Some(json!({
+        "channelId": "weixin-channel::weixin",
+        "externalConversationId": "chat-123",
+        "externalMessageId": " ",
+        "text": "Hello"
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("invalid channel envelope error");
+  assert_eq!(error.code, -32063);
+  assert_eq!(
+    error.data.expect("channel inbound error data")["status"],
+    "invalidEnvelope"
+  );
+}
+
+#[test]
 fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(
