@@ -14,3 +14,6 @@ Current contract:
   `title` and `body` are optional; URL-only input uses the default draft title.
 - Prefer concise page outlines, decision logs, and task lists over long chat transcripts.
 - Do not assume credentials exist; check the runtime connector auth state before preparing Notion actions.
+- If authorization is missing, guide the user to create an internal Notion
+  integration, paste its token locally, and share the target parent page with
+  that integration before publishing.

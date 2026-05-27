@@ -11,9 +11,16 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertTrue(prompt.contains("API key access for notion"))
     XCTAssertTrue(prompt.contains("Scopes: read_content, insert_content."))
     XCTAssertTrue(prompt.contains("A local token or API key is required"))
-    XCTAssertTrue(prompt.contains("create a local Notion integration"))
-    XCTAssertTrue(prompt.contains("share the target parent page"))
+    XCTAssertTrue(prompt.contains("create an internal Notion integration"))
+    XCTAssertTrue(prompt.contains("share every target parent page"))
+    XCTAssertTrue(prompt.contains("passes it only to the local Notion connector runner"))
+    XCTAssertTrue(prompt.contains("first publish still verifies"))
     XCTAssertTrue(prompt.contains("does not claim OAuth yet"))
+
+    let warning = PluginConnectorCredentialDialogPresenter.missingSecretWarningText(connector)
+    XCTAssertTrue(warning.contains("Notion internal integration token"))
+    XCTAssertTrue(warning.contains("share the target parent page"))
+    XCTAssertTrue(warning.contains("per-run environment bindings"))
   }
 
   func testMarkerOnlyPromptRemainsAvailableForNonApiKeyConnectors() {
@@ -48,6 +55,11 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
       PluginConnectorCredentialDialogPresenter
         .credentialPrompt(connector)
         .contains("marker-only authorization")
+    )
+    XCTAssertTrue(
+      PluginConnectorCredentialDialogPresenter
+        .missingSecretWarningText(connector)
+        .contains("local token or API key")
     )
   }
 

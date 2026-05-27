@@ -89,7 +89,8 @@ Current state:
   structure from forgiving text input, reports title and content truncation,
   requires trusted remote proof, and exposes proof attributes in the timeline.
 - Notion API-key authorization requires a local secret and explains token,
-  scope, parent-page sharing, and non-OAuth setup before publish.
+  scope, internal integration setup, parent-page sharing, local token storage,
+  and non-OAuth setup before publish.
 - Published Notion memory captures proof URL, parent, title/body truncation, and
   block count so later cowork turns can continue from the real remote result.
 - Connector workflow contracts are reusable across manifest workflow,

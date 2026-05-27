@@ -81,9 +81,20 @@ enum PluginConnectorCredentialDialogPresenter {
       prompt += "Leave the secret empty only when this connector uses marker-only authorization."
     }
     if isNotion(connector) {
-      prompt += "\n\nNotion setup: create a local Notion integration, copy its internal integration token, and share the target parent page with that integration. Pith does not claim OAuth yet; this token stays in local connector state."
+      prompt += notionSetupPrompt()
     }
     return prompt
+  }
+
+  private static func notionSetupPrompt() -> String {
+    [
+      "",
+      "",
+      "Notion setup: create an internal Notion integration and copy its internal integration token.",
+      "Paste that token as the secret, then share every target parent page with the integration before publishing.",
+      "Pith keeps the token local, passes it only to the local Notion connector runner, and does not claim OAuth yet.",
+      "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response proof.",
+    ].joined(separator: "\n")
   }
 
   private static func displayAuthType(_ authType: String?) -> String {
@@ -117,11 +128,22 @@ enum PluginConnectorCredentialDialogPresenter {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = "\(connector.displayName) Requires a Secret"
-    alert.informativeText =
-      "Paste the local token or API key before authorizing this connector. "
-      + "Pith will keep it local and pass it to plugin runners through per-run environment bindings."
+    alert.informativeText = missingSecretWarningText(connector)
     alert.addButton(withTitle: "Back")
     alert.runModal()
+  }
+
+  static func missingSecretWarningText(_ connector: PluginConnectorSummary) -> String {
+    if isNotion(connector) {
+      return [
+        "Paste the Notion internal integration token before authorizing this connector.",
+        "If you have not created one yet, create an internal Notion integration first and share the target parent page with it.",
+        "Pith keeps the token local and passes it only through per-run environment bindings.",
+      ].joined(separator: " ")
+    }
+
+    return "Paste the local token or API key before authorizing this connector. "
+      + "Pith will keep it local and pass it to plugin runners through per-run environment bindings."
   }
 
   private static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {
