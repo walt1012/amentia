@@ -19,6 +19,8 @@ const AUTHORIZE_DISABLED_CONNECTOR_REPAIR_HINT: &str =
   "Enable the connector plugin before authorizing it.";
 const NOT_REQUIRED_CONNECTOR_REPAIR_HINT: &str =
   "Run the command without connector authorization; this connector does not require credentials.";
+const MISSING_SECRET_REPAIR_HINT: &str =
+  "Paste the connector token or API key, then retry connector authorization.";
 const AUTHORIZE_STORE_REPAIR_HINT: &str =
   "Check local storage permissions, then retry connector authorization.";
 const CLEAR_STORE_REPAIR_HINT: &str =
@@ -88,6 +90,17 @@ pub(crate) fn handle_plugin_connector_authorize(
     }
   };
   let credential_secret = normalized_credential_secret(params.credential_secret.as_deref());
+  if credential_secret.is_none() && connector_requires_secret(&connector) {
+    return connector_error_response(
+      request.id,
+      -32058,
+      &params.connector_id,
+      Some(&connector.plugin_id),
+      "Plugin connector requires a token or API key",
+      "missingCredentialSecret",
+      MISSING_SECRET_REPAIR_HINT,
+    );
+  }
   if let Some(secret) = credential_secret.as_deref() {
     if let Err(error) = secure_credentials::save_connector_secret(&params.connector_id, secret) {
       return connector_error_response(
@@ -264,4 +277,8 @@ fn normalized_credential_secret(secret: Option<&str>) -> Option<String> {
     .map(str::trim)
     .filter(|secret| !secret.is_empty())
     .map(str::to_string)
+}
+
+fn connector_requires_secret(connector: &PluginConnectorEntry) -> bool {
+  connector.auth_required && connector.auth_type.as_deref() == Some("api_key")
 }
