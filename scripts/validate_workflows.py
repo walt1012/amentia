@@ -123,6 +123,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
   if repository_policy_block:
     required_policy_commands = (
       "python3 scripts/test_release_identity.py",
+      "python3 scripts/test_connector_workflow_contracts.py",
     )
     for term in required_policy_commands:
       if term not in repository_policy_block:

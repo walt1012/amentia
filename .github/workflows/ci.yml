@@ -143,6 +143,9 @@ jobs:
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
 
+      - name: Test connector workflow contracts
+        run: python3 scripts/test_connector_workflow_contracts.py
+
       - name: Test Notion connector contract
         run: python3 scripts/test_notion_connector_contract.py
 

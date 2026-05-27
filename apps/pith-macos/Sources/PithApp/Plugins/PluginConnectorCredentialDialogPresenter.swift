@@ -8,7 +8,7 @@ struct PluginConnectorCredentialInput {
 
 enum PluginConnectorCredentialDialogPresenter {
   static func credentialInput(connector: PluginConnectorSummary) -> PluginConnectorCredentialInput? {
-    var initialLabel = connector.credentialLabel ?? "\(connector.displayName) authorization marker"
+    var initialLabel = connector.credentialLabel ?? defaultCredentialLabel(connector)
     while true {
       guard let input = credentialInput(connector: connector, initialLabel: initialLabel) else {
         return nil
@@ -34,7 +34,7 @@ enum PluginConnectorCredentialDialogPresenter {
     labelField.stringValue = initialLabel
 
     let secretField = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
-    secretField.placeholderString = "Token or API key, or leave blank for marker-only auth"
+    secretField.placeholderString = secretPlaceholder(connector)
 
     let stack = NSStackView(views: [
       labeledField(title: "Label", field: labelField),
@@ -64,10 +64,14 @@ enum PluginConnectorCredentialDialogPresenter {
     let scopes = connector.authScopes.isEmpty
       ? "No declared scopes."
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
-    return "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
+    var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
       + "\(scopes) Credential store: \(store). "
       + "Secrets are passed to plugin runners through per-run environment bindings. "
       + "Leave the secret empty only when this connector uses marker-only authorization."
+    if isNotion(connector) {
+      prompt += "\n\nNotion setup: create a local Notion integration, copy its internal integration token, and share the target parent page with that integration. Pith does not claim OAuth yet; this token stays in local connector state."
+    }
+    return prompt
   }
 
   private static func displayAuthType(_ authType: String?) -> String {
@@ -95,6 +99,23 @@ enum PluginConnectorCredentialDialogPresenter {
     alert.addButton(withTitle: "Authorize Marker")
     alert.addButton(withTitle: "Back")
     return alert.runModal() == .alertFirstButtonReturn
+  }
+
+  private static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {
+    isNotion(connector)
+      ? "Local Notion integration token"
+      : "\(connector.displayName) authorization marker"
+  }
+
+  private static func secretPlaceholder(_ connector: PluginConnectorSummary) -> String {
+    if isNotion(connector) {
+      return "Paste the Notion internal integration token"
+    }
+    return "Token or API key, or leave blank for marker-only auth"
+  }
+
+  private static func isNotion(_ connector: PluginConnectorSummary) -> Bool {
+    connector.service.lowercased() == "notion"
   }
 
   private static func labeledField(title: String, field: NSView) -> NSView {

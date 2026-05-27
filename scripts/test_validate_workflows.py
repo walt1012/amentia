@@ -36,6 +36,8 @@ jobs:
           persist-credentials: false
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
+      - name: Test connector workflow contracts
+        run: python3 scripts/test_connector_workflow_contracts.py
   rust-format:
     timeout-minutes: 10
   rust-clippy:
@@ -183,6 +185,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_identity.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test connector workflow contracts\n"
+        "        run: python3 scripts/test_connector_workflow_contracts.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_connector_workflow_contracts.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

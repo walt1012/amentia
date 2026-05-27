@@ -109,10 +109,12 @@ Current review:
 
 - Aligned: Notion now has a real create-page workflow contract: draft, inspect,
   approval, publish, proof, retry, command coverage, and bounded loop budget.
+- Aligned: Notion setup and publish input now guide the local integration token,
+  shared parent-page requirement, and approval-before-write behavior.
+- Aligned: connector workflow rules now have a reusable bundled-contract check,
+  not only a Notion-specific smoke path.
 - Aligned: Web Search remains the retrieval layer; saved artifacts and memory
   remain context aids, not a local document RAG product.
-- Risk: connector setup can still feel too manual unless the API-key path,
-  parent page input, retry guidance, and proof display stay first-class.
 - Risk: a second connector should not start until the Notion path is boringly
   reliable through packaged smoke and user-facing recovery.
 
@@ -133,9 +135,8 @@ M9 exit criteria:
 
 Next development order:
 
-- Tighten Notion setup and parent-page input UX before adding breadth.
-- Add one reusable connector contract fixture so future connectors follow the
-  Notion workflow shape instead of inventing new ad hoc conventions.
+- Keep tightening Notion recovery, proof, and packaged smoke before adding
+  breadth.
 - Start a second connector only after the Notion workflow stays green and the
   second connector has a real cowork use case with inspect, approval, proof, and
   retry.

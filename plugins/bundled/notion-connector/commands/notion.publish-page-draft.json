@@ -15,7 +15,7 @@
           "name": "input",
           "kind": "text",
           "required": true,
-          "description": "Plain text or JSON containing parentPageId, title, and body."
+          "description": "Plain text or JSON containing parentPageId, title, and body. The parent page must be shared with the Notion integration."
         },
         {
           "name": "connectors",

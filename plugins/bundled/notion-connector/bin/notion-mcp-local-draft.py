@@ -438,8 +438,8 @@ def publish_follow_up_attributes(title: str, body: str) -> dict[str, str]:
     "nextCommandId": DEFAULT_PUBLISH_COMMAND_ID,
     "nextCommandLabel": "Publish to Notion",
     "nextCommandInputHint": (
-      "Fill parentPageId before publishing. Pith will request approval before any "
-      "remote Notion write."
+      "Fill parentPageId with a Notion page that has been shared with the local "
+      "integration. Pith will request approval before any remote Notion write."
     ),
     "nextCommandInputTemplate": publish_input_template(title, body),
     "nextCommandInputRequired": "true",
