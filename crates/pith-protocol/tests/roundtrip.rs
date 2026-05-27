@@ -4,14 +4,14 @@ use pith_protocol::{
   PluginChannelInboundPreviewParams, PluginChannelInboundPreviewResult,
   PluginChannelOutboundPreviewParams, PluginChannelOutboundPreviewResult,
   PluginChannelRegistryResult, PluginChannelSummary, PluginCommandEnvelopeFieldSummary,
-  PluginCommandEnvelopeSummary,
-  PluginCommandExecutionSummary, PluginCommandRegistryResult, PluginCommandRunParams,
-  PluginCommandSummary, PluginCommandWorkflowSummary, PluginConnectorCredentialParams,
-  PluginConnectorCredentialResult, PluginConnectorRegistryResult, PluginConnectorSummary,
-  PluginConnectorWorkflowSummary, PluginHookRegistryResult, PluginHookSummary, PluginInspectParams,
-  PluginInspectResult, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
-  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginCommandEnvelopeSummary, PluginCommandExecutionSummary, PluginCommandRegistryResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginCommandWorkflowSummary,
+  PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
+  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookRegistryResult,
+  PluginHookSummary, PluginInspectParams, PluginInspectResult, PluginInstallParams,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
+  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -503,10 +503,7 @@ fn plugin_channel_outbound_preview_payloads_round_trip() {
 
   assert_eq!(params_value["channelId"], "weixin-channel::weixin");
   assert_eq!(params_value["replyToExternalMessageId"], "msg-456");
-  assert_eq!(
-    result_value["normalizedText"],
-    "Here is the short summary."
-  );
+  assert_eq!(result_value["normalizedText"], "Here is the short summary.");
   assert_eq!(
     decoded_params.reply_to_external_message_id.as_deref(),
     Some("msg-456")
