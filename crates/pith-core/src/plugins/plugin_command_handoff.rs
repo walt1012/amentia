@@ -21,6 +21,7 @@ const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
   "notionPageId",
   "notionPageUrl",
   "notionParentPageId",
+  "notionBlockCount",
   "bodyTruncated",
   "sourceArtifact",
   "sourceArtifactPreviewProvided",
@@ -308,6 +309,7 @@ mod tests {
             "connectorWorkflowStatus".to_string(),
             "inspected".to_string(),
           ),
+          ("notionBlockCount".to_string(), "4".to_string()),
         ])),
       }],
       capture_memory: false,
@@ -365,6 +367,10 @@ mod tests {
         .get("connectorWorkflowStatus")
         .map(String::as_str),
       Some("inspected")
+    );
+    assert_eq!(
+      attributes.get("notionBlockCount").map(String::as_str),
+      Some("4")
     );
   }
 

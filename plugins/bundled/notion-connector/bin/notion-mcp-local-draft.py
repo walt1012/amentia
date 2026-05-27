@@ -19,7 +19,7 @@ NOTION_API_BASE = os.environ.get(
 NOTION_VERSION = os.environ.get("PITH_NOTION_VERSION", "2026-03-11")
 HTTP_TIMEOUT_SECONDS = 30
 MAX_BODY_CHARS = 20_000
-MAX_PARAGRAPHS = 20
+MAX_NOTION_BLOCKS = 20
 RICH_TEXT_CHUNK_SIZE = 1_900
 DEFAULT_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 
@@ -230,6 +230,7 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
   body = string_value(input_data, "body", "content", "markdown", "text") or ""
   body, truncated = bounded_body(body)
   payload = notion_create_page_payload(parent_page_id, title, body)
+  block_count = len(payload.get("children", []))
 
   try:
     response = notion_post("/pages", token, payload)
@@ -268,6 +269,7 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
             "remoteProofKind": "notionApiResponse",
             "remoteProofStatus": "success",
             "bodyTruncated": str(truncated).lower(),
+            "notionBlockCount": str(block_count),
             **connector_workflow_attributes(
               stage="completed",
               status="completed",
@@ -532,15 +534,69 @@ def publish_input_template(title: str, body: str) -> str:
 
 
 def notion_children(body: str) -> list[dict[str, Any]]:
-  paragraphs = [part.strip() for part in re.split(r"\n\s*\n", body) if part.strip()]
-  return [
-    {
-      "object": "block",
-      "type": "paragraph",
-      "paragraph": {"rich_text": rich_text_chunks(paragraph)},
-    }
-    for paragraph in paragraphs[:MAX_PARAGRAPHS]
-  ]
+  blocks: list[dict[str, Any]] = []
+  paragraph_lines: list[str] = []
+
+  def flush_paragraph() -> None:
+    if not paragraph_lines or len(blocks) >= MAX_NOTION_BLOCKS:
+      paragraph_lines.clear()
+      return
+    paragraph = "\n".join(paragraph_lines).strip()
+    paragraph_lines.clear()
+    if paragraph:
+      blocks.append(notion_text_block("paragraph", paragraph))
+
+  for raw_line in body.splitlines():
+    line = raw_line.strip()
+    if not line:
+      flush_paragraph()
+      continue
+
+    structured_block = notion_structured_line_block(line)
+    if structured_block is not None:
+      flush_paragraph()
+      if len(blocks) < MAX_NOTION_BLOCKS:
+        blocks.append(structured_block)
+      continue
+
+    paragraph_lines.append(line)
+
+  flush_paragraph()
+  return blocks[:MAX_NOTION_BLOCKS]
+
+
+def notion_structured_line_block(line: str) -> dict[str, Any] | None:
+  heading_match = re.match(r"^(#{1,3})\s+(.+)$", line)
+  if heading_match:
+    level = len(heading_match.group(1))
+    block_type = f"heading_{level}"
+    return notion_text_block(block_type, heading_match.group(2).strip())
+
+  todo_match = re.match(r"^[-*]\s+\[([ xX])\]\s+(.+)$", line)
+  if todo_match:
+    checked = todo_match.group(1).lower() == "x"
+    return notion_text_block("to_do", todo_match.group(2).strip(), checked=checked)
+
+  bullet_match = re.match(r"^[-*]\s+(.+)$", line)
+  if bullet_match:
+    return notion_text_block("bulleted_list_item", bullet_match.group(1).strip())
+
+  numbered_match = re.match(r"^\d+[.)]\s+(.+)$", line)
+  if numbered_match:
+    return notion_text_block("numbered_list_item", numbered_match.group(1).strip())
+
+  return None
+
+
+def notion_text_block(block_type: str, text: str, checked: bool | None = None) -> dict[str, Any]:
+  body: dict[str, Any] = {"rich_text": rich_text_chunks(text)}
+  if checked is not None:
+    body["checked"] = checked
+  return {
+    "object": "block",
+    "type": block_type,
+    block_type: body,
+  }
 
 
 def rich_text_chunks(text: str) -> list[dict[str, Any]]:

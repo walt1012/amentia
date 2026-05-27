@@ -1230,7 +1230,16 @@ def validate_packaged_mcp_plugin_command(
         {
           "parentPageId": NOTION_PARENT_PAGE_URL,
           "title": "Packaged Smoke Page",
-          "body": "Created from packaged smoke after user approval.",
+          "body": "\n".join(
+            [
+              "# Packaged Smoke Page",
+              "",
+              "Created from packaged smoke after user approval.",
+              "",
+              "- [x] Connector approval completed",
+              "- Review Notion proof",
+            ]
+          ),
         }
       ),
     },
@@ -1271,6 +1280,7 @@ def validate_packaged_mcp_plugin_command(
     == "https://www.notion.so/packaged-smoke-notion-page"
     and item.get("attributes", {}).get("notionParentPageId") == NOTION_PARENT_PAGE_ID
     and item.get("attributes", {}).get("bodyTruncated") == "false"
+    and item.get("attributes", {}).get("notionBlockCount") == "4"
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
     and item.get("attributes", {}).get("connectorWorkflowProof") == "notionApiResponse"
@@ -1302,6 +1312,12 @@ def validate_packaged_mcp_plugin_command(
   title = properties.get("title")
   if not isinstance(title, dict):
     raise RuntimeError("Packaged Notion publish omitted the title property.")
+  children = payload.get("children")
+  if not isinstance(children, list) or not children:
+    raise RuntimeError("Packaged Notion publish omitted body children.")
+  child_types = [child.get("type") for child in children]
+  if child_types[:4] != ["heading_1", "paragraph", "to_do", "bulleted_list_item"]:
+    raise RuntimeError(f"Packaged Notion publish sent weak body block types: {child_types}")
 
   publish_memory_list = send_runtime_request(process, 42, "memory/list")
   if not any(

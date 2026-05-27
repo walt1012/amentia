@@ -288,6 +288,7 @@ enum TimelineInspectorPresenter {
       "remoteWrite",
       "remoteWriteStage",
       "remoteWriteStatus",
+      "notionBlockCount",
       "nextCommandId",
       "nextCommandInput",
       "nextCommandInputHint",
@@ -483,6 +484,9 @@ enum TimelineInspectorPresenter {
     }
     if let bodyTruncated = entry.attributes["bodyTruncated"] {
       lines.append("Body truncated: \(bodyTruncated)")
+    }
+    if let blockCount = entry.attributes["notionBlockCount"] {
+      lines.append("Notion blocks: \(blockCount)")
     }
     if let failureReason = entry.attributes["publishFailureReason"] {
       lines.append("Publish failure: \(failureReason)")

@@ -123,6 +123,8 @@ Current review:
   returns editable retry input before any remote write attempt.
 - Aligned: successful Notion proof now shows a compact result summary plus
   native open/copy actions without expanding the connector UI surface.
+- Aligned: Notion publish preserves lightweight page structure for headings,
+  bullets, numbered items, and todos, with block-count proof in the timeline.
 - Aligned: connector workflow rules now have a reusable bundled-contract check,
   not only a Notion-specific smoke path.
 - Aligned: Web Search remains the retrieval layer; saved artifacts and memory

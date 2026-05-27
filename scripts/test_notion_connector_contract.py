@@ -163,7 +163,17 @@ def assert_publish_success(
           {
             "parentPageId": parent_input,
             "title": "Published by test",
-            "body": "Paragraph one.\n\nParagraph two.",
+            "body": "\n".join(
+              [
+                "# Decision Log",
+                "",
+                "Paragraph one.",
+                "",
+                "- First action",
+                "- [x] Completed task",
+                "1. Numbered follow-up",
+              ]
+            ),
           },
           sort_keys=True,
         ),
@@ -194,6 +204,7 @@ def assert_publish_success(
     "notionPageUrl": "https://www.notion.so/page-success-123",
     "notionParentPageId": expected_parent_id,
     "bodyTruncated": "false",
+    "notionBlockCount": "5",
   }
   for key, value in expected.items():
     if attributes.get(key) != value:
@@ -214,8 +225,20 @@ def assert_publish_success(
   if payload.get("parent", {}).get("page_id") != expected_parent_id:
     raise AssertionError(f"Notion publish used the wrong parent: {payload}")
   children = payload.get("children")
-  if not isinstance(children, list) or len(children) != 2:
-    raise AssertionError(f"Notion publish did not preserve paragraph blocks: {payload}")
+  if not isinstance(children, list) or len(children) != 5:
+    raise AssertionError(f"Notion publish did not preserve structured blocks: {payload}")
+  child_types = [child.get("type") for child in children]
+  expected_child_types = [
+    "heading_1",
+    "paragraph",
+    "bulleted_list_item",
+    "to_do",
+    "numbered_list_item",
+  ]
+  if child_types != expected_child_types:
+    raise AssertionError(f"Notion publish used wrong block types: {child_types}")
+  if children[3].get("to_do", {}).get("checked") is not True:
+    raise AssertionError(f"Notion publish missed todo completion state: {children[3]}")
 
 
 def main() -> int:

@@ -192,6 +192,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "notionPageUrl": "https://www.notion.so/page-123",
           "notionParentPageId": "parent-456",
           "bodyTruncated": "false",
+          "notionBlockCount": "4",
           "targetService": "notion",
           "targetTool": "notion.createPage",
         ]
@@ -204,6 +205,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
     XCTAssertTrue(summary?.contains("Notion parent: parent-456") == true)
     XCTAssertTrue(summary?.contains("Body truncated: false") == true)
+    XCTAssertTrue(summary?.contains("Notion blocks: 4") == true)
   }
 
   func testExternalActionOpensSuccessfulNotionProofOnly() {
@@ -226,10 +228,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "notionPageId": "page-123",
       "notionParentPageId": "parent-456",
       "bodyTruncated": "false",
+      "notionBlockCount": "4",
     ])
 
     XCTAssertEqual(summary?.title, "Notion page created")
-    XCTAssertEqual(summary?.detail, "Page: page-123 | Parent: parent-456 | Body complete")
+    XCTAssertEqual(summary?.detail, "Page: page-123 | Parent: parent-456 | Body complete | Blocks: 4")
   }
 
   func testExternalActionRejectsUntrustedOrIncompleteProof() {

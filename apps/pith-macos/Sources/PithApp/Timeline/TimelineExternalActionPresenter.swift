@@ -57,6 +57,9 @@ enum TimelineExternalActionPresenter {
     if let bodyTruncated = attributes["bodyTruncated"] {
       parts.append(bodyTruncated == "true" ? "Body truncated" : "Body complete")
     }
+    if let blockCount = attributes["notionBlockCount"], !blockCount.isEmpty {
+      parts.append("Blocks: \(blockCount)")
+    }
 
     return TimelineProofSummary(
       title: "Notion page created",
