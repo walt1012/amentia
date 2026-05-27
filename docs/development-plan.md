@@ -105,34 +105,53 @@ Keep M8 healthy by preserving these release gates:
 Goal: make Pith useful for real non-code cowork tasks without turning the app
 into a marketplace shell or a generic RAG product.
 
-Work order:
+Current review:
 
-- Make connector contracts honest first. The bundled Notion path starts with a
-  local integration token/API-key contract; do not claim OAuth until a browser
-  OAuth flow exists.
-- Replace the Notion draft-only runner with one real third-party workflow:
-  user intent, inspected draft, approval, execution, proof, retry, and recovery.
-- Treat connector success as a user-visible contract: what changed, where it
-  changed, what proof exists, and how the user can recover.
-- Keep Web Search as the active retrieval layer. Add bounded page evidence only
-  when a connector task needs stronger source proof.
-- Let connector workflows request a larger bounded step budget when needed;
-  keep the default cowork loop small.
-- Keep saved artifacts and memory as lightweight context aids, not a local
-  document RAG system.
-- Preserve the small native UI: progressive disclosure, no always-open admin
-  panels, and no feature surface without a daily cowork use case.
-- Refactor only at ownership or failure boundaries exposed by connector work.
+- Aligned: Notion now has a real create-page workflow contract: draft, inspect,
+  approval, publish, proof, retry, command coverage, and bounded loop budget.
+- Aligned: Web Search remains the retrieval layer; saved artifacts and memory
+  remain context aids, not a local document RAG product.
+- Risk: connector setup can still feel too manual unless the API-key path,
+  parent page input, retry guidance, and proof display stay first-class.
+- Risk: a second connector should not start until the Notion path is boringly
+  reliable through packaged smoke and user-facing recovery.
 
-Current focus: make connector workflows declarative and reusable. The Notion
-create-page path now declares a manifest workflow, commands bind to `workflowId`,
-commands receive the manifest workflow shape, runner output must match declared
-action/stage/status/service proof, and the app can display the workflow binding.
-Connector registry now exposes workflow capabilities, command coverage, and
-bounded loop budget hints directly so the next connector can follow the same
-narrow contract without adding marketplace complexity.
-Notion publish proof now stays visible across runner output, agent handoff,
-packaged smoke, and the macOS inspector.
+M9 exit criteria:
+
+- Notion setup clearly explains local integration tokens, required scopes, and
+  why OAuth is not claimed yet.
+- Notion create-page works as one daily cowork loop: prepare a draft, inspect
+  the remote write, request approval, publish, show page proof, capture memory,
+  and offer retry without losing input.
+- Connector workflow contracts are reusable: manifest workflow, command
+  bindings, output envelopes, proof attributes, step budget, and CI contract
+  checks all travel together.
+- The app keeps connector UI progressive: show readiness, repair, workflow,
+  and proof when needed; avoid an always-open admin surface.
+- Packaged smoke proves the connector path, Web Search evidence, workspace
+  approval, runtime recovery, and unsigned DMG install path together.
+
+Next development order:
+
+- Tighten Notion setup and parent-page input UX before adding breadth.
+- Add one reusable connector contract fixture so future connectors follow the
+  Notion workflow shape instead of inventing new ad hoc conventions.
+- Start a second connector only after the Notion workflow stays green and the
+  second connector has a real cowork use case with inspect, approval, proof, and
+  retry.
+
+## Next Milestone: M10 Connector Breadth
+
+Goal: add one more useful cowork connector without turning Pith into a
+marketplace shell.
+
+Candidate scope:
+
+- Pick one connector with a narrow daily workflow, not a broad platform clone.
+- Reuse M9 contracts exactly: local credential, manifest workflow, bounded
+  runner, inspect-before-write, approval, proof, retry, and packaged smoke.
+- Keep the native UI small; expand surfaces only where the workflow needs setup,
+  action, or proof.
 
 ## Guardrails
 
