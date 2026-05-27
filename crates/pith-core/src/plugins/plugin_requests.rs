@@ -1,4 +1,6 @@
-pub(crate) use super::plugin_channel_inbound::handle_plugin_channel_inbound_preview;
+pub(crate) use super::plugin_channel_messages::{
+  handle_plugin_channel_inbound_preview, handle_plugin_channel_outbound_preview,
+};
 pub(crate) use super::plugin_connector_auth::{
   handle_plugin_connector_authorize, handle_plugin_connector_clear_credential,
 };

@@ -2,15 +2,16 @@ use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, JsonRpcResponse,
   PluginCapabilityRegistration, PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
   PluginChannelInboundPreviewParams, PluginChannelInboundPreviewResult,
+  PluginChannelOutboundPreviewParams, PluginChannelOutboundPreviewResult,
   PluginChannelRegistryResult, PluginChannelSummary, PluginCommandEnvelopeFieldSummary,
-  PluginCommandEnvelopeSummary, PluginCommandExecutionSummary, PluginCommandRegistryResult,
-  PluginCommandRunParams, PluginCommandSummary, PluginCommandWorkflowSummary,
-  PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
-  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookRegistryResult,
-  PluginHookSummary, PluginInspectParams, PluginInspectResult, PluginInstallParams,
-  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
-  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
-  WorkspaceSummary,
+  PluginCommandEnvelopeSummary,
+  PluginCommandExecutionSummary, PluginCommandRegistryResult, PluginCommandRunParams,
+  PluginCommandSummary, PluginCommandWorkflowSummary, PluginConnectorCredentialParams,
+  PluginConnectorCredentialResult, PluginConnectorRegistryResult, PluginConnectorSummary,
+  PluginConnectorWorkflowSummary, PluginHookRegistryResult, PluginHookSummary, PluginInspectParams,
+  PluginInspectResult, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
+  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
+  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -469,6 +470,49 @@ fn plugin_channel_inbound_preview_payloads_round_trip() {
   );
   assert_eq!(decoded_result.status, "accepted");
   assert!(decoded_result.accepted);
+}
+
+#[test]
+fn plugin_channel_outbound_preview_payloads_round_trip() {
+  let params = PluginChannelOutboundPreviewParams {
+    channel_id: "weixin-channel::weixin".to_string(),
+    external_conversation_id: "chat-123".to_string(),
+    reply_to_external_message_id: Some("msg-456".to_string()),
+    text: "Here is the short summary.".to_string(),
+  };
+  let result = PluginChannelOutboundPreviewResult {
+    channel_id: params.channel_id.clone(),
+    service: "weixin".to_string(),
+    protocol: "openclaw-weixin".to_string(),
+    plugin_id: "weixin-channel".to_string(),
+    plugin_display_name: "Weixin Channel".to_string(),
+    external_conversation_id: params.external_conversation_id.clone(),
+    reply_to_external_message_id: params.reply_to_external_message_id.clone(),
+    normalized_text: params.text.clone(),
+    status: "needsApproval".to_string(),
+    approval_required: true,
+    accepted: true,
+  };
+
+  let params_value = serde_json::to_value(&params).expect("serialize outbound params");
+  let result_value = serde_json::to_value(&result).expect("serialize outbound result");
+  let decoded_params: PluginChannelOutboundPreviewParams =
+    serde_json::from_value(params_value.clone()).expect("deserialize outbound params");
+  let decoded_result: PluginChannelOutboundPreviewResult =
+    serde_json::from_value(result_value.clone()).expect("deserialize outbound result");
+
+  assert_eq!(params_value["channelId"], "weixin-channel::weixin");
+  assert_eq!(params_value["replyToExternalMessageId"], "msg-456");
+  assert_eq!(
+    result_value["normalizedText"],
+    "Here is the short summary."
+  );
+  assert_eq!(
+    decoded_params.reply_to_external_message_id.as_deref(),
+    Some("msg-456")
+  );
+  assert_eq!(decoded_result.status, "needsApproval");
+  assert!(decoded_result.approval_required);
 }
 
 #[test]

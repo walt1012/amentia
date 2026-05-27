@@ -1770,6 +1770,19 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
       )
       if inbound_preview["error"]["data"]["status"] != "channelAdapterPending":
         raise RuntimeError("Packaged Weixin inbound preview should require an adapter.")
+      outbound_preview = send_runtime_request_expect_error(
+        process,
+        127,
+        "plugin/channelOutboundPreview",
+        {
+          "channelId": "weixin-channel::weixin",
+          "externalConversationId": "chat-123",
+          "replyToExternalMessageId": "msg-456",
+          "text": "Here is the short summary.",
+        },
+      )
+      if outbound_preview["error"]["data"]["status"] != "channelAdapterPending":
+        raise RuntimeError("Packaged Weixin outbound preview should require an adapter.")
 
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)

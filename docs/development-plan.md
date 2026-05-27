@@ -152,6 +152,8 @@ Current state:
   deliver messages into Pith and return approved responses.
 - A generic inbound channel preview RPC gates external messages before they can
   enter the cowork loop.
+- A matching outbound channel preview RPC gates Pith-authored replies before
+  any channel adapter can send them.
 
 Exit criteria:
 

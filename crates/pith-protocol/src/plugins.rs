@@ -231,6 +231,33 @@ pub struct PluginChannelInboundPreviewResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginChannelOutboundPreviewParams {
+  pub channel_id: String,
+  pub external_conversation_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub reply_to_external_message_id: Option<String>,
+  pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginChannelOutboundPreviewResult {
+  pub channel_id: String,
+  pub service: String,
+  pub protocol: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub external_conversation_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub reply_to_external_message_id: Option<String>,
+  pub normalized_text: String,
+  pub status: String,
+  pub approval_required: bool,
+  pub accepted: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginConnectorCredentialParams {
   pub connector_id: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -186,6 +186,38 @@ extension RuntimeBridge {
     )
   }
 
+  func previewPluginChannelOutbound(
+    channelID: String,
+    externalConversationID: String,
+    replyToExternalMessageID: String? = nil,
+    text: String
+  ) async throws -> RuntimePluginChannelOutboundPreview {
+    let response: JSONRPCResponse<PluginChannelOutboundPreviewResult> = try await sendRequest(
+      method: "plugin/channelOutboundPreview",
+      params: PluginChannelOutboundPreviewParams(
+        channelId: channelID,
+        externalConversationId: externalConversationID,
+        replyToExternalMessageId: replyToExternalMessageID,
+        text: text
+      )
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimePluginChannelOutboundPreview(
+      channelID: result.channelId,
+      service: result.service,
+      protocolName: result.protocolName,
+      pluginID: result.pluginId,
+      pluginDisplayName: result.pluginDisplayName,
+      externalConversationID: result.externalConversationId,
+      replyToExternalMessageID: result.replyToExternalMessageId,
+      normalizedText: result.normalizedText,
+      status: result.status,
+      approvalRequired: result.approvalRequired,
+      accepted: result.accepted
+    )
+  }
+
   func authorizePluginConnector(
     connectorID: String,
     credentialLabel: String? = nil,

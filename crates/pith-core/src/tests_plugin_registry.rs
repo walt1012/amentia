@@ -1701,6 +1701,72 @@ fn plugin_channel_inbound_preview_requires_external_message_key() {
 }
 
 #[test]
+fn plugin_channel_outbound_preview_rejects_pending_weixin_adapter() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "weixin-channel",
+      "Weixin Channel",
+      false,
+      false,
+      &["channel:weixin"],
+      &["network.outbound"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_OUTBOUND_PREVIEW,
+      Some(json!({
+        "channelId": "weixin-channel::weixin",
+        "externalConversationId": "chat-123",
+        "replyToExternalMessageId": "msg-456",
+        "text": "Here is the short summary."
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("channel outbound preview error");
+  assert_eq!(error.code, -32058);
+  let data = error.data.expect("channel outbound error data");
+  assert_eq!(data["channelId"], "weixin-channel::weixin");
+  assert_eq!(data["status"], "channelAdapterPending");
+  assert_eq!(data["service"], "weixin");
+  assert_eq!(data["protocol"], "openclaw-weixin");
+  assert_eq!(data["adapterStatus"], "pending");
+  assert_eq!(data["adapterAvailable"], false);
+}
+
+#[test]
+fn plugin_channel_outbound_preview_requires_conversation_id() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(&mut context, vec![]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_OUTBOUND_PREVIEW,
+      Some(json!({
+        "channelId": "weixin-channel::weixin",
+        "externalConversationId": " ",
+        "text": "Hello"
+      })),
+    ),
+  );
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("invalid outbound envelope error");
+  assert_eq!(error.code, -32063);
+  assert_eq!(
+    error.data.expect("channel outbound error data")["status"],
+    "invalidEnvelope"
+  );
+}
+
+#[test]
 fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(
