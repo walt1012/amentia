@@ -32,6 +32,10 @@ NOTION_COMMAND_ID = "notion-connector::notion.prepare-page-draft"
 NOTION_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 NOTION_CREDENTIAL_LABEL = "Packaged Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "packaged-smoke-token"
+NOTION_PARENT_PAGE_URL = (
+  "https://www.notion.so/Pith-Smoke-11112222333344445555666677778888?pvs=4"
+)
+NOTION_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
 DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
 DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
@@ -1224,7 +1228,7 @@ def validate_packaged_mcp_plugin_command(
       "commandId": NOTION_PUBLISH_COMMAND_ID,
       "input": json.dumps(
         {
-          "parentPageId": "packaged-smoke-parent",
+          "parentPageId": NOTION_PARENT_PAGE_URL,
           "title": "Packaged Smoke Page",
           "body": "Created from packaged smoke after user approval.",
         }
@@ -1265,7 +1269,7 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("notionPageId") == "packaged-smoke-notion-page"
     and item.get("attributes", {}).get("notionPageUrl")
     == "https://www.notion.so/packaged-smoke-notion-page"
-    and item.get("attributes", {}).get("notionParentPageId") == "packaged-smoke-parent"
+    and item.get("attributes", {}).get("notionParentPageId") == NOTION_PARENT_PAGE_ID
     and item.get("attributes", {}).get("bodyTruncated") == "false"
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
@@ -1290,7 +1294,7 @@ def validate_packaged_mcp_plugin_command(
   if not isinstance(payload, dict):
     raise RuntimeError("Packaged Notion publish sent an invalid payload.")
   parent = payload.get("parent")
-  if not isinstance(parent, dict) or parent.get("page_id") != "packaged-smoke-parent":
+  if not isinstance(parent, dict) or parent.get("page_id") != NOTION_PARENT_PAGE_ID:
     raise RuntimeError("Packaged Notion publish sent the wrong parent page id.")
   properties = payload.get("properties")
   if not isinstance(properties, dict):

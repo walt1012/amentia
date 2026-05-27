@@ -190,7 +190,7 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, Any]:
   input_data = parse_publish_input(arguments.get("input"))
-  parent_page_id = string_value(
+  raw_parent_page_id = string_value(
     input_data,
     "parentPageId",
     "parent_page_id",
@@ -199,6 +199,7 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
     "targetPageId",
     "target_page_id",
   )
+  parent_page_id = normalize_notion_page_id(raw_parent_page_id)
   if not parent_page_id:
     return publish_retry_needed(
       request_id,
@@ -338,6 +339,37 @@ def notion_create_page_payload(parent_page_id: str, title: str, body: str) -> di
   return payload
 
 
+def normalize_notion_page_id(value: str | None) -> str:
+  text = (value or "").strip()
+  if not text:
+    return ""
+
+  uuid_match = re.search(
+    r"(?i)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+    text,
+  )
+  if uuid_match:
+    return uuid_match.group(1).lower()
+
+  compact_match = re.search(r"(?i)(?<![0-9a-f])([0-9a-f]{32})(?![0-9a-f])", text)
+  if compact_match:
+    return hyphenated_notion_page_id(compact_match.group(1).lower())
+
+  return text
+
+
+def hyphenated_notion_page_id(value: str) -> str:
+  return "-".join(
+    [
+      value[0:8],
+      value[8:12],
+      value[12:16],
+      value[16:20],
+      value[20:32],
+    ]
+  )
+
+
 def publish_retry_needed(
   request_id: Any,
   input_data: dict[str, str],
@@ -418,8 +450,8 @@ def retry_input_json(input_data: dict[str, str], reason_code: str) -> str:
 def retry_input_hint(reason_code: str) -> str:
   if reason_code == "missingParentPageId":
     return (
-      "Add parentPageId for a Notion page shared with the local integration, "
-      "then run the publish command again."
+      "Add parentPageId or a Notion page URL for a page shared with the local "
+      "integration, then run the publish command again."
     )
   if reason_code == "missingCredential":
     return "Authorize the Notion connector, then retry with the preserved input."
@@ -456,7 +488,7 @@ def publish_follow_up_attributes(title: str, body: str) -> dict[str, str]:
     "nextCommandId": DEFAULT_PUBLISH_COMMAND_ID,
     "nextCommandLabel": "Publish to Notion",
     "nextCommandInputHint": (
-      "Fill parentPageId with a Notion page that has been shared with the local "
+      "Fill parentPageId with a Notion page ID or URL shared with the local "
       "integration. Pith will request approval before any remote Notion write."
     ),
     "nextCommandInputTemplate": publish_input_template(title, body),

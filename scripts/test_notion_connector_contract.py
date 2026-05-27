@@ -133,7 +133,12 @@ def assert_manifest_workflow_coverage() -> None:
       raise AssertionError(f"Notion command {command_id} missed connector binding")
 
 
-def assert_publish_success(connector: ModuleType) -> None:
+def assert_publish_success(
+  connector: ModuleType,
+  *,
+  parent_input: str = "parent-123",
+  expected_parent_id: str = "parent-123",
+) -> None:
   captured: dict[str, object] = {}
   previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
   os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
@@ -154,7 +159,7 @@ def assert_publish_success(connector: ModuleType) -> None:
       {
         "input": json.dumps(
           {
-            "parentPageId": "parent-123",
+            "parentPageId": parent_input,
             "title": "Published by test",
             "body": "Paragraph one.\n\nParagraph two.",
           },
@@ -185,7 +190,7 @@ def assert_publish_success(connector: ModuleType) -> None:
     "remoteProofStatus": "success",
     "notionPageId": "page-success-123",
     "notionPageUrl": "https://www.notion.so/page-success-123",
-    "notionParentPageId": "parent-123",
+    "notionParentPageId": expected_parent_id,
     "bodyTruncated": "false",
   }
   for key, value in expected.items():
@@ -204,7 +209,7 @@ def assert_publish_success(connector: ModuleType) -> None:
   payload = captured.get("payload")
   if not isinstance(payload, dict):
     raise AssertionError(f"Notion publish payload was not a dict: {captured}")
-  if payload.get("parent", {}).get("page_id") != "parent-123":
+  if payload.get("parent", {}).get("page_id") != expected_parent_id:
     raise AssertionError(f"Notion publish used the wrong parent: {payload}")
   children = payload.get("children")
   if not isinstance(children, list) or len(children) != 2:
@@ -308,6 +313,14 @@ def main() -> int:
       f"Notion missing parent retry missed input guidance: {missing_parent_attributes}"
     )
   assert_publish_success(connector)
+  assert_publish_success(
+    connector,
+    parent_input=(
+      "https://www.notion.so/Pith-Test-"
+      "11112222333344445555666677778888?pvs=4"
+    ),
+    expected_parent_id="11112222-3333-4444-5555-666677778888",
+  )
 
   print("notion connector contract tests passed")
   return 0

@@ -114,6 +114,8 @@ Current review:
 - Aligned: Notion retry distinguishes preserved-input retries from editable
   missing-parent recovery, so users can repair the publish input instead of
   looping the same failed command.
+- Aligned: Notion publish accepts copied page URLs as parent targets and
+  normalizes them before the API write, keeping setup practical for real users.
 - Aligned: connector workflow rules now have a reusable bundled-contract check,
   not only a Notion-specific smoke path.
 - Aligned: Web Search remains the retrieval layer; saved artifacts and memory
