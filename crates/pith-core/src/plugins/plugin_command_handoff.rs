@@ -396,15 +396,24 @@ mod tests {
           ("remoteWrite".to_string(), "true".to_string()),
           ("remoteWriteStage".to_string(), "completed".to_string()),
           ("remoteWriteStatus".to_string(), "completed".to_string()),
-          ("remoteProofKind".to_string(), "messageApiResponse".to_string()),
+          (
+            "remoteProofKind".to_string(),
+            "messageApiResponse".to_string(),
+          ),
           ("remoteProofStatus".to_string(), "success".to_string()),
           ("remoteProofId".to_string(), "message-123".to_string()),
           (
             "remoteProofUrl".to_string(),
             "https://slack.com/app_redirect?channel=C123&message_ts=1".to_string(),
           ),
-          ("remoteProofTitle".to_string(), "Slack message sent".to_string()),
-          ("remoteProofActionTitle".to_string(), "Open Slack Message".to_string()),
+          (
+            "remoteProofTitle".to_string(),
+            "Slack message sent".to_string(),
+          ),
+          (
+            "remoteProofActionTitle".to_string(),
+            "Open Slack Message".to_string(),
+          ),
         ])),
       }],
       capture_memory: false,
