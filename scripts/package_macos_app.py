@@ -91,14 +91,7 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
     "connector_workflow:notion.create-page",
     "mcp_server:notion",
   },
-  "slack-connector": {
-    "command:slack.prepare-message-draft",
-    "command:slack.inspect-message-send",
-    "command:slack.post-message-draft",
-    "connector:slack",
-    "connector_workflow:slack.post-message",
-    "mcp_server:slack",
-  },
+  "weixin-channel": {"channel:weixin"},
   "review-assistant": {"command:review.inspect-diff"},
   "shell-recorder": {"command:shell.summarize-session", "hook:shell.recorder"},
   "web-search": {"tool:web_search"},
@@ -683,6 +676,7 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
       raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
     assert_bundled_plugin_capability_files(plugin_root, capabilities)
     assert_bundled_plugin_connector_workflows(plugin_root, manifest, capabilities)
+    assert_bundled_plugin_channel_entries(plugin_root, manifest, capabilities)
     assert_bundled_plugin_skill_files(plugin_root, manifest)
     assert_bundled_plugin_mcp_server_files(plugin_root, manifest, capabilities)
 
@@ -798,6 +792,41 @@ def assert_bundled_plugin_connector_workflows(
       raise RuntimeError(
         f"Bundled command {command_id} workflow is not bound to its connector: {workflow_id}"
       )
+
+
+def assert_bundled_plugin_channel_entries(
+  plugin_root: Path,
+  manifest: dict,
+  capabilities: set[str],
+) -> None:
+  channels = manifest.get("appChannels", [])
+  if not isinstance(channels, list):
+    raise RuntimeError(f"Bundled plugin appChannels must be a list: {plugin_root}")
+  channel_ids = set()
+  for channel in channels:
+    if not isinstance(channel, dict):
+      raise RuntimeError(f"Bundled plugin channel entry must be an object: {plugin_root}")
+    channel_id = channel.get("id")
+    service = channel.get("service")
+    protocol = channel.get("protocol")
+    display_name = channel.get("displayName")
+    if not isinstance(channel_id, str) or not channel_id.strip():
+      raise RuntimeError(f"Bundled plugin channel entry is missing id: {plugin_root}")
+    assert_safe_capability_identifier(channel_id, f"channel:{channel_id}")
+    if not isinstance(display_name, str) or not display_name.strip():
+      raise RuntimeError(f"Bundled plugin channel {channel_id} is missing displayName")
+    if not isinstance(service, str) or not service.strip():
+      raise RuntimeError(f"Bundled plugin channel {channel_id} is missing service")
+    if not isinstance(protocol, str) or not protocol.strip():
+      raise RuntimeError(f"Bundled plugin channel {channel_id} is missing protocol")
+    channel_ids.add(channel_id)
+
+  for capability in capabilities:
+    if not capability.startswith("channel:"):
+      continue
+    channel_id = capability.removeprefix("channel:")
+    if channel_id not in channel_ids:
+      raise RuntimeError(f"Bundled plugin is missing channel declaration: {capability}")
 
 
 def assert_safe_capability_identifier(identifier: str, capability: str) -> None:

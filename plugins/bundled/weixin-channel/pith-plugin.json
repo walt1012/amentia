@@ -1,0 +1,25 @@
+{
+  "name": "weixin-channel",
+  "version": "0.1.0",
+  "displayName": "Weixin Channel",
+  "description": "Declares the official personal Weixin channel direction for Pith based on the OpenClaw Weixin channel model. This bundle is metadata-only until the channel runtime contract lands.",
+  "author": {
+    "name": "Pith"
+  },
+  "capabilities": [
+    "channel:weixin"
+  ],
+  "permissions": [
+    "network.outbound"
+  ],
+  "appChannels": [
+    {
+      "id": "weixin",
+      "displayName": "Weixin",
+      "service": "weixin",
+      "protocol": "openclaw-weixin",
+      "homepage": "https://github.com/Tencent/openclaw-weixin"
+    }
+  ],
+  "defaultEnabled": false
+}

@@ -245,11 +245,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "remoteProofKind": "messageApiResponse",
       "remoteProofStatus": "success",
       "remoteProofId": "message-123",
-      "remoteProofUrl": "https://slack.com/app_redirect?channel=C123&message_ts=1",
-      "remoteProofTitle": "Slack message sent",
-      "remoteProofActionTitle": "Open Slack Message",
-      "targetService": "slack",
-      "targetTool": "slack.sendMessage",
+      "remoteProofUrl": "https://chat.example.com/messages/message-123",
+      "remoteProofTitle": "Message sent",
+      "remoteProofActionTitle": "Open Message",
+      "targetService": "team-chat",
+      "targetTool": "team-chat.sendMessage",
     ]
 
     let summary = TimelineInspectorPresenter.selectedEntryPluginSummary(
@@ -257,7 +257,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         id: "entry-1",
         kind: .assistantMessage,
         title: "Assistant",
-        body: "Sent Slack message.",
+        body: "Sent team chat message.",
         attributes: attributes
       ))
     )
@@ -265,10 +265,12 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     let proof = TimelineExternalActionPresenter.proofSummary(attributes: attributes)
 
     XCTAssertTrue(summary?.contains("Remote proof ID: message-123") == true)
-    XCTAssertTrue(summary?.contains("Remote proof URL: https://slack.com/app_redirect") == true)
+    XCTAssertTrue(
+      summary?.contains("Remote proof URL: https://chat.example.com/messages/message-123") == true
+    )
     XCTAssertFalse(summary?.contains("Notion page") == true)
-    XCTAssertEqual(action?.title, "Open Slack Message")
-    XCTAssertEqual(proof?.title, "Slack message sent")
+    XCTAssertEqual(action?.title, "Open Message")
+    XCTAssertEqual(proof?.title, "Message sent")
     XCTAssertTrue(proof?.detail.contains("ID: message-123") == true)
   }
 

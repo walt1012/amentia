@@ -1124,9 +1124,9 @@ mod tests {
           "title": "Connector Workflow",
           "content": "Prepared a connector workflow.",
           "attributes": {
-            "connectorWorkflowId": "slack.send-message",
-            "connectorWorkflowName": "Slack Send Message",
-            "connectorWorkflowService": "slack",
+            "connectorWorkflowId": "team-chat.send-message",
+            "connectorWorkflowName": "Team Chat Send Message",
+            "connectorWorkflowService": "team-chat",
             "connectorWorkflowAction": "sendMessage",
             "connectorWorkflowStage": "messagePrepared",
             "connectorWorkflowStatus": "prepared",
@@ -1321,7 +1321,7 @@ mod tests {
     let mut base_attributes = HashMap::new();
     base_attributes.insert(
       "pluginRunnerConnectorServices".to_string(),
-      "slack".to_string(),
+      "wrong-connector".to_string(),
     );
     let output = r#"{
       "items": [

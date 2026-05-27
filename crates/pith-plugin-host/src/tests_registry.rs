@@ -138,6 +138,50 @@ fn build_capability_registry_includes_connector_metadata() {
 }
 
 #[test]
+fn build_channel_registry_lists_message_channels() {
+  let plugin_root = create_temp_plugin_root("channel-registry");
+  let plugin_dir = plugin_root.join("weixin-channel");
+  fs::create_dir_all(&plugin_dir).expect("create channel plugin dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "weixin-channel",
+  "version": "0.1.0",
+  "displayName": "Weixin Channel",
+  "description": "Personal Weixin channel metadata.",
+  "author": { "name": "Pith" },
+  "capabilities": [],
+  "permissions": ["network.outbound"],
+  "appChannels": [
+    {
+      "id": "weixin",
+      "displayName": "Weixin",
+      "service": "weixin",
+      "protocol": "openclaw-weixin",
+      "homepage": "https://github.com/Tencent/openclaw-weixin"
+    }
+  ],
+  "defaultEnabled": false
+}"#,
+  )
+  .expect("write channel manifest");
+  let plugins = discover_plugins_in_roots(std::slice::from_ref(&plugin_root))
+    .expect("discover channel plugin");
+
+  let channels = build_channel_registry(&plugins);
+  let capabilities = build_capability_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup channel plugin root");
+
+  assert_eq!(channels.len(), 1);
+  assert_eq!(channels[0].channel_id, "weixin-channel::weixin");
+  assert_eq!(channels[0].service, "weixin");
+  assert_eq!(channels[0].protocol, "openclaw-weixin");
+  assert_eq!(channels[0].status, "disabled");
+  assert!(capabilities.is_empty());
+}
+
+#[test]
 fn build_capability_registry_reports_mcp_server_status() {
   let plugin_root = create_temp_plugin_root("mcp-server-status");
   let plugin_dir = plugin_root.join("mcp-tools");
@@ -689,9 +733,9 @@ fn build_command_registry_rejects_workflow_bound_to_wrong_connector() {
       "service": "notion"
     },
     {
-      "id": "slack",
-      "displayName": "Slack",
-      "service": "slack"
+      "id": "wrong-connector",
+      "displayName": "Wrong Connector",
+      "service": "wrong-connector"
     }
   ],
   "connectorWorkflows": [
@@ -718,7 +762,7 @@ fn build_command_registry_rejects_workflow_bound_to_wrong_connector() {
     "kind": "mcp.notion.publishPage",
     "driver": "mcp",
     "entrypoint": "notion.publishPage",
-    "connectors": ["slack"],
+    "connectors": ["wrong-connector"],
     "workflowId": "notion.create-page"
   }
 }"#,

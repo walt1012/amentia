@@ -125,7 +125,6 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       "python3 scripts/test_release_identity.py",
       "python3 scripts/test_connector_workflow_contracts.py",
       "python3 scripts/test_notion_connector_contract.py",
-      "python3 scripts/test_slack_connector_contract.py",
     )
     for term in required_policy_commands:
       if term not in repository_policy_block:

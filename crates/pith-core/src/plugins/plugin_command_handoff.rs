@@ -391,8 +391,11 @@ mod tests {
         title: "Remote Write Complete".to_string(),
         content: "The connector returned a trusted proof link.".to_string(),
         attributes: Some(HashMap::from([
-          ("targetService".to_string(), "slack".to_string()),
-          ("targetTool".to_string(), "slack.sendMessage".to_string()),
+          ("targetService".to_string(), "team-chat".to_string()),
+          (
+            "targetTool".to_string(),
+            "team-chat.sendMessage".to_string(),
+          ),
           ("remoteWrite".to_string(), "true".to_string()),
           ("remoteWriteStage".to_string(), "completed".to_string()),
           ("remoteWriteStatus".to_string(), "completed".to_string()),
@@ -404,15 +407,15 @@ mod tests {
           ("remoteProofId".to_string(), "message-123".to_string()),
           (
             "remoteProofUrl".to_string(),
-            "https://slack.com/app_redirect?channel=C123&message_ts=1".to_string(),
+            "https://chat.example.com/messages/message-123".to_string(),
           ),
           (
             "remoteProofTitle".to_string(),
-            "Slack message sent".to_string(),
+            "Message sent".to_string(),
           ),
           (
             "remoteProofActionTitle".to_string(),
-            "Open Slack Message".to_string(),
+            "Open Message".to_string(),
           ),
         ])),
       }],
@@ -434,15 +437,15 @@ mod tests {
     );
     assert_eq!(
       attributes.get("remoteProofUrl").map(String::as_str),
-      Some("https://slack.com/app_redirect?channel=C123&message_ts=1")
+      Some("https://chat.example.com/messages/message-123")
     );
     assert_eq!(
       attributes.get("remoteProofTitle").map(String::as_str),
-      Some("Slack message sent")
+      Some("Message sent")
     );
     assert_eq!(
       attributes.get("remoteProofActionTitle").map(String::as_str),
-      Some("Open Slack Message")
+      Some("Open Message")
     );
   }
 

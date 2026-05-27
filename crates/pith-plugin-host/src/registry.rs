@@ -1,4 +1,5 @@
 mod capabilities;
+mod channels;
 mod command_contract;
 mod commands;
 mod connectors;
@@ -7,6 +8,7 @@ mod metadata;
 mod workflow_commands;
 
 pub use self::capabilities::build_capability_registry;
+pub use self::channels::build_channel_registry;
 pub use self::commands::build_command_registry;
 pub use self::connectors::build_connector_registry;
 pub use self::hooks::build_hook_registry;

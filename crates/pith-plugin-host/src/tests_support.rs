@@ -27,6 +27,7 @@ pub(crate) fn manifest(capabilities: Vec<&str>, permissions: Vec<&str>) -> Plugi
     permissions: permissions.into_iter().map(str::to_string).collect(),
     skills: vec![],
     mcp_servers: vec![],
+    app_channels: vec![],
     app_connectors: vec![],
     connector_workflows: vec![],
     auth_policy: None,

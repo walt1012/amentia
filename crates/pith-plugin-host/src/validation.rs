@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::manifest::PluginManifest;
 
-const KNOWN_CAPABILITY_KINDS: [&str; 10] = [
+const KNOWN_CAPABILITY_KINDS: [&str; 11] = [
   "command",
   "agent",
   "prompt_pack",
@@ -10,6 +10,7 @@ const KNOWN_CAPABILITY_KINDS: [&str; 10] = [
   "tool",
   "mcp_server",
   "skill",
+  "channel",
   "connector",
   "connector_workflow",
   "settings",
@@ -91,12 +92,15 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       .to_string();
   }
   if validation_error.contains("must include a non-empty display name") {
-    return "Add a human-readable connector displayName so Pith can show the connector clearly."
+    return "Add a human-readable displayName so Pith can show the integration clearly."
       .to_string();
   }
   if validation_error.contains("must include a non-empty service") {
-    return "Add a stable connector service such as `notion`, `github`, or another lowercase service key."
+    return "Add a stable service such as `notion`, `weixin`, or another lowercase service key."
       .to_string();
+  }
+  if validation_error.contains("must include a non-empty protocol") {
+    return "Add a stable channel protocol such as `openclaw-weixin`.".to_string();
   }
   if validation_error.contains("plugin connector workflow")
     && validation_error.contains("references undeclared connector")
@@ -207,6 +211,28 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
       anyhow::bail!(
         "plugin connector `{}` must include a non-empty service",
         connector.id
+      );
+    }
+  }
+
+  for channel in &manifest.app_channels {
+    validate_manifest_identifier("channel", &channel.id)?;
+    if channel.display_name.trim().is_empty() {
+      anyhow::bail!(
+        "plugin channel `{}` must include a non-empty display name",
+        channel.id
+      );
+    }
+    if channel.service.trim().is_empty() {
+      anyhow::bail!(
+        "plugin channel `{}` must include a non-empty service",
+        channel.id
+      );
+    }
+    if channel.protocol.trim().is_empty() {
+      anyhow::bail!(
+        "plugin channel `{}` must include a non-empty protocol",
+        channel.id
       );
     }
   }
@@ -340,6 +366,9 @@ pub(crate) fn manifest_capabilities(manifest: &PluginManifest) -> Vec<String> {
   }
   for server in &manifest.mcp_servers {
     push_unique_capability(&mut capabilities, "mcp_server", &server.id);
+  }
+  for channel in &manifest.app_channels {
+    push_unique_capability(&mut capabilities, "channel", &channel.id);
   }
   for connector in &manifest.app_connectors {
     push_unique_capability(&mut capabilities, "connector", &connector.id);

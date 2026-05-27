@@ -133,26 +133,31 @@ M9 exit criteria:
 - Packaged smoke proves connector path, Web Search evidence, workspace
   approval, runtime recovery, and unsigned DMG install path together.
 
-## Current Milestone: M10 Connector Breadth
+## Current Milestone: M10 WeChat-Aligned Cowork Channel
 
-Goal: add one more useful cowork connector without turning Pith into a
-marketplace shell.
+Goal: add one more useful cowork integration without turning Pith into a
+marketplace shell or relying on unofficial account automation.
 
 Current state:
 
-- Slack is the second connector candidate because it is cowork-native and can
-  stay narrow: prepare, inspect, approve, post one message, and show proof.
-- Slack starts as a bundled local MCP connector with the same evidence contract
-  as Notion, using generic proof metadata rather than service-specific timeline
-  control flow.
+- The previous broad chat connector candidate is removed from scope.
+- WeChat has an official OpenClaw Weixin channel path, which is closer to an
+  agent message channel than a normal outbound connector.
+- Non-personal chat products are out of scope for this milestone.
+- A disabled bundled `weixin-channel` manifest records the personal Weixin
+  channel direction without pretending login or message runtime is ready.
 
 Exit criteria:
 
-- The Slack connector supports one daily workflow, not a broad platform clone.
-- Reuse M9 contracts exactly: local credential, manifest workflow, bounded
-  runner, inspect-before-write, approval, proof, retry, and packaged smoke.
-- Keep native UI small; expand surfaces only where setup, action, or proof need
-  it.
+- Build the personal Weixin channel adapter around the official OpenClaw
+  Weixin protocol shape before exposing it as usable.
+- Do not automate personal WeChat through reverse-engineered, injected, or
+  screen-scraped clients.
+- Reuse M9 contracts where the integration writes remotely: local credential,
+  manifest workflow, bounded runner, inspect-before-write, approval, proof,
+  retry, and packaged smoke.
+- Keep the channel/connector boundary explicit so Pith can receive cowork
+  requests from chat later without polluting generic connector execution.
 
 ## Guardrails
 

@@ -22,6 +22,13 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     args: vec![],
     transport: Some("stdio".to_string()),
   }];
+  manifest.app_channels = vec![PluginAppChannelManifest {
+    id: "workspace.channel".to_string(),
+    display_name: "Workspace Channel".to_string(),
+    service: "workspace".to_string(),
+    protocol: "workspace-chat".to_string(),
+    homepage: None,
+  }];
   manifest.app_connectors = vec![PluginAppConnectorManifest {
     id: "workspace.connector".to_string(),
     display_name: "Workspace Connector".to_string(),
@@ -54,6 +61,9 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
   assert!(capabilities
     .iter()
     .any(|capability| capability == "mcp_server:workspace.mcp"));
+  assert!(capabilities
+    .iter()
+    .any(|capability| capability == "channel:workspace.channel"));
   assert!(capabilities
     .iter()
     .any(|capability| capability == "connector:workspace.connector"));
@@ -132,6 +142,7 @@ fn validation_hint_describes_supported_capability_kinds() {
   assert!(hint.contains("supported capability kinds"));
   assert!(hint.contains("command"));
   assert!(hint.contains("connector"));
+  assert!(hint.contains("channel"));
   assert!(hint.contains("settings"));
 }
 
@@ -190,15 +201,18 @@ fn validation_hint_explains_auth_free_policy_requirements() {
 }
 
 #[test]
-fn validation_hint_explains_connector_identity_fields() {
+fn validation_hint_explains_integration_identity_fields() {
   let display_name_hint =
     validation_hint_for_error("plugin connector `notion` must include a non-empty display name");
   let service_hint =
     validation_hint_for_error("plugin connector `notion` must include a non-empty service");
+  let protocol_hint =
+    validation_hint_for_error("plugin channel `weixin` must include a non-empty protocol");
 
   assert!(display_name_hint.contains("displayName"));
   assert!(service_hint.contains("service"));
-  assert!(service_hint.contains("notion"));
+  assert!(service_hint.contains("weixin"));
+  assert!(protocol_hint.contains("openclaw-weixin"));
 }
 
 #[test]

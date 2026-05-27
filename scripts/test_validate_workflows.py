@@ -40,8 +40,6 @@ jobs:
         run: python3 scripts/test_connector_workflow_contracts.py
       - name: Test Notion connector contract
         run: python3 scripts/test_notion_connector_contract.py
-      - name: Test Slack connector contract
-        run: python3 scripts/test_slack_connector_contract.py
   rust-format:
     timeout-minutes: 10
   rust-clippy:
@@ -213,18 +211,6 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_notion_connector_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - name: Test Slack connector contract\n"
-        "        run: python3 scripts/test_slack_connector_contract.py\n",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "test_slack_connector_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

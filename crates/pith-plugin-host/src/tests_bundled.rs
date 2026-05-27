@@ -10,6 +10,7 @@ fn bundled_plugin_manifests_match_runtime_schema() {
     bundled_root.join("shell-recorder/pith-plugin.json"),
     bundled_root.join("review-assistant/pith-plugin.json"),
     bundled_root.join("notion-connector/pith-plugin.json"),
+    bundled_root.join("weixin-channel/pith-plugin.json"),
   ];
 
   for manifest_path in manifests {
@@ -97,6 +98,16 @@ fn bundled_plugin_manifests_match_runtime_schema() {
   assert!(notion_capabilities
     .iter()
     .any(|capability| capability == "connector_workflow:notion.create-page"));
+
+  let weixin_manifest = read_manifest(&bundled_root.join("weixin-channel/pith-plugin.json"))
+    .expect("parse weixin channel manifest");
+  let weixin_capabilities = manifest_capabilities(&weixin_manifest);
+  assert!(!weixin_manifest.default_enabled);
+  assert!(weixin_capabilities
+    .iter()
+    .any(|capability| capability == "channel:weixin"));
+  assert_eq!(weixin_manifest.app_channels.len(), 1);
+  assert_eq!(weixin_manifest.app_channels[0].protocol, "openclaw-weixin");
 
   let notion_command = read_command_manifest(
     &bundled_root.join("notion-connector/commands/notion.prepare-page-draft.json"),

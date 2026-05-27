@@ -56,7 +56,7 @@ APP_STARTUP_TIMEOUT_SECONDS = 18.0
 APP_STABILITY_SECONDS = 2.0
 REQUIRED_BUNDLED_PLUGINS = {
   "notion-connector",
-  "slack-connector",
+  "weixin-channel",
   "review-assistant",
   "shell-recorder",
   "web-search",
