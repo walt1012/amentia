@@ -140,6 +140,9 @@ def assert_publish_success(
   *,
   parent_input: str = VALID_PARENT_PAGE_ID,
   expected_parent_id: str = VALID_PARENT_PAGE_ID,
+  raw_input: str | None = None,
+  expected_title: str = "Published by test",
+  expected_block_count: str = "5",
 ) -> None:
   captured: dict[str, object] = {}
   previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
@@ -159,10 +162,12 @@ def assert_publish_success(
     response = connector.publish_page_draft(
       3,
       {
-        "input": json.dumps(
+        "input": raw_input
+        if raw_input is not None
+        else json.dumps(
           {
             "parentPageId": parent_input,
-            "title": "Published by test",
+            "title": expected_title,
             "body": "\n".join(
               [
                 "# Decision Log",
@@ -204,7 +209,7 @@ def assert_publish_success(
     "notionPageUrl": "https://www.notion.so/page-success-123",
     "notionParentPageId": expected_parent_id,
     "bodyTruncated": "false",
-    "notionBlockCount": "5",
+    "notionBlockCount": expected_block_count,
   }
   for key, value in expected.items():
     if attributes.get(key) != value:
@@ -224,21 +229,25 @@ def assert_publish_success(
     raise AssertionError(f"Notion publish payload was not a dict: {captured}")
   if payload.get("parent", {}).get("page_id") != expected_parent_id:
     raise AssertionError(f"Notion publish used the wrong parent: {payload}")
-  children = payload.get("children")
-  if not isinstance(children, list) or len(children) != 5:
-    raise AssertionError(f"Notion publish did not preserve structured blocks: {payload}")
-  child_types = [child.get("type") for child in children]
-  expected_child_types = [
-    "heading_1",
-    "paragraph",
-    "bulleted_list_item",
-    "to_do",
-    "numbered_list_item",
-  ]
-  if child_types != expected_child_types:
-    raise AssertionError(f"Notion publish used wrong block types: {child_types}")
-  if children[3].get("to_do", {}).get("checked") is not True:
-    raise AssertionError(f"Notion publish missed todo completion state: {children[3]}")
+  title = payload.get("properties", {}).get("title", {}).get("title", [])
+  if not title or title[0].get("text", {}).get("content") != expected_title:
+    raise AssertionError(f"Notion publish used the wrong title: {payload}")
+  if raw_input is None:
+    children = payload.get("children")
+    if not isinstance(children, list) or len(children) != 5:
+      raise AssertionError(f"Notion publish did not preserve structured blocks: {payload}")
+    child_types = [child.get("type") for child in children]
+    expected_child_types = [
+      "heading_1",
+      "paragraph",
+      "bulleted_list_item",
+      "to_do",
+      "numbered_list_item",
+    ]
+    if child_types != expected_child_types:
+      raise AssertionError(f"Notion publish used wrong block types: {child_types}")
+    if children[3].get("to_do", {}).get("checked") is not True:
+      raise AssertionError(f"Notion publish missed todo completion state: {children[3]}")
 
 
 def main() -> int:
@@ -405,6 +414,27 @@ def main() -> int:
     connector,
     parent_input=VALID_PARENT_PAGE_URL,
     expected_parent_id=VALID_PARENT_PAGE_ID,
+  )
+  assert_publish_success(
+    connector,
+    raw_input=VALID_PARENT_PAGE_URL,
+    expected_parent_id=VALID_PARENT_PAGE_ID,
+    expected_title="Pith Draft",
+    expected_block_count="0",
+  )
+  assert_publish_success(
+    connector,
+    raw_input="\n".join(
+      [
+        f"parent: {VALID_PARENT_PAGE_URL}",
+        "title: Alias Parent",
+        "body:",
+        "- Captured from a forgiving input parser",
+      ]
+    ),
+    expected_parent_id=VALID_PARENT_PAGE_ID,
+    expected_title="Alias Parent",
+    expected_block_count="1",
   )
 
   print("notion connector contract tests passed")

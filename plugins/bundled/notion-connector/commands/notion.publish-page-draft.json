@@ -1,7 +1,7 @@
 {
   "title": "Publish Notion Page Draft",
   "description": "Create a Notion page from an approved local draft using the authorized Notion integration token.",
-  "prompt": "Publish the approved local draft to Notion. Require a valid parentPageId or Notion page URL, title, and optional body in the command input. Do not publish unless the user has approved this connector action.",
+  "prompt": "Publish the approved local draft to Notion. Accept a valid parentPageId, Notion page URL, or parent alias, with optional title and body in the command input. Do not publish unless the user has approved this connector action.",
   "execution": {
     "kind": "mcp.notion.publishPageDraft",
     "driver": "mcp",
@@ -15,7 +15,7 @@
           "name": "input",
           "kind": "text",
           "required": true,
-          "description": "Plain text or JSON containing a valid parentPageId or Notion page URL, title, and body. The parent page must be shared with the Notion integration."
+          "description": "Plain text or JSON containing a valid parentPageId, Notion page URL, or parent alias, plus optional title and body. The parent page must be shared with the Notion integration."
         },
         {
           "name": "connectors",

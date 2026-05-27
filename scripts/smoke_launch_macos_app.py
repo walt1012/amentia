@@ -1226,21 +1226,18 @@ def validate_packaged_mcp_plugin_command(
     {
       "threadId": "thread-1",
       "commandId": NOTION_PUBLISH_COMMAND_ID,
-      "input": json.dumps(
-        {
-          "parentPageId": NOTION_PARENT_PAGE_URL,
-          "title": "Packaged Smoke Page",
-          "body": "\n".join(
-            [
-              "# Packaged Smoke Page",
-              "",
-              "Created from packaged smoke after user approval.",
-              "",
-              "- [x] Connector approval completed",
-              "- Review Notion proof",
-            ]
-          ),
-        }
+      "input": "\n".join(
+        [
+          f"parent: {NOTION_PARENT_PAGE_URL}",
+          "title: Packaged Smoke Page",
+          "body:",
+          "# Packaged Smoke Page",
+          "",
+          "Created from packaged smoke after user approval.",
+          "",
+          "- [x] Connector approval completed",
+          "- Review Notion proof",
+        ]
       ),
     },
   )

@@ -10,7 +10,7 @@ Current contract:
 - Inspect proposed Notion writes before any remote update; inspection must not
   send data to Notion.
 - Publish only through `notion.publish-page-draft` after approval. The command
-  input must include a valid `parentPageId` or Notion page URL, `title`, and
-  optional `body`.
+  input must include a valid `parentPageId`, parent alias, or Notion page URL.
+  `title` and `body` are optional; URL-only input uses the default draft title.
 - Prefer concise page outlines, decision logs, and task lists over long chat transcripts.
 - Do not assume credentials exist; check the runtime connector auth state before preparing Notion actions.

@@ -623,6 +623,8 @@ def parse_publish_input(raw_input: Any) -> dict[str, str]:
   parsed_text = parse_key_value_text(text)
   if parsed_text:
     return parsed_text
+  if normalize_notion_page_id(text):
+    return {"parentPageId": text}
   return {"body": text}
 
 
@@ -631,6 +633,13 @@ def parse_key_value_text(text: str) -> dict[str, str]:
   body_lines: list[str] = []
   body_mode = False
   for line in text.splitlines():
+    if body_mode:
+      body_lines.append(line)
+      continue
+    if "parentPageId" not in data and normalize_notion_page_id(line):
+      data["parentPageId"] = line
+      continue
+
     match = re.match(r"^\s*([A-Za-z][A-Za-z0-9_-]{1,40})\s*[:=]\s*(.*)$", line)
     if match:
       key = normalize_input_key(match.group(1))
@@ -641,8 +650,6 @@ def parse_key_value_text(text: str) -> dict[str, str]:
       data[key] = value
       body_mode = key == "body"
       continue
-    if body_mode:
-      body_lines.append(line)
   if body_lines:
     data["body"] = "\n".join(body_lines).strip()
   return data
@@ -652,6 +659,15 @@ def normalize_input_key(key: str) -> str:
   mapping = {
     "parentpageid": "parentPageId",
     "parent_page_id": "parentPageId",
+    "parent": "parentPageId",
+    "parenturl": "parentPageId",
+    "parent_url": "parentPageId",
+    "parentpageurl": "parentPageId",
+    "parent_page_url": "parentPageId",
+    "notionurl": "parentPageId",
+    "notion_url": "parentPageId",
+    "notionpageurl": "parentPageId",
+    "notion_page_url": "parentPageId",
     "pageid": "pageId",
     "page_id": "pageId",
     "targetpageid": "targetPageId",
