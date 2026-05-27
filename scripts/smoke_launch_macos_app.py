@@ -1719,6 +1719,10 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
         raise RuntimeError("Packaged runtime is missing the personal Weixin channel.")
       if weixin_channel["protocol"] != "openclaw-weixin":
         raise RuntimeError("Packaged Weixin channel has the wrong protocol.")
+      if weixin_channel["adapterStatus"] != "pending":
+        raise RuntimeError("Packaged Weixin channel should remain adapter pending.")
+      if weixin_channel["adapterAvailable"] is not False:
+        raise RuntimeError("Packaged Weixin channel should not be activatable yet.")
 
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)

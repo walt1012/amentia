@@ -148,6 +148,8 @@ Current state:
   channel direction without pretending login or message runtime is ready.
 - Runtime and macOS plugin surfaces expose channel registry metadata so the
   Weixin path is visible as a disabled channel, not a fake ready connector.
+- Pith remains the agent runtime. Weixin work is a channel adapter that can
+  deliver messages into Pith and return approved responses.
 
 Exit criteria:
 

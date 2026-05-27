@@ -265,7 +265,7 @@ struct PluginChannelRow: View {
             onEnablePlugin()
           }
           .font(.caption2)
-          .disabled(!canEnablePlugin)
+          .disabled(!canEnablePlugin || !channel.adapterAvailable)
         }
 
         Button("Manifest") {
@@ -282,6 +282,18 @@ struct PluginChannelRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
+
+      Text("Adapter: \(channel.adapterStatus)")
+        .font(.caption2)
+        .foregroundColor(channel.adapterAvailable ? .secondary : .orange)
+        .textSelection(.enabled)
+
+      if let activationBlocker = channel.activationBlocker {
+        Text(activationBlocker)
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
 
       if !channel.permissions.isEmpty {
         Text("Permissions: \(channel.permissions.joined(separator: ", "))")

@@ -165,11 +165,13 @@ fn build_channel_registry_lists_message_channels() {
 }"#,
   )
   .expect("write channel manifest");
-  let plugins =
+  let mut plugins =
     discover_plugins_in_roots(std::slice::from_ref(&plugin_root)).expect("discover channel plugin");
 
   let channels = build_channel_registry(&plugins);
   let capabilities = build_capability_registry(&plugins);
+  plugins[0].enabled = true;
+  let enabled_channels = build_channel_registry(&plugins);
 
   fs::remove_dir_all(&plugin_root).expect("cleanup channel plugin root");
 
@@ -177,7 +179,15 @@ fn build_channel_registry_lists_message_channels() {
   assert_eq!(channels[0].channel_id, "weixin-channel::weixin");
   assert_eq!(channels[0].service, "weixin");
   assert_eq!(channels[0].protocol, "openclaw-weixin");
+  assert_eq!(channels[0].adapter_status, "pending");
+  assert!(!channels[0].adapter_available);
+  assert!(channels[0]
+    .activation_blocker
+    .as_ref()
+    .expect("activation blocker")
+    .contains("openclaw-weixin"));
   assert_eq!(channels[0].status, "disabled");
+  assert_eq!(enabled_channels[0].status, "adapterPending");
   assert!(capabilities.is_empty());
 }
 

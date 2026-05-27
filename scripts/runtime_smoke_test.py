@@ -903,7 +903,23 @@ def main() -> int:
     )
     assert weixin_channel["service"] == "weixin"
     assert weixin_channel["protocol"] == "openclaw-weixin"
+    assert weixin_channel["adapterStatus"] == "pending"
+    assert weixin_channel["adapterAvailable"] is False
+    assert "openclaw-weixin" in weixin_channel["activationBlocker"]
     assert weixin_channel["status"] == "disabled"
+    weixin_enable, _ = send_request(
+      process,
+      {
+        "id": 44,
+        "method": "plugin/setEnabled",
+        "params": {
+          "pluginId": "weixin-channel",
+          "enabled": True,
+        },
+      },
+    )
+    assert weixin_enable["error"]["code"] == -32058
+    assert weixin_enable["error"]["data"]["pluginLifecycleStatus"] == "channelAdapterPending"
     disabled_connector_authorize, _ = send_request(
       process,
       {

@@ -1595,6 +1595,12 @@ fn plugin_channel_registry_lists_disabled_weixin_channel() {
   assert_eq!(channels[0]["displayName"], "Weixin");
   assert_eq!(channels[0]["service"], "weixin");
   assert_eq!(channels[0]["protocol"], "openclaw-weixin");
+  assert_eq!(channels[0]["adapterStatus"], "pending");
+  assert_eq!(channels[0]["adapterAvailable"], false);
+  assert!(channels[0]["activationBlocker"]
+    .as_str()
+    .expect("activation blocker")
+    .contains("openclaw-weixin"));
   assert_eq!(channels[0]["status"], "disabled");
   assert_eq!(channels[0]["enabled"], false);
 }

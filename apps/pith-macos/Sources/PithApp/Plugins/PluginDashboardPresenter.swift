@@ -196,6 +196,7 @@ enum PluginDashboardPresenter {
 
     let readyCount = snapshot.channels.filter { $0.status == "ready" }.count
     let disabledCount = snapshot.channels.filter { $0.status == "disabled" }.count
+    let pendingCount = snapshot.channels.filter { !$0.adapterAvailable }.count
     var parts = [
       "\(snapshot.channels.count) Channel\(snapshot.channels.count == 1 ? "" : "s")"
     ]
@@ -204,6 +205,9 @@ enum PluginDashboardPresenter {
     }
     if disabledCount > 0 {
       parts.append("\(disabledCount) disabled")
+    }
+    if pendingCount > 0 {
+      parts.append("\(pendingCount) adapter pending")
     }
     return parts.joined(separator: " | ")
   }
@@ -357,6 +361,7 @@ enum PluginDashboardPresenter {
       "\(channel.displayName): \(channel.status)",
       "service: \(channel.service)",
       "protocol: \(channel.protocolName)",
+      "adapter: \(channel.adapterStatus)",
       "plugin: \(channel.pluginDisplayName)"
     ].joined(separator: " | ")
   }

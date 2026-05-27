@@ -135,6 +135,9 @@ struct PluginChannelSummary: Identifiable, Hashable {
   let displayName: String
   let service: String
   let protocolName: String
+  let adapterStatus: String
+  let adapterAvailable: Bool
+  let activationBlocker: String?
   let pluginID: String
   let pluginDisplayName: String
   let enabled: Bool

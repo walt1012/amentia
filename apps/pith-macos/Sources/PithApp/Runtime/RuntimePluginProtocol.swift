@@ -182,6 +182,9 @@ struct RuntimePluginChannelPayload: Codable {
   let displayName: String
   let service: String
   let protocolName: String
+  let adapterStatus: String
+  let adapterAvailable: Bool
+  let activationBlocker: String?
   let pluginId: String
   let pluginDisplayName: String
   let enabled: Bool
@@ -195,6 +198,9 @@ struct RuntimePluginChannelPayload: Codable {
     case displayName
     case service
     case protocolName = "protocol"
+    case adapterStatus
+    case adapterAvailable
+    case activationBlocker
     case pluginId
     case pluginDisplayName
     case enabled
@@ -426,6 +432,9 @@ extension RuntimeBridge {
     let displayName: String
     let service: String
     let protocolName: String
+    let adapterStatus: String
+    let adapterAvailable: Bool
+    let activationBlocker: String?
     let pluginID: String
     let pluginDisplayName: String
     let enabled: Bool

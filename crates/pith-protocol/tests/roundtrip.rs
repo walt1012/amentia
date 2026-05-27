@@ -396,6 +396,11 @@ fn plugin_channel_registry_round_trips() {
       display_name: "Weixin".to_string(),
       service: "weixin".to_string(),
       protocol: "openclaw-weixin".to_string(),
+      adapter_status: "pending".to_string(),
+      adapter_available: false,
+      activation_blocker: Some(
+        "Channel adapter for protocol `openclaw-weixin` is not available yet.".to_string(),
+      ),
       plugin_id: "weixin-channel".to_string(),
       plugin_display_name: "Weixin Channel".to_string(),
       enabled: false,
@@ -415,9 +420,12 @@ fn plugin_channel_registry_round_trips() {
   assert_eq!(decoded.channels[0].channel_id, "weixin-channel::weixin");
   assert_eq!(decoded.channels[0].service, "weixin");
   assert_eq!(decoded.channels[0].protocol, "openclaw-weixin");
+  assert_eq!(decoded.channels[0].adapter_status, "pending");
+  assert!(!decoded.channels[0].adapter_available);
   assert_eq!(decoded.channels[0].status, "disabled");
   assert!(value["channels"][0].get("channelId").is_some());
   assert_eq!(value["channels"][0]["protocol"], "openclaw-weixin");
+  assert_eq!(value["channels"][0]["adapterStatus"], "pending");
 }
 
 #[test]
