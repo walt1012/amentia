@@ -509,7 +509,7 @@ def main() -> int:
       "permissions": [
         "network.outbound",
       ],
-      "channels": [
+      "appChannels": [
         {
           "id": "weixin",
           "displayName": "Weixin",
