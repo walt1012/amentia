@@ -77,6 +77,7 @@ class FakeNotionApiServer:
   def __init__(self) -> None:
     self.requests: list[dict[str, object]] = []
     self.fail_next_pages = 0
+    self.malformed_next_pages = 0
     self._server: http.server.ThreadingHTTPServer | None = None
     self._thread: threading.Thread | None = None
 
@@ -113,6 +114,10 @@ class FakeNotionApiServer:
             503,
             {"error": "temporary outage", "message": "retry later"},
           )
+          return
+        if owner.malformed_next_pages > 0:
+          owner.malformed_next_pages -= 1
+          self.send_json(200, {"id": "packaged-smoke-notion-page"})
           return
 
         self.send_json(
@@ -161,6 +166,9 @@ class FakeNotionApiServer:
 
   def fail_next_page_create(self) -> None:
     self.fail_next_pages += 1
+
+  def malform_next_page_create(self) -> None:
+    self.malformed_next_pages += 1
 
 
 def parse_args() -> argparse.Namespace:
@@ -1219,9 +1227,57 @@ def validate_packaged_mcp_plugin_command(
       f"Items: {timeline_item_summary(missing_parent_items)}"
     )
 
-  publish = send_runtime_request(
+  notion_api.malform_next_page_create()
+  missing_proof_publish = send_runtime_request(
     process,
     40,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": json.dumps(
+        {
+          "parentPageId": NOTION_PARENT_PAGE_URL,
+          "title": "Packaged Smoke Missing Proof Page",
+          "body": "The fake API will omit the trusted Notion URL.",
+        }
+      ),
+    },
+  )
+  missing_proof_approvals = missing_proof_publish["result"]["pendingApprovals"]
+  if len(missing_proof_approvals) != 1:
+    raise RuntimeError("Packaged Notion missing-proof publish should request one approval.")
+  missing_proof_result = send_runtime_request(
+    process,
+    41,
+    "approval/respond",
+    {
+      "approvalId": missing_proof_approvals[0]["id"],
+      "decision": "approved",
+    },
+  )
+  missing_proof_items = missing_proof_result["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Publish Needs Retry"
+    and item.get("attributes", {}).get("remoteWriteStage") == "failedBeforeProof"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "unconfirmed"
+    and item.get("attributes", {}).get("remoteProofStatus") == "missing"
+    and item.get("attributes", {}).get("publishFailureReason") == "missingRemoteProof"
+    and item.get("attributes", {}).get("retryInputEditable") == "false"
+    and "may have completed" in item.get("attributes", {}).get("retryInputHint", "")
+    and item.get("attributes", {}).get("connectorWorkflowStage") == "failedBeforeProof"
+    and item.get("attributes", {}).get("connectorWorkflowProof") == "missing"
+    for item in missing_proof_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion missing-proof publish did not protect remote proof. "
+      f"Items: {timeline_item_summary(missing_proof_items)}"
+    )
+
+  publish = send_runtime_request(
+    process,
+    42,
     "plugin/commandRun",
     {
       "threadId": "thread-1",
@@ -1256,7 +1312,7 @@ def validate_packaged_mcp_plugin_command(
 
   published = send_runtime_request(
     process,
-    41,
+    43,
     "approval/respond",
     {
       "approvalId": publish_approval["id"],
@@ -1316,7 +1372,7 @@ def validate_packaged_mcp_plugin_command(
   if child_types[:4] != ["heading_1", "paragraph", "to_do", "bulleted_list_item"]:
     raise RuntimeError(f"Packaged Notion publish sent weak body block types: {child_types}")
 
-  publish_memory_list = send_runtime_request(process, 42, "memory/list")
+  publish_memory_list = send_runtime_request(process, 44, "memory/list")
   if not any(
     note["title"] == "Notion Page Published"
     and note["source"] == "plugin.notion-connector"

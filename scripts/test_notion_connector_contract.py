@@ -143,6 +143,7 @@ def assert_publish_success(
   raw_input: str | None = None,
   expected_title: str = "Published by test",
   expected_block_count: str = "5",
+  expected_body_truncated: str = "false",
 ) -> None:
   captured: dict[str, object] = {}
   previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
@@ -208,7 +209,7 @@ def assert_publish_success(
     "notionPageId": "page-success-123",
     "notionPageUrl": "https://www.notion.so/page-success-123",
     "notionParentPageId": expected_parent_id,
-    "bodyTruncated": "false",
+    "bodyTruncated": expected_body_truncated,
     "notionBlockCount": expected_block_count,
   }
   for key, value in expected.items():
@@ -232,10 +233,14 @@ def assert_publish_success(
   title = payload.get("properties", {}).get("title", {}).get("title", [])
   if not title or title[0].get("text", {}).get("content") != expected_title:
     raise AssertionError(f"Notion publish used the wrong title: {payload}")
+  expected_child_count = int(expected_block_count)
+  children = payload.get("children", [])
+  if expected_child_count == 0:
+    if children:
+      raise AssertionError(f"Notion publish should omit empty children: {payload}")
+  elif not isinstance(children, list) or len(children) != expected_child_count:
+    raise AssertionError(f"Notion publish used wrong child count: {payload}")
   if raw_input is None:
-    children = payload.get("children")
-    if not isinstance(children, list) or len(children) != 5:
-      raise AssertionError(f"Notion publish did not preserve structured blocks: {payload}")
     child_types = [child.get("type") for child in children]
     expected_child_types = [
       "heading_1",
@@ -248,6 +253,70 @@ def assert_publish_success(
       raise AssertionError(f"Notion publish used wrong block types: {child_types}")
     if children[3].get("to_do", {}).get("checked") is not True:
       raise AssertionError(f"Notion publish missed todo completion state: {children[3]}")
+
+
+def assert_publish_missing_remote_proof_retry(connector: ModuleType) -> None:
+  previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
+  os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
+
+  def fake_notion_post(_path: str, _token: str, _payload: dict) -> dict:
+    return {
+      "id": "page-without-trusted-url",
+      "url": "http://www.notion.so/page-without-trusted-url",
+    }
+
+  connector.notion_post = fake_notion_post
+  try:
+    response = connector.publish_page_draft(
+      4,
+      {
+        "input": json.dumps(
+          {
+            "parentPageId": VALID_PARENT_PAGE_ID,
+            "title": "Needs proof",
+            "body": "The response is missing trusted proof.",
+          },
+          sort_keys=True,
+        ),
+        "connectors": [
+          {
+            "service": "notion",
+            "credentialProvider": {
+              "provider": "env",
+              "envKey": "PITH_TEST_NOTION_TOKEN",
+            },
+          }
+        ],
+      },
+    )
+  finally:
+    if previous_token is None:
+      os.environ.pop("PITH_TEST_NOTION_TOKEN", None)
+    else:
+      os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
+
+  item = response_first_item(response)
+  attributes = item.get("attributes", {})
+  assert_workflow(
+    item,
+    action="createPage",
+    stage="failedBeforeProof",
+    status="retryNeeded",
+    target=VALID_PARENT_PAGE_ID,
+    proof="missing",
+  )
+  expected = {
+    "remoteWrite": "false",
+    "remoteWriteStage": "failedBeforeProof",
+    "remoteProofStatus": "missing",
+    "publishFailureReason": "missingRemoteProof",
+    "retryInputEditable": "false",
+  }
+  for key, value in expected.items():
+    if attributes.get(key) != value:
+      raise AssertionError(f"Expected missing proof {key}={value!r}, got {attributes}")
+  if "may have completed" not in attributes.get("retryInputHint", ""):
+    raise AssertionError(f"Missing proof retry should warn about duplicate risk: {attributes}")
 
 
 def main() -> int:
@@ -436,6 +505,21 @@ def main() -> int:
     expected_title="Alias Parent",
     expected_block_count="1",
   )
+  assert_publish_success(
+    connector,
+    raw_input=json.dumps(
+      {
+        "parentPageId": VALID_PARENT_PAGE_ID,
+        "title": "Block Truncation",
+        "body": "\n".join(f"- Item {index}" for index in range(25)),
+      },
+      sort_keys=True,
+    ),
+    expected_title="Block Truncation",
+    expected_block_count="20",
+    expected_body_truncated="true",
+  )
+  assert_publish_missing_remote_proof_retry(connector)
 
   print("notion connector contract tests passed")
   return 0

@@ -228,8 +228,9 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
 
   title = string_value(input_data, "title", "pageTitle", "page_title") or "Pith Draft"
   body = string_value(input_data, "body", "content", "markdown", "text") or ""
-  body, truncated = bounded_body(body)
-  payload = notion_create_page_payload(parent_page_id, title, body)
+  body, body_truncated = bounded_body(body)
+  payload, blocks_truncated = notion_create_page_payload(parent_page_id, title, body)
+  truncated = body_truncated or blocks_truncated
   block_count = len(payload.get("children", []))
 
   try:
@@ -242,8 +243,15 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
       error.reason,
     )
 
-  page_id = str(response.get("id", ""))
-  page_url = str(response.get("url", ""))
+  try:
+    page_id, page_url = notion_response_page_proof(response)
+  except NotionApiError as error:
+    return publish_retry_needed(
+      request_id,
+      input_data,
+      error.safe_message,
+      error.reason,
+    )
   content = f"Created Notion page `{title}`"
   if page_url:
     content += f" at {page_url}"
@@ -335,7 +343,34 @@ class NotionApiError(Exception):
     self.reason = reason
 
 
-def notion_create_page_payload(parent_page_id: str, title: str, body: str) -> dict[str, Any]:
+def notion_response_page_proof(response: dict[str, Any]) -> tuple[str, str]:
+  page_id = response_text_value(response, "id")
+  page_url = response_text_value(response, "url")
+  if not page_id or not trusted_notion_page_url(page_url):
+    raise NotionApiError(
+      (
+        "Notion create page returned without a trusted page proof. Check Notion "
+        "before retrying because the remote write may have completed."
+      ),
+      "missingRemoteProof",
+    )
+  return page_id, page_url
+
+
+def response_text_value(response: dict[str, Any], key: str) -> str:
+  value = response.get(key)
+  return value.strip() if isinstance(value, str) else ""
+
+
+def trusted_notion_page_url(value: str) -> bool:
+  return bool(re.match(r"^https://([A-Za-z0-9-]+\.)?notion\.so/", value.strip()))
+
+
+def notion_create_page_payload(
+  parent_page_id: str,
+  title: str,
+  body: str,
+) -> tuple[dict[str, Any], bool]:
   payload: dict[str, Any] = {
     "parent": {"page_id": parent_page_id},
     "properties": {
@@ -344,10 +379,10 @@ def notion_create_page_payload(parent_page_id: str, title: str, body: str) -> di
       }
     },
   }
-  children = notion_children(body)
+  children, truncated = notion_children(body)
   if children:
     payload["children"] = children
-  return payload
+  return payload, truncated
 
 
 def normalize_notion_page_id(value: str | None) -> str:
@@ -479,6 +514,11 @@ def retry_input_hint(reason_code: str) -> str:
     )
   if reason_code == "missingCredential":
     return "Authorize the Notion connector, then retry with the preserved input."
+  if reason_code == "missingRemoteProof":
+    return (
+      "Check Notion for a created page before retrying because the remote write "
+      "may have completed without a trusted proof URL."
+    )
   return "Review the preserved input and retry after the remote issue is resolved."
 
 
@@ -533,12 +573,16 @@ def publish_input_template(title: str, body: str) -> str:
   )
 
 
-def notion_children(body: str) -> list[dict[str, Any]]:
+def notion_children(body: str) -> tuple[list[dict[str, Any]], bool]:
   blocks: list[dict[str, Any]] = []
   paragraph_lines: list[str] = []
+  truncated = False
 
   def flush_paragraph() -> None:
+    nonlocal truncated
     if not paragraph_lines or len(blocks) >= MAX_NOTION_BLOCKS:
+      if paragraph_lines:
+        truncated = True
       paragraph_lines.clear()
       return
     paragraph = "\n".join(paragraph_lines).strip()
@@ -557,12 +601,14 @@ def notion_children(body: str) -> list[dict[str, Any]]:
       flush_paragraph()
       if len(blocks) < MAX_NOTION_BLOCKS:
         blocks.append(structured_block)
+      else:
+        truncated = True
       continue
 
     paragraph_lines.append(line)
 
   flush_paragraph()
-  return blocks[:MAX_NOTION_BLOCKS]
+  return blocks[:MAX_NOTION_BLOCKS], truncated
 
 
 def notion_structured_line_block(line: str) -> dict[str, Any] | None:
