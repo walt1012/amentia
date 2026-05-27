@@ -40,7 +40,7 @@ impl<'a> TurnLoopRunner<'a> {
   ) -> Self {
     Self {
       snapshot,
-      coordinator: AgentLoopCoordinator::new_with_max_steps(&snapshot.turn_id, max_steps),
+      coordinator: AgentLoopCoordinator::new(&snapshot.turn_id, max_steps),
       items,
       pending_active_turn,
       pending_approval,

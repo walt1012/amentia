@@ -19,11 +19,7 @@ pub(crate) struct AgentLoopCoordinator {
 }
 
 impl AgentLoopCoordinator {
-  pub(crate) fn new(turn_id: &str) -> Self {
-    Self::new_with_max_steps(turn_id, LOOP_MAX_STEPS)
-  }
-
-  pub(crate) fn new_with_max_steps(turn_id: &str, max_steps: usize) -> Self {
+  pub(crate) fn new(turn_id: &str, max_steps: usize) -> Self {
     Self {
       loop_id: format!("{turn_id}-loop-1"),
       max_steps: max_steps.clamp(1, LOOP_MAX_EXTENDED_STEPS),
@@ -398,7 +394,7 @@ mod tests {
 
   #[test]
   fn dispatcher_loop_tags_loop_budget_and_stop_reason() {
-    let coordinator = AgentLoopCoordinator::new("turn-1");
+    let coordinator = AgentLoopCoordinator::new("turn-1", LOOP_MAX_STEPS);
     let action = PreparedTurnAction::ListWorkspace;
     let step = coordinator.begin_step(1, &action);
     let mut items = vec![TimelineItem {

@@ -47,7 +47,8 @@ impl PluginCommandSnapshot {
   }
 
   pub(crate) fn workflow_max_agent_steps(&self) -> Option<usize> {
-    self.command
+    self
+      .command
       .execution
       .as_ref()
       .and_then(|execution| execution.workflow.as_ref())
