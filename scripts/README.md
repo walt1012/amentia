@@ -32,7 +32,7 @@ Current scripts:
 - `test_release_text.py`: checks release notes and DMG install guide copy generation.
 - `test_smoke_launch_macos_app.py`: checks packaged app smoke validators that do not require macOS.
 - `validate_macos_distribution.py`: checks Developer ID signing, Gatekeeper assessment, and optional notarized DMG validation for public macOS distribution builds.
-- `validate_model_pack.py`: validates local model pack metadata and first-use resource packaging; use `--remote` during release audits.
+- `validate_model_pack.py`: validates local model pack metadata, curated model catalog shape, and first-use resource packaging; use `--remote` during release audits.
 - `validate_workflows.py`: validates GitHub Actions structure so checkout credentials, artifact retention, CI lane splits, package dependencies, and release assets do not regress.
 - `test_validate_workflows.py`: checks workflow structure policy behavior without invoking GitHub Actions.
 - `test_validate_macos_distribution.py`: checks public distribution metadata policy without invoking signing tools.

@@ -94,6 +94,9 @@ Keep M8 healthy by preserving these release gates:
   recovery together in CI.
 - Release builds run the remote model catalog audit before publishing so the
   first-use download path is checked against current upstream metadata.
+- The local model catalog stays small and verified: `LFM2.5-350M` remains the
+  first-use default, with only a few current GGUF alternatives whose size,
+  SHA-256, license, and model context are checked before release.
 - The release manifest remains enough for a user or maintainer to verify what
   was built, from which source commit, by which workflow run, and with which
   trust and sandbox posture.

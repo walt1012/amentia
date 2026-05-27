@@ -65,6 +65,13 @@ CATALOG_INVARIANT_KEYS = {
   "license",
 }
 REMOTE_METADATA_TIMEOUT_SECONDS = 30
+MAX_CURATED_CATALOG_ENTRIES = 5
+REJECTED_CATALOG_MODEL_IDS = {
+  "qwen2.5-0.5b",
+  "qwen2.5-0.5b-instruct",
+  "qwen3-0.6b",
+  "smollm2-360m",
+}
 
 
 def main() -> int:
@@ -91,6 +98,7 @@ def main() -> int:
     raise SystemExit("model manifest max_output_tokens must not exceed context_size")
 
   swift_catalog_entries = load_swift_catalog_entries()
+  validate_curated_catalog_shape(swift_catalog_entries)
   validate_swift_catalog_entries(swift_catalog_entries)
   if args.remote:
     validate_remote_catalog_entries(swift_catalog_entries)
@@ -157,6 +165,34 @@ def load_swift_catalog_entries() -> list[dict[str, object]]:
     raise SystemExit("default Swift model catalog entry was not found")
 
   return entries
+
+
+def validate_curated_catalog_shape(entries: list[dict[str, object]]) -> None:
+  if not entries:
+    raise SystemExit("Swift model catalog must contain at least the default model")
+  if len(entries) > MAX_CURATED_CATALOG_ENTRIES:
+    raise SystemExit(
+      f"Swift model catalog must stay curated: {len(entries)} > {MAX_CURATED_CATALOG_ENTRIES}"
+    )
+
+  model_ids = [str(entry["id"]) for entry in entries]
+  duplicate_ids = sorted(
+    model_id for model_id in set(model_ids)
+    if model_ids.count(model_id) > 1
+  )
+  if duplicate_ids:
+    raise SystemExit(
+      f"Swift model catalog has duplicate ids: {', '.join(duplicate_ids)}"
+    )
+  if model_ids[0] != "lfm2.5-350m":
+    raise SystemExit("Swift model catalog must keep lfm2.5-350m as the first-use default")
+
+  rejected_ids = sorted(REJECTED_CATALOG_MODEL_IDS.intersection(model_ids))
+  if rejected_ids:
+    raise SystemExit(
+      "Swift model catalog contains rejected stale entries: "
+      + ", ".join(rejected_ids)
+    )
 
 
 def load_swift_local_model_sources() -> str:
