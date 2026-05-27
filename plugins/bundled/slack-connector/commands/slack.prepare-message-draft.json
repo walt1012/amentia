@@ -1,0 +1,17 @@
+{
+  "title": "Prepare Slack Message Draft",
+  "description": "Prepare a local Slack message draft from the current workspace through the Slack connector.",
+  "prompt": "Use the Slack connector to prepare a concise local cowork update. Include the audience, message, and next action. Keep the result local unless the user later approves a separate remote action.",
+  "execution": {
+    "kind": "mcp.slack.prepareMessageDraft",
+    "driver": "mcp",
+    "entrypoint": "slack.prepareMessageDraft",
+    "connectors": ["slack"],
+    "workflowId": "slack.post-message"
+  },
+  "memory": {
+    "noteTitle": "Slack Message Draft",
+    "noteSource": "plugin.slack-connector",
+    "noteTags": ["connector", "slack", "plugin"]
+  }
+}

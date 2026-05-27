@@ -14,6 +14,10 @@ const NOTION_CONNECTOR_ID: &str = "notion-connector::notion";
 const NOTION_COMMAND_ID: &str = "notion-connector::notion.prepare-page-draft";
 const NOTION_WRITE_INSPECTION_COMMAND_ID: &str = "notion-connector::notion.inspect-page-write";
 const NOTION_SECRET: &str = "notion-local-token";
+const SLACK_PLUGIN_ID: &str = "slack-connector";
+const SLACK_CONNECTOR_ID: &str = "slack-connector::slack";
+const SLACK_COMMAND_ID: &str = "slack-connector::slack.prepare-message-draft";
+const SLACK_SECRET: &str = "slack-local-token";
 
 #[test]
 fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
@@ -364,6 +368,48 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
   assert!(saved_note.body.contains("docs/handoff.md"));
 }
 
+#[test]
+fn bundled_slack_connector_runs_local_mcp_draft_after_approval() {
+  let (mut context, workspace) = setup_authorized_slack_context(
+    "bundled-slack-local-draft",
+    "Bundled Slack Connector Thread",
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": SLACK_COMMAND_ID,
+        "input": "Prepare a Slack update for the cowork handoff"
+      })),
+    ),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("command run result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "pluginCommand");
+  assert_eq!(items[1]["kind"], "approvalRequested");
+  assert_eq!(items[1]["attributes"]["connectorId"], SLACK_CONNECTOR_ID);
+  assert_eq!(items[1]["attributes"]["connectorServices"], "slack");
+  assert_eq!(
+    items[1]["attributes"]["executionKind"],
+    "mcp.slack.prepareMessageDraft"
+  );
+  assert_eq!(
+    result["pendingApprovals"][0]["title"],
+    "Run Prepare Slack Message Draft"
+  );
+
+  let approval_result = approve_pending(&mut context, &result);
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  let items = approval_result["items"].as_array().expect("approval items");
+  assert_local_slack_draft_items(&context, items);
+}
+
 fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace(label);
@@ -414,6 +460,64 @@ fn setup_authorized_notion_context(label: &str, title: &str) -> (RuntimeContext,
       Some(json!({
         "connectorId": NOTION_CONNECTOR_ID,
         "credentialSecret": NOTION_SECRET
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+
+  (context, workspace)
+}
+
+fn setup_authorized_slack_context(label: &str, title: &str) -> (RuntimeContext, PathBuf) {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace(label);
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      SLACK_PLUGIN_ID,
+      "Slack Connector",
+      true,
+      false,
+      &[
+        "command:slack.prepare-message-draft",
+        "command:slack.inspect-message-send",
+        "command:slack.post-message-draft",
+        "connector:slack",
+        "connector_workflow:slack.post-message",
+        "mcp_server:slack",
+        "prompt_pack:slack.workspace",
+      ],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+
+  let workspace_response = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  assert!(workspace_response.error.is_none());
+  let thread_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": title
+      })),
+    ),
+  );
+  assert!(thread_response.error.is_none());
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": SLACK_CONNECTOR_ID,
+        "credentialSecret": SLACK_SECRET
       })),
     ),
   );
@@ -502,6 +606,71 @@ fn assert_local_draft_items(context: &RuntimeContext, items: &[Value]) {
   assert!(saved_note
     .body
     .contains("credential-scoped local page draft"));
+}
+
+fn assert_local_slack_draft_items(context: &RuntimeContext, items: &[Value]) {
+  let draft_item = items
+    .iter()
+    .find(|item| item["title"] == "Slack Message Draft")
+    .expect("slack draft item");
+  assert_eq!(draft_item["kind"], "pluginResult");
+  assert_eq!(draft_item["attributes"]["targetService"], "slack");
+  assert_eq!(draft_item["attributes"]["draftMode"], "localDraft");
+  assert_eq!(draft_item["attributes"]["remoteWrite"], "false");
+  assert_eq!(draft_item["attributes"]["credentialScoped"], "true");
+  assert_eq!(
+    draft_item["attributes"]["targetTool"],
+    "slack.prepareMessageDraft"
+  );
+  assert_eq!(
+    draft_item["attributes"]["connectorWorkflowId"],
+    "slack.post-message"
+  );
+  assert_eq!(
+    draft_item["attributes"]["connectorWorkflowStatus"],
+    "prepared"
+  );
+  assert_eq!(
+    draft_item["attributes"]["pluginRunnerExecutionDriver"],
+    "mcp"
+  );
+  assert_eq!(draft_item["attributes"]["mcpServerId"], "slack");
+  assert_eq!(draft_item["attributes"]["mcpToolName"], "prepareMessageDraft");
+  assert_eq!(
+    draft_item["attributes"]["mcpServerCommand"],
+    "bin/slack-mcp-local-message.sh"
+  );
+  assert_eq!(draft_item["attributes"]["mcpProtocolStatus"], "completed");
+  assert_eq!(
+    draft_item["attributes"]["pluginRunnerSecretBindings"],
+    "env-bound"
+  );
+  assert_eq!(
+    draft_item["attributes"]["nextCommandId"],
+    "slack-connector::slack.post-message-draft"
+  );
+  assert!(draft_item["content"]
+    .as_str()
+    .expect("draft content")
+    .contains("local Slack message draft"));
+  assert!(!draft_item.to_string().contains(SLACK_SECRET));
+
+  let memory_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Memory Note Saved")
+    .expect("slack memory item");
+  assert_eq!(
+    memory_item["attributes"]["memoryNoteTitle"],
+    "Slack Draft Prepared"
+  );
+  let saved_note = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .find(|note| note.title == "Slack Draft Prepared")
+    .expect("saved slack draft memory note");
+  assert_eq!(saved_note.source, "plugin.slack-connector");
+  assert!(saved_note.body.contains("Slack connector prepared"));
 }
 
 fn assert_connector_handoff_items(items: &[Value]) -> &Value {

@@ -26,6 +26,7 @@ Current scripts:
 - `test_ci_changes.py`: checks CI change-lane classification rules.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `test_notion_connector_contract.py`: checks bundled Notion connector MCP handoff, retry, and follow-up metadata.
+- `test_slack_connector_contract.py`: checks bundled Slack connector MCP handoff, retry, and generic proof metadata.
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_identity.py`: checks shared product version and public release tag rules.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.

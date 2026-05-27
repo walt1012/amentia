@@ -149,6 +149,9 @@ jobs:
       - name: Test Notion connector contract
         run: python3 scripts/test_notion_connector_contract.py
 
+      - name: Test Slack connector contract
+        run: python3 scripts/test_slack_connector_contract.py
+
       - name: Test distribution validator
         run: python3 scripts/test_validate_macos_distribution.py
 

@@ -82,12 +82,12 @@ Keep these gates healthy:
 - Release assets stay limited to DMG, checksum, `README-FIRST.txt`, and release
   manifest.
 
-## Current Milestone: M9 Cowork Connectors
+## Recently Closed: M9 Cowork Connectors
 
 Goal: make Pith useful for real non-code cowork tasks without turning the app
 into a marketplace shell or a generic RAG product.
 
-Current state:
+Exit state:
 
 - Notion create-page is the reference connector workflow: draft, inspect,
   approval, publish, proof, retry, memory capture, command coverage, and
@@ -133,24 +133,22 @@ M9 exit criteria:
 - Packaged smoke proves connector path, Web Search evidence, workspace
   approval, runtime recovery, and unsigned DMG install path together.
 
-Next order:
-
-- Finish Notion reliability and packaged proof before adding connector breadth.
-- Freeze the reusable connector evidence contract before implementing the next
-  service.
-- Start a second connector only when it has a narrow cowork use case with the
-  same inspect, approval, proof, retry, and smoke contracts.
-
-## Next Milestone: M10 Connector Breadth
+## Current Milestone: M10 Connector Breadth
 
 Goal: add one more useful cowork connector without turning Pith into a
 marketplace shell.
 
-Candidate scope:
+Current state:
 
-- Start by extracting any reusable connector proof presentation boundary needed
-  by M9, then add the second connector.
-- Pick one narrow daily workflow, not a broad platform clone.
+- Slack is the second connector candidate because it is cowork-native and can
+  stay narrow: prepare, inspect, approve, post one message, and show proof.
+- Slack starts as a bundled local MCP connector with the same evidence contract
+  as Notion, using generic proof metadata rather than service-specific timeline
+  control flow.
+
+Exit criteria:
+
+- The Slack connector supports one daily workflow, not a broad platform clone.
 - Reuse M9 contracts exactly: local credential, manifest workflow, bounded
   runner, inspect-before-write, approval, proof, retry, and packaged smoke.
 - Keep native UI small; expand surfaces only where setup, action, or proof need
