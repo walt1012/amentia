@@ -20,7 +20,9 @@ struct TimelinePane: View {
             TimelineCard(
               entry: entry,
               isSelected: viewModel.selectedEntryID == entry.id,
+              proofSummary: viewModel.timelineProofSummary(from: entry),
               externalActionTitle: viewModel.timelineExternalAction(from: entry)?.title,
+              externalCopyActionTitle: viewModel.timelineExternalAction(from: entry)?.copyTitle,
               showsApprovalActions: viewModel.isPendingApproval(entry),
               showsPluginEnableAction: viewModel.canEnablePlugin(from: entry),
               showsPluginAuthorizeAction: viewModel.canAuthorizePluginConnector(from: entry),
@@ -69,6 +71,9 @@ struct TimelinePane: View {
               },
               onOpenExternalAction: {
                 viewModel.openTimelineExternalAction(from: entry)
+              },
+              onCopyExternalAction: {
+                viewModel.copyTimelineExternalActionURL(from: entry)
               }
             )
           }

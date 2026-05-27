@@ -215,7 +215,21 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ])
 
     XCTAssertEqual(action?.title, "Open Notion Page")
+    XCTAssertEqual(action?.copyTitle, "Copy Link")
     XCTAssertEqual(action?.url.absoluteString, "https://www.notion.so/page-123")
+  }
+
+  func testProofSummaryShowsSuccessfulNotionResult() {
+    let summary = TimelineExternalActionPresenter.proofSummary(attributes: [
+      "remoteProofKind": "notionApiResponse",
+      "remoteProofStatus": "success",
+      "notionPageId": "page-123",
+      "notionParentPageId": "parent-456",
+      "bodyTruncated": "false",
+    ])
+
+    XCTAssertEqual(summary?.title, "Notion page created")
+    XCTAssertEqual(summary?.detail, "Page: page-123 | Parent: parent-456 | Body complete")
   }
 
   func testExternalActionRejectsUntrustedOrIncompleteProof() {
@@ -236,6 +250,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "remoteProofStatus": "missing",
       "notionPageId": "page-123",
       "notionPageUrl": "https://www.notion.so/page-123",
+    ]))
+    XCTAssertNil(TimelineExternalActionPresenter.proofSummary(attributes: [
+      "remoteProofKind": "notionApiResponse",
+      "remoteProofStatus": "missing",
+      "notionPageId": "page-123",
     ]))
   }
 }

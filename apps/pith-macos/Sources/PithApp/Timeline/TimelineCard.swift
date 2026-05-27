@@ -4,7 +4,9 @@ import SwiftUI
 struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
+  let proofSummary: TimelineProofSummary?
   let externalActionTitle: String?
+  let externalCopyActionTitle: String?
   let showsApprovalActions: Bool
   let showsPluginEnableAction: Bool
   let showsPluginAuthorizeAction: Bool
@@ -24,6 +26,7 @@ struct TimelineCard: View {
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
   let onOpenExternalAction: () -> Void
+  let onCopyExternalAction: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -82,6 +85,10 @@ struct TimelineCard: View {
         .font(bodyFont)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
+
+      if let proofSummary {
+        proofSummaryView(proofSummary)
+      }
 
       if showsActionRow {
         HStack(spacing: 12) {
@@ -152,6 +159,13 @@ struct TimelineCard: View {
             }
             .buttonStyle(.borderedProminent)
           }
+
+          if let externalCopyActionTitle {
+            Button(externalCopyActionTitle) {
+              onCopyExternalAction()
+            }
+            .buttonStyle(.bordered)
+          }
         }
         .padding(.top, 4)
       }
@@ -197,6 +211,25 @@ struct TimelineCard: View {
       || showsPluginSourceAction
       || showsPluginRefreshAction
       || externalActionTitle != nil
+      || externalCopyActionTitle != nil
+  }
+
+  private func proofSummaryView(_ summary: TimelineProofSummary) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: "checkmark.seal")
+        .foregroundColor(.green)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(summary.title)
+          .font(.caption.weight(.semibold))
+        Text(summary.detail)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(10)
+    .background(Color.green.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
 
   private var pluginRetryTitle: String {
