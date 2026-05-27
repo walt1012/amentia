@@ -205,4 +205,37 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Notion parent: parent-456") == true)
     XCTAssertTrue(summary?.contains("Body truncated: false") == true)
   }
+
+  func testExternalActionOpensSuccessfulNotionProofOnly() {
+    let action = TimelineExternalActionPresenter.primaryAction(attributes: [
+      "remoteProofKind": "notionApiResponse",
+      "remoteProofStatus": "success",
+      "notionPageId": "page-123",
+      "notionPageUrl": "https://www.notion.so/page-123",
+    ])
+
+    XCTAssertEqual(action?.title, "Open Notion Page")
+    XCTAssertEqual(action?.url.absoluteString, "https://www.notion.so/page-123")
+  }
+
+  func testExternalActionRejectsUntrustedOrIncompleteProof() {
+    XCTAssertNil(TimelineExternalActionPresenter.primaryAction(attributes: [
+      "remoteProofKind": "notionApiResponse",
+      "remoteProofStatus": "success",
+      "notionPageId": "page-123",
+      "notionPageUrl": "file:///tmp/page",
+    ]))
+    XCTAssertNil(TimelineExternalActionPresenter.primaryAction(attributes: [
+      "remoteProofKind": "notionApiResponse",
+      "remoteProofStatus": "success",
+      "notionPageId": "page-123",
+      "notionPageUrl": "http://www.notion.so/page-123",
+    ]))
+    XCTAssertNil(TimelineExternalActionPresenter.primaryAction(attributes: [
+      "remoteProofKind": "notionApiResponse",
+      "remoteProofStatus": "missing",
+      "notionPageId": "page-123",
+      "notionPageUrl": "https://www.notion.so/page-123",
+    ]))
+  }
 }

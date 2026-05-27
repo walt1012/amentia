@@ -20,6 +20,7 @@ struct TimelinePane: View {
             TimelineCard(
               entry: entry,
               isSelected: viewModel.selectedEntryID == entry.id,
+              externalActionTitle: viewModel.timelineExternalAction(from: entry)?.title,
               showsApprovalActions: viewModel.isPendingApproval(entry),
               showsPluginEnableAction: viewModel.canEnablePlugin(from: entry),
               showsPluginAuthorizeAction: viewModel.canAuthorizePluginConnector(from: entry),
@@ -65,6 +66,9 @@ struct TimelinePane: View {
                 Task {
                   await viewModel.refreshPlugins(from: entry)
                 }
+              },
+              onOpenExternalAction: {
+                viewModel.openTimelineExternalAction(from: entry)
               }
             )
           }

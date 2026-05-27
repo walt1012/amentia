@@ -4,6 +4,7 @@ import SwiftUI
 struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
+  let externalActionTitle: String?
   let showsApprovalActions: Bool
   let showsPluginEnableAction: Bool
   let showsPluginAuthorizeAction: Bool
@@ -22,6 +23,7 @@ struct TimelineCard: View {
   let onRunPluginFollowUp: () -> Void
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
+  let onOpenExternalAction: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -143,6 +145,13 @@ struct TimelineCard: View {
             }
             .buttonStyle(.bordered)
           }
+
+          if let externalActionTitle {
+            Button(externalActionTitle) {
+              onOpenExternalAction()
+            }
+            .buttonStyle(.borderedProminent)
+          }
         }
         .padding(.top, 4)
       }
@@ -187,6 +196,7 @@ struct TimelineCard: View {
       || showsPluginFollowUpAction
       || showsPluginSourceAction
       || showsPluginRefreshAction
+      || externalActionTitle != nil
   }
 
   private var pluginRetryTitle: String {
