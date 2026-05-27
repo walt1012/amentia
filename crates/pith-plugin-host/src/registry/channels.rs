@@ -15,15 +15,17 @@ pub fn channel_adapter_blocker_for_manifest(
 ) -> anyhow::Result<Option<PluginChannelAdapterBlocker>> {
   let manifest = read_manifest(manifest_path)?;
 
-  Ok(manifest
-    .app_channels
-    .into_iter()
-    .find(|channel| !channel_adapter_available(&channel.protocol))
-    .map(|channel| PluginChannelAdapterBlocker {
-      display_name: channel.display_name,
-      service: channel.service,
-      protocol: channel.protocol,
-    }))
+  Ok(
+    manifest
+      .app_channels
+      .into_iter()
+      .find(|channel| !channel_adapter_available(&channel.protocol))
+      .map(|channel| PluginChannelAdapterBlocker {
+        display_name: channel.display_name,
+        service: channel.service,
+        protocol: channel.protocol,
+      }),
+  )
 }
 
 pub fn build_channel_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginChannelEntry> {
