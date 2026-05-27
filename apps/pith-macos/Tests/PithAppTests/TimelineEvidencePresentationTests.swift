@@ -117,6 +117,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "remoteWriteStage": "inspectBeforeWrite",
           "remoteWriteStatus": "notSent",
           "remoteWriteRequiresApproval": "true",
+          "remoteProofKind": "notionApiResponse",
           "remoteProofStatus": "notRequested",
           "retryCommandId": "notion-connector::notion.publish-page-draft",
           "retryInput": "{\"parentPageId\":\"page\"}",
@@ -142,7 +143,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Remote write: notSent") == true)
     XCTAssertTrue(summary?.contains("Remote approval required: true") == true)
     XCTAssertTrue(summary?.contains("Remote write source: docs/handoff.md") == true)
-    XCTAssertTrue(summary?.contains("Remote proof: notRequested") == true)
+    XCTAssertTrue(summary?.contains("Remote proof: notRequested | notionApiResponse") == true)
     XCTAssertTrue(
       summary?.contains(
         "Notion Create Page: inspected | stage inspectBeforeWrite | notion createPage"
@@ -167,5 +168,37 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       summary?.contains("Retry command: notion-connector::notion.publish-page-draft") == true
     )
     XCTAssertTrue(summary?.contains("Retry input: {\"parentPageId\":\"page\"}") == true)
+  }
+
+  func testInspectorSummarizesCompletedNotionProof() {
+    let summary = TimelineInspectorPresenter.selectedEntryPluginSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .assistantMessage,
+        title: "Assistant",
+        body: "Created Notion page.",
+        attributes: [
+          "remoteWrite": "true",
+          "remoteWriteStage": "completed",
+          "remoteWriteStatus": "completed",
+          "remoteWriteRequiresApproval": "true",
+          "remoteProofKind": "notionApiResponse",
+          "remoteProofStatus": "success",
+          "notionPageId": "page-123",
+          "notionPageUrl": "https://www.notion.so/page-123",
+          "notionParentPageId": "parent-456",
+          "bodyTruncated": "false",
+          "targetService": "notion",
+          "targetTool": "notion.createPage",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(summary?.contains("Remote proof: success | notionApiResponse") == true)
+    XCTAssertTrue(
+      summary?.contains("Notion page: page-123 | https://www.notion.so/page-123") == true
+    )
+    XCTAssertTrue(summary?.contains("Notion parent: parent-456") == true)
+    XCTAssertTrue(summary?.contains("Body truncated: false") == true)
   }
 }

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 from types import ModuleType
 
@@ -132,6 +133,84 @@ def assert_manifest_workflow_coverage() -> None:
       raise AssertionError(f"Notion command {command_id} missed connector binding")
 
 
+def assert_publish_success(connector: ModuleType) -> None:
+  captured: dict[str, object] = {}
+  previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
+  os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
+
+  def fake_notion_post(path: str, token: str, payload: dict) -> dict:
+    captured["path"] = path
+    captured["token"] = token
+    captured["payload"] = payload
+    return {
+      "id": "page-success-123",
+      "url": "https://www.notion.so/page-success-123",
+    }
+
+  connector.notion_post = fake_notion_post
+  try:
+    response = connector.publish_page_draft(
+      3,
+      {
+        "input": json.dumps(
+          {
+            "parentPageId": "parent-123",
+            "title": "Published by test",
+            "body": "Paragraph one.\n\nParagraph two.",
+          },
+          sort_keys=True,
+        ),
+        "connectors": [
+          {
+            "service": "notion",
+            "credentialProvider": {
+              "provider": "env",
+              "envKey": "PITH_TEST_NOTION_TOKEN",
+            },
+          }
+        ],
+      },
+    )
+  finally:
+    if previous_token is None:
+      os.environ.pop("PITH_TEST_NOTION_TOKEN", None)
+    else:
+      os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
+  item = response_first_item(response)
+  attributes = item.get("attributes", {})
+  expected = {
+    "remoteWrite": "true",
+    "remoteWriteStage": "completed",
+    "remoteProofKind": "notionApiResponse",
+    "remoteProofStatus": "success",
+    "notionPageId": "page-success-123",
+    "notionPageUrl": "https://www.notion.so/page-success-123",
+    "notionParentPageId": "parent-123",
+    "bodyTruncated": "false",
+  }
+  for key, value in expected.items():
+    if attributes.get(key) != value:
+      raise AssertionError(f"Expected successful publish {key}={value!r}, got {attributes}")
+  assert_workflow(
+    item,
+    action="createPage",
+    stage="completed",
+    status="completed",
+    target="https://www.notion.so/page-success-123",
+    proof="notionApiResponse",
+  )
+  if captured.get("path") != "/pages" or captured.get("token") != "secret-token":
+    raise AssertionError(f"Notion publish called the wrong target: {captured}")
+  payload = captured.get("payload")
+  if not isinstance(payload, dict):
+    raise AssertionError(f"Notion publish payload was not a dict: {captured}")
+  if payload.get("parent", {}).get("page_id") != "parent-123":
+    raise AssertionError(f"Notion publish used the wrong parent: {payload}")
+  children = payload.get("children")
+  if not isinstance(children, list) or len(children) != 2:
+    raise AssertionError(f"Notion publish did not preserve paragraph blocks: {payload}")
+
+
 def main() -> int:
   assert_manifest_workflow_coverage()
   connector = load_connector()
@@ -211,6 +290,7 @@ def main() -> int:
     target="missingParentPageId",
     proof="notRequested",
   )
+  assert_publish_success(connector)
 
   print("notion connector contract tests passed")
   return 0

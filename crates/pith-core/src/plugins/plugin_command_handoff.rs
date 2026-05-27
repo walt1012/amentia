@@ -16,8 +16,18 @@ const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
   "remoteWriteStage",
   "remoteWriteStatus",
   "remoteWriteRequiresApproval",
+  "remoteProofKind",
+  "remoteProofStatus",
+  "notionPageId",
+  "notionPageUrl",
+  "notionParentPageId",
+  "bodyTruncated",
   "sourceArtifact",
   "sourceArtifactPreviewProvided",
+  "publishRetryable",
+  "publishFailureReason",
+  "retryCommandId",
+  "retryInput",
   "connectorWorkflowId",
   "connectorWorkflowName",
   "connectorWorkflowService",
@@ -272,7 +282,20 @@ mod tests {
             "true".to_string(),
           ),
           ("remoteWriteStatus".to_string(), "notSent".to_string()),
+          (
+            "remoteProofKind".to_string(),
+            "notionApiResponse".to_string(),
+          ),
+          ("remoteProofStatus".to_string(), "notRequested".to_string()),
           ("sourceArtifact".to_string(), "docs/handoff.md".to_string()),
+          (
+            "retryCommandId".to_string(),
+            "notion-connector::notion.publish-page-draft".to_string(),
+          ),
+          (
+            "retryInput".to_string(),
+            "{\"parentPageId\":\"page\"}".to_string(),
+          ),
           (
             "connectorWorkflowId".to_string(),
             "notion.create-page".to_string(),
@@ -314,8 +337,24 @@ mod tests {
       Some("notSent")
     );
     assert_eq!(
+      attributes.get("remoteProofKind").map(String::as_str),
+      Some("notionApiResponse")
+    );
+    assert_eq!(
+      attributes.get("remoteProofStatus").map(String::as_str),
+      Some("notRequested")
+    );
+    assert_eq!(
       attributes.get("sourceArtifact").map(String::as_str),
       Some("docs/handoff.md")
+    );
+    assert_eq!(
+      attributes.get("retryCommandId").map(String::as_str),
+      Some("notion-connector::notion.publish-page-draft")
+    );
+    assert_eq!(
+      attributes.get("retryInput").map(String::as_str),
+      Some("{\"parentPageId\":\"page\"}")
     );
     assert_eq!(
       attributes.get("connectorWorkflowId").map(String::as_str),

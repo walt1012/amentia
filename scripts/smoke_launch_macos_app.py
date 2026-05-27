@@ -1218,6 +1218,10 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("remoteWriteStatus") == "completed"
     and item.get("attributes", {}).get("remoteProofKind") == "notionApiResponse"
     and item.get("attributes", {}).get("notionPageId") == "packaged-smoke-notion-page"
+    and item.get("attributes", {}).get("notionPageUrl")
+    == "https://www.notion.so/packaged-smoke-notion-page"
+    and item.get("attributes", {}).get("notionParentPageId") == "packaged-smoke-parent"
+    and item.get("attributes", {}).get("bodyTruncated") == "false"
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
     and item.get("attributes", {}).get("connectorWorkflowProof") == "notionApiResponse"

@@ -467,8 +467,23 @@ enum TimelineInspectorPresenter {
     if let nextCommandInputHint = entry.attributes["nextCommandInputHint"] {
       lines.append("Next input hint: \(nextCommandInputHint)")
     }
-    if let proofStatus = entry.attributes["remoteProofStatus"] {
-      lines.append("Remote proof: \(proofStatus)")
+    if entry.attributes["remoteProofStatus"] != nil || entry.attributes["remoteProofKind"] != nil {
+      let proofStatus = entry.attributes["remoteProofStatus"] ?? "unknown"
+      let proofKind = entry.attributes["remoteProofKind"] ?? "unknown proof"
+      lines.append("Remote proof: \(proofStatus) | \(proofKind)")
+    }
+    if let pageID = entry.attributes["notionPageId"] {
+      let pageURL = entry.attributes["notionPageUrl"] ?? "no URL"
+      lines.append("Notion page: \(pageID) | \(pageURL)")
+    }
+    if let parentPageID = entry.attributes["notionParentPageId"] {
+      lines.append("Notion parent: \(parentPageID)")
+    }
+    if let bodyTruncated = entry.attributes["bodyTruncated"] {
+      lines.append("Body truncated: \(bodyTruncated)")
+    }
+    if let failureReason = entry.attributes["publishFailureReason"] {
+      lines.append("Publish failure: \(failureReason)")
     }
     if let retryCommandID = entry.attributes["retryCommandId"] {
       lines.append("Retry command: \(retryCommandID)")

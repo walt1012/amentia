@@ -131,6 +131,8 @@ action/stage/status/service proof, and the app can display the workflow binding.
 Connector registry now exposes workflow capabilities, command coverage, and
 bounded loop budget hints directly so the next connector can follow the same
 narrow contract without adding marketplace complexity.
+Notion publish proof now stays visible across runner output, agent handoff,
+packaged smoke, and the macOS inspector.
 
 ## Guardrails
 
