@@ -165,8 +165,8 @@ fn build_channel_registry_lists_message_channels() {
 }"#,
   )
   .expect("write channel manifest");
-  let plugins = discover_plugins_in_roots(std::slice::from_ref(&plugin_root))
-    .expect("discover channel plugin");
+  let plugins =
+    discover_plugins_in_roots(std::slice::from_ref(&plugin_root)).expect("discover channel plugin");
 
   let channels = build_channel_registry(&plugins);
   let capabilities = build_capability_registry(&plugins);

@@ -409,10 +409,7 @@ mod tests {
             "remoteProofUrl".to_string(),
             "https://chat.example.com/messages/message-123".to_string(),
           ),
-          (
-            "remoteProofTitle".to_string(),
-            "Message sent".to_string(),
-          ),
+          ("remoteProofTitle".to_string(), "Message sent".to_string()),
           (
             "remoteProofActionTitle".to_string(),
             "Open Message".to_string(),
