@@ -4,15 +4,15 @@ use pith_plugin_host::{
   build_capability_registry, build_command_registry, build_hook_registry, PluginCatalogEntry,
 };
 use pith_protocol::{
-  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginConnectorRegistryResult, PluginHookRegistryResult,
+  PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginChannelRegistryResult,
+  PluginCommandRegistryResult, PluginConnectorRegistryResult, PluginHookRegistryResult,
 };
 
 use crate::plugins::plugin_command_readiness::command_readiness;
 
 use super::protocol_plugin_registry_mappers::{
   to_protocol_capability, to_protocol_plugin_command, to_protocol_plugin_connector,
-  to_protocol_plugin_hook,
+  to_protocol_plugin_channel, to_protocol_plugin_hook,
 };
 use super::runtime_plugins::RuntimePluginState;
 
@@ -69,6 +69,18 @@ pub(crate) fn build_protocol_connector_registry(
         let credential = plugin_state.connector_credential(&connector.connector_id);
         to_protocol_plugin_connector(connector, credential)
       })
+      .collect(),
+  }
+}
+
+pub(crate) fn build_protocol_channel_registry(
+  plugin_state: &RuntimePluginState,
+) -> PluginChannelRegistryResult {
+  PluginChannelRegistryResult {
+    channels: plugin_state
+      .channel_entries()
+      .into_iter()
+      .map(to_protocol_plugin_channel)
       .collect(),
   }
 }

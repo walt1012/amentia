@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use pith_plugin_host::{build_connector_registry, PluginCatalogEntry, PluginConnectorEntry};
+use pith_plugin_host::{
+  build_channel_registry, build_connector_registry, PluginCatalogEntry, PluginChannelEntry,
+  PluginConnectorEntry,
+};
 use pith_storage::StoredPluginConnectorCredential;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -106,6 +109,10 @@ impl RuntimePluginState {
 
   pub(crate) fn connector_entries(&self) -> Vec<PluginConnectorEntry> {
     build_connector_registry(&self.catalog)
+  }
+
+  pub(crate) fn channel_entries(&self) -> Vec<PluginChannelEntry> {
+    build_channel_registry(&self.catalog)
   }
 
   pub(crate) fn connector_credential(

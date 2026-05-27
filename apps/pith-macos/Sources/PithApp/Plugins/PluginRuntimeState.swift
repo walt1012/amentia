@@ -4,6 +4,7 @@ struct PluginStateRefresh {
   let plugins: [PluginSummary]?
   let registrySummary: PluginCapabilityRegistrySummary?
   let capabilities: [PluginCapabilitySummary]?
+  let channels: [PluginChannelSummary]?
   let connectors: [PluginConnectorSummary]?
   let commands: [PluginCommandSummary]?
   let hooks: [PluginHookSummary]?
@@ -15,6 +16,7 @@ struct PluginRuntimeState {
   var plugins: [PluginSummary]
   var registrySummary: PluginCapabilityRegistrySummary?
   var capabilities: [PluginCapabilitySummary]
+  var channels: [PluginChannelSummary]
   var connectors: [PluginConnectorSummary]
   var commands: [PluginCommandSummary]
   var hooks: [PluginHookSummary]
@@ -26,6 +28,7 @@ struct PluginRuntimeState {
     plugins: [PluginSummary] = [],
     registrySummary: PluginCapabilityRegistrySummary? = nil,
     capabilities: [PluginCapabilitySummary] = [],
+    channels: [PluginChannelSummary] = [],
     connectors: [PluginConnectorSummary] = [],
     commands: [PluginCommandSummary] = [],
     hooks: [PluginHookSummary] = [],
@@ -36,6 +39,7 @@ struct PluginRuntimeState {
     self.plugins = plugins
     self.registrySummary = registrySummary
     self.capabilities = capabilities
+    self.channels = channels
     self.connectors = connectors
     self.commands = commands
     self.hooks = hooks
@@ -53,6 +57,7 @@ struct PluginRuntimeState {
       plugins: plugins,
       registrySummary: registrySummary,
       capabilities: capabilities,
+      channels: channels,
       connectors: connectors,
       commands: commands,
       hooks: hooks,
@@ -75,6 +80,9 @@ struct PluginRuntimeState {
     }
     if let capabilities = refresh.capabilities {
       self.capabilities = capabilities
+    }
+    if let channels = refresh.channels {
+      self.channels = channels
     }
     if let connectors = refresh.connectors {
       self.connectors = connectors

@@ -1568,6 +1568,38 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
 }
 
 #[test]
+fn plugin_channel_registry_lists_disabled_weixin_channel() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "weixin-channel",
+      "Weixin Channel",
+      false,
+      false,
+      &["channel:weixin"],
+      &["network.outbound"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_CHANNEL_REGISTRY, None),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("channel registry result");
+  let channels = result["channels"].as_array().expect("channels");
+  assert_eq!(channels.len(), 1);
+  assert_eq!(channels[0]["channelId"], "weixin-channel::weixin");
+  assert_eq!(channels[0]["displayName"], "Weixin");
+  assert_eq!(channels[0]["service"], "weixin");
+  assert_eq!(channels[0]["protocol"], "openclaw-weixin");
+  assert_eq!(channels[0]["status"], "disabled");
+  assert_eq!(channels[0]["enabled"], false);
+}
+
+#[test]
 fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(

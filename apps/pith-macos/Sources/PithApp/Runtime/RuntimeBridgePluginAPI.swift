@@ -140,6 +140,16 @@ extension RuntimeBridge {
     return result.connectors.map { runtimePluginConnector(from: $0) }
   }
 
+  func listPluginChannels() async throws -> [RuntimePluginChannel] {
+    let response: JSONRPCResponse<PluginChannelRegistryResult> = try await sendRequest(
+      method: "plugin/channelRegistry",
+      params: OptionalRequestParams.none
+    )
+    let result = try responseResult(from: response)
+
+    return result.channels.map { runtimePluginChannel(from: $0) }
+  }
+
   func authorizePluginConnector(
     connectorID: String,
     credentialLabel: String? = nil,
@@ -318,6 +328,22 @@ private extension RuntimeBridge {
       credentialLabel: connector.credentialLabel,
       authorizedAt: connector.authorizedAt,
       credentialUpdatedAt: connector.credentialUpdatedAt
+    )
+  }
+
+  func runtimePluginChannel(from channel: RuntimePluginChannelPayload) -> RuntimePluginChannel {
+    RuntimePluginChannel(
+      channelID: channel.channelId,
+      displayName: channel.displayName,
+      service: channel.service,
+      protocolName: channel.protocolName,
+      pluginID: channel.pluginId,
+      pluginDisplayName: channel.pluginDisplayName,
+      enabled: channel.enabled,
+      status: channel.status,
+      permissions: channel.permissions,
+      manifestPath: channel.manifestPath,
+      homepage: channel.homepage
     )
   }
 }

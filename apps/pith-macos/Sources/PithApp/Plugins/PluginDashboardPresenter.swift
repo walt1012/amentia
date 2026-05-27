@@ -4,6 +4,7 @@ struct PluginDashboardSnapshot {
   let plugins: [PluginSummary]
   let registrySummary: PluginCapabilityRegistrySummary?
   let capabilities: [PluginCapabilitySummary]
+  let channels: [PluginChannelSummary]
   let connectors: [PluginConnectorSummary]
   let commands: [PluginCommandSummary]
   let hooks: [PluginHookSummary]
@@ -188,6 +189,39 @@ enum PluginDashboardPresenter {
     return parts.joined(separator: " | ")
   }
 
+  static func channelCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
+    if snapshot.channels.isEmpty {
+      return "No Channels"
+    }
+
+    let readyCount = snapshot.channels.filter { $0.status == "ready" }.count
+    let disabledCount = snapshot.channels.filter { $0.status == "disabled" }.count
+    var parts = [
+      "\(snapshot.channels.count) Channel\(snapshot.channels.count == 1 ? "" : "s")"
+    ]
+    if readyCount > 0 {
+      parts.append("\(readyCount) ready")
+    }
+    if disabledCount > 0 {
+      parts.append("\(disabledCount) disabled")
+    }
+    return parts.joined(separator: " | ")
+  }
+
+  static func channelDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
+    guard !snapshot.channels.isEmpty else {
+      return "Enable channel plugins to receive cowork requests from chat surfaces."
+    }
+
+    return snapshot.channels
+      .map(channelDetail)
+      .joined(separator: "\n")
+  }
+
+  static func channelPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginChannelSummary] {
+    Array(snapshot.channels.prefix(6))
+  }
+
   static func connectorDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.connectors.isEmpty else {
       return "Install or enable connector plugins to prepare third-party app integrations."
@@ -316,6 +350,15 @@ enum PluginDashboardPresenter {
     }
 
     return parts.joined(separator: " | ")
+  }
+
+  private static func channelDetail(_ channel: PluginChannelSummary) -> String {
+    [
+      "\(channel.displayName): \(channel.status)",
+      "service: \(channel.service)",
+      "protocol: \(channel.protocolName)",
+      "plugin: \(channel.pluginDisplayName)"
+    ].joined(separator: " | ")
   }
 
   private static func commandDetail(

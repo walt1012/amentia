@@ -17,6 +17,7 @@ extension AppViewModel {
   func pluginSurfaceSummary() -> String {
     [
       pluginRegistryCountSummary(),
+      pluginChannelCountSummary(),
       pluginConnectorCountSummary(),
       pluginCommandCountSummary(),
       pluginHookCountSummary(),
@@ -65,6 +66,18 @@ extension AppViewModel {
 
   func pluginConnectorCountSummary() -> String {
     PluginDashboardPresenter.connectorCountSummary(pluginDashboardSnapshot)
+  }
+
+  func pluginChannelCountSummary() -> String {
+    PluginDashboardPresenter.channelCountSummary(pluginDashboardSnapshot)
+  }
+
+  func pluginChannelDetailSummary() -> String {
+    PluginDashboardPresenter.channelDetailSummary(pluginDashboardSnapshot)
+  }
+
+  func pluginChannelPreview() -> [PluginChannelSummary] {
+    PluginDashboardPresenter.channelPreview(pluginDashboardSnapshot)
   }
 
   func pluginConnectorDetailSummary() -> String {

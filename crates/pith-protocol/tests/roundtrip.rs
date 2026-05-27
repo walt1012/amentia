@@ -1,14 +1,15 @@
 use pith_protocol::{
   ApprovalRequest, ApprovalRespondParams, InitializeParams, JsonRpcResponse,
   PluginCapabilityRegistration, PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
-  PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
-  PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
-  PluginCommandWorkflowSummary, PluginConnectorCredentialParams, PluginConnectorCredentialResult,
-  PluginConnectorRegistryResult, PluginConnectorSummary, PluginConnectorWorkflowSummary,
-  PluginHookRegistryResult, PluginHookSummary, PluginInspectParams, PluginInspectResult,
-  PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
-  PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginChannelRegistryResult, PluginChannelSummary, PluginCommandEnvelopeFieldSummary,
+  PluginCommandEnvelopeSummary, PluginCommandExecutionSummary, PluginCommandRegistryResult,
+  PluginCommandRunParams, PluginCommandSummary, PluginCommandWorkflowSummary,
+  PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
+  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookRegistryResult,
+  PluginHookSummary, PluginInspectParams, PluginInspectResult, PluginInstallParams,
+  PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams, PluginSummary, ThreadReadResult,
+  ThreadSummary, TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult,
+  WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -385,6 +386,38 @@ fn plugin_connector_registry_round_trips() {
   assert!(value["connectors"][0]
     .get("credentialSecretPresent")
     .is_some());
+}
+
+#[test]
+fn plugin_channel_registry_round_trips() {
+  let result = PluginChannelRegistryResult {
+    channels: vec![PluginChannelSummary {
+      channel_id: "weixin-channel::weixin".to_string(),
+      display_name: "Weixin".to_string(),
+      service: "weixin".to_string(),
+      protocol: "openclaw-weixin".to_string(),
+      plugin_id: "weixin-channel".to_string(),
+      plugin_display_name: "Weixin Channel".to_string(),
+      enabled: false,
+      status: "disabled".to_string(),
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: "plugins/bundled/weixin-channel/pith-plugin.json".to_string(),
+      homepage: Some("https://github.com/Tencent/openclaw-weixin".to_string()),
+    }],
+  };
+
+  let encoded = serde_json::to_string(&result).expect("serialize channel registry");
+  let decoded: PluginChannelRegistryResult =
+    serde_json::from_str(&encoded).expect("deserialize channel registry");
+  let value = serde_json::to_value(&decoded).expect("serialize channel registry value");
+
+  assert_eq!(decoded.channels.len(), 1);
+  assert_eq!(decoded.channels[0].channel_id, "weixin-channel::weixin");
+  assert_eq!(decoded.channels[0].service, "weixin");
+  assert_eq!(decoded.channels[0].protocol, "openclaw-weixin");
+  assert_eq!(decoded.channels[0].status, "disabled");
+  assert!(value["channels"][0].get("channelId").is_some());
+  assert_eq!(value["channels"][0]["protocol"], "openclaw-weixin");
 }
 
 #[test]

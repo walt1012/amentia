@@ -174,6 +174,29 @@ pub struct PluginConnectorRegistryResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginChannelSummary {
+  pub channel_id: String,
+  pub display_name: String,
+  pub service: String,
+  pub protocol: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub enabled: bool,
+  pub status: String,
+  pub permissions: Vec<String>,
+  pub manifest_path: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub homepage: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginChannelRegistryResult {
+  pub channels: Vec<PluginChannelSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginConnectorCredentialParams {
   pub connector_id: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]

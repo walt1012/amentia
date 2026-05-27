@@ -20,12 +20,16 @@ struct PluginSummary: Identifiable, Hashable {
 
 struct PluginSurfaceSummary: Hashable {
   let commandCount: Int
+  let channelCount: Int
   let connectorCount: Int
   let mcpServerCount: Int
   let hookCount: Int
   let permissionCount: Int
 
   var preferredSection: PluginManagerSection {
+    if channelCount > 0 {
+      return .channels
+    }
     if connectorCount > 0 || mcpServerCount > 0 {
       return .connectors
     }
@@ -44,6 +48,7 @@ struct PluginSurfaceSummary: Hashable {
   var summary: String {
     var parts = [
       "\(commandCount) command\(commandCount == 1 ? "" : "s")",
+      "\(channelCount) channel\(channelCount == 1 ? "" : "s")",
       "\(connectorCount) connector\(connectorCount == 1 ? "" : "s")",
       "\(hookCount) hook\(hookCount == 1 ? "" : "s")",
     ]
@@ -62,6 +67,7 @@ enum PluginSurfaceClassifier {
   ) -> PluginSurfaceSummary {
     PluginSurfaceSummary(
       commandCount: count(capabilities, kind: "command"),
+      channelCount: count(capabilities, kind: "channel"),
       connectorCount: count(capabilities, kind: "connector"),
       mcpServerCount: count(capabilities, kind: "mcp_server"),
       hookCount: count(capabilities, kind: "hook"),
@@ -122,6 +128,20 @@ struct PluginConnectorSummary: Identifiable, Hashable {
   let credentialLabel: String?
   let authorizedAt: Int?
   let credentialUpdatedAt: Int?
+}
+
+struct PluginChannelSummary: Identifiable, Hashable {
+  let id: String
+  let displayName: String
+  let service: String
+  let protocolName: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let enabled: Bool
+  let status: String
+  let permissions: [String]
+  let manifestPath: String
+  let homepage: String?
 }
 
 struct PluginConnectorWorkflowSummary: Hashable {

@@ -241,6 +241,77 @@ struct PluginConnectorRow: View {
   }
 }
 
+struct PluginChannelRow: View {
+  let channel: PluginChannelSummary
+  let canEnablePlugin: Bool
+  let onEnablePlugin: () -> Void
+  let onRevealManifest: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(channel.displayName)
+            .font(.caption.weight(.semibold))
+          Text("\(channel.service) | \(channel.status)")
+            .font(.caption2)
+            .foregroundColor(statusColor)
+        }
+
+        Spacer()
+
+        if !channel.enabled {
+          Button("Enable Plugin") {
+            onEnablePlugin()
+          }
+          .font(.caption2)
+          .disabled(!canEnablePlugin)
+        }
+
+        Button("Manifest") {
+          onRevealManifest()
+        }
+        .font(.caption2)
+      }
+
+      Text("\(channel.pluginDisplayName) | \(channel.pluginID)")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+
+      Text("Protocol: \(channel.protocolName)")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
+      if !channel.permissions.isEmpty {
+        Text("Permissions: \(channel.permissions.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if let homepage = channel.homepage {
+        Text("Homepage: \(homepage)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(.vertical, 4)
+  }
+
+  private var statusColor: Color {
+    switch channel.status {
+    case "ready":
+      return .green
+    case "disabled":
+      return .secondary
+    default:
+      return .orange
+    }
+  }
+}
+
 private extension PluginConnectorSummary {
   var authSummary: String {
     let type = authType ?? "none"

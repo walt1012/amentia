@@ -146,6 +146,8 @@ Current state:
 - Non-personal chat products are out of scope for this milestone.
 - A disabled bundled `weixin-channel` manifest records the personal Weixin
   channel direction without pretending login or message runtime is ready.
+- Runtime and macOS plugin surfaces expose channel registry metadata so the
+  Weixin path is visible as a disabled channel, not a fake ready connector.
 
 Exit criteria:
 

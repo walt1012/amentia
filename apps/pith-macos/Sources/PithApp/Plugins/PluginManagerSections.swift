@@ -3,6 +3,7 @@ import SwiftUI
 enum PluginManagerSection: String, CaseIterable, Identifiable {
   case catalog = "Catalog"
   case access = "Access"
+  case channels = "Channels"
   case connectors = "Connectors"
   case commands = "Commands"
   case hooks = "Hooks"
@@ -20,6 +21,8 @@ struct PluginManagerSectionView: View {
       PluginCatalogSection(viewModel: viewModel)
     case .access:
       PluginAccessSection(viewModel: viewModel)
+    case .channels:
+      PluginChannelsSection(viewModel: viewModel)
     case .commands:
       PluginCommandsSection(viewModel: viewModel)
     case .connectors:
@@ -113,6 +116,35 @@ private struct PluginAccessSection: View {
             },
             onRemove: {
               viewModel.removePlugin(pluginID: plugin.id)
+            }
+          )
+        }
+      }
+    }
+  }
+}
+
+private struct PluginChannelsSection: View {
+  @ObservedObject var viewModel: AppViewModel
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text(viewModel.pluginChannelDetailSummary())
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
+      if !viewModel.pluginChannelPreview().isEmpty {
+        Divider()
+        ForEach(viewModel.pluginChannelPreview()) { channel in
+          PluginChannelRow(
+            channel: channel,
+            canEnablePlugin: viewModel.canSetPluginEnabled(pluginID: channel.pluginID),
+            onEnablePlugin: {
+              viewModel.setPluginEnabled(pluginID: channel.pluginID, enabled: true)
+            },
+            onRevealManifest: {
+              viewModel.revealPluginManifest(pluginID: channel.pluginID)
             }
           )
         }

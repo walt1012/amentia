@@ -1,7 +1,8 @@
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse, PluginListResult};
 
 use crate::protocol_adapters::{
-  build_protocol_capability_registry, build_protocol_command_registry,
+  build_protocol_capability_registry, build_protocol_channel_registry,
+  build_protocol_command_registry,
   build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_plugin,
 };
 use crate::RuntimeContext;
@@ -23,6 +24,16 @@ pub(crate) fn handle_plugin_command_registry(
   JsonRpcResponse::success(
     request.id,
     &build_protocol_command_registry(&context.plugin_state),
+  )
+}
+
+pub(crate) fn handle_plugin_channel_registry(
+  context: &RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  JsonRpcResponse::success(
+    request.id,
+    &build_protocol_channel_registry(&context.plugin_state),
   )
 }
 

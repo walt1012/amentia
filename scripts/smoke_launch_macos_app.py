@@ -1709,6 +1709,16 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
           "Packaged runtime is missing bundled plugins "
           f"{', '.join(missing_plugins)}."
         )
+      channel_registry = send_runtime_request(process, 125, "plugin/channelRegistry")
+      channels = channel_registry["result"]["channels"]
+      weixin_channel = next(
+        (channel for channel in channels if channel["channelId"] == "weixin-channel::weixin"),
+        None,
+      )
+      if weixin_channel is None:
+        raise RuntimeError("Packaged runtime is missing the personal Weixin channel.")
+      if weixin_channel["protocol"] != "openclaw-weixin":
+        raise RuntimeError("Packaged Weixin channel has the wrong protocol.")
 
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)

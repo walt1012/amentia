@@ -858,6 +858,22 @@ def main() -> int:
     connectors = connector_registry["result"]["connectors"]
     notion_connector = connector_by_id(connectors, NOTION_CONNECTOR_ID)
     assert_notion_connector_disabled(notion_connector)
+    channel_registry, _ = send_request(
+      process,
+      {
+        "id": 42,
+        "method": "plugin/channelRegistry",
+      },
+    )
+    channels = channel_registry["result"]["channels"]
+    weixin_channel = next(
+      channel
+      for channel in channels
+      if channel["channelId"] == "weixin-channel::weixin"
+    )
+    assert weixin_channel["service"] == "weixin"
+    assert weixin_channel["protocol"] == "openclaw-weixin"
+    assert weixin_channel["status"] == "disabled"
     disabled_connector_authorize, _ = send_request(
       process,
       {

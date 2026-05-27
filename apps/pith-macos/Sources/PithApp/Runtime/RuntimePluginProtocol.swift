@@ -51,6 +51,10 @@ struct PluginConnectorRegistryResult: Codable {
   let connectors: [RuntimePluginConnectorPayload]
 }
 
+struct PluginChannelRegistryResult: Codable {
+  let channels: [RuntimePluginChannelPayload]
+}
+
 struct PluginConnectorCredentialParams: Codable {
   let connectorId: String
   let credentialLabel: String?
@@ -171,6 +175,34 @@ struct RuntimePluginConnectorPayload: Codable {
   let credentialLabel: String?
   let authorizedAt: Int?
   let credentialUpdatedAt: Int?
+}
+
+struct RuntimePluginChannelPayload: Codable {
+  let channelId: String
+  let displayName: String
+  let service: String
+  let protocolName: String
+  let pluginId: String
+  let pluginDisplayName: String
+  let enabled: Bool
+  let status: String
+  let permissions: [String]
+  let manifestPath: String
+  let homepage: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case channelId
+    case displayName
+    case service
+    case protocolName = "protocol"
+    case pluginId
+    case pluginDisplayName
+    case enabled
+    case status
+    case permissions
+    case manifestPath
+    case homepage
+  }
 }
 
 struct RuntimePluginConnectorWorkflowPayload: Codable {
@@ -387,6 +419,20 @@ extension RuntimeBridge {
     let stages: [String]
     let statuses: [String]
     let commandIDs: [String]
+  }
+
+  struct RuntimePluginChannel {
+    let channelID: String
+    let displayName: String
+    let service: String
+    let protocolName: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let enabled: Bool
+    let status: String
+    let permissions: [String]
+    let manifestPath: String
+    let homepage: String?
   }
 
   struct RuntimePluginHook {
