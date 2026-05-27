@@ -425,6 +425,7 @@ def main() -> int:
   (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "notion-connector").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "weixin-channel").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
@@ -489,6 +490,34 @@ def main() -> int:
         ],
         "credentialStore": "local",
       },
+      "defaultEnabled": False,
+    },
+  )
+  write_json_file(
+    plugin_dir / "weixin-channel" / "pith-plugin.json",
+    {
+      "name": "weixin-channel",
+      "version": "0.1.0",
+      "displayName": "Weixin Channel",
+      "description": "Declares the personal Weixin cowork channel using the official OpenClaw Weixin protocol shape.",
+      "author": {
+        "name": "Pith",
+      },
+      "capabilities": [
+        "channel:weixin",
+      ],
+      "permissions": [
+        "network.outbound",
+      ],
+      "channels": [
+        {
+          "id": "weixin",
+          "displayName": "Weixin",
+          "service": "weixin",
+          "protocol": "openclaw-weixin",
+          "homepage": "https://github.com/Tencent/openclaw-weixin",
+        },
+      ],
       "defaultEnabled": False,
     },
   )
@@ -770,6 +799,7 @@ def main() -> int:
     assert "shell-recorder" in plugin_ids
     assert "review-assistant" in plugin_ids
     assert "notion-connector" in plugin_ids
+    assert "weixin-channel" in plugin_ids
 
     workspace_notes_enable, _ = send_request(
       process,

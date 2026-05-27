@@ -1,14 +1,13 @@
 use pith_plugin_host::{
   PluginCapabilityRegistration as HostPluginCapabilityRegistration,
-  PluginChannelEntry as HostPluginChannelEntry,
-  PluginCommandEntry as HostPluginCommandEntry,
+  PluginChannelEntry as HostPluginChannelEntry, PluginCommandEntry as HostPluginCommandEntry,
   PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
   PluginCommandEnvelopeFieldEntry as HostPluginCommandEnvelopeFieldEntry,
   PluginConnectorEntry as HostPluginConnectorEntry, PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
-  PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
-  PluginChannelSummary, PluginCommandExecutionSummary, PluginCommandSummary,
+  PluginCapabilityRegistration, PluginChannelSummary, PluginCommandEnvelopeFieldSummary,
+  PluginCommandEnvelopeSummary, PluginCommandExecutionSummary, PluginCommandSummary,
   PluginCommandWorkflowSummary, PluginConnectorSummary, PluginConnectorWorkflowSummary,
   PluginHookSummary,
 };

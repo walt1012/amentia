@@ -11,8 +11,8 @@ use pith_protocol::{
 use crate::plugins::plugin_command_readiness::command_readiness;
 
 use super::protocol_plugin_registry_mappers::{
-  to_protocol_capability, to_protocol_plugin_command, to_protocol_plugin_connector,
-  to_protocol_plugin_channel, to_protocol_plugin_hook,
+  to_protocol_capability, to_protocol_plugin_channel, to_protocol_plugin_command,
+  to_protocol_plugin_connector, to_protocol_plugin_hook,
 };
 use super::runtime_plugins::RuntimePluginState;
 
