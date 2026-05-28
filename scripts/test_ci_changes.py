@@ -29,6 +29,10 @@ def main() -> int:
     CiChanges(False, False, True, False),
   )
   assert_equal(
+    classify_changed_paths(["scripts/installer_artifact_contract.py"]),
+    CiChanges(False, False, True, False),
+  )
+  assert_equal(
     classify_changed_paths(["scripts/validate_macos_distribution.py"]),
     CiChanges(False, False, True, False),
   )

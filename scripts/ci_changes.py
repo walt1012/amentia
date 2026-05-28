@@ -38,6 +38,7 @@ PACKAGE_PATTERNS = (
   "scripts/create_macos_dmg.py",
   "scripts/macos_llama_backend.py",
   "scripts/package_macos_app.py",
+  "scripts/installer_artifact_contract.py",
   "scripts/release_artifacts.py",
   "scripts/release_text.py",
   "scripts/smoke_launch_macos_app.py",

@@ -13,10 +13,11 @@ Current scripts:
 - `check_english_policy.py`: rejects source and documentation text that violates the repository English-only policy.
 - `ci_changes.py`: classifies changed files into CI execution lanes so heavy macOS and Rust checks run only when relevant.
 - `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide when provided.
+- `installer_artifact_contract.py`: validates the exact installer asset set before CI artifact upload or GitHub Release publish so users only receive the DMG, checksum, install guide, and manifest.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
 - `package_contract.py`: centralizes the stable macOS package contract shared by packaging, release manifests, distribution validation, packaged smoke checks, signing-mode policy, locked size-budget validation, and direct `PithPackage.json` validation in CI/release workflows.
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and optional zip; CI can pass prebuilt app and runtime executables for faster installer packaging without creating extra user-facing archives, and records schema-versioned package metadata including daily-driver readiness provenance and package size budgets in `PithPackage.json`.
-- `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, schema-versioned app package metadata, daily-driver readiness provenance, release workflow proof, exact asset sets, and tag-locked names.
+- `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, schema-versioned app package metadata, daily-driver readiness provenance, release workflow proof, and tag-locked names.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds, then revalidates release notes against the final publish state.
 - `release_text.py`: generates and validates GitHub Release notes and the DMG root install guide from the release signing mode, including the daily-driver next-action path users should follow after install.
@@ -25,6 +26,7 @@ Current scripts:
 - `smoke_launch_macos_app.py`: launches the packaged `Pith.app` on macOS CI with isolated app support, probes the packaged runtime protocol, and verifies app/runtime startup, first-use model metadata without bundled weights, app-owned model pack activation, workspace bootstrap, workspace search, deterministic first cowork request, packaged Web Search execution with bounded source snapshots, workspace write denial and approval, bundled MCP plugin command execution, connector authorization and approval, sandbox readiness, thread creation, runner memory capture, runtime recovery, and runtime database initialization.
 - `test_create_macos_dmg.py`: checks DMG staging behavior that does not require macOS.
 - `test_ci_changes.py`: checks CI change-lane classification rules.
+- `test_installer_artifact_contract.py`: checks exact CI and release installer asset sets.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `test_package_contract.py`: checks the shared package contract constants, size budgets, and bundled-model guards.
 - `test_notion_connector_contract.py`: checks bundled Notion connector MCP handoff, retry, and follow-up metadata.

@@ -72,7 +72,7 @@ Working foundation:
   unsigned install guidance, release manifest, remote catalog audit, public
   distribution metadata validation, shared package contract, locked package
   size budgets, packaged-smoke contract reuse, shared signing-mode policy, and
-  a single user-facing CI installer artifact.
+  a single user-facing CI installer artifact with an exact upload contract.
 
 ## M10: Cowork Daily Driver
 
@@ -92,8 +92,8 @@ Build toward:
   optional connector data after install.
 - Fast remote CI that proves policy, model metadata, runtime smoke, Swift app,
   shared package contract, direct package manifest validation, packaged app,
-  DMG path, and release metadata without exposing internal build artifacts as
-  user-facing downloads.
+  DMG path, exact installer asset sets, and release metadata without exposing
+  internal build artifacts as user-facing downloads.
 
 Exit when:
 

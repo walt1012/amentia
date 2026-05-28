@@ -44,6 +44,8 @@ jobs:
         run: python3 scripts/test_release_identity.py
       - name: Test package contract helper
         run: python3 scripts/test_package_contract.py
+      - name: Test installer artifact contract
+        run: python3 scripts/test_installer_artifact_contract.py
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
       - name: Test Notion connector contract
@@ -109,6 +111,14 @@ jobs:
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json
+      - name: Validate installer artifact contract
+        run: |
+          python3 scripts/installer_artifact_contract.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --asset "artifacts/macos/$MACOS_DMG_NAME" \
+            --asset "artifacts/macos/$MACOS_DMG_NAME.sha256" \
+            --asset artifacts/macos/README-FIRST.txt \
+            --asset artifacts/macos/internal-release-manifest.json
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
@@ -164,6 +174,15 @@ jobs:
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
+      - name: Validate installer artifact contract
+        run: |
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          python3 scripts/installer_artifact_contract.py \
+            --tag "$RELEASE_TAG" \
+            --asset "$dmg_path" \
+            --asset "$dmg_path.sha256" \
+            --asset artifacts/macos/README-FIRST.txt \
+            --asset "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
@@ -243,6 +262,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_package_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test installer artifact contract\n"
+        "        run: python3 scripts/test_installer_artifact_contract.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_installer_artifact_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -437,6 +468,17 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
+      ci=VALID_CI.replace(
+        "python3 scripts/installer_artifact_contract.py",
+        "python3 scripts/missing_installer_artifact_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "installer_artifact_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
       release=VALID_RELEASE.replace('--source-commit "$PITH_RELEASE_SHA"', ""),
     )
     assert_issue(issue_messages(root), "release manifest must include")
@@ -484,6 +526,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "Pith-$RELEASE_TAG-release-manifest.json")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "python3 scripts/installer_artifact_contract.py",
+        "python3 scripts/missing_installer_artifact_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "installer_artifact_contract.py")
 
   print("Workflow policy validation tests passed")
   return 0

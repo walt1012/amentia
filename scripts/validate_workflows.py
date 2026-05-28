@@ -134,6 +134,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
     required_policy_commands = (
       "python3 scripts/test_package_contract.py",
       "python3 scripts/test_release_identity.py",
+      "python3 scripts/test_installer_artifact_contract.py",
       "python3 scripts/test_connector_workflow_contracts.py",
       "python3 scripts/test_notion_connector_contract.py",
     )
@@ -183,6 +184,11 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--workflow-run-id "$GITHUB_RUN_ID"',
       '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
       '--manifest-output artifacts/macos/internal-release-manifest.json',
+      'python3 scripts/installer_artifact_contract.py',
+      '--asset "artifacts/macos/$MACOS_DMG_NAME"',
+      '--asset "artifacts/macos/$MACOS_DMG_NAME.sha256"',
+      '--asset artifacts/macos/README-FIRST.txt',
+      '--asset artifacts/macos/internal-release-manifest.json',
     )
     for term in required_package_terms:
       if term not in package_block:
@@ -296,6 +302,11 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--workflow-run-id "$GITHUB_RUN_ID"',
     '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
     '--manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
+    'python3 scripts/installer_artifact_contract.py',
+    '--asset "$dmg_path"',
+    '--asset "$dmg_path.sha256"',
+    '--asset artifacts/macos/README-FIRST.txt',
+    '--asset "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
   )
   for term in required_release_terms:
     if term not in release_block:

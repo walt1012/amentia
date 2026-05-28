@@ -140,6 +140,9 @@ jobs:
       - name: Test release artifact helper
         run: python3 scripts/test_release_artifacts.py
 
+      - name: Test installer artifact contract
+        run: python3 scripts/test_installer_artifact_contract.py
+
       - name: Test release text helper
         run: python3 scripts/test_release_text.py
 
@@ -586,6 +589,16 @@ jobs:
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json
+
+      - name: Validate installer artifact contract
+        run: |
+          set -euo pipefail
+          python3 scripts/installer_artifact_contract.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --asset "artifacts/macos/$MACOS_DMG_NAME" \
+            --asset "artifacts/macos/$MACOS_DMG_NAME.sha256" \
+            --asset artifacts/macos/README-FIRST.txt \
+            --asset artifacts/macos/internal-release-manifest.json
 
       - name: Upload macOS installer artifact
         uses: actions/upload-artifact@v7
