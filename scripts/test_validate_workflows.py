@@ -15,6 +15,12 @@ on:
   push:
   pull_request:
 
+env:
+  SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
+  RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
+  LLAMA_ARTIFACT: internal-llama-cli-x86_64
+  MACOS_APP_ARTIFACT: Pith-installer-x86_64
+
 defaults:
   run:
     shell: bash
@@ -54,12 +60,30 @@ jobs:
     timeout-minutes: 15
   swift-app:
     timeout-minutes: 25
+    steps:
+      - name: Upload Swift app executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.SWIFT_APP_ARTIFACT }}
+          retention-days: 1
   swift-tests:
     timeout-minutes: 25
   macos-runtime:
     timeout-minutes: 30
+    steps:
+      - name: Upload runtime executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.RUNTIME_ARTIFACT }}
+          retention-days: 1
   macos-llama-backend:
     timeout-minutes: 45
+    steps:
+      - name: Upload llama.cpp backend
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.LLAMA_ARTIFACT }}
+          retention-days: 1
   macos-package:
     timeout-minutes: 30
     needs:
@@ -85,17 +109,17 @@ jobs:
             --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc
-      - name: Upload macOS app artifact
+      - name: Upload macOS installer artifact
         uses: actions/upload-artifact@v7
         with:
+          name: ${{ env.MACOS_APP_ARTIFACT }}
           path: |
-            artifacts/macos/Pith-macos-x86_64.zip
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
             artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
             artifacts/macos/README-FIRST.txt
             artifacts/macos/internal-release-notes.md
             artifacts/macos/internal-release-manifest.json
-          retention-days: 21
+          retention-days: 7
 """
 
 VALID_RELEASE = """name: Release
@@ -241,8 +265,36 @@ def main() -> int:
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
-    write_workflows(root, ci=VALID_CI.replace("          retention-days: 21\n", ""))
+    write_workflows(root, ci=VALID_CI.replace("          retention-days: 7\n", ""))
     assert_issue(issue_messages(root), "retention-days")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(root, ci=VALID_CI.replace("          retention-days: 1\n", "", 1))
+    assert_issue(issue_messages(root), "internal artifact")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "SWIFT_APP_ARTIFACT: internal-PithApp-x86_64",
+        "SWIFT_APP_ARTIFACT: PithApp-x86_64",
+      ),
+    )
+    assert_issue(issue_messages(root), "internal-PithApp")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "            artifacts/macos/${{ env.MACOS_DMG_NAME }}",
+        "            artifacts/macos/Pith-macos-x86_64.zip\n"
+        "            artifacts/macos/${{ env.MACOS_DMG_NAME }}",
+      ),
+    )
+    assert_issue(issue_messages(root), "internal zip")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

@@ -21,10 +21,10 @@ env:
   LLAMA_BINARY: llama-cli
   LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
   LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
-  SWIFT_APP_ARTIFACT: PithApp-x86_64
-  RUNTIME_ARTIFACT: pith-runtime-bin-x86_64
-  LLAMA_ARTIFACT: llama-cli-x86_64
-  MACOS_APP_ARTIFACT: Pith-macos-x86_64
+  SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
+  RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
+  LLAMA_ARTIFACT: internal-llama-cli-x86_64
+  MACOS_APP_ARTIFACT: Pith-installer-x86_64
   MACOS_DMG_NAME: Pith-macos-x86_64.dmg
 
 defaults:
@@ -322,7 +322,7 @@ jobs:
           name: ${{ env.SWIFT_APP_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.SWIFT_APP_BINARY }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   swift-tests:
     name: Swift app tests
@@ -392,7 +392,7 @@ jobs:
           name: ${{ env.RUNTIME_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.RUNTIME_BINARY }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   macos-llama-backend:
     name: macOS llama.cpp backend
@@ -479,7 +479,7 @@ jobs:
           name: ${{ env.LLAMA_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   macos-package:
     name: Package macOS app
@@ -586,16 +586,15 @@ jobs:
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json
 
-      - name: Upload macOS app artifact
+      - name: Upload macOS installer artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.MACOS_APP_ARTIFACT }}
           path: |
-            artifacts/macos/Pith-macos-x86_64.zip
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
             artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
             artifacts/macos/README-FIRST.txt
             artifacts/macos/internal-release-notes.md
             artifacts/macos/internal-release-manifest.json
           if-no-files-found: error
-          retention-days: 21
+          retention-days: 7

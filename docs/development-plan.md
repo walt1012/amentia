@@ -71,7 +71,8 @@ Working foundation:
 - Release proof for x86_64 app bundle, internal DMG, robust mounted-DMG smoke,
   unsigned install guidance, release manifest, remote catalog audit, public
   distribution metadata validation, shared package contract, locked package
-  size budgets, packaged-smoke contract reuse, and shared signing-mode policy.
+  size budgets, packaged-smoke contract reuse, shared signing-mode policy, and
+  a single user-facing CI installer artifact.
 
 ## M10: Cowork Daily Driver
 
@@ -91,7 +92,8 @@ Build toward:
   optional connector data after install.
 - Fast remote CI that proves policy, model metadata, runtime smoke, Swift app,
   shared package contract, direct package manifest validation, packaged app,
-  DMG path, and release metadata without unnecessary lanes.
+  DMG path, and release metadata without exposing internal build artifacts as
+  user-facing downloads.
 
 Exit when:
 

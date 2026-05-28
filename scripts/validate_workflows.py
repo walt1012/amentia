@@ -25,12 +25,17 @@ REQUIRED_CI_JOBS = (
   "macos-package",
 )
 REQUIRED_CI_PACKAGE_ASSETS = (
-  "artifacts/macos/Pith-macos-x86_64.zip",
   "artifacts/macos/${{ env.MACOS_DMG_NAME }}",
   "artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256",
   "artifacts/macos/README-FIRST.txt",
   "artifacts/macos/internal-release-notes.md",
   "artifacts/macos/internal-release-manifest.json",
+)
+REQUIRED_CI_ARTIFACT_CONTRACT = (
+  "SWIFT_APP_ARTIFACT: internal-PithApp-x86_64",
+  "RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64",
+  "LLAMA_ARTIFACT: internal-llama-cli-x86_64",
+  "MACOS_APP_ARTIFACT: Pith-installer-x86_64",
 )
 REQUIRED_RELEASE_ASSETS = (
   "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg",
@@ -119,6 +124,12 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
     if job not in job_blocks(text):
       issues.append(WorkflowIssue(CI_WORKFLOW, f"required CI job {job} is missing"))
 
+  for term in REQUIRED_CI_ARTIFACT_CONTRACT:
+    if term not in text:
+      issues.append(WorkflowIssue(CI_WORKFLOW, f"CI artifact contract is missing {term}"))
+
+  issues.extend(validate_ci_artifact_uploads(text))
+
   repository_policy_block = job_block(text, "repository-policy")
   if repository_policy_block:
     required_policy_commands = (
@@ -176,6 +187,46 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
           )
         )
   return issues
+
+
+def validate_ci_artifact_uploads(text: str) -> list[WorkflowIssue]:
+  issues: list[WorkflowIssue] = []
+  for block in step_blocks(text):
+    block_text = "\n".join(block)
+    if "uses: actions/upload-artifact@" not in block_text:
+      continue
+    if "${{ env.SWIFT_APP_ARTIFACT }}" in block_text:
+      validate_upload_retention(block_text, "Swift app internal artifact", "1", issues)
+    if "${{ env.RUNTIME_ARTIFACT }}" in block_text:
+      validate_upload_retention(block_text, "runtime internal artifact", "1", issues)
+    if "${{ env.LLAMA_ARTIFACT }}" in block_text:
+      validate_upload_retention(block_text, "llama internal artifact", "1", issues)
+    if "${{ env.MACOS_APP_ARTIFACT }}" in block_text:
+      validate_upload_retention(block_text, "macOS installer artifact", "7", issues)
+      if "artifacts/macos/Pith-macos-x86_64.zip" in block_text:
+        issues.append(
+          WorkflowIssue(
+            CI_WORKFLOW,
+            "macOS installer artifact must not upload the internal zip bundle",
+          )
+        )
+  return issues
+
+
+def validate_upload_retention(
+  block_text: str,
+  label: str,
+  expected_days: str,
+  issues: list[WorkflowIssue],
+) -> None:
+  expected_line = f"retention-days: {expected_days}"
+  if expected_line not in block_text:
+    issues.append(
+      WorkflowIssue(
+        CI_WORKFLOW,
+        f"{label} must use retention-days: {expected_days}",
+      )
+    )
 
 
 def validate_release_workflow(text: str) -> list[WorkflowIssue]:
