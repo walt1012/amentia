@@ -35,6 +35,12 @@ SANDBOX_CONTRACT = {
   "fallback": "processOnlyWhenNativeUnavailable",
   "networkDefault": "disabled",
 }
+DAILY_DRIVER_CONTRACT = {
+  "stageSource": "runtime/readiness",
+  "nextActionSource": "runtime/readiness",
+  "presentation": "app-header-inspector",
+  "packagedSmoke": "required",
+}
 VERIFICATION_CONTRACT = {
   "ciGate": "successful-ci-required-for-source-commit",
   "packagedSmoke": "mounted-dmg-before-upload",
@@ -114,6 +120,7 @@ def release_manifest(
       "modelWeightsBundled": False,
     },
     "sandbox": dict(SANDBOX_CONTRACT),
+    "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
     "verification": release_verification(
       workflow_run_id=workflow_run_id,
       workflow_run_url=workflow_run_url,
@@ -303,6 +310,9 @@ def package_manifest_summary(
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
     "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
   }
   for field, expected in expected_values.items():
     if package_manifest.get(field) != expected:
@@ -328,6 +338,9 @@ def package_manifest_summary(
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
     "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
   }
 
 
@@ -463,6 +476,10 @@ def validate_manifest_identity(manifest: dict) -> None:
   if model_delivery.get("modelWeightsBundled") is not False:
     raise RuntimeError("Release manifest must state that model weights are not bundled")
   validate_sandbox_contract(manifest.get("sandbox"), "Release manifest sandbox")
+  validate_daily_driver_contract(
+    manifest.get("dailyDriver"),
+    "Release manifest daily driver",
+  )
   validate_verification_contract(
     manifest.get("verification"),
     "Release manifest verification",
@@ -473,6 +490,14 @@ def validate_sandbox_contract(value: object, label: str) -> None:
   if not isinstance(value, dict):
     raise RuntimeError(f"{label} must be an object")
   for field, expected in SANDBOX_CONTRACT.items():
+    if value.get(field) != expected:
+      raise RuntimeError(f"{label} {field} must be {expected}")
+
+
+def validate_daily_driver_contract(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} must be an object")
+  for field, expected in DAILY_DRIVER_CONTRACT.items():
     if value.get(field) != expected:
       raise RuntimeError(f"{label} {field} must be {expected}")
 

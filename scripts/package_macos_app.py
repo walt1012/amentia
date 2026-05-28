@@ -45,6 +45,9 @@ DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
   "models/builtin/lfm2.5-350m/model-pack.json"
 )
+DAILY_DRIVER_STAGE_SOURCE = "runtime/readiness"
+DAILY_DRIVER_NEXT_ACTION_SOURCE = "runtime/readiness"
+DAILY_DRIVER_PRESENTATION = "app-header-inspector"
 REQUIRED_ZIP_BASE_ENTRIES = {
   "Pith.app/Contents/Info.plist",
   "Pith.app/Contents/MacOS/Pith",
@@ -374,6 +377,9 @@ def write_package_manifest(
     "modelDelivery": "in-app-download",
     "modelWeightsBundled": False,
     "modelMetadataBundled": True,
+    "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
+    "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
+    "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
     "bundledPluginsIncluded": True,
     "sandboxMode": "workspaceReadWrite",
     "sandboxBackend": "runtime-detected",
@@ -554,6 +560,9 @@ def assert_package_manifest_matches_bundle(
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
     "modelDelivery": "in-app-download",
+    "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
+    "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
+    "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
     "sandboxMode": "workspaceReadWrite",
     "sandboxBackend": "runtime-detected",
     "sandboxFallback": "processOnlyWhenNativeUnavailable",

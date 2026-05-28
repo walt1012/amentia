@@ -141,7 +141,7 @@ Focus:
 
 - Keep the first-run local model path boringly reliable.
 - Keep one clear daily-driver stage shared by runtime readiness, app presenters,
-  smoke tests, and release checks.
+  smoke tests, package metadata, and release checks.
 - Keep Web Search as the active retrieval layer.
 - Keep workspace tools bounded, cancellable, and sandbox-visible.
 - Keep connector execution generic, approval-gated, and proof-oriented.

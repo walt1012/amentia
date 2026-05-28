@@ -266,6 +266,9 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
     "modelDelivery": "in-app-download",
     "modelWeightsBundled": False,
     "modelMetadataBundled": True,
+    "dailyDriverStageSource": "runtime/readiness",
+    "dailyDriverNextActionSource": "runtime/readiness",
+    "dailyDriverPresentation": "app-header-inspector",
   }
   for field, expected_value in expected_package_values.items():
     if package_manifest.get(field) != expected_value:

@@ -107,6 +107,17 @@ def validate_package_manifest(app_path: Path) -> None:
         f"Public distribution builds must record {field} as {expected} in "
         f"{manifest_path}"
       )
+  expected_daily_driver_values = {
+    "dailyDriverStageSource": "runtime/readiness",
+    "dailyDriverNextActionSource": "runtime/readiness",
+    "dailyDriverPresentation": "app-header-inspector",
+  }
+  for field, expected in expected_daily_driver_values.items():
+    if manifest.get(field) != expected:
+      raise RuntimeError(
+        f"Public distribution builds must record {field} as {expected} in "
+        f"{manifest_path}"
+      )
   source_commit = manifest.get("sourceCommit", "")
   if (
     not isinstance(source_commit, str)

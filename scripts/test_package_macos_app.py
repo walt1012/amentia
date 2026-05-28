@@ -16,6 +16,9 @@ from macos_llama_backend import (
   parse_otool_dependencies,
 )
 from package_macos_app import (
+  DAILY_DRIVER_NEXT_ACTION_SOURCE,
+  DAILY_DRIVER_PRESENTATION,
+  DAILY_DRIVER_STAGE_SOURCE,
   LLAMA_BACKEND_RELATIVE_PARENT,
   assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
@@ -80,6 +83,12 @@ def main() -> int:
     assert_equal(manifest["sandboxBackend"], "runtime-detected")
     assert_equal(manifest["sandboxFallback"], "processOnlyWhenNativeUnavailable")
     assert_equal(manifest["sandboxNetworkDefault"], "disabled")
+    assert_equal(manifest["dailyDriverStageSource"], DAILY_DRIVER_STAGE_SOURCE)
+    assert_equal(
+      manifest["dailyDriverNextActionSource"],
+      DAILY_DRIVER_NEXT_ACTION_SOURCE,
+    )
+    assert_equal(manifest["dailyDriverPresentation"], DAILY_DRIVER_PRESENTATION)
 
   assert_equal(
     parse_lipo_architectures("Non-fat file: Pith is architecture: x86_64"),

@@ -34,6 +34,9 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
         "sandboxBackend": "runtime-detected",
         "sandboxFallback": "processOnlyWhenNativeUnavailable",
         "sandboxNetworkDefault": "disabled",
+        "dailyDriverStageSource": "runtime/readiness",
+        "dailyDriverNextActionSource": "runtime/readiness",
+        "dailyDriverPresentation": "app-header-inspector",
       }
     ),
     encoding="utf-8",
@@ -84,6 +87,18 @@ def main() -> int:
     assert_raises(
       lambda: validate_package_manifest(app_path),
       "public distribution should require sandbox fallback metadata",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+    app_path = Path(root) / "Pith.app"
+    write_manifest(app_path, "developer-id", SOURCE_COMMIT)
+    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["dailyDriverStageSource"] = "app-only"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_package_manifest(app_path),
+      "public distribution should require daily-driver readiness metadata",
     )
 
   print("macOS distribution validator tests passed")

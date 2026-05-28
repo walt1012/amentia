@@ -48,6 +48,7 @@ def write_package_manifest(
   signing: str = "ad-hoc",
   model_delivery: str = "in-app-download",
   sandbox_mode: str = "workspaceReadWrite",
+  daily_driver_stage_source: str = "runtime/readiness",
 ) -> Path:
   path.write_text(
     json.dumps(
@@ -62,6 +63,9 @@ def write_package_manifest(
         "modelDelivery": model_delivery,
         "defaultModelId": "lfm2.5-350m",
         "modelWeightsBundled": False,
+        "dailyDriverStageSource": daily_driver_stage_source,
+        "dailyDriverNextActionSource": "runtime/readiness",
+        "dailyDriverPresentation": "app-header-inspector",
         "sandboxMode": sandbox_mode,
         "sandboxBackend": "runtime-detected",
         "sandboxFallback": "processOnlyWhenNativeUnavailable",
@@ -127,6 +131,10 @@ def main() -> int:
       raise AssertionError("release manifest should not claim bundled model weights")
     if manifest["sandbox"]["fallback"] != "processOnlyWhenNativeUnavailable":
       raise AssertionError("release manifest should disclose the sandbox fallback")
+    if manifest["dailyDriver"]["stageSource"] != "runtime/readiness":
+      raise AssertionError("release manifest should disclose daily-driver stage source")
+    if manifest["dailyDriver"]["presentation"] != "app-header-inspector":
+      raise AssertionError("release manifest should disclose daily-driver presentation")
     if manifest["verification"]["workflowRunId"] != WORKFLOW_RUN_ID:
       raise AssertionError("release manifest should record the workflow run id")
     if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":
@@ -141,6 +149,8 @@ def main() -> int:
       raise AssertionError("release manifest should hash the package manifest")
     if manifest["appPackage"]["sandboxMode"] != "workspaceReadWrite":
       raise AssertionError("release manifest should summarize packaged sandbox mode")
+    if manifest["appPackage"]["dailyDriverStageSource"] != "runtime/readiness":
+      raise AssertionError("release manifest should summarize packaged daily-driver stage")
     manifest_artifacts = {
       item["name"]: item
       for item in manifest["artifacts"]
@@ -536,6 +546,23 @@ def main() -> int:
         package_manifest_path=wrong_package_manifest,
       ),
       "release manifest should reject wrong packaged sandbox metadata",
+    )
+
+    wrong_package_manifest = write_package_manifest(
+      root_path / "WrongDailyDriverPithPackage.json",
+      daily_driver_stage_source="app-only",
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=wrong_package_manifest,
+      ),
+      "release manifest should reject wrong packaged daily-driver metadata",
     )
 
     artifact.write_bytes(b"tampered release artifact\n")

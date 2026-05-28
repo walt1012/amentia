@@ -11,6 +11,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertTrue(summary.detail.contains("Open Anyway"))
     XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
     XCTAssertTrue(summary.detail.contains("process-only fallback"))
+    XCTAssertTrue(summary.detail.contains("daily-driver next action"))
     XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
     XCTAssertTrue(summary.setupDetail?.contains("Control-click Pith.app") == true)
   }
@@ -49,6 +50,9 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(parsed.sandboxBackend, "runtime-detected")
     XCTAssertEqual(parsed.sandboxFallback, "processOnlyWhenNativeUnavailable")
     XCTAssertEqual(parsed.sandboxNetworkDefault, "disabled")
+    XCTAssertEqual(parsed.dailyDriverStageSource, "runtime/readiness")
+    XCTAssertEqual(parsed.dailyDriverNextActionSource, "runtime/readiness")
+    XCTAssertEqual(parsed.dailyDriverPresentation, "app-header-inspector")
     XCTAssertEqual(parsed.sourceCommit, sourceCommit)
   }
 
@@ -77,6 +81,9 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "sandboxBackend": "runtime-detected",
       "sandboxFallback": "processOnlyWhenNativeUnavailable",
       "sandboxNetworkDefault": "disabled",
+      "dailyDriverStageSource": "runtime/readiness",
+      "dailyDriverNextActionSource": "runtime/readiness",
+      "dailyDriverPresentation": "app-header-inspector",
       "schemaVersion": \(schemaVersion),
       "sourceCommit": "\(sourceCommit)",
       "signing": "\(signing)"

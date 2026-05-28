@@ -11,6 +11,9 @@ struct DistributionPackageMetadata: Equatable {
   let sandboxBackend: String
   let sandboxFallback: String
   let sandboxNetworkDefault: String
+  let dailyDriverStageSource: String
+  let dailyDriverNextActionSource: String
+  let dailyDriverPresentation: String
   let sourceCommit: String
 
   static let current = load()
@@ -51,6 +54,21 @@ struct DistributionPackageMetadata: Equatable {
         fallback: "processOnlyWhenNativeUnavailable"
       ),
       sandboxNetworkDefault: string(manifest, "sandboxNetworkDefault", fallback: "disabled"),
+      dailyDriverStageSource: string(
+        manifest,
+        "dailyDriverStageSource",
+        fallback: "runtime/readiness"
+      ),
+      dailyDriverNextActionSource: string(
+        manifest,
+        "dailyDriverNextActionSource",
+        fallback: "runtime/readiness"
+      ),
+      dailyDriverPresentation: string(
+        manifest,
+        "dailyDriverPresentation",
+        fallback: "app-header-inspector"
+      ),
       sourceCommit: string(manifest, "sourceCommit", fallback: "development")
     )
   }
@@ -66,6 +84,9 @@ struct DistributionPackageMetadata: Equatable {
     sandboxBackend: "runtime-detected",
     sandboxFallback: "processOnlyWhenNativeUnavailable",
     sandboxNetworkDefault: "disabled",
+    dailyDriverStageSource: "runtime/readiness",
+    dailyDriverNextActionSource: "runtime/readiness",
+    dailyDriverPresentation: "app-header-inspector",
     sourceCommit: "development"
   )
 
@@ -122,21 +143,23 @@ enum DistributionTrustPresenter {
       : "model weights are not bundled"
     let platform = "macOS \(metadata.minimumSystemVersion)+ \(metadata.architecture)"
     let sandbox = sandboxSummary(metadata)
+    let dailyDriver = dailyDriverSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
+    let releaseProof = "\(modelDelivery); \(weightPolicy); \(sandbox); \(dailyDriver); \(source)."
 
     switch metadata.signing {
     case "developer-id":
       return DistributionTrustSummary(
         title: "Trusted Installer",
         summary: "Developer ID signed and notarized for \(platform).",
-        detail: "Install from the DMG, launch normally, then choose one verified local model. \(modelDelivery); \(weightPolicy); \(sandbox); \(source).",
+        detail: "Install from the DMG, launch normally, then choose one verified local model. \(releaseProof)",
         setupDetail: nil
       )
     case "ad-hoc":
       return DistributionTrustSummary(
         title: "Untrusted Ad-Hoc Build",
         summary: "Ad-hoc signed and not notarized for \(platform).",
-        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(modelDelivery); \(weightPolicy); \(sandbox); \(source).",
+        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(releaseProof)",
         setupDetail: "Installer trust: if macOS blocked first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open."
       )
     case "unsigned":
@@ -174,5 +197,17 @@ enum DistributionTrustPresenter {
       ? "network off by default"
       : "network default: \(metadata.sandboxNetworkDefault)"
     return "workspace sandbox checks run at runtime; \(fallback); \(network)"
+  }
+
+  private static func dailyDriverSummary(_ metadata: DistributionPackageMetadata) -> String {
+    guard metadata.dailyDriverStageSource == "runtime/readiness",
+          metadata.dailyDriverNextActionSource == "runtime/readiness"
+    else {
+      return "daily driver readiness: custom"
+    }
+    let presentation = metadata.dailyDriverPresentation == "app-header-inspector"
+      ? "shown in app header and inspector"
+      : "presentation: \(metadata.dailyDriverPresentation)"
+    return "daily-driver next action comes from runtime readiness and is \(presentation)"
   }
 }
