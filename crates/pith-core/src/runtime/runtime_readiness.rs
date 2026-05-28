@@ -191,11 +191,7 @@ fn readiness_status(input: ReadinessStatusInput) -> &'static str {
     running_workspace_search_count,
   } = input;
 
-  if !model_ready
-    || !workspace_ready
-    || !thread_ready
-    || !web_search_permission_ready
-  {
+  if !model_ready || !workspace_ready || !thread_ready || !web_search_permission_ready {
     "setup_required"
   } else if pending_approval_count > 0 {
     "needs_approval"
