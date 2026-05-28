@@ -10,17 +10,20 @@ import sys
 import tempfile
 from pathlib import Path
 
+from package_contract import DEFAULT_MODEL_ID
 
 APP_NAME = "Pith.app"
 APPLICATIONS_LINK_NAME = "Applications"
 DEFAULT_VOLUME_NAME = "Pith"
 README_NAME = "README-FIRST.txt"
 REQUIRED_README_PHRASES = (
-  "Launch Pith and download one verified local model when prompted.",
+  "Launch Pith and download one verified local model when prompted",
+  DEFAULT_MODEL_ID,
   "Open a workspace folder.",
   "Start a cowork session",
   "Follow the next action",
   "runtime readiness",
+  "package size budget",
 )
 
 
