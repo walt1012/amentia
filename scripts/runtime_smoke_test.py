@@ -903,6 +903,10 @@ def main() -> int:
     )
     assert weixin_channel["service"] == "weixin"
     assert weixin_channel["protocol"] == "openclaw-weixin"
+    assert weixin_channel["supportsInbound"] is True
+    assert weixin_channel["supportsOutbound"] is True
+    assert weixin_channel["approvalRequired"] is True
+    assert any("approval" in note for note in weixin_channel["safetyNotes"])
     assert weixin_channel["adapterStatus"] == "pending"
     assert weixin_channel["adapterAvailable"] is False
     assert "openclaw-weixin" in weixin_channel["activationBlocker"]

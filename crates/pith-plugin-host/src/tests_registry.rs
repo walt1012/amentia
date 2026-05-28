@@ -158,6 +158,13 @@ fn build_channel_registry_lists_message_channels() {
       "displayName": "Weixin",
       "service": "weixin",
       "protocol": "openclaw-weixin",
+      "supportsInbound": true,
+      "supportsOutbound": true,
+      "approvalRequired": true,
+      "safetyNotes": [
+        "Use the official OpenClaw Weixin protocol shape.",
+        "Require approval before outbound messages."
+      ],
       "homepage": "https://github.com/Tencent/openclaw-weixin"
     }
   ],
@@ -179,6 +186,13 @@ fn build_channel_registry_lists_message_channels() {
   assert_eq!(channels[0].channel_id, "weixin-channel::weixin");
   assert_eq!(channels[0].service, "weixin");
   assert_eq!(channels[0].protocol, "openclaw-weixin");
+  assert!(channels[0].supports_inbound);
+  assert!(channels[0].supports_outbound);
+  assert!(channels[0].approval_required);
+  assert!(channels[0]
+    .safety_notes
+    .iter()
+    .any(|note| note.contains("approval")));
   assert_eq!(channels[0].adapter_status, "pending");
   assert!(!channels[0].adapter_available);
   assert!(channels[0]

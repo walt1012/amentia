@@ -283,6 +283,16 @@ struct PluginChannelRow: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
+      Text("Direction: \(channel.directionSummary)")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
+
+      Text("Approval: \(channel.approvalRequired ? "required" : "not required")")
+        .font(.caption2)
+        .foregroundColor(channel.approvalRequired ? .secondary : .orange)
+        .textSelection(.enabled)
+
       Text("Adapter: \(channel.adapterStatus)")
         .font(.caption2)
         .foregroundColor(channel.adapterAvailable ? .secondary : .orange)
@@ -297,6 +307,13 @@ struct PluginChannelRow: View {
 
       if !channel.permissions.isEmpty {
         Text("Permissions: \(channel.permissions.joined(separator: ", "))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if !channel.safetyNotes.isEmpty {
+        Text("Safety: \(channel.safetyNotes.joined(separator: " | "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)

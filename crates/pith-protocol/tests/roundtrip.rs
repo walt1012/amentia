@@ -398,6 +398,13 @@ fn plugin_channel_registry_round_trips() {
       display_name: "Weixin".to_string(),
       service: "weixin".to_string(),
       protocol: "openclaw-weixin".to_string(),
+      supports_inbound: true,
+      supports_outbound: true,
+      approval_required: true,
+      safety_notes: vec![
+        "Use the official OpenClaw Weixin protocol shape.".to_string(),
+        "Require explicit approval before outbound messages.".to_string(),
+      ],
       adapter_status: "pending".to_string(),
       adapter_available: false,
       activation_blocker: Some(
@@ -422,11 +429,17 @@ fn plugin_channel_registry_round_trips() {
   assert_eq!(decoded.channels[0].channel_id, "weixin-channel::weixin");
   assert_eq!(decoded.channels[0].service, "weixin");
   assert_eq!(decoded.channels[0].protocol, "openclaw-weixin");
+  assert!(decoded.channels[0].supports_inbound);
+  assert!(decoded.channels[0].supports_outbound);
+  assert!(decoded.channels[0].approval_required);
   assert_eq!(decoded.channels[0].adapter_status, "pending");
   assert!(!decoded.channels[0].adapter_available);
   assert_eq!(decoded.channels[0].status, "disabled");
   assert!(value["channels"][0].get("channelId").is_some());
   assert_eq!(value["channels"][0]["protocol"], "openclaw-weixin");
+  assert_eq!(value["channels"][0]["supportsInbound"], true);
+  assert_eq!(value["channels"][0]["supportsOutbound"], true);
+  assert_eq!(value["channels"][0]["approvalRequired"], true);
   assert_eq!(value["channels"][0]["adapterStatus"], "pending");
 }
 

@@ -810,6 +810,10 @@ def assert_bundled_plugin_channel_entries(
     service = channel.get("service")
     protocol = channel.get("protocol")
     display_name = channel.get("displayName")
+    supports_inbound = channel.get("supportsInbound")
+    supports_outbound = channel.get("supportsOutbound")
+    approval_required = channel.get("approvalRequired")
+    safety_notes = channel.get("safetyNotes", [])
     if not isinstance(channel_id, str) or not channel_id.strip():
       raise RuntimeError(f"Bundled plugin channel entry is missing id: {plugin_root}")
     assert_safe_capability_identifier(channel_id, f"channel:{channel_id}")
@@ -819,6 +823,26 @@ def assert_bundled_plugin_channel_entries(
       raise RuntimeError(f"Bundled plugin channel {channel_id} is missing service")
     if not isinstance(protocol, str) or not protocol.strip():
       raise RuntimeError(f"Bundled plugin channel {channel_id} is missing protocol")
+    if not isinstance(supports_inbound, bool) or not isinstance(supports_outbound, bool):
+      raise RuntimeError(
+        f"Bundled plugin channel {channel_id} must declare inbound/outbound support"
+      )
+    if not supports_inbound and not supports_outbound:
+      raise RuntimeError(
+        f"Bundled plugin channel {channel_id} must support inbound or outbound messages"
+      )
+    if supports_outbound and approval_required is not True:
+      raise RuntimeError(
+        f"Bundled plugin channel {channel_id} outbound messages must require approval"
+      )
+    if safety_notes is not None:
+      if not isinstance(safety_notes, list) or not all(
+        isinstance(note, str) and note.strip()
+        for note in safety_notes
+      ):
+        raise RuntimeError(
+          f"Bundled plugin channel {channel_id} safetyNotes must be non-empty strings"
+        )
     channel_ids.add(channel_id)
 
   for capability in capabilities:

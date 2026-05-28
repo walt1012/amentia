@@ -18,6 +18,14 @@
       "displayName": "Weixin",
       "service": "weixin",
       "protocol": "openclaw-weixin",
+      "supportsInbound": true,
+      "supportsOutbound": true,
+      "approvalRequired": true,
+      "safetyNotes": [
+        "Use the official OpenClaw Weixin protocol shape.",
+        "Do not automate personal WeChat through injected, reverse-engineered, or screen-scraped clients.",
+        "Require explicit approval before any outbound message is sent."
+      ],
       "homepage": "https://github.com/Tencent/openclaw-weixin"
     }
   ],

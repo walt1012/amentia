@@ -156,6 +156,8 @@ Current state:
   any channel adapter can send them.
 - Outbound channel requests now have a side-effecting approval entry point for
   future ready adapters, while pending Weixin stays blocked.
+- Channel manifests declare direction support, approval requirements, and
+  safety notes so adapter work stays explicit instead of implicit.
 
 Exit criteria:
 

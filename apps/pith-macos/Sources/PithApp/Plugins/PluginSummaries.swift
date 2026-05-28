@@ -135,6 +135,10 @@ struct PluginChannelSummary: Identifiable, Hashable {
   let displayName: String
   let service: String
   let protocolName: String
+  let supportsInbound: Bool
+  let supportsOutbound: Bool
+  let approvalRequired: Bool
+  let safetyNotes: [String]
   let adapterStatus: String
   let adapterAvailable: Bool
   let activationBlocker: String?
@@ -145,6 +149,19 @@ struct PluginChannelSummary: Identifiable, Hashable {
   let permissions: [String]
   let manifestPath: String
   let homepage: String?
+
+  var directionSummary: String {
+    switch (supportsInbound, supportsOutbound) {
+    case (true, true):
+      return "inbound and outbound"
+    case (true, false):
+      return "inbound"
+    case (false, true):
+      return "outbound"
+    default:
+      return "not declared"
+    }
+  }
 }
 
 struct PluginConnectorWorkflowSummary: Hashable {

@@ -108,6 +108,9 @@ fn bundled_plugin_manifests_match_runtime_schema() {
     .any(|capability| capability == "channel:weixin"));
   assert_eq!(weixin_manifest.app_channels.len(), 1);
   assert_eq!(weixin_manifest.app_channels[0].protocol, "openclaw-weixin");
+  assert!(weixin_manifest.app_channels[0].supports_inbound);
+  assert!(weixin_manifest.app_channels[0].supports_outbound);
+  assert!(weixin_manifest.app_channels[0].approval_required);
 
   let notion_command = read_command_manifest(
     &bundled_root.join("notion-connector/commands/notion.prepare-page-draft.json"),

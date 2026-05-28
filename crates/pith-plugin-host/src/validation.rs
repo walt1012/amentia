@@ -235,6 +235,28 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         channel.id
       );
     }
+    if !channel.supports_inbound && !channel.supports_outbound {
+      anyhow::bail!(
+        "plugin channel `{}` must support inbound or outbound messages",
+        channel.id
+      );
+    }
+    if channel.supports_outbound && !channel.approval_required {
+      anyhow::bail!(
+        "plugin channel `{}` outbound messages must require approval",
+        channel.id
+      );
+    }
+    if channel
+      .safety_notes
+      .iter()
+      .any(|note| note.trim().is_empty())
+    {
+      anyhow::bail!(
+        "plugin channel `{}` safety notes must not be empty",
+        channel.id
+      );
+    }
   }
 
   for workflow in &manifest.connector_workflows {

@@ -72,6 +72,14 @@ pub struct PluginAppChannelManifest {
   pub service: String,
   pub protocol: String,
   #[serde(default)]
+  pub supports_inbound: bool,
+  #[serde(default)]
+  pub supports_outbound: bool,
+  #[serde(default)]
+  pub approval_required: bool,
+  #[serde(default)]
+  pub safety_notes: Vec<String>,
+  #[serde(default)]
   pub homepage: Option<String>,
 }
 

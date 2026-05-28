@@ -86,7 +86,22 @@ pub(super) fn plugin_capability_metadata(
       ("displayName".to_string(), channel.display_name),
       ("service".to_string(), channel.service),
       ("protocol".to_string(), channel.protocol),
+      (
+        "supportsInbound".to_string(),
+        channel.supports_inbound.to_string(),
+      ),
+      (
+        "supportsOutbound".to_string(),
+        channel.supports_outbound.to_string(),
+      ),
+      (
+        "approvalRequired".to_string(),
+        channel.approval_required.to_string(),
+      ),
     ]);
+    if !channel.safety_notes.is_empty() {
+      metadata.insert("safetyNotes".to_string(), channel.safety_notes.join("; "));
+    }
     if let Some(homepage) = channel.homepage {
       metadata.insert("homepage".to_string(), homepage);
     }

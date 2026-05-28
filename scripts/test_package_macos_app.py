@@ -178,6 +178,13 @@ def main() -> int:
         "displayName": "Weixin",
         "service": "weixin",
         "protocol": "openclaw-weixin",
+        "supportsInbound": True,
+        "supportsOutbound": True,
+        "approvalRequired": True,
+        "safetyNotes": [
+          "Use the official OpenClaw Weixin protocol shape.",
+          "Require approval before outbound messages.",
+        ],
       }
     ],
   }

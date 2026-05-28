@@ -179,6 +179,10 @@ pub struct PluginChannelSummary {
   pub display_name: String,
   pub service: String,
   pub protocol: String,
+  pub supports_inbound: bool,
+  pub supports_outbound: bool,
+  pub approval_required: bool,
+  pub safety_notes: Vec<String>,
   pub adapter_status: String,
   pub adapter_available: bool,
   #[serde(default, skip_serializing_if = "Option::is_none")]

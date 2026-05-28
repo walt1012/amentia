@@ -1595,6 +1595,17 @@ fn plugin_channel_registry_lists_disabled_weixin_channel() {
   assert_eq!(channels[0]["displayName"], "Weixin");
   assert_eq!(channels[0]["service"], "weixin");
   assert_eq!(channels[0]["protocol"], "openclaw-weixin");
+  assert_eq!(channels[0]["supportsInbound"], true);
+  assert_eq!(channels[0]["supportsOutbound"], true);
+  assert_eq!(channels[0]["approvalRequired"], true);
+  assert!(channels[0]["safetyNotes"]
+    .as_array()
+    .expect("safety notes")
+    .iter()
+    .any(|note| note
+      .as_str()
+      .expect("safety note")
+      .contains("approval")));
   assert_eq!(channels[0]["adapterStatus"], "pending");
   assert_eq!(channels[0]["adapterAvailable"], false);
   assert!(channels[0]["activationBlocker"]
@@ -1812,6 +1823,13 @@ fn channel_outbound_approval_request_carries_send_context() {
     display_name: "Weixin".to_string(),
     service: "weixin".to_string(),
     protocol: "openclaw-weixin".to_string(),
+    supports_inbound: true,
+    supports_outbound: true,
+    approval_required: true,
+    safety_notes: vec![
+      "Use the official OpenClaw Weixin protocol shape.".to_string(),
+      "Require approval before outbound messages.".to_string(),
+    ],
     adapter_status: "ready".to_string(),
     adapter_available: true,
     activation_blocker: None,

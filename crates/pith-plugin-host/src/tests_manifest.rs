@@ -27,6 +27,10 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     display_name: "Workspace Channel".to_string(),
     service: "workspace".to_string(),
     protocol: "workspace-chat".to_string(),
+    supports_inbound: true,
+    supports_outbound: true,
+    approval_required: true,
+    safety_notes: vec!["Require approval before outbound messages.".to_string()],
     homepage: None,
   }];
   manifest.app_connectors = vec![PluginAppConnectorManifest {
@@ -81,6 +85,50 @@ fn validate_manifest_rejects_legacy_capability_format() {
   assert!(error
     .to_string()
     .contains("must use the `<kind>:<identifier>` format"));
+}
+
+#[test]
+fn validate_manifest_rejects_channel_without_direction() {
+  let mut manifest = manifest(vec!["channel:workspace.channel"], vec!["network.outbound"]);
+  manifest.app_channels = vec![PluginAppChannelManifest {
+    id: "workspace.channel".to_string(),
+    display_name: "Workspace Channel".to_string(),
+    service: "workspace".to_string(),
+    protocol: "workspace-chat".to_string(),
+    supports_inbound: false,
+    supports_outbound: false,
+    approval_required: false,
+    safety_notes: vec![],
+    homepage: None,
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("channel direction should be required");
+
+  assert!(error
+    .to_string()
+    .contains("must support inbound or outbound messages"));
+}
+
+#[test]
+fn validate_manifest_requires_approval_for_outbound_channel() {
+  let mut manifest = manifest(vec!["channel:workspace.channel"], vec!["network.outbound"]);
+  manifest.app_channels = vec![PluginAppChannelManifest {
+    id: "workspace.channel".to_string(),
+    display_name: "Workspace Channel".to_string(),
+    service: "workspace".to_string(),
+    protocol: "workspace-chat".to_string(),
+    supports_inbound: false,
+    supports_outbound: true,
+    approval_required: false,
+    safety_notes: vec![],
+    homepage: None,
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("outbound channel approval required");
+
+  assert!(error
+    .to_string()
+    .contains("outbound messages must require approval"));
 }
 
 #[test]
