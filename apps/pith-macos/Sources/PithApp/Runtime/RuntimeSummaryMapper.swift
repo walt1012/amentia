@@ -224,31 +224,6 @@ enum RuntimeSummaryMapper {
     )
   }
 
-  static func pluginChannelSummary(
-    from channel: RuntimeBridge.RuntimePluginChannel
-  ) -> PluginChannelSummary {
-    PluginChannelSummary(
-      id: channel.channelID,
-      displayName: channel.displayName,
-      service: channel.service,
-      protocolName: channel.protocolName,
-      supportsInbound: channel.supportsInbound,
-      supportsOutbound: channel.supportsOutbound,
-      approvalRequired: channel.approvalRequired,
-      safetyNotes: channel.safetyNotes,
-      adapterStatus: channel.adapterStatus,
-      adapterAvailable: channel.adapterAvailable,
-      activationBlocker: channel.activationBlocker,
-      pluginID: channel.pluginID,
-      pluginDisplayName: channel.pluginDisplayName,
-      enabled: channel.enabled,
-      status: channel.status,
-      permissions: channel.permissions,
-      manifestPath: channel.manifestPath,
-      homepage: channel.homepage
-    )
-  }
-
   static func pluginHookSummary(from hook: RuntimeBridge.RuntimePluginHook) -> PluginHookSummary {
     PluginHookSummary(
       id: hook.hookID,

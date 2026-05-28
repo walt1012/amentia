@@ -1,15 +1,14 @@
 use pith_plugin_host::{
   PluginCapabilityRegistration as HostPluginCapabilityRegistration,
-  PluginChannelEntry as HostPluginChannelEntry, PluginCommandEntry as HostPluginCommandEntry,
+  PluginCommandEntry as HostPluginCommandEntry,
   PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
   PluginCommandEnvelopeFieldEntry as HostPluginCommandEnvelopeFieldEntry,
   PluginConnectorEntry as HostPluginConnectorEntry, PluginHookEntry as HostPluginHookEntry,
 };
 use pith_protocol::{
-  PluginCapabilityRegistration, PluginChannelSummary, PluginCommandEnvelopeFieldSummary,
-  PluginCommandEnvelopeSummary, PluginCommandExecutionSummary, PluginCommandSummary,
-  PluginCommandWorkflowSummary, PluginConnectorSummary, PluginConnectorWorkflowSummary,
-  PluginHookSummary,
+  PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
+  PluginCommandExecutionSummary, PluginCommandSummary, PluginCommandWorkflowSummary,
+  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookSummary,
 };
 
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -169,29 +168,6 @@ pub(super) fn to_protocol_plugin_connector(
     credential_label: credential.map(|state| state.credential_label.clone()),
     authorized_at: credential.map(|state| state.authorized_at),
     credential_updated_at: credential.map(|state| state.updated_at),
-  }
-}
-
-pub(super) fn to_protocol_plugin_channel(channel: HostPluginChannelEntry) -> PluginChannelSummary {
-  PluginChannelSummary {
-    channel_id: channel.channel_id,
-    display_name: channel.display_name,
-    service: channel.service,
-    protocol: channel.protocol,
-    supports_inbound: channel.supports_inbound,
-    supports_outbound: channel.supports_outbound,
-    approval_required: channel.approval_required,
-    safety_notes: channel.safety_notes,
-    adapter_status: channel.adapter_status,
-    adapter_available: channel.adapter_available,
-    activation_blocker: channel.activation_blocker,
-    plugin_id: channel.plugin_id,
-    plugin_display_name: channel.plugin_display_name,
-    enabled: channel.enabled,
-    status: channel.status,
-    permissions: channel.permissions,
-    manifest_path: channel.manifest_path,
-    homepage: channel.homepage,
   }
 }
 

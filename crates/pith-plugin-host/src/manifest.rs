@@ -24,8 +24,6 @@ pub struct PluginManifest {
   #[serde(default)]
   pub mcp_servers: Vec<PluginMcpServerManifest>,
   #[serde(default)]
-  pub app_channels: Vec<PluginAppChannelManifest>,
-  #[serde(default)]
   pub app_connectors: Vec<PluginAppConnectorManifest>,
   #[serde(default)]
   pub connector_workflows: Vec<PluginConnectorWorkflowManifest>,
@@ -60,25 +58,6 @@ pub struct PluginAppConnectorManifest {
   pub id: String,
   pub display_name: String,
   pub service: String,
-  #[serde(default)]
-  pub homepage: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginAppChannelManifest {
-  pub id: String,
-  pub display_name: String,
-  pub service: String,
-  pub protocol: String,
-  #[serde(default)]
-  pub supports_inbound: bool,
-  #[serde(default)]
-  pub supports_outbound: bool,
-  #[serde(default)]
-  pub approval_required: bool,
-  #[serde(default)]
-  pub safety_notes: Vec<String>,
   #[serde(default)]
   pub homepage: Option<String>,
 }

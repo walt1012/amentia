@@ -425,7 +425,6 @@ def main() -> int:
   (plugin_dir / "shell-recorder").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "notion-connector").mkdir(parents=True, exist_ok=True)
-  (plugin_dir / "weixin-channel").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
@@ -490,41 +489,6 @@ def main() -> int:
         ],
         "credentialStore": "local",
       },
-      "defaultEnabled": False,
-    },
-  )
-  write_json_file(
-    plugin_dir / "weixin-channel" / "pith-plugin.json",
-    {
-      "name": "weixin-channel",
-      "version": "0.1.0",
-      "displayName": "Weixin Channel",
-      "description": "Declares the personal Weixin cowork channel using the official OpenClaw Weixin protocol shape.",
-      "author": {
-        "name": "Pith",
-      },
-      "capabilities": [
-        "channel:weixin",
-      ],
-      "permissions": [
-        "network.outbound",
-      ],
-      "appChannels": [
-        {
-          "id": "weixin",
-          "displayName": "Weixin",
-          "service": "weixin",
-          "protocol": "openclaw-weixin",
-          "homepage": "https://github.com/Tencent/openclaw-weixin",
-          "supportsInbound": True,
-          "supportsOutbound": True,
-          "approvalRequired": True,
-          "safetyNotes": [
-            "Use the official OpenClaw Weixin protocol shape.",
-            "Require approval before outbound messages.",
-          ],
-        },
-      ],
       "defaultEnabled": False,
     },
   )
@@ -806,7 +770,6 @@ def main() -> int:
     assert "shell-recorder" in plugin_ids
     assert "review-assistant" in plugin_ids
     assert "notion-connector" in plugin_ids
-    assert "weixin-channel" in plugin_ids
 
     workspace_notes_enable, _ = send_request(
       process,
@@ -895,92 +858,6 @@ def main() -> int:
     connectors = connector_registry["result"]["connectors"]
     notion_connector = connector_by_id(connectors, NOTION_CONNECTOR_ID)
     assert_notion_connector_disabled(notion_connector)
-    channel_registry, _ = send_request(
-      process,
-      {
-        "id": 42,
-        "method": "plugin/channelRegistry",
-      },
-    )
-    channels = channel_registry["result"]["channels"]
-    weixin_channel = next(
-      channel
-      for channel in channels
-      if channel["channelId"] == "weixin-channel::weixin"
-    )
-    assert weixin_channel["service"] == "weixin"
-    assert weixin_channel["protocol"] == "openclaw-weixin"
-    assert weixin_channel["supportsInbound"] is True
-    assert weixin_channel["supportsOutbound"] is True
-    assert weixin_channel["approvalRequired"] is True
-    assert any("approval" in note for note in weixin_channel["safetyNotes"])
-    assert weixin_channel["adapterStatus"] == "feasibilityPending"
-    assert weixin_channel["adapterAvailable"] is False
-    assert "feasibility" in weixin_channel["activationBlocker"]
-    assert weixin_channel["status"] == "disabled"
-    weixin_inbound_preview, _ = send_request(
-      process,
-      {
-        "id": 45,
-        "method": "plugin/channelInboundPreview",
-        "params": {
-          "channelId": "weixin-channel::weixin",
-          "externalConversationId": "chat-123",
-          "externalMessageId": "msg-456",
-          "senderLabel": "Ada",
-          "text": "Please summarize this note.",
-        },
-      },
-    )
-    assert weixin_inbound_preview["error"]["code"] == -32058
-    assert weixin_inbound_preview["error"]["data"]["status"] == "channelAdapterPending"
-    assert weixin_inbound_preview["error"]["data"]["adapterStatus"] == "feasibilityPending"
-    weixin_outbound_preview, _ = send_request(
-      process,
-      {
-        "id": 46,
-        "method": "plugin/channelOutboundPreview",
-        "params": {
-          "channelId": "weixin-channel::weixin",
-          "externalConversationId": "chat-123",
-          "replyToExternalMessageId": "msg-456",
-          "text": "Here is the short summary.",
-        },
-      },
-    )
-    assert weixin_outbound_preview["error"]["code"] == -32058
-    assert weixin_outbound_preview["error"]["data"]["status"] == "channelAdapterPending"
-    assert weixin_outbound_preview["error"]["data"]["adapterStatus"] == "feasibilityPending"
-    weixin_outbound_request, _ = send_request(
-      process,
-      {
-        "id": 47,
-        "method": "plugin/channelOutboundRequest",
-        "params": {
-          "threadId": "thread-1",
-          "channelId": "weixin-channel::weixin",
-          "externalConversationId": "chat-123",
-          "replyToExternalMessageId": "msg-456",
-          "text": "Here is the short summary.",
-        },
-      },
-    )
-    assert weixin_outbound_request["error"]["code"] == -32058
-    assert weixin_outbound_request["error"]["data"]["status"] == "channelAdapterPending"
-    assert weixin_outbound_request["error"]["data"]["adapterStatus"] == "feasibilityPending"
-    weixin_enable, _ = send_request(
-      process,
-      {
-        "id": 44,
-        "method": "plugin/setEnabled",
-        "params": {
-          "pluginId": "weixin-channel",
-          "enabled": True,
-        },
-      },
-    )
-    assert weixin_enable["error"]["code"] == -32058
-    assert weixin_enable["error"]["data"]["pluginLifecycleStatus"] == "channelAdapterPending"
     disabled_connector_authorize, _ = send_request(
       process,
       {

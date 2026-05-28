@@ -123,26 +123,6 @@ impl StoredThread {
     }
   }
 
-  pub(crate) fn begin_channel_message(&mut self) -> PreparedThreadTurn {
-    self.turn_count += 1;
-    let turn_count = self.turn_count;
-    let workspace = self.workspace.clone();
-    self.summary.status = match &workspace {
-      Some(workspace) => format!(
-        "{turn_count} channel message(s) in {}",
-        workspace.display_name
-      ),
-      None => format!("{turn_count} channel message(s)"),
-    };
-
-    PreparedThreadTurn {
-      thread_id: self.summary.id.clone(),
-      turn_id: format!("{}-turn-{turn_count}", self.summary.id),
-      thread_title: self.summary.title.clone(),
-      workspace,
-    }
-  }
-
   pub(crate) fn mark_resolving_approval(&mut self, approval_id: &str) {
     self.summary.status = format!("Resolving approval {approval_id}");
   }

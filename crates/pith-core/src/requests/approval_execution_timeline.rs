@@ -13,8 +13,6 @@ pub(super) fn approval_granted_item(approval: &PendingApproval) -> TimelineItem 
         .as_deref()
         .unwrap_or(&approval.relative_path)
     )
-  } else if approval.action == "send_channel_message" {
-    format!("Approved channel message for {}.", approval.relative_path)
   } else {
     format!(
       "Approved {} for {}.",
@@ -38,8 +36,6 @@ pub(super) fn approval_denied_item(approval: &PendingApproval) -> TimelineItem {
         .as_deref()
         .unwrap_or(&approval.relative_path)
     )
-  } else if approval.action == "send_channel_message" {
-    format!("Denied channel message for {}.", approval.relative_path)
   } else {
     format!("Denied {} for {}.", approval.action, approval.relative_path)
   };
@@ -68,11 +64,7 @@ fn approval_resolution_attributes(
     }
   }
   if let Some(content) = approval.content.as_ref() {
-    if approval.action == "send_channel_message" {
-      attributes.insert("channelMessage".to_string(), content.clone());
-    } else {
-      attributes.insert("commandInput".to_string(), content.clone());
-    }
+    attributes.insert("commandInput".to_string(), content.clone());
   }
 
   attributes
@@ -200,27 +192,6 @@ mod tests {
       attributes.get("commandInput").map(String::as_str),
       Some("sync today")
     );
-  }
-
-  #[test]
-  fn channel_approval_resolution_keeps_message_context() {
-    let mut approval = approval();
-    approval.action = "send_channel_message".to_string();
-    approval.relative_path = "channel:weixin-channel::weixin".to_string();
-    approval.content = Some("Here is the short summary.".to_string());
-
-    let item = approval_denied_item(&approval);
-    let attributes = item.attributes.expect("attributes");
-
-    assert_eq!(
-      item.content,
-      "Denied channel message for channel:weixin-channel::weixin."
-    );
-    assert_eq!(
-      attributes.get("channelMessage").map(String::as_str),
-      Some("Here is the short summary.")
-    );
-    assert!(!attributes.contains_key("commandInput"));
   }
 
   #[test]

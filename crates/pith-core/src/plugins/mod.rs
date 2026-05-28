@@ -2,7 +2,6 @@ pub(crate) mod plugin_builtin_readme;
 pub(crate) mod plugin_builtin_review;
 pub(crate) mod plugin_builtin_shell;
 pub(crate) mod plugin_catalog_state;
-pub(crate) mod plugin_channel_messages;
 pub(crate) mod plugin_command_approval;
 pub(crate) mod plugin_command_artifacts;
 pub(crate) mod plugin_command_builtins;

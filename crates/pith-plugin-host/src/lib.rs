@@ -20,17 +20,15 @@ mod validation;
 pub use catalog::{discover_plugins, discover_plugins_in_roots};
 pub use lifecycle::{inspect_plugin_bundle, install_plugin_bundle, remove_local_plugin_bundle};
 pub use manifest::{
-  PluginAppChannelManifest, PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor,
-  PluginConnectorWorkflowManifest, PluginManifest, PluginMcpServerManifest, PluginSkillManifest,
+  PluginAppConnectorManifest, PluginAuthPolicyManifest, PluginAuthor, PluginConnectorWorkflowManifest,
+  PluginManifest, PluginMcpServerManifest, PluginSkillManifest,
 };
 pub use paths::{configured_plugin_install_root, configured_plugin_roots, default_plugin_root};
 pub use registry::{
-  build_capability_registry, build_channel_registry, build_command_registry,
-  build_connector_registry, build_hook_registry, channel_adapter_blocker_for_manifest,
-  PluginChannelAdapterBlocker,
+  build_capability_registry, build_command_registry, build_connector_registry, build_hook_registry,
 };
 pub use types::{
-  PluginCapabilityRegistration, PluginCatalogEntry, PluginChannelEntry, PluginCommandEntry,
-  PluginCommandEnvelopeEntry, PluginCommandEnvelopeFieldEntry, PluginCommandExecutionEntry,
-  PluginConnectorEntry, PluginConnectorWorkflowEntry, PluginHookEntry, PluginRemovalRecord,
+  PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginCommandEnvelopeEntry,
+  PluginCommandEnvelopeFieldEntry, PluginCommandExecutionEntry, PluginConnectorEntry,
+  PluginConnectorWorkflowEntry, PluginHookEntry, PluginRemovalRecord,
 };

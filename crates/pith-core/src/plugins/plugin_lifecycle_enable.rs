@@ -1,4 +1,3 @@
-use pith_plugin_host::channel_adapter_blocker_for_manifest;
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, PluginSetEnabledParams, PluginSetEnabledResult,
 };
@@ -50,34 +49,6 @@ pub(crate) fn handle_plugin_set_enabled(
     );
   }
 
-  if params.enabled && plugin_has_channel(&plugin.capabilities) {
-    match channel_adapter_blocker_for_manifest(std::path::Path::new(&plugin.manifest_path)) {
-      Ok(Some(blocker)) => {
-        return plugin_enable_error_response(
-          request.id,
-          -32058,
-          operation,
-          "channelAdapterPending",
-          &params.plugin_id,
-          blocker.message,
-          Some("Keep this plugin disabled until the channel feasibility gate passes."),
-        );
-      }
-      Ok(None) => {}
-      Err(error) => {
-        return plugin_enable_error_response(
-          request.id,
-          -32051,
-          operation,
-          "invalidManifest",
-          &params.plugin_id,
-          error.to_string(),
-          Some("Fix the plugin manifest, then refresh or reinstall the plugin."),
-        );
-      }
-    }
-  }
-
   if let Err(error) = context.persist_plugin_enabled(&params.plugin_id, params.enabled) {
     return plugin_enable_error_response(
       request.id,
@@ -125,12 +96,6 @@ pub(crate) fn handle_plugin_set_enabled(
       plugin: to_protocol_plugin(updated_plugin),
     },
   )
-}
-
-fn plugin_has_channel(capabilities: &[String]) -> bool {
-  capabilities
-    .iter()
-    .any(|capability| capability.starts_with("channel:"))
 }
 
 fn plugin_enable_error_response(

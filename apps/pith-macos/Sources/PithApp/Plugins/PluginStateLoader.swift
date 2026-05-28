@@ -49,12 +49,6 @@ enum PluginStateLoader {
     guard !Task.isCancelled else {
       return emptyRefresh()
     }
-    let channelLoad = await load("channel registry") {
-      try await runtimeBridge.listPluginChannels()
-    }
-    guard !Task.isCancelled else {
-      return emptyRefresh()
-    }
     let hookLoad = await load("hook registry") {
       try await runtimeBridge.listPluginHooks()
     }
@@ -62,7 +56,6 @@ enum PluginStateLoader {
     let runtimeRegistry = registryLoad.value
     let runtimeCommands = commandLoad.value
     let runtimeConnectors = connectorLoad.value
-    let runtimeChannels = channelLoad.value
     let runtimeHooks = hookLoad.value
     let diagnostics = [
       catalogRefresh.diagnostic,
@@ -70,7 +63,6 @@ enum PluginStateLoader {
       registryLoad.diagnostic,
       commandLoad.diagnostic,
       connectorLoad.diagnostic,
-      channelLoad.diagnostic,
       hookLoad.diagnostic,
     ].compactMap { $0 }
 
@@ -83,7 +75,6 @@ enum PluginStateLoader {
       plugins: plugins,
       registrySummary: registryState.summary,
       capabilities: registryState.capabilities,
-      channels: mappedChannels(runtimeChannels, pluginsLoaded: runtimePlugins != nil),
       connectors: mappedConnectors(runtimeConnectors, pluginsLoaded: runtimePlugins != nil),
       commands: mappedCommands(runtimeCommands, pluginsLoaded: runtimePlugins != nil),
       hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil),
@@ -125,7 +116,6 @@ enum PluginStateLoader {
       plugins: nil,
       registrySummary: nil,
       capabilities: nil,
-      channels: nil,
       connectors: nil,
       commands: nil,
       hooks: nil,
@@ -176,17 +166,6 @@ enum PluginStateLoader {
   ) -> [PluginConnectorSummary]? {
     if let connectors {
       return connectors.map { RuntimeSummaryMapper.pluginConnectorSummary(from: $0) }
-    }
-
-    return pluginsLoaded ? [] : nil
-  }
-
-  private static func mappedChannels(
-    _ channels: [RuntimeBridge.RuntimePluginChannel]?,
-    pluginsLoaded: Bool
-  ) -> [PluginChannelSummary]? {
-    if let channels {
-      return channels.map { RuntimeSummaryMapper.pluginChannelSummary(from: $0) }
     }
 
     return pluginsLoaded ? [] : nil

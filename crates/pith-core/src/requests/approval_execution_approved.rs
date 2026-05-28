@@ -5,7 +5,6 @@ use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::WorkspaceSummary;
 
-use super::approval_execution_channel::append_approved_channel_message_execution;
 use super::approval_execution_events::ApprovalExecutionEvents;
 use super::approval_execution_shell::append_approved_shell_execution;
 use super::approval_execution_timeline::approval_granted_item;
@@ -38,7 +37,6 @@ pub(super) fn execute_approved_approval(
       permission_sources,
       plugins,
     ),
-    "send_channel_message" => append_approved_channel_message_execution(&mut events, approval),
     _ => {}
   }
 

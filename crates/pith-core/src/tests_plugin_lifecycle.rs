@@ -43,46 +43,6 @@ fn plugin_set_enabled_updates_runtime_catalog() {
 }
 
 #[test]
-fn plugin_set_enabled_rejects_pending_channel_adapter() {
-  let mut context = RuntimeContext::new_in_memory();
-  replace_plugin_catalog(
-    &mut context,
-    vec![bundled_manifest_plugin_entry(
-      "weixin-channel",
-      "Weixin Channel",
-      false,
-      false,
-      &["channel:weixin"],
-      &["network.outbound"],
-    )],
-  );
-
-  let response = handle_request(
-    &mut context,
-    request(
-      methods::PLUGIN_SET_ENABLED,
-      Some(json!({
-        "pluginId": "weixin-channel",
-        "enabled": true
-      })),
-    ),
-  );
-
-  assert!(response.result.is_none());
-  let error = response.error.expect("channel adapter pending error");
-  assert_eq!(error.code, -32058);
-  let data = error.data.expect("plugin enable error data");
-  assert_eq!(data["pluginId"], "weixin-channel");
-  assert_eq!(data["pluginLifecycleOperation"], "enable");
-  assert_eq!(data["pluginLifecycleStatus"], "channelAdapterPending");
-  assert!(data["lifecycleBlocker"]
-    .as_str()
-    .expect("lifecycle blocker")
-    .contains("feasibility"));
-  assert!(!context.plugin_state.catalog()[0].enabled);
-}
-
-#[test]
 fn plugin_set_enabled_does_not_mutate_catalog_when_persistence_fails() {
   let mut context = RuntimeContext::new_in_memory();
   let storage_root = create_temp_workspace("plugin-enable-failing-storage");

@@ -17,7 +17,6 @@ from macos_llama_backend import (
 )
 from package_macos_app import (
   LLAMA_BACKEND_RELATIVE_PARENT,
-  assert_bundled_plugin_channel_entries,
   assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
@@ -170,37 +169,6 @@ def main() -> int:
       ),
       "command workflow must be bound to the declared connector",
     )
-
-  weixin_manifest = {
-    "appChannels": [
-      {
-        "id": "weixin",
-        "displayName": "Weixin",
-        "service": "weixin",
-        "protocol": "openclaw-weixin",
-        "supportsInbound": True,
-        "supportsOutbound": True,
-        "approvalRequired": True,
-        "safetyNotes": [
-          "Use the official OpenClaw Weixin protocol shape.",
-          "Require approval before outbound messages.",
-        ],
-      }
-    ],
-  }
-  assert_bundled_plugin_channel_entries(
-    Path("."),
-    weixin_manifest,
-    {"channel:weixin"},
-  )
-  assert_raises(
-    lambda: assert_bundled_plugin_channel_entries(
-      Path("."),
-      {"appChannels": []},
-      {"channel:weixin"},
-    ),
-    "channel capability must have a channel declaration",
-  )
 
   with tempfile.TemporaryDirectory(prefix="pith-package-copy-") as root:
     root_path = Path(root)

@@ -57,29 +57,6 @@ pub struct PluginConnectorEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PluginChannelEntry {
-  pub channel_id: String,
-  pub display_name: String,
-  pub service: String,
-  pub protocol: String,
-  pub supports_inbound: bool,
-  pub supports_outbound: bool,
-  pub approval_required: bool,
-  pub safety_notes: Vec<String>,
-  pub adapter_status: String,
-  pub adapter_available: bool,
-  pub activation_blocker: Option<String>,
-  pub plugin_id: String,
-  pub plugin_display_name: String,
-  pub enabled: bool,
-  pub status: String,
-  pub permissions: Vec<String>,
-  pub manifest_path: String,
-  pub homepage: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct PluginCommandEntry {
   pub command_id: String,
   pub title: String,

@@ -56,7 +56,6 @@ APP_STARTUP_TIMEOUT_SECONDS = 18.0
 APP_STABILITY_SECONDS = 2.0
 REQUIRED_BUNDLED_PLUGINS = {
   "notion-connector",
-  "weixin-channel",
   "review-assistant",
   "shell-recorder",
   "web-search",
@@ -1742,70 +1741,6 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
           "Packaged runtime is missing bundled plugins "
           f"{', '.join(missing_plugins)}."
         )
-      channel_registry = send_runtime_request(process, 125, "plugin/channelRegistry")
-      channels = channel_registry["result"]["channels"]
-      weixin_channel = next(
-        (channel for channel in channels if channel["channelId"] == "weixin-channel::weixin"),
-        None,
-      )
-      if weixin_channel is None:
-        raise RuntimeError("Packaged runtime is missing the personal Weixin channel.")
-      if weixin_channel["protocol"] != "openclaw-weixin":
-        raise RuntimeError("Packaged Weixin channel has the wrong protocol.")
-      if weixin_channel["supportsInbound"] is not True:
-        raise RuntimeError("Packaged Weixin channel should declare inbound support.")
-      if weixin_channel["supportsOutbound"] is not True:
-        raise RuntimeError("Packaged Weixin channel should declare outbound support.")
-      if weixin_channel["approvalRequired"] is not True:
-        raise RuntimeError("Packaged Weixin channel outbound sends should require approval.")
-      if not any("approval" in note for note in weixin_channel["safetyNotes"]):
-        raise RuntimeError("Packaged Weixin channel should expose safety notes.")
-      if weixin_channel["adapterStatus"] != "feasibilityPending":
-        raise RuntimeError("Packaged Weixin channel should remain feasibility pending.")
-      if weixin_channel["adapterAvailable"] is not False:
-        raise RuntimeError("Packaged Weixin channel should not be activatable yet.")
-      inbound_preview = send_runtime_request_expect_error(
-        process,
-        126,
-        "plugin/channelInboundPreview",
-        {
-          "channelId": "weixin-channel::weixin",
-          "externalConversationId": "chat-123",
-          "externalMessageId": "msg-456",
-          "senderLabel": "Ada",
-          "text": "Please summarize this note.",
-        },
-      )
-      if inbound_preview["error"]["data"]["status"] != "channelAdapterPending":
-        raise RuntimeError("Packaged Weixin inbound preview should require an adapter.")
-      outbound_preview = send_runtime_request_expect_error(
-        process,
-        127,
-        "plugin/channelOutboundPreview",
-        {
-          "channelId": "weixin-channel::weixin",
-          "externalConversationId": "chat-123",
-          "replyToExternalMessageId": "msg-456",
-          "text": "Here is the short summary.",
-        },
-      )
-      if outbound_preview["error"]["data"]["status"] != "channelAdapterPending":
-        raise RuntimeError("Packaged Weixin outbound preview should require an adapter.")
-      outbound_request = send_runtime_request_expect_error(
-        process,
-        128,
-        "plugin/channelOutboundRequest",
-        {
-          "threadId": "thread-1",
-          "channelId": "weixin-channel::weixin",
-          "externalConversationId": "chat-123",
-          "replyToExternalMessageId": "msg-456",
-          "text": "Here is the short summary.",
-        },
-      )
-      if outbound_request["error"]["data"]["status"] != "channelAdapterPending":
-        raise RuntimeError("Packaged Weixin outbound request should require an adapter.")
-
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)
       validate_runtime_database(support_dir / "storage" / "pith.db")

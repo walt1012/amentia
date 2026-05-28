@@ -22,17 +22,6 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     args: vec![],
     transport: Some("stdio".to_string()),
   }];
-  manifest.app_channels = vec![PluginAppChannelManifest {
-    id: "workspace.channel".to_string(),
-    display_name: "Workspace Channel".to_string(),
-    service: "workspace".to_string(),
-    protocol: "workspace-chat".to_string(),
-    supports_inbound: true,
-    supports_outbound: true,
-    approval_required: true,
-    safety_notes: vec!["Require approval before outbound messages.".to_string()],
-    homepage: None,
-  }];
   manifest.app_connectors = vec![PluginAppConnectorManifest {
     id: "workspace.connector".to_string(),
     display_name: "Workspace Connector".to_string(),
@@ -67,9 +56,6 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     .any(|capability| capability == "mcp_server:workspace.mcp"));
   assert!(capabilities
     .iter()
-    .any(|capability| capability == "channel:workspace.channel"));
-  assert!(capabilities
-    .iter()
     .any(|capability| capability == "connector:workspace.connector"));
   assert!(capabilities
     .iter()
@@ -85,72 +71,6 @@ fn validate_manifest_rejects_legacy_capability_format() {
   assert!(error
     .to_string()
     .contains("must use the `<kind>:<identifier>` format"));
-}
-
-#[test]
-fn validate_manifest_rejects_channel_without_direction() {
-  let mut manifest = manifest(vec!["channel:workspace.channel"], vec!["network.outbound"]);
-  manifest.app_channels = vec![PluginAppChannelManifest {
-    id: "workspace.channel".to_string(),
-    display_name: "Workspace Channel".to_string(),
-    service: "workspace".to_string(),
-    protocol: "workspace-chat".to_string(),
-    supports_inbound: false,
-    supports_outbound: false,
-    approval_required: false,
-    safety_notes: vec![],
-    homepage: None,
-  }];
-
-  let error = validate_manifest(&manifest).expect_err("channel direction should be required");
-
-  assert!(error
-    .to_string()
-    .contains("must support inbound or outbound messages"));
-}
-
-#[test]
-fn validate_manifest_requires_approval_for_outbound_channel() {
-  let mut manifest = manifest(vec!["channel:workspace.channel"], vec!["network.outbound"]);
-  manifest.app_channels = vec![PluginAppChannelManifest {
-    id: "workspace.channel".to_string(),
-    display_name: "Workspace Channel".to_string(),
-    service: "workspace".to_string(),
-    protocol: "workspace-chat".to_string(),
-    supports_inbound: false,
-    supports_outbound: true,
-    approval_required: false,
-    safety_notes: vec![],
-    homepage: None,
-  }];
-
-  let error = validate_manifest(&manifest).expect_err("outbound channel approval required");
-
-  assert!(error
-    .to_string()
-    .contains("outbound messages must require approval"));
-}
-
-#[test]
-fn validate_manifest_requires_safety_notes_for_outbound_channel() {
-  let mut manifest = manifest(vec!["channel:workspace.channel"], vec!["network.outbound"]);
-  manifest.app_channels = vec![PluginAppChannelManifest {
-    id: "workspace.channel".to_string(),
-    display_name: "Workspace Channel".to_string(),
-    service: "workspace".to_string(),
-    protocol: "workspace-chat".to_string(),
-    supports_inbound: false,
-    supports_outbound: true,
-    approval_required: true,
-    safety_notes: vec![],
-    homepage: None,
-  }];
-
-  let error = validate_manifest(&manifest).expect_err("outbound channel safety notes required");
-
-  assert!(error
-    .to_string()
-    .contains("outbound messages must declare safety notes"));
 }
 
 #[test]
@@ -212,7 +132,6 @@ fn validation_hint_describes_supported_capability_kinds() {
   assert!(hint.contains("supported capability kinds"));
   assert!(hint.contains("command"));
   assert!(hint.contains("connector"));
-  assert!(hint.contains("channel"));
   assert!(hint.contains("settings"));
 }
 
@@ -276,13 +195,10 @@ fn validation_hint_explains_integration_identity_fields() {
     validation_hint_for_error("plugin connector `notion` must include a non-empty display name");
   let service_hint =
     validation_hint_for_error("plugin connector `notion` must include a non-empty service");
-  let protocol_hint =
-    validation_hint_for_error("plugin channel `weixin` must include a non-empty protocol");
 
   assert!(display_name_hint.contains("displayName"));
   assert!(service_hint.contains("service"));
-  assert!(service_hint.contains("weixin"));
-  assert!(protocol_hint.contains("openclaw-weixin"));
+  assert!(service_hint.contains("notion"));
 }
 
 #[test]

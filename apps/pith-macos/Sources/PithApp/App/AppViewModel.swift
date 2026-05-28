@@ -225,10 +225,6 @@ final class AppViewModel: ObservableObject {
     pluginState.capabilities
   }
 
-  var pluginChannels: [PluginChannelSummary] {
-    pluginState.channels
-  }
-
   var pluginConnectors: [PluginConnectorSummary] {
     pluginState.connectors
   }
