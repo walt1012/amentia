@@ -6,10 +6,12 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+import create_macos_dmg
 from create_macos_dmg import (
   APPLICATIONS_LINK_NAME,
   APP_NAME,
   README_NAME,
+  detach_dmg,
   stage_dmg_contents,
   validate_install_readme_text,
 )
@@ -37,8 +39,36 @@ def can_create_symlink(root: Path) -> bool:
   return True
 
 
+def validate_detach_force_fallback() -> None:
+  calls: list[list[str]] = []
+  mountpoint = Path("pith-mount")
+
+  def fake_run(command: list[str]) -> str:
+    calls.append(command)
+    if command == ["hdiutil", "detach", str(mountpoint)]:
+      raise RuntimeError("busy")
+    return ""
+
+  original_run = create_macos_dmg.run
+  try:
+    create_macos_dmg.run = fake_run
+    detach_dmg(mountpoint)
+  finally:
+    create_macos_dmg.run = original_run
+
+  require(
+    calls
+    == [
+      ["hdiutil", "detach", str(mountpoint)],
+      ["hdiutil", "detach", "-force", str(mountpoint)],
+    ],
+    "DMG detach should force-detach after a normal detach failure",
+  )
+
+
 def main() -> int:
   validate_install_readme_text(install_guide("v0.1.0", "ad-hoc"))
+  validate_detach_force_fallback()
   with tempfile.TemporaryDirectory(prefix="pith-dmg-stage-test-") as root:
     root_path = Path(root)
     if not can_create_symlink(root_path):

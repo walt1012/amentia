@@ -68,7 +68,7 @@ Working foundation:
   output envelopes, retries, and runner memory capture.
 - Notion create-page as the reference cowork connector: draft, inspect,
   approval, publish, proof, retry, memory capture, and packaged smoke.
-- Release proof for x86_64 app bundle, internal DMG, mounted-DMG smoke,
+- Release proof for x86_64 app bundle, internal DMG, robust mounted-DMG smoke,
   unsigned install guidance, release manifest, remote catalog audit, public
   distribution metadata validation, shared package contract, locked package
   size budgets, packaged-smoke contract reuse, and shared signing-mode policy.

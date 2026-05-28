@@ -150,10 +150,12 @@ def validate_dmg(
     raise RuntimeError(f"macOS DMG artifact is empty: {dmg_path}")
 
   run(["hdiutil", "imageinfo", str(dmg_path)])
-  with tempfile.TemporaryDirectory(prefix="pith-dmg-mount-") as temp_dir:
-    mountpoint = Path(temp_dir) / "mount"
-    mountpoint.mkdir()
-    attached = False
+  temp_dir = Path(tempfile.mkdtemp(prefix="pith-dmg-mount-"))
+  mountpoint = temp_dir / "mount"
+  mountpoint.mkdir()
+  attached = False
+  pending_error: Exception | None = None
+  try:
     try:
       run(
         [
@@ -179,9 +181,25 @@ def validate_dmg(
       if smoke_launch_script is not None:
         require_file(smoke_launch_script)
         run([sys.executable, str(smoke_launch_script), str(mountpoint / APP_NAME)])
+    except Exception as error:
+      pending_error = error
+      raise
     finally:
       if attached:
-        run(["hdiutil", "detach", str(mountpoint)])
+        try:
+          detach_dmg(mountpoint)
+        except Exception:
+          if pending_error is None:
+            raise
+  finally:
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def detach_dmg(mountpoint: Path) -> None:
+  try:
+    run(["hdiutil", "detach", str(mountpoint)])
+  except RuntimeError:
+    run(["hdiutil", "detach", "-force", str(mountpoint)])
 
 
 def validate_install_readme_file(staged_readme: Path, expected_readme: Path) -> None:
