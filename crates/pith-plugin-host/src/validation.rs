@@ -95,8 +95,7 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       .to_string();
   }
   if validation_error.contains("must include a non-empty service") {
-    return "Add a stable service such as `notion` or another lowercase service key."
-      .to_string();
+    return "Add a stable service such as `notion` or another lowercase service key.".to_string();
   }
   if validation_error.contains("plugin connector workflow")
     && validation_error.contains("references undeclared connector")

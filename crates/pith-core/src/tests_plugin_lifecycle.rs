@@ -1,6 +1,6 @@
 use super::test_support::{
-  bundled_manifest_plugin_entry, bundled_plugin_entry, create_temp_plugin_bundle,
-  create_temp_workspace, replace_plugin_catalog, request,
+  bundled_plugin_entry, create_temp_plugin_bundle, create_temp_workspace, replace_plugin_catalog,
+  request,
 };
 use super::*;
 use pith_protocol::methods;
