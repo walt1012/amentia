@@ -55,11 +55,7 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
 
   let mut metrics = HashMap::new();
   insert_model_metrics(&mut metrics, model_status, model_pack_id, context_window);
-  insert_daily_driver_metrics(
-    &mut metrics,
-    daily_driver_stage,
-    daily_driver_next_action,
-  );
+  insert_daily_driver_metrics(&mut metrics, daily_driver_stage, daily_driver_next_action);
   insert_workspace_metrics(
     &mut metrics,
     context,
