@@ -46,6 +46,8 @@ DEFAULT_MODEL_DOWNLOAD_URL = (
 )
 DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
 DEFAULT_MODEL_SIZE_BYTES = 229312224
+DEFAULT_MAX_APP_BUNDLE_BYTES = 250 * 1024 * 1024
+DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 PACKAGED_SOURCE_COMMIT_HEX_LENGTH = 40
 SMOKE_MODEL_ID = "packaged-smoke-local-model"
 SMOKE_MODEL_FILE_NAME = "smoke-local-model.gguf"
@@ -269,6 +271,10 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
     "dailyDriverStageSource": "runtime/readiness",
     "dailyDriverNextActionSource": "runtime/readiness",
     "dailyDriverPresentation": "app-header-inspector",
+    "sizeBudget": {
+      "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+      "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+    },
   }
   for field, expected_value in expected_package_values.items():
     if package_manifest.get(field) != expected_value:

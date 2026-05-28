@@ -70,6 +70,10 @@ def write_package_manifest(
         "sandboxBackend": "runtime-detected",
         "sandboxFallback": "processOnlyWhenNativeUnavailable",
         "sandboxNetworkDefault": "disabled",
+        "sizeBudget": {
+          "maxAppBundleBytes": 262144000,
+          "maxZipArtifactBytes": 157286400,
+        },
       },
       indent=2,
       sort_keys=True,
@@ -151,6 +155,8 @@ def main() -> int:
       raise AssertionError("release manifest should summarize packaged sandbox mode")
     if manifest["appPackage"]["dailyDriverStageSource"] != "runtime/readiness":
       raise AssertionError("release manifest should summarize packaged daily-driver stage")
+    if manifest["appPackage"]["sizeBudget"]["maxZipArtifactBytes"] != 157286400:
+      raise AssertionError("release manifest should summarize package size budget")
     manifest_artifacts = {
       item["name"]: item
       for item in manifest["artifacts"]

@@ -324,6 +324,8 @@ def package_manifest_summary(
   bundle_version = package_manifest.get("bundleVersion")
   if not isinstance(bundle_version, str) or not bundle_version.strip():
     raise RuntimeError(f"PithPackage.json bundleVersion is required: {package_manifest_path}")
+  size_budget = package_manifest.get("sizeBudget")
+  validate_package_size_budget(size_budget, package_manifest_path)
   return {
     "manifest": package_manifest_path.name,
     "schemaVersion": 1,
@@ -343,7 +345,19 @@ def package_manifest_summary(
     "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
     "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
     "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "sizeBudget": size_budget,
   }
+
+
+def validate_package_size_budget(value: object, package_manifest_path: Path) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"PithPackage.json sizeBudget is required: {package_manifest_path}")
+  for field in ("maxAppBundleBytes", "maxZipArtifactBytes"):
+    field_value = value.get(field)
+    if not isinstance(field_value, int) or field_value <= 0:
+      raise RuntimeError(
+        f"PithPackage.json sizeBudget {field} must be a positive integer: {package_manifest_path}"
+      )
 
 
 def validate_package_version_matches_tag(tag: str, package_summary: dict | None) -> None:

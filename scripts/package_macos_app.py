@@ -32,6 +32,8 @@ LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
 PACKAGE_MANIFEST_SCHEMA_VERSION = 1
+DEFAULT_MAX_APP_BUNDLE_BYTES = 250 * 1024 * 1024
+DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 DEFAULT_SOURCE_COMMIT = (
   os.environ.get("PITH_SOURCE_COMMIT")
   or os.environ.get("GITHUB_SHA")
@@ -342,6 +344,32 @@ def normalize_source_commit(source_commit: str) -> str:
   return normalized
 
 
+def package_size_budget() -> dict[str, int]:
+  return {
+    "maxAppBundleBytes": env_positive_int(
+      "PITH_MAX_APP_BUNDLE_BYTES",
+      DEFAULT_MAX_APP_BUNDLE_BYTES,
+    ),
+    "maxZipArtifactBytes": env_positive_int(
+      "PITH_MAX_ZIP_ARTIFACT_BYTES",
+      DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+    ),
+  }
+
+
+def env_positive_int(name: str, default: int) -> int:
+  raw_value = os.environ.get(name)
+  if raw_value is None:
+    return default
+  try:
+    value = int(raw_value)
+  except ValueError as error:
+    raise RuntimeError(f"{name} must be a positive integer") from error
+  if value <= 0:
+    raise RuntimeError(f"{name} must be a positive integer")
+  return value
+
+
 def write_info_plist(path: Path, version: str) -> None:
   info = {
     **REQUIRED_INFO_PLIST_VALUES,
@@ -386,6 +414,7 @@ def write_package_manifest(
     "sandboxFallback": "processOnlyWhenNativeUnavailable",
     "sandboxNetworkDefault": "disabled",
     "signing": signing_mode,
+    "sizeBudget": package_size_budget(),
   }
   path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -494,6 +523,7 @@ def validate_app_bundle(
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
+  assert_app_bundle_size_budget(app_path)
 
 
 def assert_llama_backend_dependencies_match_arch(app_path: Path) -> None:
@@ -581,6 +611,8 @@ def assert_package_manifest_matches_bundle(
     raise RuntimeError("Package manifest must include bundled model metadata")
   if not required_bool_field(manifest, "bundledPluginsIncluded", manifest_path):
     raise RuntimeError("Package manifest must include bundled plugins")
+  if manifest.get("sizeBudget") != package_size_budget():
+    raise RuntimeError("Package manifest size budget must match packaging limits")
 
   model_manifest_path = (
     app_path
@@ -686,6 +718,40 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
     assert_bundled_plugin_connector_workflows(plugin_root, manifest, capabilities)
     assert_bundled_plugin_skill_files(plugin_root, manifest)
     assert_bundled_plugin_mcp_server_files(plugin_root, manifest, capabilities)
+
+
+def assert_app_bundle_size_budget(app_path: Path) -> None:
+  budget = package_size_budget()
+  assert_size_under_budget(
+    directory_size_bytes(app_path),
+    budget["maxAppBundleBytes"],
+    "macOS app bundle",
+  )
+
+
+def assert_zip_size_budget(zip_path: Path) -> None:
+  budget = package_size_budget()
+  assert_size_under_budget(
+    zip_path.stat().st_size,
+    budget["maxZipArtifactBytes"],
+    "macOS zip artifact",
+  )
+
+
+def assert_size_under_budget(size_bytes: int, max_bytes: int, label: str) -> None:
+  if size_bytes > max_bytes:
+    raise RuntimeError(
+      f"{label} is {size_bytes} bytes, above the {max_bytes} byte release budget. "
+      "Keep model weights, multi-arch runtimes, and optional connectors out of the package."
+    )
+
+
+def directory_size_bytes(path: Path) -> int:
+  total = 0
+  for entry in path.rglob("*"):
+    if entry.is_file():
+      total += entry.stat().st_size
+  return total
 
 
 def plugin_capabilities(manifest_path: Path, manifest: dict) -> set[str]:
@@ -1009,6 +1075,7 @@ def assert_zip_artifact(zip_path: Path) -> None:
     raise RuntimeError(f"macOS package artifact must be a zip file: {zip_path}")
   if zip_path.stat().st_size <= 0:
     raise RuntimeError(f"macOS package artifact is empty: {zip_path}")
+  assert_zip_size_budget(zip_path)
   with zipfile.ZipFile(zip_path) as archive:
     infos = archive.infolist()
 

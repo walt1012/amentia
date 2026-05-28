@@ -72,6 +72,9 @@ Durable foundation:
 - Release proof: x86_64 app bundle, internal DMG workflow, mounted-DMG smoke,
   release-state safety, native sandbox fallback disclosure, and unsigned
   distribution path with optional Developer ID upgrade later.
+- Size proof: release packaging records and enforces app/zip size budgets so
+  Pith stays small by design instead of accidentally bundling model weights,
+  extra architectures, package-manager payloads, or unused runtimes.
 
 Keep these gates healthy:
 
@@ -150,6 +153,9 @@ Focus:
 - Keep the macOS app progressive and small; avoid admin panels growing into the
   main cowork loop.
 - Keep release packaging and CI fast enough to trust for daily iteration.
+- Keep package size as a product boundary: ship the app, local runtime,
+  llama backend, metadata, and bundled connector definitions only; download
+  model weights and optional connector data after install.
 
 Exit criteria:
 
@@ -157,6 +163,8 @@ Exit criteria:
   workspace approval, sandbox status, connector proof, runtime recovery, and
   unsigned DMG install guidance together.
 - The app can complete a practical cowork loop without developer-only setup.
+- Release manifests expose the same daily-driver, sandbox, model-delivery, and
+  package-size facts that CI validates.
 - Development plan stays concise and tracks direction, not commit history.
 
 ## Guardrails

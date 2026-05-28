@@ -19,11 +19,15 @@ from package_macos_app import (
   DAILY_DRIVER_NEXT_ACTION_SOURCE,
   DAILY_DRIVER_PRESENTATION,
   DAILY_DRIVER_STAGE_SOURCE,
+  DEFAULT_MAX_APP_BUNDLE_BYTES,
+  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   LLAMA_BACKEND_RELATIVE_PARENT,
+  assert_size_under_budget,
   assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
   copy_required_llama_backend,
+  package_size_budget,
   normalize_source_commit,
   normalize_version,
   parse_lipo_architectures,
@@ -89,6 +93,26 @@ def main() -> int:
       DAILY_DRIVER_NEXT_ACTION_SOURCE,
     )
     assert_equal(manifest["dailyDriverPresentation"], DAILY_DRIVER_PRESENTATION)
+    assert_equal(
+      manifest["sizeBudget"],
+      {
+        "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+        "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+      },
+    )
+
+  assert_equal(
+    package_size_budget(),
+    {
+      "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+      "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+    },
+  )
+  assert_size_under_budget(1024, 2048, "test package")
+  assert_raises(
+    lambda: assert_size_under_budget(2049, 2048, "test package"),
+    "oversized release packages should fail the size guard",
+  )
 
   assert_equal(
     parse_lipo_architectures("Non-fat file: Pith is architecture: x86_64"),
