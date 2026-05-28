@@ -41,6 +41,18 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
   let plugin_command_count = context.plugin_state.command_capability_count();
   let enabled_plugin_command_count = context.plugin_state.enabled_command_capability_count();
+  let daily_driver = daily_driver_stage(DailyDriverStageInput {
+    model_ready,
+    workspace_ready,
+    thread_ready,
+    first_request_sent,
+    pending_approval_count,
+    active_turn_count,
+    running_turn_count,
+    running_approval_count,
+    running_plugin_command_count,
+    running_workspace_search_count,
+  });
 
   let status = readiness_status(ReadinessStatusInput {
     model_ready,
@@ -122,6 +134,8 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       workspace_thread_count,
       first_request_sent,
       execution_counts,
+      daily_driver_stage: daily_driver.stage,
+      daily_driver_next_action: daily_driver.next_action,
     }),
   }
 }
@@ -184,6 +198,86 @@ fn readiness_status(input: ReadinessStatusInput) -> &'static str {
     "running"
   } else {
     "ready"
+  }
+}
+
+struct DailyDriverStage {
+  stage: &'static str,
+  next_action: &'static str,
+}
+
+struct DailyDriverStageInput {
+  model_ready: bool,
+  workspace_ready: bool,
+  thread_ready: bool,
+  first_request_sent: bool,
+  pending_approval_count: usize,
+  active_turn_count: usize,
+  running_turn_count: usize,
+  running_approval_count: usize,
+  running_plugin_command_count: usize,
+  running_workspace_search_count: usize,
+}
+
+fn daily_driver_stage(input: DailyDriverStageInput) -> DailyDriverStage {
+  let DailyDriverStageInput {
+    model_ready,
+    workspace_ready,
+    thread_ready,
+    first_request_sent,
+    pending_approval_count,
+    active_turn_count,
+    running_turn_count,
+    running_approval_count,
+    running_plugin_command_count,
+    running_workspace_search_count,
+  } = input;
+
+  if !model_ready {
+    return DailyDriverStage {
+      stage: "model_setup",
+      next_action: "Download and select a verified local model.",
+    };
+  }
+  if !workspace_ready {
+    return DailyDriverStage {
+      stage: "workspace_setup",
+      next_action: "Open a workspace to scope tools and memory.",
+    };
+  }
+  if !thread_ready {
+    return DailyDriverStage {
+      stage: "thread_setup",
+      next_action: "Create or select a workspace-bound thread.",
+    };
+  }
+  if pending_approval_count > 0 {
+    return DailyDriverStage {
+      stage: "approval_review",
+      next_action: "Review the pending approval before work continues.",
+    };
+  }
+  if active_turn_count > 0
+    || running_turn_count > 0
+    || running_approval_count > 0
+    || running_plugin_command_count > 0
+    || running_workspace_search_count > 0
+  {
+    return DailyDriverStage {
+      stage: "local_execution",
+      next_action: "Wait for local work or cancel it if it is no longer useful.",
+    };
+  }
+  if !first_request_sent {
+    return DailyDriverStage {
+      stage: "first_request",
+      next_action: "Send the first cowork request.",
+    };
+  }
+
+  DailyDriverStage {
+    stage: "ready",
+    next_action: "Ask Pith for the next cowork task.",
   }
 }
 
@@ -271,5 +365,83 @@ mod tests {
     let status = readiness_status(status_input());
 
     assert_eq!(status, "ready");
+  }
+
+  fn stage_input() -> DailyDriverStageInput {
+    DailyDriverStageInput {
+      model_ready: true,
+      workspace_ready: true,
+      thread_ready: true,
+      first_request_sent: true,
+      pending_approval_count: 0,
+      active_turn_count: 0,
+      running_turn_count: 0,
+      running_approval_count: 0,
+      running_plugin_command_count: 0,
+      running_workspace_search_count: 0,
+    }
+  }
+
+  #[test]
+  fn daily_driver_stage_reports_first_actionable_gap() {
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        model_ready: false,
+        workspace_ready: false,
+        thread_ready: false,
+        first_request_sent: false,
+        ..stage_input()
+      })
+      .stage,
+      "model_setup"
+    );
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        workspace_ready: false,
+        thread_ready: false,
+        first_request_sent: false,
+        ..stage_input()
+      })
+      .stage,
+      "workspace_setup"
+    );
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        thread_ready: false,
+        first_request_sent: false,
+        ..stage_input()
+      })
+      .stage,
+      "thread_setup"
+    );
+  }
+
+  #[test]
+  fn daily_driver_stage_reports_work_loop_state() {
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        pending_approval_count: 1,
+        ..stage_input()
+      })
+      .stage,
+      "approval_review"
+    );
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        running_workspace_search_count: 1,
+        ..stage_input()
+      })
+      .stage,
+      "local_execution"
+    );
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        first_request_sent: false,
+        ..stage_input()
+      })
+      .stage,
+      "first_request"
+    );
+    assert_eq!(daily_driver_stage(stage_input()).stage, "ready");
   }
 }

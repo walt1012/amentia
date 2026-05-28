@@ -140,6 +140,8 @@ Goal: make Pith feel like a real cowork app before adding another integration.
 Focus:
 
 - Keep the first-run local model path boringly reliable.
+- Expose one clear daily-driver stage from runtime readiness so app UI, smoke
+  tests, and release checks agree on the next user action.
 - Keep Web Search as the active retrieval layer.
 - Keep workspace tools bounded, cancellable, and sandbox-visible.
 - Keep connector execution generic, approval-gated, and proof-oriented.

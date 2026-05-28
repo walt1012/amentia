@@ -103,10 +103,13 @@ def readiness_checks(readiness: dict) -> dict[str, dict]:
 
 def assert_fresh_install_readiness(readiness: dict, model_is_ready: bool) -> None:
   checks = readiness_checks(readiness)
+  expected_stage = "workspace_setup" if model_is_ready else "model_setup"
   assert checks["localModel"]["status"] == ("ready" if model_is_ready else "setup_required")
   assert checks["workspace"]["status"] == "setup_required"
   assert checks["thread"]["status"] == "setup_required"
   assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] == expected_stage
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["workspaceBound"] == "false"
   assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
   assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
@@ -117,6 +120,11 @@ def assert_workspace_readiness(readiness: dict) -> None:
   assert checks["workspace"]["status"] == "ready"
   assert checks["thread"]["status"] == "setup_required"
   assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] in {
+    "model_setup",
+    "thread_setup",
+  }
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["workspaceBound"] == "true"
   assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
   assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
@@ -127,6 +135,11 @@ def assert_thread_ready_for_first_request(readiness: dict) -> None:
   assert checks["workspace"]["status"] == "ready"
   assert checks["thread"]["status"] == "ready"
   assert checks["firstRequest"]["status"] == "ready_to_send"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] in {
+    "model_setup",
+    "first_request",
+  }
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["workspaceBound"] == "true"
   assert readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
   assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
@@ -135,6 +148,11 @@ def assert_thread_ready_for_first_request(readiness: dict) -> None:
 def assert_first_request_sent(readiness: dict) -> None:
   checks = readiness_checks(readiness)
   assert checks["firstRequest"]["status"] == "ready"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] in {
+    "model_setup",
+    "ready",
+  }
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["firstRequestSent"] == "true"
 
 

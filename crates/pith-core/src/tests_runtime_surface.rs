@@ -69,6 +69,11 @@ fn runtime_readiness_reports_agent_control_surface() {
     "network denied by policy, not native-enforced"
   );
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
+  assert_eq!(result["metrics"]["dailyDriverStage"], "model_setup");
+  assert_eq!(
+    result["metrics"]["dailyDriverNextAction"],
+    "Download and select a verified local model."
+  );
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
   assert_eq!(result["metrics"]["activeTurnCount"], "0");

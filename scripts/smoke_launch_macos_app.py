@@ -599,6 +599,7 @@ def validate_runtime_readiness(
   expected_statuses: dict[str, str | set[str]] | None = None,
   expected_status: str = "setup_required",
   workspace_open: bool = False,
+  expected_daily_stage: str | set[str] | None = None,
 ) -> None:
   result = readiness["result"]
   if result["status"] != expected_status:
@@ -618,6 +619,7 @@ def validate_runtime_readiness(
   }
   for check_id, expected_status in expected_statuses.items():
     validate_readiness_check_status(checks, check_id, expected_status)
+  validate_daily_driver_stage(result, expected_daily_stage)
   validate_tooling_readiness(result, checks, workspace_open=workspace_open)
 
 
@@ -633,6 +635,28 @@ def validate_readiness_check_status(
     raise RuntimeError(
       f"Packaged runtime readiness check {check_id} was {actual_status}, "
       f"expected one of {expected}."
+    )
+
+
+def validate_daily_driver_stage(
+  result: dict,
+  expected_stage: str | set[str] | None,
+) -> None:
+  metrics = result["metrics"]
+  stage = metrics.get("dailyDriverStage")
+  next_action = metrics.get("dailyDriverNextAction")
+  if not isinstance(stage, str) or not stage:
+    raise RuntimeError("Packaged runtime readiness did not report dailyDriverStage.")
+  if not isinstance(next_action, str) or not next_action:
+    raise RuntimeError("Packaged runtime readiness did not report dailyDriverNextAction.")
+  if expected_stage is None:
+    return
+
+  allowed_stages = {expected_stage} if isinstance(expected_stage, str) else expected_stage
+  if stage not in allowed_stages:
+    expected = ", ".join(sorted(allowed_stages))
+    raise RuntimeError(
+      f"Packaged runtime daily-driver stage was {stage}, expected one of {expected}."
     )
 
 
@@ -783,6 +807,10 @@ def validate_packaged_runtime_workspace_bootstrap(
     },
     expected_status=expected_status,
     workspace_open=True,
+    expected_daily_stage={
+      "model_setup",
+      "first_request",
+    },
   )
 
   thread_list = send_runtime_request(process, 8, "thread/list")
@@ -1602,6 +1630,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
           "Packaged first cowork request did not mark firstRequest ready: "
           f"{checks.get('firstRequest')}"
       )
+      validate_daily_driver_stage(first_request_readiness["result"], "ready")
       validate_packaged_web_search_turn(process)
       validate_packaged_workspace_write_approval(process, support_dir)
       validate_packaged_mcp_plugin_command(process, notion_api)
@@ -1703,6 +1732,7 @@ def validate_packaged_runtime_recovery(
       },
       expected_status="ready",
       workspace_open=True,
+      expected_daily_stage="ready",
     )
     return recovered_process
   except Exception:
