@@ -41,6 +41,8 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
     json.dumps(
       {
         "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
+        "appName": "Pith",
+        "bundleVersion": "0.1.0",
         "signing": signing,
         "sourceCommit": source_commit,
         "architecture": SUPPORTED_ARCH,

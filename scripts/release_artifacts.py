@@ -19,7 +19,7 @@ from package_contract import (
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
-  validate_package_size_budget,
+  validate_package_manifest_contract,
 )
 from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
@@ -297,35 +297,14 @@ def package_manifest_summary(
   if package_manifest_path is None:
     return None
   package_manifest = read_json_object(package_manifest_path, "PithPackage.json")
-  expected_values = {
-    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
-    "appName": "Pith",
-    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
-    "architecture": SUPPORTED_ARCH,
-    "sourceCommit": source_commit,
-    "signing": signing_mode,
-    "modelDelivery": MODEL_DELIVERY_MODE,
-    "defaultModelId": DEFAULT_MODEL_ID,
-    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
-    "sandboxMode": SANDBOX_CONTRACT["mode"],
-    "sandboxBackend": SANDBOX_CONTRACT["backend"],
-    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
-    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
-    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
-    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
-    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
-  }
-  for field, expected in expected_values.items():
-    if package_manifest.get(field) != expected:
-      raise RuntimeError(
-        f"PithPackage.json field {field} must be {expected!r}: {package_manifest_path}"
-      )
   bundle_version = package_manifest.get("bundleVersion")
   if not isinstance(bundle_version, str) or not bundle_version.strip():
     raise RuntimeError(f"PithPackage.json bundleVersion is required: {package_manifest_path}")
-  size_budget = validate_package_size_budget(
-    package_manifest.get("sizeBudget"),
+  size_budget = validate_package_manifest_contract(
+    package_manifest,
     f"PithPackage.json: {package_manifest_path}",
+    source_commit=source_commit,
+    signing_mode=signing_mode,
   )
   return {
     "manifest": package_manifest_path.name,

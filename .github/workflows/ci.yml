@@ -544,6 +544,13 @@ jobs:
           fi
           exit "$status"
 
+      - name: Validate package contract
+        run: |
+          python3 scripts/package_contract.py \
+            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --source-commit "$GITHUB_SHA" \
+            --signing-mode ad-hoc
+
       - name: Create internal release copy
         run: |
           set -euo pipefail

@@ -79,6 +79,12 @@ jobs:
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json
+      - name: Validate package contract
+        run: |
+          python3 scripts/package_contract.py \
+            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --source-commit "$GITHUB_SHA" \
+            --signing-mode ad-hoc
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
         with:
@@ -129,6 +135,13 @@ jobs:
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
+      - name: Validate package contract
+        run: |
+          python3 scripts/package_contract.py \
+            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --bundle-version "$PITH_RELEASE_VERSION"
       - name: Publish GitHub Release
         run: |
           python3 scripts/release_state.py
@@ -307,6 +320,17 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
+        "python3 scripts/package_contract.py",
+        "python3 scripts/missing_package_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "package_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
         "--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json",
         "",
       ),
@@ -339,6 +363,17 @@ def main() -> int:
       release=VALID_RELEASE.replace('--source-commit "$PITH_RELEASE_SHA"', ""),
     )
     assert_issue(issue_messages(root), "release manifest must include")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "python3 scripts/package_contract.py",
+        "python3 scripts/missing_package_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "package_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

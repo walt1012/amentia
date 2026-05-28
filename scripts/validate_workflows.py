@@ -157,7 +157,8 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
           "macos-package release manifest must include --source-commit",
         )
       )
-    required_release_artifact_args = (
+    required_package_terms = (
+      'python3 scripts/package_contract.py',
       '--tag "ci-${GITHUB_SHA::12}"',
       '--signing-mode ad-hoc',
       '--install-guide artifacts/macos/README-FIRST.txt',
@@ -166,7 +167,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
       '--manifest-output artifacts/macos/internal-release-manifest.json',
     )
-    for term in required_release_artifact_args:
+    for term in required_package_terms:
       if term not in package_block:
         issues.append(
           WorkflowIssue(
@@ -222,7 +223,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         "release manifest must include --source-commit",
       )
     )
-  required_release_artifact_args = (
+  required_release_terms = (
+    'python3 scripts/package_contract.py',
     '--tag "$RELEASE_TAG"',
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
     '--install-guide artifacts/macos/README-FIRST.txt',
@@ -231,7 +233,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
     '--manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
   )
-  for term in required_release_artifact_args:
+  for term in required_release_terms:
     if term not in release_block:
       issues.append(
         WorkflowIssue(

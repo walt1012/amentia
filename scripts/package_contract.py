@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import os
+import sys
 from pathlib import Path
 
 
@@ -74,6 +77,64 @@ def validate_package_size_budget(value: object, label: str) -> dict[str, int]:
   return result
 
 
+def validate_package_manifest_contract(
+  manifest: dict,
+  label: str,
+  *,
+  source_commit: str | None = None,
+  signing_mode: str | None = None,
+  bundle_version: str | None = None,
+) -> dict[str, int]:
+  expected_values = {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
+    "appName": APP_NAME,
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+    "architecture": SUPPORTED_ARCH,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+  }
+  if source_commit is not None:
+    expected_values["sourceCommit"] = source_commit
+  if signing_mode is not None:
+    expected_values["signing"] = signing_mode
+  if bundle_version is not None:
+    expected_values["bundleVersion"] = bundle_version
+
+  for field, expected in expected_values.items():
+    if manifest.get(field) != expected:
+      raise RuntimeError(f"{label} field {field} must be {expected!r}")
+
+  actual_bundle_version = manifest.get("bundleVersion")
+  if not isinstance(actual_bundle_version, str) or not actual_bundle_version.strip():
+    raise RuntimeError(f"{label} bundleVersion is required")
+  actual_source_commit = manifest.get("sourceCommit")
+  if not isinstance(actual_source_commit, str) or not actual_source_commit.strip():
+    raise RuntimeError(f"{label} sourceCommit is required")
+  actual_signing = manifest.get("signing")
+  if not isinstance(actual_signing, str) or not actual_signing.strip():
+    raise RuntimeError(f"{label} signing is required")
+
+  return validate_package_size_budget(manifest.get("sizeBudget"), label)
+
+
+def read_json_object(path: Path, label: str) -> dict:
+  if not path.is_file():
+    raise FileNotFoundError(f"{label} is missing: {path}")
+  data = json.loads(path.read_text(encoding="utf-8"))
+  if not isinstance(data, dict):
+    raise RuntimeError(f"{label} must be a JSON object: {path}")
+  return data
+
+
 def assert_size_under_budget(size_bytes: int, max_bytes: int, label: str) -> None:
   if size_bytes > max_bytes:
     raise RuntimeError(
@@ -96,3 +157,35 @@ def bundled_model_weight_files(path: Path) -> list[Path]:
     for entry in path.rglob("*")
     if entry.is_file() and entry.suffix.lower() in PROHIBITED_MODEL_SUFFIXES
   )
+
+
+def parse_args() -> argparse.Namespace:
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument("--manifest", type=Path, required=True)
+  parser.add_argument("--source-commit")
+  parser.add_argument("--signing-mode")
+  parser.add_argument("--bundle-version")
+  return parser.parse_args()
+
+
+def main() -> int:
+  args = parse_args()
+  try:
+    manifest_path = args.manifest.resolve()
+    manifest = read_json_object(manifest_path, "PithPackage.json")
+    validate_package_manifest_contract(
+      manifest,
+      f"PithPackage.json: {manifest_path}",
+      source_commit=args.source_commit,
+      signing_mode=args.signing_mode,
+      bundle_version=args.bundle_version,
+    )
+  except Exception as error:
+    print(f"package contract validation failed: {error}", file=sys.stderr)
+    return 1
+  print("package contract validation passed.")
+  return 0
+
+
+if __name__ == "__main__":
+  raise SystemExit(main())

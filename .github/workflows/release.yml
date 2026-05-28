@@ -254,6 +254,15 @@ jobs:
           fi
           python3 scripts/package_macos_app.py "${package_args[@]}"
 
+      - name: Validate package contract
+        run: |
+          set -euo pipefail
+          python3 scripts/package_contract.py \
+            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --bundle-version "$PITH_RELEASE_VERSION"
+
       - name: Sign app for public distribution
         if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |

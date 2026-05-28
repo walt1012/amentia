@@ -3,16 +3,24 @@
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 from package_contract import (
+  APP_NAME,
+  DAILY_DRIVER_CONTRACT,
   DEFAULT_MAX_APP_BUNDLE_BYTES,
   DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
@@ -20,6 +28,8 @@ from package_contract import (
   bundled_model_weight_files,
   directory_size_bytes,
   package_size_budget,
+  read_json_object,
+  validate_package_manifest_contract,
   validate_package_size_budget,
 )
 
@@ -50,6 +60,33 @@ def with_env(name: str, value: str | None, action) -> None:
       os.environ.pop(name, None)
     else:
       os.environ[name] = original
+
+
+def valid_manifest() -> dict[str, object]:
+  return {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
+    "appName": APP_NAME,
+    "bundleVersion": "1.2.3",
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+    "architecture": SUPPORTED_ARCH,
+    "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+    "signing": "ad-hoc",
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "sizeBudget": {
+      "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+      "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+    },
+  }
 
 
 def main() -> int:
@@ -107,9 +144,66 @@ def main() -> int:
     "oversized packages should fail",
   )
 
+  manifest = valid_manifest()
+  validated_budget = validate_package_manifest_contract(
+    manifest,
+    "test manifest",
+    source_commit="0123456789abcdef0123456789abcdef01234567",
+    signing_mode="ad-hoc",
+    bundle_version="1.2.3",
+  )
+  assert_equal(validated_budget["maxAppBundleBytes"], DEFAULT_MAX_APP_BUNDLE_BYTES)
+  wrong_manifest = dict(manifest)
+  wrong_manifest["modelDelivery"] = "bundled"
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "wrong model delivery should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["sourceCommit"] = "wrong"
+  assert_raises(
+    lambda: validate_package_manifest_contract(
+      wrong_manifest,
+      "test manifest",
+      source_commit="0123456789abcdef0123456789abcdef01234567",
+    ),
+    "wrong source commit should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest.pop("bundleVersion")
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "missing bundle version should fail manifest contract validation",
+  )
+
   with tempfile.TemporaryDirectory(prefix="pith-package-contract-") as root:
     root_path = Path(root)
     (root_path / "metadata.json").write_text("{}", encoding="utf-8")
+    manifest_path = root_path / "PithPackage.json"
+    manifest_path.write_text('{"ok": true}', encoding="utf-8")
+    assert_equal(read_json_object(manifest_path, "test manifest"), {"ok": True})
+    manifest_path.write_text(
+      json.dumps(valid_manifest()),
+      encoding="utf-8",
+    )
+    subprocess.run(
+      [
+        sys.executable,
+        str(Path(__file__).with_name("package_contract.py")),
+        "--manifest",
+        str(manifest_path),
+        "--source-commit",
+        "0123456789abcdef0123456789abcdef01234567",
+        "--signing-mode",
+        "ad-hoc",
+        "--bundle-version",
+        "1.2.3",
+      ],
+      check=True,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      text=True,
+    )
     model_path = root_path / "models" / "model.gguf"
     model_path.parent.mkdir()
     model_path.write_bytes(b"gguf")

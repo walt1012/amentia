@@ -11,18 +11,10 @@ import sys
 from pathlib import Path
 
 from package_contract import (
-  DAILY_DRIVER_CONTRACT,
-  DEFAULT_MODEL_ID,
-  MINIMUM_SYSTEM_VERSION,
-  MODEL_DELIVERY_MODE,
-  MODEL_METADATA_BUNDLED,
-  MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
-  SANDBOX_CONTRACT,
-  SUPPORTED_ARCH,
   bundled_model_weight_files,
   directory_size_bytes,
-  validate_package_size_budget,
+  validate_package_manifest_contract,
 )
 
 
@@ -111,51 +103,6 @@ def validate_package_manifest(app_path: Path) -> None:
       "Public distribution builds must record developer-id signing in "
       f"{manifest_path}"
     )
-  expected_platform_values = {
-    "architecture": SUPPORTED_ARCH,
-    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
-  }
-  for field, expected in expected_platform_values.items():
-    if manifest.get(field) != expected:
-      raise RuntimeError(
-        f"Public distribution builds must record {field} as {expected} in "
-        f"{manifest_path}"
-      )
-  expected_model_values = {
-    "defaultModelId": DEFAULT_MODEL_ID,
-    "modelDelivery": MODEL_DELIVERY_MODE,
-    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
-    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-  }
-  for field, expected in expected_model_values.items():
-    if manifest.get(field) != expected:
-      raise RuntimeError(
-        f"Public distribution builds must record {field} as {expected} in "
-        f"{manifest_path}"
-      )
-  expected_sandbox_values = {
-    "sandboxMode": SANDBOX_CONTRACT["mode"],
-    "sandboxBackend": SANDBOX_CONTRACT["backend"],
-    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
-    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
-  }
-  for field, expected in expected_sandbox_values.items():
-    if manifest.get(field) != expected:
-      raise RuntimeError(
-        f"Public distribution builds must record {field} as {expected} in "
-        f"{manifest_path}"
-      )
-  expected_daily_driver_values = {
-    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
-    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
-    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
-  }
-  for field, expected in expected_daily_driver_values.items():
-    if manifest.get(field) != expected:
-      raise RuntimeError(
-        f"Public distribution builds must record {field} as {expected} in "
-        f"{manifest_path}"
-      )
   source_commit = manifest.get("sourceCommit", "")
   if (
     not isinstance(source_commit, str)
@@ -166,19 +113,19 @@ def validate_package_manifest(app_path: Path) -> None:
       "Public distribution builds must record a full source commit in "
       f"{manifest_path}"
     )
-  validate_distribution_size_budget(manifest.get("sizeBudget"), app_path, manifest_path)
+  budget = validate_package_manifest_contract(
+    manifest,
+    f"Public distribution PithPackage.json: {manifest_path}",
+    signing_mode="developer-id",
+  )
+  validate_distribution_size_budget(budget, app_path)
   validate_no_model_weight_files(app_path)
 
 
 def validate_distribution_size_budget(
-  value: object,
+  budget: dict[str, int],
   app_path: Path,
-  manifest_path: Path,
 ) -> None:
-  budget = validate_package_size_budget(
-    value,
-    f"Public distribution PithPackage.json: {manifest_path}",
-  )
   max_app_bundle_bytes = budget["maxAppBundleBytes"]
   app_size = directory_size_bytes(app_path)
   if app_size > max_app_bundle_bytes:
