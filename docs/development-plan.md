@@ -72,7 +72,8 @@ Working foundation:
   unsigned install guidance, release manifest, remote catalog audit, public
   distribution metadata validation, shared package contract, locked package
   size budgets, packaged-smoke contract reuse, shared signing-mode policy, and
-  a single user-facing CI installer artifact with an exact upload contract.
+  a single user-facing CI installer artifact whose upload contract and release
+  manifest share the same expected asset names.
 
 ## M10: Cowork Daily Driver
 

@@ -7,9 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from release_artifacts import INSTALL_GUIDE_NAME
-from release_artifacts import release_dmg_name
-from release_artifacts import release_manifest_name
+from release_artifacts import release_installer_asset_names
 
 
 FORBIDDEN_ASSET_NAMES = {
@@ -24,15 +22,7 @@ FORBIDDEN_SUFFIXES = {
 
 
 def expected_installer_asset_names(tag: str) -> frozenset[str]:
-  dmg_name = release_dmg_name(tag)
-  return frozenset(
-    {
-      dmg_name,
-      f"{dmg_name}.sha256",
-      INSTALL_GUIDE_NAME,
-      release_manifest_name(tag),
-    }
-  )
+  return frozenset(release_installer_asset_names(tag))
 
 
 def validate_installer_asset_set(tag: str, asset_paths: list[Path]) -> None:

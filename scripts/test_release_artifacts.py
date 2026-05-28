@@ -23,6 +23,7 @@ from package_contract import (
 from release_artifacts import (
   checksum_text,
   release_manifest as build_release_manifest,
+  release_installer_asset_names,
   validate_checksum_file,
   validate_install_guide,
   validate_release_manifest,
@@ -157,6 +158,8 @@ def main() -> int:
       raise AssertionError("release manifest should record the workflow run id")
     if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":
       raise AssertionError("release manifest should record the packaged smoke proof")
+    if manifest["verification"]["assetNames"] != list(release_installer_asset_names("v0.1.0")):
+      raise AssertionError("release manifest should record the exact installer asset names")
     if manifest["appPackage"]["sourceCommit"] != SOURCE_COMMIT:
       raise AssertionError("release manifest should summarize packaged app source")
     if manifest["appPackage"]["signing"] != "ad-hoc":
@@ -253,6 +256,20 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "wrong release workflow run URL should fail validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["verification"]["assetNames"] = ["Pith.dmg"]
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong release asset set should fail release manifest validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
@@ -635,6 +652,9 @@ def main() -> int:
     )
     if manifest["releaseKind"] != "internal-ci":
       raise AssertionError("ci tags should produce internal release manifests")
+    expected_internal_assets = list(release_installer_asset_names("ci-0123456789ab"))
+    if manifest["verification"]["assetNames"] != expected_internal_assets:
+      raise AssertionError("internal release manifests should record internal asset names")
 
   with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
     root_path = Path(root)

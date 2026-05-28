@@ -123,6 +123,7 @@ def release_manifest(
     "sandbox": dict(SANDBOX_CONTRACT),
     "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
     "verification": release_verification(
+      tag=tag,
       workflow_run_id=workflow_run_id,
       workflow_run_url=workflow_run_url,
     ),
@@ -412,6 +413,16 @@ def release_manifest_name(tag: str) -> str:
   return f"Pith-{tag}-release-manifest.json"
 
 
+def release_installer_asset_names(tag: str) -> tuple[str, str, str, str]:
+  dmg_name = release_dmg_name(tag)
+  return (
+    dmg_name,
+    f"{dmg_name}.sha256",
+    INSTALL_GUIDE_NAME,
+    release_manifest_name(tag),
+  )
+
+
 def validate_source_commit(source_commit: str) -> None:
   if len(source_commit) != SOURCE_COMMIT_HEX_LENGTH:
     raise RuntimeError("Release manifest source commit must be a full SHA-1 hash")
@@ -469,6 +480,7 @@ def validate_manifest_identity(manifest: dict) -> None:
   validate_verification_contract(
     manifest.get("verification"),
     "Release manifest verification",
+    tag=tag,
   )
 
 
@@ -490,23 +502,28 @@ def validate_daily_driver_contract(value: object, label: str) -> None:
 
 def release_verification(
   *,
+  tag: str,
   workflow_run_id: str,
   workflow_run_url: str,
 ) -> dict:
   validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
   return {
     **VERIFICATION_CONTRACT,
+    "assetNames": list(release_installer_asset_names(tag)),
     "workflowRunId": workflow_run_id,
     "workflowRunUrl": workflow_run_url,
   }
 
 
-def validate_verification_contract(value: object, label: str) -> None:
+def validate_verification_contract(value: object, label: str, *, tag: str) -> None:
   if not isinstance(value, dict):
     raise RuntimeError(f"{label} must be an object")
   for field, expected in VERIFICATION_CONTRACT.items():
     if value.get(field) != expected:
       raise RuntimeError(f"{label} {field} must be {expected}")
+  expected_asset_names = list(release_installer_asset_names(tag))
+  if value.get("assetNames") != expected_asset_names:
+    raise RuntimeError(f"{label} assetNames must match the installer asset contract")
   workflow_run_id = value.get("workflowRunId")
   workflow_run_url = value.get("workflowRunUrl")
   if not isinstance(workflow_run_id, str) or not isinstance(workflow_run_url, str):

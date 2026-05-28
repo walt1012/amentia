@@ -83,18 +83,20 @@ CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
 jobs, then a packaging job downloads the executable artifacts, assembles
 `Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
 and bundled plugin manifests under `Contents/Resources`, validates the app
-bundle, and emits internal zip and DMG artifacts with bounded artifact
-retention.
+bundle, creates the DMG installer, and uploads one user-facing installer
+artifact with bounded retention. Internal executable artifacts stay separate,
+short-lived, and clearly named as internal.
 
 Package validation checks the product `Info.plist`, `PkgInfo`,
 `PithPackage.json`, source commit metadata, x86_64-only binaries, first-use
 model download metadata,
 bundled plugin resource contracts, absence of model weights, symlink-free
 packaged resources and optional backend inputs, llama.cpp dependency
-portability, sandbox fallback metadata, and zip contents. The zip must include
-the default model manifest and every bundled plugin manifest, must not contain
-symlinks or model weight files, and must not require external package manager
-paths at runtime. CI also ad-hoc signs the app when `codesign` is available.
+portability, sandbox fallback metadata, and package contents. The package must
+include the default model manifest and every bundled plugin manifest, must not
+contain symlinks or model weight files, and must not require external package
+manager paths at runtime. CI also ad-hoc signs the app when `codesign` is
+available.
 Internal CI artifacts prove the package shape, but they are not public release
 installers.
 
@@ -148,9 +150,10 @@ The release page also publishes `README-FIRST.txt` and a release manifest as
 separate assets, so users and automation can inspect the platform target,
 signing mode, source commit, checksum, sidecar hashes, exact asset set, asset
 names, schema-versioned app package metadata, model delivery mode, and sandbox
-fallback contract before opening the DMG. The release manifest also records the
-GitHub Actions run that enforced the source-commit CI gate and mounted-DMG
-packaged smoke before upload.
+fallback contract before opening the DMG. The release manifest records the
+same expected installer asset names that CI and release upload validation
+enforce. It also records the GitHub Actions run that enforced the source-commit
+CI gate and mounted-DMG packaged smoke before upload.
 
 Release publishing requires these repository secrets:
 
