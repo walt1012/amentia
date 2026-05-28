@@ -528,6 +528,7 @@ jobs:
           set +e
           python3 scripts/package_macos_app.py \
             --skip-build \
+            --no-zip \
             --source-commit "$GITHUB_SHA" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
@@ -594,7 +595,6 @@ jobs:
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
             artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
             artifacts/macos/README-FIRST.txt
-            artifacts/macos/internal-release-notes.md
             artifacts/macos/internal-release-manifest.json
           if-no-files-found: error
           retention-days: 7

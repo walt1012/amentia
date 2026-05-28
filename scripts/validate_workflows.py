@@ -28,7 +28,6 @@ REQUIRED_CI_PACKAGE_ASSETS = (
   "artifacts/macos/${{ env.MACOS_DMG_NAME }}",
   "artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256",
   "artifacts/macos/README-FIRST.txt",
-  "artifacts/macos/internal-release-notes.md",
   "artifacts/macos/internal-release-manifest.json",
 )
 REQUIRED_CI_ARTIFACT_CONTRACT = (
@@ -168,6 +167,13 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
           "macos-package release manifest must include --source-commit",
         )
       )
+    if "--no-zip" not in package_block:
+      issues.append(
+        WorkflowIssue(
+          CI_WORKFLOW,
+          "macos-package installer path must pass --no-zip",
+        )
+      )
     required_package_terms = (
       'python3 scripts/package_contract.py',
       '--tag "ci-${GITHUB_SHA::12}"',
@@ -208,6 +214,13 @@ def validate_ci_artifact_uploads(text: str) -> list[WorkflowIssue]:
           WorkflowIssue(
             CI_WORKFLOW,
             "macOS installer artifact must not upload the internal zip bundle",
+          )
+        )
+      if "artifacts/macos/internal-release-notes.md" in block_text:
+        issues.append(
+          WorkflowIssue(
+            CI_WORKFLOW,
+            "macOS installer artifact must not upload internal release notes",
           )
         )
   return issues

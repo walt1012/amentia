@@ -92,6 +92,12 @@ jobs:
       - macos-runtime
       - macos-llama-backend
     steps:
+      - name: Build x86_64 macOS app bundle
+        run: |
+          python3 scripts/package_macos_app.py \
+            --skip-build \
+            --no-zip \
+            --source-commit "$GITHUB_SHA"
       - name: Create internal macOS checksum
         run: |
           python3 scripts/release_artifacts.py \
@@ -117,7 +123,6 @@ jobs:
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
             artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
             artifacts/macos/README-FIRST.txt
-            artifacts/macos/internal-release-notes.md
             artifacts/macos/internal-release-manifest.json
           retention-days: 7
 """
@@ -301,6 +306,18 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
+        "            artifacts/macos/internal-release-manifest.json",
+        "            artifacts/macos/internal-release-notes.md\n"
+        "            artifacts/macos/internal-release-manifest.json",
+      ),
+    )
+    assert_issue(issue_messages(root), "internal release notes")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
         "      - macos-llama-backend",
         "      - swift-tests\n      - macos-llama-backend",
       ),
@@ -366,6 +383,14 @@ def main() -> int:
       ci=VALID_CI.replace('--source-commit "$GITHUB_SHA"', ""),
     )
     assert_issue(issue_messages(root), "macos-package release manifest")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace("--no-zip", ""),
+    )
+    assert_issue(issue_messages(root), "--no-zip")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
