@@ -114,9 +114,11 @@ python3 scripts/validate_macos_distribution.py \
   --dmg-path artifacts/macos/Pith-v0.1.0-macos-x86_64.dmg
 ```
 
-This gate requires Developer ID signing, Gatekeeper assessment, and notarization
-stapling. Ad-hoc signed CI artifacts and explicit untrusted prereleases prove
-the package shape and user guidance, but they are not trusted macOS installers.
+This gate requires Developer ID signing, Gatekeeper assessment, notarization
+stapling, x86_64 package metadata, in-app model delivery, no bundled model
+weights, sandbox and daily-driver metadata, and package size budget compliance.
+Ad-hoc signed CI artifacts and explicit untrusted prereleases prove the package
+shape and user guidance, but they are not trusted macOS installers.
 
 ## GitHub Release Distribution
 

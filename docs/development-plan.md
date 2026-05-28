@@ -69,8 +69,8 @@ Working foundation:
 - Notion create-page as the reference cowork connector: draft, inspect,
   approval, publish, proof, retry, memory capture, and packaged smoke.
 - Release proof for x86_64 app bundle, internal DMG, mounted-DMG smoke,
-  unsigned install guidance, release manifest, remote catalog audit, and package
-  size budgets.
+  unsigned install guidance, release manifest, remote catalog audit, public
+  distribution metadata validation, and package size budgets.
 
 ## M10: Cowork Daily Driver
 

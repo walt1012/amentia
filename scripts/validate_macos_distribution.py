@@ -14,6 +14,7 @@ from pathlib import Path
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
 PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
 SOURCE_COMMIT_HEX_LENGTH = 40
+PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -95,6 +96,28 @@ def validate_package_manifest(app_path: Path) -> None:
       "Public distribution builds must record developer-id signing in "
       f"{manifest_path}"
     )
+  expected_platform_values = {
+    "architecture": "x86_64",
+    "minimumSystemVersion": "12.0",
+  }
+  for field, expected in expected_platform_values.items():
+    if manifest.get(field) != expected:
+      raise RuntimeError(
+        f"Public distribution builds must record {field} as {expected} in "
+        f"{manifest_path}"
+      )
+  expected_model_values = {
+    "defaultModelId": "lfm2.5-350m",
+    "modelDelivery": "in-app-download",
+    "modelWeightsBundled": False,
+    "modelMetadataBundled": True,
+  }
+  for field, expected in expected_model_values.items():
+    if manifest.get(field) != expected:
+      raise RuntimeError(
+        f"Public distribution builds must record {field} as {expected} in "
+        f"{manifest_path}"
+      )
   expected_sandbox_values = {
     "sandboxMode": "workspaceReadWrite",
     "sandboxBackend": "runtime-detected",
@@ -127,6 +150,55 @@ def validate_package_manifest(app_path: Path) -> None:
     raise RuntimeError(
       "Public distribution builds must record a full source commit in "
       f"{manifest_path}"
+    )
+  validate_size_budget(manifest.get("sizeBudget"), app_path, manifest_path)
+  validate_no_model_weight_files(app_path)
+
+
+def validate_size_budget(value: object, app_path: Path, manifest_path: Path) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(
+      "Public distribution builds must record package sizeBudget in "
+      f"{manifest_path}"
+    )
+  max_app_bundle_bytes = value.get("maxAppBundleBytes")
+  max_zip_artifact_bytes = value.get("maxZipArtifactBytes")
+  if not isinstance(max_app_bundle_bytes, int) or max_app_bundle_bytes <= 0:
+    raise RuntimeError(
+      "Public distribution builds must record a positive maxAppBundleBytes in "
+      f"{manifest_path}"
+    )
+  if not isinstance(max_zip_artifact_bytes, int) or max_zip_artifact_bytes <= 0:
+    raise RuntimeError(
+      "Public distribution builds must record a positive maxZipArtifactBytes in "
+      f"{manifest_path}"
+    )
+  app_size = directory_size_bytes(app_path)
+  if app_size > max_app_bundle_bytes:
+    raise RuntimeError(
+      f"Public distribution app bundle is {app_size} bytes, above the "
+      f"{max_app_bundle_bytes} byte package budget."
+    )
+
+
+def directory_size_bytes(path: Path) -> int:
+  total = 0
+  for entry in path.rglob("*"):
+    if entry.is_file():
+      total += entry.stat().st_size
+  return total
+
+
+def validate_no_model_weight_files(app_path: Path) -> None:
+  bundled_weights = sorted(
+    path
+    for path in app_path.rglob("*")
+    if path.is_file() and path.suffix.lower() in PROHIBITED_MODEL_SUFFIXES
+  )
+  if bundled_weights:
+    raise RuntimeError(
+      "Public distribution builds must not bundle model weight files: "
+      + ", ".join(str(path) for path in bundled_weights)
     )
 
 
