@@ -7,7 +7,9 @@ import argparse
 from pathlib import Path
 
 from package_contract import (
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
+  LOCAL_EXECUTION_SAFETY_MODES,
   MINIMUM_SYSTEM_VERSION,
   RELEASE_SIGNING_MODES,
   SUPPORTED_ARCH,
@@ -20,6 +22,8 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "Installer assets:",
   DEFAULT_MODEL_ID,
   "Model weights are not bundled",
+  "No Pith login is required",
+  "local execution mode",
   "SHA-256 checksum sidecar",
   "README-FIRST.txt",
   "release manifest",
@@ -33,6 +37,8 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications.",
   "Installer assets:",
   "download one verified local model",
+  "No Pith login is required",
+  "local execution mode",
   DEFAULT_MODEL_ID,
   "Open a workspace folder.",
   "Start a cowork session",
@@ -64,6 +70,14 @@ def installer_assets_copy(tag: str) -> str:
   return (
     "Installer assets: "
     f"{dmg_name}, {checksum_name}, {guide_name}, and {manifest_name}."
+  )
+
+
+def local_execution_copy() -> str:
+  modes = ", ".join(LOCAL_EXECUTION_SAFETY_MODES)
+  return (
+    "No Pith login is required; local execution mode defaults to "
+    f"{DEFAULT_LOCAL_EXECUTION_SAFETY_MODE}; available modes are {modes}."
   )
 
 
@@ -125,12 +139,14 @@ def release_notes(
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
   size_budget = release_size_budget_copy()
   installer_assets = installer_assets_copy(tag)
+  local_execution = local_execution_copy()
   return f"""Pith {tag}
 
 - {platform_label()} DMG installer.
 - {installer_assets}
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model, defaulting to {DEFAULT_MODEL_ID}.
+- {local_execution}
 - The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
 - Native sandbox is used when available; process-only fallback is disclosed in app status.
 - The {size_budget} is enforced so model weights and heavyweight payloads stay out of the app.
@@ -159,6 +175,7 @@ def install_guide(tag: str, signing_mode: str) -> str:
   trust_note, open_note = install_trust_section(signing_mode)
   size_budget = release_size_budget_copy()
   installer_assets = installer_assets_copy(tag)
+  local_execution = local_execution_copy()
   return f"""Pith {tag}
 
 Install
@@ -175,6 +192,7 @@ Trust
 
 Notes
 - {installer_assets}
+- {local_execution}
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.

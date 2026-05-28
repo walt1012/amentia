@@ -21,6 +21,13 @@ DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
 MODEL_DELIVERY_MODE = "in-app-download"
 MODEL_WEIGHTS_BUNDLED = False
 MODEL_METADATA_BUNDLED = True
+PITH_ACCOUNT_REQUIRED = False
+LOCAL_EXECUTION_SAFETY_MODES = (
+  "explore",
+  "askBeforeChange",
+  "approvedWorkspaceExecution",
+)
+DEFAULT_LOCAL_EXECUTION_SAFETY_MODE = "askBeforeChange"
 DEFAULT_MAX_APP_BUNDLE_BYTES = 250 * 1024 * 1024
 DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
@@ -97,6 +104,9 @@ def validate_package_manifest_contract(
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+    "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],

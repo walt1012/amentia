@@ -11,12 +11,15 @@ from package_contract import (
   DAILY_DRIVER_CONTRACT,
   DEFAULT_MAX_APP_BUNDLE_BYTES,
   DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
+  LOCAL_EXECUTION_SAFETY_MODES,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
   MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PITH_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
 )
@@ -78,6 +81,9 @@ def write_package_manifest(
         "defaultModelId": DEFAULT_MODEL_ID,
         "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
         "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+        "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+        "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+        "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
         "dailyDriverStageSource": daily_driver_stage_source,
         "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
         "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
@@ -148,6 +154,12 @@ def main() -> int:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
+    if manifest["identity"]["pithAccountRequired"] is not False:
+      raise AssertionError("release manifest should not require a Pith account")
+    if manifest["localExecution"]["defaultSafetyMode"] != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE:
+      raise AssertionError("release manifest should record default local execution mode")
+    if manifest["localExecution"]["safetyModes"] != list(LOCAL_EXECUTION_SAFETY_MODES):
+      raise AssertionError("release manifest should record local execution modes")
     if manifest["sandbox"]["fallback"] != SANDBOX_CONTRACT["fallback"]:
       raise AssertionError("release manifest should disclose the sandbox fallback")
     if manifest["dailyDriver"]["stageSource"] != DAILY_DRIVER_CONTRACT["stageSource"]:
@@ -168,6 +180,12 @@ def main() -> int:
       raise AssertionError("release manifest should summarize package schema version")
     if "sha256" not in manifest["appPackage"]:
       raise AssertionError("release manifest should hash the package manifest")
+    if manifest["appPackage"]["pithAccountRequired"] is not False:
+      raise AssertionError("release manifest should summarize account-free package policy")
+    if manifest["appPackage"]["defaultLocalExecutionSafetyMode"] != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE:
+      raise AssertionError("release manifest should summarize package default execution mode")
+    if manifest["appPackage"]["localExecutionSafetyModes"] != list(LOCAL_EXECUTION_SAFETY_MODES):
+      raise AssertionError("release manifest should summarize package execution modes")
     if manifest["appPackage"]["sandboxMode"] != SANDBOX_CONTRACT["mode"]:
       raise AssertionError("release manifest should summarize packaged sandbox mode")
     if manifest["appPackage"]["dailyDriverStageSource"] != DAILY_DRIVER_CONTRACT["stageSource"]:

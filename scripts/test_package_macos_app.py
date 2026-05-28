@@ -32,7 +32,10 @@ from package_macos_app import (
 from package_contract import (
   DEFAULT_MAX_APP_BUNDLE_BYTES,
   DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  LOCAL_EXECUTION_SAFETY_MODES,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PITH_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   assert_size_under_budget,
@@ -87,6 +90,15 @@ def main() -> int:
     assert_equal(
       manifest["sourceCommit"],
       "abcdef0123456789abcdef0123456789abcdef01",
+    )
+    assert_equal(manifest["pithAccountRequired"], PITH_ACCOUNT_REQUIRED)
+    assert_equal(
+      manifest["defaultLocalExecutionSafetyMode"],
+      DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+    )
+    assert_equal(
+      manifest["localExecutionSafetyModes"],
+      list(LOCAL_EXECUTION_SAFETY_MODES),
     )
     assert_equal(manifest["sandboxMode"], SANDBOX_CONTRACT["mode"])
     assert_equal(manifest["sandboxBackend"], SANDBOX_CONTRACT["backend"])

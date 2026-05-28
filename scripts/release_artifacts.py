@@ -13,10 +13,13 @@ from pathlib import Path
 from package_contract import (
   DAILY_DRIVER_CONTRACT,
   DEFAULT_MODEL_ID,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  LOCAL_EXECUTION_SAFETY_MODES,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PITH_ACCOUNT_REQUIRED,
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
@@ -119,6 +122,13 @@ def release_manifest(
       "mode": MODEL_DELIVERY_MODE,
       "defaultModelId": DEFAULT_MODEL_ID,
       "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    },
+    "identity": {
+      "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    },
+    "localExecution": {
+      "defaultSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+      "safetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     },
     "sandbox": dict(SANDBOX_CONTRACT),
     "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
@@ -319,6 +329,9 @@ def package_manifest_summary(
     "modelDelivery": MODEL_DELIVERY_MODE,
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+    "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
@@ -472,6 +485,11 @@ def validate_manifest_identity(manifest: dict) -> None:
     raise RuntimeError(f"Release manifest default model id must be {DEFAULT_MODEL_ID}")
   if model_delivery.get("modelWeightsBundled") is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Release manifest must state that model weights are not bundled")
+  validate_identity_contract(manifest.get("identity"), "Release manifest identity")
+  validate_local_execution_contract(
+    manifest.get("localExecution"),
+    "Release manifest local execution",
+  )
   validate_sandbox_contract(manifest.get("sandbox"), "Release manifest sandbox")
   validate_daily_driver_contract(
     manifest.get("dailyDriver"),
@@ -490,6 +508,24 @@ def validate_sandbox_contract(value: object, label: str) -> None:
   for field, expected in SANDBOX_CONTRACT.items():
     if value.get(field) != expected:
       raise RuntimeError(f"{label} {field} must be {expected}")
+
+
+def validate_identity_contract(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} must be an object")
+  if value.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
+    raise RuntimeError(f"{label} pithAccountRequired must be false")
+
+
+def validate_local_execution_contract(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} must be an object")
+  if value.get("defaultSafetyMode") != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE:
+    raise RuntimeError(
+      f"{label} defaultSafetyMode must be {DEFAULT_LOCAL_EXECUTION_SAFETY_MODE}"
+    )
+  if value.get("safetyModes") != list(LOCAL_EXECUTION_SAFETY_MODES):
+    raise RuntimeError(f"{label} safetyModes must match the package contract")
 
 
 def validate_daily_driver_contract(value: object, label: str) -> None:

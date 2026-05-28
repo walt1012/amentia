@@ -22,6 +22,9 @@ from package_contract import (
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   PACKAGE_SIGNING_MODES,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  LOCAL_EXECUTION_SAFETY_MODES,
+  PITH_ACCOUNT_REQUIRED,
   PROHIBITED_MODEL_SUFFIXES,
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
@@ -77,6 +80,9 @@ def valid_manifest() -> dict[str, object]:
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+    "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
@@ -96,6 +102,12 @@ def main() -> int:
   assert_equal(DEFAULT_MODEL_ID, "lfm2.5-350m")
   assert_equal(MODEL_DELIVERY_MODE, "in-app-download")
   assert_equal(MODEL_WEIGHTS_BUNDLED, False)
+  assert_equal(PITH_ACCOUNT_REQUIRED, False)
+  assert_equal(DEFAULT_LOCAL_EXECUTION_SAFETY_MODE, "askBeforeChange")
+  assert_equal(
+    LOCAL_EXECUTION_SAFETY_MODES,
+    ("explore", "askBeforeChange", "approvedWorkspaceExecution"),
+  )
   assert_equal(SANDBOX_CONTRACT["mode"], "workspaceReadWrite")
   assert_equal(PACKAGE_SIGNING_MODES, {"unsigned", "ad-hoc", "developer-id"})
   assert_equal(RELEASE_SIGNING_MODES, {"ad-hoc", "developer-id"})
@@ -162,6 +174,24 @@ def main() -> int:
   assert_raises(
     lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
     "wrong model delivery should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["pithAccountRequired"] = True
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "package contract must not allow a required Pith account",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["defaultLocalExecutionSafetyMode"] = "alwaysRun"
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "wrong default execution mode should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["localExecutionSafetyModes"] = ["alwaysRun"]
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "wrong execution mode list should fail manifest contract validation",
   )
   wrong_manifest = dict(manifest)
   wrong_manifest["sourceCommit"] = "wrong"

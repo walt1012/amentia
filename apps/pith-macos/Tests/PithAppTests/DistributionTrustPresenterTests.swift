@@ -10,6 +10,8 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(summary.title, "Untrusted Ad-Hoc Build")
     XCTAssertTrue(summary.detail.contains("Open Anyway"))
     XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
+    XCTAssertTrue(summary.detail.contains("no Pith account required"))
+    XCTAssertTrue(summary.detail.contains("local execution mode: ask-before-change"))
     XCTAssertTrue(summary.detail.contains("package size budget"))
     XCTAssertTrue(summary.detail.contains("app <= 250 MiB"))
     XCTAssertTrue(summary.detail.contains("installer artifact <= 150 MiB"))
@@ -49,6 +51,12 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(parsed.minimumSystemVersion, "12.0")
     XCTAssertEqual(parsed.modelDelivery, "in-app-download")
     XCTAssertFalse(parsed.modelWeightsBundled)
+    XCTAssertFalse(parsed.pithAccountRequired)
+    XCTAssertEqual(parsed.defaultLocalExecutionSafetyMode, "askBeforeChange")
+    XCTAssertEqual(
+      parsed.localExecutionSafetyModes,
+      ["explore", "askBeforeChange", "approvedWorkspaceExecution"]
+    )
     XCTAssertEqual(parsed.maxAppBundleBytes, 262144000)
     XCTAssertEqual(parsed.maxZipArtifactBytes, 157286400)
     XCTAssertEqual(parsed.sandboxMode, "workspaceReadWrite")
@@ -82,6 +90,13 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "minimumSystemVersion": "12.0",
       "modelDelivery": "in-app-download",
       "modelWeightsBundled": false,
+      "pithAccountRequired": false,
+      "defaultLocalExecutionSafetyMode": "askBeforeChange",
+      "localExecutionSafetyModes": [
+        "explore",
+        "askBeforeChange",
+        "approvedWorkspaceExecution"
+      ],
       "sizeBudget": {
         "maxAppBundleBytes": 262144000,
         "maxZipArtifactBytes": 157286400

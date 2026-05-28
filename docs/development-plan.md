@@ -78,6 +78,9 @@ Working foundation:
   manifest share the same expected asset names, also reflected in generated
   release notes and DMG install guidance. User-facing package budget copy now
   describes installer artifacts, not internal zip implementation detail.
+  Package metadata, release manifests, generated install copy, and app trust
+  copy now also state the no-account product boundary and the local execution
+  safety modes.
 
 ## Alignment Review
 
@@ -93,9 +96,9 @@ orchestration too early.
 
 Active gaps found in the review:
 
-- Local execution safety modes are still mostly implicit. These are not user
-  login roles; they describe what Pith may do on this Mac without asking:
-  read-only exploration, ask-before-change, and approved workspace execution.
+- Local execution safety modes now have a release/package contract, but the
+  running app still needs a calm user-facing switch and tighter per-action
+  receipts.
 - Context management is present but not yet productized. Show what context was
   used, what was compacted, and why Web Search or memory entered the turn.
 - Connector execution is useful but still Notion-led. Keep service-specific

@@ -3,10 +3,16 @@
 
 from __future__ import annotations
 
-from package_contract import DEFAULT_MODEL_ID, MINIMUM_SYSTEM_VERSION, SUPPORTED_ARCH
+from package_contract import (
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
+  SUPPORTED_ARCH,
+)
 from release_text import (
   install_guide,
   installer_assets_copy,
+  local_execution_copy,
   platform_label,
   release_notes,
   release_size_budget_copy,
@@ -30,6 +36,8 @@ def main() -> int:
   require_contains(platform_label(), SUPPORTED_ARCH)
   require_contains(release_size_budget_copy(), "app <= 250 MiB")
   require_contains(release_size_budget_copy(), "installer artifact <= 150 MiB")
+  require_contains(local_execution_copy(), "No Pith login is required")
+  require_contains(local_execution_copy(), DEFAULT_LOCAL_EXECUTION_SAFETY_MODE)
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")
@@ -45,6 +53,8 @@ def main() -> int:
   require_contains(developer_notes, platform_label())
   require_contains(developer_notes, DEFAULT_MODEL_ID)
   require_contains(developer_notes, "Installer assets:")
+  require_contains(developer_notes, "No Pith login is required")
+  require_contains(developer_notes, "local execution mode")
   require_contains(developer_notes, "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(developer_notes, "Pith-v0.1.0-release-manifest.json")
   require_contains(developer_notes, "SHA-256 checksum sidecar")
@@ -100,6 +110,8 @@ def main() -> int:
   guide = install_guide("v0.1.0", "ad-hoc")
   require_contains(guide, "Control-click Pith.app and choose Open.")
   require_contains(guide, "Installer assets:")
+  require_contains(guide, "No Pith login is required")
+  require_contains(guide, "local execution mode")
   require_contains(guide, "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(guide, "Pith-v0.1.0-release-manifest.json")
   require_contains(guide, "download one verified local model")

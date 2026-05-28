@@ -7,6 +7,9 @@ struct DistributionPackageMetadata: Equatable {
   let minimumSystemVersion: String
   let modelDelivery: String
   let modelWeightsBundled: Bool
+  let pithAccountRequired: Bool
+  let defaultLocalExecutionSafetyMode: String
+  let localExecutionSafetyModes: [String]
   let maxAppBundleBytes: Int
   let maxZipArtifactBytes: Int
   let sandboxMode: String
@@ -49,6 +52,17 @@ struct DistributionPackageMetadata: Equatable {
       minimumSystemVersion: string(manifest, "minimumSystemVersion", fallback: "12.0"),
       modelDelivery: string(manifest, "modelDelivery", fallback: "in-app-download"),
       modelWeightsBundled: bool(manifest, "modelWeightsBundled", fallback: false),
+      pithAccountRequired: bool(manifest, "pithAccountRequired", fallback: false),
+      defaultLocalExecutionSafetyMode: string(
+        manifest,
+        "defaultLocalExecutionSafetyMode",
+        fallback: "askBeforeChange"
+      ),
+      localExecutionSafetyModes: stringArray(
+        manifest,
+        "localExecutionSafetyModes",
+        fallback: ["explore", "askBeforeChange", "approvedWorkspaceExecution"]
+      ),
       maxAppBundleBytes: int(sizeBudget, "maxAppBundleBytes", fallback: 0),
       maxZipArtifactBytes: int(sizeBudget, "maxZipArtifactBytes", fallback: 0),
       sandboxMode: string(manifest, "sandboxMode", fallback: "workspaceReadWrite"),
@@ -85,6 +99,13 @@ struct DistributionPackageMetadata: Equatable {
     minimumSystemVersion: "12.0",
     modelDelivery: "in-app-download",
     modelWeightsBundled: false,
+    pithAccountRequired: false,
+    defaultLocalExecutionSafetyMode: "askBeforeChange",
+    localExecutionSafetyModes: [
+      "explore",
+      "askBeforeChange",
+      "approvedWorkspaceExecution",
+    ],
     maxAppBundleBytes: 0,
     maxZipArtifactBytes: 0,
     sandboxMode: "workspaceReadWrite",
@@ -140,6 +161,17 @@ struct DistributionPackageMetadata: Equatable {
     }
     return value
   }
+
+  private static func stringArray(
+    _ manifest: [String: Any],
+    _ key: String,
+    fallback: [String]
+  ) -> [String] {
+    guard let value = manifest[key] as? [String] else {
+      return fallback
+    }
+    return value
+  }
 }
 
 struct DistributionTrustSummary: Equatable {
@@ -163,8 +195,10 @@ enum DistributionTrustPresenter {
     let sandbox = sandboxSummary(metadata)
     let dailyDriver = dailyDriverSummary(metadata)
     let packageSize = packageSizeSummary(metadata)
+    let identity = identitySummary(metadata)
+    let execution = localExecutionSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
-    let releaseProof = "\(modelDelivery); \(weightPolicy); \(packageSize); \(sandbox); \(dailyDriver); \(source)."
+    let releaseProof = "\(identity); \(modelDelivery); \(weightPolicy); \(execution); \(packageSize); \(sandbox); \(dailyDriver); \(source)."
 
     switch metadata.signing {
     case "developer-id":
@@ -203,6 +237,29 @@ enum DistributionTrustPresenter {
       return "source: development"
     }
     return "source: \(sourceCommit.prefix(12))"
+  }
+
+  private static func identitySummary(_ metadata: DistributionPackageMetadata) -> String {
+    metadata.pithAccountRequired ? "Pith account required" : "no Pith account required"
+  }
+
+  private static func localExecutionSummary(_ metadata: DistributionPackageMetadata) -> String {
+    let defaultMode = readableExecutionMode(metadata.defaultLocalExecutionSafetyMode)
+    let modes = metadata.localExecutionSafetyModes
+      .map(readableExecutionMode)
+      .joined(separator: ", ")
+    return "local execution mode: \(defaultMode); modes: \(modes)"
+  }
+
+  private static func readableExecutionMode(_ value: String) -> String {
+    switch value {
+    case "askBeforeChange":
+      return "ask-before-change"
+    case "approvedWorkspaceExecution":
+      return "approved workspace execution"
+    default:
+      return value
+    }
   }
 
   private static func sandboxSummary(_ metadata: DistributionPackageMetadata) -> String {
