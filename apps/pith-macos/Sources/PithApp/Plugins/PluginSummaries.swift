@@ -162,6 +162,19 @@ struct PluginChannelSummary: Identifiable, Hashable {
       return "not declared"
     }
   }
+
+  var adapterStatusSummary: String {
+    switch adapterStatus {
+    case "feasibilityPending":
+      return "feasibility pending"
+    case "adapterPending", "pending":
+      return "adapter pending"
+    case "ready":
+      return "ready"
+    default:
+      return adapterStatus
+    }
+  }
 }
 
 struct PluginConnectorWorkflowSummary: Hashable {

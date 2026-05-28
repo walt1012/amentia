@@ -914,9 +914,9 @@ def main() -> int:
     assert weixin_channel["supportsOutbound"] is True
     assert weixin_channel["approvalRequired"] is True
     assert any("approval" in note for note in weixin_channel["safetyNotes"])
-    assert weixin_channel["adapterStatus"] == "pending"
+    assert weixin_channel["adapterStatus"] == "feasibilityPending"
     assert weixin_channel["adapterAvailable"] is False
-    assert "openclaw-weixin" in weixin_channel["activationBlocker"]
+    assert "feasibility" in weixin_channel["activationBlocker"]
     assert weixin_channel["status"] == "disabled"
     weixin_inbound_preview, _ = send_request(
       process,
@@ -934,7 +934,7 @@ def main() -> int:
     )
     assert weixin_inbound_preview["error"]["code"] == -32058
     assert weixin_inbound_preview["error"]["data"]["status"] == "channelAdapterPending"
-    assert weixin_inbound_preview["error"]["data"]["adapterStatus"] == "pending"
+    assert weixin_inbound_preview["error"]["data"]["adapterStatus"] == "feasibilityPending"
     weixin_outbound_preview, _ = send_request(
       process,
       {
@@ -950,7 +950,7 @@ def main() -> int:
     )
     assert weixin_outbound_preview["error"]["code"] == -32058
     assert weixin_outbound_preview["error"]["data"]["status"] == "channelAdapterPending"
-    assert weixin_outbound_preview["error"]["data"]["adapterStatus"] == "pending"
+    assert weixin_outbound_preview["error"]["data"]["adapterStatus"] == "feasibilityPending"
     weixin_outbound_request, _ = send_request(
       process,
       {
@@ -967,7 +967,7 @@ def main() -> int:
     )
     assert weixin_outbound_request["error"]["code"] == -32058
     assert weixin_outbound_request["error"]["data"]["status"] == "channelAdapterPending"
-    assert weixin_outbound_request["error"]["data"]["adapterStatus"] == "pending"
+    assert weixin_outbound_request["error"]["data"]["adapterStatus"] == "feasibilityPending"
     weixin_enable, _ = send_request(
       process,
       {

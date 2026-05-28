@@ -53,18 +53,14 @@ pub(crate) fn handle_plugin_set_enabled(
   if params.enabled && plugin_has_channel(&plugin.capabilities) {
     match channel_adapter_blocker_for_manifest(std::path::Path::new(&plugin.manifest_path)) {
       Ok(Some(blocker)) => {
-        let message = format!(
-          "Plugin channel `{}` uses protocol `{}`, but Pith has not shipped that channel adapter yet.",
-          blocker.display_name, blocker.protocol
-        );
         return plugin_enable_error_response(
           request.id,
           -32058,
           operation,
           "channelAdapterPending",
           &params.plugin_id,
-          message,
-          Some("Keep this plugin disabled until the channel adapter is implemented."),
+          blocker.message,
+          Some("Keep this plugin disabled until the channel feasibility gate passes."),
         );
       }
       Ok(None) => {}

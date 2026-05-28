@@ -132,6 +132,28 @@ fn validate_manifest_requires_approval_for_outbound_channel() {
 }
 
 #[test]
+fn validate_manifest_requires_safety_notes_for_outbound_channel() {
+  let mut manifest = manifest(vec!["channel:workspace.channel"], vec!["network.outbound"]);
+  manifest.app_channels = vec![PluginAppChannelManifest {
+    id: "workspace.channel".to_string(),
+    display_name: "Workspace Channel".to_string(),
+    service: "workspace".to_string(),
+    protocol: "workspace-chat".to_string(),
+    supports_inbound: false,
+    supports_outbound: true,
+    approval_required: true,
+    safety_notes: vec![],
+    homepage: None,
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("outbound channel safety notes required");
+
+  assert!(error
+    .to_string()
+    .contains("outbound messages must declare safety notes"));
+}
+
+#[test]
 fn validate_manifest_rejects_plugin_name_path_segments() {
   let mut manifest = manifest(vec!["command:review.focus"], vec!["file.read"]);
   manifest.name = "../focus-review".to_string();

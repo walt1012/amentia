@@ -78,7 +78,7 @@ fn plugin_set_enabled_rejects_pending_channel_adapter() {
   assert!(data["lifecycleBlocker"]
     .as_str()
     .expect("lifecycle blocker")
-    .contains("openclaw-weixin"));
+    .contains("feasibility"));
   assert!(!context.plugin_state.catalog()[0].enabled);
 }
 

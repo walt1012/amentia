@@ -8,6 +8,7 @@ pub struct PluginChannelAdapterBlocker {
   pub display_name: String,
   pub service: String,
   pub protocol: String,
+  pub message: String,
 }
 
 pub fn channel_adapter_blocker_for_manifest(
@@ -19,12 +20,16 @@ pub fn channel_adapter_blocker_for_manifest(
     manifest
       .app_channels
       .into_iter()
-      .find(|channel| !channel_adapter_available(&channel.protocol))
-      .map(|channel| PluginChannelAdapterBlocker {
-        display_name: channel.display_name,
-        service: channel.service,
-        protocol: channel.protocol,
-      }),
+      .filter_map(|channel| {
+        let readiness = channel_adapter_readiness(&channel.protocol);
+        (!readiness.available).then(|| PluginChannelAdapterBlocker {
+          display_name: channel.display_name,
+          service: channel.service,
+          protocol: channel.protocol,
+          message: readiness.blocker,
+        })
+      })
+      .next(),
   )
 }
 
@@ -36,25 +41,15 @@ pub fn build_channel_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginChann
       continue;
     };
     for channel in manifest.app_channels {
-      let adapter_available = channel_adapter_available(&channel.protocol);
-      let adapter_status = if adapter_available {
-        "ready"
-      } else {
-        "pending"
-      };
+      let readiness = channel_adapter_readiness(&channel.protocol);
       let status = if !plugin.enabled {
         "disabled"
-      } else if adapter_available {
+      } else if readiness.available {
         "ready"
       } else {
         "adapterPending"
       };
-      let activation_blocker = (!adapter_available).then(|| {
-        format!(
-          "Channel adapter for protocol `{}` is not available yet.",
-          channel.protocol
-        )
-      });
+      let activation_blocker = (!readiness.available).then(|| readiness.blocker.clone());
       channels.push(PluginChannelEntry {
         channel_id: format!("{}::{}", plugin.id, channel.id),
         display_name: channel.display_name,
@@ -64,8 +59,8 @@ pub fn build_channel_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginChann
         supports_outbound: channel.supports_outbound,
         approval_required: channel.approval_required,
         safety_notes: channel.safety_notes,
-        adapter_status: adapter_status.to_string(),
-        adapter_available,
+        adapter_status: readiness.status.to_string(),
+        adapter_available: readiness.available,
         activation_blocker,
         plugin_id: plugin.id.clone(),
         plugin_display_name: plugin.display_name.clone(),
@@ -88,6 +83,25 @@ pub fn build_channel_registry(plugins: &[PluginCatalogEntry]) -> Vec<PluginChann
   channels
 }
 
-fn channel_adapter_available(_protocol: &str) -> bool {
-  false
+#[derive(Debug, Clone)]
+struct ChannelAdapterReadiness {
+  status: &'static str,
+  available: bool,
+  blocker: String,
+}
+
+fn channel_adapter_readiness(protocol: &str) -> ChannelAdapterReadiness {
+  match protocol {
+    "openclaw-weixin" => ChannelAdapterReadiness {
+      status: "feasibilityPending",
+      available: false,
+      blocker: "Weixin channel is paused at feasibility. The official OpenClaw Weixin package is an OpenClaw host plugin; prove QR login, getUpdates, sendMessage, and recovery without a required OpenClaw runtime before enabling this channel."
+        .to_string(),
+    },
+    _ => ChannelAdapterReadiness {
+      status: "pending",
+      available: false,
+      blocker: format!("Channel adapter for protocol `{protocol}` is not available yet."),
+    },
+  }
 }

@@ -1603,12 +1603,12 @@ fn plugin_channel_registry_lists_disabled_weixin_channel() {
     .expect("safety notes")
     .iter()
     .any(|note| note.as_str().expect("safety note").contains("approval")));
-  assert_eq!(channels[0]["adapterStatus"], "pending");
+  assert_eq!(channels[0]["adapterStatus"], "feasibilityPending");
   assert_eq!(channels[0]["adapterAvailable"], false);
   assert!(channels[0]["activationBlocker"]
     .as_str()
     .expect("activation blocker")
-    .contains("openclaw-weixin"));
+    .contains("feasibility"));
   assert_eq!(channels[0]["status"], "disabled");
   assert_eq!(channels[0]["enabled"], false);
 }
@@ -1650,7 +1650,7 @@ fn plugin_channel_inbound_preview_rejects_pending_weixin_adapter() {
   assert_eq!(data["status"], "channelAdapterPending");
   assert_eq!(data["service"], "weixin");
   assert_eq!(data["protocol"], "openclaw-weixin");
-  assert_eq!(data["adapterStatus"], "pending");
+  assert_eq!(data["adapterStatus"], "feasibilityPending");
   assert_eq!(data["adapterAvailable"], false);
 }
 
@@ -1744,7 +1744,7 @@ fn plugin_channel_outbound_preview_rejects_pending_weixin_adapter() {
   assert_eq!(data["status"], "channelAdapterPending");
   assert_eq!(data["service"], "weixin");
   assert_eq!(data["protocol"], "openclaw-weixin");
-  assert_eq!(data["adapterStatus"], "pending");
+  assert_eq!(data["adapterStatus"], "feasibilityPending");
   assert_eq!(data["adapterAvailable"], false);
 }
 
@@ -1772,6 +1772,72 @@ fn plugin_channel_outbound_preview_requires_conversation_id() {
     error.data.expect("channel outbound error data")["status"],
     "invalidEnvelope"
   );
+}
+
+#[test]
+fn plugin_channel_outbound_preview_rejects_inbound_only_channel() {
+  let mut context = RuntimeContext::new_in_memory();
+  let plugin_root = create_temp_workspace("plugin-channel-inbound-only");
+  let plugin_dir = plugin_root.join("inbound-channel");
+  fs::create_dir_all(&plugin_dir).expect("create inbound channel plugin");
+  let manifest_path = plugin_dir.join("pith-plugin.json");
+  fs::write(
+    &manifest_path,
+    r#"{
+  "name": "inbound-channel",
+  "version": "0.1.0",
+  "displayName": "Inbound Channel",
+  "description": "Inbound-only channel metadata.",
+  "author": { "name": "Pith" },
+  "capabilities": ["channel:inbound"],
+  "permissions": ["network.outbound"],
+  "appChannels": [
+    {
+      "id": "inbound",
+      "displayName": "Inbound",
+      "service": "weixin",
+      "protocol": "openclaw-weixin",
+      "supportsInbound": true,
+      "supportsOutbound": false,
+      "approvalRequired": false,
+      "safetyNotes": ["Inbound-only channels cannot send messages."]
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write inbound channel manifest");
+  let mut plugin = bundled_plugin_entry(
+    "inbound-channel",
+    "Inbound Channel",
+    true,
+    true,
+    &["channel:inbound"],
+    &["network.outbound"],
+  );
+  plugin.manifest_path = manifest_path.display().to_string();
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CHANNEL_OUTBOUND_PREVIEW,
+      Some(json!({
+        "channelId": "inbound-channel::inbound",
+        "externalConversationId": "chat-123",
+        "text": "This should not send."
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(plugin_root).expect("cleanup inbound channel plugin");
+
+  assert!(response.result.is_none());
+  let error = response.error.expect("unsupported direction error");
+  assert_eq!(error.code, -32064);
+  let data = error.data.expect("unsupported direction data");
+  assert_eq!(data["channelId"], "inbound-channel::inbound");
+  assert_eq!(data["status"], "unsupportedDirection");
 }
 
 #[test]
@@ -1811,6 +1877,7 @@ fn plugin_channel_outbound_request_rejects_pending_weixin_adapter() {
   assert_eq!(data["status"], "channelAdapterPending");
   assert_eq!(data["service"], "weixin");
   assert_eq!(data["protocol"], "openclaw-weixin");
+  assert_eq!(data["adapterStatus"], "feasibilityPending");
 }
 
 #[test]

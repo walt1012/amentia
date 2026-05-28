@@ -1760,8 +1760,8 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
         raise RuntimeError("Packaged Weixin channel outbound sends should require approval.")
       if not any("approval" in note for note in weixin_channel["safetyNotes"]):
         raise RuntimeError("Packaged Weixin channel should expose safety notes.")
-      if weixin_channel["adapterStatus"] != "pending":
-        raise RuntimeError("Packaged Weixin channel should remain adapter pending.")
+      if weixin_channel["adapterStatus"] != "feasibilityPending":
+        raise RuntimeError("Packaged Weixin channel should remain feasibility pending.")
       if weixin_channel["adapterAvailable"] is not False:
         raise RuntimeError("Packaged Weixin channel should not be activatable yet.")
       inbound_preview = send_runtime_request_expect_error(

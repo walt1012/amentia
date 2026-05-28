@@ -193,13 +193,13 @@ fn build_channel_registry_lists_message_channels() {
     .safety_notes
     .iter()
     .any(|note| note.contains("approval")));
-  assert_eq!(channels[0].adapter_status, "pending");
+  assert_eq!(channels[0].adapter_status, "feasibilityPending");
   assert!(!channels[0].adapter_available);
   assert!(channels[0]
     .activation_blocker
     .as_ref()
     .expect("activation blocker")
-    .contains("openclaw-weixin"));
+    .contains("feasibility"));
   assert_eq!(channels[0].status, "disabled");
   assert_eq!(enabled_channels[0].status, "adapterPending");
   assert!(capabilities.is_empty());

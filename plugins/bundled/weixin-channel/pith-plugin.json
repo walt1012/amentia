@@ -2,7 +2,7 @@
   "name": "weixin-channel",
   "version": "0.1.0",
   "displayName": "Weixin Channel",
-  "description": "Declares the official personal Weixin channel direction for Pith based on the OpenClaw Weixin channel model. This bundle is metadata-only until the channel adapter contract lands.",
+  "description": "Declares the official personal Weixin channel direction for Pith based on the OpenClaw Weixin channel model. This bundle stays disabled because the current official package is an OpenClaw host plugin, not a proven standalone Pith adapter.",
   "author": {
     "name": "Pith"
   },
@@ -24,7 +24,8 @@
       "safetyNotes": [
         "Use the official OpenClaw Weixin protocol shape.",
         "Do not automate personal WeChat through injected, reverse-engineered, or screen-scraped clients.",
-        "Require explicit approval before any outbound message is sent."
+        "Require explicit approval before any outbound message is sent.",
+        "Keep the channel disabled until the feasibility gate proves login, inbound polling, outbound send, and packaged runtime recovery without a required OpenClaw runtime."
       ],
       "homepage": "https://github.com/Tencent/openclaw-weixin"
     }

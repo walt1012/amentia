@@ -363,7 +363,7 @@ enum PluginDashboardPresenter {
       "protocol: \(channel.protocolName)",
       "direction: \(channel.directionSummary)",
       "approval: \(channel.approvalRequired ? "required" : "not required")",
-      "adapter: \(channel.adapterStatus)",
+      "adapter: \(channel.adapterStatusSummary)",
       "plugin: \(channel.pluginDisplayName)"
     ].joined(separator: " | ")
   }

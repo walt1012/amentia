@@ -293,7 +293,7 @@ struct PluginChannelRow: View {
         .foregroundColor(channel.approvalRequired ? .secondary : .orange)
         .textSelection(.enabled)
 
-      Text("Adapter: \(channel.adapterStatus)")
+      Text("Adapter: \(channel.adapterStatusSummary)")
         .font(.caption2)
         .foregroundColor(channel.adapterAvailable ? .secondary : .orange)
         .textSelection(.enabled)

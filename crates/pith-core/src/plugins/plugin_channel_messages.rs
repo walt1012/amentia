@@ -16,6 +16,12 @@ use crate::RuntimeContext;
 
 const CHANNEL_OUTBOUND_APPROVAL_ACTION: &str = "send_channel_message";
 
+#[derive(Clone, Copy)]
+enum ChannelMessageDirection {
+  Inbound,
+  Outbound,
+}
+
 pub(crate) fn handle_plugin_channel_inbound_preview(
   context: &RuntimeContext,
   request: JsonRpcRequest,
@@ -62,7 +68,12 @@ pub(crate) fn handle_plugin_channel_inbound_preview(
     );
   }
 
-  let channel = match validated_channel(context, request.id.clone(), &params.channel_id) {
+  let channel = match validated_channel(
+    context,
+    request.id.clone(),
+    &params.channel_id,
+    ChannelMessageDirection::Inbound,
+  ) {
     Ok(channel) => channel,
     Err(response) => return response,
   };
@@ -120,7 +131,12 @@ pub(crate) fn handle_plugin_channel_outbound_preview(
     );
   }
 
-  let channel = match validated_channel(context, request.id.clone(), &params.channel_id) {
+  let channel = match validated_channel(
+    context,
+    request.id.clone(),
+    &params.channel_id,
+    ChannelMessageDirection::Outbound,
+  ) {
     Ok(channel) => channel,
     Err(response) => return response,
   };
@@ -191,7 +207,12 @@ pub(crate) fn handle_plugin_channel_outbound_request(
     );
   }
 
-  let channel = match validated_channel(context, request.id.clone(), &params.channel_id) {
+  let channel = match validated_channel(
+    context,
+    request.id.clone(),
+    &params.channel_id,
+    ChannelMessageDirection::Outbound,
+  ) {
     Ok(channel) => channel,
     Err(response) => return response,
   };
@@ -324,6 +345,7 @@ fn validated_channel(
   context: &RuntimeContext,
   request_id: serde_json::Value,
   channel_id: &str,
+  direction: ChannelMessageDirection,
 ) -> Result<pith_plugin_host::PluginChannelEntry, JsonRpcResponse> {
   let Some(channel) = context
     .plugin_state
@@ -340,6 +362,28 @@ fn validated_channel(
       "Channel not found.",
     ));
   };
+
+  if !channel_supports_direction(&channel, direction) {
+    return Err(channel_message_error_response(
+      request_id,
+      -32064,
+      "unsupportedDirection",
+      channel_id,
+      Some(&channel),
+      channel_direction_blocker(direction),
+    ));
+  }
+
+  if matches!(direction, ChannelMessageDirection::Outbound) && !channel.approval_required {
+    return Err(channel_message_error_response(
+      request_id,
+      -32065,
+      "approvalRequired",
+      channel_id,
+      Some(&channel),
+      "Channel outbound messages must require approval before sending.",
+    ));
+  }
 
   if !channel.adapter_available {
     return Err(channel_message_error_response(
@@ -367,6 +411,23 @@ fn validated_channel(
   }
 
   Ok(channel)
+}
+
+fn channel_supports_direction(
+  channel: &pith_plugin_host::PluginChannelEntry,
+  direction: ChannelMessageDirection,
+) -> bool {
+  match direction {
+    ChannelMessageDirection::Inbound => channel.supports_inbound,
+    ChannelMessageDirection::Outbound => channel.supports_outbound,
+  }
+}
+
+fn channel_direction_blocker(direction: ChannelMessageDirection) -> &'static str {
+  match direction {
+    ChannelMessageDirection::Inbound => "Channel does not support inbound messages.",
+    ChannelMessageDirection::Outbound => "Channel does not support outbound messages.",
+  }
 }
 
 fn channel_message_error_response(

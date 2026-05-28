@@ -247,6 +247,12 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
         channel.id
       );
     }
+    if channel.supports_outbound && channel.safety_notes.is_empty() {
+      anyhow::bail!(
+        "plugin channel `{}` outbound messages must declare safety notes",
+        channel.id
+      );
+    }
     if channel
       .safety_notes
       .iter()

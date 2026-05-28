@@ -133,7 +133,7 @@ M9 exit criteria:
 - Packaged smoke proves connector path, Web Search evidence, workspace
   approval, runtime recovery, and unsigned DMG install path together.
 
-## Current Milestone: M10 WeChat-Aligned Cowork Channel
+## Paused Milestone: M10 WeChat-Aligned Cowork Channel
 
 Goal: add one more useful cowork integration without turning Pith into a
 marketplace shell or relying on unofficial account automation.
@@ -147,7 +147,7 @@ Current state:
 - A disabled bundled `weixin-channel` manifest records the personal Weixin
   channel direction without pretending login or message runtime is ready.
 - Runtime and macOS plugin surfaces expose channel registry metadata so the
-  Weixin path is visible as a disabled channel, not a fake ready connector.
+  Weixin path is visible as `feasibilityPending`, not a fake ready connector.
 - Pith remains the agent runtime. Weixin work is a channel adapter that can
   deliver messages into Pith and return approved responses.
 - A generic inbound channel preview RPC gates external messages before they can
@@ -158,18 +158,40 @@ Current state:
   future ready adapters, while pending Weixin stays blocked.
 - Channel manifests declare direction support, approval requirements, and
   safety notes so adapter work stays explicit instead of implicit.
+- Feasibility audit on May 28, 2026 found that `Tencent/openclaw-weixin` is an
+  OpenClaw host plugin: README requires the `openclaw` CLI, package metadata
+  declares an `openclaw` peer dependency, plugin entry registers through
+  OpenClaw APIs, and inbound monitoring depends on OpenClaw channel runtime.
+
+Decision:
+
+- Do not continue user-facing Weixin implementation in the current milestone.
+- Keep the disabled metadata bundle and `feasibilityPending` status so the
+  direction is remembered without pretending it is usable.
+- Resume only if a standalone Pith adapter proves QR login, inbound polling,
+  outbound send, packaged runtime recovery, and no required OpenClaw runtime.
+
+## Current Milestone: M11 Cowork Daily Driver
+
+Goal: make Pith feel like a real cowork app before adding another integration.
+
+Focus:
+
+- Keep the first-run local model path boringly reliable.
+- Keep Web Search as the active retrieval layer.
+- Keep workspace tools bounded, cancellable, and sandbox-visible.
+- Keep connector execution generic, approval-gated, and proof-oriented.
+- Keep the macOS app progressive and small; avoid admin panels growing into the
+  main cowork loop.
+- Keep release packaging and CI fast enough to trust for daily iteration.
 
 Exit criteria:
 
-- Build the personal Weixin channel adapter around the official OpenClaw
-  Weixin protocol shape before exposing it as usable.
-- Do not automate personal WeChat through reverse-engineered, injected, or
-  screen-scraped clients.
-- Reuse M9 contracts where the integration writes remotely: local credential,
-  manifest workflow, bounded runner, inspect-before-write, approval, proof,
-  retry, and packaged smoke.
-- Keep the channel/connector boundary explicit so Pith can receive cowork
-  requests from chat later without polluting generic connector execution.
+- Packaged app smoke proves first-use setup, local model readiness, Web Search,
+  workspace approval, sandbox status, connector proof, runtime recovery, and
+  unsigned DMG install guidance together.
+- The app can complete a practical cowork loop without developer-only setup.
+- Development plan stays concise and tracks direction, not commit history.
 
 ## Guardrails
 
@@ -181,6 +203,8 @@ Exit criteria:
   and useful.
 - No bundled Git runtime until bounded system Git proves insufficient for real
   packaged users.
+- No Weixin adapter until standalone feasibility is proven without requiring
+  OpenClaw runtime.
 - No cosmetic refactor that only moves code around.
 - English-only source, docs, commits, branches, and PR text.
 - Remote CI is the source of truth for Rust fmt, clippy, tests, smoke coverage,
