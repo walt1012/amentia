@@ -212,7 +212,10 @@ mod tests {
     let item = approval_denied_item(&approval);
     let attributes = item.attributes.expect("attributes");
 
-    assert_eq!(item.content, "Denied channel message for channel:weixin-channel::weixin.");
+    assert_eq!(
+      item.content,
+      "Denied channel message for channel:weixin-channel::weixin."
+    );
     assert_eq!(
       attributes.get("channelMessage").map(String::as_str),
       Some("Here is the short summary.")

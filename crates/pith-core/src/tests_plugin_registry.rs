@@ -1836,7 +1836,10 @@ fn channel_outbound_approval_request_carries_send_context() {
 
   assert_eq!(approval.action, "send_channel_message");
   assert_eq!(approval.relative_path, "channel:weixin-channel::weixin");
-  assert_eq!(approval.content.as_deref(), Some("Here is the short summary."));
+  assert_eq!(
+    approval.content.as_deref(),
+    Some("Here is the short summary.")
+  );
   assert_eq!(items.len(), 2);
   assert_eq!(items[0].kind, "approvalRequested");
   let attributes = items[0].attributes.as_ref().expect("approval attributes");
