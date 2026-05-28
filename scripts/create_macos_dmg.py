@@ -17,6 +17,7 @@ APPLICATIONS_LINK_NAME = "Applications"
 DEFAULT_VOLUME_NAME = "Pith"
 README_NAME = "README-FIRST.txt"
 REQUIRED_README_PHRASES = (
+  "Installer assets:",
   "Launch Pith and download one verified local model when prompted",
   DEFAULT_MODEL_ID,
   "Open a workspace folder.",

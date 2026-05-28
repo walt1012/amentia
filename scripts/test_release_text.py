@@ -6,6 +6,7 @@ from __future__ import annotations
 from package_contract import DEFAULT_MODEL_ID, MINIMUM_SYSTEM_VERSION, SUPPORTED_ARCH
 from release_text import (
   install_guide,
+  installer_assets_copy,
   platform_label,
   release_notes,
   release_size_budget_copy,
@@ -29,6 +30,10 @@ def main() -> int:
   require_contains(platform_label(), SUPPORTED_ARCH)
   require_contains(release_size_budget_copy(), "app <= 250 MiB")
   require_contains(release_size_budget_copy(), "zip <= 150 MiB")
+  require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg")
+  require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
+  require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")
+  require_contains(installer_assets_copy("ci-0123456789ab"), "internal-release-manifest.json")
 
   developer_notes = release_notes(
     "v0.1.0",
@@ -39,6 +44,9 @@ def main() -> int:
   require_contains(developer_notes, "Developer ID signed and notarized.")
   require_contains(developer_notes, platform_label())
   require_contains(developer_notes, DEFAULT_MODEL_ID)
+  require_contains(developer_notes, "Installer assets:")
+  require_contains(developer_notes, "Pith-v0.1.0-macos-x86_64.dmg")
+  require_contains(developer_notes, "Pith-v0.1.0-release-manifest.json")
   require_contains(developer_notes, "SHA-256 checksum sidecar")
   require_contains(developer_notes, "release manifest")
   require_contains(developer_notes, "sidecar hashes")
@@ -91,6 +99,9 @@ def main() -> int:
 
   guide = install_guide("v0.1.0", "ad-hoc")
   require_contains(guide, "Control-click Pith.app and choose Open.")
+  require_contains(guide, "Installer assets:")
+  require_contains(guide, "Pith-v0.1.0-macos-x86_64.dmg")
+  require_contains(guide, "Pith-v0.1.0-release-manifest.json")
   require_contains(guide, "download one verified local model")
   require_contains(guide, DEFAULT_MODEL_ID)
   require_contains(guide, "Open a workspace folder.")

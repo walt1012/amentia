@@ -13,9 +13,11 @@ from package_contract import (
   SUPPORTED_ARCH,
   package_size_budget,
 )
+from release_artifacts import release_installer_asset_names
 
 RELEASE_NOTES_REQUIRED_PHRASES = (
   "DMG installer.",
+  "Installer assets:",
   DEFAULT_MODEL_ID,
   "Model weights are not bundled",
   "SHA-256 checksum sidecar",
@@ -29,6 +31,7 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
 )
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications.",
+  "Installer assets:",
   "download one verified local model",
   DEFAULT_MODEL_ID,
   "Open a workspace folder.",
@@ -54,6 +57,14 @@ def release_size_budget_copy() -> str:
   app_budget = mebibytes(budget["maxAppBundleBytes"])
   zip_budget = mebibytes(budget["maxZipArtifactBytes"])
   return f"package size budget: app <= {app_budget}, zip <= {zip_budget}"
+
+
+def installer_assets_copy(tag: str) -> str:
+  dmg_name, checksum_name, guide_name, manifest_name = release_installer_asset_names(tag)
+  return (
+    "Installer assets: "
+    f"{dmg_name}, {checksum_name}, {guide_name}, and {manifest_name}."
+  )
 
 
 def mebibytes(bytes_value: int) -> str:
@@ -113,9 +124,11 @@ def release_notes(
 ) -> str:
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
   size_budget = release_size_budget_copy()
+  installer_assets = installer_assets_copy(tag)
   return f"""Pith {tag}
 
 - {platform_label()} DMG installer.
+- {installer_assets}
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model, defaulting to {DEFAULT_MODEL_ID}.
 - The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
@@ -145,6 +158,7 @@ def validate_release_notes(
 def install_guide(tag: str, signing_mode: str) -> str:
   trust_note, open_note = install_trust_section(signing_mode)
   size_budget = release_size_budget_copy()
+  installer_assets = installer_assets_copy(tag)
   return f"""Pith {tag}
 
 Install
@@ -160,6 +174,7 @@ Trust
 {open_note}
 
 Notes
+- {installer_assets}
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.

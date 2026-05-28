@@ -68,6 +68,7 @@ def validate_detach_force_fallback() -> None:
 
 def main() -> int:
   validate_install_readme_text(install_guide("v0.1.0", "ad-hoc"))
+  validate_install_readme_text(install_guide("ci-0123456789ab", "ad-hoc"))
   validate_detach_force_fallback()
   with tempfile.TemporaryDirectory(prefix="pith-dmg-stage-test-") as root:
     root_path = Path(root)
