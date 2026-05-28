@@ -7,6 +7,19 @@ import json
 import tempfile
 from pathlib import Path
 
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MAX_APP_BUNDLE_BYTES,
+  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+)
 from validate_macos_distribution import validate_package_manifest
 
 
@@ -27,25 +40,25 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
   manifest_path.write_text(
     json.dumps(
       {
-        "schemaVersion": 1,
+        "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
         "signing": signing,
         "sourceCommit": source_commit,
-        "architecture": "x86_64",
-        "minimumSystemVersion": "12.0",
-        "defaultModelId": "lfm2.5-350m",
-        "modelDelivery": "in-app-download",
-        "modelWeightsBundled": False,
-        "modelMetadataBundled": True,
-        "sandboxMode": "workspaceReadWrite",
-        "sandboxBackend": "runtime-detected",
-        "sandboxFallback": "processOnlyWhenNativeUnavailable",
-        "sandboxNetworkDefault": "disabled",
-        "dailyDriverStageSource": "runtime/readiness",
-        "dailyDriverNextActionSource": "runtime/readiness",
-        "dailyDriverPresentation": "app-header-inspector",
+        "architecture": SUPPORTED_ARCH,
+        "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+        "defaultModelId": DEFAULT_MODEL_ID,
+        "modelDelivery": MODEL_DELIVERY_MODE,
+        "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+        "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+        "sandboxMode": SANDBOX_CONTRACT["mode"],
+        "sandboxBackend": SANDBOX_CONTRACT["backend"],
+        "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+        "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+        "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+        "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+        "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
         "sizeBudget": {
-          "maxAppBundleBytes": 262144000,
-          "maxZipArtifactBytes": 157286400,
+          "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+          "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
         },
       }
     ),

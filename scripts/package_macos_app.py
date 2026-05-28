@@ -21,35 +21,42 @@ from macos_llama_backend import (
   assert_portable_llama_backend,
   stage_llama_backend,
 )
+from package_contract import (
+  APP_NAME,
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MODEL_ID,
+  DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PROHIBITED_MODEL_SUFFIXES,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+  assert_size_under_budget,
+  directory_size_bytes,
+  package_size_budget,
+)
 from release_identity import normalize_product_version
 
 
-APP_NAME = "Pith"
 APP_EXECUTABLE_NAME = "Pith"
 SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
-PACKAGE_MANIFEST_SCHEMA_VERSION = 1
-DEFAULT_MAX_APP_BUNDLE_BYTES = 250 * 1024 * 1024
-DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 DEFAULT_SOURCE_COMMIT = (
   os.environ.get("PITH_SOURCE_COMMIT")
   or os.environ.get("GITHUB_SHA")
   or "development"
 )
-SUPPORTED_ARCH = "x86_64"
 SOURCE_COMMIT_HEX_LENGTH = 40
 SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
-PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
-DEFAULT_MODEL_ID = "lfm2.5-350m"
-DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
-  "models/builtin/lfm2.5-350m/model-pack.json"
-)
-DAILY_DRIVER_STAGE_SOURCE = "runtime/readiness"
-DAILY_DRIVER_NEXT_ACTION_SOURCE = "runtime/readiness"
-DAILY_DRIVER_PRESENTATION = "app-header-inspector"
+DAILY_DRIVER_STAGE_SOURCE = DAILY_DRIVER_CONTRACT["stageSource"]
+DAILY_DRIVER_NEXT_ACTION_SOURCE = DAILY_DRIVER_CONTRACT["nextActionSource"]
+DAILY_DRIVER_PRESENTATION = DAILY_DRIVER_CONTRACT["presentation"]
 REQUIRED_ZIP_BASE_ENTRIES = {
   "Pith.app/Contents/Info.plist",
   "Pith.app/Contents/MacOS/Pith",
@@ -81,7 +88,7 @@ REQUIRED_INFO_PLIST_VALUES = {
   "CFBundleSupportedPlatforms": ["MacOSX"],
   "LSApplicationCategoryType": "public.app-category.productivity",
   "LSArchitecturePriority": [SUPPORTED_ARCH],
-  "LSMinimumSystemVersion": "12.0",
+  "LSMinimumSystemVersion": MINIMUM_SYSTEM_VERSION,
   "NSHighResolutionCapable": True,
   "NSPrincipalClass": "NSApplication",
   "NSSupportsAutomaticTermination": True,
@@ -345,32 +352,6 @@ def normalize_source_commit(source_commit: str) -> str:
   return normalized
 
 
-def package_size_budget() -> dict[str, int]:
-  return {
-    "maxAppBundleBytes": env_positive_int(
-      "PITH_MAX_APP_BUNDLE_BYTES",
-      DEFAULT_MAX_APP_BUNDLE_BYTES,
-    ),
-    "maxZipArtifactBytes": env_positive_int(
-      "PITH_MAX_ZIP_ARTIFACT_BYTES",
-      DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
-    ),
-  }
-
-
-def env_positive_int(name: str, default: int) -> int:
-  raw_value = os.environ.get(name)
-  if raw_value is None:
-    return default
-  try:
-    value = int(raw_value)
-  except ValueError as error:
-    raise RuntimeError(f"{name} must be a positive integer") from error
-  if value <= 0:
-    raise RuntimeError(f"{name} must be a positive integer")
-  return value
-
-
 def write_info_plist(path: Path, version: str) -> None:
   info = {
     **REQUIRED_INFO_PLIST_VALUES,
@@ -395,7 +376,7 @@ def write_package_manifest(
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
     "bundleVersion": version,
     "sourceCommit": source_commit,
-    "minimumSystemVersion": "12.0",
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
     "architecture": arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
     "backendExecutable": (
@@ -403,17 +384,17 @@ def write_package_manifest(
     ).as_posix(),
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": "in-app-download",
-    "modelWeightsBundled": False,
-    "modelMetadataBundled": True,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
     "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
     "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
     "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
     "bundledPluginsIncluded": True,
-    "sandboxMode": "workspaceReadWrite",
-    "sandboxBackend": "runtime-detected",
-    "sandboxFallback": "processOnlyWhenNativeUnavailable",
-    "sandboxNetworkDefault": "disabled",
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
     "signing": signing_mode,
     "sizeBudget": package_size_budget(),
   }
@@ -582,7 +563,7 @@ def assert_package_manifest_matches_bundle(
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
     "bundleVersion": expected_version,
     "sourceCommit": expected_source_commit,
-    "minimumSystemVersion": "12.0",
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
     "architecture": expected_arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
     "backendExecutable": (
@@ -590,14 +571,14 @@ def assert_package_manifest_matches_bundle(
     ).as_posix(),
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": "in-app-download",
+    "modelDelivery": MODEL_DELIVERY_MODE,
     "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
     "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
     "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
-    "sandboxMode": "workspaceReadWrite",
-    "sandboxBackend": "runtime-detected",
-    "sandboxFallback": "processOnlyWhenNativeUnavailable",
-    "sandboxNetworkDefault": "disabled",
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
     "signing": expected_signing_mode,
   }
   for field, expected_value in expected_values.items():
@@ -606,9 +587,9 @@ def assert_package_manifest_matches_bundle(
         f"Package manifest field {field} must be {expected_value!r}: {manifest_path}"
       )
 
-  if required_bool_field(manifest, "modelWeightsBundled", manifest_path) is not False:
+  if required_bool_field(manifest, "modelWeightsBundled", manifest_path) is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Package manifest must not claim bundled model weights")
-  if not required_bool_field(manifest, "modelMetadataBundled", manifest_path):
+  if required_bool_field(manifest, "modelMetadataBundled", manifest_path) is not MODEL_METADATA_BUNDLED:
     raise RuntimeError("Package manifest must include bundled model metadata")
   if not required_bool_field(manifest, "bundledPluginsIncluded", manifest_path):
     raise RuntimeError("Package manifest must include bundled plugins")
@@ -737,22 +718,6 @@ def assert_zip_size_budget(zip_path: Path) -> None:
     budget["maxZipArtifactBytes"],
     "macOS zip artifact",
   )
-
-
-def assert_size_under_budget(size_bytes: int, max_bytes: int, label: str) -> None:
-  if size_bytes > max_bytes:
-    raise RuntimeError(
-      f"{label} is {size_bytes} bytes, above the {max_bytes} byte release budget. "
-      "Keep model weights, multi-arch runtimes, and optional connectors out of the package."
-    )
-
-
-def directory_size_bytes(path: Path) -> int:
-  total = 0
-  for entry in path.rglob("*"):
-    if entry.is_file():
-      total += entry.stat().st_size
-  return total
 
 
 def plugin_capabilities(manifest_path: Path, manifest: dict) -> set[str]:

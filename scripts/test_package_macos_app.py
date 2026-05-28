@@ -19,19 +19,24 @@ from package_macos_app import (
   DAILY_DRIVER_NEXT_ACTION_SOURCE,
   DAILY_DRIVER_PRESENTATION,
   DAILY_DRIVER_STAGE_SOURCE,
-  DEFAULT_MAX_APP_BUNDLE_BYTES,
-  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   LLAMA_BACKEND_RELATIVE_PARENT,
-  assert_size_under_budget,
   assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
   copy_required_llama_backend,
-  package_size_budget,
   normalize_source_commit,
   normalize_version,
   parse_lipo_architectures,
   write_package_manifest,
+)
+from package_contract import (
+  DEFAULT_MAX_APP_BUNDLE_BYTES,
+  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+  assert_size_under_budget,
+  package_size_budget,
 )
 
 
@@ -72,21 +77,21 @@ def main() -> int:
     manifest_path = Path(root) / "PithPackage.json"
     write_package_manifest(
       manifest_path,
-      "x86_64",
+      SUPPORTED_ARCH,
       "1.2.3",
       "abcdef0123456789abcdef0123456789abcdef01",
       "ad-hoc",
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert_equal(manifest["schemaVersion"], 1)
+    assert_equal(manifest["schemaVersion"], PACKAGE_MANIFEST_SCHEMA_VERSION)
     assert_equal(
       manifest["sourceCommit"],
       "abcdef0123456789abcdef0123456789abcdef01",
     )
-    assert_equal(manifest["sandboxMode"], "workspaceReadWrite")
-    assert_equal(manifest["sandboxBackend"], "runtime-detected")
-    assert_equal(manifest["sandboxFallback"], "processOnlyWhenNativeUnavailable")
-    assert_equal(manifest["sandboxNetworkDefault"], "disabled")
+    assert_equal(manifest["sandboxMode"], SANDBOX_CONTRACT["mode"])
+    assert_equal(manifest["sandboxBackend"], SANDBOX_CONTRACT["backend"])
+    assert_equal(manifest["sandboxFallback"], SANDBOX_CONTRACT["fallback"])
+    assert_equal(manifest["sandboxNetworkDefault"], SANDBOX_CONTRACT["networkDefault"])
     assert_equal(manifest["dailyDriverStageSource"], DAILY_DRIVER_STAGE_SOURCE)
     assert_equal(
       manifest["dailyDriverNextActionSource"],

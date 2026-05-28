@@ -10,11 +10,25 @@ import subprocess
 import sys
 from pathlib import Path
 
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+  bundled_model_weight_files,
+  directory_size_bytes,
+  validate_package_size_budget,
+)
+
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
 PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
 SOURCE_COMMIT_HEX_LENGTH = 40
-PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -86,9 +100,10 @@ def validate_package_manifest(app_path: Path) -> None:
   manifest_path = app_path / PACKAGE_MANIFEST_RELATIVE_PATH
   require_file(manifest_path, "PithPackage.json")
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-  if manifest.get("schemaVersion") != 1:
+  if manifest.get("schemaVersion") != PACKAGE_MANIFEST_SCHEMA_VERSION:
     raise RuntimeError(
-      "Public distribution builds must record PithPackage schema version 1 in "
+      "Public distribution builds must record PithPackage schema version "
+      f"{PACKAGE_MANIFEST_SCHEMA_VERSION} in "
       f"{manifest_path}"
     )
   if manifest.get("signing") != "developer-id":
@@ -97,8 +112,8 @@ def validate_package_manifest(app_path: Path) -> None:
       f"{manifest_path}"
     )
   expected_platform_values = {
-    "architecture": "x86_64",
-    "minimumSystemVersion": "12.0",
+    "architecture": SUPPORTED_ARCH,
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
   }
   for field, expected in expected_platform_values.items():
     if manifest.get(field) != expected:
@@ -107,10 +122,10 @@ def validate_package_manifest(app_path: Path) -> None:
         f"{manifest_path}"
       )
   expected_model_values = {
-    "defaultModelId": "lfm2.5-350m",
-    "modelDelivery": "in-app-download",
-    "modelWeightsBundled": False,
-    "modelMetadataBundled": True,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
   }
   for field, expected in expected_model_values.items():
     if manifest.get(field) != expected:
@@ -119,10 +134,10 @@ def validate_package_manifest(app_path: Path) -> None:
         f"{manifest_path}"
       )
   expected_sandbox_values = {
-    "sandboxMode": "workspaceReadWrite",
-    "sandboxBackend": "runtime-detected",
-    "sandboxFallback": "processOnlyWhenNativeUnavailable",
-    "sandboxNetworkDefault": "disabled",
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
   }
   for field, expected in expected_sandbox_values.items():
     if manifest.get(field) != expected:
@@ -131,9 +146,9 @@ def validate_package_manifest(app_path: Path) -> None:
         f"{manifest_path}"
       )
   expected_daily_driver_values = {
-    "dailyDriverStageSource": "runtime/readiness",
-    "dailyDriverNextActionSource": "runtime/readiness",
-    "dailyDriverPresentation": "app-header-inspector",
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
   }
   for field, expected in expected_daily_driver_values.items():
     if manifest.get(field) != expected:
@@ -151,28 +166,20 @@ def validate_package_manifest(app_path: Path) -> None:
       "Public distribution builds must record a full source commit in "
       f"{manifest_path}"
     )
-  validate_size_budget(manifest.get("sizeBudget"), app_path, manifest_path)
+  validate_distribution_size_budget(manifest.get("sizeBudget"), app_path, manifest_path)
   validate_no_model_weight_files(app_path)
 
 
-def validate_size_budget(value: object, app_path: Path, manifest_path: Path) -> None:
-  if not isinstance(value, dict):
-    raise RuntimeError(
-      "Public distribution builds must record package sizeBudget in "
-      f"{manifest_path}"
-    )
-  max_app_bundle_bytes = value.get("maxAppBundleBytes")
-  max_zip_artifact_bytes = value.get("maxZipArtifactBytes")
-  if not isinstance(max_app_bundle_bytes, int) or max_app_bundle_bytes <= 0:
-    raise RuntimeError(
-      "Public distribution builds must record a positive maxAppBundleBytes in "
-      f"{manifest_path}"
-    )
-  if not isinstance(max_zip_artifact_bytes, int) or max_zip_artifact_bytes <= 0:
-    raise RuntimeError(
-      "Public distribution builds must record a positive maxZipArtifactBytes in "
-      f"{manifest_path}"
-    )
+def validate_distribution_size_budget(
+  value: object,
+  app_path: Path,
+  manifest_path: Path,
+) -> None:
+  budget = validate_package_size_budget(
+    value,
+    f"Public distribution PithPackage.json: {manifest_path}",
+  )
+  max_app_bundle_bytes = budget["maxAppBundleBytes"]
   app_size = directory_size_bytes(app_path)
   if app_size > max_app_bundle_bytes:
     raise RuntimeError(
@@ -180,21 +187,8 @@ def validate_size_budget(value: object, app_path: Path, manifest_path: Path) -> 
       f"{max_app_bundle_bytes} byte package budget."
     )
 
-
-def directory_size_bytes(path: Path) -> int:
-  total = 0
-  for entry in path.rglob("*"):
-    if entry.is_file():
-      total += entry.stat().st_size
-  return total
-
-
 def validate_no_model_weight_files(app_path: Path) -> None:
-  bundled_weights = sorted(
-    path
-    for path in app_path.rglob("*")
-    if path.is_file() and path.suffix.lower() in PROHIBITED_MODEL_SUFFIXES
-  )
+  bundled_weights = bundled_model_weight_files(app_path)
   if bundled_weights:
     raise RuntimeError(
       "Public distribution builds must not bundle model weight files: "

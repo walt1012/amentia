@@ -7,6 +7,18 @@ import tempfile
 import json
 from pathlib import Path
 
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MAX_APP_BUNDLE_BYTES,
+  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+)
 from release_artifacts import (
   checksum_text,
   release_manifest as build_release_manifest,
@@ -46,33 +58,33 @@ def write_package_manifest(
   bundle_version: str = "0.1.0",
   source_commit: str = SOURCE_COMMIT,
   signing: str = "ad-hoc",
-  model_delivery: str = "in-app-download",
-  sandbox_mode: str = "workspaceReadWrite",
-  daily_driver_stage_source: str = "runtime/readiness",
+  model_delivery: str = MODEL_DELIVERY_MODE,
+  sandbox_mode: str = SANDBOX_CONTRACT["mode"],
+  daily_driver_stage_source: str = DAILY_DRIVER_CONTRACT["stageSource"],
 ) -> Path:
   path.write_text(
     json.dumps(
       {
-        "schemaVersion": 1,
+        "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
         "appName": "Pith",
         "bundleVersion": bundle_version,
-        "minimumSystemVersion": "12.0",
-        "architecture": "x86_64",
+        "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+        "architecture": SUPPORTED_ARCH,
         "sourceCommit": source_commit,
         "signing": signing,
         "modelDelivery": model_delivery,
-        "defaultModelId": "lfm2.5-350m",
-        "modelWeightsBundled": False,
+        "defaultModelId": DEFAULT_MODEL_ID,
+        "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
         "dailyDriverStageSource": daily_driver_stage_source,
-        "dailyDriverNextActionSource": "runtime/readiness",
-        "dailyDriverPresentation": "app-header-inspector",
+        "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+        "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
         "sandboxMode": sandbox_mode,
-        "sandboxBackend": "runtime-detected",
-        "sandboxFallback": "processOnlyWhenNativeUnavailable",
-        "sandboxNetworkDefault": "disabled",
+        "sandboxBackend": SANDBOX_CONTRACT["backend"],
+        "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+        "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
         "sizeBudget": {
-          "maxAppBundleBytes": 262144000,
-          "maxZipArtifactBytes": 157286400,
+          "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+          "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
         },
       },
       indent=2,
@@ -123,9 +135,9 @@ def main() -> int:
       install_guide_path=install_guide,
       package_manifest_path=package_manifest,
     )
-    if manifest["platform"]["architecture"] != "x86_64":
+    if manifest["platform"]["architecture"] != SUPPORTED_ARCH:
       raise AssertionError("release manifest should lock the macOS architecture")
-    if manifest["schemaVersion"] != 1:
+    if manifest["schemaVersion"] != PACKAGE_MANIFEST_SCHEMA_VERSION:
       raise AssertionError("release manifest should record its schema version")
     if manifest["releaseKind"] != "public":
       raise AssertionError("public release tags should produce public manifests")
@@ -133,11 +145,11 @@ def main() -> int:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
-    if manifest["sandbox"]["fallback"] != "processOnlyWhenNativeUnavailable":
+    if manifest["sandbox"]["fallback"] != SANDBOX_CONTRACT["fallback"]:
       raise AssertionError("release manifest should disclose the sandbox fallback")
-    if manifest["dailyDriver"]["stageSource"] != "runtime/readiness":
+    if manifest["dailyDriver"]["stageSource"] != DAILY_DRIVER_CONTRACT["stageSource"]:
       raise AssertionError("release manifest should disclose daily-driver stage source")
-    if manifest["dailyDriver"]["presentation"] != "app-header-inspector":
+    if manifest["dailyDriver"]["presentation"] != DAILY_DRIVER_CONTRACT["presentation"]:
       raise AssertionError("release manifest should disclose daily-driver presentation")
     if manifest["verification"]["workflowRunId"] != WORKFLOW_RUN_ID:
       raise AssertionError("release manifest should record the workflow run id")
@@ -147,15 +159,15 @@ def main() -> int:
       raise AssertionError("release manifest should summarize packaged app source")
     if manifest["appPackage"]["signing"] != "ad-hoc":
       raise AssertionError("release manifest should summarize packaged app signing")
-    if manifest["appPackage"]["schemaVersion"] != 1:
+    if manifest["appPackage"]["schemaVersion"] != PACKAGE_MANIFEST_SCHEMA_VERSION:
       raise AssertionError("release manifest should summarize package schema version")
     if "sha256" not in manifest["appPackage"]:
       raise AssertionError("release manifest should hash the package manifest")
-    if manifest["appPackage"]["sandboxMode"] != "workspaceReadWrite":
+    if manifest["appPackage"]["sandboxMode"] != SANDBOX_CONTRACT["mode"]:
       raise AssertionError("release manifest should summarize packaged sandbox mode")
-    if manifest["appPackage"]["dailyDriverStageSource"] != "runtime/readiness":
+    if manifest["appPackage"]["dailyDriverStageSource"] != DAILY_DRIVER_CONTRACT["stageSource"]:
       raise AssertionError("release manifest should summarize packaged daily-driver stage")
-    if manifest["appPackage"]["sizeBudget"]["maxZipArtifactBytes"] != 157286400:
+    if manifest["appPackage"]["sizeBudget"]["maxZipArtifactBytes"] != DEFAULT_MAX_ZIP_ARTIFACT_BYTES:
       raise AssertionError("release manifest should summarize package size budget")
     manifest_artifacts = {
       item["name"]: item

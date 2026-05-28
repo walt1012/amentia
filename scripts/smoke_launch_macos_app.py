@@ -18,6 +18,18 @@ import time
 from pathlib import Path
 
 from macos_llama_backend import assert_portable_llama_backend
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MAX_APP_BUNDLE_BYTES,
+  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  DEFAULT_MODEL_ID,
+  DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
+  MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
+  MODEL_WEIGHTS_BUNDLED,
+  PROHIBITED_MODEL_SUFFIXES,
+  SANDBOX_CONTRACT,
+)
 
 
 APP_PROCESS_NAME = "Pith"
@@ -36,22 +48,17 @@ NOTION_PARENT_PAGE_URL = (
   "https://www.notion.so/Pith-Smoke-11112222333344445555666677778888?pvs=4"
 )
 NOTION_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
-DEFAULT_MODEL_ID = "lfm2.5-350m"
 DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
 DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
-DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path("models/builtin/lfm2.5-350m/model-pack.json")
 DEFAULT_MODEL_DOWNLOAD_URL = (
   "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
   "LFM2.5-350M-Q4_K_M.gguf"
 )
 DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
 DEFAULT_MODEL_SIZE_BYTES = 229312224
-DEFAULT_MAX_APP_BUNDLE_BYTES = 250 * 1024 * 1024
-DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 PACKAGED_SOURCE_COMMIT_HEX_LENGTH = 40
 SMOKE_MODEL_ID = "packaged-smoke-local-model"
 SMOKE_MODEL_FILE_NAME = "smoke-local-model.gguf"
-PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
 APP_STARTUP_TIMEOUT_SECONDS = 18.0
@@ -265,12 +272,12 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
     "schemaVersion": 1,
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": "in-app-download",
-    "modelWeightsBundled": False,
-    "modelMetadataBundled": True,
-    "dailyDriverStageSource": "runtime/readiness",
-    "dailyDriverNextActionSource": "runtime/readiness",
-    "dailyDriverPresentation": "app-header-inspector",
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
     "sizeBudget": {
       "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
       "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
@@ -688,7 +695,7 @@ def validate_tooling_readiness(
     "webSearchProvider": "DuckDuckGo Lite",
     "webSearchAvailable": "true",
     "webSearchPermissionGranted": "true",
-    "sandboxMode": "workspaceReadWrite",
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxNetworkAllowed": "false",
   }
   for key, expected_value in expected_metrics.items():

@@ -14,6 +14,7 @@ Current scripts:
 - `ci_changes.py`: classifies changed files into CI execution lanes so heavy macOS and Rust checks run only when relevant.
 - `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide when provided.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
+- `package_contract.py`: centralizes the stable macOS package contract shared by packaging, release manifests, distribution validation, and packaged smoke checks.
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and release zip; CI can also pass prebuilt app and runtime executables for faster parallel packaging, and records schema-versioned package metadata including daily-driver readiness provenance and package size budgets in `PithPackage.json`.
 - `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, schema-versioned app package metadata, daily-driver readiness provenance, release workflow proof, exact asset sets, and tag-locked names.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.

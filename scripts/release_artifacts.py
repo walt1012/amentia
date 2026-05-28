@@ -10,6 +10,17 @@ import re
 import sys
 from pathlib import Path
 
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+  validate_package_size_budget,
+)
 from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
 
@@ -31,18 +42,6 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "SHA-256",
   "release manifest",
 )
-SANDBOX_CONTRACT = {
-  "mode": "workspaceReadWrite",
-  "backend": "runtime-detected",
-  "fallback": "processOnlyWhenNativeUnavailable",
-  "networkDefault": "disabled",
-}
-DAILY_DRIVER_CONTRACT = {
-  "stageSource": "runtime/readiness",
-  "nextActionSource": "runtime/readiness",
-  "presentation": "app-header-inspector",
-  "packagedSmoke": "required",
-}
 VERIFICATION_CONTRACT = {
   "ciGate": "successful-ci-required-for-source-commit",
   "packagedSmoke": "mounted-dmg-before-upload",
@@ -104,22 +103,22 @@ def release_manifest(
   validate_package_version_matches_tag(tag, package_summary)
 
   manifest = {
-    "schemaVersion": 1,
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
     "tag": tag,
     "releaseKind": release_kind(tag),
     "sourceCommit": source_commit,
     "product": "Pith",
     "platform": {
       "os": "macOS",
-      "minimumVersion": "12.0",
-      "architecture": "x86_64",
+      "minimumVersion": MINIMUM_SYSTEM_VERSION,
+      "architecture": SUPPORTED_ARCH,
     },
     "signingMode": signing_mode,
     "trust": release_trust(signing_mode),
     "modelDelivery": {
-      "mode": "in-app-download",
-      "defaultModelId": "lfm2.5-350m",
-      "modelWeightsBundled": False,
+      "mode": MODEL_DELIVERY_MODE,
+      "defaultModelId": DEFAULT_MODEL_ID,
+      "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     },
     "sandbox": dict(SANDBOX_CONTRACT),
     "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
@@ -299,15 +298,15 @@ def package_manifest_summary(
     return None
   package_manifest = read_json_object(package_manifest_path, "PithPackage.json")
   expected_values = {
-    "schemaVersion": 1,
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
     "appName": "Pith",
-    "minimumSystemVersion": "12.0",
-    "architecture": "x86_64",
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+    "architecture": SUPPORTED_ARCH,
     "sourceCommit": source_commit,
     "signing": signing_mode,
-    "modelDelivery": "in-app-download",
-    "defaultModelId": "lfm2.5-350m",
-    "modelWeightsBundled": False,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
@@ -324,20 +323,22 @@ def package_manifest_summary(
   bundle_version = package_manifest.get("bundleVersion")
   if not isinstance(bundle_version, str) or not bundle_version.strip():
     raise RuntimeError(f"PithPackage.json bundleVersion is required: {package_manifest_path}")
-  size_budget = package_manifest.get("sizeBudget")
-  validate_package_size_budget(size_budget, package_manifest_path)
+  size_budget = validate_package_size_budget(
+    package_manifest.get("sizeBudget"),
+    f"PithPackage.json: {package_manifest_path}",
+  )
   return {
     "manifest": package_manifest_path.name,
-    "schemaVersion": 1,
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
     "sha256": sha256_hex(package_manifest_path),
     "bundleVersion": bundle_version,
     "sourceCommit": source_commit,
     "signing": signing_mode,
-    "architecture": "x86_64",
-    "minimumSystemVersion": "12.0",
-    "modelDelivery": "in-app-download",
-    "defaultModelId": "lfm2.5-350m",
-    "modelWeightsBundled": False,
+    "architecture": SUPPORTED_ARCH,
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxBackend": SANDBOX_CONTRACT["backend"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
@@ -347,18 +348,6 @@ def package_manifest_summary(
     "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
     "sizeBudget": size_budget,
   }
-
-
-def validate_package_size_budget(value: object, package_manifest_path: Path) -> None:
-  if not isinstance(value, dict):
-    raise RuntimeError(f"PithPackage.json sizeBudget is required: {package_manifest_path}")
-  for field in ("maxAppBundleBytes", "maxZipArtifactBytes"):
-    field_value = value.get(field)
-    if not isinstance(field_value, int) or field_value <= 0:
-      raise RuntimeError(
-        f"PithPackage.json sizeBudget {field} must be a positive integer: {package_manifest_path}"
-      )
-
 
 def validate_package_version_matches_tag(tag: str, package_summary: dict | None) -> None:
   if package_summary is None or release_kind(tag) != "public":
@@ -452,8 +441,10 @@ def validate_source_commit(source_commit: str) -> None:
 
 
 def validate_manifest_identity(manifest: dict) -> None:
-  if manifest.get("schemaVersion") != 1:
-    raise RuntimeError("Release manifest schema version must be 1")
+  if manifest.get("schemaVersion") != PACKAGE_MANIFEST_SCHEMA_VERSION:
+    raise RuntimeError(
+      f"Release manifest schema version must be {PACKAGE_MANIFEST_SCHEMA_VERSION}"
+    )
   tag = manifest.get("tag")
   kind = release_kind(tag)
   if manifest.get("releaseKind") != kind:
@@ -469,8 +460,8 @@ def validate_manifest_identity(manifest: dict) -> None:
     raise RuntimeError("Release manifest platform must be an object")
   expected_platform = {
     "os": "macOS",
-    "minimumVersion": "12.0",
-    "architecture": "x86_64",
+    "minimumVersion": MINIMUM_SYSTEM_VERSION,
+    "architecture": SUPPORTED_ARCH,
   }
   for key, expected in expected_platform.items():
     if platform.get(key) != expected:
@@ -485,11 +476,11 @@ def validate_manifest_identity(manifest: dict) -> None:
   model_delivery = manifest.get("modelDelivery")
   if not isinstance(model_delivery, dict):
     raise RuntimeError("Release manifest model delivery must be an object")
-  if model_delivery.get("mode") != "in-app-download":
-    raise RuntimeError("Release manifest model delivery mode must be in-app-download")
-  if model_delivery.get("defaultModelId") != "lfm2.5-350m":
-    raise RuntimeError("Release manifest default model id must be lfm2.5-350m")
-  if model_delivery.get("modelWeightsBundled") is not False:
+  if model_delivery.get("mode") != MODEL_DELIVERY_MODE:
+    raise RuntimeError(f"Release manifest model delivery mode must be {MODEL_DELIVERY_MODE}")
+  if model_delivery.get("defaultModelId") != DEFAULT_MODEL_ID:
+    raise RuntimeError(f"Release manifest default model id must be {DEFAULT_MODEL_ID}")
+  if model_delivery.get("modelWeightsBundled") is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Release manifest must state that model weights are not bundled")
   validate_sandbox_contract(manifest.get("sandbox"), "Release manifest sandbox")
   validate_daily_driver_contract(
