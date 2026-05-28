@@ -7,6 +7,8 @@ struct DistributionPackageMetadata: Equatable {
   let minimumSystemVersion: String
   let modelDelivery: String
   let modelWeightsBundled: Bool
+  let maxAppBundleBytes: Int
+  let maxZipArtifactBytes: Int
   let sandboxMode: String
   let sandboxBackend: String
   let sandboxFallback: String
@@ -38,6 +40,7 @@ struct DistributionPackageMetadata: Equatable {
     guard int(manifest, "schemaVersion", fallback: 0) == 1 else {
       return nil
     }
+    let sizeBudget = dictionary(manifest, "sizeBudget", fallback: [:])
 
     return DistributionPackageMetadata(
       schemaVersion: int(manifest, "schemaVersion", fallback: 1),
@@ -46,6 +49,8 @@ struct DistributionPackageMetadata: Equatable {
       minimumSystemVersion: string(manifest, "minimumSystemVersion", fallback: "12.0"),
       modelDelivery: string(manifest, "modelDelivery", fallback: "in-app-download"),
       modelWeightsBundled: bool(manifest, "modelWeightsBundled", fallback: false),
+      maxAppBundleBytes: int(sizeBudget, "maxAppBundleBytes", fallback: 0),
+      maxZipArtifactBytes: int(sizeBudget, "maxZipArtifactBytes", fallback: 0),
       sandboxMode: string(manifest, "sandboxMode", fallback: "workspaceReadWrite"),
       sandboxBackend: string(manifest, "sandboxBackend", fallback: "runtime-detected"),
       sandboxFallback: string(
@@ -80,6 +85,8 @@ struct DistributionPackageMetadata: Equatable {
     minimumSystemVersion: "12.0",
     modelDelivery: "in-app-download",
     modelWeightsBundled: false,
+    maxAppBundleBytes: 0,
+    maxZipArtifactBytes: 0,
     sandboxMode: "workspaceReadWrite",
     sandboxBackend: "runtime-detected",
     sandboxFallback: "processOnlyWhenNativeUnavailable",
@@ -122,6 +129,17 @@ struct DistributionPackageMetadata: Equatable {
     }
     return value
   }
+
+  private static func dictionary(
+    _ manifest: [String: Any],
+    _ key: String,
+    fallback: [String: Any]
+  ) -> [String: Any] {
+    guard let value = manifest[key] as? [String: Any] else {
+      return fallback
+    }
+    return value
+  }
 }
 
 struct DistributionTrustSummary: Equatable {
@@ -144,8 +162,9 @@ enum DistributionTrustPresenter {
     let platform = "macOS \(metadata.minimumSystemVersion)+ \(metadata.architecture)"
     let sandbox = sandboxSummary(metadata)
     let dailyDriver = dailyDriverSummary(metadata)
+    let packageSize = packageSizeSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
-    let releaseProof = "\(modelDelivery); \(weightPolicy); \(sandbox); \(dailyDriver); \(source)."
+    let releaseProof = "\(modelDelivery); \(weightPolicy); \(packageSize); \(sandbox); \(dailyDriver); \(source)."
 
     switch metadata.signing {
     case "developer-id":
@@ -197,6 +216,23 @@ enum DistributionTrustPresenter {
       ? "network off by default"
       : "network default: \(metadata.sandboxNetworkDefault)"
     return "workspace sandbox checks run at runtime; \(fallback); \(network)"
+  }
+
+  private static func packageSizeSummary(_ metadata: DistributionPackageMetadata) -> String {
+    guard metadata.maxAppBundleBytes > 0, metadata.maxZipArtifactBytes > 0 else {
+      return "package size budget: unavailable"
+    }
+    let appBudget = mebibytes(metadata.maxAppBundleBytes)
+    let zipBudget = mebibytes(metadata.maxZipArtifactBytes)
+    return "package size budget: app <= \(appBudget), zip <= \(zipBudget)"
+  }
+
+  private static func mebibytes(_ bytes: Int) -> String {
+    let oneMebibyte = 1024 * 1024
+    if bytes % oneMebibyte == 0 {
+      return "\(bytes / oneMebibyte) MiB"
+    }
+    return String(format: "%.1f MiB", Double(bytes) / Double(oneMebibyte))
   }
 
   private static func dailyDriverSummary(_ metadata: DistributionPackageMetadata) -> String {

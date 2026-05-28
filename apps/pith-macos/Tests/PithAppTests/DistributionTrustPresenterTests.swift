@@ -10,6 +10,9 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(summary.title, "Untrusted Ad-Hoc Build")
     XCTAssertTrue(summary.detail.contains("Open Anyway"))
     XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
+    XCTAssertTrue(summary.detail.contains("package size budget"))
+    XCTAssertTrue(summary.detail.contains("app <= 250 MiB"))
+    XCTAssertTrue(summary.detail.contains("zip <= 150 MiB"))
     XCTAssertTrue(summary.detail.contains("process-only fallback"))
     XCTAssertTrue(summary.detail.contains("daily-driver next action"))
     XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
@@ -46,6 +49,8 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(parsed.minimumSystemVersion, "12.0")
     XCTAssertEqual(parsed.modelDelivery, "in-app-download")
     XCTAssertFalse(parsed.modelWeightsBundled)
+    XCTAssertEqual(parsed.maxAppBundleBytes, 262144000)
+    XCTAssertEqual(parsed.maxZipArtifactBytes, 157286400)
     XCTAssertEqual(parsed.sandboxMode, "workspaceReadWrite")
     XCTAssertEqual(parsed.sandboxBackend, "runtime-detected")
     XCTAssertEqual(parsed.sandboxFallback, "processOnlyWhenNativeUnavailable")
@@ -77,6 +82,10 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "minimumSystemVersion": "12.0",
       "modelDelivery": "in-app-download",
       "modelWeightsBundled": false,
+      "sizeBudget": {
+        "maxAppBundleBytes": 262144000,
+        "maxZipArtifactBytes": 157286400
+      },
       "sandboxMode": "workspaceReadWrite",
       "sandboxBackend": "runtime-detected",
       "sandboxFallback": "processOnlyWhenNativeUnavailable",

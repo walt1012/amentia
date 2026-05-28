@@ -111,6 +111,7 @@ REQUIRED_APP_COPY_SNIPPETS = (
   "reinstall metadata if readiness still fails",
   "Open Anyway",
   "Control-click Pith.app",
+  "package size budget",
 )
 
 

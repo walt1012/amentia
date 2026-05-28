@@ -17,6 +17,7 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "Native sandbox",
   "process-only fallback",
   "daily-driver next action",
+  "package size budget",
 )
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications.",
@@ -31,6 +32,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "sidecar hashes",
   "source commit",
   "model delivery mode",
+  "package size budget",
 )
 
 
@@ -90,6 +92,7 @@ def release_notes(
 - Model weights are not bundled; first launch guides the user to download one verified local model.
 - The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
 - Native sandbox is used when available; process-only fallback is disclosed in app status.
+- The package size budget is enforced so model weights and heavyweight payloads stay out of the app.
 - SHA-256 checksum sidecar is published next to the DMG.
 - README-FIRST.txt and the release manifest are published as separate assets for pre-install review, including sidecar hashes.
 - {trust_note}
@@ -132,6 +135,7 @@ Notes
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, and model delivery mode.
+- The release manifest records the package size budget that CI enforces before upload.
 - Pith reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
 - Only one local model runs at a time.
 - Short, specific first requests work best with the default small local model.

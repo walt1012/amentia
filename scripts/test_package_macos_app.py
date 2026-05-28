@@ -219,6 +219,7 @@ def main() -> int:
           "reinstall metadata if readiness still fails",
           "Open Anyway",
           "Control-click Pith.app",
+          "package size budget",
         ]
       ),
       encoding="utf-8",
