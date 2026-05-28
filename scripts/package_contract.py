@@ -84,6 +84,7 @@ def validate_package_manifest_contract(
   source_commit: str | None = None,
   signing_mode: str | None = None,
   bundle_version: str | None = None,
+  expected_size_budget: dict[str, int] | None = None,
 ) -> dict[str, int]:
   expected_values = {
     "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
@@ -123,7 +124,13 @@ def validate_package_manifest_contract(
   if not isinstance(actual_signing, str) or not actual_signing.strip():
     raise RuntimeError(f"{label} signing is required")
 
-  return validate_package_size_budget(manifest.get("sizeBudget"), label)
+  actual_size_budget = validate_package_size_budget(manifest.get("sizeBudget"), label)
+  expected_budget = (
+    package_size_budget() if expected_size_budget is None else expected_size_budget
+  )
+  if actual_size_budget != expected_budget:
+    raise RuntimeError(f"{label} sizeBudget must be {expected_budget!r}")
+  return actual_size_budget
 
 
 def read_json_object(path: Path, label: str) -> dict:

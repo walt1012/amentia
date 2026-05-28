@@ -70,8 +70,8 @@ Working foundation:
   approval, publish, proof, retry, memory capture, and packaged smoke.
 - Release proof for x86_64 app bundle, internal DMG, mounted-DMG smoke,
   unsigned install guidance, release manifest, remote catalog audit, public
-  distribution metadata validation, shared package contract, and package size
-  budgets.
+  distribution metadata validation, shared package contract, locked package
+  size budgets, and packaged-smoke contract reuse.
 
 ## M10: Cowork Daily Driver
 

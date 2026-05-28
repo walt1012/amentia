@@ -19,16 +19,11 @@ from pathlib import Path
 
 from macos_llama_backend import assert_portable_llama_backend
 from package_contract import (
-  DAILY_DRIVER_CONTRACT,
-  DEFAULT_MAX_APP_BUNDLE_BYTES,
-  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   DEFAULT_MODEL_ID,
   DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
-  MODEL_DELIVERY_MODE,
-  MODEL_METADATA_BUNDLED,
-  MODEL_WEIGHTS_BUNDLED,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
+  validate_package_manifest_contract,
 )
 
 
@@ -268,26 +263,18 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
   resources_path = bundled_resource_path(app_path)
   package_manifest_path = resources_path / "PithPackage.json"
   package_manifest = read_json_object(package_manifest_path)
-  expected_package_values = {
-    "schemaVersion": 1,
-    "defaultModelId": DEFAULT_MODEL_ID,
-    "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": MODEL_DELIVERY_MODE,
-    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
-    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
-    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
-    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
-    "sizeBudget": {
-      "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
-      "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
-    },
-  }
-  for field, expected_value in expected_package_values.items():
-    if package_manifest.get(field) != expected_value:
-      raise RuntimeError(
-        f"Packaged manifest field {field} must be {expected_value!r}."
-      )
+  validate_package_manifest_contract(
+    package_manifest,
+    f"Packaged manifest: {package_manifest_path}",
+  )
+  if (
+    package_manifest.get("defaultModelManifest")
+    != DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()
+  ):
+    raise RuntimeError(
+      "Packaged manifest defaultModelManifest must point to the bundled "
+      f"default metadata: {DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()}."
+    )
   source_commit = package_manifest.get("sourceCommit", "")
   if (
     not isinstance(source_commit, str)

@@ -175,6 +175,29 @@ def main() -> int:
     lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
     "missing bundle version should fail manifest contract validation",
   )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["sizeBudget"] = {
+    "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES * 2,
+    "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  }
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "wrong package budget should fail manifest contract validation",
+  )
+  custom_budget = {
+    "maxAppBundleBytes": 1024,
+    "maxZipArtifactBytes": 2048,
+  }
+  custom_manifest = dict(manifest)
+  custom_manifest["sizeBudget"] = custom_budget
+  assert_equal(
+    validate_package_manifest_contract(
+      custom_manifest,
+      "test manifest",
+      expected_size_budget=custom_budget,
+    ),
+    custom_budget,
+  )
 
   with tempfile.TemporaryDirectory(prefix="pith-package-contract-") as root:
     root_path = Path(root)
