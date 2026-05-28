@@ -8,6 +8,8 @@ Pith is a small, strong, local-first macOS cowork agent for real daily work.
 - Purpose: cowork first; coding is one workflow, not the product boundary.
 - Intelligence: local model by default, no required hosted model API, one active
   local model at a time.
+- Identity: no Pith account, login, subscription, or hosted user session is
+  required to use the app.
 - First use: in-app verified GGUF download, defaulting to `LFM2.5-350M`.
 - Retrieval: Web Search is the active retrieval layer; no generic local document
   RAG until the cowork loop is excellent.
@@ -34,8 +36,8 @@ evidence, ask before writes, preserve useful memory, and recover cleanly.
   app-facing state.
 - `crates/pith-runtime-bin`: JSON-RPC process, routing, notifications, request
   supervision, and lock boundaries.
-- `crates/pith-core`: orchestration, turn lifecycle, permissions, context,
-  memory use, and plugin execution.
+- `crates/pith-core`: orchestration, turn lifecycle, local execution safety,
+  context, memory use, and plugin execution.
 - `crates/pith-tools`: bounded workspace tools, shell, Web Search, compaction,
   and path safety.
 - `crates/pith-sandbox`: native sandbox policy and diagnostics.
@@ -63,9 +65,9 @@ Working foundation:
   catalog, runtime recovery, and bounded local inference.
 - Workspace-safe tools, sandbox diagnostics, bounded shell/model work, compact
   context packing, Web Search retrieval, and progressive UI surfaces.
-- Plugin registry, inspect-before-install, enable/disable, connector auth,
-  bounded runners, one-shot MCP stdio commands, permission gates, approvals,
-  output envelopes, retries, and runner memory capture.
+- Plugin registry, inspect-before-install, enable/disable, connector
+  credentials, bounded runners, one-shot MCP stdio commands, local execution
+  gates, approvals, output envelopes, retries, and runner memory capture.
 - Notion create-page as the reference cowork connector: draft, inspect,
   approval, publish, proof, retry, memory capture, and packaged smoke.
 - Release proof for x86_64 app bundle, internal DMG, robust mounted-DMG smoke,
@@ -91,7 +93,8 @@ orchestration too early.
 
 Active gaps found in the review:
 
-- Permission modes are still mostly implicit. Add simple user-facing modes for
+- Local execution safety modes are still mostly implicit. These are not user
+  login roles; they describe what Pith may do on this Mac without asking:
   read-only exploration, ask-before-change, and approved workspace execution.
 - Context management is present but not yet productized. Show what context was
   used, what was compacted, and why Web Search or memory entered the turn.
@@ -108,8 +111,8 @@ Goal: make Pith feel like a real cowork app before adding another integration.
 
 Build toward:
 
-- Explicit simple permission modes: explore, ask-before-change, and approved
-  workspace execution.
+- Explicit simple local execution modes: explore, ask-before-change, and
+  approved workspace execution.
 - Context receipts: workspace snippets, Web Search sources, memory notes, and
   compaction decisions shown as reviewable evidence.
 - One clear daily-driver stage shared by runtime readiness, app UI, smoke tests,
@@ -133,7 +136,7 @@ Exit when:
   workspace approval, sandbox status, connector proof, runtime recovery, and
   unsigned DMG install guidance together.
 - The app can explain every tool decision with a compact context receipt and a
-  clear permission mode.
+  clear local execution mode.
 - Release manifest exposes the same daily-driver, sandbox, model-delivery, and
   package-size facts that CI validates.
 - The main app surface stays progressive and calm; admin details do not crowd
@@ -145,8 +148,8 @@ Goal: make third-party local connectors safe and useful without building a
 marketplace too early.
 
 - Keep the Notion workflow as the reference contract.
-- Add connector execution only when auth, permission, proof, retry, memory, and
-  timeline evidence remain generic.
+- Add connector execution only when local credentials, execution gates, proof,
+  retry, memory, and timeline evidence remain generic.
 - Add third-party connector import only after the generic connector contract can
   run, approve, retry, prove, and forget secrets without service-specific UI.
 - Prefer one excellent connector path over many shallow examples.
@@ -172,6 +175,7 @@ Goal: ship a usable macOS installer from GitHub Releases.
 ## Guardrails
 
 - No hosted model dependency.
+- No required Pith login, account, hosted user session, or subscription gate.
 - No generic local vector database before Web Search and workspace context are
   reliable.
 - No multi-agent orchestration before the single cowork loop is excellent.
