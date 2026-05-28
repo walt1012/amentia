@@ -36,6 +36,8 @@ jobs:
           persist-credentials: false
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
+      - name: Test package contract helper
+        run: python3 scripts/test_package_contract.py
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
       - name: Test Notion connector contract
@@ -187,6 +189,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_identity.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test package contract helper\n"
+        "        run: python3 scripts/test_package_contract.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_package_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

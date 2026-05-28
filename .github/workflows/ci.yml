@@ -116,6 +116,9 @@ jobs:
       - name: Test packaging helpers
         run: python3 scripts/test_package_macos_app.py
 
+      - name: Test package contract helper
+        run: python3 scripts/test_package_contract.py
+
       - name: Test CI change classifier
         run: python3 scripts/test_ci_changes.py
 

@@ -26,6 +26,7 @@ Current scripts:
 - `test_create_macos_dmg.py`: checks DMG staging behavior that does not require macOS.
 - `test_ci_changes.py`: checks CI change-lane classification rules.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
+- `test_package_contract.py`: checks the shared package contract constants, size budgets, and bundled-model guards.
 - `test_notion_connector_contract.py`: checks bundled Notion connector MCP handoff, retry, and follow-up metadata.
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_identity.py`: checks shared product version and public release tag rules.

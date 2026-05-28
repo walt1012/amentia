@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+from package_contract import DEFAULT_MODEL_ID, MINIMUM_SYSTEM_VERSION, SUPPORTED_ARCH
 from release_text import (
   install_guide,
+  platform_label,
   release_notes,
+  release_size_budget_copy,
   validate_install_guide,
   validate_release_notes,
 )
@@ -22,6 +25,11 @@ def require_not_contains(text: str, unexpected: str) -> None:
 
 
 def main() -> int:
+  require_contains(platform_label(), MINIMUM_SYSTEM_VERSION)
+  require_contains(platform_label(), SUPPORTED_ARCH)
+  require_contains(release_size_budget_copy(), "app <= 250 MiB")
+  require_contains(release_size_budget_copy(), "zip <= 150 MiB")
+
   developer_notes = release_notes(
     "v0.1.0",
     "developer-id",
@@ -29,6 +37,8 @@ def main() -> int:
     draft=False,
   )
   require_contains(developer_notes, "Developer ID signed and notarized.")
+  require_contains(developer_notes, platform_label())
+  require_contains(developer_notes, DEFAULT_MODEL_ID)
   require_contains(developer_notes, "SHA-256 checksum sidecar")
   require_contains(developer_notes, "release manifest")
   require_contains(developer_notes, "sidecar hashes")
@@ -36,6 +46,7 @@ def main() -> int:
   require_contains(developer_notes, "process-only fallback")
   require_contains(developer_notes, "daily-driver next action")
   require_contains(developer_notes, "app header and inspector")
+  require_contains(developer_notes, release_size_budget_copy())
   require_not_contains(developer_notes, "Open Anyway")
   validate_release_notes(
     developer_notes,
@@ -81,6 +92,7 @@ def main() -> int:
   guide = install_guide("v0.1.0", "ad-hoc")
   require_contains(guide, "Control-click Pith.app and choose Open.")
   require_contains(guide, "download one verified local model")
+  require_contains(guide, DEFAULT_MODEL_ID)
   require_contains(guide, "Open a workspace folder.")
   require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
   require_contains(guide, "Follow the next action")
@@ -90,6 +102,7 @@ def main() -> int:
   require_contains(guide, "sidecar hashes")
   require_contains(guide, "source commit")
   require_contains(guide, "model delivery mode")
+  require_contains(guide, release_size_budget_copy())
   require_contains(guide, "sandbox status")
   require_contains(guide, "process-only fallback")
   validate_install_guide(guide, tag="v0.1.0", signing_mode="ad-hoc")

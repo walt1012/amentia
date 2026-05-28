@@ -90,7 +90,8 @@ Build toward:
   metadata, and bundled connector definitions only; download model weights and
   optional connector data after install.
 - Fast remote CI that proves policy, model metadata, runtime smoke, Swift app,
-  packaged app, DMG path, and release metadata without unnecessary lanes.
+  shared package contract, packaged app, DMG path, and release metadata without
+  unnecessary lanes.
 
 Exit when:
 

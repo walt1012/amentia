@@ -6,9 +6,16 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from package_contract import (
+  DEFAULT_MODEL_ID,
+  MINIMUM_SYSTEM_VERSION,
+  SUPPORTED_ARCH,
+  package_size_budget,
+)
 
 RELEASE_NOTES_REQUIRED_PHRASES = (
-  "macOS 12+ x86_64 DMG installer.",
+  "DMG installer.",
+  DEFAULT_MODEL_ID,
   "Model weights are not bundled",
   "SHA-256 checksum sidecar",
   "README-FIRST.txt",
@@ -22,6 +29,7 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications.",
   "download one verified local model",
+  DEFAULT_MODEL_ID,
   "Open a workspace folder.",
   "Start a cowork session",
   "Follow the next action",
@@ -34,6 +42,24 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "model delivery mode",
   "package size budget",
 )
+
+
+def platform_label() -> str:
+  return f"macOS {MINIMUM_SYSTEM_VERSION}+ {SUPPORTED_ARCH}"
+
+
+def release_size_budget_copy() -> str:
+  budget = package_size_budget()
+  app_budget = mebibytes(budget["maxAppBundleBytes"])
+  zip_budget = mebibytes(budget["maxZipArtifactBytes"])
+  return f"package size budget: app <= {app_budget}, zip <= {zip_budget}"
+
+
+def mebibytes(bytes_value: int) -> str:
+  one_mib = 1024 * 1024
+  if bytes_value % one_mib == 0:
+    return f"{bytes_value // one_mib} MiB"
+  return f"{bytes_value / one_mib:.1f} MiB"
 
 
 def parse_bool(value: str) -> bool:
@@ -85,14 +111,15 @@ def release_notes(
   draft: bool,
 ) -> str:
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
+  size_budget = release_size_budget_copy()
   return f"""Pith {tag}
 
-- macOS 12+ x86_64 DMG installer.
+- {platform_label()} DMG installer.
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
-- Model weights are not bundled; first launch guides the user to download one verified local model.
+- Model weights are not bundled; first launch guides the user to download one verified local model, defaulting to {DEFAULT_MODEL_ID}.
 - The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
 - Native sandbox is used when available; process-only fallback is disclosed in app status.
-- The package size budget is enforced so model weights and heavyweight payloads stay out of the app.
+- The {size_budget} is enforced so model weights and heavyweight payloads stay out of the app.
 - SHA-256 checksum sidecar is published next to the DMG.
 - README-FIRST.txt and the release manifest are published as separate assets for pre-install review, including sidecar hashes.
 - {trust_note}
@@ -116,12 +143,13 @@ def validate_release_notes(
 
 def install_guide(tag: str, signing_mode: str) -> str:
   trust_note, open_note = install_trust_section(signing_mode)
+  size_budget = release_size_budget_copy()
   return f"""Pith {tag}
 
 Install
 1. Open this DMG.
 2. Drag Pith.app to Applications.
-3. Launch Pith and download one verified local model when prompted.
+3. Launch Pith and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
 4. Open a workspace folder.
 5. Start a cowork session with Map Workspace, Plan Next Step, or your own first request.
 6. Follow the next action shown by Pith; it comes from runtime readiness, not a static setup checklist.
@@ -135,7 +163,7 @@ Notes
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, and model delivery mode.
-- The release manifest records the package size budget that CI enforces before upload.
+- The release manifest records the {size_budget} that CI enforces before upload.
 - Pith reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
 - Only one local model runs at a time.
 - Short, specific first requests work best with the default small local model.
