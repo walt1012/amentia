@@ -55,8 +55,8 @@ def platform_label() -> str:
 def release_size_budget_copy() -> str:
   budget = package_size_budget()
   app_budget = mebibytes(budget["maxAppBundleBytes"])
-  zip_budget = mebibytes(budget["maxZipArtifactBytes"])
-  return f"package size budget: app <= {app_budget}, zip <= {zip_budget}"
+  installer_budget = mebibytes(budget["maxZipArtifactBytes"])
+  return f"package size budget: app <= {app_budget}, installer artifact <= {installer_budget}"
 
 
 def installer_assets_copy(tag: str) -> str:

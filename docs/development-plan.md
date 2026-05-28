@@ -74,7 +74,33 @@ Working foundation:
   size budgets, packaged-smoke contract reuse, shared signing-mode policy, and
   a single user-facing CI installer artifact whose upload contract and release
   manifest share the same expected asset names, also reflected in generated
-  release notes and DMG install guidance.
+  release notes and DMG install guidance. User-facing package budget copy now
+  describes installer artifacts, not internal zip implementation detail.
+
+## Alignment Review
+
+Pith is aligned with Codex and Claude Code on the durable foundations: local
+workspace context, bounded tools, approvals, sandbox visibility, Web Search,
+MCP-style extension points, session continuity, hooks metadata, reviewable
+evidence, and release verification.
+
+The product should not copy their full shape. Pith remains a cowork app, so the
+next work is to make one local cowork loop excellent rather than adding cloud
+tasks, broad marketplace surfaces, generic local RAG, or multi-agent
+orchestration too early.
+
+Active gaps found in the review:
+
+- Permission modes are still mostly implicit. Add simple user-facing modes for
+  read-only exploration, ask-before-change, and approved workspace execution.
+- Context management is present but not yet productized. Show what context was
+  used, what was compacted, and why Web Search or memory entered the turn.
+- Connector execution is useful but still Notion-led. Keep service-specific
+  logic narrow and make the protocol generic before adding another connector.
+- Hooks and subagents should stay scoped to verification and automation after
+  the single cowork loop is stable.
+- Release packaging is strong, but the first public tag still needs a complete
+  ad-hoc prerelease rehearsal from GitHub Release download to first launch.
 
 ## M10: Cowork Daily Driver
 
@@ -82,6 +108,10 @@ Goal: make Pith feel like a real cowork app before adding another integration.
 
 Build toward:
 
+- Explicit simple permission modes: explore, ask-before-change, and approved
+  workspace execution.
+- Context receipts: workspace snippets, Web Search sources, memory notes, and
+  compaction decisions shown as reviewable evidence.
 - One clear daily-driver stage shared by runtime readiness, app UI, smoke tests,
   package metadata, release notes, and release checks.
 - Boring first-run setup: model download, activation, workspace open, Web
@@ -102,6 +132,8 @@ Exit when:
 - Packaged app smoke proves first-use setup, local model readiness, Web Search,
   workspace approval, sandbox status, connector proof, runtime recovery, and
   unsigned DMG install guidance together.
+- The app can explain every tool decision with a compact context receipt and a
+  clear permission mode.
 - Release manifest exposes the same daily-driver, sandbox, model-delivery, and
   package-size facts that CI validates.
 - The main app surface stays progressive and calm; admin details do not crowd
@@ -115,8 +147,12 @@ marketplace too early.
 - Keep the Notion workflow as the reference contract.
 - Add connector execution only when auth, permission, proof, retry, memory, and
   timeline evidence remain generic.
+- Add third-party connector import only after the generic connector contract can
+  run, approve, retry, prove, and forget secrets without service-specific UI.
 - Prefer one excellent connector path over many shallow examples.
 - Avoid service-specific logic in broad runtime or app presenters.
+- Treat hooks as connector/runtime verification points first, not arbitrary
+  always-on automation.
 
 ## M12: Public Release
 
@@ -124,6 +160,10 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 - Public assets stay limited to DMG, checksum, `README-FIRST.txt`, and release
   manifest.
+- Run one full ad-hoc prerelease rehearsal before the first public tag:
+  download from GitHub Release, verify checksum, open DMG, handle Gatekeeper,
+  download the default model, open a workspace, run a cowork turn, and inspect
+  proof.
 - Developer ID notarization is optional later; ad-hoc unsigned prereleases must
   clearly explain Gatekeeper manual approval.
 - No bundled model weights, package-manager payloads, extra architectures, or

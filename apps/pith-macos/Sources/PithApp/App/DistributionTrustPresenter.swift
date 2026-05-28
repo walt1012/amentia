@@ -223,8 +223,8 @@ enum DistributionTrustPresenter {
       return "package size budget: unavailable"
     }
     let appBudget = mebibytes(metadata.maxAppBundleBytes)
-    let zipBudget = mebibytes(metadata.maxZipArtifactBytes)
-    return "package size budget: app <= \(appBudget), zip <= \(zipBudget)"
+    let installerBudget = mebibytes(metadata.maxZipArtifactBytes)
+    return "package size budget: app <= \(appBudget), installer artifact <= \(installerBudget)"
   }
 
   private static func mebibytes(_ bytes: Int) -> String {

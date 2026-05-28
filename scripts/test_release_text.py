@@ -29,7 +29,7 @@ def main() -> int:
   require_contains(platform_label(), MINIMUM_SYSTEM_VERSION)
   require_contains(platform_label(), SUPPORTED_ARCH)
   require_contains(release_size_budget_copy(), "app <= 250 MiB")
-  require_contains(release_size_budget_copy(), "zip <= 150 MiB")
+  require_contains(release_size_budget_copy(), "installer artifact <= 150 MiB")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")

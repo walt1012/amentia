@@ -12,7 +12,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
     XCTAssertTrue(summary.detail.contains("package size budget"))
     XCTAssertTrue(summary.detail.contains("app <= 250 MiB"))
-    XCTAssertTrue(summary.detail.contains("zip <= 150 MiB"))
+    XCTAssertTrue(summary.detail.contains("installer artifact <= 150 MiB"))
     XCTAssertTrue(summary.detail.contains("process-only fallback"))
     XCTAssertTrue(summary.detail.contains("daily-driver next action"))
     XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
