@@ -1602,10 +1602,7 @@ fn plugin_channel_registry_lists_disabled_weixin_channel() {
     .as_array()
     .expect("safety notes")
     .iter()
-    .any(|note| note
-      .as_str()
-      .expect("safety note")
-      .contains("approval")));
+    .any(|note| note.as_str().expect("safety note").contains("approval")));
   assert_eq!(channels[0]["adapterStatus"], "pending");
   assert_eq!(channels[0]["adapterAvailable"], false);
   assert!(channels[0]["activationBlocker"]
