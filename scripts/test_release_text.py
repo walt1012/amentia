@@ -34,6 +34,8 @@ def main() -> int:
   require_contains(developer_notes, "sidecar hashes")
   require_contains(developer_notes, "Native sandbox is used when available")
   require_contains(developer_notes, "process-only fallback")
+  require_contains(developer_notes, "daily-driver next action")
+  require_contains(developer_notes, "app header and inspector")
   require_not_contains(developer_notes, "Open Anyway")
   validate_release_notes(
     developer_notes,
@@ -81,6 +83,8 @@ def main() -> int:
   require_contains(guide, "download one verified local model")
   require_contains(guide, "Open a workspace folder.")
   require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
+  require_contains(guide, "Follow the next action")
+  require_contains(guide, "runtime readiness")
   require_contains(guide, "SHA-256 `.sha256` file")
   require_contains(guide, "verify the downloaded installer")
   require_contains(guide, "sidecar hashes")

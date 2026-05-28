@@ -24,6 +24,8 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "download one verified local model",
   "Open a workspace folder",
   "Start a cowork session",
+  "Follow the next action",
+  "runtime readiness",
   "sandbox status",
   "process-only fallback",
   "SHA-256",

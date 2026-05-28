@@ -38,6 +38,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .get("network.outbound")
     .cloned()
     .unwrap_or_default();
+  let web_search_permission_ready = !network_permission_sources.is_empty();
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
   let plugin_command_count = context.plugin_state.command_capability_count();
   let enabled_plugin_command_count = context.plugin_state.enabled_command_capability_count();
@@ -45,6 +46,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     model_ready,
     workspace_ready,
     thread_ready,
+    web_search_permission_ready,
     first_request_sent,
     pending_approval_count,
     active_turn_count,
@@ -58,6 +60,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     model_ready,
     workspace_ready,
     thread_ready,
+    web_search_permission_ready,
     pending_approval_count,
     active_turn_count,
     running_turn_count,
@@ -83,6 +86,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       model_ready,
       workspace_ready,
       thread_ready,
+      web_search_permission_ready,
       first_request_sent,
       pending_approval_count,
       active_turn_count,
@@ -164,6 +168,7 @@ struct ReadinessStatusInput {
   model_ready: bool,
   workspace_ready: bool,
   thread_ready: bool,
+  web_search_permission_ready: bool,
   pending_approval_count: usize,
   active_turn_count: usize,
   running_turn_count: usize,
@@ -177,6 +182,7 @@ fn readiness_status(input: ReadinessStatusInput) -> &'static str {
     model_ready,
     workspace_ready,
     thread_ready,
+    web_search_permission_ready,
     pending_approval_count,
     active_turn_count,
     running_turn_count,
@@ -185,7 +191,11 @@ fn readiness_status(input: ReadinessStatusInput) -> &'static str {
     running_workspace_search_count,
   } = input;
 
-  if !model_ready || !workspace_ready || !thread_ready {
+  if !model_ready
+    || !workspace_ready
+    || !thread_ready
+    || !web_search_permission_ready
+  {
     "setup_required"
   } else if pending_approval_count > 0 {
     "needs_approval"
@@ -210,6 +220,7 @@ struct DailyDriverStageInput {
   model_ready: bool,
   workspace_ready: bool,
   thread_ready: bool,
+  web_search_permission_ready: bool,
   first_request_sent: bool,
   pending_approval_count: usize,
   active_turn_count: usize,
@@ -224,6 +235,7 @@ fn daily_driver_stage(input: DailyDriverStageInput) -> DailyDriverStage {
     model_ready,
     workspace_ready,
     thread_ready,
+    web_search_permission_ready,
     first_request_sent,
     pending_approval_count,
     active_turn_count,
@@ -268,6 +280,12 @@ fn daily_driver_stage(input: DailyDriverStageInput) -> DailyDriverStage {
       next_action: "Wait for local work or cancel it if it is no longer useful.",
     };
   }
+  if !web_search_permission_ready {
+    return DailyDriverStage {
+      stage: "retrieval_setup",
+      next_action: "Enable Web Search so Pith can retrieve current information when needed.",
+    };
+  }
   if !first_request_sent {
     return DailyDriverStage {
       stage: "first_request",
@@ -290,6 +308,7 @@ mod tests {
       model_ready: true,
       workspace_ready: true,
       thread_ready: true,
+      web_search_permission_ready: true,
       pending_approval_count: 0,
       active_turn_count: 0,
       running_turn_count: 0,
@@ -361,6 +380,16 @@ mod tests {
   }
 
   #[test]
+  fn readiness_status_requires_web_search_permission_before_ready() {
+    let status = readiness_status(ReadinessStatusInput {
+      web_search_permission_ready: false,
+      ..status_input()
+    });
+
+    assert_eq!(status, "setup_required");
+  }
+
+  #[test]
   fn readiness_status_reports_ready_when_setup_is_complete_and_idle() {
     let status = readiness_status(status_input());
 
@@ -372,6 +401,7 @@ mod tests {
       model_ready: true,
       workspace_ready: true,
       thread_ready: true,
+      web_search_permission_ready: true,
       first_request_sent: true,
       pending_approval_count: 0,
       active_turn_count: 0,
@@ -414,6 +444,15 @@ mod tests {
       .stage,
       "thread_setup"
     );
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        web_search_permission_ready: false,
+        first_request_sent: false,
+        ..stage_input()
+      })
+      .stage,
+      "retrieval_setup"
+    );
   }
 
   #[test]
@@ -429,6 +468,16 @@ mod tests {
     assert_eq!(
       daily_driver_stage(DailyDriverStageInput {
         running_workspace_search_count: 1,
+        ..stage_input()
+      })
+      .stage,
+      "local_execution"
+    );
+    assert_eq!(
+      daily_driver_stage(DailyDriverStageInput {
+        web_search_permission_ready: false,
+        running_workspace_search_count: 1,
+        first_request_sent: false,
         ..stage_input()
       })
       .stage,

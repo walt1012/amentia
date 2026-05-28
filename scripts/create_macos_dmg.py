@@ -19,6 +19,8 @@ REQUIRED_README_PHRASES = (
   "Launch Pith and download one verified local model when prompted.",
   "Open a workspace folder.",
   "Start a cowork session",
+  "Follow the next action",
+  "runtime readiness",
 )
 
 

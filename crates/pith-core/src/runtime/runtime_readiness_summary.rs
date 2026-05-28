@@ -3,6 +3,7 @@ pub(super) struct ReadinessSummaryInput<'a> {
   pub(super) model_ready: bool,
   pub(super) workspace_ready: bool,
   pub(super) thread_ready: bool,
+  pub(super) web_search_permission_ready: bool,
   pub(super) first_request_sent: bool,
   pub(super) pending_approval_count: usize,
   pub(super) active_turn_count: usize,
@@ -18,6 +19,7 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
     model_ready,
     workspace_ready,
     thread_ready,
+    web_search_permission_ready,
     first_request_sent,
     pending_approval_count,
     active_turn_count,
@@ -36,6 +38,9 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
     }
     "setup_required" if !thread_ready => {
       "Create or resume a workspace-bound thread before local agent work.".to_string()
+    }
+    "setup_required" if !web_search_permission_ready => {
+      "Enable Web Search so Pith can retrieve current information when needed.".to_string()
     }
     "needs_approval" => {
       format!("Runtime is waiting on {pending_approval_count} approval(s) before continuing.")

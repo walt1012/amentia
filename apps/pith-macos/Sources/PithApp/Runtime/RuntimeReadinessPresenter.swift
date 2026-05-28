@@ -180,6 +180,8 @@ enum DailyDriverStagePresenter {
       return "Open a workspace to scope tools and memory."
     case "thread_setup":
       return "Create or select a workspace-bound thread."
+    case "retrieval_setup":
+      return "Enable Web Search so Pith can retrieve current information when needed."
     case "approval_review":
       return "Review the pending approval before work continues."
     case "local_execution":
@@ -199,7 +201,8 @@ enum DailyDriverStagePresenter {
       return .ready
     case "local_execution":
       return .active
-    case "model_setup", "workspace_setup", "thread_setup", "approval_review", "first_request":
+    case "model_setup", "workspace_setup", "thread_setup", "retrieval_setup",
+         "approval_review", "first_request":
       return .warning
     default:
       return .neutral

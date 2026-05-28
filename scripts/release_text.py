@@ -16,12 +16,15 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "sidecar hashes",
   "Native sandbox",
   "process-only fallback",
+  "daily-driver next action",
 )
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications.",
   "download one verified local model",
   "Open a workspace folder.",
   "Start a cowork session",
+  "Follow the next action",
+  "runtime readiness",
   "sandbox status",
   "process-only fallback",
   "SHA-256 `.sha256` file",
@@ -85,6 +88,7 @@ def release_notes(
 - macOS 12+ x86_64 DMG installer.
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model.
+- The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
 - Native sandbox is used when available; process-only fallback is disclosed in app status.
 - SHA-256 checksum sidecar is published next to the DMG.
 - README-FIRST.txt and the release manifest are published as separate assets for pre-install review, including sidecar hashes.
@@ -117,6 +121,7 @@ Install
 3. Launch Pith and download one verified local model when prompted.
 4. Open a workspace folder.
 5. Start a cowork session with Map Workspace, Plan Next Step, or your own first request.
+6. Follow the next action shown by Pith; it comes from runtime readiness, not a static setup checklist.
 
 Trust
 {trust_note}

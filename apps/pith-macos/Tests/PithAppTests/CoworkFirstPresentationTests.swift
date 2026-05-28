@@ -21,6 +21,18 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Ask Pith for the next cowork task.")
   }
 
+  func testDailyDriverPresenterNamesRetrievalSetup() {
+    let summary = DailyDriverStagePresenter.summary(
+      stage: "retrieval_setup",
+      nextAction: nil
+    )
+
+    XCTAssertEqual(
+      summary,
+      "Enable Web Search so Pith can retrieve current information when needed."
+    )
+  }
+
   func testInspectorSessionUsesDailyDriverNextAction() {
     let summary = InspectorSessionPresenter.metaSummary(
       InspectorSessionSnapshot(
