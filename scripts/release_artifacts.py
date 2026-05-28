@@ -17,6 +17,7 @@ from package_contract import (
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   validate_package_manifest_contract,
@@ -25,7 +26,6 @@ from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
 
 
-SUPPORTED_SIGNING_MODES = {"ad-hoc", "developer-id"}
 SOURCE_COMMIT_HEX_LENGTH = 40
 INTERNAL_CI_TAG_PATTERN = re.compile(r"^ci-[0-9a-f]{12,40}$")
 INSTALL_GUIDE_NAME = "README-FIRST.txt"
@@ -350,7 +350,7 @@ def read_json_object(path: Path, label: str) -> dict:
 def validate_release_identity(tag: str, source_commit: str, signing_mode: str) -> None:
   release_kind(tag)
   validate_source_commit(source_commit)
-  if signing_mode not in SUPPORTED_SIGNING_MODES:
+  if signing_mode not in RELEASE_SIGNING_MODES:
     raise RuntimeError(f"Unsupported release signing mode: {signing_mode}")
 
 
@@ -447,7 +447,7 @@ def validate_manifest_identity(manifest: dict) -> None:
       raise RuntimeError(f"Release manifest platform {key} must be {expected}")
 
   signing_mode = manifest.get("signingMode")
-  if signing_mode not in SUPPORTED_SIGNING_MODES:
+  if signing_mode not in RELEASE_SIGNING_MODES:
     raise RuntimeError("Release manifest signing mode is unsupported")
   if manifest.get("trust") != release_trust(signing_mode):
     raise RuntimeError("Release manifest trust does not match signing mode")
@@ -580,7 +580,7 @@ def main() -> int:
   parser.add_argument("--package-manifest", type=Path)
   parser.add_argument("--tag")
   parser.add_argument("--source-commit")
-  parser.add_argument("--signing-mode", choices=sorted(SUPPORTED_SIGNING_MODES))
+  parser.add_argument("--signing-mode", choices=sorted(RELEASE_SIGNING_MODES))
   parser.add_argument("--workflow-run-id")
   parser.add_argument("--workflow-run-url")
   args = parser.parse_args()

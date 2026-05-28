@@ -24,6 +24,8 @@ MODEL_METADATA_BUNDLED = True
 DEFAULT_MAX_APP_BUNDLE_BYTES = 250 * 1024 * 1024
 DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
+PACKAGE_SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
+RELEASE_SIGNING_MODES = {"ad-hoc", "developer-id"}
 
 SANDBOX_CONTRACT = {
   "mode": "workspaceReadWrite",
@@ -123,6 +125,9 @@ def validate_package_manifest_contract(
   actual_signing = manifest.get("signing")
   if not isinstance(actual_signing, str) or not actual_signing.strip():
     raise RuntimeError(f"{label} signing is required")
+  if actual_signing not in PACKAGE_SIGNING_MODES:
+    expected = ", ".join(sorted(PACKAGE_SIGNING_MODES))
+    raise RuntimeError(f"{label} signing must be one of: {expected}")
 
   actual_size_budget = validate_package_size_budget(manifest.get("sizeBudget"), label)
   expected_budget = (

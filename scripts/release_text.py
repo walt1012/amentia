@@ -9,6 +9,7 @@ from pathlib import Path
 from package_contract import (
   DEFAULT_MODEL_ID,
   MINIMUM_SYSTEM_VERSION,
+  RELEASE_SIGNING_MODES,
   SUPPORTED_ARCH,
   package_size_budget,
 )
@@ -192,7 +193,7 @@ def require_phrases(text: str, phrases: tuple[str, ...], label: str) -> None:
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--tag", required=True)
-  parser.add_argument("--signing-mode", required=True, choices=["developer-id", "ad-hoc"])
+  parser.add_argument("--signing-mode", required=True, choices=sorted(RELEASE_SIGNING_MODES))
   parser.add_argument("--allow-untrusted-ad-hoc", required=True)
   parser.add_argument("--draft", required=True)
   parser.add_argument("--install-guide-output", required=True)

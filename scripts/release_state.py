@@ -9,6 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from package_contract import RELEASE_SIGNING_MODES
 from release_text import validate_release_notes
 
 
@@ -85,7 +86,7 @@ def main() -> int:
   parser.add_argument("--title", required=True)
   parser.add_argument("--tag", required=True)
   parser.add_argument("--notes-file", required=True)
-  parser.add_argument("--signing-mode", required=True, choices=["developer-id", "ad-hoc"])
+  parser.add_argument("--signing-mode", required=True, choices=sorted(RELEASE_SIGNING_MODES))
   parser.add_argument("--requested-draft", required=True)
   parser.add_argument("--requested-prerelease", required=True)
   parser.add_argument("--allow-untrusted-ad-hoc", required=True)

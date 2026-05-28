@@ -71,7 +71,7 @@ Working foundation:
 - Release proof for x86_64 app bundle, internal DMG, mounted-DMG smoke,
   unsigned install guidance, release manifest, remote catalog audit, public
   distribution metadata validation, shared package contract, locked package
-  size budgets, and packaged-smoke contract reuse.
+  size budgets, packaged-smoke contract reuse, and shared signing-mode policy.
 
 ## M10: Cowork Daily Driver
 

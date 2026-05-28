@@ -23,6 +23,8 @@ from package_contract import (
   DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
+  assert_size_under_budget,
+  directory_size_bytes,
   validate_package_manifest_contract,
 )
 
@@ -263,9 +265,14 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
   resources_path = bundled_resource_path(app_path)
   package_manifest_path = resources_path / "PithPackage.json"
   package_manifest = read_json_object(package_manifest_path)
-  validate_package_manifest_contract(
+  size_budget = validate_package_manifest_contract(
     package_manifest,
     f"Packaged manifest: {package_manifest_path}",
+  )
+  assert_size_under_budget(
+    directory_size_bytes(app_path),
+    size_budget["maxAppBundleBytes"],
+    "packaged app bundle smoke",
   )
   if (
     package_manifest.get("defaultModelManifest")

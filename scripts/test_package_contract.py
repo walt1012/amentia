@@ -21,7 +21,9 @@ from package_contract import (
   MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PACKAGE_SIGNING_MODES,
   PROHIBITED_MODEL_SUFFIXES,
+  RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   assert_size_under_budget,
@@ -95,6 +97,8 @@ def main() -> int:
   assert_equal(MODEL_DELIVERY_MODE, "in-app-download")
   assert_equal(MODEL_WEIGHTS_BUNDLED, False)
   assert_equal(SANDBOX_CONTRACT["mode"], "workspaceReadWrite")
+  assert_equal(PACKAGE_SIGNING_MODES, {"unsigned", "ad-hoc", "developer-id"})
+  assert_equal(RELEASE_SIGNING_MODES, {"ad-hoc", "developer-id"})
   assert_equal(DEFAULT_MAX_APP_BUNDLE_BYTES, 250 * 1024 * 1024)
   assert_equal(DEFAULT_MAX_ZIP_ARTIFACT_BYTES, 150 * 1024 * 1024)
   assert_equal(
@@ -168,6 +172,12 @@ def main() -> int:
       source_commit="0123456789abcdef0123456789abcdef01234567",
     ),
     "wrong source commit should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["signing"] = "package-manager"
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "unsupported signing mode should fail manifest contract validation",
   )
   wrong_manifest = dict(manifest)
   wrong_manifest.pop("bundleVersion")

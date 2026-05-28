@@ -31,12 +31,14 @@ from package_contract import (
   MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PACKAGE_SIGNING_MODES,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   assert_size_under_budget,
   directory_size_bytes,
   package_size_budget,
+  validate_package_manifest_contract,
 )
 from release_identity import normalize_product_version
 
@@ -53,7 +55,6 @@ DEFAULT_SOURCE_COMMIT = (
   or "development"
 )
 SOURCE_COMMIT_HEX_LENGTH = 40
-SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
 DAILY_DRIVER_STAGE_SOURCE = DAILY_DRIVER_CONTRACT["stageSource"]
 DAILY_DRIVER_NEXT_ACTION_SOURCE = DAILY_DRIVER_CONTRACT["nextActionSource"]
 DAILY_DRIVER_PRESENTATION = DAILY_DRIVER_CONTRACT["presentation"]
@@ -207,7 +208,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument(
     "--signing-mode",
     default="ad-hoc",
-    choices=sorted(SIGNING_MODES),
+    choices=sorted(PACKAGE_SIGNING_MODES),
     help="Signing state recorded in PithPackage.json.",
   )
   parser.add_argument(
@@ -271,7 +272,7 @@ def package_app(
   validate_swift_package_rules(repo_root)
   version = normalize_version(version)
   source_commit = normalize_source_commit(source_commit)
-  if signing_mode not in SIGNING_MODES:
+  if signing_mode not in PACKAGE_SIGNING_MODES:
     raise RuntimeError(f"Unsupported signing mode: {signing_mode}")
   if signing_mode == "ad-hoc" and skip_ad_hoc_sign:
     signing_mode = "unsigned"
@@ -557,29 +558,23 @@ def assert_package_manifest_matches_bundle(
 ) -> None:
   manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
   manifest = read_json_object(manifest_path)
+  validate_package_manifest_contract(
+    manifest,
+    f"Package manifest: {manifest_path}",
+    source_commit=expected_source_commit,
+    signing_mode=expected_signing_mode,
+    bundle_version=expected_version,
+    expected_size_budget=package_size_budget(),
+  )
+  if expected_arch != SUPPORTED_ARCH:
+    raise RuntimeError(f"Packaged app architecture must be {SUPPORTED_ARCH}")
   expected_values = {
-    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
-    "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
-    "bundleVersion": expected_version,
-    "sourceCommit": expected_source_commit,
-    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
-    "architecture": expected_arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
     "backendExecutable": (
       LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME
     ).as_posix(),
-    "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": MODEL_DELIVERY_MODE,
-    "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
-    "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
-    "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
-    "sandboxMode": SANDBOX_CONTRACT["mode"],
-    "sandboxBackend": SANDBOX_CONTRACT["backend"],
-    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
-    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
-    "signing": expected_signing_mode,
   }
   for field, expected_value in expected_values.items():
     if manifest.get(field) != expected_value:
@@ -593,8 +588,6 @@ def assert_package_manifest_matches_bundle(
     raise RuntimeError("Package manifest must include bundled model metadata")
   if not required_bool_field(manifest, "bundledPluginsIncluded", manifest_path):
     raise RuntimeError("Package manifest must include bundled plugins")
-  if manifest.get("sizeBudget") != package_size_budget():
-    raise RuntimeError("Package manifest size budget must match packaging limits")
 
   model_manifest_path = (
     app_path
