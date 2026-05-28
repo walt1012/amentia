@@ -13,6 +13,8 @@ struct RuntimeHeaderSnapshot {
   let isWorkspaceSearching: Bool
   let hasModelDownload: Bool
   let hasPausedModelDownload: Bool
+  let dailyDriverStage: String?
+  let dailyDriverNextAction: String?
 }
 
 enum RuntimeHeaderPresenter {
@@ -29,20 +31,35 @@ enum RuntimeHeaderPresenter {
         return snapshot.modelSetupSummary
       }
       if !snapshot.hasWorkspace {
-        return "Model is ready. Open a workspace to bind tools to a project."
+        return DailyDriverStagePresenter.summary(
+          stage: snapshot.dailyDriverStage,
+          nextAction: snapshot.dailyDriverNextAction
+        ) ?? "Model is ready. Open a workspace to bind tools to a project."
       }
       if snapshot.hasActiveTurn {
-        return "Pith is running locally. Cancel only if the execution is no longer useful."
+        return DailyDriverStagePresenter.summary(
+          stage: snapshot.dailyDriverStage,
+          nextAction: snapshot.dailyDriverNextAction
+        ) ?? "Pith is running locally. Cancel only if the execution is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
-        return "Select or create a thread to start local work."
+        return DailyDriverStagePresenter.summary(
+          stage: snapshot.dailyDriverStage,
+          nextAction: snapshot.dailyDriverNextAction
+        ) ?? "Select or create a thread to start local work."
       }
       if snapshot.isWaitingForFirstMessage {
         return snapshot.hasDraftMessage
           ? "First cowork prompt is drafted. Send it to finish setup."
-          : "Ready to start the first cowork session."
+          : DailyDriverStagePresenter.summary(
+            stage: snapshot.dailyDriverStage,
+            nextAction: snapshot.dailyDriverNextAction
+          ) ?? "Ready to start the first cowork session."
       }
-      return "Ready for local work."
+      return DailyDriverStagePresenter.summary(
+        stage: snapshot.dailyDriverStage,
+        nextAction: snapshot.dailyDriverNextAction
+      ) ?? "Ready for local work."
     }
   }
 
@@ -57,6 +74,10 @@ enum RuntimeHeaderPresenter {
     case .ready:
       if snapshot.hasActiveTurn || snapshot.hasModelDownload || snapshot.isWorkspaceSearching {
         return .active
+      }
+      let dailyTone = DailyDriverStagePresenter.tone(stage: snapshot.dailyDriverStage)
+      if dailyTone != .neutral {
+        return dailyTone
       }
       if !snapshot.hasWorkspace
         || !snapshot.isLocalModelReady

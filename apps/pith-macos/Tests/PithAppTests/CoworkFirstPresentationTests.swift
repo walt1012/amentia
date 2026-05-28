@@ -8,6 +8,43 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Ready to start the first cowork session.")
   }
 
+  func testRuntimeHeaderUsesDailyDriverNextActionAfterSetup() {
+    let summary = RuntimeHeaderPresenter.statusSummary(
+      headerSnapshot(
+        hasDraftMessage: false,
+        isWaitingForFirstMessage: false,
+        dailyDriverStage: "ready",
+        dailyDriverNextAction: "Ask Pith for the next cowork task."
+      )
+    )
+
+    XCTAssertEqual(summary, "Ask Pith for the next cowork task.")
+  }
+
+  func testInspectorSessionUsesDailyDriverNextAction() {
+    let summary = InspectorSessionPresenter.metaSummary(
+      InspectorSessionSnapshot(
+        runtimeState: .ready,
+        isLocalModelReady: true,
+        hasWorkspace: true,
+        workspaceDisplayName: "Pith",
+        hasRuntimeThreadSelection: true,
+        selectedThreadTitle: "Cowork",
+        hasActiveTurn: false,
+        setupReadyStepCount: SetupFlowState.stepCount,
+        setupStepCount: SetupFlowState.stepCount,
+        setupProgressDetail: "Ready",
+        isWaitingForFirstMessage: false,
+        runtimeReadinessStatus: "ready",
+        dailyDriverStage: "ready",
+        dailyDriverNextAction: "Ask Pith for the next cowork task.",
+        runtimeReadinessChecks: []
+      )
+    )
+
+    XCTAssertTrue(summary.contains("Ask Pith for the next cowork task."))
+  }
+
   func testComposerFramesDraftAsCoworkPrompt() {
     let placeholder = ComposerStatusPresenter.placeholder(composerSnapshot(hasDraftMessage: true))
     let summary = ComposerStatusPresenter.statusSummary(composerSnapshot(hasDraftMessage: true))
@@ -23,7 +60,12 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(entry.body.contains("cowork request"))
   }
 
-  private func headerSnapshot(hasDraftMessage: Bool) -> RuntimeHeaderSnapshot {
+  private func headerSnapshot(
+    hasDraftMessage: Bool,
+    isWaitingForFirstMessage: Bool = true,
+    dailyDriverStage: String? = nil,
+    dailyDriverNextAction: String? = nil
+  ) -> RuntimeHeaderSnapshot {
     RuntimeHeaderSnapshot(
       runtimeState: .ready,
       runtimeDetail: "",
@@ -32,11 +74,13 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasWorkspace: true,
       hasRuntimeThreadSelection: true,
       hasActiveTurn: false,
-      isWaitingForFirstMessage: true,
+      isWaitingForFirstMessage: isWaitingForFirstMessage,
       hasDraftMessage: hasDraftMessage,
       isWorkspaceSearching: false,
       hasModelDownload: false,
-      hasPausedModelDownload: false
+      hasPausedModelDownload: false,
+      dailyDriverStage: dailyDriverStage,
+      dailyDriverNextAction: dailyDriverNextAction
     )
   }
 

@@ -13,6 +13,8 @@ struct InspectorSessionSnapshot {
   let setupProgressDetail: String
   let isWaitingForFirstMessage: Bool
   let runtimeReadinessStatus: String?
+  let dailyDriverStage: String?
+  let dailyDriverNextAction: String?
   let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
 }
 
@@ -82,8 +84,10 @@ enum InspectorSessionPresenter {
     }
 
     let modelSummary = snapshot.isLocalModelReady ? "Model ready" : "Model pending"
-    let readinessSummary =
-      snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
+    let readinessSummary = DailyDriverStagePresenter.summary(
+      stage: snapshot.dailyDriverStage,
+      nextAction: snapshot.dailyDriverNextAction
+    ) ?? snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
     let toolSummary = RuntimeToolReadinessPresenter.inspectorSummary(snapshot.runtimeReadinessChecks)
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"

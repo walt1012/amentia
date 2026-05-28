@@ -19,7 +19,9 @@ extension AppViewModel {
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
       isWorkspaceSearching: isWorkspaceSearching,
       hasModelDownload: modelDownloadState.hasActiveDownload,
-      hasPausedModelDownload: modelDownloadState.hasPausedDownload
+      hasPausedModelDownload: modelDownloadState.hasPausedDownload,
+      dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
+      dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction")
     )
   }
 
@@ -77,6 +79,8 @@ extension AppViewModel {
       setupProgressDetail: setupProgressDetail(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       runtimeReadinessStatus: runtimeReadiness?.status,
+      dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
+      dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction"),
       runtimeReadinessChecks: runtimeReadiness?.checks ?? []
     )
   }
@@ -165,5 +169,18 @@ extension AppViewModel {
       runtimeLaunchButtonTitle: runtimeLaunchButtonTitle(),
       modelSetupActionTitle: modelSetupCalloutActionTitle()
     )
+  }
+}
+
+private extension AppViewModel {
+  func runtimeReadinessMetric(_ key: String) -> String? {
+    guard let rawValue = runtimeReadiness?.metrics[key] else {
+      return nil
+    }
+    let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty else {
+      return nil
+    }
+    return value
   }
 }

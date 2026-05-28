@@ -162,3 +162,56 @@ enum RuntimeReadinessPresenter {
     )
   }
 }
+
+enum DailyDriverStagePresenter {
+  static func summary(stage: String?, nextAction: String?) -> String? {
+    if let nextAction = cleaned(nextAction) {
+      return nextAction
+    }
+
+    guard let stage = cleaned(stage) else {
+      return nil
+    }
+
+    switch stage {
+    case "model_setup":
+      return "Download and select a verified local model."
+    case "workspace_setup":
+      return "Open a workspace to scope tools and memory."
+    case "thread_setup":
+      return "Create or select a workspace-bound thread."
+    case "approval_review":
+      return "Review the pending approval before work continues."
+    case "local_execution":
+      return "Wait for local work or cancel it if it is no longer useful."
+    case "first_request":
+      return "Send the first cowork request."
+    case "ready":
+      return "Ask Pith for the next cowork task."
+    default:
+      return nil
+    }
+  }
+
+  static func tone(stage: String?) -> StatusTone {
+    switch cleaned(stage) {
+    case "ready":
+      return .ready
+    case "local_execution":
+      return .active
+    case "model_setup", "workspace_setup", "thread_setup", "approval_review", "first_request":
+      return .warning
+    default:
+      return .neutral
+    }
+  }
+
+  private static func cleaned(_ value: String?) -> String? {
+    guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !trimmed.isEmpty
+    else {
+      return nil
+    }
+    return trimmed
+  }
+}
