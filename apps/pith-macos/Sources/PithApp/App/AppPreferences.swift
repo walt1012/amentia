@@ -3,6 +3,7 @@ import Foundation
 enum AppPreferences {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
   private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
+  private static let localExecutionSafetyModeKey = "pith.localExecutionSafetyMode"
 
   static func storedSelectedSetupModelID(matching models: [LocalModelSummary]) -> String? {
     guard let modelID = UserDefaults.standard.string(forKey: selectedSetupModelIDKey),
@@ -38,5 +39,18 @@ enum AppPreferences {
 
   static func clearLastWorkspacePath() {
     UserDefaults.standard.removeObject(forKey: lastWorkspacePathKey)
+  }
+
+  static func storedLocalExecutionSafetyMode() -> String {
+    LocalExecutionSafetyModePresenter.validMode(
+      UserDefaults.standard.string(forKey: localExecutionSafetyModeKey)
+    )
+  }
+
+  static func storeLocalExecutionSafetyMode(_ mode: String) {
+    UserDefaults.standard.set(
+      LocalExecutionSafetyModePresenter.validMode(mode),
+      forKey: localExecutionSafetyModeKey
+    )
   }
 }

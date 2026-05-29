@@ -7,9 +7,9 @@ use super::turn_plugin_disambiguation::maybe_disambiguate_plugin_route;
 use super::turn_plugin_routing::ExplicitPluginCommandRoute;
 use super::turn_tool_planning::{plan_initial_turn_tool, InitialToolPlan};
 use crate::plugin_commands::prepare_plugin_command_turn_snapshot;
-use crate::plugin_permissions::permission_is_granted;
 use crate::request_state::PreparedTurnAction;
 use crate::runtime_context::RuntimeContext;
+use crate::turn::local_execution_safety::LocalExecutionSafetyMode;
 
 pub(crate) fn prepare_turn_action(
   context: &mut RuntimeContext,
@@ -17,6 +17,7 @@ pub(crate) fn prepare_turn_action(
   message: &str,
   workspace: Option<&WorkspaceSummary>,
   permission_sources: &HashMap<String, Vec<String>>,
+  local_execution_safety_mode: LocalExecutionSafetyMode,
   cancellation: GenerationCancellation,
 ) -> PreparedTurnAction {
   let plan = plan_initial_turn_tool(message, workspace, context.plugin_state.catalog());
@@ -25,6 +26,7 @@ pub(crate) fn prepare_turn_action(
     thread_id,
     workspace,
     permission_sources,
+    local_execution_safety_mode,
     message,
     cancellation,
     plan,
@@ -36,6 +38,7 @@ fn materialize_initial_tool_plan(
   thread_id: &str,
   workspace: Option<&WorkspaceSummary>,
   permission_sources: &HashMap<String, Vec<String>>,
+  local_execution_safety_mode: LocalExecutionSafetyMode,
   message: &str,
   cancellation: GenerationCancellation,
   plan: InitialToolPlan,
@@ -47,19 +50,29 @@ fn materialize_initial_tool_plan(
     }
     InitialToolPlan::NoWorkspace => PreparedTurnAction::NoWorkspace,
     InitialToolPlan::Write { intent } => {
-      let approval_id = permission_is_granted(permission_sources, "file.write")
+      let approval_id = local_execution_safety_mode
+        .should_reserve_approval_id(permission_sources, "file.write")
         .then(|| reserve_approval_id(context));
       PreparedTurnAction::Write {
         intent,
-        approval_id,
+        policy: local_execution_safety_mode.change_policy(
+          permission_sources,
+          "file.write",
+          approval_id,
+        ),
       }
     }
     InitialToolPlan::Shell { command } => {
-      let approval_id = permission_is_granted(permission_sources, "shell.exec")
+      let approval_id = local_execution_safety_mode
+        .should_reserve_approval_id(permission_sources, "shell.exec")
         .then(|| reserve_approval_id(context));
       PreparedTurnAction::Shell {
         command,
-        approval_id,
+        policy: local_execution_safety_mode.change_policy(
+          permission_sources,
+          "shell.exec",
+          approval_id,
+        ),
       }
     }
     InitialToolPlan::ReadFile { relative_path } => PreparedTurnAction::ReadFile { relative_path },

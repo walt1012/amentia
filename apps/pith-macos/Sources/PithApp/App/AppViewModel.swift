@@ -13,6 +13,11 @@ final class AppViewModel: ObservableObject {
   @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
   @Published var pluginManagerSection: PluginManagerSection
+  @Published var selectedLocalExecutionSafetyMode: String {
+    didSet {
+      AppPreferences.storeLocalExecutionSafetyMode(selectedLocalExecutionSafetyMode)
+    }
+  }
 
   let runtimeBridge: RuntimeBridge
   let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
@@ -53,6 +58,7 @@ final class AppViewModel: ObservableObject {
     self.memoryState = MemoryRuntimeState()
     self.pluginState = PluginRuntimeState()
     self.pluginManagerSection = .catalog
+    self.selectedLocalExecutionSafetyMode = AppPreferences.storedLocalExecutionSafetyMode()
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData
     )
@@ -66,6 +72,10 @@ final class AppViewModel: ObservableObject {
         self?.handleRuntimeConnectionStateChange(state, detail: detail)
       }
     }
+  }
+
+  func selectLocalExecutionSafetyMode(_ mode: String) {
+    selectedLocalExecutionSafetyMode = LocalExecutionSafetyModePresenter.validMode(mode)
   }
 
   var threads: [ThreadSummary] {

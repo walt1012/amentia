@@ -6,11 +6,12 @@ use pith_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnStartR
 
 use crate::approval_state::approvals_for_thread;
 use crate::plugin_commands::capture_plugin_command_output_memory;
-use crate::plugin_permissions::{granted_permission_sources, permission_is_granted};
+use crate::plugin_permissions::granted_permission_sources;
 use crate::request_params::parse_required_params;
 use crate::request_state::{CompletedTurnStart, PreparedTurnSnapshot, PreparedTurnStart};
 use crate::runtime_context::RuntimeContext;
 use crate::thread_summary::refresh_thread_summary_note;
+use crate::turn::local_execution_safety::LocalExecutionSafetyMode;
 use crate::turn::turn_agent_loop::LOOP_MAX_STEPS;
 use crate::turn_actions;
 
@@ -42,6 +43,8 @@ pub fn prepare_turn_start(
   let memory_notes = context.memory_state.snapshot_notes();
   let plugin_state = context.plugin_state.clone();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
+  let local_execution_safety_mode =
+    LocalExecutionSafetyMode::from_request(params.local_execution_safety_mode.as_deref());
   let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&params.thread_id) else {
       return Err(JsonRpcResponse::error(
@@ -59,9 +62,14 @@ pub fn prepare_turn_start(
     &params.message,
     prepared_thread.workspace.as_ref(),
     &permission_sources,
+    local_execution_safety_mode,
     cancellation.clone(),
   );
-  let reserved_approval_ids = reserve_follow_up_approval_ids(context, &permission_sources);
+  let reserved_approval_ids = reserve_follow_up_approval_ids(
+    context,
+    &permission_sources,
+    local_execution_safety_mode,
+  );
   if context
     .execution_state
     .take_pending_running_cancel(&prepared_thread.thread_id)
@@ -88,6 +96,7 @@ pub fn prepare_turn_start(
       memory_notes,
       plugin_state,
       permission_sources,
+      local_execution_safety_mode,
       reserved_approval_ids,
       action,
     },
@@ -101,9 +110,10 @@ fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), 
 fn reserve_follow_up_approval_ids(
   context: &mut RuntimeContext,
   permission_sources: &HashMap<String, Vec<String>>,
+  local_execution_safety_mode: LocalExecutionSafetyMode,
 ) -> Vec<String> {
-  if !permission_is_granted(permission_sources, "file.write")
-    && !permission_is_granted(permission_sources, "shell.exec")
+  if !local_execution_safety_mode.should_reserve_approval_id(permission_sources, "file.write")
+    && !local_execution_safety_mode.should_reserve_approval_id(permission_sources, "shell.exec")
     && context.plugin_state.enabled_command_capability_count() == 0
   {
     return vec![];

@@ -20,6 +20,16 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
+  func testActionReceiptBadgeShowsAutoApprovedMode() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "tool": "write_file",
+      "actionApprovalPolicy": "autoApproved",
+    ])
+
+    XCTAssertEqual(badges.first?.label, "Auto Approved")
+    XCTAssertEqual(badges.first?.tone, .active)
+  }
+
   func testWebSearchBadgeLabelsSearchResultAttribution() {
     let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
       "webSearchSourceMode": "searchResultAttribution",
@@ -133,6 +143,26 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Boundary: network") == true)
     XCTAssertTrue(summary?.contains("Approval: requires enabled plugin permission") == true)
     XCTAssertTrue(summary?.contains("Reason: freshPublicInformation") == true)
+  }
+
+  func testInspectorSummarizesAutoApprovedActionReceipt() {
+    let summary = TimelineInspectorPresenter.selectedEntryActionReceiptSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .tool,
+        title: "write_file result",
+        body: "Wrote file.",
+        attributes: [
+          "tool": "write_file",
+          "toolKind": "file",
+          "localExecutionSafetyMode": "approvedWorkspaceExecution",
+          "actionApprovalPolicy": "autoApproved",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(summary?.contains("Mode: approved workspace execution") == true)
+    XCTAssertTrue(summary?.contains("Approval: auto approved") == true)
   }
 
   func testInspectorGroupsContextReceiptSections() {

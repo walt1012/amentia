@@ -35,10 +35,18 @@ extension RuntimeBridge {
     )
   }
 
-  func startTurn(threadID: String, message: String) async throws -> RuntimeTurnResult {
+  func startTurn(
+    threadID: String,
+    message: String,
+    localExecutionSafetyMode: String?
+  ) async throws -> RuntimeTurnResult {
     let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
       method: "turn/start",
-      params: TurnStartParams(threadId: threadID, message: message)
+      params: TurnStartParams(
+        threadId: threadID,
+        message: message,
+        localExecutionSafetyMode: localExecutionSafetyMode
+      )
     )
     let result = try responseResult(from: response)
 

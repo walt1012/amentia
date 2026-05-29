@@ -233,3 +233,113 @@ fn natural_handoff_save_uses_write_approval() {
     .expect("handoff content")
     .contains("prepare a connector update"));
 }
+
+#[test]
+fn approved_workspace_execution_writes_without_pending_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("auto-write");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Auto Write Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Write docs/auto.txt: Auto approved content",
+        "localExecutionSafetyMode": "approvedWorkspaceExecution"
+      })),
+    ),
+  );
+
+  let written_content =
+    fs::read_to_string(workspace.join("docs").join("auto.txt")).expect("read written output");
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  assert_eq!(turn_result["pendingApprovals"].as_array().unwrap().len(), 0);
+  let items = turn_result["items"].as_array().expect("turn items");
+  assert!(items.iter().any(|item| {
+    item["title"] == "write_file result"
+      && item["attributes"]["actionApprovalPolicy"] == "autoApproved"
+      && item["attributes"]["localExecutionSafetyMode"] == "approvedWorkspaceExecution"
+  }));
+  assert!(items.iter().any(|item| {
+    item["attributes"]["handoffKind"] == "autoApprovedWrite"
+      && item["attributes"]["relativePath"] == "docs/auto.txt"
+  }));
+  assert_eq!(written_content, "Auto approved content");
+}
+
+#[test]
+fn explore_mode_blocks_workspace_write_even_with_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("explore-write");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Explore Write Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Write docs/explore.txt: This should not be written",
+        "localExecutionSafetyMode": "explore"
+      })),
+    ),
+  );
+
+  let target_exists = workspace.join("docs").join("explore.txt").exists();
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  assert_eq!(turn_result["pendingApprovals"].as_array().unwrap().len(), 0);
+  assert!(!target_exists);
+  let items = turn_result["items"].as_array().expect("turn items");
+  assert!(items.iter().any(|item| {
+    item["attributes"]["localExecutionSafetyMode"] == "explore"
+      && item["attributes"]["actionApprovalPolicy"] == "blocked"
+      && item["attributes"]["blockReason"] == "readOnlyMode"
+      && item["attributes"]["requiredPermission"] == "file.write"
+  }));
+}

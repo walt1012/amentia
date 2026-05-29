@@ -4,8 +4,10 @@ use pith_protocol::TimelineItem;
 
 use super::turn_agent_steps::{AgentStepOutcome, AgentStepRecord};
 use crate::intent_inference::{WebSearchIntent, WriteIntent};
-use crate::plugin_permissions::permission_is_granted;
 use crate::request_state::PreparedTurnAction;
+use crate::turn::local_execution_safety::{
+  LocalChangeExecutionPolicy, LocalExecutionSafetyMode,
+};
 
 pub(crate) const LOOP_MAX_STEPS: usize = 3;
 pub(crate) const LOOP_MAX_EXTENDED_STEPS: usize = 8;
@@ -211,7 +213,11 @@ impl AgentLoopObservation {
 
   #[cfg(test)]
   pub(crate) fn planned_next_action(&self) -> Option<PreparedTurnAction> {
-    self.planned_next_action_with_approvals(&HashMap::new(), &mut VecDeque::new())
+    self.planned_next_action_with_approvals(
+      &HashMap::new(),
+      LocalExecutionSafetyMode::AskBeforeChange,
+      &mut VecDeque::new(),
+    )
   }
 
   pub(crate) fn planned_action(&self) -> Option<&AgentLoopPlannedAction> {
@@ -221,6 +227,7 @@ impl AgentLoopObservation {
   pub(crate) fn planned_next_action_with_approvals(
     &self,
     permission_sources: &HashMap<String, Vec<String>>,
+    local_execution_safety_mode: LocalExecutionSafetyMode,
     reserved_approval_ids: &mut VecDeque<String>,
   ) -> Option<PreparedTurnAction> {
     let action = self.planned_next_action.as_ref()?;
@@ -234,7 +241,12 @@ impl AgentLoopObservation {
       }),
       AgentLoopPlannedAction::Shell { command } => Some(PreparedTurnAction::Shell {
         command: command.clone(),
-        approval_id: next_approval_id(permission_sources, reserved_approval_ids, "shell.exec"),
+        policy: change_execution_policy(
+          permission_sources,
+          local_execution_safety_mode,
+          reserved_approval_ids,
+          "shell.exec",
+        ),
       }),
       AgentLoopPlannedAction::WebSearch {
         query,
@@ -251,7 +263,12 @@ impl AgentLoopObservation {
           relative_path: relative_path.clone(),
           content: content.clone(),
         },
-        approval_id: next_approval_id(permission_sources, reserved_approval_ids, "file.write"),
+        policy: change_execution_policy(
+          permission_sources,
+          local_execution_safety_mode,
+          reserved_approval_ids,
+          "file.write",
+        ),
       }),
       AgentLoopPlannedAction::PluginCommand { .. } => None,
     }
@@ -367,16 +384,17 @@ fn planned_action_from_item(item: &TimelineItem) -> Option<AgentLoopPlannedActio
   }
 }
 
-fn next_approval_id(
+fn change_execution_policy(
   permission_sources: &HashMap<String, Vec<String>>,
+  local_execution_safety_mode: LocalExecutionSafetyMode,
   reserved_approval_ids: &mut VecDeque<String>,
   permission: &str,
-) -> Option<String> {
-  if permission_is_granted(permission_sources, permission) {
-    reserved_approval_ids.pop_front()
-  } else {
-    None
-  }
+) -> LocalChangeExecutionPolicy {
+  let approval_id = local_execution_safety_mode
+    .should_reserve_approval_id(permission_sources, permission)
+    .then(|| reserved_approval_ids.pop_front())
+    .flatten();
+  local_execution_safety_mode.change_policy(permission_sources, permission, approval_id)
 }
 
 fn normalized_next_routing_reason(value: Option<&String>) -> &'static str {
@@ -595,16 +613,23 @@ mod tests {
     let permissions = HashMap::from([("shell.exec".to_string(), vec!["Test".to_string()])]);
 
     let next_action = observation
-      .planned_next_action_with_approvals(&permissions, &mut approval_ids)
+      .planned_next_action_with_approvals(
+        &permissions,
+        LocalExecutionSafetyMode::AskBeforeChange,
+        &mut approval_ids,
+      )
       .expect("next action");
 
     match next_action {
       PreparedTurnAction::Shell {
         command,
-        approval_id,
+        policy,
       } => {
         assert_eq!(command, "git status --short");
-        assert_eq!(approval_id.as_deref(), Some("approval-1"));
+        assert_eq!(
+          policy,
+          LocalChangeExecutionPolicy::Ask("approval-1".to_string())
+        );
       }
       other => panic!("unexpected next action: {other:?}"),
     }
@@ -630,17 +655,24 @@ mod tests {
     let permissions = HashMap::from([("file.write".to_string(), vec!["Test".to_string()])]);
 
     let next_action = observation
-      .planned_next_action_with_approvals(&permissions, &mut approval_ids)
+      .planned_next_action_with_approvals(
+        &permissions,
+        LocalExecutionSafetyMode::AskBeforeChange,
+        &mut approval_ids,
+      )
       .expect("next action");
 
     match next_action {
       PreparedTurnAction::Write {
         intent,
-        approval_id,
+        policy,
       } => {
         assert_eq!(intent.relative_path, "notes/today.md");
         assert_eq!(intent.content, "Ship the cowork loop.");
-        assert_eq!(approval_id.as_deref(), Some("approval-2"));
+        assert_eq!(
+          policy,
+          LocalChangeExecutionPolicy::Ask("approval-2".to_string())
+        );
       }
       other => panic!("unexpected next action: {other:?}"),
     }

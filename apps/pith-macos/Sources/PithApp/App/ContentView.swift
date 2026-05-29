@@ -98,10 +98,29 @@ private struct SidebarEmptyState: View {
 }
 
 struct SettingsView: View {
+  @ObservedObject var viewModel: AppViewModel
   private let distributionTrust = DistributionTrustPresenter.summary()
 
   var body: some View {
     Form {
+      Section("Local Execution") {
+        Picker(
+          "Mode",
+          selection: Binding(
+            get: { viewModel.selectedLocalExecutionSafetyMode },
+            set: { viewModel.selectLocalExecutionSafetyMode($0) }
+          )
+        ) {
+          ForEach(LocalExecutionSafetyModePresenter.modes, id: \.self) { mode in
+            Text(LocalExecutionSafetyModePresenter.userTitle(mode))
+              .tag(mode)
+          }
+        }
+        Text(LocalExecutionSafetyModePresenter.userDetail(
+          viewModel.selectedLocalExecutionSafetyMode
+        ))
+      }
+
       Section("Local Models") {
         Text("Pith downloads verified GGUF models in app.")
         Text("Default: LFM2.5-350M. Alternative: Granite 4.0-H-350M.")

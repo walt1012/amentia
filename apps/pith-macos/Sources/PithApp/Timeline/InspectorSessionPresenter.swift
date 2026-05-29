@@ -17,6 +17,7 @@ struct InspectorSessionSnapshot {
   let dailyDriverNextAction: String?
   let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
   let runtimeReadinessMetrics: [String: String]
+  let selectedLocalExecutionSafetyMode: String
 }
 
 enum InspectorSessionPresenter {
@@ -93,9 +94,11 @@ enum InspectorSessionPresenter {
       snapshot.runtimeReadinessChecks,
       metrics: snapshot.runtimeReadinessMetrics
     )
+    let selectedModeSummary = "Mode "
+      + LocalExecutionSafetyModePresenter.compact(snapshot.selectedLocalExecutionSafetyMode)
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
-    return [readinessSummary, toolSummary, workspaceSummary, threadSummary]
+    return [readinessSummary, toolSummary, selectedModeSummary, workspaceSummary, threadSummary]
       .compactMap { $0 }
       .joined(separator: " | ")
   }

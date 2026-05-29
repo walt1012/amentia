@@ -73,7 +73,7 @@ struct PithApp: App {
       }
     }
     Settings {
-      SettingsView()
+      SettingsView(viewModel: viewModel)
     }
   }
 }

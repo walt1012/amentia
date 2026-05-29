@@ -76,14 +76,14 @@ impl<'a> TurnStepDispatcher<'a> {
     match action {
       PreparedTurnAction::Write {
         intent,
-        approval_id,
+        policy,
       } => {
         if let Some(workspace) = self.snapshot.workspace.as_ref() {
           execute_write_turn(
             self.snapshot,
             workspace,
             &intent,
-            &approval_id,
+            &policy,
             self.items,
             self.pending_approval,
           );
@@ -93,14 +93,14 @@ impl<'a> TurnStepDispatcher<'a> {
       }
       PreparedTurnAction::Shell {
         command,
-        approval_id,
+        policy,
       } => {
         if let Some(workspace) = self.snapshot.workspace.as_ref() {
           execute_shell_turn(
             self.snapshot,
             workspace,
             &command,
-            &approval_id,
+            &policy,
             self.items,
             self.pending_approval,
           );

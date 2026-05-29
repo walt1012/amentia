@@ -41,6 +41,8 @@ pub struct ThreadReadParams {
 pub struct TurnStartParams {
   pub thread_id: String,
   pub message: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub local_execution_safety_mode: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -83,7 +83,8 @@ extension AppViewModel {
       dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
       dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction"),
       runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
-      runtimeReadinessMetrics: runtimeReadiness?.metrics ?? [:]
+      runtimeReadinessMetrics: runtimeReadiness?.metrics ?? [:],
+      selectedLocalExecutionSafetyMode: selectedLocalExecutionSafetyMode
     )
   }
 

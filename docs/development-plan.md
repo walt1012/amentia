@@ -84,7 +84,9 @@ Working foundation:
   now presents compact context receipts from stable timeline attributes:
   workspace snippets, Web Search source depth, local action mode, approval
   policy, account requirement, tool boundary, memory context ranking, source
-  reason, and compaction decisions.
+  reason, and compaction decisions. The app now sends the selected local
+  execution safety mode to `turn/start`; runtime behavior distinguishes
+  read-only exploration, ask-before-change, and approved workspace execution.
 
 ## Alignment Review
 
@@ -100,12 +102,12 @@ orchestration too early.
 
 Active gaps found in the review:
 
-- Local execution safety modes now have release/package/runtime/app contracts
-  and compact action/context receipts. The remaining gap is a calm user-facing
-  switch.
+- Local execution safety modes now have release/package/runtime/app contracts,
+  compact action/context receipts, and a Settings entry that changes real
+  runtime write/shell behavior.
 - Context management is present but not fully productized. The app now shows
   workspace, Web Search, memory ranking, source reason, and compaction receipts;
-  next, make these receipts drive the calm user-facing execution mode switch.
+  next, make these receipts easier to scan during long cowork sessions.
 - Connector execution is useful but still Notion-led. Keep service-specific
   logic narrow and make the protocol generic before adding another connector.
 - Hooks and subagents should stay scoped to verification and automation after

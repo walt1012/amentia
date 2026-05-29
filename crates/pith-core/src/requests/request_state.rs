@@ -12,6 +12,9 @@ use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
 use crate::plugin_hooks::PluginHookMemoryCapture;
 use crate::requests::approval_agent_context::ApprovalAgentContext;
 use crate::runtime_plugins::RuntimePluginState;
+use crate::turn::local_execution_safety::{
+  LocalChangeExecutionPolicy, LocalExecutionSafetyMode,
+};
 
 #[derive(Debug)]
 pub struct PreparedTurnStart {
@@ -50,6 +53,7 @@ pub(crate) struct PreparedTurnSnapshot {
   pub(crate) memory_notes: Vec<MemoryNote>,
   pub(crate) plugin_state: RuntimePluginState,
   pub(crate) permission_sources: HashMap<String, Vec<String>>,
+  pub(crate) local_execution_safety_mode: LocalExecutionSafetyMode,
   pub(crate) reserved_approval_ids: Vec<String>,
   pub(crate) action: PreparedTurnAction,
 }
@@ -59,11 +63,11 @@ pub(crate) enum PreparedTurnAction {
   NoWorkspace,
   Write {
     intent: intent_inference::WriteIntent,
-    approval_id: Option<String>,
+    policy: LocalChangeExecutionPolicy,
   },
   Shell {
     command: String,
-    approval_id: Option<String>,
+    policy: LocalChangeExecutionPolicy,
   },
   PluginCommand {
     snapshot: Box<PluginCommandSnapshot>,

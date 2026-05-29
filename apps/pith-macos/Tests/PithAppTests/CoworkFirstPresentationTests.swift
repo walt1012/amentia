@@ -51,12 +51,14 @@ final class CoworkFirstPresentationTests: XCTestCase {
         dailyDriverStage: "ready",
         dailyDriverNextAction: "Ask Pith for the next cowork task.",
         runtimeReadinessChecks: [],
-        runtimeReadinessMetrics: localExecutionMetrics
+        runtimeReadinessMetrics: localExecutionMetrics,
+        selectedLocalExecutionSafetyMode: "askBeforeChange"
       )
     )
 
     XCTAssertTrue(summary.contains("Ask Pith for the next cowork task."))
     XCTAssertTrue(summary.contains("Safety Ask, no account"))
+    XCTAssertTrue(summary.contains("Mode Ask"))
   }
 
   func testToolReadinessShowsLocalExecutionModeWhenReady() {

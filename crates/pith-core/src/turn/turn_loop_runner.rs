@@ -128,6 +128,7 @@ impl<'a> TurnLoopRunner<'a> {
       }
       _ => observation.planned_next_action_with_approvals(
         &self.snapshot.permission_sources,
+        self.snapshot.local_execution_safety_mode,
         &mut self.reserved_approval_ids,
       ),
     };

@@ -40,6 +40,7 @@ struct ThreadUpdatedNotificationParams: Codable {
 struct TurnStartParams: Codable {
   let threadId: String
   let message: String
+  let localExecutionSafetyMode: String?
 }
 
 struct RuntimeTimelineItem: Codable {

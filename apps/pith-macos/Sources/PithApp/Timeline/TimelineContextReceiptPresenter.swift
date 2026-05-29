@@ -300,6 +300,10 @@ enum TimelineContextReceiptPresenter {
 
   private static func readableApprovalPolicy(_ value: String?) -> String {
     switch value {
+    case "autoApproved":
+      return "auto approved"
+    case "blocked":
+      return "blocked by mode or permission"
     case "requiresApproval":
       return "requires approval"
     case "requiresPluginPermission":

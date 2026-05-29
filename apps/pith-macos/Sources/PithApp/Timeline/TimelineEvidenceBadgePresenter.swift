@@ -44,6 +44,10 @@ enum TimelineEvidenceBadgePresenter {
 
     let tool = attributes["toolName"] ?? attributes["tool"]
     switch attributes["actionApprovalPolicy"] ?? inferredApprovalPolicy(tool) {
+    case "autoApproved":
+      return TimelineEvidenceBadgeSummary(label: "Auto Approved", tone: .active)
+    case "blocked":
+      return TimelineEvidenceBadgeSummary(label: "Blocked", tone: .warning)
     case "requiresApproval":
       return TimelineEvidenceBadgeSummary(label: "Approval Required", tone: .warning)
     case "requiresPluginPermission":
