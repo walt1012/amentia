@@ -304,7 +304,23 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Restore cached Swift app executable
+        id: swift_app_binary_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+
+      - name: Use cached Swift app executable
+        if: steps.swift_app_binary_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+
       - name: Cache Swift build output
+        if: steps.swift_app_binary_cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           path: apps/pith-macos/.build
@@ -313,13 +329,15 @@ jobs:
             swift-build-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 Swift app executable
+        if: steps.swift_app_binary_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
           bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp "$bin_path/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$SWIFT_APP_BINARY_CACHE_DIR"
+          cp "$bin_path/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
 
       - name: Upload Swift app executable
         uses: actions/upload-artifact@v7
@@ -372,7 +390,23 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Restore cached runtime executable
+        id: runtime_binary_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.RUNTIME_BINARY_CACHE_DIR }}
+          key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
+
+      - name: Use cached runtime executable
+        if: steps.runtime_binary_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+
       - name: Cache macOS runtime build output
+        if: steps.runtime_binary_cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           path: |
@@ -384,12 +418,14 @@ jobs:
             macos-runtime-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 runtime executable
+        if: steps.runtime_binary_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           cargo build -p pith-runtime-bin --release
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp "target/release/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
+          cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
 
       - name: Upload runtime executable
         uses: actions/upload-artifact@v7

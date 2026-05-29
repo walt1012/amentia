@@ -63,6 +63,13 @@ jobs:
   swift-app:
     timeout-minutes: 25
     steps:
+      - name: Restore cached Swift app executable
+        id: swift_app_binary_cache
+        uses: actions/cache/restore@v5
+        with:
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+      - name: Use cached Swift app executable
+        run: cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
       - name: Upload Swift app executable
         uses: actions/upload-artifact@v7
         with:
@@ -73,6 +80,13 @@ jobs:
   macos-runtime:
     timeout-minutes: 30
     steps:
+      - name: Restore cached runtime executable
+        id: runtime_binary_cache
+        uses: actions/cache/restore@v5
+        with:
+          key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
+      - name: Use cached runtime executable
+        run: cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
       - name: Upload runtime executable
         uses: actions/upload-artifact@v7
         with:

@@ -147,6 +147,32 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
           )
         )
 
+  swift_app_block = job_block(text, "swift-app")
+  if swift_app_block:
+    for term in (
+      'id: swift_app_binary_cache',
+      'uses: actions/cache/restore@v5',
+      'key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'Use cached Swift app executable',
+    ):
+      if term not in swift_app_block:
+        issues.append(
+          WorkflowIssue(CI_WORKFLOW, f"swift-app cached executable path is missing {term}")
+        )
+
+  macos_runtime_block = job_block(text, "macos-runtime")
+  if macos_runtime_block:
+    for term in (
+      'id: runtime_binary_cache',
+      'uses: actions/cache/restore@v5',
+      'key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'Use cached runtime executable',
+    ):
+      if term not in macos_runtime_block:
+        issues.append(
+          WorkflowIssue(CI_WORKFLOW, f"macos-runtime cached executable path is missing {term}")
+        )
+
   package_block = job_block(text, "macos-package")
   if package_block:
     if re.search(r"(?m)^\s+-\s+swift-tests\s*$", package_block):

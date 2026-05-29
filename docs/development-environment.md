@@ -42,10 +42,12 @@ assets.
 
 Rust formatting, clippy, tests, and runtime smoke run as separate jobs so
 failures surface earlier instead of waiting behind a single serial Rust lane.
-The final macOS package job depends only on change detection. It restores the
-Swift executable, runtime executable, and pinned llama.cpp backend directly from
-shared caches, building missing app/runtime executables concurrently inside the
-package lane only on cache miss. Swift app build, runtime build, and Swift logic tests remain
+Swift app and macOS runtime validation lanes first restore executable caches and
+only compile when source changes invalidate those caches. The final macOS
+package job depends only on change detection. It restores the Swift executable,
+runtime executable, and pinned llama.cpp backend directly from shared caches,
+building missing app/runtime executables concurrently inside the package lane
+only on cache miss. Swift app build, runtime build, and Swift logic tests remain
 independent validation gates, but they no longer block artifact assembly when
 the package lane already has valid cached executables.
 

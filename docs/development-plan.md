@@ -143,7 +143,8 @@ Build toward:
   internal build artifacts as user-facing downloads. The package lane should
   depend only on change detection, restore cached app/runtime/llama executables
   directly, and build missing app/runtime cache entries concurrently without
-  waiting for validation artifact handoffs.
+  waiting for validation artifact handoffs. Standalone app/runtime validation
+  should also reuse executable caches when source inputs are unchanged.
 
 Exit when:
 
