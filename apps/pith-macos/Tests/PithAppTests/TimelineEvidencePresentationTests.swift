@@ -143,6 +143,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         title: "Assistant",
         body: "Search result answer.",
         attributes: [
+          "workspaceDisplayName": "Pith",
           "toolName": "web_search",
           "toolKind": "web",
           "sourceAttribution": "web_search",
@@ -166,20 +167,77 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     XCTAssertEqual(sections.map(\.title), [
+      "Workspace Context",
       "Web Search Sources",
       "Local Action",
       "Memory Context",
       "Context Compaction",
     ])
-    XCTAssertTrue(sections[0].body.contains("Source snapshot: yes"))
-    XCTAssertTrue(sections[0].body.contains("Reason: freshPublicInformation"))
-    XCTAssertTrue(sections[1].body.contains("Approval: requires enabled plugin permission"))
-    XCTAssertTrue(sections[2].body.contains("Titles: Project rule"))
-    XCTAssertTrue(sections[2].body.contains("Ranking scores: 9, 4, 1"))
-    XCTAssertTrue(sections[3].body.contains("Observation: 4000/1800 chars | truncated yes"))
+    XCTAssertTrue(sections[0].body.contains("Workspace: Pith"))
+    XCTAssertTrue(sections[1].body.contains("Source snapshot: yes"))
+    XCTAssertTrue(sections[1].body.contains("Reason: freshPublicInformation"))
+    XCTAssertTrue(sections[2].body.contains("Approval: requires enabled plugin permission"))
+    XCTAssertTrue(sections[3].body.contains("Titles: Project rule"))
+    XCTAssertTrue(sections[3].body.contains("Ranking scores: 9, 4, 1"))
+    XCTAssertTrue(sections[4].body.contains("Observation: 4000/1800 chars | truncated yes"))
     XCTAssertTrue(
-      sections[3].body.contains("Memory decision: selected 1/3 notes | omitted 2 | truncated 0")
+      sections[4].body.contains("Memory decision: selected 1/3 notes | omitted 2 | truncated 0")
     )
+  }
+
+  func testInspectorSummarizesWorkspaceContextReceipt() {
+    let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .tool,
+        title: "search_files result",
+        body: "README.md:2 Search target",
+        attributes: [
+          "tool": "search_files",
+          "agentToolName": "search_files",
+          "workspaceDisplayName": "Pith",
+          "query": "Search target",
+          "resultCount": "2",
+          "uniquePathCount": "2",
+          "maxResults": "12",
+          "nextAction": "read_file",
+          "nextRelativePath": "README.md",
+          "agentStepIndex": "1",
+        ]
+      ))
+    )
+
+    let workspace = sections.first(where: { $0.id == "workspace" })
+    XCTAssertEqual(workspace?.title, "Workspace Context")
+    XCTAssertTrue(workspace?.body.contains("Tool: search_files") == true)
+    XCTAssertTrue(workspace?.body.contains("Query: Search target") == true)
+    XCTAssertTrue(workspace?.body.contains("Result count: 2") == true)
+    XCTAssertTrue(workspace?.body.contains("Unique paths: 2") == true)
+    XCTAssertTrue(workspace?.body.contains("Next action: read_file") == true)
+    XCTAssertTrue(workspace?.body.contains("Next path: README.md") == true)
+  }
+
+  func testInspectorSummarizesWorkspaceReadReceipt() {
+    let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .tool,
+        title: "read_file result",
+        body: "# Pith",
+        attributes: [
+          "tool": "read_file",
+          "workspaceDisplayName": "Pith",
+          "relativePath": "README.md",
+          "maxBytes": "4096",
+          "isTruncated": "false",
+        ]
+      ))
+    )
+
+    let workspace = sections.first(where: { $0.id == "workspace" })
+    XCTAssertTrue(workspace?.body.contains("Path: README.md") == true)
+    XCTAssertTrue(workspace?.body.contains("Max bytes: 4096") == true)
+    XCTAssertTrue(workspace?.body.contains("Truncated: no") == true)
   }
 
   func testInspectorSeparatesCompactionFromMemoryContext() {

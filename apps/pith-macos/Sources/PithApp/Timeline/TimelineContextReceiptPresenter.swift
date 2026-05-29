@@ -13,6 +13,7 @@ enum TimelineContextReceiptPresenter {
     }
 
     return [
+      workspaceSection(entry),
       sourceSection(entry),
       actionSection(entry),
       memorySection(entry),
@@ -42,6 +43,36 @@ enum TimelineContextReceiptPresenter {
     }
 
     return memorySection(entry)?.body
+  }
+
+  private static func workspaceSection(_ entry: TimelineEntry) -> TimelineContextReceiptSection? {
+    guard hasWorkspaceContext(entry.attributes) else {
+      return nil
+    }
+
+    var lines: [String] = []
+    appendLine("Tool", entry.attributes["tool"] ?? entry.attributes["agentToolName"], to: &lines)
+    appendLine("Workspace", entry.attributes["workspaceDisplayName"], to: &lines)
+    appendLine("Path", entry.attributes["relativePath"], to: &lines)
+    appendLine("Query", entry.attributes["query"], to: &lines)
+    appendLine("Max bytes", entry.attributes["maxBytes"], to: &lines)
+    appendLine("Max results", entry.attributes["maxResults"], to: &lines)
+    appendLine("Result count", entry.attributes["resultCount"], to: &lines)
+    appendLine("Unique paths", entry.attributes["uniquePathCount"], to: &lines)
+    appendLine("Truncated", entry.attributes["isTruncated"].map(yesNo), to: &lines)
+    appendLine("Next action", entry.attributes["nextAction"], to: &lines)
+    appendLine("Next path", entry.attributes["nextRelativePath"], to: &lines)
+    appendLine("Loop step", entry.attributes["agentStepIndex"], to: &lines)
+
+    guard !lines.isEmpty else {
+      return nil
+    }
+
+    return TimelineContextReceiptSection(
+      id: "workspace",
+      title: "Workspace Context",
+      body: lines.joined(separator: "\n")
+    )
   }
 
   private static func sourceSection(_ entry: TimelineEntry) -> TimelineContextReceiptSection? {
@@ -217,6 +248,25 @@ enum TimelineContextReceiptPresenter {
       || attributes["agentToolName"] != nil
   }
 
+  private static func hasWorkspaceContext(_ attributes: [String: String]) -> Bool {
+    if attributes["relativePath"] != nil
+      || attributes["query"] != nil
+      || attributes["resultCount"] != nil
+      || attributes["uniquePathCount"] != nil
+      || attributes["nextRelativePath"] != nil
+      || attributes["workspaceDisplayName"] != nil
+    {
+      return true
+    }
+
+    switch attributes["tool"] ?? attributes["agentToolName"] {
+    case "read_file", "search_files", "list_directory", "write_file", "generate_diff":
+      return true
+    default:
+      return false
+    }
+  }
+
   private static func readableBoundary(_ value: String?) -> String {
     switch value {
     case "workspace":
@@ -309,6 +359,13 @@ enum TimelineContextReceiptPresenter {
       "Memory decision: selected \(selectedCount)/\(candidateCount) notes"
         + " | omitted \(omittedCount) | truncated \(truncatedCount)"
     )
+  }
+
+  private static func appendLine(_ label: String, _ value: String?, to lines: inout [String]) {
+    guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return
+    }
+    lines.append("\(label): \(value)")
   }
 
   private static func yesNo(_ value: String) -> String {
