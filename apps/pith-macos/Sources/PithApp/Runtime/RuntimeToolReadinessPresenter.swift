@@ -134,20 +134,7 @@ enum LocalExecutionSafetyPresenter {
     guard let rawMode = cleaned(metrics["defaultLocalExecutionSafetyMode"]) else {
       return nil
     }
-    return readableMode(rawMode)
-  }
-
-  private static func readableMode(_ value: String) -> String {
-    switch value {
-    case "askBeforeChange":
-      return "Ask"
-    case "approvedWorkspaceExecution":
-      return "Approved"
-    case "explore":
-      return "Explore"
-    default:
-      return value
-    }
+    return LocalExecutionSafetyModePresenter.compact(rawMode)
   }
 
   private static func cleaned(_ value: String?) -> String? {

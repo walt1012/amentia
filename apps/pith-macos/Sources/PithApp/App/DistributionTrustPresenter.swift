@@ -244,22 +244,13 @@ enum DistributionTrustPresenter {
   }
 
   private static func localExecutionSummary(_ metadata: DistributionPackageMetadata) -> String {
-    let defaultMode = readableExecutionMode(metadata.defaultLocalExecutionSafetyMode)
+    let defaultMode = LocalExecutionSafetyModePresenter.detailed(
+      metadata.defaultLocalExecutionSafetyMode
+    )
     let modes = metadata.localExecutionSafetyModes
-      .map(readableExecutionMode)
+      .map { LocalExecutionSafetyModePresenter.detailed($0) }
       .joined(separator: ", ")
     return "local execution mode: \(defaultMode); modes: \(modes)"
-  }
-
-  private static func readableExecutionMode(_ value: String) -> String {
-    switch value {
-    case "askBeforeChange":
-      return "ask-before-change"
-    case "approvedWorkspaceExecution":
-      return "approved workspace execution"
-    default:
-      return value
-    }
   }
 
   private static func sandboxSummary(_ metadata: DistributionPackageMetadata) -> String {

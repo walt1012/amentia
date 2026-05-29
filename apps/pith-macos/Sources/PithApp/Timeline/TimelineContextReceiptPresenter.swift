@@ -84,7 +84,7 @@ enum TimelineContextReceiptPresenter {
     }
 
     let tool = entry.attributes["toolName"] ?? entry.attributes["tool"]
-    let mode = readableExecutionMode(
+    let mode = LocalExecutionSafetyModePresenter.detailed(
       entry.attributes["localExecutionSafetyMode"] ?? "askBeforeChange"
     )
     let boundary = readableBoundary(
@@ -169,19 +169,6 @@ enum TimelineContextReceiptPresenter {
       || attributes["toolName"] != nil
       || attributes["tool"] != nil
       || attributes["agentToolName"] != nil
-  }
-
-  private static func readableExecutionMode(_ value: String?) -> String {
-    switch value {
-    case "askBeforeChange":
-      return "ask-before-change"
-    case "approvedWorkspaceExecution":
-      return "approved workspace execution"
-    case "explore":
-      return "explore"
-    default:
-      return value ?? "unknown"
-    }
   }
 
   private static func readableBoundary(_ value: String?) -> String {
