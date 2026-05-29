@@ -141,8 +141,9 @@ Build toward:
   shared package contract, direct package manifest validation, packaged app,
   DMG path, exact installer asset sets, and release metadata without exposing
   internal build artifacts as user-facing downloads. The package lane should
-  avoid unnecessary artifact handoffs by restoring stable bundled backends from
-  cache and building them only on cache miss.
+  depend only on change detection, restore cached app/runtime/llama executables
+  directly, and build missing cache entries without waiting for validation
+  artifact handoffs.
 
 Exit when:
 

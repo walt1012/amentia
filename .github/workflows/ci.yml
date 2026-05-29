@@ -20,6 +20,8 @@ env:
   RUNTIME_BINARY: pith-runtime-bin
   LLAMA_BINARY: llama-cli
   LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
+  SWIFT_APP_BINARY_CACHE_DIR: .ci-cache/swift-app-bin
+  RUNTIME_BINARY_CACHE_DIR: .ci-cache/runtime-bin
   LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
   SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
   RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
@@ -490,8 +492,6 @@ jobs:
     timeout-minutes: 30
     needs:
       - changes
-      - swift-app
-      - macos-runtime
     if: ${{ needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
@@ -500,17 +500,81 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Download Swift app executable
-        uses: actions/download-artifact@v7
+      - name: Cache Swift app executable
+        id: package_swift_cache
+        uses: actions/cache@v5
         with:
-          name: ${{ env.SWIFT_APP_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+          path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
 
-      - name: Download runtime executable
-        uses: actions/download-artifact@v7
+      - name: Restore cached Swift app executable
+        if: steps.package_swift_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+
+      - name: Cache Swift package build output
+        if: steps.package_swift_cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v5
         with:
-          name: ${{ env.RUNTIME_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+          path: apps/pith-macos/.build
+          key: package-swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          restore-keys: |
+            package-swift-build-${{ runner.os }}-${{ runner.arch }}-
+            swift-build-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build Swift app executable
+        if: steps.package_swift_cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
+          bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$SWIFT_APP_BINARY_CACHE_DIR"
+          cp "$bin_path/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+
+      - name: Cache runtime executable
+        id: package_runtime_cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.RUNTIME_BINARY_CACHE_DIR }}
+          key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
+
+      - name: Restore cached runtime executable
+        if: steps.package_runtime_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+
+      - name: Install Rust for package runtime
+        if: steps.package_runtime_cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache package Cargo build output
+        if: steps.package_runtime_cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: package-cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            package-cargo-${{ runner.os }}-${{ runner.arch }}-
+            macos-runtime-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build runtime executable
+        if: steps.package_runtime_cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          cargo build -p pith-runtime-bin --release
+          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
+          cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
 
       - name: Cache pinned llama.cpp backend
         id: package_llama_cache

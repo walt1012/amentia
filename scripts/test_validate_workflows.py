@@ -90,9 +90,21 @@ jobs:
     timeout-minutes: 30
     needs:
       - changes
-      - swift-app
-      - macos-runtime
     steps:
+      - name: Cache Swift app executable
+        id: package_swift_cache
+        uses: actions/cache@v5
+        with:
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+      - name: Build Swift app executable
+        run: swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
+      - name: Cache runtime executable
+        id: package_runtime_cache
+        uses: actions/cache@v5
+        with:
+          key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
+      - name: Build runtime executable
+        run: cargo build -p pith-runtime-bin --release
       - name: Cache pinned llama.cpp backend
         id: package_llama_cache
         uses: actions/cache@v5
@@ -357,8 +369,8 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
-        "      - macos-runtime",
-        "      - macos-runtime\n      - swift-tests",
+        "      - changes",
+        "      - changes\n      - swift-tests",
       ),
     )
     assert_issue(issue_messages(root), "must not wait for swift-tests")
@@ -368,8 +380,30 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
-        "      - macos-runtime",
-        "      - macos-runtime\n      - macos-llama-backend",
+        "      - changes",
+        "      - changes\n      - swift-app",
+      ),
+    )
+    assert_issue(issue_messages(root), "Swift executable directly")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - changes",
+        "      - changes\n      - macos-runtime",
+      ),
+    )
+    assert_issue(issue_messages(root), "runtime executable directly")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - changes",
+        "      - changes\n      - macos-llama-backend",
       ),
     )
     assert_issue(issue_messages(root), "cached llama.cpp directly")

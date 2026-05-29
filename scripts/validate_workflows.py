@@ -156,6 +156,20 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
           "macos-package must not wait for swift-tests before artifact assembly",
         )
       )
+    if re.search(r"(?m)^\s+-\s+swift-app\s*$", package_block):
+      issues.append(
+        WorkflowIssue(
+          CI_WORKFLOW,
+          "macos-package must restore or build the Swift executable directly instead of waiting for the Swift artifact",
+        )
+      )
+    if re.search(r"(?m)^\s+-\s+macos-runtime\s*$", package_block):
+      issues.append(
+        WorkflowIssue(
+          CI_WORKFLOW,
+          "macos-package must restore or build the runtime executable directly instead of waiting for the runtime artifact",
+        )
+      )
     if re.search(r"(?m)^\s+-\s+macos-llama-backend\s*$", package_block):
       issues.append(
         WorkflowIssue(
@@ -184,6 +198,12 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       )
     required_package_terms = (
       'python3 scripts/package_contract.py',
+      'id: package_swift_cache',
+      'key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'Build Swift app executable',
+      'id: package_runtime_cache',
+      'key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'Build runtime executable',
       'id: package_llama_cache',
       'key: llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1',
       'Build pinned llama.cpp backend',
