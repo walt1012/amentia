@@ -16,24 +16,8 @@ pub(crate) fn local_tool_attributes(
     ("toolName".to_string(), tool_name.to_string()),
     ("toolKind".to_string(), tool_kind.to_string()),
     ("toolSchema".to_string(), LOCAL_TOOL_SCHEMA.to_string()),
-    (
-      "actionReceiptSchema".to_string(),
-      ACTION_RECEIPT_SCHEMA.to_string(),
-    ),
-    (
-      "localExecutionSafetyMode".to_string(),
-      DEFAULT_LOCAL_EXECUTION_SAFETY_MODE.to_string(),
-    ),
-    ("pithAccountRequired".to_string(), "false".to_string()),
-    (
-      "actionBoundary".to_string(),
-      action_boundary(tool_kind).to_string(),
-    ),
-    (
-      "actionApprovalPolicy".to_string(),
-      action_approval_policy(tool_name).to_string(),
-    ),
   ]);
+  insert_action_receipt_attributes(&mut attributes, tool_kind, tool_name);
   attributes.extend(extra);
   attributes
 }
@@ -68,6 +52,30 @@ fn workspace_tool_kind(tool: &str) -> &'static str {
     "run_shell" => "shell",
     _ => "workspace",
   }
+}
+
+fn insert_action_receipt_attributes(
+  attributes: &mut HashMap<String, String>,
+  tool_kind: &str,
+  tool_name: &str,
+) {
+  attributes.insert(
+    "actionReceiptSchema".to_string(),
+    ACTION_RECEIPT_SCHEMA.to_string(),
+  );
+  attributes.insert(
+    "localExecutionSafetyMode".to_string(),
+    DEFAULT_LOCAL_EXECUTION_SAFETY_MODE.to_string(),
+  );
+  attributes.insert("pithAccountRequired".to_string(), "false".to_string());
+  attributes.insert(
+    "actionBoundary".to_string(),
+    action_boundary(tool_kind).to_string(),
+  );
+  attributes.insert(
+    "actionApprovalPolicy".to_string(),
+    action_approval_policy(tool_name).to_string(),
+  );
 }
 
 fn action_boundary(tool_kind: &str) -> &'static str {
