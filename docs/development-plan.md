@@ -80,8 +80,8 @@ Working foundation:
   describes installer artifacts, not internal zip implementation detail.
   Package metadata, release manifests, generated install copy, app trust copy,
   runtime readiness metrics, packaged smoke, and app status summaries now state
-  the no-account product boundary and the local execution safety modes. Local
-  tool and Web Search timeline items now carry action receipts for execution
+  the no-account product boundary and the local execution safety modes. The app
+  now presents action receipts from stable timeline tool attributes: execution
   mode, boundary, approval policy, account requirement, and tool context.
 
 ## Alignment Review

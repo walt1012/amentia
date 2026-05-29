@@ -35,17 +35,32 @@ enum TimelineEvidenceBadgePresenter {
   private static func actionReceiptBadge(
     attributes: [String: String]
   ) -> TimelineEvidenceBadgeSummary? {
-    guard attributes["actionReceiptSchema"] != nil else {
+    guard attributes["actionReceiptSchema"] != nil
+      || attributes["toolName"] != nil
+      || attributes["tool"] != nil
+    else {
       return nil
     }
 
-    switch attributes["actionApprovalPolicy"] {
+    let tool = attributes["toolName"] ?? attributes["tool"]
+    switch attributes["actionApprovalPolicy"] ?? inferredApprovalPolicy(tool) {
     case "requiresApproval":
       return TimelineEvidenceBadgeSummary(label: "Approval Required", tone: .warning)
     case "requiresPluginPermission":
       return TimelineEvidenceBadgeSummary(label: "Plugin Permission", tone: .active)
     default:
       return TimelineEvidenceBadgeSummary(label: "Ask Mode", tone: .ready)
+    }
+  }
+
+  private static func inferredApprovalPolicy(_ tool: String?) -> String {
+    switch tool {
+    case "write_file", "run_shell":
+      return "requiresApproval"
+    case "web_search":
+      return "requiresPluginPermission"
+    default:
+      return "readOnlyAllowed"
     }
   }
 

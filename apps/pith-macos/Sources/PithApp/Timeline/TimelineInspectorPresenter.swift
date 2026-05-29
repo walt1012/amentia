@@ -66,14 +66,21 @@ enum TimelineInspectorPresenter {
 
   static func selectedEntryActionReceiptSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
     guard let entry = snapshot.selectedEntry,
-          entry.attributes["actionReceiptSchema"] != nil
+          hasActionReceiptContext(entry.attributes)
     else {
       return nil
     }
 
-    let mode = readableExecutionMode(entry.attributes["localExecutionSafetyMode"])
-    let boundary = readableBoundary(entry.attributes["actionBoundary"])
-    let policy = readableApprovalPolicy(entry.attributes["actionApprovalPolicy"])
+    let tool = entry.attributes["toolName"] ?? entry.attributes["tool"]
+    let mode = readableExecutionMode(
+      entry.attributes["localExecutionSafetyMode"] ?? "askBeforeChange"
+    )
+    let boundary = readableBoundary(
+      entry.attributes["actionBoundary"] ?? inferredBoundary(entry.attributes)
+    )
+    let policy = readableApprovalPolicy(
+      entry.attributes["actionApprovalPolicy"] ?? inferredApprovalPolicy(tool)
+    )
     let account = yesNo(entry.attributes["pithAccountRequired"] ?? "false")
     var lines = [
       "Mode: \(mode)",
@@ -81,7 +88,7 @@ enum TimelineInspectorPresenter {
       "Approval: \(policy)",
       "Pith account required: \(account)",
     ]
-    if let tool = entry.attributes["toolName"] ?? entry.attributes["tool"] {
+    if let tool {
       lines.append("Tool: \(tool)")
     }
     if let workspace = entry.attributes["workspaceDisplayName"] {
@@ -324,6 +331,13 @@ enum TimelineInspectorPresenter {
     }
   }
 
+  private static func hasActionReceiptContext(_ attributes: [String: String]) -> Bool {
+    attributes["actionReceiptSchema"] != nil
+      || attributes["toolName"] != nil
+      || attributes["tool"] != nil
+      || attributes["agentToolName"] != nil
+  }
+
   private static func readableExecutionMode(_ value: String?) -> String {
     switch value {
     case "askBeforeChange":
@@ -352,6 +366,22 @@ enum TimelineInspectorPresenter {
     }
   }
 
+  private static func inferredBoundary(_ attributes: [String: String]) -> String {
+    if attributes["webSearchSourceMode"] != nil || attributes["networkAccess"] == "true" {
+      return "network"
+    }
+    switch attributes["toolKind"] ?? attributes["agentToolKind"] {
+    case "web":
+      return "network"
+    case "connector", "plugin":
+      return "localPlugin"
+    case "file", "search", "shell", "workspace":
+      return "workspace"
+    default:
+      return "localRuntime"
+    }
+  }
+
   private static func readableApprovalPolicy(_ value: String?) -> String {
     switch value {
     case "requiresApproval":
@@ -362,6 +392,17 @@ enum TimelineInspectorPresenter {
       return "read-only allowed"
     default:
       return value ?? "unknown"
+    }
+  }
+
+  private static func inferredApprovalPolicy(_ tool: String?) -> String {
+    switch tool {
+    case "write_file", "run_shell":
+      return "requiresApproval"
+    case "web_search":
+      return "requiresPluginPermission"
+    default:
+      return "readOnlyAllowed"
     }
   }
 

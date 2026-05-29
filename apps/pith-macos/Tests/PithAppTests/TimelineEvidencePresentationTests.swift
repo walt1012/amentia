@@ -4,8 +4,7 @@ import XCTest
 final class TimelineEvidencePresentationTests: XCTestCase {
   func testActionReceiptBadgeShowsAskMode() {
     let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
-      "actionReceiptSchema": "pith.actionReceipt.v1",
-      "actionApprovalPolicy": "readOnlyAllowed",
+      "tool": "read_file",
     ])
 
     XCTAssertEqual(badges.first?.label, "Ask Mode")
@@ -14,8 +13,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
 
   func testActionReceiptBadgeShowsApprovalRequired() {
     let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
-      "actionReceiptSchema": "pith.actionReceipt.v1",
-      "actionApprovalPolicy": "requiresApproval",
+      "tool": "run_shell",
     ])
 
     XCTAssertEqual(badges.first?.label, "Approval Required")
@@ -97,12 +95,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         title: "read_file",
         body: "README.md",
         attributes: [
-          "actionReceiptSchema": "pith.actionReceipt.v1",
-          "localExecutionSafetyMode": "askBeforeChange",
-          "actionBoundary": "workspace",
-          "actionApprovalPolicy": "readOnlyAllowed",
-          "pithAccountRequired": "false",
           "toolName": "read_file",
+          "toolKind": "file",
           "workspaceDisplayName": "Pith",
         ]
       ))
@@ -129,12 +123,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         title: "web_search",
         body: "latest model",
         attributes: [
-          "actionReceiptSchema": "pith.actionReceipt.v1",
-          "localExecutionSafetyMode": "askBeforeChange",
-          "actionBoundary": "network",
-          "actionApprovalPolicy": "requiresPluginPermission",
-          "pithAccountRequired": "false",
           "toolName": "web_search",
+          "toolKind": "web",
           "routingReason": "freshPublicInformation",
         ]
       ))
