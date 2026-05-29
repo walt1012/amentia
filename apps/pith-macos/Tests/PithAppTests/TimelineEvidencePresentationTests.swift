@@ -2,6 +2,26 @@
 import XCTest
 
 final class TimelineEvidencePresentationTests: XCTestCase {
+  func testActionReceiptBadgeShowsAskMode() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "actionReceiptSchema": "pith.actionReceipt.v1",
+      "actionApprovalPolicy": "readOnlyAllowed",
+    ])
+
+    XCTAssertEqual(badges.first?.label, "Ask Mode")
+    XCTAssertEqual(badges.first?.tone, .ready)
+  }
+
+  func testActionReceiptBadgeShowsApprovalRequired() {
+    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+      "actionReceiptSchema": "pith.actionReceipt.v1",
+      "actionApprovalPolicy": "requiresApproval",
+    ])
+
+    XCTAssertEqual(badges.first?.label, "Approval Required")
+    XCTAssertEqual(badges.first?.tone, .warning)
+  }
+
   func testWebSearchBadgeLabelsSearchResultAttribution() {
     let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
       "webSearchSourceMode": "searchResultAttribution",
@@ -67,6 +87,62 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(badges.count, 1)
     XCTAssertEqual(badges.first?.label, "Connector Retry Needed")
     XCTAssertEqual(badges.first?.tone, .warning)
+  }
+
+  func testInspectorSummarizesActionReceipt() {
+    let summary = TimelineInspectorPresenter.selectedEntryActionReceiptSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .tool,
+        title: "read_file",
+        body: "README.md",
+        attributes: [
+          "actionReceiptSchema": "pith.actionReceipt.v1",
+          "localExecutionSafetyMode": "askBeforeChange",
+          "actionBoundary": "workspace",
+          "actionApprovalPolicy": "readOnlyAllowed",
+          "pithAccountRequired": "false",
+          "toolName": "read_file",
+          "workspaceDisplayName": "Pith",
+        ]
+      ))
+    )
+
+    XCTAssertEqual(
+      summary,
+      """
+      Mode: ask-before-change
+      Boundary: workspace
+      Approval: read-only allowed
+      Pith account required: no
+      Tool: read_file
+      Workspace: Pith
+      """
+    )
+  }
+
+  func testInspectorSummarizesNetworkActionReceiptReason() {
+    let summary = TimelineInspectorPresenter.selectedEntryActionReceiptSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .tool,
+        title: "web_search",
+        body: "latest model",
+        attributes: [
+          "actionReceiptSchema": "pith.actionReceipt.v1",
+          "localExecutionSafetyMode": "askBeforeChange",
+          "actionBoundary": "network",
+          "actionApprovalPolicy": "requiresPluginPermission",
+          "pithAccountRequired": "false",
+          "toolName": "web_search",
+          "routingReason": "freshPublicInformation",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(summary?.contains("Boundary: network") == true)
+    XCTAssertTrue(summary?.contains("Approval: requires enabled plugin permission") == true)
+    XCTAssertTrue(summary?.contains("Reason: freshPublicInformation") == true)
   }
 
   func testInspectorSummarizesWebSearchSourceDepth() {

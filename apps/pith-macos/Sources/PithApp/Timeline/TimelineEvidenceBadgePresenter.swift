@@ -8,6 +8,7 @@ struct TimelineEvidenceBadgeSummary: Hashable {
 enum TimelineEvidenceBadgePresenter {
   static func badges(attributes: [String: String]) -> [TimelineEvidenceBadgeSummary] {
     [
+      actionReceiptBadge(attributes: attributes),
       webSearchBadge(attributes: attributes),
       connectorWorkflowBadge(attributes: attributes) ?? remoteWriteBadge(attributes: attributes),
     ]
@@ -29,6 +30,23 @@ enum TimelineEvidenceBadgePresenter {
     }
 
     return TimelineEvidenceBadgeSummary(label: "Search Result Sources", tone: .active)
+  }
+
+  private static func actionReceiptBadge(
+    attributes: [String: String]
+  ) -> TimelineEvidenceBadgeSummary? {
+    guard attributes["actionReceiptSchema"] != nil else {
+      return nil
+    }
+
+    switch attributes["actionApprovalPolicy"] {
+    case "requiresApproval":
+      return TimelineEvidenceBadgeSummary(label: "Approval Required", tone: .warning)
+    case "requiresPluginPermission":
+      return TimelineEvidenceBadgeSummary(label: "Plugin Permission", tone: .active)
+    default:
+      return TimelineEvidenceBadgeSummary(label: "Ask Mode", tone: .ready)
+    }
   }
 
   private static func remoteWriteBadge(

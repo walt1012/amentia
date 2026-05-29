@@ -78,6 +78,20 @@ fn turn_start_reads_a_requested_workspace_file() {
   );
   assert_eq!(items[2]["attributes"]["toolCallStatus"], "started");
   assert_eq!(items[2]["attributes"]["tool"], "read_file");
+  assert_eq!(
+    items[2]["attributes"]["actionReceiptSchema"],
+    "pith.actionReceipt.v1"
+  );
+  assert_eq!(
+    items[2]["attributes"]["localExecutionSafetyMode"],
+    "askBeforeChange"
+  );
+  assert_eq!(items[2]["attributes"]["actionBoundary"], "workspace");
+  assert_eq!(
+    items[2]["attributes"]["actionApprovalPolicy"],
+    "readOnlyAllowed"
+  );
+  assert_eq!(items[2]["attributes"]["pithAccountRequired"], "false");
   assert_eq!(items[2]["attributes"]["relativePath"], "README.md");
   assert_eq!(items[2]["attributes"]["maxBytes"], "4096");
   assert_eq!(
@@ -180,6 +194,10 @@ fn turn_start_searches_workspace_content() {
   assert_eq!(items[2]["attributes"]["agentToolKind"], "workspace");
   assert_eq!(items[2]["attributes"]["agentToolName"], "search_files");
   assert_eq!(items[2]["attributes"]["tool"], "search_files");
+  assert_eq!(
+    items[2]["attributes"]["actionApprovalPolicy"],
+    "readOnlyAllowed"
+  );
   assert_eq!(items[2]["attributes"]["query"], "Search target");
   assert_eq!(items[2]["attributes"]["maxResults"], "12");
   assert_eq!(items[3]["kind"], "toolResult");

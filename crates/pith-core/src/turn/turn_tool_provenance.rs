@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use pith_protocol::WorkspaceSummary;
 
 pub(crate) const LOCAL_TOOL_SCHEMA: &str = "pith.localTool.v1";
+pub(crate) const ACTION_RECEIPT_SCHEMA: &str = "pith.actionReceipt.v1";
+pub(crate) const DEFAULT_LOCAL_EXECUTION_SAFETY_MODE: &str = "askBeforeChange";
 
 pub(crate) fn local_tool_attributes(
   tool_kind: &str,
@@ -14,6 +16,23 @@ pub(crate) fn local_tool_attributes(
     ("toolName".to_string(), tool_name.to_string()),
     ("toolKind".to_string(), tool_kind.to_string()),
     ("toolSchema".to_string(), LOCAL_TOOL_SCHEMA.to_string()),
+    (
+      "actionReceiptSchema".to_string(),
+      ACTION_RECEIPT_SCHEMA.to_string(),
+    ),
+    (
+      "localExecutionSafetyMode".to_string(),
+      DEFAULT_LOCAL_EXECUTION_SAFETY_MODE.to_string(),
+    ),
+    ("pithAccountRequired".to_string(), "false".to_string()),
+    (
+      "actionBoundary".to_string(),
+      action_boundary(tool_kind).to_string(),
+    ),
+    (
+      "actionApprovalPolicy".to_string(),
+      action_approval_policy(tool_name).to_string(),
+    ),
   ]);
   attributes.extend(extra);
   attributes
@@ -51,6 +70,23 @@ fn workspace_tool_kind(tool: &str) -> &'static str {
   }
 }
 
+fn action_boundary(tool_kind: &str) -> &'static str {
+  match tool_kind {
+    "web" => "network",
+    "file" | "search" | "shell" | "workspace" => "workspace",
+    "connector" | "plugin" => "localPlugin",
+    _ => "localRuntime",
+  }
+}
+
+fn action_approval_policy(tool: &str) -> &'static str {
+  match tool {
+    "write_file" | "run_shell" => "requiresApproval",
+    "web_search" => "requiresPluginPermission",
+    _ => "readOnlyAllowed",
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -75,6 +111,18 @@ mod tests {
     assert_eq!(
       attributes.get("toolSchema").map(String::as_str),
       Some("pith.localTool.v1")
+    );
+    assert_eq!(
+      attributes.get("actionReceiptSchema").map(String::as_str),
+      Some("pith.actionReceipt.v1")
+    );
+    assert_eq!(
+      attributes.get("localExecutionSafetyMode").map(String::as_str),
+      Some("askBeforeChange")
+    );
+    assert_eq!(
+      attributes.get("pithAccountRequired").map(String::as_str),
+      Some("false")
     );
     assert_eq!(
       attributes.get("query").map(String::as_str),
@@ -104,6 +152,18 @@ mod tests {
     assert_eq!(
       search_attributes.get("toolKind").map(String::as_str),
       Some("search")
+    );
+    assert_eq!(
+      read_attributes.get("actionApprovalPolicy").map(String::as_str),
+      Some("readOnlyAllowed")
+    );
+    assert_eq!(
+      shell_attributes.get("actionApprovalPolicy").map(String::as_str),
+      Some("requiresApproval")
+    );
+    assert_eq!(
+      shell_attributes.get("actionBoundary").map(String::as_str),
+      Some("workspace")
     );
   }
 }

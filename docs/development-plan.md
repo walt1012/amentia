@@ -80,7 +80,9 @@ Working foundation:
   describes installer artifacts, not internal zip implementation detail.
   Package metadata, release manifests, generated install copy, app trust copy,
   runtime readiness metrics, packaged smoke, and app status summaries now state
-  the no-account product boundary and the local execution safety modes.
+  the no-account product boundary and the local execution safety modes. Local
+  tool and Web Search timeline items now carry action receipts for execution
+  mode, boundary, approval policy, account requirement, and tool context.
 
 ## Alignment Review
 
@@ -96,9 +98,9 @@ orchestration too early.
 
 Active gaps found in the review:
 
-- Local execution safety modes now have a release/package/runtime/app contract,
-  but the running app still needs a calm user-facing switch and tighter
-  per-action receipts.
+- Local execution safety modes now have release/package/runtime/app contracts
+  and baseline action receipts. The remaining gap is a calm user-facing switch,
+  plus richer context receipts for memory, compaction, and Web Search sources.
 - Context management is present but not yet productized. Show what context was
   used, what was compacted, and why Web Search or memory entered the turn.
 - Connector execution is useful but still Notion-led. Keep service-specific

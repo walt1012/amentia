@@ -64,6 +64,35 @@ enum TimelineInspectorPresenter {
     return lines.joined(separator: "\n")
   }
 
+  static func selectedEntryActionReceiptSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
+    guard let entry = snapshot.selectedEntry,
+          entry.attributes["actionReceiptSchema"] != nil
+    else {
+      return nil
+    }
+
+    let mode = readableExecutionMode(entry.attributes["localExecutionSafetyMode"])
+    let boundary = readableBoundary(entry.attributes["actionBoundary"])
+    let policy = readableApprovalPolicy(entry.attributes["actionApprovalPolicy"])
+    let account = yesNo(entry.attributes["pithAccountRequired"] ?? "false")
+    var lines = [
+      "Mode: \(mode)",
+      "Boundary: \(boundary)",
+      "Approval: \(policy)",
+      "Pith account required: \(account)",
+    ]
+    if let tool = entry.attributes["toolName"] ?? entry.attributes["tool"] {
+      lines.append("Tool: \(tool)")
+    }
+    if let workspace = entry.attributes["workspaceDisplayName"] {
+      lines.append("Workspace: \(workspace)")
+    }
+    if let reason = entry.attributes["routingReason"] {
+      lines.append("Reason: \(reason)")
+    }
+    return lines.joined(separator: "\n")
+  }
+
   static func selectedDiffSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
     guard let entry = snapshot.selectedEntry, entry.kind == .diff else {
       return nil
@@ -292,6 +321,47 @@ enum TimelineInspectorPresenter {
       return "no"
     default:
       return value
+    }
+  }
+
+  private static func readableExecutionMode(_ value: String?) -> String {
+    switch value {
+    case "askBeforeChange":
+      return "ask-before-change"
+    case "approvedWorkspaceExecution":
+      return "approved workspace execution"
+    case "explore":
+      return "explore"
+    default:
+      return value ?? "unknown"
+    }
+  }
+
+  private static func readableBoundary(_ value: String?) -> String {
+    switch value {
+    case "workspace":
+      return "workspace"
+    case "network":
+      return "network"
+    case "localPlugin":
+      return "local plugin"
+    case "localRuntime":
+      return "local runtime"
+    default:
+      return value ?? "unknown"
+    }
+  }
+
+  private static func readableApprovalPolicy(_ value: String?) -> String {
+    switch value {
+    case "requiresApproval":
+      return "requires approval"
+    case "requiresPluginPermission":
+      return "requires enabled plugin permission"
+    case "readOnlyAllowed":
+      return "read-only allowed"
+    default:
+      return value ?? "unknown"
     }
   }
 

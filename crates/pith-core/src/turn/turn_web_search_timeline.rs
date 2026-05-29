@@ -154,6 +154,14 @@ mod tests {
     );
     assert_eq!(attributes.get("toolKind").map(String::as_str), Some("web"));
     assert_eq!(
+      attributes.get("actionBoundary").map(String::as_str),
+      Some("network")
+    );
+    assert_eq!(
+      attributes.get("actionApprovalPolicy").map(String::as_str),
+      Some("requiresPluginPermission")
+    );
+    assert_eq!(
       attributes.get("provider").map(String::as_str),
       Some("Example Search")
     );

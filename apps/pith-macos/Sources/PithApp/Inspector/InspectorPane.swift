@@ -10,6 +10,7 @@ struct InspectorPane: View {
   @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = false
   @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
   @AppStorage("pith.inspector.selectedPluginExpanded") private var selectedPluginExpanded = false
+  @AppStorage("pith.inspector.selectedReceiptExpanded") private var selectedReceiptExpanded = false
   @AppStorage("pith.inspector.selectedSandboxExpanded") private var selectedSandboxExpanded = false
   @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
@@ -55,6 +56,7 @@ struct InspectorPane: View {
 
         selectedItemSection
         diffDetailSection
+        selectedReceiptSection
         selectedMemorySection
         selectedPluginSection
         selectedSandboxSection
@@ -100,6 +102,19 @@ struct InspectorPane: View {
     if let diffSummary = viewModel.selectedDiffSummary() {
       GroupBox("Diff Detail") {
         DiffDetailView(summary: diffSummary, lines: viewModel.selectedDiffLines())
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var selectedReceiptSection: some View {
+    if let receiptSummary = viewModel.selectedEntryActionReceiptSummary() {
+      DisclosureGroup("Selected Action Receipt", isExpanded: $selectedReceiptExpanded) {
+        Text(receiptSummary)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
   }
