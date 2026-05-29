@@ -12,9 +12,7 @@ use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
 use crate::plugin_hooks::PluginHookMemoryCapture;
 use crate::requests::approval_agent_context::ApprovalAgentContext;
 use crate::runtime_plugins::RuntimePluginState;
-use crate::turn::local_execution_safety::{
-  LocalChangeExecutionPolicy, LocalExecutionSafetyMode,
-};
+use crate::turn::local_execution_safety::{LocalChangeExecutionPolicy, LocalExecutionSafetyMode};
 
 #[derive(Debug)]
 pub struct PreparedTurnStart {

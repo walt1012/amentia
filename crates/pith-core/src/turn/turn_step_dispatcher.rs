@@ -74,10 +74,7 @@ impl<'a> TurnStepDispatcher<'a> {
 
   pub(super) fn execute(&mut self, action: PreparedTurnAction) -> TurnStepResult {
     match action {
-      PreparedTurnAction::Write {
-        intent,
-        policy,
-      } => {
+      PreparedTurnAction::Write { intent, policy } => {
         if let Some(workspace) = self.snapshot.workspace.as_ref() {
           execute_write_turn(
             self.snapshot,
@@ -91,10 +88,7 @@ impl<'a> TurnStepDispatcher<'a> {
           execute_no_workspace_turn(self.snapshot, self.items);
         }
       }
-      PreparedTurnAction::Shell {
-        command,
-        policy,
-      } => {
+      PreparedTurnAction::Shell { command, policy } => {
         if let Some(workspace) = self.snapshot.workspace.as_ref() {
           execute_shell_turn(
             self.snapshot,

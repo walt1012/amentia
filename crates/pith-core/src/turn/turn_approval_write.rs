@@ -53,7 +53,10 @@ pub(super) fn execute_write_turn(
       ),
       (
         "blockReason".to_string(),
-        policy.block_reason_attribute().unwrap_or("unknown").to_string(),
+        policy
+          .block_reason_attribute()
+          .unwrap_or("unknown")
+          .to_string(),
       ),
     ]);
     if policy.is_missing_permission_denial() {
@@ -85,14 +88,18 @@ pub(super) fn execute_write_turn(
         write_file_max_bytes()
       ),
       workspace,
-      change_policy_attributes(snapshot, policy, [
-        ("relativePath".to_string(), intent.relative_path.clone()),
-        (
-          "bytesRequested".to_string(),
-          intent.content.len().to_string(),
-        ),
-        ("maxBytes".to_string(), write_file_max_bytes().to_string()),
-      ]),
+      change_policy_attributes(
+        snapshot,
+        policy,
+        [
+          ("relativePath".to_string(), intent.relative_path.clone()),
+          (
+            "bytesRequested".to_string(),
+            intent.content.len().to_string(),
+          ),
+          ("maxBytes".to_string(), write_file_max_bytes().to_string()),
+        ],
+      ),
     ));
     items.push(TimelineItem {
       kind: "assistantMessage".to_string(),
@@ -129,10 +136,14 @@ pub(super) fn execute_write_turn(
     "generate_diff",
     intent.relative_path.clone(),
     workspace,
-    change_policy_attributes(snapshot, policy, [
-      ("relativePath".to_string(), intent.relative_path.clone()),
-      ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
-    ]),
+    change_policy_attributes(
+      snapshot,
+      policy,
+      [
+        ("relativePath".to_string(), intent.relative_path.clone()),
+        ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+      ],
+    ),
   ));
   match generate_diff_with_cancellation(
     Path::new(&workspace.root_path),
@@ -144,11 +155,15 @@ pub(super) fn execute_write_turn(
       items.push(workspace_diff_artifact_item(
         diff,
         workspace,
-        change_policy_attributes(snapshot, policy, [
-          ("action".to_string(), "write_file".to_string()),
-          ("relativePath".to_string(), intent.relative_path.clone()),
-          ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
-        ]),
+        change_policy_attributes(
+          snapshot,
+          policy,
+          [
+            ("action".to_string(), "write_file".to_string()),
+            ("relativePath".to_string(), intent.relative_path.clone()),
+            ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+          ],
+        ),
       ));
     }
     Err(error) => {
@@ -220,10 +235,14 @@ fn execute_auto_approved_write(
     "generate_diff",
     intent.relative_path.clone(),
     workspace,
-    change_policy_attributes(snapshot, policy, [
-      ("relativePath".to_string(), intent.relative_path.clone()),
-      ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
-    ]),
+    change_policy_attributes(
+      snapshot,
+      policy,
+      [
+        ("relativePath".to_string(), intent.relative_path.clone()),
+        ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+      ],
+    ),
   ));
   match generate_diff_with_cancellation(
     Path::new(&workspace.root_path),
@@ -234,11 +253,15 @@ fn execute_auto_approved_write(
     Ok(diff) => items.push(workspace_diff_artifact_item(
       diff,
       workspace,
-      change_policy_attributes(snapshot, policy, [
-        ("action".to_string(), "write_file".to_string()),
-        ("relativePath".to_string(), intent.relative_path.clone()),
-        ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
-      ]),
+      change_policy_attributes(
+        snapshot,
+        policy,
+        [
+          ("action".to_string(), "write_file".to_string()),
+          ("relativePath".to_string(), intent.relative_path.clone()),
+          ("maxBytes".to_string(), diff_preview_max_bytes().to_string()),
+        ],
+      ),
     )),
     Err(error) => {
       if snapshot.cancellation.is_cancelled() {
@@ -277,11 +300,15 @@ fn execute_auto_approved_write(
         "write_file",
         format!("Wrote {} bytes to {}.", intent.content.len(), relative_path),
         workspace,
-        change_policy_attributes(snapshot, policy, [
-          ("relativePath".to_string(), relative_path.clone()),
-          ("bytesWritten".to_string(), intent.content.len().to_string()),
-          ("maxBytes".to_string(), write_file_max_bytes().to_string()),
-        ]),
+        change_policy_attributes(
+          snapshot,
+          policy,
+          [
+            ("relativePath".to_string(), relative_path.clone()),
+            ("bytesWritten".to_string(), intent.content.len().to_string()),
+            ("maxBytes".to_string(), write_file_max_bytes().to_string()),
+          ],
+        ),
       ));
       items.push(TimelineItem {
         kind: "assistantMessage".to_string(),
@@ -311,10 +338,14 @@ fn execute_auto_approved_write(
       "write_file failed".to_string(),
       error.to_string(),
       workspace,
-      change_policy_attributes(snapshot, policy, [
-        ("relativePath".to_string(), intent.relative_path.clone()),
-        ("maxBytes".to_string(), write_file_max_bytes().to_string()),
-      ]),
+      change_policy_attributes(
+        snapshot,
+        policy,
+        [
+          ("relativePath".to_string(), intent.relative_path.clone()),
+          ("maxBytes".to_string(), write_file_max_bytes().to_string()),
+        ],
+      ),
     )),
   }
 }

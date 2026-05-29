@@ -5,9 +5,7 @@ use pith_protocol::TimelineItem;
 use super::turn_agent_steps::{AgentStepOutcome, AgentStepRecord};
 use crate::intent_inference::{WebSearchIntent, WriteIntent};
 use crate::request_state::PreparedTurnAction;
-use crate::turn::local_execution_safety::{
-  LocalChangeExecutionPolicy, LocalExecutionSafetyMode,
-};
+use crate::turn::local_execution_safety::{LocalChangeExecutionPolicy, LocalExecutionSafetyMode};
 
 pub(crate) const LOOP_MAX_STEPS: usize = 3;
 pub(crate) const LOOP_MAX_EXTENDED_STEPS: usize = 8;
@@ -621,10 +619,7 @@ mod tests {
       .expect("next action");
 
     match next_action {
-      PreparedTurnAction::Shell {
-        command,
-        policy,
-      } => {
+      PreparedTurnAction::Shell { command, policy } => {
         assert_eq!(command, "git status --short");
         assert_eq!(
           policy,
@@ -663,10 +658,7 @@ mod tests {
       .expect("next action");
 
     match next_action {
-      PreparedTurnAction::Write {
-        intent,
-        policy,
-      } => {
+      PreparedTurnAction::Write { intent, policy } => {
         assert_eq!(intent.relative_path, "notes/today.md");
         assert_eq!(intent.content, "Ship the cowork loop.");
         assert_eq!(

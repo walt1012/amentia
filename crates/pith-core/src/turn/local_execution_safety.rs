@@ -52,11 +52,9 @@ impl LocalExecutionSafetyMode {
 
     match self {
       Self::Explore => LocalChangeExecutionPolicy::Denied(LocalChangeBlockReason::ReadOnlyMode),
-      Self::AskBeforeChange => approval_id
-        .map(LocalChangeExecutionPolicy::Ask)
-        .unwrap_or(LocalChangeExecutionPolicy::Denied(
-          LocalChangeBlockReason::ApprovalUnavailable,
-        )),
+      Self::AskBeforeChange => approval_id.map(LocalChangeExecutionPolicy::Ask).unwrap_or(
+        LocalChangeExecutionPolicy::Denied(LocalChangeBlockReason::ApprovalUnavailable),
+      ),
       Self::ApprovedWorkspaceExecution => LocalChangeExecutionPolicy::AutoApproved,
     }
   }

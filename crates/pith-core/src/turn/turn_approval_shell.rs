@@ -48,7 +48,10 @@ pub(super) fn execute_shell_turn(
       ),
       (
         "blockReason".to_string(),
-        policy.block_reason_attribute().unwrap_or("unknown").to_string(),
+        policy
+          .block_reason_attribute()
+          .unwrap_or("unknown")
+          .to_string(),
       ),
     ]);
     if policy.is_missing_permission_denial() {
@@ -140,13 +143,17 @@ fn execute_auto_approved_shell(
     attributes: Some(workspace_tool_attributes(
       "run_shell",
       workspace,
-      change_policy_attributes(snapshot, policy, [
-        ("command".to_string(), command.to_string()),
-        (
-          "maxOutputBytes".to_string(),
-          SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
-        ),
-      ]),
+      change_policy_attributes(
+        snapshot,
+        policy,
+        [
+          ("command".to_string(), command.to_string()),
+          (
+            "maxOutputBytes".to_string(),
+            SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+          ),
+        ],
+      ),
     )),
   });
 
@@ -172,16 +179,20 @@ fn execute_auto_approved_shell(
           let mut attributes = workspace_tool_attributes(
             "run_shell",
             workspace,
-            change_policy_attributes(snapshot, policy, [
-              ("command".to_string(), command.to_string()),
-              ("exitCode".to_string(), result.exit_code.to_string()),
-              ("timedOut".to_string(), result.timed_out.to_string()),
-              ("cancelled".to_string(), result.cancelled.to_string()),
-              (
-                "maxOutputBytes".to_string(),
-                SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
-              ),
-            ]),
+            change_policy_attributes(
+              snapshot,
+              policy,
+              [
+                ("command".to_string(), command.to_string()),
+                ("exitCode".to_string(), result.exit_code.to_string()),
+                ("timedOut".to_string(), result.timed_out.to_string()),
+                ("cancelled".to_string(), result.cancelled.to_string()),
+                (
+                  "maxOutputBytes".to_string(),
+                  SHELL_OUTPUT_PREVIEW_MAX_BYTES.to_string(),
+                ),
+              ],
+            ),
           );
           attributes.extend(result.sandbox.attributes());
           attributes.extend(result.output_context.attributes());
@@ -218,10 +229,7 @@ fn execute_auto_approved_shell(
   }
 }
 
-fn shell_plan_summary(
-  policy: &LocalChangeExecutionPolicy,
-  workspace: &WorkspaceSummary,
-) -> String {
+fn shell_plan_summary(policy: &LocalChangeExecutionPolicy, workspace: &WorkspaceSummary) -> String {
   match policy {
     LocalChangeExecutionPolicy::Ask(_) => format!(
       "Request approval before running a shell command in {}.",

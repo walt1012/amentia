@@ -65,11 +65,8 @@ pub fn prepare_turn_start(
     local_execution_safety_mode,
     cancellation.clone(),
   );
-  let reserved_approval_ids = reserve_follow_up_approval_ids(
-    context,
-    &permission_sources,
-    local_execution_safety_mode,
-  );
+  let reserved_approval_ids =
+    reserve_follow_up_approval_ids(context, &permission_sources, local_execution_safety_mode);
   if context
     .execution_state
     .take_pending_running_cancel(&prepared_thread.thread_id)
