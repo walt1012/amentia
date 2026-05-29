@@ -96,15 +96,13 @@ jobs:
         uses: actions/cache@v5
         with:
           key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
-      - name: Build Swift app executable
-        run: swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
       - name: Cache runtime executable
         id: package_runtime_cache
         uses: actions/cache@v5
         with:
           key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
-      - name: Build runtime executable
-        run: cargo build -p pith-runtime-bin --release
+      - name: Build missing package executables
+        run: swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 && cargo build -p pith-runtime-bin --release
       - name: Cache pinned llama.cpp backend
         id: package_llama_cache
         uses: actions/cache@v5

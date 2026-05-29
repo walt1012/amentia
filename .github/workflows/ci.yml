@@ -524,17 +524,6 @@ jobs:
             package-swift-build-${{ runner.os }}-${{ runner.arch }}-
             swift-build-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: Build Swift app executable
-        if: steps.package_swift_cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
-          bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
-          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$SWIFT_APP_BINARY_CACHE_DIR"
-          cp "$bin_path/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
-          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
-
       - name: Cache runtime executable
         id: package_runtime_cache
         uses: actions/cache@v5
@@ -566,15 +555,45 @@ jobs:
             package-cargo-${{ runner.os }}-${{ runner.arch }}-
             macos-runtime-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: Build runtime executable
-        if: steps.package_runtime_cache.outputs.cache-hit != 'true'
+      - name: Build missing package executables
+        if: steps.package_swift_cache.outputs.cache-hit != 'true' || steps.package_runtime_cache.outputs.cache-hit != 'true'
+        env:
+          SWIFT_CACHE_HIT: ${{ steps.package_swift_cache.outputs.cache-hit }}
+          RUNTIME_CACHE_HIT: ${{ steps.package_runtime_cache.outputs.cache-hit }}
         run: |
           set -euo pipefail
-          cargo build -p pith-runtime-bin --release
-          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
-          cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
-          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+
+          pids=()
+          if [[ "$SWIFT_CACHE_HIT" != "true" ]]; then
+            (
+              swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
+              bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
+              mkdir -p "$PREBUILT_ARTIFACT_DIR" "$SWIFT_APP_BINARY_CACHE_DIR"
+              cp "$bin_path/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+              cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+              chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+            ) &
+            pids+=("$!")
+          fi
+
+          if [[ "$RUNTIME_CACHE_HIT" != "true" ]]; then
+            (
+              cargo build -p pith-runtime-bin --release
+              mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
+              cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+              cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+              chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+            ) &
+            pids+=("$!")
+          fi
+
+          failed=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              failed=1
+            fi
+          done
+          exit "$failed"
 
       - name: Cache pinned llama.cpp backend
         id: package_llama_cache

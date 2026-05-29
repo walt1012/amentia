@@ -44,8 +44,8 @@ Rust formatting, clippy, tests, and runtime smoke run as separate jobs so
 failures surface earlier instead of waiting behind a single serial Rust lane.
 The final macOS package job depends only on change detection. It restores the
 Swift executable, runtime executable, and pinned llama.cpp backend directly from
-shared caches, building missing executables inside the package lane only on
-cache miss. Swift app build, runtime build, and Swift logic tests remain
+shared caches, building missing app/runtime executables concurrently inside the
+package lane only on cache miss. Swift app build, runtime build, and Swift logic tests remain
 independent validation gates, but they no longer block artifact assembly when
 the package lane already has valid cached executables.
 
@@ -85,7 +85,7 @@ python3 scripts/package_macos_app.py
 CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
 and `pith-runtime-bin` build or run in parallel cached jobs. The packaging job
 starts from change detection, restores cached app/runtime/llama executables
-directly, builds only missing cache entries, assembles
+directly, builds missing app/runtime cache entries concurrently, assembles
 `Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
 and bundled plugin manifests under `Contents/Resources`, validates the app
 bundle, creates the DMG installer, and uploads one user-facing installer

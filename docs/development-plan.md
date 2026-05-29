@@ -142,8 +142,8 @@ Build toward:
   DMG path, exact installer asset sets, and release metadata without exposing
   internal build artifacts as user-facing downloads. The package lane should
   depend only on change detection, restore cached app/runtime/llama executables
-  directly, and build missing cache entries without waiting for validation
-  artifact handoffs.
+  directly, and build missing app/runtime cache entries concurrently without
+  waiting for validation artifact handoffs.
 
 Exit when:
 
