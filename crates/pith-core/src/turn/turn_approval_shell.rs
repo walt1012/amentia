@@ -37,6 +37,11 @@ pub(super) fn execute_shell_turn(
   }
   if policy.is_denied() {
     let attributes = HashMap::from([
+      ("tool".to_string(), "run_shell".to_string()),
+      ("toolName".to_string(), "run_shell".to_string()),
+      ("toolKind".to_string(), "shell".to_string()),
+      ("actionBoundary".to_string(), "workspace".to_string()),
+      ("pithAccountRequired".to_string(), "false".to_string()),
       ("command".to_string(), command.to_string()),
       (
         "localExecutionSafetyMode".to_string(),
@@ -279,6 +284,8 @@ fn change_policy_attributes(
   extra: impl IntoIterator<Item = (String, String)>,
 ) -> Vec<(String, String)> {
   let mut attributes = vec![
+    ("actionBoundary".to_string(), "workspace".to_string()),
+    ("pithAccountRequired".to_string(), "false".to_string()),
     (
       "localExecutionSafetyMode".to_string(),
       snapshot.local_execution_safety_mode.as_str().to_string(),

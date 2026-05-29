@@ -7,6 +7,21 @@ struct TimelineContextReceiptSection: Identifiable, Equatable {
 }
 
 enum TimelineContextReceiptPresenter {
+  static func cardSummary(_ entry: TimelineEntry) -> String? {
+    let parts = [
+      actionCardSummary(entry.attributes),
+      sourceCardSummary(entry.attributes),
+      memoryCardSummary(entry.attributes),
+      compactionCardSummary(entry.attributes),
+    ].compactMap { $0 }
+
+    guard !parts.isEmpty else {
+      return nil
+    }
+
+    return parts.joined(separator: " | ")
+  }
+
   static func sections(_ snapshot: TimelineInspectorSnapshot) -> [TimelineContextReceiptSection] {
     guard let entry = snapshot.selectedEntry else {
       return []
@@ -146,6 +161,9 @@ enum TimelineContextReceiptPresenter {
     }
     if let reason = entry.attributes["routingReason"] {
       lines.append("Reason: \(reason)")
+    }
+    if let blockReason = entry.attributes["blockReason"] {
+      lines.append("Block reason: \(readableBlockReason(blockReason))")
     }
 
     return TimelineContextReceiptSection(
@@ -315,6 +333,19 @@ enum TimelineContextReceiptPresenter {
     }
   }
 
+  private static func readableBlockReason(_ value: String) -> String {
+    switch value {
+    case "readOnlyMode":
+      return "read-only mode"
+    case "missingPermission":
+      return "missing permission"
+    case "approvalUnavailable":
+      return "approval unavailable"
+    default:
+      return value
+    }
+  }
+
   private static func inferredApprovalPolicy(_ tool: String?) -> String {
     switch tool {
     case "write_file", "run_shell":
@@ -378,6 +409,81 @@ enum TimelineContextReceiptPresenter {
       return "yes"
     case "false":
       return "no"
+    default:
+      return value
+    }
+  }
+
+  private static func actionCardSummary(_ attributes: [String: String]) -> String? {
+    guard hasActionReceiptContext(attributes) else {
+      return nil
+    }
+
+    let tool = attributes["toolName"] ?? attributes["tool"]
+    let mode = LocalExecutionSafetyModePresenter.compact(
+      attributes["localExecutionSafetyMode"] ?? "askBeforeChange"
+    )
+    let approval = compactApprovalPolicy(attributes["actionApprovalPolicy"] ?? inferredApprovalPolicy(tool))
+    if let blockReason = attributes["blockReason"] {
+      return "Action \(approval) by \(readableBlockReason(blockReason))"
+    }
+    if let tool {
+      return "\(tool) | \(mode) | \(approval)"
+    }
+    return "\(mode) | \(approval)"
+  }
+
+  private static func sourceCardSummary(_ attributes: [String: String]) -> String? {
+    guard attributes["webSearchSourceMode"] != nil
+      || attributes["sourceAttribution"] == "web_search"
+    else {
+      return nil
+    }
+
+    if attributes["pageFetchPerformed"] == "true" {
+      return "Web sources verified"
+    }
+    if attributes["sourceSnapshotAvailable"] == "true" {
+      return "Web snapshot retained"
+    }
+    return "Web search results"
+  }
+
+  private static func memoryCardSummary(_ attributes: [String: String]) -> String? {
+    guard attributes["memoryContextMode"] != nil || attributes["memoryNoteCount"] != nil else {
+      return nil
+    }
+
+    let noteCount = attributes["memoryNoteCount"] ?? "0"
+    if let candidateCount = attributes["memoryContextCandidateNoteCount"] {
+      return "Memory \(noteCount)/\(candidateCount)"
+    }
+    return "Memory \(noteCount)"
+  }
+
+  private static func compactionCardSummary(_ attributes: [String: String]) -> String? {
+    let promptTruncated = attributes["promptTruncated"] == "true"
+    let observationTruncated = attributes["observationTruncated"] == "true"
+    let priorTruncated = attributes["priorObservationTruncated"] == "true"
+    guard promptTruncated || observationTruncated || priorTruncated else {
+      return nil
+    }
+
+    return "Context compacted"
+  }
+
+  private static func compactApprovalPolicy(_ value: String) -> String {
+    switch value {
+    case "autoApproved":
+      return "auto approved"
+    case "blocked":
+      return "blocked"
+    case "requiresApproval":
+      return "needs approval"
+    case "requiresPluginPermission":
+      return "needs plugin permission"
+    case "readOnlyAllowed":
+      return "read-only"
     default:
       return value
     }

@@ -165,6 +165,47 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Approval: auto approved") == true)
   }
 
+  func testTimelineCardSummaryKeepsActionEvidenceCompact() {
+    let summary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
+      id: "entry-1",
+      kind: .tool,
+      title: "write_file result",
+      body: "Wrote file.",
+      attributes: [
+        "tool": "write_file",
+        "toolKind": "file",
+        "localExecutionSafetyMode": "approvedWorkspaceExecution",
+        "actionApprovalPolicy": "autoApproved",
+        "memoryContextMode": "ranked",
+        "memoryNoteCount": "1",
+        "memoryContextCandidateNoteCount": "3",
+        "promptTruncated": "true",
+      ]
+    ))
+
+    XCTAssertEqual(
+      summary,
+      "write_file | Approved | auto approved | Memory 1/3 | Context compacted"
+    )
+  }
+
+  func testTimelineCardSummaryNamesBlockedReadOnlyMode() {
+    let summary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
+      id: "entry-1",
+      kind: .warning,
+      title: "Local Execution Blocked",
+      body: "Pith did not run a shell command.",
+      attributes: [
+        "tool": "run_shell",
+        "localExecutionSafetyMode": "explore",
+        "actionApprovalPolicy": "blocked",
+        "blockReason": "readOnlyMode",
+      ]
+    ))
+
+    XCTAssertEqual(summary, "Action blocked by read-only mode")
+  }
+
   func testInspectorGroupsContextReceiptSections() {
     let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(

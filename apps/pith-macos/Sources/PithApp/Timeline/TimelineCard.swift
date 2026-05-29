@@ -86,6 +86,18 @@ struct TimelineCard: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
+      if let contextReceiptSummary {
+        HStack(alignment: .top, spacing: 6) {
+          Image(systemName: "checkmark.circle")
+            .foregroundColor(.secondary)
+          Text(contextReceiptSummary)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .lineLimit(2)
+        }
+        .padding(.top, 2)
+      }
+
       if let proofSummary {
         proofSummaryView(proofSummary)
       }
@@ -373,6 +385,10 @@ struct TimelineCard: View {
 
   private var evidenceBadges: [TimelineEvidenceBadgeSummary] {
     TimelineEvidenceBadgePresenter.badges(attributes: entry.attributes)
+  }
+
+  private var contextReceiptSummary: String? {
+    TimelineContextReceiptPresenter.cardSummary(entry)
   }
 
   private func progressLabel() -> String? {
