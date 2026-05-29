@@ -140,7 +140,9 @@ Build toward:
 - Fast remote CI that proves policy, model metadata, runtime smoke, Swift app,
   shared package contract, direct package manifest validation, packaged app,
   DMG path, exact installer asset sets, and release metadata without exposing
-  internal build artifacts as user-facing downloads.
+  internal build artifacts as user-facing downloads. The package lane should
+  avoid unnecessary artifact handoffs by restoring stable bundled backends from
+  cache and building them only on cache miss.
 
 Exit when:
 

@@ -492,7 +492,6 @@ jobs:
       - changes
       - swift-app
       - macos-runtime
-      - macos-llama-backend
     if: ${{ needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
@@ -513,11 +512,60 @@ jobs:
           name: ${{ env.RUNTIME_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
 
-      - name: Download llama.cpp backend
-        uses: actions/download-artifact@v7
+      - name: Cache pinned llama.cpp backend
+        id: package_llama_cache
+        uses: actions/cache@v5
         with:
-          name: ${{ env.LLAMA_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+          path: ${{ env.LLAMA_BACKEND_CACHE_DIR }}
+          key: llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1
+
+      - name: Restore cached llama.cpp backend
+        if: steps.package_llama_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Build pinned llama.cpp backend
+        if: steps.package_llama_cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/llama.cpp"
+          build_dir="$RUNNER_TEMP/llama.cpp-build"
+          git init "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C "$source_dir" fetch --depth 1 origin "$LLAMA_CPP_REF"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          cmake \
+            -S "$source_dir" \
+            -B "$build_dir" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DBUILD_SHARED_LIBS=OFF
+          if ! cmake --build "$build_dir" --config Release --parallel 3 > "$RUNNER_TEMP/llama-build.log" 2>&1; then
+            tail -n 160 "$RUNNER_TEMP/llama-build.log"
+            exit 1
+          fi
+          backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
+          test -x "$backend"
+          rm -rf "$LLAMA_BACKEND_CACHE_DIR"
+          mkdir -p "$LLAMA_BACKEND_CACHE_DIR"
+          python3 scripts/package_macos_app.py \
+            --stage-llama-backend "$backend" \
+            --stage-llama-output "$LLAMA_BACKEND_CACHE_DIR"
+          chmod +x "$LLAMA_BACKEND_CACHE_DIR/$LLAMA_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Validate packaged llama.cpp backend
+        run: |
+          set -euo pipefail
+          test -x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          archs="$(lipo -archs "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" 2>/dev/null || true)"
+          if [[ -n "$archs" && "$archs" != *"x86_64"* ]]; then
+            echo "::error title=llama.cpp backend architecture::Expected x86_64 llama-cli, got $archs"
+            exit 1
+          fi
 
       - name: Restore executable permissions
         run: |

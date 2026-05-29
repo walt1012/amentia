@@ -35,15 +35,18 @@ still trigger the relevant heavy gates.
 The repository policy suite also runs `scripts/validate_workflows.py`. That
 check guards the workflow structure itself: checkout credentials stay disabled,
 artifact uploads keep bounded retention, Rust lanes stay split, package
-assembly does not wait behind Swift logic tests, and release jobs keep the CI
-gate plus the required DMG, checksum, install guide, and manifest assets.
+assembly does not wait behind Swift logic tests or the standalone llama backend
+artifact job, and release jobs keep the CI gate plus the required DMG,
+checksum, install guide, and manifest assets.
 
 Rust formatting, clippy, tests, and runtime smoke run as separate jobs so
 failures surface earlier instead of waiting behind a single serial Rust lane.
 The final macOS package job depends only on executable-producing lanes: Swift
-app build, runtime build, and llama.cpp backend. Swift logic tests remain an
-independent required gate, but they no longer block artifact assembly when the
-Swift executable is already available.
+app build and runtime build. It restores the pinned llama.cpp backend directly
+from the shared cache, building it inside the package lane only on cache miss,
+so ordinary app/runtime changes avoid waiting for a separate backend artifact
+handoff. Swift logic tests remain an independent required gate, but they no
+longer block artifact assembly when the Swift executable is already available.
 
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
@@ -79,8 +82,9 @@ python3 scripts/package_macos_app.py
 ```
 
 CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
-`pith-runtime-bin`, and pinned llama.cpp backend build or run in parallel cached
-jobs, then a packaging job downloads the executable artifacts, assembles
+and `pith-runtime-bin` build or run in parallel cached jobs, then a packaging
+job downloads the executable artifacts, restores or builds the pinned llama.cpp
+backend from cache, assembles
 `Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
 and bundled plugin manifests under `Contents/Resources`, validates the app
 bundle, creates the DMG installer, and uploads one user-facing installer

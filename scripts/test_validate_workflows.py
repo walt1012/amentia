@@ -92,8 +92,16 @@ jobs:
       - changes
       - swift-app
       - macos-runtime
-      - macos-llama-backend
     steps:
+      - name: Cache pinned llama.cpp backend
+        id: package_llama_cache
+        uses: actions/cache@v5
+        with:
+          key: llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1
+      - name: Build pinned llama.cpp backend
+        run: python3 scripts/package_macos_app.py --stage-llama-backend llama-cli --stage-llama-output cache
+      - name: Validate packaged llama.cpp backend
+        run: test -x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
       - name: Build x86_64 macOS app bundle
         run: |
           python3 scripts/package_macos_app.py \
@@ -349,11 +357,22 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
-        "      - macos-llama-backend",
-        "      - swift-tests\n      - macos-llama-backend",
+        "      - macos-runtime",
+        "      - macos-runtime\n      - swift-tests",
       ),
     )
     assert_issue(issue_messages(root), "must not wait for swift-tests")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - macos-runtime",
+        "      - macos-runtime\n      - macos-llama-backend",
+      ),
+    )
+    assert_issue(issue_messages(root), "cached llama.cpp directly")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
