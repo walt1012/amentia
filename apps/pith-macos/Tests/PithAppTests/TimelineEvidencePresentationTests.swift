@@ -508,6 +508,50 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(action?.url.absoluteString, "https://www.notion.so/page-123")
   }
 
+  func testExternalActionOpensFirstSafeWebSearchSource() {
+    let action = TimelineExternalActionPresenter.primaryAction(attributes: [
+      "sourceAttribution": "web_search",
+      "webSearchSourceMode": "searchResultAttribution",
+      "sourceUrls": "file:///tmp/leak https://example.com/pith https://example.com/second",
+    ])
+
+    XCTAssertEqual(action?.title, "Open Web Source")
+    XCTAssertEqual(action?.copyTitle, "Copy Source Link")
+    XCTAssertEqual(action?.url.absoluteString, "https://example.com/pith")
+  }
+
+  func testExternalActionRevealsWorkspaceReceiptPath() {
+    let action = TimelineExternalActionPresenter.primaryAction(
+      attributes: [
+        "tool": "read_file",
+        "relativePath": "docs/guide.md",
+      ],
+      workspaceRoot: "/tmp/Pith Workspace"
+    )
+
+    XCTAssertEqual(action?.title, "Reveal Source File")
+    XCTAssertEqual(action?.copyTitle, "Copy File Path")
+    XCTAssertEqual(action?.url.path, "/tmp/Pith Workspace/docs/guide.md")
+    XCTAssertEqual(action?.copyValue, "/tmp/Pith Workspace/docs/guide.md")
+  }
+
+  func testExternalActionRejectsWorkspacePathEscapes() {
+    XCTAssertNil(TimelineExternalActionPresenter.primaryAction(
+      attributes: [
+        "tool": "read_file",
+        "relativePath": "../secrets.txt",
+      ],
+      workspaceRoot: "/tmp/workspace"
+    ))
+    XCTAssertNil(TimelineExternalActionPresenter.primaryAction(
+      attributes: [
+        "tool": "read_file",
+        "relativePath": "/etc/passwd",
+      ],
+      workspaceRoot: "/tmp/workspace"
+    ))
+  }
+
   func testProofSummaryShowsSuccessfulNotionResult() {
     let summary = TimelineExternalActionPresenter.proofSummary(attributes: [
       "remoteProofKind": "notionApiResponse",

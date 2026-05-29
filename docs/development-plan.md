@@ -86,9 +86,11 @@ Working foundation:
   policy, account requirement, tool boundary, memory context ranking, source
   reason, and compaction decisions. The timeline also shows a short receipt
   summary on each relevant card, so long cowork sessions can be scanned without
-  opening the inspector. The app now sends the selected local execution safety
-  mode to `turn/start`; runtime behavior distinguishes read-only exploration,
-  ask-before-change, and approved workspace execution.
+  opening the inspector. Web Search receipts can open their first safe HTTPS
+  source, and workspace/diff receipts can reveal their bounded workspace file.
+  The app now sends the selected local execution safety mode to `turn/start`;
+  runtime behavior distinguishes read-only exploration, ask-before-change, and
+  approved workspace execution.
 
 ## Alignment Review
 
@@ -108,8 +110,7 @@ Active gaps found in the review:
   compact action/context receipts, and a Settings entry that changes real
   runtime write/shell behavior.
 - Context management is present and visible. The remaining product gap is to
-  make receipts directly actionable: jump to sources, open changed files, and
-  retry blocked actions from the calm cowork surface.
+  make blocked-action recovery directly actionable from the calm cowork surface.
 - Connector execution is useful but still Notion-led. Keep service-specific
   logic narrow and make the protocol generic before adding another connector.
 - Hooks and subagents should stay scoped to verification and automation after

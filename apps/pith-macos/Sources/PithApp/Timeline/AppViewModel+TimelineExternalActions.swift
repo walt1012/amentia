@@ -4,7 +4,10 @@ import Foundation
 @MainActor
 extension AppViewModel {
   func timelineExternalAction(from entry: TimelineEntry) -> TimelineExternalActionSummary? {
-    TimelineExternalActionPresenter.primaryAction(attributes: entry.attributes)
+    TimelineExternalActionPresenter.primaryAction(
+      attributes: entry.attributes,
+      workspaceRoot: workspace?.rootPath
+    )
   }
 
   func timelineProofSummary(from entry: TimelineEntry) -> TimelineProofSummary? {
@@ -14,6 +17,14 @@ extension AppViewModel {
   func openTimelineExternalAction(from entry: TimelineEntry) {
     guard let action = timelineExternalAction(from: entry) else {
       runtimeDetail = "External timeline action is unavailable."
+      return
+    }
+
+    if action.url.isFileURL {
+      runtimeDetail = FileRevealService.revealFilePath(
+        action.url.path,
+        successDetail: "Revealed timeline source: \(action.title)."
+      )
       return
     }
 
@@ -32,7 +43,7 @@ extension AppViewModel {
 
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
-    pasteboard.setString(action.url.absoluteString, forType: .string)
-    runtimeDetail = "Copied external proof link: \(action.title)."
+    pasteboard.setString(action.copyValue ?? action.url.absoluteString, forType: .string)
+    runtimeDetail = "Copied timeline action target: \(action.title)."
   }
 }
