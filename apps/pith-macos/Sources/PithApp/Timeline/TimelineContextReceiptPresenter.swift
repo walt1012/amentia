@@ -59,6 +59,12 @@ enum TimelineContextReceiptPresenter {
       "Page fetch: \(yesNo(pageFetch))",
       "Source snapshot: \(yesNo(snapshotAvailable))",
     ]
+    if let attribution = entry.attributes["sourceAttribution"] {
+      lines.append("Attribution: \(attribution)")
+    }
+    if let reason = entry.attributes["routingReason"] {
+      lines.append("Reason: \(reason)")
+    }
     if let sourceTitles = entry.attributes["sourceTitles"] {
       lines.append("Titles: \(sourceTitles)")
     }
@@ -148,6 +154,9 @@ enum TimelineContextReceiptPresenter {
           + "\(windowTokens) token window | "
           + "omitted \(omittedCount) | truncated \(truncatedCount)"
       )
+    }
+    if let rankingScores = entry.attributes["memoryRankingScores"] {
+      lines.append("Ranking scores: \(rankingScores)")
     }
 
     return TimelineContextReceiptSection(

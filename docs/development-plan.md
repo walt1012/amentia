@@ -83,7 +83,8 @@ Working foundation:
   the no-account product boundary and the local execution safety modes. The app
   now presents compact context receipts from stable timeline attributes:
   Web Search source depth, local action mode, approval policy, account
-  requirement, tool boundary, memory context, and compaction decisions.
+  requirement, tool boundary, memory context ranking, source reason, and
+  compaction decisions.
 
 ## Alignment Review
 
@@ -103,8 +104,8 @@ Active gaps found in the review:
   and compact action/context receipts. The remaining gap is a calm user-facing
   switch.
 - Context management is present but not fully productized. The app now shows
-  Web Search, memory, and compaction receipts; next, make the reason a context
-  source entered the turn more explicit.
+  Web Search, memory ranking, source reason, and compaction receipts; next,
+  make workspace snippet receipts more explicit.
 - Connector execution is useful but still Notion-led. Keep service-specific
   logic narrow and make the protocol generic before adding another connector.
 - Hooks and subagents should stay scoped to verification and automation after

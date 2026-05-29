@@ -147,12 +147,14 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "toolKind": "web",
           "sourceAttribution": "web_search",
           "webSearchSourceMode": "searchResultAttribution",
+          "routingReason": "freshPublicInformation",
           "pageFetchPerformed": "false",
           "sourceSnapshotAvailable": "true",
           "memoryContextMode": "ranked",
           "memoryNoteCount": "1",
           "memoryNoteTitles": "Project rule",
           "memoryNoteIds": "note-1",
+          "memoryRankingScores": "9, 4, 1",
           "observationSourceChars": "4000",
           "observationBudgetChars": "1800",
           "observationTruncated": "true",
@@ -170,8 +172,10 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "Context Compaction",
     ])
     XCTAssertTrue(sections[0].body.contains("Source snapshot: yes"))
+    XCTAssertTrue(sections[0].body.contains("Reason: freshPublicInformation"))
     XCTAssertTrue(sections[1].body.contains("Approval: requires enabled plugin permission"))
     XCTAssertTrue(sections[2].body.contains("Titles: Project rule"))
+    XCTAssertTrue(sections[2].body.contains("Ranking scores: 9, 4, 1"))
     XCTAssertTrue(sections[3].body.contains("Observation: 4000/1800 chars | truncated yes"))
     XCTAssertTrue(
       sections[3].body.contains("Memory decision: selected 1/3 notes | omitted 2 | truncated 0")
@@ -228,6 +232,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         attributes: [
           "sourceAttribution": "web_search",
           "webSearchSourceMode": "searchResultAttribution",
+          "routingReason": "freshPublicInformation",
           "pageFetchPerformed": "false",
           "sourceSnapshotAvailable": "true",
           "sourceSnapshotKind": "searchResults",
@@ -244,6 +249,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       Source mode: searchResultAttribution
       Page fetch: no
       Source snapshot: yes
+      Attribution: web_search
+      Reason: freshPublicInformation
       Titles: Pith
       URLs: https://example.com/pith
       Snapshot kind: searchResults
