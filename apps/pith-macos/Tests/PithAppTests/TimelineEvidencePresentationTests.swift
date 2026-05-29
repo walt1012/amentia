@@ -153,6 +153,12 @@ final class TimelineEvidencePresentationTests: XCTestCase {
           "memoryNoteCount": "1",
           "memoryNoteTitles": "Project rule",
           "memoryNoteIds": "note-1",
+          "observationSourceChars": "4000",
+          "observationBudgetChars": "1800",
+          "observationTruncated": "true",
+          "memoryContextCandidateNoteCount": "3",
+          "memoryContextOmittedNoteCount": "2",
+          "memoryContextTruncatedNoteCount": "0",
         ]
       ))
     )
@@ -161,10 +167,55 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "Web Search Sources",
       "Local Action",
       "Memory Context",
+      "Context Compaction",
     ])
     XCTAssertTrue(sections[0].body.contains("Source snapshot: yes"))
     XCTAssertTrue(sections[1].body.contains("Approval: requires enabled plugin permission"))
     XCTAssertTrue(sections[2].body.contains("Titles: Project rule"))
+    XCTAssertTrue(sections[3].body.contains("Observation: 4000/1800 chars | truncated yes"))
+    XCTAssertTrue(
+      sections[3].body.contains("Memory decision: selected 1/3 notes | omitted 2 | truncated 0")
+    )
+  }
+
+  func testInspectorSeparatesCompactionFromMemoryContext() {
+    let snapshot = TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+      id: "entry-1",
+      kind: .tool,
+      title: "read_file result",
+      body: "Large file preview.",
+      attributes: [
+        "memoryContextMode": "compacted",
+        "memoryNoteCount": "0",
+        "memoryContextCandidateNoteCount": "0",
+        "memoryContextSourceNoteCount": "2",
+        "memoryContextEstimatedChars": "0",
+        "memoryContextBudgetChars": "1228",
+        "memoryContextWindowTokens": "4096",
+        "promptSourceChars": "9000",
+        "promptBudgetChars": "7200",
+        "promptTruncated": "true",
+        "priorObservationCount": "2",
+        "priorObservationSourceChars": "2200",
+        "priorObservationBudgetChars": "1800",
+        "priorObservationTruncated": "true",
+        "priorObservationPaths": "Sources/App.swift\nREADME.md",
+      ]
+    ))
+
+    let memorySummary = TimelineInspectorPresenter.selectedEntryMemorySummary(snapshot)
+    let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(snapshot)
+    let compaction = sections.first(where: { $0.id == "compaction" })
+
+    XCTAssertTrue(memorySummary?.contains("Memory context: compacted") == true)
+    XCTAssertFalse(memorySummary?.contains("Prompt:") == true)
+    XCTAssertEqual(compaction?.title, "Context Compaction")
+    XCTAssertTrue(compaction?.body.contains("Prompt: 9000/7200 chars | truncated yes") == true)
+    XCTAssertTrue(
+      compaction?.body.contains("Prior observations: 2200/1800 chars | truncated yes") == true
+    )
+    XCTAssertTrue(compaction?.body.contains("Prior observation count: 2") == true)
+    XCTAssertTrue(compaction?.body.contains("Sources/App.swift") == true)
   }
 
   func testInspectorSummarizesWebSearchSourceDepth() {

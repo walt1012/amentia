@@ -16,6 +16,7 @@ enum TimelineContextReceiptPresenter {
       sourceSection(entry),
       actionSection(entry),
       memorySection(entry),
+      compactionSection(entry),
     ].compactMap { $0 }
   }
 
@@ -149,17 +150,53 @@ enum TimelineContextReceiptPresenter {
       )
     }
 
-    if let observationTruncated = entry.attributes["observationTruncated"] {
-      let sourceChars = entry.attributes["observationSourceChars"] ?? "unknown"
-      let budgetChars = entry.attributes["observationBudgetChars"] ?? "unknown"
-      lines.append(
-        "Observation: \(sourceChars)/\(budgetChars) chars | truncated \(observationTruncated)"
-      )
-    }
-
     return TimelineContextReceiptSection(
       id: "memory",
       title: "Memory Context",
+      body: lines.joined(separator: "\n")
+    )
+  }
+
+  private static func compactionSection(_ entry: TimelineEntry) -> TimelineContextReceiptSection? {
+    var lines: [String] = []
+
+    appendBudgetLine(
+      label: "Observation",
+      sourceChars: entry.attributes["observationSourceChars"],
+      budgetChars: entry.attributes["observationBudgetChars"],
+      truncated: entry.attributes["observationTruncated"],
+      to: &lines
+    )
+    appendBudgetLine(
+      label: "Prompt",
+      sourceChars: entry.attributes["promptSourceChars"],
+      budgetChars: entry.attributes["promptBudgetChars"],
+      truncated: entry.attributes["promptTruncated"],
+      to: &lines
+    )
+    appendBudgetLine(
+      label: "Prior observations",
+      sourceChars: entry.attributes["priorObservationSourceChars"],
+      budgetChars: entry.attributes["priorObservationBudgetChars"],
+      truncated: entry.attributes["priorObservationTruncated"],
+      to: &lines
+    )
+
+    if let priorCount = entry.attributes["priorObservationCount"] {
+      lines.append("Prior observation count: \(priorCount)")
+    }
+    if let priorPaths = entry.attributes["priorObservationPaths"] {
+      lines.append("Prior observation paths:\n\(priorPaths)")
+    }
+    appendMemoryCompactionDecision(entry.attributes, to: &lines)
+
+    guard !lines.isEmpty else {
+      return nil
+    }
+
+    return TimelineContextReceiptSection(
+      id: "compaction",
+      title: "Context Compaction",
       body: lines.joined(separator: "\n")
     )
   }
@@ -224,6 +261,45 @@ enum TimelineContextReceiptPresenter {
     default:
       return "readOnlyAllowed"
     }
+  }
+
+  private static func appendBudgetLine(
+    label: String,
+    sourceChars: String?,
+    budgetChars: String?,
+    truncated: String?,
+    to lines: inout [String]
+  ) {
+    guard sourceChars != nil || budgetChars != nil || truncated != nil else {
+      return
+    }
+
+    lines.append(
+      "\(label): \(sourceChars ?? "unknown")/\(budgetChars ?? "unknown") chars"
+        + " | truncated \(yesNo(truncated ?? "unknown"))"
+    )
+  }
+
+  private static func appendMemoryCompactionDecision(
+    _ attributes: [String: String],
+    to lines: inout [String]
+  ) {
+    guard attributes["memoryContextMode"] != nil else {
+      return
+    }
+
+    let omittedCount = attributes["memoryContextOmittedNoteCount"] ?? "0"
+    let truncatedCount = attributes["memoryContextTruncatedNoteCount"] ?? "0"
+    if omittedCount == "0", truncatedCount == "0" {
+      return
+    }
+
+    let candidateCount = attributes["memoryContextCandidateNoteCount"] ?? "unknown"
+    let selectedCount = attributes["memoryNoteCount"] ?? "unknown"
+    lines.append(
+      "Memory decision: selected \(selectedCount)/\(candidateCount) notes"
+        + " | omitted \(omittedCount) | truncated \(truncatedCount)"
+    )
   }
 
   private static func yesNo(_ value: String) -> String {
