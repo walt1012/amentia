@@ -50,11 +50,27 @@ final class CoworkFirstPresentationTests: XCTestCase {
         runtimeReadinessStatus: "ready",
         dailyDriverStage: "ready",
         dailyDriverNextAction: "Ask Pith for the next cowork task.",
-        runtimeReadinessChecks: []
+        runtimeReadinessChecks: [],
+        runtimeReadinessMetrics: localExecutionMetrics
       )
     )
 
     XCTAssertTrue(summary.contains("Ask Pith for the next cowork task."))
+    XCTAssertTrue(summary.contains("Safety Ask, no account"))
+  }
+
+  func testToolReadinessShowsLocalExecutionModeWhenReady() {
+    let detail = RuntimeToolReadinessPresenter.timelineDetail(
+      readyChecks(),
+      metrics: localExecutionMetrics
+    )
+    let summary = RuntimeToolReadinessPresenter.inspectorSummary(
+      readyChecks(),
+      metrics: localExecutionMetrics
+    )
+
+    XCTAssertEqual(detail, "Ask")
+    XCTAssertEqual(summary, "Safety Ask, no account")
   }
 
   func testComposerFramesDraftAsCoworkPrompt() {
@@ -109,4 +125,21 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasDraftMessage: hasDraftMessage
     )
   }
+
+  private func readyChecks() -> [RuntimeReadinessCheckSummary] {
+    [
+      RuntimeReadinessCheckSummary(
+        id: "executionControls",
+        title: "Execution Controls",
+        status: "ready",
+        detail: "Ready"
+      )
+    ]
+  }
+
+  private let localExecutionMetrics = [
+    "pithAccountRequired": "false",
+    "defaultLocalExecutionSafetyMode": "askBeforeChange",
+    "localExecutionSafetyModes": "explore,askBeforeChange,approvedWorkspaceExecution",
+  ]
 }

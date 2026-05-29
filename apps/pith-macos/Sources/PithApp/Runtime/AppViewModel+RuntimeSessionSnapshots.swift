@@ -61,7 +61,8 @@ extension AppViewModel {
       hasActiveTurn: hasActiveOrPendingTurn(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
-      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
+      runtimeReadinessMetrics: runtimeReadiness?.metrics ?? [:]
     )
   }
 
@@ -81,7 +82,8 @@ extension AppViewModel {
       runtimeReadinessStatus: runtimeReadiness?.status,
       dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
       dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction"),
-      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
+      runtimeReadinessMetrics: runtimeReadiness?.metrics ?? [:]
     )
   }
 

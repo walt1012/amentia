@@ -74,6 +74,15 @@ fn runtime_readiness_reports_agent_control_surface() {
     result["metrics"]["dailyDriverNextAction"],
     "Download and select a verified local model."
   );
+  assert_eq!(result["metrics"]["pithAccountRequired"], "false");
+  assert_eq!(
+    result["metrics"]["defaultLocalExecutionSafetyMode"],
+    "askBeforeChange"
+  );
+  assert_eq!(
+    result["metrics"]["localExecutionSafetyModes"],
+    "explore,askBeforeChange,approvedWorkspaceExecution"
+  );
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
   assert_eq!(result["metrics"]["activeTurnCount"], "0");

@@ -236,6 +236,8 @@ def main() -> int:
           "reinstall metadata if readiness still fails",
           "Open Anyway",
           "Control-click Pith.app",
+          "no Pith account required",
+          "local execution mode",
           "package size budget",
         ]
       ),

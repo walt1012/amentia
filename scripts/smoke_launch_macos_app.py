@@ -689,6 +689,9 @@ def validate_tooling_readiness(
     "webSearchProvider": "DuckDuckGo Lite",
     "webSearchAvailable": "true",
     "webSearchPermissionGranted": "true",
+    "pithAccountRequired": "false",
+    "defaultLocalExecutionSafetyMode": "askBeforeChange",
+    "localExecutionSafetyModes": "explore,askBeforeChange,approvedWorkspaceExecution",
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxNetworkAllowed": "false",
   }

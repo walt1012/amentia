@@ -16,6 +16,7 @@ struct InspectorSessionSnapshot {
   let dailyDriverStage: String?
   let dailyDriverNextAction: String?
   let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
+  let runtimeReadinessMetrics: [String: String]
 }
 
 enum InspectorSessionPresenter {
@@ -88,7 +89,10 @@ enum InspectorSessionPresenter {
       stage: snapshot.dailyDriverStage,
       nextAction: snapshot.dailyDriverNextAction
     ) ?? snapshot.runtimeReadinessStatus.map(runtimeReadinessSummary) ?? modelSummary
-    let toolSummary = RuntimeToolReadinessPresenter.inspectorSummary(snapshot.runtimeReadinessChecks)
+    let toolSummary = RuntimeToolReadinessPresenter.inspectorSummary(
+      snapshot.runtimeReadinessChecks,
+      metrics: snapshot.runtimeReadinessMetrics
+    )
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
     return [readinessSummary, toolSummary, workspaceSummary, threadSummary]

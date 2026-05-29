@@ -12,6 +12,7 @@ struct RuntimeReadinessSnapshot {
   let isWaitingForFirstMessage: Bool
   let hasDraftMessage: Bool
   let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
+  let runtimeReadinessMetrics: [String: String]
 }
 
 struct ReadinessStepSummary: Identifiable, Hashable {
@@ -157,7 +158,10 @@ enum RuntimeReadinessPresenter {
     return ReadinessStepSummary(
       id: "tools",
       label: "Tools",
-      detail: RuntimeToolReadinessPresenter.timelineDetail(snapshot.runtimeReadinessChecks),
+      detail: RuntimeToolReadinessPresenter.timelineDetail(
+        snapshot.runtimeReadinessChecks,
+        metrics: snapshot.runtimeReadinessMetrics
+      ),
       tone: RuntimeToolReadinessPresenter.timelineTone(snapshot.runtimeReadinessChecks)
     )
   }

@@ -11,6 +11,9 @@ use pith_tools::{
 
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_execution::RuntimeExecutionCounts;
+use super::runtime_readiness_execution::{
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE, LOCAL_EXECUTION_SAFETY_MODES, PITH_ACCOUNT_REQUIRED,
+};
 use crate::turn::turn_tool_limits::{
   LIST_DIRECTORY_RESULT_LIMIT, READ_FILE_PREVIEW_MAX_BYTES, SEARCH_FILES_RESULT_LIMIT,
   SHELL_OUTPUT_PREVIEW_MAX_BYTES, WEB_SEARCH_RESULT_LIMIT,
@@ -63,6 +66,7 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     first_request_sent,
   );
   insert_execution_metrics(&mut metrics, execution_counts);
+  insert_local_execution_safety_metrics(&mut metrics);
   insert_memory_metrics(&mut metrics, context);
   insert_plugin_metrics(
     &mut metrics,
@@ -160,6 +164,20 @@ fn insert_execution_metrics(
     execution_counts
       .running_workspace_search_count()
       .to_string(),
+  );
+}
+
+fn insert_local_execution_safety_metrics(metrics: &mut HashMap<String, String>) {
+  insert_metric(metrics, "pithAccountRequired", PITH_ACCOUNT_REQUIRED);
+  insert_metric(
+    metrics,
+    "defaultLocalExecutionSafetyMode",
+    DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  );
+  insert_metric(
+    metrics,
+    "localExecutionSafetyModes",
+    LOCAL_EXECUTION_SAFETY_MODES.join(","),
   );
 }
 

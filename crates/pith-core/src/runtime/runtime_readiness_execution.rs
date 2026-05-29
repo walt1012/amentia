@@ -1,5 +1,13 @@
 use pith_protocol::RuntimeReadinessCheck;
 
+pub(super) const PITH_ACCOUNT_REQUIRED: &str = "false";
+pub(super) const DEFAULT_LOCAL_EXECUTION_SAFETY_MODE: &str = "askBeforeChange";
+pub(super) const LOCAL_EXECUTION_SAFETY_MODES: [&str; 3] = [
+  "explore",
+  "askBeforeChange",
+  "approvedWorkspaceExecution",
+];
+
 pub(super) fn execution_control_check(
   pending_approval_count: usize,
   active_turn_count: usize,
@@ -94,5 +102,6 @@ fn execution_control_detail(
     );
   }
 
-  "Risky actions require approval, and local executions can be cancelled.".to_string()
+  "Default mode is ask-before-change; risky local actions require approval and can be cancelled."
+    .to_string()
 }
