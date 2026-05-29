@@ -206,6 +206,41 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Action blocked by read-only mode")
   }
 
+  func testLocalExecutionRecoveryOffersAskModeForReadOnlyBlock() {
+    let action = TimelineLocalExecutionRecoveryPresenter.recoveryAction(
+      attributes: [
+        "actionApprovalPolicy": "blocked",
+        "blockReason": "readOnlyMode",
+        "blockedAction": "run a shell command",
+        "localExecutionSafetyMode": "explore",
+      ],
+      currentMode: "explore"
+    )
+
+    XCTAssertEqual(action?.title, "Switch to Ask Mode")
+    XCTAssertEqual(action?.targetMode, "askBeforeChange")
+    XCTAssertTrue(action?.detail.contains("request approval") == true)
+    XCTAssertTrue(action?.detail.contains("run a shell command") == true)
+  }
+
+  func testLocalExecutionRecoveryDoesNotBypassPermissionBlocks() {
+    XCTAssertNil(TimelineLocalExecutionRecoveryPresenter.recoveryAction(
+      attributes: [
+        "actionApprovalPolicy": "blocked",
+        "blockReason": "missingPermission",
+        "blockedAction": "prepare a file write",
+      ],
+      currentMode: "explore"
+    ))
+    XCTAssertNil(TimelineLocalExecutionRecoveryPresenter.recoveryAction(
+      attributes: [
+        "actionApprovalPolicy": "blocked",
+        "blockReason": "readOnlyMode",
+      ],
+      currentMode: "askBeforeChange"
+    ))
+  }
+
   func testInspectorGroupsContextReceiptSections() {
     let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(

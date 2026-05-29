@@ -15,6 +15,7 @@ struct TimelineCard: View {
   let showsPluginFollowUpAction: Bool
   let showsPluginSourceAction: Bool
   let showsPluginRefreshAction: Bool
+  let localExecutionRecoveryTitle: String?
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
@@ -25,6 +26,7 @@ struct TimelineCard: View {
   let onRunPluginFollowUp: () -> Void
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
+  let onRecoverLocalExecution: () -> Void
   let onOpenExternalAction: () -> Void
   let onCopyExternalAction: () -> Void
 
@@ -165,6 +167,13 @@ struct TimelineCard: View {
             .buttonStyle(.bordered)
           }
 
+          if let localExecutionRecoveryTitle {
+            Button(localExecutionRecoveryTitle) {
+              onRecoverLocalExecution()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
           if let externalActionTitle {
             Button(externalActionTitle) {
               onOpenExternalAction()
@@ -222,6 +231,7 @@ struct TimelineCard: View {
       || showsPluginFollowUpAction
       || showsPluginSourceAction
       || showsPluginRefreshAction
+      || localExecutionRecoveryTitle != nil
       || externalActionTitle != nil
       || externalCopyActionTitle != nil
   }

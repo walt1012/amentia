@@ -14,6 +14,25 @@ extension AppViewModel {
     TimelineExternalActionPresenter.proofSummary(attributes: entry.attributes)
   }
 
+  func localExecutionRecoveryAction(
+    from entry: TimelineEntry
+  ) -> TimelineLocalExecutionRecoverySummary? {
+    TimelineLocalExecutionRecoveryPresenter.recoveryAction(
+      attributes: entry.attributes,
+      currentMode: selectedLocalExecutionSafetyMode
+    )
+  }
+
+  func recoverLocalExecutionMode(from entry: TimelineEntry) {
+    guard let action = localExecutionRecoveryAction(from: entry) else {
+      runtimeDetail = "Local execution recovery is unavailable for this timeline item."
+      return
+    }
+
+    selectLocalExecutionSafetyMode(action.targetMode)
+    runtimeDetail = "\(action.detail) Retry the request when ready."
+  }
+
   func openTimelineExternalAction(from entry: TimelineEntry) {
     guard let action = timelineExternalAction(from: entry) else {
       runtimeDetail = "External timeline action is unavailable."

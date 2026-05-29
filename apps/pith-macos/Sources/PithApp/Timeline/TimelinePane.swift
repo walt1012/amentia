@@ -31,6 +31,7 @@ struct TimelinePane: View {
               showsPluginFollowUpAction: viewModel.canRunPluginFollowUp(from: entry),
               showsPluginSourceAction: viewModel.canRevealPluginSource(from: entry),
               showsPluginRefreshAction: viewModel.canRefreshPlugins(from: entry),
+              localExecutionRecoveryTitle: viewModel.localExecutionRecoveryAction(from: entry)?.title,
               onSelect: {
                 viewModel.selectTimelineEntry(id: entry.id)
               },
@@ -68,6 +69,9 @@ struct TimelinePane: View {
                 Task {
                   await viewModel.refreshPlugins(from: entry)
                 }
+              },
+              onRecoverLocalExecution: {
+                viewModel.recoverLocalExecutionMode(from: entry)
               },
               onOpenExternalAction: {
                 viewModel.openTimelineExternalAction(from: entry)

@@ -88,6 +88,8 @@ Working foundation:
   summary on each relevant card, so long cowork sessions can be scanned without
   opening the inspector. Web Search receipts can open their first safe HTTPS
   source, and workspace/diff receipts can reveal their bounded workspace file.
+  Read-only local execution blocks can now switch back to ask-before-change
+  mode from the timeline without bypassing permission gates.
   The app now sends the selected local execution safety mode to `turn/start`;
   runtime behavior distinguishes read-only exploration, ask-before-change, and
   approved workspace execution.
@@ -109,8 +111,9 @@ Active gaps found in the review:
 - Local execution safety modes now have release/package/runtime/app contracts,
   compact action/context receipts, and a Settings entry that changes real
   runtime write/shell behavior.
-- Context management is present and visible. The remaining product gap is to
-  make blocked-action recovery directly actionable from the calm cowork surface.
+- Context management and read-only recovery are present and visible. The
+  remaining product gap is to make retry wording reuse the original request
+  cleanly after a blocked action is repaired.
 - Connector execution is useful but still Notion-led. Keep service-specific
   logic narrow and make the protocol generic before adding another connector.
 - Hooks and subagents should stay scoped to verification and automation after
