@@ -4,31 +4,36 @@
 
 Pith is a small, strong, local-first macOS cowork agent for real daily work.
 
-- Product: `Pith`, macOS 12+, `x86_64` only.
-- Purpose: cowork first; coding is one workflow, not the product boundary.
+- Product: native `Pith` app, macOS 12+, `x86_64` only.
+- Purpose: cowork first; coding is one workflow, not the boundary.
 - Intelligence: local model by default, no required hosted model API, one active
   local model at a time.
-- Identity: no Pith account, login, subscription, or hosted user session is
-  required to use the app.
-- First use: in-app verified GGUF download, defaulting to `LFM2.5-350M`.
-- Retrieval: Web Search is the active retrieval layer; no generic local document
-  RAG until the cowork loop is excellent.
-- Plugins: real local capabilities and connectors, not prompt templates.
-- Delivery: users install a downloadable macOS app package; CI proves the
-  packaged app path.
+- Setup: first use downloads and verifies a GGUF model in-app, defaulting to
+  `LFM2.5-350M`.
+- Retrieval: Web Search is the active retrieval layer. Generic local document
+  RAG waits until the daily cowork loop is excellent.
+- Extensions: plugins and connectors must be real local capabilities, not prompt
+  templates or marketplace theater.
+- Delivery: users install a downloadable macOS package from GitHub Releases.
 
-## Product Shape
+## Product Contract
 
-Learn from Codex and Claude Code at the durable boundaries: workspace context,
-bounded tools, Web Search, approvals, sandbox status, session continuity,
+Learn from Codex and Claude Code at durable boundaries: workspace context,
+bounded tools, Web Search, approvals, sandbox visibility, session continuity,
 reviewable evidence, and MCP-style local connectors.
 
-Pith should differ intentionally: local-first inference, cowork-first tasks,
-small-model constraints, no hosted model dependency, no marketplace shell before
-one connector workflow is excellent, and no heavyweight distribution payloads.
+Pith should stay intentionally different where it matters: local-first
+inference, no account requirement, small-model constraints, cowork-first tasks,
+and a lightweight package that downloads model weights after install.
 
-The core loop is simple: understand context, choose a bounded tool, show
-evidence, ask before writes, preserve useful memory, and recover cleanly.
+The daily loop is:
+
+1. Understand the workspace and request.
+2. Retrieve only useful context.
+3. Choose a bounded tool or connector.
+4. Explain the action with a compact receipt.
+5. Ask before writes or external effects.
+6. Execute, show proof, remember useful state, and continue.
 
 ## Architecture
 
@@ -52,130 +57,77 @@ evidence, ask before writes, preserve useful memory, and recover cleanly.
 
 Memory owns meaning and ranking. Storage owns durable records. Connector
 evidence stays generic at protocol and timeline layers; service-specific detail
-belongs in connector output attributes and narrow presenter adapters.
+belongs in connector attributes and narrow presenter adapters.
 
-## Current State
+## Current Stage
 
-Milestones 1-9 are closed. Keep implementation detail in git history, not in
+Milestones 1-9 are closed. Implementation history belongs in git history, not
 this roadmap.
 
-Working foundation:
+Active milestone: **M10 Cowork Daily Driver**.
 
-- First-use model setup, resumable downloads, verified activation, curated model
-  catalog, runtime recovery, and bounded local inference.
-- Workspace-safe tools, sandbox diagnostics, bounded shell/model work, compact
-  context packing, Web Search retrieval, and progressive UI surfaces.
-- Plugin registry, inspect-before-install, enable/disable, connector
-  credentials, bounded runners, one-shot MCP stdio commands, local execution
-  gates, approvals, output envelopes, retries, and runner memory capture.
-- Notion create-page as the reference cowork connector: draft, inspect,
-  approval, publish, proof, retry, memory capture, and packaged smoke.
-- Release proof for x86_64 app bundle, internal DMG, robust mounted-DMG smoke,
-  unsigned install guidance, release manifest, remote catalog audit, public
-  distribution metadata validation, shared package contract, locked package
-  size budgets, packaged-smoke contract reuse, shared signing-mode policy, and
-  a single user-facing CI installer artifact whose upload contract and release
-  manifest share the same expected asset names, also reflected in generated
-  release notes and DMG install guidance. User-facing package budget copy now
-  describes installer artifacts, not internal zip implementation detail.
-  Package metadata, release manifests, generated install copy, app trust copy,
-  runtime readiness metrics, packaged smoke, and app status summaries now state
-  the no-account product boundary and the local execution safety modes. The app
-  now presents compact context receipts from stable timeline attributes:
-  workspace snippets, Web Search source depth, local action mode, approval
-  policy, account requirement, tool boundary, memory context ranking, source
-  reason, and compaction decisions. The timeline also shows a short receipt
-  summary on each relevant card, so long cowork sessions can be scanned without
-  opening the inspector. Web Search receipts can open their first safe HTTPS
-  source, and workspace/diff receipts can reveal their bounded workspace file.
-  Read-only local execution blocks can now switch back to ask-before-change
-  mode from the timeline without bypassing permission gates.
-  The app now sends the selected local execution safety mode to `turn/start`;
-  runtime behavior distinguishes read-only exploration, ask-before-change, and
-  approved workspace execution.
+Ready foundations:
 
-## Alignment Review
+- First-use model setup, resumable downloads, verified activation, bounded local
+  inference, and runtime recovery.
+- Workspace-safe tools, sandbox diagnostics, bounded subprocess execution,
+  compact context packing, Web Search retrieval, and progressive UI surfaces.
+- Plugin registry, connector credentials, local execution gates, approvals,
+  output envelopes, retries, runner memory capture, and Notion as the reference
+  connector.
+- x86_64 app packaging, internal DMG, unsigned install guidance, release
+  manifest, package-size budgets, CI package contracts, and packaged smoke
+  coverage.
+- Compact timeline receipts for workspace snippets, Web Search sources, local
+  action mode, approval policy, tool boundary, memory ranking, source reason,
+  and compaction decisions.
 
-Pith is aligned with Codex and Claude Code on the durable foundations: local
-workspace context, bounded tools, approvals, sandbox visibility, Web Search,
-MCP-style extension points, session continuity, hooks metadata, reviewable
-evidence, and release verification.
+Latest review decisions:
 
-The product should not copy their full shape. Pith remains a cowork app, so the
-next work is to make one local cowork loop excellent rather than adding cloud
-tasks, broad marketplace surfaces, generic local RAG, or multi-agent
-orchestration too early.
-
-Active gaps found in the review:
-
-- Local execution safety modes now have release/package/runtime/app contracts,
-  compact action/context receipts, and a Settings entry that changes real
-  runtime write/shell behavior.
-- Context management and read-only recovery are present and visible. The
-  remaining product gap is to make retry wording reuse the original request
-  cleanly after a blocked action is repaired.
-- Connector execution is useful but still Notion-led. Keep service-specific
-  logic narrow and make the protocol generic before adding another connector.
-- Hooks and subagents should stay scoped to verification and automation after
-  the single cowork loop is stable.
-- Release packaging is strong, but the first public tag still needs a complete
-  ad-hoc prerelease rehearsal from GitHub Release download to first launch.
+- Keep Web Search as retrieval for now; do not build generic local RAG yet.
+- Keep connector expansion narrow until one local cowork loop is excellent.
+- Do not bundle Git, model weights, package-manager payloads, extra
+  architectures, or unused runtimes.
+- Package resources must exclude generated caches, bytecode, and model weights.
+- Keep development planning concise; move completed detail to history, tests, or
+  release notes.
 
 ## M10: Cowork Daily Driver
 
-Goal: make Pith feel like a real cowork app before adding another integration.
+Goal: make one local cowork loop feel complete in the packaged app.
 
-Build toward:
+Build now:
 
-- Explicit simple local execution modes: explore, ask-before-change, and
-  approved workspace execution.
-- Context receipts: workspace snippets, Web Search sources, memory notes, and
-  compaction decisions shown in one calm review surface.
-- One clear daily-driver stage shared by runtime readiness, app UI, smoke tests,
-  package metadata, release notes, and release checks.
-- Boring first-run setup: model download, activation, workspace open, Web
-  Search readiness, sandbox status, and connector readiness are visible and
+- First-run path: model download, activation, workspace open, Web Search
+  readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Practical cowork loop without developer-only setup: ask, retrieve, inspect,
-  approve, execute, show proof, remember, and continue.
-- Small package as a product boundary: ship app, local runtime, llama backend,
-  metadata, and bundled connector definitions only; download model weights and
-  optional connector data after install.
-- Fast remote CI that proves policy, model metadata, runtime smoke, Swift app,
-  shared package contract, direct package manifest validation, packaged app,
-  DMG path, exact installer asset sets, and release metadata without exposing
-  internal build artifacts as user-facing downloads. The package lane should
-  depend only on change detection, restore cached app/runtime/llama executables
-  directly, and build missing app/runtime cache entries concurrently without
-  waiting for validation artifact handoffs. Standalone app/runtime validation
-  should also reuse executable caches when source inputs are unchanged. Keep
-  the workflow governed by a tested CI contract, not ad-hoc speed tweaks.
+- Action recovery: blocked read-only work can switch mode, retry cleanly, and
+  preserve the original request.
+- Receipts: every meaningful tool decision has a compact, actionable receipt.
+- Package proof: CI and packaged smoke verify the user-facing DMG path, not only
+  internal scripts.
+- UI restraint: admin detail stays progressive and never crowds the cowork loop.
 
 Exit when:
 
-- Packaged app smoke proves first-use setup, local model readiness, Web Search,
-  workspace approval, sandbox status, connector proof, runtime recovery, and
-  unsigned DMG install guidance together.
-- The app can explain every tool decision with a compact context receipt and a
-  clear local execution mode.
-- Release manifest exposes the same daily-driver, sandbox, model-delivery, and
-  package-size facts that CI validates.
-- The main app surface stays progressive and calm; admin details do not crowd
-  the cowork loop.
+- A fresh unsigned DMG install can download the default model, open a workspace,
+  run a cowork turn, use Web Search, request approval, execute safely, show
+  proof, and recover from runtime failure.
+- Runtime readiness, app copy, package metadata, release notes, and smoke tests
+  all describe the same daily-driver contract.
+- The main surface remains calm, with evidence available on demand.
 
 ## M11: Connector Platform
 
 Goal: make third-party local connectors safe and useful without building a
 marketplace too early.
 
-- Keep the Notion workflow as the reference contract.
-- Add connector execution only when local credentials, execution gates, proof,
-  retry, memory, and timeline evidence remain generic.
-- Add third-party connector import only after the generic connector contract can
-  run, approve, retry, prove, and forget secrets without service-specific UI.
-- Prefer one excellent connector path over many shallow examples.
-- Avoid service-specific logic in broad runtime or app presenters.
-- Treat hooks as connector/runtime verification points first, not arbitrary
+- Keep Notion as the reference contract.
+- Add another connector only after credentials, approvals, retries, proof,
+  memory capture, and timeline evidence remain generic.
+- Add import/distribution only after connector secrets can be installed, used,
+  revoked, and forgotten safely.
+- Treat hooks as verification and automation points first, not arbitrary
   always-on automation.
 
 ## M12: Public Release
@@ -184,12 +136,11 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 - Public assets stay limited to DMG, checksum, `README-FIRST.txt`, and release
   manifest.
-- Run one full ad-hoc prerelease rehearsal before the first public tag:
-  download from GitHub Release, verify checksum, open DMG, handle Gatekeeper,
-  download the default model, open a workspace, run a cowork turn, and inspect
-  proof.
-- Developer ID notarization is optional later; ad-hoc unsigned prereleases must
-  clearly explain Gatekeeper manual approval.
+- Run one full ad-hoc prerelease rehearsal: download from GitHub Release, verify
+  checksum, open DMG, handle Gatekeeper, download the default model, open a
+  workspace, run a cowork turn, and inspect proof.
+- Developer ID notarization is optional later; unsigned prereleases must clearly
+  explain Gatekeeper manual approval.
 - No bundled model weights, package-manager payloads, extra architectures, or
   unused runtimes.
 

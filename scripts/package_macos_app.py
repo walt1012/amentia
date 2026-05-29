@@ -421,7 +421,14 @@ def copy_tree_if_present(source: Path, destination: Path) -> None:
   if not source.exists():
     return
   assert_copy_source_has_no_symlinks(source)
-  ignore = shutil.ignore_patterns("*.gguf", "*.bin", "*.safetensors", ".DS_Store")
+  ignore = shutil.ignore_patterns(
+    "*.gguf",
+    "*.bin",
+    "*.safetensors",
+    "*.pyc",
+    "__pycache__",
+    ".DS_Store",
+  )
   shutil.copytree(source, destination, ignore=ignore)
 
 

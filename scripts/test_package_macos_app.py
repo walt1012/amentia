@@ -23,6 +23,7 @@ from package_macos_app import (
   assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
+  copy_tree_if_present,
   copy_required_llama_backend,
   normalize_source_commit,
   normalize_version,
@@ -274,6 +275,28 @@ def main() -> int:
     lambda: assert_zip_entries_are_safe(Path("Pith-macos-x86_64.zip"), [symlink_entry]),
     "zip symlinks should be rejected",
   )
+
+  with tempfile.TemporaryDirectory(prefix="pith-package-resource-copy-") as root:
+    root_path = Path(root)
+    source = root_path / "source"
+    destination = root_path / "destination"
+    source.mkdir()
+    (source / "pith-plugin.json").write_text("{}", encoding="utf-8")
+    (source / "model.gguf").write_text("weight", encoding="utf-8")
+    (source / "module.pyc").write_bytes(b"cache")
+    pycache = source / "__pycache__"
+    pycache.mkdir()
+    (pycache / "module.cpython-311.pyc").write_bytes(b"cache")
+    copy_tree_if_present(source, destination)
+    if not (destination / "pith-plugin.json").is_file():
+      raise AssertionError("resource copy should keep plugin metadata")
+    for generated_path in (
+      destination / "model.gguf",
+      destination / "module.pyc",
+      destination / "__pycache__",
+    ):
+      if generated_path.exists():
+        raise AssertionError(f"resource copy should exclude {generated_path.name}")
 
   with tempfile.TemporaryDirectory(prefix="pith-package-test-") as root:
     root_path = Path(root)

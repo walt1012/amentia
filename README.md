@@ -53,18 +53,16 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestones 1-8 are closed on the active development branch. Pith now has the
+Milestones 1-9 are closed on the active development branch. Pith now has the
 daily-driver cowork foundation: first-use model setup, workspace flow, Web
-Search, sandbox, approvals, plugin recovery, saved artifacts, connector draft
-handoffs, a bounded Plan/Act/Observe loop, and the x86_64 macOS package path.
+Search, sandbox visibility, approvals, compact context receipts, actionable
+source/file evidence, plugin recovery, Notion connector proof, memory capture,
+bounded local execution, and the x86_64 macOS DMG package path.
 
-The current focus is Milestone 9: cowork connector reliability. Notion create
-page is the reference workflow for local credentials, inspect-before-write,
-approval, publish proof, retry, memory capture, and packaged smoke coverage.
-
-After M9, the next planned direction is Milestone 10: one more narrow cowork
-connector using the same contracts, not a marketplace shell or coding-only
-surface area.
+The current focus is Milestone 10: make the single local cowork loop feel
+complete before adding another connector. Work should improve first-run setup,
+receipt/action recovery, packaged-app reliability, and release readiness rather
+than broad marketplace, generic RAG, or multi-agent scope.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 
