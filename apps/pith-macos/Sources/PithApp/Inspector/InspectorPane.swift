@@ -8,9 +8,8 @@ struct InspectorPane: View {
   @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
   @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = false
-  @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
   @AppStorage("pith.inspector.selectedPluginExpanded") private var selectedPluginExpanded = false
-  @AppStorage("pith.inspector.selectedReceiptExpanded") private var selectedReceiptExpanded = false
+  @AppStorage("pith.inspector.selectedContextExpanded") private var selectedContextExpanded = false
   @AppStorage("pith.inspector.selectedSandboxExpanded") private var selectedSandboxExpanded = false
   @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
@@ -56,8 +55,7 @@ struct InspectorPane: View {
 
         selectedItemSection
         diffDetailSection
-        selectedReceiptSection
-        selectedMemorySection
+        selectedContextSection
         selectedPluginSection
         selectedSandboxSection
       }
@@ -77,13 +75,6 @@ struct InspectorPane: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
-          if let sourceSummary = viewModel.selectedEntrySourceSummary() {
-            Text(sourceSummary)
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
           DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
             Text(viewModel.selectedEntryMetadata())
               .font(.caption)
@@ -107,27 +98,24 @@ struct InspectorPane: View {
   }
 
   @ViewBuilder
-  private var selectedReceiptSection: some View {
-    if let receiptSummary = viewModel.selectedEntryActionReceiptSummary() {
-      DisclosureGroup("Selected Action Receipt", isExpanded: $selectedReceiptExpanded) {
-        Text(receiptSummary)
-          .font(.caption)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private var selectedMemorySection: some View {
-    if let memorySummary = viewModel.selectedEntryMemorySummary() {
-      DisclosureGroup("Selected Memory Context", isExpanded: $selectedMemoryExpanded) {
-        Text(memorySummary)
-          .font(.caption)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-          .frame(maxWidth: .infinity, alignment: .leading)
+  private var selectedContextSection: some View {
+    let sections = viewModel.selectedEntryContextReceiptSections()
+    if !sections.isEmpty {
+      DisclosureGroup("Selected Context Receipts", isExpanded: $selectedContextExpanded) {
+        VStack(alignment: .leading, spacing: 10) {
+          ForEach(sections) { section in
+            VStack(alignment: .leading, spacing: 4) {
+              Text(section.title)
+                .font(.caption.weight(.semibold))
+              Text(section.body)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
   }

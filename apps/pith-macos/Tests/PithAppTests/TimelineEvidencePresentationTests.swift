@@ -135,6 +135,38 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Reason: freshPublicInformation") == true)
   }
 
+  func testInspectorGroupsContextReceiptSections() {
+    let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .assistantMessage,
+        title: "Assistant",
+        body: "Search result answer.",
+        attributes: [
+          "toolName": "web_search",
+          "toolKind": "web",
+          "sourceAttribution": "web_search",
+          "webSearchSourceMode": "searchResultAttribution",
+          "pageFetchPerformed": "false",
+          "sourceSnapshotAvailable": "true",
+          "memoryContextMode": "ranked",
+          "memoryNoteCount": "1",
+          "memoryNoteTitles": "Project rule",
+          "memoryNoteIds": "note-1",
+        ]
+      ))
+    )
+
+    XCTAssertEqual(sections.map(\.title), [
+      "Web Search Sources",
+      "Local Action",
+      "Memory Context",
+    ])
+    XCTAssertTrue(sections[0].body.contains("Source snapshot: yes"))
+    XCTAssertTrue(sections[1].body.contains("Approval: requires enabled plugin permission"))
+    XCTAssertTrue(sections[2].body.contains("Titles: Project rule"))
+  }
+
   func testInspectorSummarizesWebSearchSourceDepth() {
     let summary = TimelineInspectorPresenter.selectedEntrySourceSummary(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(

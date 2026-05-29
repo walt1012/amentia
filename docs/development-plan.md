@@ -81,8 +81,9 @@ Working foundation:
   Package metadata, release manifests, generated install copy, app trust copy,
   runtime readiness metrics, packaged smoke, and app status summaries now state
   the no-account product boundary and the local execution safety modes. The app
-  now presents action receipts from stable timeline tool attributes: execution
-  mode, boundary, approval policy, account requirement, and tool context.
+  now presents compact context receipts from stable timeline attributes:
+  Web Search source depth, local action mode, approval policy, account
+  requirement, tool boundary, and memory context.
 
 ## Alignment Review
 
@@ -99,10 +100,10 @@ orchestration too early.
 Active gaps found in the review:
 
 - Local execution safety modes now have release/package/runtime/app contracts
-  and baseline action receipts. The remaining gap is a calm user-facing switch,
-  plus richer context receipts for memory, compaction, and Web Search sources.
-- Context management is present but not yet productized. Show what context was
-  used, what was compacted, and why Web Search or memory entered the turn.
+  and compact action/context receipts. The remaining gap is a calm user-facing
+  switch and clearer compaction-decision evidence.
+- Context management is present but not fully productized. Show what was
+  compacted and why Web Search or memory entered the turn.
 - Connector execution is useful but still Notion-led. Keep service-specific
   logic narrow and make the protocol generic before adding another connector.
 - Hooks and subagents should stay scoped to verification and automation after
@@ -119,7 +120,7 @@ Build toward:
 - Explicit simple local execution modes: explore, ask-before-change, and
   approved workspace execution.
 - Context receipts: workspace snippets, Web Search sources, memory notes, and
-  compaction decisions shown as reviewable evidence.
+  compaction decisions shown in one calm review surface.
 - One clear daily-driver stage shared by runtime readiness, app UI, smoke tests,
   package metadata, release notes, and release checks.
 - Boring first-run setup: model download, activation, workspace open, Web
