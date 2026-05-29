@@ -54,6 +54,27 @@ the package lane already has valid cached executables.
 Do not treat a missing or broken local toolchain as a blocker. Push the branch and inspect the
 remote CI logs instead.
 
+## CI Contract
+
+CI should stay both fast and boring:
+
+- Workflow permissions are minimal. CI uses read-only repository permissions;
+  release uses write permission only to publish release assets.
+- Checkout credentials are not persisted.
+- Every job has a timeout, and push concurrency cancels stale CI runs.
+- Change detection controls which heavy gates run, but repository policy checks
+  always run.
+- Quality gates and installer assembly are separate lanes. Validation jobs
+  prove Rust, Swift, runtime, model, workflow, packaging, and connector
+  contracts; the package job produces the user-facing installer.
+- The package job may restore stable executable caches, but it must not wait
+  behind validation artifact handoffs.
+- Public CI artifacts are limited to the installer DMG, checksum,
+  `README-FIRST.txt`, and release manifest. Internal executable artifacts are
+  short-lived and clearly named as internal.
+- Workflow structure is itself tested by `scripts/validate_workflows.py` and
+  `scripts/test_validate_workflows.py`.
+
 ## Runtime Bridge Development
 
 The macOS shell looks for the runtime binary in this order:

@@ -85,6 +85,16 @@ def validate_common_workflow_rules(
   text: str,
 ) -> list[WorkflowIssue]:
   issues: list[WorkflowIssue] = []
+  for term in (
+    "defaults:",
+    "shell: bash",
+    "concurrency:",
+  ):
+    if term not in text:
+      issues.append(
+        WorkflowIssue(relative_path, f"workflow contract is missing {term}")
+      )
+
   blocks = step_blocks(text)
   for block in blocks:
     block_text = "\n".join(block)
@@ -119,6 +129,15 @@ def validate_common_workflow_rules(
 
 def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
   issues: list[WorkflowIssue] = []
+  for term in (
+    "permissions:",
+    "actions: read",
+    "contents: read",
+    "cancel-in-progress: true",
+  ):
+    if term not in text:
+      issues.append(WorkflowIssue(CI_WORKFLOW, f"CI workflow contract is missing {term}"))
+
   for job in REQUIRED_CI_JOBS:
     if job not in job_blocks(text):
       issues.append(WorkflowIssue(CI_WORKFLOW, f"required CI job {job} is missing"))
@@ -175,6 +194,14 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
 
   package_block = job_block(text, "macos-package")
   if package_block:
+    package_needs = job_needs(package_block)
+    if package_needs != ["changes"]:
+      issues.append(
+        WorkflowIssue(
+          CI_WORKFLOW,
+          "macos-package must depend only on changes; validation lanes must not sit on the installer critical path",
+        )
+      )
     if re.search(r"(?m)^\s+-\s+swift-tests\s*$", package_block):
       issues.append(
         WorkflowIssue(
@@ -306,6 +333,17 @@ def validate_upload_retention(
 
 def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   issues: list[WorkflowIssue] = []
+  for term in (
+    "permissions:",
+    "actions: read",
+    "contents: write",
+    "cancel-in-progress: false",
+  ):
+    if term not in text:
+      issues.append(
+        WorkflowIssue(RELEASE_WORKFLOW, f"release workflow contract is missing {term}")
+      )
+
   release_block = job_block(text, "release-dmg")
   if not release_block:
     return [WorkflowIssue(RELEASE_WORKFLOW, "required release-dmg job is missing")]
@@ -423,6 +461,24 @@ def job_blocks(text: str) -> dict[str, str]:
 
 def job_block(text: str, job_name: str) -> str:
   return job_blocks(text).get(job_name, "")
+
+
+def job_needs(block: str) -> list[str]:
+  needs: list[str] = []
+  in_needs = False
+  for line in block.splitlines():
+    if re.match(r"^\s{4}needs:\s*$", line):
+      in_needs = True
+      continue
+    if not in_needs:
+      continue
+    match = re.match(r"^\s{6}-\s+([A-Za-z0-9_-]+)\s*$", line)
+    if match:
+      needs.append(match.group(1))
+      continue
+    if line.startswith("    ") and not line.startswith("      "):
+      break
+  return needs
 
 
 def command_window_contains(text: str, anchor: str, term: str) -> bool:

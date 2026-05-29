@@ -144,7 +144,8 @@ Build toward:
   depend only on change detection, restore cached app/runtime/llama executables
   directly, and build missing app/runtime cache entries concurrently without
   waiting for validation artifact handoffs. Standalone app/runtime validation
-  should also reuse executable caches when source inputs are unchanged.
+  should also reuse executable caches when source inputs are unchanged. Keep
+  the workflow governed by a tested CI contract, not ad-hoc speed tweaks.
 
 Exit when:
 

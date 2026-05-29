@@ -25,6 +25,14 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   changes:
     timeout-minutes: 5
@@ -179,6 +187,14 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release-dmg:
     timeout-minutes: 90
@@ -270,6 +286,22 @@ def main() -> int:
       ci=VALID_CI.replace("persist-credentials: false", "fetch-depth: 1", 1),
     )
     assert_issue(issue_messages(root), "persist-credentials: false")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace("  contents: read", "  contents: write"),
+    )
+    assert_issue(issue_messages(root), "contents: read")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace("  cancel-in-progress: true", "  cancel-in-progress: false"),
+    )
+    assert_issue(issue_messages(root), "cancel-in-progress: true")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -424,9 +456,28 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
+      ci=VALID_CI.replace(
+        "      - changes",
+        "      - changes\n      - repository-policy",
+      ),
+    )
+    assert_issue(issue_messages(root), "depend only on changes")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
       release=VALID_RELEASE.replace("--workflow CI", "--workflow Release"),
     )
     assert_issue(issue_messages(root), "release CI gate")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace("  contents: write", "  contents: read"),
+    )
+    assert_issue(issue_messages(root), "contents: write")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
