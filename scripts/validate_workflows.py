@@ -159,6 +159,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       "python3 scripts/test_validate_workflows.py",
       "python3 scripts/test_create_macos_dmg.py",
       "python3 scripts/test_release_state.py",
+      "python3 scripts/test_release_publish_contract.py",
       "python3 scripts/test_package_contract.py",
       "python3 scripts/test_release_identity.py",
       "python3 scripts/test_sign_macos_app_for_distribution.py",
@@ -410,6 +411,26 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --title")
     )
+  if "scripts/release_publish_contract.py" not in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "published release contract helper is missing",
+      )
+    )
+  for term in (
+    'gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json',
+    '--release-json release-published.json',
+    '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
+    '--expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"',
+  ):
+    if term not in release_block:
+      issues.append(
+        WorkflowIssue(
+          RELEASE_WORKFLOW,
+          f"published release contract is missing {term}",
+        )
+      )
   if "--source-commit" not in release_block:
     issues.append(
       WorkflowIssue(
@@ -527,7 +548,7 @@ def command_window_contains(text: str, anchor: str, term: str) -> bool:
   start = text.find(anchor)
   if start == -1:
     return False
-  return term in text[start:start + 800]
+  return term in text[start:start + 260]
 
 
 def main() -> int:

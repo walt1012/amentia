@@ -70,6 +70,8 @@ jobs:
         run: python3 scripts/test_create_macos_dmg.py
       - name: Test release state helper
         run: python3 scripts/test_release_state.py
+      - name: Test published release contract
+        run: python3 scripts/test_release_publish_contract.py
       - name: Test installer artifact contract
         run: python3 scripts/test_installer_artifact_contract.py
       - name: Test release artifact helper
@@ -315,6 +317,12 @@ jobs:
             "artifacts/macos/README-FIRST.txt" \\
             "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
             --clobber
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
+          python3 scripts/release_publish_contract.py \\
+            --tag "$RELEASE_TAG" \\
+            --release-json release-published.json \\
+            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
+            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"
 """
 
 
@@ -429,6 +437,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_text.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test published release contract\n"
+        "        run: python3 scripts/test_release_publish_contract.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_release_publish_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -652,6 +672,28 @@ def main() -> int:
       release=VALID_RELEASE.replace('          --title "$release_title"\n', ""),
     )
     assert_issue(issue_messages(root), "release state helper must receive --title")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "scripts/release_publish_contract.py",
+        "scripts/missing_release_publish_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "published release contract helper")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
+        "--missing-expected-draft",
+      ),
+    )
+    assert_issue(issue_messages(root), "expected-draft")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

@@ -86,6 +86,8 @@ Ready foundations:
   packaged first-run proof before opening the app.
 - Release state planning now prevents accidental public-release rollback to
   draft; visible withdrawal stays a deliberate maintainer action.
+- Release publishing now reads the final GitHub Release back and validates tag,
+  title, draft/prerelease state, and exact public installer assets.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
@@ -110,6 +112,8 @@ Build now:
 - Packaged first-run rehearsal: prove the unsigned DMG path from download,
   checksum, Gatekeeper guidance, launch, model download, workspace open, Web
   Search, approval, safe execution, proof, and runtime recovery.
+- Publish proof: verify the final GitHub Release page state and asset set after
+  upload, not just before it.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Recovery proof: readiness chips, timeline warnings, inspector detail, release
   copy, and package metadata all point to the same local fix.

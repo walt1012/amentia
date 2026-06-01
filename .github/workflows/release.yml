@@ -402,6 +402,13 @@ jobs:
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \
             --input release-state.json
 
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
+          python3 scripts/release_publish_contract.py \
+            --tag "$RELEASE_TAG" \
+            --release-json release-published.json \
+            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
+            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"
+
       - name: Cleanup release keychain
         if: always()
         run: |
