@@ -98,7 +98,58 @@ fn turn_start_web_search_respects_disabled_web_search_plugin() {
 
   assert_eq!(
     permission_item["attributes"]["requiredPermission"],
-    "network.outbound"
+    "tool:web_search"
+  );
+  assert_eq!(permission_item["attributes"]["grantedBy"], "none");
+}
+
+#[test]
+fn turn_start_web_search_requires_web_search_tool_permission_not_any_network_plugin() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["connector:notion"],
+      &["network.outbound"],
+    )],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Connector Network Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "web search for Pith local model"
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let permission_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Permission Required")
+    .expect("permission item");
+
+  assert_eq!(
+    permission_item["attributes"]["requiredPermission"],
+    "tool:web_search"
   );
   assert_eq!(permission_item["attributes"]["grantedBy"], "none");
 }

@@ -10,7 +10,7 @@ use super::runtime_readiness_checks::{
   web_search_check, workspace_check, ReadinessSummaryInput,
 };
 use super::runtime_readiness_metrics::{readiness_metrics, ReadinessMetricsInput};
-use crate::plugin_permissions::granted_permission_sources;
+use crate::plugin_permissions::{granted_permission_sources, WEB_SEARCH_TOOL_PERMISSION};
 use crate::runtime_context::RuntimeContext;
 
 pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadinessResult {
@@ -34,11 +34,11 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
     .unwrap_or_else(workspace_required_status);
   let web_search_status = web_search_status();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
-  let network_permission_sources = permission_sources
-    .get("network.outbound")
+  let web_search_permission_sources = permission_sources
+    .get(WEB_SEARCH_TOOL_PERMISSION)
     .cloned()
     .unwrap_or_default();
-  let web_search_permission_ready = !network_permission_sources.is_empty();
+  let web_search_permission_ready = !web_search_permission_sources.is_empty();
   let enabled_plugin_count = context.plugin_state.enabled_ready_count();
   let plugin_command_count = context.plugin_state.command_capability_count();
   let enabled_plugin_command_count = context.plugin_state.enabled_command_capability_count();
@@ -115,7 +115,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
         running_workspace_search_count,
       ),
       native_sandbox_check(&sandbox_status),
-      web_search_check(&web_search_status, &network_permission_sources),
+      web_search_check(&web_search_status, &web_search_permission_sources),
       plugin_check(
         enabled_plugin_count,
         context.plugin_state.catalog_len(),
@@ -134,7 +134,7 @@ pub(crate) fn build_runtime_readiness(context: &RuntimeContext) -> RuntimeReadin
       plugin_command_count,
       sandbox_status: &sandbox_status,
       web_search_status: &web_search_status,
-      web_search_permission_sources: &network_permission_sources,
+      web_search_permission_sources: &web_search_permission_sources,
       workspace_thread_count,
       first_request_sent,
       execution_counts,

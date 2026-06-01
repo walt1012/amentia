@@ -92,6 +92,8 @@ Ready foundations:
   toward their next local recovery surface instead of showing passive status.
 - Web Search readiness can directly re-enable the bundled Web Search plugin
   when that is the missing retrieval permission.
+- Web Search authorization is scoped to plugins that declare `tool:web_search`;
+  generic connector network permission no longer unlocks web retrieval.
 - Header detail remains available while tool readiness is unresolved, so
   recovery actions have visible feedback.
 - CI change classification treats release, package, and signing contract edits as

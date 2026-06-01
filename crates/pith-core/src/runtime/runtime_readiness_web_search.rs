@@ -13,7 +13,7 @@ pub(super) fn web_search_check(
     "limited"
   };
   let detail = if permission_sources.is_empty() {
-    "Enable the Web Search plugin to grant outbound network permission.".to_string()
+    "Enable the Web Search plugin to grant Web Search permission.".to_string()
   } else {
     format!(
       "{} Permission granted by {}.",
@@ -44,7 +44,7 @@ mod tests {
   }
 
   #[test]
-  fn web_search_check_requires_plugin_network_permission() {
+  fn web_search_check_requires_web_search_tool_permission() {
     let check = web_search_check(&status(true), &[]);
 
     assert_eq!(check.status, "setup_required");

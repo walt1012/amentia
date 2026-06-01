@@ -166,6 +166,35 @@ fn runtime_readiness_web_search_requires_enabled_network_plugin() {
 }
 
 #[test]
+fn runtime_readiness_web_search_ignores_connector_only_network_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["connector:notion"],
+      &["network.outbound"],
+    )],
+  );
+  let response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("runtime readiness result");
+  let web_search = result["checks"]
+    .as_array()
+    .expect("checks")
+    .iter()
+    .find(|check| check["id"] == "webSearch")
+    .expect("web search check");
+  assert_eq!(web_search["status"], "setup_required");
+  assert_eq!(result["metrics"]["webSearchPermissionGranted"], "false");
+  assert_eq!(result["metrics"]["webSearchPermissionSources"], "");
+}
+
+#[test]
 fn model_health_returns_local_model_status() {
   let mut context = RuntimeContext::new_in_memory();
   let response = handle_request(&mut context, request(methods::MODEL_HEALTH, None));
