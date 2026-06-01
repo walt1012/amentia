@@ -75,6 +75,43 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Safety Ask, no account")
   }
 
+  func testReadinessStripStaysVisibleForFirstRequest() {
+    XCTAssertTrue(
+      RuntimeReadinessStripPresenter.shouldShow(
+        setupProgressVisible: false,
+        isWaitingForFirstMessage: true,
+        runtimeReadinessChecks: readyChecks()
+      )
+    )
+  }
+
+  func testReadinessStripStaysVisibleForToolSetup() {
+    XCTAssertTrue(
+      RuntimeReadinessStripPresenter.shouldShow(
+        setupProgressVisible: false,
+        isWaitingForFirstMessage: false,
+        runtimeReadinessChecks: [
+          RuntimeReadinessCheckSummary(
+            id: "webSearch",
+            title: "Web Search",
+            status: "setup_required",
+            detail: "Enable Web Search"
+          )
+        ]
+      )
+    )
+  }
+
+  func testReadinessStripHidesAfterDailyDriverReady() {
+    XCTAssertFalse(
+      RuntimeReadinessStripPresenter.shouldShow(
+        setupProgressVisible: false,
+        isWaitingForFirstMessage: false,
+        runtimeReadinessChecks: readyChecks()
+      )
+    )
+  }
+
   func testComposerFramesDraftAsCoworkPrompt() {
     let placeholder = ComposerStatusPresenter.placeholder(composerSnapshot(hasDraftMessage: true))
     let summary = ComposerStatusPresenter.statusSummary(composerSnapshot(hasDraftMessage: true))

@@ -5,6 +5,10 @@ enum RuntimeToolReadinessPresenter {
     !toolChecks(checks).isEmpty
   }
 
+  static func hasToolIssue(_ checks: [RuntimeReadinessCheckSummary]) -> Bool {
+    primaryIssue(checks) != nil
+  }
+
   static func timelineDetail(
     _ checks: [RuntimeReadinessCheckSummary],
     metrics: [String: String] = [:]

@@ -167,6 +167,18 @@ enum RuntimeReadinessPresenter {
   }
 }
 
+enum RuntimeReadinessStripPresenter {
+  static func shouldShow(
+    setupProgressVisible: Bool,
+    isWaitingForFirstMessage: Bool,
+    runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
+  ) -> Bool {
+    setupProgressVisible
+      || isWaitingForFirstMessage
+      || RuntimeToolReadinessPresenter.hasToolIssue(runtimeReadinessChecks)
+  }
+}
+
 enum DailyDriverStagePresenter {
   static func summary(stage: String?, nextAction: String?) -> String? {
     if let nextAction = cleaned(nextAction) {
