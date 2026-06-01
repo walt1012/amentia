@@ -42,7 +42,11 @@ enum RuntimeToolReadinessPresenter {
   private static func primaryIssue(
     _ checks: [RuntimeReadinessCheckSummary]
   ) -> RuntimeReadinessCheckSummary? {
-    toolChecks(checks).first(where: { $0.status != "ready" })
+    toolChecks(checks).first(where: isBlockingIssue)
+  }
+
+  private static func isBlockingIssue(_ check: RuntimeReadinessCheckSummary) -> Bool {
+    check.status != "ready" && check.status != "optional"
   }
 
   private static func toolChecks(

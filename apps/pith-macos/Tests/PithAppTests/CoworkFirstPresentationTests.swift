@@ -112,6 +112,32 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testOptionalPluginsDoNotKeepReadinessStripVisible() {
+    let optionalPluginChecks = readyChecks() + [
+      RuntimeReadinessCheckSummary(
+        id: "plugins",
+        title: "Plugins",
+        status: "optional",
+        detail: "No plugin command capabilities are required."
+      )
+    ]
+
+    XCTAssertFalse(
+      RuntimeReadinessStripPresenter.shouldShow(
+        setupProgressVisible: false,
+        isWaitingForFirstMessage: false,
+        runtimeReadinessChecks: optionalPluginChecks
+      )
+    )
+    XCTAssertEqual(
+      RuntimeToolReadinessPresenter.inspectorSummary(
+        optionalPluginChecks,
+        metrics: localExecutionMetrics
+      ),
+      "Safety Ask, no account"
+    )
+  }
+
   func testComposerFramesDraftAsCoworkPrompt() {
     let placeholder = ComposerStatusPresenter.placeholder(composerSnapshot(hasDraftMessage: true))
     let summary = ComposerStatusPresenter.statusSummary(composerSnapshot(hasDraftMessage: true))
