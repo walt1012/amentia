@@ -197,8 +197,10 @@ a normal trusted release. Without Developer ID secrets, it defaults to a draft
 release and refuses to update an already-public release unless
 `publish_untrusted_ad_hoc=true` is set explicitly. With that maintainer intent,
 it may publish an untrusted ad-hoc prerelease for users who accept the
-Gatekeeper warning path. With Developer ID secrets, it publishes the signed,
-notarized, stapled DMG.
+Gatekeeper warning path. The workflow also refuses to move an existing public
+GitHub Release back to draft; withdrawal should be handled deliberately by a
+maintainer. With Developer ID secrets, it publishes the signed, notarized,
+stapled DMG.
 
 ## Local Model Runtime
 

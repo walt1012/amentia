@@ -51,6 +51,11 @@ def plan_release_state(
   is_developer_id = signing_mode == "developer-id"
   if release_exists and existing_draft is None:
     raise ValueError("Existing GitHub Release draft state is required.")
+  if release_exists and existing_draft is False and requested_draft:
+    raise ValueError(
+      "Refusing to move an existing public GitHub Release back to draft. "
+      "Delete or manually manage the release before retrying."
+    )
   if (
     not is_developer_id
     and not allow_untrusted_ad_hoc

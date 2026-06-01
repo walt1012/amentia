@@ -56,4 +56,6 @@ an untrusted prerelease for users who accept the macOS Gatekeeper manual approva
 path, but it must not be promoted as a normal trusted installer. The release
 state helper rejects non-version tags, mismatched release titles, and accidental
 ad-hoc updates to an already-public release unless that untrusted prerelease
-path was explicitly requested.
+path was explicitly requested. It also refuses to move an existing public
+GitHub Release back to draft; release withdrawal should stay a deliberate
+maintainer action.

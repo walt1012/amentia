@@ -84,6 +84,8 @@ Ready foundations:
   and validate, so release proof names the user path it exercised.
 - Release notes and `README-FIRST.txt` tell users where to inspect that
   packaged first-run proof before opening the app.
+- Release state planning now prevents accidental public-release rollback to
+  draft; visible withdrawal stays a deliberate maintainer action.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

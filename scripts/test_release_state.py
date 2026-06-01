@@ -72,6 +72,21 @@ def assert_rejects_unknown_existing_release_state() -> None:
   raise AssertionError("existing release updates require known draft state")
 
 
+def assert_rejects_public_release_to_draft() -> None:
+  try:
+    plan_release_state(
+      signing_mode="developer-id",
+      requested_draft=True,
+      requested_prerelease=False,
+      allow_untrusted_ad_hoc=False,
+      release_exists=True,
+      existing_draft=False,
+    )
+  except ValueError:
+    return
+  raise AssertionError("public release updates should not move back to draft")
+
+
 def assert_rejects_tampered_release_notes() -> None:
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -201,6 +216,7 @@ def main() -> int:
     expected_prerelease=True,
   )
   assert_rejects_unknown_existing_release_state()
+  assert_rejects_public_release_to_draft()
   assert_rejects_public_ad_hoc_without_explicit_publish()
   assert_rejects_tampered_release_notes()
   assert_rejects_wrong_release_title()
@@ -217,12 +233,12 @@ def main() -> int:
   )
   assert_state(
     signing_mode="developer-id",
-    requested_draft=True,
+    requested_draft=False,
     requested_prerelease=False,
     allow_untrusted_ad_hoc=False,
     release_exists=True,
     existing_draft=False,
-    expected_draft=True,
+    expected_draft=False,
     expected_prerelease=False,
   )
   print("release state tests passed")
