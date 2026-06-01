@@ -10,7 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from release_text import INSTALL_GUIDE_REQUIRED_PHRASES
+from release_copy_contract import INSTALL_GUIDE_REQUIRED_PHRASES
 
 APP_NAME = "Pith.app"
 APPLICATIONS_LINK_NAME = "Applications"

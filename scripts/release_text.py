@@ -16,6 +16,7 @@ from package_contract import (
   package_size_budget,
 )
 from release_artifacts import release_installer_asset_names
+from release_copy_contract import INSTALL_GUIDE_REQUIRED_PHRASES
 
 RELEASE_NOTES_REQUIRED_PHRASES = (
   "DMG installer.",
@@ -32,31 +33,6 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "process-only fallback",
   "daily-driver next action",
   "package size budget",
-)
-INSTALL_GUIDE_REQUIRED_PHRASES = (
-  "Drag Pith.app to Applications.",
-  "Installer assets:",
-  "download one verified local model",
-  "First-run path:",
-  "No Pith login is required",
-  "local execution mode",
-  DEFAULT_MODEL_ID,
-  "Open a workspace folder.",
-  "Web Search readiness",
-  "approve a safe local change",
-  "inspect the proof",
-  "Start a cowork session",
-  "Follow the next action",
-  "runtime readiness",
-  "sandbox status",
-  "process-only fallback",
-  "SHA-256 `.sha256` file",
-  "shasum -a 256 -c",
-  "sidecar hashes",
-  "source commit",
-  "model delivery mode",
-  "package size budget",
-  "first-run contract",
 )
 
 

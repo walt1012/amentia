@@ -25,6 +25,7 @@ from package_contract import (
   SUPPORTED_ARCH,
   validate_package_manifest_contract,
 )
+from release_copy_contract import INSTALL_GUIDE_REQUIRED_PHRASES
 from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
 
@@ -33,24 +34,6 @@ SOURCE_COMMIT_HEX_LENGTH = 40
 INTERNAL_CI_TAG_PATTERN = re.compile(r"^ci-[0-9a-f]{12,40}$")
 INSTALL_GUIDE_NAME = "README-FIRST.txt"
 INTERNAL_CI_DMG_NAME = "Pith-macos-x86_64.dmg"
-INSTALL_GUIDE_REQUIRED_PHRASES = (
-  "Drag Pith.app to Applications",
-  "download one verified local model",
-  "First-run path:",
-  "Open a workspace folder",
-  "Web Search readiness",
-  "approve a safe local change",
-  "inspect the proof",
-  "Start a cowork session",
-  "Follow the next action",
-  "runtime readiness",
-  "sandbox status",
-  "process-only fallback",
-  "SHA-256",
-  "shasum -a 256 -c",
-  "release manifest",
-  "first-run contract",
-)
 VERIFICATION_CONTRACT = {
   "ciGate": "successful-ci-required-for-source-commit",
   "packagedSmoke": "mounted-dmg-before-upload",

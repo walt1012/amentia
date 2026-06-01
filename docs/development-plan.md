@@ -80,6 +80,8 @@ Ready foundations:
   place.
 - Release assets are now contract-checked as a matching DMG, checksum,
   tag-specific install guide, and manifest set with stable tag/title identity.
+- Installer copy requirements are centralized so release text, sidecar
+  validation, and DMG staging do not drift.
 
 Latest review decisions:
 
