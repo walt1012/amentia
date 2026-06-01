@@ -139,6 +139,9 @@ jobs:
       - name: Test published release contract
         run: python3 scripts/test_release_publish_contract.py
 
+      - name: Test release rehearsal contract
+        run: python3 scripts/test_release_rehearsal_contract.py
+
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
 

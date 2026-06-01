@@ -72,6 +72,8 @@ jobs:
         run: python3 scripts/test_release_state.py
       - name: Test published release contract
         run: python3 scripts/test_release_publish_contract.py
+      - name: Test release rehearsal contract
+        run: python3 scripts/test_release_rehearsal_contract.py
       - name: Test installer artifact contract
         run: python3 scripts/test_installer_artifact_contract.py
       - name: Test release artifact helper
@@ -449,6 +451,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_publish_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test release rehearsal contract\n"
+        "        run: python3 scripts/test_release_rehearsal_contract.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_release_rehearsal_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

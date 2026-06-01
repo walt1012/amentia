@@ -160,6 +160,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       "python3 scripts/test_create_macos_dmg.py",
       "python3 scripts/test_release_state.py",
       "python3 scripts/test_release_publish_contract.py",
+      "python3 scripts/test_release_rehearsal_contract.py",
       "python3 scripts/test_package_contract.py",
       "python3 scripts/test_release_identity.py",
       "python3 scripts/test_sign_macos_app_for_distribution.py",

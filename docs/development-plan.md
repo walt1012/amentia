@@ -90,7 +90,8 @@ Ready foundations:
   title, draft/prerelease state, exact public installer assets, non-empty
   uploads, and tag-scoped download URLs.
 - Downloaded release rehearsals can validate a whole asset directory against
-  the same installer contract used before upload.
+  the same installer contract used before upload, then summarize first-run
+  proof, checksum command, signing mode, and source commit.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
@@ -115,6 +116,8 @@ Build now:
 - Packaged first-run rehearsal: prove the unsigned DMG path from download,
   checksum, Gatekeeper guidance, launch, model download, workspace open, Web
   Search, approval, safe execution, proof, and runtime recovery.
+- Download rehearsal: after assets are downloaded from GitHub Release, validate
+  the directory and produce one compact summary before manual app opening.
 - Publish proof: verify the final GitHub Release page state and asset set after
   upload, including asset readiness and user download URLs, not just before it.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.

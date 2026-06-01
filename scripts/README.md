@@ -21,6 +21,7 @@ Current scripts:
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_publish_contract.py`: validates the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
+- `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, first-run manifest contract, and packaged smoke proof, then can write a compact rehearsal summary.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds, enforces tag/title identity, then revalidates release notes against the final publish state.
 - `release_text.py`: generates and validates GitHub Release notes and the DMG root install guide from the release signing mode, including exact installer asset names and the daily-driver next-action path users should follow after install.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
@@ -35,6 +36,7 @@ Current scripts:
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_identity.py`: checks shared product version and public release tag rules.
 - `test_release_publish_contract.py`: checks final published GitHub Release state and asset validation.
+- `test_release_rehearsal_contract.py`: checks downloaded release rehearsal validation and summary generation.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.
 - `test_release_text.py`: checks release notes and DMG install guide copy generation.
 - `test_smoke_launch_macos_app.py`: checks packaged app smoke validators that do not require macOS.
