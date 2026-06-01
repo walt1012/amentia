@@ -325,7 +325,6 @@ fn explore_mode_blocks_shell_even_with_permission() {
       && item["attributes"]["actionApprovalPolicy"] == "blocked"
       && item["attributes"]["blockReason"] == "readOnlyMode"
       && item["attributes"]["requiredPermission"] == "shell.exec"
-      && item["attributes"]["retryMessage"]
-        == "Run shell: echo blocked > shell-blocked.txt"
+      && item["attributes"]["retryMessage"] == "Run shell: echo blocked > shell-blocked.txt"
   }));
 }

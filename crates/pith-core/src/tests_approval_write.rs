@@ -341,7 +341,6 @@ fn explore_mode_blocks_workspace_write_even_with_permission() {
       && item["attributes"]["actionApprovalPolicy"] == "blocked"
       && item["attributes"]["blockReason"] == "readOnlyMode"
       && item["attributes"]["requiredPermission"] == "file.write"
-      && item["attributes"]["retryMessage"]
-        == "Write docs/explore.txt: This should not be written"
+      && item["attributes"]["retryMessage"] == "Write docs/explore.txt: This should not be written"
   }));
 }
