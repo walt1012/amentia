@@ -10,7 +10,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from release_state import main as release_state_main
+from release_state import expected_release_title
 from release_state import plan_release_state
+from release_state import validate_release_title
 from release_text import release_notes
 
 
@@ -116,7 +118,58 @@ def assert_rejects_tampered_release_notes() -> None:
       sys.argv = original_argv
 
 
+def assert_rejects_wrong_release_title() -> None:
+  try:
+    validate_release_title("Pith latest", "v0.1.0")
+  except ValueError:
+    return
+  raise AssertionError("release title must match the release tag")
+
+
+def assert_rejects_non_release_tag() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    notes_file.write_text("Pith latest\n", encoding="utf-8")
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith latest",
+        "--tag",
+        "latest",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "developer-id",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "false",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+      ]
+      with redirect_stderr(StringIO()):
+        exit_code = release_state_main()
+      if exit_code == 0:
+        raise AssertionError("non-version release tags should be rejected")
+    finally:
+      sys.argv = original_argv
+
+
 def main() -> int:
+  if expected_release_title("v0.1.0") != "Pith v0.1.0":
+    raise AssertionError("release title should be derived from the tag")
+  validate_release_title("Pith v0.1.0", "v0.1.0")
   assert_state(
     signing_mode="developer-id",
     requested_draft=False,
@@ -150,6 +203,8 @@ def main() -> int:
   assert_rejects_unknown_existing_release_state()
   assert_rejects_public_ad_hoc_without_explicit_publish()
   assert_rejects_tampered_release_notes()
+  assert_rejects_wrong_release_title()
+  assert_rejects_non_release_tag()
   assert_state(
     signing_mode="ad-hoc",
     requested_draft=False,

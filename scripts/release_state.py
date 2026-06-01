@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from package_contract import RELEASE_SIGNING_MODES
+from release_identity import validate_public_release_tag
 from release_text import validate_release_notes
 
 
@@ -17,6 +18,16 @@ from release_text import validate_release_notes
 class ReleaseState:
   draft: bool
   prerelease: bool
+
+
+def expected_release_title(tag: str) -> str:
+  return f"Pith {tag}"
+
+
+def validate_release_title(title: str, tag: str) -> None:
+  expected = expected_release_title(tag)
+  if title != expected:
+    raise ValueError(f"Release title must be {expected!r}")
 
 
 def parse_bool(value: str) -> bool:
@@ -97,6 +108,8 @@ def main() -> int:
   args = parser.parse_args()
 
   try:
+    validate_public_release_tag(args.tag)
+    validate_release_title(args.title, args.tag)
     release_exists = parse_bool(args.release_exists)
     existing_draft = (
       parse_bool(args.existing_draft)
@@ -111,7 +124,7 @@ def main() -> int:
       release_exists=release_exists,
       existing_draft=existing_draft,
     )
-  except ValueError as error:
+  except (RuntimeError, ValueError) as error:
     print(f"release state planning failed: {error}", file=sys.stderr)
     return 1
 

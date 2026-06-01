@@ -99,6 +99,10 @@ Ready foundations:
   internal DMG assets.
 - Installer asset contract now verifies that the DMG, checksum, install guide,
   and release manifest are a matching set before upload.
+- Release state planning now requires the GitHub Release title to match the
+  release tag, keeping the download page identity stable.
+- Release state planning also rejects non-version tags, so public release pages
+  stay tied to immutable `vX.Y.Z` identities.
 
 Latest review decisions:
 
