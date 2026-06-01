@@ -508,8 +508,8 @@ def main() -> int:
       install_guide_path=install_guide,
       package_manifest_path=developer_package_manifest,
     )
-    if developer_manifest["trust"] != "developer-id-signed-not-notarized":
-      raise AssertionError("Developer ID releases should not claim notarization")
+    if developer_manifest["trust"] != "developer-id-signed-notarized":
+      raise AssertionError("Developer ID releases should record notarized trust")
 
     checksum_data = checksum_path.read_text(encoding="utf-8")
     checksum_path.write_text("0" * 64 + f"  {artifact.name}\n", encoding="utf-8")

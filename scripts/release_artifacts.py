@@ -592,7 +592,7 @@ def validate_workflow_run_metadata(workflow_run_id: str, workflow_run_url: str) 
 
 def release_trust(signing_mode: str) -> str:
   if signing_mode == "developer-id":
-    return "developer-id-signed-not-notarized"
+    return "developer-id-signed-notarized"
   return "ad-hoc-not-notarized"
 
 

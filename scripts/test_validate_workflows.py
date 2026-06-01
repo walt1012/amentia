@@ -264,6 +264,19 @@ jobs:
             --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --bundle-version "$PITH_RELEASE_VERSION"
+      - name: Notarize and staple DMG
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        run: |
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          xcrun notarytool submit "$dmg_path" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+          xcrun stapler staple "$dmg_path"
+          python3 scripts/validate_macos_distribution.py \
+            artifacts/macos/Pith.app \
+            --dmg-path "$dmg_path"
       - name: Publish GitHub Release
         run: |
           release_title="Pith $RELEASE_TAG"
@@ -713,6 +726,22 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "package_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace("xcrun notarytool submit", "xcrun missing_notarytool submit"),
+    )
+    assert_issue(issue_messages(root), "notarytool")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace('xcrun stapler staple "$dmg_path"', "echo missing stapler"),
+    )
+    assert_issue(issue_messages(root), "stapler")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

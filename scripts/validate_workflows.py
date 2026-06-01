@@ -417,6 +417,13 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     )
   required_release_terms = (
     'python3 scripts/package_contract.py',
+    'xcrun notarytool submit "$dmg_path"',
+    '--apple-id "$APPLE_ID"',
+    '--team-id "$APPLE_TEAM_ID"',
+    '--password "$APPLE_APP_SPECIFIC_PASSWORD"',
+    '--wait',
+    'xcrun stapler staple "$dmg_path"',
+    '--dmg-path "$dmg_path"',
     '--tag "$RELEASE_TAG"',
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
     '--install-guide artifacts/macos/README-FIRST.txt',
