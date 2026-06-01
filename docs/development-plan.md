@@ -88,6 +88,10 @@ Ready foundations:
   notes, and manifests describe the same installer state.
 - First-run readiness now stays visible through the first request and unresolved
   required tool readiness; optional plugins do not block the daily loop.
+- Tool readiness chips now route Web Search, plugin command, and sandbox issues
+  toward their next local recovery surface instead of showing passive status.
+- Header detail remains available while tool readiness is unresolved, so
+  recovery actions have visible feedback.
 - CI change classification treats release, package, and signing contract edits as
   package-impacting changes.
 - Workflow validation now requires the CI change-classifier test to stay in the

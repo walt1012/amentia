@@ -20,6 +20,9 @@ extension AppViewModel {
       isWorkspaceSearching: isWorkspaceSearching,
       hasModelDownload: modelDownloadState.hasActiveDownload,
       hasPausedModelDownload: modelDownloadState.hasPausedDownload,
+      hasToolReadinessIssue: RuntimeToolReadinessPresenter.hasToolIssue(
+        runtimeReadiness?.checks ?? []
+      ),
       dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
       dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction")
     )
@@ -169,6 +172,7 @@ extension AppViewModel {
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
       hasFirstRequestSuggestion: firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil,
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
       runtimeLaunchButtonTitle: runtimeLaunchButtonTitle(),
       modelSetupActionTitle: modelSetupCalloutActionTitle()
     )

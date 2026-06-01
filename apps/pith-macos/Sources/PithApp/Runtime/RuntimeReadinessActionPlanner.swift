@@ -13,6 +13,7 @@ struct RuntimeReadinessActionSnapshot {
   let isWaitingForFirstMessage: Bool
   let hasDraftMessage: Bool
   let hasFirstRequestSuggestion: Bool
+  let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
   let runtimeLaunchButtonTitle: String
   let modelSetupActionTitle: String?
 }
@@ -24,6 +25,9 @@ enum RuntimeReadinessAction {
   case createThread
   case useFirstRequestPrompt
   case sendFirstRequest
+  case openPluginAccess
+  case openPluginCommands
+  case inspectSandboxStatus
 }
 
 enum RuntimeReadinessActionPlanner {
@@ -42,6 +46,8 @@ enum RuntimeReadinessActionPlanner {
       return threadAction(snapshot)
     case "first-request":
       return firstRequestAction(snapshot)
+    case "tools":
+      return toolsAction(snapshot)
     default:
       return nil
     }
@@ -68,6 +74,12 @@ enum RuntimeReadinessActionPlanner {
       return "Use Prompt"
     case .sendFirstRequest:
       return "Send"
+    case .openPluginAccess:
+      return "Access"
+    case .openPluginCommands:
+      return "Commands"
+    case .inspectSandboxStatus:
+      return "Inspect"
     }
   }
 
@@ -92,6 +104,8 @@ enum RuntimeReadinessActionPlanner {
       return snapshot.hasFirstRequestSuggestion
     case .sendFirstRequest:
       return snapshot.hasDraftMessage
+    case .openPluginAccess, .openPluginCommands, .inspectSandboxStatus:
+      return snapshot.runtimeState == .ready
     }
   }
 
@@ -150,5 +164,24 @@ enum RuntimeReadinessActionPlanner {
     }
 
     return snapshot.hasDraftMessage ? .sendFirstRequest : .useFirstRequestPrompt
+  }
+
+  private static func toolsAction(
+    _ snapshot: RuntimeReadinessActionSnapshot
+  ) -> RuntimeReadinessAction? {
+    guard snapshot.runtimeState == .ready else {
+      return nil
+    }
+
+    switch RuntimeToolReadinessPresenter.primaryIssueID(snapshot.runtimeReadinessChecks) {
+    case "webSearch":
+      return .openPluginAccess
+    case "plugins":
+      return .openPluginCommands
+    case "nativeSandbox":
+      return .inspectSandboxStatus
+    default:
+      return nil
+    }
   }
 }

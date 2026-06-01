@@ -21,6 +21,19 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Ask Pith for the next cowork task.")
   }
 
+  func testRuntimeHeaderShowsDetailForToolReadinessIssue() {
+    XCTAssertTrue(
+      RuntimeHeaderPresenter.shouldShowDetail(
+        headerSnapshot(
+          hasDraftMessage: false,
+          isWaitingForFirstMessage: false,
+          runtimeDetail: "Native sandbox status is limited.",
+          hasToolReadinessIssue: true
+        )
+      )
+    )
+  }
+
   func testDailyDriverPresenterNamesRetrievalSetup() {
     let summary = DailyDriverStagePresenter.summary(
       stage: "retrieval_setup",
@@ -138,6 +151,69 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testToolReadinessActionOpensWebSearchAccess() {
+    let step = ReadinessStepSummary(
+      id: "tools",
+      label: "Tools",
+      detail: "Web Setup",
+      tone: .warning
+    )
+    let snapshot = readinessActionSnapshot(checks: [
+      RuntimeReadinessCheckSummary(
+        id: "webSearch",
+        title: "Web Search",
+        status: "setup_required",
+        detail: "Enable Web Search"
+      )
+    ])
+    let action = RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot)
+
+    XCTAssertEqual(RuntimeReadinessActionPlanner.title(for: action, snapshot: snapshot), "Access")
+    XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
+  }
+
+  func testToolReadinessActionOpensPluginCommands() {
+    let step = ReadinessStepSummary(
+      id: "tools",
+      label: "Tools",
+      detail: "Plugins Setup",
+      tone: .warning
+    )
+    let snapshot = readinessActionSnapshot(checks: [
+      RuntimeReadinessCheckSummary(
+        id: "plugins",
+        title: "Plugins",
+        status: "setup_required",
+        detail: "Enable command capability"
+      )
+    ])
+    let action = RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot)
+
+    XCTAssertEqual(RuntimeReadinessActionPlanner.title(for: action, snapshot: snapshot), "Commands")
+    XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
+  }
+
+  func testToolReadinessActionInspectsNativeSandbox() {
+    let step = ReadinessStepSummary(
+      id: "tools",
+      label: "Tools",
+      detail: "Sandbox Limited",
+      tone: .warning
+    )
+    let snapshot = readinessActionSnapshot(checks: [
+      RuntimeReadinessCheckSummary(
+        id: "nativeSandbox",
+        title: "Native Sandbox",
+        status: "limited",
+        detail: "Native sandbox unavailable"
+      )
+    ])
+    let action = RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot)
+
+    XCTAssertEqual(RuntimeReadinessActionPlanner.title(for: action, snapshot: snapshot), "Inspect")
+    XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
+  }
+
   func testComposerFramesDraftAsCoworkPrompt() {
     let placeholder = ComposerStatusPresenter.placeholder(composerSnapshot(hasDraftMessage: true))
     let summary = ComposerStatusPresenter.statusSummary(composerSnapshot(hasDraftMessage: true))
@@ -170,12 +246,14 @@ final class CoworkFirstPresentationTests: XCTestCase {
   private func headerSnapshot(
     hasDraftMessage: Bool,
     isWaitingForFirstMessage: Bool = true,
+    runtimeDetail: String = "",
+    hasToolReadinessIssue: Bool = false,
     dailyDriverStage: String? = nil,
     dailyDriverNextAction: String? = nil
   ) -> RuntimeHeaderSnapshot {
     RuntimeHeaderSnapshot(
       runtimeState: .ready,
-      runtimeDetail: "",
+      runtimeDetail: runtimeDetail,
       modelSetupSummary: "Model ready",
       isLocalModelReady: true,
       hasWorkspace: true,
@@ -186,6 +264,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       isWorkspaceSearching: false,
       hasModelDownload: false,
       hasPausedModelDownload: false,
+      hasToolReadinessIssue: hasToolReadinessIssue,
       dailyDriverStage: dailyDriverStage,
       dailyDriverNextAction: dailyDriverNextAction
     )
@@ -218,6 +297,28 @@ final class CoworkFirstPresentationTests: XCTestCase {
         detail: "Ready"
       )
     ]
+  }
+
+  private func readinessActionSnapshot(
+    checks: [RuntimeReadinessCheckSummary]
+  ) -> RuntimeReadinessActionSnapshot {
+    RuntimeReadinessActionSnapshot(
+      runtimeState: .ready,
+      isLocalModelReady: true,
+      hasWorkspace: true,
+      hasRuntimeThreadSelection: true,
+      canLaunchRuntime: false,
+      canRunModelSetupAction: false,
+      canOpenWorkspace: false,
+      canCreateThread: false,
+      canUseComposer: true,
+      isWaitingForFirstMessage: false,
+      hasDraftMessage: false,
+      hasFirstRequestSuggestion: false,
+      runtimeReadinessChecks: checks,
+      runtimeLaunchButtonTitle: "Launch Runtime",
+      modelSetupActionTitle: nil
+    )
   }
 
   private let localExecutionMetrics = [

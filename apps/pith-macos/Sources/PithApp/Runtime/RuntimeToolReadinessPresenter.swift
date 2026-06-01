@@ -9,6 +9,10 @@ enum RuntimeToolReadinessPresenter {
     primaryIssue(checks) != nil
   }
 
+  static func primaryIssueID(_ checks: [RuntimeReadinessCheckSummary]) -> String? {
+    primaryIssue(checks)?.id
+  }
+
   static func timelineDetail(
     _ checks: [RuntimeReadinessCheckSummary],
     metrics: [String: String] = [:]

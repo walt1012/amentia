@@ -39,6 +39,14 @@ extension AppViewModel {
       useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
     case .sendFirstRequest:
       sendDraftMessage()
+    case .openPluginAccess:
+      pluginManagerSection = .access
+      runtimeDetail = "Open Plugin Manager Access to enable the Web Search plugin permission."
+    case .openPluginCommands:
+      pluginManagerSection = .commands
+      runtimeDetail = "Open Plugin Manager Commands to enable a ready command capability."
+    case .inspectSandboxStatus:
+      runtimeDetail = "Native sandbox status is shown in runtime readiness and local execution receipts."
     }
   }
 

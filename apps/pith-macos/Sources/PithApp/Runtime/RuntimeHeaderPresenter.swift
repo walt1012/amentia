@@ -13,6 +13,7 @@ struct RuntimeHeaderSnapshot {
   let isWorkspaceSearching: Bool
   let hasModelDownload: Bool
   let hasPausedModelDownload: Bool
+  let hasToolReadinessIssue: Bool
   let dailyDriverStage: String?
   let dailyDriverNextAction: String?
 }
@@ -116,6 +117,7 @@ enum RuntimeHeaderPresenter {
         || !snapshot.hasWorkspace
         || !snapshot.hasRuntimeThreadSelection
         || snapshot.isWaitingForFirstMessage
+        || snapshot.hasToolReadinessIssue
     }
   }
 }
