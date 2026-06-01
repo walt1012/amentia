@@ -93,6 +93,8 @@ Ready foundations:
   model download, workspace, Web Search, sandbox status, approval, and proof.
 - Release manifests now expose the same first-run path as machine-readable
   release metadata for downloaded-installer checks.
+- `README-FIRST.txt` now gives a concrete `shasum -a 256 -c` verification
+  path and points users to the manifest first-run contract before launch.
 
 Latest review decisions:
 
@@ -113,8 +115,8 @@ Build now:
 - First-run path: model download, activation, workspace open, Web Search
   readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Release rehearsal: finish edge checks around downloaded installer verification
-  and first launch guidance.
+- Release rehearsal: keep downloaded installer verification, first launch
+  guidance, and manifest contracts aligned with the actual release assets.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Package proof: CI and packaged smoke verify the user-facing DMG path, not only
   internal scripts.

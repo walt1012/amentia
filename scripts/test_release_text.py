@@ -17,6 +17,7 @@ from release_text import (
   platform_label,
   release_notes,
   release_size_budget_copy,
+  checksum_verification_copy,
   validate_install_guide,
   validate_release_notes,
 )
@@ -47,6 +48,10 @@ def main() -> int:
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")
   require_contains(installer_assets_copy("ci-0123456789ab"), "internal-release-manifest.json")
+  require_contains(checksum_verification_copy("v0.1.0"), "shasum -a 256 -c")
+  require_contains(checksum_verification_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg.sha256")
+  require_contains(checksum_verification_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
+  require_contains(checksum_verification_copy("v0.1.0"), "first-run contract")
 
   developer_notes = release_notes(
     "v0.1.0",
@@ -131,10 +136,12 @@ def main() -> int:
   require_contains(guide, "Follow the next action")
   require_contains(guide, "runtime readiness")
   require_contains(guide, "SHA-256 `.sha256` file")
+  require_contains(guide, "shasum -a 256 -c Pith-v0.1.0-macos-x86_64.dmg.sha256")
   require_contains(guide, "verify the downloaded installer")
   require_contains(guide, "sidecar hashes")
   require_contains(guide, "source commit")
   require_contains(guide, "model delivery mode")
+  require_contains(guide, "first-run contract")
   require_contains(guide, release_size_budget_copy())
   require_contains(guide, "sandbox status")
   require_contains(guide, "process-only fallback")

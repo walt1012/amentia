@@ -51,10 +51,12 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "sandbox status",
   "process-only fallback",
   "SHA-256 `.sha256` file",
+  "shasum -a 256 -c",
   "sidecar hashes",
   "source commit",
   "model delivery mode",
   "package size budget",
+  "first-run contract",
 )
 
 
@@ -91,6 +93,15 @@ def first_run_path_copy() -> str:
     f"({DEFAULT_MODEL_ID}), open a workspace folder, confirm Web Search readiness "
     "and sandbox status, start a cowork session, approve a safe local change only "
     "after reviewing it, then inspect the proof shown in the timeline."
+  )
+
+
+def checksum_verification_copy(tag: str) -> str:
+  _dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(tag)
+  return (
+    f"Verify the installer before first launch with `shasum -a 256 -c {checksum_name}`, "
+    f"then open {manifest_name} to confirm platform, signing mode, model delivery mode, "
+    "and first-run contract."
   )
 
 
@@ -154,6 +165,7 @@ def release_notes(
   installer_assets = installer_assets_copy(tag)
   local_execution = local_execution_copy()
   first_run_path = first_run_path_copy()
+  verification = checksum_verification_copy(tag)
   return f"""Pith {tag}
 
 - {platform_label()} DMG installer.
@@ -192,6 +204,7 @@ def install_guide(tag: str, signing_mode: str) -> str:
   installer_assets = installer_assets_copy(tag)
   local_execution = local_execution_copy()
   first_run_path = first_run_path_copy()
+  verification = checksum_verification_copy(tag)
   return f"""Pith {tag}
 
 Install
@@ -208,6 +221,9 @@ Trust
 {trust_note}
 {open_note}
 
+Verify
+{verification}
+
 Notes
 - {installer_assets}
 - {local_execution}
@@ -215,7 +231,7 @@ Notes
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
-- The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, and model delivery mode.
+- The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, and first-run contract.
 - The release manifest records the {size_budget} that CI enforces before upload.
 - Pith reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
 - Only one local model runs at a time.

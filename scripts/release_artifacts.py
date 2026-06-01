@@ -47,7 +47,9 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "sandbox status",
   "process-only fallback",
   "SHA-256",
+  "shasum -a 256 -c",
   "release manifest",
+  "first-run contract",
 )
 VERIFICATION_CONTRACT = {
   "ciGate": "successful-ci-required-for-source-commit",
