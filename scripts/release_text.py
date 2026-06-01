@@ -16,23 +16,9 @@ from package_contract import (
   package_size_budget,
 )
 from release_artifacts import release_installer_asset_names
-from release_copy_contract import INSTALL_GUIDE_REQUIRED_PHRASES
-
-RELEASE_NOTES_REQUIRED_PHRASES = (
-  "DMG installer.",
-  "Installer assets:",
-  DEFAULT_MODEL_ID,
-  "Model weights are not bundled",
-  "No Pith login is required",
-  "local execution mode",
-  "SHA-256 checksum sidecar",
-  "README-FIRST.txt",
-  "release manifest",
-  "sidecar hashes",
-  "Native sandbox",
-  "process-only fallback",
-  "daily-driver next action",
-  "package size budget",
+from release_copy_contract import (
+  INSTALL_GUIDE_REQUIRED_PHRASES,
+  RELEASE_NOTES_REQUIRED_PHRASES,
 )
 
 

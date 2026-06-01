@@ -9,6 +9,10 @@ from package_contract import (
   MINIMUM_SYSTEM_VERSION,
   SUPPORTED_ARCH,
 )
+from release_copy_contract import (
+  INSTALL_GUIDE_REQUIRED_PHRASES,
+  RELEASE_NOTES_REQUIRED_PHRASES,
+)
 from release_text import (
   first_run_path_copy,
   install_guide,
@@ -40,6 +44,10 @@ def main() -> int:
   require_contains(release_size_budget_copy(), "installer artifact <= 150 MiB")
   require_contains(local_execution_copy(), "No Pith login is required")
   require_contains(local_execution_copy(), DEFAULT_LOCAL_EXECUTION_SAFETY_MODE)
+  require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "DMG installer.")
+  require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "SHA-256 checksum sidecar")
+  require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "shasum -a 256 -c")
+  require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "first-run contract")
   require_contains(first_run_path_copy(), DEFAULT_MODEL_ID)
   require_contains(first_run_path_copy(), "Web Search readiness")
   require_contains(first_run_path_copy(), "approve a safe local change")
