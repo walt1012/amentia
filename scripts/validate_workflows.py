@@ -151,6 +151,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
   repository_policy_block = job_block(text, "repository-policy")
   if repository_policy_block:
     required_policy_commands = (
+      "python3 scripts/test_ci_changes.py",
       "python3 scripts/test_package_contract.py",
       "python3 scripts/test_release_identity.py",
       "python3 scripts/test_installer_artifact_contract.py",

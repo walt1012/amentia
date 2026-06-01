@@ -40,6 +40,7 @@ PACKAGE_PATTERNS = (
   "scripts/package_macos_app.py",
   "scripts/installer_artifact_contract.py",
   "scripts/release_artifacts.py",
+  "scripts/release_copy_contract.py",
   "scripts/release_text.py",
   "scripts/smoke_launch_macos_app.py",
   "scripts/validate_macos_distribution.py",

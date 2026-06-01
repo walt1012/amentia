@@ -52,6 +52,8 @@ jobs:
         run: python3 scripts/test_release_identity.py
       - name: Test package contract helper
         run: python3 scripts/test_package_contract.py
+      - name: Test CI change classifier
+        run: python3 scripts/test_ci_changes.py
       - name: Test installer artifact contract
         run: python3 scripts/test_installer_artifact_contract.py
       - name: Test connector workflow contracts
@@ -328,6 +330,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_package_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test CI change classifier\n"
+        "        run: python3 scripts/test_ci_changes.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_ci_changes.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
