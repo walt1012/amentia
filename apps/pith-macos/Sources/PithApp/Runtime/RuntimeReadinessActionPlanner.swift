@@ -14,6 +14,7 @@ struct RuntimeReadinessActionSnapshot {
   let hasDraftMessage: Bool
   let hasFirstRequestSuggestion: Bool
   let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
+  let canEnableWebSearchPlugin: Bool
   let runtimeLaunchButtonTitle: String
   let modelSetupActionTitle: String?
 }
@@ -25,6 +26,7 @@ enum RuntimeReadinessAction {
   case createThread
   case useFirstRequestPrompt
   case sendFirstRequest
+  case enableWebSearchPlugin
   case openPluginAccess
   case openPluginCommands
   case inspectSandboxStatus
@@ -74,6 +76,8 @@ enum RuntimeReadinessActionPlanner {
       return "Use Prompt"
     case .sendFirstRequest:
       return "Send"
+    case .enableWebSearchPlugin:
+      return "Enable"
     case .openPluginAccess:
       return "Access"
     case .openPluginCommands:
@@ -104,6 +108,8 @@ enum RuntimeReadinessActionPlanner {
       return snapshot.hasFirstRequestSuggestion
     case .sendFirstRequest:
       return snapshot.hasDraftMessage
+    case .enableWebSearchPlugin:
+      return snapshot.canEnableWebSearchPlugin
     case .openPluginAccess, .openPluginCommands, .inspectSandboxStatus:
       return snapshot.runtimeState == .ready
     }
@@ -175,6 +181,9 @@ enum RuntimeReadinessActionPlanner {
 
     switch RuntimeToolReadinessPresenter.primaryIssueID(snapshot.runtimeReadinessChecks) {
     case "webSearch":
+      if snapshot.canEnableWebSearchPlugin {
+        return .enableWebSearchPlugin
+      }
       return .openPluginAccess
     case "plugins":
       return .openPluginCommands

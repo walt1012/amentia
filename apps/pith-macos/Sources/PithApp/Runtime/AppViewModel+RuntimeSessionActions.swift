@@ -39,6 +39,8 @@ extension AppViewModel {
       useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
     case .sendFirstRequest:
       sendDraftMessage()
+    case .enableWebSearchPlugin:
+      setPluginEnabled(pluginID: webSearchPluginID, enabled: true)
     case .openPluginAccess:
       pluginManagerSection = .access
       runtimeDetail = "Open Plugin Manager Access to enable the Web Search plugin permission."
@@ -161,4 +163,16 @@ extension AppViewModel {
   func canUseComposer() -> Bool {
     SessionActionPlanner.canUseComposer(sessionActionSnapshot())
   }
+
+  func canEnableWebSearchPlugin() -> Bool {
+    guard let plugin = pluginSummary(pluginID: webSearchPluginID),
+          !plugin.enabled
+    else {
+      return false
+    }
+
+    return canSetPluginEnabled(pluginID: webSearchPluginID)
+  }
 }
+
+private let webSearchPluginID = "web-search"

@@ -90,6 +90,8 @@ Ready foundations:
   required tool readiness; optional plugins do not block the daily loop.
 - Tool readiness chips now route Web Search, plugin command, and sandbox issues
   toward their next local recovery surface instead of showing passive status.
+- Web Search readiness can directly re-enable the bundled Web Search plugin
+  when that is the missing retrieval permission.
 - Header detail remains available while tool readiness is unresolved, so
   recovery actions have visible feedback.
 - CI change classification treats release, package, and signing contract edits as

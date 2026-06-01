@@ -172,6 +172,30 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
   }
 
+  func testToolReadinessActionEnablesWebSearchWhenAvailable() {
+    let step = ReadinessStepSummary(
+      id: "tools",
+      label: "Tools",
+      detail: "Web Setup",
+      tone: .warning
+    )
+    let snapshot = readinessActionSnapshot(
+      checks: [
+        RuntimeReadinessCheckSummary(
+          id: "webSearch",
+          title: "Web Search",
+          status: "setup_required",
+          detail: "Enable Web Search"
+        )
+      ],
+      canEnableWebSearchPlugin: true
+    )
+    let action = RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot)
+
+    XCTAssertEqual(RuntimeReadinessActionPlanner.title(for: action, snapshot: snapshot), "Enable")
+    XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
+  }
+
   func testToolReadinessActionOpensPluginCommands() {
     let step = ReadinessStepSummary(
       id: "tools",
@@ -300,7 +324,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
   }
 
   private func readinessActionSnapshot(
-    checks: [RuntimeReadinessCheckSummary]
+    checks: [RuntimeReadinessCheckSummary],
+    canEnableWebSearchPlugin: Bool = false
   ) -> RuntimeReadinessActionSnapshot {
     RuntimeReadinessActionSnapshot(
       runtimeState: .ready,
@@ -316,6 +341,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasDraftMessage: false,
       hasFirstRequestSuggestion: false,
       runtimeReadinessChecks: checks,
+      canEnableWebSearchPlugin: canEnableWebSearchPlugin,
       runtimeLaunchButtonTitle: "Launch Runtime",
       modelSetupActionTitle: nil
     )
