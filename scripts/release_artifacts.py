@@ -568,9 +568,11 @@ def release_verification(
   workflow_run_url: str,
 ) -> dict:
   validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
+  _dmg_name, checksum_name, _guide_name, _manifest_name = release_installer_asset_names(tag)
   return {
     **VERIFICATION_CONTRACT,
     "assetNames": list(release_installer_asset_names(tag)),
+    "checksumCommand": f"shasum -a 256 -c {checksum_name}",
     "workflowRunId": workflow_run_id,
     "workflowRunUrl": workflow_run_url,
   }
@@ -585,6 +587,9 @@ def validate_verification_contract(value: object, label: str, *, tag: str) -> No
   expected_asset_names = list(release_installer_asset_names(tag))
   if value.get("assetNames") != expected_asset_names:
     raise RuntimeError(f"{label} assetNames must match the installer asset contract")
+  expected_checksum_command = f"shasum -a 256 -c {expected_asset_names[1]}"
+  if value.get("checksumCommand") != expected_checksum_command:
+    raise RuntimeError(f"{label} checksumCommand must match the checksum sidecar")
   workflow_run_id = value.get("workflowRunId")
   workflow_run_url = value.get("workflowRunUrl")
   if not isinstance(workflow_run_id, str) or not isinstance(workflow_run_url, str):

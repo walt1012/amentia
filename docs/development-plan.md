@@ -95,6 +95,8 @@ Ready foundations:
   release metadata for downloaded-installer checks.
 - `README-FIRST.txt` now gives a concrete `shasum -a 256 -c` verification
   path and points users to the manifest first-run contract before launch.
+- Release manifests now record the exact checksum command for public and
+  internal DMG assets.
 
 Latest review decisions:
 
