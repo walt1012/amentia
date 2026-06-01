@@ -82,6 +82,8 @@ Ready foundations:
   place.
 - Mounted-DMG smoke now emits a first-run receipt that release manifests embed
   and validate, so release proof names the user path it exercised.
+- Release notes and `README-FIRST.txt` tell users where to inspect that
+  packaged first-run proof before opening the app.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
