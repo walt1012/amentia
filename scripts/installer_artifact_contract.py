@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from release_artifacts import release_installer_asset_names
+from release_artifacts import validate_release_manifest
 
 
 FORBIDDEN_ASSET_NAMES = {
@@ -50,6 +51,14 @@ def validate_installer_asset_set(tag: str, asset_paths: list[Path]) -> None:
     if extra:
       details.append("extra " + ", ".join(extra))
     raise RuntimeError("Installer asset set must exactly match the release contract: " + "; ".join(details))
+
+  dmg_name, checksum_name, install_guide_name, manifest_name = release_installer_asset_names(tag)
+  validate_release_manifest(
+    assets_by_name[manifest_name],
+    artifact_path=assets_by_name[dmg_name],
+    checksum_path=assets_by_name[checksum_name],
+    install_guide_path=assets_by_name[install_guide_name],
+  )
 
 
 def validate_installer_asset_path(asset_path: Path) -> None:

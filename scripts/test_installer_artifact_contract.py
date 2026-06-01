@@ -8,17 +8,45 @@ from tempfile import TemporaryDirectory
 
 from installer_artifact_contract import expected_installer_asset_names
 from installer_artifact_contract import validate_installer_asset_set
+from release_artifacts import write_checksum_file
+from release_artifacts import write_release_manifest
+from release_text import install_guide as release_install_guide
 
 
-def touch(path: Path) -> Path:
-  path.write_bytes(b"pith installer asset\n")
+SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+WORKFLOW_RUN_ID = "123456789"
+WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
+
+
+def write_bytes(path: Path, content: bytes = b"pith installer asset\n") -> Path:
+  path.write_bytes(content)
   return path
 
 
 def valid_assets(root: Path, tag: str) -> list[Path]:
+  names = sorted(expected_installer_asset_names(tag))
+  dmg_name = next(name for name in names if name.endswith(".dmg"))
+  checksum_name = f"{dmg_name}.sha256"
+  guide_name = "README-FIRST.txt"
+  manifest_name = next(name for name in names if name.endswith("-manifest.json"))
+  artifact = write_bytes(root / dmg_name)
+  guide = root / guide_name
+  guide.write_text(release_install_guide(tag, "ad-hoc"), encoding="utf-8")
+  checksum = write_checksum_file(artifact, root / checksum_name)
+  write_release_manifest(
+    tag=tag,
+    source_commit=SOURCE_COMMIT,
+    signing_mode="ad-hoc",
+    artifact_path=artifact,
+    checksum_path=checksum,
+    install_guide_path=guide,
+    output_path=root / manifest_name,
+    workflow_run_id=WORKFLOW_RUN_ID,
+    workflow_run_url=WORKFLOW_RUN_URL,
+  )
   return [
-    touch(root / name)
-    for name in sorted(expected_installer_asset_names(tag))
+    root / name
+    for name in names
   ]
 
 
@@ -56,7 +84,7 @@ def main() -> int:
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
-    assets = valid_assets(root, "v0.1.0") + [touch(root / "Pith-v0.1.0-macos-x86_64.zip")]
+    assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "Pith-v0.1.0-macos-x86_64.zip")]
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "must not include .zip payloads",
@@ -64,7 +92,7 @@ def main() -> int:
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
-    assets = valid_assets(root, "v0.1.0") + [touch(root / "internal-release-notes.md")]
+    assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "internal-release-notes.md")]
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "must not include internal notes",
@@ -72,7 +100,7 @@ def main() -> int:
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
-    assets = valid_assets(root, "v0.1.0") + [touch(root / "MiniCPM5-1B-Q4_K_M.gguf")]
+    assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "MiniCPM5-1B-Q4_K_M.gguf")]
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "must not include .gguf payloads",
@@ -81,7 +109,7 @@ def main() -> int:
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
-    assets[0] = touch(root / "Pith-v0.2.0-macos-x86_64.dmg")
+    assets[0] = write_bytes(root / "Pith-v0.2.0-macos-x86_64.dmg")
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "missing Pith-v0.1.0-macos-x86_64.dmg",
@@ -103,6 +131,24 @@ def main() -> int:
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "Installer asset is missing",
+    )
+
+  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+    root = Path(directory)
+    assets = valid_assets(root, "v0.1.0")
+    (root / "Pith-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered dmg\n")
+    assert_raises(
+      lambda: validate_installer_asset_set("v0.1.0", assets),
+      "Release checksum does not match artifact",
+    )
+
+  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+    root = Path(directory)
+    assets = valid_assets(root, "v0.1.0")
+    (root / "README-FIRST.txt").write_text("Install Pith.\n", encoding="utf-8")
+    assert_raises(
+      lambda: validate_installer_asset_set("v0.1.0", assets),
+      "Release manifest install guide size does not match",
     )
 
   print("installer artifact contract tests passed")

@@ -97,6 +97,8 @@ Ready foundations:
   path and points users to the manifest first-run contract before launch.
 - Release manifests now record the exact checksum command for public and
   internal DMG assets.
+- Installer asset contract now verifies that the DMG, checksum, install guide,
+  and release manifest are a matching set before upload.
 
 Latest review decisions:
 
