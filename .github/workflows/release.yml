@@ -409,6 +409,24 @@ jobs:
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"
 
+          rm -rf release-download
+          mkdir -p release-download
+          gh release download "$RELEASE_TAG" \
+            --dir release-download \
+            --clobber
+          python3 scripts/release_rehearsal_contract.py \
+            --tag "$RELEASE_TAG" \
+            --asset-dir release-download \
+            --summary-output release-rehearsal.md
+
+      - name: Upload release rehearsal summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-rehearsal-${{ env.RELEASE_TAG }}
+          path: release-rehearsal.md
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Cleanup release keychain
         if: always()
         run: |

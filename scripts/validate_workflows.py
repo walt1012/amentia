@@ -432,6 +432,30 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
           f"published release contract is missing {term}",
         )
       )
+  if "scripts/release_rehearsal_contract.py" not in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "release download rehearsal helper is missing",
+      )
+    )
+  for term in (
+    'gh release download "$RELEASE_TAG"',
+    "--dir release-download",
+    "--asset-dir release-download",
+    "--summary-output release-rehearsal.md",
+    "uses: actions/upload-artifact@v7",
+    "release-rehearsal-${{ env.RELEASE_TAG }}",
+    "path: release-rehearsal.md",
+    "retention-days: 30",
+  ):
+    if term not in release_block:
+      issues.append(
+        WorkflowIssue(
+          RELEASE_WORKFLOW,
+          f"release download rehearsal is missing {term}",
+        )
+      )
   if "--source-commit" not in release_block:
     issues.append(
       WorkflowIssue(

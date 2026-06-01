@@ -325,6 +325,22 @@ jobs:
             --release-json release-published.json \\
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"
+          rm -rf release-download
+          mkdir -p release-download
+          gh release download "$RELEASE_TAG" \\
+            --dir release-download \\
+            --clobber
+          python3 scripts/release_rehearsal_contract.py \\
+            --tag "$RELEASE_TAG" \\
+            --asset-dir release-download \\
+            --summary-output release-rehearsal.md
+      - name: Upload release rehearsal summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-rehearsal-${{ env.RELEASE_TAG }}
+          path: release-rehearsal.md
+          if-no-files-found: error
+          retention-days: 30
 """
 
 
@@ -708,6 +724,36 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "expected-draft")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "scripts/release_rehearsal_contract.py",
+        "scripts/missing_release_rehearsal_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "release download rehearsal helper")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        'gh release download "$RELEASE_TAG"',
+        'gh release view "$RELEASE_TAG"',
+      ),
+    )
+    assert_issue(issue_messages(root), "release download rehearsal")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace("          retention-days: 30\n", ""),
+    )
+    assert_issue(issue_messages(root), "retention-days")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

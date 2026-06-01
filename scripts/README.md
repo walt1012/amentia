@@ -64,4 +64,7 @@ path was explicitly requested. It also refuses to move an existing public
 GitHub Release back to draft; release withdrawal should stay a deliberate
 maintainer action. After upload and release-state patching, the release workflow
 reads the GitHub Release back and validates the final state, exact public asset
-set, non-empty uploads, and download URLs before the job can pass.
+set, non-empty uploads, and download URLs. It then downloads the release assets
+back through GitHub Releases and runs the same rehearsal contract a maintainer
+can use after manual download. The rehearsal summary is uploaded as an internal
+workflow artifact, not as an extra public Release asset.

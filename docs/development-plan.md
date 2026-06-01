@@ -89,6 +89,9 @@ Ready foundations:
 - Release publishing now reads the final GitHub Release back and validates tag,
   title, draft/prerelease state, exact public installer assets, non-empty
   uploads, and tag-scoped download URLs.
+- Release workflow now downloads its own published assets back through GitHub
+  Releases, runs the downloaded-asset rehearsal before passing, and keeps the
+  summary as an internal workflow artifact instead of a public release asset.
 - Downloaded release rehearsals can validate a whole asset directory against
   the same installer contract used before upload, then summarize first-run
   proof, checksum command, signing mode, and source commit.
