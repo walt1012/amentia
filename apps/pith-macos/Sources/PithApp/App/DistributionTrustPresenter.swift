@@ -3,6 +3,7 @@ import Foundation
 struct DistributionPackageMetadata: Equatable {
   let schemaVersion: Int
   let signing: String
+  let distributionTrust: String
   let architecture: String
   let minimumSystemVersion: String
   let modelDelivery: String
@@ -48,6 +49,13 @@ struct DistributionPackageMetadata: Equatable {
     return DistributionPackageMetadata(
       schemaVersion: int(manifest, "schemaVersion", fallback: 1),
       signing: string(manifest, "signing", fallback: "development"),
+      distributionTrust: string(
+        manifest,
+        "distributionTrust",
+        fallback: distributionTrustFallback(
+          signing: string(manifest, "signing", fallback: "development")
+        )
+      ),
       architecture: string(manifest, "architecture", fallback: "unknown"),
       minimumSystemVersion: string(manifest, "minimumSystemVersion", fallback: "12.0"),
       modelDelivery: string(manifest, "modelDelivery", fallback: "in-app-download"),
@@ -95,6 +103,7 @@ struct DistributionPackageMetadata: Equatable {
   static let development = DistributionPackageMetadata(
     schemaVersion: 0,
     signing: "development",
+    distributionTrust: "development",
     architecture: "unknown",
     minimumSystemVersion: "12.0",
     modelDelivery: "in-app-download",
@@ -172,6 +181,19 @@ struct DistributionPackageMetadata: Equatable {
     }
     return value
   }
+
+  private static func distributionTrustFallback(signing: String) -> String {
+    switch signing {
+    case "developer-id":
+      return "developer-id-signed-notarized"
+    case "ad-hoc":
+      return "ad-hoc-not-notarized"
+    case "unsigned":
+      return "unsigned-local-build"
+    default:
+      return "development"
+    }
+  }
 }
 
 struct DistributionTrustSummary: Equatable {
@@ -200,22 +222,22 @@ enum DistributionTrustPresenter {
     let source = sourceSummary(metadata.sourceCommit)
     let releaseProof = "\(identity); \(modelDelivery); \(weightPolicy); \(execution); \(packageSize); \(sandbox); \(dailyDriver); \(source)."
 
-    switch metadata.signing {
-    case "developer-id":
+    switch metadata.distributionTrust {
+    case "developer-id-signed-notarized":
       return DistributionTrustSummary(
         title: "Trusted Installer",
         summary: "Developer ID signed and notarized for \(platform).",
         detail: "Install from the DMG, launch normally, then choose one verified local model. \(releaseProof)",
         setupDetail: nil
       )
-    case "ad-hoc":
+    case "ad-hoc-not-notarized":
       return DistributionTrustSummary(
         title: "Untrusted Ad-Hoc Build",
         summary: "Ad-hoc signed and not notarized for \(platform).",
         detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(releaseProof)",
         setupDetail: "Installer trust: if macOS blocked first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open."
       )
-    case "unsigned":
+    case "unsigned-local-build":
       return DistributionTrustSummary(
         title: "Unsigned Build",
         summary: "Unsigned local build for \(platform).",

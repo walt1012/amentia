@@ -41,6 +41,7 @@ from package_contract import (
   assert_size_under_budget,
   directory_size_bytes,
   package_size_budget,
+  package_distribution_trust,
   validate_package_manifest_contract,
 )
 from release_identity import normalize_product_version
@@ -405,6 +406,7 @@ def write_package_manifest(
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
     "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
     "signing": signing_mode,
+    "distributionTrust": package_distribution_trust(signing_mode),
     "sizeBudget": package_size_budget(),
   }
   path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

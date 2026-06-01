@@ -79,6 +79,11 @@ def write_package_manifest(
         "architecture": SUPPORTED_ARCH,
         "sourceCommit": source_commit,
         "signing": signing,
+        "distributionTrust": {
+          "ad-hoc": "ad-hoc-not-notarized",
+          "developer-id": "developer-id-signed-notarized",
+          "unsigned": "unsigned-local-build",
+        }[signing],
         "modelDelivery": model_delivery,
         "defaultModelId": DEFAULT_MODEL_ID,
         "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
@@ -187,6 +192,8 @@ def main() -> int:
       raise AssertionError("release manifest should summarize packaged app source")
     if manifest["appPackage"]["signing"] != "ad-hoc":
       raise AssertionError("release manifest should summarize packaged app signing")
+    if manifest["appPackage"]["distributionTrust"] != "ad-hoc-not-notarized":
+      raise AssertionError("release manifest should summarize packaged app trust")
     if manifest["appPackage"]["schemaVersion"] != PACKAGE_MANIFEST_SCHEMA_VERSION:
       raise AssertionError("release manifest should summarize package schema version")
     if "sha256" not in manifest["appPackage"]:

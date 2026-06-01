@@ -84,6 +84,8 @@ Ready foundations:
   install guides, trust wording, sidecar validation, and DMG staging do not drift.
 - Release workflow policy pins Developer ID app signing, DMG notarization, and
   stapling before public trusted upload.
+- Packaged app metadata exposes distribution trust so first-run UI, release
+  notes, and manifests describe the same installer state.
 - CI change classification treats release, package, and signing contract edits as
   package-impacting changes.
 - Workflow validation now requires the CI change-classifier test to stay in the

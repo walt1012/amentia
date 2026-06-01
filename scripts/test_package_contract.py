@@ -22,6 +22,7 @@ from package_contract import (
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   PACKAGE_SIGNING_MODES,
+  PACKAGE_DISTRIBUTION_TRUST_BY_SIGNING,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   LOCAL_EXECUTION_SAFETY_MODES,
   PITH_ACCOUNT_REQUIRED,
@@ -33,6 +34,7 @@ from package_contract import (
   bundled_model_weight_files,
   directory_size_bytes,
   package_size_budget,
+  package_distribution_trust,
   read_json_object,
   validate_package_manifest_contract,
   validate_package_size_budget,
@@ -76,6 +78,7 @@ def valid_manifest() -> dict[str, object]:
     "architecture": SUPPORTED_ARCH,
     "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
     "signing": "ad-hoc",
+    "distributionTrust": "ad-hoc-not-notarized",
     "modelDelivery": MODEL_DELIVERY_MODE,
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
@@ -110,7 +113,16 @@ def main() -> int:
   )
   assert_equal(SANDBOX_CONTRACT["mode"], "workspaceReadWrite")
   assert_equal(PACKAGE_SIGNING_MODES, {"unsigned", "ad-hoc", "developer-id"})
+  assert_equal(
+    PACKAGE_DISTRIBUTION_TRUST_BY_SIGNING,
+    {
+      "unsigned": "unsigned-local-build",
+      "ad-hoc": "ad-hoc-not-notarized",
+      "developer-id": "developer-id-signed-notarized",
+    },
+  )
   assert_equal(RELEASE_SIGNING_MODES, {"ad-hoc", "developer-id"})
+  assert_equal(package_distribution_trust("developer-id"), "developer-id-signed-notarized")
   assert_equal(DEFAULT_MAX_APP_BUNDLE_BYTES, 250 * 1024 * 1024)
   assert_equal(DEFAULT_MAX_ZIP_ARTIFACT_BYTES, 150 * 1024 * 1024)
   assert_equal(
@@ -208,6 +220,12 @@ def main() -> int:
   assert_raises(
     lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
     "unsupported signing mode should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["distributionTrust"] = "developer-id-signed-notarized"
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "wrong distribution trust should fail manifest contract validation",
   )
   wrong_manifest = dict(manifest)
   wrong_manifest.pop("bundleVersion")

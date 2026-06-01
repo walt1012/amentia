@@ -23,7 +23,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
 
   func testDeveloperIDBuildAvoidsManualGatekeeperCopy() throws {
     let summary = DistributionTrustPresenter.summary(
-      try metadata(signing: "developer-id")
+      try metadata(signing: "developer-id", distributionTrust: "developer-id-signed-notarized")
     )
 
     XCTAssertEqual(summary.title, "Trusted Installer")
@@ -46,6 +46,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     )
 
     XCTAssertEqual(parsed.signing, "ad-hoc")
+    XCTAssertEqual(parsed.distributionTrust, "ad-hoc-not-notarized")
     XCTAssertEqual(parsed.schemaVersion, 1)
     XCTAssertEqual(parsed.architecture, "x86_64")
     XCTAssertEqual(parsed.minimumSystemVersion, "12.0")
@@ -77,16 +78,41 @@ final class DistributionTrustPresenterTests: XCTestCase {
     )
   }
 
-  private func metadata(signing: String) throws -> DistributionPackageMetadata {
+  func testManifestParsingBackfillsDistributionTrustForOlderPackages() throws {
+    let parsed = try XCTUnwrap(
+      DistributionPackageMetadata.fromManifestData(
+        manifestData(signing: "developer-id", distributionTrust: nil)
+      )
+    )
+
+    XCTAssertEqual(parsed.distributionTrust, "developer-id-signed-notarized")
+  }
+
+  private func metadata(
+    signing: String,
+    distributionTrust: String? = nil
+  ) throws -> DistributionPackageMetadata {
     try XCTUnwrap(
-      DistributionPackageMetadata.fromManifestData(manifestData(signing: signing))
+      DistributionPackageMetadata.fromManifestData(
+        manifestData(signing: signing, distributionTrust: distributionTrust)
+      )
     )
   }
 
-  private func manifestData(signing: String, schemaVersion: Int = 1) -> Data {
+  private func manifestData(
+    signing: String,
+    schemaVersion: Int = 1,
+    distributionTrust: String? = "ad-hoc-not-notarized"
+  ) -> Data {
+    let distributionTrustLine = distributionTrust.map {
+      """
+      "distributionTrust": "\($0)",
+      """
+    } ?? ""
     """
     {
       "architecture": "x86_64",
+      \(distributionTrustLine)
       "minimumSystemVersion": "12.0",
       "modelDelivery": "in-app-download",
       "modelWeightsBundled": false,

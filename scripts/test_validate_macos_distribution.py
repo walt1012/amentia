@@ -22,6 +22,7 @@ from package_contract import (
   PITH_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
+  package_distribution_trust,
 )
 from validate_macos_distribution import validate_package_manifest
 
@@ -47,6 +48,7 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
         "appName": "Pith",
         "bundleVersion": "0.1.0",
         "signing": signing,
+        "distributionTrust": package_distribution_trust(signing),
         "sourceCommit": source_commit,
         "architecture": SUPPORTED_ARCH,
         "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,

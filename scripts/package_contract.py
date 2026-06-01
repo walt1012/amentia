@@ -33,6 +33,11 @@ DEFAULT_MAX_ZIP_ARTIFACT_BYTES = 150 * 1024 * 1024
 PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
 PACKAGE_SIGNING_MODES = {"unsigned", "ad-hoc", "developer-id"}
 RELEASE_SIGNING_MODES = {"ad-hoc", "developer-id"}
+PACKAGE_DISTRIBUTION_TRUST_BY_SIGNING = {
+  "unsigned": "unsigned-local-build",
+  "ad-hoc": "ad-hoc-not-notarized",
+  "developer-id": "developer-id-signed-notarized",
+}
 
 SANDBOX_CONTRACT = {
   "mode": "workspaceReadWrite",
@@ -138,6 +143,12 @@ def validate_package_manifest_contract(
   if actual_signing not in PACKAGE_SIGNING_MODES:
     expected = ", ".join(sorted(PACKAGE_SIGNING_MODES))
     raise RuntimeError(f"{label} signing must be one of: {expected}")
+  actual_distribution_trust = manifest.get("distributionTrust")
+  expected_distribution_trust = package_distribution_trust(actual_signing)
+  if actual_distribution_trust != expected_distribution_trust:
+    raise RuntimeError(
+      f"{label} distributionTrust must be {expected_distribution_trust!r}"
+    )
 
   actual_size_budget = validate_package_size_budget(manifest.get("sizeBudget"), label)
   expected_budget = (
@@ -146,6 +157,13 @@ def validate_package_manifest_contract(
   if actual_size_budget != expected_budget:
     raise RuntimeError(f"{label} sizeBudget must be {expected_budget!r}")
   return actual_size_budget
+
+
+def package_distribution_trust(signing_mode: str) -> str:
+  try:
+    return PACKAGE_DISTRIBUTION_TRUST_BY_SIGNING[signing_mode]
+  except KeyError as error:
+    raise RuntimeError(f"Unsupported signing mode: {signing_mode}") from error
 
 
 def read_json_object(path: Path, label: str) -> dict:

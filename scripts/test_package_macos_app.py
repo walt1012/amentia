@@ -101,6 +101,7 @@ def main() -> int:
       manifest["localExecutionSafetyModes"],
       list(LOCAL_EXECUTION_SAFETY_MODES),
     )
+    assert_equal(manifest["distributionTrust"], "ad-hoc-not-notarized")
     assert_equal(manifest["sandboxMode"], SANDBOX_CONTRACT["mode"])
     assert_equal(manifest["sandboxBackend"], SANDBOX_CONTRACT["backend"])
     assert_equal(manifest["sandboxFallback"], SANDBOX_CONTRACT["fallback"])

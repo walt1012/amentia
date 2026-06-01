@@ -23,6 +23,7 @@ from package_contract import (
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
+  package_distribution_trust,
   validate_package_manifest_contract,
 )
 from release_copy_contract import require_install_guide_copy
@@ -323,6 +324,7 @@ def package_manifest_summary(
     "bundleVersion": bundle_version,
     "sourceCommit": source_commit,
     "signing": signing_mode,
+    "distributionTrust": package_distribution_trust(signing_mode),
     "architecture": SUPPORTED_ARCH,
     "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
     "modelDelivery": MODEL_DELIVERY_MODE,
