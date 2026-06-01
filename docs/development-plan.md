@@ -83,6 +83,8 @@ Ready foundations:
   and compaction decisions.
 - Read-only local execution recovery switches to ask-before-change mode and
   restores the blocked original request to the composer without auto-executing.
+- Packaged smoke now verifies read-only workspace writes are blocked without
+  approval, preserve retry metadata, and do not create files.
 
 Latest review decisions:
 
@@ -103,8 +105,8 @@ Build now:
 - First-run path: model download, activation, workspace open, Web Search
   readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Action recovery: finish packaged smoke coverage for mode switching, restored
-  requests, and approval retry handoff.
+- Action recovery: finish UI-level coverage for restored request handoff and
+  approval retry wording.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Package proof: CI and packaged smoke verify the user-facing DMG path, not only
   internal scripts.

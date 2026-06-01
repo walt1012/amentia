@@ -584,6 +584,12 @@ def timeline_item_summary(items: list[dict]) -> str:
     "sourceSnapshotResultCount",
     "sourceTitles",
     "sourceUrls",
+    "actionApprovalPolicy",
+    "blockReason",
+    "localExecutionSafetyMode",
+    "relativePath",
+    "requiredPermission",
+    "retryMessage",
     "webSearchSourceMode",
   }
   for item in items:
@@ -1463,6 +1469,7 @@ def validate_packaged_workspace_write_approval(
   process: subprocess.Popen[str],
   support_dir: Path,
 ) -> None:
+  validate_packaged_workspace_read_only_recovery_contract(process, support_dir)
   validate_packaged_workspace_write_denial(process, support_dir)
   approval = request_packaged_workspace_write(
     process,
@@ -1494,6 +1501,45 @@ def validate_packaged_workspace_write_approval(
   output_path = support_dir / "workspace" / "docs" / "packaged-output.txt"
   if output_path.read_text(encoding="utf-8") != "Created from packaged approval flow":
     raise RuntimeError("Packaged workspace write approval wrote unexpected content.")
+
+
+def validate_packaged_workspace_read_only_recovery_contract(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  relative_path = "docs/packaged-read-only.txt"
+  message = f"Write {relative_path}: This should stay blocked"
+  read_only_turn = send_runtime_request(
+    process,
+    56,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": message,
+      "localExecutionSafetyMode": "explore",
+    },
+  )
+  if read_only_turn["result"]["pendingApprovals"]:
+    raise RuntimeError(
+      "Packaged read-only workspace write should not request approval. "
+      f"Items: {timeline_item_summary(read_only_turn['result']['items'])}"
+    )
+
+  output_path = support_dir / "workspace" / relative_path
+  if output_path.exists():
+    raise RuntimeError("Packaged read-only workspace write created a file.")
+
+  if not any(
+    item.get("attributes", {}).get("actionApprovalPolicy") == "blocked"
+    and item.get("attributes", {}).get("blockReason") == "readOnlyMode"
+    and item.get("attributes", {}).get("requiredPermission") == "file.write"
+    and item.get("attributes", {}).get("retryMessage") == message
+    for item in read_only_turn["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged read-only workspace write did not preserve retry recovery metadata. "
+      f"Items: {timeline_item_summary(read_only_turn['result']['items'])}"
+    )
 
 
 def validate_packaged_workspace_write_denial(
