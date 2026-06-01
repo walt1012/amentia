@@ -66,10 +66,21 @@ def validate_detach_force_fallback() -> None:
   )
 
 
+def validate_readme_contract_rejects_stale_guidance() -> None:
+  try:
+    validate_install_readme_text(
+      install_guide("v0.1.0", "ad-hoc").replace("shasum -a 256 -c", "checksum")
+    )
+  except RuntimeError:
+    return
+  raise AssertionError("DMG README validation should reject stale checksum guidance")
+
+
 def main() -> int:
   validate_install_readme_text(install_guide("v0.1.0", "ad-hoc"))
   validate_install_readme_text(install_guide("ci-0123456789ab", "ad-hoc"))
   validate_detach_force_fallback()
+  validate_readme_contract_rejects_stale_guidance()
   with tempfile.TemporaryDirectory(prefix="pith-dmg-stage-test-") as root:
     root_path = Path(root)
     if not can_create_symlink(root_path):

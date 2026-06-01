@@ -105,6 +105,8 @@ Ready foundations:
   stay tied to immutable `vX.Y.Z` identities.
 - Workflow validation now protects the release title handoff, keeping GitHub
   Release page identity aligned with release state planning.
+- DMG staging validation now rejects stale `README-FIRST.txt` guidance that
+  omits checksum verification or the manifest first-run contract.
 
 Latest review decisions:
 

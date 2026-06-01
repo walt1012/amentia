@@ -12,7 +12,7 @@ Current scripts:
 
 - `check_english_policy.py`: rejects source and documentation text that violates the repository English-only policy.
 - `ci_changes.py`: classifies changed files into CI execution lanes so heavy macOS and Rust checks run only when relevant.
-- `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide when provided.
+- `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including the root install guide, checksum verification copy, and first-run contract when provided.
 - `installer_artifact_contract.py`: validates the exact installer asset set before CI artifact upload or GitHub Release publish so users only receive a matching DMG, checksum, install guide, and manifest.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
 - `package_contract.py`: centralizes the stable macOS package contract shared by packaging, release manifests, distribution validation, packaged smoke checks, signing-mode policy, locked size-budget validation, and direct `PithPackage.json` validation in CI/release workflows.
