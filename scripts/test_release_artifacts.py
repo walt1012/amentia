@@ -24,6 +24,7 @@ from package_contract import (
   SUPPORTED_ARCH,
 )
 from release_artifacts import (
+  FIRST_RUN_CONTRACT,
   checksum_text,
   release_manifest as build_release_manifest,
   release_installer_asset_names,
@@ -166,6 +167,8 @@ def main() -> int:
       raise AssertionError("release manifest should disclose daily-driver stage source")
     if manifest["dailyDriver"]["presentation"] != DAILY_DRIVER_CONTRACT["presentation"]:
       raise AssertionError("release manifest should disclose daily-driver presentation")
+    if manifest["firstRun"] != FIRST_RUN_CONTRACT:
+      raise AssertionError("release manifest should disclose the first-run path contract")
     if manifest["verification"]["workflowRunId"] != WORKFLOW_RUN_ID:
       raise AssertionError("release manifest should record the workflow run id")
     if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":

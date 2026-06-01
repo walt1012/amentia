@@ -56,6 +56,15 @@ VERIFICATION_CONTRACT = {
   "installGuide": INSTALL_GUIDE_NAME,
   "assetSet": "dmg-checksum-install-guide-manifest",
 }
+FIRST_RUN_CONTRACT = {
+  "model": "download-default-verified-local-model",
+  "workspace": "open-workspace-folder",
+  "retrieval": "web-search-readiness",
+  "sandbox": "status-visible",
+  "approval": "review-before-local-change",
+  "proof": "timeline-proof",
+  "nextAction": "runtime-readiness",
+}
 GITHUB_RUN_ID_PATTERN = re.compile(r"^[1-9][0-9]*$")
 
 
@@ -136,6 +145,7 @@ def release_manifest(
     },
     "sandbox": dict(SANDBOX_CONTRACT),
     "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
+    "firstRun": dict(FIRST_RUN_CONTRACT),
     "verification": release_verification(
       tag=tag,
       workflow_run_id=workflow_run_id,
@@ -499,6 +509,7 @@ def validate_manifest_identity(manifest: dict) -> None:
     manifest.get("dailyDriver"),
     "Release manifest daily driver",
   )
+  validate_first_run_contract(manifest.get("firstRun"), "Release manifest first run")
   validate_verification_contract(
     manifest.get("verification"),
     "Release manifest verification",
@@ -536,6 +547,14 @@ def validate_daily_driver_contract(value: object, label: str) -> None:
   if not isinstance(value, dict):
     raise RuntimeError(f"{label} must be an object")
   for field, expected in DAILY_DRIVER_CONTRACT.items():
+    if value.get(field) != expected:
+      raise RuntimeError(f"{label} {field} must be {expected}")
+
+
+def validate_first_run_contract(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} must be an object")
+  for field, expected in FIRST_RUN_CONTRACT.items():
     if value.get(field) != expected:
       raise RuntimeError(f"{label} {field} must be {expected}")
 

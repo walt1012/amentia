@@ -91,6 +91,8 @@ Ready foundations:
   to proof, denied actions clarify that no local change was made.
 - Release notes and `README-FIRST.txt` now state the first-run daily-driver path:
   model download, workspace, Web Search, sandbox status, approval, and proof.
+- Release manifests now expose the same first-run path as machine-readable
+  release metadata for downloaded-installer checks.
 
 Latest review decisions:
 
