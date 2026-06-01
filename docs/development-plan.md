@@ -96,6 +96,8 @@ Ready foundations:
   generic connector network permission no longer unlocks web retrieval.
 - Web Search permission blocks keep protocol attributes but present readable
   recovery copy in timeline and inspector surfaces.
+- Web Search permission warnings now carry the bundled plugin identity, so the
+  timeline can offer the same direct enable path as readiness.
 - Header detail remains available while tool readiness is unresolved, so
   recovery actions have visible feedback.
 - CI change classification treats release, package, and signing contract edits as

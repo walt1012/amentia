@@ -216,6 +216,7 @@ extension AppViewModel {
       || isPluginInstallIssueEntry(entry)
       || isPluginConnectorIssueEntry(entry)
       || isPluginLifecycleIssueEntry(entry)
+      || entry.attributes["permissionGate"] == "requiresPluginPermission"
   }
 
   private func pluginID(from entry: TimelineEntry) -> String? {

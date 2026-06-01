@@ -100,6 +100,11 @@ fn turn_start_web_search_respects_disabled_web_search_plugin() {
     permission_item["attributes"]["requiredPermission"],
     "tool:web_search"
   );
+  assert_eq!(permission_item["attributes"]["pluginId"], "web-search");
+  assert_eq!(
+    permission_item["attributes"]["permissionGate"],
+    "requiresPluginPermission"
+  );
   assert_eq!(
     permission_item["attributes"]["requiredPermissionLabel"],
     "Web Search"
@@ -158,6 +163,11 @@ fn turn_start_web_search_requires_web_search_tool_permission_not_any_network_plu
   assert_eq!(
     permission_item["attributes"]["requiredPermission"],
     "tool:web_search"
+  );
+  assert_eq!(permission_item["attributes"]["pluginId"], "web-search");
+  assert_eq!(
+    permission_item["attributes"]["permissionGate"],
+    "requiresPluginPermission"
   );
   assert_eq!(
     permission_item["attributes"]["requiredPermissionLabel"],

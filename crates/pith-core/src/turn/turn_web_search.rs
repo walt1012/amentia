@@ -149,6 +149,12 @@ pub(super) fn execute_web_search_turn(
       "search the web",
       "the web",
       HashMap::from([
+        ("pluginId".to_string(), "web-search".to_string()),
+        ("pluginDisplayName".to_string(), "Web Search".to_string()),
+        (
+          "permissionGate".to_string(),
+          "requiresPluginPermission".to_string(),
+        ),
         ("query".to_string(), query.to_string()),
         (
           "routingReason".to_string(),

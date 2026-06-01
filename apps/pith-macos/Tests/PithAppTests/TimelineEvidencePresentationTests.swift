@@ -287,6 +287,36 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertFalse(summary?.contains("requires tool:web_search") == true)
   }
 
+  @MainActor
+  func testWebSearchPermissionWarningCanEnableBundledPlugin() {
+    let viewModel = AppViewModel()
+    viewModel.runtimeState = .ready
+    viewModel.updatePluginState { state in
+      state.plugins = [
+        pluginSummary(
+          id: "web-search",
+          displayName: "Web Search",
+          enabled: false,
+          capabilities: ["tool:web_search"],
+          permissions: ["network.outbound"]
+        ),
+      ]
+    }
+    let entry = TimelineEntry(
+      id: "entry-1",
+      kind: .warning,
+      title: "Plugin Permission Required",
+      body: "Pith could not search the web.",
+      attributes: [
+        "permissionGate": "requiresPluginPermission",
+        "pluginId": "web-search",
+        "requiredPermission": "tool:web_search",
+      ]
+    )
+
+    XCTAssertTrue(viewModel.canEnablePlugin(from: entry))
+  }
+
   func testApprovalOutcomeSummarizesApprovedWriteNextStep() {
     let summary = TimelineApprovalOutcomePresenter.summary(attributes: [
       "decision": "approved",
@@ -733,5 +763,31 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "remoteProofStatus": "missing",
       "notionPageId": "page-123",
     ]))
+  }
+
+  private func pluginSummary(
+    id: String,
+    displayName: String,
+    enabled: Bool,
+    capabilities: [String],
+    permissions: [String]
+  ) -> PluginSummary {
+    PluginSummary(
+      id: id,
+      name: id,
+      version: "0.1.0",
+      displayName: displayName,
+      status: "ready",
+      description: "Test plugin",
+      authorName: "Pith",
+      enabled: enabled,
+      defaultEnabled: true,
+      capabilities: capabilities,
+      permissions: permissions,
+      manifestPath: "plugins/bundled/\(id)/pith-plugin.json",
+      provenance: "bundled",
+      validationError: nil,
+      validationHint: nil
+    )
   }
 }
