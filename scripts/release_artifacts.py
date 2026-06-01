@@ -634,6 +634,23 @@ def validate_install_guide_for_tag(install_guide_path: Path, tag: str) -> None:
   text = install_guide_path.read_text(encoding="utf-8")
   if f"Pith {tag}" not in text:
     raise RuntimeError("Release install guide tag does not match the release manifest")
+  dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(tag)
+  required_tag_phrases = (
+    dmg_name,
+    checksum_name,
+    manifest_name,
+    f"shasum -a 256 -c {checksum_name}",
+  )
+  missing = [
+    phrase
+    for phrase in required_tag_phrases
+    if phrase not in text
+  ]
+  if missing:
+    raise RuntimeError(
+      "Release install guide is missing tag-specific asset guidance: "
+      + ", ".join(missing)
+    )
 
 
 def validate_checksum_file(artifact_path: Path, checksum_path: Path) -> None:

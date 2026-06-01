@@ -30,6 +30,7 @@ from release_artifacts import (
   release_installer_asset_names,
   validate_checksum_file,
   validate_install_guide,
+  validate_install_guide_for_tag,
   validate_release_manifest,
   write_checksum_file,
   write_release_manifest as build_write_release_manifest,
@@ -135,6 +136,7 @@ def main() -> int:
     checksum_path = write_checksum_file(artifact)
     validate_checksum_file(artifact, checksum_path)
     validate_install_guide(install_guide)
+    validate_install_guide_for_tag(install_guide, "v0.1.0")
 
     manifest = release_manifest(
       tag="v0.1.0",
@@ -516,6 +518,38 @@ def main() -> int:
         install_guide_path=install_guide,
       ),
       "tampered install guide should fail release manifest validation",
+    )
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc"),
+      encoding="utf-8",
+    )
+
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc").replace(
+        "Pith-v0.1.0-macos-x86_64.dmg.sha256",
+        "Pith-v0.2.0-macos-x86_64.dmg.sha256",
+      ),
+      encoding="utf-8",
+    )
+    assert_raises(
+      lambda: validate_install_guide_for_tag(install_guide, "v0.1.0"),
+      "install guide checksum command should match the release tag",
+    )
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc"),
+      encoding="utf-8",
+    )
+
+    install_guide.write_text(
+      release_install_guide("v0.1.0", "ad-hoc").replace(
+        "Pith-v0.1.0-release-manifest.json",
+        "Pith-v0.2.0-release-manifest.json",
+      ),
+      encoding="utf-8",
+    )
+    assert_raises(
+      lambda: validate_install_guide_for_tag(install_guide, "v0.1.0"),
+      "install guide manifest name should match the release tag",
     )
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc"),
