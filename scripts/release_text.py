@@ -19,6 +19,8 @@ from release_artifacts import release_installer_asset_names
 from release_copy_contract import (
   INSTALL_GUIDE_REQUIRED_PHRASES,
   RELEASE_NOTES_REQUIRED_PHRASES,
+  require_release_copy,
+  require_release_notes_copy,
 )
 
 
@@ -153,9 +155,10 @@ def validate_release_notes(
   allow_untrusted_ad_hoc: bool,
   draft: bool,
 ) -> None:
-  require_phrases(text, (f"Pith {tag}", *RELEASE_NOTES_REQUIRED_PHRASES), "release notes")
+  require_release_copy(text, (f"Pith {tag}",), "release notes")
+  require_release_notes_copy(text)
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
-  require_phrases(text, (trust_note,), "release notes")
+  require_release_copy(text, (trust_note,), "release notes")
   if signing_mode == "developer-id" and "Open Anyway" in text:
     raise RuntimeError("Developer ID release notes must not mention manual Gatekeeper override")
 
@@ -203,21 +206,11 @@ Notes
 
 def validate_install_guide(text: str, *, tag: str, signing_mode: str) -> None:
   trust_note, open_note = install_trust_section(signing_mode)
-  require_phrases(
+  require_release_copy(
     text,
     (f"Pith {tag}", *INSTALL_GUIDE_REQUIRED_PHRASES, trust_note, open_note),
     "install guide",
   )
-
-
-def require_phrases(text: str, phrases: tuple[str, ...], label: str) -> None:
-  missing = [
-    phrase
-    for phrase in phrases
-    if phrase not in text
-  ]
-  if missing:
-    raise RuntimeError(f"{label} is missing required copy: {', '.join(missing)}")
 
 
 def main() -> int:

@@ -12,6 +12,9 @@ from package_contract import (
 from release_copy_contract import (
   INSTALL_GUIDE_REQUIRED_PHRASES,
   RELEASE_NOTES_REQUIRED_PHRASES,
+  missing_required_phrases,
+  require_install_guide_copy,
+  require_release_copy,
 )
 from release_text import (
   first_run_path_copy,
@@ -37,6 +40,16 @@ def require_not_contains(text: str, unexpected: str) -> None:
     raise AssertionError(f"expected text not to contain {unexpected!r}")
 
 
+def require_raises(action, expected: str) -> None:
+  try:
+    action()
+  except RuntimeError as error:
+    if expected not in str(error):
+      raise AssertionError(f"expected {expected!r}, got {error!r}") from error
+    return
+  raise AssertionError(f"expected failure containing {expected!r}")
+
+
 def main() -> int:
   require_contains(platform_label(), MINIMUM_SYSTEM_VERSION)
   require_contains(platform_label(), SUPPORTED_ARCH)
@@ -48,6 +61,13 @@ def main() -> int:
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "SHA-256 checksum sidecar")
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "shasum -a 256 -c")
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "first-run contract")
+  if missing_required_phrases("alpha beta", ("alpha", "gamma")) != ["gamma"]:
+    raise AssertionError("release copy missing phrase helper should preserve missing phrases")
+  require_release_copy("alpha beta", ("alpha",), "test copy")
+  require_raises(
+    lambda: require_install_guide_copy("Install Pith.", "test install guide"),
+    "test install guide is missing required copy",
+  )
   require_contains(first_run_path_copy(), DEFAULT_MODEL_ID)
   require_contains(first_run_path_copy(), "Web Search readiness")
   require_contains(first_run_path_copy(), "approve a safe local change")

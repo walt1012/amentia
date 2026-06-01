@@ -10,13 +10,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-from release_copy_contract import INSTALL_GUIDE_REQUIRED_PHRASES
+from release_copy_contract import require_install_guide_copy
 
 APP_NAME = "Pith.app"
 APPLICATIONS_LINK_NAME = "Applications"
 DEFAULT_VOLUME_NAME = "Pith"
 README_NAME = "README-FIRST.txt"
-REQUIRED_README_PHRASES = INSTALL_GUIDE_REQUIRED_PHRASES
 
 
 def parse_args() -> argparse.Namespace:
@@ -205,9 +204,7 @@ def validate_install_readme_file(staged_readme: Path, expected_readme: Path) -> 
 
 
 def validate_install_readme_text(text: str) -> None:
-  for phrase in REQUIRED_README_PHRASES:
-    if phrase not in text:
-      raise RuntimeError(f"macOS DMG install guide is missing: {phrase}")
+  require_install_guide_copy(text, "macOS DMG install guide")
 
 
 def run(command: list[str]) -> str:

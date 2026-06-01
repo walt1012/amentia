@@ -25,7 +25,7 @@ from package_contract import (
   SUPPORTED_ARCH,
   validate_package_manifest_contract,
 )
-from release_copy_contract import INSTALL_GUIDE_REQUIRED_PHRASES
+from release_copy_contract import require_install_guide_copy
 from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
 
@@ -600,16 +600,7 @@ def validate_install_guide(install_guide_path: Path) -> None:
   if not install_guide_path.is_file():
     raise FileNotFoundError(f"Release install guide is missing: {install_guide_path}")
   text = install_guide_path.read_text(encoding="utf-8")
-  missing = [
-    phrase
-    for phrase in INSTALL_GUIDE_REQUIRED_PHRASES
-    if phrase not in text
-  ]
-  if missing:
-    raise RuntimeError(
-      "Release install guide is missing required user guidance: "
-      + ", ".join(missing)
-    )
+  require_install_guide_copy(text, "release install guide")
 
 
 def validate_install_guide_for_tag(install_guide_path: Path, tag: str) -> None:

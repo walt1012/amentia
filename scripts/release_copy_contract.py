@@ -49,3 +49,25 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "package size budget",
   "first-run contract",
 )
+
+
+def missing_required_phrases(text: str, phrases: tuple[str, ...]) -> list[str]:
+  return [
+    phrase
+    for phrase in phrases
+    if phrase not in text
+  ]
+
+
+def require_release_copy(text: str, phrases: tuple[str, ...], label: str) -> None:
+  missing = missing_required_phrases(text, phrases)
+  if missing:
+    raise RuntimeError(f"{label} is missing required copy: {', '.join(missing)}")
+
+
+def require_release_notes_copy(text: str, label: str = "release notes") -> None:
+  require_release_copy(text, RELEASE_NOTES_REQUIRED_PHRASES, label)
+
+
+def require_install_guide_copy(text: str, label: str = "install guide") -> None:
+  require_release_copy(text, INSTALL_GUIDE_REQUIRED_PHRASES, label)
