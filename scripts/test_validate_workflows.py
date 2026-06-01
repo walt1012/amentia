@@ -264,6 +264,13 @@ jobs:
             --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --bundle-version "$PITH_RELEASE_VERSION"
+      - name: Sign app for public distribution
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        run: |
+          python3 scripts/sign_macos_app_for_distribution.py \
+            artifacts/macos/Pith.app \
+            --identity "$MACOS_DEVELOPER_ID_APPLICATION"
+          python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
       - name: Notarize and staple DMG
         if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
@@ -726,6 +733,25 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "package_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "python3 scripts/sign_macos_app_for_distribution.py",
+        "python3 scripts/missing_sign_macos_app_for_distribution.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "sign_macos_app_for_distribution.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace('--identity "$MACOS_DEVELOPER_ID_APPLICATION"', ""),
+    )
+    assert_issue(issue_messages(root), "MACOS_DEVELOPER_ID_APPLICATION")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

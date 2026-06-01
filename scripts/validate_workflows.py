@@ -417,6 +417,9 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     )
   required_release_terms = (
     'python3 scripts/package_contract.py',
+    'python3 scripts/sign_macos_app_for_distribution.py',
+    '--identity "$MACOS_DEVELOPER_ID_APPLICATION"',
+    'python3 scripts/validate_macos_distribution.py',
     'xcrun notarytool submit "$dmg_path"',
     '--apple-id "$APPLE_ID"',
     '--team-id "$APPLE_TEAM_ID"',

@@ -53,6 +53,10 @@ def main() -> int:
     CiChanges(False, False, True, False),
   )
   assert_equal(
+    classify_changed_paths(["scripts/validate_workflows.py"]),
+    CiChanges(False, False, True, False),
+  )
+  assert_equal(
     classify_changed_paths(["scripts/package_macos_app.py"]),
     CiChanges(False, False, True, True),
   )

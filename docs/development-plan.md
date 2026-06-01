@@ -82,6 +82,8 @@ Ready foundations:
   tag-specific install guide, and manifest set with stable tag/title identity.
 - Release copy requirements and validators are centralized so release notes,
   install guides, trust wording, sidecar validation, and DMG staging do not drift.
+- Release workflow policy pins Developer ID app signing, DMG notarization, and
+  stapling before public trusted upload.
 - CI change classification treats release, package, and signing contract edits as
   package-impacting changes.
 - Workflow validation now requires the CI change-classifier test to stay in the
