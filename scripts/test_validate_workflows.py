@@ -56,6 +56,8 @@ jobs:
         run: python3 scripts/test_package_macos_app.py
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
+      - name: Test distribution signing helper
+        run: python3 scripts/test_sign_macos_app_for_distribution.py
       - name: Test package contract helper
         run: python3 scripts/test_package_contract.py
       - name: Test CI change classifier
@@ -340,6 +342,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_identity.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test distribution signing helper\n"
+        "        run: python3 scripts/test_sign_macos_app_for_distribution.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_sign_macos_app_for_distribution.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

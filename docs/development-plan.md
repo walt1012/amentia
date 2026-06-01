@@ -82,8 +82,8 @@ Ready foundations:
   tag-specific install guide, and manifest set with stable tag/title identity.
 - Release copy requirements and validators are centralized so release notes,
   install guides, sidecar validation, and DMG staging do not drift.
-- CI change classification treats release/package contract edits as package-impacting
-  changes.
+- CI change classification treats release, package, and signing contract edits as
+  package-impacting changes.
 - Workflow validation now requires the CI change-classifier test to stay in the
   repository policy lane.
 - Workflow validation now pins the release copy, sidecar, DMG, package, and

@@ -139,6 +139,9 @@ jobs:
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
 
+      - name: Test distribution signing helper
+        run: python3 scripts/test_sign_macos_app_for_distribution.py
+
       - name: Test release artifact helper
         run: python3 scripts/test_release_artifacts.py
 
