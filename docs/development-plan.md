@@ -68,45 +68,18 @@ Active milestone: **M10 Cowork Daily Driver**.
 
 Ready foundations:
 
-- First-use model setup, resumable downloads, verified activation, bounded local
-  inference, and runtime recovery.
-- Workspace-safe tools, sandbox diagnostics, bounded subprocess execution,
-  compact context packing, Web Search retrieval, and progressive UI surfaces.
+- First-use model setup, verified activation, bounded local inference, and
+  runtime recovery are in place.
+- Workspace-safe tools, sandbox diagnostics, bounded subprocess execution, Web
+  Search retrieval, and compact receipts are in place.
 - Plugin registry, connector credentials, local execution gates, approvals,
-  output envelopes, retries, runner memory capture, and Notion as the reference
-  connector.
-- x86_64 app packaging, internal DMG, unsigned install guidance, release
-  manifest, package-size budgets, CI package contracts, and packaged smoke
-  coverage.
-- Compact timeline receipts for workspace snippets, Web Search sources, local
-  action mode, approval policy, tool boundary, memory ranking, source reason,
-  and compaction decisions.
-- Read-only local execution recovery switches to ask-before-change mode and
-  restores the blocked original request to the composer without auto-executing.
-- Packaged smoke now verifies read-only workspace writes are blocked without
-  approval, preserve retry metadata, and do not create files.
-- Composer status now distinguishes restored local execution drafts from normal
-  prompts, so users know to review and send the repaired request.
-- Approval outcomes now show concise next-step guidance: accepted actions point
-  to proof, denied actions clarify that no local change was made.
-- Release notes and `README-FIRST.txt` now state the first-run daily-driver path:
-  model download, workspace, Web Search, sandbox status, approval, and proof.
-- Release manifests now expose the same first-run path as machine-readable
-  release metadata for downloaded-installer checks.
-- `README-FIRST.txt` now gives a concrete `shasum -a 256 -c` verification
-  path and points users to the manifest first-run contract before launch.
-- Release manifests now record the exact checksum command for public and
-  internal DMG assets.
-- Installer asset contract now verifies that the DMG, checksum, install guide,
-  and release manifest are a matching set before upload.
-- Release state planning now requires the GitHub Release title to match the
-  release tag, keeping the download page identity stable.
-- Release state planning also rejects non-version tags, so public release pages
-  stay tied to immutable `vX.Y.Z` identities.
-- Workflow validation now protects the release title handoff, keeping GitHub
-  Release page identity aligned with release state planning.
-- DMG staging validation now rejects stale `README-FIRST.txt` guidance that
-  omits checksum verification or the manifest first-run contract.
+  retries, runner memory capture, and Notion as the reference connector are in
+  place.
+- x86_64 app packaging, internal DMG creation, unsigned install guidance,
+  package-size budgets, release manifests, and packaged smoke coverage are in
+  place.
+- Release assets are now contract-checked as a matching DMG, checksum,
+  install-guide, and manifest set with stable tag/title identity.
 
 Latest review decisions:
 
