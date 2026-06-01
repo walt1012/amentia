@@ -629,6 +629,8 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     raise RuntimeError("Packaged smoke receipt kind is unsupported")
   if receipt.get("result") != "passed":
     raise RuntimeError("Packaged smoke receipt must record a passed result")
+  if receipt.get("proofScope") != PACKAGED_SMOKE_PROOF_SCOPE:
+    raise RuntimeError("Packaged smoke receipt proof scope does not match the first-run contract")
   checks = receipt.get("checks")
   if not isinstance(checks, list):
     raise RuntimeError("Packaged smoke receipt checks must be a list")

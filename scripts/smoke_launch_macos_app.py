@@ -23,6 +23,7 @@ from package_contract import (
   DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
@@ -1906,6 +1907,7 @@ def write_packaged_smoke_receipt(output_path: Path | None) -> None:
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
+    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "checks": [
       {
         "id": check_id,

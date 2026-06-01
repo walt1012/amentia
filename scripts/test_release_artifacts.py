@@ -54,6 +54,7 @@ def write_smoke_receipt(path: Path) -> Path:
         "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
         "kind": PACKAGED_SMOKE_RECEIPT_KIND,
         "result": "passed",
+        "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
         "checks": [
           {
             "id": check_id,
@@ -331,6 +332,23 @@ def main() -> int:
         smoke_receipt_path=tampered_smoke_receipt,
       ),
       "incomplete packaged smoke receipt should fail release manifest validation",
+    )
+
+    wrong_scope_receipt = write_smoke_receipt(root_path / "wrong-scope-smoke-receipt.json")
+    wrong_scope_data = json.loads(wrong_scope_receipt.read_text(encoding="utf-8"))
+    wrong_scope_data["proofScope"] = "workspace only"
+    wrong_scope_receipt.write_text(json.dumps(wrong_scope_data), encoding="utf-8")
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        smoke_receipt_path=wrong_scope_receipt,
+      ),
+      "wrong packaged smoke receipt scope should fail release manifest validation",
     )
 
     tampered_manifest = json.loads(manifest_data)

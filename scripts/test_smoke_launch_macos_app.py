@@ -7,7 +7,7 @@ import json
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from package_contract import PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+from package_contract import PACKAGED_SMOKE_PROOF_SCOPE, PACKAGED_SMOKE_REQUIRED_CHECK_IDS
 from smoke_launch_macos_app import (
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
@@ -91,6 +91,8 @@ def main() -> int:
       raise AssertionError("packaged smoke receipt should record its schema")
     if receipt["kind"] != PACKAGED_SMOKE_RECEIPT_KIND:
       raise AssertionError("packaged smoke receipt should record its kind")
+    if receipt["proofScope"] != PACKAGED_SMOKE_PROOF_SCOPE:
+      raise AssertionError("packaged smoke receipt should record its proof scope")
     if [item["id"] for item in receipt["checks"]] != [
       check_id for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
     ]:
