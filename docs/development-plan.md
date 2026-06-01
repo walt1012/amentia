@@ -72,40 +72,16 @@ Ready foundations:
   runtime recovery are in place.
 - Workspace-safe tools, sandbox diagnostics, bounded subprocess execution, Web
   Search retrieval, and compact receipts are in place.
+- First-run readiness, Web Search permission recovery, plugin recovery, and
+  sandbox recovery now stay visible from the main cowork loop.
 - Plugin registry, connector credentials, local execution gates, approvals,
   retries, runner memory capture, and Notion as the reference connector are in
   place.
-- x86_64 app packaging, internal DMG creation, unsigned install guidance,
-  package-size budgets, release manifests, and packaged smoke coverage are in
+- x86_64 DMG packaging, unsigned install guidance, package-size budgets,
+  release manifests, release copy validation, and packaged smoke coverage are in
   place.
-- Release assets are now contract-checked as a matching DMG, checksum,
-  tag-specific install guide, and manifest set with stable tag/title identity.
-- Release copy requirements and validators are centralized so release notes,
-  install guides, trust wording, sidecar validation, and DMG staging do not drift.
-- Release workflow policy pins Developer ID app signing, DMG notarization, and
-  stapling before public trusted upload.
-- Packaged app metadata exposes distribution trust so first-run UI, release
-  notes, and manifests describe the same installer state.
-- First-run readiness now stays visible through the first request and unresolved
-  required tool readiness; optional plugins do not block the daily loop.
-- Tool readiness chips now route Web Search, plugin command, and sandbox issues
-  toward their next local recovery surface instead of showing passive status.
-- Web Search readiness can directly re-enable the bundled Web Search plugin
-  when that is the missing retrieval permission.
-- Web Search authorization is scoped to plugins that declare `tool:web_search`;
-  generic connector network permission no longer unlocks web retrieval.
-- Web Search permission blocks keep protocol attributes but present readable
-  recovery copy in timeline and inspector surfaces.
-- Web Search permission warnings now carry the bundled plugin identity, so the
-  timeline can offer the same direct enable path as readiness.
-- Header detail remains available while tool readiness is unresolved, so
-  recovery actions have visible feedback.
-- CI change classification treats release, package, and signing contract edits as
-  package-impacting changes.
-- Workflow validation now requires the CI change-classifier test to stay in the
-  repository policy lane.
-- Workflow validation now pins the release copy, sidecar, DMG, package, and
-  distribution policy tests in the repository policy lane.
+- CI lanes are change-aware, policy-tested, and split so validation and package
+  assembly stay fast without hiding release-impacting changes.
 
 Latest review decisions:
 
@@ -116,6 +92,8 @@ Latest review decisions:
 - Package resources must exclude generated caches, bytecode, and model weights.
 - Keep development planning concise; move completed detail to history, tests, or
   release notes.
+- Treat M10 as capability-complete enough for release rehearsal. New work should
+  close proof gaps, not expand scope.
 
 ## M10: Cowork Daily Driver
 
@@ -123,14 +101,12 @@ Goal: make one local cowork loop feel complete in the packaged app.
 
 Build now:
 
-- First-run path: model download, activation, workspace open, Web Search
-  readiness, sandbox status, and connector readiness are visible and
-  recoverable.
-- Release rehearsal: keep downloaded installer verification, first launch
-  guidance, and manifest contracts aligned with the actual release assets.
+- Packaged first-run rehearsal: prove the unsigned DMG path from download,
+  checksum, Gatekeeper guidance, launch, model download, workspace open, Web
+  Search, approval, safe execution, proof, and runtime recovery.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
-- Package proof: CI and packaged smoke verify the user-facing DMG path, not only
-  internal scripts.
+- Recovery proof: readiness chips, timeline warnings, inspector detail, release
+  copy, and package metadata all point to the same local fix.
 - UI restraint: admin detail stays progressive and never crowds the cowork loop.
 
 Exit when:
@@ -148,8 +124,9 @@ Goal: make third-party local connectors safe and useful without building a
 marketplace too early.
 
 - Keep Notion as the reference contract.
-- Add another connector only after credentials, approvals, retries, proof,
-  memory capture, and timeline evidence remain generic.
+- Generalize connector permission recovery beyond Web Search only after the
+  Notion path proves credentials, approvals, retries, proof, memory capture, and
+  timeline evidence stay generic.
 - Add import/distribution only after connector secrets can be installed, used,
   revoked, and forgotten safely.
 - Treat hooks as verification and automation points first, not arbitrary
