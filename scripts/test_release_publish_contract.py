@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 from installer_artifact_contract import expected_installer_asset_names
 from release_publish_contract import load_release
+from release_publish_contract import RELEASE_REPOSITORY
 from release_publish_contract import release_asset_names
 from release_publish_contract import validate_published_release
 from release_state import expected_release_title
@@ -30,7 +31,17 @@ def release_payload(
     "name": expected_release_title(tag),
     "draft": draft,
     "prerelease": prerelease,
-    "assets": [{"name": name} for name in asset_names],
+    "assets": [
+      {
+        "name": name,
+        "state": "uploaded",
+        "size": 1024,
+        "browser_download_url": (
+          f"https://github.com/{RELEASE_REPOSITORY}/releases/download/{tag}/{name}"
+        ),
+      }
+      for name in asset_names
+    ],
   }
 
 
@@ -69,6 +80,18 @@ def main() -> int:
     "extra",
   )
   expect_failure(release_payload(assets=[*expected_assets, "model.gguf"]), "model.gguf")
+
+  missing_url_payload = release_payload()
+  missing_url_payload["assets"][0]["browser_download_url"] = ""
+  expect_failure(missing_url_payload, "download URL")
+
+  zero_size_payload = release_payload()
+  zero_size_payload["assets"][0]["size"] = 0
+  expect_failure(zero_size_payload, "non-empty")
+
+  pending_asset_payload = release_payload()
+  pending_asset_payload["assets"][0]["state"] = "starter"
+  expect_failure(pending_asset_payload, "uploaded")
 
   duplicate_asset_payload = release_payload(
     assets=[expected_assets[0], expected_assets[0]]

@@ -7,6 +7,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from installer_artifact_contract import expected_installer_asset_names
+from installer_artifact_contract import installer_asset_paths
+from installer_artifact_contract import installer_asset_paths_from_directory
 from installer_artifact_contract import validate_installer_asset_set
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
@@ -64,6 +66,30 @@ def main() -> int:
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
     validate_installer_asset_set("v0.1.0", valid_assets(root, "v0.1.0"))
+    validate_installer_asset_set(
+      "v0.1.0",
+      installer_asset_paths_from_directory("v0.1.0", root),
+    )
+    validate_installer_asset_set(
+      "v0.1.0",
+      installer_asset_paths(
+        tag="v0.1.0",
+        asset_paths=[],
+        asset_dir=root,
+      ),
+    )
+
+  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+    root = Path(directory)
+    assets = valid_assets(root, "v0.1.0")
+    assert_raises(
+      lambda: installer_asset_paths(
+        tag="v0.1.0",
+        asset_paths=assets,
+        asset_dir=root,
+      ),
+      "Use either --asset-dir",
+    )
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)

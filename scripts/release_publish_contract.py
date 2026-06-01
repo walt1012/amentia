@@ -15,6 +15,9 @@ from release_state import expected_release_title
 from release_state import parse_bool
 
 
+RELEASE_REPOSITORY = "walt1012/pith"
+
+
 def validate_published_release(
   release: dict,
   *,
@@ -47,7 +50,7 @@ def validate_release_bool(release: dict, field: str, expected: bool) -> None:
 
 
 def validate_release_assets(release: dict, tag: str) -> None:
-  actual_names = release_asset_names(release)
+  actual_names = release_asset_names(release, tag=tag)
   expected_names = expected_installer_asset_names(tag)
   missing = sorted(expected_names - actual_names)
   extra = sorted(actual_names - expected_names)
@@ -63,7 +66,7 @@ def validate_release_assets(release: dict, tag: str) -> None:
     )
 
 
-def release_asset_names(release: dict) -> frozenset[str]:
+def release_asset_names(release: dict, *, tag: str | None = None) -> frozenset[str]:
   assets = release.get("assets")
   if not isinstance(assets, list):
     raise RuntimeError("Published GitHub Release response must include an assets list")
@@ -76,10 +79,30 @@ def release_asset_names(release: dict) -> frozenset[str]:
     if not isinstance(name, str):
       raise RuntimeError("Published GitHub Release asset names must be strings")
     validate_installer_asset_name(name)
+    if tag is not None:
+      validate_release_asset_download(asset, tag=tag, name=name)
     if name in names:
       raise RuntimeError(f"Published GitHub Release has duplicate asset: {name}")
     names.add(name)
   return frozenset(names)
+
+
+def validate_release_asset_download(asset: dict, *, tag: str, name: str) -> None:
+  if asset.get("state") != "uploaded":
+    raise RuntimeError(f"Published GitHub Release asset must be uploaded: {name}")
+
+  size = asset.get("size")
+  if not isinstance(size, int) or size <= 0:
+    raise RuntimeError(f"Published GitHub Release asset must be non-empty: {name}")
+
+  download_url = asset.get("browser_download_url")
+  expected_url = (
+    f"https://github.com/{RELEASE_REPOSITORY}/releases/download/{tag}/{name}"
+  )
+  if download_url != expected_url:
+    raise RuntimeError(
+      f"Published GitHub Release asset download URL must be {expected_url}: {name}"
+    )
 
 
 def load_release(path: Path) -> dict:

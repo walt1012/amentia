@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the exact installer asset set before upload or release publish."""
+"""Validate the exact installer asset set before upload, publish, or download rehearsal."""
 
 from __future__ import annotations
 
@@ -61,6 +61,28 @@ def validate_installer_asset_set(tag: str, asset_paths: list[Path]) -> None:
   )
 
 
+def installer_asset_paths_from_directory(tag: str, asset_dir: Path) -> list[Path]:
+  if not asset_dir.is_dir():
+    raise NotADirectoryError(f"Installer asset directory is missing: {asset_dir}")
+  return [
+    asset_dir / name
+    for name in sorted(expected_installer_asset_names(tag))
+  ]
+
+
+def installer_asset_paths(
+  *,
+  tag: str,
+  asset_paths: list[Path],
+  asset_dir: Path | None,
+) -> list[Path]:
+  if asset_dir is not None and asset_paths:
+    raise RuntimeError("Use either --asset-dir or explicit --asset paths, not both")
+  if asset_dir is not None:
+    return installer_asset_paths_from_directory(tag, asset_dir)
+  return asset_paths
+
+
 def validate_installer_asset_path(asset_path: Path) -> None:
   if not asset_path.is_file():
     raise FileNotFoundError(f"Installer asset is missing: {asset_path}")
@@ -79,11 +101,19 @@ def validate_installer_asset_name(name: str) -> None:
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--tag", required=True)
-  parser.add_argument("--asset", action="append", required=True, type=Path)
+  parser.add_argument("--asset", action="append", default=[], type=Path)
+  parser.add_argument("--asset-dir", type=Path)
   args = parser.parse_args()
 
   try:
-    validate_installer_asset_set(args.tag, args.asset)
+    validate_installer_asset_set(
+      args.tag,
+      installer_asset_paths(
+        tag=args.tag,
+        asset_paths=args.asset,
+        asset_dir=args.asset_dir,
+      ),
+    )
   except Exception as error:
     print(f"installer artifact contract failed: {error}", file=sys.stderr)
     return 1
