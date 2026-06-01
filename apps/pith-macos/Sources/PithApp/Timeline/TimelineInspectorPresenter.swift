@@ -109,8 +109,13 @@ enum TimelineInspectorPresenter {
     appendPluginRunnerSetupSummary(entry, to: &lines)
 
     if let permissionGate = entry.attributes["permissionGate"] {
-      let required = entry.attributes["requiredPermission"] ?? "unknown"
+      let required = entry.attributes["requiredPermissionLabel"]
+        ?? entry.attributes["requiredPermission"]
+        ?? "unknown"
       lines.append("Permission gate: \(permissionGate) | requires \(required)")
+      if let recoveryHint = entry.attributes["permissionRecoveryHint"] {
+        lines.append("Permission recovery: \(recoveryHint)")
+      }
     }
 
     appendPluginRunnerSummary(entry, to: &lines)

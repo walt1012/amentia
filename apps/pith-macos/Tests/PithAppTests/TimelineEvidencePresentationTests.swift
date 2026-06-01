@@ -262,6 +262,31 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ))
   }
 
+  func testInspectorUsesReadablePermissionGateLabelAndRecovery() {
+    let summary = TimelineInspectorPresenter.selectedEntryPluginSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .warning,
+        title: "Plugin Permission Required",
+        body: "Pith could not search the web.",
+        attributes: [
+          "permissionGate": "requiresPluginPermission",
+          "requiredPermission": "tool:web_search",
+          "requiredPermissionLabel": "Web Search",
+          "permissionRecoveryHint": "Enable the bundled Web Search plugin.",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(
+      summary?.contains("Permission gate: requiresPluginPermission | requires Web Search") == true
+    )
+    XCTAssertTrue(
+      summary?.contains("Permission recovery: Enable the bundled Web Search plugin.") == true
+    )
+    XCTAssertFalse(summary?.contains("requires tool:web_search") == true)
+  }
+
   func testApprovalOutcomeSummarizesApprovedWriteNextStep() {
     let summary = TimelineApprovalOutcomePresenter.summary(attributes: [
       "decision": "approved",

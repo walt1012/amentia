@@ -100,6 +100,14 @@ fn turn_start_web_search_respects_disabled_web_search_plugin() {
     permission_item["attributes"]["requiredPermission"],
     "tool:web_search"
   );
+  assert_eq!(
+    permission_item["attributes"]["requiredPermissionLabel"],
+    "Web Search"
+  );
+  assert!(permission_item["content"]
+    .as_str()
+    .expect("content")
+    .contains("Web Search is not enabled"));
   assert_eq!(permission_item["attributes"]["grantedBy"], "none");
 }
 
@@ -150,6 +158,10 @@ fn turn_start_web_search_requires_web_search_tool_permission_not_any_network_plu
   assert_eq!(
     permission_item["attributes"]["requiredPermission"],
     "tool:web_search"
+  );
+  assert_eq!(
+    permission_item["attributes"]["requiredPermissionLabel"],
+    "Web Search"
   );
   assert_eq!(permission_item["attributes"]["grantedBy"], "none");
 }

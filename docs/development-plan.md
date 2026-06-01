@@ -94,6 +94,8 @@ Ready foundations:
   when that is the missing retrieval permission.
 - Web Search authorization is scoped to plugins that declare `tool:web_search`;
   generic connector network permission no longer unlocks web retrieval.
+- Web Search permission blocks keep protocol attributes but present readable
+  recovery copy in timeline and inspector surfaces.
 - Header detail remains available while tool readiness is unresolved, so
   recovery actions have visible feedback.
 - CI change classification treats release, package, and signing contract edits as
