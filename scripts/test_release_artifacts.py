@@ -289,6 +289,13 @@ def main() -> int:
       package_manifest_path=package_manifest,
       smoke_receipt_path=smoke_receipt,
     )
+    validate_release_manifest(
+      manifest_path,
+      artifact_path=artifact,
+      checksum_path=checksum_path,
+      install_guide_path=install_guide,
+      package_manifest_path=package_manifest,
+    )
 
     manifest_data = manifest_path.read_text(encoding="utf-8")
     tampered_manifest = json.loads(manifest_data)

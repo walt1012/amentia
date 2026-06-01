@@ -603,9 +603,13 @@ def validate_verification_contract(
   if not isinstance(workflow_run_id, str) or not isinstance(workflow_run_url, str):
     raise RuntimeError(f"{label} must include workflow run metadata")
   validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
-  expected_smoke_receipt = packaged_smoke_receipt_summary(smoke_receipt_path)
-  if value.get("packagedSmokeReceipt") != expected_smoke_receipt:
-    raise RuntimeError(f"{label} packagedSmokeReceipt must match the smoke receipt")
+  packaged_smoke_receipt = value.get("packagedSmokeReceipt")
+  if smoke_receipt_path is None:
+    validate_packaged_smoke_receipt_summary(packaged_smoke_receipt, label)
+  else:
+    expected_smoke_receipt = packaged_smoke_receipt_summary(smoke_receipt_path)
+    if packaged_smoke_receipt != expected_smoke_receipt:
+      raise RuntimeError(f"{label} packagedSmokeReceipt must match the smoke receipt")
 
 
 def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
@@ -643,6 +647,27 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     "checkIds": check_ids,
     "sha256": sha256_hex(smoke_receipt_path),
   }
+
+
+def validate_packaged_smoke_receipt_summary(value: object, label: str) -> None:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} packagedSmokeReceipt must be an object")
+  expected_values = {
+    "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+    "kind": PACKAGED_SMOKE_RECEIPT_KIND,
+    "result": "passed",
+    "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
+  }
+  for field, expected in expected_values.items():
+    if value.get(field) != expected:
+      raise RuntimeError(f"{label} packagedSmokeReceipt {field} must be {expected!r}")
+  receipt_hash = value.get("sha256")
+  if receipt_hash is not None and (
+    not isinstance(receipt_hash, str)
+    or len(receipt_hash) != 64
+    or any(character not in "0123456789abcdef" for character in receipt_hash)
+  ):
+    raise RuntimeError(f"{label} packagedSmokeReceipt sha256 must be lowercase hex")
 
 
 def validate_workflow_run_metadata(workflow_run_id: str, workflow_run_url: str) -> None:
