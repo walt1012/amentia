@@ -70,6 +70,10 @@ PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (
   "runtimeRecovery",
   "sandboxReadiness",
 )
+PACKAGED_SMOKE_PROOF_SCOPE = (
+  "model setup, workspace, Web Search, approval, connector, sandbox, "
+  "and runtime recovery checks"
+)
 
 
 def package_size_budget() -> dict[str, int]:

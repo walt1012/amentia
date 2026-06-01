@@ -7,10 +7,12 @@ from package_contract import (
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
   MINIMUM_SYSTEM_VERSION,
+  PACKAGED_SMOKE_PROOF_SCOPE,
   SUPPORTED_ARCH,
 )
 from release_copy_contract import (
   INSTALL_GUIDE_REQUIRED_PHRASES,
+  PACKAGED_FIRST_RUN_PROOF_PHRASE,
   RELEASE_NOTES_REQUIRED_PHRASES,
   missing_required_phrases,
   require_install_guide_copy,
@@ -18,6 +20,7 @@ from release_copy_contract import (
 )
 from release_text import (
   first_run_path_copy,
+  first_run_proof_copy,
   install_guide,
   installer_assets_copy,
   local_execution_copy,
@@ -59,10 +62,10 @@ def main() -> int:
   require_contains(local_execution_copy(), DEFAULT_LOCAL_EXECUTION_SAFETY_MODE)
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "DMG installer.")
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "SHA-256 checksum sidecar")
-  require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "packaged first-run smoke receipt")
+  require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), PACKAGED_FIRST_RUN_PROOF_PHRASE)
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "shasum -a 256 -c")
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "first-run contract")
-  require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "packaged first-run smoke receipt")
+  require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), PACKAGED_FIRST_RUN_PROOF_PHRASE)
   if missing_required_phrases("alpha beta", ("alpha", "gamma")) != ["gamma"]:
     raise AssertionError("release copy missing phrase helper should preserve missing phrases")
   require_release_copy("alpha beta", ("alpha",), "test copy")
@@ -74,6 +77,8 @@ def main() -> int:
   require_contains(first_run_path_copy(), "Web Search readiness")
   require_contains(first_run_path_copy(), "approve a safe local change")
   require_contains(first_run_path_copy(), "inspect the proof")
+  require_contains(first_run_proof_copy(), PACKAGED_FIRST_RUN_PROOF_PHRASE)
+  require_contains(first_run_proof_copy(), PACKAGED_SMOKE_PROOF_SCOPE)
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")
@@ -82,7 +87,7 @@ def main() -> int:
   require_contains(checksum_verification_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg.sha256")
   require_contains(checksum_verification_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(checksum_verification_copy("v0.1.0"), "first-run contract")
-  require_contains(checksum_verification_copy("v0.1.0"), "packaged first-run smoke receipt")
+  require_contains(checksum_verification_copy("v0.1.0"), PACKAGED_FIRST_RUN_PROOF_PHRASE)
 
   developer_notes = release_notes(
     "v0.1.0",
@@ -102,7 +107,7 @@ def main() -> int:
   require_contains(developer_notes, "SHA-256 checksum sidecar")
   require_contains(developer_notes, "release manifest")
   require_contains(developer_notes, "sidecar hashes")
-  require_contains(developer_notes, "packaged first-run smoke receipt")
+  require_contains(developer_notes, first_run_proof_copy())
   require_contains(developer_notes, "Native sandbox is used when available")
   require_contains(developer_notes, "process-only fallback")
   require_contains(developer_notes, "daily-driver next action")
@@ -171,11 +176,11 @@ def main() -> int:
   require_contains(guide, "shasum -a 256 -c Pith-v0.1.0-macos-x86_64.dmg.sha256")
   require_contains(guide, "verify the downloaded installer")
   require_contains(guide, "sidecar hashes")
-  require_contains(guide, "packaged first-run smoke receipt")
+  require_contains(guide, first_run_proof_copy())
   require_contains(guide, "source commit")
   require_contains(guide, "model delivery mode")
   require_contains(guide, "first-run contract")
-  require_contains(guide, "runtime recovery checks")
+  require_contains(guide, PACKAGED_SMOKE_PROOF_SCOPE)
   require_contains(guide, release_size_budget_copy())
   require_contains(guide, "sandbox status")
   require_contains(guide, "process-only fallback")

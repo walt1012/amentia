@@ -21,6 +21,7 @@ from package_contract import (
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PITH_ACCOUNT_REQUIRED,
   RELEASE_SIGNING_MODES,
@@ -618,6 +619,7 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
       "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
       "kind": PACKAGED_SMOKE_RECEIPT_KIND,
       "result": "passed",
+      "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
       "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
     }
   receipt = read_json_object(smoke_receipt_path, "Packaged smoke receipt")
@@ -644,6 +646,7 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
+    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "checkIds": check_ids,
     "sha256": sha256_hex(smoke_receipt_path),
   }
@@ -656,6 +659,7 @@ def validate_packaged_smoke_receipt_summary(value: object, label: str) -> None:
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
+    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
   }
   for field, expected in expected_values.items():

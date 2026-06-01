@@ -27,6 +27,7 @@ from release_artifacts import (
   FIRST_RUN_CONTRACT,
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   checksum_text,
   release_manifest as build_release_manifest,
@@ -215,6 +216,8 @@ def main() -> int:
       PACKAGED_SMOKE_REQUIRED_CHECK_IDS
     ):
       raise AssertionError("release manifest should record packaged smoke receipt checks")
+    if manifest["verification"]["packagedSmokeReceipt"]["proofScope"] != PACKAGED_SMOKE_PROOF_SCOPE:
+      raise AssertionError("release manifest should summarize packaged smoke proof scope")
     if "sha256" not in manifest["verification"]["packagedSmokeReceipt"]:
       raise AssertionError("release manifest should hash the packaged smoke receipt")
     if manifest["verification"]["assetNames"] != list(release_installer_asset_names("v0.1.0")):

@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
-from package_contract import DEFAULT_MODEL_ID
+from package_contract import DEFAULT_MODEL_ID, PACKAGED_SMOKE_PROOF_SCOPE
 
+
+PACKAGED_FIRST_RUN_PROOF_PHRASE = "packaged first-run smoke receipt"
+PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
 
 RELEASE_NOTES_REQUIRED_PHRASES = (
   "DMG installer.",
@@ -17,7 +20,7 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "README-FIRST.txt",
   "release manifest",
   "sidecar hashes",
-  "packaged first-run smoke receipt",
+  PACKAGED_FIRST_RUN_PROOF_PHRASE,
   "Native sandbox",
   "process-only fallback",
   "daily-driver next action",
@@ -45,7 +48,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "SHA-256 `.sha256` file",
   "shasum -a 256 -c",
   "sidecar hashes",
-  "packaged first-run smoke receipt",
+  PACKAGED_FIRST_RUN_PROOF_PHRASE,
   "source commit",
   "model delivery mode",
   "package size budget",
