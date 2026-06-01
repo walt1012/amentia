@@ -1295,6 +1295,29 @@ def main() -> int:
     assert "notes.txt:1" in search_turn["result"]["items"][3]["content"]
     assert int(search_turn["result"]["items"][1]["attributes"]["memoryNoteCount"]) >= 1
 
+    read_only_write_message = "Write docs/read-only.txt: This should stay blocked"
+    read_only_write_turn, _ = send_request(
+      process,
+      {
+        "id": 45,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": read_only_write_message,
+          "localExecutionSafetyMode": "explore",
+        },
+      },
+    )
+    assert len(read_only_write_turn["result"]["pendingApprovals"]) == 0
+    assert not (workspace_dir / "docs" / "read-only.txt").exists()
+    assert any(
+      item.get("attributes", {}).get("actionApprovalPolicy") == "blocked"
+      and item.get("attributes", {}).get("blockReason") == "readOnlyMode"
+      and item.get("attributes", {}).get("requiredPermission") == "file.write"
+      and item.get("attributes", {}).get("retryMessage") == read_only_write_message
+      for item in read_only_write_turn["result"]["items"]
+    )
+
     write_turn, _ = send_request(
       process,
       {

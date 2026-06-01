@@ -30,7 +30,27 @@ extension AppViewModel {
     }
 
     selectLocalExecutionSafetyMode(action.targetMode)
+    if restoreLocalExecutionRetryDraft(action.retryMessage) {
+      runtimeDetail = "\(action.detail) Review the restored request, then send it when ready."
+      return
+    }
+
     runtimeDetail = "\(action.detail) Retry the request when ready."
+  }
+
+  private func restoreLocalExecutionRetryDraft(_ message: String?) -> Bool {
+    guard let message,
+          !message.isEmpty
+    else {
+      return false
+    }
+
+    if trimmedDraftMessage.isEmpty || trimmedDraftMessage == message {
+      draftMessage = message
+      return true
+    }
+
+    return false
   }
 
   func openTimelineExternalAction(from entry: TimelineEntry) {

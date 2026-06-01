@@ -213,14 +213,17 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         "blockReason": "readOnlyMode",
         "blockedAction": "run a shell command",
         "localExecutionSafetyMode": "explore",
+        "retryMessage": "Run the test command.",
       ],
       currentMode: "explore"
     )
 
-    XCTAssertEqual(action?.title, "Switch to Ask Mode")
+    XCTAssertEqual(action?.title, "Switch Mode and Restore Request")
     XCTAssertEqual(action?.targetMode, "askBeforeChange")
     XCTAssertTrue(action?.detail.contains("request approval") == true)
     XCTAssertTrue(action?.detail.contains("run a shell command") == true)
+    XCTAssertTrue(action?.detail.contains("original request") == true)
+    XCTAssertEqual(action?.retryMessage, "Run the test command.")
   }
 
   func testLocalExecutionRecoveryDoesNotBypassPermissionBlocks() {

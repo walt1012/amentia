@@ -81,6 +81,8 @@ Ready foundations:
 - Compact timeline receipts for workspace snippets, Web Search sources, local
   action mode, approval policy, tool boundary, memory ranking, source reason,
   and compaction decisions.
+- Read-only local execution recovery switches to ask-before-change mode and
+  restores the blocked original request to the composer without auto-executing.
 
 Latest review decisions:
 
@@ -101,8 +103,8 @@ Build now:
 - First-run path: model download, activation, workspace open, Web Search
   readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Action recovery: blocked read-only work can switch mode, retry cleanly, and
-  preserve the original request.
+- Action recovery: finish packaged smoke coverage for mode switching, restored
+  requests, and approval retry handoff.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Package proof: CI and packaged smoke verify the user-facing DMG path, not only
   internal scripts.

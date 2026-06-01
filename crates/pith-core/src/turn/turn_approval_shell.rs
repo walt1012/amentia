@@ -58,6 +58,7 @@ pub(super) fn execute_shell_turn(
           .unwrap_or("unknown")
           .to_string(),
       ),
+      ("retryMessage".to_string(), snapshot.message.clone()),
     ]);
     if policy.is_missing_permission_denial() {
       items.extend(build_permission_denied_items(

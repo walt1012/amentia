@@ -4,6 +4,7 @@ struct TimelineLocalExecutionRecoverySummary: Hashable {
   let title: String
   let targetMode: String
   let detail: String
+  let retryMessage: String?
 }
 
 enum TimelineLocalExecutionRecoveryPresenter {
@@ -24,11 +25,26 @@ enum TimelineLocalExecutionRecoveryPresenter {
 
     let action = attributes["blockedAction"]
       ?? readableTool(attributes["toolName"] ?? attributes["tool"])
+    let retryMessage = normalizedRetryMessage(attributes["retryMessage"])
     return TimelineLocalExecutionRecoverySummary(
-      title: "Switch to Ask Mode",
+      title: retryMessage == nil ? "Switch to Ask Mode" : "Switch Mode and Restore Request",
       targetMode: targetMode,
-      detail: "Ask mode will let Pith request approval before it tries to \(action)."
+      detail: recoveryDetail(action: action, retryMessage: retryMessage),
+      retryMessage: retryMessage
     )
+  }
+
+  private static func normalizedRetryMessage(_ value: String?) -> String? {
+    let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty ? nil : trimmed
+  }
+
+  private static func recoveryDetail(action: String, retryMessage: String?) -> String {
+    let base = "Ask mode will let Pith request approval before it tries to \(action)."
+    guard retryMessage != nil else {
+      return base
+    }
+    return "\(base) The original request will be restored to the composer."
   }
 
   private static func readableTool(_ value: String?) -> String {
