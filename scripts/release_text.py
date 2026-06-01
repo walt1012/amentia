@@ -91,7 +91,10 @@ def release_trust_note(
   draft: bool,
 ) -> str:
   if signing_mode == "developer-id":
-    return "Developer ID signed and notarized."
+    return (
+      "Developer ID signed but not notarized. macOS Gatekeeper may still require "
+      "manual approval before first launch."
+    )
   if allow_untrusted_ad_hoc and not draft:
     return (
       "Untrusted ad-hoc prerelease. This DMG is not notarized; macOS Gatekeeper "
@@ -107,8 +110,10 @@ def release_trust_note(
 def install_trust_section(signing_mode: str) -> tuple[str, str]:
   if signing_mode == "developer-id":
     return (
-      "This build is Developer ID signed and notarized.",
-      "Open the DMG, drag Pith.app to Applications, then launch Pith.",
+      "This build is Developer ID signed but not notarized.",
+      "After dragging Pith.app to Applications, macOS may still block first launch. "
+      "Open System Settings > Privacy & Security and choose Open Anyway, or "
+      "Control-click Pith.app and choose Open.",
     )
   return (
     "This build is ad-hoc signed and not notarized.",
@@ -159,8 +164,6 @@ def validate_release_notes(
   require_release_notes_copy(text)
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
   require_release_copy(text, (trust_note,), "release notes")
-  if signing_mode == "developer-id" and "Open Anyway" in text:
-    raise RuntimeError("Developer ID release notes must not mention manual Gatekeeper override")
 
 
 def install_guide(tag: str, signing_mode: str) -> str:

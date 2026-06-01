@@ -87,7 +87,8 @@ def main() -> int:
     allow_untrusted_ad_hoc=False,
     draft=False,
   )
-  require_contains(developer_notes, "Developer ID signed and notarized.")
+  require_contains(developer_notes, "Developer ID signed but not notarized.")
+  require_contains(developer_notes, "manual approval")
   require_contains(developer_notes, platform_label())
   require_contains(developer_notes, DEFAULT_MODEL_ID)
   require_contains(developer_notes, "Installer assets:")
@@ -104,7 +105,6 @@ def main() -> int:
   require_contains(developer_notes, "daily-driver next action")
   require_contains(developer_notes, "app header and inspector")
   require_contains(developer_notes, release_size_budget_copy())
-  require_not_contains(developer_notes, "Open Anyway")
   validate_release_notes(
     developer_notes,
     tag="v0.1.0",
@@ -174,6 +174,11 @@ def main() -> int:
   require_contains(guide, "sandbox status")
   require_contains(guide, "process-only fallback")
   validate_install_guide(guide, tag="v0.1.0", signing_mode="ad-hoc")
+
+  developer_guide = install_guide("v0.1.0", "developer-id")
+  require_contains(developer_guide, "Developer ID signed but not notarized.")
+  require_contains(developer_guide, "Open Anyway")
+  validate_install_guide(developer_guide, tag="v0.1.0", signing_mode="developer-id")
 
   print("release text tests passed")
   return 0

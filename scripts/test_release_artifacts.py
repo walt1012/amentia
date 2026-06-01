@@ -153,6 +153,8 @@ def main() -> int:
       raise AssertionError("release manifest should record its schema version")
     if manifest["releaseKind"] != "public":
       raise AssertionError("public release tags should produce public manifests")
+    if manifest["trust"] != "ad-hoc-not-notarized":
+      raise AssertionError("ad-hoc releases should not claim notarization")
     if manifest["sourceCommit"] != SOURCE_COMMIT:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
@@ -492,6 +494,22 @@ def main() -> int:
       ),
       "partial public release tags should fail validation",
     )
+
+    developer_package_manifest = write_package_manifest(
+      root_path / "DeveloperIdPithPackage.json",
+      signing="developer-id",
+    )
+    developer_manifest = release_manifest(
+      tag="v0.1.0",
+      source_commit=SOURCE_COMMIT,
+      signing_mode="developer-id",
+      artifact_path=artifact,
+      checksum_path=checksum_path,
+      install_guide_path=install_guide,
+      package_manifest_path=developer_package_manifest,
+    )
+    if developer_manifest["trust"] != "developer-id-signed-not-notarized":
+      raise AssertionError("Developer ID releases should not claim notarization")
 
     checksum_data = checksum_path.read_text(encoding="utf-8")
     checksum_path.write_text("0" * 64 + f"  {artifact.name}\n", encoding="utf-8")
