@@ -14,6 +14,16 @@ extension AppViewModel {
     TimelineExternalActionPresenter.proofSummary(attributes: entry.attributes)
   }
 
+  func timelineApprovalOutcomeSummary(
+    from entry: TimelineEntry
+  ) -> TimelineApprovalOutcomeSummary? {
+    guard entry.kind == .approval else {
+      return nil
+    }
+
+    return TimelineApprovalOutcomePresenter.summary(attributes: entry.attributes)
+  }
+
   func localExecutionRecoveryAction(
     from entry: TimelineEntry
   ) -> TimelineLocalExecutionRecoverySummary? {

@@ -87,6 +87,8 @@ Ready foundations:
   approval, preserve retry metadata, and do not create files.
 - Composer status now distinguishes restored local execution drafts from normal
   prompts, so users know to review and send the repaired request.
+- Approval outcomes now show concise next-step guidance: accepted actions point
+  to proof, denied actions clarify that no local change was made.
 
 Latest review decisions:
 
@@ -107,7 +109,7 @@ Build now:
 - First-run path: model download, activation, workspace open, Web Search
   readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Action recovery: finish approval retry wording and packaged first-run polish.
+- Action recovery: finish packaged first-run polish and release rehearsal edges.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Package proof: CI and packaged smoke verify the user-facing DMG path, not only
   internal scripts.

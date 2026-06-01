@@ -262,6 +262,31 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ))
   }
 
+  func testApprovalOutcomeSummarizesApprovedWriteNextStep() {
+    let summary = TimelineApprovalOutcomePresenter.summary(attributes: [
+      "decision": "approved",
+      "action": "write_file",
+      "relativePath": "docs/output.txt",
+    ])
+
+    XCTAssertEqual(summary?.title, "Approval accepted")
+    XCTAssertEqual(summary?.tone, .ready)
+    XCTAssertTrue(summary?.detail.contains("`docs/output.txt`") == true)
+    XCTAssertTrue(summary?.detail.contains("Review the proof") == true)
+  }
+
+  func testApprovalOutcomeSummarizesDeniedActionWithoutRetryConfusion() {
+    let summary = TimelineApprovalOutcomePresenter.summary(attributes: [
+      "decision": "denied",
+      "action": "run_shell",
+    ])
+
+    XCTAssertEqual(summary?.title, "Approval denied")
+    XCTAssertEqual(summary?.tone, .warning)
+    XCTAssertTrue(summary?.detail.contains("No local change was made") == true)
+    XCTAssertTrue(summary?.detail.contains("safer version") == true)
+  }
+
   func testInspectorGroupsContextReceiptSections() {
     let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(

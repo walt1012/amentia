@@ -21,6 +21,7 @@ struct TimelinePane: View {
               entry: entry,
               isSelected: viewModel.selectedEntryID == entry.id,
               proofSummary: viewModel.timelineProofSummary(from: entry),
+              approvalOutcomeSummary: viewModel.timelineApprovalOutcomeSummary(from: entry),
               externalActionTitle: viewModel.timelineExternalAction(from: entry)?.title,
               externalCopyActionTitle: viewModel.timelineExternalAction(from: entry)?.copyTitle,
               showsApprovalActions: viewModel.isPendingApproval(entry),

@@ -5,6 +5,7 @@ struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
   let proofSummary: TimelineProofSummary?
+  let approvalOutcomeSummary: TimelineApprovalOutcomeSummary?
   let externalActionTitle: String?
   let externalCopyActionTitle: String?
   let showsApprovalActions: Bool
@@ -102,6 +103,10 @@ struct TimelineCard: View {
 
       if let proofSummary {
         proofSummaryView(proofSummary)
+      }
+
+      if let approvalOutcomeSummary {
+        approvalOutcomeView(approvalOutcomeSummary)
       }
 
       if showsActionRow {
@@ -251,6 +256,24 @@ struct TimelineCard: View {
     }
     .padding(10)
     .background(Color.green.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+  }
+
+  private func approvalOutcomeView(_ summary: TimelineApprovalOutcomeSummary) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: summary.tone == .warning ? "hand.raised" : "checkmark.seal")
+        .foregroundColor(summary.tone.color)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(summary.title)
+          .font(.caption.weight(.semibold))
+        Text(summary.detail)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(10)
+    .background(summary.tone.color.opacity(0.08))
     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
 
