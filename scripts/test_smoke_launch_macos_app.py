@@ -3,7 +3,17 @@
 
 from __future__ import annotations
 
-from smoke_launch_macos_app import validate_packaged_web_search_snapshot
+import json
+from tempfile import TemporaryDirectory
+from pathlib import Path
+
+from package_contract import PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+from smoke_launch_macos_app import (
+  PACKAGED_SMOKE_RECEIPT_KIND,
+  PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  validate_packaged_web_search_snapshot,
+  write_packaged_smoke_receipt,
+)
 
 
 def assert_raises(action, message: str) -> None:
@@ -72,6 +82,19 @@ def main() -> int:
     lambda: validate_packaged_web_search_snapshot(web_search_items(wrong_hash)),
     "packaged smoke should require stable snapshot hash shape",
   )
+
+  with TemporaryDirectory(prefix="pith-smoke-receipt-") as root:
+    receipt_path = Path(root) / "receipt.json"
+    write_packaged_smoke_receipt(receipt_path)
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    if receipt["schemaVersion"] != PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION:
+      raise AssertionError("packaged smoke receipt should record its schema")
+    if receipt["kind"] != PACKAGED_SMOKE_RECEIPT_KIND:
+      raise AssertionError("packaged smoke receipt should record its kind")
+    if [item["id"] for item in receipt["checks"]] != [
+      check_id for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+    ]:
+      raise AssertionError("packaged smoke receipt should record stable check ids")
 
   print("smoke launch helper tests passed")
   return 0

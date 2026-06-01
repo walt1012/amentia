@@ -743,7 +743,8 @@ jobs:
             artifacts/macos/Pith.app \
             "artifacts/macos/$MACOS_DMG_NAME" \
             --readme-file artifacts/macos/README-FIRST.txt \
-            --smoke-launch-script scripts/smoke_launch_macos_app.py
+            --smoke-launch-script scripts/smoke_launch_macos_app.py \
+            --smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json
 
       - name: Create internal macOS checksum
         run: |
@@ -756,6 +757,7 @@ jobs:
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
             --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json

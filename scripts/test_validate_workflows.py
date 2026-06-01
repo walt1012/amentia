@@ -166,6 +166,14 @@ jobs:
             --skip-build \
             --no-zip \
             --source-commit "$GITHUB_SHA"
+      - name: Create internal macOS disk image
+        run: |
+          python3 scripts/create_macos_dmg.py \
+            artifacts/macos/Pith.app \
+            "artifacts/macos/$MACOS_DMG_NAME" \
+            --readme-file artifacts/macos/README-FIRST.txt \
+            --smoke-launch-script scripts/smoke_launch_macos_app.py \
+            --smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json
       - name: Create internal macOS checksum
         run: |
           python3 scripts/release_artifacts.py \
@@ -174,6 +182,7 @@ jobs:
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
             --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output artifacts/macos/internal-release-manifest.json
@@ -237,6 +246,15 @@ jobs:
           gh run list --workflow CI --status success
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
+      - name: Create release DMG
+        run: |
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          python3 scripts/create_macos_dmg.py \
+            artifacts/macos/Pith.app \
+            "$dmg_path" \
+            --readme-file artifacts/macos/README-FIRST.txt \
+            --smoke-launch-script scripts/smoke_launch_macos_app.py \
+            --smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json
       - name: Create release checksum
         run: |
           python3 scripts/release_artifacts.py \
@@ -245,6 +263,7 @@ jobs:
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
             --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
@@ -689,6 +708,17 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
+      ci=VALID_CI.replace(
+        "--smoke-receipt artifacts/macos/packaged-smoke-receipt.json",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "packaged-smoke-receipt.json")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
       ci=VALID_CI.replace('--workflow-run-id "$GITHUB_RUN_ID"', ""),
     )
     assert_issue(issue_messages(root), "workflow-run-id")
@@ -779,6 +809,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "PithPackage.json")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "--smoke-receipt artifacts/macos/packaged-smoke-receipt.json",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "packaged-smoke-receipt.json")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

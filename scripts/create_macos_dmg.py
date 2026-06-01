@@ -33,6 +33,11 @@ def parse_args() -> argparse.Namespace:
     help="Optional packaged app smoke script to run against the app inside the mounted DMG.",
   )
   parser.add_argument(
+    "--smoke-receipt-output",
+    type=Path,
+    help="Optional JSON receipt path passed to the packaged app smoke script.",
+  )
+  parser.add_argument(
     "--readme-file",
     type=Path,
     help="Optional plain-text install guide to copy into the DMG root.",
@@ -63,6 +68,7 @@ def main() -> int:
       dmg_path,
       args.smoke_launch_script.resolve() if args.smoke_launch_script else None,
       readme_file,
+      args.smoke_receipt_output.resolve() if args.smoke_receipt_output else None,
     )
   except Exception as error:
     print(f"macOS DMG creation failed: {error}", file=sys.stderr)
@@ -132,6 +138,7 @@ def validate_dmg(
   dmg_path: Path,
   smoke_launch_script: Path | None = None,
   readme_file: Path | None = None,
+  smoke_receipt_output: Path | None = None,
 ) -> None:
   if not dmg_path.is_file():
     raise FileNotFoundError(f"Missing DMG artifact: {dmg_path}")
@@ -171,7 +178,10 @@ def validate_dmg(
         validate_install_readme_file(mountpoint / README_NAME, readme_file)
       if smoke_launch_script is not None:
         require_file(smoke_launch_script)
-        run([sys.executable, str(smoke_launch_script), str(mountpoint / APP_NAME)])
+        smoke_command = [sys.executable, str(smoke_launch_script), str(mountpoint / APP_NAME)]
+        if smoke_receipt_output is not None:
+          smoke_command.extend(["--receipt-output", str(smoke_receipt_output)])
+        run(smoke_command)
     except Exception as error:
       pending_error = error
       raise

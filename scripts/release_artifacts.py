@@ -19,6 +19,9 @@ from package_contract import (
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PACKAGED_SMOKE_RECEIPT_KIND,
+  PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PITH_ACCOUNT_REQUIRED,
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
@@ -87,6 +90,7 @@ def release_manifest(
   workflow_run_id: str,
   workflow_run_url: str,
   package_manifest_path: Path | None = None,
+  smoke_receipt_path: Path | None = None,
 ) -> dict:
   validate_release_identity(tag, source_commit, signing_mode)
   validate_release_asset_names(
@@ -136,6 +140,7 @@ def release_manifest(
       tag=tag,
       workflow_run_id=workflow_run_id,
       workflow_run_url=workflow_run_url,
+      smoke_receipt_path=smoke_receipt_path,
     ),
     "artifacts": [
       {
@@ -177,6 +182,7 @@ def write_release_manifest(
   workflow_run_id: str,
   workflow_run_url: str,
   package_manifest_path: Path | None = None,
+  smoke_receipt_path: Path | None = None,
 ) -> Path:
   validate_release_manifest_name(tag, output_path)
   output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +196,7 @@ def write_release_manifest(
         checksum_path=checksum_path,
         install_guide_path=install_guide_path,
         package_manifest_path=package_manifest_path,
+        smoke_receipt_path=smoke_receipt_path,
         workflow_run_id=workflow_run_id,
         workflow_run_url=workflow_run_url,
       ),
@@ -205,6 +212,7 @@ def write_release_manifest(
     checksum_path=checksum_path,
     install_guide_path=install_guide_path,
     package_manifest_path=package_manifest_path,
+    smoke_receipt_path=smoke_receipt_path,
   )
   return output_path
 
@@ -216,11 +224,12 @@ def validate_release_manifest(
   checksum_path: Path,
   install_guide_path: Path,
   package_manifest_path: Path | None = None,
+  smoke_receipt_path: Path | None = None,
 ) -> None:
   if not manifest_path.is_file():
     raise FileNotFoundError(f"Release manifest is missing: {manifest_path}")
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-  validate_manifest_identity(manifest)
+  validate_manifest_identity(manifest, smoke_receipt_path=smoke_receipt_path)
   tag = manifest["tag"]
   validate_release_manifest_name(tag, manifest_path)
   validate_release_asset_names(
@@ -444,7 +453,11 @@ def validate_source_commit(source_commit: str) -> None:
     raise RuntimeError("Release manifest source commit must be lowercase hex")
 
 
-def validate_manifest_identity(manifest: dict) -> None:
+def validate_manifest_identity(
+  manifest: dict,
+  *,
+  smoke_receipt_path: Path | None = None,
+) -> None:
   if manifest.get("schemaVersion") != PACKAGE_MANIFEST_SCHEMA_VERSION:
     raise RuntimeError(
       f"Release manifest schema version must be {PACKAGE_MANIFEST_SCHEMA_VERSION}"
@@ -501,6 +514,7 @@ def validate_manifest_identity(manifest: dict) -> None:
     manifest.get("verification"),
     "Release manifest verification",
     tag=tag,
+    smoke_receipt_path=smoke_receipt_path,
   )
 
 
@@ -551,19 +565,28 @@ def release_verification(
   tag: str,
   workflow_run_id: str,
   workflow_run_url: str,
+  smoke_receipt_path: Path | None = None,
 ) -> dict:
   validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
   _dmg_name, checksum_name, _guide_name, _manifest_name = release_installer_asset_names(tag)
+  smoke_receipt = packaged_smoke_receipt_summary(smoke_receipt_path)
   return {
     **VERIFICATION_CONTRACT,
     "assetNames": list(release_installer_asset_names(tag)),
     "checksumCommand": f"shasum -a 256 -c {checksum_name}",
     "workflowRunId": workflow_run_id,
     "workflowRunUrl": workflow_run_url,
+    "packagedSmokeReceipt": smoke_receipt,
   }
 
 
-def validate_verification_contract(value: object, label: str, *, tag: str) -> None:
+def validate_verification_contract(
+  value: object,
+  label: str,
+  *,
+  tag: str,
+  smoke_receipt_path: Path | None = None,
+) -> None:
   if not isinstance(value, dict):
     raise RuntimeError(f"{label} must be an object")
   for field, expected in VERIFICATION_CONTRACT.items():
@@ -580,6 +603,46 @@ def validate_verification_contract(value: object, label: str, *, tag: str) -> No
   if not isinstance(workflow_run_id, str) or not isinstance(workflow_run_url, str):
     raise RuntimeError(f"{label} must include workflow run metadata")
   validate_workflow_run_metadata(workflow_run_id, workflow_run_url)
+  expected_smoke_receipt = packaged_smoke_receipt_summary(smoke_receipt_path)
+  if value.get("packagedSmokeReceipt") != expected_smoke_receipt:
+    raise RuntimeError(f"{label} packagedSmokeReceipt must match the smoke receipt")
+
+
+def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
+  if smoke_receipt_path is None:
+    return {
+      "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+      "kind": PACKAGED_SMOKE_RECEIPT_KIND,
+      "result": "passed",
+      "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
+    }
+  receipt = read_json_object(smoke_receipt_path, "Packaged smoke receipt")
+  if receipt.get("schemaVersion") != PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION:
+    raise RuntimeError("Packaged smoke receipt schema version is unsupported")
+  if receipt.get("kind") != PACKAGED_SMOKE_RECEIPT_KIND:
+    raise RuntimeError("Packaged smoke receipt kind is unsupported")
+  if receipt.get("result") != "passed":
+    raise RuntimeError("Packaged smoke receipt must record a passed result")
+  checks = receipt.get("checks")
+  if not isinstance(checks, list):
+    raise RuntimeError("Packaged smoke receipt checks must be a list")
+  check_ids = []
+  for item in checks:
+    if not isinstance(item, dict):
+      raise RuntimeError("Packaged smoke receipt checks must be objects")
+    check_id = item.get("id")
+    if not isinstance(check_id, str) or not check_id:
+      raise RuntimeError("Packaged smoke receipt check id is required")
+    check_ids.append(check_id)
+  if check_ids != list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS):
+    raise RuntimeError("Packaged smoke receipt check ids do not match the first-run contract")
+  return {
+    "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+    "kind": PACKAGED_SMOKE_RECEIPT_KIND,
+    "result": "passed",
+    "checkIds": check_ids,
+    "sha256": sha256_hex(smoke_receipt_path),
+  }
 
 
 def validate_workflow_run_metadata(workflow_run_id: str, workflow_run_url: str) -> None:
@@ -659,6 +722,7 @@ def main() -> int:
   parser.add_argument("--signing-mode", choices=sorted(RELEASE_SIGNING_MODES))
   parser.add_argument("--workflow-run-id")
   parser.add_argument("--workflow-run-url")
+  parser.add_argument("--smoke-receipt", type=Path)
   args = parser.parse_args()
 
   try:
@@ -676,11 +740,12 @@ def main() -> int:
         or not args.package_manifest
         or not args.workflow_run_id
         or not args.workflow_run_url
+        or not args.smoke_receipt
       ):
         raise RuntimeError(
           "--manifest-output requires --tag, --source-commit, --signing-mode, "
-          "--install-guide, --package-manifest, --workflow-run-id, and "
-          "--workflow-run-url"
+          "--install-guide, --package-manifest, --workflow-run-id, "
+          "--workflow-run-url, and --smoke-receipt"
         )
       manifest_path = write_release_manifest(
         tag=args.tag,
@@ -690,6 +755,7 @@ def main() -> int:
         checksum_path=checksum_path,
         install_guide_path=args.install_guide.resolve(),
         package_manifest_path=args.package_manifest.resolve(),
+        smoke_receipt_path=args.smoke_receipt.resolve(),
         workflow_run_id=args.workflow_run_id,
         workflow_run_url=args.workflow_run_url,
         output_path=args.manifest_output.resolve(),

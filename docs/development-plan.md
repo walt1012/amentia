@@ -80,6 +80,8 @@ Ready foundations:
 - x86_64 DMG packaging, unsigned install guidance, package-size budgets,
   release manifests, release copy validation, and packaged smoke coverage are in
   place.
+- Mounted-DMG smoke now emits a first-run receipt that release manifests embed
+  and validate, so release proof names the user path it exercised.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

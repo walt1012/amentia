@@ -25,6 +25,9 @@ from package_contract import (
 )
 from release_artifacts import (
   FIRST_RUN_CONTRACT,
+  PACKAGED_SMOKE_RECEIPT_KIND,
+  PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   checksum_text,
   release_manifest as build_release_manifest,
   release_installer_asset_names,
@@ -41,6 +44,30 @@ from release_text import install_guide as release_install_guide
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
 WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
+
+
+def write_smoke_receipt(path: Path) -> Path:
+  path.write_text(
+    json.dumps(
+      {
+        "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+        "kind": PACKAGED_SMOKE_RECEIPT_KIND,
+        "result": "passed",
+        "checks": [
+          {
+            "id": check_id,
+            "proof": f"{check_id} proof",
+          }
+          for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+        ],
+      },
+      indent=2,
+      sort_keys=True,
+    )
+    + "\n",
+    encoding="utf-8",
+  )
+  return path
 
 
 def release_manifest(**kwargs) -> dict:
@@ -126,6 +153,7 @@ def main() -> int:
     artifact = root_path / "Pith-v0.1.0-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
     package_manifest = write_package_manifest(root_path / "PithPackage.json")
+    smoke_receipt = write_smoke_receipt(root_path / "packaged-smoke-receipt.json")
     artifact.write_bytes(b"pith release artifact\n")
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc"),
@@ -151,6 +179,7 @@ def main() -> int:
       checksum_path=checksum_path,
       install_guide_path=install_guide,
       package_manifest_path=package_manifest,
+      smoke_receipt_path=smoke_receipt,
     )
     if manifest["platform"]["architecture"] != SUPPORTED_ARCH:
       raise AssertionError("release manifest should lock the macOS architecture")
@@ -182,6 +211,12 @@ def main() -> int:
       raise AssertionError("release manifest should record the workflow run id")
     if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":
       raise AssertionError("release manifest should record the packaged smoke proof")
+    if manifest["verification"]["packagedSmokeReceipt"]["checkIds"] != list(
+      PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+    ):
+      raise AssertionError("release manifest should record packaged smoke receipt checks")
+    if "sha256" not in manifest["verification"]["packagedSmokeReceipt"]:
+      raise AssertionError("release manifest should hash the packaged smoke receipt")
     if manifest["verification"]["assetNames"] != list(release_installer_asset_names("v0.1.0")):
       raise AssertionError("release manifest should record the exact installer asset names")
     if manifest["verification"]["checksumCommand"] != (
@@ -229,8 +264,9 @@ def main() -> int:
         artifact_path=artifact,
         checksum_path=checksum_path,
         install_guide_path=install_guide,
-        package_manifest_path=package_manifest,
-        output_path=root_path / "release-manifest.json",
+      package_manifest_path=package_manifest,
+      smoke_receipt_path=smoke_receipt,
+      output_path=root_path / "release-manifest.json",
       ),
       "public release manifest file names should match the release tag",
     )
@@ -242,6 +278,7 @@ def main() -> int:
       checksum_path=checksum_path,
       install_guide_path=install_guide,
       package_manifest_path=package_manifest,
+      smoke_receipt_path=smoke_receipt,
       output_path=root_path / "Pith-v0.1.0-release-manifest.json",
     )
     validate_release_manifest(
@@ -250,9 +287,42 @@ def main() -> int:
       checksum_path=checksum_path,
       install_guide_path=install_guide,
       package_manifest_path=package_manifest,
+      smoke_receipt_path=smoke_receipt,
     )
 
     manifest_data = manifest_path.read_text(encoding="utf-8")
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["verification"]["packagedSmokeReceipt"]["checkIds"] = ["appLaunch"]
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        smoke_receipt_path=smoke_receipt,
+      ),
+      "wrong packaged smoke receipt should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_smoke_receipt = write_smoke_receipt(root_path / "tampered-smoke-receipt.json")
+    tampered_smoke_data = json.loads(tampered_smoke_receipt.read_text(encoding="utf-8"))
+    tampered_smoke_data["checks"] = tampered_smoke_data["checks"][:-1]
+    tampered_smoke_receipt.write_text(json.dumps(tampered_smoke_data), encoding="utf-8")
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        smoke_receipt_path=tampered_smoke_receipt,
+      ),
+      "incomplete packaged smoke receipt should fail release manifest validation",
+    )
+
     tampered_manifest = json.loads(manifest_data)
     tampered_manifest["schemaVersion"] = 2
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")

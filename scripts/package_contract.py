@@ -51,6 +51,25 @@ DAILY_DRIVER_CONTRACT = {
   "presentation": "app-header-inspector",
   "packagedSmoke": "required",
 }
+PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION = 1
+PACKAGED_SMOKE_RECEIPT_KIND = "pith.packagedSmokeReceipt"
+PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (
+  "mountedDmgAppBundle",
+  "appLaunch",
+  "runtimeProtocol",
+  "defaultModelMetadata",
+  "appOwnedModelActivation",
+  "workspaceBootstrap",
+  "firstCoworkTurn",
+  "webSearchExecution",
+  "approvalDenied",
+  "approvalApproved",
+  "connectorAuthorization",
+  "connectorExecution",
+  "runnerMemoryCapture",
+  "runtimeRecovery",
+  "sandboxReadiness",
+)
 
 
 def package_size_budget() -> dict[str, int]:

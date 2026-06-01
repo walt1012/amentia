@@ -21,6 +21,9 @@ from macos_llama_backend import assert_portable_llama_backend
 from package_contract import (
   DEFAULT_MODEL_ID,
   DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
+  PACKAGED_SMOKE_RECEIPT_KIND,
+  PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
   assert_size_under_budget,
@@ -77,6 +80,23 @@ REQUIRED_DATABASE_TABLES = {
   "workspace_state",
 }
 REQUIRED_SCHEMA_VERSION = 9
+PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
+  "mountedDmgAppBundle": "Mounted DMG exposes Pith.app and install guide.",
+  "appLaunch": "Packaged app launches and starts pith-runtime-bin.",
+  "runtimeProtocol": "Bundled runtime initializes through JSON-RPC.",
+  "defaultModelMetadata": "Default model metadata is bundled without weights.",
+  "appOwnedModelActivation": "Local model can activate from app-owned storage.",
+  "workspaceBootstrap": "Workspace and thread state bootstrap successfully.",
+  "firstCoworkTurn": "First cowork request produces timeline output.",
+  "webSearchExecution": "Web Search runs through the packaged fixture.",
+  "approvalDenied": "Denied workspace write does not mutate files.",
+  "approvalApproved": "Approved workspace write applies with diff proof.",
+  "connectorAuthorization": "Reference connector credential can be authorized.",
+  "connectorExecution": "Reference connector produces remote proof.",
+  "runnerMemoryCapture": "Connector runner memory is persisted.",
+  "runtimeRecovery": "Runtime restarts and restores state.",
+  "sandboxReadiness": "Sandbox readiness is visible in runtime checks.",
+}
 
 
 class FakeNotionApiServer:
@@ -199,6 +219,11 @@ def parse_args() -> argparse.Namespace:
     type=float,
     default=APP_STABILITY_SECONDS,
     help="Seconds the app and launched runtime must remain alive after startup.",
+  )
+  parser.add_argument(
+    "--receipt-output",
+    type=Path,
+    help="Optional JSON receipt describing the packaged first-run smoke proof.",
   )
   return parser.parse_args()
 
@@ -1873,6 +1898,28 @@ def print_packaged_app_success(
   )
 
 
+def write_packaged_smoke_receipt(output_path: Path | None) -> None:
+  if output_path is None:
+    return
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  receipt = {
+    "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+    "kind": PACKAGED_SMOKE_RECEIPT_KIND,
+    "result": "passed",
+    "checks": [
+      {
+        "id": check_id,
+        "proof": PACKAGED_SMOKE_PROOF_BY_CHECK_ID[check_id],
+      }
+      for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+    ],
+  }
+  output_path.write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+  )
+
+
 def main() -> int:
   args = parse_args()
   if sys.platform != "darwin":
@@ -1908,6 +1955,7 @@ def main() -> int:
             stability_duration,
           )
           validate_isolated_support_dir(support_dir)
+          write_packaged_smoke_receipt(args.receipt_output)
           print_packaged_app_success(app_process, launched_runtime_pids, support_dir)
           return 0
         time.sleep(0.2)
