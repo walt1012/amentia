@@ -89,6 +89,8 @@ Ready foundations:
   prompts, so users know to review and send the repaired request.
 - Approval outcomes now show concise next-step guidance: accepted actions point
   to proof, denied actions clarify that no local change was made.
+- Release notes and `README-FIRST.txt` now state the first-run daily-driver path:
+  model download, workspace, Web Search, sandbox status, approval, and proof.
 
 Latest review decisions:
 
@@ -109,7 +111,8 @@ Build now:
 - First-run path: model download, activation, workspace open, Web Search
   readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Action recovery: finish packaged first-run polish and release rehearsal edges.
+- Release rehearsal: finish edge checks around downloaded installer verification
+  and first launch guidance.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Package proof: CI and packaged smoke verify the user-facing DMG path, not only
   internal scripts.

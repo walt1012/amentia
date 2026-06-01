@@ -36,7 +36,11 @@ INTERNAL_CI_DMG_NAME = "Pith-macos-x86_64.dmg"
 INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications",
   "download one verified local model",
+  "First-run path:",
   "Open a workspace folder",
+  "Web Search readiness",
+  "approve a safe local change",
+  "inspect the proof",
   "Start a cowork session",
   "Follow the next action",
   "runtime readiness",

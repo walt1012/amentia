@@ -37,10 +37,14 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Drag Pith.app to Applications.",
   "Installer assets:",
   "download one verified local model",
+  "First-run path:",
   "No Pith login is required",
   "local execution mode",
   DEFAULT_MODEL_ID,
   "Open a workspace folder.",
+  "Web Search readiness",
+  "approve a safe local change",
+  "inspect the proof",
   "Start a cowork session",
   "Follow the next action",
   "runtime readiness",
@@ -78,6 +82,15 @@ def local_execution_copy() -> str:
   return (
     "No Pith login is required; local execution mode defaults to "
     f"{DEFAULT_LOCAL_EXECUTION_SAFETY_MODE}; available modes are {modes}."
+  )
+
+
+def first_run_path_copy() -> str:
+  return (
+    "First-run path: download the default verified local model "
+    f"({DEFAULT_MODEL_ID}), open a workspace folder, confirm Web Search readiness "
+    "and sandbox status, start a cowork session, approve a safe local change only "
+    "after reviewing it, then inspect the proof shown in the timeline."
   )
 
 
@@ -140,6 +153,7 @@ def release_notes(
   size_budget = release_size_budget_copy()
   installer_assets = installer_assets_copy(tag)
   local_execution = local_execution_copy()
+  first_run_path = first_run_path_copy()
   return f"""Pith {tag}
 
 - {platform_label()} DMG installer.
@@ -147,6 +161,7 @@ def release_notes(
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model, defaulting to {DEFAULT_MODEL_ID}.
 - {local_execution}
+- {first_run_path}
 - The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
 - Native sandbox is used when available; process-only fallback is disclosed in app status.
 - The {size_budget} is enforced so model weights and heavyweight payloads stay out of the app.
@@ -176,6 +191,7 @@ def install_guide(tag: str, signing_mode: str) -> str:
   size_budget = release_size_budget_copy()
   installer_assets = installer_assets_copy(tag)
   local_execution = local_execution_copy()
+  first_run_path = first_run_path_copy()
   return f"""Pith {tag}
 
 Install
@@ -183,8 +199,10 @@ Install
 2. Drag Pith.app to Applications.
 3. Launch Pith and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
 4. Open a workspace folder.
-5. Start a cowork session with Map Workspace, Plan Next Step, or your own first request.
-6. Follow the next action shown by Pith; it comes from runtime readiness, not a static setup checklist.
+5. Confirm Web Search readiness and sandbox status in the setup surface.
+6. Start a cowork session with Map Workspace, Plan Next Step, or your own first request.
+7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
+8. Follow the next action shown by Pith; it comes from runtime readiness, not a static setup checklist.
 
 Trust
 {trust_note}
@@ -193,6 +211,7 @@ Trust
 Notes
 - {installer_assets}
 - {local_execution}
+- {first_run_path}
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.

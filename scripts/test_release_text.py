@@ -10,6 +10,7 @@ from package_contract import (
   SUPPORTED_ARCH,
 )
 from release_text import (
+  first_run_path_copy,
   install_guide,
   installer_assets_copy,
   local_execution_copy,
@@ -38,6 +39,10 @@ def main() -> int:
   require_contains(release_size_budget_copy(), "installer artifact <= 150 MiB")
   require_contains(local_execution_copy(), "No Pith login is required")
   require_contains(local_execution_copy(), DEFAULT_LOCAL_EXECUTION_SAFETY_MODE)
+  require_contains(first_run_path_copy(), DEFAULT_MODEL_ID)
+  require_contains(first_run_path_copy(), "Web Search readiness")
+  require_contains(first_run_path_copy(), "approve a safe local change")
+  require_contains(first_run_path_copy(), "inspect the proof")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")
@@ -55,6 +60,7 @@ def main() -> int:
   require_contains(developer_notes, "Installer assets:")
   require_contains(developer_notes, "No Pith login is required")
   require_contains(developer_notes, "local execution mode")
+  require_contains(developer_notes, first_run_path_copy())
   require_contains(developer_notes, "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(developer_notes, "Pith-v0.1.0-release-manifest.json")
   require_contains(developer_notes, "SHA-256 checksum sidecar")
@@ -115,8 +121,12 @@ def main() -> int:
   require_contains(guide, "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(guide, "Pith-v0.1.0-release-manifest.json")
   require_contains(guide, "download one verified local model")
+  require_contains(guide, "First-run path:")
   require_contains(guide, DEFAULT_MODEL_ID)
   require_contains(guide, "Open a workspace folder.")
+  require_contains(guide, "Confirm Web Search readiness and sandbox status")
+  require_contains(guide, "Approve a safe local change only after reviewing it")
+  require_contains(guide, "inspect the proof")
   require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
   require_contains(guide, "Follow the next action")
   require_contains(guide, "runtime readiness")
