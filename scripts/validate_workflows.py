@@ -380,6 +380,21 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --tag")
     )
+  if 'release_title="Pith $RELEASE_TAG"' not in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "release workflow must derive the GitHub Release title from the tag",
+      )
+    )
+  elif not command_window_contains(
+    release_block,
+    "scripts/release_state.py",
+    '--title "$release_title"',
+  ):
+    issues.append(
+      WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --title")
+    )
   if "--source-commit" not in release_block:
     issues.append(
       WorkflowIssue(

@@ -240,7 +240,9 @@ jobs:
             --bundle-version "$PITH_RELEASE_VERSION"
       - name: Publish GitHub Release
         run: |
+          release_title="Pith $RELEASE_TAG"
           python3 scripts/release_state.py
+          --title "$release_title"
           --tag "$RELEASE_TAG"
           gh release upload "$RELEASE_TAG" \\
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \\
@@ -509,6 +511,22 @@ def main() -> int:
       release=VALID_RELEASE.replace('          --tag "$RELEASE_TAG"\n', ""),
     )
     assert_issue(issue_messages(root), "release state helper")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace('          release_title="Pith $RELEASE_TAG"', ""),
+    )
+    assert_issue(issue_messages(root), "Release title")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace('          --title "$release_title"\n', ""),
+    )
+    assert_issue(issue_messages(root), "release state helper must receive --title")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

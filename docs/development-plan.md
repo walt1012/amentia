@@ -103,6 +103,8 @@ Ready foundations:
   release tag, keeping the download page identity stable.
 - Release state planning also rejects non-version tags, so public release pages
   stay tied to immutable `vX.Y.Z` identities.
+- Workflow validation now protects the release title handoff, keeping GitHub
+  Release page identity aligned with release state planning.
 
 Latest review decisions:
 
