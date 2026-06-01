@@ -109,7 +109,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "distributionTrust": "\($0)",
       """
     } ?? ""
-    """
+    return """
     {
       "architecture": "x86_64",
       \(distributionTrustLine)
