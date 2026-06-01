@@ -48,18 +48,40 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - name: Validate model pack manifest
+        run: python3 scripts/validate_model_pack.py
+      - name: Check English-only policy
+        run: python3 scripts/check_english_policy.py
+      - name: Test packaging helpers
+        run: python3 scripts/test_package_macos_app.py
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
       - name: Test package contract helper
         run: python3 scripts/test_package_contract.py
       - name: Test CI change classifier
         run: python3 scripts/test_ci_changes.py
+      - name: Validate workflow structure
+        run: python3 scripts/validate_workflows.py
+      - name: Test workflow structure policy
+        run: python3 scripts/test_validate_workflows.py
+      - name: Test DMG staging helper
+        run: python3 scripts/test_create_macos_dmg.py
+      - name: Test release state helper
+        run: python3 scripts/test_release_state.py
       - name: Test installer artifact contract
         run: python3 scripts/test_installer_artifact_contract.py
+      - name: Test release artifact helper
+        run: python3 scripts/test_release_artifacts.py
+      - name: Test release text helper
+        run: python3 scripts/test_release_text.py
+      - name: Test packaged smoke helper
+        run: python3 scripts/test_smoke_launch_macos_app.py
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
       - name: Test Notion connector contract
         run: python3 scripts/test_notion_connector_contract.py
+      - name: Test distribution validator
+        run: python3 scripts/test_validate_macos_distribution.py
   rust-format:
     timeout-minutes: 10
   rust-clippy:
@@ -342,6 +364,42 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_ci_changes.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test release text helper\n"
+        "        run: python3 scripts/test_release_text.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_release_text.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test release artifact helper\n"
+        "        run: python3 scripts/test_release_artifacts.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_release_artifacts.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test DMG staging helper\n"
+        "        run: python3 scripts/test_create_macos_dmg.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_create_macos_dmg.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

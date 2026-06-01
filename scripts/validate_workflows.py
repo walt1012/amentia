@@ -151,12 +151,23 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
   repository_policy_block = job_block(text, "repository-policy")
   if repository_policy_block:
     required_policy_commands = (
+      "python3 scripts/validate_model_pack.py",
+      "python3 scripts/check_english_policy.py",
+      "python3 scripts/test_package_macos_app.py",
       "python3 scripts/test_ci_changes.py",
+      "python3 scripts/validate_workflows.py",
+      "python3 scripts/test_validate_workflows.py",
+      "python3 scripts/test_create_macos_dmg.py",
+      "python3 scripts/test_release_state.py",
       "python3 scripts/test_package_contract.py",
       "python3 scripts/test_release_identity.py",
+      "python3 scripts/test_release_artifacts.py",
       "python3 scripts/test_installer_artifact_contract.py",
+      "python3 scripts/test_release_text.py",
+      "python3 scripts/test_smoke_launch_macos_app.py",
       "python3 scripts/test_connector_workflow_contracts.py",
       "python3 scripts/test_notion_connector_contract.py",
+      "python3 scripts/test_validate_macos_distribution.py",
     )
     for term in required_policy_commands:
       if term not in repository_policy_block:

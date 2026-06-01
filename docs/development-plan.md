@@ -86,6 +86,8 @@ Ready foundations:
   changes.
 - Workflow validation now requires the CI change-classifier test to stay in the
   repository policy lane.
+- Workflow validation now pins the release copy, sidecar, DMG, package, and
+  distribution policy tests in the repository policy lane.
 
 Latest review decisions:
 
