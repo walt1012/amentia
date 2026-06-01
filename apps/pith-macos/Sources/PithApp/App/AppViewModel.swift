@@ -6,6 +6,7 @@ final class AppViewModel: ObservableObject {
   @Published var timelineState: TimelineRuntimeState
   @Published var runtimeConnectionState: RuntimeConnectionStateStore
   @Published var draftMessage: String
+  @Published var restoredLocalExecutionDraftMessage: String?
   @Published var workspace: WorkspaceSummary?
   @Published var workspaceSearchState: WorkspaceSearchRuntimeState
   @Published private var localModelReadinessState: LocalModelReadinessState
@@ -44,6 +45,7 @@ final class AppViewModel: ObservableObject {
       detail: launchState.runtimeDetail
     )
     self.draftMessage = ""
+    self.restoredLocalExecutionDraftMessage = nil
     self.workspace = nil
     self.workspaceSearchState = WorkspaceSearchRuntimeState()
     self.localModelReadinessState = LocalModelReadinessState(

@@ -83,6 +83,20 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Review the starter prompt, then start the cowork session.")
   }
 
+  func testComposerFramesRestoredLocalExecutionDraft() {
+    let placeholder = ComposerStatusPresenter.placeholder(composerSnapshot(
+      hasDraftMessage: true,
+      hasRestoredLocalExecutionDraft: true
+    ))
+    let summary = ComposerStatusPresenter.statusSummary(composerSnapshot(
+      hasDraftMessage: true,
+      hasRestoredLocalExecutionDraft: true
+    ))
+
+    XCTAssertEqual(placeholder, "Review the restored request, then send")
+    XCTAssertEqual(summary, "Ask mode is ready. Review the restored request, then send it.")
+  }
+
   func testFirstReadyTimelineEventFramesCoworkRequest() {
     let entry = TimelineEventPresenter.firstRequestReady()
 
@@ -114,7 +128,10 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
-  private func composerSnapshot(hasDraftMessage: Bool) -> ComposerStatusSnapshot {
+  private func composerSnapshot(
+    hasDraftMessage: Bool,
+    hasRestoredLocalExecutionDraft: Bool = false
+  ) -> ComposerStatusSnapshot {
     ComposerStatusSnapshot(
       runtimeState: .ready,
       modelSetupTitle: "Download model",
@@ -124,7 +141,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasRuntimeThreadSelection: true,
       hasActiveTurn: false,
       isWaitingForFirstMessage: true,
-      hasDraftMessage: hasDraftMessage
+      hasDraftMessage: hasDraftMessage,
+      hasRestoredLocalExecutionDraft: hasRestoredLocalExecutionDraft
     )
   }
 

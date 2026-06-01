@@ -10,6 +10,7 @@ struct ComposerStatusSnapshot {
   let hasActiveTurn: Bool
   let isWaitingForFirstMessage: Bool
   let hasDraftMessage: Bool
+  let hasRestoredLocalExecutionDraft: Bool
 }
 
 enum ComposerStatusPresenter {
@@ -39,6 +40,10 @@ enum ComposerStatusPresenter {
 
     if snapshot.hasActiveTurn {
       return "Pith is running a local execution. Cancel to stop it."
+    }
+
+    if snapshot.hasRestoredLocalExecutionDraft {
+      return "Review the restored request, then send"
     }
 
     if snapshot.isWaitingForFirstMessage {
@@ -73,6 +78,10 @@ enum ComposerStatusPresenter {
 
       if snapshot.hasActiveTurn {
         return "Pith is running locally. Cancel the execution if it is no longer useful."
+      }
+
+      if snapshot.hasRestoredLocalExecutionDraft {
+        return "Ask mode is ready. Review the restored request, then send it."
       }
 
       if snapshot.isWaitingForFirstMessage {

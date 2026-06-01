@@ -47,6 +47,7 @@ extension AppViewModel {
 
     if trimmedDraftMessage.isEmpty || trimmedDraftMessage == message {
       draftMessage = message
+      restoredLocalExecutionDraftMessage = message
       return true
     }
 

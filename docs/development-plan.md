@@ -85,6 +85,8 @@ Ready foundations:
   restores the blocked original request to the composer without auto-executing.
 - Packaged smoke now verifies read-only workspace writes are blocked without
   approval, preserve retry metadata, and do not create files.
+- Composer status now distinguishes restored local execution drafts from normal
+  prompts, so users know to review and send the repaired request.
 
 Latest review decisions:
 
@@ -105,8 +107,7 @@ Build now:
 - First-run path: model download, activation, workspace open, Web Search
   readiness, sandbox status, and connector readiness are visible and
   recoverable.
-- Action recovery: finish UI-level coverage for restored request handoff and
-  approval retry wording.
+- Action recovery: finish approval retry wording and packaged first-run polish.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
 - Package proof: CI and packaged smoke verify the user-facing DMG path, not only
   internal scripts.
