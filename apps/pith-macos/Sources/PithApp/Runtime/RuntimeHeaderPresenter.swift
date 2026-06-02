@@ -55,7 +55,7 @@ enum RuntimeHeaderPresenter {
           : DailyDriverStagePresenter.summary(
             stage: snapshot.dailyDriverStage,
             nextAction: snapshot.dailyDriverNextAction
-          ) ?? "Ready to start the first cowork session."
+          ) ?? FirstRequestPromptPresenter.firstAppOpenActionSummary()
       }
       return DailyDriverStagePresenter.summary(
         stage: snapshot.dailyDriverStage,

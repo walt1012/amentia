@@ -28,7 +28,7 @@ FIRST_APP_OPEN_CHECKS = (
   f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
   "Open a workspace folder.",
   "Confirm Web Search readiness and sandbox status.",
-  "Start a cowork session with Map Workspace, Plan Next Step, or a short custom request.",
+  "Choose Map Workspace, Plan Next Step, or type a short cowork request.",
   "Follow the daily-driver next action shown in the app header and inspector.",
 )
 

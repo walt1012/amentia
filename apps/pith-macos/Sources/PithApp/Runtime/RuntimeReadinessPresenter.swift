@@ -141,7 +141,7 @@ enum RuntimeReadinessPresenter {
     return ReadinessStepSummary(
       id: "first-request",
       label: "First Request",
-      detail: "Prompt",
+      detail: "Choose",
       tone: .warning
     )
   }

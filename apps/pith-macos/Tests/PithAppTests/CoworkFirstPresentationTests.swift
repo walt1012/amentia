@@ -5,7 +5,10 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testRuntimeHeaderFramesFirstUseAsCoworkSession() {
     let summary = RuntimeHeaderPresenter.statusSummary(headerSnapshot(hasDraftMessage: false))
 
-    XCTAssertEqual(summary, "Ready to start the first cowork session.")
+    XCTAssertEqual(
+      summary,
+      "Choose Map Workspace, Plan Next Step, or type a short cowork request."
+    )
   }
 
   func testRuntimeHeaderUsesDailyDriverNextActionAfterSetup() {
@@ -238,6 +241,32 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
   }
 
+  func testFirstRequestReadinessStepNamesPromptChoice() {
+    guard let step = RuntimeReadinessPresenter.steps(readinessSnapshotForFirstRequest())
+      .first { $0.id == "first-request" }
+    else {
+      XCTFail("Expected first-request readiness step")
+      return
+    }
+
+    XCTAssertEqual(step.detail, "Choose")
+    let actionSnapshot = readinessActionSnapshot(
+      checks: readyChecks(),
+      isWaitingForFirstMessage: true,
+      hasFirstRequestSuggestion: true
+    )
+
+    let action = RuntimeReadinessActionPlanner.action(
+      for: step,
+      snapshot: actionSnapshot
+    )
+
+    XCTAssertEqual(
+      RuntimeReadinessActionPlanner.title(for: action, snapshot: actionSnapshot),
+      "Choose"
+    )
+  }
+
   func testComposerFramesDraftAsCoworkPrompt() {
     let placeholder = ComposerStatusPresenter.placeholder(composerSnapshot(hasDraftMessage: true))
     let summary = ComposerStatusPresenter.statusSummary(composerSnapshot(hasDraftMessage: true))
@@ -325,7 +354,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   private func readinessActionSnapshot(
     checks: [RuntimeReadinessCheckSummary],
-    canEnableWebSearchPlugin: Bool = false
+    canEnableWebSearchPlugin: Bool = false,
+    isWaitingForFirstMessage: Bool = false,
+    hasFirstRequestSuggestion: Bool = false
   ) -> RuntimeReadinessActionSnapshot {
     RuntimeReadinessActionSnapshot(
       runtimeState: .ready,
@@ -337,13 +368,30 @@ final class CoworkFirstPresentationTests: XCTestCase {
       canOpenWorkspace: false,
       canCreateThread: false,
       canUseComposer: true,
-      isWaitingForFirstMessage: false,
+      isWaitingForFirstMessage: isWaitingForFirstMessage,
       hasDraftMessage: false,
-      hasFirstRequestSuggestion: false,
+      hasFirstRequestSuggestion: hasFirstRequestSuggestion,
       runtimeReadinessChecks: checks,
       canEnableWebSearchPlugin: canEnableWebSearchPlugin,
       runtimeLaunchButtonTitle: "Launch Runtime",
       modelSetupActionTitle: nil
+    )
+  }
+
+  private func readinessSnapshotForFirstRequest() -> RuntimeReadinessSnapshot {
+    RuntimeReadinessSnapshot(
+      runtimeState: .ready,
+      modelReadinessDetail: "Ready",
+      modelTone: .ready,
+      workspaceDisplayName: "Pith",
+      isLocalModelReady: true,
+      hasWorkspace: true,
+      hasRuntimeThreadSelection: true,
+      hasActiveTurn: false,
+      isWaitingForFirstMessage: true,
+      hasDraftMessage: false,
+      runtimeReadinessChecks: readyChecks(),
+      runtimeReadinessMetrics: localExecutionMetrics
     )
   }
 

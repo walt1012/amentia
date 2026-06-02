@@ -73,7 +73,7 @@ enum RuntimeReadinessActionPlanner {
     case .createThread:
       return "New"
     case .useFirstRequestPrompt:
-      return "Use Prompt"
+      return "Choose"
     case .sendFirstRequest:
       return "Send"
     case .enableWebSearchPlugin:

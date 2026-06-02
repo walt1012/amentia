@@ -4,8 +4,12 @@ enum FirstRequestPromptPresenter {
   static let mapWorkspaceID = "map-workspace"
   static let planNextStepID = "plan-next-step"
 
+  static func firstAppOpenActionSummary() -> String {
+    "Choose Map Workspace, Plan Next Step, or type a short cowork request."
+  }
+
   static func calloutSummary() -> String {
-    "Core setup is ready. Ask Pith to map the workspace, plan one useful next step, or type your own request."
+    "Core setup is ready. \(firstAppOpenActionSummary())"
   }
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {

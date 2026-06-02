@@ -3,7 +3,9 @@ import XCTest
 
 final class FirstRequestPromptPresenterTests: XCTestCase {
   func testFirstRequestCopyFramesCoworkSession() {
-    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("plan one useful next step"))
+    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Map Workspace"))
+    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Plan Next Step"))
+    XCTAssertTrue(FirstRequestPromptPresenter.firstAppOpenActionSummary().contains("short cowork request"))
     XCTAssertTrue(
       FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: nil).contains("cowork session")
     )

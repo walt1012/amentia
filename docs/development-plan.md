@@ -96,6 +96,8 @@ Ready foundations:
   the same installer contract used before upload, then summarize first-run
   proof, checksum command, signing mode, source commit, and first app-open
   checks.
+- First app-open copy now matches the release rehearsal path: choose Map
+  Workspace, Plan Next Step, or type a short cowork request.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
@@ -123,6 +125,8 @@ Build now:
 - Download rehearsal: after assets are downloaded from GitHub Release, validate
   the directory and produce one compact summary before manual app opening,
   including what the first screen should guide the user to do.
+- First app-open guidance: keep the header, readiness strip, and starter prompt
+  choices aligned so new users know the next action immediately.
 - Publish proof: verify the final GitHub Release page state and asset set after
   upload, including asset readiness and user download URLs, not just before it.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.

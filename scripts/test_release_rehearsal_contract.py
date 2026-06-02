@@ -66,7 +66,7 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should include the first-run model step")
     if summary["dailyDriver"] != DAILY_DRIVER_CONTRACT:
       raise AssertionError("release rehearsal summary should record daily-driver readiness")
-    if not any("Map Workspace" in check for check in summary["firstAppOpenChecks"]):
+    if not any("Choose Map Workspace" in check for check in summary["firstAppOpenChecks"]):
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
     if "Pith v0.1.0 Release Rehearsal" not in markdown:
