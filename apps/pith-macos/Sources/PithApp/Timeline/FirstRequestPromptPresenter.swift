@@ -1,11 +1,16 @@
 import Foundation
 
 enum FirstRequestPromptPresenter {
+  static let firstAppOpenActionContractID = "map-plan-or-short-cowork-request"
   static let mapWorkspaceID = "map-workspace"
   static let planNextStepID = "plan-next-step"
 
   static func firstAppOpenActionSummary() -> String {
     "Choose Map Workspace, Plan Next Step, or type a short cowork request."
+  }
+
+  static func firstAppOpenActionTrustSummary() -> String {
+    "first app-open action offers Map Workspace, Plan Next Step, or a short cowork request"
   }
 
   static func calloutSummary() -> String {

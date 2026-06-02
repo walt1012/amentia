@@ -100,7 +100,7 @@ struct DistributionPackageMetadata: Equatable {
       firstAppOpenActionContract: string(
         manifest,
         "firstAppOpenActionContract",
-        fallback: "map-plan-or-short-cowork-request"
+        fallback: FirstRequestPromptPresenter.firstAppOpenActionContractID
       ),
       sourceCommit: string(manifest, "sourceCommit", fallback: "development")
     )
@@ -130,7 +130,7 @@ struct DistributionPackageMetadata: Equatable {
     dailyDriverStageSource: "runtime/readiness",
     dailyDriverNextActionSource: "runtime/readiness",
     dailyDriverPresentation: "app-header-inspector",
-    firstAppOpenActionContract: "map-plan-or-short-cowork-request",
+    firstAppOpenActionContract: FirstRequestPromptPresenter.firstAppOpenActionContractID,
     sourceCommit: "development"
   )
 
@@ -326,9 +326,9 @@ enum DistributionTrustPresenter {
   }
 
   private static func firstAppOpenSummary(_ metadata: DistributionPackageMetadata) -> String {
-    guard metadata.firstAppOpenActionContract == "map-plan-or-short-cowork-request" else {
+    guard metadata.firstAppOpenActionContract == FirstRequestPromptPresenter.firstAppOpenActionContractID else {
       return "first app-open action: \(metadata.firstAppOpenActionContract)"
     }
-    return "first app-open action offers Map Workspace, Plan Next Step, or a short cowork request"
+    return FirstRequestPromptPresenter.firstAppOpenActionTrustSummary()
   }
 }

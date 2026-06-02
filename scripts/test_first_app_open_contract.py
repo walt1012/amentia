@@ -31,6 +31,15 @@ SETUP_PROGRESS_PRESENTER = (
   / "Setup"
   / "SetupProgressPresenter.swift"
 )
+DISTRIBUTION_TRUST_PRESENTER = (
+  ROOT
+  / "apps"
+  / "pith-macos"
+  / "Sources"
+  / "PithApp"
+  / "App"
+  / "DistributionTrustPresenter.swift"
+)
 
 FORBIDDEN_FIRST_OPEN_COPY = (
   "Choose First Prompt",
@@ -52,12 +61,28 @@ def require_not_contains(text: str, unexpected: str, label: str) -> None:
 def main() -> int:
   first_request_text = FIRST_REQUEST_PRESENTER.read_text(encoding="utf-8")
   setup_progress_text = SETUP_PROGRESS_PRESENTER.read_text(encoding="utf-8")
-  app_text = f"{first_request_text}\n{setup_progress_text}"
+  distribution_trust_text = DISTRIBUTION_TRUST_PRESENTER.read_text(encoding="utf-8")
+  app_text = f"{first_request_text}\n{setup_progress_text}\n{distribution_trust_text}"
 
   require_contains(
     first_request_text,
     FIRST_APP_OPEN_ACTION_COPY,
     "Swift first request presenter",
+  )
+  require_contains(
+    first_request_text,
+    f'firstAppOpenActionContractID = "{FIRST_APP_OPEN_CONTRACT_ID}"',
+    "Swift first request presenter",
+  )
+  require_contains(
+    distribution_trust_text,
+    "FirstRequestPromptPresenter.firstAppOpenActionContractID",
+    "Swift distribution trust presenter",
+  )
+  require_contains(
+    distribution_trust_text,
+    "FirstRequestPromptPresenter.firstAppOpenActionTrustSummary()",
+    "Swift distribution trust presenter",
   )
   for phrase in ("Map Workspace", "Plan Next Step"):
     require_contains(first_request_text, phrase, "Swift first request presenter")

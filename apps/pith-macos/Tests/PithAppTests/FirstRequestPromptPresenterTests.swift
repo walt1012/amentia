@@ -2,6 +2,19 @@
 import XCTest
 
 final class FirstRequestPromptPresenterTests: XCTestCase {
+  func testFirstRequestContractNamesPackagedFirstOpenAction() {
+    XCTAssertEqual(
+      FirstRequestPromptPresenter.firstAppOpenActionContractID,
+      "map-plan-or-short-cowork-request"
+    )
+    XCTAssertTrue(
+      FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("Map Workspace")
+    )
+    XCTAssertTrue(
+      FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("short cowork request")
+    )
+  }
+
   func testFirstRequestCopyFramesCoworkSession() {
     XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Map Workspace"))
     XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Plan Next Step"))

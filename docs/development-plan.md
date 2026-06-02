@@ -109,6 +109,8 @@ Ready foundations:
   smoke proof scope names the first cowork request explicitly.
 - `PithPackage.json` now carries the same first app-open action contract, so the
   installed app can surface it in distribution trust copy.
+- Swift first-open and distribution-trust copy now share the same presenter
+  contract instead of duplicated action strings.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
