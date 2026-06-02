@@ -451,6 +451,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "--dir release-download",
     "--asset-dir release-download",
     "--summary-output release-rehearsal.md",
+    'cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
     "uses: actions/upload-artifact@v7",
     "release-rehearsal-${{ env.RELEASE_TAG }}",
     "path: release-rehearsal.md",

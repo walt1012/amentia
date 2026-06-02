@@ -420,6 +420,7 @@ jobs:
             --tag "$RELEASE_TAG" \
             --asset-dir release-download \
             --summary-output release-rehearsal.md
+          cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release rehearsal summary
         uses: actions/upload-artifact@v7

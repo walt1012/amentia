@@ -345,6 +345,7 @@ jobs:
             --tag "$RELEASE_TAG" \\
             --asset-dir release-download \\
             --summary-output release-rehearsal.md
+          cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload release rehearsal summary
         uses: actions/upload-artifact@v7
         with:
@@ -788,6 +789,17 @@ def main() -> int:
       release=VALID_RELEASE.replace(
         'gh release download "$RELEASE_TAG"',
         'gh release view "$RELEASE_TAG"',
+      ),
+    )
+    assert_issue(issue_messages(root), "release download rehearsal")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"\n',
+        "",
       ),
     )
     assert_issue(issue_messages(root), "release download rehearsal")

@@ -124,6 +124,8 @@ Ready foundations:
   state, and untrusted ad-hoc Gatekeeper copy.
 - CI macOS packaging now runs the same downloaded-installer rehearsal before
   uploading the internal installer artifact, then writes the summary to the job.
+- Release workflows now also write downloaded-release rehearsal summaries to
+  the run summary before uploading the internal rehearsal artifact.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
