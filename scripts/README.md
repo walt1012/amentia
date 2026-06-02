@@ -52,7 +52,8 @@ execution environment.
 
 CI keeps fast policy checks, Rust checks, Swift builds, runtime builds, the pinned llama.cpp backend,
 and macOS packaging as separate gates. The llama.cpp backend is cached by pinned source revision, but
-the packaged app smoke test still validates the staged backend before release artifacts are uploaded.
+the packaged app smoke test and internal downloaded-release rehearsal still validate the staged
+installer before release artifacts are uploaded.
 Public GitHub Releases should upload the notarized
 `Pith-<tag>-macos-x86_64.dmg`, checksum, root install guide, and release
 manifest. If Developer ID credentials are unavailable, the release workflow

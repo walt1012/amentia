@@ -200,6 +200,13 @@ jobs:
             --asset "artifacts/macos/$MACOS_DMG_NAME.sha256" \
             --asset artifacts/macos/README-FIRST.txt \
             --asset artifacts/macos/internal-release-manifest.json
+      - name: Rehearse internal installer download
+        run: |
+          python3 scripts/release_rehearsal_contract.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --asset-dir artifacts/macos \
+            --summary-output artifacts/macos/internal-release-rehearsal.md
+          cat artifacts/macos/internal-release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
@@ -884,6 +891,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "installer_artifact_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "python3 scripts/release_rehearsal_contract.py",
+        "python3 scripts/missing_release_rehearsal_contract.py",
+      ),
+    )
+    assert_issue(issue_messages(root), "release_rehearsal_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

@@ -122,6 +122,8 @@ Ready foundations:
   as the tag state and installer asset set.
 - Published release body validation now also matches the signing mode, draft
   state, and untrusted ad-hoc Gatekeeper copy.
+- CI macOS packaging now runs the same downloaded-installer rehearsal before
+  uploading the internal installer artifact, then writes the summary to the job.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

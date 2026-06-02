@@ -290,6 +290,10 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--asset "artifacts/macos/$MACOS_DMG_NAME.sha256"',
       '--asset artifacts/macos/README-FIRST.txt',
       '--asset artifacts/macos/internal-release-manifest.json',
+      'python3 scripts/release_rehearsal_contract.py',
+      '--asset-dir artifacts/macos',
+      '--summary-output artifacts/macos/internal-release-rehearsal.md',
+      'cat artifacts/macos/internal-release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
     )
     for term in required_package_terms:
       if term not in package_block:
