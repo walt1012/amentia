@@ -113,6 +113,8 @@ Ready foundations:
   contract instead of duplicated action strings.
 - Packaged smoke receipts now embed the same package metadata proof that release
   manifests validate against `PithPackage.json`.
+- Downloaded-release rehearsals now require the same app package proof and smoke
+  package metadata before declaring a downloaded installer set ready.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

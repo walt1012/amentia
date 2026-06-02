@@ -7,12 +7,26 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from package_contract import DEFAULT_MODEL_ID
-from package_contract import DAILY_DRIVER_CONTRACT
-from release_copy_contract import (
-  FIRST_APP_OPEN_ACTION_COPY,
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MAX_APP_BUNDLE_BYTES,
+  DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  DEFAULT_MODEL_ID,
   FIRST_APP_OPEN_CONTRACT_ID,
+  LOCAL_EXECUTION_SAFETY_MODES,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PITH_ACCOUNT_REQUIRED,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+  package_distribution_trust,
+  packaged_smoke_package_metadata,
 )
+from release_copy_contract import FIRST_APP_OPEN_ACTION_COPY
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
@@ -20,11 +34,44 @@ from release_rehearsal_contract import summary_markdown
 from release_rehearsal_contract import validate_release_rehearsal
 from release_rehearsal_contract import write_summary
 from release_text import install_guide as release_install_guide
+from smoke_launch_macos_app import write_packaged_smoke_receipt
 
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
 WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
+
+
+def package_manifest_data(tag: str, signing: str = "ad-hoc") -> dict:
+  return {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
+    "appName": "Pith",
+    "bundleVersion": tag.removeprefix("v"),
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
+    "architecture": SUPPORTED_ARCH,
+    "sourceCommit": SOURCE_COMMIT,
+    "signing": signing,
+    "distributionTrust": package_distribution_trust(signing),
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+    "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+    "sizeBudget": {
+      "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
+      "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
+    },
+  }
 
 
 def write_downloaded_assets(root: Path, tag: str = "v0.1.0") -> None:
@@ -34,6 +81,16 @@ def write_downloaded_assets(root: Path, tag: str = "v0.1.0") -> None:
   guide = root / guide_name
   guide.write_text(release_install_guide(tag, "ad-hoc"), encoding="utf-8")
   checksum = write_checksum_file(artifact, root / checksum_name)
+  package_manifest = root / "PithPackage.json"
+  package_manifest.write_text(
+    json.dumps(package_manifest_data(tag), indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+  )
+  smoke_receipt = root / "packaged-smoke-receipt.json"
+  write_packaged_smoke_receipt(
+    smoke_receipt,
+    package_metadata=packaged_smoke_package_metadata(package_manifest_data(tag)),
+  )
   write_release_manifest(
     tag=tag,
     source_commit=SOURCE_COMMIT,
@@ -41,6 +98,8 @@ def write_downloaded_assets(root: Path, tag: str = "v0.1.0") -> None:
     artifact_path=artifact,
     checksum_path=checksum,
     install_guide_path=guide,
+    package_manifest_path=package_manifest,
+    smoke_receipt_path=smoke_receipt,
     output_path=root / manifest_name,
     workflow_run_id=WORKFLOW_RUN_ID,
     workflow_run_url=WORKFLOW_RUN_URL,
@@ -72,6 +131,13 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should include the first app-open contract")
     if summary["dailyDriver"] != DAILY_DRIVER_CONTRACT:
       raise AssertionError("release rehearsal summary should record daily-driver readiness")
+    if summary["appPackage"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
+      raise AssertionError("release rehearsal summary should record app package first app-open proof")
+    if (
+      summary["packagedSmokeReceipt"]["packageMetadata"]["firstAppOpenActionContract"]
+      != FIRST_APP_OPEN_CONTRACT_ID
+    ):
+      raise AssertionError("release rehearsal summary should record smoke package metadata")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
@@ -79,6 +145,8 @@ def main() -> int:
       raise AssertionError("release rehearsal markdown should name the tag")
     if "## First App Open" not in markdown:
       raise AssertionError("release rehearsal markdown should include first app open checks")
+    if "First app-open contract" not in markdown:
+      raise AssertionError("release rehearsal markdown should include package contract proof")
     output = root / "rehearsal.md"
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):
@@ -116,11 +184,39 @@ def main() -> int:
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
     manifest_path = root / manifest_name
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["sandbox"]["fallback"] = "processOnly"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_rehearsal("v0.1.0", root),
+      "sandbox fallback must be processOnlyWhenNativeUnavailable",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+    root = Path(directory)
+    write_downloaded_assets(root)
+    _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
+    manifest_path = root / manifest_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["verification"]["packagedSmokeReceipt"]["result"] = "failed"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     expect_failure(
       lambda: validate_release_rehearsal("v0.1.0", root),
       "packagedSmokeReceipt result must be 'passed'",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+    root = Path(directory)
+    write_downloaded_assets(root)
+    _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
+    manifest_path = root / manifest_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["verification"]["packagedSmokeReceipt"]["packageMetadata"][
+      "firstAppOpenActionContract"
+    ] = "static-checklist"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_rehearsal("v0.1.0", root),
+      "smoke metadata must match app package metadata",
     )
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:

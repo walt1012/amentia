@@ -21,7 +21,7 @@ Current scripts:
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_publish_contract.py`: validates the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
-- `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, and packaged smoke proof, then can write a compact rehearsal summary with first app-open checks.
+- `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write a compact rehearsal summary with first app-open checks.
 - `test_first_app_open_contract.py`: checks that Swift first-open copy stays aligned with the shared release first app-open copy contract.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds, enforces tag/title identity, then revalidates release notes against the final publish state.
 - `release_text.py`: generates and validates GitHub Release notes and the DMG root install guide from the release signing mode, including exact installer asset names and the daily-driver next-action path users should follow after install.

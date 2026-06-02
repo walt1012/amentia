@@ -12,14 +12,20 @@ from installer_artifact_contract import installer_asset_paths_from_directory
 from installer_artifact_contract import validate_installer_asset_set
 from package_contract import (
   DAILY_DRIVER_CONTRACT,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
+  FIRST_APP_OPEN_CONTRACT_ID,
+  LOCAL_EXECUTION_SAFETY_MODES,
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
   PITH_ACCOUNT_REQUIRED,
+  SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
+  packaged_smoke_package_metadata,
 )
 from release_artifacts import FIRST_RUN_CONTRACT
 from release_artifacts import release_installer_asset_names
+from release_artifacts import validate_packaged_smoke_receipt_summary
 from release_copy_contract import (
   FIRST_APP_OPEN_ACTION_COPY,
   PACKAGED_FIRST_RUN_PROOF_PHRASE,
@@ -73,11 +79,41 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
   identity = manifest.get("identity")
   if not isinstance(identity, dict) or identity.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
     raise RuntimeError("Downloaded release manifest must keep Pith account-free")
+  local_execution = manifest.get("localExecution")
+  if (
+    not isinstance(local_execution, dict)
+    or local_execution.get("defaultSafetyMode") != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE
+    or local_execution.get("safetyModes") != list(LOCAL_EXECUTION_SAFETY_MODES)
+  ):
+    raise RuntimeError("Downloaded release manifest local execution contract is incomplete")
+  if manifest.get("sandbox") != SANDBOX_CONTRACT:
+    raise RuntimeError("Downloaded release manifest sandbox contract is incomplete")
   if manifest.get("firstRun") != FIRST_RUN_CONTRACT:
     raise RuntimeError("Downloaded release manifest first-run contract is incomplete")
   daily_driver = manifest.get("dailyDriver")
   if daily_driver != DAILY_DRIVER_CONTRACT:
     raise RuntimeError("Downloaded release manifest daily-driver contract is incomplete")
+  app_package = manifest.get("appPackage")
+  if not isinstance(app_package, dict):
+    raise RuntimeError("Downloaded release manifest must include app package metadata")
+  if app_package.get("sourceCommit") != manifest.get("sourceCommit"):
+    raise RuntimeError("Downloaded release app package source must match the release source")
+  if app_package.get("architecture") != SUPPORTED_ARCH:
+    raise RuntimeError("Downloaded release app package architecture is wrong")
+  if app_package.get("modelDelivery") != MODEL_DELIVERY_MODE:
+    raise RuntimeError("Downloaded release app package model delivery is wrong")
+  if app_package.get("defaultModelId") != DEFAULT_MODEL_ID:
+    raise RuntimeError("Downloaded release app package default model is wrong")
+  if app_package.get("modelWeightsBundled") is not MODEL_WEIGHTS_BUNDLED:
+    raise RuntimeError("Downloaded release app package must not bundle model weights")
+  if app_package.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
+    raise RuntimeError("Downloaded release app package must keep Pith account-free")
+  if app_package.get("firstAppOpenActionContract") != FIRST_APP_OPEN_CONTRACT_ID:
+    raise RuntimeError("Downloaded release app package first app-open contract is wrong")
+  if app_package.get("sandboxMode") != SANDBOX_CONTRACT["mode"]:
+    raise RuntimeError("Downloaded release app package sandbox mode is wrong")
+  if app_package.get("sandboxFallback") != SANDBOX_CONTRACT["fallback"]:
+    raise RuntimeError("Downloaded release app package sandbox fallback is wrong")
   verification = manifest.get("verification")
   if not isinstance(verification, dict):
     raise RuntimeError("Downloaded release manifest must include verification")
@@ -86,6 +122,14 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
   smoke_receipt = verification.get("packagedSmokeReceipt")
   if not isinstance(smoke_receipt, dict) or smoke_receipt.get("result") != "passed":
     raise RuntimeError("Downloaded release manifest must include a passed packaged smoke receipt")
+  validate_packaged_smoke_receipt_summary(
+    smoke_receipt,
+    "Downloaded release manifest verification",
+  )
+  if smoke_receipt.get("packageMetadata") != packaged_smoke_package_metadata(app_package):
+    raise RuntimeError(
+      "Downloaded release packaged smoke metadata must match app package metadata"
+    )
 
 
 def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
@@ -99,6 +143,11 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     "sourceCommit": manifest["sourceCommit"],
     "signingMode": manifest["signingMode"],
     "defaultModelId": manifest["modelDelivery"]["defaultModelId"],
+    "appPackage": {
+      "sourceCommit": manifest["appPackage"]["sourceCommit"],
+      "modelDelivery": manifest["appPackage"]["modelDelivery"],
+      "firstAppOpenActionContract": manifest["appPackage"]["firstAppOpenActionContract"],
+    },
     "firstRun": dict(FIRST_RUN_CONTRACT),
     "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
     "firstAppOpenChecks": list(FIRST_APP_OPEN_CHECKS),
@@ -106,6 +155,7 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
       "phrase": PACKAGED_FIRST_RUN_PROOF_PHRASE,
       "proofScope": smoke_receipt["proofScope"],
       "checkCount": len(smoke_receipt["checkIds"]),
+      "packageMetadata": dict(smoke_receipt["packageMetadata"]),
     },
   }
 
@@ -134,6 +184,9 @@ Result: `{summary["result"]}`
 - Source commit: `{summary["sourceCommit"]}`
 - Signing mode: `{summary["signingMode"]}`
 - Default model: `{summary["defaultModelId"]}`
+- App package source: `{summary["appPackage"]["sourceCommit"]}`
+- App package model delivery: `{summary["appPackage"]["modelDelivery"]}`
+- First app-open contract: `{summary["appPackage"]["firstAppOpenActionContract"]}`
 - Packaged proof: `{summary["packagedSmokeReceipt"]["phrase"]}`
 - Proof scope: `{summary["packagedSmokeReceipt"]["proofScope"]}`
 - Proof checks: `{summary["packagedSmokeReceipt"]["checkCount"]}`
