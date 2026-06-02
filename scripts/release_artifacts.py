@@ -28,6 +28,7 @@ from package_contract import (
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
+  packaged_smoke_package_metadata,
   package_distribution_trust,
   validate_package_manifest_contract,
 )
@@ -170,6 +171,12 @@ def release_manifest(
   }
   if package_summary is not None:
     manifest["appPackage"] = package_summary
+  if package_summary is not None and smoke_receipt_path is not None:
+    validate_packaged_smoke_package_metadata(
+      manifest["verification"]["packagedSmokeReceipt"],
+      package_summary_smoke_metadata(package_summary),
+      "Release manifest verification",
+    )
   return manifest
 
 
@@ -261,6 +268,19 @@ def validate_release_manifest(
   validate_package_version_matches_tag(tag, package_summary)
   if package_summary is not None and manifest.get("appPackage") != package_summary:
     raise RuntimeError("Release manifest app package summary does not match PithPackage.json")
+  smoke_receipt_summary = manifest.get("verification", {}).get("packagedSmokeReceipt")
+  if package_summary is not None and (
+    smoke_receipt_path is not None
+    or (
+      isinstance(smoke_receipt_summary, dict)
+      and "packageMetadata" in smoke_receipt_summary
+    )
+  ):
+    validate_packaged_smoke_package_metadata(
+      smoke_receipt_summary,
+      package_summary_smoke_metadata(package_summary),
+      "Release manifest verification",
+    )
   artifact_entry = by_name.get(artifact_path.name)
   if artifact_entry is None:
     raise RuntimeError("Release manifest is missing the DMG artifact entry")
@@ -355,6 +375,11 @@ def package_manifest_summary(
     "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
     "sizeBudget": size_budget,
   }
+
+
+def package_summary_smoke_metadata(package_summary: dict) -> dict:
+  return packaged_smoke_package_metadata(package_summary)
+
 
 def validate_package_version_matches_tag(tag: str, package_summary: dict | None) -> None:
   if package_summary is None or release_kind(tag) != "public":
@@ -653,6 +678,10 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     "result": "passed",
     "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "checkIds": check_ids,
+    "packageMetadata": validate_smoke_receipt_package_metadata(
+      receipt.get("packageMetadata"),
+      "Packaged smoke receipt",
+    ),
     "sha256": sha256_hex(smoke_receipt_path),
   }
 
@@ -677,6 +706,30 @@ def validate_packaged_smoke_receipt_summary(value: object, label: str) -> None:
     or any(character not in "0123456789abcdef" for character in receipt_hash)
   ):
     raise RuntimeError(f"{label} packagedSmokeReceipt sha256 must be lowercase hex")
+  if receipt_hash is not None:
+    validate_smoke_receipt_package_metadata(
+      value.get("packageMetadata"),
+      f"{label} packagedSmokeReceipt",
+    )
+
+
+def validate_smoke_receipt_package_metadata(value: object, label: str) -> dict:
+  if not isinstance(value, dict):
+    raise RuntimeError(f"{label} packageMetadata must be an object")
+  return packaged_smoke_package_metadata(value)
+
+
+def validate_packaged_smoke_package_metadata(
+  smoke_receipt_summary: object,
+  expected_metadata: dict,
+  label: str,
+) -> None:
+  if not isinstance(smoke_receipt_summary, dict):
+    raise RuntimeError(f"{label} packagedSmokeReceipt must be an object")
+  if smoke_receipt_summary.get("packageMetadata") != expected_metadata:
+    raise RuntimeError(
+      f"{label} packagedSmokeReceipt packageMetadata must match PithPackage.json"
+    )
 
 
 def validate_workflow_run_metadata(workflow_run_id: str, workflow_run_url: str) -> None:

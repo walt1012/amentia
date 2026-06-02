@@ -111,6 +111,8 @@ Ready foundations:
   installed app can surface it in distribution trust copy.
 - Swift first-open and distribution-trust copy now share the same presenter
   contract instead of duplicated action strings.
+- Packaged smoke receipts now embed the same package metadata proof that release
+  manifests validate against `PithPackage.json`.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

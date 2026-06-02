@@ -75,6 +75,21 @@ PACKAGED_SMOKE_PROOF_SCOPE = (
   "model setup, workspace, first cowork request, Web Search, approval, "
   "connector, sandbox, and runtime recovery checks"
 )
+PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS = (
+  "schemaVersion",
+  "sourceCommit",
+  "architecture",
+  "modelDelivery",
+  "defaultModelId",
+  "modelWeightsBundled",
+  "pithAccountRequired",
+  "sandboxMode",
+  "sandboxFallback",
+  "dailyDriverStageSource",
+  "dailyDriverNextActionSource",
+  "dailyDriverPresentation",
+  "firstAppOpenActionContract",
+)
 
 
 def package_size_budget() -> dict[str, int]:
@@ -182,6 +197,23 @@ def validate_package_manifest_contract(
   if actual_size_budget != expected_budget:
     raise RuntimeError(f"{label} sizeBudget must be {expected_budget!r}")
   return actual_size_budget
+
+
+def packaged_smoke_package_metadata(package_manifest: dict) -> dict:
+  missing_fields = [
+    field
+    for field in PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS
+    if field not in package_manifest
+  ]
+  if missing_fields:
+    raise RuntimeError(
+      "Packaged smoke package metadata is missing fields: "
+      f"{', '.join(missing_fields)}"
+    )
+  return {
+    field: package_manifest[field]
+    for field in PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS
+  }
 
 
 def package_distribution_trust(signing_mode: str) -> str:

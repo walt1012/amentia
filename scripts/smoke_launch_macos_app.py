@@ -29,6 +29,7 @@ from package_contract import (
   SANDBOX_CONTRACT,
   assert_size_under_budget,
   directory_size_bytes,
+  packaged_smoke_package_metadata,
   validate_package_manifest_contract,
 )
 
@@ -276,18 +277,19 @@ def terminate_processes(process_name: str, process_ids_to_stop: set[int]) -> Non
       pass
 
 
-def validate_app_bundle(app_path: Path) -> None:
+def validate_app_bundle(app_path: Path) -> dict:
   require_file(app_path / "Contents" / "Info.plist")
   require_file(app_path / "Contents" / "MacOS" / "Pith")
   require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
-  validate_packaged_model_metadata(app_path)
+  package_metadata = validate_packaged_model_metadata(app_path)
   assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
   validate_packaged_llama_backend_launch(app_path)
+  return package_metadata
 
 
-def validate_packaged_model_metadata(app_path: Path) -> None:
+def validate_packaged_model_metadata(app_path: Path) -> dict:
   resources_path = bundled_resource_path(app_path)
   package_manifest_path = resources_path / "PithPackage.json"
   package_manifest = read_json_object(package_manifest_path)
@@ -330,6 +332,7 @@ def validate_packaged_model_metadata(app_path: Path) -> None:
       "Packaged app must not bundle model weight files: "
       f"{', '.join(str(path) for path in bundled_weight_files)}"
     )
+  return packaged_smoke_package_metadata(package_manifest)
 
 
 def validate_default_model_manifest(manifest_path: Path) -> None:
@@ -1899,7 +1902,11 @@ def print_packaged_app_success(
   )
 
 
-def write_packaged_smoke_receipt(output_path: Path | None) -> None:
+def write_packaged_smoke_receipt(
+  output_path: Path | None,
+  *,
+  package_metadata: dict,
+) -> None:
   if output_path is None:
     return
   output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1908,6 +1915,7 @@ def write_packaged_smoke_receipt(output_path: Path | None) -> None:
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
     "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+    "packageMetadata": package_metadata,
     "checks": [
       {
         "id": check_id,
@@ -1929,7 +1937,7 @@ def main() -> int:
     return 0
 
   app_path = args.app_path.resolve()
-  validate_app_bundle(app_path)
+  package_metadata = validate_app_bundle(app_path)
   validate_packaged_runtime_protocol(app_path)
   before_runtime_pids = process_ids(RUNTIME_PROCESS_NAME)
   stability_duration = (
@@ -1957,7 +1965,10 @@ def main() -> int:
             stability_duration,
           )
           validate_isolated_support_dir(support_dir)
-          write_packaged_smoke_receipt(args.receipt_output)
+          write_packaged_smoke_receipt(
+            args.receipt_output,
+            package_metadata=package_metadata,
+          )
           print_packaged_app_success(app_process, launched_runtime_pids, support_dir)
           return 0
         time.sleep(0.2)

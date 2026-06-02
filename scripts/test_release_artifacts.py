@@ -23,6 +23,7 @@ from package_contract import (
   PITH_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
+  packaged_smoke_package_metadata,
 )
 from release_artifacts import (
   FIRST_RUN_CONTRACT,
@@ -49,7 +50,13 @@ WORKFLOW_RUN_ID = "123456789"
 WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
 
 
-def write_smoke_receipt(path: Path) -> Path:
+def smoke_metadata_from_package_manifest(path: Path) -> dict:
+  return packaged_smoke_package_metadata(
+    json.loads(path.read_text(encoding="utf-8"))
+  )
+
+
+def write_smoke_receipt(path: Path, package_metadata: dict) -> Path:
   path.write_text(
     json.dumps(
       {
@@ -57,6 +64,7 @@ def write_smoke_receipt(path: Path) -> Path:
         "kind": PACKAGED_SMOKE_RECEIPT_KIND,
         "result": "passed",
         "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+        "packageMetadata": package_metadata,
         "checks": [
           {
             "id": check_id,
@@ -158,7 +166,10 @@ def main() -> int:
     artifact = root_path / "Pith-v0.1.0-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
     package_manifest = write_package_manifest(root_path / "PithPackage.json")
-    smoke_receipt = write_smoke_receipt(root_path / "packaged-smoke-receipt.json")
+    smoke_receipt = write_smoke_receipt(
+      root_path / "packaged-smoke-receipt.json",
+      smoke_metadata_from_package_manifest(package_manifest),
+    )
     artifact.write_bytes(b"pith release artifact\n")
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc"),
@@ -226,6 +237,11 @@ def main() -> int:
       raise AssertionError("release manifest should summarize packaged smoke proof scope")
     if "sha256" not in manifest["verification"]["packagedSmokeReceipt"]:
       raise AssertionError("release manifest should hash the packaged smoke receipt")
+    if (
+      manifest["verification"]["packagedSmokeReceipt"]["packageMetadata"]
+      != smoke_metadata_from_package_manifest(package_manifest)
+    ):
+      raise AssertionError("release manifest should record packaged smoke package metadata")
     if manifest["verification"]["assetNames"] != list(release_installer_asset_names("v0.1.0")):
       raise AssertionError("release manifest should record the exact installer asset names")
     if manifest["verification"]["checksumCommand"] != (
@@ -324,7 +340,10 @@ def main() -> int:
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
-    tampered_smoke_receipt = write_smoke_receipt(root_path / "tampered-smoke-receipt.json")
+    tampered_smoke_receipt = write_smoke_receipt(
+      root_path / "tampered-smoke-receipt.json",
+      smoke_metadata_from_package_manifest(package_manifest),
+    )
     tampered_smoke_data = json.loads(tampered_smoke_receipt.read_text(encoding="utf-8"))
     tampered_smoke_data["checks"] = tampered_smoke_data["checks"][:-1]
     tampered_smoke_receipt.write_text(json.dumps(tampered_smoke_data), encoding="utf-8")
@@ -341,7 +360,10 @@ def main() -> int:
       "incomplete packaged smoke receipt should fail release manifest validation",
     )
 
-    wrong_scope_receipt = write_smoke_receipt(root_path / "wrong-scope-smoke-receipt.json")
+    wrong_scope_receipt = write_smoke_receipt(
+      root_path / "wrong-scope-smoke-receipt.json",
+      smoke_metadata_from_package_manifest(package_manifest),
+    )
     wrong_scope_data = json.loads(wrong_scope_receipt.read_text(encoding="utf-8"))
     wrong_scope_data["proofScope"] = "workspace only"
     wrong_scope_receipt.write_text(json.dumps(wrong_scope_data), encoding="utf-8")
@@ -356,6 +378,27 @@ def main() -> int:
         smoke_receipt_path=wrong_scope_receipt,
       ),
       "wrong packaged smoke receipt scope should fail release manifest validation",
+    )
+
+    wrong_package_receipt = write_smoke_receipt(
+      root_path / "wrong-package-smoke-receipt.json",
+      {
+        **smoke_metadata_from_package_manifest(package_manifest),
+        "firstAppOpenActionContract": "static-checklist",
+      },
+    )
+    assert_raises(
+      lambda: release_manifest(
+        tag="v0.1.0",
+        source_commit=SOURCE_COMMIT,
+        signing_mode="ad-hoc",
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        package_manifest_path=package_manifest,
+        smoke_receipt_path=wrong_package_receipt,
+      ),
+      "wrong packaged smoke package metadata should fail release manifest validation",
     )
 
     tampered_manifest = json.loads(manifest_data)

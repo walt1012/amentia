@@ -7,7 +7,19 @@ import json
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from package_contract import PACKAGED_SMOKE_PROOF_SCOPE, PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+from package_contract import (
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MODEL_ID,
+  FIRST_APP_OPEN_CONTRACT_ID,
+  MODEL_DELIVERY_MODE,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
+  PITH_ACCOUNT_REQUIRED,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+)
 from smoke_launch_macos_app import (
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
@@ -59,6 +71,24 @@ def valid_web_search_attributes() -> dict[str, str]:
   }
 
 
+def smoke_package_metadata() -> dict:
+  return {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
+    "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+    "architecture": SUPPORTED_ARCH,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
+    "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
+    "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
+  }
+
+
 def main() -> int:
   validate_packaged_web_search_snapshot(web_search_items(valid_web_search_attributes()))
 
@@ -85,7 +115,10 @@ def main() -> int:
 
   with TemporaryDirectory(prefix="pith-smoke-receipt-") as root:
     receipt_path = Path(root) / "receipt.json"
-    write_packaged_smoke_receipt(receipt_path)
+    write_packaged_smoke_receipt(
+      receipt_path,
+      package_metadata=smoke_package_metadata(),
+    )
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     if receipt["schemaVersion"] != PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION:
       raise AssertionError("packaged smoke receipt should record its schema")
@@ -93,6 +126,8 @@ def main() -> int:
       raise AssertionError("packaged smoke receipt should record its kind")
     if receipt["proofScope"] != PACKAGED_SMOKE_PROOF_SCOPE:
       raise AssertionError("packaged smoke receipt should record its proof scope")
+    if receipt["packageMetadata"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
+      raise AssertionError("packaged smoke receipt should record package first app-open action")
     if [item["id"] for item in receipt["checks"]] != [
       check_id for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
     ]:
