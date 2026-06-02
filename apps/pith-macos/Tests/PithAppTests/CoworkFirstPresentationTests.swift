@@ -243,7 +243,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   func testFirstRequestReadinessStepNamesPromptChoice() {
     guard let step = RuntimeReadinessPresenter.steps(readinessSnapshotForFirstRequest())
-      .first { $0.id == "first-request" }
+      .first(where: { $0.id == "first-request" })
     else {
       XCTFail("Expected first-request readiness step")
       return
