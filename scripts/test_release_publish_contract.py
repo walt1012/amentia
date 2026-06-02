@@ -24,6 +24,8 @@ def release_payload(
   tag: str = TAG,
   draft: bool = False,
   prerelease: bool = True,
+  signing_mode: str = "ad-hoc",
+  allow_untrusted_ad_hoc: bool = True,
   assets: list[str] | None = None,
 ) -> dict:
   asset_names = assets if assets is not None else sorted(expected_installer_asset_names(tag))
@@ -32,9 +34,9 @@ def release_payload(
     "name": expected_release_title(tag),
     "body": release_notes(
       tag,
-      "ad-hoc",
-      allow_untrusted_ad_hoc=True,
-      draft=False,
+      signing_mode,
+      allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+      draft=draft,
     ),
     "draft": draft,
     "prerelease": prerelease,
@@ -59,6 +61,8 @@ def expect_failure(payload: dict, expected: str) -> None:
       tag=TAG,
       expected_draft=False,
       expected_prerelease=True,
+      signing_mode="ad-hoc",
+      allow_untrusted_ad_hoc=True,
     )
   except Exception as error:
     if expected not in str(error):
@@ -73,11 +77,41 @@ def main() -> int:
     tag=TAG,
     expected_draft=False,
     expected_prerelease=True,
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=True,
+  )
+  validate_published_release(
+    release_payload(signing_mode="developer-id", allow_untrusted_ad_hoc=False),
+    tag=TAG,
+    expected_draft=False,
+    expected_prerelease=True,
+    signing_mode="developer-id",
+    allow_untrusted_ad_hoc=False,
+  )
+  validate_published_release(
+    release_payload(draft=True, prerelease=False, allow_untrusted_ad_hoc=False),
+    tag=TAG,
+    expected_draft=True,
+    expected_prerelease=False,
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=False,
   )
 
   expect_failure(release_payload(tag="v9.9.9"), "tag_name")
   expect_failure({**release_payload(), "name": "Pith wrong"}, "name")
   expect_failure({**release_payload(), "body": "Install Pith."}, "missing required copy")
+  expect_failure(
+    {
+      **release_payload(),
+      "body": release_notes(
+        TAG,
+        "developer-id",
+        allow_untrusted_ad_hoc=False,
+        draft=False,
+      ),
+    },
+    "Untrusted ad-hoc prerelease.",
+  )
   expect_failure(release_payload(draft=True), "draft")
   expect_failure(release_payload(prerelease=False), "prerelease")
 
@@ -120,6 +154,8 @@ def main() -> int:
       tag=TAG,
       expected_draft=False,
       expected_prerelease=True,
+      signing_mode="ad-hoc",
+      allow_untrusted_ad_hoc=True,
     )
 
   print("Published release contract tests passed")

@@ -10,11 +10,11 @@ from pathlib import Path
 
 from installer_artifact_contract import expected_installer_asset_names
 from installer_artifact_contract import validate_installer_asset_name
-from release_copy_contract import RELEASE_NOTES_REQUIRED_PHRASES
-from release_copy_contract import require_release_copy
 from release_identity import validate_public_release_tag
+from package_contract import RELEASE_SIGNING_MODES
 from release_state import expected_release_title
 from release_state import parse_bool
+from release_text import validate_release_notes
 
 
 RELEASE_REPOSITORY = "walt1012/pith"
@@ -26,13 +26,21 @@ def validate_published_release(
   tag: str,
   expected_draft: bool,
   expected_prerelease: bool,
+  signing_mode: str,
+  allow_untrusted_ad_hoc: bool,
 ) -> None:
   validate_public_release_tag(tag)
   validate_release_field(release, "tag_name", tag)
   validate_release_field(release, "name", expected_release_title(tag))
   validate_release_bool(release, "draft", expected_draft)
   validate_release_bool(release, "prerelease", expected_prerelease)
-  validate_release_body(release, tag=tag)
+  validate_release_body(
+    release,
+    tag=tag,
+    signing_mode=signing_mode,
+    allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+    draft=expected_draft,
+  )
   validate_release_assets(release, tag)
 
 
@@ -52,14 +60,23 @@ def validate_release_bool(release: dict, field: str, expected: bool) -> None:
     )
 
 
-def validate_release_body(release: dict, *, tag: str) -> None:
+def validate_release_body(
+  release: dict,
+  *,
+  tag: str,
+  signing_mode: str,
+  allow_untrusted_ad_hoc: bool,
+  draft: bool,
+) -> None:
   body = release.get("body")
   if not isinstance(body, str) or not body.strip():
     raise RuntimeError("Published GitHub Release body must be present")
-  require_release_copy(
+  validate_release_notes(
     body,
-    (f"Pith {tag}", *RELEASE_NOTES_REQUIRED_PHRASES),
-    "published GitHub Release body",
+    tag=tag,
+    signing_mode=signing_mode,
+    allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+    draft=draft,
   )
 
 
@@ -132,6 +149,8 @@ def main() -> int:
   parser.add_argument("--release-json", required=True, type=Path)
   parser.add_argument("--expected-draft", required=True)
   parser.add_argument("--expected-prerelease", required=True)
+  parser.add_argument("--signing-mode", required=True, choices=sorted(RELEASE_SIGNING_MODES))
+  parser.add_argument("--allow-untrusted-ad-hoc", required=True)
   args = parser.parse_args()
 
   try:
@@ -140,6 +159,8 @@ def main() -> int:
       tag=args.tag,
       expected_draft=parse_bool(args.expected_draft),
       expected_prerelease=parse_bool(args.expected_prerelease),
+      signing_mode=args.signing_mode,
+      allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
     )
   except Exception as error:
     print(f"published release contract failed: {error}", file=sys.stderr)

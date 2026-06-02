@@ -120,6 +120,8 @@ Ready foundations:
   trust path users or maintainers must inspect.
 - Final GitHub Release validation now checks the published release body as well
   as the tag state and installer asset set.
+- Published release body validation now also matches the signing mode, draft
+  state, and untrusted ad-hoc Gatekeeper copy.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

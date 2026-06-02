@@ -326,7 +326,9 @@ jobs:
             --tag "$RELEASE_TAG" \\
             --release-json release-published.json \\
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
-            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"
+            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
           rm -rf release-download
           mkdir -p release-download
           gh release download "$RELEASE_TAG" \\
@@ -738,6 +740,28 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "expected-draft")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
+        "--missing-signing-mode",
+      ),
+    )
+    assert_issue(issue_messages(root), "signing-mode")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"',
+        "--missing-untrusted-ad-hoc",
+      ),
+    )
+    assert_issue(issue_messages(root), "allow-untrusted-ad-hoc")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
