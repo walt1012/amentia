@@ -12,7 +12,6 @@ struct RuntimeReadinessActionSnapshot {
   let canUseComposer: Bool
   let isWaitingForFirstMessage: Bool
   let hasDraftMessage: Bool
-  let hasFirstRequestSuggestion: Bool
   let runtimeReadinessChecks: [RuntimeReadinessCheckSummary]
   let canEnableWebSearchPlugin: Bool
   let runtimeLaunchButtonTitle: String
@@ -24,7 +23,6 @@ enum RuntimeReadinessAction {
   case setupModel
   case openWorkspace
   case createThread
-  case useFirstRequestPrompt
   case sendFirstRequest
   case enableWebSearchPlugin
   case openPluginAccess
@@ -72,8 +70,6 @@ enum RuntimeReadinessActionPlanner {
       return "Open"
     case .createThread:
       return "New"
-    case .useFirstRequestPrompt:
-      return "Choose"
     case .sendFirstRequest:
       return "Send"
     case .enableWebSearchPlugin:
@@ -104,8 +100,6 @@ enum RuntimeReadinessActionPlanner {
       return snapshot.canOpenWorkspace
     case .createThread:
       return snapshot.canCreateThread
-    case .useFirstRequestPrompt:
-      return snapshot.hasFirstRequestSuggestion
     case .sendFirstRequest:
       return snapshot.hasDraftMessage
     case .enableWebSearchPlugin:
@@ -169,7 +163,7 @@ enum RuntimeReadinessActionPlanner {
       return nil
     }
 
-    return snapshot.hasDraftMessage ? .sendFirstRequest : .useFirstRequestPrompt
+    return snapshot.hasDraftMessage ? .sendFirstRequest : nil
   }
 
   private static func toolsAction(

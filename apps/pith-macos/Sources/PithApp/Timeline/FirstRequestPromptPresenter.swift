@@ -21,11 +21,11 @@ enum FirstRequestPromptPresenter {
   }
 
   static func primaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
-    suggestion == nil ? nil : "Use Map Prompt"
+    suggestion?.title
   }
 
   static func secondaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
-    suggestion == nil ? nil : "Use Next Step Prompt"
+    suggestion?.title
   }
 
   static func suggestions(workspaceDisplayName: String?) -> [ComposerSuggestionSummary] {

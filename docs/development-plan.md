@@ -98,6 +98,9 @@ Ready foundations:
   checks.
 - First app-open copy now matches the release rehearsal path: choose Map
   Workspace, Plan Next Step, or type a short cowork request.
+- First app-open actions now avoid fake single-choice behavior: readiness shows
+  state and sends only an existing draft, while starter prompt selection stays
+  in the visible cowork callout.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
@@ -126,7 +129,7 @@ Build now:
   the directory and produce one compact summary before manual app opening,
   including what the first screen should guide the user to do.
 - First app-open guidance: keep the header, readiness strip, and starter prompt
-  choices aligned so new users know the next action immediately.
+  choices aligned; readiness must not silently choose a prompt for the user.
 - Publish proof: verify the final GitHub Release page state and asset set after
   upload, including asset readiness and user download URLs, not just before it.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.

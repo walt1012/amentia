@@ -31,11 +31,11 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       FirstRequestPromptPresenter.primaryActionTitle(for: suggestions[0]),
-      "Use Map Prompt"
+      "Map Workspace"
     )
     XCTAssertEqual(
       FirstRequestPromptPresenter.secondaryActionTitle(for: suggestions[1]),
-      "Use Next Step Prompt"
+      "Plan Next Step"
     )
   }
 }

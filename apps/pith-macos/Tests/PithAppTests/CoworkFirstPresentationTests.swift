@@ -252,8 +252,30 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(step.detail, "Choose")
     let actionSnapshot = readinessActionSnapshot(
       checks: readyChecks(),
+      isWaitingForFirstMessage: true
+    )
+
+    let action = RuntimeReadinessActionPlanner.action(
+      for: step,
+      snapshot: actionSnapshot
+    )
+
+    XCTAssertNil(action)
+    XCTAssertNil(RuntimeReadinessActionPlanner.title(for: action, snapshot: actionSnapshot))
+    XCTAssertFalse(RuntimeReadinessActionPlanner.canRun(action, snapshot: actionSnapshot))
+  }
+
+  func testFirstRequestReadinessStepOnlySendsExistingDraft() {
+    let step = ReadinessStepSummary(
+      id: "first-request",
+      label: "First Request",
+      detail: "Draft",
+      tone: .warning
+    )
+    let actionSnapshot = readinessActionSnapshot(
+      checks: readyChecks(),
       isWaitingForFirstMessage: true,
-      hasFirstRequestSuggestion: true
+      hasDraftMessage: true
     )
 
     let action = RuntimeReadinessActionPlanner.action(
@@ -263,8 +285,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       RuntimeReadinessActionPlanner.title(for: action, snapshot: actionSnapshot),
-      "Choose"
+      "Send"
     )
+    XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: actionSnapshot))
   }
 
   func testComposerFramesDraftAsCoworkPrompt() {
@@ -356,7 +379,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     checks: [RuntimeReadinessCheckSummary],
     canEnableWebSearchPlugin: Bool = false,
     isWaitingForFirstMessage: Bool = false,
-    hasFirstRequestSuggestion: Bool = false
+    hasDraftMessage: Bool = false
   ) -> RuntimeReadinessActionSnapshot {
     RuntimeReadinessActionSnapshot(
       runtimeState: .ready,
@@ -369,8 +392,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       canCreateThread: false,
       canUseComposer: true,
       isWaitingForFirstMessage: isWaitingForFirstMessage,
-      hasDraftMessage: false,
-      hasFirstRequestSuggestion: hasFirstRequestSuggestion,
+      hasDraftMessage: hasDraftMessage,
       runtimeReadinessChecks: checks,
       canEnableWebSearchPlugin: canEnableWebSearchPlugin,
       runtimeLaunchButtonTitle: "Launch Runtime",

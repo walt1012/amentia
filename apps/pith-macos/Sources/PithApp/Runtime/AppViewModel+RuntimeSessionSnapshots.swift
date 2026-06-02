@@ -171,7 +171,6 @@ extension AppViewModel {
       canUseComposer: canUseComposer(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
-      hasFirstRequestSuggestion: firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil,
       runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
       canEnableWebSearchPlugin: canEnableWebSearchPlugin(),
       runtimeLaunchButtonTitle: runtimeLaunchButtonTitle(),
