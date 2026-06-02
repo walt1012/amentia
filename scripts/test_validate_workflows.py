@@ -205,6 +205,7 @@ jobs:
           python3 scripts/release_rehearsal_contract.py \
             --tag "ci-${GITHUB_SHA::12}" \
             --asset-dir artifacts/macos \
+            --allow-extra-assets \
             --summary-output artifacts/macos/internal-release-rehearsal.md
           cat artifacts/macos/internal-release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
       - name: Validate package contract
@@ -914,6 +915,25 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "release_rehearsal_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace("--allow-extra-assets", "--missing-extra-assets"),
+    )
+    assert_issue(issue_messages(root), "--allow-extra-assets")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "            --asset-dir release-download \\\n",
+        "            --asset-dir release-download \\\n            --allow-extra-assets \\\n",
+      ),
+    )
+    assert_issue(issue_messages(root), "must not allow extra assets")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

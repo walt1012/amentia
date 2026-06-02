@@ -43,8 +43,17 @@ FIRST_APP_OPEN_CHECKS = (
 )
 
 
-def validate_release_rehearsal(tag: str, asset_dir: Path) -> dict:
-  asset_paths = installer_asset_paths_from_directory(tag, asset_dir)
+def validate_release_rehearsal(
+  tag: str,
+  asset_dir: Path,
+  *,
+  allow_extra_assets: bool = False,
+) -> dict:
+  asset_paths = installer_asset_paths_from_directory(
+    tag,
+    asset_dir,
+    allow_extra_assets=allow_extra_assets,
+  )
   validate_installer_asset_set(tag, asset_paths)
   manifest = load_release_manifest(tag, asset_dir)
   validate_rehearsal_manifest(manifest, tag=tag)
@@ -223,10 +232,15 @@ def main() -> int:
   parser.add_argument("--tag", required=True)
   parser.add_argument("--asset-dir", required=True, type=Path)
   parser.add_argument("--summary-output", type=Path)
+  parser.add_argument("--allow-extra-assets", action="store_true")
   args = parser.parse_args()
 
   try:
-    summary = validate_release_rehearsal(args.tag, args.asset_dir)
+    summary = validate_release_rehearsal(
+      args.tag,
+      args.asset_dir,
+      allow_extra_assets=args.allow_extra_assets,
+    )
     if args.summary_output:
       write_summary(args.summary_output, summary)
   except Exception as error:

@@ -61,12 +61,29 @@ def validate_installer_asset_set(tag: str, asset_paths: list[Path]) -> None:
   )
 
 
-def installer_asset_paths_from_directory(tag: str, asset_dir: Path) -> list[Path]:
+def installer_asset_paths_from_directory(
+  tag: str,
+  asset_dir: Path,
+  *,
+  allow_extra_assets: bool = False,
+) -> list[Path]:
   if not asset_dir.is_dir():
     raise NotADirectoryError(f"Installer asset directory is missing: {asset_dir}")
+  expected_names = expected_installer_asset_names(tag)
+  if not allow_extra_assets:
+    extra_names = sorted(
+      entry.name
+      for entry in asset_dir.iterdir()
+      if entry.name not in expected_names
+    )
+    if extra_names:
+      raise RuntimeError(
+        "Installer asset directory must not include extra entries: "
+        + ", ".join(extra_names)
+      )
   return [
     asset_dir / name
-    for name in sorted(expected_installer_asset_names(tag))
+    for name in sorted(expected_names)
   ]
 
 
@@ -75,11 +92,18 @@ def installer_asset_paths(
   tag: str,
   asset_paths: list[Path],
   asset_dir: Path | None,
+  allow_extra_assets: bool = False,
 ) -> list[Path]:
   if asset_dir is not None and asset_paths:
     raise RuntimeError("Use either --asset-dir or explicit --asset paths, not both")
   if asset_dir is not None:
-    return installer_asset_paths_from_directory(tag, asset_dir)
+    return installer_asset_paths_from_directory(
+      tag,
+      asset_dir,
+      allow_extra_assets=allow_extra_assets,
+    )
+  if allow_extra_assets:
+    raise RuntimeError("--allow-extra-assets only applies to --asset-dir")
   return asset_paths
 
 
@@ -103,6 +127,7 @@ def main() -> int:
   parser.add_argument("--tag", required=True)
   parser.add_argument("--asset", action="append", default=[], type=Path)
   parser.add_argument("--asset-dir", type=Path)
+  parser.add_argument("--allow-extra-assets", action="store_true")
   args = parser.parse_args()
 
   try:
@@ -112,6 +137,7 @@ def main() -> int:
         tag=args.tag,
         asset_paths=args.asset,
         asset_dir=args.asset_dir,
+        allow_extra_assets=args.allow_extra_assets,
       ),
     )
   except Exception as error:

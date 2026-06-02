@@ -292,6 +292,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--asset artifacts/macos/internal-release-manifest.json',
       'python3 scripts/release_rehearsal_contract.py',
       '--asset-dir artifacts/macos',
+      '--allow-extra-assets',
       '--summary-output artifacts/macos/internal-release-rehearsal.md',
       'cat artifacts/macos/internal-release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
     )
@@ -444,6 +445,13 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       WorkflowIssue(
         RELEASE_WORKFLOW,
         "release download rehearsal helper is missing",
+      )
+    )
+  if "--allow-extra-assets" in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "release download rehearsal must not allow extra assets",
       )
     )
   for term in (

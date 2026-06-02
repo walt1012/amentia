@@ -81,6 +81,32 @@ def main() -> int:
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
+    valid_assets(root, "v0.1.0")
+    write_bytes(root / "unexpected.txt")
+    assert_raises(
+      lambda: installer_asset_paths_from_directory("v0.1.0", root),
+      "must not include extra entries",
+    )
+    validate_installer_asset_set(
+      "v0.1.0",
+      installer_asset_paths_from_directory(
+        "v0.1.0",
+        root,
+        allow_extra_assets=True,
+      ),
+    )
+    validate_installer_asset_set(
+      "v0.1.0",
+      installer_asset_paths(
+        tag="v0.1.0",
+        asset_paths=[],
+        asset_dir=root,
+        allow_extra_assets=True,
+      ),
+    )
+
+  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+    root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     assert_raises(
       lambda: installer_asset_paths(
@@ -89,6 +115,19 @@ def main() -> int:
         asset_dir=root,
       ),
       "Use either --asset-dir",
+    )
+
+  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+    root = Path(directory)
+    assets = valid_assets(root, "v0.1.0")
+    assert_raises(
+      lambda: installer_asset_paths(
+        tag="v0.1.0",
+        asset_paths=assets,
+        asset_dir=None,
+        allow_extra_assets=True,
+      ),
+      "--allow-extra-assets only applies to --asset-dir",
     )
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:

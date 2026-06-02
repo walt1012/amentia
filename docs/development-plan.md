@@ -126,6 +126,8 @@ Ready foundations:
   uploading the internal installer artifact, then writes the summary to the job.
 - Release workflows now also write downloaded-release rehearsal summaries to
   the run summary before uploading the internal rehearsal artifact.
+- Downloaded release rehearsals now reject extra assets by default; internal CI
+  package directories must opt in before allowing build-only extras.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

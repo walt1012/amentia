@@ -104,6 +104,8 @@ def write_downloaded_assets(root: Path, tag: str = "v0.1.0") -> None:
     workflow_run_id=WORKFLOW_RUN_ID,
     workflow_run_url=WORKFLOW_RUN_URL,
   )
+  package_manifest.unlink()
+  smoke_receipt.unlink()
 
 
 def expect_failure(action, expected: str) -> None:
@@ -161,6 +163,20 @@ def main() -> int:
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):
       raise AssertionError("release rehearsal summary file should record the result")
+
+  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+    root = Path(directory)
+    write_downloaded_assets(root)
+    (root / "unexpected.txt").write_text("extra release asset\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_rehearsal("v0.1.0", root),
+      "must not include extra entries",
+    )
+    validate_release_rehearsal(
+      "v0.1.0",
+      root,
+      allow_extra_assets=True,
+    )
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
     root = Path(directory)
