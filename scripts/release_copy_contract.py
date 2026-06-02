@@ -31,6 +31,8 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "README-FIRST.txt",
   "release manifest",
   "sidecar hashes",
+  "app package metadata",
+  "smoke package metadata",
   PACKAGED_FIRST_RUN_PROOF_PHRASE,
   "Native sandbox",
   "process-only fallback",
@@ -64,6 +66,8 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   PACKAGED_FIRST_RUN_PROOF_PHRASE,
   "source commit",
   "model delivery mode",
+  "app package metadata",
+  "smoke package metadata",
   "package size budget",
   "first-run contract",
 )

@@ -59,7 +59,7 @@ def first_app_open_action_sentence() -> str:
 
 
 def first_app_open_action_clause() -> str:
-  sentence = first_app_open_action_sentence()
+  sentence = first_app_open_action_sentence().rstrip(".")
   return sentence[0].lower() + sentence[1:]
 
 
@@ -77,7 +77,8 @@ def checksum_verification_copy(tag: str) -> str:
   return (
     f"Verify the installer before first launch with `shasum -a 256 -c {checksum_name}`, "
     f"then open {manifest_name} to confirm platform, signing mode, model delivery mode, "
-    f"first-run contract, and {PACKAGED_FIRST_RUN_PROOF_PHRASE}."
+    "app package metadata, smoke package metadata, first-run contract, and "
+    f"{PACKAGED_FIRST_RUN_PROOF_PHRASE}."
   )
 
 
@@ -156,6 +157,7 @@ def release_notes(
 - The {size_budget} is enforced so model weights and heavyweight payloads stay out of the app.
 - SHA-256 checksum sidecar is published next to the DMG.
 - README-FIRST.txt and the release manifest are published as separate assets for pre-install review, including sidecar hashes.
+- Verify before first launch: {verification}
 - {first_run_proof}
 - {trust_note}
 """
@@ -211,7 +213,7 @@ Notes
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
-- The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, and first-run contract.
+- The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, app package metadata, smoke package metadata, and first-run contract.
 - {first_run_proof}
 - The release manifest records the {size_budget} that CI enforces before upload.
 - Pith reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.

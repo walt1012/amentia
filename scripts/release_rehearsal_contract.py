@@ -25,6 +25,7 @@ from package_contract import (
 )
 from release_artifacts import FIRST_RUN_CONTRACT
 from release_artifacts import release_installer_asset_names
+from release_artifacts import release_trust
 from release_artifacts import validate_packaged_smoke_receipt_summary
 from release_copy_contract import (
   FIRST_APP_OPEN_ACTION_COPY,
@@ -135,6 +136,7 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
 def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
   verification = manifest["verification"]
   smoke_receipt = verification["packagedSmokeReceipt"]
+  expected_smoke_metadata = packaged_smoke_package_metadata(manifest["appPackage"])
   return {
     "tag": tag,
     "result": "passed",
@@ -142,6 +144,10 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     "checksumCommand": verification["checksumCommand"],
     "sourceCommit": manifest["sourceCommit"],
     "signingMode": manifest["signingMode"],
+    "trust": {
+      "mode": release_trust(manifest["signingMode"]),
+      "gatekeeper": release_rehearsal_gatekeeper_summary(manifest["signingMode"]),
+    },
     "defaultModelId": manifest["modelDelivery"]["defaultModelId"],
     "appPackage": {
       "sourceCommit": manifest["appPackage"]["sourceCommit"],
@@ -156,8 +162,18 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
       "proofScope": smoke_receipt["proofScope"],
       "checkCount": len(smoke_receipt["checkIds"]),
       "packageMetadata": dict(smoke_receipt["packageMetadata"]),
+      "packageMetadataMatched": smoke_receipt["packageMetadata"] == expected_smoke_metadata,
     },
   }
+
+
+def release_rehearsal_gatekeeper_summary(signing_mode: str) -> str:
+  if signing_mode == "developer-id":
+    return "Developer ID signed and notarized; Gatekeeper should allow normal launch."
+  return (
+    "Ad-hoc signed and not notarized; expect Gatekeeper manual approval through "
+    "Open Anyway or Control-click Open."
+  )
 
 
 def write_summary(path: Path, summary: dict) -> None:
@@ -183,6 +199,8 @@ Result: `{summary["result"]}`
 - Checksum: `{summary["checksumCommand"]}`
 - Source commit: `{summary["sourceCommit"]}`
 - Signing mode: `{summary["signingMode"]}`
+- Trust: `{summary["trust"]["mode"]}`
+- Gatekeeper: {summary["trust"]["gatekeeper"]}
 - Default model: `{summary["defaultModelId"]}`
 - App package source: `{summary["appPackage"]["sourceCommit"]}`
 - App package model delivery: `{summary["appPackage"]["modelDelivery"]}`
@@ -190,6 +208,7 @@ Result: `{summary["result"]}`
 - Packaged proof: `{summary["packagedSmokeReceipt"]["phrase"]}`
 - Proof scope: `{summary["packagedSmokeReceipt"]["proofScope"]}`
 - Proof checks: `{summary["packagedSmokeReceipt"]["checkCount"]}`
+- Smoke package metadata: `matches app package metadata`
 
 ## First Run
 {first_run}

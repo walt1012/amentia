@@ -125,6 +125,10 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should pass")
     if summary["defaultModelId"] != DEFAULT_MODEL_ID:
       raise AssertionError("release rehearsal summary should record the default model")
+    if summary["trust"]["mode"] != "ad-hoc-not-notarized":
+      raise AssertionError("release rehearsal summary should record ad-hoc trust")
+    if "Open Anyway" not in summary["trust"]["gatekeeper"]:
+      raise AssertionError("release rehearsal summary should record Gatekeeper manual approval")
     if "download-default-verified-local-model" not in summary["firstRun"].values():
       raise AssertionError("release rehearsal summary should include the first-run model step")
     if summary["firstRun"].get("firstAppOpen") != FIRST_APP_OPEN_CONTRACT_ID:
@@ -138,6 +142,8 @@ def main() -> int:
       != FIRST_APP_OPEN_CONTRACT_ID
     ):
       raise AssertionError("release rehearsal summary should record smoke package metadata")
+    if summary["packagedSmokeReceipt"]["packageMetadataMatched"] is not True:
+      raise AssertionError("release rehearsal summary should prove smoke package metadata match")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
@@ -147,6 +153,10 @@ def main() -> int:
       raise AssertionError("release rehearsal markdown should include first app open checks")
     if "First app-open contract" not in markdown:
       raise AssertionError("release rehearsal markdown should include package contract proof")
+    if "Gatekeeper" not in markdown or "Open Anyway" not in markdown:
+      raise AssertionError("release rehearsal markdown should include Gatekeeper guidance")
+    if "Smoke package metadata: `matches app package metadata`" not in markdown:
+      raise AssertionError("release rehearsal markdown should include smoke metadata match proof")
     output = root / "rehearsal.md"
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):

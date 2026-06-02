@@ -115,6 +115,9 @@ Ready foundations:
   manifests validate against `PithPackage.json`.
 - Downloaded-release rehearsals now require the same app package proof and smoke
   package metadata before declaring a downloaded installer set ready.
+- Release notes, install guides, and rehearsal summaries now name the app
+  package metadata, smoke package metadata, checksum command, and Gatekeeper
+  trust path users or maintainers must inspect.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
