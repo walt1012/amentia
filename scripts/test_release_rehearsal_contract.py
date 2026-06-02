@@ -8,6 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from package_contract import DEFAULT_MODEL_ID
+from package_contract import DAILY_DRIVER_CONTRACT
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
@@ -63,9 +64,15 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should record the default model")
     if "download-default-verified-local-model" not in summary["firstRun"].values():
       raise AssertionError("release rehearsal summary should include the first-run model step")
+    if summary["dailyDriver"] != DAILY_DRIVER_CONTRACT:
+      raise AssertionError("release rehearsal summary should record daily-driver readiness")
+    if not any("Map Workspace" in check for check in summary["firstAppOpenChecks"]):
+      raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
     if "Pith v0.1.0 Release Rehearsal" not in markdown:
       raise AssertionError("release rehearsal markdown should name the tag")
+    if "## First App Open" not in markdown:
+      raise AssertionError("release rehearsal markdown should include first app open checks")
     output = root / "rehearsal.md"
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):
@@ -82,6 +89,19 @@ def main() -> int:
     expect_failure(
       lambda: validate_release_rehearsal("v0.1.0", root),
       "default model",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+    root = Path(directory)
+    write_downloaded_assets(root)
+    _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
+    manifest_path = root / manifest_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["dailyDriver"]["nextActionSource"] = "static-checklist"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_rehearsal("v0.1.0", root),
+      "daily driver nextActionSource must be runtime/readiness",
     )
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:

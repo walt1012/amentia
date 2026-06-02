@@ -11,6 +11,7 @@ from pathlib import Path
 from installer_artifact_contract import installer_asset_paths_from_directory
 from installer_artifact_contract import validate_installer_asset_set
 from package_contract import (
+  DAILY_DRIVER_CONTRACT,
   DEFAULT_MODEL_ID,
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
@@ -20,6 +21,16 @@ from package_contract import (
 from release_artifacts import FIRST_RUN_CONTRACT
 from release_artifacts import release_installer_asset_names
 from release_copy_contract import PACKAGED_FIRST_RUN_PROOF_PHRASE
+
+
+FIRST_APP_OPEN_CHECKS = (
+  "Launch Pith from Applications after handling Gatekeeper if needed.",
+  f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
+  "Open a workspace folder.",
+  "Confirm Web Search readiness and sandbox status.",
+  "Start a cowork session with Map Workspace, Plan Next Step, or a short custom request.",
+  "Follow the daily-driver next action shown in the app header and inspector.",
+)
 
 
 def validate_release_rehearsal(tag: str, asset_dir: Path) -> dict:
@@ -61,6 +72,9 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
     raise RuntimeError("Downloaded release manifest must keep Pith account-free")
   if manifest.get("firstRun") != FIRST_RUN_CONTRACT:
     raise RuntimeError("Downloaded release manifest first-run contract is incomplete")
+  daily_driver = manifest.get("dailyDriver")
+  if daily_driver != DAILY_DRIVER_CONTRACT:
+    raise RuntimeError("Downloaded release manifest daily-driver contract is incomplete")
   verification = manifest.get("verification")
   if not isinstance(verification, dict):
     raise RuntimeError("Downloaded release manifest must include verification")
@@ -83,6 +97,8 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     "signingMode": manifest["signingMode"],
     "defaultModelId": manifest["modelDelivery"]["defaultModelId"],
     "firstRun": dict(FIRST_RUN_CONTRACT),
+    "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
+    "firstAppOpenChecks": list(FIRST_APP_OPEN_CHECKS),
     "packagedSmokeReceipt": {
       "phrase": PACKAGED_FIRST_RUN_PROOF_PHRASE,
       "proofScope": smoke_receipt["proofScope"],
@@ -102,6 +118,7 @@ def summary_markdown(summary: dict) -> str:
     f"- `{key}`: {value}"
     for key, value in summary["firstRun"].items()
   )
+  app_open = "\n".join(f"- {check}" for check in summary["firstAppOpenChecks"])
   return f"""# Pith {summary["tag"]} Release Rehearsal
 
 Result: `{summary["result"]}`
@@ -120,6 +137,9 @@ Result: `{summary["result"]}`
 
 ## First Run
 {first_run}
+
+## First App Open
+{app_open}
 """
 
 

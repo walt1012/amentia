@@ -94,7 +94,8 @@ Ready foundations:
   summary as an internal workflow artifact instead of a public release asset.
 - Downloaded release rehearsals can validate a whole asset directory against
   the same installer contract used before upload, then summarize first-run
-  proof, checksum command, signing mode, and source commit.
+  proof, checksum command, signing mode, source commit, and first app-open
+  checks.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
@@ -120,7 +121,8 @@ Build now:
   checksum, Gatekeeper guidance, launch, model download, workspace open, Web
   Search, approval, safe execution, proof, and runtime recovery.
 - Download rehearsal: after assets are downloaded from GitHub Release, validate
-  the directory and produce one compact summary before manual app opening.
+  the directory and produce one compact summary before manual app opening,
+  including what the first screen should guide the user to do.
 - Publish proof: verify the final GitHub Release page state and asset set after
   upload, including asset readiness and user download URLs, not just before it.
 - Receipts: every meaningful tool decision has a compact, actionable receipt.
