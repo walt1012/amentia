@@ -24,6 +24,7 @@ from package_contract import (
   packaged_smoke_package_metadata,
 )
 from release_artifacts import FIRST_RUN_CONTRACT
+from release_artifacts import release_gatekeeper_guidance
 from release_artifacts import release_installer_asset_names
 from release_artifacts import release_trust
 from release_artifacts import validate_packaged_smoke_receipt_summary
@@ -124,6 +125,10 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
     raise RuntimeError("Downloaded release app package sandbox mode is wrong")
   if app_package.get("sandboxFallback") != SANDBOX_CONTRACT["fallback"]:
     raise RuntimeError("Downloaded release app package sandbox fallback is wrong")
+  if manifest.get("trust") != release_trust(manifest["signingMode"]):
+    raise RuntimeError("Downloaded release trust does not match signing mode")
+  if manifest.get("gatekeeper") != release_gatekeeper_guidance(manifest["signingMode"]):
+    raise RuntimeError("Downloaded release Gatekeeper guidance is wrong")
   verification = manifest.get("verification")
   if not isinstance(verification, dict):
     raise RuntimeError("Downloaded release manifest must include verification")
@@ -154,8 +159,8 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     "sourceCommit": manifest["sourceCommit"],
     "signingMode": manifest["signingMode"],
     "trust": {
-      "mode": release_trust(manifest["signingMode"]),
-      "gatekeeper": release_rehearsal_gatekeeper_summary(manifest["signingMode"]),
+      "mode": manifest["trust"],
+      "gatekeeper": manifest["gatekeeper"],
     },
     "defaultModelId": manifest["modelDelivery"]["defaultModelId"],
     "appPackage": {
@@ -174,15 +179,6 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
       "packageMetadataMatched": smoke_receipt["packageMetadata"] == expected_smoke_metadata,
     },
   }
-
-
-def release_rehearsal_gatekeeper_summary(signing_mode: str) -> str:
-  if signing_mode == "developer-id":
-    return "Developer ID signed and notarized; Gatekeeper should allow normal launch."
-  return (
-    "Ad-hoc signed and not notarized; expect Gatekeeper manual approval through "
-    "Open Anyway or Control-click Open."
-  )
 
 
 def write_summary(path: Path, summary: dict) -> None:

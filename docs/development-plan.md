@@ -128,6 +128,8 @@ Ready foundations:
   the run summary before uploading the internal rehearsal artifact.
 - Downloaded release rehearsals now reject extra assets by default; internal CI
   package directories must opt in before allowing build-only extras.
+- Release manifests now carry the Gatekeeper guidance that downloaded-release
+  rehearsals display and validate.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

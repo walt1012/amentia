@@ -27,6 +27,7 @@ from package_contract import (
   packaged_smoke_package_metadata,
 )
 from release_copy_contract import FIRST_APP_OPEN_ACTION_COPY
+from release_artifacts import release_gatekeeper_guidance
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
@@ -131,6 +132,8 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should record ad-hoc trust")
     if "Open Anyway" not in summary["trust"]["gatekeeper"]:
       raise AssertionError("release rehearsal summary should record Gatekeeper manual approval")
+    if summary["trust"]["gatekeeper"] != release_gatekeeper_guidance("ad-hoc"):
+      raise AssertionError("release rehearsal summary should use manifest Gatekeeper guidance")
     if "download-default-verified-local-model" not in summary["firstRun"].values():
       raise AssertionError("release rehearsal summary should include the first-run model step")
     if summary["firstRun"].get("firstAppOpen") != FIRST_APP_OPEN_CONTRACT_ID:
@@ -176,6 +179,19 @@ def main() -> int:
       "v0.1.0",
       root,
       allow_extra_assets=True,
+    )
+
+  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+    root = Path(directory)
+    write_downloaded_assets(root)
+    _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
+    manifest_path = root / manifest_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["gatekeeper"] = "Developer ID signed and notarized."
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_rehearsal("v0.1.0", root),
+      "Gatekeeper guidance",
     )
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:

@@ -32,6 +32,7 @@ from release_artifacts import (
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   checksum_text,
+  release_gatekeeper_guidance,
   release_manifest as build_release_manifest,
   release_installer_asset_names,
   validate_checksum_file,
@@ -205,6 +206,10 @@ def main() -> int:
       raise AssertionError("public release tags should produce public manifests")
     if manifest["trust"] != "ad-hoc-not-notarized":
       raise AssertionError("ad-hoc releases should not claim notarization")
+    if manifest["gatekeeper"] != release_gatekeeper_guidance("ad-hoc"):
+      raise AssertionError("ad-hoc releases should record Gatekeeper manual approval")
+    if "Open Anyway" not in manifest["gatekeeper"]:
+      raise AssertionError("ad-hoc release Gatekeeper guidance should name manual approval")
     if manifest["sourceCommit"] != SOURCE_COMMIT:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
@@ -444,6 +449,20 @@ def main() -> int:
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
     tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["gatekeeper"] = "Developer ID signed and notarized."
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+      ),
+      "wrong release Gatekeeper guidance should fail validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
     tampered_manifest["verification"]["assetNames"] = ["Pith.dmg"]
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
     assert_raises(
@@ -665,6 +684,10 @@ def main() -> int:
     )
     if developer_manifest["trust"] != "developer-id-signed-notarized":
       raise AssertionError("Developer ID releases should record notarized trust")
+    if developer_manifest["gatekeeper"] != release_gatekeeper_guidance("developer-id"):
+      raise AssertionError("Developer ID releases should record normal Gatekeeper launch")
+    if "Open Anyway" in developer_manifest["gatekeeper"]:
+      raise AssertionError("Developer ID Gatekeeper guidance should not require manual approval")
 
     checksum_data = checksum_path.read_text(encoding="utf-8")
     checksum_path.write_text("0" * 64 + f"  {artifact.name}\n", encoding="utf-8")

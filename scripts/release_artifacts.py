@@ -125,6 +125,7 @@ def release_manifest(
     },
     "signingMode": signing_mode,
     "trust": release_trust(signing_mode),
+    "gatekeeper": release_gatekeeper_guidance(signing_mode),
     "modelDelivery": {
       "mode": MODEL_DELIVERY_MODE,
       "defaultModelId": DEFAULT_MODEL_ID,
@@ -518,6 +519,8 @@ def validate_manifest_identity(
     raise RuntimeError("Release manifest signing mode is unsupported")
   if manifest.get("trust") != release_trust(signing_mode):
     raise RuntimeError("Release manifest trust does not match signing mode")
+  if manifest.get("gatekeeper") != release_gatekeeper_guidance(signing_mode):
+    raise RuntimeError("Release manifest Gatekeeper guidance does not match signing mode")
 
   model_delivery = manifest.get("modelDelivery")
   if not isinstance(model_delivery, dict):
@@ -746,6 +749,15 @@ def release_trust(signing_mode: str) -> str:
   if signing_mode == "developer-id":
     return "developer-id-signed-notarized"
   return "ad-hoc-not-notarized"
+
+
+def release_gatekeeper_guidance(signing_mode: str) -> str:
+  if signing_mode == "developer-id":
+    return "Developer ID signed and notarized; Gatekeeper should allow normal launch."
+  return (
+    "Ad-hoc signed and not notarized; expect Gatekeeper manual approval through "
+    "Open Anyway or Control-click Open."
+  )
 
 
 def validate_install_guide(install_guide_path: Path) -> None:
