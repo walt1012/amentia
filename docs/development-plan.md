@@ -101,6 +101,8 @@ Ready foundations:
 - First app-open actions now avoid fake single-choice behavior: readiness shows
   state and sends only an existing draft, while starter prompt selection stays
   in the visible cowork callout.
+- Release notes, `README-FIRST.txt`, and downloaded-release rehearsal now share
+  the same first app-open action copy contract.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

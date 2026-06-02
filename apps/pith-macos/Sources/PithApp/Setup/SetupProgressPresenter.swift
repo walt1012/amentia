@@ -75,7 +75,7 @@ enum SetupProgressPresenter {
         return "Create Thread"
       }
       if snapshot.isWaitingForFirstMessage {
-        return snapshot.hasDraft ? "Send First Request" : "Choose First Prompt"
+        return snapshot.hasDraft ? "Send First Request" : "Choose Starter"
       }
 
       return nil

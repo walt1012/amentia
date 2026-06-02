@@ -8,6 +8,13 @@ from package_contract import DEFAULT_MODEL_ID, PACKAGED_SMOKE_PROOF_SCOPE
 
 PACKAGED_FIRST_RUN_PROOF_PHRASE = "packaged first-run smoke receipt"
 PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
+FIRST_APP_OPEN_ACTION_COPY = (
+  "Choose Map Workspace, Plan Next Step, or type a short cowork request."
+)
+FIRST_APP_OPEN_INSTALL_STEP = (
+  "Start a cowork session with Map Workspace, Plan Next Step, "
+  "or your own first request."
+)
 
 RELEASE_NOTES_REQUIRED_PHRASES = (
   "DMG installer.",
@@ -41,6 +48,8 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "approve a safe local change",
   "inspect the proof",
   "Start a cowork session",
+  "Map Workspace",
+  "Plan Next Step",
   "Follow the next action",
   "runtime readiness",
   "sandbox status",

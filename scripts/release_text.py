@@ -17,6 +17,7 @@ from package_contract import (
 )
 from release_artifacts import release_installer_asset_names
 from release_copy_contract import (
+  FIRST_APP_OPEN_INSTALL_STEP,
   INSTALL_GUIDE_REQUIRED_PHRASES,
   PACKAGED_FIRST_RUN_PROOF_PHRASE,
   PACKAGED_FIRST_RUN_PROOF_SCOPE,
@@ -53,12 +54,21 @@ def local_execution_copy() -> str:
   )
 
 
+def first_app_open_action_sentence() -> str:
+  return FIRST_APP_OPEN_INSTALL_STEP
+
+
+def first_app_open_action_clause() -> str:
+  sentence = first_app_open_action_sentence()
+  return sentence[0].lower() + sentence[1:]
+
+
 def first_run_path_copy() -> str:
   return (
     "First-run path: download the default verified local model "
     f"({DEFAULT_MODEL_ID}), open a workspace folder, confirm Web Search readiness "
-    "and sandbox status, start a cowork session, approve a safe local change only "
-    "after reviewing it, then inspect the proof shown in the timeline."
+    f"and sandbox status, {first_app_open_action_clause()}, approve a safe local "
+    "change only after reviewing it, then inspect the proof shown in the timeline."
   )
 
 
@@ -183,7 +193,7 @@ Install
 3. Launch Pith and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
 4. Open a workspace folder.
 5. Confirm Web Search readiness and sandbox status in the setup surface.
-6. Start a cowork session with Map Workspace, Plan Next Step, or your own first request.
+6. {FIRST_APP_OPEN_INSTALL_STEP}
 7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
 8. Follow the next action shown by Pith; it comes from runtime readiness, not a static setup checklist.
 

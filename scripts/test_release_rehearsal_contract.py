@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 from package_contract import DEFAULT_MODEL_ID
 from package_contract import DAILY_DRIVER_CONTRACT
+from release_copy_contract import FIRST_APP_OPEN_ACTION_COPY
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
@@ -66,7 +67,7 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should include the first-run model step")
     if summary["dailyDriver"] != DAILY_DRIVER_CONTRACT:
       raise AssertionError("release rehearsal summary should record daily-driver readiness")
-    if not any("Choose Map Workspace" in check for check in summary["firstAppOpenChecks"]):
+    if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
     if "Pith v0.1.0 Release Rehearsal" not in markdown:

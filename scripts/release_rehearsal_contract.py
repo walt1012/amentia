@@ -20,7 +20,10 @@ from package_contract import (
 )
 from release_artifacts import FIRST_RUN_CONTRACT
 from release_artifacts import release_installer_asset_names
-from release_copy_contract import PACKAGED_FIRST_RUN_PROOF_PHRASE
+from release_copy_contract import (
+  FIRST_APP_OPEN_ACTION_COPY,
+  PACKAGED_FIRST_RUN_PROOF_PHRASE,
+)
 
 
 FIRST_APP_OPEN_CHECKS = (
@@ -28,7 +31,7 @@ FIRST_APP_OPEN_CHECKS = (
   f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
   "Open a workspace folder.",
   "Confirm Web Search readiness and sandbox status.",
-  "Choose Map Workspace, Plan Next Step, or type a short cowork request.",
+  FIRST_APP_OPEN_ACTION_COPY,
   "Follow the daily-driver next action shown in the app header and inspector.",
 )
 

@@ -11,6 +11,8 @@ from package_contract import (
   SUPPORTED_ARCH,
 )
 from release_copy_contract import (
+  FIRST_APP_OPEN_ACTION_COPY,
+  FIRST_APP_OPEN_INSTALL_STEP,
   INSTALL_GUIDE_REQUIRED_PHRASES,
   PACKAGED_FIRST_RUN_PROOF_PHRASE,
   RELEASE_NOTES_REQUIRED_PHRASES,
@@ -19,6 +21,8 @@ from release_copy_contract import (
   require_release_copy,
 )
 from release_text import (
+  first_app_open_action_clause,
+  first_app_open_action_sentence,
   first_run_path_copy,
   first_run_proof_copy,
   install_guide,
@@ -60,6 +64,10 @@ def main() -> int:
   require_contains(release_size_budget_copy(), "installer artifact <= 150 MiB")
   require_contains(local_execution_copy(), "No Pith login is required")
   require_contains(local_execution_copy(), DEFAULT_LOCAL_EXECUTION_SAFETY_MODE)
+  require_contains(FIRST_APP_OPEN_ACTION_COPY, "Map Workspace")
+  require_contains(FIRST_APP_OPEN_ACTION_COPY, "Plan Next Step")
+  require_contains(first_app_open_action_sentence(), FIRST_APP_OPEN_INSTALL_STEP)
+  require_contains(first_app_open_action_clause(), "start a cowork session")
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "DMG installer.")
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "SHA-256 checksum sidecar")
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), PACKAGED_FIRST_RUN_PROOF_PHRASE)
@@ -75,6 +83,7 @@ def main() -> int:
   )
   require_contains(first_run_path_copy(), DEFAULT_MODEL_ID)
   require_contains(first_run_path_copy(), "Web Search readiness")
+  require_contains(first_run_path_copy(), first_app_open_action_clause())
   require_contains(first_run_path_copy(), "approve a safe local change")
   require_contains(first_run_path_copy(), "inspect the proof")
   require_contains(first_run_proof_copy(), PACKAGED_FIRST_RUN_PROOF_PHRASE)
@@ -169,7 +178,7 @@ def main() -> int:
   require_contains(guide, "Confirm Web Search readiness and sandbox status")
   require_contains(guide, "Approve a safe local change only after reviewing it")
   require_contains(guide, "inspect the proof")
-  require_contains(guide, "Start a cowork session with Map Workspace, Plan Next Step")
+  require_contains(guide, FIRST_APP_OPEN_INSTALL_STEP)
   require_contains(guide, "Follow the next action")
   require_contains(guide, "runtime readiness")
   require_contains(guide, "SHA-256 `.sha256` file")

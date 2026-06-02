@@ -101,6 +101,28 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testSetupProgressFramesFirstRequestAsStarterChoice() {
+    let detail = SetupProgressPresenter.detail(
+      setupProgressSnapshot(
+        isWaitingForFirstMessage: true,
+        hasDraft: false
+      )
+    )
+
+    XCTAssertEqual(detail, "Next: Choose Starter")
+  }
+
+  func testSetupProgressSendsExistingFirstRequestDraft() {
+    let detail = SetupProgressPresenter.detail(
+      setupProgressSnapshot(
+        isWaitingForFirstMessage: true,
+        hasDraft: true
+      )
+    )
+
+    XCTAssertEqual(detail, "Next: Send First Request")
+  }
+
   func testReadinessStripStaysVisibleForToolSetup() {
     XCTAssertTrue(
       RuntimeReadinessStripPresenter.shouldShow(
@@ -361,6 +383,25 @@ final class CoworkFirstPresentationTests: XCTestCase {
       isWaitingForFirstMessage: true,
       hasDraftMessage: hasDraftMessage,
       hasRestoredLocalExecutionDraft: hasRestoredLocalExecutionDraft
+    )
+  }
+
+  private func setupProgressSnapshot(
+    isWaitingForFirstMessage: Bool,
+    hasDraft: Bool
+  ) -> SetupProgressSnapshot {
+    SetupProgressSnapshot(
+      readyStepCount: SetupFlowState.stepCount - 1,
+      stepCount: SetupFlowState.stepCount,
+      runtimeState: .ready,
+      showsRuntimeActivity: false,
+      isLocalModelReady: true,
+      hasWorkspace: true,
+      hasRuntimeThreadSelection: true,
+      hasActiveTurn: false,
+      isWaitingForFirstMessage: isWaitingForFirstMessage,
+      hasDraft: hasDraft,
+      modelReadinessDetail: "Ready"
     )
   }
 
