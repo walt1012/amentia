@@ -26,6 +26,7 @@ from package_contract import (
   DAILY_DRIVER_CONTRACT,
   DEFAULT_MODEL_ID,
   DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
+  FIRST_APP_OPEN_CONTRACT_ID,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
   MODEL_METADATA_BUNDLED,
@@ -62,6 +63,7 @@ SOURCE_COMMIT_HEX_LENGTH = 40
 DAILY_DRIVER_STAGE_SOURCE = DAILY_DRIVER_CONTRACT["stageSource"]
 DAILY_DRIVER_NEXT_ACTION_SOURCE = DAILY_DRIVER_CONTRACT["nextActionSource"]
 DAILY_DRIVER_PRESENTATION = DAILY_DRIVER_CONTRACT["presentation"]
+FIRST_APP_OPEN_ACTION_CONTRACT = FIRST_APP_OPEN_CONTRACT_ID
 REQUIRED_ZIP_BASE_ENTRIES = {
   "Pith.app/Contents/Info.plist",
   "Pith.app/Contents/MacOS/Pith",
@@ -400,6 +402,7 @@ def write_package_manifest(
     "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
     "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
     "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
+    "firstAppOpenActionContract": FIRST_APP_OPEN_ACTION_CONTRACT,
     "bundledPluginsIncluded": True,
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxBackend": SANDBOX_CONTRACT["backend"],

@@ -13,6 +13,7 @@ from package_contract import (
   DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
+  FIRST_APP_OPEN_CONTRACT_ID,
   LOCAL_EXECUTION_SAFETY_MODES,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
@@ -66,6 +67,7 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
         "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
         "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
         "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+        "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
         "sizeBudget": {
           "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
           "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
@@ -168,6 +170,18 @@ def main() -> int:
     assert_raises(
       lambda: validate_package_manifest(app_path),
       "public distribution should require daily-driver readiness metadata",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+    app_path = Path(root) / "Pith.app"
+    write_manifest(app_path, "developer-id", SOURCE_COMMIT)
+    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["firstAppOpenActionContract"] = "static-checklist"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_package_manifest(app_path),
+      "public distribution should require first app-open action metadata",
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:

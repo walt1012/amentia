@@ -51,6 +51,7 @@ DAILY_DRIVER_CONTRACT = {
   "presentation": "app-header-inspector",
   "packagedSmoke": "required",
 }
+FIRST_APP_OPEN_CONTRACT_ID = "map-plan-or-short-cowork-request"
 PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION = 1
 PACKAGED_SMOKE_RECEIPT_KIND = "pith.packagedSmokeReceipt"
 PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (
@@ -142,6 +143,7 @@ def validate_package_manifest_contract(
     "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
     "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
     "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
   }
   if source_commit is not None:
     expected_values["sourceCommit"] = source_commit

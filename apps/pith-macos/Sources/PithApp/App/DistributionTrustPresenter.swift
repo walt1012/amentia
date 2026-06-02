@@ -20,6 +20,7 @@ struct DistributionPackageMetadata: Equatable {
   let dailyDriverStageSource: String
   let dailyDriverNextActionSource: String
   let dailyDriverPresentation: String
+  let firstAppOpenActionContract: String
   let sourceCommit: String
 
   static let current = load()
@@ -96,6 +97,11 @@ struct DistributionPackageMetadata: Equatable {
         "dailyDriverPresentation",
         fallback: "app-header-inspector"
       ),
+      firstAppOpenActionContract: string(
+        manifest,
+        "firstAppOpenActionContract",
+        fallback: "map-plan-or-short-cowork-request"
+      ),
       sourceCommit: string(manifest, "sourceCommit", fallback: "development")
     )
   }
@@ -124,6 +130,7 @@ struct DistributionPackageMetadata: Equatable {
     dailyDriverStageSource: "runtime/readiness",
     dailyDriverNextActionSource: "runtime/readiness",
     dailyDriverPresentation: "app-header-inspector",
+    firstAppOpenActionContract: "map-plan-or-short-cowork-request",
     sourceCommit: "development"
   )
 
@@ -216,11 +223,12 @@ enum DistributionTrustPresenter {
     let platform = "macOS \(metadata.minimumSystemVersion)+ \(metadata.architecture)"
     let sandbox = sandboxSummary(metadata)
     let dailyDriver = dailyDriverSummary(metadata)
+    let firstOpen = firstAppOpenSummary(metadata)
     let packageSize = packageSizeSummary(metadata)
     let identity = identitySummary(metadata)
     let execution = localExecutionSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
-    let releaseProof = "\(identity); \(modelDelivery); \(weightPolicy); \(execution); \(packageSize); \(sandbox); \(dailyDriver); \(source)."
+    let releaseProof = "\(identity); \(modelDelivery); \(weightPolicy); \(execution); \(packageSize); \(sandbox); \(dailyDriver); \(firstOpen); \(source)."
 
     switch metadata.distributionTrust {
     case "developer-id-signed-notarized":
@@ -315,5 +323,12 @@ enum DistributionTrustPresenter {
       ? "shown in app header and inspector"
       : "presentation: \(metadata.dailyDriverPresentation)"
     return "daily-driver next action comes from runtime readiness and is \(presentation)"
+  }
+
+  private static func firstAppOpenSummary(_ metadata: DistributionPackageMetadata) -> String {
+    guard metadata.firstAppOpenActionContract == "map-plan-or-short-cowork-request" else {
+      return "first app-open action: \(metadata.firstAppOpenActionContract)"
+    }
+    return "first app-open action offers Map Workspace, Plan Next Step, or a short cowork request"
   }
 }

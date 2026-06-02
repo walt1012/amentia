@@ -13,6 +13,7 @@ from package_contract import (
   DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
+  FIRST_APP_OPEN_CONTRACT_ID,
   LOCAL_EXECUTION_SAFETY_MODES,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
@@ -124,6 +125,7 @@ def write_package_manifest(
         "dailyDriverStageSource": daily_driver_stage_source,
         "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
         "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+        "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
         "sandboxMode": sandbox_mode,
         "sandboxBackend": SANDBOX_CONTRACT["backend"],
         "sandboxFallback": SANDBOX_CONTRACT["fallback"],
@@ -250,6 +252,8 @@ def main() -> int:
       raise AssertionError("release manifest should summarize packaged sandbox mode")
     if manifest["appPackage"]["dailyDriverStageSource"] != DAILY_DRIVER_CONTRACT["stageSource"]:
       raise AssertionError("release manifest should summarize packaged daily-driver stage")
+    if manifest["appPackage"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
+      raise AssertionError("release manifest should summarize packaged first app-open action")
     if manifest["appPackage"]["sizeBudget"]["maxZipArtifactBytes"] != DEFAULT_MAX_ZIP_ARTIFACT_BYTES:
       raise AssertionError("release manifest should summarize package size budget")
     manifest_artifacts = {

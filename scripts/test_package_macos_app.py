@@ -17,6 +17,7 @@ from macos_llama_backend import (
 )
 from package_macos_app import (
   DAILY_DRIVER_NEXT_ACTION_SOURCE,
+  FIRST_APP_OPEN_ACTION_CONTRACT,
   DAILY_DRIVER_PRESENTATION,
   DAILY_DRIVER_STAGE_SOURCE,
   LLAMA_BACKEND_RELATIVE_PARENT,
@@ -112,6 +113,10 @@ def main() -> int:
       DAILY_DRIVER_NEXT_ACTION_SOURCE,
     )
     assert_equal(manifest["dailyDriverPresentation"], DAILY_DRIVER_PRESENTATION)
+    assert_equal(
+      manifest["firstAppOpenActionContract"],
+      FIRST_APP_OPEN_ACTION_CONTRACT,
+    )
     assert_equal(
       manifest["sizeBudget"],
       {

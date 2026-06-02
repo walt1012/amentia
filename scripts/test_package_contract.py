@@ -16,6 +16,7 @@ from package_contract import (
   DEFAULT_MAX_APP_BUNDLE_BYTES,
   DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
   DEFAULT_MODEL_ID,
+  FIRST_APP_OPEN_CONTRACT_ID,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
   MODEL_METADATA_BUNDLED,
@@ -93,6 +94,7 @@ def valid_manifest() -> dict[str, object]:
     "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
     "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
     "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
     "sizeBudget": {
       "maxAppBundleBytes": DEFAULT_MAX_APP_BUNDLE_BYTES,
       "maxZipArtifactBytes": DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
@@ -226,6 +228,12 @@ def main() -> int:
   assert_raises(
     lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
     "wrong distribution trust should fail manifest contract validation",
+  )
+  wrong_manifest = dict(manifest)
+  wrong_manifest["firstAppOpenActionContract"] = "static-checklist"
+  assert_raises(
+    lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
+    "wrong first app-open action should fail manifest contract validation",
   )
   wrong_manifest = dict(manifest)
   wrong_manifest.pop("bundleVersion")

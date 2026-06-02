@@ -14,6 +14,7 @@ from package_contract import (
   DAILY_DRIVER_CONTRACT,
   DEFAULT_MODEL_ID,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  FIRST_APP_OPEN_CONTRACT_ID,
   LOCAL_EXECUTION_SAFETY_MODES,
   MINIMUM_SYSTEM_VERSION,
   MODEL_DELIVERY_MODE,
@@ -30,7 +31,6 @@ from package_contract import (
   package_distribution_trust,
   validate_package_manifest_contract,
 )
-from release_copy_contract import FIRST_APP_OPEN_CONTRACT_ID
 from release_copy_contract import require_install_guide_copy
 from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
@@ -352,6 +352,7 @@ def package_manifest_summary(
     "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
     "dailyDriverNextActionSource": DAILY_DRIVER_CONTRACT["nextActionSource"],
     "dailyDriverPresentation": DAILY_DRIVER_CONTRACT["presentation"],
+    "firstAppOpenActionContract": FIRST_APP_OPEN_CONTRACT_ID,
     "sizeBudget": size_budget,
   }
 

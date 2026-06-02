@@ -17,6 +17,9 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertTrue(summary.detail.contains("installer artifact <= 150 MiB"))
     XCTAssertTrue(summary.detail.contains("process-only fallback"))
     XCTAssertTrue(summary.detail.contains("daily-driver next action"))
+    XCTAssertTrue(summary.detail.contains("Map Workspace"))
+    XCTAssertTrue(summary.detail.contains("Plan Next Step"))
+    XCTAssertTrue(summary.detail.contains("short cowork request"))
     XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
     XCTAssertTrue(summary.setupDetail?.contains("Control-click Pith.app") == true)
   }
@@ -67,6 +70,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertEqual(parsed.dailyDriverStageSource, "runtime/readiness")
     XCTAssertEqual(parsed.dailyDriverNextActionSource, "runtime/readiness")
     XCTAssertEqual(parsed.dailyDriverPresentation, "app-header-inspector")
+    XCTAssertEqual(parsed.firstAppOpenActionContract, "map-plan-or-short-cowork-request")
     XCTAssertEqual(parsed.sourceCommit, sourceCommit)
   }
 
@@ -134,6 +138,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
       "dailyDriverStageSource": "runtime/readiness",
       "dailyDriverNextActionSource": "runtime/readiness",
       "dailyDriverPresentation": "app-header-inspector",
+      "firstAppOpenActionContract": "map-plan-or-short-cowork-request",
       "schemaVersion": \(schemaVersion),
       "sourceCommit": "\(sourceCommit)",
       "signing": "\(signing)"

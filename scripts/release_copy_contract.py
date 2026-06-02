@@ -3,7 +3,11 @@
 
 from __future__ import annotations
 
-from package_contract import DEFAULT_MODEL_ID, PACKAGED_SMOKE_PROOF_SCOPE
+from package_contract import (
+  DEFAULT_MODEL_ID,
+  FIRST_APP_OPEN_CONTRACT_ID,
+  PACKAGED_SMOKE_PROOF_SCOPE,
+)
 
 
 PACKAGED_FIRST_RUN_PROOF_PHRASE = "packaged first-run smoke receipt"
@@ -11,7 +15,6 @@ PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
 FIRST_APP_OPEN_ACTION_COPY = (
   "Choose Map Workspace, Plan Next Step, or type a short cowork request."
 )
-FIRST_APP_OPEN_CONTRACT_ID = "map-plan-or-short-cowork-request"
 FIRST_APP_OPEN_INSTALL_STEP = (
   "Start a cowork session with Map Workspace, Plan Next Step, "
   "or your own first request."
