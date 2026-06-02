@@ -11,6 +11,7 @@ PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
 FIRST_APP_OPEN_ACTION_COPY = (
   "Choose Map Workspace, Plan Next Step, or type a short cowork request."
 )
+FIRST_APP_OPEN_CONTRACT_ID = "map-plan-or-short-cowork-request"
 FIRST_APP_OPEN_INSTALL_STEP = (
   "Start a cowork session with Map Workspace, Plan Next Step, "
   "or your own first request."

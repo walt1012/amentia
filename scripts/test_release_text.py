@@ -12,6 +12,7 @@ from package_contract import (
 )
 from release_copy_contract import (
   FIRST_APP_OPEN_ACTION_COPY,
+  FIRST_APP_OPEN_CONTRACT_ID,
   FIRST_APP_OPEN_INSTALL_STEP,
   INSTALL_GUIDE_REQUIRED_PHRASES,
   PACKAGED_FIRST_RUN_PROOF_PHRASE,
@@ -66,6 +67,7 @@ def main() -> int:
   require_contains(local_execution_copy(), DEFAULT_LOCAL_EXECUTION_SAFETY_MODE)
   require_contains(FIRST_APP_OPEN_ACTION_COPY, "Map Workspace")
   require_contains(FIRST_APP_OPEN_ACTION_COPY, "Plan Next Step")
+  require_contains(FIRST_APP_OPEN_CONTRACT_ID, "map-plan")
   require_contains(first_app_open_action_sentence(), FIRST_APP_OPEN_INSTALL_STEP)
   require_contains(first_app_open_action_clause(), "start a cowork session")
   require_contains(" ".join(RELEASE_NOTES_REQUIRED_PHRASES), "DMG installer.")
@@ -88,6 +90,7 @@ def main() -> int:
   require_contains(first_run_path_copy(), "inspect the proof")
   require_contains(first_run_proof_copy(), PACKAGED_FIRST_RUN_PROOF_PHRASE)
   require_contains(first_run_proof_copy(), PACKAGED_SMOKE_PROOF_SCOPE)
+  require_contains(PACKAGED_SMOKE_PROOF_SCOPE, "first cowork request")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Pith-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Pith-macos-x86_64.dmg")

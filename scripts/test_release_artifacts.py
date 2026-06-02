@@ -39,6 +39,7 @@ from release_artifacts import (
   write_checksum_file,
   write_release_manifest as build_write_release_manifest,
 )
+from release_copy_contract import FIRST_APP_OPEN_CONTRACT_ID
 from release_text import install_guide as release_install_guide
 
 
@@ -209,6 +210,8 @@ def main() -> int:
       raise AssertionError("release manifest should disclose daily-driver presentation")
     if manifest["firstRun"] != FIRST_RUN_CONTRACT:
       raise AssertionError("release manifest should disclose the first-run path contract")
+    if manifest["firstRun"]["firstAppOpen"] != FIRST_APP_OPEN_CONTRACT_ID:
+      raise AssertionError("release manifest should disclose the first app-open action")
     if manifest["verification"]["workflowRunId"] != WORKFLOW_RUN_ID:
       raise AssertionError("release manifest should record the workflow run id")
     if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":

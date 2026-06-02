@@ -9,7 +9,10 @@ from tempfile import TemporaryDirectory
 
 from package_contract import DEFAULT_MODEL_ID
 from package_contract import DAILY_DRIVER_CONTRACT
-from release_copy_contract import FIRST_APP_OPEN_ACTION_COPY
+from release_copy_contract import (
+  FIRST_APP_OPEN_ACTION_COPY,
+  FIRST_APP_OPEN_CONTRACT_ID,
+)
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
@@ -65,6 +68,8 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should record the default model")
     if "download-default-verified-local-model" not in summary["firstRun"].values():
       raise AssertionError("release rehearsal summary should include the first-run model step")
+    if summary["firstRun"].get("firstAppOpen") != FIRST_APP_OPEN_CONTRACT_ID:
+      raise AssertionError("release rehearsal summary should include the first app-open contract")
     if summary["dailyDriver"] != DAILY_DRIVER_CONTRACT:
       raise AssertionError("release rehearsal summary should record daily-driver readiness")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:

@@ -71,8 +71,8 @@ PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (
   "sandboxReadiness",
 )
 PACKAGED_SMOKE_PROOF_SCOPE = (
-  "model setup, workspace, Web Search, approval, connector, sandbox, "
-  "and runtime recovery checks"
+  "model setup, workspace, first cowork request, Web Search, approval, "
+  "connector, sandbox, and runtime recovery checks"
 )
 
 

@@ -30,6 +30,7 @@ from package_contract import (
   package_distribution_trust,
   validate_package_manifest_contract,
 )
+from release_copy_contract import FIRST_APP_OPEN_CONTRACT_ID
 from release_copy_contract import require_install_guide_copy
 from release_identity import product_version_from_tag
 from release_identity import validate_public_release_tag
@@ -51,6 +52,7 @@ FIRST_RUN_CONTRACT = {
   "workspace": "open-workspace-folder",
   "retrieval": "web-search-readiness",
   "sandbox": "status-visible",
+  "firstAppOpen": FIRST_APP_OPEN_CONTRACT_ID,
   "approval": "review-before-local-change",
   "proof": "timeline-proof",
   "nextAction": "runtime-readiness",

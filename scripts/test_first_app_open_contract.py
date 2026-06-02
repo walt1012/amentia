@@ -7,6 +7,7 @@ from pathlib import Path
 
 from release_copy_contract import (
   FIRST_APP_OPEN_ACTION_COPY,
+  FIRST_APP_OPEN_CONTRACT_ID,
   FIRST_APP_OPEN_INSTALL_STEP,
 )
 
@@ -70,6 +71,11 @@ def main() -> int:
     FIRST_APP_OPEN_INSTALL_STEP,
     "your own first request",
     "release install step",
+  )
+  require_contains(
+    FIRST_APP_OPEN_CONTRACT_ID,
+    "cowork-request",
+    "first app-open contract id",
   )
 
   require_contains(
