@@ -27,6 +27,7 @@ from package_contract import (
   packaged_smoke_package_metadata,
 )
 from release_copy_contract import FIRST_APP_OPEN_ACTION_COPY
+from release_artifacts import packaged_smoke_journey
 from release_artifacts import release_gatekeeper_guidance
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
@@ -149,6 +150,8 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should record smoke package metadata")
     if summary["packagedSmokeReceipt"]["packageMetadataMatched"] is not True:
       raise AssertionError("release rehearsal summary should prove smoke package metadata match")
+    if summary["packagedSmokeReceipt"]["journey"] != packaged_smoke_journey():
+      raise AssertionError("release rehearsal summary should include packaged smoke journey")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
@@ -162,6 +165,8 @@ def main() -> int:
       raise AssertionError("release rehearsal markdown should include Gatekeeper guidance")
     if "Smoke package metadata: `matches app package metadata`" not in markdown:
       raise AssertionError("release rehearsal markdown should include smoke metadata match proof")
+    if "## Packaged Smoke Journey" not in markdown or "Web Search retrieval" not in markdown:
+      raise AssertionError("release rehearsal markdown should include smoke journey stages")
     output = root / "rehearsal.md"
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):
@@ -192,6 +197,19 @@ def main() -> int:
     expect_failure(
       lambda: validate_release_rehearsal("v0.1.0", root),
       "Gatekeeper guidance",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+    root = Path(directory)
+    write_downloaded_assets(root)
+    _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
+    manifest_path = root / manifest_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["verification"]["packagedSmokeReceipt"]["journey"][3]["checkIds"] = []
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_rehearsal("v0.1.0", root),
+      "journey",
     )
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:

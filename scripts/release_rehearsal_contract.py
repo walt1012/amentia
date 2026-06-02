@@ -175,6 +175,7 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
       "phrase": PACKAGED_FIRST_RUN_PROOF_PHRASE,
       "proofScope": smoke_receipt["proofScope"],
       "checkCount": len(smoke_receipt["checkIds"]),
+      "journey": list(smoke_receipt["journey"]),
       "packageMetadata": dict(smoke_receipt["packageMetadata"]),
       "packageMetadataMatched": smoke_receipt["packageMetadata"] == expected_smoke_metadata,
     },
@@ -193,6 +194,10 @@ def summary_markdown(summary: dict) -> str:
     for key, value in summary["firstRun"].items()
   )
   app_open = "\n".join(f"- {check}" for check in summary["firstAppOpenChecks"])
+  smoke_journey = "\n".join(
+    f"- {stage['title']}: {', '.join(stage['checkIds'])}"
+    for stage in summary["packagedSmokeReceipt"]["journey"]
+  )
   return f"""# Pith {summary["tag"]} Release Rehearsal
 
 Result: `{summary["result"]}`
@@ -214,6 +219,9 @@ Result: `{summary["result"]}`
 - Proof scope: `{summary["packagedSmokeReceipt"]["proofScope"]}`
 - Proof checks: `{summary["packagedSmokeReceipt"]["checkCount"]}`
 - Smoke package metadata: `matches app package metadata`
+
+## Packaged Smoke Journey
+{smoke_journey}
 
 ## First Run
 {first_run}

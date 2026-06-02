@@ -32,6 +32,7 @@ from release_artifacts import (
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   checksum_text,
+  packaged_smoke_journey,
   release_gatekeeper_guidance,
   release_manifest as build_release_manifest,
   release_installer_asset_names,
@@ -66,6 +67,7 @@ def write_smoke_receipt(path: Path, package_metadata: dict) -> Path:
         "result": "passed",
         "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
         "packageMetadata": package_metadata,
+        "journey": packaged_smoke_journey(),
         "checks": [
           {
             "id": check_id,
@@ -240,6 +242,8 @@ def main() -> int:
       raise AssertionError("release manifest should record packaged smoke receipt checks")
     if manifest["verification"]["packagedSmokeReceipt"]["proofScope"] != PACKAGED_SMOKE_PROOF_SCOPE:
       raise AssertionError("release manifest should summarize packaged smoke proof scope")
+    if manifest["verification"]["packagedSmokeReceipt"]["journey"] != packaged_smoke_journey():
+      raise AssertionError("release manifest should summarize packaged smoke journey")
     if "sha256" not in manifest["verification"]["packagedSmokeReceipt"]:
       raise AssertionError("release manifest should hash the packaged smoke receipt")
     if (
@@ -342,6 +346,23 @@ def main() -> int:
         smoke_receipt_path=smoke_receipt,
       ),
       "wrong packaged smoke receipt should fail release manifest validation",
+    )
+    manifest_path.write_text(manifest_data, encoding="utf-8")
+
+    tampered_manifest = json.loads(manifest_data)
+    tampered_manifest["verification"]["packagedSmokeReceipt"]["journey"][0][
+      "checkIds"
+    ] = ["appLaunch"]
+    manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
+    assert_raises(
+      lambda: validate_release_manifest(
+        manifest_path,
+        artifact_path=artifact,
+        checksum_path=checksum_path,
+        install_guide_path=install_guide,
+        smoke_receipt_path=smoke_receipt,
+      ),
+      "wrong packaged smoke journey should fail release manifest validation",
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 

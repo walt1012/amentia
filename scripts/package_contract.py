@@ -71,6 +71,65 @@ PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (
   "runtimeRecovery",
   "sandboxReadiness",
 )
+PACKAGED_SMOKE_JOURNEY = (
+  {
+    "id": "install",
+    "title": "Install and launch",
+    "checkIds": (
+      "mountedDmgAppBundle",
+      "appLaunch",
+      "runtimeProtocol",
+    ),
+  },
+  {
+    "id": "modelSetup",
+    "title": "Local model setup",
+    "checkIds": (
+      "defaultModelMetadata",
+      "appOwnedModelActivation",
+    ),
+  },
+  {
+    "id": "workspaceCowork",
+    "title": "Workspace cowork loop",
+    "checkIds": (
+      "workspaceBootstrap",
+      "firstCoworkTurn",
+    ),
+  },
+  {
+    "id": "retrieval",
+    "title": "Web Search retrieval",
+    "checkIds": (
+      "webSearchExecution",
+    ),
+  },
+  {
+    "id": "localExecution",
+    "title": "Approval and sandbox safety",
+    "checkIds": (
+      "approvalDenied",
+      "approvalApproved",
+      "sandboxReadiness",
+    ),
+  },
+  {
+    "id": "connector",
+    "title": "Connector execution",
+    "checkIds": (
+      "connectorAuthorization",
+      "connectorExecution",
+      "runnerMemoryCapture",
+    ),
+  },
+  {
+    "id": "recovery",
+    "title": "Runtime recovery",
+    "checkIds": (
+      "runtimeRecovery",
+    ),
+  },
+)
 PACKAGED_SMOKE_PROOF_SCOPE = (
   "model setup, workspace, first cowork request, Web Search, approval, "
   "connector, sandbox, and runtime recovery checks"

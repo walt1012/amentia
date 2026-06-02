@@ -14,6 +14,7 @@ from package_contract import (
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PACKAGED_SMOKE_JOURNEY,
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PITH_ACCOUNT_REQUIRED,
@@ -89,6 +90,17 @@ def smoke_package_metadata() -> dict:
   }
 
 
+def packaged_smoke_journey() -> list[dict]:
+  return [
+    {
+      "id": stage["id"],
+      "title": stage["title"],
+      "checkIds": list(stage["checkIds"]),
+    }
+    for stage in PACKAGED_SMOKE_JOURNEY
+  ]
+
+
 def main() -> int:
   validate_packaged_web_search_snapshot(web_search_items(valid_web_search_attributes()))
 
@@ -128,6 +140,8 @@ def main() -> int:
       raise AssertionError("packaged smoke receipt should record its proof scope")
     if receipt["packageMetadata"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
       raise AssertionError("packaged smoke receipt should record package first app-open action")
+    if receipt["journey"] != packaged_smoke_journey():
+      raise AssertionError("packaged smoke receipt should record the first-run journey")
     if [item["id"] for item in receipt["checks"]] != [
       check_id for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
     ]:

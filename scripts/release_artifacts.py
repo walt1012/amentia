@@ -22,6 +22,7 @@ from package_contract import (
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_JOURNEY,
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PITH_ACCOUNT_REQUIRED,
@@ -652,6 +653,7 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
       "result": "passed",
       "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
       "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
+      "journey": packaged_smoke_journey(),
     }
   receipt = read_json_object(smoke_receipt_path, "Packaged smoke receipt")
   if receipt.get("schemaVersion") != PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION:
@@ -675,12 +677,17 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     check_ids.append(check_id)
   if check_ids != list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS):
     raise RuntimeError("Packaged smoke receipt check ids do not match the first-run contract")
+  journey = validate_packaged_smoke_journey(
+    receipt.get("journey"),
+    "Packaged smoke receipt",
+  )
   return {
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
     "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "checkIds": check_ids,
+    "journey": journey,
     "packageMetadata": validate_smoke_receipt_package_metadata(
       receipt.get("packageMetadata"),
       "Packaged smoke receipt",
@@ -698,6 +705,7 @@ def validate_packaged_smoke_receipt_summary(value: object, label: str) -> None:
     "result": "passed",
     "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
+    "journey": packaged_smoke_journey(),
   }
   for field, expected in expected_values.items():
     if value.get(field) != expected:
@@ -714,6 +722,37 @@ def validate_packaged_smoke_receipt_summary(value: object, label: str) -> None:
       value.get("packageMetadata"),
       f"{label} packagedSmokeReceipt",
     )
+  validate_packaged_smoke_journey(
+    value.get("journey"),
+    f"{label} packagedSmokeReceipt",
+  )
+
+
+def packaged_smoke_journey() -> list[dict]:
+  return [
+    {
+      "id": stage["id"],
+      "title": stage["title"],
+      "checkIds": list(stage["checkIds"]),
+    }
+    for stage in PACKAGED_SMOKE_JOURNEY
+  ]
+
+
+def validate_packaged_smoke_journey(value: object, label: str) -> list[dict]:
+  expected = packaged_smoke_journey()
+  if value != expected:
+    raise RuntimeError(f"{label} journey must match the packaged smoke contract")
+  covered_check_ids = [
+    check_id
+    for stage in expected
+    for check_id in stage["checkIds"]
+  ]
+  if sorted(covered_check_ids) != sorted(PACKAGED_SMOKE_REQUIRED_CHECK_IDS):
+    raise RuntimeError(f"{label} journey must cover packaged smoke checks")
+  if len(covered_check_ids) != len(set(covered_check_ids)):
+    raise RuntimeError(f"{label} journey must not duplicate packaged smoke checks")
+  return expected
 
 
 def validate_smoke_receipt_package_metadata(value: object, label: str) -> dict:

@@ -24,6 +24,8 @@ from package_contract import (
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   PACKAGE_SIGNING_MODES,
   PACKAGE_DISTRIBUTION_TRUST_BY_SIGNING,
+  PACKAGED_SMOKE_JOURNEY,
+  PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   LOCAL_EXECUTION_SAFETY_MODES,
   PITH_ACCOUNT_REQUIRED,
@@ -124,6 +126,25 @@ def main() -> int:
     },
   )
   assert_equal(RELEASE_SIGNING_MODES, {"ad-hoc", "developer-id"})
+  journey_check_ids = [
+    check_id
+    for stage in PACKAGED_SMOKE_JOURNEY
+    for check_id in stage["checkIds"]
+  ]
+  assert_equal(sorted(journey_check_ids), sorted(PACKAGED_SMOKE_REQUIRED_CHECK_IDS))
+  assert_equal(len(journey_check_ids), len(set(journey_check_ids)))
+  assert_equal(
+    [stage["id"] for stage in PACKAGED_SMOKE_JOURNEY],
+    [
+      "install",
+      "modelSetup",
+      "workspaceCowork",
+      "retrieval",
+      "localExecution",
+      "connector",
+      "recovery",
+    ],
+  )
   assert_equal(package_distribution_trust("developer-id"), "developer-id-signed-notarized")
   assert_equal(DEFAULT_MAX_APP_BUNDLE_BYTES, 250 * 1024 * 1024)
   assert_equal(DEFAULT_MAX_ZIP_ARTIFACT_BYTES, 150 * 1024 * 1024)

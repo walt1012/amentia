@@ -23,6 +23,7 @@ from package_contract import (
   DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_JOURNEY,
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PROHIBITED_MODEL_SUFFIXES,
@@ -1916,6 +1917,7 @@ def write_packaged_smoke_receipt(
     "result": "passed",
     "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
     "packageMetadata": package_metadata,
+    "journey": list(PACKAGED_SMOKE_JOURNEY),
     "checks": [
       {
         "id": check_id,

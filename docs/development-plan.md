@@ -130,6 +130,8 @@ Ready foundations:
   package directories must opt in before allowing build-only extras.
 - Release manifests now carry the Gatekeeper guidance that downloaded-release
   rehearsals display and validate.
+- Packaged smoke receipts now group checks into user-journey stages so release
+  rehearsals show what the installer actually proved.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
