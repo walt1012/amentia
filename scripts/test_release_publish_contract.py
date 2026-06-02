@@ -13,6 +13,7 @@ from release_publish_contract import RELEASE_REPOSITORY
 from release_publish_contract import release_asset_names
 from release_publish_contract import validate_published_release
 from release_state import expected_release_title
+from release_text import release_notes
 
 
 TAG = "v1.2.3"
@@ -29,6 +30,12 @@ def release_payload(
   return {
     "tag_name": tag,
     "name": expected_release_title(tag),
+    "body": release_notes(
+      tag,
+      "ad-hoc",
+      allow_untrusted_ad_hoc=True,
+      draft=False,
+    ),
     "draft": draft,
     "prerelease": prerelease,
     "assets": [
@@ -70,6 +77,7 @@ def main() -> int:
 
   expect_failure(release_payload(tag="v9.9.9"), "tag_name")
   expect_failure({**release_payload(), "name": "Pith wrong"}, "name")
+  expect_failure({**release_payload(), "body": "Install Pith."}, "missing required copy")
   expect_failure(release_payload(draft=True), "draft")
   expect_failure(release_payload(prerelease=False), "prerelease")
 

@@ -10,6 +10,8 @@ from pathlib import Path
 
 from installer_artifact_contract import expected_installer_asset_names
 from installer_artifact_contract import validate_installer_asset_name
+from release_copy_contract import RELEASE_NOTES_REQUIRED_PHRASES
+from release_copy_contract import require_release_copy
 from release_identity import validate_public_release_tag
 from release_state import expected_release_title
 from release_state import parse_bool
@@ -30,6 +32,7 @@ def validate_published_release(
   validate_release_field(release, "name", expected_release_title(tag))
   validate_release_bool(release, "draft", expected_draft)
   validate_release_bool(release, "prerelease", expected_prerelease)
+  validate_release_body(release, tag=tag)
   validate_release_assets(release, tag)
 
 
@@ -47,6 +50,17 @@ def validate_release_bool(release: dict, field: str, expected: bool) -> None:
     raise RuntimeError(
       f"Published GitHub Release field {field} must be {str(expected).lower()}, got {actual!r}"
     )
+
+
+def validate_release_body(release: dict, *, tag: str) -> None:
+  body = release.get("body")
+  if not isinstance(body, str) or not body.strip():
+    raise RuntimeError("Published GitHub Release body must be present")
+  require_release_copy(
+    body,
+    (f"Pith {tag}", *RELEASE_NOTES_REQUIRED_PHRASES),
+    "published GitHub Release body",
+  )
 
 
 def validate_release_assets(release: dict, tag: str) -> None:

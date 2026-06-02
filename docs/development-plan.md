@@ -118,6 +118,8 @@ Ready foundations:
 - Release notes, install guides, and rehearsal summaries now name the app
   package metadata, smoke package metadata, checksum command, and Gatekeeper
   trust path users or maintainers must inspect.
+- Final GitHub Release validation now checks the published release body as well
+  as the tag state and installer asset set.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
