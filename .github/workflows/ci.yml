@@ -157,6 +157,9 @@ jobs:
       - name: Test release text helper
         run: python3 scripts/test_release_text.py
 
+      - name: Test first app-open contract
+        run: python3 scripts/test_first_app_open_contract.py
+
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
 

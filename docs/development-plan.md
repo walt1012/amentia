@@ -103,6 +103,8 @@ Ready foundations:
   in the visible cowork callout.
 - Release notes, `README-FIRST.txt`, and downloaded-release rehearsal now share
   the same first app-open action copy contract.
+- CI now checks that Swift first-open copy stays aligned with the release copy
+  contract.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

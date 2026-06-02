@@ -80,6 +80,8 @@ jobs:
         run: python3 scripts/test_release_artifacts.py
       - name: Test release text helper
         run: python3 scripts/test_release_text.py
+      - name: Test first app-open contract
+        run: python3 scripts/test_first_app_open_contract.py
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
       - name: Test connector workflow contracts
@@ -455,6 +457,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_text.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test first app-open contract\n"
+        "        run: python3 scripts/test_first_app_open_contract.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_first_app_open_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
