@@ -12,6 +12,7 @@ from pathlib import Path
 WORKFLOW_PATTERNS = (
   ".github/workflows/ci.yml",
   ".github/workflows/release.yml",
+  "scripts/ci_changes.py",
 )
 RUST_PATTERNS = (
   "Cargo.toml",

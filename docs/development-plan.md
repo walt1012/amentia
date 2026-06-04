@@ -135,7 +135,7 @@ Ready foundations:
 - Downloaded-release rehearsal summaries now include the manual prerelease
   acceptance path for a fresh unsigned DMG.
 - CI change detection now treats release rehearsal contract changes as package
-  impacting.
+  impacting and reruns all lanes when the classifier itself changes.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

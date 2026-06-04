@@ -44,6 +44,7 @@ def main() -> int:
     classify_changed_paths(["scripts/release_rehearsal_contract.py"]),
     CiChanges(False, False, True, False),
   )
+  assert_equal(classify_changed_paths(["scripts/ci_changes.py"]), CiChanges.all())
   assert_equal(
     classify_changed_paths(["scripts/sign_macos_app_for_distribution.py"]),
     CiChanges(False, False, True, False),
