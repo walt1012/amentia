@@ -134,6 +134,8 @@ Ready foundations:
   rehearsals show what the installer actually proved.
 - Downloaded-release rehearsal summaries now include the manual prerelease
   acceptance path for a fresh unsigned DMG.
+- CI change detection now treats release rehearsal contract changes as package
+  impacting.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
