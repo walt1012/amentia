@@ -426,6 +426,17 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       )
     )
   for term in (
+    "-X PATCH",
+    "--input release-state.json",
+  ):
+    if term not in release_block:
+      issues.append(
+        WorkflowIssue(
+          RELEASE_WORKFLOW,
+          f"final release state patch is missing {term}",
+        )
+      )
+  for term in (
     'gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json',
     '--release-json release-published.json',
     '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
@@ -447,6 +458,20 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         "release download rehearsal helper is missing",
       )
     )
+  require_release_order(
+    release_block,
+    "scripts/release_rehearsal_contract.py",
+    "-X PATCH",
+    "release download rehearsal must pass before final release state patch",
+    issues,
+  )
+  require_release_order(
+    release_block,
+    "-X PATCH",
+    "scripts/release_publish_contract.py",
+    "published release validation must run after final release state patch",
+    issues,
+  )
   if "--allow-extra-assets" in release_block:
     issues.append(
       WorkflowIssue(
@@ -520,6 +545,21 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         WorkflowIssue(RELEASE_WORKFLOW, f"release upload is missing {asset}")
       )
   return issues
+
+
+def require_release_order(
+  text: str,
+  earlier: str,
+  later: str,
+  message: str,
+  issues: list[WorkflowIssue],
+) -> None:
+  earlier_index = text.find(earlier)
+  later_index = text.find(later)
+  if earlier_index == -1 or later_index == -1:
+    return
+  if earlier_index > later_index:
+    issues.append(WorkflowIssue(RELEASE_WORKFLOW, message))
 
 
 def step_blocks(text: str) -> list[list[str]]:

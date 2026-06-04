@@ -329,14 +329,6 @@ jobs:
             "artifacts/macos/README-FIRST.txt" \\
             "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
             --clobber
-          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
-          python3 scripts/release_publish_contract.py \\
-            --tag "$RELEASE_TAG" \\
-            --release-json release-published.json \\
-            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
-            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
-            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
           rm -rf release-download
           mkdir -p release-download
           gh release download "$RELEASE_TAG" \\
@@ -347,6 +339,18 @@ jobs:
             --asset-dir release-download \\
             --summary-output release-rehearsal.md
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+          gh api \\
+            -X PATCH \\
+            "repos/$GITHUB_REPOSITORY/releases/$release_id" \\
+            --input release-state.json
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
+          python3 scripts/release_publish_contract.py \\
+            --tag "$RELEASE_TAG" \\
+            --release-json release-published.json \\
+            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
+            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
       - name: Upload release rehearsal summary
         uses: actions/upload-artifact@v7
         with:
@@ -738,6 +742,30 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "published release contract helper")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace("-X PATCH", "-X POST"),
+    )
+    assert_issue(issue_messages(root), "final release state patch")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "          rm -rf release-download\n",
+        "          gh api \\\n"
+        "            -X PATCH \\\n"
+        "            \"repos/$GITHUB_REPOSITORY/releases/$release_id\" \\\n"
+        "            --input release-state.json\n"
+        "          rm -rf release-download\n",
+        1,
+      ),
+    )
+    assert_issue(issue_messages(root), "rehearsal must pass")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

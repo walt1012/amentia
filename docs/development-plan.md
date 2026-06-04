@@ -136,6 +136,8 @@ Ready foundations:
   acceptance path for a fresh unsigned DMG.
 - CI change detection now treats release rehearsal contract changes as package
   impacting and reruns all lanes when the classifier itself changes.
+- Release workflow now rehearses downloaded assets before applying the final
+  GitHub Release visibility state.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 
