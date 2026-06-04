@@ -231,6 +231,9 @@ VALID_RELEASE = """name: Release
 on:
   push:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
 
 defaults:
   run:
@@ -243,6 +246,9 @@ permissions:
 concurrency:
   group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
   cancel-in-progress: false
+
+env:
+  RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 jobs:
   release-dmg:
@@ -328,6 +334,7 @@ jobs:
           --source-commit "$PITH_RELEASE_SHA"
           --ci-run-url "$PITH_RELEASE_CI_RUN_URL"
           --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          --dry-run "$RELEASE_DRY_RUN"
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
           printf '%s' "$release_json" > release-existing.json
@@ -335,7 +342,20 @@ jobs:
             --mode preupload-existing-assets \\
             --tag "$RELEASE_TAG" \\
             --release-json release-existing.json
+      - name: Upload release dry-run assets
+        if: env.RELEASE_DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run-${{ env.RELEASE_TAG }}
+          path: |
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256
+            artifacts/macos/README-FIRST.txt
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
+            release-plan.md
+          retention-days: 7
       - name: Upload GitHub Release draft assets
+        if: env.RELEASE_DRY_RUN != 'true'
         run: |
           release_title="Pith $RELEASE_TAG"
           gh release upload "$RELEASE_TAG" \\
@@ -345,6 +365,7 @@ jobs:
             "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
             --clobber
       - name: Rehearse downloaded GitHub Release assets
+        if: env.RELEASE_DRY_RUN != 'true'
         run: |
           rm -rf release-download
           mkdir -p release-download
@@ -357,12 +378,14 @@ jobs:
             --summary-output release-rehearsal.md
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
       - name: Apply final GitHub Release visibility
+        if: env.RELEASE_DRY_RUN != 'true'
         run: |
           gh api \\
             -X PATCH \\
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \\
             --input release-state.json
       - name: Validate final GitHub Release
+        if: env.RELEASE_DRY_RUN != 'true'
         run: |
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
           python3 scripts/release_publish_contract.py \\
@@ -373,6 +396,7 @@ jobs:
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
       - name: Upload release rehearsal summary
+        if: always() && env.RELEASE_DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: release-rehearsal-${{ env.RELEASE_TAG }}
@@ -782,6 +806,29 @@ def main() -> int:
       release=VALID_RELEASE.replace(
         "--mode preupload-existing-assets",
         "--missing-preupload-mode",
+      ),
+    )
+    assert_issue(issue_messages(root), "stage boundary")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "      - name: Upload GitHub Release draft assets\n"
+        "        if: env.RELEASE_DRY_RUN != 'true'\n",
+        "      - name: Upload GitHub Release draft assets\n",
+      ),
+    )
+    assert_issue(issue_messages(root), "final release state patch")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "release-dry-run-${{ env.RELEASE_TAG }}",
+        "release-dry-run-missing",
       ),
     )
     assert_issue(issue_messages(root), "stage boundary")

@@ -189,6 +189,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     source_commit="0123456789abcdef0123456789abcdef01234567",
     ci_run_url="https://github.com/walt1012/pith/actions/runs/100",
     workflow_run_url="https://github.com/walt1012/pith/actions/runs/101",
+    dry_run=True,
     signing_mode="ad-hoc",
     requested_draft=False,
     requested_prerelease=False,
@@ -209,6 +210,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "0123456789abcdef0123456789abcdef01234567",
     "https://github.com/walt1012/pith/actions/runs/100",
     "https://github.com/walt1012/pith/actions/runs/101",
+    "Workflow mode: `dry-run`",
     "Final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Untrusted ad-hoc prerelease",
@@ -261,6 +263,8 @@ def assert_main_writes_release_summary() -> None:
         "https://github.com/walt1012/pith/actions/runs/100",
         "--workflow-run-url",
         "https://github.com/walt1012/pith/actions/runs/101",
+        "--dry-run",
+        "true",
       ]
       exit_code = release_state_main()
       if exit_code != 0:
@@ -272,6 +276,8 @@ def assert_main_writes_release_summary() -> None:
       raise AssertionError("release summary should record final visibility")
     if "https://github.com/walt1012/pith/actions/runs/100" not in summary:
       raise AssertionError("release summary should record the successful CI run")
+    if "Workflow mode: `dry-run`" not in summary:
+      raise AssertionError("release summary should record the workflow mode")
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("release env should record final draft state")
 

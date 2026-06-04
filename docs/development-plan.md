@@ -64,7 +64,7 @@ belongs in connector attributes and narrow presenter adapters.
 Milestones 1-9 are closed. Implementation history belongs in git history, not
 this roadmap.
 
-Active milestone: **M10 Cowork Daily Driver**.
+Active milestone: **M12 Public Release**.
 
 Ready foundations:
 
@@ -100,6 +100,9 @@ Ready foundations:
 - Existing GitHub Releases are checked for non-contract assets before upload,
   keeping reruns from carrying stale packages or model payloads into a user
   download page.
+- Release workflow dispatch can run a dry-run build that validates the same
+  DMG, checksum, install guide, manifest, and release plan without creating or
+  updating a GitHub Release.
 - Downloaded release rehearsals can validate a whole asset directory against
   the same installer contract used before upload, then summarize first-run
   proof, checksum command, signing mode, source commit, and first app-open
@@ -211,6 +214,8 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 - Public assets stay limited to DMG, checksum, `README-FIRST.txt`, and release
   manifest.
+- Use release dry-run before the first visible prerelease to inspect the exact
+  installer assets and release plan without mutating GitHub Releases.
 - Run one full ad-hoc prerelease rehearsal: download from GitHub Release, verify
   checksum, open DMG, handle Gatekeeper, download the default model, open a
   workspace, run a cowork turn, and inspect proof.

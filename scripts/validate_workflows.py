@@ -361,6 +361,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "actions: read",
     "contents: write",
     "cancel-in-progress: false",
+    "dry_run:",
+    "RELEASE_DRY_RUN:",
   ):
     if term not in text:
       issues.append(
@@ -427,6 +429,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--source-commit "$PITH_RELEASE_SHA"',
     '--ci-run-url "$PITH_RELEASE_CI_RUN_URL"',
     '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
+    '--dry-run "$RELEASE_DRY_RUN"',
     'cat release-plan.md >> "$GITHUB_STEP_SUMMARY"',
     'printf \'%s\' "$release_json" > release-existing.json',
     '--mode preupload-existing-assets',
@@ -435,6 +438,12 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Rehearse downloaded GitHub Release assets",
     "Apply final GitHub Release visibility",
     "Validate final GitHub Release",
+    "Upload release dry-run assets",
+    "release-dry-run-${{ env.RELEASE_TAG }}",
+    "if: env.RELEASE_DRY_RUN == 'true'",
+    "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg",
+    "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
+    "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json",
   ):
     if term not in release_block:
       issues.append(
@@ -451,6 +460,11 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       )
     )
   for term in (
+    "Upload GitHub Release draft assets\n        if: env.RELEASE_DRY_RUN != 'true'",
+    "Rehearse downloaded GitHub Release assets\n        if: env.RELEASE_DRY_RUN != 'true'",
+    "Apply final GitHub Release visibility\n        if: env.RELEASE_DRY_RUN != 'true'",
+    "Validate final GitHub Release\n        if: env.RELEASE_DRY_RUN != 'true'",
+    "Upload release rehearsal summary\n        if: always() && env.RELEASE_DRY_RUN != 'true'",
     "-X PATCH",
     "--input release-state.json",
   ):

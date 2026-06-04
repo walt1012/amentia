@@ -25,6 +25,11 @@ on:
         required: false
         default: false
         type: boolean
+      dry_run:
+        description: "Build and validate release assets without creating or updating a GitHub Release."
+        required: false
+        default: false
+        type: boolean
 
 env:
   GIT_CONFIG_COUNT: "1"
@@ -41,6 +46,7 @@ env:
   RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
   RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
+  RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 defaults:
   run:
@@ -376,7 +382,8 @@ jobs:
             --summary-output release-plan.md \
             --source-commit "$PITH_RELEASE_SHA" \
             --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
-            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --dry-run "$RELEASE_DRY_RUN"
           source release-state.env
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
@@ -387,7 +394,22 @@ jobs:
               --release-json release-existing.json
           fi
 
+      - name: Upload release dry-run assets
+        if: env.RELEASE_DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run-${{ env.RELEASE_TAG }}
+          path: |
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256
+            artifacts/macos/README-FIRST.txt
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
+            release-plan.md
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload GitHub Release draft assets
+        if: env.RELEASE_DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -413,6 +435,7 @@ jobs:
             --clobber
 
       - name: Rehearse downloaded GitHub Release assets
+        if: env.RELEASE_DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -429,6 +452,7 @@ jobs:
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply final GitHub Release visibility
+        if: env.RELEASE_DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -444,6 +468,7 @@ jobs:
           fi
 
       - name: Validate final GitHub Release
+        if: env.RELEASE_DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -458,7 +483,7 @@ jobs:
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
 
       - name: Upload release rehearsal summary
-        if: always()
+        if: always() && env.RELEASE_DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: release-rehearsal-${{ env.RELEASE_TAG }}

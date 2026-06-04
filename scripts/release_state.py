@@ -105,6 +105,7 @@ def release_state_summary(
   source_commit: str,
   ci_run_url: str,
   workflow_run_url: str,
+  dry_run: bool,
   signing_mode: str,
   requested_draft: bool,
   requested_prerelease: bool,
@@ -130,6 +131,7 @@ def release_state_summary(
 - Source commit: `{summary_value(source_commit)}`
 - Successful CI: {summary_value(ci_run_url)}
 - Release workflow: {summary_value(workflow_run_url)}
+- Workflow mode: `{"dry-run" if dry_run else "publish"}`
 - Signing mode: `{signing_mode}`
 - Existing release: `{existing_state}`
 - Requested draft: `{str(requested_draft).lower()}`
@@ -167,6 +169,7 @@ def main() -> int:
   parser.add_argument("--source-commit", default="")
   parser.add_argument("--ci-run-url", default="")
   parser.add_argument("--workflow-run-url", default="")
+  parser.add_argument("--dry-run", default="false")
   args = parser.parse_args()
 
   try:
@@ -226,6 +229,7 @@ def main() -> int:
         source_commit=args.source_commit,
         ci_run_url=args.ci_run_url,
         workflow_run_url=args.workflow_run_url,
+        dry_run=parse_bool(args.dry_run),
         signing_mode=args.signing_mode,
         requested_draft=requested_draft,
         requested_prerelease=requested_prerelease,
