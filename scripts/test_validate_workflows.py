@@ -317,18 +317,24 @@ jobs:
           python3 scripts/validate_macos_distribution.py \
             artifacts/macos/Pith.app \
             --dmg-path "$dmg_path"
-      - name: Publish GitHub Release
+      - name: Plan GitHub Release state
         run: |
           release_title="Pith $RELEASE_TAG"
           python3 scripts/release_state.py
           --title "$release_title"
           --tag "$RELEASE_TAG"
+          cat release-state.env >> "$GITHUB_ENV"
+      - name: Upload GitHub Release draft assets
+        run: |
+          release_title="Pith $RELEASE_TAG"
           gh release upload "$RELEASE_TAG" \\
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \\
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
             "artifacts/macos/README-FIRST.txt" \\
             "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
             --clobber
+      - name: Rehearse downloaded GitHub Release assets
+        run: |
           rm -rf release-download
           mkdir -p release-download
           gh release download "$RELEASE_TAG" \\
@@ -339,10 +345,14 @@ jobs:
             --asset-dir release-download \\
             --summary-output release-rehearsal.md
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply final GitHub Release visibility
+        run: |
           gh api \\
             -X PATCH \\
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \\
             --input release-state.json
+      - name: Validate final GitHub Release
+        run: |
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
           python3 scripts/release_publish_contract.py \\
             --tag "$RELEASE_TAG" \\
@@ -731,6 +741,17 @@ def main() -> int:
       release=VALID_RELEASE.replace('          --title "$release_title"\n', ""),
     )
     assert_issue(issue_messages(root), "release state helper must receive --title")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          cat release-state.env >> "$GITHUB_ENV"\n',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "stage boundary")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

@@ -89,9 +89,9 @@ Ready foundations:
 - Release publishing now reads the final GitHub Release back and validates tag,
   title, draft/prerelease state, exact public installer assets, non-empty
   uploads, and tag-scoped download URLs.
-- Release workflow now downloads its own published assets back through GitHub
-  Releases, runs the downloaded-asset rehearsal before passing, and keeps the
-  summary as an internal workflow artifact instead of a public release asset.
+- Release publishing is staged: plan release state, upload draft assets,
+  download and rehearse those assets, then apply final visibility and validate
+  the GitHub Release.
 - Downloaded release rehearsals can validate a whole asset directory against
   the same installer contract used before upload, then summarize first-run
   proof, checksum command, signing mode, source commit, and first app-open
@@ -136,8 +136,8 @@ Ready foundations:
   acceptance path for a fresh unsigned DMG.
 - CI change detection now treats release rehearsal contract changes as package
   impacting and reruns all lanes when the classifier itself changes.
-- Release workflow now rehearses downloaded assets before applying the final
-  GitHub Release visibility state.
+- Workflow policy tests now enforce the release staging order so assets cannot
+  become visible before downloaded-asset rehearsal passes.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

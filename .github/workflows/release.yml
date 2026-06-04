@@ -346,7 +346,7 @@ jobs:
             --asset artifacts/macos/README-FIRST.txt \
             --asset "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
 
-      - name: Publish GitHub Release
+      - name: Plan GitHub Release state
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -372,8 +372,15 @@ jobs:
             --state-output release-state.json \
             --env-output release-state.env
           source release-state.env
+          cat release-state.env >> "$GITHUB_ENV"
 
-          if [[ "$release_exists" == "true" ]]; then
+      - name: Upload GitHub Release draft assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_title="Pith $RELEASE_TAG"
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \
               --title "$release_title" \
               --notes-file release-notes.md
@@ -392,7 +399,11 @@ jobs:
             "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \
             --clobber
 
-          release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
+      - name: Rehearse downloaded GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
           rm -rf release-download
           mkdir -p release-download
           gh release download "$RELEASE_TAG" \
@@ -404,6 +415,12 @@ jobs:
             --summary-output release-rehearsal.md
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Apply final GitHub Release visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
           gh api \
             -X PATCH \
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \
@@ -413,6 +430,11 @@ jobs:
             echo "Release $RELEASE_TAG kept as draft."
           fi
 
+      - name: Validate final GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
           python3 scripts/release_publish_contract.py \
             --tag "$RELEASE_TAG" \
@@ -423,11 +445,12 @@ jobs:
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
 
       - name: Upload release rehearsal summary
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: release-rehearsal-${{ env.RELEASE_TAG }}
           path: release-rehearsal.md
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Cleanup release keychain

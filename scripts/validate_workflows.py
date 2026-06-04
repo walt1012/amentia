@@ -418,6 +418,21 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --title")
     )
+  for term in (
+    "Plan GitHub Release state",
+    'cat release-state.env >> "$GITHUB_ENV"',
+    "Upload GitHub Release draft assets",
+    "Rehearse downloaded GitHub Release assets",
+    "Apply final GitHub Release visibility",
+    "Validate final GitHub Release",
+  ):
+    if term not in release_block:
+      issues.append(
+        WorkflowIssue(
+          RELEASE_WORKFLOW,
+          f"release workflow stage boundary is missing {term}",
+        )
+      )
   if "scripts/release_publish_contract.py" not in release_block:
     issues.append(
       WorkflowIssue(
@@ -458,6 +473,27 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         "release download rehearsal helper is missing",
       )
     )
+  require_release_order(
+    release_block,
+    "scripts/release_state.py",
+    "gh release upload",
+    "release state planning must pass before assets are uploaded",
+    issues,
+  )
+  require_release_order(
+    release_block,
+    "gh release upload",
+    'gh release download "$RELEASE_TAG"',
+    "release assets must be uploaded before downloaded rehearsal",
+    issues,
+  )
+  require_release_order(
+    release_block,
+    'gh release download "$RELEASE_TAG"',
+    "scripts/release_rehearsal_contract.py",
+    "release assets must be downloaded before rehearsal validation",
+    issues,
+  )
   require_release_order(
     release_block,
     "scripts/release_rehearsal_contract.py",
