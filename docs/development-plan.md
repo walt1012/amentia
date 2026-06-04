@@ -95,6 +95,8 @@ Ready foundations:
 - Release planning writes the final draft/prerelease state and trust path into
   the workflow summary before upload, so maintainers see what will become
   visible before assets move.
+- Release plans now include the source commit, successful CI run, and release
+  workflow run before assets upload, keeping the first tag path auditable.
 - Existing GitHub Releases are checked for non-contract assets before upload,
   keeping reruns from carrying stale packages or model payloads into a user
   download page.

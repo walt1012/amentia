@@ -257,7 +257,8 @@ jobs:
           if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             exit 1
           fi
-          gh run list --workflow CI --status success
+          gh run list --workflow CI --status success --json conclusion,headSha,url
+          echo "PITH_RELEASE_CI_RUN_URL=https://github.com/walt1012/pith/actions/runs/100" >> "$GITHUB_ENV"
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
       - name: Create release DMG
@@ -324,6 +325,9 @@ jobs:
           --title "$release_title"
           --tag "$RELEASE_TAG"
           --summary-output release-plan.md
+          --source-commit "$PITH_RELEASE_SHA"
+          --ci-run-url "$PITH_RELEASE_CI_RUN_URL"
+          --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
           printf '%s' "$release_json" > release-existing.json

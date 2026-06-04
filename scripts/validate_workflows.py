@@ -375,6 +375,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "gh run list",
     "--workflow CI",
     "--status success",
+    "--json conclusion,headSha,url",
+    "PITH_RELEASE_CI_RUN_URL",
     r"^v[0-9]+\.[0-9]+\.[0-9]+$",
     "python3 scripts/validate_model_pack.py --remote",
   )
@@ -422,6 +424,9 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Plan GitHub Release state",
     'cat release-state.env >> "$GITHUB_ENV"',
     '--summary-output release-plan.md',
+    '--source-commit "$PITH_RELEASE_SHA"',
+    '--ci-run-url "$PITH_RELEASE_CI_RUN_URL"',
+    '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
     'cat release-plan.md >> "$GITHUB_STEP_SUMMARY"',
     'printf \'%s\' "$release_json" > release-existing.json',
     '--mode preupload-existing-assets',

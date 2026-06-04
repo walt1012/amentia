@@ -102,6 +102,9 @@ def release_state_summary(
   *,
   tag: str,
   title: str,
+  source_commit: str,
+  ci_run_url: str,
+  workflow_run_url: str,
   signing_mode: str,
   requested_draft: bool,
   requested_prerelease: bool,
@@ -124,6 +127,9 @@ def release_state_summary(
 
 - Tag: `{tag}`
 - Title: `{title}`
+- Source commit: `{summary_value(source_commit)}`
+- Successful CI: {summary_value(ci_run_url)}
+- Release workflow: {summary_value(workflow_run_url)}
 - Signing mode: `{signing_mode}`
 - Existing release: `{existing_state}`
 - Requested draft: `{str(requested_draft).lower()}`
@@ -132,6 +138,11 @@ def release_state_summary(
 - Final visibility: `{visibility} {release_class}`
 - Trust path: {trust_note}
 """
+
+
+def summary_value(value: str) -> str:
+  stripped = value.strip()
+  return stripped if stripped else "not recorded"
 
 
 def write_summary(path: Path, summary: str) -> None:
@@ -153,6 +164,9 @@ def main() -> int:
   parser.add_argument("--state-output", required=True)
   parser.add_argument("--env-output", required=True)
   parser.add_argument("--summary-output", type=Path)
+  parser.add_argument("--source-commit", default="")
+  parser.add_argument("--ci-run-url", default="")
+  parser.add_argument("--workflow-run-url", default="")
   args = parser.parse_args()
 
   try:
@@ -209,6 +223,9 @@ def main() -> int:
       release_state_summary(
         tag=args.tag,
         title=args.title,
+        source_commit=args.source_commit,
+        ci_run_url=args.ci_run_url,
+        workflow_run_url=args.workflow_run_url,
         signing_mode=args.signing_mode,
         requested_draft=requested_draft,
         requested_prerelease=requested_prerelease,

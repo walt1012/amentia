@@ -89,19 +89,20 @@ jobs:
           echo "PITH_RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
           echo "PITH_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
 
-          successful_ci_count="$(
+          successful_ci_url="$(
             gh run list \
               --workflow CI \
               --commit "$release_sha" \
               --status success \
-              --json conclusion,headSha \
+              --json conclusion,headSha,url \
               --limit 20 \
-              --jq '[.[] | select(.headSha == "'"$release_sha"'" and .conclusion == "success")] | length'
+              --jq '[.[] | select(.headSha == "'"$release_sha"'" and .conclusion == "success")][0].url // ""'
           )"
-          if [[ "$successful_ci_count" == "0" ]]; then
+          if [[ -z "$successful_ci_url" ]]; then
             echo "::error title=Release CI gate::The release commit $release_sha does not have a successful CI run. Run CI for this commit before publishing a release."
             exit 1
           fi
+          echo "PITH_RELEASE_CI_RUN_URL=$successful_ci_url" >> "$GITHUB_ENV"
 
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
@@ -372,7 +373,10 @@ jobs:
             --existing-draft "$existing_draft" \
             --state-output release-state.json \
             --env-output release-state.env \
-            --summary-output release-plan.md
+            --summary-output release-plan.md \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           source release-state.env
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"

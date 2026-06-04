@@ -186,6 +186,9 @@ def assert_release_summary_names_visibility_and_trust() -> None:
   summary = release_state_summary(
     tag="v0.1.0",
     title="Pith v0.1.0",
+    source_commit="0123456789abcdef0123456789abcdef01234567",
+    ci_run_url="https://github.com/walt1012/pith/actions/runs/100",
+    workflow_run_url="https://github.com/walt1012/pith/actions/runs/101",
     signing_mode="ad-hoc",
     requested_draft=False,
     requested_prerelease=False,
@@ -203,6 +206,9 @@ def assert_release_summary_names_visibility_and_trust() -> None:
   )
   for phrase in (
     "# Release Plan",
+    "0123456789abcdef0123456789abcdef01234567",
+    "https://github.com/walt1012/pith/actions/runs/100",
+    "https://github.com/walt1012/pith/actions/runs/101",
     "Final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Untrusted ad-hoc prerelease",
@@ -249,6 +255,12 @@ def assert_main_writes_release_summary() -> None:
         str(env_file),
         "--summary-output",
         str(summary_file),
+        "--source-commit",
+        "0123456789abcdef0123456789abcdef01234567",
+        "--ci-run-url",
+        "https://github.com/walt1012/pith/actions/runs/100",
+        "--workflow-run-url",
+        "https://github.com/walt1012/pith/actions/runs/101",
       ]
       exit_code = release_state_main()
       if exit_code != 0:
@@ -258,6 +270,8 @@ def assert_main_writes_release_summary() -> None:
     summary = summary_file.read_text(encoding="utf-8")
     if "Final visibility: `visible prerelease`" not in summary:
       raise AssertionError("release summary should record final visibility")
+    if "https://github.com/walt1012/pith/actions/runs/100" not in summary:
+      raise AssertionError("release summary should record the successful CI run")
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("release env should record final draft state")
 
