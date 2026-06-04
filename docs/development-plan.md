@@ -132,6 +132,8 @@ Ready foundations:
   rehearsals display and validate.
 - Packaged smoke receipts now group checks into user-journey stages so release
   rehearsals show what the installer actually proved.
+- Downloaded-release rehearsal summaries now include the manual prerelease
+  acceptance path for a fresh unsigned DMG.
 - CI lanes are change-aware, policy-tested, and split so validation and package
   assembly stay fast without hiding release-impacting changes.
 

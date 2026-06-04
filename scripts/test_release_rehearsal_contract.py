@@ -152,6 +152,17 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should prove smoke package metadata match")
     if summary["packagedSmokeReceipt"]["journey"] != packaged_smoke_journey():
       raise AssertionError("release rehearsal summary should include packaged smoke journey")
+    manual_checks = "\n".join(summary["manualPrereleaseChecks"])
+    for phrase in (
+      "SHA-256 sidecar",
+      DEFAULT_MODEL_ID,
+      "workspace readiness",
+      "Web Search",
+      "reviewing the diff",
+      "runtime readiness",
+    ):
+      if phrase not in manual_checks:
+        raise AssertionError(f"manual prerelease checks should include {phrase}")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     markdown = summary_markdown(summary)
@@ -167,6 +178,10 @@ def main() -> int:
       raise AssertionError("release rehearsal markdown should include smoke metadata match proof")
     if "## Packaged Smoke Journey" not in markdown or "Web Search retrieval" not in markdown:
       raise AssertionError("release rehearsal markdown should include smoke journey stages")
+    if "## Manual Prerelease Acceptance" not in markdown:
+      raise AssertionError("release rehearsal markdown should include manual acceptance")
+    if "- [ ] Let the model use Web Search" not in markdown:
+      raise AssertionError("release rehearsal markdown should include Web Search acceptance")
     output = root / "rehearsal.md"
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):
