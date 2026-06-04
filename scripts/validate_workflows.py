@@ -438,12 +438,18 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Rehearse downloaded GitHub Release assets",
     "Apply final GitHub Release visibility",
     "Validate final GitHub Release",
+    "Rehearse release dry-run assets",
     "Upload release dry-run assets",
     "release-dry-run-${{ env.RELEASE_TAG }}",
     "if: env.RELEASE_DRY_RUN == 'true'",
+    "release-dry-run-assets",
+    "--asset-dir release-dry-run-assets",
+    "--summary-output release-dry-run-rehearsal.md",
+    'cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg",
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json",
+    "release-dry-run-rehearsal.md",
   ):
     if term not in release_block:
       issues.append(
@@ -513,14 +519,21 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   )
   require_release_order(
     release_block,
+    "Rehearse release dry-run assets",
+    "Upload release dry-run assets",
+    "release dry-run rehearsal must pass before dry-run assets are uploaded",
+    issues,
+  )
+  require_release_order(
+    release_block,
     'gh release download "$RELEASE_TAG"',
-    "scripts/release_rehearsal_contract.py",
+    "--asset-dir release-download",
     "release assets must be downloaded before rehearsal validation",
     issues,
   )
   require_release_order(
     release_block,
-    "scripts/release_rehearsal_contract.py",
+    "--asset-dir release-download",
     "-X PATCH",
     "release download rehearsal must pass before final release state patch",
     issues,

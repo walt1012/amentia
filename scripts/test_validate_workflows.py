@@ -342,6 +342,15 @@ jobs:
             --mode preupload-existing-assets \\
             --tag "$RELEASE_TAG" \\
             --release-json release-existing.json
+      - name: Rehearse release dry-run assets
+        if: env.RELEASE_DRY_RUN == 'true'
+        run: |
+          mkdir -p release-dry-run-assets
+          python3 scripts/release_rehearsal_contract.py \\
+            --tag "$RELEASE_TAG" \\
+            --asset-dir release-dry-run-assets \\
+            --summary-output release-dry-run-rehearsal.md
+          cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload release dry-run assets
         if: env.RELEASE_DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -353,6 +362,7 @@ jobs:
             artifacts/macos/README-FIRST.txt
             artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
             release-plan.md
+            release-dry-run-rehearsal.md
           retention-days: 7
       - name: Upload GitHub Release draft assets
         if: env.RELEASE_DRY_RUN != 'true'
@@ -832,6 +842,26 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "stage boundary")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "      - name: Upload release dry-run assets",
+        "      - name: Upload release dry-run assets moved",
+        1,
+      ).replace(
+        "      - name: Rehearse release dry-run assets",
+        "      - name: Upload release dry-run assets",
+        1,
+      ).replace(
+        "      - name: Upload release dry-run assets moved",
+        "      - name: Rehearse release dry-run assets",
+        1,
+      ),
+    )
+    assert_issue(issue_messages(root), "dry-run rehearsal")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

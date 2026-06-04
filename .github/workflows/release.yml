@@ -394,6 +394,24 @@ jobs:
               --release-json release-existing.json
           fi
 
+      - name: Rehearse release dry-run assets
+        if: env.RELEASE_DRY_RUN == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf release-dry-run-assets
+          mkdir -p release-dry-run-assets
+          cp \
+            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \
+            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            artifacts/macos/README-FIRST.txt \
+            "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \
+            release-dry-run-assets/
+          python3 scripts/release_rehearsal_contract.py \
+            --tag "$RELEASE_TAG" \
+            --asset-dir release-dry-run-assets \
+            --summary-output release-dry-run-rehearsal.md
+          cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload release dry-run assets
         if: env.RELEASE_DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -405,6 +423,7 @@ jobs:
             artifacts/macos/README-FIRST.txt
             artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
             release-plan.md
+            release-dry-run-rehearsal.md
           if-no-files-found: error
           retention-days: 7
 
