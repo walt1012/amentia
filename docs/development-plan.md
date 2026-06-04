@@ -95,6 +95,9 @@ Ready foundations:
 - Release planning writes the final draft/prerelease state and trust path into
   the workflow summary before upload, so maintainers see what will become
   visible before assets move.
+- Existing GitHub Releases are checked for non-contract assets before upload,
+  keeping reruns from carrying stale packages or model payloads into a user
+  download page.
 - Downloaded release rehearsals can validate a whole asset directory against
   the same installer contract used before upload, then summarize first-run
   proof, checksum command, signing mode, source commit, and first app-open

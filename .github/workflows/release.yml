@@ -356,6 +356,7 @@ jobs:
           existing_draft=""
           if release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" 2>/dev/null)"; then
             release_exists="true"
+            printf '%s' "$release_json" > release-existing.json
             existing_draft="$(python3 -c 'import json, sys; print(str(json.loads(sys.argv[1])["draft"]).lower())' "$release_json")"
           fi
 
@@ -375,6 +376,12 @@ jobs:
           source release-state.env
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$release_exists" == "true" ]]; then
+            python3 scripts/release_publish_contract.py \
+              --mode preupload-existing-assets \
+              --tag "$RELEASE_TAG" \
+              --release-json release-existing.json
+          fi
 
       - name: Upload GitHub Release draft assets
         env:

@@ -423,6 +423,9 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     'cat release-state.env >> "$GITHUB_ENV"',
     '--summary-output release-plan.md',
     'cat release-plan.md >> "$GITHUB_STEP_SUMMARY"',
+    'printf \'%s\' "$release_json" > release-existing.json',
+    '--mode preupload-existing-assets',
+    '--release-json release-existing.json',
     "Upload GitHub Release draft assets",
     "Rehearse downloaded GitHub Release assets",
     "Apply final GitHub Release visibility",
@@ -506,7 +509,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   require_release_order(
     release_block,
     "-X PATCH",
-    "scripts/release_publish_contract.py",
+    "--release-json release-published.json",
     "published release validation must run after final release state patch",
     issues,
   )

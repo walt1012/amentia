@@ -11,6 +11,7 @@ from installer_artifact_contract import expected_installer_asset_names
 from release_publish_contract import load_release
 from release_publish_contract import RELEASE_REPOSITORY
 from release_publish_contract import release_asset_names
+from release_publish_contract import validate_existing_release_assets_before_upload
 from release_publish_contract import validate_published_release
 from release_state import expected_release_title
 from release_text import release_notes
@@ -96,6 +97,22 @@ def main() -> int:
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=False,
   )
+  validate_existing_release_assets_before_upload(
+    release_payload(assets=sorted(expected_installer_asset_names(TAG))[:2]),
+    tag=TAG,
+  )
+  try:
+    validate_existing_release_assets_before_upload(
+      release_payload(
+        assets=[*sorted(expected_installer_asset_names(TAG))[:2], "unexpected.txt"]
+      ),
+      tag=TAG,
+    )
+  except RuntimeError as error:
+    if "non-contract assets" not in str(error):
+      raise
+  else:
+    raise AssertionError("existing release asset preupload guard should reject extras")
 
   expect_failure(release_payload(tag="v9.9.9"), "tag_name")
   expect_failure({**release_payload(), "name": "Pith wrong"}, "name")

@@ -44,6 +44,18 @@ def validate_published_release(
   validate_release_assets(release, tag)
 
 
+def validate_existing_release_assets_before_upload(release: dict, *, tag: str) -> None:
+  validate_public_release_tag(tag)
+  actual_names = release_asset_names(release)
+  expected_names = expected_installer_asset_names(tag)
+  extra = sorted(actual_names - expected_names)
+  if extra:
+    raise RuntimeError(
+      "Existing GitHub Release has non-contract assets before upload: "
+      + ", ".join(extra)
+    )
+
+
 def validate_release_field(release: dict, field: str, expected: str) -> None:
   actual = release.get(field)
   if actual != expected:
@@ -145,17 +157,34 @@ def load_release(path: Path) -> dict:
 
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument(
+    "--mode",
+    choices=("final", "preupload-existing-assets"),
+    default="final",
+  )
   parser.add_argument("--tag", required=True)
   parser.add_argument("--release-json", required=True, type=Path)
-  parser.add_argument("--expected-draft", required=True)
-  parser.add_argument("--expected-prerelease", required=True)
-  parser.add_argument("--signing-mode", required=True, choices=sorted(RELEASE_SIGNING_MODES))
-  parser.add_argument("--allow-untrusted-ad-hoc", required=True)
+  parser.add_argument("--expected-draft")
+  parser.add_argument("--expected-prerelease")
+  parser.add_argument("--signing-mode", choices=sorted(RELEASE_SIGNING_MODES))
+  parser.add_argument("--allow-untrusted-ad-hoc")
   args = parser.parse_args()
 
   try:
+    release = load_release(args.release_json)
+    if args.mode == "preupload-existing-assets":
+      validate_existing_release_assets_before_upload(release, tag=args.tag)
+      print("Existing release asset preupload contract passed")
+      return 0
+    if (
+      args.expected_draft is None
+      or args.expected_prerelease is None
+      or args.signing_mode is None
+      or args.allow_untrusted_ad_hoc is None
+    ):
+      raise RuntimeError("Final release validation requires expected state and signing arguments")
     validate_published_release(
-      load_release(args.release_json),
+      release,
       tag=args.tag,
       expected_draft=parse_bool(args.expected_draft),
       expected_prerelease=parse_bool(args.expected_prerelease),
