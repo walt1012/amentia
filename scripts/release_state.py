@@ -11,6 +11,7 @@ from pathlib import Path
 
 from package_contract import RELEASE_SIGNING_MODES
 from release_identity import validate_public_release_tag
+from release_text import release_trust_note
 from release_text import validate_release_notes
 
 
@@ -97,6 +98,47 @@ def write_env(path: Path, state: ReleaseState) -> None:
   )
 
 
+def release_state_summary(
+  *,
+  tag: str,
+  title: str,
+  signing_mode: str,
+  requested_draft: bool,
+  requested_prerelease: bool,
+  allow_untrusted_ad_hoc: bool,
+  release_exists: bool,
+  existing_draft: bool | None,
+  state: ReleaseState,
+) -> str:
+  existing_state = "none"
+  if release_exists:
+    existing_state = "draft" if existing_draft else "visible"
+  visibility = "draft" if state.draft else "visible"
+  release_class = "prerelease" if state.prerelease else "stable"
+  trust_note = release_trust_note(
+    signing_mode,
+    allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+    draft=state.draft,
+  )
+  return f"""# Release Plan
+
+- Tag: `{tag}`
+- Title: `{title}`
+- Signing mode: `{signing_mode}`
+- Existing release: `{existing_state}`
+- Requested draft: `{str(requested_draft).lower()}`
+- Requested prerelease: `{str(requested_prerelease).lower()}`
+- Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
+- Final visibility: `{visibility} {release_class}`
+- Trust path: {trust_note}
+"""
+
+
+def write_summary(path: Path, summary: str) -> None:
+  path.parent.mkdir(parents=True, exist_ok=True)
+  path.write_text(summary, encoding="utf-8")
+
+
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--title", required=True)
@@ -110,12 +152,16 @@ def main() -> int:
   parser.add_argument("--existing-draft", default="")
   parser.add_argument("--state-output", required=True)
   parser.add_argument("--env-output", required=True)
+  parser.add_argument("--summary-output", type=Path)
   args = parser.parse_args()
 
   try:
     validate_public_release_tag(args.tag)
     validate_release_title(args.title, args.tag)
     release_exists = parse_bool(args.release_exists)
+    requested_draft = parse_bool(args.requested_draft)
+    requested_prerelease = parse_bool(args.requested_prerelease)
+    allow_untrusted_ad_hoc = parse_bool(args.allow_untrusted_ad_hoc)
     existing_draft = (
       parse_bool(args.existing_draft)
       if args.existing_draft.strip()
@@ -123,9 +169,9 @@ def main() -> int:
     )
     state = plan_release_state(
       signing_mode=args.signing_mode,
-      requested_draft=parse_bool(args.requested_draft),
-      requested_prerelease=parse_bool(args.requested_prerelease),
-      allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
+      requested_draft=requested_draft,
+      requested_prerelease=requested_prerelease,
+      allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
       release_exists=release_exists,
       existing_draft=existing_draft,
     )
@@ -139,7 +185,7 @@ def main() -> int:
       notes,
       tag=args.tag,
       signing_mode=args.signing_mode,
-      allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
+      allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
       draft=state.draft,
     )
   except RuntimeError as error:
@@ -157,6 +203,21 @@ def main() -> int:
     encoding="utf-8",
   )
   write_env(Path(args.env_output), state)
+  if args.summary_output is not None:
+    write_summary(
+      args.summary_output,
+      release_state_summary(
+        tag=args.tag,
+        title=args.title,
+        signing_mode=args.signing_mode,
+        requested_draft=requested_draft,
+        requested_prerelease=requested_prerelease,
+        allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+        release_exists=release_exists,
+        existing_draft=existing_draft,
+        state=state,
+      ),
+    )
   return 0
 
 

@@ -421,6 +421,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   for term in (
     "Plan GitHub Release state",
     'cat release-state.env >> "$GITHUB_ENV"',
+    '--summary-output release-plan.md',
+    'cat release-plan.md >> "$GITHUB_STEP_SUMMARY"',
     "Upload GitHub Release draft assets",
     "Rehearse downloaded GitHub Release assets",
     "Apply final GitHub Release visibility",

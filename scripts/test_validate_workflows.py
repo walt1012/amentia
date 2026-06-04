@@ -323,7 +323,9 @@ jobs:
           python3 scripts/release_state.py
           --title "$release_title"
           --tag "$RELEASE_TAG"
+          --summary-output release-plan.md
           cat release-state.env >> "$GITHUB_ENV"
+          cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload GitHub Release draft assets
         run: |
           release_title="Pith $RELEASE_TAG"
@@ -748,6 +750,17 @@ def main() -> int:
       root,
       release=VALID_RELEASE.replace(
         '          cat release-state.env >> "$GITHUB_ENV"\n',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "stage boundary")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          cat release-plan.md >> "$GITHUB_STEP_SUMMARY"\n',
         "",
       ),
     )

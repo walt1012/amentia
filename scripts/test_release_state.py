@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from release_state import main as release_state_main
 from release_state import expected_release_title
 from release_state import plan_release_state
+from release_state import release_state_summary
 from release_state import validate_release_title
 from release_text import release_notes
 
@@ -181,6 +182,86 @@ def assert_rejects_non_release_tag() -> None:
       sys.argv = original_argv
 
 
+def assert_release_summary_names_visibility_and_trust() -> None:
+  summary = release_state_summary(
+    tag="v0.1.0",
+    title="Pith v0.1.0",
+    signing_mode="ad-hoc",
+    requested_draft=False,
+    requested_prerelease=False,
+    allow_untrusted_ad_hoc=True,
+    release_exists=False,
+    existing_draft=None,
+    state=plan_release_state(
+      signing_mode="ad-hoc",
+      requested_draft=False,
+      requested_prerelease=False,
+      allow_untrusted_ad_hoc=True,
+      release_exists=False,
+      existing_draft=None,
+    ),
+  )
+  for phrase in (
+    "# Release Plan",
+    "Final visibility: `visible prerelease`",
+    "Allow visible ad-hoc: `true`",
+    "Untrusted ad-hoc prerelease",
+    "Open Anyway",
+  ):
+    if phrase not in summary:
+      raise AssertionError(f"release summary should include {phrase}")
+
+
+def assert_main_writes_release_summary() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    summary_file = root / "release-plan.md"
+    notes_file.write_text(
+      release_notes("v0.1.0", "ad-hoc", True, False),
+      encoding="utf-8",
+    )
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith v0.1.0",
+        "--tag",
+        "v0.1.0",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "ad-hoc",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "true",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+        "--summary-output",
+        str(summary_file),
+      ]
+      exit_code = release_state_main()
+      if exit_code != 0:
+        raise AssertionError("release state summary command should pass")
+    finally:
+      sys.argv = original_argv
+    summary = summary_file.read_text(encoding="utf-8")
+    if "Final visibility: `visible prerelease`" not in summary:
+      raise AssertionError("release summary should record final visibility")
+    if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
+      raise AssertionError("release env should record final draft state")
+
+
 def main() -> int:
   if expected_release_title("v0.1.0") != "Pith v0.1.0":
     raise AssertionError("release title should be derived from the tag")
@@ -221,6 +302,8 @@ def main() -> int:
   assert_rejects_tampered_release_notes()
   assert_rejects_wrong_release_title()
   assert_rejects_non_release_tag()
+  assert_release_summary_names_visibility_and_trust()
+  assert_main_writes_release_summary()
   assert_state(
     signing_mode="ad-hoc",
     requested_draft=False,
