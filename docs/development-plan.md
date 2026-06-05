@@ -145,6 +145,9 @@ Ready foundations:
   rehearsals show what the installer actually proved.
 - Downloaded-release rehearsal summaries now include the manual prerelease
   acceptance path for a fresh unsigned DMG.
+- Release rehearsal summaries now include the publish decision boundary:
+  automated rehearsal can pass while visible ad-hoc prerelease still requires
+  manual acceptance.
 - CI change detection now treats release rehearsal contract changes as package
   impacting and reruns all lanes when the classifier itself changes.
 - Workflow policy tests now enforce the release staging order so assets cannot
@@ -217,6 +220,8 @@ Goal: ship a usable macOS installer from GitHub Releases.
 - Use release dry-run before the first visible prerelease to inspect the exact
   installer assets, release plan, and rehearsal summary without mutating GitHub
   Releases.
+- Treat release rehearsal as a publish gate, not a substitute for manual
+  first-launch acceptance on a fresh Mac.
 - Run one full ad-hoc prerelease rehearsal: download from GitHub Release, verify
   checksum, open DMG, handle Gatekeeper, download the default model, open a
   workspace, run a cowork turn, and inspect proof.

@@ -21,7 +21,7 @@ Current scripts:
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
-- `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write a compact rehearsal summary with trust, Gatekeeper, smoke journey, manual prerelease acceptance, metadata-match, and first app-open checks.
+- `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write a compact rehearsal summary with trust, Gatekeeper, smoke journey, release-decision gate, manual prerelease acceptance, metadata-match, and first app-open checks.
 - `test_first_app_open_contract.py`: checks that Swift first-open copy stays aligned with the shared release first app-open copy contract.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID, ad-hoc, and dry-run DMG builds, enforces tag/title identity, revalidates release notes against the final publish state, and writes the release plan summary used in Actions.
 - `release_text.py`: generates and validates GitHub Release notes and the DMG root install guide from the release signing mode, including exact installer asset names and the daily-driver next-action path users should follow after install.
@@ -62,7 +62,9 @@ an untrusted prerelease for users who accept the macOS Gatekeeper manual approva
 path, but it must not be promoted as a normal trusted installer. The release
 workflow can also run as a dry-run: it builds, validates, and rehearses the same
 DMG, checksum, root install guide, manifest, release plan, and rehearsal summary
-without creating or updating a GitHub Release. The release state helper rejects
+without creating or updating a GitHub Release. Rehearsal summaries record that
+manual acceptance is still required before any visible ad-hoc prerelease. The
+release state helper rejects
 non-version tags, mismatched release titles, and accidental ad-hoc updates to an
 already-public release unless that untrusted prerelease path was explicitly
 requested. It also refuses to move an existing public GitHub Release back to

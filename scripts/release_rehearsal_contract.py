@@ -53,6 +53,11 @@ MANUAL_PRERELEASE_CHECKS = (
   "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
   "Restart Pith and confirm runtime readiness, selected workspace, model state, and recent proof recover.",
 )
+RELEASE_DECISION = {
+  "automatedRehearsal": "passed",
+  "manualAcceptance": "required-before-visible-prerelease",
+  "publishGate": "do-not-publish-visible-ad-hoc-until-manual-acceptance-passes",
+}
 
 
 def validate_release_rehearsal(
@@ -181,6 +186,7 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     },
     "firstRun": dict(FIRST_RUN_CONTRACT),
     "dailyDriver": dict(DAILY_DRIVER_CONTRACT),
+    "releaseDecision": dict(RELEASE_DECISION),
     "firstAppOpenChecks": list(FIRST_APP_OPEN_CHECKS),
     "manualPrereleaseChecks": list(MANUAL_PRERELEASE_CHECKS),
     "packagedSmokeReceipt": {
@@ -204,6 +210,10 @@ def summary_markdown(summary: dict) -> str:
   first_run = "\n".join(
     f"- `{key}`: {value}"
     for key, value in summary["firstRun"].items()
+  )
+  release_decision = "\n".join(
+    f"- `{key}`: {value}"
+    for key, value in summary["releaseDecision"].items()
   )
   app_open = "\n".join(f"- {check}" for check in summary["firstAppOpenChecks"])
   manual_acceptance = "\n".join(
@@ -240,6 +250,9 @@ Result: `{summary["result"]}`
 
 ## First Run
 {first_run}
+
+## Release Decision
+{release_decision}
 
 ## First App Open
 {app_open}

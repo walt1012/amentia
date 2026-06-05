@@ -141,6 +141,13 @@ def main() -> int:
       raise AssertionError("release rehearsal summary should include the first app-open contract")
     if summary["dailyDriver"] != DAILY_DRIVER_CONTRACT:
       raise AssertionError("release rehearsal summary should record daily-driver readiness")
+    if (
+      summary["releaseDecision"]["manualAcceptance"]
+      != "required-before-visible-prerelease"
+    ):
+      raise AssertionError("release rehearsal summary should require manual acceptance")
+    if "do-not-publish-visible-ad-hoc" not in summary["releaseDecision"]["publishGate"]:
+      raise AssertionError("release rehearsal summary should guard visible ad-hoc publish")
     if summary["appPackage"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
       raise AssertionError("release rehearsal summary should record app package first app-open proof")
     if (
@@ -180,6 +187,10 @@ def main() -> int:
       raise AssertionError("release rehearsal markdown should include smoke journey stages")
     if "## Manual Prerelease Acceptance" not in markdown:
       raise AssertionError("release rehearsal markdown should include manual acceptance")
+    if "## Release Decision" not in markdown:
+      raise AssertionError("release rehearsal markdown should include release decision")
+    if "required-before-visible-prerelease" not in markdown:
+      raise AssertionError("release rehearsal markdown should require manual acceptance")
     if "- [ ] Let the model use Web Search" not in markdown:
       raise AssertionError("release rehearsal markdown should include Web Search acceptance")
     output = root / "rehearsal.md"
