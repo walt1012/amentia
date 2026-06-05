@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from release_readiness import plan_readiness
+from release_readiness import readiness_json
 from release_readiness import readiness_report
 
 
@@ -41,6 +42,26 @@ def assert_ready_dry_run_report() -> None:
   ):
     if phrase not in report:
       raise AssertionError(f"readiness report should include {phrase}")
+
+  payload = readiness_json(readiness)
+  expected_values = {
+    "status": "ready",
+    "tag": "v0.1.0",
+    "sourceCommit": VALID_COMMIT,
+    "successfulCiRunUrl": VALID_CI_URL,
+    "workflowMode": "dry-run",
+    "signingMode": "ad-hoc",
+    "plannedDraft": True,
+    "plannedPrerelease": True,
+    "workingTreeClean": True,
+    "tagPointsAtSourceCommit": True,
+    "releaseWorkflowInputsReady": True,
+  }
+  for key, expected in expected_values.items():
+    if payload.get(key) != expected:
+      raise AssertionError(f"readiness JSON {key} should be {expected!r}, got {payload.get(key)!r}")
+  if "gh workflow run release.yml" not in str(payload.get("nextCommand", "")):
+    raise AssertionError("readiness JSON should include the dispatch command")
 
 
 def assert_blocks_missing_ci_and_tag() -> None:
@@ -126,6 +147,19 @@ def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
   ):
     if phrase not in report:
       raise AssertionError(f"accepted publish report should include {phrase}")
+
+  payload = readiness_json(readiness)
+  expected_values = {
+    "workflowMode": "publish",
+    "allowUntrustedAdHoc": True,
+    "manualAcceptanceConfirmed": True,
+    "manualAcceptanceEvidence": evidence,
+    "plannedDraft": False,
+    "plannedPrerelease": True,
+  }
+  for key, expected in expected_values.items():
+    if payload.get(key) != expected:
+      raise AssertionError(f"accepted publish JSON {key} should be {expected!r}")
 
 
 def assert_rejects_invalid_tag() -> None:

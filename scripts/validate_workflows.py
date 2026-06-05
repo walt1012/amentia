@@ -444,6 +444,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Write release readiness report",
     'python3 scripts/release_readiness.py',
     '--output release-readiness.md',
+    '--json-output release-readiness.json',
     '--ci-run-url "$PITH_RELEASE_CI_RUN_URL"',
     'cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"',
     'printf \'%s\' "$release_json" > release-existing.json',
@@ -467,6 +468,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json",
     "release-readiness.md",
+    "release-readiness.json",
     "release-dry-run-rehearsal.md",
     "release-dry-run-manual-acceptance.md",
   ):

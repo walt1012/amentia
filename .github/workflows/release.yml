@@ -153,6 +153,7 @@ jobs:
             --tag "$RELEASE_TAG" \
             --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
             --output release-readiness.md \
+            --json-output release-readiness.json \
             --dry-run "$RELEASE_DRY_RUN" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --requested-draft "$RELEASE_DRAFT" \
@@ -456,6 +457,7 @@ jobs:
             artifacts/macos/README-FIRST.txt
             artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
             release-readiness.md
+            release-readiness.json
             release-plan.md
             release-dry-run-rehearsal.md
             release-dry-run-manual-acceptance.md
@@ -545,6 +547,7 @@ jobs:
           name: release-rehearsal-${{ env.RELEASE_TAG }}
           path: |
             release-readiness.md
+            release-readiness.json
             release-rehearsal.md
             release-manual-acceptance.md
           if-no-files-found: warn

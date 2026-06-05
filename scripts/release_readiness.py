@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -177,6 +178,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   release_class = "prerelease" if readiness.state.prerelease else "stable"
   evidence = readiness.manual_acceptance_evidence or "not recorded"
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
+  next_command = readiness_next_command(readiness)
   if not blockers:
     blockers = "- None"
 
@@ -200,16 +202,47 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 
 ## Next Command
 ```bash
-gh workflow run release.yml \\
-  -f tag={readiness.tag} \\
-  -f dry_run={str(readiness.dry_run).lower()} \\
-  -f draft={str(readiness.requested_draft).lower()} \\
-  -f prerelease={str(readiness.requested_prerelease).lower()} \\
-  -f publish_untrusted_ad_hoc={str(readiness.allow_untrusted_ad_hoc).lower()} \\
-  -f manual_acceptance_confirmed={str(readiness.manual_acceptance_confirmed).lower()} \\
-  -f manual_acceptance_evidence={shell_quote(readiness.manual_acceptance_evidence)}
+{next_command}
 ```
 """
+
+
+def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
+  return {
+    "status": "ready" if readiness.ready else "blocked",
+    "tag": readiness.tag,
+    "sourceCommit": readiness.source_commit,
+    "successfulCiRunUrl": readiness.ci_run_url,
+    "workflowMode": "dry-run" if readiness.dry_run else "publish",
+    "signingMode": readiness.signing_mode,
+    "requestedDraft": readiness.requested_draft,
+    "requestedPrerelease": readiness.requested_prerelease,
+    "allowUntrustedAdHoc": readiness.allow_untrusted_ad_hoc,
+    "plannedDraft": readiness.state.draft,
+    "plannedPrerelease": readiness.state.prerelease,
+    "workingTreeClean": readiness.working_tree_clean,
+    "tagPointsAtSourceCommit": readiness.tag_points_at_commit,
+    "releaseWorkflowInputsReady": readiness.workflow_inputs_ready,
+    "manualAcceptanceConfirmed": readiness.manual_acceptance_confirmed,
+    "manualAcceptanceEvidence": readiness.manual_acceptance_evidence,
+    "blockers": list(readiness.blockers),
+    "nextCommand": readiness_next_command(readiness),
+  }
+
+
+def readiness_next_command(readiness: ReleaseReadiness) -> str:
+  return "\n".join(
+    [
+      "gh workflow run release.yml \\",
+      f"  -f tag={readiness.tag} \\",
+      f"  -f dry_run={str(readiness.dry_run).lower()} \\",
+      f"  -f draft={str(readiness.requested_draft).lower()} \\",
+      f"  -f prerelease={str(readiness.requested_prerelease).lower()} \\",
+      f"  -f publish_untrusted_ad_hoc={str(readiness.allow_untrusted_ad_hoc).lower()} \\",
+      f"  -f manual_acceptance_confirmed={str(readiness.manual_acceptance_confirmed).lower()} \\",
+      f"  -f manual_acceptance_evidence={shell_quote(readiness.manual_acceptance_evidence)}",
+    ]
+  )
 
 
 def shell_quote(value: str) -> str:
@@ -225,6 +258,7 @@ def main() -> int:
   parser.add_argument("--tag", required=True)
   parser.add_argument("--ci-run-url", default="")
   parser.add_argument("--output", type=Path)
+  parser.add_argument("--json-output", type=Path)
   parser.add_argument("--dry-run", default="true")
   parser.add_argument("--signing-mode", default="ad-hoc", choices=("ad-hoc", "developer-id"))
   parser.add_argument("--requested-draft", default="true")
@@ -260,6 +294,12 @@ def main() -> int:
     args.output.write_text(report, encoding="utf-8")
   else:
     print(report)
+  if args.json_output is not None:
+    args.json_output.parent.mkdir(parents=True, exist_ok=True)
+    args.json_output.write_text(
+      json.dumps(readiness_json(readiness), indent=2, sort_keys=True) + "\n",
+      encoding="utf-8",
+    )
   return 0 if readiness.ready else 1
 
 
