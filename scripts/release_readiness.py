@@ -184,6 +184,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
   next_command = readiness_next_command(readiness)
   ci_lookup_command = readiness_ci_lookup_command(readiness)
+  dry_run_lookup_command = readiness_dry_run_artifact_lookup_command(readiness)
   dry_run_download_command = readiness_dry_run_download_command(readiness)
   dry_run_validation_command = readiness_dry_run_validation_command(readiness)
   post_acceptance_command = readiness_post_acceptance_publish_command(readiness)
@@ -236,6 +237,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 
 ## Dry-Run Artifact Verification
 ```bash
+{dry_run_lookup_command}
 {dry_run_download_command}
 {dry_run_validation_command}
 ```
@@ -272,6 +274,7 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "expectedDryRunEvidence": list(expected_evidence_names("dry-run", readiness.tag)),
     "tagCommands": readiness_tag_commands(readiness),
     "successfulCiLookupCommand": readiness_ci_lookup_command(readiness),
+    "dryRunArtifactLookupCommand": readiness_dry_run_artifact_lookup_command(readiness),
     "dryRunArtifactDownloadCommand": readiness_dry_run_download_command(readiness),
     "dryRunEvidenceValidationCommand": readiness_dry_run_validation_command(readiness),
     "postAcceptancePublishCommand": readiness_post_acceptance_publish_command(readiness),
@@ -288,6 +291,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     "Use the CI lookup command to copy the successful CI URL for this exact source commit.",
     f"Confirm the successful CI run matches the source commit: {readiness.ci_run_url or 'not recorded'}.",
     "Run the release workflow as a dry-run before any publish attempt.",
+    f"Use the dry-run artifact lookup command to find the release-dry-run-{readiness.tag} workflow run.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
     "Run the dry-run evidence validation command before manual acceptance.",
     "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
@@ -313,10 +317,26 @@ def readiness_ci_lookup_command(readiness: ReleaseReadiness) -> str:
   )
 
 
+def readiness_dry_run_artifact_lookup_command(readiness: ReleaseReadiness) -> str:
+  artifact_name = f"release-dry-run-{readiness.tag}"
+  return "\n".join(
+    [
+      'release_workflow_run_id="$(',
+      "  gh api repos/:owner/:repo/actions/artifacts --paginate \\",
+      "    --jq "
+      + shell_quote(
+        f'[.artifacts[] | select(.name == "{artifact_name}" and .expired == false)][0].workflow_run.id // ""'
+      ),
+      ')"',
+      'test -n "$release_workflow_run_id"',
+    ]
+  )
+
+
 def readiness_dry_run_download_command(readiness: ReleaseReadiness) -> str:
   artifact_name = f"release-dry-run-{readiness.tag}"
   return (
-    f"gh run download <release-workflow-run-id> "
+    'gh run download "$release_workflow_run_id" '
     f"--name {shell_quote(artifact_name)} "
     f"--dir {shell_quote(artifact_name)}"
   )

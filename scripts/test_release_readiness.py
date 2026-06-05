@@ -52,7 +52,6 @@ def assert_ready_dry_run_report() -> None:
     "gh workflow run release.yml",
     "-f dry_run=true",
     "## Dry-Run Artifact Verification",
-    "gh run download <release-workflow-run-id> --name release-dry-run-v0.1.0",
     "python scripts/release_evidence_contract.py",
     "--mode dry-run",
     "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
@@ -63,6 +62,10 @@ def assert_ready_dry_run_report() -> None:
     "-f publish_untrusted_ad_hoc=true",
     "-f manual_acceptance_confirmed=true",
     "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+    "release_workflow_run_id=\"$(",
+    "gh api repos/:owner/:repo/actions/artifacts --paginate",
+    'select(.name == "release-dry-run-v0.1.0" and .expired == false)',
+    'gh run download "$release_workflow_run_id" --name release-dry-run-v0.1.0',
   ):
     if phrase not in report:
       raise AssertionError(f"readiness report should include {phrase}")
@@ -108,7 +111,16 @@ def assert_ready_dry_run_report() -> None:
     if phrase not in ci_lookup:
       raise AssertionError(f"readiness JSON CI lookup should include {phrase}")
   download_command = str(payload.get("dryRunArtifactDownloadCommand", ""))
-  if "gh run download <release-workflow-run-id> --name release-dry-run-v0.1.0" not in download_command:
+  lookup_command = str(payload.get("dryRunArtifactLookupCommand", ""))
+  for phrase in (
+    "gh api repos/:owner/:repo/actions/artifacts --paginate",
+    'select(.name == "release-dry-run-v0.1.0" and .expired == false)',
+    "workflow_run.id",
+    'test -n "$release_workflow_run_id"',
+  ):
+    if phrase not in lookup_command:
+      raise AssertionError(f"readiness JSON dry-run lookup should include {phrase}")
+  if 'gh run download "$release_workflow_run_id" --name release-dry-run-v0.1.0' not in download_command:
     raise AssertionError("readiness JSON should include the dry-run artifact download command")
   validation_command = str(payload.get("dryRunEvidenceValidationCommand", ""))
   for phrase in (
@@ -289,6 +301,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "tag-push release events run as dry-run",
     "CI lookup command",
     "release workflow as a dry-run",
+    "dry-run artifact lookup command",
     "release-dry-run-v0.1.0",
     "dry-run evidence validation command",
     "fresh-Mac manual acceptance",
