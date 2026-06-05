@@ -81,6 +81,8 @@ Current decisions:
 
 - Keep Web Search as retrieval for now; do not build generic local RAG yet.
 - Keep connector expansion narrow until the local cowork loop ships cleanly.
+- Do not start new product surfaces before the first release candidate is
+  accepted on the real install path.
 - Do not bundle Git, model weights, package-manager payloads, extra
   architectures, or unused runtimes.
 - Public release assets stay limited to DMG, checksum, `README-FIRST.txt`, and
@@ -95,6 +97,8 @@ Alignment review:
   MCP-style connector execution, compact evidence, cancellation, and recovery.
 - M12 is not complete until a real release dry-run artifact is manually accepted
   on a fresh Mac and the visible ad-hoc path records acceptance evidence.
+- The current architecture is good enough to ship M12; avoid broad refactors
+  unless they remove a correctness, release, or safety risk.
 - M13 should prove connector import, credential lifecycle, revocation, and
   service-agnostic timeline evidence before adding more services.
 - Cowork continuity, such as follow-up queues or scheduled work, belongs after

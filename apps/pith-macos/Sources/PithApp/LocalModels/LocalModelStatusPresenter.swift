@@ -55,7 +55,7 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Choose LFM2.5 or Granite from the local catalog before running Pith. Removed or external model selections are not treated as first-use ready."
+      return "Choose a verified model from the local catalog before running Pith. Removed or external model selections are not treated as first-use ready."
     }
 
     return modelHealth.detail
