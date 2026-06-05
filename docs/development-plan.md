@@ -77,7 +77,7 @@ Closed foundations:
   rehearsal, maintainer acceptance checklist, asset contract checks, final
   release validation, machine-readable release evidence, internal evidence
   contracts, safe tag and manual dispatch defaults, release-candidate
-  checklists, and workflow policy tests.
+  checklists, tag preparation commands, and workflow policy tests.
 
 Current decisions:
 
@@ -103,7 +103,8 @@ Build now:
 - Run release dry-run for the first release candidate and inspect the exact
   installer assets, release plan, rehearsal summary, and manual acceptance
   checklist.
-- Generate the release readiness report before dispatching the dry-run.
+- Generate the release readiness report, create and push the release tag from
+  its commands, then dispatch the dry-run.
 - Complete one manual first-launch acceptance on a fresh Mac: download from
   GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
   default model, open a workspace, run a cowork turn, use Web Search, approve a

@@ -40,6 +40,9 @@ def assert_ready_dry_run_report() -> None:
     "Planned visibility: `draft prerelease`",
     "Tag points at source commit: `true`",
     "## Pre-Dispatch Checklist",
+    "## Tag Preparation",
+    f"git tag v0.1.0 {VALID_COMMIT}",
+    "git push origin v0.1.0",
     "## Expected Dry-Run Evidence",
     "Pith-v0.1.0-macos-x86_64.dmg",
     "release-dry-run-rehearsal.json",
@@ -75,6 +78,11 @@ def assert_ready_dry_run_report() -> None:
     raise AssertionError("readiness JSON should include expected public assets")
   if "release-dry-run-rehearsal.json" not in payload.get("expectedDryRunEvidence", []):
     raise AssertionError("readiness JSON should include expected dry-run evidence")
+  if payload.get("tagCommands") != [
+    f"git tag v0.1.0 {VALID_COMMIT}",
+    "git push origin v0.1.0",
+  ]:
+    raise AssertionError("readiness JSON should include deterministic tag preparation commands")
 
 
 def assert_blocks_missing_ci_and_tag() -> None:
@@ -227,7 +235,9 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
   )
   checklist = "\n".join(readiness_checklist(readiness))
   for phrase in (
+    "Create tag v0.1.0",
     "Push the tag to origin",
+    "tag-push release events run as dry-run",
     "release workflow as a dry-run",
     "release-dry-run-v0.1.0",
     "fresh-Mac manual acceptance",
