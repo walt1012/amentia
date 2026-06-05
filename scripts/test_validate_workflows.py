@@ -236,13 +236,25 @@ on:
   push:
   workflow_dispatch:
     inputs:
+      tag:
+        type: string
+      draft:
+        default: true
+        type: boolean
+      prerelease:
+        default: false
+        type: boolean
       publish_untrusted_ad_hoc:
+        default: false
         type: boolean
       manual_acceptance_confirmed:
+        default: false
         type: boolean
       manual_acceptance_evidence:
+        default: ""
         type: string
       dry_run:
+        default: true
         type: boolean
 
 defaults:
@@ -831,6 +843,21 @@ def main() -> int:
       release=VALID_RELEASE.replace("  contents: write", "  contents: read"),
     )
     assert_issue(issue_messages(root), "contents: write")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "      dry_run:\n"
+        "        default: true\n"
+        "        type: boolean\n",
+        "      dry_run:\n"
+        "        default: false\n"
+        "        type: boolean\n",
+      ),
+    )
+    assert_issue(issue_messages(root), "dry_run must include default: true")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

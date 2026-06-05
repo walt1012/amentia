@@ -20,6 +20,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 REQUIRED_RELEASE_INPUTS = (
   "tag",
+  "draft",
+  "prerelease",
   "dry_run",
   "publish_untrusted_ad_hoc",
   "manual_acceptance_confirmed",

@@ -38,7 +38,7 @@ on:
       dry_run:
         description: "Build and validate release assets without creating or updating a GitHub Release."
         required: false
-        default: false
+        default: true
         type: boolean
 
 env:

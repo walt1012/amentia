@@ -377,6 +377,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         WorkflowIssue(RELEASE_WORKFLOW, f"release workflow contract is missing {term}")
       )
 
+  issues.extend(validate_release_dispatch_inputs(text))
+
   release_block = job_block(text, "release-dmg")
   if not release_block:
     return [WorkflowIssue(RELEASE_WORKFLOW, "required release-dmg job is missing")]
@@ -669,6 +671,49 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
         WorkflowIssue(RELEASE_WORKFLOW, f"release upload is missing {asset}")
       )
   return issues
+
+
+def validate_release_dispatch_inputs(text: str) -> list[WorkflowIssue]:
+  issues: list[WorkflowIssue] = []
+  required_inputs = {
+    "tag": ("type: string",),
+    "draft": ("default: true", "type: boolean"),
+    "prerelease": ("default: false", "type: boolean"),
+    "publish_untrusted_ad_hoc": ("default: false", "type: boolean"),
+    "manual_acceptance_confirmed": ("default: false", "type: boolean"),
+    "manual_acceptance_evidence": ('default: ""', "type: string"),
+    "dry_run": ("default: true", "type: boolean"),
+  }
+  for name, required_terms in required_inputs.items():
+    block = workflow_dispatch_input_block(text, name)
+    if not block:
+      issues.append(
+        WorkflowIssue(
+          RELEASE_WORKFLOW,
+          f"release workflow dispatch input {name} is missing",
+        )
+      )
+      continue
+    for term in required_terms:
+      if term not in block:
+        issues.append(
+          WorkflowIssue(
+            RELEASE_WORKFLOW,
+            f"release workflow dispatch input {name} must include {term}",
+          )
+        )
+  return issues
+
+
+def workflow_dispatch_input_block(text: str, input_name: str) -> str:
+  pattern = re.compile(rf"^\s{{6}}{re.escape(input_name)}:\s*$", re.MULTILINE)
+  match = pattern.search(text)
+  if not match:
+    return ""
+  next_match = re.search(r"^\s{6}[A-Za-z0-9_]+:\s*$", text[match.end():], re.MULTILINE)
+  if next_match:
+    return text[match.start():match.end() + next_match.start()]
+  return text[match.start():]
 
 
 def require_release_order(

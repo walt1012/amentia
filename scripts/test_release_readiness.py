@@ -6,6 +6,7 @@ from __future__ import annotations
 from release_readiness import plan_readiness
 from release_readiness import readiness_json
 from release_readiness import readiness_report
+from release_readiness import REQUIRED_RELEASE_INPUTS
 
 
 VALID_CI_URL = "https://github.com/walt1012/pith/actions/runs/100"
@@ -182,12 +183,27 @@ def assert_rejects_invalid_tag() -> None:
     raise AssertionError("invalid release tag should block readiness")
 
 
+def assert_required_release_inputs_cover_dispatch_controls() -> None:
+  for name in (
+    "tag",
+    "draft",
+    "prerelease",
+    "dry_run",
+    "publish_untrusted_ad_hoc",
+    "manual_acceptance_confirmed",
+    "manual_acceptance_evidence",
+  ):
+    if name not in REQUIRED_RELEASE_INPUTS:
+      raise AssertionError(f"release readiness should require dispatch input {name}")
+
+
 def main() -> int:
   assert_ready_dry_run_report()
   assert_blocks_missing_ci_and_tag()
   assert_blocks_visible_ad_hoc_without_acceptance()
   assert_accepted_visible_ad_hoc_report_preserves_inputs()
   assert_rejects_invalid_tag()
+  assert_required_release_inputs_cover_dispatch_controls()
   print("release readiness tests passed")
   return 0
 
