@@ -123,9 +123,6 @@ jobs:
           fi
           echo "PITH_RELEASE_CI_RUN_URL=$successful_ci_url" >> "$GITHUB_ENV"
 
-      - name: Audit remote model catalog metadata
-        run: python3 scripts/validate_model_pack.py --remote
-
       - name: Determine release signing mode
         run: |
           set -euo pipefail
@@ -164,6 +161,9 @@ jobs:
             --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
             --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
           cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Audit remote model catalog metadata
+        run: python3 scripts/validate_model_pack.py --remote
 
       - name: Import Developer ID certificate
         if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'

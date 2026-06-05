@@ -791,6 +791,23 @@ def main() -> int:
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
+    audit_step = (
+      "      - name: Audit remote model catalog metadata\n"
+      "        run: python3 scripts/validate_model_pack.py --remote\n"
+    )
+    release_with_early_audit = VALID_RELEASE.replace(audit_step, "", 1).replace(
+      "      - name: Write release readiness report\n",
+      audit_step + "      - name: Write release readiness report\n",
+      1,
+    )
+    write_workflows(
+      root,
+      release=release_with_early_audit,
+    )
+    assert_issue(issue_messages(root), "readiness must be written before remote model audit")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
     write_workflows(
       root,
       release=VALID_RELEASE.replace(

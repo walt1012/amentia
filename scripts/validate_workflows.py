@@ -531,6 +531,20 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   )
   require_release_order(
     release_block,
+    "Write release readiness report",
+    "Audit remote model catalog metadata",
+    "release readiness must be written before remote model audit can fail the job",
+    issues,
+  )
+  require_release_order(
+    release_block,
+    "Write release readiness report",
+    "Build Swift app executable",
+    "release readiness must be written before expensive release builds",
+    issues,
+  )
+  require_release_order(
+    release_block,
     "gh release upload",
     'gh release download "$RELEASE_TAG"',
     "release assets must be uploaded before downloaded rehearsal",
