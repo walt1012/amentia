@@ -108,6 +108,17 @@ def validate_manual_acceptance_gate(
       "Visible ad-hoc prereleases require manual acceptance evidence. "
       "Set manual_acceptance_evidence to a checklist artifact, issue, or notes URL."
     )
+  validate_manual_acceptance_evidence(manual_acceptance_evidence)
+
+
+def validate_manual_acceptance_evidence(value: str) -> None:
+  normalized = value.strip().lower()
+  placeholder_terms = ("<", ">", "todo", "tbd", "not recorded", "placeholder")
+  if any(term in normalized for term in placeholder_terms):
+    raise ValueError(
+      "Visible ad-hoc prereleases require real manual acceptance evidence. "
+      "Replace placeholder text with a checklist artifact, issue, or notes URL."
+    )
 
 
 def write_env(path: Path, state: ReleaseState) -> None:

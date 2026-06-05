@@ -93,6 +93,27 @@ def assert_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
   raise AssertionError("visible ad-hoc publishing should require acceptance evidence")
 
 
+def assert_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
+  for evidence in (
+    "<manual-acceptance-evidence-url>",
+    "TODO",
+    "not recorded",
+    "placeholder",
+  ):
+    try:
+      validate_manual_acceptance_gate(
+        signing_mode="ad-hoc",
+        dry_run=False,
+        allow_untrusted_ad_hoc=True,
+        manual_acceptance_confirmed=True,
+        manual_acceptance_evidence=evidence,
+        state=ReleaseState(draft=False, prerelease=True),
+      )
+    except ValueError:
+      continue
+    raise AssertionError("visible ad-hoc publishing should reject placeholder evidence")
+
+
 def assert_manual_acceptance_gate_allows_safe_modes() -> None:
   for signing_mode, dry_run, draft, confirmed, evidence in (
     ("ad-hoc", True, False, False, ""),
@@ -506,6 +527,55 @@ def assert_main_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
       sys.argv = original_argv
 
 
+def assert_main_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    notes_file.write_text(
+      release_notes("v0.1.0", "ad-hoc", True, False),
+      encoding="utf-8",
+    )
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith v0.1.0",
+        "--tag",
+        "v0.1.0",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "ad-hoc",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "true",
+        "--manual-acceptance-confirmed",
+        "true",
+        "--manual-acceptance-evidence",
+        "<manual-acceptance-evidence-url>",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+      ]
+      with redirect_stderr(StringIO()) as stderr:
+        exit_code = release_state_main()
+      if exit_code == 0:
+        raise AssertionError("visible ad-hoc publish with placeholder evidence should be rejected")
+      if "real manual acceptance evidence" not in stderr.getvalue():
+        raise AssertionError("placeholder evidence rejection should explain the required input")
+    finally:
+      sys.argv = original_argv
+
+
 def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -614,6 +684,7 @@ def main() -> int:
   assert_rejects_public_release_to_draft()
   assert_rejects_public_ad_hoc_without_explicit_publish()
   assert_rejects_visible_ad_hoc_without_manual_acceptance()
+  assert_rejects_visible_ad_hoc_with_placeholder_evidence()
   assert_manual_acceptance_gate_allows_safe_modes()
   assert_rejects_tampered_release_notes()
   assert_rejects_wrong_release_title()
@@ -623,6 +694,7 @@ def main() -> int:
   assert_main_writes_release_summary()
   assert_main_rejects_unaccepted_visible_ad_hoc_publish()
   assert_main_rejects_visible_ad_hoc_without_acceptance_evidence()
+  assert_main_rejects_visible_ad_hoc_with_placeholder_evidence()
   assert_main_allows_accepted_visible_ad_hoc_publish()
   assert_release_next_actions_match_mode()
   assert_state(
