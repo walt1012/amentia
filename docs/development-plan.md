@@ -78,8 +78,9 @@ Closed foundations:
   release validation, machine-readable release evidence, internal evidence
   contracts, safe tag and manual dispatch defaults, release-candidate
   checklists, tag preparation and remote verification commands, source-commit CI
-  lookup, workflow policy tests, dry-run artifact lookup and verification, and
-  guarded publish commands.
+  lookup, workflow policy tests, dry-run artifact lookup and verification,
+  structured readiness and release-plan evidence validation, and guarded publish
+  commands.
 
 Current decisions:
 

@@ -29,6 +29,59 @@ PUBLISH_REHEARSAL_NAMES = (
   "release-rehearsal.json",
   "release-manual-acceptance.md",
 )
+REQUIRED_JSON_KEYS_BY_NAME = {
+  "release-readiness.json": (
+    "status",
+    "tag",
+    "sourceCommit",
+    "successfulCiRunUrl",
+    "workflowMode",
+    "signingMode",
+    "requestedDraft",
+    "requestedPrerelease",
+    "allowUntrustedAdHoc",
+    "plannedDraft",
+    "plannedPrerelease",
+    "workingTreeClean",
+    "tagPointsAtSourceCommit",
+    "releaseWorkflowInputsReady",
+    "manualAcceptanceConfirmed",
+    "manualAcceptanceEvidence",
+    "preDispatchChecklist",
+    "expectedPublicAssets",
+    "expectedDryRunEvidence",
+    "tagCommands",
+    "remoteTagVerificationCommand",
+    "successfulCiLookupCommand",
+    "dryRunArtifactLookupCommand",
+    "dryRunArtifactDownloadCommand",
+    "dryRunEvidenceValidationCommand",
+    "postAcceptancePublishCommand",
+    "blockers",
+    "nextCommand",
+  ),
+  "release-plan.json": (
+    "tag",
+    "title",
+    "sourceCommit",
+    "successfulCiRunUrl",
+    "releaseWorkflowRunUrl",
+    "workflowMode",
+    "githubMutation",
+    "signingMode",
+    "releaseExists",
+    "existingReleaseState",
+    "requestedDraft",
+    "requestedPrerelease",
+    "allowVisibleAdHoc",
+    "manualAcceptanceConfirmed",
+    "manualAcceptanceEvidence",
+    "plannedDraft",
+    "plannedPrerelease",
+    "trustPath",
+    "nextMaintainerActions",
+  ),
+}
 
 
 def expected_evidence_names(mode: str, tag: str) -> tuple[str, ...]:
@@ -89,10 +142,23 @@ def validate_evidence_content(path: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
       raise RuntimeError(f"Release evidence JSON must be an object: {path.name}")
+    validate_required_json_keys(path.name, data)
   elif path.suffix == ".md":
     text = path.read_text(encoding="utf-8").strip()
     if not text.startswith("# "):
       raise RuntimeError(f"Release evidence Markdown must start with a heading: {path.name}")
+
+
+def validate_required_json_keys(name: str, data: dict[str, object]) -> None:
+  required_keys = REQUIRED_JSON_KEYS_BY_NAME.get(name)
+  if required_keys is None:
+    return
+  missing = [key for key in required_keys if key not in data]
+  if missing:
+    raise RuntimeError(
+      f"Release evidence JSON is missing required keys for {name}: "
+      + ", ".join(missing)
+    )
 
 
 def main() -> int:
