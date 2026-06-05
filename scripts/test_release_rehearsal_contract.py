@@ -35,6 +35,7 @@ from release_artifacts import write_release_manifest
 from release_rehearsal_contract import summary_markdown
 from release_rehearsal_contract import acceptance_markdown
 from release_rehearsal_contract import write_acceptance
+from release_rehearsal_contract import write_json
 from release_rehearsal_contract import validate_release_rehearsal
 from release_rehearsal_contract import write_summary
 from release_text import install_guide as release_install_guide
@@ -222,6 +223,15 @@ def main() -> int:
     write_acceptance(acceptance_output, summary)
     if "Required Manual Checks" not in acceptance_output.read_text(encoding="utf-8"):
       raise AssertionError("manual acceptance file should record required checks")
+    json_output = root / "rehearsal.json"
+    write_json(json_output, summary)
+    summary_payload = json.loads(json_output.read_text(encoding="utf-8"))
+    if summary_payload["result"] != "passed":
+      raise AssertionError("release rehearsal JSON should record the result")
+    if summary_payload["releaseDecision"] != summary["releaseDecision"]:
+      raise AssertionError("release rehearsal JSON should preserve release decision evidence")
+    if summary_payload["manualPrereleaseChecks"] != summary["manualPrereleaseChecks"]:
+      raise AssertionError("release rehearsal JSON should preserve manual acceptance checks")
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
     root = Path(directory)

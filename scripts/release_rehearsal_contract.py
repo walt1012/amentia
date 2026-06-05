@@ -210,6 +210,14 @@ def write_acceptance(path: Path, summary: dict) -> None:
   path.write_text(acceptance_markdown(summary), encoding="utf-8")
 
 
+def write_json(path: Path, summary: dict) -> None:
+  path.parent.mkdir(parents=True, exist_ok=True)
+  path.write_text(
+    json.dumps(summary, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+  )
+
+
 def acceptance_markdown(summary: dict) -> str:
   assets = "\n".join(f"- [ ] Download `{name}`" for name in summary["assetNames"])
   manual_acceptance = "\n".join(
@@ -312,6 +320,7 @@ def main() -> int:
   parser.add_argument("--asset-dir", required=True, type=Path)
   parser.add_argument("--summary-output", type=Path)
   parser.add_argument("--acceptance-output", type=Path)
+  parser.add_argument("--json-output", type=Path)
   parser.add_argument("--allow-extra-assets", action="store_true")
   args = parser.parse_args()
 
@@ -325,6 +334,8 @@ def main() -> int:
       write_summary(args.summary_output, summary)
     if args.acceptance_output:
       write_acceptance(args.acceptance_output, summary)
+    if args.json_output:
+      write_json(args.json_output, summary)
   except Exception as error:
     print(f"release rehearsal contract failed: {error}", file=sys.stderr)
     return 1

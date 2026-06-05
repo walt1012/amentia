@@ -75,7 +75,8 @@ Closed foundations:
   manifests, release copy, package metadata, and packaged smoke proof.
 - Release automation: change-aware CI lanes, release dry-run, downloaded-asset
   rehearsal, maintainer acceptance checklist, asset contract checks, final
-  release validation, and workflow policy tests.
+  release validation, machine-readable release evidence, and workflow policy
+  tests.
 
 Current decisions:
 

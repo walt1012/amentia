@@ -379,7 +379,8 @@ jobs:
             --tag "$RELEASE_TAG" \\
             --asset-dir release-dry-run-assets \\
             --summary-output release-dry-run-rehearsal.md \\
-            --acceptance-output release-dry-run-manual-acceptance.md
+            --acceptance-output release-dry-run-manual-acceptance.md \\
+            --json-output release-dry-run-rehearsal.json
           cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
           cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload release dry-run assets
@@ -396,6 +397,7 @@ jobs:
             release-readiness.json
             release-plan.md
             release-dry-run-rehearsal.md
+            release-dry-run-rehearsal.json
             release-dry-run-manual-acceptance.md
           retention-days: 7
       - name: Upload GitHub Release draft assets
@@ -420,7 +422,8 @@ jobs:
             --tag "$RELEASE_TAG" \\
             --asset-dir release-download \\
             --summary-output release-rehearsal.md \\
-            --acceptance-output release-manual-acceptance.md
+            --acceptance-output release-manual-acceptance.md \\
+            --json-output release-rehearsal.json
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
           cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
       - name: Apply final GitHub Release visibility
@@ -450,6 +453,7 @@ jobs:
             release-readiness.md
             release-readiness.json
             release-rehearsal.md
+            release-rehearsal.json
             release-manual-acceptance.md
           if-no-files-found: error
           retention-days: 30
