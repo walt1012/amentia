@@ -20,10 +20,10 @@ Current scripts:
 - `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, signing trust and Gatekeeper guidance, schema-versioned app package metadata, daily-driver readiness provenance, packaged first-run smoke receipt proof, release workflow proof, and tag-locked names.
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
-- `release_publish_contract.py`: validates the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
+- `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
 - `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write a compact rehearsal summary with trust, Gatekeeper, smoke journey, manual prerelease acceptance, metadata-match, and first app-open checks.
 - `test_first_app_open_contract.py`: checks that Swift first-open copy stays aligned with the shared release first app-open copy contract.
-- `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID and ad-hoc DMG builds, enforces tag/title identity, then revalidates release notes against the final publish state.
+- `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID, ad-hoc, and dry-run DMG builds, enforces tag/title identity, revalidates release notes against the final publish state, and writes the release plan summary used in Actions.
 - `release_text.py`: generates and validates GitHub Release notes and the DMG root install guide from the release signing mode, including exact installer asset names and the daily-driver next-action path users should follow after install.
 - `runtime_smoke_test.py`: verifies the runtime handshake, model health, memory, web search, plugin, command, hook, and connector protocol surfaces in CI.
 - `sign_macos_app_for_distribution.py`: signs `Pith.app` with Developer ID and Hardened Runtime before notarized release packaging.
@@ -60,13 +60,18 @@ manifest. If Developer ID credentials are unavailable, the release workflow
 defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
 an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
 path, but it must not be promoted as a normal trusted installer. The release
-state helper rejects non-version tags, mismatched release titles, and accidental
-ad-hoc updates to an already-public release unless that untrusted prerelease
-path was explicitly requested. It also refuses to move an existing public
-GitHub Release back to draft; release withdrawal should stay a deliberate
-maintainer action. After upload and release-state patching, the release workflow
-reads the GitHub Release back and validates the final state, exact public asset
-set, non-empty uploads, and download URLs. It then downloads the release assets
-back through GitHub Releases and runs the same rehearsal contract a maintainer
-can use after manual download. The rehearsal summary is uploaded as an internal
-workflow artifact, not as an extra public Release asset.
+workflow can also run as a dry-run: it builds, validates, and rehearses the same
+DMG, checksum, root install guide, manifest, release plan, and rehearsal summary
+without creating or updating a GitHub Release. The release state helper rejects
+non-version tags, mismatched release titles, and accidental ad-hoc updates to an
+already-public release unless that untrusted prerelease path was explicitly
+requested. It also refuses to move an existing public GitHub Release back to
+draft; release withdrawal should stay a deliberate maintainer action. Before
+uploading over an existing release, the workflow rejects non-contract assets so
+stale packages or model payloads cannot remain on the user download page. After
+upload and release-state patching, the release workflow reads the GitHub Release
+back and validates the final state, exact public asset set, non-empty uploads,
+and download URLs. It then downloads the release assets back through GitHub
+Releases and runs the same rehearsal contract a maintainer can use after manual
+download. The rehearsal summary is uploaded as an internal workflow artifact,
+not as an extra public Release asset.

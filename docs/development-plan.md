@@ -161,8 +161,8 @@ Latest review decisions:
 - Package resources must exclude generated caches, bytecode, and model weights.
 - Keep development planning concise; move completed detail to history, tests, or
   release notes.
-- Treat M10 as capability-complete enough for release rehearsal. New work should
-  close proof gaps, not expand scope.
+- Treat M12 as the active lane. New work should close release proof gaps, not
+  expand product scope before the first usable prerelease.
 
 ## M10: Cowork Daily Driver
 

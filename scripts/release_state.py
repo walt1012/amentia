@@ -119,6 +119,9 @@ def release_state_summary(
     existing_state = "draft" if existing_draft else "visible"
   visibility = "draft" if state.draft else "visible"
   release_class = "prerelease" if state.prerelease else "stable"
+  mutation = "none; dry-run does not create or update a GitHub Release"
+  if not dry_run:
+    mutation = "create-or-update GitHub Release after asset rehearsal"
   trust_note = release_trust_note(
     signing_mode,
     allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
@@ -132,6 +135,7 @@ def release_state_summary(
 - Successful CI: {summary_value(ci_run_url)}
 - Release workflow: {summary_value(workflow_run_url)}
 - Workflow mode: `{"dry-run" if dry_run else "publish"}`
+- GitHub mutation: {mutation}
 - Signing mode: `{signing_mode}`
 - Existing release: `{existing_state}`
 - Requested draft: `{str(requested_draft).lower()}`

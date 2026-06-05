@@ -211,6 +211,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "https://github.com/walt1012/pith/actions/runs/100",
     "https://github.com/walt1012/pith/actions/runs/101",
     "Workflow mode: `dry-run`",
+    "GitHub mutation: none; dry-run does not create or update a GitHub Release",
     "Final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Untrusted ad-hoc prerelease",
@@ -278,6 +279,8 @@ def assert_main_writes_release_summary() -> None:
       raise AssertionError("release summary should record the successful CI run")
     if "Workflow mode: `dry-run`" not in summary:
       raise AssertionError("release summary should record the workflow mode")
+    if "GitHub mutation: none" not in summary:
+      raise AssertionError("release summary should record dry-run mutation behavior")
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("release env should record final draft state")
 
