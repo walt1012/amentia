@@ -236,6 +236,8 @@ on:
         type: boolean
       manual_acceptance_confirmed:
         type: boolean
+      manual_acceptance_evidence:
+        type: string
       dry_run:
         type: boolean
 
@@ -254,6 +256,7 @@ concurrency:
 env:
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
   RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
+  RELEASE_MANUAL_ACCEPTANCE_EVIDENCE: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_evidence || '' }}
   RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 jobs:
@@ -342,6 +345,7 @@ jobs:
           --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           --dry-run "$RELEASE_DRY_RUN"
           --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"
+          --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
           printf '%s' "$release_json" > release-existing.json

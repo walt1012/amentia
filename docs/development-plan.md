@@ -103,7 +103,8 @@ Build now:
   bounded action, and inspect proof.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.
 - Require `manual_acceptance_confirmed=true` before any visible ad-hoc
-  prerelease can be published.
+  prerelease can be published, with `manual_acceptance_evidence` recorded in the
+  release plan.
 - Keep unsigned/ad-hoc copy explicit because Developer ID notarization is paid
   and optional later.
 

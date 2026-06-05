@@ -165,9 +165,10 @@ modes:
   missing. Tag-triggered builds and ordinary manual runs stay draft-only, but a
   manual run can publish a visible untrusted prerelease when
   `publish_untrusted_ad_hoc=true`, `manual_acceptance_confirmed=true`, and
-  `draft=false` are all set. That release must remain marked as a prerelease
-  and must explain that macOS Gatekeeper will require manual user approval
-  before first launch.
+  `draft=false` are all set, and `manual_acceptance_evidence` points to the
+  checklist artifact, issue, or notes URL. That release must remain marked as a
+  prerelease and must explain that macOS Gatekeeper will require manual user
+  approval before first launch.
 
 Each release DMG includes `README-FIRST.txt` at the volume root. That file
 summarizes the install steps, first-use model download, workspace opening,
@@ -198,12 +199,13 @@ a normal trusted release. Without Developer ID secrets, it defaults to a draft
 release and refuses to update an already-public release unless
 `publish_untrusted_ad_hoc=true` is set explicitly. A visible ad-hoc prerelease
 also requires `manual_acceptance_confirmed=true`, which means the generated
-manual acceptance checklist passed on a fresh Mac. With that maintainer intent,
-it may publish an untrusted ad-hoc prerelease for users who accept the
-Gatekeeper warning path. The workflow also refuses to move an existing public
-GitHub Release back to draft; withdrawal should be handled deliberately by a
-maintainer. With Developer ID secrets, it publishes the signed, notarized,
-stapled DMG.
+manual acceptance checklist passed on a fresh Mac, plus
+`manual_acceptance_evidence` so the release plan records where that proof lives.
+With that maintainer intent, it may publish an untrusted ad-hoc prerelease for
+users who accept the Gatekeeper warning path. The workflow also refuses to move
+an existing public GitHub Release back to draft; withdrawal should be handled
+deliberately by a maintainer. With Developer ID secrets, it publishes the
+signed, notarized, stapled DMG.
 
 ## Local Model Runtime
 

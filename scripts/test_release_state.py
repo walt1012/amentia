@@ -68,6 +68,7 @@ def assert_rejects_visible_ad_hoc_without_manual_acceptance() -> None:
       dry_run=False,
       allow_untrusted_ad_hoc=True,
       manual_acceptance_confirmed=False,
+      manual_acceptance_evidence="",
       state=ReleaseState(draft=False, prerelease=True),
     )
   except ValueError:
@@ -75,18 +76,34 @@ def assert_rejects_visible_ad_hoc_without_manual_acceptance() -> None:
   raise AssertionError("visible ad-hoc publishing should require manual acceptance")
 
 
+def assert_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
+  try:
+    validate_manual_acceptance_gate(
+      signing_mode="ad-hoc",
+      dry_run=False,
+      allow_untrusted_ad_hoc=True,
+      manual_acceptance_confirmed=True,
+      manual_acceptance_evidence="",
+      state=ReleaseState(draft=False, prerelease=True),
+    )
+  except ValueError:
+    return
+  raise AssertionError("visible ad-hoc publishing should require acceptance evidence")
+
+
 def assert_manual_acceptance_gate_allows_safe_modes() -> None:
-  for signing_mode, dry_run, draft, confirmed in (
-    ("ad-hoc", True, False, False),
-    ("ad-hoc", False, True, False),
-    ("ad-hoc", False, False, True),
-    ("developer-id", False, False, False),
+  for signing_mode, dry_run, draft, confirmed, evidence in (
+    ("ad-hoc", True, False, False, ""),
+    ("ad-hoc", False, True, False, ""),
+    ("ad-hoc", False, False, True, "https://github.com/walt1012/pith/actions/runs/100"),
+    ("developer-id", False, False, False, ""),
   ):
     validate_manual_acceptance_gate(
       signing_mode=signing_mode,
       dry_run=dry_run,
       allow_untrusted_ad_hoc=True,
       manual_acceptance_confirmed=confirmed,
+      manual_acceptance_evidence=evidence,
       state=ReleaseState(draft=draft, prerelease=signing_mode != "developer-id"),
     )
 
@@ -228,6 +245,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     requested_prerelease=False,
     allow_untrusted_ad_hoc=True,
     manual_acceptance_confirmed=False,
+    manual_acceptance_evidence="not recorded",
     release_exists=False,
     existing_draft=None,
     state=plan_release_state(
@@ -252,6 +270,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "Planned final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Manual acceptance confirmed: `false`",
+    "Manual acceptance evidence: not recorded",
     "Untrusted ad-hoc prerelease",
     "Open Anyway",
   ):
@@ -290,6 +309,8 @@ def assert_main_writes_release_summary() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "false",
+        "--manual-acceptance-evidence",
+        "",
         "--release-exists",
         "false",
         "--state-output",
@@ -357,6 +378,8 @@ def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "false",
+        "--manual-acceptance-evidence",
+        "",
         "--release-exists",
         "false",
         "--state-output",
@@ -370,6 +393,55 @@ def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
         raise AssertionError("unaccepted visible ad-hoc publish should be rejected")
       if "manual_acceptance_confirmed=true" not in stderr.getvalue():
         raise AssertionError("manual acceptance rejection should explain the required input")
+    finally:
+      sys.argv = original_argv
+
+
+def assert_main_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    notes_file.write_text(
+      release_notes("v0.1.0", "ad-hoc", True, False),
+      encoding="utf-8",
+    )
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith v0.1.0",
+        "--tag",
+        "v0.1.0",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "ad-hoc",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "true",
+        "--manual-acceptance-confirmed",
+        "true",
+        "--manual-acceptance-evidence",
+        "",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+      ]
+      with redirect_stderr(StringIO()) as stderr:
+        exit_code = release_state_main()
+      if exit_code == 0:
+        raise AssertionError("visible ad-hoc publish without evidence should be rejected")
+      if "manual acceptance evidence" not in stderr.getvalue():
+        raise AssertionError("acceptance evidence rejection should explain the required input")
     finally:
       sys.argv = original_argv
 
@@ -404,6 +476,8 @@ def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "true",
+        "--manual-acceptance-evidence",
+        "https://github.com/walt1012/pith/actions/runs/100#manual-acceptance",
         "--release-exists",
         "false",
         "--state-output",
@@ -487,6 +561,7 @@ def main() -> int:
   assert_release_summary_names_visibility_and_trust()
   assert_main_writes_release_summary()
   assert_main_rejects_unaccepted_visible_ad_hoc_publish()
+  assert_main_rejects_visible_ad_hoc_without_acceptance_evidence()
   assert_main_allows_accepted_visible_ad_hoc_publish()
   assert_release_next_actions_match_mode()
   assert_state(

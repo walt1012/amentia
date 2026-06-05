@@ -60,13 +60,13 @@ manifest. If Developer ID credentials are unavailable, the release workflow
 defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
 an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
 path, but only after the generated manual acceptance checklist passes and
-`manual_acceptance_confirmed=true` is set. It must not be promoted as a normal
-trusted installer. The release workflow can also run as a dry-run: it builds,
-validates, and rehearses the same DMG, checksum, root install guide, manifest,
-release plan, rehearsal summary, and manual acceptance checklist without
-creating or updating a GitHub Release. Rehearsal summaries record that manual
-acceptance is still required before any visible ad-hoc prerelease. The release
-state helper rejects
+`manual_acceptance_confirmed=true` and `manual_acceptance_evidence` are set. It
+must not be promoted as a normal trusted installer. The release workflow can
+also run as a dry-run: it builds, validates, and rehearses the same DMG,
+checksum, root install guide, manifest, release plan, rehearsal summary, and
+manual acceptance checklist without creating or updating a GitHub Release.
+Rehearsal summaries record that manual acceptance is still required before any
+visible ad-hoc prerelease. The release state helper rejects
 non-version tags, mismatched release titles, and accidental ad-hoc updates to an
 already-public release unless that untrusted prerelease path was explicitly
 requested. It also refuses to move an existing public GitHub Release back to

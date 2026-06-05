@@ -30,6 +30,11 @@ on:
         required: false
         default: false
         type: boolean
+      manual_acceptance_evidence:
+        description: "Checklist artifact, issue, or notes URL proving manual acceptance for visible ad-hoc publishing."
+        required: false
+        default: ""
+        type: string
       dry_run:
         description: "Build and validate release assets without creating or updating a GitHub Release."
         required: false
@@ -52,6 +57,7 @@ env:
   RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
   RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
+  RELEASE_MANUAL_ACCEPTANCE_EVIDENCE: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_evidence || '' }}
   RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 defaults:
@@ -382,6 +388,7 @@ jobs:
             --requested-prerelease "$RELEASE_PRERELEASE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
             --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE" \
             --release-exists "$release_exists" \
             --existing-draft "$existing_draft" \
             --state-output release-state.json \

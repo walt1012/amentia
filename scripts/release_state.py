@@ -91,6 +91,7 @@ def validate_manual_acceptance_gate(
   dry_run: bool,
   allow_untrusted_ad_hoc: bool,
   manual_acceptance_confirmed: bool,
+  manual_acceptance_evidence: str,
   state: ReleaseState,
 ) -> None:
   if dry_run or signing_mode == "developer-id" or state.draft:
@@ -101,6 +102,11 @@ def validate_manual_acceptance_gate(
     raise ValueError(
       "Visible ad-hoc prereleases require manual_acceptance_confirmed=true. "
       "Run the generated manual acceptance checklist on a fresh Mac before publishing."
+    )
+  if not manual_acceptance_evidence.strip():
+    raise ValueError(
+      "Visible ad-hoc prereleases require manual acceptance evidence. "
+      "Set manual_acceptance_evidence to a checklist artifact, issue, or notes URL."
     )
 
 
@@ -130,6 +136,7 @@ def release_state_summary(
   requested_prerelease: bool,
   allow_untrusted_ad_hoc: bool,
   manual_acceptance_confirmed: bool,
+  manual_acceptance_evidence: str,
   release_exists: bool,
   existing_draft: bool | None,
   state: ReleaseState,
@@ -163,6 +170,7 @@ def release_state_summary(
 - Requested prerelease: `{str(requested_prerelease).lower()}`
 - Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
 - Manual acceptance confirmed: `{str(manual_acceptance_confirmed).lower()}`
+- Manual acceptance evidence: {summary_value(manual_acceptance_evidence)}
 - Planned final visibility: `{visibility} {release_class}`
 - Trust path: {trust_note}
 
@@ -218,6 +226,7 @@ def main() -> int:
   parser.add_argument("--requested-prerelease", required=True)
   parser.add_argument("--allow-untrusted-ad-hoc", required=True)
   parser.add_argument("--manual-acceptance-confirmed", default="false")
+  parser.add_argument("--manual-acceptance-evidence", default="")
   parser.add_argument("--release-exists", required=True)
   parser.add_argument("--existing-draft", default="")
   parser.add_argument("--state-output", required=True)
@@ -256,6 +265,7 @@ def main() -> int:
       dry_run=dry_run,
       allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
       manual_acceptance_confirmed=manual_acceptance_confirmed,
+      manual_acceptance_evidence=args.manual_acceptance_evidence,
       state=state,
     )
   except (RuntimeError, ValueError) as error:
@@ -301,6 +311,7 @@ def main() -> int:
         requested_prerelease=requested_prerelease,
         allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
         manual_acceptance_confirmed=manual_acceptance_confirmed,
+        manual_acceptance_evidence=args.manual_acceptance_evidence,
         release_exists=release_exists,
         existing_draft=existing_draft,
         state=state,

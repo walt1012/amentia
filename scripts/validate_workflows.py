@@ -363,9 +363,11 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "cancel-in-progress: false",
     "publish_untrusted_ad_hoc:",
     "manual_acceptance_confirmed:",
+    "manual_acceptance_evidence:",
     "dry_run:",
     "RELEASE_ALLOW_UNTRUSTED_AD_HOC:",
     "RELEASE_MANUAL_ACCEPTANCE_CONFIRMED:",
+    "RELEASE_MANUAL_ACCEPTANCE_EVIDENCE:",
     "RELEASE_DRY_RUN:",
   ):
     if term not in text:
@@ -435,6 +437,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
     '--dry-run "$RELEASE_DRY_RUN"',
     '--manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"',
+    '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
     'cat release-plan.md >> "$GITHUB_STEP_SUMMARY"',
     'printf \'%s\' "$release_json" > release-existing.json',
     '--mode preupload-existing-assets',
