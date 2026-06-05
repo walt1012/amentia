@@ -184,6 +184,8 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
   next_command = readiness_next_command(readiness)
   ci_lookup_command = readiness_ci_lookup_command(readiness)
+  dry_run_download_command = readiness_dry_run_download_command(readiness)
+  dry_run_validation_command = readiness_dry_run_validation_command(readiness)
   tag_commands = "\n".join(readiness_tag_commands(readiness))
   checklist = "\n".join(f"- [ ] {item}" for item in readiness_checklist(readiness))
   dry_run_evidence = "\n".join(
@@ -230,6 +232,12 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 ```bash
 {next_command}
 ```
+
+## Dry-Run Artifact Verification
+```bash
+{dry_run_download_command}
+{dry_run_validation_command}
+```
 """
 
 
@@ -256,6 +264,8 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "expectedDryRunEvidence": list(expected_evidence_names("dry-run", readiness.tag)),
     "tagCommands": readiness_tag_commands(readiness),
     "successfulCiLookupCommand": readiness_ci_lookup_command(readiness),
+    "dryRunArtifactDownloadCommand": readiness_dry_run_download_command(readiness),
+    "dryRunEvidenceValidationCommand": readiness_dry_run_validation_command(readiness),
     "blockers": list(readiness.blockers),
     "nextCommand": readiness_next_command(readiness),
   }
@@ -270,6 +280,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     f"Confirm the successful CI run matches the source commit: {readiness.ci_run_url or 'not recorded'}.",
     "Run the release workflow as a dry-run before any publish attempt.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
+    "Run the dry-run evidence validation command before manual acceptance.",
     "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
     "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
   ]
@@ -290,6 +301,29 @@ def readiness_ci_lookup_command(readiness: ReleaseReadiness) -> str:
       ),
     ]
   )
+
+
+def readiness_dry_run_download_command(readiness: ReleaseReadiness) -> str:
+  artifact_name = f"release-dry-run-{readiness.tag}"
+  return (
+    f"gh run download <release-workflow-run-id> "
+    f"--name {shell_quote(artifact_name)} "
+    f"--dir {shell_quote(artifact_name)}"
+  )
+
+
+def readiness_dry_run_validation_command(readiness: ReleaseReadiness) -> str:
+  artifact_dir = f"release-dry-run-{readiness.tag}"
+  lines = [
+    "python scripts/release_evidence_contract.py \\",
+    "  --mode dry-run \\",
+    f"  --tag {shell_quote(readiness.tag)} \\",
+  ]
+  evidence_names = expected_evidence_names("dry-run", readiness.tag)
+  for index, name in enumerate(evidence_names):
+    suffix = " \\" if index < len(evidence_names) - 1 else ""
+    lines.append(f"  --evidence {shell_quote(f'{artifact_dir}/{name}')}{suffix}")
+  return "\n".join(lines)
 
 
 def readiness_tag_commands(readiness: ReleaseReadiness) -> list[str]:

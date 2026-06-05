@@ -51,6 +51,11 @@ def assert_ready_dry_run_report() -> None:
     "release-dry-run-rehearsal.json",
     "gh workflow run release.yml",
     "-f dry_run=true",
+    "## Dry-Run Artifact Verification",
+    "gh run download <release-workflow-run-id> --name release-dry-run-v0.1.0",
+    "python scripts/release_evidence_contract.py",
+    "--mode dry-run",
+    "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
   ):
     if phrase not in report:
       raise AssertionError(f"readiness report should include {phrase}")
@@ -95,6 +100,19 @@ def assert_ready_dry_run_report() -> None:
   ):
     if phrase not in ci_lookup:
       raise AssertionError(f"readiness JSON CI lookup should include {phrase}")
+  download_command = str(payload.get("dryRunArtifactDownloadCommand", ""))
+  if "gh run download <release-workflow-run-id> --name release-dry-run-v0.1.0" not in download_command:
+    raise AssertionError("readiness JSON should include the dry-run artifact download command")
+  validation_command = str(payload.get("dryRunEvidenceValidationCommand", ""))
+  for phrase in (
+    "python scripts/release_evidence_contract.py",
+    "--mode dry-run",
+    "--tag v0.1.0",
+    "release-dry-run-v0.1.0/Pith-v0.1.0-macos-x86_64.dmg",
+    "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
+  ):
+    if phrase not in validation_command:
+      raise AssertionError(f"readiness JSON dry-run validation should include {phrase}")
 
 
 def assert_blocks_missing_ci_and_tag() -> None:
@@ -253,6 +271,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "CI lookup command",
     "release workflow as a dry-run",
     "release-dry-run-v0.1.0",
+    "dry-run evidence validation command",
     "fresh-Mac manual acceptance",
   ):
     if phrase not in checklist:
