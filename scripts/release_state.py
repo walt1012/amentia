@@ -179,6 +179,66 @@ def release_state_summary(
 """
 
 
+def release_plan_json(
+  *,
+  tag: str,
+  title: str,
+  source_commit: str,
+  ci_run_url: str,
+  workflow_run_url: str,
+  dry_run: bool,
+  signing_mode: str,
+  requested_draft: bool,
+  requested_prerelease: bool,
+  allow_untrusted_ad_hoc: bool,
+  manual_acceptance_confirmed: bool,
+  manual_acceptance_evidence: str,
+  release_exists: bool,
+  existing_draft: bool | None,
+  state: ReleaseState,
+) -> dict[str, object]:
+  existing_state = "none"
+  if release_exists:
+    existing_state = "draft" if existing_draft else "visible"
+  mutation = "none" if dry_run else "create-or-update"
+  return {
+    "tag": tag,
+    "title": title,
+    "sourceCommit": source_commit.strip(),
+    "successfulCiRunUrl": ci_run_url.strip(),
+    "releaseWorkflowRunUrl": workflow_run_url.strip(),
+    "workflowMode": "dry-run" if dry_run else "publish",
+    "githubMutation": mutation,
+    "signingMode": signing_mode,
+    "releaseExists": release_exists,
+    "existingReleaseState": existing_state,
+    "requestedDraft": requested_draft,
+    "requestedPrerelease": requested_prerelease,
+    "allowVisibleAdHoc": allow_untrusted_ad_hoc,
+    "manualAcceptanceConfirmed": manual_acceptance_confirmed,
+    "manualAcceptanceEvidence": manual_acceptance_evidence.strip(),
+    "plannedDraft": state.draft,
+    "plannedPrerelease": state.prerelease,
+    "trustPath": release_trust_note(
+      signing_mode,
+      allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+      draft=state.draft,
+    ),
+    "nextMaintainerActions": release_next_action_items(
+      dry_run=dry_run,
+      state=state,
+    ),
+  }
+
+
+def release_next_action_items(*, dry_run: bool, state: ReleaseState) -> list[str]:
+  return [
+    line.removeprefix("- ").strip()
+    for line in release_next_actions(dry_run=dry_run, state=state).splitlines()
+    if line.strip()
+  ]
+
+
 def release_next_actions(*, dry_run: bool, state: ReleaseState) -> str:
   if dry_run:
     return "\n".join(
@@ -216,6 +276,14 @@ def write_summary(path: Path, summary: str) -> None:
   path.write_text(summary, encoding="utf-8")
 
 
+def write_plan_json(path: Path, plan: dict[str, object]) -> None:
+  path.parent.mkdir(parents=True, exist_ok=True)
+  path.write_text(
+    json.dumps(plan, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+  )
+
+
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--title", required=True)
@@ -232,6 +300,7 @@ def main() -> int:
   parser.add_argument("--state-output", required=True)
   parser.add_argument("--env-output", required=True)
   parser.add_argument("--summary-output", type=Path)
+  parser.add_argument("--plan-output", type=Path)
   parser.add_argument("--source-commit", default="")
   parser.add_argument("--ci-run-url", default="")
   parser.add_argument("--workflow-run-url", default="")
@@ -300,6 +369,27 @@ def main() -> int:
     write_summary(
       args.summary_output,
       release_state_summary(
+        tag=args.tag,
+        title=args.title,
+        source_commit=args.source_commit,
+        ci_run_url=args.ci_run_url,
+        workflow_run_url=args.workflow_run_url,
+        dry_run=dry_run,
+        signing_mode=args.signing_mode,
+        requested_draft=requested_draft,
+        requested_prerelease=requested_prerelease,
+        allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+        manual_acceptance_confirmed=manual_acceptance_confirmed,
+        manual_acceptance_evidence=args.manual_acceptance_evidence,
+        release_exists=release_exists,
+        existing_draft=existing_draft,
+        state=state,
+      ),
+    )
+  if args.plan_output is not None:
+    write_plan_json(
+      args.plan_output,
+      release_plan_json(
         tag=args.tag,
         title=args.title,
         source_commit=args.source_commit,

@@ -358,6 +358,7 @@ jobs:
           --title "$release_title"
           --tag "$RELEASE_TAG"
           --summary-output release-plan.md
+          --plan-output release-plan.json
           --source-commit "$PITH_RELEASE_SHA"
           --ci-run-url "$PITH_RELEASE_CI_RUN_URL"
           --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
@@ -396,6 +397,7 @@ jobs:
             release-readiness.md
             release-readiness.json
             release-plan.md
+            release-plan.json
             release-dry-run-rehearsal.md
             release-dry-run-rehearsal.json
             release-dry-run-manual-acceptance.md
@@ -452,6 +454,7 @@ jobs:
           path: |
             release-readiness.md
             release-readiness.json
+            release-plan.json
             release-rehearsal.md
             release-rehearsal.json
             release-manual-acceptance.md

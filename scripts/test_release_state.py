@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from contextlib import redirect_stderr
 from io import StringIO
@@ -13,6 +14,7 @@ from release_state import main as release_state_main
 from release_state import expected_release_title
 from release_state import plan_release_state
 from release_state import ReleaseState
+from release_state import release_plan_json
 from release_state import release_next_actions
 from release_state import release_state_summary
 from release_state import validate_manual_acceptance_gate
@@ -278,6 +280,54 @@ def assert_release_summary_names_visibility_and_trust() -> None:
       raise AssertionError(f"release summary should include {phrase}")
 
 
+def assert_release_plan_json_preserves_release_decision() -> None:
+  state = plan_release_state(
+    signing_mode="ad-hoc",
+    requested_draft=False,
+    requested_prerelease=False,
+    allow_untrusted_ad_hoc=True,
+    release_exists=False,
+    existing_draft=None,
+  )
+  plan = release_plan_json(
+    tag="v0.1.0",
+    title="Pith v0.1.0",
+    source_commit="0123456789abcdef0123456789abcdef01234567",
+    ci_run_url="https://github.com/walt1012/pith/actions/runs/100",
+    workflow_run_url="https://github.com/walt1012/pith/actions/runs/101",
+    dry_run=True,
+    signing_mode="ad-hoc",
+    requested_draft=False,
+    requested_prerelease=False,
+    allow_untrusted_ad_hoc=True,
+    manual_acceptance_confirmed=False,
+    manual_acceptance_evidence="",
+    release_exists=False,
+    existing_draft=None,
+    state=state,
+  )
+  expected_values = {
+    "workflowMode": "dry-run",
+    "githubMutation": "none",
+    "signingMode": "ad-hoc",
+    "existingReleaseState": "none",
+    "allowVisibleAdHoc": True,
+    "manualAcceptanceConfirmed": False,
+    "plannedDraft": False,
+    "plannedPrerelease": True,
+  }
+  for key, expected in expected_values.items():
+    if plan.get(key) != expected:
+      raise AssertionError(f"release plan JSON {key} should be {expected!r}")
+  actions = plan.get("nextMaintainerActions")
+  if not isinstance(actions, list) or not actions:
+    raise AssertionError("release plan JSON should include next maintainer actions")
+  if not any("manual prerelease acceptance" in action for action in actions):
+    raise AssertionError("release plan JSON should preserve manual acceptance guidance")
+  if "Untrusted ad-hoc prerelease" not in str(plan.get("trustPath", "")):
+    raise AssertionError("release plan JSON should preserve trust guidance")
+
+
 def assert_main_writes_release_summary() -> None:
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -285,6 +335,7 @@ def assert_main_writes_release_summary() -> None:
     state_file = root / "release-state.json"
     env_file = root / "release-state.env"
     summary_file = root / "release-plan.md"
+    plan_file = root / "release-plan.json"
     notes_file.write_text(
       release_notes("v0.1.0", "ad-hoc", True, False),
       encoding="utf-8",
@@ -319,6 +370,8 @@ def assert_main_writes_release_summary() -> None:
         str(env_file),
         "--summary-output",
         str(summary_file),
+        "--plan-output",
+        str(plan_file),
         "--source-commit",
         "0123456789abcdef0123456789abcdef01234567",
         "--ci-run-url",
@@ -346,6 +399,13 @@ def assert_main_writes_release_summary() -> None:
       raise AssertionError("release summary should include dry-run next actions")
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("release env should record final draft state")
+    plan = json.loads(plan_file.read_text(encoding="utf-8"))
+    if plan["workflowMode"] != "dry-run":
+      raise AssertionError("release plan JSON should record workflow mode")
+    if plan["sourceCommit"] != "0123456789abcdef0123456789abcdef01234567":
+      raise AssertionError("release plan JSON should record source commit")
+    if plan["plannedDraft"] is not False:
+      raise AssertionError("release plan JSON should record final draft state")
 
 
 def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
@@ -559,6 +619,7 @@ def main() -> int:
   assert_rejects_wrong_release_title()
   assert_rejects_non_release_tag()
   assert_release_summary_names_visibility_and_trust()
+  assert_release_plan_json_preserves_release_decision()
   assert_main_writes_release_summary()
   assert_main_rejects_unaccepted_visible_ad_hoc_publish()
   assert_main_rejects_visible_ad_hoc_without_acceptance_evidence()
