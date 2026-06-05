@@ -43,6 +43,9 @@ def assert_ready_dry_run_report() -> None:
     "## Tag Preparation",
     f"git tag v0.1.0 {VALID_COMMIT}",
     "git push origin v0.1.0",
+    "## Remote Tag Verification",
+    "git ls-remote --exit-code --tags origin refs/tags/v0.1.0",
+    f'test "${{remote_tag_line%%[[:space:]]*}}" = {VALID_COMMIT}',
     "## CI Lookup",
     f"--commit {VALID_COMMIT}",
     f'select(.headSha == "{VALID_COMMIT}"',
@@ -101,6 +104,13 @@ def assert_ready_dry_run_report() -> None:
     "git push origin v0.1.0",
   ]:
     raise AssertionError("readiness JSON should include deterministic tag preparation commands")
+  remote_tag_command = str(payload.get("remoteTagVerificationCommand", ""))
+  for phrase in (
+    "git ls-remote --exit-code --tags origin refs/tags/v0.1.0",
+    f'test "${{remote_tag_line%%[[:space:]]*}}" = {VALID_COMMIT}',
+  ):
+    if phrase not in remote_tag_command:
+      raise AssertionError(f"readiness JSON remote tag verification should include {phrase}")
   ci_lookup = str(payload.get("successfulCiLookupCommand", ""))
   for phrase in (
     "gh run list",
@@ -299,6 +309,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "Create tag v0.1.0",
     "Push the tag to origin",
     "tag-push release events run as dry-run",
+    "remote tag verification command",
     "CI lookup command",
     "release workflow as a dry-run",
     "dry-run artifact lookup command",

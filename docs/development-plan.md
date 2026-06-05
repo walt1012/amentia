@@ -77,9 +77,9 @@ Closed foundations:
   rehearsal, maintainer acceptance checklist, asset contract checks, final
   release validation, machine-readable release evidence, internal evidence
   contracts, safe tag and manual dispatch defaults, release-candidate
-  checklists, tag preparation commands, source-commit CI lookup, and workflow
-  policy tests, plus dry-run artifact lookup, verification, and guarded publish
-  commands.
+  checklists, tag preparation and remote verification commands, source-commit CI
+  lookup, workflow policy tests, dry-run artifact lookup and verification, and
+  guarded publish commands.
 
 Current decisions:
 

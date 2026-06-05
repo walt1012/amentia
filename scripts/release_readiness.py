@@ -189,6 +189,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   dry_run_validation_command = readiness_dry_run_validation_command(readiness)
   post_acceptance_command = readiness_post_acceptance_publish_command(readiness)
   tag_commands = "\n".join(readiness_tag_commands(readiness))
+  remote_tag_command = readiness_remote_tag_verification_command(readiness)
   checklist = "\n".join(f"- [ ] {item}" for item in readiness_checklist(readiness))
   dry_run_evidence = "\n".join(
     f"- `{name}`" for name in expected_evidence_names("dry-run", readiness.tag)
@@ -220,6 +221,11 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 ## Tag Preparation
 ```bash
 {tag_commands}
+```
+
+## Remote Tag Verification
+```bash
+{remote_tag_command}
 ```
 
 ## CI Lookup
@@ -273,6 +279,7 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "expectedPublicAssets": list(release_installer_asset_names(readiness.tag)),
     "expectedDryRunEvidence": list(expected_evidence_names("dry-run", readiness.tag)),
     "tagCommands": readiness_tag_commands(readiness),
+    "remoteTagVerificationCommand": readiness_remote_tag_verification_command(readiness),
     "successfulCiLookupCommand": readiness_ci_lookup_command(readiness),
     "dryRunArtifactLookupCommand": readiness_dry_run_artifact_lookup_command(readiness),
     "dryRunArtifactDownloadCommand": readiness_dry_run_download_command(readiness),
@@ -288,6 +295,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     f"Create tag {readiness.tag} at source commit {readiness.source_commit} if it does not already exist.",
     f"Confirm tag {readiness.tag} points at source commit {readiness.source_commit}.",
     "Push the tag to origin; tag-push release events run as dry-run by default.",
+    "Run the remote tag verification command before dispatching a manual release workflow.",
     "Use the CI lookup command to copy the successful CI URL for this exact source commit.",
     f"Confirm the successful CI run matches the source commit: {readiness.ci_run_url or 'not recorded'}.",
     "Run the release workflow as a dry-run before any publish attempt.",
@@ -298,6 +306,15 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
     "Use the post-acceptance publish command only after manual acceptance evidence is recorded.",
   ]
+
+
+def readiness_remote_tag_verification_command(readiness: ReleaseReadiness) -> str:
+  return "\n".join(
+    [
+      f'remote_tag_line="$(git ls-remote --exit-code --tags origin refs/tags/{shell_quote(readiness.tag)})"',
+      f'test "${{remote_tag_line%%[[:space:]]*}}" = {shell_quote(readiness.source_commit)}',
+    ]
+  )
 
 
 def readiness_ci_lookup_command(readiness: ReleaseReadiness) -> str:
