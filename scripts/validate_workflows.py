@@ -371,6 +371,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "RELEASE_MANUAL_ACCEPTANCE_CONFIRMED:",
     "RELEASE_MANUAL_ACCEPTANCE_EVIDENCE:",
     "RELEASE_DRY_RUN:",
+    "RELEASE_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}",
   ):
     if term not in text:
       issues.append(

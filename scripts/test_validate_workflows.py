@@ -273,7 +273,7 @@ env:
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
   RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
   RELEASE_MANUAL_ACCEPTANCE_EVIDENCE: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_evidence || '' }}
-  RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+  RELEASE_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
 
 jobs:
   release-dmg:
@@ -858,6 +858,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "dry_run must include default: true")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "RELEASE_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}",
+        "RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}",
+      ),
+    )
+    assert_issue(issue_messages(root), "RELEASE_DRY_RUN")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

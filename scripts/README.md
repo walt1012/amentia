@@ -82,4 +82,6 @@ back and validates the final state, exact public asset set, non-empty uploads,
 and download URLs. It then downloads the release assets back through GitHub
 Releases and runs the same rehearsal contract a maintainer can use after manual
 download. The rehearsal summary is uploaded as an internal workflow artifact,
-not as an extra public Release asset.
+not as an extra public Release asset. Tag-push and manual release dispatches
+default to dry-run; publishing requires an explicit manual dispatch with
+`dry_run=false`.
