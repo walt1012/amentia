@@ -76,7 +76,8 @@ Closed foundations:
 - Release automation: change-aware CI lanes, release dry-run, downloaded-asset
   rehearsal, maintainer acceptance checklist, asset contract checks, final
   release validation, machine-readable release evidence, internal evidence
-  contracts, safe manual dispatch defaults, and workflow policy tests.
+  contracts, safe manual dispatch defaults, release-candidate checklists, and
+  workflow policy tests.
 
 Current decisions:
 

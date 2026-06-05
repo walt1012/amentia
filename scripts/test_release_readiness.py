@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from release_readiness import plan_readiness
+from release_readiness import readiness_checklist
 from release_readiness import readiness_json
 from release_readiness import readiness_report
 from release_readiness import REQUIRED_RELEASE_INPUTS
@@ -38,6 +39,10 @@ def assert_ready_dry_run_report() -> None:
     "Workflow mode: `dry-run`",
     "Planned visibility: `draft prerelease`",
     "Tag points at source commit: `true`",
+    "## Pre-Dispatch Checklist",
+    "## Expected Dry-Run Evidence",
+    "Pith-v0.1.0-macos-x86_64.dmg",
+    "release-dry-run-rehearsal.json",
     "gh workflow run release.yml",
     "-f dry_run=true",
   ):
@@ -63,6 +68,13 @@ def assert_ready_dry_run_report() -> None:
       raise AssertionError(f"readiness JSON {key} should be {expected!r}, got {payload.get(key)!r}")
   if "gh workflow run release.yml" not in str(payload.get("nextCommand", "")):
     raise AssertionError("readiness JSON should include the dispatch command")
+  checklist = payload.get("preDispatchChecklist")
+  if not isinstance(checklist, list) or len(checklist) < 5:
+    raise AssertionError("readiness JSON should include the pre-dispatch checklist")
+  if "Pith-v0.1.0-macos-x86_64.dmg" not in payload.get("expectedPublicAssets", []):
+    raise AssertionError("readiness JSON should include expected public assets")
+  if "release-dry-run-rehearsal.json" not in payload.get("expectedDryRunEvidence", []):
+    raise AssertionError("readiness JSON should include expected dry-run evidence")
 
 
 def assert_blocks_missing_ci_and_tag() -> None:
@@ -197,6 +209,33 @@ def assert_required_release_inputs_cover_dispatch_controls() -> None:
       raise AssertionError(f"release readiness should require dispatch input {name}")
 
 
+def assert_readiness_checklist_names_release_candidate_flow() -> None:
+  readiness = plan_readiness(
+    tag="v0.1.0",
+    source_commit=VALID_COMMIT,
+    working_tree_clean_value=True,
+    tag_points_at_commit_value=True,
+    workflow_inputs_ready=True,
+    ci_run_url=VALID_CI_URL,
+    dry_run=True,
+    signing_mode="ad-hoc",
+    requested_draft=True,
+    requested_prerelease=True,
+    allow_untrusted_ad_hoc=False,
+    manual_acceptance_confirmed=False,
+    manual_acceptance_evidence="",
+  )
+  checklist = "\n".join(readiness_checklist(readiness))
+  for phrase in (
+    "Push the tag to origin",
+    "release workflow as a dry-run",
+    "release-dry-run-v0.1.0",
+    "fresh-Mac manual acceptance",
+  ):
+    if phrase not in checklist:
+      raise AssertionError(f"readiness checklist should include {phrase}")
+
+
 def main() -> int:
   assert_ready_dry_run_report()
   assert_blocks_missing_ci_and_tag()
@@ -204,6 +243,7 @@ def main() -> int:
   assert_accepted_visible_ad_hoc_report_preserves_inputs()
   assert_rejects_invalid_tag()
   assert_required_release_inputs_cover_dispatch_controls()
+  assert_readiness_checklist_names_release_candidate_flow()
   print("release readiness tests passed")
   return 0
 

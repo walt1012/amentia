@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from release_identity import validate_public_release_tag
+from release_artifacts import release_installer_asset_names
+from release_evidence_contract import expected_evidence_names
 from release_state import ReleaseState
 from release_state import plan_release_state
 from release_state import validate_manual_acceptance_gate
@@ -181,6 +183,10 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   evidence = readiness.manual_acceptance_evidence or "not recorded"
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
   next_command = readiness_next_command(readiness)
+  checklist = "\n".join(f"- [ ] {item}" for item in readiness_checklist(readiness))
+  dry_run_evidence = "\n".join(
+    f"- `{name}`" for name in expected_evidence_names("dry-run", readiness.tag)
+  )
   if not blockers:
     blockers = "- None"
 
@@ -201,6 +207,12 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 
 ## Blockers
 {blockers}
+
+## Pre-Dispatch Checklist
+{checklist}
+
+## Expected Dry-Run Evidence
+{dry_run_evidence}
 
 ## Next Command
 ```bash
@@ -227,9 +239,24 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "releaseWorkflowInputsReady": readiness.workflow_inputs_ready,
     "manualAcceptanceConfirmed": readiness.manual_acceptance_confirmed,
     "manualAcceptanceEvidence": readiness.manual_acceptance_evidence,
+    "preDispatchChecklist": readiness_checklist(readiness),
+    "expectedPublicAssets": list(release_installer_asset_names(readiness.tag)),
+    "expectedDryRunEvidence": list(expected_evidence_names("dry-run", readiness.tag)),
     "blockers": list(readiness.blockers),
     "nextCommand": readiness_next_command(readiness),
   }
+
+
+def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
+  return [
+    f"Confirm tag {readiness.tag} points at source commit {readiness.source_commit}.",
+    "Push the tag to origin before dispatching the release workflow.",
+    f"Confirm the successful CI run matches the source commit: {readiness.ci_run_url or 'not recorded'}.",
+    "Run the release workflow as a dry-run before any publish attempt.",
+    f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
+    "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
+    "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
+  ]
 
 
 def readiness_next_command(readiness: ReleaseReadiness) -> str:
