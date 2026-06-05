@@ -19,7 +19,7 @@ Current scripts:
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and optional zip; CI can pass prebuilt app and runtime executables for faster installer packaging without creating extra user-facing archives, and records schema-versioned package metadata including daily-driver readiness provenance and package size budgets in `PithPackage.json`.
 - `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, signing trust and Gatekeeper guidance, schema-versioned app package metadata, daily-driver readiness provenance, packaged first-run smoke receipt proof, release workflow proof, and tag-locked names.
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
-- `release_evidence_contract.py`: validates internal dry-run and publish-rehearsal evidence artifacts, including structured readiness and release-plan JSON keys, before workflow upload without adding extra public release assets.
+- `release_evidence_contract.py`: validates internal dry-run and publish-rehearsal evidence artifacts, including structured readiness and release-plan JSON keys plus tag, workflow mode, and asset-contract consistency, before workflow upload without adding extra public release assets.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
 - `release_readiness.py`: prepares maintainer-facing Markdown and machine-readable JSON readiness reports before dispatching the release workflow, including tag preparation and remote verification commands, exact source-commit CI lookup, the safe dry-run-first command, dry-run artifact lookup and verification, guarded post-acceptance publish command, release-candidate checklist, and expected dry-run evidence.
@@ -37,7 +37,7 @@ Current scripts:
 - `test_package_contract.py`: checks the shared package contract constants, size budgets, and bundled-model guards.
 - `test_notion_connector_contract.py`: checks bundled Notion connector MCP handoff, retry, and follow-up metadata.
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
-- `test_release_evidence_contract.py`: checks internal release evidence artifact sets, structured readiness and release-plan JSON keys, Markdown shape, and missing or extra file rejection.
+- `test_release_evidence_contract.py`: checks internal release evidence artifact sets, structured readiness and release-plan JSON consistency, Markdown shape, and missing or extra file rejection.
 - `test_release_identity.py`: checks shared product version and public release tag rules.
 - `test_release_publish_contract.py`: checks final published GitHub Release state and asset validation.
 - `test_release_readiness.py`: checks release readiness blocking, JSON evidence, and dry-run command generation.

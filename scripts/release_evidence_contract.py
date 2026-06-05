@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from release_artifacts import release_installer_asset_names
+from package_contract import RELEASE_SIGNING_MODES
 
 
 DRY_RUN_EXTRA_NAMES = (
@@ -125,7 +126,7 @@ def validate_release_evidence_set(
     )
 
   for path in evidence_by_name.values():
-    validate_evidence_content(path)
+    validate_evidence_content(path, mode=mode, tag=tag)
 
 
 def validate_evidence_path(path: Path) -> None:
@@ -135,7 +136,7 @@ def validate_evidence_path(path: Path) -> None:
     raise RuntimeError(f"Release evidence names must be basenames: {path.name}")
 
 
-def validate_evidence_content(path: Path) -> None:
+def validate_evidence_content(path: Path, *, mode: str, tag: str) -> None:
   if path.stat().st_size == 0:
     raise RuntimeError(f"Release evidence file must not be empty: {path.name}")
   if path.suffix == ".json":
@@ -143,6 +144,7 @@ def validate_evidence_content(path: Path) -> None:
     if not isinstance(data, dict):
       raise RuntimeError(f"Release evidence JSON must be an object: {path.name}")
     validate_required_json_keys(path.name, data)
+    validate_structured_json(path.name, data, mode=mode, tag=tag)
   elif path.suffix == ".md":
     text = path.read_text(encoding="utf-8").strip()
     if not text.startswith("# "):
@@ -158,6 +160,170 @@ def validate_required_json_keys(name: str, data: dict[str, object]) -> None:
     raise RuntimeError(
       f"Release evidence JSON is missing required keys for {name}: "
       + ", ".join(missing)
+    )
+
+
+def validate_structured_json(
+  name: str,
+  data: dict[str, object],
+  *,
+  mode: str,
+  tag: str,
+) -> None:
+  if name == "release-readiness.json":
+    validate_release_readiness_json(data, mode=mode, tag=tag)
+  elif name == "release-plan.json":
+    validate_release_plan_json(data, mode=mode, tag=tag)
+
+
+def validate_release_readiness_json(
+  data: dict[str, object],
+  *,
+  mode: str,
+  tag: str,
+) -> None:
+  expected_workflow_mode = expected_workflow_mode_for_evidence(mode)
+  require_equal(data, "tag", tag)
+  require_equal(data, "workflowMode", expected_workflow_mode)
+  require_one_of(data, "status", {"ready", "blocked"})
+  require_one_of(data, "signingMode", RELEASE_SIGNING_MODES)
+  require_string(data, "sourceCommit")
+  require_string(data, "successfulCiRunUrl")
+  require_string(data, "manualAcceptanceEvidence", allow_empty=True)
+  require_string(data, "remoteTagVerificationCommand")
+  require_string(data, "successfulCiLookupCommand")
+  require_string(data, "dryRunArtifactLookupCommand")
+  require_string(data, "dryRunArtifactDownloadCommand")
+  require_string(data, "dryRunEvidenceValidationCommand")
+  require_string(data, "postAcceptancePublishCommand")
+  require_string(data, "nextCommand")
+  for key in (
+    "requestedDraft",
+    "requestedPrerelease",
+    "allowUntrustedAdHoc",
+    "plannedDraft",
+    "plannedPrerelease",
+    "workingTreeClean",
+    "tagPointsAtSourceCommit",
+    "releaseWorkflowInputsReady",
+    "manualAcceptanceConfirmed",
+  ):
+    require_bool(data, key)
+  require_string_list(data, "preDispatchChecklist")
+  require_string_list(data, "tagCommands")
+  require_string_list(data, "blockers", allow_empty=True)
+  require_exact_string_list(
+    data,
+    "expectedPublicAssets",
+    release_installer_asset_names(tag),
+  )
+  require_exact_string_list(
+    data,
+    "expectedDryRunEvidence",
+    expected_evidence_names("dry-run", tag),
+  )
+
+
+def validate_release_plan_json(
+  data: dict[str, object],
+  *,
+  mode: str,
+  tag: str,
+) -> None:
+  expected_workflow_mode = expected_workflow_mode_for_evidence(mode)
+  require_equal(data, "tag", tag)
+  require_equal(data, "title", f"Pith {tag}")
+  require_equal(data, "workflowMode", expected_workflow_mode)
+  require_equal(
+    data,
+    "githubMutation",
+    "none" if expected_workflow_mode == "dry-run" else "create-or-update",
+  )
+  require_one_of(data, "signingMode", RELEASE_SIGNING_MODES)
+  require_one_of(data, "existingReleaseState", {"none", "draft", "visible"})
+  require_string(data, "sourceCommit")
+  require_string(data, "successfulCiRunUrl")
+  require_string(data, "releaseWorkflowRunUrl")
+  require_string(data, "manualAcceptanceEvidence", allow_empty=True)
+  require_string(data, "trustPath")
+  for key in (
+    "releaseExists",
+    "requestedDraft",
+    "requestedPrerelease",
+    "allowVisibleAdHoc",
+    "manualAcceptanceConfirmed",
+    "plannedDraft",
+    "plannedPrerelease",
+  ):
+    require_bool(data, key)
+  require_string_list(data, "nextMaintainerActions")
+
+
+def expected_workflow_mode_for_evidence(mode: str) -> str:
+  if mode == "dry-run":
+    return "dry-run"
+  if mode == "publish-rehearsal":
+    return "publish"
+  raise RuntimeError(f"Unknown release evidence mode: {mode}")
+
+
+def require_equal(data: dict[str, object], key: str, expected: str) -> None:
+  actual = data.get(key)
+  if actual != expected:
+    raise RuntimeError(
+      f"Release evidence JSON key {key} must be {expected!r}, got {actual!r}"
+    )
+
+
+def require_one_of(data: dict[str, object], key: str, expected: set[str]) -> None:
+  actual = data.get(key)
+  if not isinstance(actual, str) or actual not in expected:
+    expected_values = ", ".join(sorted(expected))
+    raise RuntimeError(
+      f"Release evidence JSON key {key} must be one of {expected_values}."
+    )
+
+
+def require_string(
+  data: dict[str, object],
+  key: str,
+  *,
+  allow_empty: bool = False,
+) -> None:
+  actual = data.get(key)
+  if not isinstance(actual, str) or (not allow_empty and not actual.strip()):
+    raise RuntimeError(f"Release evidence JSON key {key} must be a string.")
+
+
+def require_bool(data: dict[str, object], key: str) -> None:
+  if not isinstance(data.get(key), bool):
+    raise RuntimeError(f"Release evidence JSON key {key} must be a boolean.")
+
+
+def require_string_list(
+  data: dict[str, object],
+  key: str,
+  *,
+  allow_empty: bool = False,
+) -> None:
+  actual = data.get(key)
+  if (
+    not isinstance(actual, list)
+    or (not allow_empty and not actual)
+    or any(not isinstance(item, str) or not item.strip() for item in actual)
+  ):
+    raise RuntimeError(f"Release evidence JSON key {key} must be a string list.")
+
+
+def require_exact_string_list(
+  data: dict[str, object],
+  key: str,
+  expected: tuple[str, ...],
+) -> None:
+  actual = data.get(key)
+  if list(expected) != actual:
+    raise RuntimeError(
+      f"Release evidence JSON key {key} must match the release contract."
     )
 
 
