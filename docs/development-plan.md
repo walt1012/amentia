@@ -74,8 +74,8 @@ Closed foundations:
 - macOS delivery: x86_64 DMG packaging, unsigned install guidance, size budgets,
   manifests, release copy, package metadata, and packaged smoke proof.
 - Release automation: change-aware CI lanes, release dry-run, downloaded-asset
-  rehearsal, asset contract checks, final release validation, and workflow
-  policy tests.
+  rehearsal, maintainer acceptance checklist, asset contract checks, final
+  release validation, and workflow policy tests.
 
 Current decisions:
 
@@ -95,7 +95,8 @@ Goal: ship a usable macOS installer from GitHub Releases.
 Build now:
 
 - Run release dry-run for the first release candidate and inspect the exact
-  installer assets, release plan, and rehearsal summary.
+  installer assets, release plan, rehearsal summary, and manual acceptance
+  checklist.
 - Complete one manual first-launch acceptance on a fresh Mac: download from
   GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
   default model, open a workspace, run a cowork turn, use Web Search, approve a

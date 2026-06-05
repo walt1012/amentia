@@ -445,11 +445,14 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "release-dry-run-assets",
     "--asset-dir release-dry-run-assets",
     "--summary-output release-dry-run-rehearsal.md",
+    "--acceptance-output release-dry-run-manual-acceptance.md",
     'cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
+    'cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"',
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg",
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json",
     "release-dry-run-rehearsal.md",
+    "release-dry-run-manual-acceptance.md",
   ):
     if term not in release_block:
       issues.append(
@@ -557,10 +560,12 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "--dir release-download",
     "--asset-dir release-download",
     "--summary-output release-rehearsal.md",
+    "--acceptance-output release-manual-acceptance.md",
     'cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
+    'cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"',
     "uses: actions/upload-artifact@v7",
     "release-rehearsal-${{ env.RELEASE_TAG }}",
-    "path: release-rehearsal.md",
+    "release-manual-acceptance.md",
     "retention-days: 30",
   ):
     if term not in release_block:

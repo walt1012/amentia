@@ -349,8 +349,10 @@ jobs:
           python3 scripts/release_rehearsal_contract.py \\
             --tag "$RELEASE_TAG" \\
             --asset-dir release-dry-run-assets \\
-            --summary-output release-dry-run-rehearsal.md
+            --summary-output release-dry-run-rehearsal.md \\
+            --acceptance-output release-dry-run-manual-acceptance.md
           cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload release dry-run assets
         if: env.RELEASE_DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -363,6 +365,7 @@ jobs:
             artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
             release-plan.md
             release-dry-run-rehearsal.md
+            release-dry-run-manual-acceptance.md
           retention-days: 7
       - name: Upload GitHub Release draft assets
         if: env.RELEASE_DRY_RUN != 'true'
@@ -385,8 +388,10 @@ jobs:
           python3 scripts/release_rehearsal_contract.py \\
             --tag "$RELEASE_TAG" \\
             --asset-dir release-download \\
-            --summary-output release-rehearsal.md
+            --summary-output release-rehearsal.md \\
+            --acceptance-output release-manual-acceptance.md
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
       - name: Apply final GitHub Release visibility
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
@@ -410,7 +415,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-rehearsal-${{ env.RELEASE_TAG }}
-          path: release-rehearsal.md
+          path: |
+            release-rehearsal.md
+            release-manual-acceptance.md
           if-no-files-found: error
           retention-days: 30
 """

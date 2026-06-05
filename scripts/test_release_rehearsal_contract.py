@@ -33,6 +33,8 @@ from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
 from release_rehearsal_contract import summary_markdown
+from release_rehearsal_contract import acceptance_markdown
+from release_rehearsal_contract import write_acceptance
 from release_rehearsal_contract import validate_release_rehearsal
 from release_rehearsal_contract import write_summary
 from release_text import install_guide as release_install_guide
@@ -193,10 +195,33 @@ def main() -> int:
       raise AssertionError("release rehearsal markdown should require manual acceptance")
     if "- [ ] Let the model use Web Search" not in markdown:
       raise AssertionError("release rehearsal markdown should include Web Search acceptance")
+    acceptance = acceptance_markdown(summary)
+    if "Manual Release Acceptance" not in acceptance:
+      raise AssertionError("manual acceptance markdown should name its purpose")
+    if "Accept this build for visible ad-hoc prerelease" not in acceptance:
+      raise AssertionError("manual acceptance markdown should include an accept decision")
+    if "Keep this build draft-only" not in acceptance:
+      raise AssertionError("manual acceptance markdown should include a reject decision")
+    for name in release_installer_asset_names("v0.1.0"):
+      if f"Download `{name}`" not in acceptance:
+        raise AssertionError("manual acceptance markdown should list every release asset")
+    for phrase in (
+      "Checksum verification result",
+      "Gatekeeper path used",
+      "Web Search proof inspected",
+      "Approval and diff receipt inspected",
+      "Restart recovery result",
+    ):
+      if phrase not in acceptance:
+        raise AssertionError(f"manual acceptance markdown should request evidence for {phrase}")
     output = root / "rehearsal.md"
     write_summary(output, summary)
     if "Result: `passed`" not in output.read_text(encoding="utf-8"):
       raise AssertionError("release rehearsal summary file should record the result")
+    acceptance_output = root / "acceptance.md"
+    write_acceptance(acceptance_output, summary)
+    if "Required Manual Checks" not in acceptance_output.read_text(encoding="utf-8"):
+      raise AssertionError("manual acceptance file should record required checks")
 
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
     root = Path(directory)

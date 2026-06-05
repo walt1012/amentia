@@ -205,6 +205,50 @@ def write_summary(path: Path, summary: dict) -> None:
   path.write_text(summary_markdown(summary), encoding="utf-8")
 
 
+def write_acceptance(path: Path, summary: dict) -> None:
+  path.parent.mkdir(parents=True, exist_ok=True)
+  path.write_text(acceptance_markdown(summary), encoding="utf-8")
+
+
+def acceptance_markdown(summary: dict) -> str:
+  assets = "\n".join(f"- [ ] Download `{name}`" for name in summary["assetNames"])
+  manual_acceptance = "\n".join(
+    f"- [ ] {check}" for check in summary["manualPrereleaseChecks"]
+  )
+  return f"""# Pith {summary["tag"]} Manual Release Acceptance
+
+Use this checklist only after automated release rehearsal passes.
+
+Decision:
+- [ ] Accept this build for visible ad-hoc prerelease.
+- [ ] Keep this build draft-only and fix issues before publishing.
+
+## Release Inputs
+- Source commit: `{summary["sourceCommit"]}`
+- Signing mode: `{summary["signingMode"]}`
+- Trust: `{summary["trust"]["mode"]}`
+- Gatekeeper: {summary["trust"]["gatekeeper"]}
+- Checksum command: `{summary["checksumCommand"]}`
+- Default model: `{summary["defaultModelId"]}`
+
+## Downloaded Assets
+{assets}
+
+## Required Manual Checks
+{manual_acceptance}
+
+## Evidence To Record
+- Fresh Mac or clean macOS user profile used.
+- Checksum verification result.
+- Gatekeeper path used.
+- Model selected and activated.
+- Workspace path used for acceptance.
+- Web Search proof inspected.
+- Approval and diff receipt inspected.
+- Restart recovery result.
+"""
+
+
 def summary_markdown(summary: dict) -> str:
   assets = "\n".join(f"- `{name}`" for name in summary["assetNames"])
   first_run = "\n".join(
@@ -267,6 +311,7 @@ def main() -> int:
   parser.add_argument("--tag", required=True)
   parser.add_argument("--asset-dir", required=True, type=Path)
   parser.add_argument("--summary-output", type=Path)
+  parser.add_argument("--acceptance-output", type=Path)
   parser.add_argument("--allow-extra-assets", action="store_true")
   args = parser.parse_args()
 
@@ -278,6 +323,8 @@ def main() -> int:
     )
     if args.summary_output:
       write_summary(args.summary_output, summary)
+    if args.acceptance_output:
+      write_acceptance(args.acceptance_output, summary)
   except Exception as error:
     print(f"release rehearsal contract failed: {error}", file=sys.stderr)
     return 1
