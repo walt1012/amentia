@@ -448,6 +448,25 @@ jobs:
           cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
           cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate release dry-run evidence
+        if: env.RELEASE_DRY_RUN == 'true'
+        run: |
+          set -euo pipefail
+          python3 scripts/release_evidence_contract.py \
+            --mode dry-run \
+            --tag "$RELEASE_TAG" \
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            --evidence artifacts/macos/README-FIRST.txt \
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \
+            --evidence release-readiness.md \
+            --evidence release-readiness.json \
+            --evidence release-plan.md \
+            --evidence release-plan.json \
+            --evidence release-dry-run-rehearsal.md \
+            --evidence release-dry-run-rehearsal.json \
+            --evidence release-dry-run-manual-acceptance.md
+
       - name: Upload release dry-run assets
         if: env.RELEASE_DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -545,6 +564,21 @@ jobs:
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
 
+      - name: Validate release rehearsal evidence
+        if: env.RELEASE_DRY_RUN != 'true'
+        run: |
+          set -euo pipefail
+          python3 scripts/release_evidence_contract.py \
+            --mode publish-rehearsal \
+            --tag "$RELEASE_TAG" \
+            --evidence release-readiness.md \
+            --evidence release-readiness.json \
+            --evidence release-plan.md \
+            --evidence release-plan.json \
+            --evidence release-rehearsal.md \
+            --evidence release-rehearsal.json \
+            --evidence release-manual-acceptance.md
+
       - name: Upload release rehearsal summary
         if: always() && env.RELEASE_DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
@@ -553,6 +587,7 @@ jobs:
           path: |
             release-readiness.md
             release-readiness.json
+            release-plan.md
             release-plan.json
             release-rehearsal.md
             release-rehearsal.json
