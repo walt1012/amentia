@@ -83,28 +83,14 @@ Current decisions:
 - Keep connector expansion narrow until the local cowork loop ships cleanly.
 - Do not start new product surfaces before the first release candidate is
   accepted on the real install path.
+- Avoid broad refactors before M12 unless they remove a correctness, release,
+  or safety risk.
 - Do not bundle Git, model weights, package-manager payloads, extra
   architectures, or unused runtimes.
 - Public release assets stay limited to DMG, checksum, `README-FIRST.txt`, and
   release manifest.
 - Remote CI is the source of truth for Rust formatting, tests, policy checks,
   model catalog validation, and macOS packaging.
-
-Alignment review:
-
-- Codex/Claude alignment is strongest at the boundaries that matter now:
-  workspace-scoped tools, approval gates, sandbox status, Web Search retrieval,
-  MCP-style connector execution, compact evidence, cancellation, and recovery.
-- M12 is not complete until a real release dry-run artifact is manually accepted
-  on a fresh Mac and the visible ad-hoc path records acceptance evidence.
-- The current architecture is good enough to ship M12; avoid broad refactors
-  unless they remove a correctness, release, or safety risk.
-- M13 should prove connector import, credential lifecycle, revocation, and
-  service-agnostic timeline evidence before adding more services.
-- Cowork continuity, such as follow-up queues or scheduled work, belongs after
-  the first shipped local cowork loop; do not add multi-agent orchestration yet.
-- Large plugin execution tests should be split by behavior after M12 only if
-  they start slowing review or hiding regressions.
 
 ## M12: Public Release
 
@@ -119,6 +105,8 @@ Build now:
   GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
   default model, open a workspace, run a cowork turn, use Web Search, approve a
   bounded action, and inspect proof.
+- Record the accepted dry-run artifact and fresh-Mac evidence before changing
+  release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.
 - Require `manual_acceptance_confirmed=true` before any visible ad-hoc
   prerelease can be published, with `manual_acceptance_evidence` recorded in the
@@ -146,6 +134,8 @@ marketplace too early.
   proof, memory capture, and timeline evidence stay service-agnostic.
 - Prove connector import, local enablement, credential storage, revocation, and
   removal before adding broad service catalogs.
+- Keep connector evidence generic in the timeline; service-specific detail must
+  stay in connector attributes and narrow presenters.
 - Add import/distribution only after connector secrets can be installed, used,
   revoked, and forgotten safely.
 - Treat hooks as verification and automation points first, not arbitrary
@@ -155,6 +145,10 @@ marketplace too early.
 
 - Developer ID signing and notarization when an Apple Developer account exists.
 - Broader connector ecosystem after the local connector contract is proven.
+- Cowork continuity, such as follow-up queues or scheduled work, after the first
+  shipped local cowork loop.
+- Split oversized plugin execution tests by behavior only if they start slowing
+  review or hiding regressions.
 - Local document RAG only after Web Search, workspace context, and memory
   ranking are reliable in daily use.
 - Native sandbox hardening beyond the current workspace and subprocess
