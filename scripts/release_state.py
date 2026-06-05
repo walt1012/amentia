@@ -122,6 +122,7 @@ def release_state_summary(
   mutation = "none; dry-run does not create or update a GitHub Release"
   if not dry_run:
     mutation = "create-or-update GitHub Release after asset rehearsal"
+  next_actions = release_next_actions(dry_run=dry_run, state=state)
   trust_note = release_trust_note(
     signing_mode,
     allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
@@ -141,9 +142,39 @@ def release_state_summary(
 - Requested draft: `{str(requested_draft).lower()}`
 - Requested prerelease: `{str(requested_prerelease).lower()}`
 - Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
-- Final visibility: `{visibility} {release_class}`
+- Planned final visibility: `{visibility} {release_class}`
 - Trust path: {trust_note}
+
+## Next Maintainer Actions
+{next_actions}
 """
+
+
+def release_next_actions(*, dry_run: bool, state: ReleaseState) -> str:
+  if dry_run:
+    return "\n".join(
+      [
+        "- Download the `release-dry-run-*` artifact from this workflow.",
+        "- Verify the DMG checksum, release manifest, release plan, and dry-run rehearsal summary.",
+        "- Run the manual prerelease acceptance checklist on a fresh Mac before any visible ad-hoc release.",
+        "- If acceptance passes, rerun the release workflow with `dry_run=false` and the intended visibility inputs.",
+      ]
+    )
+  if state.draft:
+    return "\n".join(
+      [
+        "- Review the draft GitHub Release assets and downloaded-release rehearsal summary.",
+        "- Complete manual prerelease acceptance before making any ad-hoc release visible.",
+        "- Edit release visibility only after the release page, manifest, checksum, and install guide all match.",
+      ]
+    )
+  return "\n".join(
+    [
+      "- Inspect the visible GitHub Release page and confirm the exact four public assets.",
+      "- Download the DMG from the release page and run the manual prerelease acceptance checklist.",
+      "- If acceptance fails, withdraw the release deliberately rather than moving it back to draft in automation.",
+    ]
+  )
 
 
 def summary_value(value: str) -> str:

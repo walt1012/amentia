@@ -12,6 +12,8 @@ from tempfile import TemporaryDirectory
 from release_state import main as release_state_main
 from release_state import expected_release_title
 from release_state import plan_release_state
+from release_state import ReleaseState
+from release_state import release_next_actions
 from release_state import release_state_summary
 from release_state import validate_release_title
 from release_text import release_notes
@@ -212,7 +214,10 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "https://github.com/walt1012/pith/actions/runs/101",
     "Workflow mode: `dry-run`",
     "GitHub mutation: none; dry-run does not create or update a GitHub Release",
-    "Final visibility: `visible prerelease`",
+    "## Next Maintainer Actions",
+    "release-dry-run-*",
+    "manual prerelease acceptance checklist",
+    "Planned final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Untrusted ad-hoc prerelease",
     "Open Anyway",
@@ -273,17 +278,39 @@ def assert_main_writes_release_summary() -> None:
     finally:
       sys.argv = original_argv
     summary = summary_file.read_text(encoding="utf-8")
-    if "Final visibility: `visible prerelease`" not in summary:
-      raise AssertionError("release summary should record final visibility")
+    if "Planned final visibility: `visible prerelease`" not in summary:
+      raise AssertionError("release summary should record planned final visibility")
     if "https://github.com/walt1012/pith/actions/runs/100" not in summary:
       raise AssertionError("release summary should record the successful CI run")
     if "Workflow mode: `dry-run`" not in summary:
       raise AssertionError("release summary should record the workflow mode")
     if "GitHub mutation: none" not in summary:
       raise AssertionError("release summary should record dry-run mutation behavior")
+    if "release-dry-run-*" not in summary:
+      raise AssertionError("release summary should include dry-run next actions")
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("release env should record final draft state")
 
+
+def assert_release_next_actions_match_mode() -> None:
+  dry_run_actions = release_next_actions(
+    dry_run=True,
+    state=ReleaseState(draft=False, prerelease=True),
+  )
+  if "release-dry-run-*" not in dry_run_actions:
+    raise AssertionError("dry-run next actions should point to the dry-run artifact")
+  draft_actions = release_next_actions(
+    dry_run=False,
+    state=ReleaseState(draft=True, prerelease=True),
+  )
+  if "draft GitHub Release" not in draft_actions:
+    raise AssertionError("draft publish next actions should keep draft review visible")
+  visible_actions = release_next_actions(
+    dry_run=False,
+    state=ReleaseState(draft=False, prerelease=True),
+  )
+  if "visible GitHub Release page" not in visible_actions:
+    raise AssertionError("visible publish next actions should inspect the release page")
 
 def main() -> int:
   if expected_release_title("v0.1.0") != "Pith v0.1.0":
@@ -327,6 +354,7 @@ def main() -> int:
   assert_rejects_non_release_tag()
   assert_release_summary_names_visibility_and_trust()
   assert_main_writes_release_summary()
+  assert_release_next_actions_match_mode()
   assert_state(
     signing_mode="ad-hoc",
     requested_draft=False,
