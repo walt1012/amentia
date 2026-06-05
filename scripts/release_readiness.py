@@ -36,6 +36,9 @@ class ReleaseReadiness:
   ci_run_url: str
   dry_run: bool
   signing_mode: str
+  requested_draft: bool
+  requested_prerelease: bool
+  allow_untrusted_ad_hoc: bool
   state: ReleaseState
   manual_acceptance_confirmed: bool
   manual_acceptance_evidence: str
@@ -157,6 +160,9 @@ def plan_readiness(
     ci_run_url=ci_run_url.strip(),
     dry_run=dry_run,
     signing_mode=signing_mode,
+    requested_draft=requested_draft,
+    requested_prerelease=requested_prerelease,
+    allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
     state=state,
     manual_acceptance_confirmed=manual_acceptance_confirmed,
     manual_acceptance_evidence=manual_acceptance_evidence.strip(),
@@ -197,13 +203,21 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 gh workflow run release.yml \\
   -f tag={readiness.tag} \\
   -f dry_run={str(readiness.dry_run).lower()} \\
-  -f draft={str(readiness.state.draft).lower()} \\
-  -f prerelease={str(readiness.state.prerelease).lower()} \\
-  -f publish_untrusted_ad_hoc=false \\
-  -f manual_acceptance_confirmed=false \\
-  -f manual_acceptance_evidence=
+  -f draft={str(readiness.requested_draft).lower()} \\
+  -f prerelease={str(readiness.requested_prerelease).lower()} \\
+  -f publish_untrusted_ad_hoc={str(readiness.allow_untrusted_ad_hoc).lower()} \\
+  -f manual_acceptance_confirmed={str(readiness.manual_acceptance_confirmed).lower()} \\
+  -f manual_acceptance_evidence={shell_quote(readiness.manual_acceptance_evidence)}
 ```
 """
+
+
+def shell_quote(value: str) -> str:
+  if not value:
+    return ""
+  if all(character.isalnum() or character in "-_./:#?=&%" for character in value):
+    return value
+  return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
 def main() -> int:

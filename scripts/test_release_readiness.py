@@ -93,6 +93,41 @@ def assert_blocks_visible_ad_hoc_without_acceptance() -> None:
     raise AssertionError("visible ad-hoc blocker should name manual acceptance")
 
 
+def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
+  evidence = "https://github.com/walt1012/pith/actions/runs/100#manual-acceptance"
+  readiness = plan_readiness(
+    tag="v0.1.0",
+    source_commit=VALID_COMMIT,
+    working_tree_clean_value=True,
+    tag_points_at_commit_value=True,
+    workflow_inputs_ready=True,
+    ci_run_url=VALID_CI_URL,
+    dry_run=False,
+    signing_mode="ad-hoc",
+    requested_draft=False,
+    requested_prerelease=True,
+    allow_untrusted_ad_hoc=True,
+    manual_acceptance_confirmed=True,
+    manual_acceptance_evidence=evidence,
+  )
+  if not readiness.ready:
+    raise AssertionError(f"accepted visible ad-hoc publish should be ready: {readiness.blockers}")
+
+  report = readiness_report(readiness)
+  for phrase in (
+    "Workflow mode: `publish`",
+    "Planned visibility: `visible prerelease`",
+    "-f dry_run=false",
+    "-f draft=false",
+    "-f prerelease=true",
+    "-f publish_untrusted_ad_hoc=true",
+    "-f manual_acceptance_confirmed=true",
+    f"-f manual_acceptance_evidence={evidence}",
+  ):
+    if phrase not in report:
+      raise AssertionError(f"accepted publish report should include {phrase}")
+
+
 def assert_rejects_invalid_tag() -> None:
   readiness = plan_readiness(
     tag="latest",
@@ -117,6 +152,7 @@ def main() -> int:
   assert_ready_dry_run_report()
   assert_blocks_missing_ci_and_tag()
   assert_blocks_visible_ad_hoc_without_acceptance()
+  assert_accepted_visible_ad_hoc_report_preserves_inputs()
   assert_rejects_invalid_tag()
   print("release readiness tests passed")
   return 0
