@@ -242,7 +242,7 @@ on:
         default: true
         type: boolean
       prerelease:
-        default: false
+        default: true
         type: boolean
       publish_untrusted_ad_hoc:
         default: false
@@ -858,6 +858,21 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "dry_run must include default: true")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "      prerelease:\n"
+        "        default: true\n"
+        "        type: boolean\n",
+        "      prerelease:\n"
+        "        default: false\n"
+        "        type: boolean\n",
+      ),
+    )
+    assert_issue(issue_messages(root), "prerelease must include default: true")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

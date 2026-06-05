@@ -18,7 +18,7 @@ on:
       prerelease:
         description: "Mark the GitHub Release as a prerelease."
         required: false
-        default: false
+        default: true
         type: boolean
       publish_untrusted_ad_hoc:
         description: "Allow a visible ad-hoc, non-notarized prerelease when Developer ID secrets are unavailable."

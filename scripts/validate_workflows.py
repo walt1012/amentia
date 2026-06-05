@@ -679,7 +679,7 @@ def validate_release_dispatch_inputs(text: str) -> list[WorkflowIssue]:
   required_inputs = {
     "tag": ("type: string",),
     "draft": ("default: true", "type: boolean"),
-    "prerelease": ("default: false", "type: boolean"),
+    "prerelease": ("default: true", "type: boolean"),
     "publish_untrusted_ad_hoc": ("default: false", "type: boolean"),
     "manual_acceptance_confirmed": ("default: false", "type: boolean"),
     "manual_acceptance_evidence": ('default: ""', "type: string"),

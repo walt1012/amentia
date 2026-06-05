@@ -91,6 +91,8 @@ Current decisions:
   architectures, or unused runtimes.
 - Public release assets stay limited to DMG, checksum, `README-FIRST.txt`, and
   release manifest.
+- Manual release dispatch defaults to a dry-run draft prerelease; stable
+  visibility must be an explicit later decision.
 - Remote CI is the source of truth for Rust formatting, tests, policy checks,
   model catalog validation, and macOS packaging.
 
