@@ -127,6 +127,7 @@ def validate_release_evidence_set(
 
   for path in evidence_by_name.values():
     validate_evidence_content(path, mode=mode, tag=tag)
+  validate_release_json_consistency(evidence_by_name)
 
 
 def validate_evidence_path(path: Path) -> None:
@@ -160,6 +161,50 @@ def validate_required_json_keys(name: str, data: dict[str, object]) -> None:
     raise RuntimeError(
       f"Release evidence JSON is missing required keys for {name}: "
       + ", ".join(missing)
+    )
+
+
+def validate_release_json_consistency(evidence_by_name: dict[str, Path]) -> None:
+  readiness = read_evidence_json(evidence_by_name["release-readiness.json"])
+  plan = read_evidence_json(evidence_by_name["release-plan.json"])
+  require_matching_json_value(readiness, plan, "tag")
+  require_matching_json_value(readiness, plan, "sourceCommit")
+  require_matching_json_value(readiness, plan, "successfulCiRunUrl")
+  require_matching_json_value(readiness, plan, "workflowMode")
+  require_matching_json_value(readiness, plan, "signingMode")
+  require_matching_json_value(readiness, plan, "requestedDraft")
+  require_matching_json_value(readiness, plan, "requestedPrerelease")
+  require_matching_json_value(readiness, plan, "plannedDraft")
+  require_matching_json_value(readiness, plan, "plannedPrerelease")
+  require_matching_json_value(readiness, plan, "manualAcceptanceConfirmed")
+  require_matching_json_value(readiness, plan, "manualAcceptanceEvidence")
+  require_matching_json_value(
+    readiness,
+    plan,
+    "allowUntrustedAdHoc",
+    right_key="allowVisibleAdHoc",
+  )
+
+
+def read_evidence_json(path: Path) -> dict[str, object]:
+  data = json.loads(path.read_text(encoding="utf-8"))
+  if not isinstance(data, dict):
+    raise RuntimeError(f"Release evidence JSON must be an object: {path.name}")
+  return data
+
+
+def require_matching_json_value(
+  left: dict[str, object],
+  right: dict[str, object],
+  left_key: str,
+  *,
+  right_key: str | None = None,
+) -> None:
+  actual_right_key = right_key or left_key
+  if left.get(left_key) != right.get(actual_right_key):
+    raise RuntimeError(
+      "Release readiness and release plan JSON disagree on "
+      f"{left_key}/{actual_right_key}."
     )
 
 

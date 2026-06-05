@@ -270,12 +270,63 @@ def assert_rejects_inconsistent_structured_json() -> None:
     )
 
 
+def assert_rejects_cross_file_json_disagreement() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    plan_path = root / "release-plan.json"
+    stale = release_plan_payload("dry-run")
+    stale["sourceCommit"] = "fedcba9876543210fedcba9876543210fedcba98"
+    plan_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "disagree on sourceCommit",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    plan_path = root / "release-plan.json"
+    stale = release_plan_payload("dry-run")
+    stale["allowVisibleAdHoc"] = True
+    plan_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "disagree on allowUntrustedAdHoc/allowVisibleAdHoc",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "publish-rehearsal")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("publish-rehearsal")
+    stale["successfulCiRunUrl"] = "https://github.com/walt1012/pith/actions/runs/99"
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="publish-rehearsal",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "disagree on successfulCiRunUrl",
+    )
+
+
 def main() -> int:
   assert_dry_run_evidence_accepts_exact_set()
   assert_publish_rehearsal_accepts_exact_set()
   assert_rejects_missing_extra_empty_and_invalid_json()
   assert_rejects_stale_structured_json()
   assert_rejects_inconsistent_structured_json()
+  assert_rejects_cross_file_json_disagreement()
   print("release evidence contract tests passed")
   return 0
 
