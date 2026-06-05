@@ -70,6 +70,8 @@ jobs:
         run: python3 scripts/test_create_macos_dmg.py
       - name: Test release state helper
         run: python3 scripts/test_release_state.py
+      - name: Test release readiness helper
+        run: python3 scripts/test_release_readiness.py
       - name: Test published release contract
         run: python3 scripts/test_release_publish_contract.py
       - name: Test release rehearsal contract
@@ -272,8 +274,23 @@ jobs:
           if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             exit 1
           fi
+          git fetch --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
           gh run list --workflow CI --status success --json conclusion,headSha,url
           echo "PITH_RELEASE_CI_RUN_URL=https://github.com/walt1012/pith/actions/runs/100" >> "$GITHUB_ENV"
+      - name: Write release readiness report
+        run: |
+          python3 scripts/release_readiness.py \
+            --tag "$RELEASE_TAG" \
+            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --output release-readiness.md \
+            --dry-run "$RELEASE_DRY_RUN" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --requested-draft "$RELEASE_DRAFT" \
+            --requested-prerelease "$RELEASE_PRERELEASE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+          cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
       - name: Create release DMG
@@ -374,6 +391,7 @@ jobs:
             artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256
             artifacts/macos/README-FIRST.txt
             artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
+            release-readiness.md
             release-plan.md
             release-dry-run-rehearsal.md
             release-dry-run-manual-acceptance.md
@@ -427,6 +445,7 @@ jobs:
         with:
           name: release-rehearsal-${{ env.RELEASE_TAG }}
           path: |
+            release-readiness.md
             release-rehearsal.md
             release-manual-acceptance.md
           if-no-files-found: error
