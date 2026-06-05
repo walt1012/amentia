@@ -43,6 +43,9 @@ def assert_ready_dry_run_report() -> None:
     "## Tag Preparation",
     f"git tag v0.1.0 {VALID_COMMIT}",
     "git push origin v0.1.0",
+    "## CI Lookup",
+    f"--commit {VALID_COMMIT}",
+    f'select(.headSha == "{VALID_COMMIT}"',
     "## Expected Dry-Run Evidence",
     "Pith-v0.1.0-macos-x86_64.dmg",
     "release-dry-run-rehearsal.json",
@@ -83,6 +86,15 @@ def assert_ready_dry_run_report() -> None:
     "git push origin v0.1.0",
   ]:
     raise AssertionError("readiness JSON should include deterministic tag preparation commands")
+  ci_lookup = str(payload.get("successfulCiLookupCommand", ""))
+  for phrase in (
+    "gh run list",
+    "--workflow CI",
+    f"--commit {VALID_COMMIT}",
+    f'select(.headSha == "{VALID_COMMIT}"',
+  ):
+    if phrase not in ci_lookup:
+      raise AssertionError(f"readiness JSON CI lookup should include {phrase}")
 
 
 def assert_blocks_missing_ci_and_tag() -> None:
@@ -238,6 +250,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "Create tag v0.1.0",
     "Push the tag to origin",
     "tag-push release events run as dry-run",
+    "CI lookup command",
     "release workflow as a dry-run",
     "release-dry-run-v0.1.0",
     "fresh-Mac manual acceptance",

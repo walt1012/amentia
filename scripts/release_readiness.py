@@ -183,6 +183,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   evidence = readiness.manual_acceptance_evidence or "not recorded"
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
   next_command = readiness_next_command(readiness)
+  ci_lookup_command = readiness_ci_lookup_command(readiness)
   tag_commands = "\n".join(readiness_tag_commands(readiness))
   checklist = "\n".join(f"- [ ] {item}" for item in readiness_checklist(readiness))
   dry_run_evidence = "\n".join(
@@ -217,6 +218,11 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 {tag_commands}
 ```
 
+## CI Lookup
+```bash
+{ci_lookup_command}
+```
+
 ## Expected Dry-Run Evidence
 {dry_run_evidence}
 
@@ -249,6 +255,7 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "expectedPublicAssets": list(release_installer_asset_names(readiness.tag)),
     "expectedDryRunEvidence": list(expected_evidence_names("dry-run", readiness.tag)),
     "tagCommands": readiness_tag_commands(readiness),
+    "successfulCiLookupCommand": readiness_ci_lookup_command(readiness),
     "blockers": list(readiness.blockers),
     "nextCommand": readiness_next_command(readiness),
   }
@@ -259,12 +266,30 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     f"Create tag {readiness.tag} at source commit {readiness.source_commit} if it does not already exist.",
     f"Confirm tag {readiness.tag} points at source commit {readiness.source_commit}.",
     "Push the tag to origin; tag-push release events run as dry-run by default.",
+    "Use the CI lookup command to copy the successful CI URL for this exact source commit.",
     f"Confirm the successful CI run matches the source commit: {readiness.ci_run_url or 'not recorded'}.",
     "Run the release workflow as a dry-run before any publish attempt.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
     "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
     "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
   ]
+
+
+def readiness_ci_lookup_command(readiness: ReleaseReadiness) -> str:
+  return " ".join(
+    [
+      "gh run list",
+      "--workflow CI",
+      f"--commit {shell_quote(readiness.source_commit)}",
+      "--status success",
+      "--json conclusion,headSha,url",
+      "--limit 20",
+      "--jq",
+      shell_quote(
+        f'[.[] | select(.headSha == "{readiness.source_commit}" and .conclusion == "success")][0].url // ""'
+      ),
+    ]
+  )
 
 
 def readiness_tag_commands(readiness: ReleaseReadiness) -> list[str]:
