@@ -56,6 +56,13 @@ def assert_ready_dry_run_report() -> None:
     "python scripts/release_evidence_contract.py",
     "--mode dry-run",
     "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
+    "## Post-Acceptance Publish Command",
+    "Use only after the manual acceptance checklist passes.",
+    "-f dry_run=false",
+    "-f draft=false",
+    "-f publish_untrusted_ad_hoc=true",
+    "-f manual_acceptance_confirmed=true",
+    "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
   ):
     if phrase not in report:
       raise AssertionError(f"readiness report should include {phrase}")
@@ -113,6 +120,18 @@ def assert_ready_dry_run_report() -> None:
   ):
     if phrase not in validation_command:
       raise AssertionError(f"readiness JSON dry-run validation should include {phrase}")
+  publish_command = str(payload.get("postAcceptancePublishCommand", ""))
+  for phrase in (
+    "gh workflow run release.yml",
+    "-f dry_run=false",
+    "-f draft=false",
+    "-f prerelease=true",
+    "-f publish_untrusted_ad_hoc=true",
+    "-f manual_acceptance_confirmed=true",
+    "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+  ):
+    if phrase not in publish_command:
+      raise AssertionError(f"readiness JSON post-acceptance publish command should include {phrase}")
 
 
 def assert_blocks_missing_ci_and_tag() -> None:
@@ -273,6 +292,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "release-dry-run-v0.1.0",
     "dry-run evidence validation command",
     "fresh-Mac manual acceptance",
+    "post-acceptance publish command",
   ):
     if phrase not in checklist:
       raise AssertionError(f"readiness checklist should include {phrase}")

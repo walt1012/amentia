@@ -186,6 +186,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   ci_lookup_command = readiness_ci_lookup_command(readiness)
   dry_run_download_command = readiness_dry_run_download_command(readiness)
   dry_run_validation_command = readiness_dry_run_validation_command(readiness)
+  post_acceptance_command = readiness_post_acceptance_publish_command(readiness)
   tag_commands = "\n".join(readiness_tag_commands(readiness))
   checklist = "\n".join(f"- [ ] {item}" for item in readiness_checklist(readiness))
   dry_run_evidence = "\n".join(
@@ -238,6 +239,13 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 {dry_run_download_command}
 {dry_run_validation_command}
 ```
+
+## Post-Acceptance Publish Command
+Use only after the manual acceptance checklist passes.
+
+```bash
+{post_acceptance_command}
+```
 """
 
 
@@ -266,6 +274,7 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "successfulCiLookupCommand": readiness_ci_lookup_command(readiness),
     "dryRunArtifactDownloadCommand": readiness_dry_run_download_command(readiness),
     "dryRunEvidenceValidationCommand": readiness_dry_run_validation_command(readiness),
+    "postAcceptancePublishCommand": readiness_post_acceptance_publish_command(readiness),
     "blockers": list(readiness.blockers),
     "nextCommand": readiness_next_command(readiness),
   }
@@ -283,6 +292,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     "Run the dry-run evidence validation command before manual acceptance.",
     "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
     "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
+    "Use the post-acceptance publish command only after manual acceptance evidence is recorded.",
   ]
 
 
@@ -324,6 +334,29 @@ def readiness_dry_run_validation_command(readiness: ReleaseReadiness) -> str:
     suffix = " \\" if index < len(evidence_names) - 1 else ""
     lines.append(f"  --evidence {shell_quote(f'{artifact_dir}/{name}')}{suffix}")
   return "\n".join(lines)
+
+
+def readiness_post_acceptance_publish_command(readiness: ReleaseReadiness) -> str:
+  if readiness.signing_mode == "developer-id":
+    allow_untrusted = False
+    manual_confirmed = False
+    manual_evidence = ""
+  else:
+    allow_untrusted = True
+    manual_confirmed = True
+    manual_evidence = "<manual-acceptance-evidence-url>"
+  return "\n".join(
+    [
+      "gh workflow run release.yml \\",
+      f"  -f tag={readiness.tag} \\",
+      "  -f dry_run=false \\",
+      "  -f draft=false \\",
+      "  -f prerelease=true \\",
+      f"  -f publish_untrusted_ad_hoc={str(allow_untrusted).lower()} \\",
+      f"  -f manual_acceptance_confirmed={str(manual_confirmed).lower()} \\",
+      f"  -f manual_acceptance_evidence={shell_quote(manual_evidence)}",
+    ]
+  )
 
 
 def readiness_tag_commands(readiness: ReleaseReadiness) -> list[str]:
