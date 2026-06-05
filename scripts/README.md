@@ -21,6 +21,7 @@ Current scripts:
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
 - `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
+- `release_readiness.py`: prepares a maintainer-facing readiness report before dispatching the release workflow.
 - `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write a compact rehearsal summary with trust, Gatekeeper, smoke journey, release-decision gate, manual prerelease acceptance, metadata-match, and first app-open checks.
 - `test_first_app_open_contract.py`: checks that Swift first-open copy stays aligned with the shared release first app-open copy contract.
 - `release_state.py`: plans GitHub Release draft/prerelease safety for Developer ID, ad-hoc, and dry-run DMG builds, enforces tag/title identity, revalidates release notes against the final publish state, and writes the release plan plus maintainer next-action summary used in Actions.
@@ -37,6 +38,7 @@ Current scripts:
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_identity.py`: checks shared product version and public release tag rules.
 - `test_release_publish_contract.py`: checks final published GitHub Release state and asset validation.
+- `test_release_readiness.py`: checks release readiness blocking and dry-run command generation.
 - `test_release_rehearsal_contract.py`: checks downloaded release rehearsal validation and summary generation.
 - `test_release_state.py`: checks release state planning behavior that does not require GitHub Actions.
 - `test_release_text.py`: checks release notes and DMG install guide copy generation.

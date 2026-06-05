@@ -136,6 +136,9 @@ jobs:
       - name: Test release state helper
         run: python3 scripts/test_release_state.py
 
+      - name: Test release readiness helper
+        run: python3 scripts/test_release_readiness.py
+
       - name: Test published release contract
         run: python3 scripts/test_release_publish_contract.py
 

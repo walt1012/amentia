@@ -101,6 +101,7 @@ Build now:
 - Run release dry-run for the first release candidate and inspect the exact
   installer assets, release plan, rehearsal summary, and manual acceptance
   checklist.
+- Generate the release readiness report before dispatching the dry-run.
 - Complete one manual first-launch acceptance on a fresh Mac: download from
   GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
   default model, open a workspace, run a cowork turn, use Web Search, approve a
