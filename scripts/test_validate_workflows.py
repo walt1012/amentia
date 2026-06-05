@@ -232,6 +232,10 @@ on:
   push:
   workflow_dispatch:
     inputs:
+      publish_untrusted_ad_hoc:
+        type: boolean
+      manual_acceptance_confirmed:
+        type: boolean
       dry_run:
         type: boolean
 
@@ -248,6 +252,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
+  RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
   RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 jobs:
@@ -335,6 +341,7 @@ jobs:
           --ci-run-url "$PITH_RELEASE_CI_RUN_URL"
           --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           --dry-run "$RELEASE_DRY_RUN"
+          --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
           printf '%s' "$release_json" > release-existing.json

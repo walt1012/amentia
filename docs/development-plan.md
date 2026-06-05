@@ -102,6 +102,8 @@ Build now:
   default model, open a workspace, run a cowork turn, use Web Search, approve a
   bounded action, and inspect proof.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.
+- Require `manual_acceptance_confirmed=true` before any visible ad-hoc
+  prerelease can be published.
 - Keep unsigned/ad-hoc copy explicit because Developer ID notarization is paid
   and optional later.
 

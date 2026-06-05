@@ -15,6 +15,7 @@ from release_state import plan_release_state
 from release_state import ReleaseState
 from release_state import release_next_actions
 from release_state import release_state_summary
+from release_state import validate_manual_acceptance_gate
 from release_state import validate_release_title
 from release_text import release_notes
 
@@ -58,6 +59,36 @@ def assert_rejects_public_ad_hoc_without_explicit_publish() -> None:
   except ValueError:
     return
   raise AssertionError("public ad-hoc release updates should be rejected")
+
+
+def assert_rejects_visible_ad_hoc_without_manual_acceptance() -> None:
+  try:
+    validate_manual_acceptance_gate(
+      signing_mode="ad-hoc",
+      dry_run=False,
+      allow_untrusted_ad_hoc=True,
+      manual_acceptance_confirmed=False,
+      state=ReleaseState(draft=False, prerelease=True),
+    )
+  except ValueError:
+    return
+  raise AssertionError("visible ad-hoc publishing should require manual acceptance")
+
+
+def assert_manual_acceptance_gate_allows_safe_modes() -> None:
+  for signing_mode, dry_run, draft, confirmed in (
+    ("ad-hoc", True, False, False),
+    ("ad-hoc", False, True, False),
+    ("ad-hoc", False, False, True),
+    ("developer-id", False, False, False),
+  ):
+    validate_manual_acceptance_gate(
+      signing_mode=signing_mode,
+      dry_run=dry_run,
+      allow_untrusted_ad_hoc=True,
+      manual_acceptance_confirmed=confirmed,
+      state=ReleaseState(draft=draft, prerelease=signing_mode != "developer-id"),
+    )
 
 
 def assert_rejects_unknown_existing_release_state() -> None:
@@ -196,6 +227,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     requested_draft=False,
     requested_prerelease=False,
     allow_untrusted_ad_hoc=True,
+    manual_acceptance_confirmed=False,
     release_exists=False,
     existing_draft=None,
     state=plan_release_state(
@@ -219,6 +251,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "manual prerelease acceptance checklist",
     "Planned final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
+    "Manual acceptance confirmed: `false`",
     "Untrusted ad-hoc prerelease",
     "Open Anyway",
   ):
@@ -255,6 +288,8 @@ def assert_main_writes_release_summary() -> None:
         "false",
         "--allow-untrusted-ad-hoc",
         "true",
+        "--manual-acceptance-confirmed",
+        "false",
         "--release-exists",
         "false",
         "--state-output",
@@ -292,6 +327,99 @@ def assert_main_writes_release_summary() -> None:
       raise AssertionError("release env should record final draft state")
 
 
+def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    notes_file.write_text(
+      release_notes("v0.1.0", "ad-hoc", True, False),
+      encoding="utf-8",
+    )
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith v0.1.0",
+        "--tag",
+        "v0.1.0",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "ad-hoc",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "true",
+        "--manual-acceptance-confirmed",
+        "false",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+      ]
+      with redirect_stderr(StringIO()) as stderr:
+        exit_code = release_state_main()
+      if exit_code == 0:
+        raise AssertionError("unaccepted visible ad-hoc publish should be rejected")
+      if "manual_acceptance_confirmed=true" not in stderr.getvalue():
+        raise AssertionError("manual acceptance rejection should explain the required input")
+    finally:
+      sys.argv = original_argv
+
+
+def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    notes_file = root / "release-notes.md"
+    state_file = root / "release-state.json"
+    env_file = root / "release-state.env"
+    notes_file.write_text(
+      release_notes("v0.1.0", "ad-hoc", True, False),
+      encoding="utf-8",
+    )
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_state.py",
+        "--title",
+        "Pith v0.1.0",
+        "--tag",
+        "v0.1.0",
+        "--notes-file",
+        str(notes_file),
+        "--signing-mode",
+        "ad-hoc",
+        "--requested-draft",
+        "false",
+        "--requested-prerelease",
+        "false",
+        "--allow-untrusted-ad-hoc",
+        "true",
+        "--manual-acceptance-confirmed",
+        "true",
+        "--release-exists",
+        "false",
+        "--state-output",
+        str(state_file),
+        "--env-output",
+        str(env_file),
+      ]
+      exit_code = release_state_main()
+      if exit_code != 0:
+        raise AssertionError("accepted visible ad-hoc publish should pass")
+    finally:
+      sys.argv = original_argv
+    if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
+      raise AssertionError("accepted visible ad-hoc publish should stay visible")
+
+
 def assert_release_next_actions_match_mode() -> None:
   dry_run_actions = release_next_actions(
     dry_run=True,
@@ -311,6 +439,8 @@ def assert_release_next_actions_match_mode() -> None:
   )
   if "visible GitHub Release page" not in visible_actions:
     raise AssertionError("visible publish next actions should inspect the release page")
+  if "recorded manual acceptance evidence" not in visible_actions:
+    raise AssertionError("visible publish next actions should confirm recorded acceptance")
 
 def main() -> int:
   if expected_release_title("v0.1.0") != "Pith v0.1.0":
@@ -349,11 +479,15 @@ def main() -> int:
   assert_rejects_unknown_existing_release_state()
   assert_rejects_public_release_to_draft()
   assert_rejects_public_ad_hoc_without_explicit_publish()
+  assert_rejects_visible_ad_hoc_without_manual_acceptance()
+  assert_manual_acceptance_gate_allows_safe_modes()
   assert_rejects_tampered_release_notes()
   assert_rejects_wrong_release_title()
   assert_rejects_non_release_tag()
   assert_release_summary_names_visibility_and_trust()
   assert_main_writes_release_summary()
+  assert_main_rejects_unaccepted_visible_ad_hoc_publish()
+  assert_main_allows_accepted_visible_ad_hoc_publish()
   assert_release_next_actions_match_mode()
   assert_state(
     signing_mode="ad-hoc",

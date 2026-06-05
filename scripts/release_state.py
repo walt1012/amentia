@@ -85,6 +85,25 @@ def plan_release_state(
   return ReleaseState(draft=desired_draft, prerelease=final_prerelease)
 
 
+def validate_manual_acceptance_gate(
+  *,
+  signing_mode: str,
+  dry_run: bool,
+  allow_untrusted_ad_hoc: bool,
+  manual_acceptance_confirmed: bool,
+  state: ReleaseState,
+) -> None:
+  if dry_run or signing_mode == "developer-id" or state.draft:
+    return
+  if not allow_untrusted_ad_hoc:
+    return
+  if not manual_acceptance_confirmed:
+    raise ValueError(
+      "Visible ad-hoc prereleases require manual_acceptance_confirmed=true. "
+      "Run the generated manual acceptance checklist on a fresh Mac before publishing."
+    )
+
+
 def write_env(path: Path, state: ReleaseState) -> None:
   path.write_text(
     "\n".join(
@@ -110,6 +129,7 @@ def release_state_summary(
   requested_draft: bool,
   requested_prerelease: bool,
   allow_untrusted_ad_hoc: bool,
+  manual_acceptance_confirmed: bool,
   release_exists: bool,
   existing_draft: bool | None,
   state: ReleaseState,
@@ -142,6 +162,7 @@ def release_state_summary(
 - Requested draft: `{str(requested_draft).lower()}`
 - Requested prerelease: `{str(requested_prerelease).lower()}`
 - Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
+- Manual acceptance confirmed: `{str(manual_acceptance_confirmed).lower()}`
 - Planned final visibility: `{visibility} {release_class}`
 - Trust path: {trust_note}
 
@@ -171,7 +192,7 @@ def release_next_actions(*, dry_run: bool, state: ReleaseState) -> str:
   return "\n".join(
     [
       "- Inspect the visible GitHub Release page and confirm the exact four public assets.",
-      "- Download the DMG from the release page and run the manual prerelease acceptance checklist.",
+      "- Confirm the recorded manual acceptance evidence matches the published DMG.",
       "- If acceptance fails, withdraw the release deliberately rather than moving it back to draft in automation.",
     ]
   )
@@ -196,6 +217,7 @@ def main() -> int:
   parser.add_argument("--requested-draft", required=True)
   parser.add_argument("--requested-prerelease", required=True)
   parser.add_argument("--allow-untrusted-ad-hoc", required=True)
+  parser.add_argument("--manual-acceptance-confirmed", default="false")
   parser.add_argument("--release-exists", required=True)
   parser.add_argument("--existing-draft", default="")
   parser.add_argument("--state-output", required=True)
@@ -214,6 +236,8 @@ def main() -> int:
     requested_draft = parse_bool(args.requested_draft)
     requested_prerelease = parse_bool(args.requested_prerelease)
     allow_untrusted_ad_hoc = parse_bool(args.allow_untrusted_ad_hoc)
+    manual_acceptance_confirmed = parse_bool(args.manual_acceptance_confirmed)
+    dry_run = parse_bool(args.dry_run)
     existing_draft = (
       parse_bool(args.existing_draft)
       if args.existing_draft.strip()
@@ -226,6 +250,13 @@ def main() -> int:
       allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
       release_exists=release_exists,
       existing_draft=existing_draft,
+    )
+    validate_manual_acceptance_gate(
+      signing_mode=args.signing_mode,
+      dry_run=dry_run,
+      allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+      manual_acceptance_confirmed=manual_acceptance_confirmed,
+      state=state,
     )
   except (RuntimeError, ValueError) as error:
     print(f"release state planning failed: {error}", file=sys.stderr)
@@ -264,11 +295,12 @@ def main() -> int:
         source_commit=args.source_commit,
         ci_run_url=args.ci_run_url,
         workflow_run_url=args.workflow_run_url,
-        dry_run=parse_bool(args.dry_run),
+        dry_run=dry_run,
         signing_mode=args.signing_mode,
         requested_draft=requested_draft,
         requested_prerelease=requested_prerelease,
         allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+        manual_acceptance_confirmed=manual_acceptance_confirmed,
         release_exists=release_exists,
         existing_draft=existing_draft,
         state=state,

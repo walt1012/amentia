@@ -25,6 +25,11 @@ on:
         required: false
         default: false
         type: boolean
+      manual_acceptance_confirmed:
+        description: "Confirm the generated manual acceptance checklist passed on a fresh Mac before visible ad-hoc publishing."
+        required: false
+        default: false
+        type: boolean
       dry_run:
         description: "Build and validate release assets without creating or updating a GitHub Release."
         required: false
@@ -46,6 +51,7 @@ env:
   RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
   RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
+  RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
   RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 defaults:
@@ -375,6 +381,7 @@ jobs:
             --requested-draft "$RELEASE_DRAFT" \
             --requested-prerelease "$RELEASE_PRERELEASE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
             --release-exists "$release_exists" \
             --existing-draft "$existing_draft" \
             --state-output release-state.json \
