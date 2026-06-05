@@ -88,6 +88,20 @@ Current decisions:
 - Remote CI is the source of truth for Rust formatting, tests, policy checks,
   model catalog validation, and macOS packaging.
 
+Alignment review:
+
+- Codex/Claude alignment is strongest at the boundaries that matter now:
+  workspace-scoped tools, approval gates, sandbox status, Web Search retrieval,
+  MCP-style connector execution, compact evidence, cancellation, and recovery.
+- M12 is not complete until a real release dry-run artifact is manually accepted
+  on a fresh Mac and the visible ad-hoc path records acceptance evidence.
+- M13 should prove connector import, credential lifecycle, revocation, and
+  service-agnostic timeline evidence before adding more services.
+- Cowork continuity, such as follow-up queues or scheduled work, belongs after
+  the first shipped local cowork loop; do not add multi-agent orchestration yet.
+- Large plugin execution tests should be split by behavior after M12 only if
+  they start slowing review or hiding regressions.
+
 ## M12: Public Release
 
 Goal: ship a usable macOS installer from GitHub Releases.
@@ -126,6 +140,8 @@ marketplace too early.
 - Keep Notion as the reference connector until the release loop proves stable.
 - Generalize connector contracts only after credentials, approvals, retries,
   proof, memory capture, and timeline evidence stay service-agnostic.
+- Prove connector import, local enablement, credential storage, revocation, and
+  removal before adding broad service catalogs.
 - Add import/distribution only after connector secrets can be installed, used,
   revoked, and forgotten safely.
 - Treat hooks as verification and automation points first, not arbitrary
