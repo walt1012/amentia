@@ -476,9 +476,15 @@ jobs:
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
+          release_tag_commit="$(
+            git ls-remote --exit-code --tags origin \\
+              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk '{print $1}'
+          )"
           python3 scripts/release_publish_contract.py \\
             --tag "$RELEASE_TAG" \\
             --release-json release-published.json \\
+            --source-commit "$SOURCE_COMMIT" \\
+            --tag-commit "$release_tag_commit" \\
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
@@ -1149,6 +1155,42 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
+        '          release_tag_commit="$(\n'
+        '            git ls-remote --exit-code --tags origin \\\n'
+        '              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk \'{print $1}\'\n'
+        '          )"\n',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "release_tag_commit")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--source-commit "$SOURCE_COMMIT"',
+        "--missing-source-commit",
+      ),
+    )
+    assert_issue(issue_messages(root), "source-commit")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--tag-commit "$release_tag_commit"',
+        "--missing-tag-commit",
+      ),
+    )
+    assert_issue(issue_messages(root), "tag-commit")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
         '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
         "--missing-expected-draft",
       ),
@@ -1358,7 +1400,7 @@ def main() -> int:
       root,
       release=VALID_RELEASE.replace('--source-commit "$PITH_RELEASE_SHA"', ""),
     )
-    assert_issue(issue_messages(root), "release manifest must include")
+    assert_issue(issue_messages(root), "source-commit")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

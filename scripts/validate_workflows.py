@@ -523,7 +523,12 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       )
   for term in (
     'gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json',
+    'release_tag_commit="$(',
+    "git ls-remote --exit-code --tags origin",
+    '"refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}"',
     '--release-json release-published.json',
+    '--source-commit "$SOURCE_COMMIT"',
+    '--tag-commit "$release_tag_commit"',
     '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
     '--expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"',
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
