@@ -309,9 +309,13 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
 
 
 def readiness_remote_tag_verification_command(readiness: ReleaseReadiness) -> str:
+  tag_ref = f"refs/tags/{readiness.tag}"
   return "\n".join(
     [
-      f'remote_tag_line="$(git ls-remote --exit-code --tags origin refs/tags/{shell_quote(readiness.tag)})"',
+      'remote_tag_line="$(',
+      "  git ls-remote --exit-code --tags origin "
+      f"{shell_quote(tag_ref)} {shell_quote(tag_ref + '^{}')} | tail -n 1",
+      ')"',
       f'test "${{remote_tag_line%%[[:space:]]*}}" = {shell_quote(readiness.source_commit)}',
     ]
   )
