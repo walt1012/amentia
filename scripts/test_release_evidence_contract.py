@@ -71,10 +71,62 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "dryRunArtifactLookupCommand": dry_run_artifact_lookup_command(),
     "dryRunArtifactDownloadCommand": dry_run_artifact_download_command(),
     "dryRunEvidenceValidationCommand": dry_run_evidence_validation_command(),
-    "postAcceptancePublishCommand": "gh workflow run release.yml",
+    "postAcceptancePublishCommand": post_acceptance_publish_command(),
     "blockers": [],
-    "nextCommand": "gh workflow run release.yml",
+    "nextCommand": release_next_command(workflow_mode),
   }
+
+
+def developer_id_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
+  payload = release_readiness_payload(mode)
+  payload["signingMode"] = "developer-id"
+  payload["postAcceptancePublishCommand"] = developer_id_publish_command()
+  return payload
+
+
+def release_next_command(workflow_mode: str) -> str:
+  return "\n".join(
+    [
+      "gh workflow run release.yml \\",
+      f"  -f tag={TAG} \\",
+      f"  -f dry_run={'true' if workflow_mode == 'dry-run' else 'false'} \\",
+      "  -f draft=true \\",
+      "  -f prerelease=true \\",
+      "  -f publish_untrusted_ad_hoc=false \\",
+      "  -f manual_acceptance_confirmed=false \\",
+      "  -f manual_acceptance_evidence=",
+    ]
+  )
+
+
+def post_acceptance_publish_command() -> str:
+  return "\n".join(
+    [
+      "gh workflow run release.yml \\",
+      f"  -f tag={TAG} \\",
+      "  -f dry_run=false \\",
+      "  -f draft=false \\",
+      "  -f prerelease=true \\",
+      "  -f publish_untrusted_ad_hoc=true \\",
+      "  -f manual_acceptance_confirmed=true \\",
+      "  -f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+    ]
+  )
+
+
+def developer_id_publish_command() -> str:
+  return "\n".join(
+    [
+      "gh workflow run release.yml \\",
+      f"  -f tag={TAG} \\",
+      "  -f dry_run=false \\",
+      "  -f draft=false \\",
+      "  -f prerelease=true \\",
+      "  -f publish_untrusted_ad_hoc=false \\",
+      "  -f manual_acceptance_confirmed=false \\",
+      "  -f manual_acceptance_evidence=",
+    ]
+  )
 
 
 def dry_run_artifact_lookup_command() -> str:
@@ -443,6 +495,43 @@ def assert_rejects_stale_readiness_commands() -> None:
       "dry-run artifact lookup command",
     )
 
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["nextCommand"] = str(stale["nextCommand"]).replace(
+      f"-f tag={TAG}",
+      "-f tag=v9.9.9",
+    )
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "next command",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["postAcceptancePublishCommand"] = str(
+      stale["postAcceptancePublishCommand"]
+    ).replace("-f dry_run=false", "-f dry_run=true")
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "post-acceptance publish command",
+    )
+
 
 def assert_rejects_stale_manual_acceptance_markdown() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
@@ -472,6 +561,26 @@ def assert_rejects_stale_manual_acceptance_markdown() -> None:
         evidence_paths=paths,
       ),
       "Web Search",
+    )
+
+
+def assert_accepts_developer_id_publish_command() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    plan_path = root / "release-plan.json"
+    readiness_path.write_text(
+      json.dumps(developer_id_readiness_payload("dry-run")) + "\n",
+      encoding="utf-8",
+    )
+    plan = release_plan_payload("dry-run")
+    plan["signingMode"] = "developer-id"
+    plan_path.write_text(json.dumps(plan) + "\n", encoding="utf-8")
+    validate_release_evidence_set(
+      mode="dry-run",
+      tag=TAG,
+      evidence_paths=paths,
     )
 
 
@@ -615,6 +724,7 @@ def main() -> int:
   assert_rejects_invalid_dry_run_installer_asset_evidence()
   assert_rejects_stale_structured_json()
   assert_rejects_stale_readiness_commands()
+  assert_accepts_developer_id_publish_command()
   assert_rejects_stale_manual_acceptance_markdown()
   assert_rejects_stale_release_rehearsal_evidence()
   assert_rejects_inconsistent_structured_json()

@@ -322,7 +322,6 @@ def validate_release_readiness_json(
   require_string(data, "dryRunArtifactDownloadCommand")
   require_string(data, "dryRunEvidenceValidationCommand")
   require_string(data, "postAcceptancePublishCommand")
-  validate_release_readiness_commands(data, tag=tag)
   require_string(data, "nextCommand")
   for key in (
     "requestedDraft",
@@ -349,6 +348,7 @@ def validate_release_readiness_json(
     "expectedDryRunEvidence",
     expected_evidence_names("dry-run", tag),
   )
+  validate_release_readiness_commands(data, tag=tag)
 
 
 def validate_release_readiness_commands(
@@ -395,6 +395,47 @@ def validate_release_readiness_commands(
     validation_command,
     tuple(required_validation_terms),
     "release readiness dry-run evidence validation command",
+  )
+  next_command = str(data["nextCommand"])
+  dry_run_value = "true" if str(data["workflowMode"]) == "dry-run" else "false"
+  require_text_contains(
+    next_command,
+    (
+      "gh workflow run release.yml",
+      f"-f tag={tag}",
+      f"-f dry_run={dry_run_value}",
+      f"-f draft={str(data['requestedDraft']).lower()}",
+      f"-f prerelease={str(data['requestedPrerelease']).lower()}",
+      f"-f publish_untrusted_ad_hoc={str(data['allowUntrustedAdHoc']).lower()}",
+      f"-f manual_acceptance_confirmed={str(data['manualAcceptanceConfirmed']).lower()}",
+      f"-f manual_acceptance_evidence={data['manualAcceptanceEvidence']}",
+    ),
+    "release readiness next command",
+  )
+  publish_command = str(data["postAcceptancePublishCommand"])
+  if str(data["signingMode"]) == "developer-id":
+    publish_trust_terms = (
+      "-f publish_untrusted_ad_hoc=false",
+      "-f manual_acceptance_confirmed=false",
+      "-f manual_acceptance_evidence=",
+    )
+  else:
+    publish_trust_terms = (
+      "-f publish_untrusted_ad_hoc=true",
+      "-f manual_acceptance_confirmed=true",
+      "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+    )
+  require_text_contains(
+    publish_command,
+    (
+      "gh workflow run release.yml",
+      f"-f tag={tag}",
+      "-f dry_run=false",
+      "-f draft=false",
+      "-f prerelease=true",
+      *publish_trust_terms,
+    ),
+    "release readiness post-acceptance publish command",
   )
 
 
