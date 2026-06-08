@@ -65,9 +65,9 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "preDispatchChecklist": ["Run the dry-run."],
     "expectedPublicAssets": list(release_installer_asset_names(TAG)),
     "expectedDryRunEvidence": list(expected_evidence_names("dry-run", TAG)),
-    "tagCommands": ["git tag v0.1.0 HEAD", "git push origin v0.1.0"],
-    "remoteTagVerificationCommand": "git ls-remote --tags origin refs/tags/v0.1.0",
-    "successfulCiLookupCommand": "gh run list --workflow CI",
+    "tagCommands": release_tag_commands(),
+    "remoteTagVerificationCommand": remote_tag_verification_command(),
+    "successfulCiLookupCommand": successful_ci_lookup_command(),
     "dryRunArtifactLookupCommand": dry_run_artifact_lookup_command(),
     "dryRunArtifactDownloadCommand": dry_run_artifact_download_command(),
     "dryRunEvidenceValidationCommand": dry_run_evidence_validation_command(),
@@ -75,6 +75,44 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "blockers": [],
     "nextCommand": release_next_command(workflow_mode),
   }
+
+
+def release_tag_commands() -> list[str]:
+  return [
+    f"git tag {TAG} {SOURCE_COMMIT}",
+    f"git push origin {TAG}",
+  ]
+
+
+def remote_tag_verification_command() -> str:
+  tag_ref = f"refs/tags/{TAG}"
+  return "\n".join(
+    [
+      'remote_tag_line="$(',
+      "  git ls-remote --exit-code --tags origin "
+      f"{tag_ref} '{tag_ref}^{{}}' | tail -n 1",
+      ')"',
+      f'test "${{remote_tag_line%%[[:space:]]*}}" = {SOURCE_COMMIT}',
+    ]
+  )
+
+
+def successful_ci_lookup_command() -> str:
+  return (
+    "gh run list "
+    "--workflow CI "
+    f"--commit {SOURCE_COMMIT} "
+    "--status success "
+    "--json conclusion,headSha,url "
+    "--limit 20 "
+    "--jq "
+    + "'"
+    + (
+      f'[.[] | select(.headSha == "{SOURCE_COMMIT}" '
+      'and .conclusion == "success")][0].url // ""'
+    )
+    + "'"
+  )
 
 
 def developer_id_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
@@ -460,6 +498,58 @@ def assert_rejects_stale_structured_json() -> None:
 
 
 def assert_rejects_stale_readiness_commands() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["tagCommands"] = [f"git tag {TAG} HEAD", f"git push origin {TAG}"]
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "tag commands",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["remoteTagVerificationCommand"] = str(
+      stale["remoteTagVerificationCommand"]
+    ).replace(SOURCE_COMMIT, "HEAD")
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "remote tag verification command",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["successfulCiLookupCommand"] = str(
+      stale["successfulCiLookupCommand"]
+    ).replace(f"--commit {SOURCE_COMMIT}", "--branch main")
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "successful CI lookup command",
+    )
+
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")

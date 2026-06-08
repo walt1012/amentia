@@ -357,6 +357,42 @@ def validate_release_readiness_commands(
   tag: str,
 ) -> None:
   source_commit = str(data["sourceCommit"])
+  expected_tag_commands = [
+    f"git tag {tag} {source_commit}",
+    f"git push origin {tag}",
+  ]
+  if data["tagCommands"] != expected_tag_commands:
+    raise RuntimeError(
+      "release readiness tag commands must target the source commit."
+    )
+  remote_tag_command = str(data["remoteTagVerificationCommand"])
+  tag_ref = f"refs/tags/{tag}"
+  require_text_contains(
+    remote_tag_command,
+    (
+      "git ls-remote --exit-code --tags origin",
+      tag_ref,
+      f"'{tag_ref}^{{}}'",
+      "tail -n 1",
+      source_commit,
+    ),
+    "release readiness remote tag verification command",
+  )
+  ci_lookup_command = str(data["successfulCiLookupCommand"])
+  require_text_contains(
+    ci_lookup_command,
+    (
+      "gh run list",
+      "--workflow CI",
+      f"--commit {source_commit}",
+      "--status success",
+      "--json conclusion,headSha,url",
+      "--limit 20",
+      f'.headSha == "{source_commit}"',
+      '.conclusion == "success"',
+    ),
+    "release readiness successful CI lookup command",
+  )
   artifact_name = f"release-dry-run-{tag}"
   lookup_command = str(data["dryRunArtifactLookupCommand"])
   require_text_contains(
