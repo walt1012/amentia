@@ -14,6 +14,7 @@ from release_evidence_contract import validate_release_evidence_set
 
 
 TAG = "v0.1.0"
+SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
 def write_evidence_file(path: Path, mode: str = "dry-run") -> None:
@@ -23,10 +24,14 @@ def write_evidence_file(path: Path, mode: str = "dry-run") -> None:
       payload = release_readiness_payload(mode)
     elif path.name == "release-plan.json":
       payload = release_plan_payload(mode)
+    elif path.name in {"release-dry-run-rehearsal.json", "release-rehearsal.json"}:
+      payload = release_rehearsal_payload()
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
   elif path.suffix == ".md":
     if path.name in {"release-dry-run-manual-acceptance.md", "release-manual-acceptance.md"}:
       path.write_text(manual_acceptance_markdown() + "\n", encoding="utf-8")
+    elif path.name in {"release-dry-run-rehearsal.md", "release-rehearsal.md"}:
+      path.write_text(release_rehearsal_markdown() + "\n", encoding="utf-8")
     else:
       path.write_text(f"# {path.stem}\n\nEvidence.\n", encoding="utf-8")
   else:
@@ -38,7 +43,7 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
   return {
     "status": "ready",
     "tag": TAG,
-    "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+    "sourceCommit": SOURCE_COMMIT,
     "successfulCiRunUrl": "https://github.com/walt1012/pith/actions/runs/1",
     "workflowMode": workflow_mode,
     "signingMode": "ad-hoc",
@@ -73,7 +78,7 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
   return {
     "tag": TAG,
     "title": f"Pith {TAG}",
-    "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+    "sourceCommit": SOURCE_COMMIT,
     "successfulCiRunUrl": "https://github.com/walt1012/pith/actions/runs/1",
     "releaseWorkflowRunUrl": "https://github.com/walt1012/pith/actions/runs/2",
     "workflowMode": workflow_mode,
@@ -91,6 +96,76 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
     "trustPath": "Ad-hoc signed prerelease.",
     "nextMaintainerActions": ["Download the dry-run artifact."],
   }
+
+
+def release_rehearsal_payload() -> dict[str, object]:
+  return {
+    "tag": TAG,
+    "result": "passed",
+    "assetNames": list(release_installer_asset_names(TAG)),
+    "checksumCommand": "shasum -a 256 Pith-v0.1.0-macos-x86_64.dmg",
+    "sourceCommit": SOURCE_COMMIT,
+    "signingMode": "ad-hoc",
+    "trust": {
+      "mode": "ad-hoc",
+      "gatekeeper": "Manual Gatekeeper approval is required.",
+    },
+    "defaultModelId": DEFAULT_MODEL_ID,
+    "appPackage": {
+      "sourceCommit": SOURCE_COMMIT,
+      "modelDelivery": "in-app-download",
+      "firstAppOpenActionContract": "first-app-open-v1",
+    },
+    "firstRun": {"modelSetup": "required"},
+    "dailyDriver": {"loop": "cowork"},
+    "releaseDecision": {
+      "automatedRehearsal": "passed",
+      "manualAcceptance": "required-before-visible-prerelease",
+      "publishGate": "do-not-publish-visible-ad-hoc-until-manual-acceptance-passes",
+    },
+    "firstAppOpenChecks": [
+      f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
+      "Confirm Web Search readiness and sandbox status.",
+    ],
+    "manualPrereleaseChecks": [
+      "Verify the downloaded DMG with the SHA-256 sidecar before opening it.",
+      "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
+      f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
+      "Let the model use Web Search when useful and inspect the source proof in the timeline.",
+      "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
+    ],
+    "packagedSmokeReceipt": {
+      "phrase": "Packaged first-run smoke proof",
+      "proofScope": "packaged-app",
+      "checkCount": 5,
+      "journey": [{"title": "First app open", "checkIds": ["model", "workspace"]}],
+      "packageMetadata": {"sourceCommit": SOURCE_COMMIT},
+      "packageMetadataMatched": True,
+    },
+  }
+
+
+def release_rehearsal_markdown() -> str:
+  return f"""# Pith {TAG} Release Rehearsal
+
+Result: `passed`
+
+## Assets
+- `Pith-{TAG}-macos-x86_64.dmg`
+
+## Verification
+- Default model: `{DEFAULT_MODEL_ID}`
+
+## Packaged Smoke Journey
+- First app open: model, workspace
+
+## First App Open
+- Confirm Web Search readiness and sandbox status.
+
+## Manual Prerelease Acceptance
+- [ ] Let the model use Web Search when useful and inspect the source proof in the timeline.
+- [ ] Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.
+"""
 
 
 def manual_acceptance_markdown() -> str:
@@ -279,6 +354,39 @@ def assert_rejects_stale_manual_acceptance_markdown() -> None:
     )
 
 
+def assert_rejects_stale_release_rehearsal_evidence() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    rehearsal_path = root / "release-dry-run-rehearsal.json"
+    stale = release_rehearsal_payload()
+    stale["packagedSmokeReceipt"]["packageMetadataMatched"] = False
+    rehearsal_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "packageMetadataMatched",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "publish-rehearsal")
+    rehearsal_path = root / "release-rehearsal.md"
+    stale = release_rehearsal_markdown().replace("reviewing the diff", "checking output")
+    rehearsal_path.write_text(stale + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="publish-rehearsal",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "reviewing the diff",
+    )
+
+
 def assert_rejects_inconsistent_structured_json() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
@@ -385,6 +493,7 @@ def main() -> int:
   assert_rejects_missing_extra_empty_and_invalid_json()
   assert_rejects_stale_structured_json()
   assert_rejects_stale_manual_acceptance_markdown()
+  assert_rejects_stale_release_rehearsal_evidence()
   assert_rejects_inconsistent_structured_json()
   assert_rejects_cross_file_json_disagreement()
   print("release evidence contract tests passed")

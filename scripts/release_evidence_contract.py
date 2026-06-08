@@ -31,6 +31,23 @@ PUBLISH_REHEARSAL_NAMES = (
   "release-rehearsal.json",
   "release-manual-acceptance.md",
 )
+REQUIRED_REHEARSAL_JSON_KEYS = (
+  "tag",
+  "result",
+  "assetNames",
+  "checksumCommand",
+  "sourceCommit",
+  "signingMode",
+  "trust",
+  "defaultModelId",
+  "appPackage",
+  "firstRun",
+  "dailyDriver",
+  "releaseDecision",
+  "firstAppOpenChecks",
+  "manualPrereleaseChecks",
+  "packagedSmokeReceipt",
+)
 REQUIRED_JSON_KEYS_BY_NAME = {
   "release-readiness.json": (
     "status",
@@ -83,7 +100,21 @@ REQUIRED_JSON_KEYS_BY_NAME = {
     "trustPath",
     "nextMaintainerActions",
   ),
+  "release-dry-run-rehearsal.json": REQUIRED_REHEARSAL_JSON_KEYS,
+  "release-rehearsal.json": REQUIRED_REHEARSAL_JSON_KEYS,
 }
+REQUIRED_REHEARSAL_MARKDOWN_TERMS = (
+  "Release Rehearsal",
+  "Result: `passed`",
+  "## Assets",
+  "## Verification",
+  "## Packaged Smoke Journey",
+  "## First App Open",
+  "## Manual Prerelease Acceptance",
+  DEFAULT_MODEL_ID,
+  "Web Search",
+  "reviewing the diff",
+)
 REQUIRED_MANUAL_ACCEPTANCE_TERMS = (
   "Manual Release Acceptance",
   "Accept this build for visible ad-hoc prerelease.",
@@ -98,6 +129,8 @@ REQUIRED_MANUAL_ACCEPTANCE_TERMS = (
   "Restart recovery",
 )
 REQUIRED_MARKDOWN_TERMS_BY_NAME = {
+  "release-dry-run-rehearsal.md": REQUIRED_REHEARSAL_MARKDOWN_TERMS,
+  "release-rehearsal.md": REQUIRED_REHEARSAL_MARKDOWN_TERMS,
   "release-dry-run-manual-acceptance.md": REQUIRED_MANUAL_ACCEPTANCE_TERMS,
   "release-manual-acceptance.md": REQUIRED_MANUAL_ACCEPTANCE_TERMS,
 }
@@ -250,6 +283,8 @@ def validate_structured_json(
     validate_release_readiness_json(data, mode=mode, tag=tag)
   elif name == "release-plan.json":
     validate_release_plan_json(data, mode=mode, tag=tag)
+  elif name in {"release-dry-run-rehearsal.json", "release-rehearsal.json"}:
+    validate_release_rehearsal_json(data, tag=tag)
 
 
 def validate_release_readiness_json(
@@ -335,6 +370,63 @@ def validate_release_plan_json(
   require_string_list(data, "nextMaintainerActions")
 
 
+def validate_release_rehearsal_json(data: dict[str, object], *, tag: str) -> None:
+  require_equal(data, "tag", tag)
+  require_equal(data, "result", "passed")
+  require_one_of(data, "signingMode", RELEASE_SIGNING_MODES)
+  require_string(data, "checksumCommand")
+  require_string(data, "sourceCommit")
+  require_equal(data, "defaultModelId", DEFAULT_MODEL_ID)
+  require_exact_string_list(data, "assetNames", release_installer_asset_names(tag))
+  require_string_list(data, "firstAppOpenChecks")
+  require_string_list(data, "manualPrereleaseChecks")
+  require_string_list_contains(
+    data,
+    "firstAppOpenChecks",
+    ("Web Search", DEFAULT_MODEL_ID),
+  )
+  require_string_list_contains(
+    data,
+    "manualPrereleaseChecks",
+    (
+      "SHA-256 sidecar",
+      "Gatekeeper",
+      DEFAULT_MODEL_ID,
+      "Web Search",
+      "reviewing the diff",
+    ),
+  )
+  trust = require_object(data, "trust")
+  require_object_string(trust, "mode")
+  require_object_string(trust, "gatekeeper")
+  app_package = require_object(data, "appPackage")
+  require_object_equal(app_package, "sourceCommit", data["sourceCommit"])
+  require_object_string(app_package, "modelDelivery")
+  require_object_string(app_package, "firstAppOpenActionContract")
+  require_object(data, "firstRun")
+  require_object(data, "dailyDriver")
+  release_decision = require_object(data, "releaseDecision")
+  require_object_equal(release_decision, "automatedRehearsal", "passed")
+  require_object_equal(
+    release_decision,
+    "manualAcceptance",
+    "required-before-visible-prerelease",
+  )
+  require_object_equal(
+    release_decision,
+    "publishGate",
+    "do-not-publish-visible-ad-hoc-until-manual-acceptance-passes",
+  )
+  smoke = require_object(data, "packagedSmokeReceipt")
+  require_object_string(smoke, "phrase")
+  require_object_string(smoke, "proofScope")
+  require_object_bool(smoke, "packageMetadataMatched", True)
+  if not isinstance(smoke.get("checkCount"), int) or smoke["checkCount"] <= 0:
+    raise RuntimeError("Release rehearsal packaged smoke checkCount must be positive.")
+  if not isinstance(smoke.get("journey"), list) or not smoke["journey"]:
+    raise RuntimeError("Release rehearsal packaged smoke journey must be present.")
+
+
 def expected_workflow_mode_for_evidence(mode: str) -> str:
   if mode == "dry-run":
     return "dry-run"
@@ -400,6 +492,60 @@ def require_exact_string_list(
   if list(expected) != actual:
     raise RuntimeError(
       f"Release evidence JSON key {key} must match the release contract."
+    )
+
+
+def require_string_list_contains(
+  data: dict[str, object],
+  key: str,
+  required_terms: tuple[str, ...],
+) -> None:
+  actual = data.get(key)
+  if not isinstance(actual, list):
+    raise RuntimeError(f"Release evidence JSON key {key} must be a string list.")
+  combined = "\n".join(item for item in actual if isinstance(item, str))
+  missing = [term for term in required_terms if term not in combined]
+  if missing:
+    raise RuntimeError(
+      f"Release evidence JSON key {key} is missing required terms: "
+      + ", ".join(missing)
+    )
+
+
+def require_object(data: dict[str, object], key: str) -> dict[str, object]:
+  actual = data.get(key)
+  if not isinstance(actual, dict):
+    raise RuntimeError(f"Release evidence JSON key {key} must be an object.")
+  return actual
+
+
+def require_object_string(data: dict[str, object], key: str) -> None:
+  actual = data.get(key)
+  if not isinstance(actual, str) or not actual.strip():
+    raise RuntimeError(f"Release evidence JSON object key {key} must be a string.")
+
+
+def require_object_equal(
+  data: dict[str, object],
+  key: str,
+  expected: object,
+) -> None:
+  actual = data.get(key)
+  if actual != expected:
+    raise RuntimeError(
+      f"Release evidence JSON object key {key} must be {expected!r}, got {actual!r}"
+    )
+
+
+def require_object_bool(
+  data: dict[str, object],
+  key: str,
+  expected: bool,
+) -> None:
+  actual = data.get(key)
+  if actual is not expected:
+    raise RuntimeError(
+      f"Release evidence JSON object key {key} must be {str(expected).lower()}."
     )
 
 
