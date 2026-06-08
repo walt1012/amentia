@@ -302,7 +302,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     f"Use the dry-run artifact lookup command to find the release-dry-run-{readiness.tag} workflow run.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
     "Run the dry-run evidence validation command before manual acceptance.",
-    "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance receipt template.",
+    "Download the DMG, checksum, install guide, and manifest into one folder before verifying the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance receipt template.",
     "Complete fresh-Mac manual acceptance and validate the receipt before any visible ad-hoc prerelease.",
     "Use the post-acceptance publish command only after a validated manual acceptance receipt is recorded.",
   ]

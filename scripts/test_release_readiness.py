@@ -60,6 +60,7 @@ def assert_ready_dry_run_report() -> None:
     "python3 scripts/release_evidence_contract.py",
     "--mode dry-run",
     "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
+    "Download the DMG, checksum, install guide, and manifest into one folder",
     "## Post-Acceptance Publish Command",
     "Use only after the generated manual acceptance receipt is filled and validated.",
     "-f dry_run=false",
