@@ -10,6 +10,7 @@ from pathlib import Path
 
 from installer_artifact_contract import expected_installer_asset_names
 from installer_artifact_contract import validate_installer_asset_name
+from release_artifacts import validate_source_commit
 from release_identity import validate_public_release_tag
 from package_contract import RELEASE_SIGNING_MODES
 from release_state import expected_release_title
@@ -24,12 +25,18 @@ def validate_published_release(
   release: dict,
   *,
   tag: str,
+  source_commit: str,
+  tag_commit: str,
   expected_draft: bool,
   expected_prerelease: bool,
   signing_mode: str,
   allow_untrusted_ad_hoc: bool,
 ) -> None:
   validate_public_release_tag(tag)
+  validate_source_commit(source_commit)
+  validate_source_commit(tag_commit)
+  if tag_commit != source_commit:
+    raise RuntimeError("Published GitHub Release tag must point at the source commit")
   validate_release_field(release, "tag_name", tag)
   validate_release_field(release, "name", expected_release_title(tag))
   validate_release_bool(release, "draft", expected_draft)
@@ -164,6 +171,8 @@ def main() -> int:
   )
   parser.add_argument("--tag", required=True)
   parser.add_argument("--release-json", required=True, type=Path)
+  parser.add_argument("--source-commit")
+  parser.add_argument("--tag-commit")
   parser.add_argument("--expected-draft")
   parser.add_argument("--expected-prerelease")
   parser.add_argument("--signing-mode", choices=sorted(RELEASE_SIGNING_MODES))
@@ -177,15 +186,22 @@ def main() -> int:
       print("Existing release asset preupload contract passed")
       return 0
     if (
-      args.expected_draft is None
+      args.source_commit is None
+      or args.tag_commit is None
+      or args.expected_draft is None
       or args.expected_prerelease is None
       or args.signing_mode is None
       or args.allow_untrusted_ad_hoc is None
     ):
-      raise RuntimeError("Final release validation requires expected state and signing arguments")
+      raise RuntimeError(
+        "Final release validation requires source commit, tag commit, "
+        "expected state, and signing arguments"
+      )
     validate_published_release(
       release,
       tag=args.tag,
+      source_commit=args.source_commit,
+      tag_commit=args.tag_commit,
       expected_draft=parse_bool(args.expected_draft),
       expected_prerelease=parse_bool(args.expected_prerelease),
       signing_mode=args.signing_mode,

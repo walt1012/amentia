@@ -21,7 +21,7 @@ Current scripts:
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_evidence_contract.py`: validates internal dry-run and publish-rehearsal evidence artifacts, including structured readiness, release-plan, release-rehearsal JSON, rehearsal Markdown, manual acceptance checklist terms, cross-file release consistency, and asset-contract consistency, before workflow upload without adding extra public release assets.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
-- `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
+- `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, remote tag source commit, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
 - `release_readiness.py`: prepares maintainer-facing Markdown and machine-readable JSON readiness reports before dispatching the release workflow, including tag preparation, lightweight or annotated remote tag verification, exact source-commit CI lookup, the safe dry-run-first command, source-commit and successful-run matched dry-run artifact lookup and verification, guarded post-acceptance publish command, release-candidate checklist, and expected dry-run evidence.
 - `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write compact Markdown and JSON rehearsal evidence with trust, Gatekeeper, smoke journey, release-decision gate, manual prerelease acceptance, metadata-match, and first app-open checks.
 - `test_first_app_open_contract.py`: checks that Swift first-open copy stays aligned with the shared release first app-open copy contract.
@@ -39,7 +39,7 @@ Current scripts:
 - `test_release_artifacts.py`: checks checksum and release manifest sidecar behavior.
 - `test_release_evidence_contract.py`: checks internal release evidence artifact sets, structured readiness, release-plan, release-rehearsal JSON consistency, rehearsal and manual acceptance Markdown content, cross-file agreement, and missing or extra file rejection.
 - `test_release_identity.py`: checks shared product version and public release tag rules.
-- `test_release_publish_contract.py`: checks final published GitHub Release state and asset validation.
+- `test_release_publish_contract.py`: checks final published GitHub Release source commit, state, copy, and asset validation.
 - `test_release_readiness.py`: checks release readiness blocking, JSON evidence, and dry-run command generation.
 - `test_release_rehearsal_contract.py`: checks downloaded release rehearsal validation plus Markdown and JSON summary generation.
 - `test_release_state.py`: checks release state planning and release-plan evidence behavior that does not require GitHub Actions.

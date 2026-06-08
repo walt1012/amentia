@@ -81,6 +81,7 @@ Closed foundations:
   checklists, tag preparation, annotated-safe remote verification commands,
   source-commit CI lookup, workflow policy tests, shared release input guards,
   evidence-step ordering, source-commit and successful-run matched dry-run artifact lookup and verification,
+  final Release source-commit validation,
   structured readiness, release-plan, rehearsal, and manual-acceptance evidence
   validation with tag, mode, cross-file, asset, and user-path consistency, and
   guarded publish commands.

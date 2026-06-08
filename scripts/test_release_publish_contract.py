@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import json
+import sys
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from installer_artifact_contract import expected_installer_asset_names
 from release_publish_contract import load_release
+from release_publish_contract import main as release_publish_main
 from release_publish_contract import RELEASE_REPOSITORY
 from release_publish_contract import release_asset_names
 from release_publish_contract import validate_existing_release_assets_before_upload
@@ -18,6 +22,7 @@ from release_text import release_notes
 
 
 TAG = "v1.2.3"
+SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
 def release_payload(
@@ -60,6 +65,8 @@ def expect_failure(payload: dict, expected: str) -> None:
     validate_published_release(
       payload,
       tag=TAG,
+      source_commit=SOURCE_COMMIT,
+      tag_commit=SOURCE_COMMIT,
       expected_draft=False,
       expected_prerelease=True,
       signing_mode="ad-hoc",
@@ -72,10 +79,69 @@ def expect_failure(payload: dict, expected: str) -> None:
   raise AssertionError(f"expected published release validation to fail: {expected}")
 
 
+def assert_main_validates_final_release_source_commit() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    release_file = root / "release.json"
+    release_file.write_text(json.dumps(release_payload()), encoding="utf-8")
+    original_argv = sys.argv[:]
+    try:
+      sys.argv = [
+        "release_publish_contract.py",
+        "--tag",
+        TAG,
+        "--release-json",
+        str(release_file),
+        "--source-commit",
+        SOURCE_COMMIT,
+        "--tag-commit",
+        SOURCE_COMMIT,
+        "--expected-draft",
+        "false",
+        "--expected-prerelease",
+        "true",
+        "--signing-mode",
+        "ad-hoc",
+        "--allow-untrusted-ad-hoc",
+        "true",
+      ]
+      if release_publish_main() != 0:
+        raise AssertionError("published release CLI should pass with matching tag commit")
+      sys.argv = [
+        "release_publish_contract.py",
+        "--tag",
+        TAG,
+        "--release-json",
+        str(release_file),
+        "--source-commit",
+        SOURCE_COMMIT,
+        "--tag-commit",
+        "fedcba9876543210fedcba9876543210fedcba98",
+        "--expected-draft",
+        "false",
+        "--expected-prerelease",
+        "true",
+        "--signing-mode",
+        "ad-hoc",
+        "--allow-untrusted-ad-hoc",
+        "true",
+      ]
+      with redirect_stderr(StringIO()) as stderr:
+        exit_code = release_publish_main()
+      if exit_code == 0:
+        raise AssertionError("published release CLI should reject a mismatched tag commit")
+      if "tag must point at the source commit" not in stderr.getvalue():
+        raise AssertionError("published release CLI should explain tag commit mismatch")
+    finally:
+      sys.argv = original_argv
+
+
 def main() -> int:
   validate_published_release(
     release_payload(),
     tag=TAG,
+    source_commit=SOURCE_COMMIT,
+    tag_commit=SOURCE_COMMIT,
     expected_draft=False,
     expected_prerelease=True,
     signing_mode="ad-hoc",
@@ -84,6 +150,8 @@ def main() -> int:
   validate_published_release(
     release_payload(signing_mode="developer-id", allow_untrusted_ad_hoc=False),
     tag=TAG,
+    source_commit=SOURCE_COMMIT,
+    tag_commit=SOURCE_COMMIT,
     expected_draft=False,
     expected_prerelease=True,
     signing_mode="developer-id",
@@ -92,6 +160,8 @@ def main() -> int:
   validate_published_release(
     release_payload(draft=True, prerelease=False, allow_untrusted_ad_hoc=False),
     tag=TAG,
+    source_commit=SOURCE_COMMIT,
+    tag_commit=SOURCE_COMMIT,
     expected_draft=True,
     expected_prerelease=False,
     signing_mode="ad-hoc",
@@ -116,6 +186,22 @@ def main() -> int:
 
   expect_failure(release_payload(tag="v9.9.9"), "tag_name")
   expect_failure({**release_payload(), "name": "Pith wrong"}, "name")
+  try:
+    validate_published_release(
+      release_payload(),
+      tag=TAG,
+      source_commit=SOURCE_COMMIT,
+      tag_commit="fedcba9876543210fedcba9876543210fedcba98",
+      expected_draft=False,
+      expected_prerelease=True,
+      signing_mode="ad-hoc",
+      allow_untrusted_ad_hoc=True,
+    )
+  except RuntimeError as error:
+    if "tag must point at the source commit" not in str(error):
+      raise
+  else:
+    raise AssertionError("final release validation should reject wrong tag commit")
   expect_failure({**release_payload(), "body": "Install Pith."}, "missing required copy")
   expect_failure(
     {
@@ -169,11 +255,15 @@ def main() -> int:
     validate_published_release(
       load_release(path),
       tag=TAG,
+      source_commit=SOURCE_COMMIT,
+      tag_commit=SOURCE_COMMIT,
       expected_draft=False,
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
     )
+
+  assert_main_validates_final_release_source_commit()
 
   print("Published release contract tests passed")
   return 0
