@@ -11,6 +11,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from manual_acceptance_contract import manual_acceptance_template
+from manual_acceptance_contract import manual_acceptance_template_from_asset_dir
 from manual_acceptance_contract import main as manual_acceptance_main
 from manual_acceptance_contract import validate_manual_acceptance_evidence
 from package_contract import DEFAULT_MODEL_ID
@@ -80,11 +81,100 @@ def assert_template_is_safe_to_fill() -> None:
       raise AssertionError(f"template {key} should be false until manually filled")
 
 
+def write_asset_dir(
+  root: Path,
+  *,
+  checksum: str = CHECKSUM,
+  manifest_checksum: str = CHECKSUM,
+  workflow_run_url: str = RUN_URL,
+) -> None:
+  dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(TAG)
+  manifest: dict[str, object] = {
+    "tag": TAG,
+    "sourceCommit": SOURCE_COMMIT,
+    "verification": {
+      "workflowRunUrl": workflow_run_url,
+    },
+    "artifacts": [
+      {
+        "kind": "dmg",
+        "name": dmg_name,
+        "sha256": manifest_checksum,
+      },
+      {
+        "kind": "checksum",
+        "name": checksum_name,
+        "checks": dmg_name,
+      },
+    ],
+  }
+  root.mkdir(parents=True, exist_ok=True)
+  (root / dmg_name).write_bytes(b"release dmg\n")
+  (root / checksum_name).write_text(f"{checksum}  {dmg_name}\n", encoding="utf-8")
+  (root / manifest_name).write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+
+
+def assert_template_can_be_derived_from_release_assets() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root)
+    template = manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root)
+    if template["sourceCommit"] != SOURCE_COMMIT:
+      raise AssertionError("asset-derived template should use manifest source commit")
+    if template["releaseWorkflowRunUrl"] != RUN_URL:
+      raise AssertionError("asset-derived template should use manifest workflow URL")
+    if template["dmgAssetName"] != release_installer_asset_names(TAG)[0]:
+      raise AssertionError("asset-derived template should use the release DMG asset")
+    if template["checksum"] != CHECKSUM:
+      raise AssertionError("asset-derived template should use the verified DMG checksum")
+    if template["checksumVerified"] is not False:
+      raise AssertionError("asset-derived template should still require manual checksum confirmation")
+
+
+def assert_asset_template_rejects_stale_assets() -> None:
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root, checksum="b" * 64)
+    expect_template_failure(
+      lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
+      "checksum sidecar digest",
+    )
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root, checksum="g" * 64, manifest_checksum="g" * 64)
+    expect_template_failure(
+      lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
+      "SHA-256 hex digest",
+    )
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root, workflow_run_url="")
+    expect_template_failure(
+      lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
+      "workflowRunUrl",
+    )
+
+
+def expect_template_failure(action, expected: str) -> None:
+  try:
+    action()
+  except Exception as error:
+    if expected not in str(error):
+      raise AssertionError(f"expected {expected!r} in {error!r}") from error
+    return
+  raise AssertionError(f"expected manual acceptance template to fail: {expected}")
+
+
 def assert_cli_template_and_validation() -> None:
   with TemporaryDirectory() as directory:
     root = Path(directory)
     template_path = root / "manual-acceptance.json"
     evidence_path = root / "filled-manual-acceptance.json"
+    asset_template_path = root / "asset-manual-acceptance.json"
+    asset_dir = root / "assets"
+    write_asset_dir(asset_dir)
     original_argv = sys.argv[:]
     try:
       sys.argv = [
@@ -103,6 +193,20 @@ def assert_cli_template_and_validation() -> None:
       data = json.loads(template_path.read_text(encoding="utf-8"))
       if data["acceptedForVisiblePrerelease"] is not False:
         raise AssertionError("template should not pre-accept release")
+      sys.argv = [
+        "manual_acceptance_contract.py",
+        "--tag",
+        TAG,
+        "--asset-dir",
+        str(asset_dir),
+        "--template-output",
+        str(asset_template_path),
+      ]
+      if manual_acceptance_main() != 0:
+        raise AssertionError("asset-derived manual acceptance template CLI should pass")
+      asset_data = json.loads(asset_template_path.read_text(encoding="utf-8"))
+      if asset_data["checksum"] != CHECKSUM:
+        raise AssertionError("asset-derived CLI template should include the DMG checksum")
       evidence_path.write_text(json.dumps(valid_payload()), encoding="utf-8")
       sys.argv = [
         "manual_acceptance_contract.py",
@@ -128,6 +232,17 @@ def assert_cli_template_and_validation() -> None:
         result = manual_acceptance_main()
       if result == 0 or "webSearchProofInspected" not in stderr.getvalue():
         raise AssertionError("manual acceptance CLI should reject incomplete evidence")
+      sys.argv = [
+        "manual_acceptance_contract.py",
+        "--tag",
+        TAG,
+        "--template-output",
+        str(root / "missing-inputs.json"),
+      ]
+      with redirect_stderr(StringIO()) as stderr:
+        result = manual_acceptance_main()
+      if result == 0 or "--source-commit" not in stderr.getvalue():
+        raise AssertionError("manual acceptance CLI should reject template inputs without an asset dir")
     finally:
       sys.argv = original_argv
 
@@ -143,6 +258,8 @@ def main() -> int:
   expect_failure({**valid_payload(), "workspaceOpened": False}, "workspaceOpened")
   expect_failure({**valid_payload(), "approvalReceipt": ""}, "approvalReceipt")
   assert_template_is_safe_to_fill()
+  assert_template_can_be_derived_from_release_assets()
+  assert_asset_template_rejects_stale_assets()
   assert_cli_template_and_validation()
   print("manual acceptance contract tests passed")
   return 0

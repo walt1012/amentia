@@ -110,8 +110,8 @@ Build now:
 - Complete one manual first-launch acceptance on a fresh Mac: download from
   GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
   default model, open a workspace, run a cowork turn, use Web Search, approve a
-  bounded action, inspect proof, and validate the structured manual acceptance
-  receipt.
+  bounded action, inspect proof, generate the manual acceptance receipt from
+  downloaded assets, fill it, and validate it.
 - Record the accepted dry-run artifact and validated fresh-Mac receipt before
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.

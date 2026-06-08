@@ -254,7 +254,7 @@ Decision:
 - Web Search proof inspected.
 - Approval and diff receipt inspected.
 - Restart recovery result.
-- Fill a structured manual acceptance JSON receipt and validate it with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --evidence <manual-acceptance.json>`.
+- Generate a structured manual acceptance JSON receipt with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --asset-dir <downloaded-assets> --template-output manual-acceptance.json`, fill it, then validate it with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --evidence manual-acceptance.json`.
 """
 
 

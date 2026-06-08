@@ -59,14 +59,20 @@ def validate_manual_acceptance_evidence(data: dict[str, object], *, tag: str) ->
     require_true(data, check)
 
 
-def manual_acceptance_template(*, tag: str, source_commit: str, release_workflow_run_url: str) -> dict[str, object]:
+def manual_acceptance_template(
+  *,
+  tag: str,
+  source_commit: str,
+  release_workflow_run_url: str,
+  checksum: str = "",
+) -> dict[str, object]:
   validate_public_release_tag(tag)
   return {
     "tag": tag,
     "sourceCommit": source_commit,
     "releaseWorkflowRunUrl": release_workflow_run_url,
     "dmgAssetName": release_installer_asset_names(tag)[0],
-    "checksum": "",
+    "checksum": checksum,
     "checksumVerified": False,
     "manifestReviewed": False,
     "gatekeeperPath": "",
@@ -88,6 +94,111 @@ def manual_acceptance_template(*, tag: str, source_commit: str, release_workflow
     "acceptedBy": "",
     "acceptedAt": "",
   }
+
+
+def manual_acceptance_template_from_asset_dir(
+  *,
+  tag: str,
+  asset_dir: Path,
+) -> dict[str, object]:
+  validate_public_release_tag(tag)
+  dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(tag)
+  manifest = load_release_manifest(asset_dir / manifest_name)
+  require_manifest_equal(manifest, "tag", tag)
+  source_commit = require_manifest_string(manifest, "sourceCommit", length=40)
+  verification = require_manifest_object(manifest, "verification")
+  workflow_run_url = require_manifest_string(
+    verification,
+    "workflowRunUrl",
+    prefix="https://github.com/walt1012/pith/actions/runs/",
+  )
+  checksum = require_dmg_artifact_checksum(manifest, dmg_name)
+  require_sha256_hex(checksum, "release manifest DMG artifact sha256")
+  require_checksum_sidecar(
+    asset_dir / checksum_name,
+    expected_checksum=checksum,
+    expected_name=dmg_name,
+  )
+  return manual_acceptance_template(
+    tag=tag,
+    source_commit=source_commit,
+    release_workflow_run_url=workflow_run_url,
+    checksum=checksum,
+  )
+
+
+def load_release_manifest(path: Path) -> dict[str, object]:
+  if not path.is_file():
+    raise FileNotFoundError(f"release manifest is missing: {path}")
+  data = json.loads(path.read_text(encoding="utf-8"))
+  if not isinstance(data, dict):
+    raise RuntimeError("release manifest must be a JSON object")
+  return data
+
+
+def require_dmg_artifact_checksum(manifest: dict[str, object], dmg_name: str) -> str:
+  artifacts = manifest.get("artifacts")
+  if not isinstance(artifacts, list):
+    raise RuntimeError("release manifest artifacts must be a list")
+  for artifact in artifacts:
+    if (
+      isinstance(artifact, dict)
+      and artifact.get("kind") == "dmg"
+      and artifact.get("name") == dmg_name
+    ):
+      return require_manifest_string(artifact, "sha256", length=64)
+  raise RuntimeError(f"release manifest must include DMG artifact {dmg_name}")
+
+
+def require_checksum_sidecar(
+  path: Path,
+  *,
+  expected_checksum: str,
+  expected_name: str,
+) -> None:
+  if not path.is_file():
+    raise FileNotFoundError(f"checksum sidecar is missing: {path}")
+  text = path.read_text(encoding="utf-8").strip()
+  parts = text.split()
+  if len(parts) != 2:
+    raise RuntimeError("checksum sidecar must contain a digest and asset name")
+  actual_checksum, actual_name = parts
+  require_sha256_hex(actual_checksum, "checksum sidecar digest")
+  if actual_checksum.lower() != expected_checksum.lower():
+    raise RuntimeError("checksum sidecar digest must match release manifest")
+  if actual_name != expected_name:
+    raise RuntimeError("checksum sidecar asset name must match the DMG asset")
+
+
+def require_manifest_equal(data: dict[str, object], key: str, expected: str) -> None:
+  actual = data.get(key)
+  if actual != expected:
+    raise RuntimeError(f"release manifest {key} must be {expected!r}, got {actual!r}")
+
+
+def require_manifest_object(data: dict[str, object], key: str) -> dict[str, object]:
+  actual = data.get(key)
+  if not isinstance(actual, dict):
+    raise RuntimeError(f"release manifest {key} must be an object")
+  return actual
+
+
+def require_manifest_string(
+  data: dict[str, object],
+  key: str,
+  *,
+  length: int | None = None,
+  prefix: str | None = None,
+) -> str:
+  actual = data.get(key)
+  if not isinstance(actual, str) or not actual.strip():
+    raise RuntimeError(f"release manifest {key} must be a non-empty string")
+  value = actual.strip()
+  if length is not None and len(value) != length:
+    raise RuntimeError(f"release manifest {key} must be {length} characters")
+  if prefix is not None and not value.startswith(prefix):
+    raise RuntimeError(f"release manifest {key} must start with {prefix}")
+  return value
 
 
 def require_equal(data: dict[str, object], key: str, expected: str) -> None:
@@ -120,8 +231,15 @@ def require_true(data: dict[str, object], key: str) -> None:
 
 def require_sha256(data: dict[str, object], key: str) -> None:
   value = str(data[key]).strip().lower()
-  if any(character not in "0123456789abcdef" for character in value):
-    raise RuntimeError(f"manual acceptance {key} must be a SHA-256 hex digest")
+  require_sha256_hex(value, f"manual acceptance {key}")
+
+
+def require_sha256_hex(value: str, label: str) -> None:
+  normalized = value.strip().lower()
+  if len(normalized) != 64 or any(
+    character not in "0123456789abcdef" for character in normalized
+  ):
+    raise RuntimeError(f"{label} must be a SHA-256 hex digest")
 
 
 def load_json(path: Path) -> dict[str, object]:
@@ -141,20 +259,31 @@ def main() -> int:
   parser.add_argument("--tag", required=True)
   parser.add_argument("--evidence", type=Path)
   parser.add_argument("--template-output", type=Path)
+  parser.add_argument("--asset-dir", type=Path)
   parser.add_argument("--source-commit", default="")
   parser.add_argument("--release-workflow-run-url", default="")
   args = parser.parse_args()
 
   try:
     if args.template_output is not None:
-      write_json(
-        args.template_output,
-        manual_acceptance_template(
+      if args.asset_dir is not None:
+        template = manual_acceptance_template_from_asset_dir(
+          tag=args.tag,
+          asset_dir=args.asset_dir,
+        )
+      else:
+        if not args.source_commit.strip():
+          raise RuntimeError("manual acceptance template requires --source-commit or --asset-dir")
+        if not args.release_workflow_run_url.strip():
+          raise RuntimeError(
+            "manual acceptance template requires --release-workflow-run-url or --asset-dir"
+          )
+        template = manual_acceptance_template(
           tag=args.tag,
           source_commit=args.source_commit,
           release_workflow_run_url=args.release_workflow_run_url,
-        ),
-      )
+        )
+      write_json(args.template_output, template)
       print("Manual acceptance receipt template written")
       return 0
     if args.evidence is None:
