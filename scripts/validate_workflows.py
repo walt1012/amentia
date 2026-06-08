@@ -367,6 +367,10 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "manual_acceptance_confirmed:",
     "manual_acceptance_evidence:",
     "dry_run:",
+    "RELEASE_DRAFT:",
+    "RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}",
+    "RELEASE_PRERELEASE:",
+    "RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}",
     "RELEASE_ALLOW_UNTRUSTED_AD_HOC:",
     "RELEASE_MANUAL_ACCEPTANCE_CONFIRMED:",
     "RELEASE_MANUAL_ACCEPTANCE_EVIDENCE:",
@@ -434,6 +438,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --title")
     )
+  validate_release_shared_input_contract(release_block, issues)
   for term in (
     "Plan GitHub Release state",
     'cat release-state.env >> "$GITHUB_ENV"',
@@ -674,6 +679,34 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   return issues
 
 
+def validate_release_shared_input_contract(
+  release_block: str,
+  issues: list[WorkflowIssue],
+) -> None:
+  shared_inputs = (
+    '--dry-run "$RELEASE_DRY_RUN"',
+    '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
+    '--requested-draft "$RELEASE_DRAFT"',
+    '--requested-prerelease "$RELEASE_PRERELEASE"',
+    '--allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"',
+    '--manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"',
+    '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
+  )
+  for anchor, label in (
+    ("scripts/release_readiness.py", "release readiness"),
+    ("scripts/release_state.py", "release state"),
+  ):
+    step_text = step_text_containing(release_block, anchor)
+    for term in shared_inputs:
+      if term not in step_text:
+        issues.append(
+          WorkflowIssue(
+            RELEASE_WORKFLOW,
+            f"{label} helper must receive shared release input {term}",
+          )
+        )
+
+
 def validate_release_dispatch_inputs(text: str) -> list[WorkflowIssue]:
   issues: list[WorkflowIssue] = []
   required_inputs = {
@@ -730,6 +763,21 @@ def require_release_order(
     return
   if earlier_index > later_index:
     issues.append(WorkflowIssue(RELEASE_WORKFLOW, message))
+
+
+def step_text_containing(text: str, anchor: str) -> str:
+  anchor_index = text.find(anchor)
+  if anchor_index == -1:
+    return ""
+  step_start = text.rfind("\n      - name:", 0, anchor_index)
+  if step_start == -1:
+    step_start = 0
+  else:
+    step_start += 1
+  step_end = text.find("\n      - name:", anchor_index)
+  if step_end == -1:
+    step_end = len(text)
+  return text[step_start:step_end]
 
 
 def step_blocks(text: str) -> list[list[str]]:
@@ -795,11 +843,17 @@ def job_needs(block: str) -> list[str]:
   return needs
 
 
-def command_window_contains(text: str, anchor: str, term: str) -> bool:
+def command_window_contains(
+  text: str,
+  anchor: str,
+  term: str,
+  *,
+  span: int = 260,
+) -> bool:
   start = text.find(anchor)
   if start == -1:
     return False
-  return term in text[start:start + 260]
+  return term in text[start:start + span]
 
 
 def main() -> int:

@@ -270,6 +270,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
+  RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
   RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
   RELEASE_MANUAL_ACCEPTANCE_EVIDENCE: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_evidence || '' }}
@@ -371,6 +373,10 @@ jobs:
           python3 scripts/release_state.py
           --title "$release_title"
           --tag "$RELEASE_TAG"
+          --signing-mode "$PITH_RELEASE_SIGNING_MODE"
+          --requested-draft "$RELEASE_DRAFT"
+          --requested-prerelease "$RELEASE_PRERELEASE"
+          --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
           --summary-output release-plan.md
           --plan-output release-plan.json
           --source-commit "$PITH_RELEASE_SHA"
@@ -948,6 +954,28 @@ def main() -> int:
       release=VALID_RELEASE.replace('          --title "$release_title"\n', ""),
     )
     assert_issue(issue_messages(root), "release state helper must receive --title")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--requested-prerelease "$RELEASE_PRERELEASE"',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "release readiness helper must receive shared release input")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"\n',
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "release state helper must receive shared release input")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
