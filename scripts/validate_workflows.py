@@ -439,6 +439,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --title")
     )
   validate_release_shared_input_contract(release_block, issues)
+  validate_release_evidence_step_contracts(release_block, issues)
   for term in (
     "Plan GitHub Release state",
     'cat release-state.env >> "$GITHUB_ENV"',
@@ -483,6 +484,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json",
     "release-readiness.md",
     "release-readiness.json",
+    "release-plan.md",
     "release-plan.json",
     "release-dry-run-rehearsal.md",
     "release-dry-run-rehearsal.json",
@@ -574,6 +576,13 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Rehearse release dry-run assets",
     "Upload release dry-run assets",
     "release dry-run rehearsal must pass before dry-run assets are uploaded",
+    issues,
+  )
+  require_release_order(
+    release_block,
+    "Validate release dry-run evidence",
+    "Upload release dry-run assets",
+    "release dry-run evidence validation must pass before dry-run assets are uploaded",
     issues,
   )
   require_release_order(
@@ -703,6 +712,58 @@ def validate_release_shared_input_contract(
           WorkflowIssue(
             RELEASE_WORKFLOW,
             f"{label} helper must receive shared release input {term}",
+          )
+        )
+
+
+def validate_release_evidence_step_contracts(
+  release_block: str,
+  issues: list[WorkflowIssue],
+) -> None:
+  expected_by_step = (
+    (
+      "Validate release dry-run evidence",
+      "dry-run evidence validation",
+      (
+        "--mode dry-run",
+        '--tag "$RELEASE_TAG"',
+        'artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg',
+        'artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256',
+        "artifacts/macos/README-FIRST.txt",
+        'artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json',
+        "release-readiness.md",
+        "release-readiness.json",
+        "release-plan.md",
+        "release-plan.json",
+        "release-dry-run-rehearsal.md",
+        "release-dry-run-rehearsal.json",
+        "release-dry-run-manual-acceptance.md",
+      ),
+    ),
+    (
+      "Validate release rehearsal evidence",
+      "publish rehearsal evidence validation",
+      (
+        "--mode publish-rehearsal",
+        '--tag "$RELEASE_TAG"',
+        "release-readiness.md",
+        "release-readiness.json",
+        "release-plan.md",
+        "release-plan.json",
+        "release-rehearsal.md",
+        "release-rehearsal.json",
+        "release-manual-acceptance.md",
+      ),
+    ),
+  )
+  for step_name, label, expected_terms in expected_by_step:
+    step_text = step_text_containing(release_block, step_name)
+    for term in expected_terms:
+      if term not in step_text:
+        issues.append(
+          WorkflowIssue(
+            RELEASE_WORKFLOW,
+            f"{label} step is missing {term}",
           )
         )
 

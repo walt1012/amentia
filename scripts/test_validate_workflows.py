@@ -410,10 +410,10 @@ jobs:
           python3 scripts/release_evidence_contract.py \\
             --mode dry-run \\
             --tag "$RELEASE_TAG" \\
-            --evidence "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg" \\
-            --evidence "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256" \\
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \\
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
             --evidence artifacts/macos/README-FIRST.txt \\
-            --evidence "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json" \\
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
             --evidence release-readiness.md \\
             --evidence release-readiness.json \\
             --evidence release-plan.md \\
@@ -1064,6 +1064,50 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "release workflow stage boundary")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "--evidence release-plan.md",
+        "--missing-release-plan-md",
+        1,
+      ),
+    )
+    assert_issue(issue_messages(root), "dry-run evidence validation step")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "--evidence release-manual-acceptance.md",
+        "--missing-release-manual-acceptance-md",
+        1,
+      ),
+    )
+    assert_issue(issue_messages(root), "publish rehearsal evidence validation step")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "      - name: Upload release dry-run assets",
+        "      - name: Upload release dry-run assets moved",
+        1,
+      ).replace(
+        "      - name: Validate release dry-run evidence",
+        "      - name: Upload release dry-run assets",
+        1,
+      ).replace(
+        "      - name: Upload release dry-run assets moved",
+        "      - name: Validate release dry-run evidence",
+        1,
+      ),
+    )
+    assert_issue(issue_messages(root), "dry-run evidence validation")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

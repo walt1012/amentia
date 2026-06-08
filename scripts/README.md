@@ -47,7 +47,7 @@ Current scripts:
 - `test_smoke_launch_macos_app.py`: checks packaged app smoke validators that do not require macOS.
 - `validate_macos_distribution.py`: checks Developer ID signing, Gatekeeper assessment, x86_64 metadata, in-app model delivery, no bundled model weights, package size budget, and optional notarized DMG validation for public macOS distribution builds.
 - `validate_model_pack.py`: validates local model pack metadata, curated model catalog shape, and first-use resource packaging; use `--remote` during release audits.
-- `validate_workflows.py`: validates GitHub Actions structure so checkout credentials, internal artifact retention, CI lane splits, package dependencies, shared release inputs, user-facing installer uploads, and release assets do not regress.
+- `validate_workflows.py`: validates GitHub Actions structure so checkout credentials, internal artifact retention, CI lane splits, package dependencies, shared release inputs, evidence-step ordering, user-facing installer uploads, and release assets do not regress.
 - `test_validate_workflows.py`: checks workflow structure policy behavior without invoking GitHub Actions.
 - `test_validate_macos_distribution.py`: checks public distribution metadata policy without invoking signing tools.
 
