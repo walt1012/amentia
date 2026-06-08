@@ -348,7 +348,35 @@ def validate_release_readiness_json(
     "expectedDryRunEvidence",
     expected_evidence_names("dry-run", tag),
   )
+  validate_release_readiness_checklist(data, tag=tag)
   validate_release_readiness_commands(data, tag=tag)
+
+
+def validate_release_readiness_checklist(
+  data: dict[str, object],
+  *,
+  tag: str,
+) -> None:
+  source_commit = str(data["sourceCommit"])
+  artifact_name = f"release-dry-run-{tag}"
+  require_string_list_contains(
+    data,
+    "preDispatchChecklist",
+    (
+      f"Create tag {tag}",
+      source_commit,
+      "Push the tag to origin",
+      "remote tag verification command",
+      "CI lookup command",
+      "successful CI run matches the source commit",
+      "release workflow as a dry-run",
+      artifact_name,
+      "dry-run evidence validation command",
+      "DMG checksum",
+      "manual acceptance",
+      "post-acceptance publish command",
+    ),
+  )
 
 
 def validate_release_readiness_commands(

@@ -62,7 +62,7 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "releaseWorkflowInputsReady": True,
     "manualAcceptanceConfirmed": False,
     "manualAcceptanceEvidence": "",
-    "preDispatchChecklist": ["Run the dry-run."],
+    "preDispatchChecklist": pre_dispatch_checklist(),
     "expectedPublicAssets": list(release_installer_asset_names(TAG)),
     "expectedDryRunEvidence": list(expected_evidence_names("dry-run", TAG)),
     "tagCommands": release_tag_commands(),
@@ -75,6 +75,48 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "blockers": [],
     "nextCommand": release_next_command(workflow_mode),
   }
+
+
+def pre_dispatch_checklist() -> list[str]:
+  return [
+    (
+      f"Create tag {TAG} at source commit {SOURCE_COMMIT} "
+      "if it does not already exist."
+    ),
+    f"Confirm tag {TAG} points at source commit {SOURCE_COMMIT}.",
+    "Push the tag to origin; tag-push release events run as dry-run by default.",
+    (
+      "Run the remote tag verification command before dispatching "
+      "a manual release workflow."
+    ),
+    (
+      "Use the CI lookup command to copy the successful CI URL "
+      "for this exact source commit."
+    ),
+    (
+      "Confirm the successful CI run matches the source commit: "
+      "https://github.com/walt1012/pith/actions/runs/1."
+    ),
+    "Run the release workflow as a dry-run before any publish attempt.",
+    (
+      "Use the dry-run artifact lookup command to find the "
+      f"release-dry-run-{TAG} workflow run."
+    ),
+    (
+      f"Download the release-dry-run-{TAG} workflow artifact "
+      "after the dry-run passes."
+    ),
+    "Run the dry-run evidence validation command before manual acceptance.",
+    (
+      "Verify the DMG checksum, release manifest, release plan, "
+      "rehearsal summary, and manual acceptance checklist."
+    ),
+    "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
+    (
+      "Use the post-acceptance publish command only after manual acceptance "
+      "evidence is recorded."
+    ),
+  ]
 
 
 def release_tag_commands() -> list[str]:
@@ -623,6 +665,29 @@ def assert_rejects_stale_readiness_commands() -> None:
     )
 
 
+def assert_rejects_stale_readiness_checklist() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["preDispatchChecklist"] = [
+      item
+      for item in pre_dispatch_checklist()
+      if "manual acceptance" not in item
+      and "post-acceptance publish command" not in item
+    ]
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "preDispatchChecklist",
+    )
+
+
 def assert_rejects_stale_manual_acceptance_markdown() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
@@ -813,6 +878,7 @@ def main() -> int:
   assert_rejects_missing_extra_empty_and_invalid_json()
   assert_rejects_invalid_dry_run_installer_asset_evidence()
   assert_rejects_stale_structured_json()
+  assert_rejects_stale_readiness_checklist()
   assert_rejects_stale_readiness_commands()
   assert_accepts_developer_id_publish_command()
   assert_rejects_stale_manual_acceptance_markdown()
