@@ -49,6 +49,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "No Pith login is required",
   "local execution mode",
   DEFAULT_MODEL_ID,
+  "Gatekeeper",
   "Open a workspace folder.",
   "Web Search readiness",
   "approve a safe local change",

@@ -120,12 +120,12 @@ def release_trust_note(
 def install_trust_section(signing_mode: str) -> tuple[str, str]:
   if signing_mode == "developer-id":
     return (
-      "This build is Developer ID signed and notarized.",
+      "This build is Developer ID signed and notarized for normal Gatekeeper launch.",
       "Open the DMG, drag Pith.app to Applications, then launch Pith.",
     )
   return (
     "This build is ad-hoc signed and not notarized.",
-    "After dragging Pith.app to Applications, macOS may block first launch. "
+    "After dragging Pith.app to Applications, macOS Gatekeeper may block first launch. "
     "Open System Settings > Privacy & Security and choose Open Anyway, or "
     "Control-click Pith.app and choose Open.",
   )

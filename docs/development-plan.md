@@ -74,18 +74,9 @@ Closed foundations:
 - macOS delivery: x86_64 DMG packaging, unsigned install guidance, size budgets,
   manifests, release copy, package metadata, transient DMG retry, and packaged
   smoke proof.
-- Release automation: change-aware CI lanes, release dry-run, downloaded-asset
-  rehearsal, maintainer acceptance checklist, asset contract checks, final
-  release validation, machine-readable release evidence, internal evidence
-  contracts, safe tag and manual dispatch defaults, release-candidate
-  checklists, tag preparation, annotated-safe remote verification commands,
-  source-commit CI lookup, workflow policy tests, shared release input guards,
-  evidence-before-visibility ordering, source-commit and successful-run matched dry-run artifact lookup and verification,
-  final Release source-commit validation and workflow policy coverage,
-  structured readiness state, pre-dispatch checklist gates, tag/CI lookup,
-  guarded publish commands, release-plan action gates, first-install rehearsal
-  gates, dry-run installer asset, and manual-acceptance evidence validation
-  with tag, mode, cross-file, asset, and user-path consistency.
+- Release automation: split CI lanes, dry-run DMG packaging, downloaded-asset
+  rehearsal, release-plan guards, evidence-before-visibility ordering, final
+  publish validation, and manual-acceptance gates.
 
 Current decisions:
 
@@ -112,11 +103,10 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 Build now:
 
-- Run release dry-run for the first release candidate and inspect the exact
-  installer assets, release plan, rehearsal summary, and manual acceptance
-  checklist.
-- Generate the release readiness report, create and push the release tag from
-  its commands, then dispatch the dry-run.
+- Treat `v0.1.2` as the current dry-run candidate; its remote CI dry-run passed
+  and produced the expected four public-style assets.
+- Keep installer guidance explicit for both Developer ID and ad-hoc Gatekeeper
+  paths.
 - Complete one manual first-launch acceptance on a fresh Mac: download from
   GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
   default model, open a workspace, run a cowork turn, use Web Search, approve a

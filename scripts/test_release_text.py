@@ -176,6 +176,7 @@ def main() -> int:
   )
 
   guide = install_guide("v0.1.0", "ad-hoc")
+  require_contains(guide, "Gatekeeper")
   require_contains(guide, "Control-click Pith.app and choose Open.")
   require_contains(guide, "Installer assets:")
   require_contains(guide, "No Pith login is required")
@@ -209,7 +210,8 @@ def main() -> int:
   validate_install_guide(guide, tag="v0.1.0", signing_mode="ad-hoc")
 
   developer_guide = install_guide("v0.1.0", "developer-id")
-  require_contains(developer_guide, "Developer ID signed and notarized.")
+  require_contains(developer_guide, "Developer ID signed and notarized for normal Gatekeeper launch.")
+  require_contains(developer_guide, "Gatekeeper")
   require_not_contains(developer_guide, "Open Anyway")
   validate_install_guide(developer_guide, tag="v0.1.0", signing_mode="developer-id")
 
