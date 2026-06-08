@@ -688,6 +688,61 @@ def assert_rejects_stale_readiness_checklist() -> None:
     )
 
 
+def assert_rejects_blocked_readiness_state() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["status"] = "blocked"
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "status must be ready",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["blockers"] = ["Release workflow is missing required dispatch inputs."]
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "must not contain blockers",
+    )
+
+  for key in (
+    "workingTreeClean",
+    "tagPointsAtSourceCommit",
+    "releaseWorkflowInputsReady",
+  ):
+    with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+      root = Path(directory)
+      paths = write_evidence_set(root, "dry-run")
+      readiness_path = root / "release-readiness.json"
+      stale = release_readiness_payload("dry-run")
+      stale[key] = False
+      readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+      expect_failure(
+        lambda: validate_release_evidence_set(
+          mode="dry-run",
+          tag=TAG,
+          evidence_paths=paths,
+        ),
+        key,
+      )
+
+
 def assert_rejects_stale_manual_acceptance_markdown() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
@@ -878,6 +933,7 @@ def main() -> int:
   assert_rejects_missing_extra_empty_and_invalid_json()
   assert_rejects_invalid_dry_run_installer_asset_evidence()
   assert_rejects_stale_structured_json()
+  assert_rejects_blocked_readiness_state()
   assert_rejects_stale_readiness_checklist()
   assert_rejects_stale_readiness_commands()
   assert_accepts_developer_id_publish_command()

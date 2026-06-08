@@ -348,8 +348,24 @@ def validate_release_readiness_json(
     "expectedDryRunEvidence",
     expected_evidence_names("dry-run", tag),
   )
+  validate_release_readiness_state(data)
   validate_release_readiness_checklist(data, tag=tag)
   validate_release_readiness_commands(data, tag=tag)
+
+
+def validate_release_readiness_state(data: dict[str, object]) -> None:
+  blockers = data["blockers"]
+  if blockers:
+    raise RuntimeError("release readiness evidence must not contain blockers.")
+  if data["status"] != "ready":
+    raise RuntimeError("release readiness evidence status must be ready.")
+  for key in (
+    "workingTreeClean",
+    "tagPointsAtSourceCommit",
+    "releaseWorkflowInputsReady",
+  ):
+    if data[key] is not True:
+      raise RuntimeError(f"release readiness evidence key {key} must be true.")
 
 
 def validate_release_readiness_checklist(
