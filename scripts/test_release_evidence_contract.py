@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_evidence_contract import expected_evidence_names
 from release_evidence_contract import validate_release_evidence_set
@@ -24,7 +25,10 @@ def write_evidence_file(path: Path, mode: str = "dry-run") -> None:
       payload = release_plan_payload(mode)
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
   elif path.suffix == ".md":
-    path.write_text(f"# {path.stem}\n\nEvidence.\n", encoding="utf-8")
+    if path.name in {"release-dry-run-manual-acceptance.md", "release-manual-acceptance.md"}:
+      path.write_text(manual_acceptance_markdown() + "\n", encoding="utf-8")
+    else:
+      path.write_text(f"# {path.stem}\n\nEvidence.\n", encoding="utf-8")
   else:
     path.write_bytes(b"release asset\n")
 
@@ -87,6 +91,30 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
     "trustPath": "Ad-hoc signed prerelease.",
     "nextMaintainerActions": ["Download the dry-run artifact."],
   }
+
+
+def manual_acceptance_markdown() -> str:
+  return f"""# Pith {TAG} Manual Release Acceptance
+
+Decision:
+- [ ] Accept this build for visible ad-hoc prerelease.
+- [ ] Keep this build draft-only and fix issues before publishing.
+
+## Downloaded Assets
+- [ ] Download `Pith-{TAG}-macos-x86_64.dmg`
+
+## Required Manual Checks
+- [ ] Verify the downloaded DMG with the SHA-256 sidecar before opening it.
+- [ ] Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.
+- [ ] Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.
+- [ ] Let the model use Web Search when useful and inspect the source proof in the timeline.
+- [ ] Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.
+- [ ] Restart Pith and confirm runtime readiness, selected workspace, model state, and recent proof recover.
+
+## Evidence To Record
+- Approval and diff receipt inspected.
+- Restart recovery result.
+"""
 
 
 def write_evidence_set(root: Path, mode: str) -> list[Path]:
@@ -220,6 +248,37 @@ def assert_rejects_stale_structured_json() -> None:
     )
 
 
+def assert_rejects_stale_manual_acceptance_markdown() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    acceptance_path = root / "release-dry-run-manual-acceptance.md"
+    acceptance_path.write_text("# Manual Release Acceptance\n\nIncomplete.\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "missing required terms",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "publish-rehearsal")
+    acceptance_path = root / "release-manual-acceptance.md"
+    stale = manual_acceptance_markdown().replace("Web Search", "retrieval")
+    acceptance_path.write_text(stale + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="publish-rehearsal",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "Web Search",
+    )
+
+
 def assert_rejects_inconsistent_structured_json() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
@@ -325,6 +384,7 @@ def main() -> int:
   assert_publish_rehearsal_accepts_exact_set()
   assert_rejects_missing_extra_empty_and_invalid_json()
   assert_rejects_stale_structured_json()
+  assert_rejects_stale_manual_acceptance_markdown()
   assert_rejects_inconsistent_structured_json()
   assert_rejects_cross_file_json_disagreement()
   print("release evidence contract tests passed")

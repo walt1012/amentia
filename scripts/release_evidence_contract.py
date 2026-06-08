@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from release_artifacts import release_installer_asset_names
+from package_contract import DEFAULT_MODEL_ID
 from package_contract import RELEASE_SIGNING_MODES
 
 
@@ -83,6 +84,23 @@ REQUIRED_JSON_KEYS_BY_NAME = {
     "nextMaintainerActions",
   ),
 }
+REQUIRED_MANUAL_ACCEPTANCE_TERMS = (
+  "Manual Release Acceptance",
+  "Accept this build for visible ad-hoc prerelease.",
+  "Keep this build draft-only",
+  "## Downloaded Assets",
+  "## Required Manual Checks",
+  "SHA-256 sidecar",
+  "Gatekeeper",
+  DEFAULT_MODEL_ID,
+  "Web Search",
+  "Approval and diff receipt",
+  "Restart recovery",
+)
+REQUIRED_MARKDOWN_TERMS_BY_NAME = {
+  "release-dry-run-manual-acceptance.md": REQUIRED_MANUAL_ACCEPTANCE_TERMS,
+  "release-manual-acceptance.md": REQUIRED_MANUAL_ACCEPTANCE_TERMS,
+}
 
 
 def expected_evidence_names(mode: str, tag: str) -> tuple[str, ...]:
@@ -150,6 +168,7 @@ def validate_evidence_content(path: Path, *, mode: str, tag: str) -> None:
     text = path.read_text(encoding="utf-8").strip()
     if not text.startswith("# "):
       raise RuntimeError(f"Release evidence Markdown must start with a heading: {path.name}")
+    validate_required_markdown_terms(path.name, text)
 
 
 def validate_required_json_keys(name: str, data: dict[str, object]) -> None:
@@ -160,6 +179,18 @@ def validate_required_json_keys(name: str, data: dict[str, object]) -> None:
   if missing:
     raise RuntimeError(
       f"Release evidence JSON is missing required keys for {name}: "
+      + ", ".join(missing)
+    )
+
+
+def validate_required_markdown_terms(name: str, text: str) -> None:
+  required_terms = REQUIRED_MARKDOWN_TERMS_BY_NAME.get(name)
+  if required_terms is None:
+    return
+  missing = [term for term in required_terms if term not in text]
+  if missing:
+    raise RuntimeError(
+      f"Release evidence Markdown is missing required terms for {name}: "
       + ", ".join(missing)
     )
 
