@@ -57,7 +57,7 @@ def assert_ready_dry_run_report() -> None:
     "gh workflow run release.yml",
     "-f dry_run=true",
     "## Dry-Run Artifact Verification",
-    "python scripts/release_evidence_contract.py",
+    "python3 scripts/release_evidence_contract.py",
     "--mode dry-run",
     "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
     "## Post-Acceptance Publish Command",
@@ -150,7 +150,7 @@ def assert_ready_dry_run_report() -> None:
       raise AssertionError(f"readiness JSON dry-run download should include {phrase}")
   validation_command = str(payload.get("dryRunEvidenceValidationCommand", ""))
   for phrase in (
-    "python scripts/release_evidence_contract.py",
+    "python3 scripts/release_evidence_contract.py",
     "--mode dry-run",
     "--tag v0.1.0",
     "release-dry-run-v0.1.0/Pith-v0.1.0-macos-x86_64.dmg",

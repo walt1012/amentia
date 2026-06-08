@@ -374,7 +374,7 @@ def readiness_dry_run_download_command(readiness: ReleaseReadiness) -> str:
 def readiness_dry_run_validation_command(readiness: ReleaseReadiness) -> str:
   artifact_dir = f"release-dry-run-{readiness.tag}"
   lines = [
-    "python scripts/release_evidence_contract.py \\",
+    "python3 scripts/release_evidence_contract.py \\",
     "  --mode dry-run \\",
     f"  --tag {shell_quote(readiness.tag)} \\",
   ]

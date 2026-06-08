@@ -68,13 +68,51 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "tagCommands": ["git tag v0.1.0 HEAD", "git push origin v0.1.0"],
     "remoteTagVerificationCommand": "git ls-remote --tags origin refs/tags/v0.1.0",
     "successfulCiLookupCommand": "gh run list --workflow CI",
-    "dryRunArtifactLookupCommand": "gh api repos/:owner/:repo/actions/artifacts",
-    "dryRunArtifactDownloadCommand": "gh run download",
-    "dryRunEvidenceValidationCommand": "python scripts/release_evidence_contract.py",
+    "dryRunArtifactLookupCommand": dry_run_artifact_lookup_command(),
+    "dryRunArtifactDownloadCommand": dry_run_artifact_download_command(),
+    "dryRunEvidenceValidationCommand": dry_run_evidence_validation_command(),
     "postAcceptancePublishCommand": "gh workflow run release.yml",
     "blockers": [],
     "nextCommand": "gh workflow run release.yml",
   }
+
+
+def dry_run_artifact_lookup_command() -> str:
+  return (
+    'release_workflow_run_id="$(\n'
+    "  gh api repos/:owner/:repo/actions/artifacts --paginate \\\n"
+    "    --jq "
+    + "'"
+    + "[.artifacts[] | select("
+    + f'.name == "release-dry-run-{TAG}" '
+    + "and .expired == false "
+    + f'and .workflow_run.head_sha == "{SOURCE_COMMIT}"'
+    + ')][0].workflow_run.id // ""'
+    + "'\n"
+    ')"\n'
+    'test -n "$release_workflow_run_id"'
+  )
+
+
+def dry_run_artifact_download_command() -> str:
+  return (
+    'release_workflow_conclusion="$(gh run view "$release_workflow_run_id" --json conclusion --jq .conclusion)"\n'
+    'test "$release_workflow_conclusion" = success\n'
+    f'gh run download "$release_workflow_run_id" --name release-dry-run-{TAG} --dir release-dry-run-{TAG}'
+  )
+
+
+def dry_run_evidence_validation_command() -> str:
+  lines = [
+    "python3 scripts/release_evidence_contract.py \\",
+    "  --mode dry-run \\",
+    f"  --tag {TAG} \\",
+  ]
+  evidence_names = expected_evidence_names("dry-run", TAG)
+  for index, name in enumerate(evidence_names):
+    suffix = " \\" if index < len(evidence_names) - 1 else ""
+    lines.append(f"  --evidence release-dry-run-{TAG}/{name}{suffix}")
+  return "\n".join(lines)
 
 
 def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
@@ -369,6 +407,43 @@ def assert_rejects_stale_structured_json() -> None:
     )
 
 
+def assert_rejects_stale_readiness_commands() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["dryRunEvidenceValidationCommand"] = "python scripts/release_evidence_contract.py"
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "dry-run evidence validation command",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    readiness_path = root / "release-readiness.json"
+    stale = release_readiness_payload("dry-run")
+    stale["dryRunArtifactLookupCommand"] = stale["dryRunArtifactLookupCommand"].replace(
+      SOURCE_COMMIT,
+      "fedcba9876543210fedcba9876543210fedcba98",
+    )
+    readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "dry-run artifact lookup command",
+    )
+
+
 def assert_rejects_stale_manual_acceptance_markdown() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
@@ -539,6 +614,7 @@ def main() -> int:
   assert_rejects_missing_extra_empty_and_invalid_json()
   assert_rejects_invalid_dry_run_installer_asset_evidence()
   assert_rejects_stale_structured_json()
+  assert_rejects_stale_readiness_commands()
   assert_rejects_stale_manual_acceptance_markdown()
   assert_rejects_stale_release_rehearsal_evidence()
   assert_rejects_inconsistent_structured_json()

@@ -322,6 +322,7 @@ def validate_release_readiness_json(
   require_string(data, "dryRunArtifactDownloadCommand")
   require_string(data, "dryRunEvidenceValidationCommand")
   require_string(data, "postAcceptancePublishCommand")
+  validate_release_readiness_commands(data, tag=tag)
   require_string(data, "nextCommand")
   for key in (
     "requestedDraft",
@@ -347,6 +348,53 @@ def validate_release_readiness_json(
     data,
     "expectedDryRunEvidence",
     expected_evidence_names("dry-run", tag),
+  )
+
+
+def validate_release_readiness_commands(
+  data: dict[str, object],
+  *,
+  tag: str,
+) -> None:
+  source_commit = str(data["sourceCommit"])
+  artifact_name = f"release-dry-run-{tag}"
+  lookup_command = str(data["dryRunArtifactLookupCommand"])
+  require_text_contains(
+    lookup_command,
+    (
+      "gh api repos/:owner/:repo/actions/artifacts --paginate",
+      artifact_name,
+      source_commit,
+      ".expired == false",
+      ".workflow_run.head_sha",
+      'test -n "$release_workflow_run_id"',
+    ),
+    "release readiness dry-run artifact lookup command",
+  )
+  download_command = str(data["dryRunArtifactDownloadCommand"])
+  require_text_contains(
+    download_command,
+    (
+      'gh run view "$release_workflow_run_id" --json conclusion --jq .conclusion',
+      'test "$release_workflow_conclusion" = success',
+      f"gh run download \"$release_workflow_run_id\" --name {artifact_name}",
+    ),
+    "release readiness dry-run artifact download command",
+  )
+  validation_command = str(data["dryRunEvidenceValidationCommand"])
+  required_validation_terms = [
+    "python3 scripts/release_evidence_contract.py",
+    "--mode dry-run",
+    f"--tag {tag}",
+  ]
+  required_validation_terms.extend(
+    f"--evidence {artifact_name}/{name}"
+    for name in expected_evidence_names("dry-run", tag)
+  )
+  require_text_contains(
+    validation_command,
+    tuple(required_validation_terms),
+    "release readiness dry-run evidence validation command",
   )
 
 
@@ -508,6 +556,16 @@ def require_exact_string_list(
     raise RuntimeError(
       f"Release evidence JSON key {key} must match the release contract."
     )
+
+
+def require_text_contains(
+  text: str,
+  required_terms: tuple[str, ...],
+  label: str,
+) -> None:
+  missing = [term for term in required_terms if term not in text]
+  if missing:
+    raise RuntimeError(f"{label} is missing required terms: " + ", ".join(missing))
 
 
 def require_string_list_contains(
