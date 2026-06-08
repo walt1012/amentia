@@ -600,8 +600,15 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   require_release_order(
     release_block,
     "--asset-dir release-download",
+    "Validate release rehearsal evidence",
+    "release download rehearsal must pass before publish rehearsal evidence validation",
+    issues,
+  )
+  require_release_order(
+    release_block,
+    "Validate release rehearsal evidence",
     "-X PATCH",
-    "release download rehearsal must pass before final release state patch",
+    "publish rehearsal evidence validation must pass before final release state patch",
     issues,
   )
   require_release_order(

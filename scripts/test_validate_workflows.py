@@ -465,6 +465,19 @@ jobs:
             --json-output release-rehearsal.json
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
           cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Validate release rehearsal evidence
+        if: env.RELEASE_DRY_RUN != 'true'
+        run: |
+          python3 scripts/release_evidence_contract.py \\
+            --mode publish-rehearsal \\
+            --tag "$RELEASE_TAG" \\
+            --evidence release-readiness.md \\
+            --evidence release-readiness.json \\
+            --evidence release-plan.md \\
+            --evidence release-plan.json \\
+            --evidence release-rehearsal.md \\
+            --evidence release-rehearsal.json \\
+            --evidence release-manual-acceptance.md
       - name: Apply final GitHub Release visibility
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
@@ -489,19 +502,6 @@ jobs:
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
-      - name: Validate release rehearsal evidence
-        if: env.RELEASE_DRY_RUN != 'true'
-        run: |
-          python3 scripts/release_evidence_contract.py \\
-            --mode publish-rehearsal \\
-            --tag "$RELEASE_TAG" \\
-            --evidence release-readiness.md \\
-            --evidence release-readiness.json \\
-            --evidence release-plan.md \\
-            --evidence release-plan.json \\
-            --evidence release-rehearsal.md \\
-            --evidence release-rehearsal.json \\
-            --evidence release-manual-acceptance.md
       - name: Upload release rehearsal summary
         if: always() && env.RELEASE_DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
@@ -1148,7 +1148,7 @@ def main() -> int:
         1,
       ),
     )
-    assert_issue(issue_messages(root), "rehearsal must pass")
+    assert_issue(issue_messages(root), "publish rehearsal evidence validation")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
