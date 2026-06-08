@@ -250,6 +250,7 @@ def dry_run_evidence_validation_command() -> str:
 def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
   workflow_mode = "dry-run" if mode == "dry-run" else "publish"
   github_mutation = "none" if workflow_mode == "dry-run" else "create-or-update"
+  planned_draft = True
   return {
     "tag": TAG,
     "title": f"Pith {TAG}",
@@ -266,11 +267,59 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
     "allowVisibleAdHoc": False,
     "manualAcceptanceConfirmed": False,
     "manualAcceptanceEvidence": "",
-    "plannedDraft": True,
+    "plannedDraft": planned_draft,
     "plannedPrerelease": True,
     "trustPath": "Ad-hoc signed prerelease.",
-    "nextMaintainerActions": ["Download the dry-run artifact."],
+    "nextMaintainerActions": release_plan_actions(
+      workflow_mode=workflow_mode,
+      planned_draft=planned_draft,
+    ),
   }
+
+
+def release_plan_actions(*, workflow_mode: str, planned_draft: bool) -> list[str]:
+  if workflow_mode == "dry-run":
+    return [
+      "Download the `release-dry-run-*` artifact from this workflow.",
+      (
+        "Verify the DMG checksum, release manifest, release plan, "
+        "and dry-run rehearsal summary."
+      ),
+      (
+        "Run the manual prerelease acceptance checklist on a fresh Mac "
+        "before any visible ad-hoc release."
+      ),
+      (
+        "If acceptance passes, rerun the release workflow with "
+        "`dry_run=false` and the intended visibility inputs."
+      ),
+    ]
+  if planned_draft:
+    return [
+      (
+        "Review the draft GitHub Release assets and downloaded-release "
+        "rehearsal summary."
+      ),
+      (
+        "Complete manual prerelease acceptance before making any ad-hoc "
+        "release visible."
+      ),
+      (
+        "Edit release visibility only after the release page, manifest, "
+        "checksum, and install guide all match."
+      ),
+    ]
+  return [
+    (
+      "Inspect the visible GitHub Release page and confirm the exact four "
+      "public assets."
+    ),
+    "Confirm the recorded manual acceptance evidence matches the published DMG.",
+    (
+      "If acceptance fails, withdraw the release deliberately rather than "
+      "moving it back to draft in automation."
+    ),
+  ]
 
 
 def release_rehearsal_payload() -> dict[str, object]:
@@ -743,6 +792,54 @@ def assert_rejects_blocked_readiness_state() -> None:
       )
 
 
+def assert_rejects_stale_release_plan_actions() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    plan_path = root / "release-plan.json"
+    stale = release_plan_payload("dry-run")
+    stale["nextMaintainerActions"] = [
+      action
+      for action in release_plan_actions(
+        workflow_mode="dry-run",
+        planned_draft=True,
+      )
+      if "dry_run=false" not in action
+    ]
+    plan_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "nextMaintainerActions",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "publish-rehearsal")
+    plan_path = root / "release-plan.json"
+    stale = release_plan_payload("publish-rehearsal")
+    stale["nextMaintainerActions"] = [
+      action
+      for action in release_plan_actions(
+        workflow_mode="publish",
+        planned_draft=True,
+      )
+      if "manual prerelease acceptance" not in action
+    ]
+    plan_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="publish-rehearsal",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "nextMaintainerActions",
+    )
+
+
 def assert_rejects_stale_manual_acceptance_markdown() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
@@ -934,6 +1031,7 @@ def main() -> int:
   assert_rejects_invalid_dry_run_installer_asset_evidence()
   assert_rejects_stale_structured_json()
   assert_rejects_blocked_readiness_state()
+  assert_rejects_stale_release_plan_actions()
   assert_rejects_stale_readiness_checklist()
   assert_rejects_stale_readiness_commands()
   assert_accepts_developer_id_publish_command()

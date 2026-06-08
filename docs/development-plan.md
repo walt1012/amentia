@@ -83,9 +83,9 @@ Closed foundations:
   evidence-before-visibility ordering, source-commit and successful-run matched dry-run artifact lookup and verification,
   final Release source-commit validation and workflow policy coverage,
   structured readiness state, pre-dispatch checklist gates, tag/CI lookup,
-  guarded publish commands, release-plan, rehearsal, dry-run installer asset,
-  and manual-acceptance evidence validation with tag, mode, cross-file, asset,
-  and user-path consistency.
+  guarded publish commands, release-plan action gates, rehearsal, dry-run
+  installer asset, and manual-acceptance evidence validation with tag, mode,
+  cross-file, asset, and user-path consistency.
 
 Current decisions:
 

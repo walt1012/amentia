@@ -552,6 +552,50 @@ def validate_release_plan_json(
   ):
     require_bool(data, key)
   require_string_list(data, "nextMaintainerActions")
+  validate_release_plan_actions(data)
+
+
+def validate_release_plan_actions(data: dict[str, object]) -> None:
+  if data["workflowMode"] == "dry-run":
+    require_string_list_contains(
+      data,
+      "nextMaintainerActions",
+      (
+        "release-dry-run-*",
+        "DMG checksum",
+        "release manifest",
+        "dry-run rehearsal summary",
+        "manual prerelease acceptance",
+        "dry_run=false",
+      ),
+    )
+    return
+  if data["plannedDraft"] is True:
+    require_string_list_contains(
+      data,
+      "nextMaintainerActions",
+      (
+        "draft GitHub Release assets",
+        "downloaded-release rehearsal summary",
+        "manual prerelease acceptance",
+        "release page",
+        "manifest",
+        "checksum",
+        "install guide",
+      ),
+    )
+    return
+  require_string_list_contains(
+    data,
+    "nextMaintainerActions",
+    (
+      "visible GitHub Release page",
+      "exact four public assets",
+      "manual acceptance evidence",
+      "published DMG",
+      "withdraw the release deliberately",
+    ),
+  )
 
 
 def validate_release_rehearsal_json(data: dict[str, object], *, tag: str) -> None:
