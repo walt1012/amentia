@@ -360,10 +360,14 @@ def readiness_dry_run_artifact_lookup_command(readiness: ReleaseReadiness) -> st
 
 def readiness_dry_run_download_command(readiness: ReleaseReadiness) -> str:
   artifact_name = f"release-dry-run-{readiness.tag}"
-  return (
-    'gh run download "$release_workflow_run_id" '
-    f"--name {shell_quote(artifact_name)} "
-    f"--dir {shell_quote(artifact_name)}"
+  return "\n".join(
+    [
+      'release_workflow_conclusion="$(gh run view "$release_workflow_run_id" --json conclusion --jq .conclusion)"',
+      'test "$release_workflow_conclusion" = success',
+      'gh run download "$release_workflow_run_id" '
+      f"--name {shell_quote(artifact_name)} "
+      f"--dir {shell_quote(artifact_name)}",
+    ]
   )
 
 

@@ -72,6 +72,8 @@ def assert_ready_dry_run_report() -> None:
     'select(.name == "release-dry-run-v0.1.0"',
     ".expired == false",
     f'.workflow_run.head_sha == "{VALID_COMMIT}"',
+    'gh run view "$release_workflow_run_id" --json conclusion --jq .conclusion',
+    'test "$release_workflow_conclusion" = success',
     'gh run download "$release_workflow_run_id" --name release-dry-run-v0.1.0',
   ):
     if phrase not in report:
@@ -140,6 +142,12 @@ def assert_ready_dry_run_report() -> None:
       raise AssertionError(f"readiness JSON dry-run lookup should include {phrase}")
   if 'gh run download "$release_workflow_run_id" --name release-dry-run-v0.1.0' not in download_command:
     raise AssertionError("readiness JSON should include the dry-run artifact download command")
+  for phrase in (
+    'gh run view "$release_workflow_run_id" --json conclusion --jq .conclusion',
+    'test "$release_workflow_conclusion" = success',
+  ):
+    if phrase not in download_command:
+      raise AssertionError(f"readiness JSON dry-run download should include {phrase}")
   validation_command = str(payload.get("dryRunEvidenceValidationCommand", ""))
   for phrase in (
     "python scripts/release_evidence_contract.py",
