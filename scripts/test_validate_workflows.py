@@ -250,9 +250,11 @@ on:
         default: false
         type: boolean
       manual_acceptance_confirmed:
+        description: "Confirm the validated manual acceptance receipt passed on a fresh Mac before visible ad-hoc publishing."
         default: false
         type: boolean
       manual_acceptance_evidence:
+        description: "HTTPS URL for the validated manual acceptance receipt required before visible ad-hoc publishing."
         default: ""
         type: string
       dry_run:
@@ -887,6 +889,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "prerelease must include default: true")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "HTTPS URL for the validated manual acceptance receipt",
+        "Checklist artifact, issue, or notes URL",
+      ),
+    )
+    assert_issue(issue_messages(root), "manual_acceptance_evidence must include HTTPS URL")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

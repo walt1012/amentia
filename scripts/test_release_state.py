@@ -100,6 +100,7 @@ def assert_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
     "not recorded",
     "placeholder",
     "https://github.com/walt1012/pith/actions/runs/100",
+    "https://example.com/manual-acceptance-receipt",
   ):
     try:
       validate_manual_acceptance_gate(

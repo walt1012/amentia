@@ -48,6 +48,7 @@ def validate_manual_acceptance_evidence(data: dict[str, object], *, tag: str) ->
   validate_public_release_tag(tag)
   require_equal(data, "tag", tag)
   require_string(data, "sourceCommit", length=40)
+  require_git_sha(str(data["sourceCommit"]), "manual acceptance sourceCommit")
   require_string(data, "releaseWorkflowRunUrl", prefix="https://github.com/walt1012/pith/actions/runs/")
   require_equal(data, "dmgAssetName", release_installer_asset_names(tag)[0])
   require_string(data, "checksum", length=64)
@@ -106,6 +107,7 @@ def manual_acceptance_template_from_asset_dir(
   manifest = load_release_manifest(asset_dir / manifest_name)
   require_manifest_equal(manifest, "tag", tag)
   source_commit = require_manifest_string(manifest, "sourceCommit", length=40)
+  require_git_sha(source_commit, "release manifest sourceCommit")
   verification = require_manifest_object(manifest, "verification")
   workflow_run_url = require_manifest_string(
     verification,
@@ -240,6 +242,14 @@ def require_sha256_hex(value: str, label: str) -> None:
     character not in "0123456789abcdef" for character in normalized
   ):
     raise RuntimeError(f"{label} must be a SHA-256 hex digest")
+
+
+def require_git_sha(value: str, label: str) -> None:
+  normalized = value.strip().lower()
+  if len(normalized) != 40 or any(
+    character not in "0123456789abcdef" for character in normalized
+  ):
+    raise RuntimeError(f"{label} must be a 40-character Git SHA hex digest")
 
 
 def load_json(path: Path) -> dict[str, object]:

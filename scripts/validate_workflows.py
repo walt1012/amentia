@@ -788,8 +788,16 @@ def validate_release_dispatch_inputs(text: str) -> list[WorkflowIssue]:
     "draft": ("default: true", "type: boolean"),
     "prerelease": ("default: true", "type: boolean"),
     "publish_untrusted_ad_hoc": ("default: false", "type: boolean"),
-    "manual_acceptance_confirmed": ("default: false", "type: boolean"),
-    "manual_acceptance_evidence": ('default: ""', "type: string"),
+    "manual_acceptance_confirmed": (
+      "validated manual acceptance receipt",
+      "default: false",
+      "type: boolean",
+    ),
+    "manual_acceptance_evidence": (
+      "HTTPS URL for the validated manual acceptance receipt",
+      'default: ""',
+      "type: string",
+    ),
     "dry_run": ("default: true", "type: boolean"),
   }
   for name, required_terms in required_inputs.items():

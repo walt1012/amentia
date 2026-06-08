@@ -92,8 +92,8 @@ Current decisions:
   release manifest.
 - Manual release dispatch defaults to a dry-run draft prerelease; stable
   visibility must be an explicit later decision.
-- Visible ad-hoc prerelease publishing requires a validated manual acceptance
-  receipt, not placeholders.
+- Visible ad-hoc prerelease publishing requires a repository-scoped validated
+  manual acceptance receipt, not placeholders.
 - Remote CI is the source of truth for Rust formatting, tests, policy checks,
   model catalog validation, and macOS packaging.
 

@@ -86,12 +86,13 @@ def write_asset_dir(
   *,
   checksum: str = CHECKSUM,
   manifest_checksum: str = CHECKSUM,
+  source_commit: str = SOURCE_COMMIT,
   workflow_run_url: str = RUN_URL,
 ) -> None:
   dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(TAG)
   manifest: dict[str, object] = {
     "tag": TAG,
-    "sourceCommit": SOURCE_COMMIT,
+    "sourceCommit": source_commit,
     "verification": {
       "workflowRunUrl": workflow_run_url,
     },
@@ -146,6 +147,14 @@ def assert_asset_template_rejects_stale_assets() -> None:
     expect_template_failure(
       lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
       "SHA-256 hex digest",
+    )
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root, source_commit="z" * 40)
+    expect_template_failure(
+      lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
+      "Git SHA hex digest",
     )
 
   with TemporaryDirectory() as directory:
@@ -251,6 +260,7 @@ def main() -> int:
   validate_manual_acceptance_evidence(valid_payload(), tag=TAG)
   expect_failure({**valid_payload(), "tag": "v9.9.9"}, "tag")
   expect_failure({**valid_payload(), "sourceCommit": "short"}, "40 characters")
+  expect_failure({**valid_payload(), "sourceCommit": "z" * 40}, "Git SHA hex digest")
   expect_failure({**valid_payload(), "checksum": "short"}, "64 characters")
   expect_failure({**valid_payload(), "checksum": "g" * 64}, "SHA-256 hex digest")
   expect_failure({**valid_payload(), "dmgAssetName": "Pith.zip"}, "dmgAssetName")

@@ -26,12 +26,12 @@ on:
         default: false
         type: boolean
       manual_acceptance_confirmed:
-        description: "Confirm the generated manual acceptance checklist passed on a fresh Mac before visible ad-hoc publishing."
+        description: "Confirm the validated manual acceptance receipt passed on a fresh Mac before visible ad-hoc publishing."
         required: false
         default: false
         type: boolean
       manual_acceptance_evidence:
-        description: "Checklist artifact, issue, or notes URL proving manual acceptance for visible ad-hoc publishing."
+        description: "HTTPS URL for the validated manual acceptance receipt required before visible ad-hoc publishing."
         required: false
         default: ""
         type: string
