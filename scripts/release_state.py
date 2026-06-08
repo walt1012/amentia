@@ -105,8 +105,8 @@ def validate_manual_acceptance_gate(
     )
   if not manual_acceptance_evidence.strip():
     raise ValueError(
-      "Visible ad-hoc prereleases require manual acceptance evidence. "
-      "Set manual_acceptance_evidence to a checklist artifact, issue, or notes URL."
+      "Visible ad-hoc prereleases require a manual acceptance receipt URL. "
+      "Set manual_acceptance_evidence to a validated receipt URL."
     )
   validate_manual_acceptance_evidence(manual_acceptance_evidence)
 
@@ -116,8 +116,16 @@ def validate_manual_acceptance_evidence(value: str) -> None:
   placeholder_terms = ("<", ">", "todo", "tbd", "not recorded", "placeholder")
   if any(term in normalized for term in placeholder_terms):
     raise ValueError(
-      "Visible ad-hoc prereleases require real manual acceptance evidence. "
-      "Replace placeholder text with a checklist artifact, issue, or notes URL."
+      "Visible ad-hoc prereleases require a real manual acceptance receipt. "
+      "Replace placeholder text with a validated manual acceptance receipt URL."
+    )
+  if not normalized.startswith("https://"):
+    raise ValueError(
+      "Visible ad-hoc prereleases require the manual acceptance receipt as an HTTPS URL."
+    )
+  if "manual-acceptance" not in normalized or "receipt" not in normalized:
+    raise ValueError(
+      "Visible ad-hoc prereleases require a validated manual acceptance receipt URL."
     )
 
 
@@ -181,7 +189,7 @@ def release_state_summary(
 - Requested prerelease: `{str(requested_prerelease).lower()}`
 - Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
 - Manual acceptance confirmed: `{str(manual_acceptance_confirmed).lower()}`
-- Manual acceptance evidence: {summary_value(manual_acceptance_evidence)}
+- Manual acceptance receipt: {summary_value(manual_acceptance_evidence)}
 - Planned final visibility: `{visibility} {release_class}`
 - Trust path: {trust_note}
 
@@ -271,7 +279,7 @@ def release_next_actions(*, dry_run: bool, state: ReleaseState) -> str:
   return "\n".join(
     [
       "- Inspect the visible GitHub Release page and confirm the exact four public assets.",
-      "- Confirm the recorded manual acceptance evidence matches the published DMG.",
+      "- Confirm the recorded manual acceptance receipt matches the published DMG.",
       "- If acceptance fails, withdraw the release deliberately rather than moving it back to draft in automation.",
     ]
   )

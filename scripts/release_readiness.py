@@ -210,7 +210,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 - Tag points at source commit: `{str(readiness.tag_points_at_commit).lower()}`
 - Release workflow inputs ready: `{str(readiness.workflow_inputs_ready).lower()}`
 - Manual acceptance confirmed: `{str(readiness.manual_acceptance_confirmed).lower()}`
-- Manual acceptance evidence: {evidence}
+- Manual acceptance receipt: {evidence}
 
 ## Blockers
 {blockers}
@@ -304,7 +304,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     "Run the dry-run evidence validation command before manual acceptance.",
     "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
     "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
-    "Use the post-acceptance publish command only after manual acceptance evidence is recorded.",
+    "Use the post-acceptance publish command only after a validated manual acceptance receipt is recorded.",
   ]
 
 
@@ -393,7 +393,7 @@ def readiness_post_acceptance_publish_command(readiness: ReleaseReadiness) -> st
   else:
     allow_untrusted = True
     manual_confirmed = True
-    manual_evidence = "<manual-acceptance-evidence-url>"
+    manual_evidence = "<manual-acceptance-receipt-url>"
   return "\n".join(
     [
       "gh workflow run release.yml \\",

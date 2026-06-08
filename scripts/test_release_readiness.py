@@ -66,7 +66,7 @@ def assert_ready_dry_run_report() -> None:
     "-f draft=false",
     "-f publish_untrusted_ad_hoc=true",
     "-f manual_acceptance_confirmed=true",
-    "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+    "-f manual_acceptance_evidence='<manual-acceptance-receipt-url>'",
     "release_workflow_run_id=\"$(",
     "gh api repos/:owner/:repo/actions/artifacts --paginate",
     'select(.name == "release-dry-run-v0.1.0"',
@@ -166,7 +166,7 @@ def assert_ready_dry_run_report() -> None:
     "-f prerelease=true",
     "-f publish_untrusted_ad_hoc=true",
     "-f manual_acceptance_confirmed=true",
-    "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+    "-f manual_acceptance_evidence='<manual-acceptance-receipt-url>'",
   ):
     if phrase not in publish_command:
       raise AssertionError(f"readiness JSON post-acceptance publish command should include {phrase}")
@@ -223,7 +223,7 @@ def assert_blocks_visible_ad_hoc_without_acceptance() -> None:
 
 
 def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
-  evidence = "https://github.com/walt1012/pith/actions/runs/100#manual-acceptance"
+  evidence = "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt"
   readiness = plan_readiness(
     tag="v0.1.0",
     source_commit=VALID_COMMIT,

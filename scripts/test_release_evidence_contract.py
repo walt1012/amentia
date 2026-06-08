@@ -189,7 +189,7 @@ def post_acceptance_publish_command() -> str:
       "  -f prerelease=true \\",
       "  -f publish_untrusted_ad_hoc=true \\",
       "  -f manual_acceptance_confirmed=true \\",
-      "  -f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+      "  -f manual_acceptance_evidence='<manual-acceptance-receipt-url>'",
     ]
   )
 
@@ -314,7 +314,7 @@ def release_plan_actions(*, workflow_mode: str, planned_draft: bool) -> list[str
       "Inspect the visible GitHub Release page and confirm the exact four "
       "public assets."
     ),
-    "Confirm the recorded manual acceptance evidence matches the published DMG.",
+    "Confirm the recorded manual acceptance receipt matches the published DMG.",
     (
       "If acceptance fails, withdraw the release deliberately rather than "
       "moving it back to draft in automation."

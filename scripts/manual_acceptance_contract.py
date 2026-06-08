@@ -127,7 +127,7 @@ def require_sha256(data: dict[str, object], key: str) -> None:
 def load_json(path: Path) -> dict[str, object]:
   data = json.loads(path.read_text(encoding="utf-8"))
   if not isinstance(data, dict):
-    raise RuntimeError("manual acceptance evidence must be a JSON object")
+    raise RuntimeError("manual acceptance receipt must be a JSON object")
   return data
 
 
@@ -155,7 +155,7 @@ def main() -> int:
           release_workflow_run_url=args.release_workflow_run_url,
         ),
       )
-      print("Manual acceptance evidence template written")
+      print("Manual acceptance receipt template written")
       return 0
     if args.evidence is None:
       raise RuntimeError("manual acceptance validation requires --evidence")

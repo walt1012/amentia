@@ -504,7 +504,7 @@ def validate_release_readiness_commands(
     publish_trust_terms = (
       "-f publish_untrusted_ad_hoc=true",
       "-f manual_acceptance_confirmed=true",
-      "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
+      "-f manual_acceptance_evidence='<manual-acceptance-receipt-url>'",
     )
   require_text_contains(
     publish_command,
@@ -592,7 +592,7 @@ def validate_release_plan_actions(data: dict[str, object]) -> None:
     (
       "visible GitHub Release page",
       "exact four public assets",
-      "manual acceptance evidence",
+      "manual acceptance receipt",
       "published DMG",
       "withdraw the release deliberately",
     ),

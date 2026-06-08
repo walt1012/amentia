@@ -92,8 +92,8 @@ Current decisions:
   release manifest.
 - Manual release dispatch defaults to a dry-run draft prerelease; stable
   visibility must be an explicit later decision.
-- Visible ad-hoc prerelease publishing requires real manual acceptance evidence,
-  not placeholders.
+- Visible ad-hoc prerelease publishing requires a validated manual acceptance
+  receipt, not placeholders.
 - Remote CI is the source of truth for Rust formatting, tests, policy checks,
   model catalog validation, and macOS packaging.
 
@@ -116,8 +116,8 @@ Build now:
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.
 - Require `manual_acceptance_confirmed=true` before any visible ad-hoc
-  prerelease can be published, with `manual_acceptance_evidence` recorded in the
-  release plan.
+  prerelease can be published, with `manual_acceptance_evidence` pointing to the
+  validated receipt.
 - Keep unsigned/ad-hoc copy explicit because Developer ID notarization is paid
   and optional later.
 

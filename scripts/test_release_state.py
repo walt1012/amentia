@@ -95,10 +95,11 @@ def assert_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
 
 def assert_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
   for evidence in (
-    "<manual-acceptance-evidence-url>",
+    "<manual-acceptance-receipt-url>",
     "TODO",
     "not recorded",
     "placeholder",
+    "https://github.com/walt1012/pith/actions/runs/100",
   ):
     try:
       validate_manual_acceptance_gate(
@@ -118,7 +119,7 @@ def assert_manual_acceptance_gate_allows_safe_modes() -> None:
   for signing_mode, dry_run, draft, confirmed, evidence in (
     ("ad-hoc", True, False, False, ""),
     ("ad-hoc", False, True, False, ""),
-    ("ad-hoc", False, False, True, "https://github.com/walt1012/pith/actions/runs/100"),
+    ("ad-hoc", False, False, True, "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt"),
     ("developer-id", False, False, False, ""),
   ):
     validate_manual_acceptance_gate(
@@ -293,7 +294,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "Planned final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Manual acceptance confirmed: `false`",
-    "Manual acceptance evidence: not recorded",
+    "Manual acceptance receipt: not recorded",
     "Untrusted ad-hoc prerelease",
     "Open Anyway",
   ):
@@ -521,8 +522,8 @@ def assert_main_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
         exit_code = release_state_main()
       if exit_code == 0:
         raise AssertionError("visible ad-hoc publish without evidence should be rejected")
-      if "manual acceptance evidence" not in stderr.getvalue():
-        raise AssertionError("acceptance evidence rejection should explain the required input")
+      if "manual acceptance receipt" not in stderr.getvalue():
+        raise AssertionError("acceptance receipt rejection should explain the required input")
     finally:
       sys.argv = original_argv
 
@@ -558,7 +559,7 @@ def assert_main_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
         "--manual-acceptance-confirmed",
         "true",
         "--manual-acceptance-evidence",
-        "<manual-acceptance-evidence-url>",
+        "<manual-acceptance-receipt-url>",
         "--release-exists",
         "false",
         "--state-output",
@@ -570,8 +571,8 @@ def assert_main_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
         exit_code = release_state_main()
       if exit_code == 0:
         raise AssertionError("visible ad-hoc publish with placeholder evidence should be rejected")
-      if "real manual acceptance evidence" not in stderr.getvalue():
-        raise AssertionError("placeholder evidence rejection should explain the required input")
+      if "real manual acceptance receipt" not in stderr.getvalue():
+        raise AssertionError("placeholder receipt rejection should explain the required input")
     finally:
       sys.argv = original_argv
 
@@ -607,7 +608,7 @@ def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
         "--manual-acceptance-confirmed",
         "true",
         "--manual-acceptance-evidence",
-        "https://github.com/walt1012/pith/actions/runs/100#manual-acceptance",
+        "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt",
         "--release-exists",
         "false",
         "--state-output",
@@ -643,7 +644,7 @@ def assert_release_next_actions_match_mode() -> None:
   )
   if "visible GitHub Release page" not in visible_actions:
     raise AssertionError("visible publish next actions should inspect the release page")
-  if "recorded manual acceptance evidence" not in visible_actions:
+  if "recorded manual acceptance receipt" not in visible_actions:
     raise AssertionError("visible publish next actions should confirm recorded acceptance")
 
 def main() -> int:
