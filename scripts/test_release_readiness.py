@@ -67,7 +67,9 @@ def assert_ready_dry_run_report() -> None:
     "-f manual_acceptance_evidence='<manual-acceptance-evidence-url>'",
     "release_workflow_run_id=\"$(",
     "gh api repos/:owner/:repo/actions/artifacts --paginate",
-    'select(.name == "release-dry-run-v0.1.0" and .expired == false)',
+    'select(.name == "release-dry-run-v0.1.0"',
+    ".expired == false",
+    f'.workflow_run.head_sha == "{VALID_COMMIT}"',
     'gh run download "$release_workflow_run_id" --name release-dry-run-v0.1.0',
   ):
     if phrase not in report:
@@ -124,7 +126,9 @@ def assert_ready_dry_run_report() -> None:
   lookup_command = str(payload.get("dryRunArtifactLookupCommand", ""))
   for phrase in (
     "gh api repos/:owner/:repo/actions/artifacts --paginate",
-    'select(.name == "release-dry-run-v0.1.0" and .expired == false)',
+    'select(.name == "release-dry-run-v0.1.0"',
+    ".expired == false",
+    f'.workflow_run.head_sha == "{VALID_COMMIT}"',
     "workflow_run.id",
     'test -n "$release_workflow_run_id"',
   ):

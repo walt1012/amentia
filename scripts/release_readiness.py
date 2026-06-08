@@ -342,7 +342,11 @@ def readiness_dry_run_artifact_lookup_command(readiness: ReleaseReadiness) -> st
       "  gh api repos/:owner/:repo/actions/artifacts --paginate \\",
       "    --jq "
       + shell_quote(
-        f'[.artifacts[] | select(.name == "{artifact_name}" and .expired == false)][0].workflow_run.id // ""'
+        "[.artifacts[] | select("
+        f'.name == "{artifact_name}" '
+        "and .expired == false "
+        f'and .workflow_run.head_sha == "{readiness.source_commit}"'
+        ")][0].workflow_run.id // \"\""
       ),
       ')"',
       'test -n "$release_workflow_run_id"',
