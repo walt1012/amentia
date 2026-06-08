@@ -72,7 +72,8 @@ Closed foundations:
 - Connector baseline: plugin registry, local execution gates, credentials,
   retries, memory capture, and Notion as the reference connector.
 - macOS delivery: x86_64 DMG packaging, unsigned install guidance, size budgets,
-  manifests, release copy, package metadata, and packaged smoke proof.
+  manifests, release copy, package metadata, transient DMG retry, and packaged
+  smoke proof.
 - Release automation: change-aware CI lanes, release dry-run, downloaded-asset
   rehearsal, maintainer acceptance checklist, asset contract checks, final
   release validation, machine-readable release evidence, internal evidence

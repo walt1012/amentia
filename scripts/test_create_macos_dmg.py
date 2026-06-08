@@ -11,7 +11,9 @@ from create_macos_dmg import (
   APPLICATIONS_LINK_NAME,
   APP_NAME,
   README_NAME,
+  create_dmg,
   detach_dmg,
+  is_transient_hdiutil_create_error,
   stage_dmg_contents,
   validate_install_readme_text,
 )
@@ -76,11 +78,67 @@ def validate_readme_contract_rejects_stale_guidance() -> None:
   raise AssertionError("DMG README validation should reject stale checksum guidance")
 
 
+def validate_create_retries_transient_hdiutil_error() -> None:
+  calls: list[list[str]] = []
+  sleeps: list[int] = []
+
+  def fake_run(command: list[str]) -> str:
+    calls.append(command)
+    if len(calls) < 3:
+      raise RuntimeError("hdiutil: create failed - Resource busy")
+    return ""
+
+  original_run = create_macos_dmg.run
+  original_sleep = create_macos_dmg.time.sleep
+  try:
+    create_macos_dmg.run = fake_run
+    create_macos_dmg.time.sleep = lambda seconds: sleeps.append(seconds)
+    with tempfile.TemporaryDirectory(prefix="pith-dmg-create-test-") as root:
+      root_path = Path(root)
+      create_dmg(root_path / "staging", root_path / "Pith.dmg", "Pith")
+  finally:
+    create_macos_dmg.run = original_run
+    create_macos_dmg.time.sleep = original_sleep
+
+  require(len(calls) == 3, "transient hdiutil create errors should be retried")
+  require(sleeps == [2, 2], "transient hdiutil create retries should be bounded")
+
+
+def validate_create_does_not_retry_permanent_hdiutil_error() -> None:
+  calls: list[list[str]] = []
+
+  def fake_run(command: list[str]) -> str:
+    calls.append(command)
+    raise RuntimeError("hdiutil: create failed - invalid argument")
+
+  original_run = create_macos_dmg.run
+  try:
+    create_macos_dmg.run = fake_run
+    with tempfile.TemporaryDirectory(prefix="pith-dmg-create-test-") as root:
+      root_path = Path(root)
+      try:
+        create_dmg(root_path / "staging", root_path / "Pith.dmg", "Pith")
+      except RuntimeError:
+        pass
+      else:
+        raise AssertionError("permanent hdiutil create failures should fail")
+  finally:
+    create_macos_dmg.run = original_run
+
+  require(len(calls) == 1, "permanent hdiutil create failures should not retry")
+  require(
+    not is_transient_hdiutil_create_error(RuntimeError("invalid argument")),
+    "invalid hdiutil arguments should not be treated as transient",
+  )
+
+
 def main() -> int:
   validate_install_readme_text(install_guide("v0.1.0", "ad-hoc"))
   validate_install_readme_text(install_guide("ci-0123456789ab", "ad-hoc"))
   validate_detach_force_fallback()
   validate_readme_contract_rejects_stale_guidance()
+  validate_create_retries_transient_hdiutil_error()
+  validate_create_does_not_retry_permanent_hdiutil_error()
   with tempfile.TemporaryDirectory(prefix="pith-dmg-stage-test-") as root:
     root_path = Path(root)
     if not can_create_symlink(root_path):

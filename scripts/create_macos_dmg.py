@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from release_copy_contract import require_install_guide_copy
@@ -16,6 +17,8 @@ APP_NAME = "Pith.app"
 APPLICATIONS_LINK_NAME = "Applications"
 DEFAULT_VOLUME_NAME = "Pith"
 README_NAME = "README-FIRST.txt"
+HDIUTIL_CREATE_ATTEMPTS = 3
+HDIUTIL_CREATE_RETRY_SECONDS = 2
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,24 +117,44 @@ def stage_dmg_contents(app_path: Path, staging_dir: Path, readme_file: Path | No
 
 
 def create_dmg(staging_dir: Path, dmg_path: Path, volume_name: str) -> None:
-  if dmg_path.exists():
-    dmg_path.unlink()
-  run(
-    [
-      "hdiutil",
-      "create",
-      "-volname",
-      volume_name,
-      "-srcfolder",
-      str(staging_dir),
-      "-ov",
-      "-format",
-      "UDZO",
-      "-fs",
-      "HFS+",
-      str(dmg_path),
-    ]
+  command = [
+    "hdiutil",
+    "create",
+    "-volname",
+    volume_name,
+    "-srcfolder",
+    str(staging_dir),
+    "-ov",
+    "-format",
+    "UDZO",
+    "-fs",
+    "HFS+",
+    str(dmg_path),
+  ]
+  last_error: RuntimeError | None = None
+  for attempt in range(1, HDIUTIL_CREATE_ATTEMPTS + 1):
+    if dmg_path.exists():
+      dmg_path.unlink()
+    try:
+      run(command)
+      return
+    except RuntimeError as error:
+      last_error = error
+      if attempt == HDIUTIL_CREATE_ATTEMPTS or not is_transient_hdiutil_create_error(error):
+        raise
+      time.sleep(HDIUTIL_CREATE_RETRY_SECONDS)
+  if last_error is not None:
+    raise last_error
+
+
+def is_transient_hdiutil_create_error(error: RuntimeError) -> bool:
+  message = str(error).lower()
+  transient_terms = (
+    "resource busy",
+    "temporarily unavailable",
+    "device busy",
   )
+  return any(term in message for term in transient_terms)
 
 
 def validate_dmg(
