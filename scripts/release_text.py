@@ -75,8 +75,9 @@ def first_run_path_copy() -> str:
 def checksum_verification_copy(tag: str) -> str:
   _dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(tag)
   return (
-    f"Verify the installer before first launch with `shasum -a 256 -c {checksum_name}`, "
-    f"then open {manifest_name} to confirm platform, signing mode, model delivery mode, "
+    "Keep the DMG, checksum, install guide, and manifest in the same download folder, "
+    f"then verify the installer before first launch with `shasum -a 256 -c {checksum_name}` "
+    f"from that folder. Open {manifest_name} to confirm platform, signing mode, model delivery mode, "
     "app package metadata, smoke package metadata, first-run contract, and "
     f"{PACKAGED_FIRST_RUN_PROOF_PHRASE}."
   )

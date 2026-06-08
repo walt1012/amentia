@@ -90,6 +90,8 @@ Current decisions:
   architectures, or unused runtimes.
 - Public release assets stay limited to DMG, checksum, `README-FIRST.txt`, and
   release manifest.
+- Installer verification copy must keep those four assets in one download
+  folder so checksum validation is obvious for normal users.
 - Manual release dispatch defaults to a dry-run draft prerelease; stable
   visibility must be an explicit later decision.
 - Visible ad-hoc prerelease publishing requires a repository-scoped validated
