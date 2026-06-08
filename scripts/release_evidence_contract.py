@@ -608,22 +608,8 @@ def validate_release_rehearsal_json(data: dict[str, object], *, tag: str) -> Non
   require_exact_string_list(data, "assetNames", release_installer_asset_names(tag))
   require_string_list(data, "firstAppOpenChecks")
   require_string_list(data, "manualPrereleaseChecks")
-  require_string_list_contains(
-    data,
-    "firstAppOpenChecks",
-    ("Web Search", DEFAULT_MODEL_ID),
-  )
-  require_string_list_contains(
-    data,
-    "manualPrereleaseChecks",
-    (
-      "SHA-256 sidecar",
-      "Gatekeeper",
-      DEFAULT_MODEL_ID,
-      "Web Search",
-      "reviewing the diff",
-    ),
-  )
+  validate_first_app_open_checks(data)
+  validate_manual_prerelease_checks(data)
   trust = require_object(data, "trust")
   require_object_string(trust, "mode")
   require_object_string(trust, "gatekeeper")
@@ -653,6 +639,48 @@ def validate_release_rehearsal_json(data: dict[str, object], *, tag: str) -> Non
     raise RuntimeError("Release rehearsal packaged smoke checkCount must be positive.")
   if not isinstance(smoke.get("journey"), list) or not smoke["journey"]:
     raise RuntimeError("Release rehearsal packaged smoke journey must be present.")
+
+
+def validate_first_app_open_checks(data: dict[str, object]) -> None:
+  require_string_list_contains(
+    data,
+    "firstAppOpenChecks",
+    (
+      "Launch Pith",
+      "Gatekeeper",
+      DEFAULT_MODEL_ID,
+      "Open a workspace folder",
+      "Web Search",
+      "sandbox status",
+      "daily-driver next action",
+    ),
+  )
+
+
+def validate_manual_prerelease_checks(data: dict[str, object]) -> None:
+  require_string_list_contains(
+    data,
+    "manualPrereleaseChecks",
+    (
+      "SHA-256 sidecar",
+      "release manifest",
+      "macOS x86_64",
+      "in-app model delivery",
+      "no bundled model weights",
+      "no Pith login",
+      "Gatekeeper",
+      DEFAULT_MODEL_ID,
+      "real workspace folder",
+      "Map Workspace",
+      "Plan Next Step",
+      "Web Search",
+      "reviewing the diff",
+      "Restart Pith",
+      "runtime readiness",
+      "model state",
+      "recent proof recover",
+    ),
+  )
 
 
 def expected_workflow_mode_for_evidence(mode: str) -> str:

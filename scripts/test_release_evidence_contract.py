@@ -348,15 +348,35 @@ def release_rehearsal_payload() -> dict[str, object]:
       "publishGate": "do-not-publish-visible-ad-hoc-until-manual-acceptance-passes",
     },
     "firstAppOpenChecks": [
+      "Launch Pith from Applications after handling Gatekeeper if needed.",
       f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
+      "Open a workspace folder.",
       "Confirm Web Search readiness and sandbox status.",
+      "Use the first app-open action.",
+      "Follow the daily-driver next action shown in the app header and inspector.",
     ],
     "manualPrereleaseChecks": [
       "Verify the downloaded DMG with the SHA-256 sidecar before opening it.",
+      (
+        "Open the release manifest and confirm macOS x86_64, "
+        "in-app model delivery, no bundled model weights, and no Pith login."
+      ),
       "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
       f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
+      (
+        "Open a real workspace folder and confirm the header or inspector "
+        "reports workspace readiness."
+      ),
+      (
+        "Run Map Workspace, Plan Next Step, or a short cowork request "
+        "from the first app-open surface."
+      ),
       "Let the model use Web Search when useful and inspect the source proof in the timeline.",
       "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
+      (
+        "Restart Pith and confirm runtime readiness, selected workspace, "
+        "model state, and recent proof recover."
+      ),
     ],
     "packagedSmokeReceipt": {
       "phrase": "Packaged first-run smoke proof",
@@ -921,6 +941,46 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
         evidence_paths=paths,
       ),
       "reviewing the diff",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    rehearsal_path = root / "release-dry-run-rehearsal.json"
+    stale = release_rehearsal_payload()
+    stale["firstAppOpenChecks"] = [
+      check
+      for check in stale["firstAppOpenChecks"]
+      if "workspace folder" not in check
+    ]
+    rehearsal_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "firstAppOpenChecks",
+    )
+
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "publish-rehearsal")
+    rehearsal_path = root / "release-rehearsal.json"
+    stale = release_rehearsal_payload()
+    stale["manualPrereleaseChecks"] = [
+      check
+      for check in stale["manualPrereleaseChecks"]
+      if "Restart Pith" not in check
+    ]
+    rehearsal_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="publish-rehearsal",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "manualPrereleaseChecks",
     )
 
 
