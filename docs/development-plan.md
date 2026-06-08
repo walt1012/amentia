@@ -117,7 +117,7 @@ Build now:
 - Publish the first ad-hoc prerelease only after manual acceptance passes.
 - Require `manual_acceptance_confirmed=true` before any visible ad-hoc
   prerelease can be published, with `manual_acceptance_evidence` pointing to the
-  validated receipt.
+  validated receipt and the final release notes exposing that receipt.
 - Keep unsigned/ad-hoc copy explicit because Developer ID notarization is paid
   and optional later.
 

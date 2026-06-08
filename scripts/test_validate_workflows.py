@@ -505,7 +505,8 @@ jobs:
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
-            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \\
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
       - name: Upload release rehearsal summary
         if: always() && env.RELEASE_DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
@@ -1233,6 +1234,17 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "allow-untrusted-ad-hoc")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
+        "--missing-manual-acceptance-evidence",
+      ),
+    )
+    assert_issue(issue_messages(root), "manual-acceptance-evidence")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

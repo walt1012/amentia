@@ -202,6 +202,24 @@ def release_state_summary(
 """
 
 
+def release_body(
+  notes: str,
+  *,
+  signing_mode: str,
+  allow_untrusted_ad_hoc: bool,
+  manual_acceptance_evidence: str,
+  state: ReleaseState,
+) -> str:
+  if signing_mode == "developer-id" or state.draft or not allow_untrusted_ad_hoc:
+    return notes
+  receipt = manual_acceptance_evidence.strip()
+  return (
+    notes.rstrip()
+    + "\n\n## Manual Acceptance\n\n"
+    + f"Visible ad-hoc prerelease acceptance receipt: {receipt}\n"
+  )
+
+
 def release_plan_json(
   *,
   tag: str,
@@ -380,7 +398,13 @@ def main() -> int:
     json.dumps(
       {
         "name": args.title,
-        "body": notes,
+        "body": release_body(
+          notes,
+          signing_mode=args.signing_mode,
+          allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+          manual_acceptance_evidence=args.manual_acceptance_evidence,
+          state=state,
+        ),
         "draft": state.draft,
         "prerelease": state.prerelease,
       }

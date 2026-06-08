@@ -583,7 +583,8 @@ jobs:
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
-            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
 
       - name: Upload release rehearsal summary
         if: always() && env.RELEASE_DRY_RUN != 'true'

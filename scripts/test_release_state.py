@@ -15,11 +15,15 @@ from release_state import expected_release_title
 from release_state import plan_release_state
 from release_state import ReleaseState
 from release_state import release_plan_json
+from release_state import release_body
 from release_state import release_next_actions
 from release_state import release_state_summary
 from release_state import validate_manual_acceptance_gate
 from release_state import validate_release_title
 from release_text import release_notes
+
+
+ACCEPTANCE_RECEIPT = "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt"
 
 
 def assert_state(
@@ -351,6 +355,30 @@ def assert_release_plan_json_preserves_release_decision() -> None:
     raise AssertionError("release plan JSON should preserve trust guidance")
 
 
+def assert_release_body_records_visible_ad_hoc_receipt() -> None:
+  notes = release_notes("v0.1.0", "ad-hoc", True, False)
+  body = release_body(
+    notes,
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=True,
+    manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+    state=ReleaseState(draft=False, prerelease=True),
+  )
+  if "## Manual Acceptance" not in body:
+    raise AssertionError("visible ad-hoc release body should include manual acceptance")
+  if ACCEPTANCE_RECEIPT not in body:
+    raise AssertionError("visible ad-hoc release body should include acceptance receipt")
+  draft_body = release_body(
+    notes,
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=True,
+    manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+    state=ReleaseState(draft=True, prerelease=True),
+  )
+  if "## Manual Acceptance" in draft_body:
+    raise AssertionError("draft release body should not expose manual acceptance as published proof")
+
+
 def assert_main_writes_release_summary() -> None:
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -609,7 +637,7 @@ def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
         "--manual-acceptance-confirmed",
         "true",
         "--manual-acceptance-evidence",
-        "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt",
+        ACCEPTANCE_RECEIPT,
         "--release-exists",
         "false",
         "--state-output",
@@ -624,6 +652,9 @@ def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
       sys.argv = original_argv
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("accepted visible ad-hoc publish should stay visible")
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    if ACCEPTANCE_RECEIPT not in state["body"]:
+      raise AssertionError("accepted visible ad-hoc release body should include receipt")
 
 
 def assert_release_next_actions_match_mode() -> None:
@@ -693,6 +724,7 @@ def main() -> int:
   assert_rejects_non_release_tag()
   assert_release_summary_names_visibility_and_trust()
   assert_release_plan_json_preserves_release_decision()
+  assert_release_body_records_visible_ad_hoc_receipt()
   assert_main_writes_release_summary()
   assert_main_rejects_unaccepted_visible_ad_hoc_publish()
   assert_main_rejects_visible_ad_hoc_without_acceptance_evidence()

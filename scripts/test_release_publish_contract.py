@@ -23,6 +23,7 @@ from release_text import release_notes
 
 TAG = "v1.2.3"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+ACCEPTANCE_RECEIPT = "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt"
 
 
 def release_payload(
@@ -33,17 +34,25 @@ def release_payload(
   signing_mode: str = "ad-hoc",
   allow_untrusted_ad_hoc: bool = True,
   assets: list[str] | None = None,
+  acceptance_receipt: str = ACCEPTANCE_RECEIPT,
 ) -> dict:
   asset_names = assets if assets is not None else sorted(expected_installer_asset_names(tag))
+  body = release_notes(
+    tag,
+    signing_mode,
+    allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
+    draft=draft,
+  )
+  if signing_mode != "developer-id" and allow_untrusted_ad_hoc and not draft:
+    body = (
+      body.rstrip()
+      + "\n\n## Manual Acceptance\n\n"
+      + f"Visible ad-hoc prerelease acceptance receipt: {acceptance_receipt}\n"
+    )
   return {
     "tag_name": tag,
     "name": expected_release_title(tag),
-    "body": release_notes(
-      tag,
-      signing_mode,
-      allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
-      draft=draft,
-    ),
+    "body": body,
     "draft": draft,
     "prerelease": prerelease,
     "assets": [
@@ -71,6 +80,7 @@ def expect_failure(payload: dict, expected: str) -> None:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
+      manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
     )
   except Exception as error:
     if expected not in str(error):
@@ -104,6 +114,8 @@ def assert_main_validates_final_release_source_commit() -> None:
         "ad-hoc",
         "--allow-untrusted-ad-hoc",
         "true",
+        "--manual-acceptance-evidence",
+        ACCEPTANCE_RECEIPT,
       ]
       if release_publish_main() != 0:
         raise AssertionError("published release CLI should pass with matching tag commit")
@@ -125,6 +137,8 @@ def assert_main_validates_final_release_source_commit() -> None:
         "ad-hoc",
         "--allow-untrusted-ad-hoc",
         "true",
+        "--manual-acceptance-evidence",
+        ACCEPTANCE_RECEIPT,
       ]
       with redirect_stderr(StringIO()) as stderr:
         exit_code = release_publish_main()
@@ -146,6 +160,7 @@ def main() -> int:
     expected_prerelease=True,
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=True,
+    manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
   )
   validate_published_release(
     release_payload(signing_mode="developer-id", allow_untrusted_ad_hoc=False),
@@ -196,6 +211,7 @@ def main() -> int:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
+      manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
     )
   except RuntimeError as error:
     if "tag must point at the source commit" not in str(error):
@@ -203,6 +219,10 @@ def main() -> int:
   else:
     raise AssertionError("final release validation should reject wrong tag commit")
   expect_failure({**release_payload(), "body": "Install Pith."}, "missing required copy")
+  expect_failure(
+    release_payload(acceptance_receipt=""),
+    "manual acceptance receipt",
+  )
   expect_failure(
     {
       **release_payload(),
@@ -261,6 +281,7 @@ def main() -> int:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
+      manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
     )
 
   assert_main_validates_final_release_source_commit()

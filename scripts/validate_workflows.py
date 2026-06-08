@@ -534,6 +534,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"',
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
     '--allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"',
+    '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
   ):
     if term not in release_block:
       issues.append(
