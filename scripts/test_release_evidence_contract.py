@@ -9,12 +9,17 @@ from tempfile import TemporaryDirectory
 
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
+from release_artifacts import write_checksum_file
+from release_artifacts import write_release_manifest
 from release_evidence_contract import expected_evidence_names
 from release_evidence_contract import validate_release_evidence_set
+from release_text import install_guide as release_install_guide
 
 
 TAG = "v0.1.0"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+WORKFLOW_RUN_ID = "123456789"
+WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
 
 
 def write_evidence_file(path: Path, mode: str = "dry-run") -> None:
@@ -193,12 +198,35 @@ Decision:
 
 
 def write_evidence_set(root: Path, mode: str) -> list[Path]:
+  if mode == "dry-run":
+    write_installer_assets(root)
   paths: list[Path] = []
   for name in expected_evidence_names(mode, TAG):
     path = root / name
-    write_evidence_file(path, mode)
+    if not path.exists():
+      write_evidence_file(path, mode)
     paths.append(path)
   return paths
+
+
+def write_installer_assets(root: Path) -> None:
+  dmg_name, checksum_name, guide_name, manifest_name = release_installer_asset_names(TAG)
+  dmg = root / dmg_name
+  dmg.write_bytes(b"pith release dmg\n")
+  guide = root / guide_name
+  guide.write_text(release_install_guide(TAG, "ad-hoc"), encoding="utf-8")
+  checksum = write_checksum_file(dmg, root / checksum_name)
+  write_release_manifest(
+    tag=TAG,
+    source_commit=SOURCE_COMMIT,
+    signing_mode="ad-hoc",
+    artifact_path=dmg,
+    checksum_path=checksum,
+    install_guide_path=guide,
+    output_path=root / manifest_name,
+    workflow_run_id=WORKFLOW_RUN_ID,
+    workflow_run_url=WORKFLOW_RUN_URL,
+  )
 
 
 def expect_failure(action, expected: str) -> None:
@@ -286,6 +314,24 @@ def assert_rejects_missing_extra_empty_and_invalid_json() -> None:
         evidence_paths=paths,
       ),
       "JSON must be an object",
+    )
+
+
+def assert_rejects_invalid_dry_run_installer_asset_evidence() -> None:
+  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    root = Path(directory)
+    paths = write_evidence_set(root, "dry-run")
+    (root / f"Pith-{TAG}-macos-x86_64.dmg.sha256").write_text(
+      "0" * 64 + f"  Pith-{TAG}-macos-x86_64.dmg\n",
+      encoding="utf-8",
+    )
+    expect_failure(
+      lambda: validate_release_evidence_set(
+        mode="dry-run",
+        tag=TAG,
+        evidence_paths=paths,
+      ),
+      "Release checksum does not match artifact",
     )
 
 
@@ -491,6 +537,7 @@ def main() -> int:
   assert_dry_run_evidence_accepts_exact_set()
   assert_publish_rehearsal_accepts_exact_set()
   assert_rejects_missing_extra_empty_and_invalid_json()
+  assert_rejects_invalid_dry_run_installer_asset_evidence()
   assert_rejects_stale_structured_json()
   assert_rejects_stale_manual_acceptance_markdown()
   assert_rejects_stale_release_rehearsal_evidence()

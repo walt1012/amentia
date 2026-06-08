@@ -82,9 +82,9 @@ Closed foundations:
   source-commit CI lookup, workflow policy tests, shared release input guards,
   evidence-before-visibility ordering, source-commit and successful-run matched dry-run artifact lookup and verification,
   final Release source-commit validation and workflow policy coverage,
-  structured readiness, release-plan, rehearsal, and manual-acceptance evidence
-  validation with tag, mode, cross-file, asset, and user-path consistency, and
-  guarded publish commands.
+  structured readiness, release-plan, rehearsal, dry-run installer asset, and
+  manual-acceptance evidence validation with tag, mode, cross-file, asset, and
+  user-path consistency, and guarded publish commands.
 
 Current decisions:
 

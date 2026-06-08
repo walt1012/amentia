@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from installer_artifact_contract import validate_installer_asset_set
 from release_artifacts import release_installer_asset_names
 from package_contract import DEFAULT_MODEL_ID
 from package_contract import RELEASE_SIGNING_MODES
@@ -178,6 +179,7 @@ def validate_release_evidence_set(
 
   for path in evidence_by_name.values():
     validate_evidence_content(path, mode=mode, tag=tag)
+  validate_release_asset_evidence(mode, tag, evidence_by_name)
   validate_release_json_consistency(evidence_by_name)
 
 
@@ -226,6 +228,19 @@ def validate_required_markdown_terms(name: str, text: str) -> None:
       f"Release evidence Markdown is missing required terms for {name}: "
       + ", ".join(missing)
     )
+
+
+def validate_release_asset_evidence(
+  mode: str,
+  tag: str,
+  evidence_by_name: dict[str, Path],
+) -> None:
+  if mode != "dry-run":
+    return
+  validate_installer_asset_set(
+    tag,
+    [evidence_by_name[name] for name in release_installer_asset_names(tag)],
+  )
 
 
 def validate_release_json_consistency(evidence_by_name: dict[str, Path]) -> None:
