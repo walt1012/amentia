@@ -249,7 +249,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 ```
 
 ## Post-Acceptance Publish Command
-Use only after the manual acceptance checklist passes.
+Use only after the generated manual acceptance receipt is filled and validated.
 
 ```bash
 {post_acceptance_command}
@@ -302,8 +302,8 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     f"Use the dry-run artifact lookup command to find the release-dry-run-{readiness.tag} workflow run.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
     "Run the dry-run evidence validation command before manual acceptance.",
-    "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance checklist.",
-    "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
+    "Verify the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance receipt template.",
+    "Complete fresh-Mac manual acceptance and validate the receipt before any visible ad-hoc prerelease.",
     "Use the post-acceptance publish command only after a validated manual acceptance receipt is recorded.",
   ]
 

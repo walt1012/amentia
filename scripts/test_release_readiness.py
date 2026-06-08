@@ -61,7 +61,7 @@ def assert_ready_dry_run_report() -> None:
     "--mode dry-run",
     "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
     "## Post-Acceptance Publish Command",
-    "Use only after the manual acceptance checklist passes.",
+    "Use only after the generated manual acceptance receipt is filled and validated.",
     "-f dry_run=false",
     "-f draft=false",
     "-f publish_untrusted_ad_hoc=true",
@@ -332,6 +332,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "release-dry-run-v0.1.0",
     "dry-run evidence validation command",
     "fresh-Mac manual acceptance",
+    "validate the receipt",
     "post-acceptance publish command",
   ):
     if phrase not in checklist:

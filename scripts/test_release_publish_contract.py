@@ -223,6 +223,25 @@ def main() -> int:
     release_payload(acceptance_receipt=""),
     "manual acceptance receipt",
   )
+  try:
+    validate_published_release(
+      release_payload(
+        acceptance_receipt="https://example.com/manual-acceptance-receipt"
+      ),
+      tag=TAG,
+      source_commit=SOURCE_COMMIT,
+      tag_commit=SOURCE_COMMIT,
+      expected_draft=False,
+      expected_prerelease=True,
+      signing_mode="ad-hoc",
+      allow_untrusted_ad_hoc=True,
+      manual_acceptance_evidence="https://example.com/manual-acceptance-receipt",
+    )
+  except Exception as error:
+    if "repository-scoped" not in str(error):
+      raise
+  else:
+    raise AssertionError("final release validation should reject external receipt URLs")
   expect_failure(
     {
       **release_payload(),

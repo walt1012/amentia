@@ -22,7 +22,7 @@ Current scripts:
 - `release_copy_contract.py`: centralizes release notes and installer guide copy requirements plus shared copy validators used by release text generation, release sidecar validation, and DMG staging validation.
 - `release_evidence_contract.py`: validates internal dry-run and publish-rehearsal evidence artifacts, including structured readiness state, pre-dispatch checklist gates, tag/CI lookup, guarded publish command content, release-plan action gates, first-install rehearsal gates, release-rehearsal JSON, rehearsal Markdown, manual acceptance checklist terms, dry-run installer asset integrity, cross-file release consistency, and asset-contract consistency, before workflow upload without adding extra public release assets.
 - `release_identity.py`: centralizes strict `vX.Y.Z` public release tag and three-part product version rules.
-- `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, remote tag source commit, draft/prerelease flags, signing-mode-specific release copy, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
+- `release_publish_contract.py`: validates existing GitHub Release assets before upload and the final GitHub Release state after publish by checking tag, title, remote tag source commit, draft/prerelease flags, signing-mode-specific release copy, visible ad-hoc receipt disclosure, exact user-facing installer assets, non-empty uploads, and tag-scoped download URLs.
 - `release_readiness.py`: prepares maintainer-facing Markdown and machine-readable JSON readiness reports before dispatching the release workflow, including tag preparation, lightweight or annotated remote tag verification, exact source-commit CI lookup, the safe dry-run-first command, source-commit and successful-run matched dry-run artifact lookup and verification, guarded post-acceptance publish command, release-candidate checklist, and expected dry-run evidence commands.
 - `release_rehearsal_contract.py`: validates a downloaded release asset directory against the installer contract, daily-driver readiness contract, first-run manifest contract, app package metadata, and packaged smoke proof, then can write compact Markdown and JSON rehearsal evidence with trust, Gatekeeper, smoke journey, release-decision gate, manual prerelease acceptance, metadata-match, and first app-open checks.
 - `test_first_app_open_contract.py`: checks that Swift first-open copy stays aligned with the shared release first app-open copy contract.
@@ -65,14 +65,15 @@ Public GitHub Releases should upload the notarized
 manifest. If Developer ID credentials are unavailable, the release workflow
 defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
 an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
-path, but only after the generated manual acceptance checklist passes and
-the structured manual acceptance JSON receipt validates. The publish dispatch
+path, but only after the generated manual acceptance receipt is filled and
+validated. The publish dispatch
 still requires `manual_acceptance_confirmed=true` and
-`manual_acceptance_evidence` to point at that receipt. It must not be promoted
+`manual_acceptance_evidence` to point at that repository-scoped receipt, and
+the final release notes must expose the same receipt. It must not be promoted
 as a normal trusted installer. The release workflow can
 also run as a dry-run: it builds, validates, and rehearses the same DMG,
 checksum, root install guide, manifest, release plan, rehearsal summary, and
-manual acceptance checklist without creating or updating a GitHub Release.
+manual acceptance receipt template without creating or updating a GitHub Release.
 Rehearsal summaries record that manual acceptance is still required before any
 visible ad-hoc prerelease. The release state helper rejects
 non-version tags, mismatched release titles, and accidental ad-hoc updates to an

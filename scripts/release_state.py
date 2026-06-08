@@ -101,7 +101,7 @@ def validate_manual_acceptance_gate(
   if not manual_acceptance_confirmed:
     raise ValueError(
       "Visible ad-hoc prereleases require manual_acceptance_confirmed=true. "
-      "Run the generated manual acceptance checklist on a fresh Mac before publishing."
+      "Generate and validate the manual acceptance receipt on a fresh Mac before publishing."
     )
   if not manual_acceptance_evidence.strip():
     raise ValueError(

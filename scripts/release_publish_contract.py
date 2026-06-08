@@ -15,6 +15,7 @@ from release_identity import validate_public_release_tag
 from package_contract import RELEASE_SIGNING_MODES
 from release_state import expected_release_title
 from release_state import parse_bool
+from release_state import validate_manual_acceptance_evidence as validate_manual_acceptance_receipt_url
 from release_text import validate_release_notes
 
 
@@ -105,6 +106,7 @@ def validate_release_body(
       raise RuntimeError(
         "Published visible ad-hoc release must include the manual acceptance receipt URL"
       )
+    validate_manual_acceptance_receipt_url(manual_acceptance_evidence)
     required_terms = (
       "## Manual Acceptance",
       "Visible ad-hoc prerelease acceptance receipt:",
