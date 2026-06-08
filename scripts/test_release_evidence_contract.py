@@ -433,6 +433,7 @@ Decision:
 ## Evidence To Record
 - Approval and diff receipt inspected.
 - Restart recovery result.
+- Fill a structured manual acceptance JSON receipt and validate it with `python3 scripts/manual_acceptance_contract.py --tag {TAG} --evidence <manual-acceptance.json>`.
 """
 
 

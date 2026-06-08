@@ -15,6 +15,7 @@ Current scripts:
 - `create_macos_dmg.py`: creates and validates the user-facing macOS DMG installer from a packaged `Pith.app`, including bounded transient `hdiutil create` retry, the root install guide, checksum verification copy, mounted-DMG smoke launch, and optional first-run receipt output.
 - `installer_artifact_contract.py`: validates the exact installer asset set before CI artifact upload, GitHub Release publish, or downloaded-release rehearsal so users only receive a matching DMG, checksum, install guide, and manifest; downloaded asset directories reject extra entries unless an internal CI build opts in.
 - `macos_llama_backend.py`: stages and validates a self-contained llama.cpp backend for the packaged macOS app.
+- `manual_acceptance_contract.py`: writes and validates the structured fresh-Mac manual acceptance receipt required before a visible ad-hoc prerelease.
 - `package_contract.py`: centralizes the stable macOS package contract shared by packaging, release manifests, distribution validation, packaged smoke checks, signing-mode policy, locked size-budget validation, and direct `PithPackage.json` validation in CI/release workflows.
 - `package_macos_app.py`: builds and validates the x86_64 macOS app bundle and optional zip; CI can pass prebuilt app and runtime executables for faster installer packaging without creating extra user-facing archives, and records schema-versioned package metadata including daily-driver readiness provenance and package size budgets in `PithPackage.json`.
 - `release_artifacts.py`: creates and validates user-facing release sidecars such as basename-only SHA-256 checksum files and source-commit release manifests with DMG, checksum, install-guide hashes, signing trust and Gatekeeper guidance, schema-versioned app package metadata, daily-driver readiness provenance, packaged first-run smoke receipt proof, release workflow proof, and tag-locked names.
@@ -33,6 +34,7 @@ Current scripts:
 - `test_create_macos_dmg.py`: checks DMG staging behavior that does not require macOS.
 - `test_ci_changes.py`: checks CI change-lane classification rules.
 - `test_installer_artifact_contract.py`: checks exact CI and release installer asset sets.
+- `test_manual_acceptance_contract.py`: checks manual acceptance receipt templates and required fresh-install evidence.
 - `test_package_macos_app.py`: checks packaging helper behavior that does not require macOS.
 - `test_package_contract.py`: checks the shared package contract constants, size budgets, and bundled-model guards.
 - `test_notion_connector_contract.py`: checks bundled Notion connector MCP handoff, retry, and follow-up metadata.
@@ -64,8 +66,10 @@ manifest. If Developer ID credentials are unavailable, the release workflow
 defaults to a draft ad-hoc DMG. A maintainer may explicitly publish that DMG as
 an untrusted prerelease for users who accept the macOS Gatekeeper manual approval
 path, but only after the generated manual acceptance checklist passes and
-`manual_acceptance_confirmed=true` and `manual_acceptance_evidence` are set. It
-must not be promoted as a normal trusted installer. The release workflow can
+the structured manual acceptance JSON receipt validates. The publish dispatch
+still requires `manual_acceptance_confirmed=true` and
+`manual_acceptance_evidence` to be set. It must not be promoted as a normal
+trusted installer. The release workflow can
 also run as a dry-run: it builds, validates, and rehearses the same DMG,
 checksum, root install guide, manifest, release plan, rehearsal summary, and
 manual acceptance checklist without creating or updating a GitHub Release.

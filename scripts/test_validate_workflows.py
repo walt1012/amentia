@@ -80,6 +80,8 @@ jobs:
         run: python3 scripts/test_release_evidence_contract.py
       - name: Test installer artifact contract
         run: python3 scripts/test_installer_artifact_contract.py
+      - name: Test manual acceptance contract
+        run: python3 scripts/test_manual_acceptance_contract.py
       - name: Test release artifact helper
         run: python3 scripts/test_release_artifacts.py
       - name: Test release text helper

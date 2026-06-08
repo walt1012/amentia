@@ -128,6 +128,7 @@ REQUIRED_MANUAL_ACCEPTANCE_TERMS = (
   "Web Search",
   "Approval and diff receipt",
   "Restart recovery",
+  "structured manual acceptance JSON receipt",
 )
 REQUIRED_MARKDOWN_TERMS_BY_NAME = {
   "release-dry-run-rehearsal.md": REQUIRED_REHEARSAL_MARKDOWN_TERMS,
