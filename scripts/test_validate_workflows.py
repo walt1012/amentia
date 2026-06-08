@@ -897,7 +897,7 @@ def main() -> int:
       root,
       release=VALID_RELEASE.replace(
         "HTTPS URL for the validated manual acceptance receipt",
-        "Checklist artifact, issue, or notes URL",
+        "Acceptance artifact, issue, or notes URL",
       ),
     )
     assert_issue(issue_messages(root), "manual_acceptance_evidence must include HTTPS URL")

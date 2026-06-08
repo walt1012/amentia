@@ -109,7 +109,7 @@ def pre_dispatch_checklist() -> list[str]:
     "Run the dry-run evidence validation command before manual acceptance.",
     (
       "Verify the DMG checksum, release manifest, release plan, "
-      "rehearsal summary, and manual acceptance checklist."
+      "rehearsal summary, and manual acceptance receipt template."
     ),
     "Complete fresh-Mac manual acceptance before any visible ad-hoc prerelease.",
     (
