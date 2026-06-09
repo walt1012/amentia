@@ -116,13 +116,15 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "workspace-notes": {"command:workspace.capture-note"},
 }
 REQUIRED_APP_COPY_SNIPPETS = (
-  "Recovery: launch the local engine",
+  "Launch the local engine to restore model choices",
   "paused downloads",
-  "selected model state are read from local storage",
+  "selected model choices remain local",
   "to keep resume data",
   "cancel to clear the partial file",
   "from saved resume data",
-  "repair setup info if readiness still fails",
+  "Refresh local model setup if readiness still fails",
+  "Download Local Model",
+  "Repair Model Setup",
   "Open Anyway",
   "Control-click Pith.app",
   "no Pith account required",

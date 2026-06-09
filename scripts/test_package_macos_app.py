@@ -234,13 +234,15 @@ def main() -> int:
     executable.write_text(
       "\n".join(
         [
-          "Recovery: launch the local engine",
+          "Launch the local engine to restore model choices",
           "paused downloads",
-          "selected model state are read from local storage",
+          "selected model choices remain local",
           "to keep resume data",
           "cancel to clear the partial file",
           "from saved resume data",
-          "repair setup info if readiness still fails",
+          "Refresh local model setup if readiness still fails",
+          "Download Local Model",
+          "Repair Model Setup",
           "Open Anyway",
           "Control-click Pith.app",
           "no Pith account required",
@@ -251,7 +253,7 @@ def main() -> int:
       encoding="utf-8",
     )
     assert_packaged_app_copy_is_present(root_path / "Pith.app")
-    executable.write_text("Recovery: launch the local engine\n", encoding="utf-8")
+    executable.write_text("Launch the local engine to restore model choices\n", encoding="utf-8")
     assert_raises(
       lambda: assert_packaged_app_copy_is_present(root_path / "Pith.app"),
       "missing packaged recovery copy should fail package validation",
