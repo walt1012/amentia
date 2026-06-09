@@ -97,11 +97,11 @@ enum SetupProgressPresenter {
     case "Select":
       return "Use Model"
     case "Repair":
-      return "Repair Engine"
+      return "Repair Model"
     case "Choose":
       return "Choose Model"
     default:
-      return "Download Engine"
+      return "Download Model"
     }
   }
 }

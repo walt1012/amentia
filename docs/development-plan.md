@@ -131,6 +131,9 @@ Build now:
 - Keep first-use local engine setup plain and confidence-building: default
   model choice first, repair language instead of metadata language, and model
   file details only behind advanced disclosure.
+- Keep local model setup language user-facing: download, verify, use, pause,
+  continue, cancel, and repair model setup; reserve paths and package details
+  for Advanced.
 - Keep workspace context and first prompt surfaces cowork-first: search should
   feel like context gathering, and starter prompts should name user goals rather
   than implementation mechanics.

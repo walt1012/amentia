@@ -59,7 +59,7 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(pausedModel: selectedModel, selectedModel: selectedModel)
     )
 
-    XCTAssertTrue(summary.contains("continue LFM2.5-350M Q4_K_M"))
+    XCTAssertTrue(summary.contains("Continue LFM2.5-350M Q4_K_M"))
     XCTAssertTrue(summary.contains("cancel to remove the partial file"))
   }
 
@@ -74,8 +74,34 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(selectedModel: selectedModel)
     )
 
-    XCTAssertTrue(summary.contains("use Granite 4.0-H-350M Q4_K_M"))
-    XCTAssertTrue(summary.contains("repair setup info"))
+    XCTAssertTrue(summary.contains("Use Granite 4.0-H-350M Q4_K_M"))
+    XCTAssertTrue(summary.contains("Refresh local model setup"))
+    XCTAssertFalse(summary.contains("setup info"))
+  }
+
+  func testSetupGuidanceNamesModelDownloadInsteadOfEngineDownload() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let guidance = LocalModelOperationPresenter.setupGuidance(
+      operationSnapshot(selectedModel: selectedModel)
+    )
+
+    XCTAssertEqual(guidance.title, "Download Local Model")
+    XCTAssertTrue(guidance.detail.contains("Size"))
+    XCTAssertFalse(guidance.title.contains("Engine"))
+    XCTAssertFalse(guidance.detail.contains("|"))
+  }
+
+  func testRepairGuidanceAvoidsInternalSetupInfoLanguage() {
+    let guidance = LocalModelOperationPresenter.setupGuidance(operationSnapshot())
+
+    XCTAssertEqual(guidance.title, "Repair Model Setup")
+    XCTAssertTrue(guidance.summary.contains("setup is refreshed"))
+    XCTAssertFalse(guidance.detail.contains("setup info"))
   }
 
   func testRecoverySummaryExplainsRuntimeRelaunch() {
@@ -83,7 +109,7 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(runtimeState: .failed)
     )
 
-    XCTAssertTrue(summary.contains("relaunch the local engine"))
+    XCTAssertTrue(summary.contains("Relaunch the local engine"))
     XCTAssertTrue(summary.contains("selected model choices remain local"))
   }
 

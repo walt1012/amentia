@@ -101,7 +101,7 @@ enum LocalModelActionPlanner {
     case .blockedDownload:
       return "Download Blocked"
     case .bootstrapModelPackMetadata:
-      return "Repair Engine"
+      return "Repair Model"
     }
   }
 

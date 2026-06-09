@@ -53,7 +53,7 @@ struct LocalModelPanel: View {
         }
       }
 
-      DisclosureGroup("Choose Engine", isExpanded: $modelChooserExpanded) {
+      DisclosureGroup("Choose Model", isExpanded: $modelChooserExpanded) {
         modelManager
       }
 
@@ -72,7 +72,7 @@ struct LocalModelPanel: View {
           .font(.caption2)
           .foregroundColor(.secondary)
         Spacer()
-        Button("Reset Engine") {
+        Button("Reset Model") {
           viewModel.resetActiveLocalModel()
         }
         .buttonStyle(.bordered)
@@ -194,7 +194,7 @@ private struct ModelTroubleshootingPanel: View {
         .buttonStyle(.bordered)
         .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
-        Button("Show Engine Folder") {
+        Button("Show Helper Folder") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)

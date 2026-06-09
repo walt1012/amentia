@@ -123,6 +123,28 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(detail, "Next: Send Prompt")
   }
 
+  func testSetupProgressNamesModelDownloadForFirstUse() {
+    let detail = SetupProgressPresenter.detail(
+      setupProgressSnapshot(
+        isLocalModelReady: false,
+        modelReadinessDetail: "Download"
+      )
+    )
+
+    XCTAssertEqual(detail, "Next: Download Model")
+  }
+
+  func testSetupProgressNamesModelRepairForFirstUse() {
+    let detail = SetupProgressPresenter.detail(
+      setupProgressSnapshot(
+        isLocalModelReady: false,
+        modelReadinessDetail: "Repair"
+      )
+    )
+
+    XCTAssertEqual(detail, "Next: Repair Model")
+  }
+
   func testReadinessStripStaysVisibleForToolSetup() {
     XCTAssertTrue(
       RuntimeReadinessStripPresenter.shouldShow(
@@ -387,21 +409,23 @@ final class CoworkFirstPresentationTests: XCTestCase {
   }
 
   private func setupProgressSnapshot(
-    isWaitingForFirstMessage: Bool,
-    hasDraft: Bool
+    isWaitingForFirstMessage: Bool = true,
+    hasDraft: Bool = false,
+    isLocalModelReady: Bool = true,
+    modelReadinessDetail: String = "Ready"
   ) -> SetupProgressSnapshot {
     SetupProgressSnapshot(
       readyStepCount: SetupFlowState.stepCount - 1,
       stepCount: SetupFlowState.stepCount,
       runtimeState: .ready,
       showsRuntimeActivity: false,
-      isLocalModelReady: true,
+      isLocalModelReady: isLocalModelReady,
       hasWorkspace: true,
       hasRuntimeThreadSelection: true,
       hasActiveTurn: false,
       isWaitingForFirstMessage: isWaitingForFirstMessage,
       hasDraft: hasDraft,
-      modelReadinessDetail: "Ready"
+      modelReadinessDetail: modelReadinessDetail
     )
   }
 

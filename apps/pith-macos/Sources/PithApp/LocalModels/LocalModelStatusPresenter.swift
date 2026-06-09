@@ -31,7 +31,7 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Model needs reselection"
+      return "Choose a verified model"
     }
 
     switch modelHealth.status {
@@ -64,7 +64,7 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Choose a verified model from Pith's curated list before running. Removed or external model selections are not treated as first-use ready."
+      return "Choose a verified model from Pith's curated list before running. Removed or external model selections need to be picked again."
     }
 
     return modelHealth.detail
@@ -72,7 +72,7 @@ enum LocalModelStatusPresenter {
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Local engine source unavailable."
+      return "Model source unavailable."
     }
 
     return "Source: \(modelHealth.source)"
@@ -80,7 +80,7 @@ enum LocalModelStatusPresenter {
 
   static func metricsSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Metrics: unavailable"
+      return "Model details unavailable."
     }
 
     let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
@@ -94,7 +94,7 @@ enum LocalModelStatusPresenter {
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Local engine readiness unavailable."
+      return "Model readiness unavailable."
     }
 
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"
@@ -107,7 +107,7 @@ enum LocalModelStatusPresenter {
 
   static func installHintSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Launch Pith to inspect local engine setup."
+      return "Launch Pith to inspect local model setup."
     }
 
     return modelHealth.metrics["installHint"] ?? "Setup hint unavailable."
@@ -115,7 +115,7 @@ enum LocalModelStatusPresenter {
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard snapshot.modelHealth != nil else {
-      return "Local folders are unavailable until Pith finishes checking setup."
+      return "Local folders appear after Pith finishes checking setup."
     }
 
     return "Use the folder buttons below if you need to inspect local model files."
@@ -123,7 +123,7 @@ enum LocalModelStatusPresenter {
 
   static func artifactPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard snapshot.modelHealth != nil else {
-      return "No local engine files are active yet."
+      return "No local model is active yet."
     }
 
     return "Pith is using the selected verified local model."
