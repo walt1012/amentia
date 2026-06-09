@@ -665,7 +665,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       workspaceRoot: "/tmp/Pith Workspace"
     )
 
-    XCTAssertEqual(action?.title, "Reveal Source File")
+    XCTAssertEqual(action?.title, "Show Source File")
     XCTAssertEqual(action?.copyTitle, "Copy File Path")
     XCTAssertEqual(action?.url.path, "/tmp/Pith Workspace/docs/guide.md")
     XCTAssertEqual(action?.copyValue, "/tmp/Pith Workspace/docs/guide.md")
