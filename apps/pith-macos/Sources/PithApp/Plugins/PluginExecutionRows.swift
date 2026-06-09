@@ -21,7 +21,7 @@ struct PluginCommandRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(command.title)
             .font(.caption.weight(.semibold))
-          Text("\(command.pluginDisplayName) | \(command.pluginID)")
+          Text(command.pluginDisplayName)
             .font(.caption2)
             .foregroundColor(.secondary)
         }
@@ -60,30 +60,30 @@ struct PluginCommandRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
 
-      Text("Execution: \(executionLabel)")
+      Text("Runs: \(executionLabel)")
         .font(.caption2)
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
 
-      Text("Run State: \(runStateLabel)")
+      Text("State: \(runStateLabel)")
         .font(.caption2)
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
 
-      Text("Turn Route: \(command.explicitTurnRoute)")
+      Text("Route: \(command.explicitTurnRoute)")
         .font(.caption2)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
       if let runDisabledReason {
-        Text("Run blocker: \(runDisabledReason)")
+        Text("Blocked: \(runDisabledReason)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)
       }
 
       if let repairHint = command.runRepairHint {
-        Text("Repair: \(repairHint)")
+        Text("Fix: \(repairHint)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -127,13 +127,13 @@ struct PluginCommandRow: View {
       connectorRows
 
       if !command.permissions.isEmpty {
-        Text("Permissions: \(command.permissions.joined(separator: ", "))")
+        Text("Needs: \(command.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(tone: command.runStatus == "ready" ? .neutral : .warning)
   }
 
   @ViewBuilder
@@ -149,7 +149,7 @@ struct PluginCommandRow: View {
           Spacer()
 
           if !connector.enabled {
-            Button("Enable Plugin") {
+            Button("Enable") {
               onEnablePlugin(connector.pluginID)
             }
             .font(.caption2)
@@ -238,8 +238,8 @@ struct PluginCommandRow: View {
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
     let secret = connector.credentialSecretPresent ? "env-bound" : "no secret"
-    return "Connector: \(connector.displayName) | \(connector.status) "
-      + "| auth: \(connector.authStatus) | \(secret)"
+    return "Connection: \(connector.displayName) | \(connector.status) "
+      + "| \(displayConnectionStatus(connector.authStatus)) | \(secret)"
   }
 
   private var missingConnectorIds: [String] {
@@ -257,6 +257,17 @@ struct PluginCommandRow: View {
     default:
       return .secondary
     }
+  }
+}
+
+private func displayConnectionStatus(_ status: String) -> String {
+  switch status {
+  case "ready":
+    return "ready"
+  case "needsAuth":
+    return "needs sign in"
+  default:
+    return status
   }
 }
 
@@ -312,19 +323,20 @@ struct PluginHookRow: View {
       }
 
       if let repairHint = hook.runRepairHint {
-        Text("Repair: \(repairHint)")
+        Text("Fix: \(repairHint)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
 
       if !hook.permissions.isEmpty {
-        Text("Permissions: \(hook.permissions.joined(separator: ", "))")
+        Text("Needs: \(hook.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(tone: hook.status == "ready" ? .neutral : .warning)
   }
+
 }

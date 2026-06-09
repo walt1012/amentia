@@ -17,7 +17,7 @@ struct InspectorPane: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Inspector")
+        Text("Details")
           .font(.title3.weight(.semibold))
 
         InspectorSessionCard(
@@ -27,11 +27,11 @@ struct InspectorPane: View {
           tone: viewModel.runtimeStatusTone()
         )
 
-        DisclosureGroup("Workspace Search", isExpanded: $workspaceExpanded) {
+        DisclosureGroup("Search Workspace", isExpanded: $workspaceExpanded) {
           WorkspaceSearchPanel(viewModel: viewModel)
         }
 
-        DisclosureGroup("Local Model", isExpanded: $localModelExpanded) {
+        DisclosureGroup("Local Engine", isExpanded: $localModelExpanded) {
           LocalModelPanel(viewModel: viewModel)
         }
 
@@ -51,7 +51,7 @@ struct InspectorPane: View {
               PluginManagerPanel(viewModel: viewModel)
             }
 
-            DisclosureGroup("Session", isExpanded: $threadExpanded) {
+            DisclosureGroup("Conversation", isExpanded: $threadExpanded) {
               VStack(alignment: .leading, spacing: 8) {
                 Text(viewModel.selectedThreadTitle())
                   .font(.headline)
@@ -97,7 +97,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var diffDetailSection: some View {
     if let diffSummary = viewModel.selectedDiffSummary() {
-      GroupBox("Diff Detail") {
+      GroupBox("Change Detail") {
         DiffDetailView(summary: diffSummary, lines: viewModel.selectedDiffLines())
       }
     }
@@ -107,7 +107,7 @@ struct InspectorPane: View {
   private var selectedContextSection: some View {
     let sections = viewModel.selectedEntryContextReceiptSections()
     if !sections.isEmpty {
-      DisclosureGroup("Context Used", isExpanded: $selectedContextExpanded) {
+      DisclosureGroup("Context", isExpanded: $selectedContextExpanded) {
         VStack(alignment: .leading, spacing: 10) {
           ForEach(sections) { section in
             VStack(alignment: .leading, spacing: 4) {

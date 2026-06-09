@@ -295,10 +295,10 @@ enum TimelineInspectorPresenter {
       lines.append("Input: \(input)")
     }
     if let blocker = entry.attributes["runBlocker"] {
-      lines.append("Run blocker: \(blocker)")
+      lines.append("Blocked: \(blocker)")
     }
     if let repairHint = entry.attributes["runRepairHint"] {
-      lines.append("Run repair: \(repairHint)")
+      lines.append("Fix: \(repairHint)")
     }
   }
 

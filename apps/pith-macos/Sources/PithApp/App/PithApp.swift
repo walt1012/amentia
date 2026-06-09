@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 @main
 struct PithApp: App {
@@ -51,7 +51,7 @@ struct PithApp: App {
           .disabled(!viewModel.canRunSetupCalloutSecondaryAction())
         }
 
-        Button("Install Plugin") {
+        Button("Add Local Connector") {
           viewModel.installPlugin()
         }
         .keyboardShortcut("i", modifiers: [.command, .shift])

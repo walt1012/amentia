@@ -72,7 +72,7 @@ enum TimelineExternalActionPresenter {
     }
 
     let isDiff = attributes["tool"] == "generate_diff" || attributes["toolName"] == "generate_diff"
-    let title = isDiff ? "Reveal Changed File" : "Reveal Source File"
+    let title = isDiff ? "Show Changed File" : "Show Source File"
     return TimelineExternalActionSummary(
       title: title,
       copyTitle: "Copy File Path",

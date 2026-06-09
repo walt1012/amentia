@@ -24,7 +24,7 @@ struct PluginPermissionRow: View {
       }
 
       if plugin.permissions.isEmpty {
-        Text("No extra runtime permissions declared.")
+        Text("No extra local permissions requested.")
           .font(.caption2)
           .foregroundColor(.secondary)
       } else {
@@ -34,7 +34,7 @@ struct PluginPermissionRow: View {
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel()
   }
 }
 
@@ -53,7 +53,7 @@ struct InvalidPluginRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(plugin.displayName)
             .font(.caption.weight(.semibold))
-          Text("Configuration file: \(plugin.manifestPath)")
+          Text("Setup file: \(plugin.manifestPath)")
             .font(.caption2)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
@@ -73,7 +73,7 @@ struct InvalidPluginRow: View {
         .disabled(!canRefresh)
 
         if plugin.provenance == "local" {
-          Button("Remove Local Plugin") {
+          Button("Remove") {
             onRemove()
           }
           .buttonStyle(.bordered)
@@ -81,13 +81,13 @@ struct InvalidPluginRow: View {
         }
       }
 
-      Text(plugin.validationError ?? "Plugin setup did not pass validation.")
+      Text(plugin.validationError ?? "Connector setup did not pass validation.")
         .font(.caption2)
         .foregroundColor(.orange)
         .textSelection(.enabled)
 
       if let validationHint = plugin.validationHint {
-        Text("Repair: \(validationHint)")
+        Text("Fix: \(validationHint)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -100,6 +100,6 @@ struct InvalidPluginRow: View {
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(tone: .warning)
   }
 }

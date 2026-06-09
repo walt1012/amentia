@@ -28,16 +28,16 @@ struct PluginManagerPanel: View {
         .font(.caption2)
         .disabled(!viewModel.canRefreshPlugins())
 
-        Button("Install Local Plugin") {
+        Button("Add Local Connector") {
           viewModel.installPlugin()
         }
         .buttonStyle(.bordered)
         .disabled(!viewModel.canInstallPlugin())
       }
 
-      Picker("Surface", selection: $viewModel.pluginManagerSection) {
+      Picker("View", selection: $viewModel.pluginManagerSection) {
         ForEach(PluginManagerSection.allCases) { section in
-          Text(section.rawValue)
+          Text(section.title)
             .tag(section)
         }
       }

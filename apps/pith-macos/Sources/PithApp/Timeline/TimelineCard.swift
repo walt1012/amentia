@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 struct TimelineCard: View {
@@ -124,7 +123,7 @@ struct TimelineCard: View {
           }
 
           if showsPluginEnableAction {
-            Button("Enable Plugin") {
+            Button("Enable") {
               onEnablePlugin()
             }
             .buttonStyle(.borderedProminent)
@@ -159,14 +158,14 @@ struct TimelineCard: View {
           }
 
           if showsPluginSourceAction {
-            Button("Reveal Source") {
+            Button("Show Source") {
               onRevealPluginSource()
             }
             .buttonStyle(.bordered)
           }
 
           if showsPluginRefreshAction {
-            Button("Refresh Plugins") {
+            Button("Refresh") {
               onRefreshPlugins()
             }
             .buttonStyle(.bordered)
@@ -202,28 +201,23 @@ struct TimelineCard: View {
     }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(backgroundColor)
-    .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .strokeBorder(isSelected ? Color.accentColor.opacity(0.45) : Color.clear, lineWidth: 1.5)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .softPanel(tone: entryTone, isSelected: isSelected)
   }
 
-  private var backgroundColor: Color {
+  private var entryTone: StatusTone {
     switch entry.kind {
     case .plan:
-      return Color.accentColor.opacity(0.12)
+      return .active
     case .tool:
-      return Color.green.opacity(0.12)
+      return .ready
     case .diff:
-      return Color.blue.opacity(0.1)
+      return .active
     case .approval:
-      return Color.yellow.opacity(0.16)
+      return .warning
     case .warning:
-      return Color.orange.opacity(0.16)
+      return .warning
     default:
-      return Color(NSColor.controlBackgroundColor)
+      return .neutral
     }
   }
 
@@ -312,11 +306,11 @@ struct TimelineCard: View {
     case .plan:
       return "Plan"
     case .tool:
-      return "Tool"
+      return "Action"
     case .diff:
-      return "Diff"
+      return "Change"
     case .approval:
-      return "Approval"
+      return "Review"
     case .warning:
       return "Warning"
     }
@@ -364,7 +358,9 @@ struct TimelineCard: View {
       return preview
     }
 
-    return "\(preview)\n... \(lines.count - previewLimit) more line(s). Select this diff to inspect the full highlighted change."
+    let remainingLines = lines.count - previewLimit
+    let lineLabel = remainingLines == 1 ? "line" : "lines"
+    return "\(preview)\n... \(remainingLines) more \(lineLabel). Select this change to inspect the full detail."
   }
 
   private var streamingLabel: String? {
@@ -376,11 +372,11 @@ struct TimelineCard: View {
 
     switch streamingStatus {
     case "in_progress":
-      return progressLabel().map { "Streaming \($0)" } ?? "Streaming"
+      return progressLabel().map { "Working \($0)" } ?? "Working"
     case "completed":
-      return "Completed"
+      return "Done"
     case "cancelled":
-      return "Cancelled"
+      return "Stopped"
     default:
       return nil
     }
