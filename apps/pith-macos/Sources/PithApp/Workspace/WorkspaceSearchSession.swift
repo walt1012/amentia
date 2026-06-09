@@ -172,9 +172,13 @@ final class WorkspaceSearchSession {
   }
 
   static func successStatus(query: String, matchCount: Int) -> String {
-    matchCount == 0
-      ? "No matches found for \"\(query)\"."
-      : "Found \(matchCount) match(es) for \"\(query)\"."
+    if matchCount == 0 {
+      return "No matches found for \"\(query)\"."
+    }
+    if matchCount == 1 {
+      return "Found 1 match for \"\(query)\"."
+    }
+    return "Found \(matchCount) matches for \"\(query)\"."
   }
 
   static func failureStatus(error: Error) -> String {

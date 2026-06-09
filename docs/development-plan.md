@@ -122,6 +122,9 @@ Build now:
 - Keep normal-path UI language product-level: show session, local engine,
   connector, local model, workspace search, and first prompt concepts instead
   of internal runtime/thread/file details.
+- Keep the first-run and daily-work UI calm, spacious, and humane: progressive
+  disclosure before dense panels, plain-language actions before diagnostics,
+  and soft native surfaces instead of noisy debug-style lists.
 - Record the accepted dry-run artifact and validated fresh-Mac receipt before
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.

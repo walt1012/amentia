@@ -57,7 +57,7 @@ struct LocalModelPanel: View {
         modelManager
       }
 
-      DisclosureGroup("Troubleshooting", isExpanded: $modelTroubleshootingExpanded) {
+      DisclosureGroup("Advanced", isExpanded: $modelTroubleshootingExpanded) {
         ModelTroubleshootingPanel(viewModel: viewModel)
       }
     }
@@ -71,7 +71,7 @@ struct LocalModelPanel: View {
           .font(.caption2)
           .foregroundColor(.secondary)
         Spacer()
-        Button("Reset Active") {
+        Button("Reset") {
           viewModel.resetActiveLocalModel()
         }
         .buttonStyle(.bordered)
@@ -118,22 +118,22 @@ private struct LocalModelRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 5) {
-      Text(viewModel.localModelChoiceSummary(model))
-        .font(.caption2)
-        .fontWeight(.medium)
-        .foregroundColor(model.active ? .green : .secondary)
-      Text(model.displayName)
-        .font(.caption)
-        .fontWeight(.semibold)
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text(model.displayName)
+          .font(.caption.weight(.semibold))
+        Spacer()
+        StatusPill(
+          label: viewModel.localModelChoiceSummary(model),
+          tone: model.active ? .ready : .neutral
+        )
+      }
       Text(model.description)
         .font(.caption2)
         .foregroundColor(.secondary)
-      Text(viewModel.localModelStatusSummary(model))
+      Text("\(viewModel.localModelStatusSummary(model)) | \(viewModel.localModelTagSummary(model))")
         .font(.caption2)
         .foregroundColor(.secondary)
-      Text(viewModel.localModelTagSummary(model))
-        .font(.caption2)
-        .foregroundColor(.secondary)
+        .lineLimit(2)
 
       HStack(spacing: 8) {
         Button(modelUseButtonTitle) {
@@ -148,7 +148,7 @@ private struct LocalModelRow: View {
         .buttonStyle(.bordered)
         .disabled(!viewModel.canDownloadRecommendedModel(modelID: model.id))
 
-        Button("Reveal") {
+        Button("Show File") {
           viewModel.revealRecommendedModel(modelID: model.id)
         }
         .buttonStyle(.bordered)
@@ -162,7 +162,7 @@ private struct LocalModelRow: View {
           .fixedSize(horizontal: false, vertical: true)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(isSelected: model.active)
   }
 
   private var modelUseButtonTitle: String {

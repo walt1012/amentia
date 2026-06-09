@@ -73,9 +73,7 @@ struct SetupModelChooser: View {
         }
       }
     }
-    .padding(10)
-    .background(Color.secondary.opacity(0.08))
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .softPanel()
   }
 }
 
@@ -125,14 +123,7 @@ private struct SetupModelOptionRow: View {
       }
       .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06))
-      .overlay(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .stroke(
-            isSelected ? Color.accentColor.opacity(0.7) : Color.secondary.opacity(0.14),
-            lineWidth: 1
-          )
-      )
+      .softPanel(isSelected: isSelected)
     }
     .buttonStyle(.plain)
     .disabled(isDisabled)
@@ -216,8 +207,6 @@ struct SetupCallout: View {
         }
       }
     }
-    .padding(10)
-    .background(tone.color.opacity(0.10))
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .softPanel(tone: tone)
   }
 }

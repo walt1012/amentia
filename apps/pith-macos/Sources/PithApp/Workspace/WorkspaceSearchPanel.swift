@@ -58,7 +58,7 @@ struct WorkspaceSearchPanel: View {
             .lineLimit(2)
             .textSelection(.enabled)
         }
-        .padding(.vertical, 2)
+        .softPanel()
       }
 
       if let overflow = viewModel.workspaceSearchOverflowSummary() {
@@ -78,9 +78,7 @@ private struct EmptyStateHint: View {
     Text(text)
       .font(.caption2)
       .foregroundColor(.secondary)
-      .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(Color.secondary.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .softPanel()
   }
 }

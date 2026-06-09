@@ -95,7 +95,7 @@ struct TimelinePane: View {
   private var header: some View {
     HStack {
       VStack(alignment: .leading, spacing: 4) {
-        Text("Timeline")
+        Text("Cowork")
           .font(.title2.weight(.semibold))
         Text(viewModel.workspaceDisplayName())
           .font(.caption)
@@ -109,7 +109,7 @@ struct TimelinePane: View {
               .controlSize(.small)
           }
           StatusPill(
-            label: viewModel.runtimeState.rawValue.capitalized,
+            label: runtimeStateLabel,
             tone: viewModel.runtimeStatusTone()
           )
         }
@@ -132,6 +132,19 @@ struct TimelinePane: View {
           .disabled(!viewModel.canRunRuntimePrimaryAction())
         }
       }
+    }
+  }
+
+  private var runtimeStateLabel: String {
+    switch viewModel.runtimeState {
+    case .disconnected:
+      return "Start"
+    case .launching:
+      return "Starting"
+    case .failed:
+      return "Needs Help"
+    case .ready:
+      return "Ready"
     }
   }
 
