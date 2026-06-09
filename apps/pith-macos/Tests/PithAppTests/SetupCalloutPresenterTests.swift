@@ -7,7 +7,7 @@ final class SetupCalloutPresenterTests: XCTestCase {
       snapshot(runtimeState: .disconnected, distributionTrustSetupDetail: "Installer trust: Open Anyway.")
     )
 
-    XCTAssertTrue(detail.contains("local runtime"))
+    XCTAssertTrue(detail.contains("local engine"))
     XCTAssertTrue(detail.contains("Open Anyway"))
   }
 
@@ -16,7 +16,7 @@ final class SetupCalloutPresenterTests: XCTestCase {
       snapshot(runtimeState: .ready, distributionTrustSetupDetail: "Installer trust: Open Anyway.")
     )
 
-    XCTAssertTrue(detail.contains("local runtime"))
+    XCTAssertTrue(detail.contains("local engine"))
     XCTAssertFalse(detail.contains("Open Anyway"))
   }
 
@@ -30,15 +30,15 @@ final class SetupCalloutPresenterTests: XCTestCase {
       hasWorkspace: false,
       hasRuntimeThreadSelection: false,
       modelGuidance: LocalModelSetupGuidance(
-        title: "Launch Local Runtime",
-        summary: "Launch Pith's local runtime before choosing or running a model.",
-        detail: "The model catalog, downloads, and active model state stay inside the local runtime.",
-        actionSummary: "Launch the runtime to inspect local model setup.",
+        title: "Launch Local Engine",
+        summary: "Launch Pith's local engine before choosing or running a model.",
+        detail: "The model catalog, downloads, and selected model state stay local on this Mac.",
+        actionSummary: "Launch the local engine to inspect model setup.",
         readinessDetail: "Launch",
         tone: .warning
       ),
       modelProgressDetail: nil,
-      runtimeLaunchActionTitle: "Launch Runtime",
+      runtimeLaunchActionTitle: "Launch Local Engine",
       modelPrimaryActionTitle: nil,
       modelSecondaryActionTitle: nil,
       distributionTrustSetupDetail: distributionTrustSetupDetail

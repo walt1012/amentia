@@ -120,7 +120,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(detail, "Next: Send First Request")
+    XCTAssertEqual(detail, "Next: Send First Prompt")
   }
 
   func testReadinessStripStaysVisibleForToolSetup() {
@@ -179,7 +179,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testToolReadinessActionOpensWebSearchAccess() {
     let step = ReadinessStepSummary(
       id: "tools",
-      label: "Tools",
+      label: "Actions",
       detail: "Web Setup",
       tone: .warning
     )
@@ -200,7 +200,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testToolReadinessActionEnablesWebSearchWhenAvailable() {
     let step = ReadinessStepSummary(
       id: "tools",
-      label: "Tools",
+      label: "Actions",
       detail: "Web Setup",
       tone: .warning
     )
@@ -224,7 +224,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testToolReadinessActionOpensPluginCommands() {
     let step = ReadinessStepSummary(
       id: "tools",
-      label: "Tools",
+      label: "Actions",
       detail: "Plugins Setup",
       tone: .warning
     )
@@ -245,7 +245,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testToolReadinessActionInspectsNativeSandbox() {
     let step = ReadinessStepSummary(
       id: "tools",
-      label: "Tools",
+      label: "Actions",
       detail: "Sandbox Limited",
       tone: .warning
     )
@@ -290,7 +290,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testFirstRequestReadinessStepOnlySendsExistingDraft() {
     let step = ReadinessStepSummary(
       id: "first-request",
-      label: "First Request",
+      label: "First Prompt",
       detail: "Draft",
       tone: .warning
     )
@@ -338,7 +338,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let entry = TimelineEventPresenter.firstRequestReady()
 
     XCTAssertEqual(entry.title, "Cowork Session Ready")
-    XCTAssertTrue(entry.body.contains("cowork request"))
+    XCTAssertTrue(entry.body.contains("cowork prompt"))
   }
 
   private func headerSnapshot(
@@ -436,7 +436,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasDraftMessage: hasDraftMessage,
       runtimeReadinessChecks: checks,
       canEnableWebSearchPlugin: canEnableWebSearchPlugin,
-      runtimeLaunchButtonTitle: "Launch Runtime",
+      runtimeLaunchButtonTitle: "Launch Local Engine",
       modelSetupActionTitle: nil
     )
   }

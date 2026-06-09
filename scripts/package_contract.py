@@ -124,7 +124,7 @@ PACKAGED_SMOKE_JOURNEY = (
   },
   {
     "id": "recovery",
-    "title": "Runtime recovery",
+    "title": "Local engine recovery",
     "checkIds": (
       "runtimeRecovery",
     ),
@@ -132,7 +132,7 @@ PACKAGED_SMOKE_JOURNEY = (
 )
 PACKAGED_SMOKE_PROOF_SCOPE = (
   "model setup, workspace, first cowork request, Web Search, approval, "
-  "connector, sandbox, and runtime recovery checks"
+  "connector, sandbox, and local engine recovery checks"
 )
 PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS = (
   "schemaVersion",

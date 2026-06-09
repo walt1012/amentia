@@ -116,7 +116,7 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "workspace-notes": {"command:workspace.capture-note"},
 }
 REQUIRED_APP_COPY_SNIPPETS = (
-  "Recovery: launch the runtime",
+  "Recovery: launch the local engine",
   "paused downloads",
   "selected model state are read from local storage",
   "to keep resume data",

@@ -83,7 +83,7 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(runtimeState: .failed)
     )
 
-    XCTAssertTrue(summary.contains("relaunch the runtime"))
+    XCTAssertTrue(summary.contains("relaunch the local engine"))
     XCTAssertTrue(summary.contains("selected model choices remain local"))
   }
 
