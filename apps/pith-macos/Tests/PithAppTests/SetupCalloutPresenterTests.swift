@@ -16,7 +16,7 @@ final class SetupCalloutPresenterTests: XCTestCase {
       snapshot(runtimeState: .ready, distributionTrustSetupDetail: "Installer trust: Open Anyway.")
     )
 
-    XCTAssertTrue(detail.contains("local engine"))
+    XCTAssertTrue(detail.contains("local on this Mac"))
     XCTAssertFalse(detail.contains("Open Anyway"))
   }
 
