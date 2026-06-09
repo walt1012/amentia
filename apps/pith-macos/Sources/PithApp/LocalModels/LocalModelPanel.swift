@@ -152,7 +152,7 @@ private struct LocalModelRow: View {
           viewModel.revealRecommendedModel(modelID: model.id)
         }
         .buttonStyle(.bordered)
-        .disabled(!model.downloaded)
+        .disabled(!model.hasLocalFile)
       }
 
       if model.needsVerification {

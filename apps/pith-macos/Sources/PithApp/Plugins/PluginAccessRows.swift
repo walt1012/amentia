@@ -17,7 +17,7 @@ struct PluginPermissionRow: View {
 
         Spacer()
 
-        Button("Reveal Manifest") {
+        Button("Show Config") {
           onRevealManifest()
         }
         .buttonStyle(.bordered)
@@ -53,7 +53,7 @@ struct InvalidPluginRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(plugin.displayName)
             .font(.caption.weight(.semibold))
-          Text(plugin.manifestPath)
+          Text("Configuration file: \(plugin.manifestPath)")
             .font(.caption2)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
@@ -61,7 +61,7 @@ struct InvalidPluginRow: View {
 
         Spacer()
 
-        Button("Reveal Manifest") {
+        Button("Show Config") {
           onRevealManifest()
         }
         .buttonStyle(.bordered)
@@ -81,7 +81,7 @@ struct InvalidPluginRow: View {
         }
       }
 
-      Text(plugin.validationError ?? "Plugin manifest did not pass runtime validation.")
+      Text(plugin.validationError ?? "Plugin setup did not pass validation.")
         .font(.caption2)
         .foregroundColor(.orange)
         .textSelection(.enabled)

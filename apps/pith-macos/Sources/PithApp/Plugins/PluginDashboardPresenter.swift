@@ -15,7 +15,7 @@ struct PluginDashboardSnapshot {
 enum PluginDashboardPresenter {
   static func pluginCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     if snapshot.plugins.isEmpty {
-      return "No plugin manifests discovered yet."
+      return "No local plugins discovered yet."
     }
 
     let readyCount = readyPluginList(snapshot).count
@@ -41,7 +41,7 @@ enum PluginDashboardPresenter {
     let diagnostics = pluginLoadDiagnostics(snapshot)
     guard !snapshot.plugins.isEmpty else {
       return diagnostics
-        ?? "Pith discovers plugin manifests from configured local and app plugin roots."
+        ?? "Pith discovers local plugins from configured app and user plugin folders."
     }
 
     let pluginDetails = snapshot.plugins
@@ -83,7 +83,7 @@ enum PluginDashboardPresenter {
     let readyPlugins = readyPluginList(snapshot)
 
     guard !readyPlugins.isEmpty else {
-      return "Permission coverage appears here after the runtime loads plugin manifests."
+      return "Permission coverage appears here after Pith loads local plugins."
     }
 
     let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
@@ -112,17 +112,17 @@ enum PluginDashboardPresenter {
     let invalidPlugins = invalidPluginList(snapshot)
 
     if invalidPlugins.isEmpty {
-      return "No Manifest Issues"
+      return "No Setup Issues"
     }
 
-    return "\(invalidPlugins.count) Invalid Plugin Manifest\(invalidPlugins.count == 1 ? "" : "s")"
+    return "\(invalidPlugins.count) Plugin Setup Issue\(invalidPlugins.count == 1 ? "" : "s")"
   }
 
   static func invalidPluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     let invalidPlugins = invalidPluginList(snapshot)
 
     guard !invalidPlugins.isEmpty else {
-      return "All discovered plugin manifests match the current runtime schema."
+      return "All discovered plugins match the current local plugin format."
     }
 
     return invalidPlugins

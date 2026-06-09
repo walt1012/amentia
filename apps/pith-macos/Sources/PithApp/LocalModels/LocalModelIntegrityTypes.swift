@@ -38,7 +38,7 @@ enum LocalModelIntegrityError: LocalizedError {
       return
         "\(displayName) is incomplete. Expected at least \(expectedMinimumBytes) bytes, found \(actualBytes)."
     case .invalidMagic(let displayName):
-      return "\(displayName) is not a valid GGUF file."
+      return "\(displayName) is not a valid local model file."
     case .missingChecksum(let displayName):
       return "\(displayName) is missing required SHA-256 metadata."
     case .checksumMismatch(let displayName, let expected, let actual):

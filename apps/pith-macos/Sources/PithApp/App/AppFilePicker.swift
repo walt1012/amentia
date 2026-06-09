@@ -23,7 +23,7 @@ enum AppFilePicker {
     panel.canChooseFiles = true
     panel.allowsMultipleSelection = false
     panel.prompt = "Install Plugin"
-    panel.message = "Choose a plugin folder or a pith-plugin.json manifest."
+    panel.message = "Choose a plugin folder or its pith-plugin.json configuration file."
 
     guard panel.runModal() == .OK else {
       return nil

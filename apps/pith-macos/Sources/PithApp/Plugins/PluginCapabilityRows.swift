@@ -146,7 +146,7 @@ struct PluginConnectorRow: View {
 
         connectorActions
 
-        Button("Manifest") {
+        Button("Config") {
           onRevealManifest()
         }
         .font(.caption2)

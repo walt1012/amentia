@@ -72,15 +72,10 @@ enum LocalModelStatusPresenter {
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Source: unavailable"
+      return "Model source unavailable."
     }
 
-    let source = "Source: \(modelHealth.source)"
-    if let manifestPath = modelHealth.manifestPath {
-      return "\(source)\nManifest: \(manifestPath)"
-    }
-
-    return source
+    return "Model source: \(modelHealth.source)"
   }
 
   static func metricsSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -99,42 +94,39 @@ enum LocalModelStatusPresenter {
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Readiness: unavailable"
+      return "Model readiness unavailable."
     }
 
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"
     let packReady = modelHealth.metrics["packReady"] ?? "false"
-    return "Readiness: \(readiness) | Pack Ready: \(packReady)"
+    if readiness == "ready", packReady == "true" {
+      return "Model setup is ready."
+    }
+    return "Model setup is not ready yet."
   }
 
   static func installHintSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Install hint: launch the runtime to inspect local model setup."
+      return "Launch Pith to inspect local model setup."
     }
 
     return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
   }
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
-    guard let modelHealth = snapshot.modelHealth else {
-      return "Suggested install layout unavailable."
+    guard snapshot.modelHealth != nil else {
+      return "Suggested model folders are unavailable until Pith finishes checking setup."
     }
 
-    let manifestPath = modelHealth.metrics["suggestedManifestPath"] ?? "manifest path unavailable"
-    let modelPath = modelHealth.metrics["suggestedModelPath"] ?? "model path unavailable"
-    let binaryPath = modelHealth.metrics["suggestedBinaryPath"] ?? "binary path unavailable"
-    return "Suggested Manifest: \(manifestPath)\nSuggested Model: \(modelPath)\nSuggested Binary: \(binaryPath)"
+    return "Use the folder buttons below if you need to inspect local model files."
   }
 
   static func artifactPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
-    guard let modelHealth = snapshot.modelHealth else {
-      return "No local model paths available yet."
+    guard snapshot.modelHealth != nil else {
+      return "No local model files are active yet."
     }
 
-    let modelPath = modelHealth.modelPath ?? "model path unavailable"
-    let binaryPath = modelHealth.binaryPath ?? "binary path unavailable"
-    let manifestPath = modelHealth.manifestPath ?? "manifest path unavailable"
-    return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
+    return "Pith is using the selected verified local model."
   }
 
   static func localModelStatusSummary(

@@ -71,7 +71,14 @@ enum LocalModelOperationPresenter {
     }
 
     let role = model.id == defaultModelID ? "Default" : "Recommended alternative"
-    let status = model.downloaded ? "downloaded" : "not downloaded"
+    let status: String
+    if model.downloaded {
+      status = "downloaded"
+    } else if model.needsVerification {
+      status = "needs verification"
+    } else {
+      status = "not downloaded"
+    }
     return "\(role): \(model.description) \(LocalModelByteFormatter.string(model.sizeBytes)) | \(model.license) | \(status). The first-use catalog is intentionally small, and Pith runs one active model at a time."
   }
 
@@ -172,6 +179,17 @@ enum LocalModelOperationPresenter {
       )
     }
 
+    if let model = snapshot.selectedSetupModel, model.needsVerification {
+      return LocalModelSetupGuidance(
+        title: "Verify Local Model",
+        summary: "\(model.displayName) is already on this Mac. Verify it to finish first-use setup.",
+        detail: "Pith checks the file before using it. You can replace it with a fresh download if verification fails.",
+        actionSummary: "Verify the selected local model or replace it with a fresh download.",
+        readinessDetail: "Verify",
+        tone: .warning
+      )
+    }
+
     if let model = snapshot.selectedSetupModel,
        let blockedDetail = snapshot.selectedDownloadBlockedDetail
     {
@@ -234,6 +252,10 @@ enum LocalModelOperationPresenter {
 
     if let model = snapshot.selectedSetupModel, model.downloaded {
       return "Recovery: use \(model.displayName) to activate it; reinstall metadata if readiness still fails."
+    }
+
+    if let model = snapshot.selectedSetupModel, model.needsVerification {
+      return "Recovery: verify \(model.displayName) before use, or replace it with a fresh download."
     }
 
     if let blockedDetail = snapshot.selectedDownloadBlockedDetail {
