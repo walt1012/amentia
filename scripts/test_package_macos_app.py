@@ -240,7 +240,7 @@ def main() -> int:
           "to keep resume data",
           "cancel to clear the partial file",
           "from saved resume data",
-          "reinstall metadata if readiness still fails",
+          "repair setup info if readiness still fails",
           "Open Anyway",
           "Control-click Pith.app",
           "no Pith account required",
