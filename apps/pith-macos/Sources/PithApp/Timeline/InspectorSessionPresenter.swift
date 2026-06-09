@@ -71,7 +71,7 @@ enum InspectorSessionPresenter {
         return "Create or select a session to keep messages, approvals, memory, and cancellation together."
       }
       if snapshot.isWaitingForFirstMessage {
-        return "Send one short cowork request from the composer to finish first-use setup."
+        return "Send one short cowork prompt from the composer to finish first-use setup."
       }
       return "Use the composer for the next request. Open inspector sections only when detail is needed."
     }

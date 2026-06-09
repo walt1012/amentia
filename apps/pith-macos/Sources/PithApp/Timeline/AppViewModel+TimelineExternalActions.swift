@@ -41,7 +41,7 @@ extension AppViewModel {
 
     selectLocalExecutionSafetyMode(action.targetMode)
     if restoreLocalExecutionRetryDraft(action.retryMessage) {
-      runtimeDetail = "\(action.detail) Review the restored request, then send it when ready."
+      runtimeDetail = "\(action.detail) Review the restored prompt, then send it when ready."
       return
     }
 

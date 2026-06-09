@@ -7,7 +7,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       summary,
-      "Choose Map Workspace, Plan Next Step, or type a short cowork request."
+      "Choose Map Workspace, Plan Next Step, or type a short cowork prompt."
     )
   }
 
@@ -330,8 +330,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasRestoredLocalExecutionDraft: true
     ))
 
-    XCTAssertEqual(placeholder, "Review the restored request, then send")
-    XCTAssertEqual(summary, "Ask mode is ready. Review the restored request, then send it.")
+    XCTAssertEqual(placeholder, "Review the restored prompt, then send")
+    XCTAssertEqual(summary, "Ask mode is ready. Review the restored prompt, then send it.")
   }
 
   func testFirstReadyTimelineEventFramesCoworkRequest() {

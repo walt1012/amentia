@@ -89,17 +89,17 @@ def main() -> int:
     require_contains(FIRST_APP_OPEN_INSTALL_STEP, phrase, "release install step")
   require_contains(
     first_request_text,
-    "short cowork request",
+    "short cowork prompt",
     "Swift first request presenter",
   )
   require_contains(
     FIRST_APP_OPEN_INSTALL_STEP,
-    "your own first request",
+    "your own first prompt",
     "release install step",
   )
   require_contains(
     FIRST_APP_OPEN_CONTRACT_ID,
-    "cowork-request",
+    "cowork-prompt",
     "first app-open contract id",
   )
 

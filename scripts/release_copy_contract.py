@@ -13,11 +13,11 @@ from package_contract import (
 PACKAGED_FIRST_RUN_PROOF_PHRASE = "packaged first-run smoke receipt"
 PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
 FIRST_APP_OPEN_ACTION_COPY = (
-  "Choose Map Workspace, Plan Next Step, or type a short cowork request."
+  "Choose Map Workspace, Plan Next Step, or type a short cowork prompt."
 )
 FIRST_APP_OPEN_INSTALL_STEP = (
   "Start a cowork session with Map Workspace, Plan Next Step, "
-  "or your own first request."
+  "or your own first prompt."
 )
 
 RELEASE_NOTES_REQUIRED_PHRASES = (

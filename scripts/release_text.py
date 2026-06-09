@@ -219,7 +219,7 @@ Notes
 - The release manifest records the {size_budget} that CI enforces before upload.
 - Pith reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
 - Only one local model runs at a time.
-- Short, specific first requests work best with the default small local model.
+- Short, specific first prompts work best with the default small local model.
 """
 
 

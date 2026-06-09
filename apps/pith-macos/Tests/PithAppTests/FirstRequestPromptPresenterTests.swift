@@ -5,25 +5,25 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
   func testFirstRequestContractNamesPackagedFirstOpenAction() {
     XCTAssertEqual(
       FirstRequestPromptPresenter.firstAppOpenActionContractID,
-      "map-plan-or-short-cowork-request"
+      "map-plan-or-short-cowork-prompt"
     )
     XCTAssertTrue(
       FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("Map Workspace")
     )
     XCTAssertTrue(
-      FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("short cowork request")
+      FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("short cowork prompt")
     )
   }
 
   func testFirstRequestCopyFramesCoworkSession() {
     XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Map Workspace"))
     XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Plan Next Step"))
-    XCTAssertTrue(FirstRequestPromptPresenter.firstAppOpenActionSummary().contains("short cowork request"))
+    XCTAssertTrue(FirstRequestPromptPresenter.firstAppOpenActionSummary().contains("short cowork prompt"))
     XCTAssertTrue(
       FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: nil).contains("cowork session")
     )
     XCTAssertTrue(
-      FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: "Pith").contains("cowork requests")
+      FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: "Pith").contains("cowork prompts")
     )
   }
 

@@ -51,7 +51,7 @@ DAILY_DRIVER_CONTRACT = {
   "presentation": "app-header-inspector",
   "packagedSmoke": "required",
 }
-FIRST_APP_OPEN_CONTRACT_ID = "map-plan-or-short-cowork-request"
+FIRST_APP_OPEN_CONTRACT_ID = "map-plan-or-short-cowork-prompt"
 PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION = 1
 PACKAGED_SMOKE_RECEIPT_KIND = "pith.packagedSmokeReceipt"
 PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (

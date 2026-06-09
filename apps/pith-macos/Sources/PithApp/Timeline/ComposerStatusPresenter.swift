@@ -43,13 +43,13 @@ enum ComposerStatusPresenter {
     }
 
     if snapshot.hasRestoredLocalExecutionDraft {
-      return "Review the restored request, then send"
+      return "Review the restored prompt, then send"
     }
 
     if snapshot.isWaitingForFirstMessage {
       return snapshot.hasDraftMessage
         ? "Review the first cowork prompt, then send"
-        : "Choose a starter prompt or type the first cowork request"
+        : "Choose a starter prompt or type the first cowork prompt"
     }
 
     return "Ask Pith to inspect files, review diffs, or make a safe local change"
@@ -81,14 +81,14 @@ enum ComposerStatusPresenter {
       }
 
       if snapshot.hasRestoredLocalExecutionDraft {
-        return "Ask mode is ready. Review the restored request, then send it."
+        return "Ask mode is ready. Review the restored prompt, then send it."
       }
 
       if snapshot.isWaitingForFirstMessage {
         if snapshot.hasDraftMessage {
           return "Review the starter prompt, then start the cowork session."
         }
-        return "Choose a starter prompt or type a short cowork request."
+        return "Choose a starter prompt or type a short cowork prompt."
       }
 
       return "Ready for local work."

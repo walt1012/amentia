@@ -368,7 +368,7 @@ def release_rehearsal_payload() -> dict[str, object]:
         "reports workspace readiness."
       ),
       (
-        "Run Map Workspace, Plan Next Step, or a short cowork request "
+        "Run Map Workspace, Plan Next Step, or a short cowork prompt "
         "from the first app-open surface."
       ),
       "Let the model use Web Search when useful and inspect the source proof in the timeline.",
