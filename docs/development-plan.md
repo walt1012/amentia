@@ -66,7 +66,7 @@ Active milestone: **M12 Public Release**.
 Ready foundations:
 
 - Local model setup works through in-app download, verification, activation,
-  pause, resume, cancel, recovery, and one active model.
+  pause, resume, cancel, recovery, local data reset, and one active model.
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.

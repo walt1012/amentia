@@ -6,13 +6,14 @@ extension AppViewModel {
     AppSupportDirectories.rootDirectory().path
   }
 
-  func localDataStorageSummary() -> String {
-    let downloadedBytes = localModelOperationSnapshot().downloadedLocalSizeBytes
-    if downloadedBytes > 0 {
-      return "Downloaded models use \(LocalModelByteFormatter.string(downloadedBytes)) on this Mac."
-    }
-
-    return "No downloaded model files yet. Sessions, plugins, and preferences stay local."
+  func localDataSettingsSummary() -> LocalDataSettingsSummary {
+    LocalDataSettingsPresenter.summary(
+      LocalDataSettingsSnapshot(
+        downloadedModelBytes: localModelOperationSnapshot().downloadedLocalSizeBytes,
+        canDeleteLocalData: canDeleteLocalData(),
+        localDataPath: localDataFolderPath()
+      )
+    )
   }
 
   func canDeleteLocalData() -> Bool {

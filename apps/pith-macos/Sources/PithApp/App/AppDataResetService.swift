@@ -24,9 +24,7 @@ enum AppDataResetService {
     AppPreferences.clearStoredPreferences()
     RuntimeBridgeLocalEnvironment.clearActiveLocalModel()
     LocalModelCatalog.clearPausedDownload()
-    LocalModelVerificationStampStore.forgetVerifiedModels(
-      modelIDs: LocalModelCatalog.items().map(\.id)
-    )
+    LocalModelVerificationStampStore.forgetAllVerifiedModels()
   }
 
   private static func removeAppSupportRoot(_ rootDirectory: URL) throws {
