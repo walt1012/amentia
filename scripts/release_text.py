@@ -151,6 +151,7 @@ def release_notes(
 - {installer_assets}
 - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
 - Model weights are not bundled; first launch guides the user to download one verified local model, defaulting to {DEFAULT_MODEL_ID}.
+- Downloaded models and Pith sessions stay in local app data; users can reveal or delete them from Settings > Storage without deleting workspaces.
 - {local_execution}
 - {first_run_path}
 - The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
@@ -213,6 +214,7 @@ Notes
 - {first_run_path}
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
+- Downloaded models and Pith sessions stay in local app data. Use Settings > Storage to reveal or delete Pith local data without deleting workspace folders.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, app package metadata, smoke package metadata, and first-run contract.
 - {first_run_proof}

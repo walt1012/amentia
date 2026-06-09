@@ -101,6 +101,7 @@ private struct SidebarEmptyState: View {
 
 struct SettingsView: View {
   @ObservedObject var viewModel: AppViewModel
+  @State private var confirmsLocalDataDelete = false
   private let distributionTrust = DistributionTrustPresenter.summary()
 
   var body: some View {
@@ -128,6 +129,25 @@ struct SettingsView: View {
         Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
       }
 
+      Section("Storage") {
+        Text(viewModel.localDataStorageSummary())
+        Text("Deleting local data removes Pith models, sessions, plugins, download recovery data, and preferences. It does not delete your workspaces.")
+          .foregroundColor(.secondary)
+
+        HStack {
+          Button("Show Local Data") {
+            viewModel.revealLocalDataFolder()
+          }
+
+          Spacer()
+
+          Button("Delete Local Data...", role: .destructive) {
+            confirmsLocalDataDelete = true
+          }
+          .disabled(!viewModel.canDeleteLocalData())
+        }
+      }
+
       Section("Platform") {
         Text("Built for macOS 12+ on Intel.")
       }
@@ -139,6 +159,14 @@ struct SettingsView: View {
     }
     .padding(20)
     .background(PithVisualStyle.paneBackground)
-    .frame(width: 420)
+    .frame(width: 460)
+    .alert("Delete Pith Local Data?", isPresented: $confirmsLocalDataDelete) {
+      Button("Delete Local Data", role: .destructive) {
+        viewModel.deleteLocalData()
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("Pith will remove its downloaded models, sessions, plugins, download recovery data, and preferences. Your workspaces and repositories will not be deleted.")
+    }
   }
 }

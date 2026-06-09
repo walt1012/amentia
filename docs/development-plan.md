@@ -105,6 +105,8 @@ Build now:
 - Keep normal UI language product-level: session, workspace, local model,
   local engine, Web Search, connector, approval, and proof. Keep paths,
   manifests, package details, and diagnostics behind Advanced.
+- Make local storage ownership explicit: users can reveal or delete Pith local
+  data without touching their workspaces.
 - Keep visuals system-adaptive and light-mode friendly: clean spacing, readable
   cards, quiet borders, no fixed dark theme, and no fixed light theme.
 - Publish only after the dry-run artifact and fresh-Mac manual acceptance

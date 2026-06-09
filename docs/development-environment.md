@@ -238,7 +238,16 @@ The resolved model file path then checks:
 
 The repository tracks manifests, licensing notes, and small metadata only. Model weights are downloaded in app, verified, and stored in the suggested app data path; they must not be committed to git history. Environment variables remain development overrides, not the normal user setup path.
 
-The macOS Local Model panel keeps a curated list of lightweight models, downloads files into `PITH_DATA_DIR/models`, verifies integrity, and activates one model at a time by writing a local `model-pack.json`. Activation stores selected model paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and `PITH_MODEL_PATH` for the local engine, and relaunches the engine so health checks report the selected model.
+The macOS Local Model panel keeps a curated list of lightweight models, downloads
+files into `PITH_DATA_DIR/models`, verifies integrity, and activates one model at
+a time by writing a local `model-pack.json`. Activation stores selected model
+paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and
+`PITH_MODEL_PATH` for the local engine, and relaunches the engine so health
+checks report the selected model. Normal app installs set `PITH_DATA_DIR` to
+`~/Library/Application Support/Pith/storage`, so downloaded GGUF files live under
+`~/Library/Application Support/Pith/storage/models`. Removing `Pith.app` does not
+delete that user data; Settings > Storage can reveal or delete Pith local data
+without deleting workspace folders.
 
 If either path is missing, Pith reports the local model as unavailable and blocks agent work until a verified local model is selected. A development-only setup example is:
 

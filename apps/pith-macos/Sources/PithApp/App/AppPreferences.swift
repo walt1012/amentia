@@ -53,4 +53,10 @@ enum AppPreferences {
       forKey: localExecutionSafetyModeKey
     )
   }
+
+  static func clearStoredPreferences() {
+    UserDefaults.standard.removeObject(forKey: lastWorkspacePathKey)
+    UserDefaults.standard.removeObject(forKey: selectedSetupModelIDKey)
+    UserDefaults.standard.removeObject(forKey: localExecutionSafetyModeKey)
+  }
 }

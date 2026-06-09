@@ -47,6 +47,12 @@ enum LocalModelVerificationStampStore {
     UserDefaults.standard.removeObject(forKey: verifiedModelKey(for: modelID))
   }
 
+  static func forgetVerifiedModels(modelIDs: [String]) {
+    for modelID in modelIDs {
+      forgetVerifiedModel(modelID: modelID)
+    }
+  }
+
   private static func verifiedModelKey(for modelID: String) -> String {
     "\(verifiedModelKeyPrefix)\(modelID)"
   }
