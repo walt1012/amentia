@@ -207,9 +207,9 @@ an existing public GitHub Release back to draft; withdrawal should be handled
 deliberately by a maintainer. With Developer ID secrets, it publishes the
 signed, notarized, stapled DMG.
 
-## Local Model Runtime
+## Local Model Engine
 
-The runtime now resolves the local model stack in this order:
+The local engine resolves the model backend in this order:
 
 1. `PITH_LLAMACPP_PATH`
 2. an executable-relative `third_party/llama.cpp/llama-cli`
@@ -236,11 +236,11 @@ The resolved model file path then checks:
 5. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
 6. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
 
-The repository should track the manifest, licensing notes, and small metadata only. The actual `LFM2.5-350M-Q4_K_M.gguf` file should not be committed to git history. The macOS app exposes the manifest `download_url` as a one-click local model download into the suggested app data path, while advanced local installs can still point `PITH_MODEL_PATH` at another local GGUF file.
+The repository tracks manifests, licensing notes, and small metadata only. Model weights are downloaded in app, verified, and stored in the suggested app data path; they must not be committed to git history. Environment variables remain development overrides, not the normal user setup path.
 
-The macOS Local Model panel also includes a small local model manager. It keeps a curated list of lightweight GGUF models, downloads each file into `PITH_DATA_DIR/models`, monitors which recommended models are present on disk, and can activate a downloaded model by writing a local `model-pack.json` beside the GGUF file. Activating a model stores the selected manifest and model paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and `PITH_MODEL_PATH` for the runtime, and relaunches the local runtime so health checks report the selected model.
+The macOS Local Model panel keeps a curated list of lightweight models, downloads files into `PITH_DATA_DIR/models`, verifies integrity, and activates one model at a time by writing a local `model-pack.json`. Activation stores selected model paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and `PITH_MODEL_PATH` for the local engine, and relaunches the engine so health checks report the selected model.
 
-If either path is missing, Pith reports the local model as unavailable and blocks agent work until a real local runtime is configured. One local setup example is:
+If either path is missing, Pith reports the local model as unavailable and blocks agent work until a verified local model is selected. A development-only setup example is:
 
 ```bash
 export PITH_LLAMACPP_PATH=/absolute/path/to/llama-cli

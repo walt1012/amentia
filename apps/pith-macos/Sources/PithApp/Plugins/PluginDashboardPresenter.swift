@@ -264,7 +264,7 @@ enum PluginDashboardPresenter {
 
   static func hookDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.hooks.isEmpty else {
-      return "Enable ready plugins with declared hook capabilities to extend local runtime events."
+      return "Enable ready plugins with declared hook capabilities to extend local engine events."
     }
 
     return snapshot.hooks.map(hookDetail).joined(separator: "\n")

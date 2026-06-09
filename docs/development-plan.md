@@ -119,9 +119,9 @@ Build now:
   default model, open a workspace, run a cowork turn, use Web Search, approve a
   bounded action, inspect proof, generate the manual acceptance receipt from
   downloaded assets, fill it, and validate it.
-- Keep first-run UI language product-level: show session, local engine,
-  connector, and local model concepts instead of internal runtime/thread file
-  details on the normal path.
+- Keep normal-path UI language product-level: show session, local engine,
+  connector, local model, workspace search, and first prompt concepts instead
+  of internal runtime/thread/file details.
 - Record the accepted dry-run artifact and validated fresh-Mac receipt before
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.

@@ -122,7 +122,7 @@ extension AppViewModel {
 
   func activateRecommendedModel(modelID: String) {
     guard runtimeState != .launching else {
-      runtimeDetail = "Wait for the local runtime launch to finish before switching models."
+      runtimeDetail = "Wait for the local engine to finish starting before switching models."
       return
     }
     guard !hasActiveOrPendingTurn() else {
@@ -193,7 +193,7 @@ extension AppViewModel {
   func resetActiveLocalModel() {
     guard canResetActiveLocalModel() else {
       runtimeDetail =
-        "Finish runtime launch, model download, model selection check, or active local work before resetting model selection."
+        "Finish local engine startup, model download, model selection check, or active local work before resetting model selection."
       return
     }
 

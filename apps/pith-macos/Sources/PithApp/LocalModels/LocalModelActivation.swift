@@ -78,8 +78,8 @@ enum LocalModelActivationPlanner {
         "modelPath": model.installPath,
         "result": "selected",
       ],
-      relaunchRunningDetail: "Restarting local runtime with \(model.displayName)...",
-      relaunchIdleDetail: "\(model.displayName) will be used when the runtime launches."
+      relaunchRunningDetail: "Restarting local engine with \(model.displayName)...",
+      relaunchIdleDetail: "\(model.displayName) will be used when the local engine starts."
     )
   }
 
@@ -90,8 +90,8 @@ enum LocalModelActivationPlanner {
       attributes: [
         "result": "reset"
       ],
-      relaunchRunningDetail: "Restarting local runtime with automatic model discovery...",
-      relaunchIdleDetail: "Automatic model discovery will be used when the runtime launches."
+      relaunchRunningDetail: "Restarting local engine with automatic model discovery...",
+      relaunchIdleDetail: "Automatic model discovery will be used when the local engine starts."
     )
   }
 

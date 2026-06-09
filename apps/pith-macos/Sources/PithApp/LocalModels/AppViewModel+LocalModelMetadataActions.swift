@@ -10,7 +10,7 @@ extension AppViewModel {
 
   func bootstrapModelPackMetadata() {
     guard runtimeState == .ready else {
-      runtimeDetail = "Launch the runtime before preparing local model metadata."
+      runtimeDetail = "Launch the local engine before preparing model metadata."
       return
     }
     guard !modelDownloadCoordinator.isDownloading else {

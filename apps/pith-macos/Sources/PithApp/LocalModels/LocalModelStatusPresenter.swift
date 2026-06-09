@@ -20,11 +20,11 @@ enum LocalModelStatusPresenter {
     guard let modelHealth = snapshot.modelHealth else {
       switch snapshot.runtimeState {
       case .disconnected:
-        return "Launch the runtime to inspect local model setup."
+        return "Launch the local engine to inspect model setup."
       case .launching:
         return "Checking local model setup..."
       case .failed:
-        return "Relaunch the runtime to recover local model setup."
+        return "Relaunch the local engine to recover model setup."
       case .ready:
         return "Choose and download one local model to continue."
       }
@@ -85,7 +85,7 @@ enum LocalModelStatusPresenter {
 
     let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
     let modelContextSize = modelHealth.metrics["modelContextSize"]
-      .map { "\(contextSize) runtime / \($0) model" }
+      .map { "\(contextSize) active / \($0) limit" }
       ?? contextSize
     let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
     let backend = modelHealth.metrics["backend"] ?? modelHealth.backend

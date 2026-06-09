@@ -193,7 +193,7 @@ final class WorkspaceSearchSession {
       return nil
     }
     if runtimeState != .ready {
-      return "Launch the runtime to search workspace files."
+      return "Launch the local engine to search workspace files."
     }
     if !hasWorkspace {
       return "Open a workspace to search local files."
@@ -205,7 +205,7 @@ final class WorkspaceSearchSession {
       return "No results yet. Try a shorter query, filename, or symbol name."
     }
     if status.hasPrefix("Workspace search failed") {
-      return "Search failed. Check the runtime status, then try again."
+      return "Search failed. Check the local engine status, then try again."
     }
 
     return nil

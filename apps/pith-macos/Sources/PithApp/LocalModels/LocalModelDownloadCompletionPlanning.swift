@@ -35,8 +35,8 @@ enum LocalModelDownloadCompletionPlanner {
           ],
           uniquingKeysWith: { _, new in new }
         ),
-        relaunchRunningDetail: "Restarting local runtime with \(model.displayName)...",
-        relaunchIdleDetail: "\(model.displayName) will be used when the runtime launches."
+        relaunchRunningDetail: "Restarting local engine with \(model.displayName)...",
+        relaunchIdleDetail: "\(model.displayName) will be used when the local engine starts."
       )
     }
 

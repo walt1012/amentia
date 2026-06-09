@@ -217,7 +217,7 @@ enum LocalModelOperationPresenter {
     return LocalModelSetupGuidance(
       title: "Install Model Metadata",
       summary: "Local model choices are unavailable until model metadata is installed.",
-      detail: "Install metadata or relaunch the runtime to refresh model catalog state.",
+      detail: "Install metadata or relaunch the local engine to refresh model choices.",
       actionSummary: "Install local model metadata before choosing a model.",
       readinessDetail: snapshot.totalModelCount == 0 ? "Metadata" : "Choose",
       tone: .warning
@@ -226,7 +226,7 @@ enum LocalModelOperationPresenter {
 
   private static func modelDetail(_ model: LocalModelSummary) -> String {
     let size = LocalModelByteFormatter.string(model.sizeBytes)
-    let context = "\(model.contextSize) runtime / \(model.modelContextSize) model context"
+    let context = "\(model.contextSize) active context / \(model.modelContextSize) model limit"
     return "\(size) | \(model.license) | \(context)"
   }
 
