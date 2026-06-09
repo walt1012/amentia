@@ -75,7 +75,7 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertTrue(summary.contains("use Granite 4.0-H-350M Q4_K_M"))
-    XCTAssertTrue(summary.contains("reinstall metadata"))
+    XCTAssertTrue(summary.contains("repair setup info"))
   }
 
   func testRecoverySummaryExplainsRuntimeRelaunch() {

@@ -186,7 +186,7 @@ enum TimelineEventPresenter {
 
   static func localModelDownloaded(_ plan: LocalModelDownloadCompletionPlan) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Local Model Downloaded",
+      title: "Local Engine Downloaded",
       body: plan.timelineBody,
       attributes: plan.attributes
     )

@@ -128,6 +128,9 @@ Build now:
 - Keep high-frequency surfaces aligned to that standard: cowork timeline,
   details pane, local engine, workspace search, connectors, and notes should
   read as product UI before advanced diagnostics appear.
+- Keep first-use local engine setup plain and confidence-building: default
+  model choice first, repair language instead of metadata language, and model
+  file details only behind advanced disclosure.
 - Record the accepted dry-run artifact and validated fresh-Mac receipt before
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.

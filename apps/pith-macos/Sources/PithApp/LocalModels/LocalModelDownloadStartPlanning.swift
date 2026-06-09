@@ -72,7 +72,7 @@ enum LocalModelDownloadStartPlanner {
         isResuming: isResuming
       ),
       runtimeDetail: "\(verb) \(model.displayName) (\(LocalModelByteFormatter.string(model.sizeBytes)))...",
-      timelineTitle: isResuming ? "Local Model Download Continued" : "Local Model Download Started",
+      timelineTitle: isResuming ? "Engine Download Continued" : "Engine Download Started",
       timelineBody:
         "\(model.displayName) download \(eventVerb) from \(sourceURL.absoluteString).",
       attributes: [

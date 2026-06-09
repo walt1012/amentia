@@ -53,7 +53,7 @@ struct LocalModelPanel: View {
         }
       }
 
-      DisclosureGroup("Choose Model", isExpanded: $modelChooserExpanded) {
+      DisclosureGroup("Choose Engine", isExpanded: $modelChooserExpanded) {
         modelManager
       }
 
@@ -61,6 +61,7 @@ struct LocalModelPanel: View {
         ModelTroubleshootingPanel(viewModel: viewModel)
       }
     }
+    .softPanel()
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
@@ -71,7 +72,7 @@ struct LocalModelPanel: View {
           .font(.caption2)
           .foregroundColor(.secondary)
         Spacer()
-        Button("Reset") {
+        Button("Reset Engine") {
           viewModel.resetActiveLocalModel()
         }
         .buttonStyle(.bordered)
@@ -156,7 +157,7 @@ private struct LocalModelRow: View {
       }
 
       if model.needsVerification {
-        Text("Pith found a local file. Verify it before use, or replace it with a fresh download.")
+        Text("Pith found this file on your Mac. Verify it before use, or replace it with a fresh download.")
           .font(.caption2)
           .foregroundColor(.secondary)
           .fixedSize(horizontal: false, vertical: true)
@@ -200,6 +201,7 @@ private struct ModelTroubleshootingPanel: View {
         .disabled(!viewModel.canRevealSuggestedBinaryDirectory())
       }
     }
+    .softPanel()
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }

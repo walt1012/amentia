@@ -38,7 +38,7 @@ struct SetupModelChooser: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text("Choose Local Model")
+        Text("Choose Local Engine")
           .font(.caption.weight(.semibold))
         StatusPill(label: "One active model", tone: .neutral)
         Spacer()

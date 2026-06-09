@@ -24,7 +24,7 @@ enum LocalModelDownloadInterruptionPlanner {
       return LocalModelDownloadInterruptionPlan(
         mode: .paused(resumeData: paused.resumeData),
         runtimeDetail: "Paused \(model.displayName) download. Continue to resume from the saved partial state.",
-        timelineTitle: "Local Model Download Paused",
+        timelineTitle: "Engine Download Paused",
         timelineBody:
           "\(model.displayName) download was paused and can continue from the saved local state.",
         timelineKind: .system,
@@ -43,8 +43,8 @@ enum LocalModelDownloadInterruptionPlanner {
 
     return LocalModelDownloadInterruptionPlan(
       mode: .failed,
-      runtimeDetail: "Model download failed: \(error.localizedDescription)",
-      timelineTitle: "Local Model Download Failed",
+      runtimeDetail: "Engine download failed: \(error.localizedDescription)",
+      timelineTitle: "Engine Download Failed",
       timelineBody: "\(model.displayName) download failed: \(error.localizedDescription)",
       timelineKind: .warning,
       attributes: [
@@ -61,7 +61,7 @@ enum LocalModelDownloadInterruptionPlanner {
     LocalModelDownloadInterruptionPlan(
       mode: .cancelled,
       runtimeDetail: "Cancelled \(model.displayName) download and cleared partial state.",
-      timelineTitle: "Local Model Download Cancelled",
+      timelineTitle: "Engine Download Cancelled",
       timelineBody: "\(model.displayName) download was cancelled and the partial file was cleared.",
       timelineKind: .system,
       attributes: [
@@ -118,7 +118,7 @@ enum LocalModelDownloadControlPlanner {
     guard let model = models.first(where: { $0.id == pausedModelID }) else {
       return LocalModelDownloadCancelPlan(
         mode: .orphanedPaused(modelID: pausedModelID),
-        runtimeDetail: "Cancelled local model download and cleared partial state."
+        runtimeDetail: "Cancelled local engine download and cleared partial state."
       )
     }
 
@@ -133,7 +133,7 @@ enum LocalModelDownloadControlPlanner {
   private static func displayName(for modelID: String?, models: [LocalModelSummary]) -> String {
     modelID
       .flatMap { id in models.first(where: { $0.id == id })?.displayName }
-      ?? "local model"
+      ?? "local engine"
   }
 }
 

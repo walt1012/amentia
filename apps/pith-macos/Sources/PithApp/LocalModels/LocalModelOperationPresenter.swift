@@ -37,10 +37,10 @@ enum LocalModelOperationPresenter {
       )
     case .launching:
       return LocalModelSetupGuidance(
-        title: "Checking Local Model",
-        summary: "Pith is reconnecting the local model catalog and active model state.",
-        detail: "Model choices and download state will appear after the runtime is ready.",
-        actionSummary: "Checking local model setup...",
+        title: "Checking Local Engine",
+        summary: "Pith is reconnecting your local engine and selected model.",
+        detail: "Model choices and download state will appear after the local engine is ready.",
+        actionSummary: "Checking local engine setup...",
         readinessDetail: "Checking",
         tone: .active
       )
@@ -67,7 +67,7 @@ enum LocalModelOperationPresenter {
     defaultModelID: String
   ) -> String {
     guard let model = snapshot.selectedSetupModel else {
-      return "Choose one local model to download and run."
+      return "Choose one local model for Pith to download and run."
     }
 
     let role = model.id == defaultModelID ? "Default" : "Recommended alternative"
@@ -79,7 +79,7 @@ enum LocalModelOperationPresenter {
     } else {
       status = "not downloaded"
     }
-    return "\(role): \(model.description) \(LocalModelByteFormatter.string(model.sizeBytes)) | \(model.license) | \(status). The first-use catalog is intentionally small, and Pith runs one active model at a time."
+    return "\(role): \(model.description) \(LocalModelByteFormatter.string(model.sizeBytes)) | \(model.license) | \(status). The first-use list is intentionally small, and Pith runs one active model at a time."
   }
 
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
@@ -92,13 +92,13 @@ enum LocalModelOperationPresenter {
 
   static func managerSummary(_ snapshot: LocalModelOperationSnapshot) -> String {
     if let model = snapshot.downloadingModel {
-      return "Downloading \(model.displayName). One active model will run at a time."
+      return "Downloading \(model.displayName). Pith will run one verified model at a time."
     }
     if let model = snapshot.pausedModel {
       return "Paused \(model.displayName). Continue or cancel before starting another download."
     }
     if snapshot.hasActiveTurn {
-      return "Active: \(snapshot.activeModelDisplayName ?? "local model"). Switching waits for the current turn."
+      return "Active: \(snapshot.activeModelDisplayName ?? "local engine"). Switching waits for the current turn."
     }
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
@@ -112,7 +112,7 @@ enum LocalModelOperationPresenter {
       return "Recovery: launch the local engine; model catalog, paused downloads, " +
         "and selected model state are read from local storage."
     case .launching:
-      return "Recovery: reconnecting local model state before showing the next action."
+      return "Recovery: reconnecting local engine state before showing the next action."
     case .failed:
       return "Recovery: relaunch the local engine; paused downloads and selected model choices remain local."
     case .ready:
@@ -125,8 +125,8 @@ enum LocalModelOperationPresenter {
   ) -> LocalModelSetupGuidance {
     if let model = snapshot.downloadingModel {
       return LocalModelSetupGuidance(
-        title: "Downloading Local Model",
-        summary: "\(model.displayName) is downloading. Pith will unlock offline agent work after it is ready.",
+        title: "Downloading Local Engine",
+        summary: "\(model.displayName) is downloading. Pith will unlock local cowork after it is ready.",
         detail: modelDetail(model),
         actionSummary: "Downloading \(model.displayName). You can pause or cancel without losing control.",
         readinessDetail: "Downloading",
@@ -136,7 +136,7 @@ enum LocalModelOperationPresenter {
 
     if let model = snapshot.pausedModel {
       return LocalModelSetupGuidance(
-        title: "Continue Local Model Download",
+        title: "Continue Engine Download",
         summary: "\(model.displayName) is paused. Continue the download or cancel to clear the partial file.",
         detail: "Partial download state is saved locally for this model.",
         actionSummary: "\(model.displayName) is paused. Continue from the saved local state or cancel to clear it.",
@@ -147,10 +147,10 @@ enum LocalModelOperationPresenter {
 
     if snapshot.hasActiveTurn {
       return LocalModelSetupGuidance(
-        title: "Local Model Running",
-        summary: "Pith is using the active local model for the current turn.",
-        detail: "Finish or cancel the current local turn before switching the active model.",
-        actionSummary: "Finish or cancel the current local turn before switching the active model.",
+        title: "Local Engine Working",
+        summary: "Pith is using the active local engine for the current turn.",
+        detail: "Finish or stop the current turn before switching the active model.",
+        actionSummary: "Finish or stop the current turn before switching the active model.",
         readinessDetail: "Streaming",
         tone: .active
       )
@@ -159,10 +159,10 @@ enum LocalModelOperationPresenter {
     if snapshot.isLocalModelReady {
       let activeModel = snapshot.activeModelDisplayName ?? "the active local model"
       return LocalModelSetupGuidance(
-        title: "Local Model Ready",
-        summary: "\(activeModel) is ready for offline agent work.",
+        title: "Local Engine Ready",
+        summary: "\(activeModel) is ready for local cowork.",
         detail: "Pith will use one active local model at a time for generation.",
-        actionSummary: "Local model is ready for offline agent work.",
+        actionSummary: "Local engine is ready for cowork.",
         readinessDetail: "Ready",
         tone: .ready
       )
@@ -170,10 +170,10 @@ enum LocalModelOperationPresenter {
 
     if let model = snapshot.selectedSetupModel, model.downloaded {
       return LocalModelSetupGuidance(
-        title: "Select Downloaded Local Model",
+        title: "Use Downloaded Model",
         summary: "\(model.displayName) is downloaded but not active. Use it to finish first-use setup.",
         detail: modelDetail(model),
-        actionSummary: "Use the selected downloaded model or reinstall pack metadata to repair readiness.",
+        actionSummary: "Use the selected downloaded model or repair its setup info.",
         readinessDetail: "Select",
         tone: .warning
       )
@@ -181,7 +181,7 @@ enum LocalModelOperationPresenter {
 
     if let model = snapshot.selectedSetupModel, model.needsVerification {
       return LocalModelSetupGuidance(
-        title: "Verify Local Model",
+        title: "Verify Local Engine",
         summary: "\(model.displayName) is already on this Mac. Verify it to finish first-use setup.",
         detail: "Pith checks the file before using it. You can replace it with a fresh download if verification fails.",
         actionSummary: "Verify the selected local model or replace it with a fresh download.",
@@ -194,7 +194,7 @@ enum LocalModelOperationPresenter {
        let blockedDetail = snapshot.selectedDownloadBlockedDetail
     {
       return LocalModelSetupGuidance(
-        title: "Model Download Blocked",
+        title: "Download Blocked",
         summary: "\(model.displayName) cannot start downloading yet.",
         detail: blockedDetail,
         actionSummary: blockedDetail,
@@ -205,7 +205,7 @@ enum LocalModelOperationPresenter {
 
     if let model = snapshot.selectedSetupModel {
       return LocalModelSetupGuidance(
-        title: "Download Local Model",
+        title: "Download Local Engine",
         summary: "Fresh installs need one curated local model before Pith can answer locally. \(model.displayName) is selected.",
         detail: modelDetail(model),
         actionSummary: "Choose between the fastest default and the stronger tiny alternative.",
@@ -215,11 +215,11 @@ enum LocalModelOperationPresenter {
     }
 
     return LocalModelSetupGuidance(
-      title: "Install Model Metadata",
-      summary: "Local model choices are unavailable until model metadata is installed.",
-      detail: "Install metadata or relaunch the local engine to refresh model choices.",
-      actionSummary: "Install local model metadata before choosing a model.",
-      readinessDetail: snapshot.totalModelCount == 0 ? "Metadata" : "Choose",
+      title: "Repair Local Engine",
+      summary: "Local model choices are unavailable until setup info is restored.",
+      detail: "Repair setup info or relaunch the local engine to refresh model choices.",
+      actionSummary: "Repair local model setup before choosing a model.",
+      readinessDetail: snapshot.totalModelCount == 0 ? "Repair" : "Choose",
       tone: .warning
     )
   }
@@ -242,7 +242,7 @@ enum LocalModelOperationPresenter {
     }
 
     if snapshot.hasActiveTurn {
-      return "Recovery: finish or cancel the current local turn before changing model setup."
+      return "Recovery: finish or stop the current turn before changing model setup."
     }
 
     if snapshot.isLocalModelReady {
@@ -251,7 +251,7 @@ enum LocalModelOperationPresenter {
     }
 
     if let model = snapshot.selectedSetupModel, model.downloaded {
-      return "Recovery: use \(model.displayName) to activate it; reinstall metadata if readiness still fails."
+      return "Recovery: use \(model.displayName) to activate it; repair setup info if readiness still fails."
     }
 
     if let model = snapshot.selectedSetupModel, model.needsVerification {
@@ -267,6 +267,6 @@ enum LocalModelOperationPresenter {
         "cancelled downloads clear partial files."
     }
 
-    return "Recovery: install model metadata or relaunch the local engine to refresh the catalog."
+    return "Recovery: repair setup info or relaunch the local engine to refresh model choices."
   }
 }

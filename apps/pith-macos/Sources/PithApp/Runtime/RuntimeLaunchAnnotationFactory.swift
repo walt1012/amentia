@@ -68,7 +68,7 @@ enum RuntimeLaunchAnnotationFactory {
     guard let modelHealth = snapshot.modelHealth else {
       return [
         TimelineEntryFactory.warning(
-          title: "Local Model Required",
+          title: "Local Engine Required",
           body: snapshot.localModelRequiredSummary,
           attributes: [
             "modelStatus": "unavailable"
@@ -90,7 +90,7 @@ enum RuntimeLaunchAnnotationFactory {
 
       return [
         TimelineEntryFactory.system(
-          title: "Local Model Ready",
+          title: "Local Engine Ready",
           body:
             "\(modelHealth.displayName) is ready for local work.",
           attributes: attributes
@@ -100,7 +100,7 @@ enum RuntimeLaunchAnnotationFactory {
 
     return [
       TimelineEntryFactory.warning(
-        title: "Local Model Required",
+        title: "Local Engine Required",
         body: snapshot.localModelRequiredSummary,
         attributes: attributes
       )

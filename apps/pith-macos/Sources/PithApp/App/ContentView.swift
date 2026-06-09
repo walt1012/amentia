@@ -121,8 +121,8 @@ struct SettingsView: View {
         ))
       }
 
-      Section("Local Models") {
-        Text("Pith downloads and verifies local models in app.")
+      Section("Local Engine") {
+        Text("Pith downloads and verifies one local model in app.")
         Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
       }
 

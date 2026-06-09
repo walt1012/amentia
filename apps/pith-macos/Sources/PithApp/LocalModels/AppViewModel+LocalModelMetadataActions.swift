@@ -10,15 +10,15 @@ extension AppViewModel {
 
   func bootstrapModelPackMetadata() {
     guard runtimeState == .ready else {
-      runtimeDetail = "Launch the local engine before preparing model metadata."
+      runtimeDetail = "Launch the local engine before repairing model setup."
       return
     }
     guard !modelDownloadCoordinator.isDownloading else {
-      runtimeDetail = "Finish, pause, or cancel the current model download before preparing metadata."
+      runtimeDetail = "Finish, pause, or cancel the current model download before repairing setup."
       return
     }
     guard let requestToken = localModelMetadataCoordinator.begin() else {
-      runtimeDetail = "Model metadata preparation is already running."
+      runtimeDetail = "Model setup repair is already running."
       return
     }
 
@@ -33,8 +33,8 @@ extension AppViewModel {
         }
         await refreshModelHealthState()
         let copiedSummary = result.copiedFiles.isEmpty
-          ? "Pack metadata was already present."
-          : "Prepared \(result.copiedFiles.count) local model metadata file(s)."
+          ? "Model setup info was already present."
+          : "Prepared \(result.copiedFiles.count) local model setup file(s)."
         runtimeDetail = "\(copiedSummary) Local model setup is ready."
       } catch {
         guard !Task.isCancelled,
@@ -42,7 +42,7 @@ extension AppViewModel {
         else {
           return
         }
-        runtimeDetail = "Model metadata bootstrap failed: \(error.localizedDescription)"
+        runtimeDetail = "Model setup repair failed: \(error.localizedDescription)"
       }
     }
     localModelMetadataCoordinator.bind(task: task, token: requestToken)

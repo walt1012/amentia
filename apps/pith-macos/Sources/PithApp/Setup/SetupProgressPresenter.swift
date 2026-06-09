@@ -96,12 +96,12 @@ enum SetupProgressPresenter {
       return "Finish Turn"
     case "Select":
       return "Use Model"
-    case "Metadata":
-      return "Install Metadata"
+    case "Repair":
+      return "Repair Engine"
     case "Choose":
       return "Choose Model"
     default:
-      return "Download Model"
+      return "Download Engine"
     }
   }
 }

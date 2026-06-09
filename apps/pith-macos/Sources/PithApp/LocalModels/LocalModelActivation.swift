@@ -70,8 +70,8 @@ enum LocalModelActivationPreparer {
 enum LocalModelActivationPlanner {
   static func selectionPlan(model: LocalModelSummary, manifestPath: String) -> LocalModelActivationPlan {
     LocalModelActivationPlan(
-      timelineTitle: "Local Model Selected",
-      timelineBody: "\(model.displayName) is now the active local model.",
+      timelineTitle: "Local Engine Selected",
+      timelineBody: "\(model.displayName) is now the active local engine.",
       attributes: [
         "manifestPath": manifestPath,
         "modelId": model.id,
@@ -85,8 +85,8 @@ enum LocalModelActivationPlanner {
 
   static func resetPlan() -> LocalModelActivationPlan {
     LocalModelActivationPlan(
-      timelineTitle: "Local Model Reset",
-      timelineBody: "Pith will use automatic local model discovery.",
+      timelineTitle: "Local Engine Reset",
+      timelineBody: "Pith will choose the local engine automatically.",
       attributes: [
         "result": "reset"
       ],

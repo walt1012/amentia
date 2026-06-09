@@ -13,7 +13,7 @@ struct LocalModelStatusSnapshot {
 
 enum LocalModelStatusPresenter {
   static func displayName(_ snapshot: LocalModelStatusSnapshot) -> String {
-    snapshot.modelHealth?.displayName ?? "Local Model Not Loaded"
+    snapshot.modelHealth?.displayName ?? "Local Engine Not Ready"
   }
 
   static func statusSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -22,7 +22,7 @@ enum LocalModelStatusPresenter {
       case .disconnected:
         return "Launch the local engine to inspect model setup."
       case .launching:
-        return "Checking local model setup..."
+        return "Checking local engine setup..."
       case .failed:
         return "Relaunch the local engine to recover model setup."
       case .ready:
@@ -31,18 +31,18 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Model ready outside curated catalog"
+      return "Model needs reselection"
     }
 
     switch modelHealth.status {
     case "ready":
       return "Ready to use"
     case "unavailable":
-      return "Model setup needed"
+      return "Local engine setup needed"
     case "error":
       return "Model needs attention"
     default:
-      return "Checking model"
+      return "Checking local engine"
     }
   }
 
@@ -64,7 +64,7 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Choose a verified model from the local catalog before running Pith. Removed or external model selections are not treated as first-use ready."
+      return "Choose a verified model from Pith's curated list before running. Removed or external model selections are not treated as first-use ready."
     }
 
     return modelHealth.detail
@@ -72,10 +72,10 @@ enum LocalModelStatusPresenter {
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Model source unavailable."
+      return "Local engine source unavailable."
     }
 
-    return "Model source: \(modelHealth.source)"
+    return "Source: \(modelHealth.source)"
   }
 
   static func metricsSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -89,33 +89,33 @@ enum LocalModelStatusPresenter {
       ?? contextSize
     let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
     let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
-    return "Context: \(modelContextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
+    return "Context: \(modelContextSize) | Output: \(maxOutputTokens) | Engine: \(backend)"
   }
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Model readiness unavailable."
+      return "Local engine readiness unavailable."
     }
 
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"
     let packReady = modelHealth.metrics["packReady"] ?? "false"
     if readiness == "ready", packReady == "true" {
-      return "Model setup is ready."
+      return "Local engine setup is ready."
     }
-    return "Model setup is not ready yet."
+    return "Local engine setup is not ready yet."
   }
 
   static func installHintSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Launch Pith to inspect local model setup."
+      return "Launch Pith to inspect local engine setup."
     }
 
-    return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
+    return modelHealth.metrics["installHint"] ?? "Setup hint unavailable."
   }
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard snapshot.modelHealth != nil else {
-      return "Suggested model folders are unavailable until Pith finishes checking setup."
+      return "Local folders are unavailable until Pith finishes checking setup."
     }
 
     return "Use the folder buttons below if you need to inspect local model files."
@@ -123,7 +123,7 @@ enum LocalModelStatusPresenter {
 
   static func artifactPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard snapshot.modelHealth != nil else {
-      return "No local model files are active yet."
+      return "No local engine files are active yet."
     }
 
     return "Pith is using the selected verified local model."
@@ -155,13 +155,13 @@ enum LocalModelStatusPresenter {
 
   static func managerRuleSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     if snapshot.modelDownloadID != nil {
-      return "Downloads can be paused or cancelled. Pith will activate only one verified model."
+      return "Downloads can be paused or cancelled. Pith activates only one verified model."
     }
     if snapshot.pausedModelDownloadID != nil {
       return "Continue the paused download or cancel it before starting another model."
     }
     if let model = snapshot.selectedSetupModel {
-      return "Selected setup model: \(model.displayName). Pith runs one active model at a time."
+      return "Selected: \(model.displayName). Pith runs one active model at a time."
     }
 
     return "Choose one curated local model. Pith verifies the file before it can run."
@@ -173,10 +173,10 @@ enum LocalModelStatusPresenter {
     defaultModelID: String
   ) -> String {
     if model.active {
-      return "Currently active local model"
+      return "Active now"
     }
     if snapshot.modelDownloadID == model.id {
-      return "Downloading for local setup"
+      return "Downloading"
     }
     if snapshot.pausedModelDownloadID == model.id {
       return "Paused download"
@@ -186,13 +186,13 @@ enum LocalModelStatusPresenter {
     }
     if model.id == snapshot.selectedSetupModelID {
       if model.id == defaultModelID {
-        return "Selected default for first setup"
+        return "Selected default"
       }
 
-      return "Selected alternative for first setup"
+      return "Selected alternative"
     }
     if model.id == defaultModelID {
-      return "Default first-use choice"
+      return "Default choice"
     }
     if model.tags.contains("recommended") {
       return "Curated stronger tiny alternative"
