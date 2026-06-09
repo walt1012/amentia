@@ -63,46 +63,32 @@ belongs in connector attributes and narrow presenter adapters.
 
 Active milestone: **M12 Public Release**.
 
-Closed foundations:
+Ready foundations:
 
-- Local model setup: first-use guidance, verified downloads, activation,
-  bounded inference, restart recovery, and one active local model.
-- Installed local model files can be re-verified and selected again after app
-  updates or state loss; the UI must not present verification recovery as a
-  fresh download requirement.
-- Workspace loop: workspace-safe tools, sandbox diagnostics, bounded
-  subprocesses, Web Search, approvals, compact receipts, and recovery evidence.
-- Connector baseline: plugin registry, local execution gates, credentials,
-  retries, memory capture, and Notion as the reference connector.
-- macOS delivery: x86_64 DMG packaging, unsigned install guidance, size budgets,
-  manifests, release copy, package metadata, transient DMG retry, and packaged
-  smoke proof.
-- Release automation: split CI lanes, dry-run DMG packaging, downloaded-asset
-  rehearsal, release-plan guards, evidence-before-visibility ordering, final
-  publish validation, and manual-acceptance gates.
+- Local model setup works through in-app download, verification, activation,
+  pause, resume, cancel, recovery, and one active model.
+- Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
+  approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
+  evidence.
+- Connector baseline has local plugin registry, execution gates, credentials,
+  retries, generic timeline evidence, memory capture, and Notion as the
+  reference connector.
+- macOS packaging produces an x86_64 DMG with app bundle metadata, unsigned
+  install guidance, package-size checks, release copy, manifest, checksum, and
+  packaged smoke proof.
+- CI is split by change area and remains the source of truth for Rust, Swift,
+  package, policy, model, and release checks.
 
-Current decisions:
+Current constraints:
 
-- Keep Web Search as retrieval for now; do not build generic local RAG yet.
-- Keep connector expansion narrow until the local cowork loop ships cleanly.
-- Do not start new product surfaces before the first release candidate is
-  accepted on the real install path.
-- Avoid broad refactors before M12 unless they remove a correctness, release,
-  or safety risk.
+- Ship the first useful local cowork loop before adding new surfaces.
+- Keep Web Search as retrieval; generic local document RAG remains deferred.
+- Keep connector expansion narrow until the release install path is accepted.
 - Do not bundle Git, model weights, package-manager payloads, extra
   architectures, or unused runtimes.
-- Public release assets stay limited to DMG, checksum, `README-FIRST.txt`, and
-  release manifest.
-- Installer verification copy must keep those four assets in one download
-  folder so checksum validation is obvious for normal users.
-- Manual release dispatch defaults to a dry-run draft prerelease; stable
-  visibility must be an explicit later decision.
-- Visible ad-hoc prerelease publishing requires a repository-scoped validated
-  manual acceptance receipt, not placeholders.
-- Manual acceptance receipt templates must be derived from downloaded assets
-  whose DMG bytes match the manifest and checksum sidecar.
-- Remote CI is the source of truth for Rust formatting, tests, policy checks,
-  model catalog validation, and macOS packaging.
+- Public release assets stay limited to the DMG, checksum, `README-FIRST.txt`,
+  and release manifest.
+- Visible ad-hoc prereleases require an explicit manual acceptance receipt.
 
 ## M12: Public Release
 
@@ -110,54 +96,31 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 Build now:
 
-- Treat `v0.1.2` as the current dry-run candidate; its remote CI dry-run passed
-  and produced the expected four public-style assets.
-- Keep installer guidance explicit for both Developer ID and ad-hoc Gatekeeper
-  paths.
-- Complete one manual first-launch acceptance on a fresh Mac: download from
-  GitHub Release, verify checksum, open DMG, handle Gatekeeper, download the
-  default model, open a workspace, run a cowork turn, use Web Search, approve a
-  bounded action, inspect proof, generate the manual acceptance receipt from
-  downloaded assets, fill it, and validate it.
-- Keep normal-path UI language product-level: show session, local engine,
-  connector, local model, workspace search, and first prompt concepts instead
-  of internal runtime/thread/file details.
-- Keep the visual direction system-adaptive and light-mode friendly: quiet
-  borders, readable cards, and no fixed dark or fixed light appearance.
-- Keep the first-run and daily-work UI calm, spacious, and humane: progressive
-  disclosure before dense panels, plain-language actions before diagnostics,
-  and soft native surfaces instead of noisy debug-style lists.
-- Keep high-frequency surfaces aligned to that standard: cowork timeline,
-  details pane, local engine, workspace search, connectors, and notes should
-  read as product UI before advanced diagnostics appear.
-- Keep first-use local engine setup plain and confidence-building: default
-  model choice first, repair language instead of metadata language, and model
-  file details only behind advanced disclosure.
-- Keep local model setup language user-facing: download, verify, use, pause,
-  continue, cancel, and repair model setup; reserve paths and package details
-  for Advanced.
-- Keep workspace context and first prompt surfaces cowork-first: search should
-  feel like context gathering, and starter prompts should name user goals rather
-  than implementation mechanics.
-- Record the accepted dry-run artifact and validated fresh-Mac receipt before
-  changing release visibility.
-- Publish the first ad-hoc prerelease only after manual acceptance passes.
-- Require `manual_acceptance_confirmed=true` before any visible ad-hoc
-  prerelease can be published, with `manual_acceptance_evidence` pointing to the
-  repository-scoped validated receipt; final publish validation independently
-  checks the receipt URL and release notes disclosure.
-- Keep unsigned/ad-hoc copy explicit because Developer ID notarization is paid
-  and optional later.
+- Freeze M12 scope to release readiness, install confidence, first-run clarity,
+  and user-facing UI polish only.
+- Run the full first-launch acceptance path on a fresh Mac: download release
+  assets, verify checksum, open DMG, pass Gatekeeper, download the default
+  model, open a workspace, run a cowork turn, use Web Search, approve one
+  bounded action, inspect proof, and validate the manual acceptance receipt.
+- Keep normal UI language product-level: session, workspace, local model,
+  local engine, Web Search, connector, approval, and proof. Keep paths,
+  manifests, package details, and diagnostics behind Advanced.
+- Keep visuals system-adaptive and light-mode friendly: clean spacing, readable
+  cards, quiet borders, no fixed dark theme, and no fixed light theme.
+- Publish only after the dry-run artifact and fresh-Mac manual acceptance
+  receipt are recorded and the release workflow validates the same four public
+  assets.
 
 Exit when:
 
+- A fresh unsigned install completes the daily cowork loop without hidden hosted
+  services or manual model import.
 - The GitHub Release exposes exactly the four public assets and final publish
   validation passes against the live release.
-- A fresh unsigned install can complete the daily cowork loop without hidden
-  hosted services or manual file import.
 - Release plan, release manifest, `README-FIRST.txt`, release notes, packaged
-  smoke proof, and downloaded-asset rehearsal describe the same user path.
-- CI remains fast, split, and strict enough to block release-contract drift.
+  smoke proof, manual acceptance receipt, and downloaded-asset rehearsal
+  describe the same user path.
+- CI stays fast, split, and strict enough to block release-contract drift.
 
 ## M13: Connector Platform
 
