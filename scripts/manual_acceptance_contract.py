@@ -4,13 +4,13 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
 
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
+from release_artifacts import sha256_hex
 from release_identity import validate_public_release_tag
 
 
@@ -180,14 +180,6 @@ def require_dmg_asset_hash(path: Path, *, expected_checksum: str) -> None:
   actual_checksum = sha256_hex(path)
   if actual_checksum != expected_checksum.lower():
     raise RuntimeError("DMG asset digest must match release manifest and checksum sidecar")
-
-
-def sha256_hex(path: Path) -> str:
-  hasher = hashlib.sha256()
-  with path.open("rb") as file:
-    for chunk in iter(lambda: file.read(1024 * 1024), b""):
-      hasher.update(chunk)
-  return hasher.hexdigest()
 
 
 def require_manifest_equal(data: dict[str, object], key: str, expected: str) -> None:

@@ -225,7 +225,7 @@ def acceptance_markdown(summary: dict) -> str:
   )
   return f"""# Pith {summary["tag"]} Manual Release Acceptance
 
-Use this checklist only after automated release rehearsal passes.
+Use this acceptance worksheet only after automated release rehearsal passes.
 
 Decision:
 - [ ] Accept this build for visible ad-hoc prerelease.
