@@ -48,7 +48,7 @@ MANUAL_PRERELEASE_CHECKS = (
   "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
   f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
   "Open a real workspace folder and confirm the header or inspector reports workspace readiness.",
-  "Run Map Workspace, Plan Next Step, or a short cowork prompt from the first app-open surface.",
+  "Run Understand Project, Pick Next Step, or a short cowork prompt from the first app-open surface.",
   "Let the model use Web Search when useful and inspect the source proof in the timeline.",
   "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
   "Restart Pith and confirm runtime readiness, selected workspace, model state, and recent proof recover.",

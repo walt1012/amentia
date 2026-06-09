@@ -84,7 +84,7 @@ def main() -> int:
     "FirstRequestPromptPresenter.firstAppOpenActionTrustSummary()",
     "Swift distribution trust presenter",
   )
-  for phrase in ("Map Workspace", "Plan Next Step"):
+  for phrase in ("Understand Project", "Pick Next Step"):
     require_contains(first_request_text, phrase, "Swift first request presenter")
     require_contains(FIRST_APP_OPEN_INSTALL_STEP, phrase, "release install step")
   require_contains(
@@ -105,7 +105,7 @@ def main() -> int:
 
   require_contains(
     setup_progress_text,
-    "Choose Starter",
+    "Pick Start",
     "Swift setup progress presenter",
   )
   for phrase in FORBIDDEN_FIRST_OPEN_COPY:

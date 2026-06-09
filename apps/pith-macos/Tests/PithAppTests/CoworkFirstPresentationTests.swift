@@ -7,7 +7,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       summary,
-      "Choose Map Workspace, Plan Next Step, or type a short cowork prompt."
+      "Choose Understand Project, Pick Next Step, or type a short cowork prompt."
     )
   }
 
@@ -109,7 +109,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(detail, "Next: Choose Starter")
+    XCTAssertEqual(detail, "Next: Pick Start")
   }
 
   func testSetupProgressSendsExistingFirstRequestDraft() {
@@ -120,7 +120,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(detail, "Next: Send First Prompt")
+    XCTAssertEqual(detail, "Next: Send Prompt")
   }
 
   func testReadinessStripStaysVisibleForToolSetup() {

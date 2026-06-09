@@ -6,11 +6,11 @@ enum FirstRequestPromptPresenter {
   static let planNextStepID = "plan-next-step"
 
   static func firstAppOpenActionSummary() -> String {
-    "Choose Map Workspace, Plan Next Step, or type a short cowork prompt."
+    "Choose Understand Project, Pick Next Step, or type a short cowork prompt."
   }
 
   static func firstAppOpenActionTrustSummary() -> String {
-    "first app-open action offers Map Workspace, Plan Next Step, or a short cowork prompt"
+    "first app-open action offers Understand Project, Pick Next Step, or a short cowork prompt"
   }
 
   static func calloutSummary() -> String {
@@ -38,12 +38,12 @@ enum FirstRequestPromptPresenter {
     return [
       ComposerSuggestionSummary(
         id: mapWorkspaceID,
-        title: "Map Workspace",
-        message: "Map \(workspaceName) briefly. Return: 1. key folders, 2. project flow, 3. one safe next step."
+        title: "Understand Project",
+        message: "Understand \(workspaceName) briefly. Return: 1. key folders, 2. project flow, 3. one safe next step."
       ),
       ComposerSuggestionSummary(
         id: planNextStepID,
-        title: "Plan Next Step",
+        title: "Pick Next Step",
         message: "Help me choose the next useful step in \(workspaceName). Return only: 1. current situation, 2. safest next action, 3. what you need from me."
       ),
     ]

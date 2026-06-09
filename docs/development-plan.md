@@ -131,6 +131,9 @@ Build now:
 - Keep first-use local engine setup plain and confidence-building: default
   model choice first, repair language instead of metadata language, and model
   file details only behind advanced disclosure.
+- Keep workspace context and first prompt surfaces cowork-first: search should
+  feel like context gathering, and starter prompts should name user goals rather
+  than implementation mechanics.
 - Record the accepted dry-run artifact and validated fresh-Mac receipt before
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.

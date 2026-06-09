@@ -8,7 +8,7 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
       "map-plan-or-short-cowork-prompt"
     )
     XCTAssertTrue(
-      FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("Map Workspace")
+      FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("Understand Project")
     )
     XCTAssertTrue(
       FirstRequestPromptPresenter.firstAppOpenActionTrustSummary().contains("short cowork prompt")
@@ -16,8 +16,8 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
   }
 
   func testFirstRequestCopyFramesCoworkSession() {
-    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Map Workspace"))
-    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Plan Next Step"))
+    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Understand Project"))
+    XCTAssertTrue(FirstRequestPromptPresenter.calloutSummary().contains("Pick Next Step"))
     XCTAssertTrue(FirstRequestPromptPresenter.firstAppOpenActionSummary().contains("short cowork prompt"))
     XCTAssertTrue(
       FirstRequestPromptPresenter.calloutDetail(workspaceDisplayName: nil).contains("cowork session")
@@ -34,7 +34,7 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
       FirstRequestPromptPresenter.mapWorkspaceID,
       FirstRequestPromptPresenter.planNextStepID,
     ])
-    XCTAssertEqual(suggestions[1].title, "Plan Next Step")
+    XCTAssertEqual(suggestions[1].title, "Pick Next Step")
     XCTAssertTrue(suggestions[1].message.contains("next useful step"))
     XCTAssertFalse(suggestions[1].message.lowercased().contains("git"))
   }
@@ -44,11 +44,11 @@ final class FirstRequestPromptPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       FirstRequestPromptPresenter.primaryActionTitle(for: suggestions[0]),
-      "Map Workspace"
+      "Understand Project"
     )
     XCTAssertEqual(
       FirstRequestPromptPresenter.secondaryActionTitle(for: suggestions[1]),
-      "Plan Next Step"
+      "Pick Next Step"
     )
   }
 }

@@ -31,7 +31,7 @@ enum SetupProgressPresenter {
       return "Next: \(nextStep)"
     }
     if snapshot.isWaitingForFirstMessage {
-      return snapshot.hasDraft ? "Draft ready" : "Next: First request"
+      return snapshot.hasDraft ? "Draft ready" : "Next: First prompt"
     }
 
     return "Ready"
@@ -75,7 +75,7 @@ enum SetupProgressPresenter {
         return "Create Session"
       }
       if snapshot.isWaitingForFirstMessage {
-        return snapshot.hasDraft ? "Send First Prompt" : "Choose Starter"
+        return snapshot.hasDraft ? "Send Prompt" : "Pick Start"
       }
 
       return nil

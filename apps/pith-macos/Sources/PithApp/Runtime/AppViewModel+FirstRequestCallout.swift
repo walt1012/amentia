@@ -9,7 +9,7 @@ extension AppViewModel {
   }
 
   func firstRequestCalloutTitle() -> String {
-    "Start Cowork Session"
+    "Start Coworking"
   }
 
   func firstRequestCalloutSummary() -> String {
