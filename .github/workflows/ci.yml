@@ -421,12 +421,12 @@ jobs:
             for line in lines
             if (
               "error:" in line.lower()
-              or "failed" in line.lower()
+              or ("failed" in line.lower() and "passed" not in line.lower())
               or "xctassert" in line.lower()
-              or "test case" in line.lower()
+              or "failure:" in line.lower()
             )
           ]
-          snippet = "\n".join((interesting or lines)[-60:])
+          snippet = "\n".join((interesting or lines[-80:])[-80:])
           snippet = snippet.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
           print(f"::error title=Swift test failure::{snippet}")
           PY
