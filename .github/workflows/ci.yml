@@ -393,7 +393,19 @@ jobs:
             swift-test-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Test x86_64 Swift app logic
-        run: swift test --package-path "$SWIFT_PACKAGE_PATH" --arch x86_64
+        run: |
+          set -o pipefail
+          mkdir -p .ci-logs
+          swift test --package-path "$SWIFT_PACKAGE_PATH" --arch x86_64 2>&1 | tee .ci-logs/swift-test.log
+
+      - name: Upload Swift test log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-test-log
+          path: .ci-logs/swift-test.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   macos-runtime:
     name: macOS runtime build
