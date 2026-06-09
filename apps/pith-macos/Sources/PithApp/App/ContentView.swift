@@ -34,7 +34,7 @@ struct ContentView: View {
         }
 
         if viewModel.canCreateThread() {
-          Button("New Thread") {
+          Button("New Session") {
             viewModel.createThread()
           }
         }
@@ -47,10 +47,10 @@ struct ContentView: View {
 
   private var sidebar: some View {
     List(selection: Binding(get: { viewModel.selectedThreadID }, set: { viewModel.selectThread(id: $0) })) {
-      Section("Threads") {
+      Section("Sessions") {
         if viewModel.threads.isEmpty {
           SidebarEmptyState(
-            title: "No Threads Yet",
+            title: "No Sessions Yet",
             detail: viewModel.sidebarEmptyStateDetail()
           )
         } else {

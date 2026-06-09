@@ -8,7 +8,7 @@ Pith is a small, strong, local-first macOS cowork agent for real daily work.
 - Purpose: cowork first; coding is one workflow, not the product boundary.
 - Intelligence: local model by default, no required hosted model API, one active
   local model at a time.
-- Setup: first use downloads and verifies a GGUF model in-app, defaulting to
+- Setup: first use downloads and verifies a local model in-app, defaulting to
   `LFM2.5-350M`.
 - Retrieval: Web Search is the active retrieval layer. Generic local document
   RAG is deferred until the daily cowork loop is excellent.
@@ -119,6 +119,9 @@ Build now:
   default model, open a workspace, run a cowork turn, use Web Search, approve a
   bounded action, inspect proof, generate the manual acceptance receipt from
   downloaded assets, fill it, and validate it.
+- Keep first-run UI language product-level: show session, local engine,
+  connector, and local model concepts instead of internal runtime/thread file
+  details on the normal path.
 - Record the accepted dry-run artifact and validated fresh-Mac receipt before
   changing release visibility.
 - Publish the first ad-hoc prerelease only after manual acceptance passes.

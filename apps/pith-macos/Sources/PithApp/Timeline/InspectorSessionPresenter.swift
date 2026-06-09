@@ -24,11 +24,11 @@ enum InspectorSessionPresenter {
   static func title(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Local Runtime Offline"
+      return "Local Engine Offline"
     case .launching:
-      return "Starting Local Runtime"
+      return "Starting Local Engine"
     case .failed:
-      return "Runtime Needs Relaunch"
+      return "Local Engine Needs Relaunch"
     case .ready:
       if snapshot.hasActiveTurn {
         return "Local Execution Running"
@@ -40,10 +40,10 @@ enum InspectorSessionPresenter {
         return "Workspace Needed"
       }
       if !snapshot.hasRuntimeThreadSelection {
-        return "Thread Needed"
+        return "Session Needed"
       }
       if snapshot.isWaitingForFirstMessage {
-        return "First Request Ready"
+        return "First Prompt Ready"
       }
       return "Local Session Ready"
     }
@@ -52,11 +52,11 @@ enum InspectorSessionPresenter {
   static func detail(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch Pith's runtime before inspecting project tools, model state, memory, or plugins."
+      return "Launch Pith's local engine before inspecting project actions, model state, memory, or connectors."
     case .launching:
-      return "Pith is reconnecting local model, workspace, thread, memory, and plugin state."
+      return "Pith is reconnecting local model, workspace, session, memory, and connector state."
     case .failed:
-      return "Use the relaunch action in the timeline header to recover the local runtime."
+      return "Use the relaunch action in the timeline header to recover the local engine."
     case .ready:
       if snapshot.hasActiveTurn {
         return "Pith is running locally. Keep review focused on the timeline unless the execution should be cancelled."
@@ -68,7 +68,7 @@ enum InspectorSessionPresenter {
         return "Open one workspace so file, shell, search, diff, and memory actions stay scoped."
       }
       if !snapshot.hasRuntimeThreadSelection {
-        return "Create or select a thread to keep messages, approvals, memory, and cancellation together."
+        return "Create or select a session to keep messages, approvals, memory, and cancellation together."
       }
       if snapshot.isWaitingForFirstMessage {
         return "Send one short cowork request from the composer to finish first-use setup."
@@ -97,7 +97,7 @@ enum InspectorSessionPresenter {
     let selectedModeSummary = "Mode "
       + LocalExecutionSafetyModePresenter.compact(snapshot.selectedLocalExecutionSafetyMode)
     let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
-    let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No thread"
+    let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No session"
     return [readinessSummary, toolSummary, selectedModeSummary, workspaceSummary, threadSummary]
       .compactMap { $0 }
       .joined(separator: " | ")
@@ -106,15 +106,15 @@ enum InspectorSessionPresenter {
   private static func runtimeReadinessSummary(_ status: String) -> String {
     switch status {
     case "ready":
-      return "Runtime ready"
+      return "Local engine ready"
     case "running":
-      return "Runtime running"
+      return "Local work running"
     case "needs_approval":
-      return "Runtime needs approval"
+      return "Approval needed"
     case "setup_required":
-      return "Runtime setup"
+      return "Setup needed"
     default:
-      return "Runtime \(status)"
+      return "Local engine \(status)"
     }
   }
 

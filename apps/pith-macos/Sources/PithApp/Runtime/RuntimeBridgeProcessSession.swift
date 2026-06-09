@@ -61,12 +61,12 @@ final class RuntimeBridgeProcessSession {
   ) {
     let processIdentifier = identifier
     process.terminationHandler = { [processIdentifier] process in
-      let detail = "Runtime exited with status \(process.terminationStatus)."
+      let detail = "Local engine exited with status \(process.terminationStatus)."
       onTermination(processIdentifier, detail)
     }
 
     guard process.isRunning else {
-      onTermination(processIdentifier, "Runtime exited with status \(process.terminationStatus).")
+      onTermination(processIdentifier, "Local engine exited with status \(process.terminationStatus).")
       return
     }
 

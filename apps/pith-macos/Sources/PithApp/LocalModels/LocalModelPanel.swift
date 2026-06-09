@@ -193,7 +193,7 @@ private struct ModelTroubleshootingPanel: View {
         .buttonStyle(.bordered)
         .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
-        Button("Show Runtime Folder") {
+        Button("Show Engine Folder") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)

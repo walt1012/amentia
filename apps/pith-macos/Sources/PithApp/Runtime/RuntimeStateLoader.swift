@@ -35,11 +35,11 @@ enum RuntimeStateLoader {
     } catch {
       return RuntimeReadinessSummary(
         status: "unavailable",
-        summary: "Runtime readiness unavailable: \(error.localizedDescription)",
+        summary: "Local engine readiness unavailable: \(error.localizedDescription)",
         checks: [
           RuntimeReadinessCheckSummary(
             id: "runtime-readiness",
-            title: "Runtime Readiness",
+            title: "Local Engine Readiness",
             status: "unavailable",
             detail: error.localizedDescription
           )
@@ -50,7 +50,7 @@ enum RuntimeStateLoader {
   }
 
   private static func modelHealthFailureDetail(serverLabel: String?, error: Error) -> String {
-    let detail = "Model health unavailable: \(error.localizedDescription)"
+    let detail = "Model setup unavailable: \(error.localizedDescription)"
     guard let serverLabel, !serverLabel.isEmpty else {
       return detail
     }

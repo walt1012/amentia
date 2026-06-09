@@ -11,7 +11,7 @@ extension AppViewModel {
       return
     }
     let failureThreadID = selectedThreadID
-    let title = "Thread \(threads.count + 1)"
+    let title = "Session \(threads.count + 1)"
 
     let task = Task {
       defer {

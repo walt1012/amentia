@@ -51,7 +51,7 @@ struct InspectorPane: View {
               PluginManagerPanel(viewModel: viewModel)
             }
 
-            DisclosureGroup("Thread", isExpanded: $threadExpanded) {
+            DisclosureGroup("Session", isExpanded: $threadExpanded) {
               VStack(alignment: .leading, spacing: 8) {
                 Text(viewModel.selectedThreadTitle())
                   .font(.headline)

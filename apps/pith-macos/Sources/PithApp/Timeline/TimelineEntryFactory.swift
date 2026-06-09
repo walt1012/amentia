@@ -61,7 +61,7 @@ enum TimelineEntryFactory {
       TimelineEntry(
         id: "default-thread-ready:\(title)",
         kind: .system,
-        title: "Thread Ready",
+        title: "Session Ready",
         body: "\(title) is ready after runtime, model, workspace, and thread setup. Send one short cowork request to finish first-use setup.",
         attributes: [
           "setup": "runtime, model, workspace, thread, first request"

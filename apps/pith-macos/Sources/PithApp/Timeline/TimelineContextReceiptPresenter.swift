@@ -292,9 +292,9 @@ enum TimelineContextReceiptPresenter {
     case "network":
       return "network"
     case "localPlugin":
-      return "local plugin"
+      return "local connector"
     case "localRuntime":
-      return "local runtime"
+      return "local engine"
     default:
       return value ?? "unknown"
     }

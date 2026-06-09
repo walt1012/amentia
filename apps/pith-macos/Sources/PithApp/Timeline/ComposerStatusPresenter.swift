@@ -17,11 +17,11 @@ enum ComposerStatusPresenter {
   static func placeholder(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local runtime to start"
+      return "Launch the local engine to start"
     case .launching:
-      return "Runtime is starting..."
+      return "Local engine is starting..."
     case .failed:
-      return "Relaunch the runtime to recover"
+      return "Relaunch the local engine to recover"
     case .ready:
       break
     }
@@ -35,7 +35,7 @@ enum ComposerStatusPresenter {
     }
 
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create or select a thread"
+      return "Create or select a session"
     }
 
     if snapshot.hasActiveTurn {
@@ -58,11 +58,11 @@ enum ComposerStatusPresenter {
   static func statusSummary(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local runtime to start."
+      return "Launch the local engine to start."
     case .launching:
-      return "Launching the local runtime..."
+      return "Launching the local engine..."
     case .failed:
-      return "Relaunch the local runtime to recover."
+      return "Relaunch the local engine to recover."
     case .ready:
       if !snapshot.isLocalModelReady {
         return "\(snapshot.modelSetupSummary) Continue model setup to run locally."
@@ -73,7 +73,7 @@ enum ComposerStatusPresenter {
       }
 
       if !snapshot.hasRuntimeThreadSelection {
-        return "Create a thread to start local work."
+        return "Create a session to start local work."
       }
 
       if snapshot.hasActiveTurn {

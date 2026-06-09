@@ -22,7 +22,7 @@ enum SetupCalloutPresenter {
       return "Open Workspace"
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create Thread"
+      return "Create Session"
     }
 
     return "Local Setup Complete"
@@ -36,7 +36,7 @@ enum SetupCalloutPresenter {
       return "Choose the project Pith should inspect, search, and edit locally."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create or select a thread before starting the first cowork session."
+      return "Create or select a session before starting the first cowork task."
     }
 
     return "Pith is ready for local work."
@@ -53,7 +53,7 @@ enum SetupCalloutPresenter {
       return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Threads keep timeline, approvals, cancellation, and local memory together."
+      return "Sessions keep messages, approvals, cancellation, and useful memory together."
     }
 
     return "Ready"
@@ -92,7 +92,7 @@ enum SetupCalloutPresenter {
       return "Open Workspace"
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "New Thread"
+      return "New Session"
     }
 
     return nil

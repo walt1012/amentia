@@ -28,10 +28,10 @@ enum LocalModelOperationPresenter {
     switch snapshot.runtimeState {
     case .disconnected:
       return LocalModelSetupGuidance(
-        title: "Launch Local Runtime",
-        summary: "Launch Pith's local runtime before choosing or running a model.",
-        detail: "The model catalog, downloads, and active model state stay inside the local runtime.",
-        actionSummary: "Launch the runtime to inspect local model setup.",
+        title: "Launch Local Engine",
+        summary: "Launch Pith's local engine before choosing or running a model.",
+        detail: "The model catalog, downloads, and selected model state stay local on this Mac.",
+        actionSummary: "Launch the local engine to inspect model setup.",
         readinessDetail: "Launch",
         tone: .warning
       )
@@ -46,10 +46,10 @@ enum LocalModelOperationPresenter {
       )
     case .failed:
       return LocalModelSetupGuidance(
-        title: "Relaunch Runtime",
-        summary: "Runtime stopped before local model setup could be completed.",
-        detail: "Relaunch the runtime to recover model catalog, download, and activation state.",
-        actionSummary: "Relaunch the runtime before changing model setup.",
+        title: "Relaunch Local Engine",
+        summary: "Local engine stopped before model setup could be completed.",
+        detail: "Relaunch the local engine to recover model catalog, download, and activation state.",
+        actionSummary: "Relaunch the local engine before changing model setup.",
         readinessDetail: "Relaunch",
         tone: .danger
       )
@@ -109,12 +109,12 @@ enum LocalModelOperationPresenter {
   static func recoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Recovery: launch the runtime; model catalog, paused downloads, " +
+      return "Recovery: launch the local engine; model catalog, paused downloads, " +
         "and selected model state are read from local storage."
     case .launching:
       return "Recovery: reconnecting local model state before showing the next action."
     case .failed:
-      return "Recovery: relaunch the runtime; paused downloads and selected model choices remain local."
+      return "Recovery: relaunch the local engine; paused downloads and selected model choices remain local."
     case .ready:
       return readyRecoverySummary(snapshot)
     }
@@ -247,7 +247,7 @@ enum LocalModelOperationPresenter {
 
     if snapshot.isLocalModelReady {
       let activeModel = snapshot.activeModelDisplayName ?? "the active model"
-      return "Recovery: \(activeModel) is selected; runtime relaunch will reuse this local model."
+      return "Recovery: \(activeModel) is selected; local engine relaunch will reuse this model."
     }
 
     if let model = snapshot.selectedSetupModel, model.downloaded {
@@ -267,6 +267,6 @@ enum LocalModelOperationPresenter {
         "cancelled downloads clear partial files."
     }
 
-    return "Recovery: install model metadata or relaunch the runtime to refresh the local catalog."
+    return "Recovery: install model metadata or relaunch the local engine to refresh the catalog."
   }
 }

@@ -12,7 +12,7 @@ enum WorkspaceThreadSelectionLoader {
       .map { RuntimeSummaryMapper.threadSummary(from: $0) }
 
     if workspaceThreads.isEmpty && createIfEmpty {
-      let thread = try await startThread("\(workspace.displayName) Thread")
+      let thread = try await startThread("\(workspace.displayName) Session")
       workspaceThreads = [thread]
     }
 

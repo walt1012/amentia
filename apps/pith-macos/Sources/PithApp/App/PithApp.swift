@@ -14,7 +14,7 @@ struct PithApp: App {
     }
     .commands {
       CommandGroup(replacing: .newItem) {
-        Button("New Thread") {
+        Button("New Session") {
           viewModel.createThread()
         }
         .keyboardShortcut("n", modifiers: [.command])
@@ -65,7 +65,7 @@ struct PithApp: App {
         .keyboardShortcut(.return, modifiers: [.command])
         .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel Execution") {
+        Button("Cancel Work") {
           viewModel.cancelActiveTurn()
         }
         .keyboardShortcut(.cancelAction)

@@ -22,7 +22,7 @@ enum TimelineSessionState {
   }
 
   static func threadTitle(for threadID: String, threads: [ThreadSummary]) -> String {
-    threads.first(where: { $0.id == threadID })?.title ?? "Thread"
+    threads.first(where: { $0.id == threadID })?.title ?? "Session"
   }
 
   static func selectedEntry(

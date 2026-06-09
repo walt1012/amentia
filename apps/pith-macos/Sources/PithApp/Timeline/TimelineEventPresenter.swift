@@ -77,7 +77,7 @@ enum TimelineEventPresenter {
 
   static func threadCreationFailed(error: Error) -> TimelineEntry {
     return TimelineEntryFactory.warning(
-      title: "Thread Creation Failed",
+      title: "Session Creation Failed",
       body: error.localizedDescription,
       attributes: [:]
     )
@@ -85,8 +85,8 @@ enum TimelineEventPresenter {
 
   static func threadCreated(_ thread: ThreadSummary) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Thread Created",
-      body: "Created \(thread.title) in the local runtime.",
+      title: "Session Created",
+      body: "Created \(thread.title) for local work.",
       attributes: [:]
     )
   }
@@ -133,7 +133,7 @@ enum TimelineEventPresenter {
 
   static func threadLoadFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Thread Load Failed",
+      title: "Session Load Failed",
       body: error.localizedDescription,
       attributes: [:]
     )
@@ -159,7 +159,7 @@ enum TimelineEventPresenter {
     TimelineEntryFactory.system(
       title: "Cowork Session Ready",
       body:
-        "Runtime, local model, workspace, and thread are ready. Send one short cowork request to finish first-use setup.",
+        "Local engine, model, workspace, and session are ready. Send one short cowork prompt to finish first-use setup.",
       attributes: [
         "setup": "first-request"
       ]
@@ -168,8 +168,8 @@ enum TimelineEventPresenter {
 
   static func runtimeDisconnected(detail: String) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Runtime Disconnected",
-      body: "\(detail) Use Relaunch Runtime to recover the local session.",
+      title: "Local Engine Disconnected",
+      body: "\(detail) Use Relaunch Local Engine to recover the session.",
       attributes: [
         "recovery": "relaunch-runtime"
       ]
@@ -178,7 +178,7 @@ enum TimelineEventPresenter {
 
   static func runtimeLaunchFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Runtime Launch Failed",
+      title: "Local Engine Launch Failed",
       body: error.localizedDescription,
       attributes: [:]
     )
