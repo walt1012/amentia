@@ -295,7 +295,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "GitHub mutation: none; dry-run does not create or update a GitHub Release",
     "## Next Maintainer Actions",
     "release-dry-run-*",
-    "manual prerelease acceptance checklist",
+    "manual acceptance receipt",
     "Planned final visibility: `visible prerelease`",
     "Allow visible ad-hoc: `true`",
     "Manual acceptance confirmed: `false`",
@@ -349,7 +349,7 @@ def assert_release_plan_json_preserves_release_decision() -> None:
   actions = plan.get("nextMaintainerActions")
   if not isinstance(actions, list) or not actions:
     raise AssertionError("release plan JSON should include next maintainer actions")
-  if not any("manual prerelease acceptance" in action for action in actions):
+  if not any("manual acceptance receipt" in action for action in actions):
     raise AssertionError("release plan JSON should preserve manual acceptance guidance")
   if "Untrusted ad-hoc prerelease" not in str(plan.get("trustPath", "")):
     raise AssertionError("release plan JSON should preserve trust guidance")

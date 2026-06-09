@@ -568,7 +568,7 @@ def validate_release_plan_actions(data: dict[str, object]) -> None:
         "DMG checksum",
         "release manifest",
         "dry-run rehearsal summary",
-        "manual prerelease acceptance",
+        "manual acceptance receipt",
         "dry_run=false",
       ),
     )

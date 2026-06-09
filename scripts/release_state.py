@@ -286,7 +286,7 @@ def release_next_actions(*, dry_run: bool, state: ReleaseState) -> str:
       [
         "- Download the `release-dry-run-*` artifact from this workflow.",
         "- Verify the DMG checksum, release manifest, release plan, and dry-run rehearsal summary.",
-        "- Run the manual prerelease acceptance checklist on a fresh Mac before any visible ad-hoc release.",
+        "- Generate, fill, and validate the manual acceptance receipt on a fresh Mac before any visible ad-hoc release.",
         "- If acceptance passes, rerun the release workflow with `dry_run=false` and the intended visibility inputs.",
       ]
     )

@@ -96,6 +96,8 @@ Current decisions:
   visibility must be an explicit later decision.
 - Visible ad-hoc prerelease publishing requires a repository-scoped validated
   manual acceptance receipt, not placeholders.
+- Manual acceptance receipt templates must be derived from downloaded assets
+  whose DMG bytes match the manifest and checksum sidecar.
 - Remote CI is the source of truth for Rust formatting, tests, policy checks,
   model catalog validation, and macOS packaging.
 

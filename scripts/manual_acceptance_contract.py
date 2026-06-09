@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -121,6 +122,7 @@ def manual_acceptance_template_from_asset_dir(
     expected_checksum=checksum,
     expected_name=dmg_name,
   )
+  require_dmg_asset_hash(asset_dir / dmg_name, expected_checksum=checksum)
   return manual_acceptance_template(
     tag=tag,
     source_commit=source_commit,
@@ -170,6 +172,22 @@ def require_checksum_sidecar(
     raise RuntimeError("checksum sidecar digest must match release manifest")
   if actual_name != expected_name:
     raise RuntimeError("checksum sidecar asset name must match the DMG asset")
+
+
+def require_dmg_asset_hash(path: Path, *, expected_checksum: str) -> None:
+  if not path.is_file():
+    raise FileNotFoundError(f"DMG asset is missing: {path}")
+  actual_checksum = sha256_hex(path)
+  if actual_checksum != expected_checksum.lower():
+    raise RuntimeError("DMG asset digest must match release manifest and checksum sidecar")
+
+
+def sha256_hex(path: Path) -> str:
+  hasher = hashlib.sha256()
+  with path.open("rb") as file:
+    for chunk in iter(lambda: file.read(1024 * 1024), b""):
+      hasher.update(chunk)
+  return hasher.hexdigest()
 
 
 def require_manifest_equal(data: dict[str, object], key: str, expected: str) -> None:

@@ -286,7 +286,7 @@ def release_plan_actions(*, workflow_mode: str, planned_draft: bool) -> list[str
         "and dry-run rehearsal summary."
       ),
       (
-        "Run the manual prerelease acceptance checklist on a fresh Mac "
+        "Generate, fill, and validate the manual acceptance receipt on a fresh Mac "
         "before any visible ad-hoc release."
       ),
       (

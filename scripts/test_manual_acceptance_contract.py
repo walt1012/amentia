@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 from contextlib import redirect_stderr
 from io import StringIO
@@ -21,7 +22,8 @@ from release_artifacts import release_installer_asset_names
 TAG = "v1.2.3"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456"
-CHECKSUM = "a" * 64
+DMG_BYTES = b"release dmg\n"
+CHECKSUM = hashlib.sha256(DMG_BYTES).hexdigest()
 
 
 def valid_payload() -> dict[str, object]:
@@ -110,7 +112,7 @@ def write_asset_dir(
     ],
   }
   root.mkdir(parents=True, exist_ok=True)
-  (root / dmg_name).write_bytes(b"release dmg\n")
+  (root / dmg_name).write_bytes(DMG_BYTES)
   (root / checksum_name).write_text(f"{checksum}  {dmg_name}\n", encoding="utf-8")
   (root / manifest_name).write_text(json.dumps(manifest) + "\n", encoding="utf-8")
 
@@ -163,6 +165,24 @@ def assert_asset_template_rejects_stale_assets() -> None:
     expect_template_failure(
       lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
       "workflowRunUrl",
+    )
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root)
+    (root / release_installer_asset_names(TAG)[0]).unlink()
+    expect_template_failure(
+      lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
+      "DMG asset is missing",
+    )
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_asset_dir(root)
+    (root / release_installer_asset_names(TAG)[0]).write_bytes(b"tampered dmg\n")
+    expect_template_failure(
+      lambda: manual_acceptance_template_from_asset_dir(tag=TAG, asset_dir=root),
+      "DMG asset digest",
     )
 
 
