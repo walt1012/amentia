@@ -9,6 +9,7 @@ struct ContentView: View {
       TimelinePane(viewModel: viewModel)
       InspectorPane(viewModel: viewModel)
     }
+    .background(PithVisualStyle.windowBackground)
     .toolbar {
       ToolbarItemGroup {
         if viewModel.shouldShowRuntimeLaunchToolbarAction(),
@@ -70,6 +71,7 @@ struct ContentView: View {
     }
     .frame(minWidth: 240)
     .listStyle(.sidebar)
+    .background(PithVisualStyle.windowBackground)
   }
 
 }
@@ -136,6 +138,7 @@ struct SettingsView: View {
       }
     }
     .padding(20)
+    .background(PithVisualStyle.paneBackground)
     .frame(width: 420)
   }
 }

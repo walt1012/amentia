@@ -90,6 +90,7 @@ struct TimelinePane: View {
       TimelineComposerView(viewModel: viewModel)
     }
     .frame(minWidth: 520)
+    .background(PithVisualStyle.paneBackground)
   }
 
   private var header: some View {

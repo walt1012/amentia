@@ -122,6 +122,8 @@ Build now:
 - Keep normal-path UI language product-level: show session, local engine,
   connector, local model, workspace search, and first prompt concepts instead
   of internal runtime/thread/file details.
+- Keep the visual direction system-adaptive and light-mode friendly: quiet
+  borders, readable cards, and no fixed dark or fixed light appearance.
 - Keep the first-run and daily-work UI calm, spacious, and humane: progressive
   disclosure before dense panels, plain-language actions before diagnostics,
   and soft native surfaces instead of noisy debug-style lists.

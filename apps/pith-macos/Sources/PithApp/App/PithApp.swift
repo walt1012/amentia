@@ -10,6 +10,7 @@ struct PithApp: App {
     WindowGroup {
       ContentView(viewModel: viewModel)
         .frame(minWidth: 1120, minHeight: 720)
+        .background(PithVisualStyle.windowBackground)
         .background(MainWindowMarker())
     }
     .commands {

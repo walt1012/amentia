@@ -68,6 +68,7 @@ struct InspectorPane: View {
       .padding(20)
     }
     .frame(minWidth: 280)
+    .background(PithVisualStyle.inspectorBackground)
   }
 
   @ViewBuilder
@@ -182,7 +183,11 @@ private struct InspectorSessionCard: View {
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(tone.color.opacity(0.08))
+    .background(PithVisualStyle.panelBackground)
+    .overlay(
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .stroke(tone.color.opacity(0.18), lineWidth: 1)
+    )
     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }
