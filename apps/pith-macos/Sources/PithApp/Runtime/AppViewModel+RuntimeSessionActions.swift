@@ -41,10 +41,10 @@ extension AppViewModel {
       setPluginEnabled(pluginID: webSearchPluginID, enabled: true)
     case .openPluginAccess:
       pluginManagerSection = .access
-      runtimeDetail = "Open Plugin Manager Access to enable the Web Search plugin permission."
+      runtimeDetail = "Open Advanced > Connectors to enable Web Search access."
     case .openPluginCommands:
       pluginManagerSection = .commands
-      runtimeDetail = "Open Plugin Manager Commands to enable a ready command capability."
+      runtimeDetail = "Open Advanced > Connectors to enable a ready command."
     case .inspectSandboxStatus:
       runtimeDetail = "Native sandbox status is shown in runtime readiness and local execution receipts."
     }

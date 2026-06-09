@@ -45,4 +45,12 @@ struct LocalModelSummary: Identifiable, Hashable, Sendable {
   let downloaded: Bool
   let active: Bool
   let localSizeBytes: Int64?
+
+  var hasLocalFile: Bool {
+    localSizeBytes != nil
+  }
+
+  var needsVerification: Bool {
+    hasLocalFile && !downloaded
+  }
 }

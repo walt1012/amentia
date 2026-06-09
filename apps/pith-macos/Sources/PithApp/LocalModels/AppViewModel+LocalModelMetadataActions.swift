@@ -35,7 +35,7 @@ extension AppViewModel {
         let copiedSummary = result.copiedFiles.isEmpty
           ? "Pack metadata was already present."
           : "Prepared \(result.copiedFiles.count) local model metadata file(s)."
-        runtimeDetail = "\(copiedSummary) Manifest: \(result.manifestPath)"
+        runtimeDetail = "\(copiedSummary) Local model setup is ready."
       } catch {
         guard !Task.isCancelled,
               localModelMetadataCoordinator.isCurrent(requestToken)

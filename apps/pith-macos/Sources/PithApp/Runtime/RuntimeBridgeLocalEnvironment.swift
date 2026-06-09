@@ -114,7 +114,7 @@ enum RuntimeBridgeLocalEnvironment {
     else {
       clearActiveLocalModel(
         invalidationDetail:
-          "The saved active local model was reset because its manifest or GGUF file no longer exists. Choose or download a model to continue."
+          "The saved active local model was reset because its setup file or model file no longer exists. Choose or download a model to continue."
       )
       return nil
     }
@@ -126,7 +126,7 @@ enum RuntimeBridgeLocalEnvironment {
     ) else {
       clearActiveLocalModel(
         invalidationDetail:
-          "The saved active local model was reset because its manifest and GGUF file no longer match the verified catalog. Choose or download a model to continue."
+          "The saved active local model was reset because its setup file and model file no longer match Pith's verified catalog. Choose or download a model to continue."
       )
       return nil
     }

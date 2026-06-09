@@ -30,7 +30,7 @@ extension AppViewModel {
     runtimeDetail = FileRevealService.revealSuggestedPath(
       metricKey: "suggestedBinaryPath",
       modelHealth: modelHealth,
-      successDetail: "Opened the suggested llama.cpp binary folder."
+      successDetail: "Opened the local runtime folder."
     )
   }
 

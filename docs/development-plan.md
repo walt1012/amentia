@@ -67,6 +67,9 @@ Closed foundations:
 
 - Local model setup: first-use guidance, verified downloads, activation,
   bounded inference, restart recovery, and one active local model.
+- Installed local model files can be re-verified and selected again after app
+  updates or state loss; the UI must not present verification recovery as a
+  fresh download requirement.
 - Workspace loop: workspace-safe tools, sandbox diagnostics, bounded
   subprocesses, Web Search, approvals, compact receipts, and recovery evidence.
 - Connector baseline: plugin registry, local execution gates, credentials,

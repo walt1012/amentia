@@ -2,8 +2,8 @@ import SwiftUI
 
 struct LocalModelPanel: View {
   @ObservedObject var viewModel: AppViewModel
-  @AppStorage("pith.inspector.modelManagerExpanded") private var modelManagerExpanded = false
-  @AppStorage("pith.inspector.modelDiagnosticsExpanded") private var modelDiagnosticsExpanded = false
+  @AppStorage("pith.inspector.modelChooserExpanded") private var modelChooserExpanded = false
+  @AppStorage("pith.inspector.modelTroubleshootingExpanded") private var modelTroubleshootingExpanded = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -53,12 +53,12 @@ struct LocalModelPanel: View {
         }
       }
 
-      DisclosureGroup("Model Manager", isExpanded: $modelManagerExpanded) {
+      DisclosureGroup("Choose Model", isExpanded: $modelChooserExpanded) {
         modelManager
       }
 
-      DisclosureGroup("Model Diagnostics", isExpanded: $modelDiagnosticsExpanded) {
-        ModelDiagnosticsPanel(viewModel: viewModel)
+      DisclosureGroup("Troubleshooting", isExpanded: $modelTroubleshootingExpanded) {
+        ModelTroubleshootingPanel(viewModel: viewModel)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -136,7 +136,7 @@ private struct LocalModelRow: View {
         .foregroundColor(.secondary)
 
       HStack(spacing: 8) {
-        Button(model.active ? "Active" : "Use") {
+        Button(modelUseButtonTitle) {
           viewModel.activateRecommendedModel(modelID: model.id)
         }
         .buttonStyle(.borderedProminent)
@@ -155,16 +155,28 @@ private struct LocalModelRow: View {
         .disabled(!model.downloaded)
       }
 
-      Text(viewModel.localModelPathSummary(model))
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
+      if model.needsVerification {
+        Text("Pith found a local file. Verify it before use, or replace it with a fresh download.")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
     }
     .padding(.vertical, 4)
   }
+
+  private var modelUseButtonTitle: String {
+    if model.active {
+      return "Active"
+    }
+    if model.needsVerification {
+      return "Verify"
+    }
+    return "Use"
+  }
 }
 
-private struct ModelDiagnosticsPanel: View {
+private struct ModelTroubleshootingPanel: View {
   @ObservedObject var viewModel: AppViewModel
 
   var body: some View {
@@ -172,38 +184,16 @@ private struct ModelDiagnosticsPanel: View {
       Text(viewModel.modelDetailSummary())
         .font(.caption)
         .foregroundColor(.secondary)
-        .textSelection(.enabled)
-      Text(viewModel.modelSourceSummary())
-        .font(.caption)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
-      Text(viewModel.modelMetricsSummary())
-        .font(.caption2)
-        .foregroundColor(.secondary)
-      Text(viewModel.modelReadinessSummary())
-        .font(.caption2)
-        .foregroundColor(.secondary)
-      Text(viewModel.modelInstallHintSummary())
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
-      Text(viewModel.modelSuggestedPathSummary())
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
-      Text(viewModel.modelArtifactPathSummary())
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .textSelection(.enabled)
+        .fixedSize(horizontal: false, vertical: true)
 
       HStack(spacing: 8) {
-        Button("Reveal Model Folder") {
+        Button("Show Model Folder") {
           viewModel.revealSuggestedModelDirectory()
         }
         .buttonStyle(.bordered)
         .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
-        Button("Reveal Binary Folder") {
+        Button("Show Runtime Folder") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)

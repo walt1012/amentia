@@ -4,6 +4,7 @@ struct InspectorPane: View {
   @ObservedObject var viewModel: AppViewModel
   @AppStorage("pith.inspector.workspaceExpanded") private var workspaceExpanded = false
   @AppStorage("pith.inspector.localModelExpanded") private var localModelExpanded = false
+  @AppStorage("pith.inspector.advancedExpanded") private var advancedExpanded = false
   @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
   @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
@@ -34,30 +35,35 @@ struct InspectorPane: View {
           LocalModelPanel(viewModel: viewModel)
         }
 
-        DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
-          MemoryPanel(viewModel: viewModel)
-        }
-
-        DisclosureGroup("Plugin Manager", isExpanded: $pluginManagerExpanded) {
-          PluginManagerPanel(viewModel: viewModel)
-        }
-
-        DisclosureGroup("Thread", isExpanded: $threadExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.selectedThreadTitle())
-              .font(.headline)
-            Text(viewModel.selectedThreadPreview())
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-
         selectedItemSection
         diffDetailSection
         selectedContextSection
         selectedPluginSection
         selectedSandboxSection
+
+        DisclosureGroup("Advanced", isExpanded: $advancedExpanded) {
+          VStack(alignment: .leading, spacing: 14) {
+            DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
+              MemoryPanel(viewModel: viewModel)
+            }
+
+            DisclosureGroup("Connectors", isExpanded: $pluginManagerExpanded) {
+              PluginManagerPanel(viewModel: viewModel)
+            }
+
+            DisclosureGroup("Thread", isExpanded: $threadExpanded) {
+              VStack(alignment: .leading, spacing: 8) {
+                Text(viewModel.selectedThreadTitle())
+                  .font(.headline)
+                Text(viewModel.selectedThreadPreview())
+                  .font(.subheadline)
+                  .foregroundColor(.secondary)
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
+            }
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
       }
       .padding(20)
     }
@@ -67,7 +73,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedItemSection: some View {
     if viewModel.shouldShowSelectedEntryInspector() {
-      DisclosureGroup("Selected Item", isExpanded: $selectedItemExpanded) {
+      DisclosureGroup("Selection", isExpanded: $selectedItemExpanded) {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.selectedEntryTitle())
             .font(.headline)
@@ -75,7 +81,7 @@ struct InspectorPane: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
-          DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
+          DisclosureGroup("Details", isExpanded: $selectedAttributesExpanded) {
             Text(viewModel.selectedEntryMetadata())
               .font(.caption)
               .foregroundColor(.secondary)
@@ -101,7 +107,7 @@ struct InspectorPane: View {
   private var selectedContextSection: some View {
     let sections = viewModel.selectedEntryContextReceiptSections()
     if !sections.isEmpty {
-      DisclosureGroup("Selected Context Receipts", isExpanded: $selectedContextExpanded) {
+      DisclosureGroup("Context Used", isExpanded: $selectedContextExpanded) {
         VStack(alignment: .leading, spacing: 10) {
           ForEach(sections) { section in
             VStack(alignment: .leading, spacing: 4) {
@@ -123,7 +129,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedPluginSection: some View {
     if let pluginSummary = viewModel.selectedEntryPluginSummary() {
-      DisclosureGroup("Selected Plugin Context", isExpanded: $selectedPluginExpanded) {
+      DisclosureGroup("Connector Details", isExpanded: $selectedPluginExpanded) {
         Text(pluginSummary)
           .font(.caption)
           .foregroundColor(.secondary)
@@ -136,7 +142,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedSandboxSection: some View {
     if let sandboxSummary = viewModel.selectedEntrySandboxSummary() {
-      DisclosureGroup("Selected Sandbox Context", isExpanded: $selectedSandboxExpanded) {
+      DisclosureGroup("Safety Details", isExpanded: $selectedSandboxExpanded) {
         Text(sandboxSummary)
           .font(.caption)
           .foregroundColor(.secondary)

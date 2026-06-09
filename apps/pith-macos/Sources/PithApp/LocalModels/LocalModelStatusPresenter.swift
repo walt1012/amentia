@@ -34,7 +34,16 @@ enum LocalModelStatusPresenter {
       return "Model ready outside curated catalog"
     }
 
-    return "\(modelHealth.backend) | \(modelHealth.status)"
+    switch modelHealth.status {
+    case "ready":
+      return "Ready to use"
+    case "unavailable":
+      return "Model setup needed"
+    case "error":
+      return "Model needs attention"
+    default:
+      return "Checking model"
+    }
   }
 
   static func showsActivity(_ snapshot: LocalModelStatusSnapshot) -> Bool {
@@ -51,7 +60,7 @@ enum LocalModelStatusPresenter {
         return "Pith will use \(model.displayName) after it is downloaded and selected."
       }
 
-      return "Pith needs one downloaded GGUF model selected before it can answer locally."
+      return "Pith needs one downloaded local model selected before it can answer."
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
@@ -141,6 +150,8 @@ enum LocalModelStatusPresenter {
       status = "active"
     } else if model.downloaded {
       status = "downloaded"
+    } else if model.needsVerification {
+      status = "verify before use"
     } else {
       status = "available"
     }
@@ -161,7 +172,7 @@ enum LocalModelStatusPresenter {
       return "Selected setup model: \(model.displayName). Pith runs one active model at a time."
     }
 
-    return "Choose one curated GGUF model. Pith verifies the file before it can run."
+    return "Choose one curated local model. Pith verifies the file before it can run."
   }
 
   static func localModelChoiceSummary(
@@ -177,6 +188,9 @@ enum LocalModelStatusPresenter {
     }
     if snapshot.pausedModelDownloadID == model.id {
       return "Paused download"
+    }
+    if model.needsVerification {
+      return "Found local file"
     }
     if model.id == snapshot.selectedSetupModelID {
       if model.id == defaultModelID {
@@ -208,6 +222,9 @@ enum LocalModelStatusPresenter {
       if setupModel.active {
         return "Model Selected"
       }
+      if setupModel.needsVerification {
+        return "Verify \(LocalModelDisplayPresenter.actionName(setupModel))"
+      }
       if setupModel.downloaded {
         return "Use \(LocalModelDisplayPresenter.actionName(setupModel))"
       }
@@ -227,6 +244,9 @@ enum LocalModelStatusPresenter {
     }
     if snapshot.pausedModelDownloadID == model.id {
       return "Continue"
+    }
+    if model.needsVerification {
+      return "Replace"
     }
 
     return model.downloaded ? "Downloaded" : "Download"

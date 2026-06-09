@@ -122,7 +122,7 @@ struct SettingsView: View {
       }
 
       Section("Local Models") {
-        Text("Pith downloads verified GGUF models in app.")
+        Text("Pith downloads and verifies local models in app.")
         Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
       }
 

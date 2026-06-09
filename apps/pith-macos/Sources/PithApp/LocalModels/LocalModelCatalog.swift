@@ -56,7 +56,19 @@ enum LocalModelCatalog {
     storageRootPath: String,
     modelPath: String
   ) -> Bool {
-    verifiedInstalledModel(storageRootPath: storageRootPath, modelPath: modelPath) != nil
+    guard let model = installedModel(
+      storageRootPath: storageRootPath,
+      modelPath: modelPath
+    ) else {
+      return false
+    }
+
+    do {
+      try validateDownloadedModel(model)
+      return true
+    } catch {
+      return false
+    }
   }
 
   static func isVerifiedInstalledSelection(
@@ -112,13 +124,23 @@ enum LocalModelCatalog {
     storageRootPath: String,
     modelPath: String
   ) -> LocalModelSummary? {
+    return installedModel(
+      storageRootPath: storageRootPath,
+      modelPath: modelPath
+    )
+  }
+
+  private static func installedModel(
+    storageRootPath: String,
+    modelPath: String
+  ) -> LocalModelSummary? {
     let normalizedModelPath = normalizedPath(modelPath)
     return summaries(
       storageRootPath: storageRootPath,
       activeModelPath: modelPath
     )
     .first { model in
-      model.downloaded && normalizedPath(model.installPath) == normalizedModelPath
+      normalizedPath(model.installPath) == normalizedModelPath && model.hasLocalFile
     }
   }
 

@@ -26,7 +26,7 @@ extension AppViewModel {
       return false
     }
 
-    return model.downloaded && !model.active
+    return (model.downloaded || model.needsVerification) && !model.active
   }
 
   func canResetActiveLocalModel() -> Bool {
@@ -146,7 +146,7 @@ extension AppViewModel {
       return
     }
 
-    guard model.downloaded else {
+    guard model.downloaded || model.needsVerification else {
       localModelActivationCoordinator.finish(requestID)
       runtimeDetail = "Download \(model.displayName) before using it."
       return
