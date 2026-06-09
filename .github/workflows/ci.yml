@@ -407,6 +407,30 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+      - name: Annotate Swift test failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          log_path = Path(".ci-logs/swift-test.log")
+          text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+          lines = text.splitlines()
+          interesting = [
+            line
+            for line in lines
+            if (
+              "error:" in line.lower()
+              or "failed" in line.lower()
+              or "xctassert" in line.lower()
+              or "test case" in line.lower()
+            )
+          ]
+          snippet = "\n".join((interesting or lines)[-60:])
+          snippet = snippet.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::error title=Swift test failure::{snippet}")
+          PY
+
   macos-runtime:
     name: macOS runtime build
     runs-on: macos-15-intel
