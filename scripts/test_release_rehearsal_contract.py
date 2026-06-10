@@ -169,12 +169,19 @@ def main() -> int:
       "workspace readiness",
       "Web Search",
       "reviewing the diff",
-      "runtime readiness",
+      "local service status",
     ):
       if phrase not in manual_checks:
         raise AssertionError(f"manual prerelease checks should include {phrase}")
+    if "runtime readiness" in manual_checks:
+      raise AssertionError("manual prerelease checks should use local service language")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
+    first_app_open_checks = "\n".join(summary["firstAppOpenChecks"])
+    if "Check that Web Search and workspace safety are ready." not in first_app_open_checks:
+      raise AssertionError("first app-open checks should use product-level setup language")
+    if "Web Search readiness" in first_app_open_checks:
+      raise AssertionError("first app-open checks should not use internal readiness wording")
     markdown = summary_markdown(summary)
     if "Pith v0.1.0 Release Rehearsal" not in markdown:
       raise AssertionError("release rehearsal markdown should name the tag")

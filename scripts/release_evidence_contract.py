@@ -654,7 +654,7 @@ def validate_first_app_open_checks(data: dict[str, object]) -> None:
       DEFAULT_MODEL_ID,
       "Open a workspace folder",
       "Web Search",
-      "sandbox status",
+      "workspace safety",
       "daily-driver next action",
     ),
   )
@@ -679,7 +679,7 @@ def validate_manual_prerelease_checks(data: dict[str, object]) -> None:
       "Web Search",
       "reviewing the diff",
       "Restart Pith",
-      "runtime readiness",
+      "local service status",
       "model state",
       "recent proof recover",
     ),

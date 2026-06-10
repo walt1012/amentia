@@ -121,6 +121,8 @@ Build now:
 - Publish only after the dry-run artifact and fresh-Mac manual acceptance
   receipt are recorded and the release workflow validates the same four public
   assets.
+- Treat historical two-asset prereleases as superseded; the M12 candidate must
+  be a new release tag produced by the current four-asset workflow.
 
 Exit when:
 

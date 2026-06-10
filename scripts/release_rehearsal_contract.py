@@ -38,7 +38,7 @@ FIRST_APP_OPEN_CHECKS = (
   "Launch Pith from Applications after handling Gatekeeper if needed.",
   f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
   "Open a workspace folder.",
-  "Confirm Web Search readiness and sandbox status.",
+  "Check that Web Search and workspace safety are ready.",
   FIRST_APP_OPEN_ACTION_COPY,
   "Follow the daily-driver next action shown in the app header and inspector.",
 )
@@ -51,7 +51,7 @@ MANUAL_PRERELEASE_CHECKS = (
   "Run Understand Project, Pick Next Step, or a short cowork prompt from the first app-open surface.",
   "Let the model use Web Search when useful and inspect the source proof in the timeline.",
   "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
-  "Restart Pith and confirm runtime readiness, selected workspace, model state, and recent proof recover.",
+  "Restart Pith and confirm local service status, selected workspace, model state, and recent proof recover.",
 )
 RELEASE_DECISION = {
   "automatedRehearsal": "passed",
