@@ -27,7 +27,7 @@ extension RuntimeBridge {
       case .runtimePathMissing:
         return
           "The local service could not be found. " +
-          "Set PITH_RUNTIME_PATH to the built runtime executable."
+          "Reinstall Pith or download a fresh installer, then try again."
       case .runtimePipeUnavailable:
         return "The local service connection is not available."
       case .invalidResponse:

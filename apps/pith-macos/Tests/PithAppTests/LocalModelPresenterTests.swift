@@ -151,6 +151,21 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(summary.contains("Q4_K_M"))
   }
 
+  func testModelIntegrityErrorsAvoidRawPathsAndHashes() {
+    let missingSize = LocalModelIntegrityError.missingSize(path: "/Users/example/model.gguf")
+    let mismatch = LocalModelIntegrityError.checksumMismatch(
+      displayName: "LFM2.5-350M",
+      expected: String(repeating: "a", count: 64),
+      actual: String(repeating: "b", count: 64)
+    )
+
+    XCTAssertFalse(missingSize.localizedDescription.contains("/Users/example"))
+    XCTAssertTrue(missingSize.localizedDescription.contains("downloading it again"))
+    XCTAssertFalse(mismatch.localizedDescription.contains(String(repeating: "a", count: 64)))
+    XCTAssertFalse(mismatch.localizedDescription.contains(String(repeating: "b", count: 64)))
+    XCTAssertTrue(mismatch.localizedDescription.contains("fresh download"))
+  }
+
   func testDownloadProgressSummaryAvoidsPipeSeparators() {
     let selectedModel = model(
       id: "lfm2.5-350m",

@@ -32,17 +32,16 @@ enum LocalModelIntegrityError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .missingSize(let path):
-      return "Could not inspect local model size at \(path)."
-    case .sizeTooSmall(let displayName, let expectedMinimumBytes, let actualBytes):
-      return
-        "\(displayName) is incomplete. Expected at least \(expectedMinimumBytes) bytes, found \(actualBytes)."
+    case .missingSize:
+      return "Pith could not inspect this local model file. Try downloading it again."
+    case .sizeTooSmall(let displayName, _, _):
+      return "\(displayName) is incomplete. Cancel or replace it with a fresh download."
     case .invalidMagic(let displayName):
       return "\(displayName) is not a valid local model file."
     case .missingChecksum(let displayName):
-      return "\(displayName) is missing required SHA-256 metadata."
-    case .checksumMismatch(let displayName, let expected, let actual):
-      return "\(displayName) checksum mismatch. Expected \(expected), found \(actual)."
+      return "\(displayName) is missing verification metadata."
+    case .checksumMismatch(let displayName, _, _):
+      return "\(displayName) did not match the verified download. Replace it with a fresh download."
     }
   }
 }

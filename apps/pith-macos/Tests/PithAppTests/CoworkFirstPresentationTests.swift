@@ -363,6 +363,15 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(entry.body.contains("cowork prompt"))
   }
 
+  func testRuntimeMissingErrorAvoidsDeveloperOverrideInUserCopy() {
+    let error = RuntimeBridge.RuntimeError.runtimePathMissing
+    let entry = TimelineEventPresenter.runtimeLaunchFailed(error: error)
+
+    XCTAssertTrue(error.localizedDescription.contains("download a fresh installer"))
+    XCTAssertFalse(error.localizedDescription.contains("PITH_RUNTIME_PATH"))
+    XCTAssertFalse(entry.body.contains("PITH_RUNTIME_PATH"))
+  }
+
   private func headerSnapshot(
     hasDraftMessage: Bool,
     isWaitingForFirstMessage: Bool = true,

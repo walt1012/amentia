@@ -68,7 +68,8 @@ Ready foundations:
 - Local model setup works through in-app download, verification, activation,
   pause, resume, cancel, recovery, local data reset, and one active model.
 - First-run model setup now hides GGUF quantization names from primary UI and
-  uses consistent local service/local model language.
+  uses consistent local service/local model language without raw paths or hashes
+  in normal recovery copy.
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.
