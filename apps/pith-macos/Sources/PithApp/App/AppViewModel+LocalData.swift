@@ -33,8 +33,7 @@ extension AppViewModel {
 
   func deleteLocalData() {
     guard canDeleteLocalData() else {
-      runtimeDetail =
-        "Finish active local work, model downloads, model selection checks, or plugin operations before deleting local data."
+      runtimeDetail = LocalDataSettingsPresenter.deleteBlockedDetail
       return
     }
 
@@ -94,17 +93,14 @@ extension AppViewModel {
       progress: nil
     )
     resetToWelcomeThread()
-    runtimeDetail = "Deleted Pith local data at \(result.appSupportPath). Restart the local service to set up again."
+    let resetSummary = LocalDataSettingsPresenter.resetSummary(result)
+    runtimeDetail = resetSummary.runtimeDetail
     appendEntry(
       to: selectedThreadID,
       TimelineEntryFactory.system(
-        title: "Local Data Deleted",
-        body:
-          "Pith removed local models, sessions, plugins, download recovery data, and known preferences. Workspaces on disk were not deleted.",
-        attributes: [
-          "appSupportPath": result.appSupportPath,
-          "recreatedDirectoryCount": "\(result.recreatedDirectoryCount)",
-        ]
+        title: resetSummary.timelineTitle,
+        body: resetSummary.timelineBody,
+        attributes: resetSummary.attributes
       )
     )
   }

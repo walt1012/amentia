@@ -49,4 +49,25 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertFalse(summary.canDeleteLocalData)
     XCTAssertTrue(summary.blockedDetail?.contains("Finish active local work") == true)
   }
+
+  func testResetSummaryKeepsPathOutOfRuntimeDetail() {
+    let reset = LocalDataSettingsPresenter.resetSummary(
+      AppDataResetResult(
+        appSupportPath: "/Users/example/Library/Application Support/Pith",
+        recreatedDirectoryCount: 7
+      )
+    )
+
+    XCTAssertEqual(
+      reset.runtimeDetail,
+      "Deleted Pith local data. Restart the local service to set up again."
+    )
+    XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
+    XCTAssertTrue(reset.timelineBody.contains("Workspaces on disk were not deleted"))
+    XCTAssertEqual(
+      reset.attributes["appSupportPath"],
+      "/Users/example/Library/Application Support/Pith"
+    )
+    XCTAssertEqual(reset.attributes["recreatedDirectoryCount"], "7")
+  }
 }

@@ -18,7 +18,17 @@ struct LocalDataSettingsSummary: Equatable {
   let canDeleteLocalData: Bool
 }
 
+struct LocalDataResetSummary: Equatable {
+  let runtimeDetail: String
+  let timelineTitle: String
+  let timelineBody: String
+  let attributes: [String: String]
+}
+
 enum LocalDataSettingsPresenter {
+  static let deleteBlockedDetail =
+    "Finish active local work, model downloads, model checks, or plugin operations before deleting local data."
+
   static func summary(_ snapshot: LocalDataSettingsSnapshot) -> LocalDataSettingsSummary {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
@@ -35,6 +45,19 @@ enum LocalDataSettingsPresenter {
     )
   }
 
+  static func resetSummary(_ result: AppDataResetResult) -> LocalDataResetSummary {
+    LocalDataResetSummary(
+      runtimeDetail: "Deleted Pith local data. Restart the local service to set up again.",
+      timelineTitle: "Local Data Deleted",
+      timelineBody:
+        "Pith removed downloaded models, sessions, plugins, download recovery data, and known preferences. Workspaces on disk were not deleted.",
+      attributes: [
+        "appSupportPath": result.appSupportPath,
+        "recreatedDirectoryCount": "\(result.recreatedDirectoryCount)",
+      ]
+    )
+  }
+
   private static func storageSummary(downloadedModelBytes: Int64) -> String {
     if downloadedModelBytes > 0 {
       return "Downloaded models use \(LocalModelByteFormatter.string(downloadedModelBytes)) on this Mac."
@@ -48,6 +71,6 @@ enum LocalDataSettingsPresenter {
       return nil
     }
 
-    return "Finish active local work, model downloads, model checks, or plugin operations before deleting local data."
+    return deleteBlockedDetail
   }
 }
