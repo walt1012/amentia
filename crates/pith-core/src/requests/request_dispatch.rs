@@ -52,6 +52,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     }
     methods::TURN_CANCEL => turn_streaming::handle_turn_cancel(context, request),
     methods::TURN_CANCEL_RUNNING => turn_streaming::handle_turn_cancel_running(context, request),
+    methods::THREAD_DELETE => thread_requests::handle_thread_delete(context, request),
     methods::THREAD_READ => thread_requests::handle_thread_read(context, request),
     methods::THREAD_START => thread_requests::handle_thread_start(context, request),
     methods::THREAD_LIST => thread_requests::handle_thread_list(context, request),

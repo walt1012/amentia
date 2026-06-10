@@ -114,6 +114,44 @@ fn sqlite_store_round_trips_pending_approvals_and_resolution_audit() {
 }
 
 #[test]
+fn sqlite_store_deletes_all_approvals_for_thread() {
+  let root = create_temp_directory("approval-delete-thread");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let approval = StoredApprovalRecord {
+    id: "approval-4".to_string(),
+    thread_id: "thread-2".to_string(),
+    action: "write_file".to_string(),
+    title: "Write docs/output.txt".to_string(),
+    relative_path: "docs/output.txt".to_string(),
+    content: Some("hello".to_string()),
+    command: None,
+  };
+
+  store
+    .save_pending_approvals(std::slice::from_ref(&approval))
+    .expect("save pending approval");
+  store
+    .resolve_approval(&approval, "approved")
+    .expect("resolve approval");
+
+  let deleted = store
+    .delete_approvals_for_thread("thread-2")
+    .expect("delete approvals");
+  let pending = store
+    .load_pending_approvals()
+    .expect("load pending approvals");
+  let next_sequence = store
+    .next_approval_sequence()
+    .expect("next approval sequence");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(deleted, 1);
+  assert!(pending.is_empty());
+  assert_eq!(next_sequence, 1);
+}
+
+#[test]
 fn sqlite_store_imports_legacy_json_threads() {
   let root = create_temp_directory("legacy-import");
   let database_path = root.join("pith.db");

@@ -35,6 +35,28 @@ extension RuntimeBridge {
     )
   }
 
+  func deleteThread(threadID: String) async throws -> [RuntimeThreadSummary] {
+    let response: JSONRPCResponse<ThreadDeleteResult> = try await sendRequest(
+      method: "thread/delete",
+      params: ThreadDeleteParams(threadId: threadID)
+    )
+    let result = try responseResult(from: response)
+
+    guard result.deleted else {
+      throw RuntimeError.rpc("Session was not deleted.")
+    }
+
+    return result.threads.map {
+      RuntimeThreadSummary(
+        id: $0.id,
+        title: $0.title,
+        status: $0.status,
+        workspaceRootPath: $0.workspace?.rootPath,
+        workspaceDisplayName: $0.workspace?.displayName
+      )
+    }
+  }
+
   func startTurn(
     threadID: String,
     message: String,

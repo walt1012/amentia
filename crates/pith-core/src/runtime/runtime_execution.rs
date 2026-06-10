@@ -103,6 +103,10 @@ impl RuntimeExecutionState {
     self.pending_approvals.remove(id)
   }
 
+  pub(crate) fn remove_pending_approvals_for_thread(&mut self, thread_id: &str) -> usize {
+    self.pending_approvals.remove_for_thread(thread_id)
+  }
+
   pub(crate) fn active_turn_ids(&self) -> Vec<String> {
     self.active_turns.ids()
   }
@@ -191,6 +195,10 @@ impl RuntimeExecutionState {
 
   pub(crate) fn take_pending_running_cancel(&mut self, thread_id: &str) -> bool {
     self.running.take_pending_cancel(thread_id)
+  }
+
+  pub(crate) fn has_running_work_for_thread(&self, thread_id: &str) -> bool {
+    self.running.has_running_for_thread(thread_id)
   }
 
   pub(crate) fn cancel_running_work(&mut self) {

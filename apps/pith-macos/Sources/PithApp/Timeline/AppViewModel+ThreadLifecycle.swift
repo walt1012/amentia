@@ -80,6 +80,36 @@ extension AppViewModel {
     threadHistoryLoadCoordinator.bind(task: task, token: requestToken)
   }
 
+  func canDeleteThread(_ thread: ThreadSummary) -> Bool {
+    runtimeState == .ready
+      && !thread.id.hasPrefix("local-")
+      && !hasActiveOrPendingTurn()
+  }
+
+  func deleteThread(_ thread: ThreadSummary) {
+    guard canDeleteThread(thread) else {
+      runtimeDetail = "Finish or cancel active local work before deleting a session."
+      return
+    }
+
+    let deletedThreadID = thread.id
+    Task {
+      do {
+        let runtimeThreads = try await runtimeBridge.deleteThread(threadID: deletedThreadID)
+        guard !Task.isCancelled else {
+          return
+        }
+        await applyDeletedThread(threadID: deletedThreadID, runtimeThreads: runtimeThreads)
+      } catch {
+        guard !Task.isCancelled else {
+          return
+        }
+        runtimeDetail = "Session delete failed: \(error.localizedDescription)"
+      }
+    }
+    threadHistoryLoadCoordinator.cancel()
+  }
+
   func refreshWorkspaceThreadSelection(
     from runtimeThreads: [RuntimeBridge.RuntimeThreadSummary],
     createIfEmpty: Bool
@@ -210,6 +240,31 @@ extension AppViewModel {
     updateTimelineState { state in
       state.applyWorkspaceThreads(workspaceThreads)
     }
+  }
+
+  private func applyDeletedThread(
+    threadID: String,
+    runtimeThreads: [RuntimeBridge.RuntimeThreadSummary]
+  ) async {
+    let workspaceThreads: [ThreadSummary]
+    if let workspace {
+      workspaceThreads = (try? await WorkspaceThreadSelectionLoader.load(
+        workspace: workspace,
+        runtimeThreads: runtimeThreads,
+        createIfEmpty: false,
+        startThread: { [runtimeBridge] title in
+          try await runtimeBridge.startThread(title: title)
+        }
+      )) ?? []
+    } else {
+      workspaceThreads = runtimeThreads.map(RuntimeSummaryMapper.threadSummary(from:))
+    }
+
+    updateTimelineState { state in
+      state.deleteThread(threadID: threadID, remainingThreads: workspaceThreads)
+    }
+    runtimeDetail = "Deleted session. Workspace files were not changed."
+    announceFirstRequestReadyIfNeeded()
   }
 
   private func applyThreadEntries(threadID: String, entries: [TimelineEntry]) {

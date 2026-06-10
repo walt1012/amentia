@@ -38,6 +38,20 @@ pub struct ThreadReadParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ThreadDeleteParams {
+  pub thread_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadDeleteResult {
+  pub thread_id: String,
+  pub deleted: bool,
+  pub threads: Vec<ThreadSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TurnStartParams {
   pub thread_id: String,
   pub message: String,

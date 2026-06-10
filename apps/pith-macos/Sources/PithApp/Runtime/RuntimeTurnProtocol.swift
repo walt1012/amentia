@@ -23,6 +23,16 @@ struct ThreadReadParams: Codable {
   let threadId: String
 }
 
+struct ThreadDeleteParams: Codable {
+  let threadId: String
+}
+
+struct ThreadDeleteResult: Codable {
+  let threadId: String
+  let deleted: Bool
+  let threads: [RuntimeThreadPayload]
+}
+
 struct ThreadReadResult: Codable {
   let thread: RuntimeThreadPayload
   let items: [RuntimeTimelineItem]

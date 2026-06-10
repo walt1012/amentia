@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
   @ObservedObject var viewModel: AppViewModel
+  @State private var sessionDeleteCandidate: ThreadSummary?
 
   var body: some View {
     NavigationView {
@@ -44,6 +45,18 @@ struct ContentView: View {
     .onAppear {
       viewModel.startDailyUseSessionIfNeeded()
     }
+    .alert(item: $sessionDeleteCandidate) { thread in
+      Alert(
+        title: Text("Delete Session?"),
+        message: Text(
+          "Pith will delete this session's messages, timeline, and pending approvals. Workspace files and repositories will not be changed."
+        ),
+        primaryButton: .destructive(Text("Delete Session")) {
+          viewModel.deleteThread(thread)
+        },
+        secondaryButton: .cancel()
+      )
+    }
   }
 
   private var sidebar: some View {
@@ -65,6 +78,12 @@ struct ContentView: View {
             }
             .padding(.vertical, 4)
             .tag(thread.id)
+            .contextMenu {
+              Button("Delete Session...", role: .destructive) {
+                sessionDeleteCandidate = thread
+              }
+              .disabled(!viewModel.canDeleteThread(thread))
+            }
           }
         }
       }

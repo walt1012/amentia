@@ -1,6 +1,7 @@
 use pith_protocol::{
-  JsonRpcRequest, JsonRpcResponse, ThreadListResult, ThreadReadParams, ThreadReadResult,
-  ThreadStartParams, ThreadStartResult, ThreadSummary, TimelineItem,
+  JsonRpcRequest, JsonRpcResponse, ThreadDeleteParams, ThreadDeleteResult, ThreadListResult,
+  ThreadReadParams, ThreadReadResult, ThreadStartParams, ThreadStartResult, ThreadSummary,
+  TimelineItem,
 };
 
 use crate::approval_state::approvals_for_thread;
@@ -57,6 +58,54 @@ pub(crate) fn handle_thread_read(
         .active_turn_id_for_thread(&thread_id),
       thread,
       items,
+    },
+  )
+}
+
+pub(crate) fn handle_thread_delete(
+  context: &mut RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  let params = match parse_required_params::<ThreadDeleteParams>(&request, "thread/delete") {
+    Ok(params) => params,
+    Err(response) => return response,
+  };
+
+  if context
+    .execution_state
+    .active_turn_id_for_thread(&params.thread_id)
+    .is_some()
+    || context
+      .execution_state
+      .has_running_work_for_thread(&params.thread_id)
+  {
+    return JsonRpcResponse::error(
+      request.id,
+      -32012,
+      "Cannot delete a session while local work is running.",
+    );
+  }
+
+  let Some(_removed_thread) = context.thread_state.remove(&params.thread_id) else {
+    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+  };
+  context
+    .execution_state
+    .remove_pending_approvals_for_thread(&params.thread_id);
+
+  if let Err(error) = context.persist_runtime_state() {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+  if let Err(error) = context.delete_approvals_for_thread(&params.thread_id) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
+
+  JsonRpcResponse::success(
+    request.id,
+    &ThreadDeleteResult {
+      thread_id: params.thread_id,
+      deleted: true,
+      threads: context.thread_state.summaries(),
     },
   )
 }
