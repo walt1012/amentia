@@ -591,7 +591,7 @@ jobs:
           python3 scripts/release_publish_contract.py \
             --tag "$RELEASE_TAG" \
             --release-json release-published.json \
-            --source-commit "$SOURCE_COMMIT" \
+            --source-commit "$PITH_RELEASE_SHA" \
             --tag-commit "$release_tag_commit" \
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \

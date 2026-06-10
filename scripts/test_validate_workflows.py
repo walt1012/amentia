@@ -507,7 +507,7 @@ jobs:
           python3 scripts/release_publish_contract.py \\
             --tag "$RELEASE_TAG" \\
             --release-json release-published.json \\
-            --source-commit "$SOURCE_COMMIT" \\
+            --source-commit "$PITH_RELEASE_SHA" \\
             --tag-commit "$release_tag_commit" \\
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
@@ -1192,11 +1192,30 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--source-commit "$SOURCE_COMMIT"',
+        '--source-commit "$PITH_RELEASE_SHA"',
         "--missing-source-commit",
       ),
     )
     assert_issue(issue_messages(root), "source-commit")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    final_validation_source = (
+      '            --release-json release-published.json \\\n'
+      '            --source-commit "$PITH_RELEASE_SHA" \\\n'
+    )
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        final_validation_source,
+        final_validation_source.replace(
+          '--source-commit "$PITH_RELEASE_SHA"',
+          '--source-commit "$SOURCE_COMMIT"',
+        ),
+        1,
+      ),
+    )
+    assert_issue(issue_messages(root), "undefined SOURCE_COMMIT")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

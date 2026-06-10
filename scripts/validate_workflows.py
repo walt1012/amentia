@@ -530,7 +530,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "git ls-remote --exit-code --tags origin",
     '"refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}"',
     '--release-json release-published.json',
-    '--source-commit "$SOURCE_COMMIT"',
+    '--source-commit "$PITH_RELEASE_SHA"',
     '--tag-commit "$release_tag_commit"',
     '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
     '--expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"',
@@ -545,6 +545,17 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
           f"published release contract is missing {term}",
         )
       )
+  final_validation_step = step_text_containing(
+    release_block,
+    "Validate final GitHub Release",
+  )
+  if "$SOURCE_COMMIT" in final_validation_step:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "published release contract must use PITH_RELEASE_SHA instead of undefined SOURCE_COMMIT",
+      )
+    )
   if "scripts/release_rehearsal_contract.py" not in release_block:
     issues.append(
       WorkflowIssue(
