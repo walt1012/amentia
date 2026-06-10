@@ -40,7 +40,10 @@ impl RuntimeContext {
       .delete_approvals_for_thread(thread_id)
   }
 
-  pub(crate) fn persist_workspace_change(&self, change: &StoredWorkspaceChangeRecord) -> Result<()> {
+  pub(crate) fn persist_workspace_change(
+    &self,
+    change: &StoredWorkspaceChangeRecord,
+  ) -> Result<()> {
     self.persistence_state.save_workspace_change(change)
   }
 }

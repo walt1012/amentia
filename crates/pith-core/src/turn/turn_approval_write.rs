@@ -313,7 +313,10 @@ fn execute_auto_approved_write(
           snapshot,
           policy,
           [
-            ("relativePath".to_string(), write_result.relative_path.clone()),
+            (
+              "relativePath".to_string(),
+              write_result.relative_path.clone(),
+            ),
             (
               "bytesWritten".to_string(),
               write_result.bytes_written.to_string(),

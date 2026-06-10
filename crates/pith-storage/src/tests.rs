@@ -291,15 +291,25 @@ fn sqlite_store_migrates_existing_version_one_database() {
     .expect("query connector credential columns")
     .collect::<std::result::Result<Vec<_>, _>>()
     .expect("collect connector credential columns");
+  let workspace_change_table_count: i64 = connection
+    .query_row(
+      "SELECT COUNT(*)
+       FROM sqlite_master
+       WHERE type = 'table' AND name = 'workspace_changes'",
+      [],
+      |row| row.get(0),
+    )
+    .expect("query workspace change table");
 
   fs::remove_dir_all(&root).expect("cleanup temp directory");
 
   assert_eq!(threads.len(), 1);
   assert_eq!(threads[0].summary.id, "thread-old");
   assert!(pending_approvals.is_empty());
-  assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   assert!(approval_indexes.contains(&"idx_approvals_requested_at".to_string()));
   assert!(!credential_columns.contains(&"credential_secret".to_string()));
+  assert_eq!(workspace_change_table_count, 1);
 }
 
 #[test]

@@ -12,7 +12,9 @@ fn approval_respond_writes_file_after_approval() {
   let workspace = create_temp_workspace("approval-write");
   let store_root = create_temp_workspace("approval-write-store");
   let store = RuntimeStore::new(store_root.join("pith.db"), store_root.join("threads.json"));
-  context.persistence_state.set_store_for_testing(store.clone());
+  context
+    .persistence_state
+    .set_store_for_testing(store.clone());
 
   let _ = handle_request(
     &mut context,
@@ -159,7 +161,10 @@ fn approval_respond_writes_file_after_approval() {
   assert_eq!(written_content, "Approval protected content");
   assert_eq!(workspace_changes.len(), 1);
   assert_eq!(workspace_changes[0].thread_id, "thread-1");
-  assert_eq!(workspace_changes[0].approval_id.as_deref(), Some("approval-1"));
+  assert_eq!(
+    workspace_changes[0].approval_id.as_deref(),
+    Some("approval-1")
+  );
   assert_eq!(workspace_changes[0].relative_path, "docs/output.txt");
   assert_eq!(workspace_changes[0].previous_content, None);
   assert_eq!(
