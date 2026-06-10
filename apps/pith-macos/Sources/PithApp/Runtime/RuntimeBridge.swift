@@ -15,7 +15,7 @@ final class RuntimeBridge {
   private let pendingResponses = RuntimeBridgePendingResponses()
   private let requestWriter = RuntimeBridgeRequestWriter()
 
-  func launchAndInitialize(launchDetail: String = "Launching local engine") async throws -> SessionInfo {
+  func launchAndInitialize(launchDetail: String = "Starting local service") async throws -> SessionInfo {
     if currentProcessSession()?.isRunning != true {
       resetProcessState()
       let environment = await runtimeEnvironment()
@@ -44,7 +44,7 @@ final class RuntimeBridge {
       }
 
       let detail = stopRuntimeAfterRequestBoundary(
-        detail: "Local engine initialization failed: \(error.localizedDescription)"
+        detail: "Local service initialization failed: \(error.localizedDescription)"
       )
       throw RuntimeError.rpc(detail)
     }
@@ -57,7 +57,7 @@ final class RuntimeBridge {
     )
   }
 
-  func stopRuntime(detail: String = "Local engine stopped.") {
+  func stopRuntime(detail: String = "Local service stopped.") {
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.disconnected, detail: detail)
@@ -99,7 +99,7 @@ final class RuntimeBridge {
     )
     guard isCurrentProcessSession(session.identifier), session.isRunning else {
       detachProcessSession(matching: session.identifier)?.stop()
-      throw RuntimeError.rpc("Local engine exited before initialization.")
+      throw RuntimeError.rpc("Local service exited before initialization.")
     }
   }
 
@@ -141,7 +141,7 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = "Local engine request \(method) was cancelled."
+    let detail = "Local service request \(method) was cancelled."
     continuation.resume(throwing: RuntimeError.rpc(detail))
     if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterCancelledRequest(method: method) {
       stopRuntimeAfterRequestCancellation(method: method)
@@ -150,15 +150,15 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestCancellation(method: String) {
     let detail =
-      "Local engine request \(method) was cancelled. " +
-      "Relaunch the local engine to continue."
+      "Local service request \(method) was cancelled. " +
+      "Restart the local service to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
   private func stopRuntimeAfterRequestTimeout(method: String, seconds: Int) {
     let detail =
-      "Local engine request \(method) timed out after \(seconds) seconds. " +
-      "Relaunch the local engine to continue."
+      "Local service request \(method) timed out after \(seconds) seconds. " +
+      "Restart the local service to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
@@ -180,7 +180,7 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = runtimeFailureDetail("Local engine disconnected.", session: session)
+    let detail = runtimeFailureDetail("Local service disconnected.", session: session)
     failPendingResponses(with: RuntimeError.rpc(detail))
     session.stop()
     updateConnectionState(.failed, detail: detail)
@@ -205,7 +205,7 @@ final class RuntimeBridge {
       return detail
     }
 
-    return "\(detail) Engine log: \(summary)"
+    return "\(detail) Local service log: \(summary)"
   }
 
   private func resetProcessState() {
@@ -343,8 +343,8 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestWriteFailure(method: String, error: Error) {
     let detail =
-      "Local engine request \(method) could not be written: \(error.localizedDescription). " +
-      "Relaunch the local engine to continue."
+      "Local service request \(method) could not be written: \(error.localizedDescription). " +
+      "Restart the local service to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 

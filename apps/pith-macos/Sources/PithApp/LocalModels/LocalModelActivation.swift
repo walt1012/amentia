@@ -69,29 +69,30 @@ enum LocalModelActivationPreparer {
 
 enum LocalModelActivationPlanner {
   static func selectionPlan(model: LocalModelSummary, manifestPath: String) -> LocalModelActivationPlan {
+    let modelName = LocalModelDisplayPresenter.actionName(model)
     LocalModelActivationPlan(
-      timelineTitle: "Local Engine Selected",
-      timelineBody: "\(model.displayName) is now the active local engine.",
+      timelineTitle: "Local Model Selected",
+      timelineBody: "\(modelName) is now the active local model.",
       attributes: [
         "manifestPath": manifestPath,
         "modelId": model.id,
         "modelPath": model.installPath,
         "result": "selected",
       ],
-      relaunchRunningDetail: "Restarting local engine with \(model.displayName)...",
-      relaunchIdleDetail: "\(model.displayName) will be used when the local engine starts."
+      relaunchRunningDetail: "Restarting local service with \(modelName)...",
+      relaunchIdleDetail: "\(modelName) will be used when the local service starts."
     )
   }
 
   static func resetPlan() -> LocalModelActivationPlan {
     LocalModelActivationPlan(
-      timelineTitle: "Local Engine Reset",
-      timelineBody: "Pith will choose the local engine automatically.",
+      timelineTitle: "Local Model Reset",
+      timelineBody: "Pith will choose the local model automatically.",
       attributes: [
         "result": "reset"
       ],
-      relaunchRunningDetail: "Restarting local engine with automatic model discovery...",
-      relaunchIdleDetail: "Automatic model discovery will be used when the local engine starts."
+      relaunchRunningDetail: "Restarting local service with automatic model discovery...",
+      relaunchIdleDetail: "Automatic model discovery will be used when the local service starts."
     )
   }
 

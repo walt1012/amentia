@@ -120,7 +120,7 @@ private struct LocalModelRow: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 5) {
       HStack(alignment: .firstTextBaseline, spacing: 6) {
-        Text(model.displayName)
+        Text(LocalModelDisplayPresenter.setupTitle(model))
           .font(.caption.weight(.semibold))
         Spacer()
         StatusPill(
@@ -131,7 +131,11 @@ private struct LocalModelRow: View {
       Text(model.description)
         .font(.caption2)
         .foregroundColor(.secondary)
-      Text("\(viewModel.localModelStatusSummary(model)) | \(viewModel.localModelTagSummary(model))")
+      Text(viewModel.localModelStatusSummary(model))
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .lineLimit(2)
+      Text("Tags: \(viewModel.localModelTagSummary(model))")
         .font(.caption2)
         .foregroundColor(.secondary)
         .lineLimit(2)

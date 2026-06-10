@@ -54,7 +54,7 @@ enum PluginActionPlanner {
     }
 
     if snapshot.runtimeState != .ready {
-      return "Local engine is not ready."
+      return "Local service is not ready."
     }
     if !connector.enabled {
       return "Connector plugin is disabled."
@@ -91,7 +91,7 @@ enum PluginActionPlanner {
     }
 
     if snapshot.runtimeState != .ready {
-      return "Local engine is not ready."
+      return "Local service is not ready."
     }
     if !connector.credentialPresent {
       return "Connector has no stored credential."
@@ -195,7 +195,7 @@ enum PluginActionPlanner {
       return "Command requires connector input, but no connector is declared."
     }
     if snapshot.runtimeState != .ready {
-      return "Local engine is not ready."
+      return "Local service is not ready."
     }
     if command.requiresWorkspaceInput && !snapshot.hasRuntimeThreadSelection {
       return "Command requires a workspace-bound session."

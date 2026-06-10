@@ -8,7 +8,7 @@ struct SettingsView: View {
   var body: some View {
     Form {
       localExecutionSection
-      localEngineSection
+      localModelSection
       SettingsStorageSection(
         summary: viewModel.localDataSettingsSummary(),
         reveal: viewModel.revealLocalDataFolder,
@@ -43,8 +43,8 @@ struct SettingsView: View {
     }
   }
 
-  private var localEngineSection: some View {
-    Section("Local Engine") {
+  private var localModelSection: some View {
+    Section("Local Models") {
       Text("Pith downloads and verifies one local model in app.")
       Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
     }

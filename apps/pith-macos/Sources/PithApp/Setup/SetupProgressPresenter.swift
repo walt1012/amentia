@@ -59,11 +59,11 @@ enum SetupProgressPresenter {
   private static func nextStep(_ snapshot: SetupProgressSnapshot) -> String? {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch Local Engine"
+      return "Start Local Service"
     case .launching:
-      return "Starting Local Engine"
+      return "Starting Local Service"
     case .failed:
-      return "Relaunch Local Engine"
+      return "Restart Local Service"
     case .ready:
       if !snapshot.isLocalModelReady {
         return modelNextStep(snapshot.modelReadinessDetail)

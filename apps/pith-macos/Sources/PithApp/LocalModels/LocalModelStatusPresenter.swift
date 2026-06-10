@@ -13,18 +13,20 @@ struct LocalModelStatusSnapshot {
 
 enum LocalModelStatusPresenter {
   static func displayName(_ snapshot: LocalModelStatusSnapshot) -> String {
-    snapshot.modelHealth?.displayName ?? "Local Engine Not Ready"
+    snapshot.modelHealth
+      .map { LocalModelDisplayPresenter.cleanDisplayName($0.displayName) }
+      ?? "Model Setup Not Ready"
   }
 
   static func statusSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
       switch snapshot.runtimeState {
       case .disconnected:
-        return "Launch the local engine to inspect model setup."
+        return "Start Pith's local service to inspect model setup."
       case .launching:
-        return "Checking local engine setup..."
+        return "Checking local service setup..."
       case .failed:
-        return "Relaunch the local engine to recover model setup."
+        return "Restart the local service to recover model setup."
       case .ready:
         return "Choose and download one local model to continue."
       }
@@ -38,11 +40,11 @@ enum LocalModelStatusPresenter {
     case "ready":
       return "Ready to use"
     case "unavailable":
-      return "Local engine setup needed"
+      return "Local model setup needed"
     case "error":
       return "Model needs attention"
     default:
-      return "Checking local engine"
+      return "Checking local model"
     }
   }
 
@@ -54,10 +56,10 @@ enum LocalModelStatusPresenter {
     guard let modelHealth = snapshot.modelHealth else {
       if let model = snapshot.selectedSetupModel {
         if model.downloaded {
-          return "Pith will use \(model.displayName) after it is selected."
+          return "Pith will use \(LocalModelDisplayPresenter.actionName(model)) after it is selected."
         }
 
-        return "Pith will use \(model.displayName) after it is downloaded and selected."
+        return "Pith will use \(LocalModelDisplayPresenter.actionName(model)) after it is downloaded and selected."
       }
 
       return "Pith needs one downloaded local model selected before it can answer."
@@ -89,7 +91,7 @@ enum LocalModelStatusPresenter {
       ?? contextSize
     let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
     let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
-    return "Context: \(modelContextSize) | Output: \(maxOutputTokens) | Engine: \(backend)"
+    return "Context: \(modelContextSize). Output: \(maxOutputTokens). Backend: \(backend)."
   }
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -100,9 +102,9 @@ enum LocalModelStatusPresenter {
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"
     let packReady = modelHealth.metrics["packReady"] ?? "false"
     if readiness == "ready", packReady == "true" {
-      return "Local engine setup is ready."
+      return "Local model setup is ready."
     }
-    return "Local engine setup is not ready yet."
+    return "Local model setup is not ready yet."
   }
 
   static func installHintSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -148,9 +150,11 @@ enum LocalModelStatusPresenter {
       status = "available"
     }
 
-    let localSize = model.localSizeBytes.map(LocalModelByteFormatter.string)
-      ?? LocalModelByteFormatter.string(model.sizeBytes)
-    return "\(status) | \(localSize) | \(model.license)"
+    return LocalModelDisplayPresenter.statusMetadata(
+      status: status,
+      sizeBytes: model.localSizeBytes ?? model.sizeBytes,
+      license: model.license
+    )
   }
 
   static func managerRuleSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -161,7 +165,7 @@ enum LocalModelStatusPresenter {
       return "Continue the paused download or cancel it before starting another model."
     }
     if let model = snapshot.selectedSetupModel {
-      return "Selected: \(model.displayName). Pith runs one active model at a time."
+      return "Selected: \(LocalModelDisplayPresenter.actionName(model)). Pith runs one active model at a time."
     }
 
     return "Choose one curated local model. Pith verifies the file before it can run."
@@ -245,7 +249,7 @@ enum LocalModelStatusPresenter {
   }
 
   static func tagSummary(_ model: LocalModelSummary) -> String {
-    model.tags.joined(separator: " / ")
+    model.tags.joined(separator: ", ")
   }
 
   static func pathSummary(_ model: LocalModelSummary) -> String {

@@ -22,7 +22,9 @@ enum RuntimeStateLoader {
 
     return ModelHealthRefresh(
       modelHealth: RuntimeSummaryMapper.modelHealthSummary(from: runtimeModel),
-      runtimeDetail: serverLabel.map { "\($0) | \(runtimeModel.displayName)" }
+      runtimeDetail: serverLabel.map {
+        "\($0). \(LocalModelDisplayPresenter.cleanDisplayName(runtimeModel.displayName))"
+      }
     )
   }
 
@@ -35,11 +37,11 @@ enum RuntimeStateLoader {
     } catch {
       return RuntimeReadinessSummary(
         status: "unavailable",
-        summary: "Local engine readiness unavailable: \(error.localizedDescription)",
+        summary: "Local model readiness unavailable: \(error.localizedDescription)",
         checks: [
           RuntimeReadinessCheckSummary(
             id: "runtime-readiness",
-            title: "Local Engine Readiness",
+            title: "Local Model Readiness",
             status: "unavailable",
             detail: error.localizedDescription
           )
@@ -55,6 +57,6 @@ enum RuntimeStateLoader {
       return detail
     }
 
-    return "\(serverLabel) | \(detail)"
+    return "\(serverLabel). \(detail)"
   }
 }

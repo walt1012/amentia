@@ -59,6 +59,7 @@ enum LocalModelDownloadStartPlanner {
 
     let verb = isResuming ? "Continuing" : "Downloading"
     let eventVerb = isResuming ? "continued" : "started"
+    let modelName = LocalModelDisplayPresenter.actionName(model)
 
     return LocalModelDownloadStartPlan(
       mode: mode,
@@ -71,10 +72,10 @@ enum LocalModelDownloadStartPlanner {
         updatedAt: now,
         isResuming: isResuming
       ),
-      runtimeDetail: "\(verb) \(model.displayName) (\(LocalModelByteFormatter.string(model.sizeBytes)))...",
-      timelineTitle: isResuming ? "Engine Download Continued" : "Engine Download Started",
+      runtimeDetail: "\(verb) \(modelName) (\(LocalModelByteFormatter.string(model.sizeBytes)))...",
+      timelineTitle: isResuming ? "Model Download Continued" : "Model Download Started",
       timelineBody:
-        "\(model.displayName) download \(eventVerb) from \(sourceURL.absoluteString).",
+        "\(modelName) download \(eventVerb) from \(sourceURL.absoluteString).",
       attributes: [
         "downloadUrl": sourceURL.absoluteString,
         "result": isResuming ? "continued" : "started",

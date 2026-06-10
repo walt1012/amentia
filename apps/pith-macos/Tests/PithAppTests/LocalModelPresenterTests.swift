@@ -59,7 +59,8 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(pausedModel: selectedModel, selectedModel: selectedModel)
     )
 
-    XCTAssertTrue(summary.contains("Continue LFM2.5-350M Q4_K_M"))
+    XCTAssertTrue(summary.contains("Continue LFM2.5-350M"))
+    XCTAssertFalse(summary.contains("Q4_K_M"))
     XCTAssertTrue(summary.contains("cancel to remove the partial file"))
   }
 
@@ -74,7 +75,8 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(selectedModel: selectedModel)
     )
 
-    XCTAssertTrue(summary.contains("Use Granite 4.0-H-350M Q4_K_M"))
+    XCTAssertTrue(summary.contains("Use Granite 4.0-H-350M"))
+    XCTAssertFalse(summary.contains("Q4_K_M"))
     XCTAssertTrue(summary.contains("Refresh local model setup"))
     XCTAssertFalse(summary.contains("setup info"))
   }
@@ -96,6 +98,85 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(guidance.detail.contains("|"))
   }
 
+  func testSetupModelChoiceDetailAvoidsTechnicalSeparators() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let detail = LocalModelOperationPresenter.setupModelChoiceDetail(
+      operationSnapshot(selectedModel: selectedModel),
+      defaultModelID: selectedModel.id
+    )
+
+    XCTAssertTrue(detail.contains("LFM2.5-350M"))
+    XCTAssertTrue(detail.contains("one verified local model"))
+    XCTAssertFalse(detail.contains("|"))
+    XCTAssertFalse(detail.contains("Q4_K_M"))
+  }
+
+  func testLocalModelStatusSummaryAvoidsPipeSeparators() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let summary = LocalModelStatusPresenter.localModelStatusSummary(
+      selectedModel,
+      snapshot: statusSnapshot(selectedModel: selectedModel)
+    )
+
+    XCTAssertTrue(summary.contains("active"))
+    XCTAssertTrue(summary.contains("License"))
+    XCTAssertFalse(summary.contains("|"))
+  }
+
+  func testDownloadProgressSummaryAvoidsPipeSeparators() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let startedAt = Date(timeIntervalSince1970: 1)
+    let summary = LocalModelDownloadStatusPresenter.downloadProgressSummary(
+      statusSnapshot(
+        selectedModel: selectedModel,
+        modelDownloadID: selectedModel.id,
+        progress: ModelDownloadProgress(
+          modelID: selectedModel.id,
+          displayName: selectedModel.displayName,
+          bytesReceived: 50,
+          totalBytes: 100,
+          startedAt: startedAt,
+          updatedAt: startedAt.addingTimeInterval(10),
+          isResuming: false
+        )
+      )
+    )
+
+    XCTAssertTrue(summary.contains("50% complete"))
+    XCTAssertFalse(summary.contains("Q4_K_M"))
+    XCTAssertFalse(summary.contains("|"))
+  }
+
+  func testDownloadInterruptionCopyUsesFriendlyModelName() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let plan = LocalModelDownloadInterruptionPlanner.cancellationPlan(model: selectedModel)
+
+    XCTAssertEqual(plan.timelineTitle, "Model Download Cancelled")
+    XCTAssertTrue(plan.runtimeDetail.contains("LFM2.5-350M"))
+    XCTAssertFalse(plan.runtimeDetail.contains("Q4_K_M"))
+    XCTAssertFalse(plan.timelineTitle.contains("Engine"))
+  }
+
   func testRepairGuidanceAvoidsInternalSetupInfoLanguage() {
     let guidance = LocalModelOperationPresenter.setupGuidance(operationSnapshot())
 
@@ -109,21 +190,22 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(runtimeState: .failed)
     )
 
-    XCTAssertTrue(summary.contains("Relaunch the local engine"))
+    XCTAssertTrue(summary.contains("Restart the local service"))
     XCTAssertTrue(summary.contains("selected model choices remain local"))
   }
 
   private func statusSnapshot(
     selectedModel: LocalModelSummary,
     modelDownloadID: String? = nil,
-    pausedModelDownloadID: String? = nil
+    pausedModelDownloadID: String? = nil,
+    progress: ModelDownloadProgress? = nil
   ) -> LocalModelStatusSnapshot {
     LocalModelStatusSnapshot(
       runtimeState: .ready,
       modelHealth: nil,
       modelDownloadID: modelDownloadID,
       pausedModelDownloadID: pausedModelDownloadID,
-      modelDownloadProgress: nil,
+      modelDownloadProgress: progress,
       selectedSetupModelID: selectedModel.id,
       selectedSetupModel: selectedModel,
       hasActiveCatalogModel: false

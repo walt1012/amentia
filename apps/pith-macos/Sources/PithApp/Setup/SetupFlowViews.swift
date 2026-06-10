@@ -89,7 +89,7 @@ private struct SetupModelOptionRow: View {
     Button(action: onSelect) {
       VStack(alignment: .leading, spacing: 5) {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-          Text(model.displayName)
+          Text(LocalModelDisplayPresenter.setupTitle(model))
             .font(.caption.weight(.semibold))
             .foregroundColor(.primary)
           if isDefault {
@@ -130,18 +130,11 @@ private struct SetupModelOptionRow: View {
   }
 
   private var detail: String {
-    let size = formattedByteCount(model.sizeBytes)
-    return "\(size) | \(model.license)"
+    LocalModelDisplayPresenter.setupMetadata(model)
   }
 
   private var fit: String {
     LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
-  }
-
-  private func formattedByteCount(_ byteCount: Int64) -> String {
-    let formatter = ByteCountFormatter()
-    formatter.countStyle = .file
-    return formatter.string(fromByteCount: byteCount)
   }
 }
 

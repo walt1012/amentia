@@ -67,6 +67,8 @@ Ready foundations:
 
 - Local model setup works through in-app download, verification, activation,
   pause, resume, cancel, recovery, local data reset, and one active model.
+- First-run model setup now hides GGUF quantization names from primary UI and
+  uses consistent local service/local model language.
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.
@@ -102,8 +104,8 @@ Build now:
   assets, verify checksum, open DMG, pass Gatekeeper, download the default
   model, open a workspace, run a cowork turn, use Web Search, approve one
   bounded action, inspect proof, and validate the manual acceptance receipt.
-- Keep normal UI language product-level: session, workspace, local model,
-  local engine, Web Search, connector, approval, and proof. Keep paths,
+- Keep normal UI language product-level: session, workspace, local service,
+  local model, Web Search, connector, approval, and proof. Keep paths,
   manifests, package details, and diagnostics behind Advanced.
 - Make local storage ownership explicit: users can reveal or delete Pith local
   data without touching their workspaces.

@@ -24,11 +24,11 @@ enum InspectorSessionPresenter {
   static func title(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Local Engine Offline"
+      return "Local Service Offline"
     case .launching:
-      return "Starting Local Engine"
+      return "Starting Local Service"
     case .failed:
-      return "Local Engine Needs Relaunch"
+      return "Local Service Needs Restart"
     case .ready:
       if snapshot.hasActiveTurn {
         return "Local Execution Running"
@@ -52,11 +52,11 @@ enum InspectorSessionPresenter {
   static func detail(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch Pith's local engine before inspecting project actions, model state, memory, or connectors."
+      return "Start Pith's local service before inspecting project actions, model state, memory, or connectors."
     case .launching:
       return "Pith is reconnecting local model, workspace, session, memory, and connector state."
     case .failed:
-      return "Use the relaunch action in the timeline header to recover the local engine."
+      return "Use the restart action in the timeline header to recover the local service."
     case .ready:
       if snapshot.hasActiveTurn {
         return "Pith is running locally. Keep review focused on the timeline unless the execution should be cancelled."
@@ -106,7 +106,7 @@ enum InspectorSessionPresenter {
   private static func runtimeReadinessSummary(_ status: String) -> String {
     switch status {
     case "ready":
-      return "Local engine ready"
+      return "Local service ready"
     case "running":
       return "Local work running"
     case "needs_approval":
@@ -114,7 +114,7 @@ enum InspectorSessionPresenter {
     case "setup_required":
       return "Setup needed"
     default:
-      return "Local engine \(status)"
+      return "Local service \(status)"
     }
   }
 

@@ -122,7 +122,7 @@ extension AppViewModel {
 
   func activateRecommendedModel(modelID: String) {
     guard runtimeState != .launching else {
-      runtimeDetail = "Wait for the local engine to finish starting before switching models."
+      runtimeDetail = "Wait for Pith's local service to finish starting before switching models."
       return
     }
     guard !hasActiveOrPendingTurn() else {
@@ -148,11 +148,11 @@ extension AppViewModel {
 
     guard model.downloaded || model.needsVerification else {
       localModelActivationCoordinator.finish(requestID)
-      runtimeDetail = "Download \(model.displayName) before using it."
+      runtimeDetail = "Download \(LocalModelDisplayPresenter.actionName(model)) before using it."
       return
     }
 
-    runtimeDetail = "Verifying \(model.displayName) before selection..."
+    runtimeDetail = "Verifying \(LocalModelDisplayPresenter.actionName(model)) before selection..."
     let task = Task {
       defer {
         localModelActivationCoordinator.finish(requestID)
@@ -193,7 +193,7 @@ extension AppViewModel {
   func resetActiveLocalModel() {
     guard canResetActiveLocalModel() else {
       runtimeDetail =
-        "Finish local engine startup, model download, model selection check, or active local work before resetting model selection."
+        "Finish local service startup, model download, model selection check, or active local work before resetting model selection."
       return
     }
 

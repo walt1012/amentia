@@ -20,13 +20,14 @@ struct LocalModelDownloadInterruptionPlan {
 
 enum LocalModelDownloadInterruptionPlanner {
   static func plan(model: LocalModelSummary, error: Error) -> LocalModelDownloadInterruptionPlan {
+    let modelName = LocalModelDisplayPresenter.actionName(model)
     if let paused = error as? ModelDownloadPaused {
       return LocalModelDownloadInterruptionPlan(
         mode: .paused(resumeData: paused.resumeData),
-        runtimeDetail: "Paused \(model.displayName) download. Continue to resume from the saved partial state.",
-        timelineTitle: "Engine Download Paused",
+        runtimeDetail: "Paused \(modelName) download. Continue to resume from the saved partial state.",
+        timelineTitle: "Model Download Paused",
         timelineBody:
-          "\(model.displayName) download was paused and can continue from the saved local state.",
+          "\(modelName) download was paused and can continue from the saved local state.",
         timelineKind: .system,
         attributes: [
           "result": "paused",
@@ -43,9 +44,9 @@ enum LocalModelDownloadInterruptionPlanner {
 
     return LocalModelDownloadInterruptionPlan(
       mode: .failed,
-      runtimeDetail: "Engine download failed: \(error.localizedDescription)",
-      timelineTitle: "Engine Download Failed",
-      timelineBody: "\(model.displayName) download failed: \(error.localizedDescription)",
+      runtimeDetail: "Model download failed: \(error.localizedDescription)",
+      timelineTitle: "Model Download Failed",
+      timelineBody: "\(modelName) download failed: \(error.localizedDescription)",
       timelineKind: .warning,
       attributes: [
         "error": error.localizedDescription,
@@ -58,11 +59,12 @@ enum LocalModelDownloadInterruptionPlanner {
   }
 
   static func cancellationPlan(model: LocalModelSummary) -> LocalModelDownloadInterruptionPlan {
+    let modelName = LocalModelDisplayPresenter.actionName(model)
     LocalModelDownloadInterruptionPlan(
       mode: .cancelled,
-      runtimeDetail: "Cancelled \(model.displayName) download and cleared partial state.",
-      timelineTitle: "Engine Download Cancelled",
-      timelineBody: "\(model.displayName) download was cancelled and the partial file was cleared.",
+      runtimeDetail: "Cancelled \(modelName) download and cleared partial state.",
+      timelineTitle: "Model Download Cancelled",
+      timelineBody: "\(modelName) download was cancelled and the partial file was cleared.",
       timelineKind: .system,
       attributes: [
         "result": "cancelled",
@@ -118,7 +120,7 @@ enum LocalModelDownloadControlPlanner {
     guard let model = models.first(where: { $0.id == pausedModelID }) else {
       return LocalModelDownloadCancelPlan(
         mode: .orphanedPaused(modelID: pausedModelID),
-        runtimeDetail: "Cancelled local engine download and cleared partial state."
+        runtimeDetail: "Cancelled model download and cleared partial state."
       )
     }
 
@@ -132,8 +134,8 @@ enum LocalModelDownloadControlPlanner {
 
   private static func displayName(for modelID: String?, models: [LocalModelSummary]) -> String {
     modelID
-      .flatMap { id in models.first(where: { $0.id == id })?.displayName }
-      ?? "local engine"
+      .flatMap { id in models.first(where: { $0.id == id }).map(LocalModelDisplayPresenter.actionName) }
+      ?? "model"
   }
 }
 

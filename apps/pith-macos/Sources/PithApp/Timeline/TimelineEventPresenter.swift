@@ -159,7 +159,7 @@ enum TimelineEventPresenter {
     TimelineEntryFactory.system(
       title: "Cowork Session Ready",
       body:
-        "Local engine, model, workspace, and session are ready. Send one short cowork prompt to finish first-use setup.",
+        "Local service, model, workspace, and session are ready. Send one short cowork prompt to finish first-use setup.",
       attributes: [
         "setup": "first-request"
       ]
@@ -168,8 +168,8 @@ enum TimelineEventPresenter {
 
   static func runtimeDisconnected(detail: String) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Local Engine Disconnected",
-      body: "\(detail) Use Relaunch Local Engine to recover the session.",
+      title: "Local Service Disconnected",
+      body: "\(detail) Use Restart Local Service to recover the session.",
       attributes: [
         "recovery": "relaunch-runtime"
       ]
@@ -178,7 +178,7 @@ enum TimelineEventPresenter {
 
   static func runtimeLaunchFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Local Engine Launch Failed",
+      title: "Local Service Launch Failed",
       body: error.localizedDescription,
       attributes: [:]
     )
@@ -186,7 +186,7 @@ enum TimelineEventPresenter {
 
   static func localModelDownloaded(_ plan: LocalModelDownloadCompletionPlan) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Local Engine Downloaded",
+      title: "Local Model Downloaded",
       body: plan.timelineBody,
       attributes: plan.attributes
     )

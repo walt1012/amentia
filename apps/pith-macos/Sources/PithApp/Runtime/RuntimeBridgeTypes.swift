@@ -26,15 +26,15 @@ extension RuntimeBridge {
       switch self {
       case .runtimePathMissing:
         return
-          "The local engine could not be found. " +
+          "The local service could not be found. " +
           "Set PITH_RUNTIME_PATH to the built runtime executable."
       case .runtimePipeUnavailable:
-        return "The local engine connection is not available."
+        return "The local service connection is not available."
       case .invalidResponse:
-        return "The local engine returned an invalid response."
+        return "The local service returned an invalid response."
       case .requestTimedOut(let method, let seconds):
         return
-          "Local engine request \(method) timed out after \(seconds) seconds. " +
+          "Local service request \(method) timed out after \(seconds) seconds. " +
           "The request did not finish in time."
       case .rpc(let message):
         return message

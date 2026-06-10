@@ -38,7 +38,7 @@ extension AppViewModel {
       return
     }
 
-    runtimeBridge.stopRuntime(detail: "Local data reset. Relaunch the local engine to continue.")
+    runtimeBridge.stopRuntime(detail: "Local data reset. Restart the local service to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()
@@ -94,7 +94,7 @@ extension AppViewModel {
       progress: nil
     )
     resetToWelcomeThread()
-    runtimeDetail = "Deleted Pith local data at \(result.appSupportPath). Relaunch the local engine to set up again."
+    runtimeDetail = "Deleted Pith local data at \(result.appSupportPath). Restart the local service to set up again."
     appendEntry(
       to: selectedThreadID,
       TimelineEntryFactory.system(

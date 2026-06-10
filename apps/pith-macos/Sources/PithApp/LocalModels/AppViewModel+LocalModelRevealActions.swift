@@ -10,7 +10,7 @@ extension AppViewModel {
 
     runtimeDetail = FileRevealService.revealFilePath(
       model.installPath,
-      successDetail: "Revealed \(model.displayName)."
+      successDetail: "Revealed \(LocalModelDisplayPresenter.actionName(model))."
     )
   }
 
@@ -30,7 +30,7 @@ extension AppViewModel {
     runtimeDetail = FileRevealService.revealSuggestedPath(
       metricKey: "suggestedBinaryPath",
       modelHealth: modelHealth,
-      successDetail: "Opened the local engine folder."
+      successDetail: "Opened the local service folder."
     )
   }
 

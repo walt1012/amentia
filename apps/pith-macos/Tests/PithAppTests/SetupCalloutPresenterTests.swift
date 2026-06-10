@@ -30,15 +30,15 @@ final class SetupCalloutPresenterTests: XCTestCase {
       hasWorkspace: false,
       hasRuntimeThreadSelection: false,
       modelGuidance: LocalModelSetupGuidance(
-        title: "Launch Local Engine",
-        summary: "Launch Pith's local engine before choosing or running a model.",
+        title: "Start Local Service",
+        summary: "Start Pith's local service before choosing or running a model.",
         detail: "The model catalog, downloads, and selected model state stay local on this Mac.",
-        actionSummary: "Launch the local engine to inspect model setup.",
+        actionSummary: "Start the local service to inspect model setup.",
         readinessDetail: "Launch",
         tone: .warning
       ),
       modelProgressDetail: nil,
-      runtimeLaunchActionTitle: "Launch Local Engine",
+      runtimeLaunchActionTitle: "Start Local Service",
       modelPrimaryActionTitle: nil,
       modelSecondaryActionTitle: nil,
       distributionTrustSetupDetail: distributionTrustSetupDetail

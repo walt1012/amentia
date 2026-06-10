@@ -22,11 +22,11 @@ enum RuntimeHeaderPresenter {
   static func statusSummary(_ snapshot: RuntimeHeaderSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local engine to restore model, workspace, connectors, and memory."
+      return "Start the local service to restore model, workspace, connectors, and memory."
     case .launching:
-      return "Starting the local engine and reconnecting app state..."
+      return "Starting the local service and reconnecting app state..."
     case .failed:
-      return "Local engine stopped. Relaunch to recover local work."
+      return "Local service stopped. Restart to recover local work."
     case .ready:
       if !snapshot.isLocalModelReady {
         return snapshot.modelSetupSummary
@@ -105,7 +105,7 @@ enum RuntimeHeaderPresenter {
 
     switch snapshot.runtimeState {
     case .disconnected:
-      return snapshot.runtimeDetail != "Local engine not launched"
+      return snapshot.runtimeDetail != "Local service not started"
     case .launching, .failed:
       return true
     case .ready:

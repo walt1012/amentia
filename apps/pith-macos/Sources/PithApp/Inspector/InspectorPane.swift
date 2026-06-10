@@ -31,7 +31,7 @@ struct InspectorPane: View {
           WorkspaceSearchPanel(viewModel: viewModel)
         }
 
-        DisclosureGroup("Local Engine", isExpanded: $localModelExpanded) {
+        DisclosureGroup("Local Models", isExpanded: $localModelExpanded) {
           LocalModelPanel(viewModel: viewModel)
         }
 

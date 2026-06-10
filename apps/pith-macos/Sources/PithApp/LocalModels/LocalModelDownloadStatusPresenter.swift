@@ -36,14 +36,15 @@ enum LocalModelDownloadStatusPresenter {
     if isPaused {
       trailingStatus = "Ready to continue"
     } else {
-      let eta = downloadETASummary(progress).map { " | \($0)" } ?? ""
+      let eta = downloadETASummary(progress).map { ". \($0)." } ?? "."
       trailingStatus = "\(downloadSpeedSummary(progress))\(eta)"
     }
     let percent = downloadProgressValue(snapshot)
-      .map { " | \(Int($0 * 100))%" }
+      .map { " \(Int($0 * 100))% complete." }
       ?? ""
 
-    return "\(status) \(progress.displayName): \(received) of \(total)\(percent) | \(trailingStatus)"
+    let displayName = LocalModelDisplayPresenter.cleanDisplayName(progress.displayName)
+    return "\(status) \(displayName): \(received) of \(total).\(percent) \(trailingStatus)"
   }
 
   private static func downloadSpeedSummary(_ progress: ModelDownloadProgress) -> String {

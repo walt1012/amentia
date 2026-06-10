@@ -460,7 +460,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasDraftMessage: hasDraftMessage,
       runtimeReadinessChecks: checks,
       canEnableWebSearchPlugin: canEnableWebSearchPlugin,
-      runtimeLaunchButtonTitle: "Launch Local Engine",
+      runtimeLaunchButtonTitle: "Start Local Service",
       modelSetupActionTitle: nil
     )
   }

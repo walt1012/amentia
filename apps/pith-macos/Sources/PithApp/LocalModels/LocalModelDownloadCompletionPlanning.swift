@@ -23,11 +23,12 @@ enum LocalModelDownloadCompletionPlanner {
     canActivateNow: Bool,
     manifestPath: String?
   ) -> LocalModelDownloadCompletionPlan {
+    let modelName = LocalModelDisplayPresenter.actionName(model)
     if activationRequested, canActivateNow, let manifestPath {
       return LocalModelDownloadCompletionPlan(
         mode: .activated,
-        runtimeDetail: "Downloaded and selected \(model.displayName).",
-        timelineBody: "\(model.displayName) was downloaded and selected as the active local model.",
+        runtimeDetail: "Downloaded and selected \(modelName).",
+        timelineBody: "\(modelName) was downloaded and selected as the active local model.",
         attributes: baseAttributes(model: model, sourceURL: sourceURL).merging(
           [
             "manifestPath": manifestPath,
@@ -35,17 +36,17 @@ enum LocalModelDownloadCompletionPlanner {
           ],
           uniquingKeysWith: { _, new in new }
         ),
-        relaunchRunningDetail: "Restarting local engine with \(model.displayName)...",
-        relaunchIdleDetail: "\(model.displayName) will be used when the local engine starts."
+        relaunchRunningDetail: "Restarting local service with \(modelName)...",
+        relaunchIdleDetail: "\(modelName) will be used when the local service starts."
       )
     }
 
     if activationRequested {
       return LocalModelDownloadCompletionPlan(
         mode: .waitingForTurn,
-        runtimeDetail: "Downloaded \(model.displayName). Finish the current turn before selecting it.",
+        runtimeDetail: "Downloaded \(modelName). Finish the current turn before selecting it.",
         timelineBody:
-          "\(model.displayName) was downloaded, but activation is waiting for the current local turn to finish.",
+          "\(modelName) was downloaded, but activation is waiting for the current local turn to finish.",
         attributes: baseAttributes(model: model, sourceURL: sourceURL).merging(
           [
             "result": "downloaded_pending_activation",
@@ -59,8 +60,8 @@ enum LocalModelDownloadCompletionPlanner {
 
     return LocalModelDownloadCompletionPlan(
       mode: .downloadedOnly,
-      runtimeDetail: "Downloaded \(model.displayName) to \(model.installPath).",
-      timelineBody: "\(model.displayName) was downloaded to \(model.installPath).",
+      runtimeDetail: "Downloaded \(modelName) to \(model.installPath).",
+      timelineBody: "\(modelName) was downloaded to \(model.installPath).",
       attributes: baseAttributes(model: model, sourceURL: sourceURL).merging(
         [
           "result": "downloaded",

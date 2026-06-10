@@ -47,7 +47,7 @@ struct AppLaunchState {
     activeModelInvalidationDetail: String?,
     appSupportSetupDetail: String?
   ) -> String {
-    var details = ["Local engine not launched"]
+    var details = ["Local service not started"]
     if pausedDownload != nil {
       details.append("paused model download available")
     }
@@ -57,6 +57,6 @@ struct AppLaunchState {
     if let appSupportSetupDetail {
       details.append(appSupportSetupDetail)
     }
-    return details.joined(separator: " | ")
+    return details.joined(separator: ". ")
   }
 }

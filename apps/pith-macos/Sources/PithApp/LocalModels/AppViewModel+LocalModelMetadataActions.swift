@@ -10,7 +10,7 @@ extension AppViewModel {
 
   func bootstrapModelPackMetadata() {
     guard runtimeState == .ready else {
-      runtimeDetail = "Launch the local engine before refreshing model setup."
+      runtimeDetail = "Start Pith's local service before refreshing model setup."
       return
     }
     guard !modelDownloadCoordinator.isDownloading else {

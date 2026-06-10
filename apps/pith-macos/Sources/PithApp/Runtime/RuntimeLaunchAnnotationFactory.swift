@@ -19,8 +19,8 @@ enum RuntimeLaunchAnnotationFactory {
     if snapshot.shouldAnnotateSetupLaunch {
       entries.append(
         TimelineEntryFactory.system(
-          title: "Local Engine Ready",
-          body: "Connected to the local engine.",
+          title: "Local Service Ready",
+          body: "Connected to Pith's local service.",
           attributes: [:]
         )
       )
@@ -68,7 +68,7 @@ enum RuntimeLaunchAnnotationFactory {
     guard let modelHealth = snapshot.modelHealth else {
       return [
         TimelineEntryFactory.warning(
-          title: "Local Engine Required",
+          title: "Local Model Required",
           body: snapshot.localModelRequiredSummary,
           attributes: [
             "modelStatus": "unavailable"
@@ -90,9 +90,9 @@ enum RuntimeLaunchAnnotationFactory {
 
       return [
         TimelineEntryFactory.system(
-          title: "Local Engine Ready",
+          title: "Local Model Ready",
           body:
-            "\(modelHealth.displayName) is ready for local work.",
+            "\(LocalModelDisplayPresenter.cleanDisplayName(modelHealth.displayName)) is ready for local work.",
           attributes: attributes
         )
       ]
@@ -100,7 +100,7 @@ enum RuntimeLaunchAnnotationFactory {
 
     return [
       TimelineEntryFactory.warning(
-        title: "Local Engine Required",
+        title: "Local Model Required",
         body: snapshot.localModelRequiredSummary,
         attributes: attributes
       )
