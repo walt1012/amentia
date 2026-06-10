@@ -196,7 +196,10 @@ fn approval_respond_writes_file_after_approval() {
   assert!(preview_response.error.is_none());
   let preview_result = preview_response.result.expect("preview result");
   assert_eq!(preview_result["changes"].as_array().unwrap().len(), 1);
-  assert_eq!(preview_result["changes"][0]["relativePath"], "docs/output.txt");
+  assert_eq!(
+    preview_result["changes"][0]["relativePath"],
+    "docs/output.txt"
+  );
   assert_eq!(preview_result["changes"][0]["willDeleteFile"], true);
   assert!(revert_response.error.is_none());
   let revert_result = revert_response.result.expect("revert result");

@@ -1,7 +1,6 @@
 use pith_protocol::{
   JsonRpcRequest, JsonRpcResponse, ThreadChangePreviewParams, ThreadChangePreviewResult,
-  ThreadRevertChangesParams, ThreadRevertChangesResult, ThreadWorkspaceChangeSummary,
-  TimelineItem,
+  ThreadRevertChangesParams, ThreadRevertChangesResult, ThreadWorkspaceChangeSummary, TimelineItem,
 };
 use pith_storage::StoredWorkspaceChangeRecord;
 use pith_tools::{revert_file_change, validate_file_change_revert};
@@ -14,13 +13,11 @@ pub(crate) fn handle_thread_change_preview(
   context: &RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match parse_required_params::<ThreadChangePreviewParams>(
-    &request,
-    "thread/changePreview",
-  ) {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
+  let params =
+    match parse_required_params::<ThreadChangePreviewParams>(&request, "thread/changePreview") {
+      Ok(params) => params,
+      Err(response) => return response,
+    };
 
   if context.thread_state.find(&params.thread_id).is_none() {
     return JsonRpcResponse::error(request.id, -32004, "Thread not found");
@@ -47,13 +44,11 @@ pub(crate) fn handle_thread_revert_changes(
   context: &mut RuntimeContext,
   request: JsonRpcRequest,
 ) -> JsonRpcResponse {
-  let params = match parse_required_params::<ThreadRevertChangesParams>(
-    &request,
-    "thread/revertChanges",
-  ) {
-    Ok(params) => params,
-    Err(response) => return response,
-  };
+  let params =
+    match parse_required_params::<ThreadRevertChangesParams>(&request, "thread/revertChanges") {
+      Ok(params) => params,
+      Err(response) => return response,
+    };
 
   if thread_has_active_work(context, &params.thread_id) {
     return JsonRpcResponse::error(

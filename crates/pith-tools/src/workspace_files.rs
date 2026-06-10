@@ -193,8 +193,12 @@ pub fn validate_file_change_revert(
   expected_current_content: &[u8],
 ) -> Result<String> {
   let target = resolve_revert_target(workspace_root, relative_path)?;
-  let current_content = fs::read(&target)
-    .with_context(|| format!("failed to read current file content for {}", target.display()))?;
+  let current_content = fs::read(&target).with_context(|| {
+    format!(
+      "failed to read current file content for {}",
+      target.display()
+    )
+  })?;
   if current_content != expected_current_content {
     bail!("workspace file changed after Pith wrote it; review it before reverting");
   }

@@ -24,7 +24,8 @@ pub(crate) use plugins::{
 mod requests;
 pub(crate) use requests::{
   approval_requests, memory_requests, model_requests, request_dispatch, request_params,
-  request_state, server_requests, thread_requests, turn_requests, workspace_requests,
+  request_state, server_requests, thread_change_requests, thread_requests, turn_requests,
+  workspace_requests,
 };
 
 mod runtime;
