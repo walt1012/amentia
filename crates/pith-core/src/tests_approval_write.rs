@@ -12,9 +12,7 @@ fn approval_respond_writes_file_after_approval() {
   let workspace = create_temp_workspace("approval-write");
   let store_root = create_temp_workspace("approval-write-store");
   let store = RuntimeStore::new(store_root.join("pith.db"), store_root.join("threads.json"));
-  context
-    .persistence_state
-    .set_store_for_testing(store);
+  context.persistence_state.set_store_for_testing(store.clone());
 
   let _ = handle_request(
     &mut context,
@@ -200,8 +198,8 @@ fn approval_respond_writes_file_after_approval() {
     preview_result["changes"][0]["relativePath"],
     "docs/output.txt"
   );
-  assert_eq!(preview_result["changes"][0]["willDeleteFile"], true);
-  assert_eq!(preview_result["changes"][0]["canRevert"], true);
+  assert_eq!(preview_result["changes"][0]["willDeleteFile"], json!(true));
+  assert_eq!(preview_result["changes"][0]["canRevert"], json!(true));
   assert!(revert_response.error.is_none());
   let revert_result = revert_response.result.expect("revert result");
   assert_eq!(revert_result["revertedCount"], 1);

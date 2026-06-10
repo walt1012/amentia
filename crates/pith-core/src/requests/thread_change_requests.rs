@@ -32,7 +32,10 @@ pub(crate) fn handle_thread_change_preview(
     request.id,
     &ThreadChangePreviewResult {
       thread_id: params.thread_id,
-      changes: changes.iter().map(workspace_change_summary).collect::<Vec<_>>(),
+      changes: changes
+        .iter()
+        .map(workspace_change_summary)
+        .collect::<Vec<_>>(),
     },
   )
 }
