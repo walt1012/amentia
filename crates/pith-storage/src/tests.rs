@@ -170,13 +170,18 @@ fn sqlite_store_round_trips_workspace_change_ledger() {
   store
     .save_workspace_change(&change)
     .expect("save workspace change");
+  store
+    .mark_workspace_change_reverted("approval-9")
+    .expect("mark workspace change reverted");
   let changes = store
     .load_workspace_changes_for_thread("thread-7")
     .expect("load workspace changes");
 
   fs::remove_dir_all(&root).expect("cleanup temp directory");
 
-  assert_eq!(changes, vec![change]);
+  assert_eq!(changes.len(), 1);
+  assert_eq!(changes[0].id, change.id);
+  assert!(changes[0].reverted_at.is_some());
 }
 
 #[test]

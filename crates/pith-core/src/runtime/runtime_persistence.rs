@@ -93,6 +93,25 @@ impl RuntimePersistenceState {
     store.save_workspace_change(change)
   }
 
+  pub(crate) fn workspace_changes_for_thread(
+    &self,
+    thread_id: &str,
+  ) -> Result<Vec<StoredWorkspaceChangeRecord>> {
+    let Some(store) = self.store() else {
+      return Ok(vec![]);
+    };
+
+    store.load_workspace_changes_for_thread(thread_id)
+  }
+
+  pub(crate) fn mark_workspace_change_reverted(&self, change_id: &str) -> Result<()> {
+    let Some(store) = self.store() else {
+      return Ok(());
+    };
+
+    store.mark_workspace_change_reverted(change_id)
+  }
+
   pub(crate) fn save_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {
     save_plugin_enabled_to_store(self.store(), plugin_id, enabled)
   }

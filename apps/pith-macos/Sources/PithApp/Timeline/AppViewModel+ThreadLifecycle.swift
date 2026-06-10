@@ -86,6 +86,62 @@ extension AppViewModel {
       && !hasActiveOrPendingTurn()
   }
 
+  func canRevertThreadChanges(_ thread: ThreadSummary) -> Bool {
+    runtimeState == .ready
+      && !thread.id.hasPrefix("local-")
+      && !hasActiveOrPendingTurn()
+  }
+
+  func previewThreadChanges(
+    _ thread: ThreadSummary
+  ) async -> RuntimeBridge.RuntimeThreadChangePreview? {
+    guard canRevertThreadChanges(thread) else {
+      runtimeDetail = "Finish or cancel active local work before reverting session changes."
+      return nil
+    }
+
+    do {
+      let preview = try await runtimeBridge.previewThreadChanges(threadID: thread.id)
+      guard !Task.isCancelled else {
+        return nil
+      }
+      if preview.changes.isEmpty {
+        runtimeDetail = "This session has no workspace changes to revert."
+        return nil
+      }
+      return preview
+    } catch {
+      guard !Task.isCancelled else {
+        return nil
+      }
+      runtimeDetail = "Session revert preview failed: \(error.localizedDescription)"
+      return nil
+    }
+  }
+
+  func revertThreadChanges(_ thread: ThreadSummary) {
+    guard canRevertThreadChanges(thread) else {
+      runtimeDetail = "Finish or cancel active local work before reverting session changes."
+      return
+    }
+
+    Task {
+      do {
+        let result = try await runtimeBridge.revertThreadChanges(threadID: thread.id)
+        guard !Task.isCancelled else {
+          return
+        }
+        appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        runtimeDetail = "Reverted \(result.revertedCount) session workspace change(s)."
+      } catch {
+        guard !Task.isCancelled else {
+          return
+        }
+        runtimeDetail = "Session revert failed: \(error.localizedDescription)"
+      }
+    }
+  }
+
   func deleteThread(_ thread: ThreadSummary) {
     guard canDeleteThread(thread) else {
       runtimeDetail = "Finish or cancel active local work before deleting a session."

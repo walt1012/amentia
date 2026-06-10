@@ -76,4 +76,16 @@ impl RuntimeStore {
 
     Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
   }
+
+  pub fn mark_workspace_change_reverted(&self, change_id: &str) -> Result<()> {
+    let connection = self.open_connection()?;
+    connection.execute(
+      "UPDATE workspace_changes
+       SET reverted_at = ?2
+       WHERE id = ?1",
+      params![change_id, current_timestamp()?],
+    )?;
+
+    Ok(())
+  }
 }

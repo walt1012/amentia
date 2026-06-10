@@ -46,4 +46,15 @@ impl RuntimeContext {
   ) -> Result<()> {
     self.persistence_state.save_workspace_change(change)
   }
+
+  pub(crate) fn workspace_changes_for_thread(
+    &self,
+    thread_id: &str,
+  ) -> Result<Vec<StoredWorkspaceChangeRecord>> {
+    self.persistence_state.workspace_changes_for_thread(thread_id)
+  }
+
+  pub(crate) fn mark_workspace_change_reverted(&self, change_id: &str) -> Result<()> {
+    self.persistence_state.mark_workspace_change_reverted(change_id)
+  }
 }

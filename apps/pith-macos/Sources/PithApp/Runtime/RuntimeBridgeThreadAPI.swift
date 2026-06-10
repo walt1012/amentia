@@ -57,6 +57,41 @@ extension RuntimeBridge {
     }
   }
 
+  func previewThreadChanges(threadID: String) async throws -> RuntimeThreadChangePreview {
+    let response: JSONRPCResponse<ThreadChangePreviewResult> = try await sendRequest(
+      method: "thread/changePreview",
+      params: ThreadChangePreviewParams(threadId: threadID)
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimeThreadChangePreview(
+      threadID: result.threadId,
+      changes: result.changes.map {
+        RuntimeThreadChange(
+          id: $0.id,
+          relativePath: $0.relativePath,
+          action: $0.action,
+          bytesWritten: $0.bytesWritten,
+          willDeleteFile: $0.willDeleteFile
+        )
+      }
+    )
+  }
+
+  func revertThreadChanges(threadID: String) async throws -> RuntimeThreadRevertResult {
+    let response: JSONRPCResponse<ThreadRevertChangesResult> = try await sendRequest(
+      method: "thread/revertChanges",
+      params: ThreadRevertChangesParams(threadId: threadID)
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimeThreadRevertResult(
+      threadID: result.threadId,
+      revertedCount: result.revertedCount,
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:))
+    )
+  }
+
   func startTurn(
     threadID: String,
     message: String,

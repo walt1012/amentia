@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
   @ObservedObject var viewModel: AppViewModel
   @State private var sessionDeleteCandidate: ThreadSummary?
+  @State private var sessionRevertCandidate: SessionRevertCandidate?
 
   var body: some View {
     NavigationView {
@@ -57,6 +58,16 @@ struct ContentView: View {
         secondaryButton: .cancel()
       )
     }
+    .alert(item: $sessionRevertCandidate) { candidate in
+      Alert(
+        title: Text("Revert Session Changes?"),
+        message: Text(candidate.message),
+        primaryButton: .destructive(Text("Revert Changes")) {
+          viewModel.revertThreadChanges(candidate.thread)
+        },
+        secondaryButton: .cancel()
+      )
+    }
   }
 
   private var sidebar: some View {
@@ -79,6 +90,18 @@ struct ContentView: View {
             .padding(.vertical, 4)
             .tag(thread.id)
             .contextMenu {
+              Button("Revert Session Changes...") {
+                Task {
+                  if let preview = await viewModel.previewThreadChanges(thread) {
+                    sessionRevertCandidate = SessionRevertCandidate(
+                      thread: thread,
+                      preview: preview
+                    )
+                  }
+                }
+              }
+              .disabled(!viewModel.canRevertThreadChanges(thread))
+
               Button("Delete Session...", role: .destructive) {
                 sessionDeleteCandidate = thread
               }
@@ -93,6 +116,32 @@ struct ContentView: View {
     .background(PithVisualStyle.windowBackground)
   }
 
+}
+
+private struct SessionRevertCandidate: Identifiable {
+  let thread: ThreadSummary
+  let preview: RuntimeBridge.RuntimeThreadChangePreview
+
+  var id: String {
+    thread.id
+  }
+
+  var message: String {
+    let visiblePaths = preview.changes
+      .prefix(5)
+      .map { "- \($0.relativePath)" }
+      .joined(separator: "\n")
+    let hiddenCount = max(0, preview.changes.count - 5)
+    let hiddenSuffix = hiddenCount > 0 ? "\n- and \(hiddenCount) more" : ""
+
+    return """
+    Pith will revert \(preview.changes.count) approved workspace change(s) from this session.
+
+    \(visiblePaths)\(hiddenSuffix)
+
+    Pith will only revert files that still match what Pith wrote. The session itself will stay.
+    """
+  }
 }
 
 private extension AppViewModel {

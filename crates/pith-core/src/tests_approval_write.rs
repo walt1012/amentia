@@ -97,6 +97,28 @@ fn approval_respond_writes_file_after_approval() {
   let workspace_changes = store
     .load_workspace_changes_for_thread("thread-1")
     .expect("load workspace changes");
+  let preview_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_CHANGE_PREVIEW,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  let revert_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_REVERT_CHANGES,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  let reverted_changes = store
+    .load_workspace_changes_for_thread("thread-1")
+    .expect("load reverted workspace changes");
+  let file_exists_after_revert = workspace.join("docs").join("output.txt").exists();
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
   fs::remove_dir_all(&store_root).expect("cleanup temp store");
 
@@ -171,6 +193,16 @@ fn approval_respond_writes_file_after_approval() {
     workspace_changes[0].next_content,
     b"Approval protected content".to_vec()
   );
+  assert!(preview_response.error.is_none());
+  let preview_result = preview_response.result.expect("preview result");
+  assert_eq!(preview_result["changes"].as_array().unwrap().len(), 1);
+  assert_eq!(preview_result["changes"][0]["relativePath"], "docs/output.txt");
+  assert_eq!(preview_result["changes"][0]["willDeleteFile"], true);
+  assert!(revert_response.error.is_none());
+  let revert_result = revert_response.result.expect("revert result");
+  assert_eq!(revert_result["revertedCount"], 1);
+  assert!(!file_exists_after_revert);
+  assert!(reverted_changes[0].reverted_at.is_some());
 }
 
 #[test]

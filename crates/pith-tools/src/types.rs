@@ -37,6 +37,13 @@ pub struct WriteFileResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevertFileChangeResult {
+  pub relative_path: String,
+  pub restored_bytes: usize,
+  pub deleted_file: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchMatch {
   pub relative_path: String,
   pub line_number: usize,

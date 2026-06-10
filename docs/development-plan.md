@@ -72,8 +72,9 @@ Ready foundations:
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.
-- Sessions can be deleted without touching workspace files; approved writes now
-  feed a durable change ledger for future session-level rollback.
+- Sessions can be deleted without touching workspace files; approved writes feed
+  a durable change ledger and can be previewed/reverted per session when files
+  still match Pith's recorded writes.
 - Connector baseline has local plugin registry, execution gates, credentials,
   retries, generic timeline evidence, memory capture, and Notion as the
   reference connector.
@@ -113,8 +114,8 @@ Build now:
   data without touching their workspaces.
 - Keep visuals system-adaptive and light-mode friendly: clean spacing, readable
   cards, quiet borders, no fixed dark theme, and no fixed light theme.
-- Finish "Revert Session Changes" on top of the change ledger: review affected
-  files first, then apply explicit reverse writes without deleting the session.
+- Harden "Revert Session Changes" conflict UX: show when user-edited files block
+  revert, then keep the session and workspace state understandable.
 - Publish only after the dry-run artifact and fresh-Mac manual acceptance
   receipt are recorded and the release workflow validates the same four public
   assets.

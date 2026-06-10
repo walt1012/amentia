@@ -3,8 +3,8 @@ use pith_protocol::{methods, JsonRpcRequest, JsonRpcResponse};
 use crate::runtime_context::RuntimeContext;
 use crate::{
   approval_requests, memory_requests, model_requests, plugin_commands, plugin_requests,
-  runtime_readiness, server_requests, thread_requests, turn_requests, turn_streaming,
-  workspace_requests, workspace_search,
+  runtime_readiness, server_requests, thread_change_requests, thread_requests, turn_requests,
+  turn_streaming, workspace_requests, workspace_search,
 };
 
 pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -52,8 +52,14 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     }
     methods::TURN_CANCEL => turn_streaming::handle_turn_cancel(context, request),
     methods::TURN_CANCEL_RUNNING => turn_streaming::handle_turn_cancel_running(context, request),
+    methods::THREAD_CHANGE_PREVIEW => {
+      thread_change_requests::handle_thread_change_preview(context, request)
+    }
     methods::THREAD_DELETE => thread_requests::handle_thread_delete(context, request),
     methods::THREAD_READ => thread_requests::handle_thread_read(context, request),
+    methods::THREAD_REVERT_CHANGES => {
+      thread_change_requests::handle_thread_revert_changes(context, request)
+    }
     methods::THREAD_START => thread_requests::handle_thread_start(context, request),
     methods::THREAD_LIST => thread_requests::handle_thread_list(context, request),
     methods::TURN_START => turn_requests::handle_turn_start(context, request),

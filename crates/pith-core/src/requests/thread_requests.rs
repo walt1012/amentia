@@ -71,15 +71,7 @@ pub(crate) fn handle_thread_delete(
     Err(response) => return response,
   };
 
-  let has_active_turn = context
-    .execution_state
-    .active_turn_id_for_thread(&params.thread_id)
-    .is_some();
-  let has_running_work = context
-    .execution_state
-    .has_running_work_for_thread(&params.thread_id);
-
-  if has_active_turn || has_running_work {
+  if thread_has_active_work(context, &params.thread_id) {
     return JsonRpcResponse::error(
       request.id,
       -32012,
@@ -142,4 +134,16 @@ pub(crate) fn handle_thread_start(
   }
 
   JsonRpcResponse::success(request.id, &ThreadStartResult { thread })
+}
+
+pub(crate) fn thread_has_active_work(context: &RuntimeContext, thread_id: &str) -> bool {
+  let has_active_turn = context
+    .execution_state
+    .active_turn_id_for_thread(thread_id)
+    .is_some();
+  let has_running_work = context
+    .execution_state
+    .has_running_work_for_thread(thread_id);
+
+  has_active_turn || has_running_work
 }
