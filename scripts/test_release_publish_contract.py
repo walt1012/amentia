@@ -35,6 +35,7 @@ def release_payload(
   allow_untrusted_ad_hoc: bool = True,
   assets: list[str] | None = None,
   acceptance_receipt: str = ACCEPTANCE_RECEIPT,
+  draft_download_urls: bool = False,
 ) -> dict:
   asset_names = assets if assets is not None else sorted(expected_installer_asset_names(tag))
   body = release_notes(
@@ -61,7 +62,8 @@ def release_payload(
         "state": "uploaded",
         "size": 1024,
         "browser_download_url": (
-          f"https://github.com/{RELEASE_REPOSITORY}/releases/download/{tag}/{name}"
+          f"https://github.com/{RELEASE_REPOSITORY}/releases/download/"
+          f"{'untagged-test-draft' if draft_download_urls else tag}/{name}"
         ),
       }
       for name in asset_names
@@ -179,6 +181,21 @@ def main() -> int:
     tag_commit=SOURCE_COMMIT,
     expected_draft=True,
     expected_prerelease=False,
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=False,
+  )
+  validate_published_release(
+    release_payload(
+      draft=True,
+      prerelease=True,
+      allow_untrusted_ad_hoc=False,
+      draft_download_urls=True,
+    ),
+    tag=TAG,
+    source_commit=SOURCE_COMMIT,
+    tag_commit=SOURCE_COMMIT,
+    expected_draft=True,
+    expected_prerelease=True,
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=False,
   )

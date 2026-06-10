@@ -12,7 +12,9 @@ fn approval_respond_writes_file_after_approval() {
   let workspace = create_temp_workspace("approval-write");
   let store_root = create_temp_workspace("approval-write-store");
   let store = RuntimeStore::new(store_root.join("pith.db"), store_root.join("threads.json"));
-  context.persistence_state.set_store_for_testing(store.clone());
+  context
+    .persistence_state
+    .set_store_for_testing(store.clone());
 
   let _ = handle_request(
     &mut context,

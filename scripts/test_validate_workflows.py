@@ -485,6 +485,11 @@ jobs:
       - name: Apply final GitHub Release visibility
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
+          release_id="$(
+            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+              python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")'
+          )"
+          test -n "$release_id"
           gh api \\
             -X PATCH \\
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \\
@@ -492,7 +497,9 @@ jobs:
       - name: Validate final GitHub Release
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+            python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); assert match is not None, f"missing release {tag}"; print(json.dumps(match))' \\
+            > release-published.json
           release_tag_commit="$(
             git ls-remote --exit-code --tags origin \\
               "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk '{print $1}'

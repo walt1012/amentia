@@ -51,7 +51,7 @@ def validate_published_release(
     draft=expected_draft,
     manual_acceptance_evidence=manual_acceptance_evidence,
   )
-  validate_release_assets(release, tag)
+  validate_release_assets(release, tag, draft=expected_draft)
 
 
 def validate_existing_release_assets_before_upload(release: dict, *, tag: str) -> None:
@@ -120,8 +120,8 @@ def validate_release_body(
       )
 
 
-def validate_release_assets(release: dict, tag: str) -> None:
-  actual_names = release_asset_names(release, tag=tag)
+def validate_release_assets(release: dict, tag: str, *, draft: bool) -> None:
+  actual_names = release_asset_names(release, tag=tag, draft=draft)
   expected_names = expected_installer_asset_names(tag)
   missing = sorted(expected_names - actual_names)
   extra = sorted(actual_names - expected_names)
@@ -137,7 +137,12 @@ def validate_release_assets(release: dict, tag: str) -> None:
     )
 
 
-def release_asset_names(release: dict, *, tag: str | None = None) -> frozenset[str]:
+def release_asset_names(
+  release: dict,
+  *,
+  tag: str | None = None,
+  draft: bool = False,
+) -> frozenset[str]:
   assets = release.get("assets")
   if not isinstance(assets, list):
     raise RuntimeError("Published GitHub Release response must include an assets list")
@@ -151,14 +156,20 @@ def release_asset_names(release: dict, *, tag: str | None = None) -> frozenset[s
       raise RuntimeError("Published GitHub Release asset names must be strings")
     validate_installer_asset_name(name)
     if tag is not None:
-      validate_release_asset_download(asset, tag=tag, name=name)
+      validate_release_asset_download(asset, tag=tag, name=name, draft=draft)
     if name in names:
       raise RuntimeError(f"Published GitHub Release has duplicate asset: {name}")
     names.add(name)
   return frozenset(names)
 
 
-def validate_release_asset_download(asset: dict, *, tag: str, name: str) -> None:
+def validate_release_asset_download(
+  asset: dict,
+  *,
+  tag: str,
+  name: str,
+  draft: bool,
+) -> None:
   if asset.get("state") != "uploaded":
     raise RuntimeError(f"Published GitHub Release asset must be uploaded: {name}")
 
@@ -167,6 +178,17 @@ def validate_release_asset_download(asset: dict, *, tag: str, name: str) -> None
     raise RuntimeError(f"Published GitHub Release asset must be non-empty: {name}")
 
   download_url = asset.get("browser_download_url")
+  if draft:
+    expected_prefix = f"https://github.com/{RELEASE_REPOSITORY}/releases/download/"
+    if (
+      not isinstance(download_url, str)
+      or not download_url.startswith(expected_prefix)
+      or not download_url.endswith(f"/{name}")
+    ):
+      raise RuntimeError(
+        f"Draft GitHub Release asset download URL must be a release download URL: {name}"
+      )
+    return
   expected_url = (
     f"https://github.com/{RELEASE_REPOSITORY}/releases/download/{tag}/{name}"
   )
