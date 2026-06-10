@@ -167,11 +167,10 @@ def release_state_summary(
   existing_state = "none"
   if release_exists:
     existing_state = "draft" if existing_draft else "visible"
-  visibility = "draft" if state.draft else "visible"
-  release_class = "prerelease" if state.prerelease else "stable"
   mutation = "none; dry-run does not create or update a GitHub Release"
   if not dry_run:
     mutation = "create-or-update GitHub Release after asset rehearsal"
+  visibility = release_visibility_label(dry_run=dry_run, state=state)
   next_actions = release_next_actions(dry_run=dry_run, state=state)
   trust_note = release_trust_note(
     signing_mode,
@@ -194,7 +193,7 @@ def release_state_summary(
 - Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
 - Manual acceptance confirmed: `{str(manual_acceptance_confirmed).lower()}`
 - Manual acceptance receipt: {summary_value(manual_acceptance_evidence)}
-- Planned final visibility: `{visibility} {release_class}`
+- Release visibility: `{visibility}`
 - Trust path: {trust_note}
 
 ## Next Maintainer Actions
@@ -258,6 +257,7 @@ def release_plan_json(
     "allowVisibleAdHoc": allow_untrusted_ad_hoc,
     "manualAcceptanceConfirmed": manual_acceptance_confirmed,
     "manualAcceptanceEvidence": manual_acceptance_evidence.strip(),
+    "releaseVisibility": release_visibility_label(dry_run=dry_run, state=state),
     "plannedDraft": state.draft,
     "plannedPrerelease": state.prerelease,
     "trustPath": release_trust_note(
@@ -270,6 +270,14 @@ def release_plan_json(
       state=state,
     ),
   }
+
+
+def release_visibility_label(*, dry_run: bool, state: ReleaseState) -> str:
+  if dry_run:
+    return "not published; dry-run only"
+  visibility = "draft" if state.draft else "visible"
+  release_class = "prerelease" if state.prerelease else "stable"
+  return f"{visibility} {release_class}"
 
 
 def release_next_action_items(*, dry_run: bool, state: ReleaseState) -> list[str]:

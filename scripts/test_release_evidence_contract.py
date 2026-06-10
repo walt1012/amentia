@@ -267,6 +267,11 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
     "allowVisibleAdHoc": False,
     "manualAcceptanceConfirmed": False,
     "manualAcceptanceEvidence": "",
+    "releaseVisibility": (
+      "not published; dry-run only"
+      if workflow_mode == "dry-run"
+      else "draft prerelease"
+    ),
     "plannedDraft": planned_draft,
     "plannedPrerelease": True,
     "trustPath": "Ad-hoc signed prerelease.",

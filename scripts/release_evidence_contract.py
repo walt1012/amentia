@@ -543,6 +543,7 @@ def validate_release_plan_json(
   require_string(data, "successfulCiRunUrl")
   require_string(data, "releaseWorkflowRunUrl")
   require_string(data, "manualAcceptanceEvidence", allow_empty=True)
+  require_string(data, "releaseVisibility")
   require_string(data, "trustPath")
   for key in (
     "releaseExists",
@@ -554,8 +555,17 @@ def validate_release_plan_json(
     "plannedPrerelease",
   ):
     require_bool(data, key)
+  require_equal(data, "releaseVisibility", expected_release_visibility(data))
   require_string_list(data, "nextMaintainerActions")
   validate_release_plan_actions(data)
+
+
+def expected_release_visibility(data: dict[str, object]) -> str:
+  if data["workflowMode"] == "dry-run":
+    return "not published; dry-run only"
+  visibility = "draft" if data["plannedDraft"] is True else "visible"
+  release_class = "prerelease" if data["plannedPrerelease"] is True else "stable"
+  return f"{visibility} {release_class}"
 
 
 def validate_release_plan_actions(data: dict[str, object]) -> None:

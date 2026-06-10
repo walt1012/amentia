@@ -296,7 +296,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     "## Next Maintainer Actions",
     "release-dry-run-*",
     "manual acceptance receipt",
-    "Planned final visibility: `visible prerelease`",
+    "Release visibility: `not published; dry-run only`",
     "Allow visible ad-hoc: `true`",
     "Manual acceptance confirmed: `false`",
     "Manual acceptance receipt: not recorded",
@@ -340,6 +340,7 @@ def assert_release_plan_json_preserves_release_decision() -> None:
     "existingReleaseState": "none",
     "allowVisibleAdHoc": True,
     "manualAcceptanceConfirmed": False,
+    "releaseVisibility": "not published; dry-run only",
     "plannedDraft": False,
     "plannedPrerelease": True,
   }
@@ -438,8 +439,8 @@ def assert_main_writes_release_summary() -> None:
     finally:
       sys.argv = original_argv
     summary = summary_file.read_text(encoding="utf-8")
-    if "Planned final visibility: `visible prerelease`" not in summary:
-      raise AssertionError("release summary should record planned final visibility")
+    if "Release visibility: `not published; dry-run only`" not in summary:
+      raise AssertionError("release summary should record dry-run release visibility")
     if "https://github.com/walt1012/pith/actions/runs/100" not in summary:
       raise AssertionError("release summary should record the successful CI run")
     if "Workflow mode: `dry-run`" not in summary:
@@ -457,6 +458,8 @@ def assert_main_writes_release_summary() -> None:
       raise AssertionError("release plan JSON should record source commit")
     if plan["plannedDraft"] is not False:
       raise AssertionError("release plan JSON should record final draft state")
+    if plan["releaseVisibility"] != "not published; dry-run only":
+      raise AssertionError("release plan JSON should record dry-run release visibility")
 
 
 def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
