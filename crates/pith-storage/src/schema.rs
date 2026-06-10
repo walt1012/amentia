@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 
 use crate::time::current_timestamp;
 
-const SCHEMA_VERSION: i64 = 9;
+const SCHEMA_VERSION: i64 = 10;
 
 #[derive(Debug, Clone, Copy)]
 struct SchemaMigration {
@@ -12,7 +12,7 @@ struct SchemaMigration {
   sql: &'static str,
 }
 
-const SCHEMA_MIGRATIONS: [SchemaMigration; 9] = [
+const SCHEMA_MIGRATIONS: [SchemaMigration; 10] = [
   SchemaMigration {
     version: 1,
     name: "initial_workspace_and_threads",
@@ -126,6 +126,26 @@ const SCHEMA_MIGRATIONS: [SchemaMigration; 9] = [
     sql: "
       UPDATE plugin_connector_credentials SET credential_secret = NULL;
       ALTER TABLE plugin_connector_credentials DROP COLUMN credential_secret;
+    ",
+  },
+  SchemaMigration {
+    version: 10,
+    name: "workspace_change_ledger",
+    sql: "
+      CREATE TABLE IF NOT EXISTS workspace_changes (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        approval_id TEXT,
+        workspace_root_path TEXT NOT NULL,
+        relative_path TEXT NOT NULL,
+        action TEXT NOT NULL,
+        previous_content BLOB,
+        next_content BLOB NOT NULL,
+        created_at INTEGER NOT NULL,
+        reverted_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_workspace_changes_thread_id
+      ON workspace_changes(thread_id ASC, created_at ASC, id ASC);
     ",
   },
 ];

@@ -22,7 +22,7 @@ pub use shell_output_artifacts::{
 };
 pub use types::{
   BuiltInTool, DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult,
-  ShellSandboxSummary, WebSearchResult,
+  ShellSandboxSummary, WebSearchResult, WriteFileResult,
 };
 pub use web_search::{
   web_search, web_search_status, web_search_timeout_seconds, web_search_with_cancellation,

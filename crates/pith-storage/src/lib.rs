@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use rusqlite::Connection;
 
 mod approvals;
+mod changes;
 mod legacy;
 mod memory;
 mod paths;
@@ -21,6 +22,7 @@ use crate::paths::{default_database_path, default_runtime_state_path};
 use crate::schema::ensure_schema;
 pub use crate::types::{
   StoragePaths, StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord,
+  StoredWorkspaceChangeRecord,
 };
 
 #[derive(Debug, Clone)]

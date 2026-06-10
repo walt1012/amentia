@@ -1,5 +1,6 @@
 use pith_memory::MemoryEvent;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
+use pith_storage::StoredWorkspaceChangeRecord;
 
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::PluginCommandOutput;
@@ -12,6 +13,7 @@ pub(super) struct ApprovalExecutionEvents {
   memory_event: Option<MemoryEvent>,
   hook_memory_captures: Vec<PluginHookMemoryCapture>,
   approved_plugin_command_output: Option<PluginCommandOutput>,
+  workspace_changes: Vec<StoredWorkspaceChangeRecord>,
 }
 
 impl ApprovalExecutionEvents {
@@ -21,6 +23,7 @@ impl ApprovalExecutionEvents {
       memory_event: None,
       hook_memory_captures: vec![],
       approved_plugin_command_output: None,
+      workspace_changes: vec![],
     }
   }
 
@@ -47,6 +50,10 @@ impl ApprovalExecutionEvents {
     self.approved_plugin_command_output = Some(output);
   }
 
+  pub(super) fn push_workspace_change(&mut self, change: StoredWorkspaceChangeRecord) {
+    self.workspace_changes.push(change);
+  }
+
   pub(super) fn tag_agent_context(&mut self, agent_context: &ApprovalAgentContext) {
     agent_context.tag_items(&mut self.items);
   }
@@ -65,6 +72,7 @@ impl ApprovalExecutionEvents {
       memory_event: self.memory_event,
       hook_memory_captures: self.hook_memory_captures,
       approved_plugin_command_output: self.approved_plugin_command_output,
+      workspace_changes: self.workspace_changes,
     }
   }
 }

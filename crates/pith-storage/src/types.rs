@@ -41,6 +41,19 @@ pub struct StoredApprovalRecord {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoredWorkspaceChangeRecord {
+  pub id: String,
+  pub thread_id: String,
+  pub approval_id: Option<String>,
+  pub workspace_root_path: String,
+  pub relative_path: String,
+  pub action: String,
+  pub previous_content: Option<Vec<u8>>,
+  pub next_content: Vec<u8>,
+  pub reverted_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StoredPluginConnectorCredential {
   pub connector_id: String,
   pub plugin_id: String,

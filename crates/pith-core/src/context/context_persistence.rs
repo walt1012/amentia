@@ -1,5 +1,6 @@
 use anyhow::Result;
 use pith_memory::MemoryNote;
+use pith_storage::StoredWorkspaceChangeRecord;
 
 use crate::approval_types::PendingApproval;
 use crate::runtime_context::RuntimeContext;
@@ -37,5 +38,9 @@ impl RuntimeContext {
     self
       .persistence_state
       .delete_approvals_for_thread(thread_id)
+  }
+
+  pub(crate) fn persist_workspace_change(&self, change: &StoredWorkspaceChangeRecord) -> Result<()> {
+    self.persistence_state.save_workspace_change(change)
   }
 }

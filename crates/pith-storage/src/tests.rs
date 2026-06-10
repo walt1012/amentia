@@ -152,6 +152,34 @@ fn sqlite_store_deletes_all_approvals_for_thread() {
 }
 
 #[test]
+fn sqlite_store_round_trips_workspace_change_ledger() {
+  let root = create_temp_directory("workspace-change-ledger");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let change = StoredWorkspaceChangeRecord {
+    id: "approval-9".to_string(),
+    thread_id: "thread-7".to_string(),
+    approval_id: Some("approval-9".to_string()),
+    workspace_root_path: "/tmp/pith-workspace".to_string(),
+    relative_path: "notes.txt".to_string(),
+    action: "write_file".to_string(),
+    previous_content: Some(b"before".to_vec()),
+    next_content: b"after".to_vec(),
+    reverted_at: None,
+  };
+
+  store
+    .save_workspace_change(&change)
+    .expect("save workspace change");
+  let changes = store
+    .load_workspace_changes_for_thread("thread-7")
+    .expect("load workspace changes");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(changes, vec![change]);
+}
+
+#[test]
 fn sqlite_store_imports_legacy_json_threads() {
   let root = create_temp_directory("legacy-import");
   let database_path = root.join("pith.db");

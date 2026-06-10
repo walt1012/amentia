@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use pith_memory::MemoryNote;
 use pith_protocol::WorkspaceSummary;
-use pith_storage::RuntimeStore;
+use pith_storage::{RuntimeStore, StoredWorkspaceChangeRecord};
 
 use super::runtime_persistence_bootstrap::{load_bootstrap, RuntimePersistenceBootstrap};
 use super::runtime_persistence_environment::{
@@ -83,6 +83,14 @@ impl RuntimePersistenceState {
 
   pub(crate) fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
     delete_approvals_for_thread_from_store(self.store(), thread_id)
+  }
+
+  pub(crate) fn save_workspace_change(&self, change: &StoredWorkspaceChangeRecord) -> Result<()> {
+    let Some(store) = self.store() else {
+      return Ok(());
+    };
+
+    store.save_workspace_change(change)
   }
 
   pub(crate) fn save_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {

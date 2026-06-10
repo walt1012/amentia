@@ -29,6 +29,14 @@ pub struct ReadFileResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WriteFileResult {
+  pub relative_path: String,
+  pub bytes_written: usize,
+  pub previous_content: Option<Vec<u8>>,
+  pub next_content: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchMatch {
   pub relative_path: String,
   pub line_number: usize,

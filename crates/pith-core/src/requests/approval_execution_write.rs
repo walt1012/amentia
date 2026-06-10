@@ -54,9 +54,7 @@ pub(super) fn append_approved_write_execution(
     &approval.relative_path,
     &content,
   ) {
-    Ok(relative_path) => {
-      append_successful_write(events, workspace, approval, &content, relative_path)
-    }
+    Ok(write_result) => append_successful_write(events, workspace, approval, write_result),
     Err(error) => events.push_item(warning_item(
       "write_file failed",
       error.to_string(),
@@ -77,24 +75,41 @@ fn append_successful_write(
   events: &mut ApprovalExecutionEvents,
   workspace: &WorkspaceSummary,
   approval: &PendingApproval,
-  content: &str,
-  relative_path: String,
+  write_result: pith_tools::WriteFileResult,
 ) {
+  let relative_path = write_result.relative_path.clone();
   let continuation = approved_write_continuation(&relative_path);
   events.set_memory_event(MemoryEvent::FileWritten {
     workspace_display_name: workspace.display_name.clone(),
     relative_path: relative_path.clone(),
   });
+  events.push_workspace_change(pith_storage::StoredWorkspaceChangeRecord {
+    id: approval.id.clone(),
+    thread_id: approval.thread_id.clone(),
+    approval_id: Some(approval.id.clone()),
+    workspace_root_path: workspace.root_path.clone(),
+    relative_path: relative_path.clone(),
+    action: "write_file".to_string(),
+    previous_content: write_result.previous_content,
+    next_content: write_result.next_content,
+    reverted_at: None,
+  });
   events.push_item(tool_result_item(
     "write_file result",
-    format!("Wrote {} bytes to {}.", content.len(), relative_path),
+    format!(
+      "Wrote {} bytes to {}.",
+      write_result.bytes_written, relative_path
+    ),
     Some(workspace_tool_attributes(
       "write_file",
       workspace,
       [
         ("approvalId".to_string(), approval.id.clone()),
         ("relativePath".to_string(), relative_path.clone()),
-        ("bytesWritten".to_string(), content.len().to_string()),
+        (
+          "bytesWritten".to_string(),
+          write_result.bytes_written.to_string(),
+        ),
         ("maxBytes".to_string(), write_file_max_bytes().to_string()),
       ],
     )),
@@ -107,7 +122,7 @@ fn append_successful_write(
     Some(approved_write_handoff_attributes(
       workspace,
       approval,
-      content.len(),
+      write_result.bytes_written,
       &relative_path,
       &continuation,
     )),

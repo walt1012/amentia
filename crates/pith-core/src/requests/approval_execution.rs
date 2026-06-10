@@ -112,5 +112,6 @@ fn build_recovered_approval_output(
     memory_event: None,
     hook_memory_captures: vec![],
     approved_plugin_command_output: None,
+    workspace_changes: vec![],
   }
 }

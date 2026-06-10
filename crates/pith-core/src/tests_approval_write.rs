@@ -1,6 +1,7 @@
 use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
 use super::*;
 use pith_protocol::methods;
+use pith_storage::RuntimeStore;
 use serde_json::json;
 use std::fs;
 
@@ -9,6 +10,9 @@ fn approval_respond_writes_file_after_approval() {
   let mut context = RuntimeContext::new_in_memory();
   enable_full_access_plugin(&mut context);
   let workspace = create_temp_workspace("approval-write");
+  let store_root = create_temp_workspace("approval-write-store");
+  let store = RuntimeStore::new(store_root.join("pith.db"), store_root.join("threads.json"));
+  context.persistence_state.set_store_for_testing(store.clone());
 
   let _ = handle_request(
     &mut context,
@@ -88,7 +92,11 @@ fn approval_respond_writes_file_after_approval() {
 
   let written_content =
     fs::read_to_string(workspace.join("docs").join("output.txt")).expect("read written output");
+  let workspace_changes = store
+    .load_workspace_changes_for_thread("thread-1")
+    .expect("load workspace changes");
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&store_root).expect("cleanup temp store");
 
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");
@@ -149,6 +157,15 @@ fn approval_respond_writes_file_after_approval() {
   );
   assert_eq!(items[3]["attributes"]["agentLoopFailureCount"], "0");
   assert_eq!(written_content, "Approval protected content");
+  assert_eq!(workspace_changes.len(), 1);
+  assert_eq!(workspace_changes[0].thread_id, "thread-1");
+  assert_eq!(workspace_changes[0].approval_id.as_deref(), Some("approval-1"));
+  assert_eq!(workspace_changes[0].relative_path, "docs/output.txt");
+  assert_eq!(workspace_changes[0].previous_content, None);
+  assert_eq!(
+    workspace_changes[0].next_content,
+    b"Approval protected content".to_vec()
+  );
 }
 
 #[test]

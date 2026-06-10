@@ -301,17 +301,23 @@ fn execute_auto_approved_write(
     &intent.relative_path,
     &intent.content,
   ) {
-    Ok(relative_path) => {
+    Ok(write_result) => {
       items.push(workspace_tool_result_item(
         "write_file",
-        format!("Wrote {} bytes to {}.", intent.content.len(), relative_path),
+        format!(
+          "Wrote {} bytes to {}.",
+          write_result.bytes_written, write_result.relative_path
+        ),
         workspace,
         change_policy_attributes(
           snapshot,
           policy,
           [
-            ("relativePath".to_string(), relative_path.clone()),
-            ("bytesWritten".to_string(), intent.content.len().to_string()),
+            ("relativePath".to_string(), write_result.relative_path.clone()),
+            (
+              "bytesWritten".to_string(),
+              write_result.bytes_written.to_string(),
+            ),
             ("maxBytes".to_string(), write_file_max_bytes().to_string()),
           ],
         ),
@@ -321,13 +327,13 @@ fn execute_auto_approved_write(
         title: "Assistant".to_string(),
         content: format!(
           "Pith wrote {} in {} using approved workspace execution.",
-          relative_path, workspace.display_name
+          write_result.relative_path, workspace.display_name
         ),
         attributes: Some(HashMap::from([
           ("responseRole".to_string(), "actionHandoff".to_string()),
           ("handoffKind".to_string(), "autoApprovedWrite".to_string()),
           ("action".to_string(), "write_file".to_string()),
-          ("relativePath".to_string(), relative_path),
+          ("relativePath".to_string(), write_result.relative_path),
           (
             "localExecutionSafetyMode".to_string(),
             snapshot.local_execution_safety_mode.as_str().to_string(),

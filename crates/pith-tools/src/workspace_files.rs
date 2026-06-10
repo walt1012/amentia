@@ -8,7 +8,7 @@ use crate::paths::{
   canonical_workspace_root, relative_path_string, resolve_workspace_path, sanitize_relative_path,
   validate_workspace_write_parent, validate_workspace_write_target,
 };
-use crate::types::{DirectoryEntry, ReadFileResult};
+use crate::types::{DirectoryEntry, ReadFileResult, WriteFileResult};
 
 const LIST_DIRECTORY_MAX_SCANNED_ENTRIES: usize = 5_000;
 const WRITE_FILE_MAX_BYTES: usize = 1024 * 1024;
@@ -139,7 +139,11 @@ where
   })
 }
 
-pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> Result<String> {
+pub fn write_file(
+  workspace_root: &Path,
+  relative_path: &str,
+  content: &str,
+) -> Result<WriteFileResult> {
   if content.len() > WRITE_FILE_MAX_BYTES {
     bail!("workspace write content exceeds the maximum allowed size");
   }
@@ -160,10 +164,27 @@ pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> 
     bail!("workspace path points to a directory");
   }
 
+  let previous_content = if target.exists() {
+    Some(fs::read(&target).with_context(|| {
+      format!(
+        "failed to read previous file content for {}",
+        target.display()
+      )
+    })?)
+  } else {
+    None
+  };
+  let next_content = content.as_bytes().to_vec();
+
   fs::write(&target, content)
     .with_context(|| format!("failed to write file {}", target.display()))?;
 
-  Ok(sanitized_relative_path)
+  Ok(WriteFileResult {
+    relative_path: sanitized_relative_path,
+    bytes_written: content.len(),
+    previous_content,
+    next_content,
+  })
 }
 
 #[cfg(test)]

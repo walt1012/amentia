@@ -4,6 +4,7 @@ use pith_memory::{MemoryEvent, MemoryNote};
 use pith_model_runtime::{GenerationCancellation, LocalModelRuntime};
 use pith_plugin_host::PluginCatalogEntry;
 use pith_protocol::{TimelineItem, WorkspaceSummary};
+use pith_storage::StoredWorkspaceChangeRecord;
 
 use crate::active_turns::ActiveTurn;
 use crate::approval_types::PendingApproval;
@@ -119,4 +120,5 @@ pub(crate) struct ApprovalExecutionOutput {
   pub(crate) memory_event: Option<MemoryEvent>,
   pub(crate) hook_memory_captures: Vec<PluginHookMemoryCapture>,
   pub(crate) approved_plugin_command_output: Option<PluginCommandOutput>,
+  pub(crate) workspace_changes: Vec<StoredWorkspaceChangeRecord>,
 }
