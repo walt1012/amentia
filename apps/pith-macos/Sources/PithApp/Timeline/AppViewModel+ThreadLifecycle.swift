@@ -96,7 +96,7 @@ extension AppViewModel {
     _ thread: ThreadSummary
   ) async -> RuntimeBridge.RuntimeThreadChangePreview? {
     guard canRevertThreadChanges(thread) else {
-      runtimeDetail = "Finish or cancel active local work before reverting session changes."
+      runtimeDetail = SessionChangePresenter.activeWorkBlocksRevertDetail
       return nil
     }
 
@@ -106,7 +106,7 @@ extension AppViewModel {
         return nil
       }
       if preview.changes.isEmpty {
-        runtimeDetail = "This session has no workspace changes to revert."
+        runtimeDetail = SessionChangePresenter.noRevertableChangesDetail
         return nil
       }
       return preview
@@ -114,14 +114,14 @@ extension AppViewModel {
       guard !Task.isCancelled else {
         return nil
       }
-      runtimeDetail = "Session revert preview failed: \(error.localizedDescription)"
+      runtimeDetail = SessionChangePresenter.revertPreviewFailedDetail(error: error)
       return nil
     }
   }
 
   func revertThreadChanges(_ thread: ThreadSummary) {
     guard canRevertThreadChanges(thread) else {
-      runtimeDetail = "Finish or cancel active local work before reverting session changes."
+      runtimeDetail = SessionChangePresenter.activeWorkBlocksRevertDetail
       return
     }
 
@@ -132,19 +132,19 @@ extension AppViewModel {
           return
         }
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
-        runtimeDetail = "Reverted \(result.revertedCount) session workspace change(s)."
+        runtimeDetail = SessionChangePresenter.revertSuccessDetail(revertedCount: result.revertedCount)
       } catch {
         guard !Task.isCancelled else {
           return
         }
-        runtimeDetail = "Session revert failed: \(error.localizedDescription)"
+        runtimeDetail = SessionChangePresenter.revertFailedDetail(error: error)
       }
     }
   }
 
   func deleteThread(_ thread: ThreadSummary) {
     guard canDeleteThread(thread) else {
-      runtimeDetail = "Finish or cancel active local work before deleting a session."
+      runtimeDetail = SessionChangePresenter.activeWorkBlocksDeleteDetail
       return
     }
 
@@ -160,7 +160,7 @@ extension AppViewModel {
         guard !Task.isCancelled else {
           return
         }
-        runtimeDetail = "Session delete failed: \(error.localizedDescription)"
+        runtimeDetail = SessionChangePresenter.deleteFailedDetail(error: error)
       }
     }
     threadHistoryLoadCoordinator.cancel()
@@ -319,7 +319,7 @@ extension AppViewModel {
     updateTimelineState { state in
       state.deleteThread(threadID: threadID, remainingThreads: workspaceThreads)
     }
-    runtimeDetail = "Deleted session. Workspace files were not changed."
+    runtimeDetail = SessionChangePresenter.deleteSuccessDetail
     announceFirstRequestReadyIfNeeded()
   }
 

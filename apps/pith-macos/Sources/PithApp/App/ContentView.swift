@@ -59,18 +59,19 @@ struct ContentView: View {
       )
     }
     .alert(item: $sessionRevertCandidate) { candidate in
-      if candidate.hasBlockingConflicts {
+      let prompt = SessionChangePresenter.revertPrompt(for: candidate.preview)
+      if !prompt.allowsRevert {
         return Alert(
-          title: Text("Review Session Changes"),
-          message: Text(candidate.message),
+          title: Text(prompt.title),
+          message: Text(prompt.message),
           dismissButton: .default(Text("OK"))
         )
       }
 
       return Alert(
-        title: Text("Revert Session Changes?"),
-        message: Text(candidate.message),
-        primaryButton: .destructive(Text("Revert Changes")) {
+        title: Text(prompt.title),
+        message: Text(prompt.message),
+        primaryButton: .destructive(Text(prompt.confirmButtonTitle)) {
           viewModel.revertThreadChanges(candidate.thread)
         },
         secondaryButton: .cancel()
@@ -132,35 +133,6 @@ private struct SessionRevertCandidate: Identifiable {
 
   var id: String {
     thread.id
-  }
-
-  var hasBlockingConflicts: Bool {
-    preview.changes.contains { !$0.canRevert }
-  }
-
-  var message: String {
-    let visiblePaths = preview.changes
-      .prefix(5)
-      .map { change in
-        if let conflictReason = change.conflictReason {
-          return "- \(change.relativePath): \(conflictReason)"
-        }
-        return "- \(change.relativePath)"
-      }
-      .joined(separator: "\n")
-    let hiddenCount = max(0, preview.changes.count - 5)
-    let hiddenSuffix = hiddenCount > 0 ? "\n- and \(hiddenCount) more" : ""
-    let actionLine = hasBlockingConflicts
-      ? "Some files changed after Pith wrote them, so Pith will not revert this session yet."
-      : "Pith will only revert files that still match what Pith wrote."
-
-    return """
-    Pith will revert \(preview.changes.count) approved workspace change(s) from this session.
-
-    \(visiblePaths)\(hiddenSuffix)
-
-    \(actionLine) The session itself will stay.
-    """
   }
 }
 

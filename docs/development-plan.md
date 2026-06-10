@@ -114,8 +114,9 @@ Build now:
   data without touching their workspaces.
 - Keep visuals system-adaptive and light-mode friendly: clean spacing, readable
   cards, quiet borders, no fixed dark theme, and no fixed light theme.
-- Keep polishing release UX around session safety, setup clarity, and conflict
-  receipts without adding new product surfaces.
+- Keep session safety user-facing: delete never touches workspace files, revert
+  explains exactly which saved files can be restored, and conflicts stay
+  non-destructive.
 - Publish only after the dry-run artifact and fresh-Mac manual acceptance
   receipt are recorded and the release workflow validates the same four public
   assets.
