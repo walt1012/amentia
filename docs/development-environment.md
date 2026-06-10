@@ -207,9 +207,9 @@ an existing public GitHub Release back to draft; withdrawal should be handled
 deliberately by a maintainer. With Developer ID secrets, it publishes the
 signed, notarized, stapled DMG.
 
-## Local Model Engine
+## Local Model Runtime
 
-The local engine resolves the model backend in this order:
+The local runtime resolves the model backend in this order:
 
 1. `PITH_LLAMACPP_PATH`
 2. an executable-relative `third_party/llama.cpp/llama-cli`
@@ -242,7 +242,7 @@ The macOS Local Model panel keeps a curated list of lightweight models, download
 files into `PITH_DATA_DIR/models`, verifies integrity, and activates one model at
 a time by writing a local `model-pack.json`. Activation stores selected model
 paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and
-`PITH_MODEL_PATH` for the local engine, and relaunches the engine so health
+`PITH_MODEL_PATH` for the local service, and restarts the runtime so health
 checks report the selected model. Normal app installs set `PITH_DATA_DIR` to
 `~/Library/Application Support/Pith/storage`, so downloaded GGUF files live under
 `~/Library/Application Support/Pith/storage/models`. Removing `Pith.app` does not

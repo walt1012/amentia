@@ -116,7 +116,7 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "workspace-notes": {"command:workspace.capture-note"},
 }
 REQUIRED_APP_COPY_SNIPPETS = (
-  "Launch the local engine to restore model choices",
+  "Start the local service to restore model choices",
   "paused downloads",
   "selected model choices remain local",
   "to keep resume data",
