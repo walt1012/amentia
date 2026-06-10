@@ -80,9 +80,10 @@ REQUIRED_DATABASE_TABLES = {
   "plugin_state",
   "schema_migrations",
   "threads",
+  "workspace_changes",
   "workspace_state",
 }
-REQUIRED_SCHEMA_VERSION = 9
+REQUIRED_SCHEMA_VERSION = 10
 PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
   "mountedDmgAppBundle": "Mounted DMG exposes Pith.app and install guide.",
   "appLaunch": "Packaged app launches and starts pith-runtime-bin.",
