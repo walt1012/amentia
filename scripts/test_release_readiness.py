@@ -7,6 +7,7 @@ from release_readiness import plan_readiness
 from release_readiness import readiness_checklist
 from release_readiness import readiness_json
 from release_readiness import readiness_report
+from release_readiness import readiness_visibility_label
 from release_readiness import REQUIRED_RELEASE_INPUTS
 
 
@@ -37,7 +38,7 @@ def assert_ready_dry_run_report() -> None:
   for phrase in (
     "Status: `ready`",
     "Workflow mode: `dry-run`",
-    "Planned visibility: `draft prerelease`",
+    "Release visibility: `not published; dry-run only`",
     "Tag points at source commit: `true`",
     "## Pre-Dispatch Checklist",
     "## Tag Preparation",
@@ -88,6 +89,7 @@ def assert_ready_dry_run_report() -> None:
     "successfulCiRunUrl": VALID_CI_URL,
     "workflowMode": "dry-run",
     "signingMode": "ad-hoc",
+    "releaseVisibility": "not published; dry-run only",
     "plannedDraft": True,
     "plannedPrerelease": True,
     "workingTreeClean": True,
@@ -223,6 +225,34 @@ def assert_blocks_visible_ad_hoc_without_acceptance() -> None:
     raise AssertionError("visible ad-hoc blocker should name manual acceptance")
 
 
+def assert_tag_push_dry_run_does_not_claim_visible_release() -> None:
+  readiness = plan_readiness(
+    tag="v0.1.0",
+    source_commit=VALID_COMMIT,
+    working_tree_clean_value=True,
+    tag_points_at_commit_value=True,
+    workflow_inputs_ready=True,
+    ci_run_url=VALID_CI_URL,
+    dry_run=True,
+    signing_mode="ad-hoc",
+    requested_draft=False,
+    requested_prerelease=False,
+    allow_untrusted_ad_hoc=False,
+    manual_acceptance_confirmed=False,
+    manual_acceptance_evidence="",
+  )
+  if not readiness.ready:
+    raise AssertionError(f"tag-push dry-run should be ready: {readiness.blockers}")
+  report = readiness_report(readiness)
+  if "visible stable" in report:
+    raise AssertionError("tag-push dry-run report must not claim a visible stable release")
+  expected_visibility = "not published; dry-run only"
+  if readiness_visibility_label(readiness) != expected_visibility:
+    raise AssertionError("dry-run visibility should describe no release mutation")
+  if readiness_json(readiness).get("releaseVisibility") != expected_visibility:
+    raise AssertionError("readiness JSON should expose dry-run release visibility")
+
+
 def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
   evidence = "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt"
   readiness = plan_readiness(
@@ -246,7 +276,7 @@ def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
   report = readiness_report(readiness)
   for phrase in (
     "Workflow mode: `publish`",
-    "Planned visibility: `visible prerelease`",
+    "Release visibility: `visible prerelease`",
     "-f dry_run=false",
     "-f draft=false",
     "-f prerelease=true",
@@ -260,6 +290,7 @@ def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
   payload = readiness_json(readiness)
   expected_values = {
     "workflowMode": "publish",
+    "releaseVisibility": "visible prerelease",
     "allowUntrustedAdHoc": True,
     "manualAcceptanceConfirmed": True,
     "manualAcceptanceEvidence": evidence,
@@ -344,6 +375,7 @@ def main() -> int:
   assert_ready_dry_run_report()
   assert_blocks_missing_ci_and_tag()
   assert_blocks_visible_ad_hoc_without_acceptance()
+  assert_tag_push_dry_run_does_not_claim_visible_release()
   assert_accepted_visible_ad_hoc_report_preserves_inputs()
   assert_rejects_invalid_tag()
   assert_required_release_inputs_cover_dispatch_controls()

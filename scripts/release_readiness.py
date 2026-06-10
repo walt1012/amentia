@@ -178,8 +178,7 @@ def plan_readiness(
 def readiness_report(readiness: ReleaseReadiness) -> str:
   status = "ready" if readiness.ready else "blocked"
   workflow_mode = "dry-run" if readiness.dry_run else "publish"
-  visibility = "draft" if readiness.state.draft else "visible"
-  release_class = "prerelease" if readiness.state.prerelease else "stable"
+  visibility = readiness_visibility_label(readiness)
   evidence = readiness.manual_acceptance_evidence or "not recorded"
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
   next_command = readiness_next_command(readiness)
@@ -205,7 +204,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 - Successful CI: {readiness.ci_run_url or "not recorded"}
 - Workflow mode: `{workflow_mode}`
 - Signing mode: `{readiness.signing_mode}`
-- Planned visibility: `{visibility} {release_class}`
+- Release visibility: `{visibility}`
 - Working tree clean: `{str(readiness.working_tree_clean).lower()}`
 - Tag points at source commit: `{str(readiness.tag_points_at_commit).lower()}`
 - Release workflow inputs ready: `{str(readiness.workflow_inputs_ready).lower()}`
@@ -265,6 +264,7 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "successfulCiRunUrl": readiness.ci_run_url,
     "workflowMode": "dry-run" if readiness.dry_run else "publish",
     "signingMode": readiness.signing_mode,
+    "releaseVisibility": readiness_visibility_label(readiness),
     "requestedDraft": readiness.requested_draft,
     "requestedPrerelease": readiness.requested_prerelease,
     "allowUntrustedAdHoc": readiness.allow_untrusted_ad_hoc,
@@ -288,6 +288,14 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "blockers": list(readiness.blockers),
     "nextCommand": readiness_next_command(readiness),
   }
+
+
+def readiness_visibility_label(readiness: ReleaseReadiness) -> str:
+  if readiness.dry_run:
+    return "not published; dry-run only"
+  visibility = "draft" if readiness.state.draft else "visible"
+  release_class = "prerelease" if readiness.state.prerelease else "stable"
+  return f"{visibility} {release_class}"
 
 
 def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:

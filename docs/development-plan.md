@@ -120,6 +120,8 @@ Build now:
   Advanced.
 - Publish only after the dry-run artifact, downloaded-asset rehearsal, live
   four-asset validation, and fresh-Mac manual acceptance receipt agree.
+- Keep release readiness reports explicit that tag-push dry-runs do not publish
+  or imply a visible release.
 
 Exit when:
 
