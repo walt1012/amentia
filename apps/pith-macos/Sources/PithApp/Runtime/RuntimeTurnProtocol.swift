@@ -43,6 +43,8 @@ struct ThreadWorkspaceChangePayload: Codable {
   let action: String
   let bytesWritten: Int
   let willDeleteFile: Bool
+  let canRevert: Bool
+  let conflictReason: String?
 }
 
 struct ThreadChangePreviewResult: Codable {
@@ -191,6 +193,8 @@ extension RuntimeBridge {
     let action: String
     let bytesWritten: Int
     let willDeleteFile: Bool
+    let canRevert: Bool
+    let conflictReason: String?
   }
 
   struct RuntimeThreadChangePreview {

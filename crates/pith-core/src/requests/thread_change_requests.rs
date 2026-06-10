@@ -32,10 +32,7 @@ pub(crate) fn handle_thread_change_preview(
     request.id,
     &ThreadChangePreviewResult {
       thread_id: params.thread_id,
-      changes: changes
-        .iter()
-        .map(workspace_change_summary)
-        .collect::<Vec<_>>(),
+      changes: changes.iter().map(workspace_change_summary).collect::<Vec<_>>(),
     },
   )
 }
@@ -132,12 +129,22 @@ fn active_workspace_changes_for_thread(
 }
 
 fn workspace_change_summary(change: &StoredWorkspaceChangeRecord) -> ThreadWorkspaceChangeSummary {
+  let conflict_reason = validate_file_change_revert(
+    std::path::Path::new(&change.workspace_root_path),
+    &change.relative_path,
+    &change.next_content,
+  )
+  .err()
+  .map(|error| error.to_string());
+
   ThreadWorkspaceChangeSummary {
     id: change.id.clone(),
     relative_path: change.relative_path.clone(),
     action: change.action.clone(),
     bytes_written: change.next_content.len(),
     will_delete_file: change.previous_content.is_none(),
+    can_revert: conflict_reason.is_none(),
+    conflict_reason,
   }
 }
 

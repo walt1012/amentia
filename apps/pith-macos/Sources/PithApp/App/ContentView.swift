@@ -59,7 +59,15 @@ struct ContentView: View {
       )
     }
     .alert(item: $sessionRevertCandidate) { candidate in
-      Alert(
+      if candidate.hasBlockingConflicts {
+        return Alert(
+          title: Text("Review Session Changes"),
+          message: Text(candidate.message),
+          dismissButton: .default(Text("OK"))
+        )
+      }
+
+      return Alert(
         title: Text("Revert Session Changes?"),
         message: Text(candidate.message),
         primaryButton: .destructive(Text("Revert Changes")) {
@@ -126,20 +134,32 @@ private struct SessionRevertCandidate: Identifiable {
     thread.id
   }
 
+  var hasBlockingConflicts: Bool {
+    preview.changes.contains { !$0.canRevert }
+  }
+
   var message: String {
     let visiblePaths = preview.changes
       .prefix(5)
-      .map { "- \($0.relativePath)" }
+      .map { change in
+        if let conflictReason = change.conflictReason {
+          return "- \(change.relativePath): \(conflictReason)"
+        }
+        return "- \(change.relativePath)"
+      }
       .joined(separator: "\n")
     let hiddenCount = max(0, preview.changes.count - 5)
     let hiddenSuffix = hiddenCount > 0 ? "\n- and \(hiddenCount) more" : ""
+    let actionLine = hasBlockingConflicts
+      ? "Some files changed after Pith wrote them, so Pith will not revert this session yet."
+      : "Pith will only revert files that still match what Pith wrote."
 
     return """
     Pith will revert \(preview.changes.count) approved workspace change(s) from this session.
 
     \(visiblePaths)\(hiddenSuffix)
 
-    Pith will only revert files that still match what Pith wrote. The session itself will stay.
+    \(actionLine) The session itself will stay.
     """
   }
 }

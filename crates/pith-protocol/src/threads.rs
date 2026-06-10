@@ -64,6 +64,9 @@ pub struct ThreadWorkspaceChangeSummary {
   pub action: String,
   pub bytes_written: usize,
   pub will_delete_file: bool,
+  pub can_revert: bool,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub conflict_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

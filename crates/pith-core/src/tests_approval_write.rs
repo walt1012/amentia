@@ -14,7 +14,7 @@ fn approval_respond_writes_file_after_approval() {
   let store = RuntimeStore::new(store_root.join("pith.db"), store_root.join("threads.json"));
   context
     .persistence_state
-    .set_store_for_testing(store.clone());
+    .set_store_for_testing(store);
 
   let _ = handle_request(
     &mut context,
@@ -201,11 +201,103 @@ fn approval_respond_writes_file_after_approval() {
     "docs/output.txt"
   );
   assert_eq!(preview_result["changes"][0]["willDeleteFile"], true);
+  assert_eq!(preview_result["changes"][0]["canRevert"], true);
   assert!(revert_response.error.is_none());
   let revert_result = revert_response.result.expect("revert result");
   assert_eq!(revert_result["revertedCount"], 1);
   assert!(!file_exists_after_revert);
   assert!(reverted_changes[0].reverted_at.is_some());
+}
+
+#[test]
+fn thread_revert_changes_refuses_user_modified_file() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("approval-revert-conflict");
+  let store_root = create_temp_workspace("approval-revert-conflict-store");
+  let store = RuntimeStore::new(store_root.join("pith.db"), store_root.join("threads.json"));
+  context
+    .persistence_state
+    .set_store_for_testing(store.clone());
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Approval Thread"
+      })),
+    ),
+  );
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Write docs/output.txt: Pith content"
+      })),
+    ),
+  );
+  let approval_id = turn_response.result.expect("turn result")["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+  assert!(approval_response.error.is_none());
+  fs::write(workspace.join("docs").join("output.txt"), "User edit").expect("user edit");
+
+  let preview_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_CHANGE_PREVIEW,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  let revert_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_REVERT_CHANGES,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  let preserved_content =
+    fs::read_to_string(workspace.join("docs").join("output.txt")).expect("read output");
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&store_root).expect("cleanup temp store");
+
+  assert!(preview_response.error.is_none());
+  let preview_result = preview_response.result.expect("preview result");
+  assert_eq!(preview_result["changes"].as_array().unwrap().len(), 1);
+  assert_eq!(preview_result["changes"][0]["canRevert"], json!(false));
+  assert!(preview_result["changes"][0]["conflictReason"]
+    .as_str()
+    .expect("conflict reason")
+    .contains("workspace file changed after Pith wrote it"));
+  assert!(revert_response.error.is_some());
+  assert_eq!(preserved_content, "User edit");
 }
 
 #[test]

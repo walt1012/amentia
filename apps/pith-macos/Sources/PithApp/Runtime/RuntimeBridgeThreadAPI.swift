@@ -72,7 +72,9 @@ extension RuntimeBridge {
           relativePath: $0.relativePath,
           action: $0.action,
           bytesWritten: $0.bytesWritten,
-          willDeleteFile: $0.willDeleteFile
+          willDeleteFile: $0.willDeleteFile,
+          canRevert: $0.canRevert,
+          conflictReason: $0.conflictReason
         )
       }
     )
