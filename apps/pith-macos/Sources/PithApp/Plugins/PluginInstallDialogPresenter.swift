@@ -5,18 +5,17 @@ enum PluginInstallDialogPresenter {
   static func confirmInstall(preview: PluginInstallPreview) -> Bool {
     let alert = NSAlert()
     alert.alertStyle = .warning
-    alert.messageText = "Install Plugin?"
+    alert.messageText = "Add Local Connector?"
     alert.informativeText = """
-      Plugin: \(preview.displayName) \(preview.version)
+      Connector: \(preview.displayName) \(preview.version)
       Provenance: Local import
       Author: \(preview.authorName ?? "Unknown")
-      Source: \(preview.sourcePath)
-      Manifest: \(preview.manifestPath)
-      Install Path: \(preview.installPath)
-      Default Enabled: \(preview.defaultEnabled ? "Yes" : "No")
-      Surface: \(preview.surfaceSummary.summary)
-      Permissions: \(summaryLine(preview.permissions, empty: "none"))
-      Capabilities: \(summaryLine(preview.capabilities, empty: "none"))
+      Source Folder: \(preview.sourcePath)
+      Install Location: \(preview.installPath)
+      Starts Enabled: \(preview.defaultEnabled ? "Yes" : "No")
+      Access: \(preview.surfaceSummary.summary)
+      Needs: \(summaryLine(preview.permissions, empty: "none"))
+      Can use: \(summaryLine(preview.capabilities, empty: "none"))
 
       \(preview.description)
       """
@@ -28,15 +27,14 @@ enum PluginInstallDialogPresenter {
   static func confirmRemoval(plugin: PluginSummary) -> Bool {
     let alert = NSAlert()
     alert.alertStyle = .warning
-    alert.messageText = "Remove Local Plugin?"
+    alert.messageText = "Remove Local Connector?"
     alert.informativeText = """
-      Plugin: \(plugin.displayName) \(plugin.version)
+      Connector: \(plugin.displayName) \(plugin.version)
       Provenance: \(plugin.provenance)
-      Manifest: \(plugin.manifestPath)
-      Permissions: \(summaryLine(plugin.permissions, empty: "none"))
-      Capabilities: \(summaryLine(plugin.capabilities, empty: "none"))
+      Needs: \(summaryLine(plugin.permissions, empty: "none"))
+      Can use: \(summaryLine(plugin.capabilities, empty: "none"))
 
-      Removing this plugin updates the local catalog and can disable related commands, hooks, and permissions.
+      Removing this connector updates the local catalog and can disable related actions, checks, and permissions.
       """
     alert.addButton(withTitle: "Remove")
     alert.addButton(withTitle: "Cancel")
@@ -51,31 +49,31 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("does not contain pith-plugin.json") {
-      return "Choose a plugin folder that contains pith-plugin.json, or select the manifest file directly."
+      return "Choose a connector folder that contains pith-plugin.json, or select that setup file directly."
     }
 
     if message.contains("must be a plugin directory or pith-plugin.json file") {
-      return "Choose the plugin directory itself or its pith-plugin.json file."
+      return "Choose the connector directory itself or its pith-plugin.json file."
     }
 
     if message.contains("is already installed") {
-      return "Remove the existing local plugin first, or change the plugin name before installing this copy."
+      return "Remove the existing local connector first, or change the connector name before installing this copy."
     }
 
     if message.contains("cannot contain nested pith-plugin.json manifests") {
-      return "Remove nested plugin bundles before installing. Install each plugin as its own top-level folder."
+      return "Remove nested connector bundles before installing. Install each connector as its own top-level folder."
     }
 
     if message.contains("cannot contain symbolic links") {
-      return "Replace symlinks with real files or directories so the local plugin bundle is self-contained."
+      return "Replace symlinks with real files or directories so the local connector bundle is self-contained."
     }
 
     if message.contains("Select a plugin folder or a pith-plugin.json manifest") {
-      return "Point the installer at a plugin directory or the manifest file itself."
+      return "Point the installer at a connector directory or its pith-plugin.json setup file."
     }
 
     if message.contains("Plugin manifest name") {
-      return "Use a stable plugin name without path separators or colons, for example notion-connector."
+      return "Use a stable connector name without path separators or colons, for example notion-connector."
     }
 
     if message.contains("correct format")

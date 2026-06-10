@@ -38,9 +38,9 @@ enum TimelineEntryFactory {
         id: "welcome-start-local-setup",
         kind: .system,
         title: "Start Local Setup",
-        body: "Launch the runtime, choose a local model, open a workspace, create or select a thread, then send one short local request.",
+        body: "Start the local service, choose a local model, open a workspace, create or select a session, then start a short cowork session.",
         attributes: [
-          "path": "runtime -> model -> workspace -> thread -> first request"
+          "path": "local service -> model -> workspace -> session -> first prompt"
         ]
       ),
       TimelineEntry(
@@ -61,10 +61,10 @@ enum TimelineEntryFactory {
       TimelineEntry(
         id: "default-thread-ready:\(title)",
         kind: .system,
-        title: "Thread Ready",
-        body: "\(title) is ready after runtime, model, workspace, and thread setup. Send one short request to finish first-use setup.",
+        title: "Session Ready",
+        body: "\(title) is ready after local service, model, workspace, and session setup. Send one short cowork prompt to finish first-use setup.",
         attributes: [
-          "setup": "runtime, model, workspace, thread, first request"
+          "setup": "local service, model, workspace, session, first prompt"
         ]
       ),
     ]
@@ -157,6 +157,12 @@ enum TimelineEntryFactory {
     }
     if let turnID = item.attributes["turnId"] {
       return "turn:\(turnID):\(item.kind):\(item.title)"
+    }
+    if let agentStepID = item.attributes["agentStepId"] {
+      return "agent-step:\(agentStepID):\(item.kind):\(item.title)"
+    }
+    if let toolCallID = item.attributes["toolCallId"] {
+      return "tool-call:\(toolCallID):\(item.kind):\(item.title)"
     }
     return "runtime:\(index):\(item.kind):\(item.title)"
   }

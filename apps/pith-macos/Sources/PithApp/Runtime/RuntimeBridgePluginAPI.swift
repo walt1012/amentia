@@ -98,6 +98,20 @@ extension RuntimeBridge {
             kind: $0.kind,
             driver: $0.driver,
             entrypoint: $0.entrypoint,
+            workflowID: $0.workflowId,
+            workflow: $0.workflow.map { workflow in
+              RuntimePluginCommandWorkflow(
+                workflowID: workflow.workflowId,
+                displayName: workflow.displayName,
+                connectorID: workflow.connectorId,
+                service: workflow.service,
+                action: workflow.action,
+                maxAgentSteps: workflow.maxAgentSteps,
+                stages: workflow.stages,
+                statuses: workflow.statuses,
+                commandIDs: workflow.commandIds ?? []
+              )
+            },
             input: RuntimePluginCommandEnvelopeMapper.map($0.input),
             output: RuntimePluginCommandEnvelopeMapper.map($0.output),
             supported: $0.supported
@@ -283,6 +297,19 @@ private extension RuntimeBridge {
       authRequired: connector.authRequired,
       authScopes: connector.authScopes,
       credentialStore: connector.credentialStore,
+      workflows: (connector.workflows ?? []).map { workflow in
+        RuntimePluginConnectorWorkflow(
+          workflowID: workflow.workflowId,
+          displayName: workflow.displayName,
+          connectorID: workflow.connectorId,
+          service: workflow.service,
+          action: workflow.action,
+          maxAgentSteps: workflow.maxAgentSteps,
+          stages: workflow.stages,
+          statuses: workflow.statuses,
+          commandIDs: workflow.commandIds ?? []
+        )
+      },
       authStatus: connector.authStatus,
       credentialPresent: connector.credentialPresent,
       credentialSecretPresent: connector.credentialSecretPresent,
@@ -293,4 +320,5 @@ private extension RuntimeBridge {
       credentialUpdatedAt: connector.credentialUpdatedAt
     )
   }
+
 }

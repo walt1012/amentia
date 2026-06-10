@@ -7,16 +7,16 @@ extension AppViewModel {
       return
     }
 
-    launchRuntime(launchDetail: "Preparing local runtime for daily use")
+    launchRuntime(launchDetail: "Preparing local service for daily use")
   }
 
-  func launchRuntime(launchDetail: String = "Launching local runtime") {
+  func launchRuntime(launchDetail: String = "Starting local service") {
     guard runtimeState != .launching else {
       return
     }
 
     if runtimeState == .ready {
-      runtimeBridge.stopRuntime(detail: "Relaunching local runtime...")
+      runtimeBridge.stopRuntime(detail: "Restarting local service...")
     }
 
     runtimeState = .launching

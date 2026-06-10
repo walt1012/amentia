@@ -26,7 +26,7 @@ extension AppViewModel {
       return false
     }
 
-    return model.downloaded && !model.active
+    return (model.downloaded || model.needsVerification) && !model.active
   }
 
   func canResetActiveLocalModel() -> Bool {
@@ -122,11 +122,11 @@ extension AppViewModel {
 
   func activateRecommendedModel(modelID: String) {
     guard runtimeState != .launching else {
-      runtimeDetail = "Wait for the local runtime launch to finish before switching models."
+      runtimeDetail = "Wait for Pith's local service to finish starting before switching models."
       return
     }
     guard !hasActiveOrPendingTurn() else {
-      runtimeDetail = "Finish or cancel the current local turn before switching models."
+      runtimeDetail = "Finish or stop the current turn before switching models."
       return
     }
     guard !modelDownloadCoordinator.isDownloading,
@@ -146,13 +146,13 @@ extension AppViewModel {
       return
     }
 
-    guard model.downloaded else {
+    guard model.downloaded || model.needsVerification else {
       localModelActivationCoordinator.finish(requestID)
-      runtimeDetail = "Download \(model.displayName) before using it."
+      runtimeDetail = "Download \(LocalModelDisplayPresenter.actionName(model)) before using it."
       return
     }
 
-    runtimeDetail = "Verifying \(model.displayName) before selection..."
+    runtimeDetail = "Verifying \(LocalModelDisplayPresenter.actionName(model)) before selection..."
     let task = Task {
       defer {
         localModelActivationCoordinator.finish(requestID)
@@ -165,7 +165,7 @@ extension AppViewModel {
           return
         }
         guard !hasActiveOrPendingTurn() else {
-          runtimeDetail = "Finish or cancel the current local turn before switching models."
+          runtimeDetail = "Finish or stop the current turn before switching models."
           return
         }
         runtimeBridge.configureActiveLocalModel(
@@ -193,7 +193,7 @@ extension AppViewModel {
   func resetActiveLocalModel() {
     guard canResetActiveLocalModel() else {
       runtimeDetail =
-        "Finish runtime launch, model download, model selection check, or active local work before resetting model selection."
+        "Finish local service startup, model download, model selection check, or active local work before resetting model selection."
       return
     }
 

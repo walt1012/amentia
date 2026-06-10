@@ -20,13 +20,19 @@ struct TimelinePane: View {
             TimelineCard(
               entry: entry,
               isSelected: viewModel.selectedEntryID == entry.id,
+              proofSummary: viewModel.timelineProofSummary(from: entry),
+              approvalOutcomeSummary: viewModel.timelineApprovalOutcomeSummary(from: entry),
+              externalActionTitle: viewModel.timelineExternalAction(from: entry)?.title,
+              externalCopyActionTitle: viewModel.timelineExternalAction(from: entry)?.copyTitle,
               showsApprovalActions: viewModel.isPendingApproval(entry),
               showsPluginEnableAction: viewModel.canEnablePlugin(from: entry),
               showsPluginAuthorizeAction: viewModel.canAuthorizePluginConnector(from: entry),
               showsPluginInputAction: viewModel.canRunPluginCommandWithInput(from: entry),
               showsPluginRetryAction: viewModel.canRetryPluginCommand(from: entry),
+              showsPluginFollowUpAction: viewModel.canRunPluginFollowUp(from: entry),
               showsPluginSourceAction: viewModel.canRevealPluginSource(from: entry),
               showsPluginRefreshAction: viewModel.canRefreshPlugins(from: entry),
+              localExecutionRecoveryTitle: viewModel.localExecutionRecoveryAction(from: entry)?.title,
               onSelect: {
                 viewModel.selectTimelineEntry(id: entry.id)
               },
@@ -54,6 +60,9 @@ struct TimelinePane: View {
               onRetry: {
                 viewModel.retryPluginCommand(from: entry)
               },
+              onRunPluginFollowUp: {
+                viewModel.runPluginFollowUp(from: entry)
+              },
               onRevealPluginSource: {
                 viewModel.revealPluginSource(from: entry)
               },
@@ -61,6 +70,15 @@ struct TimelinePane: View {
                 Task {
                   await viewModel.refreshPlugins(from: entry)
                 }
+              },
+              onRecoverLocalExecution: {
+                viewModel.recoverLocalExecutionMode(from: entry)
+              },
+              onOpenExternalAction: {
+                viewModel.openTimelineExternalAction(from: entry)
+              },
+              onCopyExternalAction: {
+                viewModel.copyTimelineExternalActionURL(from: entry)
               }
             )
           }
@@ -72,12 +90,13 @@ struct TimelinePane: View {
       TimelineComposerView(viewModel: viewModel)
     }
     .frame(minWidth: 520)
+    .background(PithVisualStyle.paneBackground)
   }
 
   private var header: some View {
     HStack {
       VStack(alignment: .leading, spacing: 4) {
-        Text("Timeline")
+        Text("Cowork")
           .font(.title2.weight(.semibold))
         Text(viewModel.workspaceDisplayName())
           .font(.caption)
@@ -91,7 +110,7 @@ struct TimelinePane: View {
               .controlSize(.small)
           }
           StatusPill(
-            label: viewModel.runtimeState.rawValue.capitalized,
+            label: runtimeStateLabel,
             tone: viewModel.runtimeStatusTone()
           )
         }
@@ -114,6 +133,19 @@ struct TimelinePane: View {
           .disabled(!viewModel.canRunRuntimePrimaryAction())
         }
       }
+    }
+  }
+
+  private var runtimeStateLabel: String {
+    switch viewModel.runtimeState {
+    case .disconnected:
+      return "Start"
+    case .launching:
+      return "Starting"
+    case .failed:
+      return "Needs Help"
+    case .ready:
+      return "Ready"
     }
   }
 

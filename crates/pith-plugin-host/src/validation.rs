@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::manifest::PluginManifest;
 
-const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
+const KNOWN_CAPABILITY_KINDS: [&str; 10] = [
   "command",
   "agent",
   "prompt_pack",
@@ -11,6 +11,7 @@ const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
   "mcp_server",
   "skill",
   "connector",
+  "connector_workflow",
   "settings",
 ];
 const KNOWN_PERMISSIONS: [&str; 7] = [
@@ -25,6 +26,8 @@ const KNOWN_PERMISSIONS: [&str; 7] = [
 const KNOWN_AUTH_TYPES: [&str; 3] = ["none", "api_key", "oauth2"];
 const KNOWN_CREDENTIAL_STORES: [&str; 2] = ["none", "local"];
 const KNOWN_MCP_TRANSPORTS: [&str; 1] = ["stdio"];
+const MIN_CONNECTOR_WORKFLOW_AGENT_STEPS: usize = 1;
+const MAX_CONNECTOR_WORKFLOW_AGENT_STEPS: usize = 8;
 
 pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("failed to parse plugin manifest") {
@@ -88,11 +91,34 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       .to_string();
   }
   if validation_error.contains("must include a non-empty display name") {
-    return "Add a human-readable connector displayName so Pith can show the connector clearly."
+    return "Add a human-readable displayName so Pith can show the integration clearly."
       .to_string();
   }
   if validation_error.contains("must include a non-empty service") {
-    return "Add a stable connector service such as `notion`, `github`, or another lowercase service key."
+    return "Add a stable service such as `notion` or another lowercase service key.".to_string();
+  }
+  if validation_error.contains("plugin connector workflow")
+    && validation_error.contains("references undeclared connector")
+  {
+    return "Declare the connector in appConnectors before attaching connectorWorkflows to it."
+      .to_string();
+  }
+  if validation_error.contains("plugin connector workflow capability")
+    && validation_error.contains("connectorWorkflows entry")
+  {
+    return "Add a matching connectorWorkflows entry or remove the unused connector_workflow capability."
+      .to_string();
+  }
+  if validation_error.contains("plugin connector workflow")
+    && validation_error.contains("must declare at least one")
+  {
+    return "Declare the connector workflow stages and statuses that runner output is allowed to report."
+      .to_string();
+  }
+  if validation_error.contains("plugin connector workflow")
+    && validation_error.contains("maxAgentSteps")
+  {
+    return "Set maxAgentSteps to a bounded value between 1 and 8, or omit it to use the default loop budget."
       .to_string();
   }
   if validation_error.contains("plugin credential store")
@@ -184,6 +210,74 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
     }
   }
 
+  for workflow in &manifest.connector_workflows {
+    validate_manifest_identifier("connector workflow", &workflow.id)?;
+    validate_manifest_identifier("connector workflow connector", &workflow.connector_id)?;
+    validate_manifest_identifier("connector workflow action", &workflow.action)?;
+    if workflow.display_name.trim().is_empty() {
+      anyhow::bail!(
+        "plugin connector workflow `{}` must include a non-empty display name",
+        workflow.id
+      );
+    }
+    if !manifest
+      .app_connectors
+      .iter()
+      .any(|connector| connector.id == workflow.connector_id)
+    {
+      anyhow::bail!(
+        "plugin connector workflow `{}` references undeclared connector `{}`",
+        workflow.id,
+        workflow.connector_id
+      );
+    }
+    if workflow.stages.is_empty() {
+      anyhow::bail!(
+        "plugin connector workflow `{}` must declare at least one stage",
+        workflow.id
+      );
+    }
+    if workflow.statuses.is_empty() {
+      anyhow::bail!(
+        "plugin connector workflow `{}` must declare at least one status",
+        workflow.id
+      );
+    }
+    if let Some(max_agent_steps) = workflow.max_agent_steps {
+      if !(MIN_CONNECTOR_WORKFLOW_AGENT_STEPS..=MAX_CONNECTOR_WORKFLOW_AGENT_STEPS)
+        .contains(&max_agent_steps)
+      {
+        anyhow::bail!(
+          "plugin connector workflow `{}` maxAgentSteps must be between {} and {}",
+          workflow.id,
+          MIN_CONNECTOR_WORKFLOW_AGENT_STEPS,
+          MAX_CONNECTOR_WORKFLOW_AGENT_STEPS
+        );
+      }
+    }
+    for stage in &workflow.stages {
+      validate_manifest_identifier("connector workflow stage", stage)?;
+    }
+    for status in &workflow.statuses {
+      validate_manifest_identifier("connector workflow status", status)?;
+    }
+  }
+  for capability in &manifest.capabilities {
+    let Some(("connector_workflow", workflow_id)) = capability.split_once(':') else {
+      continue;
+    };
+    if !manifest
+      .connector_workflows
+      .iter()
+      .any(|workflow| workflow.id == workflow_id)
+    {
+      anyhow::bail!(
+        "plugin connector workflow capability `{}` must match a connectorWorkflows entry",
+        capability
+      );
+    }
+  }
+
   if let Some(auth_policy) = manifest.auth_policy.as_ref() {
     if !KNOWN_AUTH_TYPES.contains(&auth_policy.auth_type.as_str()) {
       anyhow::bail!(
@@ -248,6 +342,9 @@ pub(crate) fn manifest_capabilities(manifest: &PluginManifest) -> Vec<String> {
   }
   for connector in &manifest.app_connectors {
     push_unique_capability(&mut capabilities, "connector", &connector.id);
+  }
+  for workflow in &manifest.connector_workflows {
+    push_unique_capability(&mut capabilities, "connector_workflow", &workflow.id);
   }
   capabilities
 }

@@ -188,6 +188,23 @@ impl RuntimeRunningExecutionState {
     cancellation
   }
 
+  pub(crate) fn has_running_for_thread(&self, thread_id: &str) -> bool {
+    let has_running_turn = self
+      .running_turns
+      .values()
+      .any(|turn| turn.thread_id == thread_id);
+    let has_running_approval = self
+      .running_approvals
+      .values()
+      .any(|approval| approval.thread_id == thread_id);
+    let has_running_plugin_command = self
+      .running_plugin_commands
+      .values()
+      .any(|command| command.thread_id == thread_id);
+
+    has_running_turn || has_running_approval || has_running_plugin_command
+  }
+
   pub(crate) fn take_pending_cancel(&mut self, thread_id: &str) -> bool {
     self.pending_cancellations.remove(thread_id)
   }

@@ -2,6 +2,7 @@ import Foundation
 
 enum AppSupportDirectories {
   private static let supportRootOverrideKey = "PITH_APP_SUPPORT_DIR"
+  static let appOwnedDirectoryCount = 5
 
   static func rootDirectory() -> URL {
     if let overridePath = ProcessInfo.processInfo.environment[supportRootOverrideKey],

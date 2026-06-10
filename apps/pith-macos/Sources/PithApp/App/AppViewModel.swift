@@ -6,6 +6,7 @@ final class AppViewModel: ObservableObject {
   @Published var timelineState: TimelineRuntimeState
   @Published var runtimeConnectionState: RuntimeConnectionStateStore
   @Published var draftMessage: String
+  @Published var restoredLocalExecutionDraftMessage: String?
   @Published var workspace: WorkspaceSummary?
   @Published var workspaceSearchState: WorkspaceSearchRuntimeState
   @Published private var localModelReadinessState: LocalModelReadinessState
@@ -13,6 +14,11 @@ final class AppViewModel: ObservableObject {
   @Published private var memoryState: MemoryRuntimeState
   @Published private var pluginState: PluginRuntimeState
   @Published var pluginManagerSection: PluginManagerSection
+  @Published var selectedLocalExecutionSafetyMode: String {
+    didSet {
+      AppPreferences.storeLocalExecutionSafetyMode(selectedLocalExecutionSafetyMode)
+    }
+  }
 
   let runtimeBridge: RuntimeBridge
   let runtimeLaunchCoordinator = RuntimeLaunchCoordinator()
@@ -39,6 +45,7 @@ final class AppViewModel: ObservableObject {
       detail: launchState.runtimeDetail
     )
     self.draftMessage = ""
+    self.restoredLocalExecutionDraftMessage = nil
     self.workspace = nil
     self.workspaceSearchState = WorkspaceSearchRuntimeState()
     self.localModelReadinessState = LocalModelReadinessState(
@@ -53,6 +60,7 @@ final class AppViewModel: ObservableObject {
     self.memoryState = MemoryRuntimeState()
     self.pluginState = PluginRuntimeState()
     self.pluginManagerSection = .catalog
+    self.selectedLocalExecutionSafetyMode = AppPreferences.storedLocalExecutionSafetyMode()
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData
     )
@@ -66,6 +74,10 @@ final class AppViewModel: ObservableObject {
         self?.handleRuntimeConnectionStateChange(state, detail: detail)
       }
     }
+  }
+
+  func selectLocalExecutionSafetyMode(_ mode: String) {
+    selectedLocalExecutionSafetyMode = LocalExecutionSafetyModePresenter.validMode(mode)
   }
 
   var threads: [ThreadSummary] {

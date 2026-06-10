@@ -114,6 +114,77 @@ fn sqlite_store_round_trips_pending_approvals_and_resolution_audit() {
 }
 
 #[test]
+fn sqlite_store_deletes_all_approvals_for_thread() {
+  let root = create_temp_directory("approval-delete-thread");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let approval = StoredApprovalRecord {
+    id: "approval-4".to_string(),
+    thread_id: "thread-2".to_string(),
+    action: "write_file".to_string(),
+    title: "Write docs/output.txt".to_string(),
+    relative_path: "docs/output.txt".to_string(),
+    content: Some("hello".to_string()),
+    command: None,
+  };
+
+  store
+    .save_pending_approvals(std::slice::from_ref(&approval))
+    .expect("save pending approval");
+  store
+    .resolve_approval(&approval, "approved")
+    .expect("resolve approval");
+
+  let deleted = store
+    .delete_approvals_for_thread("thread-2")
+    .expect("delete approvals");
+  let pending = store
+    .load_pending_approvals()
+    .expect("load pending approvals");
+  let next_sequence = store
+    .next_approval_sequence()
+    .expect("next approval sequence");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(deleted, 1);
+  assert!(pending.is_empty());
+  assert_eq!(next_sequence, 1);
+}
+
+#[test]
+fn sqlite_store_round_trips_workspace_change_ledger() {
+  let root = create_temp_directory("workspace-change-ledger");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let change = StoredWorkspaceChangeRecord {
+    id: "approval-9".to_string(),
+    thread_id: "thread-7".to_string(),
+    approval_id: Some("approval-9".to_string()),
+    workspace_root_path: "/tmp/pith-workspace".to_string(),
+    relative_path: "notes.txt".to_string(),
+    action: "write_file".to_string(),
+    previous_content: Some(b"before".to_vec()),
+    next_content: b"after".to_vec(),
+    reverted_at: None,
+  };
+
+  store
+    .save_workspace_change(&change)
+    .expect("save workspace change");
+  store
+    .mark_workspace_change_reverted("approval-9")
+    .expect("mark workspace change reverted");
+  let changes = store
+    .load_workspace_changes_for_thread("thread-7")
+    .expect("load workspace changes");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(changes.len(), 1);
+  assert_eq!(changes[0].id, change.id);
+  assert!(changes[0].reverted_at.is_some());
+}
+
+#[test]
 fn sqlite_store_imports_legacy_json_threads() {
   let root = create_temp_directory("legacy-import");
   let database_path = root.join("pith.db");
@@ -225,15 +296,25 @@ fn sqlite_store_migrates_existing_version_one_database() {
     .expect("query connector credential columns")
     .collect::<std::result::Result<Vec<_>, _>>()
     .expect("collect connector credential columns");
+  let workspace_change_table_count: i64 = connection
+    .query_row(
+      "SELECT COUNT(*)
+       FROM sqlite_master
+       WHERE type = 'table' AND name = 'workspace_changes'",
+      [],
+      |row| row.get(0),
+    )
+    .expect("query workspace change table");
 
   fs::remove_dir_all(&root).expect("cleanup temp directory");
 
   assert_eq!(threads.len(), 1);
   assert_eq!(threads[0].summary.id, "thread-old");
   assert!(pending_approvals.is_empty());
-  assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert_eq!(migration_versions, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   assert!(approval_indexes.contains(&"idx_approvals_requested_at".to_string()));
   assert!(!credential_columns.contains(&"credential_secret".to_string()));
+  assert_eq!(workspace_change_table_count, 1);
 }
 
 #[test]

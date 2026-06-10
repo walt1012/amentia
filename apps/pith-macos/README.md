@@ -14,7 +14,7 @@ Primary goals:
 
 The app target is intentionally organized by product domain, not by helper type:
 
-- `App`: application shell, top-level view model, shared app models, and platform services.
+- `App`: application shell, top-level view model, shared app models, distribution trust copy, and platform services.
 - `Runtime`: stdio bridge, JSON-RPC protocol payloads, runtime launch, readiness, and state mapping.
 - `LocalModels`: first-use model setup, catalog, download, verification, activation, and model panel UI.
 - `Plugins`: plugin discovery, install state, manager UI, and action planning.
@@ -26,6 +26,10 @@ The app target is intentionally organized by product domain, not by helper type:
 New macOS app code should land in the domain that owns the product behavior. Avoid creating one-off
 helper files at the target root; if a boundary is unclear, prefer tightening the owning domain model
 before extracting another file.
+
+Connector UI should render generic workflow, approval, proof, retry, and evidence concepts first.
+Keep service-specific proof copy in narrow presenter helpers or connector attributes so adding the
+next connector does not turn timeline presentation into a service-specific switchboard.
 
 ## Local Runtime Bridge
 
@@ -46,7 +50,7 @@ python3 scripts/package_macos_app.py
 ```
 
 The script builds the Swift shell and `pith-runtime-bin`, assembles `Pith.app`, places executables in
-`Contents/MacOS`, includes bundled plugin manifests and model metadata in `Contents/Resources`, and
-writes `artifacts/macos/Pith-macos-x86_64.zip`. CI validates the product metadata, x86_64-only
-binaries, first-use model metadata, bundled plugin resources, absence of model weights, and zip
-contents before ad-hoc signing when `codesign` is available.
+`Contents/MacOS`, and includes bundled plugin manifests and model metadata in `Contents/Resources`.
+CI packages that app into the x86_64 DMG installer, validates the product metadata, first-use model
+metadata, bundled plugin resources, absence of model weights, and installer asset contract before
+uploading the user-facing artifact.

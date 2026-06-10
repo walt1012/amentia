@@ -82,13 +82,13 @@ extension AppViewModel {
 
   func revealPluginManifest(pluginID: String) {
     guard let plugin = pluginSummary(pluginID: pluginID) else {
-      runtimeDetail = "Plugin manifest path is unavailable."
+      runtimeDetail = "Plugin configuration file is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       plugin.manifestPath,
-      successDetail: "Revealed \(plugin.displayName) manifest."
+      successDetail: "Revealed \(plugin.displayName) configuration file."
     )
   }
 
@@ -113,6 +113,65 @@ extension AppViewModel {
 
   func isPluginCommandRetryableEntry(_ entry: TimelineEntry) -> Bool {
     isPluginCommandIssueEntry(entry)
+      || entry.attributes["retryCommandId"] != nil
+      || pluginRetryInput(from: entry) != nil
+      || entry.attributes["publishRetryable"] == "true"
+  }
+
+  func pluginRetryCommandID(from entry: TimelineEntry) -> String? {
+    [
+      "retryCommandId",
+      "commandId",
+    ]
+    .compactMap { key in
+      entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    .first { !$0.isEmpty }
+  }
+
+  func pluginRetryInput(from entry: TimelineEntry) -> String? {
+    [
+      "retryInput",
+      "commandInput",
+    ]
+    .compactMap { key in
+      entry.attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    .first { !$0.isEmpty }
+  }
+
+  func pluginRetryInputEditable(from entry: TimelineEntry) -> Bool {
+    entry.attributes["retryInputEditable"] == "true"
+  }
+
+  func pluginRetryInputHint(from entry: TimelineEntry) -> String? {
+    let hint = entry.attributes["retryInputHint"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return hint?.isEmpty == false ? hint : nil
+  }
+
+  func pluginFollowUpCommandID(from entry: TimelineEntry) -> String? {
+    let commandID = entry.attributes["nextCommandId"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return commandID?.isEmpty == false ? commandID : nil
+  }
+
+  func pluginFollowUpInput(from entry: TimelineEntry) -> String? {
+    let input = entry.attributes["nextCommandInput"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return input?.isEmpty == false ? input : nil
+  }
+
+  func pluginFollowUpInputTemplate(from entry: TimelineEntry) -> String? {
+    let input = entry.attributes["nextCommandInputTemplate"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return input?.isEmpty == false ? input : nil
+  }
+
+  func pluginFollowUpInputHint(from entry: TimelineEntry) -> String? {
+    let hint = entry.attributes["nextCommandInputHint"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return hint?.isEmpty == false ? hint : nil
   }
 
   private func pluginSourcePath(from entry: TimelineEntry) -> String? {
@@ -157,6 +216,7 @@ extension AppViewModel {
       || isPluginInstallIssueEntry(entry)
       || isPluginConnectorIssueEntry(entry)
       || isPluginLifecycleIssueEntry(entry)
+      || entry.attributes["permissionGate"] == "requiresPluginPermission"
   }
 
   private func pluginID(from entry: TimelineEntry) -> String? {

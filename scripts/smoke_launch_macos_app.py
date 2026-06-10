@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.server
 import json
 import os
 import selectors
@@ -12,16 +13,55 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
 from macos_llama_backend import assert_portable_llama_backend
+from package_contract import (
+  DEFAULT_MODEL_ID,
+  DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
+  PACKAGED_SMOKE_RECEIPT_KIND,
+  PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+  PACKAGED_SMOKE_JOURNEY,
+  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
+  PROHIBITED_MODEL_SUFFIXES,
+  SANDBOX_CONTRACT,
+  assert_size_under_budget,
+  directory_size_bytes,
+  packaged_smoke_package_metadata,
+  validate_package_manifest_contract,
+)
 
 
 APP_PROCESS_NAME = "Pith"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
 WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
+WEB_SEARCH_SNAPSHOT_KIND = "searchResults"
+WEB_SEARCH_SNAPSHOT_HASH_LENGTH = 16
+NOTION_CONNECTOR_ID = "notion-connector::notion"
+NOTION_PLUGIN_ID = "notion-connector"
+NOTION_COMMAND_ID = "notion-connector::notion.prepare-page-draft"
+NOTION_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
+NOTION_CREDENTIAL_LABEL = "Packaged Smoke Notion"
+NOTION_CREDENTIAL_SECRET = "packaged-smoke-token"
+NOTION_PARENT_PAGE_URL = (
+  "https://www.notion.so/Pith-Smoke-11112222333344445555666677778888?pvs=4"
+)
+NOTION_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
+DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
+DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
+DEFAULT_MODEL_DOWNLOAD_URL = (
+  "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
+  "LFM2.5-350M-Q4_K_M.gguf"
+)
+DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
+DEFAULT_MODEL_SIZE_BYTES = 229312224
+PACKAGED_SOURCE_COMMIT_HEX_LENGTH = 40
+SMOKE_MODEL_ID = "packaged-smoke-local-model"
+SMOKE_MODEL_FILE_NAME = "smoke-local-model.gguf"
 RUNTIME_REQUEST_TIMEOUT_SECONDS = 10.0
 LLAMA_BACKEND_LAUNCH_TIMEOUT_SECONDS = 10.0
 APP_STARTUP_TIMEOUT_SECONDS = 18.0
@@ -40,9 +80,125 @@ REQUIRED_DATABASE_TABLES = {
   "plugin_state",
   "schema_migrations",
   "threads",
+  "workspace_changes",
   "workspace_state",
 }
-REQUIRED_SCHEMA_VERSION = 9
+REQUIRED_SCHEMA_VERSION = 10
+PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
+  "mountedDmgAppBundle": "Mounted DMG exposes Pith.app and install guide.",
+  "appLaunch": "Packaged app launches and starts pith-runtime-bin.",
+  "runtimeProtocol": "Bundled runtime initializes through JSON-RPC.",
+  "defaultModelMetadata": "Default model metadata is bundled without weights.",
+  "appOwnedModelActivation": "Local model can activate from app-owned storage.",
+  "workspaceBootstrap": "Workspace and thread state bootstrap successfully.",
+  "firstCoworkTurn": "First cowork request produces timeline output.",
+  "webSearchExecution": "Web Search runs through the packaged fixture.",
+  "approvalDenied": "Denied workspace write does not mutate files.",
+  "approvalApproved": "Approved workspace write applies with diff proof.",
+  "connectorAuthorization": "Reference connector credential can be authorized.",
+  "connectorExecution": "Reference connector produces remote proof.",
+  "runnerMemoryCapture": "Connector runner memory is persisted.",
+  "runtimeRecovery": "Runtime restarts and restores state.",
+  "sandboxReadiness": "Sandbox readiness is visible in runtime checks.",
+}
+
+
+class FakeNotionApiServer:
+  def __init__(self) -> None:
+    self.requests: list[dict[str, object]] = []
+    self.fail_next_pages = 0
+    self.malformed_next_pages = 0
+    self._server: http.server.ThreadingHTTPServer | None = None
+    self._thread: threading.Thread | None = None
+
+  def __enter__(self) -> "FakeNotionApiServer":
+    owner = self
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+      def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(length)
+        try:
+          payload = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+          self.send_json(400, {"error": "invalid json"})
+          return
+
+        owner.requests.append(
+          {
+            "path": self.path,
+            "payload": payload,
+            "hasAuthorization": self.headers.get("Authorization", "").startswith("Bearer "),
+            "notionVersion": self.headers.get("Notion-Version", ""),
+          }
+        )
+        if self.path != "/v1/pages":
+          self.send_json(404, {"error": "unexpected path"})
+          return
+        if not owner.requests[-1]["hasAuthorization"]:
+          self.send_json(401, {"error": "missing authorization"})
+          return
+        if owner.fail_next_pages > 0:
+          owner.fail_next_pages -= 1
+          self.send_json(
+            503,
+            {"error": "temporary outage", "message": "retry later"},
+          )
+          return
+        if owner.malformed_next_pages > 0:
+          owner.malformed_next_pages -= 1
+          self.send_json(200, {"id": "packaged-smoke-notion-page"})
+          return
+
+        self.send_json(
+          200,
+          {
+            "id": "packaged-smoke-notion-page",
+            "url": "https://www.notion.so/packaged-smoke-notion-page",
+          },
+        )
+
+      def send_json(self, status: int, payload: dict[str, object]) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+      def log_message(self, _format: str, *args: object) -> None:
+        return
+
+    self._server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+    self._thread.start()
+    return self
+
+  def __exit__(self, _exc_type: object, _exc: object, _traceback: object) -> None:
+    if self._server:
+      self._server.shutdown()
+      self._server.server_close()
+    if self._thread:
+      self._thread.join(timeout=5)
+
+  @property
+  def api_base(self) -> str:
+    if not self._server:
+      raise RuntimeError("Fake Notion API server is not running.")
+    host, port = self._server.server_address
+    return f"http://{host}:{port}/v1"
+
+  @property
+  def last_request(self) -> dict[str, object]:
+    if not self.requests:
+      raise RuntimeError("Fake Notion API did not receive a request.")
+    return self.requests[-1]
+
+  def fail_next_page_create(self) -> None:
+    self.fail_next_pages += 1
+
+  def malform_next_page_create(self) -> None:
+    self.malformed_next_pages += 1
 
 
 def parse_args() -> argparse.Namespace:
@@ -68,12 +224,25 @@ def parse_args() -> argparse.Namespace:
     default=APP_STABILITY_SECONDS,
     help="Seconds the app and launched runtime must remain alive after startup.",
   )
+  parser.add_argument(
+    "--receipt-output",
+    type=Path,
+    help="Optional JSON receipt describing the packaged first-run smoke proof.",
+  )
   return parser.parse_args()
 
 
 def require_file(path: Path) -> None:
   if not path.is_file():
     raise FileNotFoundError(f"Required packaged app file is missing: {path}")
+
+
+def read_json_object(path: Path) -> dict:
+  require_file(path)
+  value = json.loads(path.read_text(encoding="utf-8"))
+  if not isinstance(value, dict):
+    raise RuntimeError(f"Expected JSON object in packaged file: {path}")
+  return value
 
 
 def process_ids(name: str) -> set[int]:
@@ -110,14 +279,92 @@ def terminate_processes(process_name: str, process_ids_to_stop: set[int]) -> Non
       pass
 
 
-def validate_app_bundle(app_path: Path) -> None:
+def validate_app_bundle(app_path: Path) -> dict:
   require_file(app_path / "Contents" / "Info.plist")
   require_file(app_path / "Contents" / "MacOS" / "Pith")
   require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
+  package_metadata = validate_packaged_model_metadata(app_path)
   assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
   validate_packaged_llama_backend_launch(app_path)
+  return package_metadata
+
+
+def validate_packaged_model_metadata(app_path: Path) -> dict:
+  resources_path = bundled_resource_path(app_path)
+  package_manifest_path = resources_path / "PithPackage.json"
+  package_manifest = read_json_object(package_manifest_path)
+  size_budget = validate_package_manifest_contract(
+    package_manifest,
+    f"Packaged manifest: {package_manifest_path}",
+  )
+  assert_size_under_budget(
+    directory_size_bytes(app_path),
+    size_budget["maxAppBundleBytes"],
+    "packaged app bundle smoke",
+  )
+  if (
+    package_manifest.get("defaultModelManifest")
+    != DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()
+  ):
+    raise RuntimeError(
+      "Packaged manifest defaultModelManifest must point to the bundled "
+      f"default metadata: {DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()}."
+    )
+  source_commit = package_manifest.get("sourceCommit", "")
+  if (
+    not isinstance(source_commit, str)
+    or len(source_commit) != PACKAGED_SOURCE_COMMIT_HEX_LENGTH
+    or any(character not in "0123456789abcdef" for character in source_commit)
+  ):
+    raise RuntimeError(
+      "Packaged manifest sourceCommit must be a full lowercase source hash."
+    )
+
+  model_manifest_path = resources_path / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH
+  validate_default_model_manifest(model_manifest_path)
+  bundled_weight_files = sorted(
+    path
+    for path in resources_path.rglob("*")
+    if path.is_file() and path.suffix.lower() in PROHIBITED_MODEL_SUFFIXES
+  )
+  if bundled_weight_files:
+    raise RuntimeError(
+      "Packaged app must not bundle model weight files: "
+      f"{', '.join(str(path) for path in bundled_weight_files)}"
+    )
+  return packaged_smoke_package_metadata(package_manifest)
+
+
+def validate_default_model_manifest(manifest_path: Path) -> None:
+  manifest = read_json_object(manifest_path)
+  expected_values = {
+    "id": DEFAULT_MODEL_ID,
+    "display_name": DEFAULT_MODEL_DISPLAY_NAME,
+    "file_name": DEFAULT_MODEL_FILE_NAME,
+    "context_size": 4096,
+    "model_context_size": 32768,
+    "max_output_tokens": 160,
+    "backend": "llama.cpp",
+    "download_url": DEFAULT_MODEL_DOWNLOAD_URL,
+    "sha256": DEFAULT_MODEL_SHA256,
+    "size_bytes": DEFAULT_MODEL_SIZE_BYTES,
+  }
+  for field, expected_value in expected_values.items():
+    if manifest.get(field) != expected_value:
+      raise RuntimeError(
+        f"Packaged default model field {field} must be {expected_value!r}: {manifest_path}"
+      )
+
+  homepage = manifest.get("homepage")
+  if not isinstance(homepage, str) or not homepage.startswith("https://"):
+    raise RuntimeError("Packaged default model homepage must be HTTPS.")
+  license_value = manifest.get("license")
+  if not isinstance(license_value, str) or not license_value:
+    raise RuntimeError("Packaged default model license must be present.")
+  if (manifest_path.parent / DEFAULT_MODEL_FILE_NAME).exists():
+    raise RuntimeError("Packaged default model weights must not be bundled.")
 
 
 def validate_packaged_llama_backend_launch(app_path: Path) -> None:
@@ -194,6 +441,13 @@ def terminate_process(process: subprocess.Popen[str]) -> None:
   except subprocess.TimeoutExpired:
     process.kill()
     process.wait(timeout=5)
+
+
+def kill_process(process: subprocess.Popen[str]) -> None:
+  if process.poll() is not None:
+    return
+  process.kill()
+  process.wait(timeout=5)
 
 
 def terminate_process_with_output(process: subprocess.Popen[str]) -> tuple[str, str]:
@@ -285,6 +539,39 @@ def send_runtime_request(
       return message
 
 
+def send_runtime_request_expect_error(
+  process: subprocess.Popen[str],
+  request_id: int,
+  method: str,
+  params: dict | None = None,
+) -> dict:
+  if process.stdin is None or process.stdout is None:
+    raise RuntimeError("Packaged runtime pipes are unavailable.")
+
+  payload = {
+    "id": request_id,
+    "method": method,
+  }
+  if params is not None:
+    payload["params"] = params
+
+  process.stdin.write(json.dumps(payload) + "\n")
+  process.stdin.flush()
+
+  while True:
+    line = read_runtime_line(process, method)
+    if not line:
+      raise RuntimeError(
+        f"Packaged runtime exited before responding to {method}."
+        f"{runtime_stderr_detail(process)}"
+      )
+    message = json.loads(line)
+    if message.get("id") == request_id:
+      if "error" not in message:
+        raise RuntimeError(f"Packaged runtime {method} unexpectedly succeeded.")
+      return message
+
+
 def read_runtime_line(process: subprocess.Popen[str], method: str) -> str:
   if process.stdout is None:
     raise RuntimeError("Packaged runtime stdout is unavailable.")
@@ -310,16 +597,61 @@ def runtime_stderr_detail(process: subprocess.Popen[str]) -> str:
   return f"\nRuntime stderr:\n{stderr[-2000:]}"
 
 
+def timeline_item_summary(items: list[dict]) -> str:
+  summaries = []
+  interesting_keys = {
+    "commandId",
+    "executionKind",
+    "mcpProtocolStatus",
+    "pluginCommandStatus",
+    "pluginRunnerFailureKind",
+    "pluginRunnerRecoveryHint",
+    "pluginRunnerStderrPreview",
+    "pluginRunnerStdoutPreview",
+    "pageFetchPerformed",
+    "sourceSnapshotAvailable",
+    "sourceSnapshotHash",
+    "sourceSnapshotKind",
+    "sourceSnapshotResultCount",
+    "sourceTitles",
+    "sourceUrls",
+    "actionApprovalPolicy",
+    "blockReason",
+    "localExecutionSafetyMode",
+    "relativePath",
+    "requiredPermission",
+    "retryMessage",
+    "webSearchSourceMode",
+  }
+  for item in items:
+    attributes = item.get("attributes", {})
+    interesting_attributes = {
+      key: value
+      for key, value in attributes.items()
+      if key in interesting_keys
+    }
+    summaries.append(
+      {
+        "kind": item.get("kind"),
+        "title": item.get("title"),
+        "content": item.get("content", "")[:240],
+        "attributes": interesting_attributes,
+      }
+    )
+  return json.dumps(summaries, sort_keys=True)
+
+
 def validate_runtime_readiness(
   readiness: dict,
   expected_statuses: dict[str, str | set[str]] | None = None,
   expected_status: str = "setup_required",
   workspace_open: bool = False,
+  expected_daily_stage: str | set[str] | None = None,
 ) -> None:
   result = readiness["result"]
   if result["status"] != expected_status:
     raise RuntimeError(
-      f"Packaged runtime readiness was {result['status']}, expected {expected_status}."
+      f"Packaged local service status was {result['status']}, expected {expected_status}."
     )
   checks = {check["id"]: check for check in result["checks"]}
   expected_statuses = expected_statuses or {
@@ -334,6 +666,7 @@ def validate_runtime_readiness(
   }
   for check_id, expected_status in expected_statuses.items():
     validate_readiness_check_status(checks, check_id, expected_status)
+  validate_daily_driver_stage(result, expected_daily_stage)
   validate_tooling_readiness(result, checks, workspace_open=workspace_open)
 
 
@@ -347,8 +680,30 @@ def validate_readiness_check_status(
   if actual_status not in allowed_statuses:
     expected = ", ".join(sorted(allowed_statuses))
     raise RuntimeError(
-      f"Packaged runtime readiness check {check_id} was {actual_status}, "
+      f"Packaged local service check {check_id} was {actual_status}, "
       f"expected one of {expected}."
+    )
+
+
+def validate_daily_driver_stage(
+  result: dict,
+  expected_stage: str | set[str] | None,
+) -> None:
+  metrics = result["metrics"]
+  stage = metrics.get("dailyDriverStage")
+  next_action = metrics.get("dailyDriverNextAction")
+  if not isinstance(stage, str) or not stage:
+    raise RuntimeError("Packaged local service status did not report dailyDriverStage.")
+  if not isinstance(next_action, str) or not next_action:
+    raise RuntimeError("Packaged local service status did not report dailyDriverNextAction.")
+  if expected_stage is None:
+    return
+
+  allowed_stages = {expected_stage} if isinstance(expected_stage, str) else expected_stage
+  if stage not in allowed_stages:
+    expected = ", ".join(sorted(allowed_stages))
+    raise RuntimeError(
+      f"Packaged runtime daily-driver stage was {stage}, expected one of {expected}."
     )
 
 
@@ -362,7 +717,7 @@ def validate_tooling_readiness(
   validate_readiness_check_status(
     checks,
     "nativeSandbox",
-    "ready" if workspace_open else {"limited", "setup_required"},
+    {"ready", "limited"} if workspace_open else {"limited", "setup_required"},
   )
 
   metrics = result["metrics"]
@@ -371,44 +726,80 @@ def validate_tooling_readiness(
     "webSearchProvider": "DuckDuckGo Lite",
     "webSearchAvailable": "true",
     "webSearchPermissionGranted": "true",
-    "sandboxMode": "workspaceReadWrite",
+    "pithAccountRequired": "false",
+    "defaultLocalExecutionSafetyMode": "askBeforeChange",
+    "localExecutionSafetyModes": "explore,askBeforeChange,approvedWorkspaceExecution",
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxNetworkAllowed": "false",
   }
   for key, expected_value in expected_metrics.items():
     actual_value = metrics.get(key)
     if actual_value != expected_value:
       raise RuntimeError(
-        f"Packaged runtime readiness metric {key} was {actual_value}, "
+        f"Packaged local service metric {key} was {actual_value}, "
         f"expected {expected_value}."
       )
 
   if "Web Search" not in metrics.get("webSearchPermissionSources", ""):
-    raise RuntimeError("Packaged runtime readiness did not attribute Web Search permission.")
+    raise RuntimeError("Packaged local service status did not attribute Web Search permission.")
   if metrics.get("webSearchClient") not in {"curl", "fixture"}:
     raise RuntimeError(
-      "Packaged runtime readiness reported unexpected web search client: "
+      "Packaged local service status reported unexpected web search client: "
       f"{metrics.get('webSearchClient')}"
     )
   if workspace_open:
-    if metrics.get("sandboxBackend") != "macosSeatbelt":
+    if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
       raise RuntimeError(
-        "Packaged runtime readiness must use the native macOS sandbox after "
+        "Packaged local service status reported unexpected sandbox backend after "
         f"workspace open. Backend: {metrics.get('sandboxBackend')}"
       )
-    if metrics.get("sandboxActive") != "true":
+    native_sandbox_check = checks.get("nativeSandbox")
+    native_sandbox_status = (
+      native_sandbox_check.get("status")
+      if isinstance(native_sandbox_check, dict)
+      else None
+    )
+    if (
+      metrics.get("sandboxBackend") == "macosSeatbelt"
+      and metrics.get("sandboxActive") != "true"
+    ):
       raise RuntimeError(
-        "Packaged runtime readiness must report an active native sandbox after "
+        "Packaged local service status must report an active native sandbox after "
         f"workspace open. Active: {metrics.get('sandboxActive')}"
+      )
+    if (
+      metrics.get("sandboxBackend") == "macosSeatbelt"
+      and native_sandbox_status != "ready"
+    ):
+      raise RuntimeError(
+        "Packaged local service status must mark native sandbox ready when the "
+        f"macosSeatbelt backend is active. Status: {native_sandbox_status}"
+      )
+    if (
+      metrics.get("sandboxBackend") == "processOnly"
+      and metrics.get("sandboxActive") != "false"
+    ):
+      raise RuntimeError(
+        "Packaged local service status must report inactive native sandbox when "
+        f"falling back to process-only. Active: {metrics.get('sandboxActive')}"
+      )
+    if (
+      metrics.get("sandboxBackend") == "processOnly"
+      and native_sandbox_status != "limited"
+    ):
+      raise RuntimeError(
+        "Packaged local service status must mark native sandbox limited when "
+        f"falling back to process-only. Status: {native_sandbox_status}"
       )
   else:
     if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
       raise RuntimeError(
-        "Packaged runtime readiness reported unexpected sandbox backend: "
+        "Packaged local service status reported unexpected sandbox backend: "
         f"{metrics.get('sandboxBackend')}"
       )
     if metrics.get("sandboxActive") not in {"true", "false"}:
       raise RuntimeError(
-        "Packaged runtime readiness reported unexpected sandbox active state: "
+        "Packaged local service status reported unexpected sandbox active state: "
         f"{metrics.get('sandboxActive')}"
       )
 
@@ -466,6 +857,10 @@ def validate_packaged_runtime_workspace_bootstrap(
     },
     expected_status=expected_status,
     workspace_open=True,
+    expected_daily_stage={
+      "model_setup",
+      "first_request",
+    },
   )
 
   thread_list = send_runtime_request(process, 8, "thread/list")
@@ -506,13 +901,13 @@ def validate_packaged_runtime_workspace_search(process: subprocess.Popen[str]) -
 
 
 def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
-  model_dir = support_dir / "model-pack" / "smoke-local-model"
+  model_dir = support_dir / "storage" / "models" / "builtin" / SMOKE_MODEL_ID
   model_dir.mkdir(parents=True)
-  model_path = model_dir / "smoke-local-model.gguf"
+  model_path = model_dir / SMOKE_MODEL_FILE_NAME
   model_bytes = b"GGUFpackaged smoke local model fixture\n"
   model_path.write_bytes(model_bytes)
   manifest = {
-    "id": "packaged-smoke-local-model",
+    "id": SMOKE_MODEL_ID,
     "display_name": "Packaged Smoke Local Model",
     "file_name": model_path.name,
     "context_size": 512,
@@ -527,7 +922,70 @@ def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
   }
   manifest_path = model_dir / "model-pack.json"
   manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+  validate_smoke_model_pack(manifest_path, model_path, support_dir)
   return manifest_path, model_path
+
+
+def validate_smoke_model_pack(manifest_path: Path, model_path: Path, support_dir: Path) -> None:
+  expected_model_root = (support_dir / "storage" / "models").resolve()
+  if expected_model_root not in model_path.resolve().parents:
+    raise RuntimeError("Packaged first-use smoke model must live under app-owned storage.")
+  if manifest_path.parent != model_path.parent:
+    raise RuntimeError("Packaged first-use smoke manifest must live next to the model file.")
+  if model_path.read_bytes()[:4] != b"GGUF":
+    raise RuntimeError("Packaged first-use smoke model is missing the GGUF header.")
+
+  manifest = read_json_object(manifest_path)
+  expected_values = {
+    "id": SMOKE_MODEL_ID,
+    "file_name": model_path.name,
+    "sha256": sha256_hex(model_path),
+    "size_bytes": model_path.stat().st_size,
+  }
+  for field, expected_value in expected_values.items():
+    if manifest.get(field) != expected_value:
+      raise RuntimeError(
+        f"Packaged first-use smoke model field {field} must be {expected_value!r}."
+      )
+
+
+def sha256_hex(path: Path) -> str:
+  return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_ready_smoke_model_health(
+  model_health: dict,
+  manifest_path: Path,
+  model_path: Path,
+) -> None:
+  result = model_health["result"]
+  if result["status"] != "ready":
+    raise RuntimeError(
+      "Packaged first cowork smoke did not resolve a ready local model: "
+      f"{result}"
+    )
+  if Path(result["manifestPath"]).resolve() != manifest_path.resolve():
+    raise RuntimeError("Packaged first cowork smoke used the wrong model manifest.")
+  if Path(result["modelPath"]).resolve() != model_path.resolve():
+    raise RuntimeError("Packaged first cowork smoke used the wrong model file.")
+
+  metrics = result["metrics"]
+  expected_metrics = {
+    "fileName": SMOKE_MODEL_FILE_NAME,
+    "sha256": sha256_hex(model_path),
+    "sizeBytes": str(model_path.stat().st_size),
+    "readiness": "ready",
+    "packReady": "true",
+    "modelPresent": "true",
+    "manifestPresent": "true",
+  }
+  for key, expected_value in expected_metrics.items():
+    actual_value = metrics.get(key)
+    if actual_value != expected_value:
+      raise RuntimeError(
+        f"Packaged first-use model metric {key} was {actual_value}, "
+        f"expected {expected_value}."
+      )
 
 
 def write_deterministic_llama_backend_fixture(support_dir: Path) -> Path:
@@ -584,25 +1042,637 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
     )
   if not any(item["kind"] == "assistantMessage" for item in items):
     raise RuntimeError("Packaged web search turn did not produce an assistant item.")
+  validate_packaged_web_search_snapshot(items)
 
 
-def validate_packaged_first_local_request(app_path: Path) -> None:
-  with tempfile.TemporaryDirectory(prefix="pith-packaged-first-request-") as support_root:
+def validate_packaged_web_search_snapshot(items: list[dict]) -> None:
+  assistant_item = next(
+    (
+      item
+      for item in items
+      if item["kind"] == "assistantMessage"
+      and item.get("attributes", {}).get("handoffKind") == "webSearchSources"
+    ),
+    None,
+  )
+  if assistant_item is None:
+    raise RuntimeError(
+      "Packaged web search turn did not produce a source handoff. "
+      f"Items: {timeline_item_summary(items)}"
+    )
+
+  attributes = assistant_item.get("attributes", {})
+  expected_attributes = {
+    "webSearchSourceMode": "searchResultAttribution",
+    "pageFetchPerformed": "false",
+    "sourceSnapshotAvailable": "true",
+    "sourceSnapshotKind": WEB_SEARCH_SNAPSHOT_KIND,
+    "sourceSnapshotResultCount": "1",
+  }
+  for key, expected_value in expected_attributes.items():
+    actual_value = attributes.get(key)
+    if actual_value != expected_value:
+      raise RuntimeError(
+        f"Packaged web search source attribute {key} was {actual_value!r}, "
+        f"expected {expected_value!r}. Items: {timeline_item_summary(items)}"
+      )
+
+  source_snapshot = attributes.get("sourceSnapshot", "")
+  required_snapshot_fragments = [
+    "Pith packaged web search fixture",
+    "https://example.com/pith-packaged-smoke",
+    "Deterministic packaged web search result.",
+    "fixture",
+  ]
+  for fragment in required_snapshot_fragments:
+    if fragment not in source_snapshot:
+      raise RuntimeError(
+        "Packaged web search source snapshot missed expected evidence. "
+        f"Missing: {fragment!r}. Snapshot: {source_snapshot[:500]}"
+      )
+
+  source_hash = attributes.get("sourceSnapshotHash", "")
+  if len(source_hash) != WEB_SEARCH_SNAPSHOT_HASH_LENGTH:
+    raise RuntimeError(
+      "Packaged web search source snapshot hash had unexpected length: "
+      f"{source_hash!r}"
+    )
+  if attributes.get("sourceUrls") != "https://example.com/pith-packaged-smoke":
+    raise RuntimeError(
+      "Packaged web search source URL was not preserved in the handoff. "
+      f"Attributes: {attributes}"
+    )
+  if attributes.get("sourceTitles") != "Pith packaged web search fixture":
+    raise RuntimeError(
+      "Packaged web search source title was not preserved in the handoff. "
+      f"Attributes: {attributes}"
+    )
+
+
+def validate_packaged_mcp_plugin_command(
+  process: subprocess.Popen[str],
+  notion_api: FakeNotionApiServer,
+) -> None:
+  enable = send_runtime_request(
+    process,
+    29,
+    "plugin/setEnabled",
+    {
+      "pluginId": NOTION_PLUGIN_ID,
+      "enabled": True,
+    },
+  )
+  if enable["result"]["plugin"]["id"] != NOTION_PLUGIN_ID:
+    raise RuntimeError("Packaged plugin smoke enabled the wrong plugin.")
+  if enable["result"]["plugin"]["enabled"] is not True:
+    raise RuntimeError("Packaged plugin smoke did not enable the Notion connector.")
+
+  authorize = send_runtime_request(
+    process,
+    30,
+    "plugin/connectorAuthorize",
+    {
+      "connectorId": NOTION_CONNECTOR_ID,
+      "credentialLabel": NOTION_CREDENTIAL_LABEL,
+      "credentialSecret": NOTION_CREDENTIAL_SECRET,
+    },
+  )
+  if NOTION_CREDENTIAL_SECRET in json.dumps(authorize):
+    raise RuntimeError("Packaged plugin smoke leaked the connector credential secret.")
+  connector = authorize["result"]["connector"]
+  if connector["connectorId"] != NOTION_CONNECTOR_ID:
+    raise RuntimeError("Packaged plugin smoke authorized the wrong connector.")
+  if connector["status"] != "ready" or connector["authStatus"] != "authorized":
+    raise RuntimeError(
+      "Packaged plugin smoke connector did not become ready after authorization."
+    )
+
+  command_registry = send_runtime_request(process, 31, "plugin/commandRegistry")
+  if not any(
+    command["commandId"] == NOTION_PUBLISH_COMMAND_ID
+    and command.get("execution", {}).get("kind") == "mcp.notion.publishPageDraft"
+    for command in command_registry["result"]["commands"]
+  ):
+    raise RuntimeError("Packaged plugin smoke did not expose the Notion publish command.")
+
+  command = send_runtime_request(
+    process,
+    32,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_COMMAND_ID,
+      "input": "Prepare a packaged smoke page draft from this workspace.",
+    },
+  )
+  pending_approvals = command["result"]["pendingApprovals"]
+  if len(pending_approvals) != 1:
+    raise RuntimeError(
+      "Packaged MCP plugin command should request one connector-backed approval."
+    )
+  approval = pending_approvals[0]
+  if approval["action"] != "run_plugin_command":
+    raise RuntimeError("Packaged MCP plugin command requested the wrong approval.")
+  if approval["relativePath"] != f"plugin:{NOTION_PLUGIN_ID}":
+    raise RuntimeError("Packaged MCP plugin approval is not scoped to the plugin.")
+  if not any(
+    item["kind"] == "approvalRequested"
+    and item.get("attributes", {}).get("commandId") == NOTION_COMMAND_ID
+    for item in command["result"]["items"]
+  ):
+    raise RuntimeError("Packaged MCP plugin approval did not expose the command id.")
+
+  approved = send_runtime_request(
+    process,
+    33,
+    "approval/respond",
+    {
+      "approvalId": approval["id"],
+      "decision": "approved",
+    },
+  )
+  items = approved["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Page Draft"
+    and "Prepared a credential-scoped local Notion page draft" in item["content"]
+    and item.get("attributes", {}).get("targetService") == "notion"
+    and item.get("attributes", {}).get("draftMode") == "localDraft"
+    and item.get("attributes", {}).get("remoteWrite") == "false"
+    and item.get("attributes", {}).get("nextCommandId") == NOTION_PUBLISH_COMMAND_ID
+    and item.get("attributes", {}).get("nextCommandLabel") == "Publish to Notion"
+    and "parentPageId" in item.get("attributes", {}).get("nextCommandInputHint", "")
+    and "parentPageId" in item.get("attributes", {}).get("nextCommandInputTemplate", "")
+    and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
+    and item.get("attributes", {}).get("connectorWorkflowStatus") == "prepared"
+    and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
+    == "pith.connectorWorkflow.v1"
+    for item in items
+  ):
+    raise RuntimeError(
+      "Packaged MCP plugin command did not return the local Notion page draft. "
+      f"Items: {timeline_item_summary(items)}"
+    )
+  if not any(
+    item["kind"] == "system"
+    and item["title"] == "Plugin Memory Note Saved"
+    and item.get("attributes", {}).get("memoryNoteTitle") == "Notion Draft Prepared"
+    for item in items
+  ):
+    raise RuntimeError(
+      "Packaged MCP plugin command did not capture runner memory. "
+      f"Items: {timeline_item_summary(items)}"
+    )
+
+  memory_list = send_runtime_request(process, 34, "memory/list")
+  if not any(
+    note["title"] == "Notion Draft Prepared"
+    and note["source"] == "plugin.notion-connector"
+    for note in memory_list["result"]["notes"]
+  ):
+    raise RuntimeError("Packaged MCP plugin command memory was not persisted.")
+
+  notion_api.fail_next_page_create()
+  failed_publish = send_runtime_request(
+    process,
+    35,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": json.dumps(
+        {
+          "parentPageId": NOTION_PARENT_PAGE_URL,
+          "title": "Packaged Smoke Retry Page",
+          "body": "This first publish should report a retryable failure.",
+        }
+      ),
+    },
+  )
+  failed_publish_approvals = failed_publish["result"]["pendingApprovals"]
+  if len(failed_publish_approvals) != 1:
+    raise RuntimeError("Packaged Notion failed publish should request one approval.")
+
+  failed_published = send_runtime_request(
+    process,
+    36,
+    "approval/respond",
+    {
+      "approvalId": failed_publish_approvals[0]["id"],
+      "decision": "approved",
+    },
+  )
+  failed_items = failed_published["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Publish Needs Retry"
+    and item.get("attributes", {}).get("targetService") == "notion"
+    and item.get("attributes", {}).get("remoteWrite") == "false"
+    and item.get("attributes", {}).get("remoteWriteStage") == "failedBeforeProof"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "unconfirmed"
+    and item.get("attributes", {}).get("publishRetryable") == "true"
+    and item.get("attributes", {}).get("remoteProofStatus") == "missing"
+    and item.get("attributes", {}).get("retryCommandId") == NOTION_PUBLISH_COMMAND_ID
+    and item.get("attributes", {}).get("retryInputEditable") == "false"
+    and "retry" in item.get("attributes", {}).get("retryInputHint", "").lower()
+    and NOTION_PARENT_PAGE_ID in item.get("attributes", {}).get("retryInput", "")
+    and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
+    and item.get("attributes", {}).get("connectorWorkflowStatus") == "retryNeeded"
+    and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"
+    and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
+    == "pith.connectorWorkflow.v1"
+    for item in failed_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion failed publish did not return retry guidance. "
+      f"Items: {timeline_item_summary(failed_items)}"
+    )
+  failed_publish_memory_list = send_runtime_request(process, 37, "memory/list")
+  if not any(
+    note["title"] == "Notion Publish Retry Needed"
+    and note["source"] == "plugin.notion-connector"
+    for note in failed_publish_memory_list["result"]["notes"]
+  ):
+    raise RuntimeError("Packaged Notion failed publish memory was not persisted.")
+
+  missing_parent_publish = send_runtime_request(
+    process,
+    38,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": "{}",
+    },
+  )
+  missing_parent_approvals = missing_parent_publish["result"]["pendingApprovals"]
+  if len(missing_parent_approvals) != 1:
+    raise RuntimeError("Packaged Notion missing-parent publish should request one approval.")
+  missing_parent_result = send_runtime_request(
+    process,
+    39,
+    "approval/respond",
+    {
+      "approvalId": missing_parent_approvals[0]["id"],
+      "decision": "approved",
+    },
+  )
+  missing_parent_items = missing_parent_result["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Publish Needs Retry"
+    and item.get("attributes", {}).get("remoteWriteStage") == "blockedBeforeWrite"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "notSent"
+    and item.get("attributes", {}).get("remoteProofStatus") == "notRequested"
+    and item.get("attributes", {}).get("publishFailureReason") == "missingParentPageId"
+    and item.get("attributes", {}).get("retryInputEditable") == "true"
+    and "parentPageId" in item.get("attributes", {}).get("retryInput", "")
+    and "title" in item.get("attributes", {}).get("retryInput", "")
+    and "parentPageId" in item.get("attributes", {}).get("retryInputHint", "")
+    and item.get("attributes", {}).get("connectorWorkflowTarget") == "missingParentPageId"
+    and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"
+    for item in missing_parent_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion missing-parent publish did not return editable retry guidance. "
+      f"Items: {timeline_item_summary(missing_parent_items)}"
+    )
+
+  notion_api.malform_next_page_create()
+  missing_proof_publish = send_runtime_request(
+    process,
+    40,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": json.dumps(
+        {
+          "parentPageId": NOTION_PARENT_PAGE_URL,
+          "title": "Packaged Smoke Missing Proof Page",
+          "body": "The fake API will omit the trusted Notion URL.",
+        }
+      ),
+    },
+  )
+  missing_proof_approvals = missing_proof_publish["result"]["pendingApprovals"]
+  if len(missing_proof_approvals) != 1:
+    raise RuntimeError("Packaged Notion missing-proof publish should request one approval.")
+  missing_proof_result = send_runtime_request(
+    process,
+    41,
+    "approval/respond",
+    {
+      "approvalId": missing_proof_approvals[0]["id"],
+      "decision": "approved",
+    },
+  )
+  missing_proof_items = missing_proof_result["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Publish Needs Retry"
+    and item.get("attributes", {}).get("remoteWriteStage") == "failedBeforeProof"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "unconfirmed"
+    and item.get("attributes", {}).get("remoteProofStatus") == "missing"
+    and item.get("attributes", {}).get("publishFailureReason") == "missingRemoteProof"
+    and item.get("attributes", {}).get("retryInputEditable") == "false"
+    and "may have completed" in item.get("attributes", {}).get("retryInputHint", "")
+    and item.get("attributes", {}).get("connectorWorkflowStage") == "failedBeforeProof"
+    and item.get("attributes", {}).get("connectorWorkflowProof") == "missing"
+    for item in missing_proof_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion missing-proof publish did not protect remote proof. "
+      f"Items: {timeline_item_summary(missing_proof_items)}"
+    )
+
+  publish = send_runtime_request(
+    process,
+    42,
+    "plugin/commandRun",
+    {
+      "threadId": "thread-1",
+      "commandId": NOTION_PUBLISH_COMMAND_ID,
+      "input": "\n".join(
+        [
+          f"parent: {NOTION_PARENT_PAGE_URL}",
+          "title: Packaged Smoke Page",
+          "body: # Packaged Smoke Page",
+          "",
+          "Created from packaged smoke after user approval.",
+          "",
+          "- [x] Connector approval completed",
+          "- Review Notion proof",
+        ]
+      ),
+    },
+  )
+  publish_approvals = publish["result"]["pendingApprovals"]
+  if len(publish_approvals) != 1:
+    raise RuntimeError("Packaged Notion publish should request one approval.")
+  publish_approval = publish_approvals[0]
+  if publish_approval["action"] != "run_plugin_command":
+    raise RuntimeError("Packaged Notion publish requested the wrong approval.")
+  if not any(
+    item["kind"] == "approvalRequested"
+    and item.get("attributes", {}).get("commandId") == NOTION_PUBLISH_COMMAND_ID
+    for item in publish["result"]["items"]
+  ):
+    raise RuntimeError("Packaged Notion publish did not expose the command id.")
+
+  published = send_runtime_request(
+    process,
+    43,
+    "approval/respond",
+    {
+      "approvalId": publish_approval["id"],
+      "decision": "approved",
+    },
+  )
+  published_items = published["result"]["items"]
+  if not any(
+    item["kind"] == "pluginResult"
+    and item["title"] == "Notion Page Published"
+    and item.get("attributes", {}).get("targetService") == "notion"
+    and item.get("attributes", {}).get("remoteWrite") == "true"
+    and item.get("attributes", {}).get("remoteWriteStage") == "completed"
+    and item.get("attributes", {}).get("remoteWriteStatus") == "completed"
+    and item.get("attributes", {}).get("remoteProofKind") == "notionApiResponse"
+    and item.get("attributes", {}).get("notionPageId") == "packaged-smoke-notion-page"
+    and item.get("attributes", {}).get("notionPageUrl")
+    == "https://www.notion.so/packaged-smoke-notion-page"
+    and item.get("attributes", {}).get("notionParentPageId") == NOTION_PARENT_PAGE_ID
+    and item.get("attributes", {}).get("titleTruncated") == "false"
+    and item.get("attributes", {}).get("bodyTruncated") == "false"
+    and item.get("attributes", {}).get("notionBlockCount") == "4"
+    and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
+    and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
+    and item.get("attributes", {}).get("connectorWorkflowProof") == "notionApiResponse"
+    and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
+    == "pith.connectorWorkflow.v1"
+    for item in published_items
+  ):
+    raise RuntimeError(
+      "Packaged Notion publish did not return completed remote proof. "
+      f"Items: {timeline_item_summary(published_items)}"
+    )
+
+  publish_request = notion_api.last_request
+  if publish_request["path"] != "/v1/pages":
+    raise RuntimeError("Packaged Notion publish called the wrong API path.")
+  if publish_request["hasAuthorization"] is not True:
+    raise RuntimeError("Packaged Notion publish did not send an authorization header.")
+  if publish_request["notionVersion"] != "2026-03-11":
+    raise RuntimeError("Packaged Notion publish used the wrong Notion API version.")
+  payload = publish_request["payload"]
+  if not isinstance(payload, dict):
+    raise RuntimeError("Packaged Notion publish sent an invalid payload.")
+  parent = payload.get("parent")
+  if not isinstance(parent, dict) or parent.get("page_id") != NOTION_PARENT_PAGE_ID:
+    raise RuntimeError("Packaged Notion publish sent the wrong parent page id.")
+  properties = payload.get("properties")
+  if not isinstance(properties, dict):
+    raise RuntimeError("Packaged Notion publish omitted page properties.")
+  title = properties.get("title")
+  if not isinstance(title, dict):
+    raise RuntimeError("Packaged Notion publish omitted the title property.")
+  children = payload.get("children")
+  if not isinstance(children, list) or not children:
+    raise RuntimeError("Packaged Notion publish omitted body children.")
+  child_types = [child.get("type") for child in children]
+  if child_types[:4] != ["heading_1", "paragraph", "to_do", "bulleted_list_item"]:
+    raise RuntimeError(f"Packaged Notion publish sent weak body block types: {child_types}")
+
+  publish_memory_list = send_runtime_request(process, 44, "memory/list")
+  if not any(
+    note["title"] == "Notion Page Published"
+    and note["source"] == "plugin.notion-connector"
+    and "https://www.notion.so/packaged-smoke-notion-page" in note["body"]
+    and "Title truncated: false." in note["body"]
+    and "Body truncated: false." in note["body"]
+    and "Blocks: 4." in note["body"]
+    for note in publish_memory_list["result"]["notes"]
+  ):
+    raise RuntimeError("Packaged Notion publish memory was not persisted.")
+
+
+def validate_packaged_workspace_write_approval(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  validate_packaged_workspace_read_only_recovery_contract(process, support_dir)
+  validate_packaged_workspace_write_denial(process, support_dir)
+  approval = request_packaged_workspace_write(
+    process,
+    27,
+    "docs/packaged-output.txt",
+    "Created from packaged approval flow",
+  )
+
+  approved = send_runtime_request(
+    process,
+    28,
+    "approval/respond",
+    {
+      "approvalId": approval["id"],
+      "decision": "approved",
+    },
+  )
+  if not any(
+    item["kind"] == "toolResult"
+    and item["title"] == "write_file result"
+    and item.get("attributes", {}).get("relativePath") == "docs/packaged-output.txt"
+    for item in approved["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write approval did not execute write_file. "
+      f"Items: {timeline_item_summary(approved['result']['items'])}"
+    )
+
+  output_path = support_dir / "workspace" / "docs" / "packaged-output.txt"
+  if output_path.read_text(encoding="utf-8") != "Created from packaged approval flow":
+    raise RuntimeError("Packaged workspace write approval wrote unexpected content.")
+
+
+def validate_packaged_workspace_read_only_recovery_contract(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  relative_path = "docs/packaged-read-only.txt"
+  message = f"Write {relative_path}: This should stay blocked"
+  read_only_turn = send_runtime_request(
+    process,
+    56,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": message,
+      "localExecutionSafetyMode": "explore",
+    },
+  )
+  if read_only_turn["result"]["pendingApprovals"]:
+    raise RuntimeError(
+      "Packaged read-only workspace write should not request approval. "
+      f"Items: {timeline_item_summary(read_only_turn['result']['items'])}"
+    )
+
+  output_path = support_dir / "workspace" / relative_path
+  if output_path.exists():
+    raise RuntimeError("Packaged read-only workspace write created a file.")
+
+  if not any(
+    item.get("attributes", {}).get("actionApprovalPolicy") == "blocked"
+    and item.get("attributes", {}).get("blockReason") == "readOnlyMode"
+    and item.get("attributes", {}).get("requiredPermission") == "file.write"
+    and item.get("attributes", {}).get("retryMessage") == message
+    for item in read_only_turn["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged read-only workspace write did not preserve retry recovery metadata. "
+      f"Items: {timeline_item_summary(read_only_turn['result']['items'])}"
+    )
+
+
+def validate_packaged_workspace_write_denial(
+  process: subprocess.Popen[str],
+  support_dir: Path,
+) -> None:
+  approval = request_packaged_workspace_write(
+    process,
+    25,
+    "docs/packaged-denied.txt",
+    "Denied packaged approval flow",
+  )
+
+  denied = send_runtime_request(
+    process,
+    26,
+    "approval/respond",
+    {
+      "approvalId": approval["id"],
+      "decision": "denied",
+    },
+  )
+  if not any(
+    item["kind"] == "approvalResolved"
+    and item["title"] == "Approval Denied"
+    and item.get("attributes", {}).get("decision") == "denied"
+    and item.get("attributes", {}).get("relativePath") == "docs/packaged-denied.txt"
+    for item in denied["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write denial did not resolve the approval as denied. "
+      f"Items: {timeline_item_summary(denied['result']['items'])}"
+    )
+  if any(item["title"] == "write_file result" for item in denied["result"]["items"]):
+    raise RuntimeError("Packaged workspace write denial still executed write_file.")
+
+  denied_path = support_dir / "workspace" / "docs" / "packaged-denied.txt"
+  if denied_path.exists():
+    raise RuntimeError("Packaged workspace write denial wrote a file.")
+
+
+def request_packaged_workspace_write(
+  process: subprocess.Popen[str],
+  request_id: int,
+  relative_path: str,
+  content: str,
+) -> dict:
+  write_turn = send_runtime_request(
+    process,
+    request_id,
+    "turn/start",
+    {
+      "threadId": "thread-1",
+      "message": f"Write {relative_path}: {content}",
+    },
+  )
+  pending_approvals = write_turn["result"]["pendingApprovals"]
+  if len(pending_approvals) != 1:
+    raise RuntimeError(
+      "Packaged workspace write should request one approval. "
+      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
+    )
+
+  approval = pending_approvals[0]
+  if approval["action"] != "write_file":
+    raise RuntimeError("Packaged workspace write requested the wrong approval action.")
+  if approval["relativePath"] != relative_path:
+    raise RuntimeError("Packaged workspace write approval had the wrong path.")
+  if not any(
+    item["kind"] == "diffArtifact"
+    and f"+++ b/{relative_path}" in item["content"]
+    for item in write_turn["result"]["items"]
+  ):
+    raise RuntimeError(
+      "Packaged workspace write did not expose a diff before approval. "
+      f"Items: {timeline_item_summary(write_turn['result']['items'])}"
+    )
+  return approval
+
+
+def validate_packaged_first_cowork_request(app_path: Path) -> None:
+  with (
+    tempfile.TemporaryDirectory(prefix="pith-packaged-first-cowork-") as support_root,
+    FakeNotionApiServer() as notion_api,
+  ):
     support_dir = Path(support_root)
     manifest_path, model_path = write_smoke_model_pack(support_dir)
     backend_path = write_deterministic_llama_backend_fixture(support_dir)
     web_search_fixture_path = write_web_search_fixture(support_dir)
+    runtime_environment = {
+      "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
+      "PITH_MODEL_PATH": str(model_path),
+      "PITH_LFM_MODEL_PATH": str(model_path),
+      "PITH_LLAMACPP_PATH": str(backend_path),
+      "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
+      "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
+      "PITH_PLUGIN_RUNNER_ENV_PITH_TEST_NOTION_API_BASE": notion_api.api_base,
+    }
     process = launch_runtime_process(
       app_path,
       support_dir,
-      {
-        "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
-        "PITH_MODEL_PATH": str(model_path),
-        "PITH_LFM_MODEL_PATH": str(model_path),
-        "PITH_LLAMACPP_PATH": str(backend_path),
-        "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
-        "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
-      },
+      runtime_environment,
     )
     try:
       initialize = send_runtime_request(
@@ -611,20 +1681,16 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
         "initialize",
         {
           "clientInfo": {
-            "name": "packaged-first-request-smoke",
+            "name": "packaged-first-cowork-smoke",
             "version": "0.1.0",
           }
         },
       )
       if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
-        raise RuntimeError("Packaged first-request initialize returned the wrong server name.")
+        raise RuntimeError("Packaged first cowork initialize returned the wrong server name.")
 
       model_health = send_runtime_request(process, 21, "model/health")
-      if model_health["result"]["status"] != "ready":
-        raise RuntimeError(
-          "Packaged first-request smoke did not resolve a ready local model: "
-          f"{model_health['result']}"
-        )
+      validate_ready_smoke_model_health(model_health, manifest_path, model_path)
 
       validate_packaged_runtime_workspace_bootstrap(
         process,
@@ -643,7 +1709,7 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
       )
       items = turn["result"]["items"]
       if not any(item["kind"] == "assistantMessage" for item in items):
-        raise RuntimeError("Packaged first local request did not produce an assistant item.")
+        raise RuntimeError("Packaged first cowork request did not produce an assistant item.")
       first_request_readiness = send_runtime_request(process, 23, "runtime/readiness")
       checks = {
         check["id"]: check["status"]
@@ -651,16 +1717,117 @@ def validate_packaged_first_local_request(app_path: Path) -> None:
       }
       if checks.get("firstRequest") != "ready":
         raise RuntimeError(
-          "Packaged first local request did not mark firstRequest ready: "
+          "Packaged first cowork request did not mark firstRequest ready: "
           f"{checks.get('firstRequest')}"
-        )
+      )
+      validate_daily_driver_stage(first_request_readiness["result"], "ready")
       validate_packaged_web_search_turn(process)
+      validate_packaged_workspace_write_approval(process, support_dir)
+      validate_packaged_mcp_plugin_command(process, notion_api)
+      process = validate_packaged_runtime_recovery(
+        process,
+        app_path,
+        support_dir,
+        runtime_environment,
+        manifest_path,
+        model_path,
+      )
       print(
-        "Packaged first local request smoke passed with deterministic local model "
+        "Packaged first cowork smoke passed with deterministic local model "
         f"under {support_dir}"
       )
     finally:
       terminate_process(process)
+
+
+def validate_packaged_runtime_recovery(
+  process: subprocess.Popen[str],
+  app_path: Path,
+  support_dir: Path,
+  runtime_environment: dict[str, str],
+  manifest_path: Path,
+  model_path: Path,
+) -> subprocess.Popen[str]:
+  kill_process(process)
+  recovered_process = launch_runtime_process(app_path, support_dir, runtime_environment)
+  try:
+    initialize = send_runtime_request(
+      recovered_process,
+      50,
+      "initialize",
+      {
+        "clientInfo": {
+          "name": "packaged-runtime-recovery-smoke",
+          "version": "0.1.0",
+        }
+      },
+    )
+    if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+      raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
+
+    model_health = send_runtime_request(recovered_process, 51, "model/health")
+    validate_ready_smoke_model_health(model_health, manifest_path, model_path)
+
+    workspace_current = send_runtime_request(recovered_process, 52, "workspace/current")
+    workspace = workspace_current["result"]["workspace"]
+    expected_workspace = (support_dir / "workspace").resolve()
+    actual_workspace = Path(workspace["rootPath"]).resolve()
+    if actual_workspace != expected_workspace:
+      raise RuntimeError(
+        "Packaged runtime recovery restored the wrong workspace: "
+        f"{workspace['rootPath']}"
+      )
+
+    recovered_thread = send_runtime_request(
+      recovered_process,
+      53,
+      "thread/read",
+      {
+        "threadId": "thread-1",
+      },
+    )
+    if recovered_thread["result"]["thread"]["title"] != "Packaged Runtime Smoke":
+      raise RuntimeError("Packaged runtime recovery did not restore the smoke thread.")
+
+    recovered_output = support_dir / "workspace" / "docs" / "packaged-output.txt"
+    if recovered_output.read_text(encoding="utf-8") != "Created from packaged approval flow":
+      raise RuntimeError("Packaged runtime recovery lost the approved workspace write.")
+
+    recovered_memory = send_runtime_request(recovered_process, 54, "memory/list")
+    if not any(
+      note["title"] == "Notion Publish Retry Needed"
+      and note["source"] == "plugin.notion-connector"
+      for note in recovered_memory["result"]["notes"]
+    ):
+      raise RuntimeError("Packaged runtime recovery lost the Notion retry memory.")
+    if not any(
+      note["title"] == "Notion Page Published"
+      and note["source"] == "plugin.notion-connector"
+      for note in recovered_memory["result"]["notes"]
+    ):
+      raise RuntimeError("Packaged runtime recovery lost the Notion publish memory.")
+
+    recovered_readiness = send_runtime_request(recovered_process, 55, "runtime/readiness")
+    validate_runtime_readiness(
+      recovered_readiness,
+      {
+        "localModel": "ready",
+        "workspace": "ready",
+        "thread": "ready",
+        "firstRequest": "ready",
+        "context": "ready",
+        "executionControls": "ready",
+        "plugins": "ready",
+        "boundedRuntime": "ready",
+      },
+      expected_status="ready",
+      workspace_open=True,
+      expected_daily_stage="ready",
+    )
+    return recovered_process
+  except Exception:
+    terminate_process(recovered_process)
+    raise
 
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:
@@ -684,11 +1851,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
 
       bootstrap = send_runtime_request(process, 2, "model/bootstrap")
       manifest_path = Path(bootstrap["result"]["manifestPath"])
-      require_file(manifest_path)
-      if manifest_path.suffix != ".json":
-        raise RuntimeError(f"Packaged runtime copied an invalid model manifest: {manifest_path}")
-      if (manifest_path.parent / "LFM2.5-350M-Q4_K_M.gguf").exists():
-        raise RuntimeError("Packaged runtime smoke unexpectedly found bundled model weights.")
+      validate_default_model_manifest(manifest_path)
 
       plugin_list = send_runtime_request(process, 3, "plugin/list")
       plugin_ids = {plugin["id"] for plugin in plugin_list["result"]["plugins"]}
@@ -698,11 +1861,10 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
           "Packaged runtime is missing bundled plugins "
           f"{', '.join(missing_plugins)}."
         )
-
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)
       validate_runtime_database(support_dir / "storage" / "pith.db")
-      validate_packaged_first_local_request(app_path)
+      validate_packaged_first_cowork_request(app_path)
       print(
         "Packaged runtime protocol smoke passed with model metadata and plugins "
         f"under {support_dir}"
@@ -742,6 +1904,35 @@ def print_packaged_app_success(
   )
 
 
+def write_packaged_smoke_receipt(
+  output_path: Path | None,
+  *,
+  package_metadata: dict,
+) -> None:
+  if output_path is None:
+    return
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  receipt = {
+    "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
+    "kind": PACKAGED_SMOKE_RECEIPT_KIND,
+    "result": "passed",
+    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+    "packageMetadata": package_metadata,
+    "journey": list(PACKAGED_SMOKE_JOURNEY),
+    "checks": [
+      {
+        "id": check_id,
+        "proof": PACKAGED_SMOKE_PROOF_BY_CHECK_ID[check_id],
+      }
+      for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
+    ],
+  }
+  output_path.write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+  )
+
+
 def main() -> int:
   args = parse_args()
   if sys.platform != "darwin":
@@ -749,7 +1940,7 @@ def main() -> int:
     return 0
 
   app_path = args.app_path.resolve()
-  validate_app_bundle(app_path)
+  package_metadata = validate_app_bundle(app_path)
   validate_packaged_runtime_protocol(app_path)
   before_runtime_pids = process_ids(RUNTIME_PROCESS_NAME)
   stability_duration = (
@@ -777,6 +1968,10 @@ def main() -> int:
             stability_duration,
           )
           validate_isolated_support_dir(support_dir)
+          write_packaged_smoke_receipt(
+            args.receipt_output,
+            package_metadata=package_metadata,
+          )
           print_packaged_app_success(app_process, launched_runtime_pids, support_dir)
           return 0
         time.sleep(0.2)

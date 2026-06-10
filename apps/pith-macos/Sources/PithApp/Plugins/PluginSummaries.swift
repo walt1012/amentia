@@ -113,6 +113,7 @@ struct PluginConnectorSummary: Identifiable, Hashable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let workflows: [PluginConnectorWorkflowSummary]
   let authStatus: String
   let credentialPresent: Bool
   let credentialSecretPresent: Bool
@@ -121,6 +122,33 @@ struct PluginConnectorSummary: Identifiable, Hashable {
   let credentialLabel: String?
   let authorizedAt: Int?
   let credentialUpdatedAt: Int?
+}
+
+struct PluginConnectorWorkflowSummary: Hashable {
+  let workflowID: String
+  let displayName: String
+  let connectorID: String
+  let service: String
+  let action: String
+  let maxAgentSteps: Int?
+  let stages: [String]
+  let statuses: [String]
+  let commandIDs: [String]
+
+  var commandCoverageLabel: String {
+    commandIDs.isEmpty
+      ? "no commands"
+      : "\(commandIDs.count) command\(commandIDs.count == 1 ? "" : "s")"
+  }
+
+  var stepBudgetLabel: String? {
+    maxAgentSteps.map { "up to \($0) steps" }
+  }
+
+  var workflowLabel: String {
+    ([displayName, action, commandCoverageLabel] + [stepBudgetLabel].compactMap { $0 })
+      .joined(separator: " / ")
+  }
 }
 
 struct PluginCommandSummary: Identifiable, Hashable {
@@ -147,9 +175,38 @@ struct PluginCommandExecutionSummary: Hashable {
   let kind: String
   let driver: String
   let entrypoint: String?
+  let workflowID: String?
+  let workflow: PluginCommandWorkflowSummary?
   let input: PluginCommandEnvelopeSummary?
   let output: PluginCommandEnvelopeSummary?
   let supported: Bool
+}
+
+struct PluginCommandWorkflowSummary: Hashable {
+  let workflowID: String
+  let displayName: String
+  let connectorID: String
+  let service: String
+  let action: String
+  let maxAgentSteps: Int?
+  let stages: [String]
+  let statuses: [String]
+  let commandIDs: [String]
+
+  var commandCoverageLabel: String {
+    commandIDs.isEmpty
+      ? "no commands"
+      : "\(commandIDs.count) command\(commandIDs.count == 1 ? "" : "s")"
+  }
+
+  var stepBudgetLabel: String? {
+    maxAgentSteps.map { "up to \($0) steps" }
+  }
+
+  var workflowLabel: String {
+    ([displayName, action, commandCoverageLabel] + [stepBudgetLabel].compactMap { $0 })
+      .joined(separator: " / ")
+  }
 }
 
 struct PluginCommandEnvelopeSummary: Hashable {

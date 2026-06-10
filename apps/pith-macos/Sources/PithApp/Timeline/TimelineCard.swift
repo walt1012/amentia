@@ -1,16 +1,21 @@
-import AppKit
 import SwiftUI
 
 struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
+  let proofSummary: TimelineProofSummary?
+  let approvalOutcomeSummary: TimelineApprovalOutcomeSummary?
+  let externalActionTitle: String?
+  let externalCopyActionTitle: String?
   let showsApprovalActions: Bool
   let showsPluginEnableAction: Bool
   let showsPluginAuthorizeAction: Bool
   let showsPluginInputAction: Bool
   let showsPluginRetryAction: Bool
+  let showsPluginFollowUpAction: Bool
   let showsPluginSourceAction: Bool
   let showsPluginRefreshAction: Bool
+  let localExecutionRecoveryTitle: String?
   let onSelect: () -> Void
   let onApprove: () -> Void
   let onDeny: () -> Void
@@ -18,8 +23,12 @@ struct TimelineCard: View {
   let onAuthorizePluginConnector: () -> Void
   let onRunPluginCommandWithInput: () -> Void
   let onRetry: () -> Void
+  let onRunPluginFollowUp: () -> Void
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
+  let onRecoverLocalExecution: () -> Void
+  let onOpenExternalAction: () -> Void
+  let onCopyExternalAction: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -56,6 +65,16 @@ struct TimelineCard: View {
             .background(sandboxBadge.tone.color.opacity(0.12))
             .clipShape(Capsule())
         }
+
+        ForEach(evidenceBadges, id: \.self) { badge in
+          Text(badge.label)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(badge.tone.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(badge.tone.color.opacity(0.12))
+            .clipShape(Capsule())
+        }
       }
 
       if let streamingProgressValue {
@@ -68,6 +87,26 @@ struct TimelineCard: View {
         .font(bodyFont)
         .foregroundColor(.secondary)
         .textSelection(.enabled)
+
+      if let contextReceiptSummary {
+        HStack(alignment: .top, spacing: 6) {
+          Image(systemName: "checkmark.circle")
+            .foregroundColor(.secondary)
+          Text(contextReceiptSummary)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .lineLimit(2)
+        }
+        .padding(.top, 2)
+      }
+
+      if let proofSummary {
+        proofSummaryView(proofSummary)
+      }
+
+      if let approvalOutcomeSummary {
+        approvalOutcomeView(approvalOutcomeSummary)
+      }
 
       if showsActionRow {
         HStack(spacing: 12) {
@@ -84,7 +123,7 @@ struct TimelineCard: View {
           }
 
           if showsPluginEnableAction {
-            Button("Enable Plugin") {
+            Button("Enable") {
               onEnablePlugin()
             }
             .buttonStyle(.borderedProminent)
@@ -98,7 +137,7 @@ struct TimelineCard: View {
           }
 
           if showsPluginInputAction {
-            Button("Run with Input") {
+            Button(pluginInputTitle) {
               onRunPluginCommandWithInput()
             }
             .buttonStyle(.bordered)
@@ -111,16 +150,44 @@ struct TimelineCard: View {
             .buttonStyle(.bordered)
           }
 
+          if showsPluginFollowUpAction {
+            Button(pluginFollowUpTitle) {
+              onRunPluginFollowUp()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
           if showsPluginSourceAction {
-            Button("Reveal Source") {
+            Button("Show Source") {
               onRevealPluginSource()
             }
             .buttonStyle(.bordered)
           }
 
           if showsPluginRefreshAction {
-            Button("Refresh Plugins") {
+            Button("Refresh") {
               onRefreshPlugins()
+            }
+            .buttonStyle(.bordered)
+          }
+
+          if let localExecutionRecoveryTitle {
+            Button(localExecutionRecoveryTitle) {
+              onRecoverLocalExecution()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
+          if let externalActionTitle {
+            Button(externalActionTitle) {
+              onOpenExternalAction()
+            }
+            .buttonStyle(.borderedProminent)
+          }
+
+          if let externalCopyActionTitle {
+            Button(externalCopyActionTitle) {
+              onCopyExternalAction()
             }
             .buttonStyle(.bordered)
           }
@@ -134,28 +201,23 @@ struct TimelineCard: View {
     }
     .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(backgroundColor)
-    .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .strokeBorder(isSelected ? Color.accentColor.opacity(0.45) : Color.clear, lineWidth: 1.5)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .softPanel(tone: entryTone, isSelected: isSelected)
   }
 
-  private var backgroundColor: Color {
+  private var entryTone: StatusTone {
     switch entry.kind {
     case .plan:
-      return Color.accentColor.opacity(0.12)
+      return .active
     case .tool:
-      return Color.green.opacity(0.12)
+      return .ready
     case .diff:
-      return Color.blue.opacity(0.1)
+      return .active
     case .approval:
-      return Color.yellow.opacity(0.16)
+      return .warning
     case .warning:
-      return Color.orange.opacity(0.16)
+      return .warning
     default:
-      return Color(NSColor.controlBackgroundColor)
+      return .neutral
     }
   }
 
@@ -165,16 +227,72 @@ struct TimelineCard: View {
       || showsPluginAuthorizeAction
       || showsPluginInputAction
       || showsPluginRetryAction
+      || showsPluginFollowUpAction
       || showsPluginSourceAction
       || showsPluginRefreshAction
+      || localExecutionRecoveryTitle != nil
+      || externalActionTitle != nil
+      || externalCopyActionTitle != nil
+  }
+
+  private func proofSummaryView(_ summary: TimelineProofSummary) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: "checkmark.seal")
+        .foregroundColor(.green)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(summary.title)
+          .font(.caption.weight(.semibold))
+        Text(summary.detail)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(10)
+    .background(Color.green.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+  }
+
+  private func approvalOutcomeView(_ summary: TimelineApprovalOutcomeSummary) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: summary.tone == .warning ? "hand.raised" : "checkmark.seal")
+        .foregroundColor(summary.tone.color)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(summary.title)
+          .font(.caption.weight(.semibold))
+        Text(summary.detail)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+    }
+    .padding(10)
+    .background(summary.tone.color.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
   }
 
   private var pluginRetryTitle: String {
-    if entry.attributes["commandInput"] != nil {
+    if entry.attributes["retryInputEditable"] == "true" {
+      return "Retry After Editing"
+    }
+    if entry.attributes["retryInput"] != nil || entry.attributes["commandInput"] != nil {
       return "Retry with Input"
     }
 
     return "Retry"
+  }
+
+  private var pluginInputTitle: String {
+    entry.attributes["retryInputEditable"] == "true" ? "Edit Retry Input" : "Run with Input"
+  }
+
+  private var pluginFollowUpTitle: String {
+    let title = entry.attributes["nextCommandLabel"]?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    if let title, !title.isEmpty {
+      return title
+    }
+    return "Continue"
   }
 
   private var kindLabel: String {
@@ -188,11 +306,11 @@ struct TimelineCard: View {
     case .plan:
       return "Plan"
     case .tool:
-      return "Tool"
+      return "Action"
     case .diff:
-      return "Diff"
+      return "Change"
     case .approval:
-      return "Approval"
+      return "Review"
     case .warning:
       return "Warning"
     }
@@ -240,7 +358,9 @@ struct TimelineCard: View {
       return preview
     }
 
-    return "\(preview)\n... \(lines.count - previewLimit) more line(s). Select this diff to inspect the full highlighted change."
+    let remainingLines = lines.count - previewLimit
+    let lineLabel = remainingLines == 1 ? "line" : "lines"
+    return "\(preview)\n... \(remainingLines) more \(lineLabel). Select this change to inspect the full detail."
   }
 
   private var streamingLabel: String? {
@@ -252,11 +372,11 @@ struct TimelineCard: View {
 
     switch streamingStatus {
     case "in_progress":
-      return progressLabel().map { "Streaming \($0)" } ?? "Streaming"
+      return progressLabel().map { "Working \($0)" } ?? "Working"
     case "completed":
-      return "Completed"
+      return "Done"
     case "cancelled":
-      return "Cancelled"
+      return "Stopped"
     default:
       return nil
     }
@@ -290,6 +410,14 @@ struct TimelineCard: View {
 
   private var sandboxBadge: TimelineSandboxBadgeSummary? {
     TimelineSandboxBadgePresenter.badge(attributes: entry.attributes)
+  }
+
+  private var evidenceBadges: [TimelineEvidenceBadgeSummary] {
+    TimelineEvidenceBadgePresenter.badges(attributes: entry.attributes)
+  }
+
+  private var contextReceiptSummary: String? {
+    TimelineContextReceiptPresenter.cardSummary(entry)
   }
 
   private func progressLabel() -> String? {

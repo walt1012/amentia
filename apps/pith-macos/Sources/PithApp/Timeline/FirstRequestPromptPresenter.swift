@@ -1,27 +1,36 @@
 import Foundation
 
 enum FirstRequestPromptPresenter {
+  static let firstAppOpenActionContractID = "map-plan-or-short-cowork-prompt"
   static let mapWorkspaceID = "map-workspace"
-  static let reviewChangesID = "review-changes"
+  static let planNextStepID = "plan-next-step"
+
+  static func firstAppOpenActionSummary() -> String {
+    "Choose Understand Project, Pick Next Step, or type a short cowork prompt."
+  }
+
+  static func firstAppOpenActionTrustSummary() -> String {
+    "first app-open action offers Understand Project, Pick Next Step, or a short cowork prompt"
+  }
 
   static func calloutSummary() -> String {
-    "Core setup is ready. Pick a short starter prompt or type your own first local request."
+    "Core setup is ready. \(firstAppOpenActionSummary())"
   }
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {
     guard let workspaceDisplayName, !workspaceDisplayName.isEmpty else {
-      return "Choose a workspace before starting the first local request."
+      return "Choose a workspace before starting the first cowork session."
     }
 
-    return "Pith will use \(workspaceDisplayName) as the working context. Short first requests work best for the local model."
+    return "Pith will use \(workspaceDisplayName) as the working context. Short, specific cowork prompts work best for the local model."
   }
 
   static func primaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
-    suggestion == nil ? nil : "Use Map Prompt"
+    suggestion?.title
   }
 
   static func secondaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
-    suggestion == nil ? nil : "Use Review Prompt"
+    suggestion?.title
   }
 
   static func suggestions(workspaceDisplayName: String?) -> [ComposerSuggestionSummary] {
@@ -29,13 +38,13 @@ enum FirstRequestPromptPresenter {
     return [
       ComposerSuggestionSummary(
         id: mapWorkspaceID,
-        title: "Map Workspace",
-        message: "Map \(workspaceName) briefly. Return: 1. key folders, 2. project flow, 3. one safe next step."
+        title: "Understand Project",
+        message: "Understand \(workspaceName) briefly. Return: 1. key folders, 2. project flow, 3. one safe next step."
       ),
       ComposerSuggestionSummary(
-        id: reviewChangesID,
-        title: "Review Changes",
-        message: "Review current changes in \(workspaceName). Return only: 1. highest-risk issue, 2. missing test, 3. safe fix."
+        id: planNextStepID,
+        title: "Pick Next Step",
+        message: "Help me choose the next useful step in \(workspaceName). Return only: 1. current situation, 2. safest next action, 3. what you need from me."
       ),
     ]
   }

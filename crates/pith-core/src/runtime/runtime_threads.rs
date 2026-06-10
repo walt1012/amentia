@@ -48,6 +48,14 @@ impl RuntimeThreadState {
     self.iter_mut().find(|thread| thread.id() == thread_id)
   }
 
+  pub(crate) fn remove(&mut self, thread_id: &str) -> Option<StoredThread> {
+    let index = self
+      .threads
+      .iter()
+      .position(|thread| thread.id() == thread_id)?;
+    Some(self.threads.remove(index))
+  }
+
   pub(crate) fn count_for_workspace(&self, workspace: &WorkspaceSummary) -> usize {
     self.iter_for_workspace(workspace).count()
   }

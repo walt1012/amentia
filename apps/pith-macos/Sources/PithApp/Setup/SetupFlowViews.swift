@@ -73,9 +73,7 @@ struct SetupModelChooser: View {
         }
       }
     }
-    .padding(10)
-    .background(Color.secondary.opacity(0.08))
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .softPanel()
   }
 }
 
@@ -91,7 +89,7 @@ private struct SetupModelOptionRow: View {
     Button(action: onSelect) {
       VStack(alignment: .leading, spacing: 5) {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-          Text(model.displayName)
+          Text(LocalModelDisplayPresenter.setupTitle(model))
             .font(.caption.weight(.semibold))
             .foregroundColor(.primary)
           if isDefault {
@@ -125,32 +123,18 @@ private struct SetupModelOptionRow: View {
       }
       .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06))
-      .overlay(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .stroke(
-            isSelected ? Color.accentColor.opacity(0.7) : Color.secondary.opacity(0.14),
-            lineWidth: 1
-          )
-      )
+      .softPanel(isSelected: isSelected)
     }
     .buttonStyle(.plain)
     .disabled(isDisabled)
   }
 
   private var detail: String {
-    let size = formattedByteCount(model.sizeBytes)
-    return "\(size) | \(model.license)"
+    LocalModelDisplayPresenter.setupMetadata(model)
   }
 
   private var fit: String {
     LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
-  }
-
-  private func formattedByteCount(_ byteCount: Int64) -> String {
-    let formatter = ByteCountFormatter()
-    formatter.countStyle = .file
-    return formatter.string(fromByteCount: byteCount)
   }
 }
 
@@ -216,8 +200,6 @@ struct SetupCallout: View {
         }
       }
     }
-    .padding(10)
-    .background(tone.color.opacity(0.10))
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .softPanel(tone: tone)
   }
 }

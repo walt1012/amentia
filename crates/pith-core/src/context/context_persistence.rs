@@ -1,5 +1,6 @@
 use anyhow::Result;
 use pith_memory::MemoryNote;
+use pith_storage::StoredWorkspaceChangeRecord;
 
 use crate::approval_types::PendingApproval;
 use crate::runtime_context::RuntimeContext;
@@ -31,5 +32,33 @@ impl RuntimeContext {
     decision: &str,
   ) -> Result<()> {
     self.persistence_state.resolve_approval(approval, decision)
+  }
+
+  pub(crate) fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
+    self
+      .persistence_state
+      .delete_approvals_for_thread(thread_id)
+  }
+
+  pub(crate) fn persist_workspace_change(
+    &self,
+    change: &StoredWorkspaceChangeRecord,
+  ) -> Result<()> {
+    self.persistence_state.save_workspace_change(change)
+  }
+
+  pub(crate) fn workspace_changes_for_thread(
+    &self,
+    thread_id: &str,
+  ) -> Result<Vec<StoredWorkspaceChangeRecord>> {
+    self
+      .persistence_state
+      .workspace_changes_for_thread(thread_id)
+  }
+
+  pub(crate) fn mark_workspace_change_reverted(&self, change_id: &str) -> Result<()> {
+    self
+      .persistence_state
+      .mark_workspace_change_reverted(change_id)
   }
 }

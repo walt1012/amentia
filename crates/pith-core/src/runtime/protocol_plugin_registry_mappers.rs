@@ -7,7 +7,8 @@ use pith_plugin_host::{
 };
 use pith_protocol::{
   PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
-  PluginCommandExecutionSummary, PluginCommandSummary, PluginConnectorSummary, PluginHookSummary,
+  PluginCommandExecutionSummary, PluginCommandSummary, PluginCommandWorkflowSummary,
+  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookSummary,
 };
 
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -54,6 +55,21 @@ pub(super) fn to_protocol_plugin_command(
       kind: execution.kind.clone(),
       driver: execution.driver.clone(),
       entrypoint: execution.entrypoint.clone(),
+      workflow_id: execution.workflow_id.clone(),
+      workflow: execution
+        .workflow
+        .as_ref()
+        .map(|workflow| PluginCommandWorkflowSummary {
+          workflow_id: workflow.workflow_id.clone(),
+          display_name: workflow.display_name.clone(),
+          connector_id: workflow.connector_id.clone(),
+          service: workflow.service.clone(),
+          action: workflow.action.clone(),
+          max_agent_steps: workflow.max_agent_steps,
+          stages: workflow.stages.clone(),
+          statuses: workflow.statuses.clone(),
+          command_ids: workflow.command_ids.clone(),
+        }),
       input: to_protocol_plugin_command_envelope(&execution.input),
       output: to_protocol_plugin_command_envelope(&execution.output),
       supported,
@@ -129,6 +145,21 @@ pub(super) fn to_protocol_plugin_connector(
     auth_required: connector.auth_required,
     auth_scopes: connector.auth_scopes,
     credential_store: connector.credential_store,
+    workflows: connector
+      .workflows
+      .into_iter()
+      .map(|workflow| PluginConnectorWorkflowSummary {
+        workflow_id: workflow.workflow_id,
+        display_name: workflow.display_name,
+        connector_id: workflow.connector_id,
+        service: workflow.service,
+        action: workflow.action,
+        max_agent_steps: workflow.max_agent_steps,
+        stages: workflow.stages,
+        statuses: workflow.statuses,
+        command_ids: workflow.command_ids,
+      })
+      .collect(),
     auth_status,
     credential_present,
     credential_secret_present,

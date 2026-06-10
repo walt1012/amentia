@@ -31,7 +31,7 @@ enum SetupProgressPresenter {
       return "Next: \(nextStep)"
     }
     if snapshot.isWaitingForFirstMessage {
-      return snapshot.hasDraft ? "Draft ready" : "Next: First request"
+      return snapshot.hasDraft ? "Draft ready" : "Next: First prompt"
     }
 
     return "Ready"
@@ -59,11 +59,11 @@ enum SetupProgressPresenter {
   private static func nextStep(_ snapshot: SetupProgressSnapshot) -> String? {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch Runtime"
+      return "Start Local Service"
     case .launching:
-      return "Runtime Starting"
+      return "Starting Local Service"
     case .failed:
-      return "Relaunch Runtime"
+      return "Restart Local Service"
     case .ready:
       if !snapshot.isLocalModelReady {
         return modelNextStep(snapshot.modelReadinessDetail)
@@ -72,10 +72,10 @@ enum SetupProgressPresenter {
         return "Open Workspace"
       }
       if !snapshot.hasRuntimeThreadSelection {
-        return "Create Thread"
+        return "Create Session"
       }
       if snapshot.isWaitingForFirstMessage {
-        return snapshot.hasDraft ? "Send First Request" : "Choose First Prompt"
+        return snapshot.hasDraft ? "Send Prompt" : "Pick Start"
       }
 
       return nil
@@ -96,8 +96,8 @@ enum SetupProgressPresenter {
       return "Finish Turn"
     case "Select":
       return "Use Model"
-    case "Metadata":
-      return "Install Metadata"
+    case "Repair":
+      return "Repair Model"
     case "Choose":
       return "Choose Model"
     default:

@@ -13,7 +13,7 @@ struct PluginRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(plugin.displayName)
             .font(.subheadline.weight(.semibold))
-          Text("\(plugin.version) | \(plugin.provenance) | \(plugin.status)")
+          Text("\(plugin.version) | \(plugin.provenance) | \(displayStatus)")
             .font(.caption2)
             .foregroundColor(.secondary)
         }
@@ -32,7 +32,7 @@ struct PluginRow: View {
       }
 
       if canRemove {
-        Button("Remove Local Plugin") {
+        Button("Remove") {
           onRemove()
         }
         .buttonStyle(.bordered)
@@ -43,14 +43,14 @@ struct PluginRow: View {
         .foregroundColor(.secondary)
 
       if !plugin.capabilities.isEmpty {
-        Text("Capabilities: \(plugin.capabilities.joined(separator: ", "))")
+        Text("Can use: \(plugin.capabilities.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
 
       if !plugin.permissions.isEmpty {
-        Text("Permissions: \(plugin.permissions.joined(separator: ", "))")
+        Text("Needs: \(plugin.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -64,12 +64,21 @@ struct PluginRow: View {
       }
 
       if let validationHint = plugin.validationHint {
-        Text("Repair: \(validationHint)")
+        Text("Fix: \(validationHint)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(tone: plugin.status == "ready" ? .neutral : .warning)
+  }
+
+  private var displayStatus: String {
+    switch plugin.status {
+    case "ready":
+      return "Ready"
+    default:
+      return plugin.status
+    }
   }
 }

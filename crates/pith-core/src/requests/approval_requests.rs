@@ -8,6 +8,7 @@ use crate::plugin_commands::prepare_approved_plugin_command_snapshot;
 use crate::plugin_permissions::granted_permission_sources;
 use crate::request_params::parse_required_params;
 use crate::request_state::{PreparedApprovalRespond, PreparedApprovalSnapshot};
+use crate::requests::approval_agent_context::ApprovalAgentContext;
 use crate::runtime_context::RuntimeContext;
 
 pub(crate) fn handle_approval_respond(
@@ -53,7 +54,7 @@ pub fn prepare_approval_respond(
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
   let plugins = context.plugin_state.snapshot_catalog();
 
-  let workspace = {
+  let (workspace, agent_context) = {
     let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
       return Err(JsonRpcResponse::error(
         request.id,
@@ -69,7 +70,8 @@ pub fn prepare_approval_respond(
         "Open a workspace for this thread before resolving approvals",
       ));
     };
-    workspace
+    let agent_context = ApprovalAgentContext::from_thread_items(&approval, thread.items());
+    (workspace, agent_context)
   };
   if context
     .execution_state
@@ -114,6 +116,7 @@ pub fn prepare_approval_respond(
       approval,
       decision,
       workspace,
+      agent_context,
       model_runtime,
       cancellation,
       memory_notes,

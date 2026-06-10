@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is in Milestone 3 daily-driver hardening for `Pith`.
+This repository is in Milestone 10 daily-driver development for `Pith`.
 
 ## Project Rules
 
@@ -29,7 +29,7 @@ The remote CI suite owns:
 
 - Rust formatting, clippy, tests, and runtime smoke coverage
 - model pack manifest validation
-- Intel macOS Swift package builds
+- Intel macOS Swift package builds, package validation, and DMG smoke coverage
 
 ## CI Checklist
 
@@ -61,4 +61,8 @@ The current repository target is a stable local daily-driver loop:
 - native sandbox diagnostics and bounded subprocess execution
 - plugin metadata, discovery, permissions, and visibility foundations
 
-Milestone 4 can add real plugin execution contracts and third-party connectors after Milestone 3 is stable.
+The active milestone focuses on making one local cowork loop excellent:
+first-run setup, actionable context receipts, safe recovery from blocked local
+actions, packaged-app proof, and release readiness. Keep broad connector
+expansion, marketplace work, generic local RAG, remote MCP transport, and
+multi-agent orchestration out of scope until that loop is excellent.

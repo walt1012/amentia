@@ -47,7 +47,7 @@ extension AppViewModel {
 
   func pluginRefreshDisabledReason() -> String? {
     if runtimeState != .ready {
-      return "Runtime is not ready."
+      return "Local service is not ready."
     }
     if hasActiveOrPendingTurn() {
       return "Finish or cancel the active task first."

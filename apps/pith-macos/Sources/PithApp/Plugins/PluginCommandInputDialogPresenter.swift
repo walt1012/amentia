@@ -2,35 +2,60 @@ import AppKit
 import Foundation
 
 enum PluginCommandInputDialogPresenter {
-  static func commandInput(command: PluginCommandSummary) -> String? {
+  static func commandInput(
+    command: PluginCommandSummary,
+    initialValue: String? = nil,
+    informativeText: String? = nil
+  ) -> String? {
     let alert = NSAlert()
     alert.alertStyle = .informational
     alert.messageText = "Run \(command.title) With Input"
-    alert.informativeText = inputPrompt(command)
+    alert.informativeText = inputPrompt(command, override: informativeText)
 
-    let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
-    textField.placeholderString = command.requiresPlainInput
-      ? "Required command input"
-      : "Optional command input"
-    alert.accessoryView = textField
+    let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 440, height: 150))
+    textView.isRichText = false
+    textView.isAutomaticQuoteSubstitutionEnabled = false
+    textView.isAutomaticDashSubstitutionEnabled = false
+    textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+    textView.string = initialValue ?? ""
+
+    let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 440, height: 150))
+    scrollView.borderType = .bezelBorder
+    scrollView.hasVerticalScroller = true
+    scrollView.documentView = textView
+    alert.accessoryView = scrollView
     alert.addButton(withTitle: "Run")
     alert.addButton(withTitle: "Cancel")
-    alert.window.initialFirstResponder = textField
+    alert.window.initialFirstResponder = textView
 
     guard alert.runModal() == .alertFirstButtonReturn else {
       return nil
     }
 
-    return textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    return textView.string.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
-  private static func inputPrompt(_ command: PluginCommandSummary) -> String {
+  private static func inputPrompt(
+    _ command: PluginCommandSummary,
+    override: String?
+  ) -> String {
     let fieldDescription = command.execution?
       .input?
       .fields
       .first(where: { $0.name == "input" })?
       .description
 
-    return fieldDescription ?? "Pass a short text input to this plugin command."
+    var prompt = override
+      ?? fieldDescription
+      ?? "Pass a short text input to this plugin command."
+    if isNotionPublishCommand(command) {
+      prompt += "\n\nInput: a valid parentPageId, Notion page URL, or parent alias, with optional title and body. You can paste only the parent page URL to use the default title. The parent page must be shared with the Notion integration before publishing. Pith still requests approval before the remote write."
+    }
+    return prompt
+  }
+
+  private static func isNotionPublishCommand(_ command: PluginCommandSummary) -> Bool {
+    command.id.hasSuffix("::notion.publish-page-draft")
+      || command.execution?.kind == "mcp.notion.publishPageDraft"
   }
 }

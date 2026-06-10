@@ -197,6 +197,10 @@ extension AppViewModel {
     LocalModelOperationPresenter.managerSummary(localModelOperationSnapshot())
   }
 
+  func modelRecoverySummary() -> String {
+    LocalModelOperationPresenter.recoverySummary(localModelOperationSnapshot())
+  }
+
   func localModelManagerRuleSummary() -> String {
     LocalModelStatusPresenter.managerRuleSummary(localModelStatusSnapshot())
   }
@@ -233,8 +237,11 @@ extension AppViewModel {
     LocalModelStatusPresenter.downloadButtonTitle(model, snapshot: localModelStatusSnapshot())
   }
 
-  func localModelTagSummary(_ model: LocalModelSummary) -> String {
-    LocalModelStatusPresenter.tagSummary(model)
+  func localModelFitSummary(_ model: LocalModelSummary) -> String {
+    LocalModelStatusPresenter.fitSummary(
+      model,
+      defaultModelID: LocalModelCatalog.defaultFirstUseModelID
+    )
   }
 
   func localModelPathSummary(_ model: LocalModelSummary) -> String {

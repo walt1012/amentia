@@ -8,6 +8,21 @@ enum PluginManagerSection: String, CaseIterable, Identifiable {
   case hooks = "Hooks"
 
   var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .catalog:
+      return "Installed"
+    case .access:
+      return "Permissions"
+    case .connectors:
+      return "Connections"
+    case .commands:
+      return "Actions"
+    case .hooks:
+      return "Checks"
+    }
+  }
 }
 
 struct PluginManagerSectionView: View {

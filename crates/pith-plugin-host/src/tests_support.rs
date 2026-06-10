@@ -28,6 +28,7 @@ pub(crate) fn manifest(capabilities: Vec<&str>, permissions: Vec<&str>) -> Plugi
     skills: vec![],
     mcp_servers: vec![],
     app_connectors: vec![],
+    connector_workflows: vec![],
     auth_policy: None,
     default_enabled: true,
   }

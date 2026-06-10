@@ -1,0 +1,99 @@
+import AppKit
+import Foundation
+
+@MainActor
+extension AppViewModel {
+  func timelineExternalAction(from entry: TimelineEntry) -> TimelineExternalActionSummary? {
+    TimelineExternalActionPresenter.primaryAction(
+      attributes: entry.attributes,
+      workspaceRoot: workspace?.rootPath
+    )
+  }
+
+  func timelineProofSummary(from entry: TimelineEntry) -> TimelineProofSummary? {
+    TimelineExternalActionPresenter.proofSummary(attributes: entry.attributes)
+  }
+
+  func timelineApprovalOutcomeSummary(
+    from entry: TimelineEntry
+  ) -> TimelineApprovalOutcomeSummary? {
+    guard entry.kind == .approval else {
+      return nil
+    }
+
+    return TimelineApprovalOutcomePresenter.summary(attributes: entry.attributes)
+  }
+
+  func localExecutionRecoveryAction(
+    from entry: TimelineEntry
+  ) -> TimelineLocalExecutionRecoverySummary? {
+    TimelineLocalExecutionRecoveryPresenter.recoveryAction(
+      attributes: entry.attributes,
+      currentMode: selectedLocalExecutionSafetyMode
+    )
+  }
+
+  func recoverLocalExecutionMode(from entry: TimelineEntry) {
+    guard let action = localExecutionRecoveryAction(from: entry) else {
+      runtimeDetail = "Local execution recovery is unavailable for this timeline item."
+      return
+    }
+
+    selectLocalExecutionSafetyMode(action.targetMode)
+    if restoreLocalExecutionRetryDraft(action.retryMessage) {
+      runtimeDetail = "\(action.detail) Review the restored prompt, then send it when ready."
+      return
+    }
+
+    runtimeDetail = "\(action.detail) Retry the request when ready."
+  }
+
+  private func restoreLocalExecutionRetryDraft(_ message: String?) -> Bool {
+    guard let message,
+          !message.isEmpty
+    else {
+      return false
+    }
+
+    if trimmedDraftMessage.isEmpty || trimmedDraftMessage == message {
+      draftMessage = message
+      restoredLocalExecutionDraftMessage = message
+      return true
+    }
+
+    return false
+  }
+
+  func openTimelineExternalAction(from entry: TimelineEntry) {
+    guard let action = timelineExternalAction(from: entry) else {
+      runtimeDetail = "External timeline action is unavailable."
+      return
+    }
+
+    if action.url.isFileURL {
+      runtimeDetail = FileRevealService.revealFilePath(
+        action.url.path,
+        successDetail: "Revealed timeline source: \(action.title)."
+      )
+      return
+    }
+
+    if NSWorkspace.shared.open(action.url) {
+      runtimeDetail = "Opened external proof: \(action.title)."
+    } else {
+      runtimeDetail = "Could not open external proof: \(action.url.absoluteString)."
+    }
+  }
+
+  func copyTimelineExternalActionURL(from entry: TimelineEntry) {
+    guard let action = timelineExternalAction(from: entry) else {
+      runtimeDetail = "External timeline action is unavailable."
+      return
+    }
+
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(action.copyValue ?? action.url.absoluteString, forType: .string)
+    runtimeDetail = "Copied timeline action target: \(action.title)."
+  }
+}

@@ -44,3 +44,14 @@ pub(super) fn resolve_approval(
 
   store.resolve_approval(&stored_approval_record(approval.clone()), decision)
 }
+
+pub(super) fn delete_approvals_for_thread(
+  store: Option<&RuntimeStore>,
+  thread_id: &str,
+) -> Result<usize> {
+  let Some(store) = store else {
+    return Ok(0);
+  };
+
+  store.delete_approvals_for_thread(thread_id)
+}

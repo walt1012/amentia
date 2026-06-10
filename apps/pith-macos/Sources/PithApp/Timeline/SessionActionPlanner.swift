@@ -20,16 +20,16 @@ enum SessionActionPlanner {
   static func runtimeLaunchButtonTitle(_ snapshot: SessionActionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .ready, .failed:
-      return "Relaunch Runtime"
+      return "Restart Local Service"
     case .launching:
-      return "Launching Runtime"
+      return "Starting Local Service"
     case .disconnected:
-      return "Launch Runtime"
+      return "Start Local Service"
     }
   }
 
   static func runtimePrimaryActionTitle(_ snapshot: SessionActionSnapshot) -> String? {
-    canCancelActiveTurn(snapshot) ? "Cancel Execution" : nil
+    canCancelActiveTurn(snapshot) ? "Cancel Work" : nil
   }
 
   static func canRunRuntimePrimaryAction(_ snapshot: SessionActionSnapshot) -> Bool {

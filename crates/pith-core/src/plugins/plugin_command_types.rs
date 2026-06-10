@@ -41,6 +41,19 @@ impl PluginCommandSnapshot {
   pub(crate) fn command_id(&self) -> &str {
     &self.command.command_id
   }
+
+  pub(crate) fn uses_connector(&self) -> bool {
+    !self.connector_refs.is_empty()
+  }
+
+  pub(crate) fn workflow_max_agent_steps(&self) -> Option<usize> {
+    self
+      .command
+      .execution
+      .as_ref()
+      .and_then(|execution| execution.workflow.as_ref())
+      .and_then(|workflow| workflow.max_agent_steps)
+  }
 }
 
 #[derive(Debug, Clone)]

@@ -7,6 +7,18 @@ extension AppViewModel {
   }
 
   func runPluginCommandWithInput(commandID: String) {
+    runPluginCommandWithInput(
+      commandID: commandID,
+      initialInput: nil,
+      informativeText: nil
+    )
+  }
+
+  private func runPluginCommandWithInput(
+    commandID: String,
+    initialInput: String?,
+    informativeText: String?
+  ) {
     guard let command = pluginCommands.first(where: { $0.id == commandID }) else {
       runtimeDetail = "Plugin command is not loaded."
       return
@@ -31,7 +43,11 @@ extension AppViewModel {
       appendBlockedPluginCommand(command, detail: detail)
       return
     }
-    guard let input = PluginCommandInputDialogPresenter.commandInput(command: command) else {
+    guard let input = PluginCommandInputDialogPresenter.commandInput(
+      command: command,
+      initialValue: initialInput,
+      informativeText: informativeText
+    ) else {
       runtimeDetail = "Plugin command input was cancelled."
       return
     }
@@ -45,13 +61,16 @@ extension AppViewModel {
 
   func canRetryPluginCommand(from entry: TimelineEntry) -> Bool {
     guard isPluginCommandRetryableEntry(entry),
-          let commandID = entry.attributes["commandId"]
+          let commandID = pluginRetryCommandID(from: entry)
     else {
       return false
     }
 
     let snapshot = pluginActionSnapshot()
-    if entry.attributes["commandInput"] == nil {
+    if pluginRetryInputEditable(from: entry) {
+      return false
+    }
+    if pluginRetryInput(from: entry) == nil {
       return PluginActionPlanner.directCommandRunDisabledReason(
         commandID: commandID,
         snapshot: snapshot
@@ -62,12 +81,15 @@ extension AppViewModel {
   }
 
   func canRunPluginCommandWithInput(from entry: TimelineEntry) -> Bool {
-    guard isPluginCommandIssueEntry(entry),
-          entry.attributes["commandInput"] == nil,
-          let commandID = entry.attributes["commandId"],
+    guard (isPluginCommandIssueEntry(entry) || isPluginCommandRetryableEntry(entry)),
+          let commandID = pluginRetryCommandID(from: entry),
           let command = pluginCommands.first(where: { $0.id == commandID }),
           command.requiresPlainInput
     else {
+      return false
+    }
+
+    guard pluginRetryInput(from: entry) == nil || pluginRetryInputEditable(from: entry) else {
       return false
     }
 
@@ -79,25 +101,73 @@ extension AppViewModel {
 
   func runPluginCommandWithInput(from entry: TimelineEntry) {
     guard canRunPluginCommandWithInput(from: entry),
-          let commandID = entry.attributes["commandId"]
+          let commandID = pluginRetryCommandID(from: entry)
     else {
       runtimeDetail = "Plugin command input run is unavailable."
       return
     }
 
-    runPluginCommandWithInput(commandID: commandID)
+    runPluginCommandWithInput(
+      commandID: commandID,
+      initialInput: pluginRetryInput(from: entry),
+      informativeText: pluginRetryInputHint(from: entry)
+    )
   }
 
   func retryPluginCommand(from entry: TimelineEntry) {
     guard canRetryPluginCommand(from: entry),
-          let commandID = entry.attributes["commandId"]
+          let commandID = pluginRetryCommandID(from: entry)
     else {
       runtimeDetail = "Plugin command retry is unavailable."
       return
     }
 
     pluginManagerSection = .commands
-    runPluginCommand(commandID: commandID, input: entry.attributes["commandInput"])
+    runPluginCommand(commandID: commandID, input: pluginRetryInput(from: entry))
+  }
+
+  func canRunPluginFollowUp(from entry: TimelineEntry) -> Bool {
+    guard let commandID = pluginFollowUpCommandID(from: entry),
+          let command = pluginCommands.first(where: { $0.id == commandID })
+    else {
+      return false
+    }
+
+    let snapshot = pluginActionSnapshot()
+    if pluginFollowUpInput(from: entry) != nil {
+      return PluginActionPlanner.canRunCommand(commandID: commandID, snapshot: snapshot)
+    }
+    if command.acceptsPlainInput {
+      return PluginActionPlanner.canRunCommandWithInput(
+        commandID: commandID,
+        snapshot: snapshot
+      )
+    }
+
+    return PluginActionPlanner.directCommandRunDisabledReason(
+      commandID: commandID,
+      snapshot: snapshot
+    ) == nil
+  }
+
+  func runPluginFollowUp(from entry: TimelineEntry) {
+    guard canRunPluginFollowUp(from: entry),
+          let commandID = pluginFollowUpCommandID(from: entry)
+    else {
+      runtimeDetail = "Plugin follow-up is unavailable."
+      return
+    }
+
+    pluginManagerSection = .commands
+    if let input = pluginFollowUpInput(from: entry) {
+      runPluginCommand(commandID: commandID, input: input)
+    } else {
+      runPluginCommandWithInput(
+        commandID: commandID,
+        initialInput: pluginFollowUpInputTemplate(from: entry),
+        informativeText: pluginFollowUpInputHint(from: entry)
+      )
+    }
   }
 
   func canRunPluginCommand(commandID: String) -> Bool {

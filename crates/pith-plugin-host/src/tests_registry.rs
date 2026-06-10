@@ -193,7 +193,8 @@ fn build_capability_registry_reports_mcp_server_status() {
 fn build_connector_registry_lists_disabled_third_party_connectors() {
   let plugin_root = create_temp_plugin_root("connector-registry");
   let plugin_dir = plugin_root.join("notion-connector");
-  fs::create_dir_all(&plugin_dir).expect("create connector plugin dir");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create connector plugin dir");
   fs::write(
     plugin_dir.join("pith-plugin.json"),
     r#"{
@@ -202,7 +203,7 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
   "displayName": "Notion Connector",
   "description": "Connector plugin",
   "author": { "name": "Pith" },
-  "capabilities": [],
+  "capabilities": ["command:notion.prepare-page-draft"],
   "permissions": ["network.outbound", "mcp.connect"],
   "appConnectors": [
     {
@@ -218,10 +219,37 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
     "scopes": ["read_content", "insert_content"],
     "credentialStore": "local"
   },
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "maxAgentSteps": 5,
+      "stages": ["draftPrepared", "completed"],
+      "statuses": ["prepared", "completed"]
+    }
+  ],
   "defaultEnabled": false
 }"#,
   )
   .expect("write connector manifest");
+  fs::write(
+    commands_dir.join("notion.prepare-page-draft.json"),
+    r#"{
+  "title": "Prepare Notion Page Draft",
+  "description": "Prepare a Notion page draft.",
+  "prompt": "Prepare the page draft.",
+  "execution": {
+    "kind": "mcp.notion.preparePageDraft",
+    "driver": "mcp",
+    "entrypoint": "notion.preparePageDraft",
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
   let plugins =
     discover_plugins_in_roots(std::slice::from_ref(&plugin_root)).expect("discover connector");
 
@@ -240,6 +268,19 @@ fn build_connector_registry_lists_disabled_third_party_connectors() {
     vec!["read_content".to_string(), "insert_content".to_string()]
   );
   assert_eq!(connectors[0].credential_store.as_deref(), Some("local"));
+  assert_eq!(connectors[0].workflows.len(), 1);
+  assert_eq!(connectors[0].workflows[0].workflow_id, "notion.create-page");
+  assert_eq!(
+    connectors[0].workflows[0].display_name,
+    "Notion Create Page"
+  );
+  assert_eq!(connectors[0].workflows[0].service, "notion");
+  assert_eq!(connectors[0].workflows[0].action, "createPage");
+  assert_eq!(connectors[0].workflows[0].max_agent_steps, Some(5));
+  assert_eq!(
+    connectors[0].workflows[0].command_ids,
+    vec!["notion-connector::notion.prepare-page-draft".to_string()]
+  );
 }
 
 #[test]
@@ -468,6 +509,234 @@ fn build_command_registry_applies_default_execution_contract() {
   assert_eq!(execution.output.fields[2].name, "items");
   assert!(!execution.output.fields[2].required);
   assert_eq!(execution.output.fields[3].name, "memoryNotes");
+}
+
+#[test]
+fn build_command_registry_requires_declared_connector_workflow() {
+  let plugin_root = create_temp_plugin_root("command-workflow-contract");
+  let plugin_dir = plugin_root.join("notion-runner");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "notion-runner",
+  "version": "0.1.0",
+  "displayName": "Notion Runner",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:notion.publish-page",
+    "connector:notion"
+  ],
+  "permissions": [
+    "network.outbound"
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  fs::write(
+    commands_dir.join("notion.publish-page.json"),
+    r#"{
+  "title": "Publish Notion Page",
+  "description": "Publish a Notion page.",
+  "prompt": "Publish the page.",
+  "execution": {
+    "kind": "mcp.notion.publishPage",
+    "driver": "mcp",
+    "entrypoint": "notion.publishPage",
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page"
+  }
+}"#,
+  )
+  .expect("write command definition");
+
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+  let commands = build_command_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert_eq!(commands.len(), 1);
+  assert_eq!(
+    commands[0].manifest_error.as_deref(),
+    Some("Plugin command `notion.publish-page` references undeclared connector workflow `notion.create-page`.")
+  );
+}
+
+#[test]
+fn build_command_registry_accepts_declared_connector_workflow() {
+  let plugin_root = create_temp_plugin_root("command-workflow-ready");
+  let plugin_dir = plugin_root.join("notion-runner");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "notion-runner",
+  "version": "0.1.0",
+  "displayName": "Notion Runner",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:notion.publish-page"
+  ],
+  "permissions": [
+    "network.outbound"
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    }
+  ],
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "maxAgentSteps": 5,
+      "stages": ["draftPrepared", "completed"],
+      "statuses": ["prepared", "completed"]
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  fs::write(
+    commands_dir.join("notion.publish-page.json"),
+    r#"{
+  "title": "Publish Notion Page",
+  "description": "Publish a Notion page.",
+  "prompt": "Publish the page.",
+  "execution": {
+    "kind": "mcp.notion.publishPage",
+    "driver": "mcp",
+    "entrypoint": "notion.publishPage",
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page"
+  }
+}"#,
+  )
+  .expect("write command definition");
+
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+  let commands = build_command_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  let execution = commands[0]
+    .execution
+    .as_ref()
+    .expect("command execution contract");
+  assert_eq!(commands[0].manifest_error, None);
+  assert_eq!(execution.workflow_id.as_deref(), Some("notion.create-page"));
+  let workflow = execution.workflow.as_ref().expect("workflow contract");
+  assert_eq!(workflow.display_name, "Notion Create Page");
+  assert_eq!(workflow.connector_id, "notion");
+  assert_eq!(workflow.service, "notion");
+  assert_eq!(workflow.action, "createPage");
+  assert_eq!(workflow.max_agent_steps, Some(5));
+  assert_eq!(
+    workflow.stages,
+    vec!["draftPrepared".to_string(), "completed".to_string()]
+  );
+  assert_eq!(
+    workflow.statuses,
+    vec!["prepared".to_string(), "completed".to_string()]
+  );
+  assert_eq!(
+    workflow.command_ids,
+    vec!["notion-runner::notion.publish-page".to_string()]
+  );
+}
+
+#[test]
+fn build_command_registry_rejects_workflow_bound_to_wrong_connector() {
+  let plugin_root = create_temp_plugin_root("command-workflow-wrong-connector");
+  let plugin_dir = plugin_root.join("notion-runner");
+  let commands_dir = plugin_dir.join("commands");
+  fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::write(
+    plugin_dir.join("pith-plugin.json"),
+    r#"{
+  "name": "notion-runner",
+  "version": "0.1.0",
+  "displayName": "Notion Runner",
+  "description": "Test plugin",
+  "author": { "name": "Pith" },
+  "capabilities": [
+    "command:notion.publish-page"
+  ],
+  "permissions": [
+    "network.outbound"
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    },
+    {
+      "id": "wrong-connector",
+      "displayName": "Wrong Connector",
+      "service": "wrong-connector"
+    }
+  ],
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "stages": ["draftPrepared", "completed"],
+      "statuses": ["prepared", "completed"]
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  fs::write(
+    commands_dir.join("notion.publish-page.json"),
+    r#"{
+  "title": "Publish Notion Page",
+  "description": "Publish a Notion page.",
+  "prompt": "Publish the page.",
+  "execution": {
+    "kind": "mcp.notion.publishPage",
+    "driver": "mcp",
+    "entrypoint": "notion.publishPage",
+    "connectors": ["wrong-connector"],
+    "workflowId": "notion.create-page"
+  }
+}"#,
+  )
+  .expect("write command definition");
+
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+  let commands = build_command_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert_eq!(commands.len(), 1);
+  assert_eq!(
+    commands[0].manifest_error.as_deref(),
+    Some(
+      "Plugin command `notion.publish-page` workflow `notion.create-page` is not bound to connector `notion`."
+    )
+  );
 }
 
 #[test]

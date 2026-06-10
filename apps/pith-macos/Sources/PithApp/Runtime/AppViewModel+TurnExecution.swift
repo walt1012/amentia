@@ -20,7 +20,11 @@ extension AppViewModel {
         localExecutionRequests.clearLocalWorkRequest(requestID: requestID)
       }
       do {
-        let result = try await runtimeBridge.startTurn(threadID: threadID, message: message)
+        let result = try await runtimeBridge.startTurn(
+          threadID: threadID,
+          message: message,
+          localExecutionSafetyMode: selectedLocalExecutionSafetyMode
+        )
         await applyRuntimeTurnResult(result)
       } catch {
         if Task.isCancelled {

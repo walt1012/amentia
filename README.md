@@ -53,14 +53,16 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestones 1-4 are closed on the active development branch. The current focus is Milestone 5:
-daily-driver hardening for the first-run model download, workspace flow, web search, sandbox,
-approvals, plugin recovery, and x86_64 macOS package path.
+Milestones 1-9 are closed on the active development branch. Pith now has the
+daily-driver cowork foundation: first-use model setup, workspace flow, Web
+Search, sandbox visibility, approvals, compact context receipts, actionable
+source/file evidence, plugin recovery, Notion connector proof, memory capture,
+bounded local execution, and the x86_64 macOS DMG package path.
 
-The active branch includes guided local model choice, download, and activation, pause/continue/cancel
-with persisted recovery state, workspace-bound thread filtering, bounded shell/model/web-search
-execution, native sandbox diagnostics, progressive inspector disclosure, typed plugin command
-contracts, and bounded local `stdio` or MCP stdio plugin runners.
+The current focus is Milestone 10: make the single local cowork loop feel
+complete before adding another connector. Work should improve first-run setup,
+receipt/action recovery, packaged-app reliability, and release readiness rather
+than broad marketplace, generic RAG, or multi-agent scope.
 
 Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
 

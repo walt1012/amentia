@@ -111,6 +111,111 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     XCTAssertTrue(startPlan.runtimeDetail.hasPrefix("Continuing"))
   }
 
+  func testLaunchValidationRejectsReplacedModel() throws {
+    let rootURL = try temporaryDirectory()
+    defer {
+      try? FileManager.default.removeItem(at: rootURL)
+    }
+
+    let modelURL = rootURL
+      .appendingPathComponent("catalog", isDirectory: true)
+      .appendingPathComponent("launch-integrity-proof", isDirectory: true)
+      .appendingPathComponent("launch-integrity-proof.gguf")
+    let expectedSizeBytes: Int64 = 64 * 1024 * 1024
+    let expectedSHA256 = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes)
+    let model = localModelSummary(
+      modelURL: modelURL,
+      sizeBytes: expectedSizeBytes,
+      sha256: expectedSHA256
+    )
+    let item = LocalModelCatalogItem(
+      id: model.id,
+      displayName: model.displayName,
+      description: model.description,
+      fileName: model.fileName,
+      downloadURL: model.downloadURL,
+      homepage: model.homepage,
+      sizeBytes: model.sizeBytes,
+      sha256: model.sha256,
+      contextSize: model.contextSize,
+      modelContextSize: model.modelContextSize,
+      maxOutputTokens: model.maxOutputTokens,
+      license: model.license,
+      tags: model.tags,
+      installSegments: []
+    )
+
+    try LocalModelIntegrity.validateDownloadedModel(model)
+    let originalAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
+    let originalModificationDate = try XCTUnwrap(originalAttributes[.modificationDate] as? Date)
+    XCTAssertTrue(LocalModelIntegrity.state(at: modelURL.path, item: item).isVerified)
+
+    _ = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes, fillByte: 0x71)
+    try FileManager.default.setAttributes(
+      [.modificationDate: originalModificationDate],
+      ofItemAtPath: modelURL.path
+    )
+
+    XCTAssertThrowsError(try LocalModelIntegrity.validateDownloadedModel(model)) { error in
+      guard case LocalModelIntegrityError.checksumMismatch = error else {
+        XCTFail("Expected checksum mismatch, got \(error).")
+        return
+      }
+    }
+  }
+
+  func testLegacyVerificationStampKeepsExistingDownloadsVisible() throws {
+    let rootURL = try temporaryDirectory()
+    defer {
+      try? FileManager.default.removeItem(at: rootURL)
+    }
+
+    let modelURL = rootURL
+      .appendingPathComponent("catalog", isDirectory: true)
+      .appendingPathComponent("legacy-stamp-proof", isDirectory: true)
+      .appendingPathComponent("legacy-stamp-proof.gguf")
+    let expectedSizeBytes: Int64 = 64 * 1024 * 1024
+    let expectedSHA256 = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes)
+    let model = localModelSummary(
+      modelURL: modelURL,
+      sizeBytes: expectedSizeBytes,
+      sha256: expectedSHA256
+    )
+    defer {
+      UserDefaults.standard.removeObject(forKey: "pith.verifiedLocalModel.\(model.id)")
+    }
+
+    let attributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
+    let size = try XCTUnwrap(attributes[.size] as? NSNumber).int64Value
+    let modificationDate = try XCTUnwrap(attributes[.modificationDate] as? Date)
+    let modificationMilliseconds = Int64(modificationDate.timeIntervalSince1970 * 1000)
+    let legacyStamp = [
+      URL(fileURLWithPath: modelURL.path).standardizedFileURL.path,
+      String(size),
+      String(modificationMilliseconds),
+      model.sha256.lowercased(),
+    ].joined(separator: "|")
+    UserDefaults.standard.set(legacyStamp, forKey: "pith.verifiedLocalModel.\(model.id)")
+
+    let item = LocalModelCatalogItem(
+      id: model.id,
+      displayName: model.displayName,
+      description: model.description,
+      fileName: model.fileName,
+      downloadURL: model.downloadURL,
+      homepage: model.homepage,
+      sizeBytes: model.sizeBytes,
+      sha256: model.sha256,
+      contextSize: model.contextSize,
+      modelContextSize: model.modelContextSize,
+      maxOutputTokens: model.maxOutputTokens,
+      license: model.license,
+      tags: model.tags,
+      installSegments: []
+    )
+    XCTAssertTrue(LocalModelIntegrity.state(at: modelURL.path, item: item).isVerified)
+  }
+
   private func temporaryDirectory() throws -> URL {
     let rootURL = FileManager.default.temporaryDirectory
       .appendingPathComponent("pith-model-first-use-\(UUID().uuidString)", isDirectory: true)
@@ -144,7 +249,11 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     )
   }
 
-  private func writeGGUFFixture(at url: URL, sizeBytes: Int64) throws -> String {
+  private func writeGGUFFixture(
+    at url: URL,
+    sizeBytes: Int64,
+    fillByte: UInt8 = 0x70
+  ) throws -> String {
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(),
       withIntermediateDirectories: true
@@ -161,13 +270,13 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     handle.write(header)
     hasher.update(data: header)
 
-    let fullChunk = Data(repeating: 0x70, count: 1024 * 1024)
+    let fullChunk = Data(repeating: fillByte, count: 1024 * 1024)
     var remainingBytes = sizeBytes - Int64(header.count)
     while remainingBytes > 0 {
       let writeCount = min(remainingBytes, Int64(fullChunk.count))
       let chunk = writeCount == Int64(fullChunk.count)
         ? fullChunk
-        : Data(repeating: 0x70, count: Int(writeCount))
+        : Data(repeating: fillByte, count: Int(writeCount))
       handle.write(chunk)
       hasher.update(data: chunk)
       remainingBytes -= writeCount

@@ -88,6 +88,15 @@ fn bundled_plugin_manifests_match_runtime_schema() {
   assert!(notion_capabilities
     .iter()
     .any(|capability| capability == "command:notion.prepare-page-draft"));
+  assert!(notion_capabilities
+    .iter()
+    .any(|capability| capability == "command:notion.inspect-page-write"));
+  assert!(notion_capabilities
+    .iter()
+    .any(|capability| capability == "command:notion.publish-page-draft"));
+  assert!(notion_capabilities
+    .iter()
+    .any(|capability| capability == "connector_workflow:notion.create-page"));
 
   let notion_command = read_command_manifest(
     &bundled_root.join("notion-connector/commands/notion.prepare-page-draft.json"),
@@ -108,4 +117,51 @@ fn bundled_plugin_manifests_match_runtime_schema() {
     .expect("notion connector reference");
   assert_eq!(notion_connectors.len(), 1);
   assert_eq!(notion_connectors[0], "notion");
+  assert_eq!(
+    notion_command
+      .execution
+      .as_ref()
+      .and_then(|execution| execution.workflow_id.as_deref()),
+    Some("notion.create-page")
+  );
+
+  let notion_write_command = read_command_manifest(
+    &bundled_root.join("notion-connector/commands/notion.inspect-page-write.json"),
+  )
+  .expect("parse notion write inspection command manifest");
+  assert_eq!(notion_write_command.title, "Inspect Notion Page Write");
+  assert_eq!(
+    notion_write_command
+      .execution
+      .as_ref()
+      .map(|execution| execution.kind.as_str()),
+    Some("mcp.notion.inspectPageWrite")
+  );
+  assert_eq!(
+    notion_write_command
+      .execution
+      .as_ref()
+      .and_then(|execution| execution.workflow_id.as_deref()),
+    Some("notion.create-page")
+  );
+
+  let notion_publish_command = read_command_manifest(
+    &bundled_root.join("notion-connector/commands/notion.publish-page-draft.json"),
+  )
+  .expect("parse notion publish command manifest");
+  assert_eq!(notion_publish_command.title, "Publish Notion Page Draft");
+  assert_eq!(
+    notion_publish_command
+      .execution
+      .as_ref()
+      .map(|execution| execution.kind.as_str()),
+    Some("mcp.notion.publishPageDraft")
+  );
+  assert_eq!(
+    notion_publish_command
+      .execution
+      .as_ref()
+      .and_then(|execution| execution.workflow_id.as_deref()),
+    Some("notion.create-page")
+  );
 }

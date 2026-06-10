@@ -1,3 +1,4 @@
+pub(crate) mod approval_agent_context;
 pub(crate) mod approval_completion;
 pub(crate) mod approval_execution;
 pub(crate) mod approval_execution_approved;
@@ -13,6 +14,7 @@ pub(crate) mod request_dispatch;
 pub(crate) mod request_params;
 pub(crate) mod request_state;
 pub(crate) mod server_requests;
+pub(crate) mod thread_change_requests;
 pub(crate) mod thread_requests;
 pub(crate) mod turn_requests;
 pub(crate) mod workspace_requests;

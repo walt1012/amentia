@@ -24,7 +24,7 @@ enum FileRevealService {
           withIntermediateDirectories: true
         )
       } catch {
-        return "Failed to prepare \(directoryURL.path): \(error.localizedDescription)"
+        return "Pith could not prepare the requested folder: \(error.localizedDescription)"
       }
     }
 
@@ -32,7 +32,7 @@ enum FileRevealService {
       return successDetail
     }
 
-    return "Failed to open \(directoryURL.path)"
+    return "Pith could not open the requested folder."
   }
 
   static func hasSuggestedPath(metricKey: String, modelHealth: ModelHealthSummary?) -> Bool {
@@ -58,9 +58,9 @@ enum FileRevealService {
     let parentURL = fileURL.deletingLastPathComponent()
     if manager.fileExists(atPath: parentURL.path) {
       NSWorkspace.shared.activateFileViewerSelecting([parentURL])
-      return "Revealed the closest available folder for \(path)."
+      return "Revealed the closest available folder."
     }
 
-    return "Failed to locate \(path)"
+    return "Pith could not locate the requested file."
   }
 }

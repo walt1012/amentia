@@ -3,11 +3,12 @@ use pith_protocol::{
   PluginCapabilityRegistration, PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary,
   PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary, PluginCommandExecutionSummary,
   PluginCommandRegistryResult, PluginCommandRunParams, PluginCommandSummary,
-  PluginConnectorCredentialParams, PluginConnectorCredentialResult, PluginConnectorRegistryResult,
-  PluginConnectorSummary, PluginHookRegistryResult, PluginHookSummary, PluginInspectParams,
-  PluginInspectResult, PluginInstallParams, PluginRemoveParams, PluginRemoveResult,
-  PluginSetEnabledParams, PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem,
-  TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  PluginCommandWorkflowSummary, PluginConnectorCredentialParams, PluginConnectorCredentialResult,
+  PluginConnectorRegistryResult, PluginConnectorSummary, PluginConnectorWorkflowSummary,
+  PluginHookRegistryResult, PluginHookSummary, PluginInspectParams, PluginInspectResult,
+  PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
+  PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -328,6 +329,20 @@ fn plugin_connector_registry_round_trips() {
       auth_required: true,
       auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
       credential_store: Some("local".to_string()),
+      workflows: vec![PluginConnectorWorkflowSummary {
+        workflow_id: "notion.create-page".to_string(),
+        display_name: "Notion Create Page".to_string(),
+        connector_id: "notion".to_string(),
+        service: "notion".to_string(),
+        action: "createPage".to_string(),
+        max_agent_steps: Some(5),
+        stages: vec!["draftPrepared".to_string(), "completed".to_string()],
+        statuses: vec!["prepared".to_string(), "completed".to_string()],
+        command_ids: vec![
+          "notion-connector::notion.prepare-page-draft".to_string(),
+          "notion-connector::notion.publish-page-draft".to_string(),
+        ],
+      }],
       auth_status: "disabled".to_string(),
       credential_present: false,
       credential_secret_present: false,
@@ -352,7 +367,19 @@ fn plugin_connector_registry_round_trips() {
   assert_eq!(decoded.connectors[0].status, "disabled");
   assert_eq!(decoded.connectors[0].auth_status, "disabled");
   assert_eq!(decoded.connectors[0].auth_type.as_deref(), Some("oauth2"));
+  assert_eq!(decoded.connectors[0].workflows.len(), 1);
+  assert_eq!(decoded.connectors[0].workflows[0].action, "createPage");
+  assert_eq!(decoded.connectors[0].workflows[0].max_agent_steps, Some(5));
+  assert_eq!(decoded.connectors[0].workflows[0].command_ids.len(), 2);
   assert!(value["connectors"][0].get("connectorId").is_some());
+  assert_eq!(
+    value["connectors"][0]["workflows"][0]["workflowId"],
+    "notion.create-page"
+  );
+  assert_eq!(
+    value["connectors"][0]["workflows"][0]["commandIds"][0],
+    "notion-connector::notion.prepare-page-draft"
+  );
   assert!(value["connectors"][0].get("authRequired").is_some());
   assert!(value["connectors"][0].get("credentialPresent").is_some());
   assert!(value["connectors"][0]
@@ -383,6 +410,7 @@ fn plugin_connector_credential_payloads_round_trip() {
       auth_required: true,
       auth_scopes: vec!["read_content".to_string(), "insert_content".to_string()],
       credential_store: Some("local".to_string()),
+      workflows: vec![],
       auth_status: "authorized".to_string(),
       credential_present: true,
       credential_secret_present: true,
@@ -429,6 +457,8 @@ fn plugin_command_registry_round_trips() {
         kind: "builtin.workspaceReadmeNote".to_string(),
         driver: "builtin".to_string(),
         entrypoint: None,
+        workflow_id: None,
+        workflow: None,
         input: PluginCommandEnvelopeSummary {
           envelope: "pith.plugin.command.input".to_string(),
           fields: vec![PluginCommandEnvelopeFieldSummary {
@@ -504,6 +534,18 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
     kind: "stdio.notionSync".to_string(),
     driver: "stdio".to_string(),
     entrypoint: Some("bin/notion-sync".to_string()),
+    workflow_id: Some("notion.create-page".to_string()),
+    workflow: Some(PluginCommandWorkflowSummary {
+      workflow_id: "notion.create-page".to_string(),
+      display_name: "Notion Create Page".to_string(),
+      connector_id: "notion".to_string(),
+      service: "notion".to_string(),
+      action: "createPage".to_string(),
+      max_agent_steps: Some(5),
+      stages: vec!["draftPrepared".to_string(), "completed".to_string()],
+      statuses: vec!["prepared".to_string(), "completed".to_string()],
+      command_ids: vec![],
+    }),
     input: PluginCommandEnvelopeSummary {
       envelope: "pith.plugin.command.input".to_string(),
       fields: vec![
@@ -549,6 +591,9 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
 
   let value = serde_json::to_value(&execution).expect("serialize plugin execution");
   assert!(value.get("entrypoint").is_some());
+  assert_eq!(value["workflowId"], "notion.create-page");
+  assert_eq!(value["workflow"]["displayName"], "Notion Create Page");
+  assert_eq!(value["workflow"]["action"], "createPage");
   assert!(value.get("supported").is_some());
   assert_eq!(value["input"]["fields"][0]["name"], "threadId");
   assert_eq!(value["output"]["fields"][1]["name"], "memoryNotes");
@@ -558,6 +603,14 @@ fn plugin_command_execution_contract_round_trips_default_shape() {
 
   assert_eq!(decoded.driver, "stdio");
   assert_eq!(decoded.entrypoint.as_deref(), Some("bin/notion-sync"));
+  assert_eq!(decoded.workflow_id.as_deref(), Some("notion.create-page"));
+  assert_eq!(
+    decoded
+      .workflow
+      .as_ref()
+      .map(|workflow| workflow.service.as_str()),
+    Some("notion")
+  );
   assert_eq!(decoded.input.fields.len(), 3);
   assert_eq!(decoded.output.fields.len(), 2);
   assert!(decoded.supported);

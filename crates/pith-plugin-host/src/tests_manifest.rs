@@ -28,6 +28,15 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
     service: "workspace".to_string(),
     homepage: None,
   }];
+  manifest.connector_workflows = vec![PluginConnectorWorkflowManifest {
+    id: "workspace.publish".to_string(),
+    display_name: "Workspace Publish".to_string(),
+    connector_id: "workspace.connector".to_string(),
+    action: "publishPage".to_string(),
+    max_agent_steps: Some(4),
+    stages: vec!["draft".to_string(), "published".to_string()],
+    statuses: vec!["prepared".to_string(), "completed".to_string()],
+  }];
   manifest.auth_policy = Some(PluginAuthPolicyManifest {
     auth_type: "none".to_string(),
     required: false,
@@ -48,6 +57,9 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
   assert!(capabilities
     .iter()
     .any(|capability| capability == "connector:workspace.connector"));
+  assert!(capabilities
+    .iter()
+    .any(|capability| capability == "connector_workflow:workspace.publish"));
 }
 
 #[test]
@@ -178,7 +190,7 @@ fn validation_hint_explains_auth_free_policy_requirements() {
 }
 
 #[test]
-fn validation_hint_explains_connector_identity_fields() {
+fn validation_hint_explains_integration_identity_fields() {
   let display_name_hint =
     validation_hint_for_error("plugin connector `notion` must include a non-empty display name");
   let service_hint =
@@ -197,6 +209,24 @@ fn validation_hint_describes_required_authenticated_credential_store() {
 
   assert!(hint.contains("credentialStore: local"));
   assert!(hint.contains("authenticated connectors"));
+}
+
+#[test]
+fn validation_hint_describes_connector_workflow_repair() {
+  let connector_hint = validation_hint_for_error(
+    "plugin connector workflow `notion.create-page` references undeclared connector `notion`",
+  );
+  let stage_hint = validation_hint_for_error(
+    "plugin connector workflow `notion.create-page` must declare at least one stage",
+  );
+
+  assert!(connector_hint.contains("appConnectors"));
+  assert!(stage_hint.contains("stages"));
+  assert!(stage_hint.contains("statuses"));
+  let capability_hint = validation_hint_for_error(
+    "plugin connector workflow capability `connector_workflow:notion.create-page` must match a connectorWorkflows entry",
+  );
+  assert!(capability_hint.contains("connectorWorkflows"));
 }
 
 #[test]
@@ -361,4 +391,97 @@ fn validate_manifest_rejects_local_store_for_auth_free_policy() {
   assert!(error
     .to_string()
     .contains("plugin auth policy type `none` must use credential store `none`"));
+}
+
+#[test]
+fn validate_manifest_rejects_connector_workflow_without_connector() {
+  let mut manifest = manifest(
+    vec!["connector_workflow:notion.create-page"],
+    vec!["network.outbound"],
+  );
+  manifest.connector_workflows = vec![PluginConnectorWorkflowManifest {
+    id: "notion.create-page".to_string(),
+    display_name: "Notion Create Page".to_string(),
+    connector_id: "notion".to_string(),
+    action: "createPage".to_string(),
+    max_agent_steps: None,
+    stages: vec!["draftPrepared".to_string()],
+    statuses: vec!["prepared".to_string()],
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("workflow needs a connector");
+
+  assert!(error
+    .to_string()
+    .contains("references undeclared connector `notion`"));
+}
+
+#[test]
+fn validate_manifest_rejects_connector_workflow_capability_without_contract() {
+  let manifest = manifest(
+    vec!["connector:notion", "connector_workflow:notion.create-page"],
+    vec!["network.outbound"],
+  );
+
+  let error = validate_manifest(&manifest).expect_err("workflow capability needs contract");
+
+  assert!(error
+    .to_string()
+    .contains("must match a connectorWorkflows entry"));
+}
+
+#[test]
+fn validate_manifest_rejects_connector_workflow_without_lifecycle_shape() {
+  let mut manifest = manifest(
+    vec!["connector:notion", "connector_workflow:notion.create-page"],
+    vec!["network.outbound"],
+  );
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.connector_workflows = vec![PluginConnectorWorkflowManifest {
+    id: "notion.create-page".to_string(),
+    display_name: "Notion Create Page".to_string(),
+    connector_id: "notion".to_string(),
+    action: "createPage".to_string(),
+    max_agent_steps: None,
+    stages: vec![],
+    statuses: vec!["prepared".to_string()],
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("workflow needs stages");
+
+  assert!(error
+    .to_string()
+    .contains("must declare at least one stage"));
+}
+
+#[test]
+fn validate_manifest_rejects_unbounded_connector_workflow_steps() {
+  let mut manifest = manifest(
+    vec!["connector:notion", "connector_workflow:notion.create-page"],
+    vec!["network.outbound"],
+  );
+  manifest.app_connectors = vec![PluginAppConnectorManifest {
+    id: "notion".to_string(),
+    display_name: "Notion".to_string(),
+    service: "notion".to_string(),
+    homepage: None,
+  }];
+  manifest.connector_workflows = vec![PluginConnectorWorkflowManifest {
+    id: "notion.create-page".to_string(),
+    display_name: "Notion Create Page".to_string(),
+    connector_id: "notion".to_string(),
+    action: "createPage".to_string(),
+    max_agent_steps: Some(9),
+    stages: vec!["draftPrepared".to_string()],
+    statuses: vec!["prepared".to_string()],
+  }];
+
+  let error = validate_manifest(&manifest).expect_err("workflow step budget should be bounded");
+
+  assert!(error.to_string().contains("maxAgentSteps"));
 }

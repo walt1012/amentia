@@ -13,7 +13,7 @@ pub(crate) use threads::{thread_state, thread_summary};
 
 mod context;
 pub(crate) use context::{
-  context_compaction, context_memory_pack, intent_inference, local_responses,
+  context_compaction, context_memory_pack, context_observation, intent_inference, local_responses,
 };
 
 mod plugins;
@@ -24,7 +24,8 @@ pub(crate) use plugins::{
 mod requests;
 pub(crate) use requests::{
   approval_requests, memory_requests, model_requests, request_dispatch, request_params,
-  request_state, server_requests, thread_requests, turn_requests, workspace_requests,
+  request_state, server_requests, thread_change_requests, thread_requests, turn_requests,
+  workspace_requests,
 };
 
 mod runtime;
@@ -72,6 +73,8 @@ mod tests_approval_shell;
 mod tests_approval_write;
 #[cfg(test)]
 mod tests_memory_context;
+#[cfg(test)]
+mod tests_plugin_bundled_connectors;
 #[cfg(test)]
 mod tests_plugin_command_execution;
 #[cfg(test)]

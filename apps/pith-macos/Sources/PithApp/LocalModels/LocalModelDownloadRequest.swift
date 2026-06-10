@@ -49,7 +49,7 @@ enum LocalModelDownloadRequestPlanner {
     }
 
     if model.downloaded {
-      return .blocked("\(model.displayName) is already downloaded.")
+      return .blocked("\(LocalModelDisplayPresenter.actionName(model)) is already downloaded.")
     }
 
     let isResumingSelectedModel: Bool
@@ -103,7 +103,7 @@ enum LocalModelDownloadRequestPlanner {
 
     let operation = resumeBytesReceived == nil ? "downloading" : "continuing"
     return """
-      Free at least \(LocalModelByteFormatter.string(requiredBytes)) on the local model volume before \(operation) \(model.displayName). \
+      Free at least \(LocalModelByteFormatter.string(requiredBytes)) on the local model volume before \(operation) \(LocalModelDisplayPresenter.actionName(model)). \
       Available: \(LocalModelByteFormatter.string(availableBytes)).
       """
   }

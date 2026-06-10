@@ -10,17 +10,18 @@ struct ComposerStatusSnapshot {
   let hasActiveTurn: Bool
   let isWaitingForFirstMessage: Bool
   let hasDraftMessage: Bool
+  let hasRestoredLocalExecutionDraft: Bool
 }
 
 enum ComposerStatusPresenter {
   static func placeholder(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local runtime to start"
+      return "Start the local service to begin"
     case .launching:
-      return "Runtime is starting..."
+      return "Local service is starting..."
     case .failed:
-      return "Relaunch the runtime to recover"
+      return "Restart the local service to recover"
     case .ready:
       break
     }
@@ -34,17 +35,21 @@ enum ComposerStatusPresenter {
     }
 
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create or select a thread"
+      return "Create or select a session"
     }
 
     if snapshot.hasActiveTurn {
       return "Pith is running a local execution. Cancel to stop it."
     }
 
+    if snapshot.hasRestoredLocalExecutionDraft {
+      return "Review the restored prompt, then send"
+    }
+
     if snapshot.isWaitingForFirstMessage {
       return snapshot.hasDraftMessage
-        ? "Review the first local request, then send"
-        : "Choose a starter prompt or type the first local request"
+        ? "Review the first cowork prompt, then send"
+        : "Choose a starter prompt or type the first cowork prompt"
     }
 
     return "Ask Pith to inspect files, review diffs, or make a safe local change"
@@ -53,11 +58,11 @@ enum ComposerStatusPresenter {
   static func statusSummary(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local runtime to start."
+      return "Start the local service to begin."
     case .launching:
-      return "Launching the local runtime..."
+      return "Starting the local service..."
     case .failed:
-      return "Relaunch the local runtime to recover."
+      return "Restart the local service to recover."
     case .ready:
       if !snapshot.isLocalModelReady {
         return "\(snapshot.modelSetupSummary) Continue model setup to run locally."
@@ -68,18 +73,22 @@ enum ComposerStatusPresenter {
       }
 
       if !snapshot.hasRuntimeThreadSelection {
-        return "Create a thread to start local work."
+        return "Create a session to start local work."
       }
 
       if snapshot.hasActiveTurn {
         return "Pith is running locally. Cancel the execution if it is no longer useful."
       }
 
+      if snapshot.hasRestoredLocalExecutionDraft {
+        return "Ask mode is ready. Review the restored prompt, then send it."
+      }
+
       if snapshot.isWaitingForFirstMessage {
         if snapshot.hasDraftMessage {
-          return "Review the starter prompt, then send the first local request."
+          return "Review the starter prompt, then start the cowork session."
         }
-        return "Choose a starter prompt or type a short local request."
+        return "Choose a starter prompt or type a short cowork prompt."
       }
 
       return "Ready for local work."

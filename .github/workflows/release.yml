@@ -18,7 +18,27 @@ on:
       prerelease:
         description: "Mark the GitHub Release as a prerelease."
         required: false
+        default: true
+        type: boolean
+      publish_untrusted_ad_hoc:
+        description: "Allow a visible ad-hoc, non-notarized prerelease when Developer ID secrets are unavailable."
+        required: false
         default: false
+        type: boolean
+      manual_acceptance_confirmed:
+        description: "Confirm the validated manual acceptance receipt passed on a fresh Mac before visible ad-hoc publishing."
+        required: false
+        default: false
+        type: boolean
+      manual_acceptance_evidence:
+        description: "HTTPS URL for the validated manual acceptance receipt required before visible ad-hoc publishing."
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Build and validate release assets without creating or updating a GitHub Release."
+        required: false
+        default: true
         type: boolean
 
 env:
@@ -35,12 +55,17 @@ env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
   RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
   RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+  RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
+  RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
+  RELEASE_MANUAL_ACCEPTANCE_EVIDENCE: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_evidence || '' }}
+  RELEASE_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
 
 defaults:
   run:
     shell: bash
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -49,7 +74,7 @@ concurrency:
 
 jobs:
   release-dmg:
-    name: Build signed notarized DMG
+    name: Build release DMG
     runs-on: macos-15-intel
     timeout-minutes: 90
     env:
@@ -68,13 +93,39 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
-      - name: Validate release inputs and secrets
+      - name: Validate release tag and CI gate
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [[ "$RELEASE_TAG" != v* ]]; then
-            echo "::error title=Invalid release tag::Release tags must start with v, got $RELEASE_TAG"
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Invalid release tag::Use tags like v0.1.0, got $RELEASE_TAG"
             exit 1
           fi
+          git fetch --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          release_version="${RELEASE_TAG#v}"
+          release_sha="$(git rev-parse HEAD)"
+          echo "PITH_RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
+          echo "PITH_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+
+          successful_ci_url="$(
+            gh run list \
+              --workflow CI \
+              --commit "$release_sha" \
+              --status success \
+              --json conclusion,headSha,url \
+              --limit 20 \
+              --jq '[.[] | select(.headSha == "'"$release_sha"'" and .conclusion == "success")][0].url // ""'
+          )"
+          if [[ -z "$successful_ci_url" ]]; then
+            echo "::error title=Release CI gate::The release commit $release_sha does not have a successful CI run. Run CI for this commit before publishing a release."
+            exit 1
+          fi
+          echo "PITH_RELEASE_CI_RUN_URL=$successful_ci_url" >> "$GITHUB_ENV"
+
+      - name: Determine release signing mode
+        run: |
+          set -euo pipefail
           missing=()
           for name in \
             APPLE_APP_SPECIFIC_PASSWORD \
@@ -89,11 +140,34 @@ jobs:
           done
           if (( ${#missing[@]} > 0 )); then
             joined="$(IFS=', '; echo "${missing[*]}")"
-            echo "::error title=Missing release secrets::Configure these repository secrets before publishing a macOS release: $joined"
-            exit 1
+            echo "::warning title=Developer ID unavailable::Building an ad-hoc DMG because these release secrets are missing: $joined"
+            echo "PITH_RELEASE_SIGNING_MODE=ad-hoc" >> "$GITHUB_ENV"
+          else
+            echo "PITH_RELEASE_SIGNING_MODE=developer-id" >> "$GITHUB_ENV"
           fi
 
+      - name: Write release readiness report
+        run: |
+          set -euo pipefail
+          python3 scripts/release_readiness.py \
+            --tag "$RELEASE_TAG" \
+            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --output release-readiness.md \
+            --json-output release-readiness.json \
+            --dry-run "$RELEASE_DRY_RUN" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --requested-draft "$RELEASE_DRAFT" \
+            --requested-prerelease "$RELEASE_PRERELEASE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+          cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Audit remote model catalog metadata
+        run: python3 scripts/validate_model_pack.py --remote
+
       - name: Import Developer ID certificate
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           keychain_path="$RUNNER_TEMP/pith-release.keychain-db"
@@ -199,18 +273,35 @@ jobs:
           mkdir -p "$PREBUILT_ARTIFACT_DIR"
           cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
 
-      - name: Package unsigned app bundle
+      - name: Package release app bundle
         run: |
           set -euo pipefail
-          python3 scripts/package_macos_app.py \
+          package_args=(
             --skip-build \
-            --skip-ad-hoc-sign \
             --no-zip \
+            --version "$PITH_RELEASE_VERSION" \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
             --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          )
+          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+            package_args+=(--skip-ad-hoc-sign)
+          fi
+          python3 scripts/package_macos_app.py "${package_args[@]}"
+
+      - name: Validate package contract
+        run: |
+          set -euo pipefail
+          python3 scripts/package_contract.py \
+            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --bundle-version "$PITH_RELEASE_VERSION"
 
       - name: Sign app for public distribution
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           python3 scripts/sign_macos_app_for_distribution.py \
@@ -218,21 +309,39 @@ jobs:
             --identity "$MACOS_DEVELOPER_ID_APPLICATION"
           python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
 
-      - name: Smoke launch signed app
-        run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
+      - name: Create release copy
+        run: |
+          set -euo pipefail
+          python3 scripts/release_text.py \
+            --tag "$RELEASE_TAG" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --draft "$RELEASE_DRAFT" \
+            --install-guide-output artifacts/macos/README-FIRST.txt \
+            --notes-output release-notes.md
 
-      - name: Create signed DMG
+      - name: Create release DMG
         run: |
           set -euo pipefail
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
-          python3 scripts/create_macos_dmg.py artifacts/macos/Pith.app "$dmg_path"
-          codesign \
-            --force \
-            --timestamp \
-            --sign "$MACOS_DEVELOPER_ID_APPLICATION" \
-            "$dmg_path"
+          python3 scripts/create_macos_dmg.py \
+            artifacts/macos/Pith.app \
+            "$dmg_path" \
+            --readme-file artifacts/macos/README-FIRST.txt \
+            --smoke-launch-script scripts/smoke_launch_macos_app.py \
+            --smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json
+          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+            codesign \
+              --force \
+              --timestamp \
+              --sign "$MACOS_DEVELOPER_ID_APPLICATION" \
+              "$dmg_path"
+          else
+            echo "Created ad-hoc DMG; Developer ID signing was not available."
+          fi
 
       - name: Notarize and staple DMG
+        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
@@ -245,40 +354,253 @@ jobs:
           python3 scripts/validate_macos_distribution.py \
             artifacts/macos/Pith.app \
             --dmg-path "$dmg_path"
-          shasum -a 256 "$dmg_path" > "$dmg_path.sha256"
 
-      - name: Create release notes
+      - name: Create release checksum
         run: |
           set -euo pipefail
-          cat > release-notes.md <<EOF
-          Pith $RELEASE_TAG
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          python3 scripts/release_artifacts.py \
+            --artifact "$dmg_path" \
+            --checksum-output "$dmg_path.sha256" \
+            --tag "$RELEASE_TAG" \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --install-guide artifacts/macos/README-FIRST.txt \
+            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
 
-          - macOS 12+ x86_64 DMG installer.
-          - Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
-          - Model weights are not bundled; first launch guides the user to download one verified local model.
-          EOF
+      - name: Validate installer artifact contract
+        run: |
+          set -euo pipefail
+          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          python3 scripts/installer_artifact_contract.py \
+            --tag "$RELEASE_TAG" \
+            --asset "$dmg_path" \
+            --asset "$dmg_path.sha256" \
+            --asset artifacts/macos/README-FIRST.txt \
+            --asset "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
 
-      - name: Publish GitHub Release
+      - name: Plan GitHub Release state
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_args=(--title "Pith $RELEASE_TAG" --notes-file release-notes.md)
-          if [[ "$RELEASE_DRAFT" == "true" ]]; then
-            release_args+=(--draft)
+          release_title="Pith $RELEASE_TAG"
+          release_exists="false"
+          existing_draft=""
+          if release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" 2>/dev/null)"; then
+            release_exists="true"
+            printf '%s' "$release_json" > release-existing.json
+            existing_draft="$(python3 -c 'import json, sys; print(str(json.loads(sys.argv[1])["draft"]).lower())' "$release_json")"
           fi
-          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
-            release_args+=(--prerelease)
+
+          python3 scripts/release_state.py \
+            --title "$release_title" \
+            --tag "$RELEASE_TAG" \
+            --notes-file release-notes.md \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --requested-draft "$RELEASE_DRAFT" \
+            --requested-prerelease "$RELEASE_PRERELEASE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE" \
+            --release-exists "$release_exists" \
+            --existing-draft "$existing_draft" \
+            --state-output release-state.json \
+            --env-output release-state.env \
+            --summary-output release-plan.md \
+            --plan-output release-plan.json \
+            --source-commit "$PITH_RELEASE_SHA" \
+            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --dry-run "$RELEASE_DRY_RUN"
+          source release-state.env
+          cat release-state.env >> "$GITHUB_ENV"
+          cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$release_exists" == "true" ]]; then
+            python3 scripts/release_publish_contract.py \
+              --mode preupload-existing-assets \
+              --tag "$RELEASE_TAG" \
+              --release-json release-existing.json
           fi
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" "${release_args[@]}"
+
+      - name: Rehearse release dry-run assets
+        if: env.RELEASE_DRY_RUN == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf release-dry-run-assets
+          mkdir -p release-dry-run-assets
+          cp \
+            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \
+            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            artifacts/macos/README-FIRST.txt \
+            "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \
+            release-dry-run-assets/
+          python3 scripts/release_rehearsal_contract.py \
+            --tag "$RELEASE_TAG" \
+            --asset-dir release-dry-run-assets \
+            --summary-output release-dry-run-rehearsal.md \
+            --acceptance-output release-dry-run-manual-acceptance.md \
+            --json-output release-dry-run-rehearsal.json
+          cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate release dry-run evidence
+        if: env.RELEASE_DRY_RUN == 'true'
+        run: |
+          set -euo pipefail
+          python3 scripts/release_evidence_contract.py \
+            --mode dry-run \
+            --tag "$RELEASE_TAG" \
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            --evidence artifacts/macos/README-FIRST.txt \
+            --evidence "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \
+            --evidence release-readiness.md \
+            --evidence release-readiness.json \
+            --evidence release-plan.md \
+            --evidence release-plan.json \
+            --evidence release-dry-run-rehearsal.md \
+            --evidence release-dry-run-rehearsal.json \
+            --evidence release-dry-run-manual-acceptance.md
+
+      - name: Upload release dry-run assets
+        if: env.RELEASE_DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run-${{ env.RELEASE_TAG }}
+          path: |
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256
+            artifacts/macos/README-FIRST.txt
+            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
+            release-readiness.md
+            release-readiness.json
+            release-plan.md
+            release-plan.json
+            release-dry-run-rehearsal.md
+            release-dry-run-rehearsal.json
+            release-dry-run-manual-acceptance.md
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload GitHub Release draft assets
+        if: env.RELEASE_DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_title="Pith $RELEASE_TAG"
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --title "$release_title" \
+              --notes-file release-notes.md
           else
-            gh release create "$RELEASE_TAG" "${release_args[@]}"
+            create_args=(--title "$release_title" --notes-file release-notes.md --draft)
+            if [[ "$PITH_RELEASE_STATE_PRERELEASE" == "true" ]]; then
+              create_args+=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" "${create_args[@]}"
           fi
+
           gh release upload "$RELEASE_TAG" \
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \
             "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            "artifacts/macos/README-FIRST.txt" \
+            "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \
             --clobber
+
+      - name: Rehearse downloaded GitHub Release assets
+        if: env.RELEASE_DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf release-download
+          mkdir -p release-download
+          gh release download "$RELEASE_TAG" \
+            --dir release-download \
+            --clobber
+          python3 scripts/release_rehearsal_contract.py \
+            --tag "$RELEASE_TAG" \
+            --asset-dir release-download \
+            --summary-output release-rehearsal.md \
+            --acceptance-output release-manual-acceptance.md \
+            --json-output release-rehearsal.json
+          cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate release rehearsal evidence
+        if: env.RELEASE_DRY_RUN != 'true'
+        run: |
+          set -euo pipefail
+          python3 scripts/release_evidence_contract.py \
+            --mode publish-rehearsal \
+            --tag "$RELEASE_TAG" \
+            --evidence release-readiness.md \
+            --evidence release-readiness.json \
+            --evidence release-plan.md \
+            --evidence release-plan.json \
+            --evidence release-rehearsal.md \
+            --evidence release-rehearsal.json \
+            --evidence release-manual-acceptance.md
+
+      - name: Apply final GitHub Release visibility
+        if: env.RELEASE_DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
+          gh api \
+            -X PATCH \
+            "repos/$GITHUB_REPOSITORY/releases/$release_id" \
+            --input release-state.json
+
+          if [[ "$PITH_RELEASE_STATE_DRAFT" == "true" ]]; then
+            echo "Release $RELEASE_TAG kept as draft."
+          fi
+
+      - name: Validate final GitHub Release
+        if: env.RELEASE_DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > release-published.json
+          release_tag_commit="$(
+            git ls-remote --exit-code --tags origin \
+              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk '{print $1}'
+          )"
+          python3 scripts/release_publish_contract.py \
+            --tag "$RELEASE_TAG" \
+            --release-json release-published.json \
+            --source-commit "$SOURCE_COMMIT" \
+            --tag-commit "$release_tag_commit" \
+            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
+            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \
+            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+
+      - name: Upload release rehearsal summary
+        if: always() && env.RELEASE_DRY_RUN != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-rehearsal-${{ env.RELEASE_TAG }}
+          path: |
+            release-readiness.md
+            release-readiness.json
+            release-plan.md
+            release-plan.json
+            release-rehearsal.md
+            release-rehearsal.json
+            release-manual-acceptance.md
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Cleanup release keychain
         if: always()

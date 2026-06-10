@@ -99,6 +99,177 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
   (source_root, catalog_entry)
 }
 
+#[cfg(unix)]
+fn create_next_action_stdio_runner_plugin(
+  label: &str,
+  plugin_name: &str,
+  output_json: &str,
+  permissions: &[&str],
+) -> (std::path::PathBuf, PluginCatalogEntry) {
+  use std::os::unix::fs::PermissionsExt;
+
+  let source_root = create_temp_plugin_bundle(label, plugin_name, "Follow-up Runner");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  let command_name = format!("{plugin_name}.run");
+  fs::write(
+    &plugin_manifest,
+    format!(
+      r#"{{
+  "name": "{plugin_name}",
+  "version": "0.1.0",
+  "displayName": "Follow-up Runner",
+  "description": "Emits next-action observations for the agent loop.",
+  "author": {{ "name": "Pith" }},
+  "capabilities": ["command:{command_name}"],
+  "permissions": [{}],
+  "defaultEnabled": true
+}}"#,
+      permissions
+        .iter()
+        .map(|permission| format!(r#""{permission}""#))
+        .collect::<Vec<_>>()
+        .join(", ")
+    ),
+  )
+  .expect("write follow-up plugin manifest");
+  fs::write(
+    source_root
+      .join("commands")
+      .join(format!("{command_name}.json")),
+    r#"{
+  "title": "Emit Follow-up",
+  "description": "Emit a next action observation.",
+  "prompt": "Emit a next action for the agent loop.",
+  "execution": {
+    "kind": "stdio.followUp",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write follow-up command manifest");
+  fs::write(
+    &runner_path,
+    format!(
+      r#"#!/bin/sh
+cat >/dev/null
+cat <<'JSON'
+{output_json}
+JSON
+"#
+    ),
+  )
+  .expect("write follow-up runner");
+  let mut file_permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  file_permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, file_permissions).expect("set runner permissions");
+  let catalog_entry = PluginCatalogEntry {
+    id: plugin_name.to_string(),
+    name: plugin_name.to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Follow-up Runner".to_string(),
+    status: "ready".to_string(),
+    description: "Emits next-action observations for the agent loop.".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec![format!("command:{command_name}")],
+    permissions: permissions
+      .iter()
+      .map(|permission| permission.to_string())
+      .collect(),
+    manifest_path: plugin_manifest.display().to_string(),
+    provenance: "test".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+  (source_root, catalog_entry)
+}
+
+#[cfg(unix)]
+fn create_linear_stdio_runner_plugin(label: &str) -> (std::path::PathBuf, PluginCatalogEntry) {
+  use std::os::unix::fs::PermissionsExt;
+
+  let source_root = create_temp_plugin_bundle(label, "linear-runner", "Linear Runner");
+  let plugin_manifest = source_root.join("pith-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "linear-runner",
+  "version": "0.1.0",
+  "displayName": "Linear Runner",
+  "description": "Connector-backed Linear command plugin",
+  "author": { "name": "Pith" },
+  "capabilities": ["command:linear.update", "connector:linear"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "linear",
+      "displayName": "Linear",
+      "service": "linear",
+      "homepage": "https://linear.app"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write linear runner plugin manifest");
+  fs::write(
+    source_root.join("commands").join("linear.update.json"),
+    r#"{
+  "title": "Prepare Linear Update",
+  "description": "Prepare a Linear project update from the current cowork request.",
+  "prompt": "Prepare a concise Linear project update.",
+  "execution": {
+    "kind": "stdio.linearUpdate",
+    "entrypoint": "runner.sh",
+    "connectors": ["linear"]
+  }
+}"#,
+  )
+  .expect("write linear command manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+payload=$(cat)
+case "$payload" in *'"connectorId":"linear-runner::linear"'*) connector_id=true;; *) connector_id=false;; esac
+case "$payload" in *'"service":"linear"'*) service=true;; *) service=false;; esac
+case "$payload" in *"Prepare a Linear project update"*) input=true;; *) input=false;; esac
+printf '{"content":"linear connector_id=%s service=%s input=%s","memoryNotes":[{"title":"Linear Update Draft","body":"Linear connector routing produced a project update draft.","source":"plugin.linear-runner","tags":["connector","linear"]}]}\n' "$connector_id" "$service" "$input"
+"#,
+  )
+  .expect("write linear runner");
+  let mut permissions = fs::metadata(&runner_path)
+    .expect("runner metadata")
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  let catalog_entry = PluginCatalogEntry {
+    id: "linear-runner".to_string(),
+    name: "linear-runner".to_string(),
+    version: "0.1.0".to_string(),
+    display_name: "Linear Runner".to_string(),
+    status: "ready".to_string(),
+    description: "Connector-backed Linear command plugin".to_string(),
+    author_name: Some("Pith".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: vec![
+      "command:linear.update".to_string(),
+      "connector:linear".to_string(),
+    ],
+    permissions: vec!["network.outbound".to_string()],
+    manifest_path: plugin_manifest.display().to_string(),
+    provenance: "test".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  };
+  (source_root, catalog_entry)
+}
+
 #[test]
 fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
   let mut context = RuntimeContext::new_in_memory();
@@ -437,9 +608,9 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
 }
 
 #[test]
-fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
+fn turn_start_routes_natural_workspace_note_through_plugin_execution() {
   let mut context = RuntimeContext::new_in_memory();
-  let workspace = create_temp_workspace("turn-plugin-command-route");
+  let workspace = create_temp_workspace("turn-natural-note-route");
   replace_plugin_catalog(
     &mut context,
     vec![bundled_manifest_plugin_entry(
@@ -456,7 +627,7 @@ fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
   );
   fs::write(
     workspace.join("README.md"),
-    "Workspace Route\nExplicit plugin routing\n",
+    "Workspace Route\nNatural plugin routing\n",
   )
   .expect("write readme");
 
@@ -485,7 +656,7 @@ fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
       methods::TURN_START,
       Some(json!({
         "threadId": "thread-1",
-        "message": "/plugin workspace-notes::workspace.capture-note"
+        "message": "Capture a workspace note for this project."
       })),
     ),
   );
@@ -505,13 +676,614 @@ fn turn_start_routes_explicit_plugin_command_through_plugin_execution() {
   assert!(items[2]["content"]
     .as_str()
     .unwrap()
-    .contains("Explicit plugin routing"));
+    .contains("Natural plugin routing"));
   assert_eq!(items[3]["kind"], "assistantMessage");
+  assert_eq!(
+    items[3]["attributes"]["pluginCommandHandoff"],
+    "pluginCommand"
+  );
   assert!(items
     .iter()
     .any(|item| item["title"] == "Memory Note Saved"));
   assert_eq!(result["activeTurnId"], serde_json::Value::Null);
   assert_eq!(context.memory_state.note_count(), 3);
+}
+
+#[test]
+fn turn_start_routes_natural_review_diff_through_plugin_execution() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-natural-review-route");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "review-assistant",
+      "Review Assistant",
+      true,
+      true,
+      &["command:review.inspect-diff"],
+      &["file.read", "model.invoke"],
+    )],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Natural Review Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Review the current git diff."
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    "review-assistant::review.inspect-diff"
+  );
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert_eq!(items[3]["kind"], "assistantMessage");
+  assert_eq!(
+    items[3]["attributes"]["pluginCommandHandoff"],
+    "pluginCommand"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+}
+
+#[test]
+fn turn_start_routes_review_summary_save_through_write_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-review-save-route");
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "review-assistant",
+      "Review Assistant",
+      true,
+      true,
+      &["command:review.inspect-diff"],
+      &["file.read", "file.write", "model.invoke"],
+    )],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Review Save Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Review the current git diff and save a review summary."
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  let items = turn_result["items"].as_array().expect("items");
+  let review_result = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "pluginResult"
+        && item["attributes"]["commandId"] == "review-assistant::review.inspect-diff"
+    })
+    .expect("review result");
+  assert_eq!(review_result["attributes"]["nextAction"], "write_file");
+  assert_eq!(
+    review_result["attributes"]["nextRelativePath"],
+    ".pith/review-summary.md"
+  );
+  assert_eq!(
+    review_result["attributes"]["reviewApplyMode"],
+    "approvalRequiredWrite"
+  );
+  let diff = items
+    .iter()
+    .find(|item| item["kind"] == "diffArtifact")
+    .expect("review summary diff");
+  assert_eq!(
+    diff["attributes"]["relativePath"],
+    ".pith/review-summary.md"
+  );
+  assert!(diff["content"]
+    .as_str()
+    .expect("diff content")
+    .contains("Pith Review Summary"));
+  let approval = items
+    .iter()
+    .find(|item| item["kind"] == "approvalRequested")
+    .expect("write approval");
+  assert_eq!(approval["attributes"]["action"], "write_file");
+  assert_eq!(
+    approval["attributes"]["relativePath"],
+    ".pith/review-summary.md"
+  );
+  assert_eq!(
+    approval["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
+  let approval_id = turn_result["pendingApprovals"][0]["id"]
+    .as_str()
+    .expect("approval id")
+    .to_string();
+
+  let approval_response = handle_request(
+    &mut context,
+    request(
+      methods::APPROVAL_RESPOND,
+      Some(json!({
+        "approvalId": approval_id,
+        "decision": "approved"
+      })),
+    ),
+  );
+
+  let written_summary =
+    fs::read_to_string(workspace.join(".pith").join("review-summary.md")).expect("review summary");
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(approval_response.error.is_none());
+  assert!(written_summary.contains("Pith Review Summary"));
+  assert!(written_summary.contains("Review the current git diff and save a review summary."));
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_natural_non_notion_connector_command() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-natural-linear-route");
+  let (plugin_root, plugin) = create_linear_stdio_runner_plugin("turn-natural-linear-plugin");
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Natural Linear Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Prepare a Linear project update for this handoff."
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&plugin_root).expect("cleanup linear plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  assert_eq!(items[0]["kind"], "userMessage");
+  assert_eq!(items[1]["kind"], "pluginCommand");
+  assert_eq!(
+    items[1]["attributes"]["commandId"],
+    "linear-runner::linear.update"
+  );
+  assert_eq!(items[1]["attributes"]["agentToolKind"], "connector");
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningMode"],
+    "deterministicConnectorRanking"
+  );
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningSelectedCommandId"],
+    "linear-runner::linear.update"
+  );
+  assert_eq!(items[1]["attributes"]["toolPlanningCandidateCount"], "1");
+  assert_eq!(
+    items[1]["attributes"]["toolPlanningSelectionState"],
+    "deterministicSingle"
+  );
+  assert_eq!(items[2]["kind"], "pluginResult");
+  assert!(items[2]["content"]
+    .as_str()
+    .expect("linear content")
+    .contains("connector_id=true service=true input=true"));
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerConnectorId"],
+    "linear-runner::linear"
+  );
+  assert_eq!(
+    items[2]["attributes"]["pluginRunnerConnectorServices"],
+    "linear"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("pending approvals")
+      .len(),
+    0
+  );
+  assert!(context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .any(|note| note.title == "Linear Update Draft"));
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_plugin_shell_follow_up_to_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-shell-follow-up");
+  let output_json = r#"{
+  "items": [
+    {
+      "kind": "pluginResult",
+      "title": "Shell Follow-up",
+      "content": "Request shell inspection through the agent loop.",
+      "attributes": {
+        "nextAction": "run_shell",
+        "nextCommand": "git status --short"
+      }
+    }
+  ]
+}"#;
+  let (plugin_root, plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-shell-follow-up-plugin",
+    "follow-shell",
+    output_json,
+    &["file.read", "shell.exec"],
+  );
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Shell Follow-up Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin follow-shell::follow-shell.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let plugin_observation = items
+    .iter()
+    .find(|item| item["title"] == "Shell Follow-up")
+    .expect("plugin shell observation");
+  assert_eq!(plugin_observation["attributes"]["nextAction"], "run_shell");
+  let approval = items
+    .iter()
+    .find(|item| item["kind"] == "approvalRequested")
+    .expect("shell approval");
+  assert_eq!(approval["attributes"]["action"], "run_shell");
+  assert_eq!(approval["attributes"]["command"], "git status --short");
+  assert_eq!(
+    approval["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("approvals")
+      .len(),
+    1
+  );
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_plugin_write_follow_up_to_diff_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-write-follow-up");
+  fs::write(workspace.join("README.md"), "Before\n").expect("write readme");
+  let output_json = r#"{
+  "items": [
+    {
+      "kind": "pluginResult",
+      "title": "Write Follow-up",
+      "content": "Request a file update through the agent loop.",
+      "attributes": {
+        "nextAction": "write_file",
+        "nextRelativePath": "README.md",
+        "nextContent": "After\n"
+      }
+    }
+  ]
+}"#;
+  let (plugin_root, plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-write-follow-up-plugin",
+    "follow-write",
+    output_json,
+    &["file.read", "file.write"],
+  );
+  replace_plugin_catalog(&mut context, vec![plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Write Follow-up Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin follow-write::follow-write.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let plugin_observation = items
+    .iter()
+    .find(|item| item["title"] == "Write Follow-up")
+    .expect("plugin write observation");
+  assert_eq!(plugin_observation["attributes"]["nextAction"], "write_file");
+  let diff = items
+    .iter()
+    .find(|item| item["kind"] == "diffArtifact")
+    .expect("diff artifact");
+  assert_eq!(diff["attributes"]["relativePath"], "README.md");
+  let approval = items
+    .iter()
+    .find(|item| item["kind"] == "approvalRequested")
+    .expect("write approval");
+  assert_eq!(approval["attributes"]["action"], "write_file");
+  assert_eq!(approval["attributes"]["relativePath"], "README.md");
+  assert_eq!(
+    approval["attributes"]["agentLoopStopReason"],
+    "approvalPaused"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("approvals")
+      .len(),
+    1
+  );
+}
+
+#[cfg(unix)]
+#[test]
+fn turn_start_routes_plugin_command_follow_up_through_loop() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("turn-plugin-command-follow-up");
+  let source_output_json = r#"{
+  "items": [
+    {
+      "kind": "pluginResult",
+      "title": "Plugin Command Follow-up",
+      "content": "Request a second plugin command through the agent loop.",
+      "attributes": {
+        "nextAction": "plugin_command",
+        "nextCommandId": "follow-target::follow-target.run",
+        "nextCommandInput": "handoff payload"
+      }
+    }
+  ],
+  "memoryNotes": [
+    {
+      "title": "Source Handoff Memory",
+      "body": "Source plugin memory should survive chained plugin execution.",
+      "source": "plugin.follow-source",
+      "tags": ["chain", "source"]
+    }
+  ]
+}"#;
+  let target_output_json = r#"{
+  "content": "Target plugin received the handoff payload.",
+  "memoryNotes": [
+    {
+      "title": "Target Handoff Memory",
+      "body": "Target plugin memory should be captured after a chained command.",
+      "source": "plugin.follow-target",
+      "tags": ["chain", "target"]
+    }
+  ]
+}"#;
+  let (source_root, source_plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-command-follow-up-source",
+    "follow-source",
+    source_output_json,
+    &["file.read"],
+  );
+  let (target_root, target_plugin) = create_next_action_stdio_runner_plugin(
+    "turn-plugin-command-follow-up-target",
+    "follow-target",
+    target_output_json,
+    &["file.read"],
+  );
+  replace_plugin_catalog(&mut context, vec![source_plugin, target_plugin]);
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Plugin Command Follow-up Thread"
+      })),
+    ),
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "/plugin follow-source::follow-source.run"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  fs::remove_dir_all(&source_root).expect("cleanup source plugin root");
+  fs::remove_dir_all(&target_root).expect("cleanup target plugin root");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let source_observation = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Command Follow-up")
+    .expect("source plugin observation");
+  assert_eq!(
+    source_observation["attributes"]["nextAction"],
+    "plugin_command"
+  );
+  assert_eq!(
+    source_observation["attributes"]["nextCommandId"],
+    "follow-target::follow-target.run"
+  );
+  let target_command = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "pluginCommand"
+        && item["attributes"]["commandId"] == "follow-target::follow-target.run"
+    })
+    .expect("target plugin command");
+  assert_eq!(target_command["attributes"]["agentStepIndex"], "2");
+  assert_eq!(target_command["attributes"]["agentToolKind"], "plugin");
+  let target_result = items
+    .iter()
+    .find(|item| {
+      item["kind"] == "pluginResult"
+        && item["attributes"]["commandId"] == "follow-target::follow-target.run"
+    })
+    .expect("target plugin result");
+  assert!(target_result["content"]
+    .as_str()
+    .expect("target content")
+    .contains("Target plugin received"));
+  assert_eq!(
+    target_result["attributes"]["agentLoopStopReason"],
+    "completed"
+  );
+  assert_eq!(result["activeTurnId"], serde_json::Value::Null);
+  assert_eq!(
+    result["pendingApprovals"]
+      .as_array()
+      .expect("approvals")
+      .len(),
+    0
+  );
+  let memory_titles = context
+    .memory_state
+    .recent_notes(16)
+    .into_iter()
+    .map(|note| note.title)
+    .collect::<Vec<_>>();
+  assert!(memory_titles.contains(&"Source Handoff Memory".to_string()));
+  assert!(memory_titles.contains(&"Target Handoff Memory".to_string()));
 }
 
 #[test]

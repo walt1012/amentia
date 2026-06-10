@@ -54,6 +54,14 @@ impl RuntimePendingApprovalState {
   pub(super) fn remove(&mut self, id: &str) -> Option<PendingApproval> {
     self.pending_approvals.remove(id)
   }
+
+  pub(super) fn remove_for_thread(&mut self, thread_id: &str) -> usize {
+    let previous_count = self.pending_approvals.len();
+    self
+      .pending_approvals
+      .retain(|_, approval| approval.thread_id != thread_id);
+    previous_count - self.pending_approvals.len()
+  }
 }
 
 #[cfg(test)]

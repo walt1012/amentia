@@ -10,6 +10,7 @@ struct SetupCalloutSnapshot {
   let runtimeLaunchActionTitle: String
   let modelPrimaryActionTitle: String?
   let modelSecondaryActionTitle: String?
+  let distributionTrustSetupDetail: String?
 }
 
 enum SetupCalloutPresenter {
@@ -21,7 +22,7 @@ enum SetupCalloutPresenter {
       return "Open Workspace"
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create Thread"
+      return "Create Session"
     }
 
     return "Local Setup Complete"
@@ -35,7 +36,7 @@ enum SetupCalloutPresenter {
       return "Choose the project Pith should inspect, search, and edit locally."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Create or select a thread before sending the first local request."
+      return "Create or select a session before starting the first cowork task."
     }
 
     return "Pith is ready for local work."
@@ -43,16 +44,32 @@ enum SetupCalloutPresenter {
 
   static func detail(_ snapshot: SetupCalloutSnapshot) -> String {
     if !snapshot.isLocalModelReady {
-      return snapshot.modelProgressDetail ?? snapshot.modelGuidance.detail
+      return appendDistributionTrustDetail(
+        snapshot.modelProgressDetail ?? snapshot.modelGuidance.detail,
+        snapshot: snapshot
+      )
     }
     if !snapshot.hasWorkspace {
       return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "Threads keep timeline, approvals, cancellation, and local memory together."
+      return "Sessions keep messages, approvals, cancellation, and useful memory together."
     }
 
     return "Ready"
+  }
+
+  private static func appendDistributionTrustDetail(
+    _ detail: String,
+    snapshot: SetupCalloutSnapshot
+  ) -> String {
+    guard let trustDetail = snapshot.distributionTrustSetupDetail,
+          snapshot.runtimeState == .disconnected || snapshot.runtimeState == .failed
+    else {
+      return detail
+    }
+
+    return "\(detail) \(trustDetail)"
   }
 
   static func tone(_ snapshot: SetupCalloutSnapshot) -> StatusTone {
@@ -75,7 +92,7 @@ enum SetupCalloutPresenter {
       return "Open Workspace"
     }
     if !snapshot.hasRuntimeThreadSelection {
-      return "New Thread"
+      return "New Session"
     }
 
     return nil

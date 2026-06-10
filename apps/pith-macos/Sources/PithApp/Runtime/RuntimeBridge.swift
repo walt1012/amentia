@@ -15,10 +15,11 @@ final class RuntimeBridge {
   private let pendingResponses = RuntimeBridgePendingResponses()
   private let requestWriter = RuntimeBridgeRequestWriter()
 
-  func launchAndInitialize(launchDetail: String = "Launching local runtime") async throws -> SessionInfo {
+  func launchAndInitialize(launchDetail: String = "Starting local service") async throws -> SessionInfo {
     if currentProcessSession()?.isRunning != true {
       resetProcessState()
-      try launchProcess()
+      let environment = await runtimeEnvironment()
+      try launchProcess(environment: environment)
     }
 
     updateConnectionState(.launching, detail: launchDetail)
@@ -26,7 +27,7 @@ final class RuntimeBridge {
     let initializeParams = InitializeParams(
       clientInfo: ClientInfo(
         name: "pith-macos",
-        version: "0.1.0"
+        version: appBundleVersion()
       )
     )
 
@@ -43,7 +44,7 @@ final class RuntimeBridge {
       }
 
       let detail = stopRuntimeAfterRequestBoundary(
-        detail: "Runtime initialization failed: \(error.localizedDescription)"
+        detail: "Local service initialization failed: \(error.localizedDescription)"
       )
       throw RuntimeError.rpc(detail)
     }
@@ -56,17 +57,27 @@ final class RuntimeBridge {
     )
   }
 
-  func stopRuntime(detail: String = "Runtime stopped.") {
+  func stopRuntime(detail: String = "Local service stopped.") {
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.disconnected, detail: detail)
   }
 
-  private func launchProcess() throws {
+  private func appBundleVersion() -> String {
+    let fallbackVersion = "0.1.0"
+    guard let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String else {
+      return fallbackVersion
+    }
+
+    let trimmedVersion = version.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmedVersion.isEmpty ? fallbackVersion : trimmedVersion
+  }
+
+  private func launchProcess(environment: [String: String]) throws {
     let executableURL = try resolveRuntimeURL()
     let session = try RuntimeBridgeProcessSession(
       executableURL: executableURL,
-      environment: runtimeEnvironment()
+      environment: environment
     )
     storeProcessSession(session)
     session.startObserving(
@@ -88,7 +99,7 @@ final class RuntimeBridge {
     )
     guard isCurrentProcessSession(session.identifier), session.isRunning else {
       detachProcessSession(matching: session.identifier)?.stop()
-      throw RuntimeError.rpc("Runtime exited before initialization.")
+      throw RuntimeError.rpc("Local service exited before initialization.")
     }
   }
 
@@ -130,7 +141,7 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = "Runtime request \(method) was cancelled."
+    let detail = "Local service request \(method) was cancelled."
     continuation.resume(throwing: RuntimeError.rpc(detail))
     if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterCancelledRequest(method: method) {
       stopRuntimeAfterRequestCancellation(method: method)
@@ -139,15 +150,15 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestCancellation(method: String) {
     let detail =
-      "Runtime request \(method) was cancelled. " +
-      "Relaunch the local runtime to continue."
+      "Local service request \(method) was cancelled. " +
+      "Restart the local service to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
   private func stopRuntimeAfterRequestTimeout(method: String, seconds: Int) {
     let detail =
-      "Runtime request \(method) timed out after \(seconds) seconds. " +
-      "Relaunch the local runtime to continue."
+      "Local service request \(method) timed out after \(seconds) seconds. " +
+      "Restart the local service to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
@@ -169,7 +180,7 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = runtimeFailureDetail("Runtime disconnected.", session: session)
+    let detail = runtimeFailureDetail("Local service disconnected.", session: session)
     failPendingResponses(with: RuntimeError.rpc(detail))
     session.stop()
     updateConnectionState(.failed, detail: detail)
@@ -194,7 +205,7 @@ final class RuntimeBridge {
       return detail
     }
 
-    return "\(detail) Runtime stderr: \(summary)"
+    return "\(detail) Local service log: \(summary)"
   }
 
   private func resetProcessState() {
@@ -267,8 +278,8 @@ final class RuntimeBridge {
     throw RuntimeError.runtimePathMissing
   }
 
-  private func runtimeEnvironment() -> [String: String] {
-    RuntimeBridgeLocalEnvironment.runtimeEnvironment()
+  private func runtimeEnvironment() async -> [String: String] {
+    await RuntimeBridgeLocalEnvironment.runtimeEnvironment()
   }
 
   func sendRequest<Params: Encodable, ResultType: Decodable>(
@@ -332,8 +343,8 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestWriteFailure(method: String, error: Error) {
     let detail =
-      "Runtime request \(method) could not be written: \(error.localizedDescription). " +
-      "Relaunch the local runtime to continue."
+      "Local service request \(method) could not be written: \(error.localizedDescription). " +
+      "Restart the local service to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 

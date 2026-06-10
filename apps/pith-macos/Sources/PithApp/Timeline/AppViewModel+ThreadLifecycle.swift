@@ -11,7 +11,7 @@ extension AppViewModel {
       return
     }
     let failureThreadID = selectedThreadID
-    let title = "Thread \(threads.count + 1)"
+    let title = "Session \(threads.count + 1)"
 
     let task = Task {
       defer {
@@ -78,6 +78,92 @@ extension AppViewModel {
       }
     }
     threadHistoryLoadCoordinator.bind(task: task, token: requestToken)
+  }
+
+  func canDeleteThread(_ thread: ThreadSummary) -> Bool {
+    runtimeState == .ready
+      && !thread.id.hasPrefix("local-")
+      && !hasActiveOrPendingTurn()
+  }
+
+  func canRevertThreadChanges(_ thread: ThreadSummary) -> Bool {
+    runtimeState == .ready
+      && !thread.id.hasPrefix("local-")
+      && !hasActiveOrPendingTurn()
+  }
+
+  func previewThreadChanges(
+    _ thread: ThreadSummary
+  ) async -> RuntimeBridge.RuntimeThreadChangePreview? {
+    guard canRevertThreadChanges(thread) else {
+      runtimeDetail = SessionChangePresenter.activeWorkBlocksRevertDetail
+      return nil
+    }
+
+    do {
+      let preview = try await runtimeBridge.previewThreadChanges(threadID: thread.id)
+      guard !Task.isCancelled else {
+        return nil
+      }
+      if preview.changes.isEmpty {
+        runtimeDetail = SessionChangePresenter.noRevertableChangesDetail
+        return nil
+      }
+      return preview
+    } catch {
+      guard !Task.isCancelled else {
+        return nil
+      }
+      runtimeDetail = SessionChangePresenter.revertPreviewFailedDetail(error: error)
+      return nil
+    }
+  }
+
+  func revertThreadChanges(_ thread: ThreadSummary) {
+    guard canRevertThreadChanges(thread) else {
+      runtimeDetail = SessionChangePresenter.activeWorkBlocksRevertDetail
+      return
+    }
+
+    Task {
+      do {
+        let result = try await runtimeBridge.revertThreadChanges(threadID: thread.id)
+        guard !Task.isCancelled else {
+          return
+        }
+        appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        runtimeDetail = SessionChangePresenter.revertSuccessDetail(revertedCount: result.revertedCount)
+      } catch {
+        guard !Task.isCancelled else {
+          return
+        }
+        runtimeDetail = SessionChangePresenter.revertFailedDetail(error: error)
+      }
+    }
+  }
+
+  func deleteThread(_ thread: ThreadSummary) {
+    guard canDeleteThread(thread) else {
+      runtimeDetail = SessionChangePresenter.activeWorkBlocksDeleteDetail
+      return
+    }
+
+    let deletedThreadID = thread.id
+    Task {
+      do {
+        let runtimeThreads = try await runtimeBridge.deleteThread(threadID: deletedThreadID)
+        guard !Task.isCancelled else {
+          return
+        }
+        await applyDeletedThread(threadID: deletedThreadID, runtimeThreads: runtimeThreads)
+      } catch {
+        guard !Task.isCancelled else {
+          return
+        }
+        runtimeDetail = SessionChangePresenter.deleteFailedDetail(error: error)
+      }
+    }
+    threadHistoryLoadCoordinator.cancel()
   }
 
   func refreshWorkspaceThreadSelection(
@@ -210,6 +296,31 @@ extension AppViewModel {
     updateTimelineState { state in
       state.applyWorkspaceThreads(workspaceThreads)
     }
+  }
+
+  private func applyDeletedThread(
+    threadID: String,
+    runtimeThreads: [RuntimeBridge.RuntimeThreadSummary]
+  ) async {
+    let workspaceThreads: [ThreadSummary]
+    if let workspace {
+      workspaceThreads = (try? await WorkspaceThreadSelectionLoader.load(
+        workspace: workspace,
+        runtimeThreads: runtimeThreads,
+        createIfEmpty: false,
+        startThread: { [runtimeBridge] title in
+          try await runtimeBridge.startThread(title: title)
+        }
+      )) ?? []
+    } else {
+      workspaceThreads = runtimeThreads.map(RuntimeSummaryMapper.threadSummary(from:))
+    }
+
+    updateTimelineState { state in
+      state.deleteThread(threadID: threadID, remainingThreads: workspaceThreads)
+    }
+    runtimeDetail = SessionChangePresenter.deleteSuccessDetail
+    announceFirstRequestReadyIfNeeded()
   }
 
   private func applyThreadEntries(threadID: String, entries: [TimelineEntry]) {

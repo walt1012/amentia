@@ -8,7 +8,7 @@ struct SessionOverviewSnapshot {
 
 enum SessionOverviewPresenter {
   static func selectedThreadTitle(_ snapshot: SessionOverviewSnapshot) -> String {
-    snapshot.selectedThread?.title ?? "No Thread Selected"
+    snapshot.selectedThread?.title ?? "No Session Selected"
   }
 
   static func selectedThreadPreview(_ snapshot: SessionOverviewSnapshot) -> String {

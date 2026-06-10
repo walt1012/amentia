@@ -4,6 +4,7 @@ mod commands;
 mod connectors;
 mod hooks;
 mod metadata;
+mod workflow_commands;
 
 pub use self::capabilities::build_capability_registry;
 pub use self::commands::build_command_registry;

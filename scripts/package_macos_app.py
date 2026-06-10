@@ -21,21 +21,49 @@ from macos_llama_backend import (
   assert_portable_llama_backend,
   stage_llama_backend,
 )
+from package_contract import (
+  APP_NAME,
+  DAILY_DRIVER_CONTRACT,
+  DEFAULT_MODEL_ID,
+  DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
+  FIRST_APP_OPEN_CONTRACT_ID,
+  MINIMUM_SYSTEM_VERSION,
+  MODEL_DELIVERY_MODE,
+  MODEL_METADATA_BUNDLED,
+  MODEL_WEIGHTS_BUNDLED,
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  PACKAGE_SIGNING_MODES,
+  DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  LOCAL_EXECUTION_SAFETY_MODES,
+  PITH_ACCOUNT_REQUIRED,
+  PROHIBITED_MODEL_SUFFIXES,
+  SANDBOX_CONTRACT,
+  SUPPORTED_ARCH,
+  assert_size_under_budget,
+  directory_size_bytes,
+  package_size_budget,
+  package_distribution_trust,
+  validate_package_manifest_contract,
+)
+from release_identity import normalize_product_version
 
 
-APP_NAME = "Pith"
 APP_EXECUTABLE_NAME = "Pith"
 SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
-SUPPORTED_ARCH = "x86_64"
-PROHIBITED_MODEL_SUFFIXES = {".gguf", ".bin", ".safetensors"}
-DEFAULT_MODEL_ID = "lfm2.5-350m"
-DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
-  "models/builtin/lfm2.5-350m/model-pack.json"
+DEFAULT_SOURCE_COMMIT = (
+  os.environ.get("PITH_SOURCE_COMMIT")
+  or os.environ.get("GITHUB_SHA")
+  or "development"
 )
+SOURCE_COMMIT_HEX_LENGTH = 40
+DAILY_DRIVER_STAGE_SOURCE = DAILY_DRIVER_CONTRACT["stageSource"]
+DAILY_DRIVER_NEXT_ACTION_SOURCE = DAILY_DRIVER_CONTRACT["nextActionSource"]
+DAILY_DRIVER_PRESENTATION = DAILY_DRIVER_CONTRACT["presentation"]
+FIRST_APP_OPEN_ACTION_CONTRACT = FIRST_APP_OPEN_CONTRACT_ID
 REQUIRED_ZIP_BASE_ENTRIES = {
   "Pith.app/Contents/Info.plist",
   "Pith.app/Contents/MacOS/Pith",
@@ -64,12 +92,10 @@ REQUIRED_INFO_PLIST_VALUES = {
   "CFBundleInfoDictionaryVersion": "6.0",
   "CFBundleName": APP_NAME,
   "CFBundlePackageType": "APPL",
-  "CFBundleShortVersionString": DEFAULT_VERSION,
   "CFBundleSupportedPlatforms": ["MacOSX"],
-  "CFBundleVersion": DEFAULT_VERSION,
-  "LSApplicationCategoryType": "public.app-category.developer-tools",
+  "LSApplicationCategoryType": "public.app-category.productivity",
   "LSArchitecturePriority": [SUPPORTED_ARCH],
-  "LSMinimumSystemVersion": "12.0",
+  "LSMinimumSystemVersion": MINIMUM_SYSTEM_VERSION,
   "NSHighResolutionCapable": True,
   "NSPrincipalClass": "NSApplication",
   "NSSupportsAutomaticTermination": True,
@@ -78,7 +104,10 @@ REQUIRED_INFO_PLIST_VALUES = {
 REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "notion-connector": {
     "command:notion.prepare-page-draft",
+    "command:notion.inspect-page-write",
+    "command:notion.publish-page-draft",
     "connector:notion",
+    "connector_workflow:notion.create-page",
     "mcp_server:notion",
   },
   "review-assistant": {"command:review.inspect-diff"},
@@ -86,6 +115,22 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "web-search": {"tool:web_search"},
   "workspace-notes": {"command:workspace.capture-note"},
 }
+REQUIRED_APP_COPY_SNIPPETS = (
+  "Start the local service to restore model choices",
+  "paused downloads",
+  "selected model choices remain local",
+  "to keep resume data",
+  "cancel to clear the partial file",
+  "from saved resume data",
+  "Refresh local model setup if readiness still fails",
+  "Download Local Model",
+  "Repair Model Setup",
+  "Open Anyway",
+  "Control-click Pith.app",
+  "no Pith account required",
+  "local execution mode",
+  "package size budget",
+)
 
 
 def run(command: list[str], cwd: Path) -> str:
@@ -161,6 +206,22 @@ def parse_args() -> argparse.Namespace:
     help="Skip free ad-hoc codesign verification. CI should keep this enabled.",
   )
   parser.add_argument(
+    "--version",
+    default=os.environ.get("PITH_RELEASE_VERSION", DEFAULT_VERSION),
+    help="App bundle version, normally derived from the release tag without the leading v.",
+  )
+  parser.add_argument(
+    "--source-commit",
+    default=DEFAULT_SOURCE_COMMIT,
+    help="Source commit recorded in PithPackage.json.",
+  )
+  parser.add_argument(
+    "--signing-mode",
+    default="ad-hoc",
+    choices=sorted(PACKAGE_SIGNING_MODES),
+    help="Signing state recorded in PithPackage.json.",
+  )
+  parser.add_argument(
     "--stage-llama-backend",
     type=Path,
     help="Stage a portable llama.cpp backend directory and exit.",
@@ -212,10 +273,19 @@ def package_app(
   runtime_binary: Path,
   llama_binary: Path | None,
   arch: str,
+  version: str,
+  source_commit: str,
+  signing_mode: str,
   skip_ad_hoc_sign: bool,
   no_zip: bool,
 ) -> Path | None:
   validate_swift_package_rules(repo_root)
+  version = normalize_version(version)
+  source_commit = normalize_source_commit(source_commit)
+  if signing_mode not in PACKAGE_SIGNING_MODES:
+    raise RuntimeError(f"Unsupported signing mode: {signing_mode}")
+  if signing_mode == "ad-hoc" and skip_ad_hoc_sign:
+    signing_mode = "unsigned"
 
   app_path = dist_dir / f"{APP_NAME}.app"
   contents_path = app_path / "Contents"
@@ -226,8 +296,14 @@ def package_app(
   macos_path.mkdir(parents=True)
   resources_path.mkdir(parents=True)
 
-  write_info_plist(contents_path / "Info.plist")
-  write_package_manifest(resources_path / "PithPackage.json", arch)
+  write_info_plist(contents_path / "Info.plist", version)
+  write_package_manifest(
+    resources_path / "PithPackage.json",
+    arch,
+    version,
+    source_commit,
+    signing_mode,
+  )
   (contents_path / "PkgInfo").write_text("APPL????\n", encoding="utf-8")
 
   copy_executable(app_binary, macos_path / APP_EXECUTABLE_NAME)
@@ -236,7 +312,7 @@ def package_app(
   copy_tree_if_present(repo_root / "plugins", resources_path / "plugins")
   copy_required_llama_backend(repo_root, resources_path, llama_binary)
 
-  validate_app_bundle(app_path, arch)
+  validate_app_bundle(app_path, arch, version, source_commit, signing_mode)
   if not skip_ad_hoc_sign:
     sign_app_bundle_if_available(app_path)
     validate_app_signature_if_available(app_path)
@@ -272,17 +348,46 @@ def validate_swift_package_rules(repo_root: Path) -> None:
       raise RuntimeError(f"Swift package is missing {label}: {package_path}")
 
 
-def write_info_plist(path: Path) -> None:
+def normalize_version(version: str) -> str:
+  return normalize_product_version(version)
+
+
+def normalize_source_commit(source_commit: str) -> str:
+  normalized = source_commit.strip().lower()
+  if normalized == "development":
+    return normalized
+  if len(normalized) != SOURCE_COMMIT_HEX_LENGTH:
+    raise RuntimeError("Source commit must be a full SHA-1 hash or development")
+  if any(character not in "0123456789abcdef" for character in normalized):
+    raise RuntimeError("Source commit must be lowercase hex or development")
+  return normalized
+
+
+def write_info_plist(path: Path, version: str) -> None:
+  info = {
+    **REQUIRED_INFO_PLIST_VALUES,
+    "CFBundleShortVersionString": version,
+    "CFBundleVersion": version,
+  }
   with path.open("wb") as file:
-    plistlib.dump(REQUIRED_INFO_PLIST_VALUES, file, sort_keys=True)
+    plistlib.dump(info, file, sort_keys=True)
 
 
-def write_package_manifest(path: Path, arch: str) -> None:
+def write_package_manifest(
+  path: Path,
+  arch: str,
+  version: str,
+  source_commit: str,
+  signing_mode: str,
+) -> None:
+  source_commit = normalize_source_commit(source_commit)
   manifest = {
+    "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
     "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
-    "bundleVersion": DEFAULT_VERSION,
-    "minimumSystemVersion": "12.0",
+    "bundleVersion": version,
+    "sourceCommit": source_commit,
+    "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
     "architecture": arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
     "backendExecutable": (
@@ -290,11 +395,24 @@ def write_package_manifest(path: Path, arch: str) -> None:
     ).as_posix(),
     "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": "in-app-download",
-    "modelWeightsBundled": False,
-    "modelMetadataBundled": True,
+    "modelDelivery": MODEL_DELIVERY_MODE,
+    "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
+    "modelMetadataBundled": MODEL_METADATA_BUNDLED,
+    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+    "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
+    "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
+    "dailyDriverNextActionSource": DAILY_DRIVER_NEXT_ACTION_SOURCE,
+    "dailyDriverPresentation": DAILY_DRIVER_PRESENTATION,
+    "firstAppOpenActionContract": FIRST_APP_OPEN_ACTION_CONTRACT,
     "bundledPluginsIncluded": True,
-    "signing": "ad-hoc when codesign is available",
+    "sandboxMode": SANDBOX_CONTRACT["mode"],
+    "sandboxBackend": SANDBOX_CONTRACT["backend"],
+    "sandboxFallback": SANDBOX_CONTRACT["fallback"],
+    "sandboxNetworkDefault": SANDBOX_CONTRACT["networkDefault"],
+    "signing": signing_mode,
+    "distributionTrust": package_distribution_trust(signing_mode),
+    "sizeBudget": package_size_budget(),
   }
   path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -310,7 +428,14 @@ def copy_tree_if_present(source: Path, destination: Path) -> None:
   if not source.exists():
     return
   assert_copy_source_has_no_symlinks(source)
-  ignore = shutil.ignore_patterns("*.gguf", "*.bin", "*.safetensors", ".DS_Store")
+  ignore = shutil.ignore_patterns(
+    "*.gguf",
+    "*.bin",
+    "*.safetensors",
+    "*.pyc",
+    "__pycache__",
+    ".DS_Store",
+  )
   shutil.copytree(source, destination, ignore=ignore)
 
 
@@ -347,7 +472,13 @@ def copy_required_llama_backend(
   )
 
 
-def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
+def validate_app_bundle(
+  app_path: Path,
+  expected_arch: str,
+  expected_version: str,
+  expected_source_commit: str,
+  expected_signing_mode: str,
+) -> None:
   required_paths = [
     app_path / "Contents" / "Info.plist",
     app_path / "Contents" / "Resources" / "PithPackage.json",
@@ -371,9 +502,15 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
     / LLAMA_BACKEND_RELATIVE_PARENT
     / LLAMA_BACKEND_EXECUTABLE_NAME
   )
-  assert_info_plist_matches_product_rules(app_path)
+  assert_info_plist_matches_product_rules(app_path, expected_version)
   assert_pkg_info_matches_app_bundle(app_path)
-  assert_package_manifest_matches_bundle(app_path, expected_arch)
+  assert_package_manifest_matches_bundle(
+    app_path,
+    expected_arch,
+    expected_version,
+    expected_source_commit,
+    expected_signing_mode,
+  )
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME)
   assert_only_x86_64_if_lipo_is_available(
@@ -387,9 +524,11 @@ def validate_app_bundle(app_path: Path, expected_arch: str) -> None:
     app_path / "Contents" / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT
   )
   assert_llama_backend_dependencies_match_arch(app_path)
+  assert_packaged_app_copy_is_present(app_path)
   assert_no_model_weights_are_bundled(app_path)
   assert_packaged_model_manifest_is_downloadable(app_path)
   assert_bundled_plugins_are_package_ready(app_path)
+  assert_app_bundle_size_budget(app_path)
 
 
 def assert_llama_backend_dependencies_match_arch(app_path: Path) -> None:
@@ -406,7 +545,7 @@ def assert_llama_backend_dependencies_match_arch(app_path: Path) -> None:
     assert_only_x86_64_if_lipo_is_available(dylib)
 
 
-def assert_info_plist_matches_product_rules(app_path: Path) -> None:
+def assert_info_plist_matches_product_rules(app_path: Path, expected_version: str) -> None:
   info_path = app_path / "Contents" / "Info.plist"
   with info_path.open("rb") as file:
     info = plistlib.load(file)
@@ -418,6 +557,11 @@ def assert_info_plist_matches_product_rules(app_path: Path) -> None:
       raise RuntimeError(
         f"Info.plist field {field} must be {expected_value!r}: {info_path}"
       )
+  for field in ("CFBundleShortVersionString", "CFBundleVersion"):
+    if info.get(field) != expected_version:
+      raise RuntimeError(
+        f"Info.plist field {field} must be {expected_version!r}: {info_path}"
+      )
 
 
 def assert_pkg_info_matches_app_bundle(app_path: Path) -> None:
@@ -427,23 +571,32 @@ def assert_pkg_info_matches_app_bundle(app_path: Path) -> None:
     raise RuntimeError(f"PkgInfo must identify a macOS application bundle: {pkg_info_path}")
 
 
-def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -> None:
+def assert_package_manifest_matches_bundle(
+  app_path: Path,
+  expected_arch: str,
+  expected_version: str,
+  expected_source_commit: str,
+  expected_signing_mode: str,
+) -> None:
   manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
   manifest = read_json_object(manifest_path)
+  validate_package_manifest_contract(
+    manifest,
+    f"Package manifest: {manifest_path}",
+    source_commit=expected_source_commit,
+    signing_mode=expected_signing_mode,
+    bundle_version=expected_version,
+    expected_size_budget=package_size_budget(),
+  )
+  if expected_arch != SUPPORTED_ARCH:
+    raise RuntimeError(f"Packaged app architecture must be {SUPPORTED_ARCH}")
   expected_values = {
-    "appName": APP_NAME,
     "bundleIdentifier": DEFAULT_BUNDLE_ID,
-    "bundleVersion": DEFAULT_VERSION,
-    "minimumSystemVersion": "12.0",
-    "architecture": expected_arch,
     "runtimeExecutable": RUNTIME_EXECUTABLE_NAME,
     "backendExecutable": (
       LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME
     ).as_posix(),
-    "defaultModelId": DEFAULT_MODEL_ID,
     "defaultModelManifest": DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix(),
-    "modelDelivery": "in-app-download",
-    "signing": "ad-hoc when codesign is available",
   }
   for field, expected_value in expected_values.items():
     if manifest.get(field) != expected_value:
@@ -451,9 +604,9 @@ def assert_package_manifest_matches_bundle(app_path: Path, expected_arch: str) -
         f"Package manifest field {field} must be {expected_value!r}: {manifest_path}"
       )
 
-  if required_bool_field(manifest, "modelWeightsBundled", manifest_path) is not False:
+  if required_bool_field(manifest, "modelWeightsBundled", manifest_path) is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Package manifest must not claim bundled model weights")
-  if not required_bool_field(manifest, "modelMetadataBundled", manifest_path):
+  if required_bool_field(manifest, "modelMetadataBundled", manifest_path) is not MODEL_METADATA_BUNDLED:
     raise RuntimeError("Package manifest must include bundled model metadata")
   if not required_bool_field(manifest, "bundledPluginsIncluded", manifest_path):
     raise RuntimeError("Package manifest must include bundled plugins")
@@ -515,6 +668,35 @@ def assert_packaged_model_manifest_is_downloadable(app_path: Path) -> None:
     raise RuntimeError("Packaged default model max_output_tokens exceeds context_size")
 
 
+def assert_packaged_app_copy_is_present(app_path: Path) -> None:
+  executable_path = app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME
+  text = packaged_executable_text(executable_path)
+  missing = [
+    snippet
+    for snippet in REQUIRED_APP_COPY_SNIPPETS
+    if snippet not in text
+  ]
+  if missing:
+    raise RuntimeError(
+      "Packaged app executable is missing required user-facing copy: "
+      + ", ".join(missing)
+    )
+
+
+def packaged_executable_text(executable_path: Path) -> str:
+  require_file(executable_path, "packaged app executable")
+  try:
+    result = subprocess.run(
+      ["strings", str(executable_path)],
+      check=True,
+      capture_output=True,
+      text=True,
+    )
+    return result.stdout
+  except (FileNotFoundError, subprocess.CalledProcessError, UnicodeDecodeError):
+    return executable_path.read_bytes().decode("utf-8", errors="ignore")
+
+
 def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
   bundled_root = app_path / "Contents" / "Resources" / "plugins" / "bundled"
   for plugin_id, required_capabilities in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES.items():
@@ -530,8 +712,27 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
       missing = ", ".join(sorted(missing_capabilities))
       raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
     assert_bundled_plugin_capability_files(plugin_root, capabilities)
+    assert_bundled_plugin_connector_workflows(plugin_root, manifest, capabilities)
     assert_bundled_plugin_skill_files(plugin_root, manifest)
     assert_bundled_plugin_mcp_server_files(plugin_root, manifest, capabilities)
+
+
+def assert_app_bundle_size_budget(app_path: Path) -> None:
+  budget = package_size_budget()
+  assert_size_under_budget(
+    directory_size_bytes(app_path),
+    budget["maxAppBundleBytes"],
+    "macOS app bundle",
+  )
+
+
+def assert_zip_size_budget(zip_path: Path) -> None:
+  budget = package_size_budget()
+  assert_size_under_budget(
+    zip_path.stat().st_size,
+    budget["maxZipArtifactBytes"],
+    "macOS zip artifact",
+  )
 
 
 def plugin_capabilities(manifest_path: Path, manifest: dict) -> set[str]:
@@ -565,6 +766,86 @@ def assert_bundled_plugin_capability_files(plugin_root: Path, capabilities: set[
       hook_path = plugin_root / "hooks" / f"{hook_id}.json"
       require_file(hook_path, f"bundled plugin hook {hook_id}")
       read_json_object(hook_path)
+
+
+def assert_bundled_plugin_connector_workflows(
+  plugin_root: Path,
+  manifest: dict,
+  capabilities: set[str],
+) -> None:
+  workflows = manifest.get("connectorWorkflows", [])
+  if not isinstance(workflows, list):
+    raise RuntimeError(f"Bundled plugin connectorWorkflows must be a list: {plugin_root}")
+
+  connector_ids = {
+    connector.get("id")
+    for connector in manifest.get("appConnectors", [])
+    if isinstance(connector, dict) and isinstance(connector.get("id"), str)
+  }
+  workflow_ids = set()
+  workflow_connectors = {}
+  for workflow in workflows:
+    if not isinstance(workflow, dict):
+      raise RuntimeError(f"Bundled connector workflow must be an object: {plugin_root}")
+    workflow_id = workflow.get("id")
+    connector_id = workflow.get("connectorId")
+    action = workflow.get("action")
+    stages = workflow.get("stages")
+    statuses = workflow.get("statuses")
+    if not isinstance(workflow_id, str) or not workflow_id.strip():
+      raise RuntimeError(f"Bundled connector workflow is missing id: {plugin_root}")
+    assert_safe_capability_identifier(workflow_id, f"connector_workflow:{workflow_id}")
+    if connector_id not in connector_ids:
+      raise RuntimeError(
+        f"Bundled connector workflow references an undeclared connector: {workflow_id}"
+      )
+    if not isinstance(action, str) or not action.strip():
+      raise RuntimeError(f"Bundled connector workflow is missing action: {workflow_id}")
+    if not isinstance(stages, list) or not stages:
+      raise RuntimeError(f"Bundled connector workflow is missing stages: {workflow_id}")
+    if not isinstance(statuses, list) or not statuses:
+      raise RuntimeError(f"Bundled connector workflow is missing statuses: {workflow_id}")
+    workflow_ids.add(workflow_id)
+    workflow_connectors[workflow_id] = connector_id
+    if f"connector_workflow:{workflow_id}" not in capabilities:
+      raise RuntimeError(
+        f"Bundled connector workflow is missing capability: {workflow_id}"
+      )
+
+  for capability in capabilities:
+    if capability.startswith("connector_workflow:"):
+      workflow_id = capability.removeprefix("connector_workflow:")
+      if workflow_id not in workflow_ids:
+        raise RuntimeError(
+          f"Bundled connector workflow capability has no declaration: {capability}"
+        )
+
+  for capability in capabilities:
+    if not capability.startswith("command:"):
+      continue
+    command_id = capability.removeprefix("command:")
+    command_path = plugin_root / "commands" / f"{command_id}.json"
+    if not command_path.exists():
+      continue
+    command = read_json_object(command_path)
+    execution = command.get("execution", {})
+    if not isinstance(execution, dict):
+      continue
+    workflow_id = execution.get("workflowId")
+    if isinstance(workflow_id, str) and workflow_id.strip() and workflow_id not in workflow_ids:
+      raise RuntimeError(
+        f"Bundled command {command_id} references undeclared workflow: {workflow_id}"
+      )
+    connectors = execution.get("connectors", [])
+    if (
+      isinstance(workflow_id, str)
+      and workflow_id.strip()
+      and isinstance(connectors, list)
+      and workflow_connectors.get(workflow_id) not in connectors
+    ):
+      raise RuntimeError(
+        f"Bundled command {command_id} workflow is not bound to its connector: {workflow_id}"
+      )
 
 
 def assert_safe_capability_identifier(identifier: str, capability: str) -> None:
@@ -723,8 +1004,6 @@ def sign_app_bundle_if_available(app_path: Path) -> None:
       "--deep",
       "--sign",
       "-",
-      "--options",
-      "runtime",
       str(app_path),
     ],
     app_path.parent,
@@ -777,6 +1056,7 @@ def assert_zip_artifact(zip_path: Path) -> None:
     raise RuntimeError(f"macOS package artifact must be a zip file: {zip_path}")
   if zip_path.stat().st_size <= 0:
     raise RuntimeError(f"macOS package artifact is empty: {zip_path}")
+  assert_zip_size_budget(zip_path)
   with zipfile.ZipFile(zip_path) as archive:
     infos = archive.infolist()
 
@@ -855,6 +1135,9 @@ def main() -> int:
       runtime_binary,
       args.llama_binary.resolve() if args.llama_binary else None,
       args.arch,
+      args.version,
+      args.source_commit,
+      args.signing_mode,
       args.skip_ad_hoc_sign,
       args.no_zip,
     )

@@ -2,6 +2,16 @@ use std::fs;
 use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 
+#[cfg(target_os = "macos")]
+use std::process::{Command, Stdio};
+#[cfg(target_os = "macos")]
+use std::sync::OnceLock;
+#[cfg(target_os = "macos")]
+use std::time::Duration;
+
+#[cfg(target_os = "macos")]
+use pith_process::{configure_process_group, wait_for_child, ChildExitReason};
+
 const MACOS_SANDBOX_EXEC_PATH: &str = "/usr/bin/sandbox-exec";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -190,7 +200,8 @@ fn read_only_boundary_detail(policy: &SandboxPolicy) -> String {
 pub fn native_sandbox_available() -> bool {
   #[cfg(target_os = "macos")]
   {
-    Path::new(MACOS_SANDBOX_EXEC_PATH).is_file()
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(probe_macos_sandbox_exec)
   }
 
   #[cfg(not(target_os = "macos"))]
@@ -199,10 +210,71 @@ pub fn native_sandbox_available() -> bool {
   }
 }
 
+#[cfg(target_os = "macos")]
+fn probe_macos_sandbox_exec() -> bool {
+  if !Path::new(MACOS_SANDBOX_EXEC_PATH).is_file() {
+    return false;
+  }
+
+  let mut command = Command::new(MACOS_SANDBOX_EXEC_PATH);
+  configure_process_group(&mut command);
+  let Ok(mut child) = command
+    .arg("-p")
+    .arg(macos_sandbox_probe_profile())
+    .arg("/bin/sh")
+    .arg("-c")
+    .arg("true")
+    .stdin(Stdio::null())
+    .stdout(Stdio::null())
+    .stderr(Stdio::null())
+    .spawn()
+  else {
+    return false;
+  };
+
+  wait_for_child(
+    &mut child,
+    Duration::from_secs(2),
+    Duration::from_millis(20),
+    Duration::from_millis(50),
+    || false,
+  )
+  .is_ok_and(|wait| wait.reason == ChildExitReason::Completed && wait.status.success())
+}
+
+#[cfg(target_os = "macos")]
+fn macos_sandbox_probe_profile() -> &'static str {
+  r#"(version 1)
+(deny default)
+(allow process*)
+(allow signal (target self))
+(allow sysctl-read)
+(allow file-read-metadata (subpath "/"))
+(allow file-read*
+  (subpath "/System")
+  (subpath "/Library")
+  (subpath "/usr")
+  (subpath "/bin")
+  (subpath "/sbin")
+  (subpath "/etc")
+  (subpath "/private/etc")
+  (subpath "/private/var/db")
+  (subpath "/dev"))
+(allow file-write-data (literal "/dev/null"))"#
+}
+
 pub fn native_backend_name() -> &'static str {
-  if cfg!(target_os = "macos") {
-    "macosSeatbelt"
-  } else {
+  #[cfg(target_os = "macos")]
+  {
+    if native_sandbox_available() {
+      "macosSeatbelt"
+    } else {
+      "processOnly"
+    }
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  {
     "processOnly"
   }
 }
@@ -267,6 +339,8 @@ pub fn macos_seatbelt_profile(policy: &SandboxPolicy) -> String {
     "  (subpath \"/bin\")".to_string(),
     "  (subpath \"/sbin\")".to_string(),
     "  (subpath \"/etc\")".to_string(),
+    "  (subpath \"/private/etc\")".to_string(),
+    "  (subpath \"/private/var/db\")".to_string(),
     "  (subpath \"/dev\")".to_string(),
   ];
   for readable_root in &readable_roots {
@@ -418,6 +492,21 @@ mod tests {
     let profile = macos_seatbelt_profile(&policy);
 
     assert!(profile.contains("(allow network*)"));
+  }
+
+  #[test]
+  fn profile_allows_read_only_macos_runtime_roots() {
+    let policy = SandboxPolicy::workspace_read_write("/Users/example/work");
+    let profile = macos_seatbelt_profile(&policy);
+
+    assert!(profile.contains("(subpath \"/private/etc\")"));
+    assert!(profile.contains("(subpath \"/private/var/db\")"));
+    let write_section = profile
+      .split("(allow file-write*")
+      .nth(1)
+      .expect("write section");
+    assert!(!write_section.contains("(subpath \"/private/etc\")"));
+    assert!(!write_section.contains("(subpath \"/private/var/db\")"));
   }
 
   #[test]

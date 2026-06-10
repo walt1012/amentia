@@ -22,6 +22,7 @@ pub fn complete_prepared_approval_respond(
     memory_event,
     hook_memory_captures,
     approved_plugin_command_output,
+    workspace_changes,
   } = completed.output;
   context
     .execution_state
@@ -39,6 +40,12 @@ pub fn complete_prepared_approval_respond(
 
   if let Err(error) = context.persist_runtime_state() {
     return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
+  }
+
+  for workspace_change in workspace_changes {
+    if let Err(error) = context.persist_workspace_change(&workspace_change) {
+      return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
+    }
   }
 
   if let Some(memory_event) = memory_event {

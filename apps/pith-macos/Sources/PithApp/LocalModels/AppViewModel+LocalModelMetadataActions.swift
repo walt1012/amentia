@@ -10,15 +10,15 @@ extension AppViewModel {
 
   func bootstrapModelPackMetadata() {
     guard runtimeState == .ready else {
-      runtimeDetail = "Launch the runtime before preparing local model metadata."
+      runtimeDetail = "Start Pith's local service before refreshing model setup."
       return
     }
     guard !modelDownloadCoordinator.isDownloading else {
-      runtimeDetail = "Finish, pause, or cancel the current model download before preparing metadata."
+      runtimeDetail = "Finish, pause, or cancel the current model download before refreshing setup."
       return
     }
     guard let requestToken = localModelMetadataCoordinator.begin() else {
-      runtimeDetail = "Model metadata preparation is already running."
+      runtimeDetail = "Model setup refresh is already running."
       return
     }
 
@@ -33,16 +33,16 @@ extension AppViewModel {
         }
         await refreshModelHealthState()
         let copiedSummary = result.copiedFiles.isEmpty
-          ? "Pack metadata was already present."
-          : "Prepared \(result.copiedFiles.count) local model metadata file(s)."
-        runtimeDetail = "\(copiedSummary) Manifest: \(result.manifestPath)"
+          ? "Local model setup was already ready."
+          : "Refreshed local model setup."
+        runtimeDetail = "\(copiedSummary) Local model setup is ready."
       } catch {
         guard !Task.isCancelled,
               localModelMetadataCoordinator.isCurrent(requestToken)
         else {
           return
         }
-        runtimeDetail = "Model metadata bootstrap failed: \(error.localizedDescription)"
+        runtimeDetail = "Model setup refresh failed: \(error.localizedDescription)"
       }
     }
     localModelMetadataCoordinator.bind(task: task, token: requestToken)

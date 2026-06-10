@@ -26,6 +26,18 @@ extension AppViewModel {
     TimelineInspectorPresenter.selectedEntryMetadata(timelineInspectorSnapshot())
   }
 
+  func selectedEntrySourceSummary() -> String? {
+    TimelineInspectorPresenter.selectedEntrySourceSummary(timelineInspectorSnapshot())
+  }
+
+  func selectedEntryActionReceiptSummary() -> String? {
+    TimelineInspectorPresenter.selectedEntryActionReceiptSummary(timelineInspectorSnapshot())
+  }
+
+  func selectedEntryContextReceiptSections() -> [TimelineContextReceiptSection] {
+    TimelineInspectorPresenter.selectedEntryContextReceiptSections(timelineInspectorSnapshot())
+  }
+
   func selectedDiffSummary() -> String? {
     TimelineInspectorPresenter.selectedDiffSummary(timelineInspectorSnapshot())
   }

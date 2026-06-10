@@ -96,6 +96,22 @@ struct TimelineRuntimeState {
     syncVisibleTimeline()
   }
 
+  mutating func deleteThread(threadID: String, remainingThreads: [ThreadSummary]) {
+    threads = remainingThreads
+    threadTimelines.removeValue(forKey: threadID)
+    threadPendingApprovalIDs.removeValue(forKey: threadID)
+    announcedSetupCompleteThreadIDs.remove(threadID)
+    if activeTurnThreadID == threadID {
+      activeTurnID = nil
+      activeTurnThreadID = nil
+    }
+    selectedThreadID = TimelineMutationState.selectedThreadID(
+      workspaceThreads: remainingThreads,
+      currentSelectionID: selectedThreadID == threadID ? nil : selectedThreadID
+    )
+    syncVisibleTimeline()
+  }
+
   mutating func resetToWelcomeState(_ welcomeState: WelcomeTimelineState) {
     self = TimelineRuntimeState(welcomeState: welcomeState)
   }

@@ -35,6 +35,22 @@ extension LocalModelCatalog {
         tags: ["recommended", "tiny", "tools", "code"],
         installSegments: ["catalog", "granite-4.0-h-350m"]
       ),
+      LocalModelCatalogItem(
+        id: "minicpm5-1b",
+        displayName: "MiniCPM5-1B Q4_K_M",
+        description: "Newer Apache-2.0 1B model for local cowork, tools, code, and long-context tasks.",
+        fileName: "MiniCPM5-1B-Q4_K_M.gguf",
+        downloadURL: "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF/resolve/main/MiniCPM5-1B-Q4_K_M.gguf",
+        homepage: "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF",
+        sizeBytes: 688_065_920,
+        sha256: "81b64d05a23b17b34c475f42b3e72fbde62d4b92cc34541f7a8031d0752deafa",
+        contextSize: 8192,
+        modelContextSize: 131_072,
+        maxOutputTokens: 384,
+        license: "apache-2.0",
+        tags: ["optional", "small", "tools", "code", "long-context"],
+        installSegments: ["catalog", "minicpm5-1b"]
+      ),
     ]
   }
 }

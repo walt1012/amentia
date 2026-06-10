@@ -40,3 +40,8 @@ pub(super) fn generate_local_summary(
 
   (result.text, attributes)
 }
+
+pub(super) fn mark_cowork_handoff(attributes: &mut HashMap<String, String>, handoff_kind: &str) {
+  attributes.insert("responseRole".to_string(), "coworkHandoff".to_string());
+  attributes.insert("handoffKind".to_string(), handoff_kind.to_string());
+}

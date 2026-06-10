@@ -29,7 +29,17 @@ extension AppViewModel {
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
       hasActiveTurn: hasActiveOrPendingTurn(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
-      hasDraftMessage: !trimmedDraftMessage.isEmpty
+      hasDraftMessage: !trimmedDraftMessage.isEmpty,
+      hasRestoredLocalExecutionDraft: hasRestoredLocalExecutionDraft()
     )
+  }
+
+  private func hasRestoredLocalExecutionDraft() -> Bool {
+    guard let restoredLocalExecutionDraftMessage else {
+      return false
+    }
+
+    return !trimmedDraftMessage.isEmpty
+      && trimmedDraftMessage == restoredLocalExecutionDraftMessage
   }
 }

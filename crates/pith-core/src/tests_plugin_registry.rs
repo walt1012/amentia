@@ -1563,7 +1563,7 @@ fn plugin_connector_registry_lists_disabled_connector_plugins() {
   assert_eq!(connectors[0]["authStatus"], "disabled");
   assert_eq!(connectors[0]["credentialPresent"], false);
   assert_eq!(connectors[0]["credentialSecretPresent"], false);
-  assert_eq!(connectors[0]["authType"], "oauth2");
+  assert_eq!(connectors[0]["authType"], "api_key");
   assert_eq!(connectors[0]["credentialStore"], "local");
 }
 
@@ -1686,6 +1686,44 @@ fn plugin_connector_authorize_returns_repair_metadata_when_disabled() {
     .as_str()
     .expect("connector repair hint")
     .contains("Enable the connector plugin"));
+}
+
+#[test]
+fn plugin_connector_authorize_rejects_missing_secret_for_api_key_connectors() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["mcp_server:notion", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-connector::notion",
+        "credentialSecret": "   "
+      })),
+    ),
+  );
+
+  let error = response.error.expect("connector auth secret error");
+  assert_eq!(error.code, -32058);
+  let data = error.data.expect("connector auth secret error data");
+  assert_eq!(data["connectorId"], "notion-connector::notion");
+  assert_eq!(data["pluginId"], "notion-connector");
+  assert_eq!(data["connectorStatus"], "missingCredentialSecret");
+  assert!(data["connectorRepairHint"]
+    .as_str()
+    .expect("connector repair hint")
+    .contains("token or API key"));
 }
 
 #[test]

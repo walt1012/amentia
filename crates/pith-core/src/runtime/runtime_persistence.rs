@@ -3,13 +3,14 @@ use std::collections::HashMap;
 use anyhow::Result;
 use pith_memory::MemoryNote;
 use pith_protocol::WorkspaceSummary;
-use pith_storage::RuntimeStore;
+use pith_storage::{RuntimeStore, StoredWorkspaceChangeRecord};
 
 use super::runtime_persistence_bootstrap::{load_bootstrap, RuntimePersistenceBootstrap};
 use super::runtime_persistence_environment::{
   save_memory_note as save_memory_note_to_store, save_workspace as save_workspace_to_store,
 };
 use super::runtime_persistence_execution::{
+  delete_approvals_for_thread as delete_approvals_for_thread_from_store,
   resolve_approval as resolve_approval_in_store, save_runtime_state as save_runtime_state_to_store,
 };
 use super::runtime_persistence_plugins::{
@@ -78,6 +79,37 @@ impl RuntimePersistenceState {
 
   pub(crate) fn resolve_approval(&self, approval: &PendingApproval, decision: &str) -> Result<()> {
     resolve_approval_in_store(self.store(), approval, decision)
+  }
+
+  pub(crate) fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
+    delete_approvals_for_thread_from_store(self.store(), thread_id)
+  }
+
+  pub(crate) fn save_workspace_change(&self, change: &StoredWorkspaceChangeRecord) -> Result<()> {
+    let Some(store) = self.store() else {
+      return Ok(());
+    };
+
+    store.save_workspace_change(change)
+  }
+
+  pub(crate) fn workspace_changes_for_thread(
+    &self,
+    thread_id: &str,
+  ) -> Result<Vec<StoredWorkspaceChangeRecord>> {
+    let Some(store) = self.store() else {
+      return Ok(vec![]);
+    };
+
+    store.load_workspace_changes_for_thread(thread_id)
+  }
+
+  pub(crate) fn mark_workspace_change_reverted(&self, change_id: &str) -> Result<()> {
+    let Some(store) = self.store() else {
+      return Ok(());
+    };
+
+    store.mark_workspace_change_reverted(change_id)
   }
 
   pub(crate) fn save_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {

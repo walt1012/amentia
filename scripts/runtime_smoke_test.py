@@ -103,10 +103,13 @@ def readiness_checks(readiness: dict) -> dict[str, dict]:
 
 def assert_fresh_install_readiness(readiness: dict, model_is_ready: bool) -> None:
   checks = readiness_checks(readiness)
+  expected_stage = "workspace_setup" if model_is_ready else "model_setup"
   assert checks["localModel"]["status"] == ("ready" if model_is_ready else "setup_required")
   assert checks["workspace"]["status"] == "setup_required"
   assert checks["thread"]["status"] == "setup_required"
   assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] == expected_stage
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["workspaceBound"] == "false"
   assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
   assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
@@ -117,6 +120,11 @@ def assert_workspace_readiness(readiness: dict) -> None:
   assert checks["workspace"]["status"] == "ready"
   assert checks["thread"]["status"] == "setup_required"
   assert checks["firstRequest"]["status"] == "waiting"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] in {
+    "model_setup",
+    "thread_setup",
+  }
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["workspaceBound"] == "true"
   assert readiness["result"]["metrics"]["workspaceThreadCount"] == "0"
   assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
@@ -127,6 +135,11 @@ def assert_thread_ready_for_first_request(readiness: dict) -> None:
   assert checks["workspace"]["status"] == "ready"
   assert checks["thread"]["status"] == "ready"
   assert checks["firstRequest"]["status"] == "ready_to_send"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] in {
+    "model_setup",
+    "first_request",
+  }
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["workspaceBound"] == "true"
   assert readiness["result"]["metrics"]["workspaceThreadCount"] == "1"
   assert readiness["result"]["metrics"]["firstRequestSent"] == "false"
@@ -135,6 +148,11 @@ def assert_thread_ready_for_first_request(readiness: dict) -> None:
 def assert_first_request_sent(readiness: dict) -> None:
   checks = readiness_checks(readiness)
   assert checks["firstRequest"]["status"] == "ready"
+  assert readiness["result"]["metrics"]["dailyDriverStage"] in {
+    "model_setup",
+    "ready",
+  }
+  assert readiness["result"]["metrics"]["dailyDriverNextAction"]
   assert readiness["result"]["metrics"]["firstRequestSent"] == "true"
 
 
@@ -378,7 +396,7 @@ def connector_by_id(connectors: list[dict], connector_id: str) -> dict:
 
 def assert_notion_connector_disabled(connector: dict) -> None:
   assert connector["status"] == "disabled"
-  assert connector["authType"] == "oauth2"
+  assert connector["authType"] == "api_key"
   assert connector["credentialStore"] == "local"
   assert connector["authScopes"] == ["read_content", "insert_content"]
 
@@ -457,7 +475,7 @@ def main() -> int:
       "name": "notion-connector",
       "version": "0.1.0",
       "displayName": "Notion Connector",
-      "description": "Declares the Notion connector surface for MCP and OAuth-backed workspace integrations.",
+      "description": "Declares the Notion connector surface for MCP and local integration-token workspace integrations.",
       "author": {
         "name": "Pith",
       },
@@ -481,7 +499,7 @@ def main() -> int:
         },
       ],
       "authPolicy": {
-        "type": "oauth2",
+        "type": "api_key",
         "required": True,
         "scopes": [
           "read_content",
@@ -715,6 +733,15 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["shellTimeoutSeconds"] == "120"
     assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
     assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"
+    assert runtime_readiness["result"]["metrics"]["pithAccountRequired"] == "false"
+    assert (
+      runtime_readiness["result"]["metrics"]["defaultLocalExecutionSafetyMode"]
+      == "askBeforeChange"
+    )
+    assert (
+      runtime_readiness["result"]["metrics"]["localExecutionSafetyModes"]
+      == "explore,askBeforeChange,approvedWorkspaceExecution"
+    )
     assert runtime_readiness["result"]["metrics"]["sandboxAvailable"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["sandboxActive"] in {"true", "false"}
     assert runtime_readiness["result"]["metrics"]["webSearchTimeoutSeconds"] == "20"
@@ -1267,6 +1294,29 @@ def main() -> int:
     assert search_turn["result"]["items"][2]["title"] == "search_files"
     assert "notes.txt:1" in search_turn["result"]["items"][3]["content"]
     assert int(search_turn["result"]["items"][1]["attributes"]["memoryNoteCount"]) >= 1
+
+    read_only_write_message = "Write docs/read-only.txt: This should stay blocked"
+    read_only_write_turn, _ = send_request(
+      process,
+      {
+        "id": 45,
+        "method": "turn/start",
+        "params": {
+          "threadId": "thread-1",
+          "message": read_only_write_message,
+          "localExecutionSafetyMode": "explore",
+        },
+      },
+    )
+    assert len(read_only_write_turn["result"]["pendingApprovals"]) == 0
+    assert not (workspace_dir / "docs" / "read-only.txt").exists()
+    assert any(
+      item.get("attributes", {}).get("actionApprovalPolicy") == "blocked"
+      and item.get("attributes", {}).get("blockReason") == "readOnlyMode"
+      and item.get("attributes", {}).get("requiredPermission") == "file.write"
+      and item.get("attributes", {}).get("retryMessage") == read_only_write_message
+      for item in read_only_write_turn["result"]["items"]
+    )
 
     write_turn, _ = send_request(
       process,

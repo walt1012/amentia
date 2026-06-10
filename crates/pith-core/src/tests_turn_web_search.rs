@@ -49,6 +49,12 @@ fn turn_start_web_search_uses_enabled_web_search_permission() {
 
   assert_eq!(items[0]["kind"], "userMessage");
   assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(
+    items[1]["attributes"]["agentLoopSchema"],
+    "pith.agentLoop.v1"
+  );
+  assert_eq!(items[1]["attributes"]["agentToolKind"], "web");
+  assert_eq!(items[1]["attributes"]["agentToolName"], "web_search");
   assert_eq!(items[2]["kind"], "warning");
   assert_eq!(items[2]["title"], "Turn Cancelled");
   assert!(items
@@ -92,7 +98,80 @@ fn turn_start_web_search_respects_disabled_web_search_plugin() {
 
   assert_eq!(
     permission_item["attributes"]["requiredPermission"],
-    "network.outbound"
+    "tool:web_search"
+  );
+  assert_eq!(permission_item["attributes"]["pluginId"], "web-search");
+  assert_eq!(
+    permission_item["attributes"]["permissionGate"],
+    "requiresPluginPermission"
+  );
+  assert_eq!(
+    permission_item["attributes"]["requiredPermissionLabel"],
+    "Web Search"
+  );
+  assert!(permission_item["content"]
+    .as_str()
+    .expect("content")
+    .contains("Web Search is not enabled"));
+  assert_eq!(permission_item["attributes"]["grantedBy"], "none");
+}
+
+#[test]
+fn turn_start_web_search_requires_web_search_tool_permission_not_any_network_plugin() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["connector:notion"],
+      &["network.outbound"],
+    )],
+  );
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Connector Network Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "web search for Pith local model"
+      })),
+    ),
+  );
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+  let permission_item = items
+    .iter()
+    .find(|item| item["title"] == "Plugin Permission Required")
+    .expect("permission item");
+
+  assert_eq!(
+    permission_item["attributes"]["requiredPermission"],
+    "tool:web_search"
+  );
+  assert_eq!(permission_item["attributes"]["pluginId"], "web-search");
+  assert_eq!(
+    permission_item["attributes"]["permissionGate"],
+    "requiresPluginPermission"
+  );
+  assert_eq!(
+    permission_item["attributes"]["requiredPermissionLabel"],
+    "Web Search"
   );
   assert_eq!(permission_item["attributes"]["grantedBy"], "none");
 }
@@ -201,6 +280,69 @@ fn turn_start_prefers_workspace_file_over_fresh_web_search() {
 }
 
 #[test]
+fn turn_start_routes_fresh_find_requests_to_web_search_with_workspace_open() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_web_search_plugin(&mut context);
+  let workspace = create_temp_workspace("fresh-web-with-workspace");
+  fs::write(
+    workspace.join("notes.txt"),
+    "Local notes should not capture fresh public release lookup.\n",
+  )
+  .expect("write notes");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Fresh Web Workspace Thread"
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::TURN_CANCEL_RUNNING,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Find latest LFM2.5 release"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let result = turn_response.result.expect("turn result");
+  let items = result["items"].as_array().expect("items");
+
+  assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(items[1]["attributes"]["agentToolKind"], "web");
+  assert_eq!(items[1]["attributes"]["agentToolName"], "web_search");
+  assert_eq!(items[2]["kind"], "warning");
+  assert_eq!(items[2]["title"], "Turn Cancelled");
+}
+
+#[test]
 fn turn_start_executes_web_search_with_fixture_client() {
   let workspace = create_temp_workspace("web-search-fixture");
   let fixture_path = workspace.join("search.html");
@@ -248,11 +390,55 @@ fn turn_start_executes_web_search_with_fixture_client() {
 
   assert_eq!(items[2]["kind"], "toolStart");
   assert_eq!(items[2]["title"], "web_search");
+  assert_eq!(items[2]["attributes"]["agentStepPhase"], "toolCall");
+  assert_eq!(items[2]["attributes"]["agentLoopStepCount"], "1");
+  assert_eq!(items[2]["attributes"]["agentToolKind"], "web");
   assert_eq!(items[2]["attributes"]["client"], "fixture");
   assert_eq!(items[3]["kind"], "toolResult");
   assert_eq!(items[3]["title"], "web_search result");
+  assert_eq!(items[3]["attributes"]["agentStepPhase"], "observation");
+  assert_eq!(items[3]["attributes"]["toolCallStatus"], "completed");
   assert_eq!(items[3]["attributes"]["resultCount"], "1");
+  assert_eq!(
+    items[3]["attributes"]["webSearchSourceMode"],
+    "searchResultAttribution"
+  );
+  assert_eq!(items[3]["attributes"]["pageFetchPerformed"], "false");
   assert!(items[3]["content"]
+    .as_str()
+    .unwrap()
+    .contains("Pith fixture result"));
+  assert_eq!(items[4]["kind"], "assistantMessage");
+  assert_eq!(items[4]["attributes"]["responseRole"], "coworkHandoff");
+  assert_eq!(items[4]["attributes"]["handoffKind"], "webSearchSources");
+  assert_eq!(items[4]["attributes"]["sourceAttribution"], "web_search");
+  assert_eq!(
+    items[4]["attributes"]["webSearchSourceMode"],
+    "searchResultAttribution"
+  );
+  assert_eq!(items[4]["attributes"]["pageFetchPerformed"], "false");
+  assert_eq!(items[4]["attributes"]["sourceSnapshotAvailable"], "true");
+  assert_eq!(
+    items[4]["attributes"]["sourceSnapshotKind"],
+    "searchResults"
+  );
+  assert_eq!(items[4]["attributes"]["sourceSnapshotResultCount"], "1");
+  assert!(items[4]["attributes"]["sourceSnapshot"]
+    .as_str()
+    .unwrap()
+    .contains("Deterministic local web search result."));
+  assert_eq!(
+    items[4]["attributes"]["sourceSnapshotHash"]
+      .as_str()
+      .unwrap()
+      .len(),
+    16
+  );
+  assert_eq!(
+    items[4]["attributes"]["sourceUrls"],
+    "https://example.com/pith"
+  );
+  assert!(items[4]["attributes"]["sourceTitles"]
     .as_str()
     .unwrap()
     .contains("Pith fixture result"));

@@ -8,12 +8,20 @@ struct PluginConnectorCredentialInput {
 
 enum PluginConnectorCredentialDialogPresenter {
   static func credentialInput(connector: PluginConnectorSummary) -> PluginConnectorCredentialInput? {
-    var initialLabel = connector.credentialLabel ?? "\(connector.displayName) authorization marker"
+    var initialLabel = connector.credentialLabel ?? defaultCredentialLabel(connector)
     while true {
       guard let input = credentialInput(connector: connector, initialLabel: initialLabel) else {
         return nil
       }
-      if input.secret != nil || confirmsMarkerOnlyAuthorization(connector: connector) {
+      if input.secret != nil {
+        return input
+      }
+      if requiresLocalSecret(connector) {
+        showsMissingSecretWarning(connector: connector)
+        initialLabel = input.label ?? initialLabel
+        continue
+      }
+      if confirmsMarkerOnlyAuthorization(connector: connector) {
         return input
       }
       initialLabel = input.label ?? initialLabel
@@ -34,7 +42,7 @@ enum PluginConnectorCredentialDialogPresenter {
     labelField.stringValue = initialLabel
 
     let secretField = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
-    secretField.placeholderString = "Token or API key, or leave blank for marker-only auth"
+    secretField.placeholderString = secretPlaceholder(connector)
 
     let stack = NSStackView(views: [
       labeledField(title: "Label", field: labelField),
@@ -58,16 +66,48 @@ enum PluginConnectorCredentialDialogPresenter {
     )
   }
 
-  private static func credentialPrompt(_ connector: PluginConnectorSummary) -> String {
-    let authType = connector.authType ?? "local credential"
+  static func credentialPrompt(_ connector: PluginConnectorSummary) -> String {
+    let authType = displayAuthType(connector.authType)
     let store = connector.credentialStore ?? "local"
     let scopes = connector.authScopes.isEmpty
       ? "No declared scopes."
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
-    return "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
+    var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
       + "\(scopes) Credential store: \(store). "
       + "Secrets are passed to plugin runners through per-run environment bindings. "
-      + "Leave the secret empty only when this connector uses marker-only authorization."
+    if requiresLocalSecret(connector) {
+      prompt += "A local token or API key is required for this connector."
+    } else {
+      prompt += "Leave the secret empty only when this connector uses marker-only authorization."
+    }
+    if isNotion(connector) {
+      prompt += notionSetupPrompt()
+    }
+    return prompt
+  }
+
+  private static func notionSetupPrompt() -> String {
+    [
+      "",
+      "",
+      "Notion setup: create an internal Notion integration and copy its internal integration token.",
+      "Paste that token as the secret, then share every target parent page with the integration before publishing.",
+      "Pith keeps the token local, passes it only to the local Notion connector runner, and does not claim OAuth yet.",
+      "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response proof.",
+    ].joined(separator: "\n")
+  }
+
+  private static func displayAuthType(_ authType: String?) -> String {
+    switch authType {
+    case "api_key":
+      return "API key"
+    case "oauth2":
+      return "OAuth 2.0"
+    case let value? where !value.isEmpty:
+      return value
+    default:
+      return "local credential"
+    }
   }
 
   private static func confirmsMarkerOnlyAuthorization(
@@ -82,6 +122,49 @@ enum PluginConnectorCredentialDialogPresenter {
     alert.addButton(withTitle: "Authorize Marker")
     alert.addButton(withTitle: "Back")
     return alert.runModal() == .alertFirstButtonReturn
+  }
+
+  private static func showsMissingSecretWarning(connector: PluginConnectorSummary) {
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = "\(connector.displayName) Requires a Secret"
+    alert.informativeText = missingSecretWarningText(connector)
+    alert.addButton(withTitle: "Back")
+    alert.runModal()
+  }
+
+  static func missingSecretWarningText(_ connector: PluginConnectorSummary) -> String {
+    if isNotion(connector) {
+      return [
+        "Paste the Notion internal integration token before authorizing this connector.",
+        "If you have not created one yet, create an internal Notion integration first and share the target parent page with it.",
+        "Pith keeps the token local and passes it only through per-run environment bindings.",
+      ].joined(separator: " ")
+    }
+
+    return "Paste the local token or API key before authorizing this connector. "
+      + "Pith will keep it local and pass it to plugin runners through per-run environment bindings."
+  }
+
+  private static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {
+    isNotion(connector)
+      ? "Local Notion integration token"
+      : "\(connector.displayName) authorization marker"
+  }
+
+  private static func secretPlaceholder(_ connector: PluginConnectorSummary) -> String {
+    if isNotion(connector) {
+      return "Paste the Notion internal integration token"
+    }
+    return "Token or API key, or leave blank for marker-only auth"
+  }
+
+  private static func isNotion(_ connector: PluginConnectorSummary) -> Bool {
+    connector.service.lowercased() == "notion"
+  }
+
+  static func requiresLocalSecret(_ connector: PluginConnectorSummary) -> Bool {
+    connector.authRequired && connector.authType == "api_key"
   }
 
   private static func labeledField(title: String, field: NSView) -> NSView {

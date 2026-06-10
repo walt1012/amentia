@@ -8,7 +8,7 @@ use crate::paths::{
   canonical_workspace_root, relative_path_string, resolve_workspace_path, sanitize_relative_path,
   validate_workspace_write_parent, validate_workspace_write_target,
 };
-use crate::types::{DirectoryEntry, ReadFileResult};
+use crate::types::{DirectoryEntry, ReadFileResult, RevertFileChangeResult, WriteFileResult};
 
 const LIST_DIRECTORY_MAX_SCANNED_ENTRIES: usize = 5_000;
 const WRITE_FILE_MAX_BYTES: usize = 1024 * 1024;
@@ -139,7 +139,11 @@ where
   })
 }
 
-pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> Result<String> {
+pub fn write_file(
+  workspace_root: &Path,
+  relative_path: &str,
+  content: &str,
+) -> Result<WriteFileResult> {
   if content.len() > WRITE_FILE_MAX_BYTES {
     bail!("workspace write content exceeds the maximum allowed size");
   }
@@ -160,10 +164,91 @@ pub fn write_file(workspace_root: &Path, relative_path: &str, content: &str) -> 
     bail!("workspace path points to a directory");
   }
 
+  let previous_content = if target.exists() {
+    Some(fs::read(&target).with_context(|| {
+      format!(
+        "failed to read previous file content for {}",
+        target.display()
+      )
+    })?)
+  } else {
+    None
+  };
+  let next_content = content.as_bytes().to_vec();
+
   fs::write(&target, content)
     .with_context(|| format!("failed to write file {}", target.display()))?;
 
-  Ok(sanitized_relative_path)
+  Ok(WriteFileResult {
+    relative_path: sanitized_relative_path,
+    bytes_written: content.len(),
+    previous_content,
+    next_content,
+  })
+}
+
+pub fn validate_file_change_revert(
+  workspace_root: &Path,
+  relative_path: &str,
+  expected_current_content: &[u8],
+) -> Result<String> {
+  let target = resolve_revert_target(workspace_root, relative_path)?;
+  let current_content = fs::read(&target).with_context(|| {
+    format!(
+      "failed to read current file content for {}",
+      target.display()
+    )
+  })?;
+  if current_content != expected_current_content {
+    bail!("workspace file changed after Pith wrote it; review it before reverting");
+  }
+
+  sanitize_relative_path(relative_path)
+}
+
+pub fn revert_file_change(
+  workspace_root: &Path,
+  relative_path: &str,
+  expected_current_content: &[u8],
+  previous_content: Option<&[u8]>,
+) -> Result<RevertFileChangeResult> {
+  let sanitized_relative_path =
+    validate_file_change_revert(workspace_root, relative_path, expected_current_content)?;
+  let workspace_root = canonical_workspace_root(workspace_root)?;
+  let target = workspace_root.join(&sanitized_relative_path);
+
+  match previous_content {
+    Some(previous_content) => {
+      fs::write(&target, previous_content)
+        .with_context(|| format!("failed to restore file {}", target.display()))?;
+      Ok(RevertFileChangeResult {
+        relative_path: sanitized_relative_path,
+        restored_bytes: previous_content.len(),
+        deleted_file: false,
+      })
+    }
+    None => {
+      fs::remove_file(&target)
+        .with_context(|| format!("failed to remove file {}", target.display()))?;
+      Ok(RevertFileChangeResult {
+        relative_path: sanitized_relative_path,
+        restored_bytes: 0,
+        deleted_file: true,
+      })
+    }
+  }
+}
+
+fn resolve_revert_target(workspace_root: &Path, relative_path: &str) -> Result<std::path::PathBuf> {
+  let workspace_root = canonical_workspace_root(workspace_root)?;
+  let sanitized_relative_path = sanitize_relative_path(relative_path)?;
+  let target = workspace_root.join(&sanitized_relative_path);
+  validate_workspace_write_target(&workspace_root, &target)?;
+  if target.is_dir() {
+    bail!("workspace path points to a directory");
+  }
+
+  Ok(target)
 }
 
 #[cfg(test)]
@@ -342,6 +427,54 @@ mod tests {
       .to_string()
       .contains("workspace write content exceeds"));
     assert!(!workspace.join("large.txt").exists());
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn revert_file_change_removes_new_file_when_content_matches() {
+    let workspace = unique_temp_workspace("revert-new-file");
+    fs::create_dir_all(&workspace).expect("workspace");
+    let write_result = write_file(&workspace, "notes.txt", "created").expect("write file");
+
+    let revert_result = revert_file_change(
+      &workspace,
+      &write_result.relative_path,
+      &write_result.next_content,
+      write_result.previous_content.as_deref(),
+    )
+    .expect("revert file");
+
+    assert_eq!(revert_result.relative_path, "notes.txt");
+    assert_eq!(revert_result.restored_bytes, 0);
+    assert!(revert_result.deleted_file);
+    assert!(!workspace.join("notes.txt").exists());
+
+    let _ = fs::remove_dir_all(workspace);
+  }
+
+  #[test]
+  fn revert_file_change_rejects_user_modified_file() {
+    let workspace = unique_temp_workspace("revert-user-modified");
+    fs::create_dir_all(&workspace).expect("workspace");
+    let write_result = write_file(&workspace, "notes.txt", "created").expect("write file");
+    fs::write(workspace.join("notes.txt"), "user edit").expect("user edit");
+
+    let error = revert_file_change(
+      &workspace,
+      &write_result.relative_path,
+      &write_result.next_content,
+      write_result.previous_content.as_deref(),
+    )
+    .expect_err("modified file should not revert");
+
+    assert!(error
+      .to_string()
+      .contains("workspace file changed after Pith wrote it"));
+    assert_eq!(
+      fs::read_to_string(workspace.join("notes.txt")).expect("read file"),
+      "user edit"
+    );
 
     let _ = fs::remove_dir_all(workspace);
   }

@@ -8,12 +8,17 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
+from release_copy_contract import require_install_guide_copy
 
 APP_NAME = "Pith.app"
 APPLICATIONS_LINK_NAME = "Applications"
 DEFAULT_VOLUME_NAME = "Pith"
+README_NAME = "README-FIRST.txt"
+HDIUTIL_CREATE_ATTEMPTS = 3
+HDIUTIL_CREATE_RETRY_SECONDS = 2
 
 
 def parse_args() -> argparse.Namespace:
@@ -24,6 +29,21 @@ def parse_args() -> argparse.Namespace:
     "--volume-name",
     default=DEFAULT_VOLUME_NAME,
     help="Mounted disk image volume name.",
+  )
+  parser.add_argument(
+    "--smoke-launch-script",
+    type=Path,
+    help="Optional packaged app smoke script to run against the app inside the mounted DMG.",
+  )
+  parser.add_argument(
+    "--smoke-receipt-output",
+    type=Path,
+    help="Optional JSON receipt path passed to the packaged app smoke script.",
+  )
+  parser.add_argument(
+    "--readme-file",
+    type=Path,
+    help="Optional plain-text install guide to copy into the DMG root.",
   )
   return parser.parse_args()
 
@@ -40,11 +60,19 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="pith-dmg-") as temp_dir:
       staging_dir = Path(temp_dir) / "staging"
       staging_dir.mkdir()
-      copy_app_bundle(app_path, staging_dir / APP_NAME)
-      applications_link = staging_dir / APPLICATIONS_LINK_NAME
-      applications_link.symlink_to("/Applications", target_is_directory=True)
+      readme_file = args.readme_file.resolve() if args.readme_file else None
+      stage_dmg_contents(
+        app_path,
+        staging_dir,
+        readme_file,
+      )
       create_dmg(staging_dir, dmg_path, args.volume_name)
-    validate_dmg(dmg_path)
+    validate_dmg(
+      dmg_path,
+      args.smoke_launch_script.resolve() if args.smoke_launch_script else None,
+      readme_file,
+      args.smoke_receipt_output.resolve() if args.smoke_receipt_output else None,
+    )
   except Exception as error:
     print(f"macOS DMG creation failed: {error}", file=sys.stderr)
     return 1
@@ -56,6 +84,11 @@ def main() -> int:
 def require_tool(name: str) -> None:
   if shutil.which(name) is None:
     raise FileNotFoundError(f"Required macOS packaging tool is missing: {name}")
+
+
+def require_file(path: Path) -> None:
+  if not path.is_file():
+    raise FileNotFoundError(f"Required file is missing: {path}")
 
 
 def require_app(app_path: Path) -> None:
@@ -73,28 +106,63 @@ def copy_app_bundle(source: Path, destination: Path) -> None:
   shutil.copytree(source, destination, symlinks=False)
 
 
+def stage_dmg_contents(app_path: Path, staging_dir: Path, readme_file: Path | None) -> None:
+  copy_app_bundle(app_path, staging_dir / APP_NAME)
+  applications_link = staging_dir / APPLICATIONS_LINK_NAME
+  applications_link.symlink_to("/Applications", target_is_directory=True)
+  if readme_file is not None:
+    require_file(readme_file)
+    validate_install_readme_text(readme_file.read_text(encoding="utf-8"))
+    shutil.copy2(readme_file, staging_dir / README_NAME)
+
+
 def create_dmg(staging_dir: Path, dmg_path: Path, volume_name: str) -> None:
-  if dmg_path.exists():
-    dmg_path.unlink()
-  run(
-    [
-      "hdiutil",
-      "create",
-      "-volname",
-      volume_name,
-      "-srcfolder",
-      str(staging_dir),
-      "-ov",
-      "-format",
-      "UDZO",
-      "-fs",
-      "HFS+",
-      str(dmg_path),
-    ]
+  command = [
+    "hdiutil",
+    "create",
+    "-volname",
+    volume_name,
+    "-srcfolder",
+    str(staging_dir),
+    "-ov",
+    "-format",
+    "UDZO",
+    "-fs",
+    "HFS+",
+    str(dmg_path),
+  ]
+  last_error: RuntimeError | None = None
+  for attempt in range(1, HDIUTIL_CREATE_ATTEMPTS + 1):
+    if dmg_path.exists():
+      dmg_path.unlink()
+    try:
+      run(command)
+      return
+    except RuntimeError as error:
+      last_error = error
+      if attempt == HDIUTIL_CREATE_ATTEMPTS or not is_transient_hdiutil_create_error(error):
+        raise
+      time.sleep(HDIUTIL_CREATE_RETRY_SECONDS)
+  if last_error is not None:
+    raise last_error
+
+
+def is_transient_hdiutil_create_error(error: RuntimeError) -> bool:
+  message = str(error).lower()
+  transient_terms = (
+    "resource busy",
+    "temporarily unavailable",
+    "device busy",
   )
+  return any(term in message for term in transient_terms)
 
 
-def validate_dmg(dmg_path: Path) -> None:
+def validate_dmg(
+  dmg_path: Path,
+  smoke_launch_script: Path | None = None,
+  readme_file: Path | None = None,
+  smoke_receipt_output: Path | None = None,
+) -> None:
   if not dmg_path.is_file():
     raise FileNotFoundError(f"Missing DMG artifact: {dmg_path}")
   if dmg_path.suffix.lower() != ".dmg":
@@ -103,10 +171,12 @@ def validate_dmg(dmg_path: Path) -> None:
     raise RuntimeError(f"macOS DMG artifact is empty: {dmg_path}")
 
   run(["hdiutil", "imageinfo", str(dmg_path)])
-  with tempfile.TemporaryDirectory(prefix="pith-dmg-mount-") as temp_dir:
-    mountpoint = Path(temp_dir) / "mount"
-    mountpoint.mkdir()
-    attached = False
+  temp_dir = Path(tempfile.mkdtemp(prefix="pith-dmg-mount-"))
+  mountpoint = temp_dir / "mount"
+  mountpoint.mkdir()
+  attached = False
+  pending_error: Exception | None = None
+  try:
     try:
       run(
         [
@@ -126,9 +196,48 @@ def validate_dmg(dmg_path: Path) -> None:
         raise RuntimeError("macOS DMG must include an Applications symlink")
       if applications_link.readlink() != Path("/Applications"):
         raise RuntimeError("macOS DMG Applications symlink must point to /Applications")
+      if readme_file is not None:
+        require_file(readme_file)
+        validate_install_readme_file(mountpoint / README_NAME, readme_file)
+      if smoke_launch_script is not None:
+        require_file(smoke_launch_script)
+        smoke_command = [sys.executable, str(smoke_launch_script), str(mountpoint / APP_NAME)]
+        if smoke_receipt_output is not None:
+          smoke_command.extend(["--receipt-output", str(smoke_receipt_output)])
+        run(smoke_command)
+    except Exception as error:
+      pending_error = error
+      raise
     finally:
       if attached:
-        run(["hdiutil", "detach", str(mountpoint)])
+        try:
+          detach_dmg(mountpoint)
+        except Exception:
+          if pending_error is None:
+            raise
+  finally:
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def detach_dmg(mountpoint: Path) -> None:
+  try:
+    run(["hdiutil", "detach", str(mountpoint)])
+  except RuntimeError:
+    run(["hdiutil", "detach", "-force", str(mountpoint)])
+
+
+def validate_install_readme_file(staged_readme: Path, expected_readme: Path) -> None:
+  require_file(staged_readme)
+  require_file(expected_readme)
+  staged_text = staged_readme.read_text(encoding="utf-8")
+  expected_text = expected_readme.read_text(encoding="utf-8")
+  validate_install_readme_text(staged_text)
+  if staged_text != expected_text:
+    raise RuntimeError("macOS DMG README-FIRST.txt does not match the generated install guide")
+
+
+def validate_install_readme_text(text: str) -> None:
+  require_install_guide_copy(text, "macOS DMG install guide")
 
 
 def run(command: list[str]) -> str:

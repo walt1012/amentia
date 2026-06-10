@@ -21,7 +21,7 @@ struct TimelineComposerView: View {
         .buttonStyle(.borderedProminent)
         .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel Execution") {
+        Button("Stop") {
           viewModel.cancelActiveTurn()
         }
         .buttonStyle(.bordered)

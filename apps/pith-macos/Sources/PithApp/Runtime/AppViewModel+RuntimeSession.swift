@@ -54,7 +54,11 @@ extension AppViewModel {
   }
 
   func shouldShowReadinessSteps() -> Bool {
-    shouldShowSetupProgress()
+    RuntimeReadinessStripPresenter.shouldShow(
+      setupProgressVisible: shouldShowSetupProgress(),
+      isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
+    )
   }
 
   func inspectorSessionTitle() -> String {

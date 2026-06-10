@@ -38,6 +38,8 @@ mod tests {
         driver: "builtin".to_string(),
         entrypoint: None,
         connector_ids: None,
+        workflow_id: None,
+        workflow: None,
         input: empty_envelope("pith.plugin.command.input"),
         output: empty_envelope("pith.plugin.command.output"),
       }),

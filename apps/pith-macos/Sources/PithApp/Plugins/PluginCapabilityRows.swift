@@ -7,9 +7,9 @@ struct PluginCapabilityRow: View {
     VStack(alignment: .leading, spacing: 4) {
       HStack(alignment: .top, spacing: 12) {
         VStack(alignment: .leading, spacing: 2) {
-          Text("\(capability.kind):\(capability.identifier)")
+          Text(capability.displayTitle)
             .font(.caption.weight(.semibold))
-          Text("\(capability.pluginDisplayName) | \(capability.pluginID)")
+          Text(capability.pluginDisplayName)
             .font(.caption2)
             .foregroundColor(.secondary)
         }
@@ -18,7 +18,7 @@ struct PluginCapabilityRow: View {
       }
 
       if !capability.permissions.isEmpty {
-        Text("Permissions: \(capability.permissions.joined(separator: ", "))")
+        Text("Needs: \(capability.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -32,20 +32,20 @@ struct PluginCapabilityRow: View {
       }
 
       if let diagnosticDetail = capability.diagnosticDetail {
-        Text("Capability blocker: \(diagnosticDetail)")
+        Text("Blocked: \(diagnosticDetail)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)
       }
 
       if let metadataSummary = capability.metadataSummary {
-        Text("Metadata: \(metadataSummary)")
+        Text(metadataSummary)
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(tone: capability.diagnosticDetail == nil ? .neutral : .warning)
   }
 }
 
@@ -75,6 +75,10 @@ private extension PluginCapabilitySummary {
     }
   }
 
+  var displayTitle: String {
+    "\(displaySurface): \(identifier)"
+  }
+
   var metadataSummary: String? {
     let diagnosticKeys = Set([
       "definitionError",
@@ -90,7 +94,7 @@ private extension PluginCapabilitySummary {
     }
 
     return visibleMetadata
-      .map { "\($0.key)=\($0.value)" }
+      .map { "\($0.key): \($0.value)" }
       .joined(separator: " | ")
   }
 
@@ -146,13 +150,13 @@ struct PluginConnectorRow: View {
 
         connectorActions
 
-        Button("Manifest") {
+        Button("Config") {
           onRevealManifest()
         }
         .font(.caption2)
       }
 
-      Text("\(connector.pluginDisplayName) | \(connector.pluginID)")
+      Text(connector.pluginDisplayName)
         .font(.caption2)
         .foregroundColor(.secondary)
 
@@ -161,34 +165,41 @@ struct PluginConnectorRow: View {
         .foregroundColor(.secondary)
         .textSelection(.enabled)
 
+      if !connector.workflows.isEmpty {
+        Text(connector.workflowSummary)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
       if let actionBlocker {
-        Text("Connector blocker: \(actionBlocker)")
+        Text("Blocked: \(actionBlocker)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)
       }
 
       if !connector.permissions.isEmpty {
-        Text("Permissions: \(connector.permissions.joined(separator: ", "))")
+        Text("Needs: \(connector.permissions.joined(separator: ", "))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
 
       if let homepage = connector.homepage {
-        Text("Homepage: \(homepage)")
+        Text("Website: \(homepage)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
     }
-    .padding(.vertical, 4)
+    .softPanel(tone: connector.status == "ready" ? .neutral : .warning)
   }
 
   @ViewBuilder
   private var connectorActions: some View {
     if !connector.enabled {
-      Button("Enable Plugin") {
+      Button("Enable") {
         onEnablePlugin()
       }
       .font(.caption2)
@@ -242,8 +253,26 @@ private extension PluginConnectorSummary {
     let store = credentialStore ?? "none"
     let credential = credentialLabel ?? "no credential"
     let binding = credentialBinding
-    return "Auth: \(type) | \(authStatus) | \(required) | \(scopes) "
-      + "| store: \(store) | credential: \(binding) | \(credential)"
+    return "Connection: \(type) | \(displayStatus(authStatus)) | \(required) | \(scopes) "
+      + "| secure store: \(store) | credential: \(binding) | \(credential)"
+  }
+
+  var workflowSummary: String {
+    let labels = workflows
+      .map(\.workflowLabel)
+      .joined(separator: ", ")
+    return "Can run: \(labels)"
+  }
+
+  private func displayStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    case "needsAuth":
+      return "needs sign in"
+    default:
+      return status
+    }
   }
 
   private var credentialBinding: String {

@@ -4,13 +4,23 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+from package_contract import (
+  PACKAGE_MANIFEST_SCHEMA_VERSION,
+  bundled_model_weight_files,
+  directory_size_bytes,
+  validate_package_manifest_contract,
+)
+
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
+PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
+SOURCE_COMMIT_HEX_LENGTH = 40
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,6 +39,7 @@ def main() -> int:
   app_path = args.app_path.resolve()
   try:
     require_file(app_path / "Contents" / "Info.plist", "Info.plist")
+    validate_package_manifest(app_path)
     require_tool("codesign")
     require_tool("spctl")
     run(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(app_path)])
@@ -75,6 +86,61 @@ def validate_dmg(dmg_path: Path) -> None:
     ]
   )
   run(["xcrun", "stapler", "validate", str(dmg_path)])
+
+
+def validate_package_manifest(app_path: Path) -> None:
+  manifest_path = app_path / PACKAGE_MANIFEST_RELATIVE_PATH
+  require_file(manifest_path, "PithPackage.json")
+  manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+  if manifest.get("schemaVersion") != PACKAGE_MANIFEST_SCHEMA_VERSION:
+    raise RuntimeError(
+      "Public distribution builds must record PithPackage schema version "
+      f"{PACKAGE_MANIFEST_SCHEMA_VERSION} in "
+      f"{manifest_path}"
+    )
+  if manifest.get("signing") != "developer-id":
+    raise RuntimeError(
+      "Public distribution builds must record developer-id signing in "
+      f"{manifest_path}"
+    )
+  source_commit = manifest.get("sourceCommit", "")
+  if (
+    not isinstance(source_commit, str)
+    or len(source_commit) != SOURCE_COMMIT_HEX_LENGTH
+    or any(character not in "0123456789abcdef" for character in source_commit)
+  ):
+    raise RuntimeError(
+      "Public distribution builds must record a full source commit in "
+      f"{manifest_path}"
+    )
+  budget = validate_package_manifest_contract(
+    manifest,
+    f"Public distribution PithPackage.json: {manifest_path}",
+    signing_mode="developer-id",
+  )
+  validate_distribution_size_budget(budget, app_path)
+  validate_no_model_weight_files(app_path)
+
+
+def validate_distribution_size_budget(
+  budget: dict[str, int],
+  app_path: Path,
+) -> None:
+  max_app_bundle_bytes = budget["maxAppBundleBytes"]
+  app_size = directory_size_bytes(app_path)
+  if app_size > max_app_bundle_bytes:
+    raise RuntimeError(
+      f"Public distribution app bundle is {app_size} bytes, above the "
+      f"{max_app_bundle_bytes} byte package budget."
+    )
+
+def validate_no_model_weight_files(app_path: Path) -> None:
+  bundled_weights = bundled_model_weight_files(app_path)
+  if bundled_weights:
+    raise RuntimeError(
+      "Public distribution builds must not bundle model weight files: "
+      + ", ".join(str(path) for path in bundled_weights)
+    )
 
 
 def run(command: list[str]) -> str:

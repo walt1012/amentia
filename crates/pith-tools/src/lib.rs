@@ -22,7 +22,7 @@ pub use shell_output_artifacts::{
 };
 pub use types::{
   BuiltInTool, DirectoryEntry, ReadFileResult, SearchMatch, ShellCommandResult,
-  ShellSandboxSummary, WebSearchResult,
+  ShellSandboxSummary, WebSearchResult, WriteFileResult,
 };
 pub use web_search::{
   web_search, web_search_status, web_search_timeout_seconds, web_search_with_cancellation,
@@ -30,7 +30,8 @@ pub use web_search::{
 };
 pub use workspace_files::{
   list_directory, list_directory_max_scanned_entries, list_directory_with_cancellation, read_file,
-  read_file_with_cancellation, write_file, write_file_max_bytes,
+  read_file_with_cancellation, revert_file_change, validate_file_change_revert, write_file,
+  write_file_max_bytes,
 };
 pub use workspace_search::{
   search_files, search_files_max_file_bytes, search_files_max_visited_entries,

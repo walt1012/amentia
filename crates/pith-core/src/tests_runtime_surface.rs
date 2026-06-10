@@ -69,6 +69,20 @@ fn runtime_readiness_reports_agent_control_surface() {
     "network denied by policy, not native-enforced"
   );
   assert_eq!(result["metrics"]["contextWindowTokens"], "4096");
+  assert_eq!(result["metrics"]["dailyDriverStage"], "model_setup");
+  assert_eq!(
+    result["metrics"]["dailyDriverNextAction"],
+    "Download and select a verified local model."
+  );
+  assert_eq!(result["metrics"]["pithAccountRequired"], "false");
+  assert_eq!(
+    result["metrics"]["defaultLocalExecutionSafetyMode"],
+    "askBeforeChange"
+  );
+  assert_eq!(
+    result["metrics"]["localExecutionSafetyModes"],
+    "explore,askBeforeChange,approvedWorkspaceExecution"
+  );
   assert_eq!(result["metrics"]["workspaceThreadCount"], "0");
   assert_eq!(result["metrics"]["firstRequestSent"], "false");
   assert_eq!(result["metrics"]["activeTurnCount"], "0");
@@ -147,6 +161,35 @@ fn runtime_readiness_web_search_requires_enabled_network_plugin() {
     .as_str()
     .expect("detail")
     .contains("Enable the Web Search plugin"));
+  assert_eq!(result["metrics"]["webSearchPermissionGranted"], "false");
+  assert_eq!(result["metrics"]["webSearchPermissionSources"], "");
+}
+
+#[test]
+fn runtime_readiness_web_search_ignores_connector_only_network_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["connector:notion"],
+      &["network.outbound"],
+    )],
+  );
+  let response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("runtime readiness result");
+  let web_search = result["checks"]
+    .as_array()
+    .expect("checks")
+    .iter()
+    .find(|check| check["id"] == "webSearch")
+    .expect("web search check");
+  assert_eq!(web_search["status"], "setup_required");
   assert_eq!(result["metrics"]["webSearchPermissionGranted"], "false");
   assert_eq!(result["metrics"]["webSearchPermissionSources"], "");
 }

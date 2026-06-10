@@ -38,9 +38,65 @@ pub struct ThreadReadParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ThreadDeleteParams {
+  pub thread_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadDeleteResult {
+  pub thread_id: String,
+  pub deleted: bool,
+  pub threads: Vec<ThreadSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadChangePreviewParams {
+  pub thread_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadWorkspaceChangeSummary {
+  pub id: String,
+  pub relative_path: String,
+  pub action: String,
+  pub bytes_written: usize,
+  pub will_delete_file: bool,
+  pub can_revert: bool,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub conflict_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadChangePreviewResult {
+  pub thread_id: String,
+  pub changes: Vec<ThreadWorkspaceChangeSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadRevertChangesParams {
+  pub thread_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadRevertChangesResult {
+  pub thread_id: String,
+  pub reverted_count: usize,
+  pub items: Vec<TimelineItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TurnStartParams {
   pub thread_id: String,
   pub message: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub local_execution_safety_mode: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

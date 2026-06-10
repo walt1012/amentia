@@ -57,6 +57,7 @@ extension AppViewModel {
 
   func beginPendingLocalTurn(threadID: String) -> UUID {
     draftMessage = ""
+    restoredLocalExecutionDraftMessage = nil
     runtimeDetail = TimelineEventPresenter.generatingLocalResponseDetail
     return localExecutionRequests.beginAgentTurnRequest(threadID: threadID)
   }

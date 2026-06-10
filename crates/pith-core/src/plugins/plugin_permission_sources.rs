@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use pith_plugin_host::PluginCatalogEntry;
 
+pub(crate) const WEB_SEARCH_TOOL_PERMISSION: &str = "tool:web_search";
+
 pub(crate) fn granted_permission_sources(
   plugins: &[PluginCatalogEntry],
 ) -> HashMap<String, Vec<String>> {
@@ -17,6 +19,12 @@ pub(crate) fn granted_permission_sources(
         .or_insert_with(Vec::new)
         .push(plugin.display_name.clone());
     }
+    if grants_web_search_tool(plugin) {
+      permissions
+        .entry(WEB_SEARCH_TOOL_PERMISSION.to_string())
+        .or_insert_with(Vec::new)
+        .push(plugin.display_name.clone());
+    }
   }
 
   for plugin_names in permissions.values_mut() {
@@ -25,6 +33,17 @@ pub(crate) fn granted_permission_sources(
   }
 
   permissions
+}
+
+fn grants_web_search_tool(plugin: &PluginCatalogEntry) -> bool {
+  plugin
+    .capabilities
+    .iter()
+    .any(|capability| capability == "tool:web_search")
+    && plugin
+      .permissions
+      .iter()
+      .any(|permission| permission == "network.outbound")
 }
 
 pub(crate) fn permission_is_granted(
@@ -76,6 +95,7 @@ mod tests {
   #[test]
   fn granted_permission_sources_use_enabled_web_search_plugin_for_network() {
     let mut web_search = plugin("web-search", "Web Search", "ready", true);
+    web_search.capabilities = vec!["tool:web_search".to_string()];
     web_search.permissions = vec!["network.outbound".to_string()];
     let sources = granted_permission_sources(&[web_search]);
 
@@ -84,5 +104,21 @@ mod tests {
       Some(&vec!["Web Search".to_string()])
     );
     assert!(permission_is_granted(&sources, "network.outbound"));
+    assert_eq!(
+      sources.get(WEB_SEARCH_TOOL_PERMISSION),
+      Some(&vec!["Web Search".to_string()])
+    );
+    assert!(permission_is_granted(&sources, WEB_SEARCH_TOOL_PERMISSION));
+  }
+
+  #[test]
+  fn granted_permission_sources_do_not_treat_any_network_plugin_as_web_search() {
+    let mut connector = plugin("notion", "Notion", "ready", true);
+    connector.capabilities = vec!["connector:notion".to_string()];
+    connector.permissions = vec!["network.outbound".to_string()];
+    let sources = granted_permission_sources(&[connector]);
+
+    assert!(permission_is_granted(&sources, "network.outbound"));
+    assert!(!permission_is_granted(&sources, WEB_SEARCH_TOOL_PERMISSION));
   }
 }

@@ -57,7 +57,9 @@ enum LocalModelIntegrity {
 
     return LocalModelFileMetadata(
       sizeBytes: size.int64Value,
-      modificationDate: attributes[.modificationDate] as? Date
+      creationDate: attributes[.creationDate] as? Date,
+      modificationDate: attributes[.modificationDate] as? Date,
+      systemFileNumber: (attributes[.systemFileNumber] as? NSNumber)?.uint64Value
     )
   }
 
@@ -69,7 +71,9 @@ enum LocalModelIntegrity {
 
     return LocalModelFileMetadata(
       sizeBytes: size.int64Value,
-      modificationDate: attributes[.modificationDate] as? Date
+      creationDate: attributes[.creationDate] as? Date,
+      modificationDate: attributes[.modificationDate] as? Date,
+      systemFileNumber: (attributes[.systemFileNumber] as? NSNumber)?.uint64Value
     )
   }
 

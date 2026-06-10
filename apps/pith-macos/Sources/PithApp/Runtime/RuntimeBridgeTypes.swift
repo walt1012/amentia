@@ -26,15 +26,15 @@ extension RuntimeBridge {
       switch self {
       case .runtimePathMissing:
         return
-          "The runtime binary could not be found. " +
-          "Set PITH_RUNTIME_PATH to the built runtime executable."
+          "The local service could not be found. " +
+          "Reinstall Pith or download a fresh installer, then try again."
       case .runtimePipeUnavailable:
-        return "The runtime process pipes are not available."
+        return "The local service connection is not available."
       case .invalidResponse:
-        return "The runtime returned an invalid response."
+        return "The local service returned an invalid response."
       case .requestTimedOut(let method, let seconds):
         return
-          "Runtime request \(method) timed out after \(seconds) seconds. " +
+          "Local service request \(method) timed out after \(seconds) seconds. " +
           "The request did not finish in time."
       case .rpc(let message):
         return message

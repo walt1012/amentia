@@ -20,10 +20,12 @@ enum LocalModelSelectedActionPlanner {
     }
 
     if model.active {
-      return .blocked(detail: "\(model.displayName) is already the active local model.")
+      return .blocked(
+        detail: "\(LocalModelDisplayPresenter.actionName(model)) is already the active local model."
+      )
     }
 
-    if model.downloaded {
+    if model.downloaded || model.needsVerification {
       guard snapshot.canActivateDownloadedModel else {
         return .blocked(detail: snapshot.activationBlockedDetail)
       }

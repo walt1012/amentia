@@ -19,7 +19,12 @@ extension AppViewModel {
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
       isWorkspaceSearching: isWorkspaceSearching,
       hasModelDownload: modelDownloadState.hasActiveDownload,
-      hasPausedModelDownload: modelDownloadState.hasPausedDownload
+      hasPausedModelDownload: modelDownloadState.hasPausedDownload,
+      hasToolReadinessIssue: RuntimeToolReadinessPresenter.hasToolIssue(
+        runtimeReadiness?.checks ?? []
+      ),
+      dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
+      dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction")
     )
   }
 
@@ -59,7 +64,8 @@ extension AppViewModel {
       hasActiveTurn: hasActiveOrPendingTurn(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
-      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
+      runtimeReadinessMetrics: runtimeReadiness?.metrics ?? [:]
     )
   }
 
@@ -77,7 +83,11 @@ extension AppViewModel {
       setupProgressDetail: setupProgressDetail(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       runtimeReadinessStatus: runtimeReadiness?.status,
-      runtimeReadinessChecks: runtimeReadiness?.checks ?? []
+      dailyDriverStage: runtimeReadinessMetric("dailyDriverStage"),
+      dailyDriverNextAction: runtimeReadinessMetric("dailyDriverNextAction"),
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
+      runtimeReadinessMetrics: runtimeReadiness?.metrics ?? [:],
+      selectedLocalExecutionSafetyMode: selectedLocalExecutionSafetyMode
     )
   }
 
@@ -98,7 +108,8 @@ extension AppViewModel {
       modelProgressDetail: modelProgressDetail,
       runtimeLaunchActionTitle: runtimeLaunchButtonTitle(),
       modelPrimaryActionTitle: modelSetupCalloutActionTitle(),
-      modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle()
+      modelSecondaryActionTitle: modelSetupCalloutSecondaryActionTitle(),
+      distributionTrustSetupDetail: DistributionTrustPresenter.summary().setupDetail
     )
   }
 
@@ -160,9 +171,23 @@ extension AppViewModel {
       canUseComposer: canUseComposer(),
       isWaitingForFirstMessage: selectedThreadIsWaitingForFirstMessage(),
       hasDraftMessage: !trimmedDraftMessage.isEmpty,
-      hasFirstRequestSuggestion: firstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID) != nil,
+      runtimeReadinessChecks: runtimeReadiness?.checks ?? [],
+      canEnableWebSearchPlugin: canEnableWebSearchPlugin(),
       runtimeLaunchButtonTitle: runtimeLaunchButtonTitle(),
       modelSetupActionTitle: modelSetupCalloutActionTitle()
     )
+  }
+}
+
+private extension AppViewModel {
+  func runtimeReadinessMetric(_ key: String) -> String? {
+    guard let rawValue = runtimeReadiness?.metrics[key] else {
+      return nil
+    }
+    let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty else {
+      return nil
+    }
+    return value
   }
 }

@@ -5,13 +5,24 @@ struct WorkspaceSearchPanel: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text(viewModel.workspaceDisplayName())
-        .font(.headline)
-      Text(viewModel.workspacePath())
-        .font(.subheadline)
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text(viewModel.workspaceDisplayName())
+          .font(.headline)
+        Spacer()
+        StatusPill(label: "Local", tone: .neutral)
+      }
+
+      Text("Search the open workspace before asking Pith to act.")
+        .font(.caption)
         .foregroundColor(.secondary)
+
+      Text(viewModel.workspacePath())
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .lineLimit(2)
         .textSelection(.enabled)
-      TextField("Search workspace", text: $viewModel.workspaceSearchQuery)
+
+      TextField("Search files, symbols, or notes", text: $viewModel.workspaceSearchQuery)
         .textFieldStyle(.roundedBorder)
         .disabled(viewModel.runtimeState != .ready || viewModel.workspace == nil)
         .onSubmit {
@@ -49,16 +60,23 @@ struct WorkspaceSearchPanel: View {
 
       ForEach(viewModel.workspaceSearchResults.prefix(8)) { match in
         VStack(alignment: .leading, spacing: 2) {
-          Text("\(match.relativePath):\(match.lineNumber)")
-            .font(.caption.weight(.semibold))
-            .textSelection(.enabled)
+          HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(match.relativePath)
+              .font(.caption.weight(.semibold))
+              .lineLimit(1)
+              .textSelection(.enabled)
+            Spacer()
+            Text("line \(match.lineNumber)")
+              .font(.caption2.weight(.medium))
+              .foregroundColor(.secondary)
+          }
           Text(match.line)
             .font(.caption2)
             .foregroundColor(.secondary)
             .lineLimit(2)
             .textSelection(.enabled)
         }
-        .padding(.vertical, 2)
+        .softPanel()
       }
 
       if let overflow = viewModel.workspaceSearchOverflowSummary() {
@@ -67,6 +85,7 @@ struct WorkspaceSearchPanel: View {
           .foregroundColor(.secondary)
       }
     }
+    .softPanel()
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
@@ -78,9 +97,7 @@ private struct EmptyStateHint: View {
     Text(text)
       .font(.caption2)
       .foregroundColor(.secondary)
-      .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(Color.secondary.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .softPanel()
   }
 }

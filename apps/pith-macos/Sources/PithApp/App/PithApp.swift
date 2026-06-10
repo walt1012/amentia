@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -9,10 +10,12 @@ struct PithApp: App {
     WindowGroup {
       ContentView(viewModel: viewModel)
         .frame(minWidth: 1120, minHeight: 720)
+        .background(PithVisualStyle.windowBackground)
+        .background(MainWindowMarker())
     }
     .commands {
       CommandGroup(replacing: .newItem) {
-        Button("New Thread") {
+        Button("New Session") {
           viewModel.createThread()
         }
         .keyboardShortcut("n", modifiers: [.command])
@@ -49,7 +52,7 @@ struct PithApp: App {
           .disabled(!viewModel.canRunSetupCalloutSecondaryAction())
         }
 
-        Button("Install Plugin") {
+        Button("Add Local Connector") {
           viewModel.installPlugin()
         }
         .keyboardShortcut("i", modifiers: [.command, .shift])
@@ -63,7 +66,7 @@ struct PithApp: App {
         .keyboardShortcut(.return, modifiers: [.command])
         .disabled(!viewModel.canSendDraftMessage())
 
-        Button("Cancel Execution") {
+        Button("Cancel Work") {
           viewModel.cancelActiveTurn()
         }
         .keyboardShortcut(.cancelAction)
@@ -71,7 +74,23 @@ struct PithApp: App {
       }
     }
     Settings {
-      SettingsView()
+      SettingsView(viewModel: viewModel)
+    }
+  }
+}
+
+private struct MainWindowMarker: NSViewRepresentable {
+  func makeNSView(context: Context) -> NSView {
+    NSView(frame: .zero)
+  }
+
+  func updateNSView(_ nsView: NSView, context: Context) {
+    DispatchQueue.main.async {
+      guard let window = nsView.window else {
+        return
+      }
+
+      PithAppDelegate.registerMainWindow(window)
     }
   }
 }

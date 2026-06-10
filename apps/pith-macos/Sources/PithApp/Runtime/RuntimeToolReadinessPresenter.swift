@@ -5,9 +5,20 @@ enum RuntimeToolReadinessPresenter {
     !toolChecks(checks).isEmpty
   }
 
-  static func timelineDetail(_ checks: [RuntimeReadinessCheckSummary]) -> String {
+  static func hasToolIssue(_ checks: [RuntimeReadinessCheckSummary]) -> Bool {
+    primaryIssue(checks) != nil
+  }
+
+  static func primaryIssueID(_ checks: [RuntimeReadinessCheckSummary]) -> String? {
+    primaryIssue(checks)?.id
+  }
+
+  static func timelineDetail(
+    _ checks: [RuntimeReadinessCheckSummary],
+    metrics: [String: String] = [:]
+  ) -> String {
     guard let issue = primaryIssue(checks) else {
-      return "Ready"
+      return LocalExecutionSafetyPresenter.timelineDetail(metrics) ?? "Ready"
     }
 
     return "\(shortLabel(issue)) \(statusTitle(issue.status))"
@@ -21,9 +32,12 @@ enum RuntimeToolReadinessPresenter {
     return tone(issue.status)
   }
 
-  static func inspectorSummary(_ checks: [RuntimeReadinessCheckSummary]) -> String? {
+  static func inspectorSummary(
+    _ checks: [RuntimeReadinessCheckSummary],
+    metrics: [String: String] = [:]
+  ) -> String? {
     guard let issue = primaryIssue(checks) else {
-      return nil
+      return LocalExecutionSafetyPresenter.inspectorSummary(metrics)
     }
 
     return "\(longLabel(issue)) \(statusTitle(issue.status).lowercased())"
@@ -32,7 +46,11 @@ enum RuntimeToolReadinessPresenter {
   private static func primaryIssue(
     _ checks: [RuntimeReadinessCheckSummary]
   ) -> RuntimeReadinessCheckSummary? {
-    toolChecks(checks).first(where: { $0.status != "ready" })
+    toolChecks(checks).first(where: isBlockingIssue)
+  }
+
+  private static func isBlockingIssue(_ check: RuntimeReadinessCheckSummary) -> Bool {
+    check.status != "ready" && check.status != "optional"
   }
 
   private static func toolChecks(
@@ -103,5 +121,40 @@ enum RuntimeToolReadinessPresenter {
     default:
       return .danger
     }
+  }
+}
+
+enum LocalExecutionSafetyPresenter {
+  static func timelineDetail(_ metrics: [String: String]) -> String? {
+    guard let mode = readableDefaultMode(metrics) else {
+      return nil
+    }
+    return mode
+  }
+
+  static func inspectorSummary(_ metrics: [String: String]) -> String? {
+    guard let mode = readableDefaultMode(metrics) else {
+      return nil
+    }
+    let account = metrics["pithAccountRequired"] == "true"
+      ? "account required"
+      : "no account"
+    return "Safety \(mode), \(account)"
+  }
+
+  private static func readableDefaultMode(_ metrics: [String: String]) -> String? {
+    guard let rawMode = cleaned(metrics["defaultLocalExecutionSafetyMode"]) else {
+      return nil
+    }
+    return LocalExecutionSafetyModePresenter.compact(rawMode)
+  }
+
+  private static func cleaned(_ value: String?) -> String? {
+    guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !trimmed.isEmpty
+    else {
+      return nil
+    }
+    return trimmed
   }
 }

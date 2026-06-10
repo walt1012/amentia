@@ -22,7 +22,9 @@ enum RuntimeStateLoader {
 
     return ModelHealthRefresh(
       modelHealth: RuntimeSummaryMapper.modelHealthSummary(from: runtimeModel),
-      runtimeDetail: serverLabel.map { "\($0) | \(runtimeModel.displayName)" }
+      runtimeDetail: serverLabel.map {
+        "\($0). \(LocalModelDisplayPresenter.cleanDisplayName(runtimeModel.displayName))"
+      }
     )
   }
 
@@ -35,11 +37,11 @@ enum RuntimeStateLoader {
     } catch {
       return RuntimeReadinessSummary(
         status: "unavailable",
-        summary: "Runtime readiness unavailable: \(error.localizedDescription)",
+        summary: "Local model readiness unavailable: \(error.localizedDescription)",
         checks: [
           RuntimeReadinessCheckSummary(
             id: "runtime-readiness",
-            title: "Runtime Readiness",
+            title: "Local Model Readiness",
             status: "unavailable",
             detail: error.localizedDescription
           )
@@ -50,11 +52,11 @@ enum RuntimeStateLoader {
   }
 
   private static func modelHealthFailureDetail(serverLabel: String?, error: Error) -> String {
-    let detail = "Model health unavailable: \(error.localizedDescription)"
+    let detail = "Model setup unavailable: \(error.localizedDescription)"
     guard let serverLabel, !serverLabel.isEmpty else {
       return detail
     }
 
-    return "\(serverLabel) | \(detail)"
+    return "\(serverLabel). \(detail)"
   }
 }

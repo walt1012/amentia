@@ -1,5 +1,8 @@
 use pith_protocol::RuntimeReadinessCheck;
 
+const DEFAULT_EXECUTION_CONTROL_DETAIL: &str =
+  "Default mode: ask-before-change; risky actions require approval and can be cancelled.";
+
 pub(super) fn execution_control_check(
   pending_approval_count: usize,
   active_turn_count: usize,
@@ -94,5 +97,5 @@ fn execution_control_detail(
     );
   }
 
-  "Risky actions require approval, and local executions can be cancelled.".to_string()
+  DEFAULT_EXECUTION_CONTROL_DETAIL.to_string()
 }

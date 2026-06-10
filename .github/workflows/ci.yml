@@ -20,11 +20,13 @@ env:
   RUNTIME_BINARY: pith-runtime-bin
   LLAMA_BINARY: llama-cli
   LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
+  SWIFT_APP_BINARY_CACHE_DIR: .ci-cache/swift-app-bin
+  RUNTIME_BINARY_CACHE_DIR: .ci-cache/runtime-bin
   LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
-  SWIFT_APP_ARTIFACT: PithApp-x86_64
-  RUNTIME_ARTIFACT: pith-runtime-bin-x86_64
-  LLAMA_ARTIFACT: llama-cli-x86_64
-  MACOS_APP_ARTIFACT: Pith-macos-x86_64
+  SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
+  RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
+  LLAMA_ARTIFACT: internal-llama-cli-x86_64
+  MACOS_APP_ARTIFACT: Pith-installer-x86_64
   MACOS_DMG_NAME: Pith-macos-x86_64.dmg
 
 defaults:
@@ -40,6 +42,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Change detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.detect.outputs.rust }}
+      swift: ${{ steps.detect.outputs.swift }}
+      package: ${{ steps.detect.outputs.package }}
+      llama: ${{ steps.detect.outputs.llama }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Detect changed areas
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          PUSH_BEFORE_SHA: ${{ github.event.before || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "schedule" ]]; then
+            python3 scripts/ci_changes.py --all --github-output "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="$PUSH_BEFORE_SHA"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+          fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git rev-list --max-count=2 HEAD | tail -n 1)"
+          fi
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$base" || true
+          fi
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            python3 scripts/ci_changes.py --all --github-output "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only "$base" HEAD > changed-files.txt
+          python3 scripts/ci_changes.py \
+            --changed-files changed-files.txt \
+            --github-output "$GITHUB_OUTPUT"
+
   repository-policy:
     name: Repository policy checks
     runs-on: ubuntu-latest
@@ -54,9 +106,8 @@ jobs:
       - name: Compile Python automation
         run: |
           set -euo pipefail
-          python3 -m py_compile \
-            scripts/*.py \
-            plugins/bundled/notion-connector/bin/notion-mcp-dry-run.py
+          mapfile -d '' python_files < <(find scripts plugins/bundled -name '*.py' -print0)
+          python3 -m py_compile "${python_files[@]}"
 
       - name: Validate model pack manifest
         run: python3 scripts/validate_model_pack.py
@@ -67,10 +118,75 @@ jobs:
       - name: Test packaging helpers
         run: python3 scripts/test_package_macos_app.py
 
-  rust:
-    name: Rust checks
+      - name: Test package contract helper
+        run: python3 scripts/test_package_contract.py
+
+      - name: Test CI change classifier
+        run: python3 scripts/test_ci_changes.py
+
+      - name: Validate workflow structure
+        run: python3 scripts/validate_workflows.py
+
+      - name: Test workflow structure policy
+        run: python3 scripts/test_validate_workflows.py
+
+      - name: Test DMG staging helper
+        run: python3 scripts/test_create_macos_dmg.py
+
+      - name: Test release state helper
+        run: python3 scripts/test_release_state.py
+
+      - name: Test release readiness helper
+        run: python3 scripts/test_release_readiness.py
+
+      - name: Test published release contract
+        run: python3 scripts/test_release_publish_contract.py
+
+      - name: Test release rehearsal contract
+        run: python3 scripts/test_release_rehearsal_contract.py
+
+      - name: Test release evidence contract
+        run: python3 scripts/test_release_evidence_contract.py
+
+      - name: Test release identity helper
+        run: python3 scripts/test_release_identity.py
+
+      - name: Test distribution signing helper
+        run: python3 scripts/test_sign_macos_app_for_distribution.py
+
+      - name: Test release artifact helper
+        run: python3 scripts/test_release_artifacts.py
+
+      - name: Test installer artifact contract
+        run: python3 scripts/test_installer_artifact_contract.py
+
+      - name: Test manual acceptance contract
+        run: python3 scripts/test_manual_acceptance_contract.py
+
+      - name: Test release text helper
+        run: python3 scripts/test_release_text.py
+
+      - name: Test first app-open contract
+        run: python3 scripts/test_first_app_open_contract.py
+
+      - name: Test packaged smoke helper
+        run: python3 scripts/test_smoke_launch_macos_app.py
+
+      - name: Test connector workflow contracts
+        run: python3 scripts/test_connector_workflow_contracts.py
+
+      - name: Test Notion connector contract
+        run: python3 scripts/test_notion_connector_contract.py
+
+      - name: Test distribution validator
+        run: python3 scripts/test_validate_macos_distribution.py
+
+  rust-format:
+    name: Rust format
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -81,7 +197,47 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt
+
+      - name: Cargo fmt
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-logs
+          if ! cargo fmt --all -- --check > .ci-logs/rustfmt.log 2>&1; then
+            cargo fmt --all
+            git diff -- . > .ci-logs/rustfmt.patch
+            cat .ci-logs/rustfmt.log
+            exit 1
+          fi
+
+      - name: Upload Rust format diff
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rustfmt-diff
+          path: |
+            .ci-logs/rustfmt.log
+            .ci-logs/rustfmt.patch
+          if-no-files-found: ignore
+          retention-days: 3
+
+  rust-clippy:
+    name: Rust clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - name: Cache Cargo dependencies and build output
         uses: actions/cache@v5
@@ -94,14 +250,65 @@ jobs:
           restore-keys: |
             cargo-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: Cargo fmt
-        run: cargo fmt --all -- --check
-
       - name: Cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+  rust-test:
+    name: Rust tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies and build output
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Cargo test
         run: cargo test --workspace
+
+  runtime-smoke:
+    name: Runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies and build output
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Runtime smoke test
         run: python3 scripts/runtime_smoke_test.py
@@ -125,6 +332,8 @@ jobs:
     name: Swift app build
     runs-on: macos-15-intel
     timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.swift == 'true' || needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -135,7 +344,23 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Restore cached Swift app executable
+        id: swift_app_binary_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+
+      - name: Use cached Swift app executable
+        if: steps.swift_app_binary_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+
       - name: Cache Swift build output
+        if: steps.swift_app_binary_cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           path: apps/pith-macos/.build
@@ -144,13 +369,15 @@ jobs:
             swift-build-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 Swift app executable
+        if: steps.swift_app_binary_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
           bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp "$bin_path/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$SWIFT_APP_BINARY_CACHE_DIR"
+          cp "$bin_path/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
 
       - name: Upload Swift app executable
         uses: actions/upload-artifact@v7
@@ -158,11 +385,14 @@ jobs:
           name: ${{ env.SWIFT_APP_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.SWIFT_APP_BINARY }}
           if-no-files-found: error
+          retention-days: 1
 
   swift-tests:
     name: Swift app tests
     runs-on: macos-15-intel
     timeout-minutes: 25
+    needs: changes
+    if: ${{ needs.changes.outputs.swift == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -182,12 +412,50 @@ jobs:
             swift-test-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Test x86_64 Swift app logic
-        run: swift test --package-path "$SWIFT_PACKAGE_PATH" --arch x86_64
+        run: |
+          set -o pipefail
+          mkdir -p .ci-logs
+          swift test --package-path "$SWIFT_PACKAGE_PATH" --arch x86_64 2>&1 | tee .ci-logs/swift-test.log
+
+      - name: Upload Swift test log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-test-log
+          path: .ci-logs/swift-test.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Annotate Swift test failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          log_path = Path(".ci-logs/swift-test.log")
+          text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+          lines = text.splitlines()
+          interesting = [
+            line
+            for line in lines
+            if (
+              "error:" in line.lower()
+              or ("failed" in line.lower() and "passed" not in line.lower())
+              or "xctassert" in line.lower()
+              or "failure:" in line.lower()
+            )
+          ]
+          snippet = "\n".join((interesting or lines[-80:])[-80:])
+          snippet = snippet.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::error title=Swift test failure::{snippet}")
+          PY
 
   macos-runtime:
     name: macOS runtime build
     runs-on: macos-15-intel
     timeout-minutes: 30
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' || needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -198,7 +466,23 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Restore cached runtime executable
+        id: runtime_binary_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.RUNTIME_BINARY_CACHE_DIR }}
+          key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
+
+      - name: Use cached runtime executable
+        if: steps.runtime_binary_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+
       - name: Cache macOS runtime build output
+        if: steps.runtime_binary_cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           path: |
@@ -210,12 +494,14 @@ jobs:
             macos-runtime-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 runtime executable
+        if: steps.runtime_binary_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           cargo build -p pith-runtime-bin --release
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp "target/release/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
-          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
+          cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+          chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
 
       - name: Upload runtime executable
         uses: actions/upload-artifact@v7
@@ -223,11 +509,14 @@ jobs:
           name: ${{ env.RUNTIME_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}/${{ env.RUNTIME_BINARY }}
           if-no-files-found: error
+          retention-days: 1
 
   macos-llama-backend:
     name: macOS llama.cpp backend
     runs-on: macos-15-intel
     timeout-minutes: 45
+    needs: changes
+    if: ${{ needs.changes.outputs.llama == 'true' || needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -307,16 +596,15 @@ jobs:
           name: ${{ env.LLAMA_ARTIFACT }}
           path: ${{ env.PREBUILT_ARTIFACT_DIR }}
           if-no-files-found: error
+          retention-days: 1
 
   macos-package:
     name: Package macOS app
     runs-on: macos-15-intel
     timeout-minutes: 30
     needs:
-      - swift-app
-      - swift-tests
-      - macos-runtime
-      - macos-llama-backend
+      - changes
+    if: ${{ needs.changes.outputs.package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -324,23 +612,155 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Download Swift app executable
-        uses: actions/download-artifact@v7
+      - name: Cache Swift app executable
+        id: package_swift_cache
+        uses: actions/cache@v5
         with:
-          name: ${{ env.SWIFT_APP_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+          path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
 
-      - name: Download runtime executable
-        uses: actions/download-artifact@v7
-        with:
-          name: ${{ env.RUNTIME_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+      - name: Restore cached Swift app executable
+        if: steps.package_swift_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
 
-      - name: Download llama.cpp backend
-        uses: actions/download-artifact@v7
+      - name: Cache Swift package build output
+        if: steps.package_swift_cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v5
         with:
-          name: ${{ env.LLAMA_ARTIFACT }}
-          path: ${{ env.PREBUILT_ARTIFACT_DIR }}
+          path: apps/pith-macos/.build
+          key: package-swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          restore-keys: |
+            package-swift-build-${{ runner.os }}-${{ runner.arch }}-
+            swift-build-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache runtime executable
+        id: package_runtime_cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.RUNTIME_BINARY_CACHE_DIR }}
+          key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
+
+      - name: Restore cached runtime executable
+        if: steps.package_runtime_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+
+      - name: Install Rust for package runtime
+        if: steps.package_runtime_cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache package Cargo build output
+        if: steps.package_runtime_cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: package-cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            package-cargo-${{ runner.os }}-${{ runner.arch }}-
+            macos-runtime-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build missing package executables
+        if: steps.package_swift_cache.outputs.cache-hit != 'true' || steps.package_runtime_cache.outputs.cache-hit != 'true'
+        env:
+          SWIFT_CACHE_HIT: ${{ steps.package_swift_cache.outputs.cache-hit }}
+          RUNTIME_CACHE_HIT: ${{ steps.package_runtime_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+
+          pids=()
+          if [[ "$SWIFT_CACHE_HIT" != "true" ]]; then
+            (
+              swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64
+              bin_path="$(swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 --show-bin-path)"
+              mkdir -p "$PREBUILT_ARTIFACT_DIR" "$SWIFT_APP_BINARY_CACHE_DIR"
+              cp "$bin_path/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+              cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+              chmod +x "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY"
+            ) &
+            pids+=("$!")
+          fi
+
+          if [[ "$RUNTIME_CACHE_HIT" != "true" ]]; then
+            (
+              cargo build -p pith-runtime-bin --release
+              mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
+              cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+              cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
+              chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
+            ) &
+            pids+=("$!")
+          fi
+
+          failed=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+      - name: Cache pinned llama.cpp backend
+        id: package_llama_cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.LLAMA_BACKEND_CACHE_DIR }}
+          key: llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1
+
+      - name: Restore cached llama.cpp backend
+        if: steps.package_llama_cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Build pinned llama.cpp backend
+        if: steps.package_llama_cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/llama.cpp"
+          build_dir="$RUNNER_TEMP/llama.cpp-build"
+          git init "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C "$source_dir" fetch --depth 1 origin "$LLAMA_CPP_REF"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          cmake \
+            -S "$source_dir" \
+            -B "$build_dir" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DBUILD_SHARED_LIBS=OFF
+          if ! cmake --build "$build_dir" --config Release --parallel 3 > "$RUNNER_TEMP/llama-build.log" 2>&1; then
+            tail -n 160 "$RUNNER_TEMP/llama-build.log"
+            exit 1
+          fi
+          backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
+          test -x "$backend"
+          rm -rf "$LLAMA_BACKEND_CACHE_DIR"
+          mkdir -p "$LLAMA_BACKEND_CACHE_DIR"
+          python3 scripts/package_macos_app.py \
+            --stage-llama-backend "$backend" \
+            --stage-llama-output "$LLAMA_BACKEND_CACHE_DIR"
+          chmod +x "$LLAMA_BACKEND_CACHE_DIR/$LLAMA_BINARY"
+          mkdir -p "$PREBUILT_ARTIFACT_DIR"
+          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+
+      - name: Validate packaged llama.cpp backend
+        run: |
+          set -euo pipefail
+          test -x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
+          archs="$(lipo -archs "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" 2>/dev/null || true)"
+          if [[ -n "$archs" && "$archs" != *"x86_64"* ]]; then
+            echo "::error title=llama.cpp backend architecture::Expected x86_64 llama-cli, got $archs"
+            exit 1
+          fi
 
       - name: Restore executable permissions
         run: |
@@ -354,6 +774,8 @@ jobs:
           set +e
           python3 scripts/package_macos_app.py \
             --skip-build \
+            --no-zip \
+            --source-commit "$GITHUB_SHA" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
             --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY" \
@@ -369,17 +791,78 @@ jobs:
           fi
           exit "$status"
 
-      - name: Smoke launch packaged macOS app
-        run: python3 scripts/smoke_launch_macos_app.py artifacts/macos/Pith.app
+      - name: Validate package contract
+        run: |
+          python3 scripts/package_contract.py \
+            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --source-commit "$GITHUB_SHA" \
+            --signing-mode ad-hoc
+
+      - name: Create internal release copy
+        run: |
+          set -euo pipefail
+          python3 scripts/release_text.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --signing-mode ad-hoc \
+            --allow-untrusted-ad-hoc false \
+            --draft true \
+            --install-guide-output artifacts/macos/README-FIRST.txt \
+            --notes-output artifacts/macos/internal-release-notes.md
 
       - name: Create internal macOS disk image
-        run: python3 scripts/create_macos_dmg.py artifacts/macos/Pith.app "artifacts/macos/$MACOS_DMG_NAME"
+        run: |
+          set -euo pipefail
+          python3 scripts/create_macos_dmg.py \
+            artifacts/macos/Pith.app \
+            "artifacts/macos/$MACOS_DMG_NAME" \
+            --readme-file artifacts/macos/README-FIRST.txt \
+            --smoke-launch-script scripts/smoke_launch_macos_app.py \
+            --smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json
 
-      - name: Upload macOS app artifact
+      - name: Create internal macOS checksum
+        run: |
+          set -euo pipefail
+          python3 scripts/release_artifacts.py \
+            --artifact "artifacts/macos/$MACOS_DMG_NAME" \
+            --checksum-output "artifacts/macos/$MACOS_DMG_NAME.sha256" \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --source-commit "$GITHUB_SHA" \
+            --signing-mode ad-hoc \
+            --install-guide artifacts/macos/README-FIRST.txt \
+            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --manifest-output artifacts/macos/internal-release-manifest.json
+
+      - name: Validate installer artifact contract
+        run: |
+          set -euo pipefail
+          python3 scripts/installer_artifact_contract.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --asset "artifacts/macos/$MACOS_DMG_NAME" \
+            --asset "artifacts/macos/$MACOS_DMG_NAME.sha256" \
+            --asset artifacts/macos/README-FIRST.txt \
+            --asset artifacts/macos/internal-release-manifest.json
+
+      - name: Rehearse internal installer download
+        run: |
+          set -euo pipefail
+          python3 scripts/release_rehearsal_contract.py \
+            --tag "ci-${GITHUB_SHA::12}" \
+            --asset-dir artifacts/macos \
+            --allow-extra-assets \
+            --summary-output artifacts/macos/internal-release-rehearsal.md
+          cat artifacts/macos/internal-release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload macOS installer artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.MACOS_APP_ARTIFACT }}
           path: |
-            artifacts/macos/Pith-macos-x86_64.zip
             artifacts/macos/${{ env.MACOS_DMG_NAME }}
+            artifacts/macos/${{ env.MACOS_DMG_NAME }}.sha256
+            artifacts/macos/README-FIRST.txt
+            artifacts/macos/internal-release-manifest.json
           if-no-files-found: error
+          retention-days: 7

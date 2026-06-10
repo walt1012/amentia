@@ -38,7 +38,7 @@ pub(crate) fn summarize_denied_approval(
     )
   };
   let prompt = format!(
-    "You are Pith, a concise local coding agent. Summarize a denied approval in one sentence.\nWorkspace: {workspace_name}\n{}\nAction: {}\nTarget: {}\nCommand: {}",
+    "You are Pith, a concise local cowork agent. Summarize a denied approval in one sentence.\nWorkspace: {workspace_name}\n{}\nAction: {}\nTarget: {}\nCommand: {}",
     format_memory_context_prompt(&memory_context),
     action,
     relative_path,

@@ -109,6 +109,16 @@ impl RuntimeStore {
     Ok(())
   }
 
+  pub fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
+    let connection = self.open_connection()?;
+    let deleted = connection.execute(
+      "DELETE FROM approvals WHERE thread_id = ?1",
+      params![thread_id],
+    )?;
+
+    Ok(deleted)
+  }
+
   pub fn next_approval_sequence(&self) -> Result<usize> {
     let connection = self.open_connection()?;
     let mut statement = connection.prepare("SELECT id FROM approvals ORDER BY id ASC")?;

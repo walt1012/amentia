@@ -35,10 +35,77 @@ extension RuntimeBridge {
     )
   }
 
-  func startTurn(threadID: String, message: String) async throws -> RuntimeTurnResult {
+  func deleteThread(threadID: String) async throws -> [RuntimeThreadSummary] {
+    let response: JSONRPCResponse<ThreadDeleteResult> = try await sendRequest(
+      method: "thread/delete",
+      params: ThreadDeleteParams(threadId: threadID)
+    )
+    let result = try responseResult(from: response)
+
+    guard result.deleted else {
+      throw RuntimeError.rpc("Session was not deleted.")
+    }
+
+    return result.threads.map {
+      RuntimeThreadSummary(
+        id: $0.id,
+        title: $0.title,
+        status: $0.status,
+        workspaceRootPath: $0.workspace?.rootPath,
+        workspaceDisplayName: $0.workspace?.displayName
+      )
+    }
+  }
+
+  func previewThreadChanges(threadID: String) async throws -> RuntimeThreadChangePreview {
+    let response: JSONRPCResponse<ThreadChangePreviewResult> = try await sendRequest(
+      method: "thread/changePreview",
+      params: ThreadChangePreviewParams(threadId: threadID)
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimeThreadChangePreview(
+      threadID: result.threadId,
+      changes: result.changes.map {
+        RuntimeThreadChange(
+          id: $0.id,
+          relativePath: $0.relativePath,
+          action: $0.action,
+          bytesWritten: $0.bytesWritten,
+          willDeleteFile: $0.willDeleteFile,
+          canRevert: $0.canRevert,
+          conflictReason: $0.conflictReason
+        )
+      }
+    )
+  }
+
+  func revertThreadChanges(threadID: String) async throws -> RuntimeThreadRevertResult {
+    let response: JSONRPCResponse<ThreadRevertChangesResult> = try await sendRequest(
+      method: "thread/revertChanges",
+      params: ThreadRevertChangesParams(threadId: threadID)
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimeThreadRevertResult(
+      threadID: result.threadId,
+      revertedCount: result.revertedCount,
+      items: result.items.map(RuntimeBridgePayloadMapper.timelineItem(from:))
+    )
+  }
+
+  func startTurn(
+    threadID: String,
+    message: String,
+    localExecutionSafetyMode: String?
+  ) async throws -> RuntimeTurnResult {
     let response: JSONRPCResponse<TurnStartResult> = try await sendRequest(
       method: "turn/start",
-      params: TurnStartParams(threadId: threadID, message: message)
+      params: TurnStartParams(
+        threadId: threadID,
+        message: message,
+        localExecutionSafetyMode: localExecutionSafetyMode
+      )
     )
     let result = try responseResult(from: response)
 

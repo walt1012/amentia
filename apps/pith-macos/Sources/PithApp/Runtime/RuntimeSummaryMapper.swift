@@ -131,6 +131,20 @@ enum RuntimeSummaryMapper {
           kind: $0.kind,
           driver: $0.driver,
           entrypoint: $0.entrypoint,
+          workflowID: $0.workflowID,
+          workflow: $0.workflow.map {
+            PluginCommandWorkflowSummary(
+              workflowID: $0.workflowID,
+              displayName: $0.displayName,
+              connectorID: $0.connectorID,
+              service: $0.service,
+              action: $0.action,
+              maxAgentSteps: $0.maxAgentSteps,
+              stages: $0.stages,
+              statuses: $0.statuses,
+              commandIDs: $0.commandIDs
+            )
+          },
           input: pluginCommandEnvelopeSummary(from: $0.input),
           output: pluginCommandEnvelopeSummary(from: $0.output),
           supported: $0.supported
@@ -186,6 +200,19 @@ enum RuntimeSummaryMapper {
       authRequired: connector.authRequired,
       authScopes: connector.authScopes,
       credentialStore: connector.credentialStore,
+      workflows: connector.workflows.map {
+        PluginConnectorWorkflowSummary(
+          workflowID: $0.workflowID,
+          displayName: $0.displayName,
+          connectorID: $0.connectorID,
+          service: $0.service,
+          action: $0.action,
+          maxAgentSteps: $0.maxAgentSteps,
+          stages: $0.stages,
+          statuses: $0.statuses,
+          commandIDs: $0.commandIDs
+        )
+      },
       authStatus: connector.authStatus,
       credentialPresent: connector.credentialPresent,
       credentialSecretPresent: connector.credentialSecretPresent,

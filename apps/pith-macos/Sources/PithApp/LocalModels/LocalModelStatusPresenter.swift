@@ -13,28 +13,39 @@ struct LocalModelStatusSnapshot {
 
 enum LocalModelStatusPresenter {
   static func displayName(_ snapshot: LocalModelStatusSnapshot) -> String {
-    snapshot.modelHealth?.displayName ?? "Local Model Not Loaded"
+    snapshot.modelHealth
+      .map { LocalModelDisplayPresenter.cleanDisplayName($0.displayName) }
+      ?? "Model Setup Not Ready"
   }
 
   static func statusSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
       switch snapshot.runtimeState {
       case .disconnected:
-        return "Launch the runtime to inspect local model setup."
+        return "Start Pith's local service to inspect model setup."
       case .launching:
-        return "Checking local model setup..."
+        return "Checking local service setup..."
       case .failed:
-        return "Relaunch the runtime to recover local model setup."
+        return "Restart the local service to recover model setup."
       case .ready:
         return "Choose and download one local model to continue."
       }
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Model ready outside curated catalog"
+      return "Choose a verified model"
     }
 
-    return "\(modelHealth.backend) | \(modelHealth.status)"
+    switch modelHealth.status {
+    case "ready":
+      return "Ready to use"
+    case "unavailable":
+      return "Local model setup needed"
+    case "error":
+      return "Model needs attention"
+    default:
+      return "Checking local model"
+    }
   }
 
   static func showsActivity(_ snapshot: LocalModelStatusSnapshot) -> Bool {
@@ -45,17 +56,17 @@ enum LocalModelStatusPresenter {
     guard let modelHealth = snapshot.modelHealth else {
       if let model = snapshot.selectedSetupModel {
         if model.downloaded {
-          return "Pith will use \(model.displayName) after it is selected."
+          return "Pith will use \(LocalModelDisplayPresenter.actionName(model)) after it is selected."
         }
 
-        return "Pith will use \(model.displayName) after it is downloaded and selected."
+        return "Pith will use \(LocalModelDisplayPresenter.actionName(model)) after it is downloaded and selected."
       }
 
-      return "Pith needs one downloaded GGUF model selected before it can answer locally."
+      return "Pith needs one downloaded local model selected before it can answer."
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Choose LFM2.5 or Granite from the local catalog before running Pith. Removed or external model selections are not treated as first-use ready."
+      return "Choose a verified model from Pith's curated list before running. Removed or external model selections need to be picked again."
     }
 
     return modelHealth.detail
@@ -63,69 +74,61 @@ enum LocalModelStatusPresenter {
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Source: unavailable"
+      return "Model source unavailable."
     }
 
-    let source = "Source: \(modelHealth.source)"
-    if let manifestPath = modelHealth.manifestPath {
-      return "\(source)\nManifest: \(manifestPath)"
-    }
-
-    return source
+    return "Source: \(modelHealth.source)"
   }
 
   static func metricsSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Metrics: unavailable"
+      return "Model details unavailable."
     }
 
     let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
     let modelContextSize = modelHealth.metrics["modelContextSize"]
-      .map { "\(contextSize) runtime / \($0) model" }
+      .map { "\(contextSize) active / \($0) limit" }
       ?? contextSize
     let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
     let backend = modelHealth.metrics["backend"] ?? modelHealth.backend
-    return "Context: \(modelContextSize) | Max Output: \(maxOutputTokens) | Backend: \(backend)"
+    return "Context: \(modelContextSize). Output: \(maxOutputTokens). Backend: \(backend)."
   }
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Readiness: unavailable"
+      return "Model readiness unavailable."
     }
 
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"
     let packReady = modelHealth.metrics["packReady"] ?? "false"
-    return "Readiness: \(readiness) | Pack Ready: \(packReady)"
+    if readiness == "ready", packReady == "true" {
+      return "Local model setup is ready."
+    }
+    return "Local model setup is not ready yet."
   }
 
   static func installHintSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Install hint: launch the runtime to inspect local model setup."
+      return "Launch Pith to inspect local model setup."
     }
 
-    return modelHealth.metrics["installHint"] ?? "Install hint unavailable."
+    return modelHealth.metrics["installHint"] ?? "Setup hint unavailable."
   }
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
-    guard let modelHealth = snapshot.modelHealth else {
-      return "Suggested install layout unavailable."
+    guard snapshot.modelHealth != nil else {
+      return "Local folders appear after Pith finishes checking setup."
     }
 
-    let manifestPath = modelHealth.metrics["suggestedManifestPath"] ?? "manifest path unavailable"
-    let modelPath = modelHealth.metrics["suggestedModelPath"] ?? "model path unavailable"
-    let binaryPath = modelHealth.metrics["suggestedBinaryPath"] ?? "binary path unavailable"
-    return "Suggested Manifest: \(manifestPath)\nSuggested Model: \(modelPath)\nSuggested Binary: \(binaryPath)"
+    return "Use the folder buttons below if you need to inspect local model files."
   }
 
   static func artifactPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
-    guard let modelHealth = snapshot.modelHealth else {
-      return "No local model paths available yet."
+    guard snapshot.modelHealth != nil else {
+      return "No local model is active yet."
     }
 
-    let modelPath = modelHealth.modelPath ?? "model path unavailable"
-    let binaryPath = modelHealth.binaryPath ?? "binary path unavailable"
-    let manifestPath = modelHealth.manifestPath ?? "manifest path unavailable"
-    return "Model: \(modelPath)\nBinary: \(binaryPath)\nManifest: \(manifestPath)"
+    return "Pith is using the selected verified local model."
   }
 
   static func localModelStatusSummary(
@@ -141,27 +144,31 @@ enum LocalModelStatusPresenter {
       status = "active"
     } else if model.downloaded {
       status = "downloaded"
+    } else if model.needsVerification {
+      status = "verify before use"
     } else {
       status = "available"
     }
 
-    let localSize = model.localSizeBytes.map(LocalModelByteFormatter.string)
-      ?? LocalModelByteFormatter.string(model.sizeBytes)
-    return "\(status) | \(localSize) | \(model.license)"
+    return LocalModelDisplayPresenter.statusMetadata(
+      status: status,
+      sizeBytes: model.localSizeBytes ?? model.sizeBytes,
+      license: model.license
+    )
   }
 
   static func managerRuleSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     if snapshot.modelDownloadID != nil {
-      return "Downloads can be paused or cancelled. Pith will activate only one verified model."
+      return "Downloads can be paused or cancelled. Pith activates only one verified model."
     }
     if snapshot.pausedModelDownloadID != nil {
       return "Continue the paused download or cancel it before starting another model."
     }
     if let model = snapshot.selectedSetupModel {
-      return "Selected setup model: \(model.displayName). Pith runs one active model at a time."
+      return "Selected: \(LocalModelDisplayPresenter.actionName(model)). Pith runs one active model at a time."
     }
 
-    return "Choose one curated GGUF model. Pith verifies the file before it can run."
+    return "Choose one curated local model. Pith verifies the file before it can run."
   }
 
   static func localModelChoiceSummary(
@@ -170,23 +177,26 @@ enum LocalModelStatusPresenter {
     defaultModelID: String
   ) -> String {
     if model.active {
-      return "Currently active local model"
+      return "Active now"
     }
     if snapshot.modelDownloadID == model.id {
-      return "Downloading for local setup"
+      return "Downloading"
     }
     if snapshot.pausedModelDownloadID == model.id {
       return "Paused download"
     }
+    if model.needsVerification {
+      return "Found local file"
+    }
     if model.id == snapshot.selectedSetupModelID {
       if model.id == defaultModelID {
-        return "Selected default for first setup"
+        return "Selected default"
       }
 
-      return "Selected alternative for first setup"
+      return "Selected alternative"
     }
     if model.id == defaultModelID {
-      return "Default first-use choice"
+      return "Default choice"
     }
     if model.tags.contains("recommended") {
       return "Curated stronger tiny alternative"
@@ -197,19 +207,25 @@ enum LocalModelStatusPresenter {
 
   static func defaultDownloadButtonTitle(_ snapshot: LocalModelStatusSnapshot) -> String {
     let setupModelID = snapshot.selectedSetupModel?.id ?? snapshot.selectedSetupModelID
+    let modelName = snapshot.selectedSetupModel.map(LocalModelDisplayPresenter.actionName)
     if snapshot.modelDownloadID == setupModelID {
-      return "Downloading Model"
+      return modelName.map { "Downloading \($0)" } ?? "Downloading Model"
     }
     if snapshot.pausedModelDownloadID == setupModelID {
-      return "Continue Model"
+      return modelName.map { "Continue \($0)" } ?? "Continue Model"
     }
     if let setupModel = snapshot.selectedSetupModel {
       if setupModel.active {
         return "Model Selected"
       }
-      if setupModel.downloaded {
-        return "Use Downloaded Model"
+      if setupModel.needsVerification {
+        return "Verify \(LocalModelDisplayPresenter.actionName(setupModel))"
       }
+      if setupModel.downloaded {
+        return "Use \(LocalModelDisplayPresenter.actionName(setupModel))"
+      }
+
+      return "Download \(LocalModelDisplayPresenter.actionName(setupModel))"
     }
 
     return "Download Selected"
@@ -225,12 +241,15 @@ enum LocalModelStatusPresenter {
     if snapshot.pausedModelDownloadID == model.id {
       return "Continue"
     }
+    if model.needsVerification {
+      return "Replace"
+    }
 
     return model.downloaded ? "Downloaded" : "Download"
   }
 
-  static func tagSummary(_ model: LocalModelSummary) -> String {
-    model.tags.joined(separator: " / ")
+  static func fitSummary(_ model: LocalModelSummary, defaultModelID: String) -> String {
+    LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
   }
 
   static func pathSummary(_ model: LocalModelSummary) -> String {

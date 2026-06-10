@@ -35,10 +35,18 @@ extension AppViewModel {
       openWorkspace()
     case .createThread:
       createThread()
-    case .useFirstRequestPrompt:
-      useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
     case .sendFirstRequest:
       sendDraftMessage()
+    case .enableWebSearchPlugin:
+      setPluginEnabled(pluginID: webSearchPluginID, enabled: true)
+    case .openPluginAccess:
+      pluginManagerSection = .access
+      runtimeDetail = "Open Advanced > Connectors to enable Web Search access."
+    case .openPluginCommands:
+      pluginManagerSection = .commands
+      runtimeDetail = "Open Advanced > Connectors to enable a ready command."
+    case .inspectSandboxStatus:
+      runtimeDetail = "Native sandbox status is shown with local service status and local execution receipts."
     }
   }
 
@@ -153,4 +161,16 @@ extension AppViewModel {
   func canUseComposer() -> Bool {
     SessionActionPlanner.canUseComposer(sessionActionSnapshot())
   }
+
+  func canEnableWebSearchPlugin() -> Bool {
+    guard let plugin = pluginSummary(pluginID: webSearchPluginID),
+          !plugin.enabled
+    else {
+      return false
+    }
+
+    return canSetPluginEnabled(pluginID: webSearchPluginID)
+  }
 }
+
+private let webSearchPluginID = "web-search"

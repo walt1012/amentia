@@ -4,7 +4,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use pith_protocol::WorkspaceSummary;
 
 use crate::approval_types::PendingApproval;
-use crate::plugin_commands::execute_plugin_command_snapshot;
+use crate::plugin_commands::{ensure_plugin_command_handoff, execute_plugin_command_snapshot};
 use crate::request_state::{
   ApprovalExecutionOutput, CompletedApprovalRespond, PreparedApprovalRespond,
   PreparedApprovalSnapshot,
@@ -22,9 +22,15 @@ pub fn execute_prepared_approval_respond(
   let fallback_approval = snapshot.approval.clone();
   let fallback_decision = snapshot.decision.clone();
   let fallback_workspace = snapshot.workspace.clone();
+  let fallback_agent_context = snapshot.agent_context.clone();
   let output = catch_unwind(AssertUnwindSafe(|| execute_approval_snapshot(snapshot)))
     .unwrap_or_else(|_| {
-      build_recovered_approval_output(fallback_approval, fallback_decision, fallback_workspace)
+      build_recovered_approval_output(
+        fallback_approval,
+        fallback_decision,
+        fallback_workspace,
+        fallback_agent_context,
+      )
     });
 
   CompletedApprovalRespond { request_id, output }
@@ -35,6 +41,7 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
     approval,
     decision,
     workspace,
+    agent_context,
     model_runtime,
     cancellation,
     memory_notes,
@@ -59,7 +66,8 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
   if decision == "approved" {
     if let Some(plugin_command) = approved_plugin_command {
       match execute_plugin_command_snapshot(plugin_command) {
-        Ok(output) => {
+        Ok(mut output) => {
+          ensure_plugin_command_handoff(&mut output, "approvedPluginCommand");
           events.extend_items(output.items.clone());
           events.set_approved_plugin_command_output(output);
         }
@@ -77,6 +85,7 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
     }
   }
 
+  events.tag_agent_context(&agent_context);
   events.into_output(approval, decision, workspace)
 }
 
@@ -84,21 +93,25 @@ fn build_recovered_approval_output(
   approval: PendingApproval,
   decision: String,
   workspace: WorkspaceSummary,
+  agent_context: crate::requests::approval_agent_context::ApprovalAgentContext,
 ) -> ApprovalExecutionOutput {
+  let mut items = vec![warning_item(
+    "Approval Execution Recovered",
+    "Pith recovered after the approval action failed internally.".to_string(),
+    Some(HashMap::from([
+      ("approvalId".to_string(), approval.id.clone()),
+      ("action".to_string(), approval.action.clone()),
+    ])),
+  )];
+  agent_context.tag_items(&mut items);
   ApprovalExecutionOutput {
     approval: approval.clone(),
     decision,
     workspace,
-    items: vec![warning_item(
-      "Approval Execution Recovered",
-      "Pith recovered after the approval action failed internally.".to_string(),
-      Some(HashMap::from([
-        ("approvalId".to_string(), approval.id),
-        ("action".to_string(), approval.action),
-      ])),
-    )],
+    items,
     memory_event: None,
     hook_memory_captures: vec![],
     approved_plugin_command_output: None,
+    workspace_changes: vec![],
   }
 }

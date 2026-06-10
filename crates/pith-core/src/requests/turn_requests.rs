@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use pith_model_runtime::GenerationCancellation;
@@ -10,6 +11,8 @@ use crate::request_params::parse_required_params;
 use crate::request_state::{CompletedTurnStart, PreparedTurnSnapshot, PreparedTurnStart};
 use crate::runtime_context::RuntimeContext;
 use crate::thread_summary::refresh_thread_summary_note;
+use crate::turn::local_execution_safety::LocalExecutionSafetyMode;
+use crate::turn::turn_agent_loop::LOOP_MAX_STEPS;
 use crate::turn_actions;
 
 pub(crate) fn handle_turn_start(
@@ -38,7 +41,10 @@ pub fn prepare_turn_start(
   let model_runtime = context.model_state.snapshot();
   let cancellation = GenerationCancellation::new();
   let memory_notes = context.memory_state.snapshot_notes();
+  let plugin_state = context.plugin_state.clone();
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
+  let local_execution_safety_mode =
+    LocalExecutionSafetyMode::from_request(params.local_execution_safety_mode.as_deref());
   let prepared_thread = {
     let Some(thread) = context.thread_state.find_mut(&params.thread_id) else {
       return Err(JsonRpcResponse::error(
@@ -56,8 +62,11 @@ pub fn prepare_turn_start(
     &params.message,
     prepared_thread.workspace.as_ref(),
     &permission_sources,
+    local_execution_safety_mode,
     cancellation.clone(),
   );
+  let reserved_approval_ids =
+    reserve_follow_up_approval_ids(context, &permission_sources, local_execution_safety_mode);
   if context
     .execution_state
     .take_pending_running_cancel(&prepared_thread.thread_id)
@@ -82,7 +91,10 @@ pub fn prepare_turn_start(
       model_runtime,
       cancellation,
       memory_notes,
+      plugin_state,
       permission_sources,
+      local_execution_safety_mode,
+      reserved_approval_ids,
       action,
     },
   })
@@ -90,6 +102,23 @@ pub fn prepare_turn_start(
 
 fn ensure_turn_model_ready(context: &RuntimeContext) -> std::result::Result<(), String> {
   context.model_state.ensure_ready_for_turn()
+}
+
+fn reserve_follow_up_approval_ids(
+  context: &mut RuntimeContext,
+  permission_sources: &HashMap<String, Vec<String>>,
+  local_execution_safety_mode: LocalExecutionSafetyMode,
+) -> Vec<String> {
+  if !local_execution_safety_mode.should_reserve_approval_id(permission_sources, "file.write")
+    && !local_execution_safety_mode.should_reserve_approval_id(permission_sources, "shell.exec")
+    && context.plugin_state.enabled_command_capability_count() == 0
+  {
+    return vec![];
+  }
+
+  (0..LOOP_MAX_STEPS)
+    .map(|_| context.sequence_state.next_approval_id())
+    .collect()
 }
 
 pub fn execute_prepared_turn_start(prepared: PreparedTurnStart) -> CompletedTurnStart {
@@ -113,7 +142,7 @@ pub fn complete_prepared_turn_start(
   completed: CompletedTurnStart,
 ) -> JsonRpcResponse {
   let mut output = completed.output;
-  let plugin_command_output = output.plugin_command_output.take();
+  let plugin_command_outputs = std::mem::take(&mut output.plugin_command_outputs);
   context.execution_state.remove_running_turn(&output.turn_id);
   let was_cancelled = output.items.iter().any(|item| {
     item
@@ -153,14 +182,9 @@ pub fn complete_prepared_turn_start(
     return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
   }
 
-  if active_turn_id.is_none() {
-    if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
-      return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
-    }
-  }
-
-  if let Some(plugin_output) = plugin_command_output {
-    let memory_items = capture_plugin_command_output_memory(
+  let mut plugin_memory_items = vec![];
+  for plugin_output in plugin_command_outputs {
+    plugin_memory_items.extend(capture_plugin_command_output_memory(
       context,
       &output.thread_id,
       &plugin_output.command,
@@ -169,18 +193,21 @@ pub fn complete_prepared_turn_start(
       &plugin_output.items,
       plugin_output.capture_memory,
       &plugin_output.runner_memory_notes,
-    );
-    if !memory_items.is_empty() {
-      if let Some(thread) = context.thread_state.find_mut(&output.thread_id) {
-        thread.append_items(memory_items.clone());
-      }
-      output.items.extend(memory_items);
-      if let Err(error) = context.persist_runtime_state() {
-        return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
-      }
-      if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
-        return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
-      }
+    ));
+  }
+  if !plugin_memory_items.is_empty() {
+    if let Some(thread) = context.thread_state.find_mut(&output.thread_id) {
+      thread.append_items(plugin_memory_items.clone());
+    }
+    output.items.extend(plugin_memory_items);
+    if let Err(error) = context.persist_runtime_state() {
+      return JsonRpcResponse::error(completed.request_id, -32010, error.to_string());
+    }
+  }
+
+  if active_turn_id.is_none() {
+    if let Err(error) = refresh_thread_summary_note(context, &output.thread_id) {
+      return JsonRpcResponse::error(completed.request_id, -32012, error.to_string());
     }
   }
 

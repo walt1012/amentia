@@ -1,0 +1,51 @@
+{
+  "title": "Publish Notion Page Draft",
+  "description": "Create a Notion page from an approved local draft using the authorized Notion integration token.",
+  "prompt": "Publish the approved local draft to Notion. Accept a valid parentPageId, Notion page URL, or parent alias, with optional title and body in the command input. Do not publish unless the user has approved this connector action.",
+  "execution": {
+    "kind": "mcp.notion.publishPageDraft",
+    "driver": "mcp",
+    "entrypoint": "notion.publishPageDraft",
+    "connectors": ["notion"],
+    "workflowId": "notion.create-page",
+    "input": {
+      "envelope": "notion.publishPageDraft.input",
+      "fields": [
+        {
+          "name": "input",
+          "kind": "text",
+          "required": true,
+          "description": "Plain text or JSON containing a valid parentPageId, Notion page URL, or parent alias, plus optional title and body. The parent page must be shared with the Notion integration."
+        },
+        {
+          "name": "connectors",
+          "kind": "connectorRefs",
+          "required": true,
+          "description": "Authorized Notion connector reference."
+        }
+      ]
+    },
+    "output": {
+      "envelope": "notion.publishPageDraft.output",
+      "fields": [
+        {
+          "name": "items",
+          "kind": "timelineItems",
+          "required": true,
+          "description": "Remote write proof timeline item."
+        },
+        {
+          "name": "memoryNotes",
+          "kind": "memoryNotes",
+          "required": false,
+          "description": "Optional connector memory notes."
+        }
+      ]
+    }
+  },
+  "memory": {
+    "noteTitle": "Notion Page Published",
+    "noteSource": "plugin.notion-connector",
+    "noteTags": ["connector", "notion", "published"]
+  }
+}

@@ -19,8 +19,8 @@ enum RuntimeLaunchAnnotationFactory {
     if snapshot.shouldAnnotateSetupLaunch {
       entries.append(
         TimelineEntryFactory.system(
-          title: "Runtime Connected",
-          body: "Connected to \(snapshot.serverName) \(snapshot.serverVersion) over stdio.",
+          title: "Local Service Ready",
+          body: "Connected to Pith's local service.",
           attributes: [:]
         )
       )
@@ -92,7 +92,7 @@ enum RuntimeLaunchAnnotationFactory {
         TimelineEntryFactory.system(
           title: "Local Model Ready",
           body:
-            "\(modelHealth.displayName) is running in \(modelHealth.backend) mode with status \(modelHealth.status).",
+            "\(LocalModelDisplayPresenter.cleanDisplayName(modelHealth.displayName)) is ready for local work.",
           attributes: attributes
         )
       ]

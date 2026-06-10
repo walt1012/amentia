@@ -11,6 +11,7 @@ xcuserdata/
 *.xcuserstate
 
 *.log
+__pycache__/
 
 .pith/
 .tmp-runtime-state/

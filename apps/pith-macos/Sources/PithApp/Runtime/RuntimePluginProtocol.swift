@@ -116,9 +116,23 @@ struct RuntimePluginCommandExecutionPayload: Codable {
   let kind: String
   let driver: String
   let entrypoint: String?
+  let workflowId: String?
+  let workflow: RuntimePluginCommandWorkflowPayload?
   let input: RuntimePluginCommandEnvelopePayload?
   let output: RuntimePluginCommandEnvelopePayload?
   let supported: Bool
+}
+
+struct RuntimePluginCommandWorkflowPayload: Codable {
+  let workflowId: String
+  let displayName: String
+  let connectorId: String
+  let service: String
+  let action: String
+  let maxAgentSteps: Int?
+  let stages: [String]
+  let statuses: [String]
+  let commandIds: [String]?
 }
 
 struct RuntimePluginCommandEnvelopePayload: Codable {
@@ -148,6 +162,7 @@ struct RuntimePluginConnectorPayload: Codable {
   let authRequired: Bool
   let authScopes: [String]
   let credentialStore: String?
+  let workflows: [RuntimePluginConnectorWorkflowPayload]?
   let authStatus: String
   let credentialPresent: Bool
   let credentialSecretPresent: Bool
@@ -156,6 +171,18 @@ struct RuntimePluginConnectorPayload: Codable {
   let credentialLabel: String?
   let authorizedAt: Int?
   let credentialUpdatedAt: Int?
+}
+
+struct RuntimePluginConnectorWorkflowPayload: Codable {
+  let workflowId: String
+  let displayName: String
+  let connectorId: String
+  let service: String
+  let action: String
+  let maxAgentSteps: Int?
+  let stages: [String]
+  let statuses: [String]
+  let commandIds: [String]?
 }
 
 struct RuntimePluginHookPayload: Codable {
@@ -293,9 +320,23 @@ extension RuntimeBridge {
     let kind: String
     let driver: String
     let entrypoint: String?
+    let workflowID: String?
+    let workflow: RuntimePluginCommandWorkflow?
     let input: RuntimePluginCommandEnvelope?
     let output: RuntimePluginCommandEnvelope?
     let supported: Bool
+  }
+
+  struct RuntimePluginCommandWorkflow {
+    let workflowID: String
+    let displayName: String
+    let connectorID: String
+    let service: String
+    let action: String
+    let maxAgentSteps: Int?
+    let stages: [String]
+    let statuses: [String]
+    let commandIDs: [String]
   }
 
   struct RuntimePluginCommandEnvelope {
@@ -325,6 +366,7 @@ extension RuntimeBridge {
     let authRequired: Bool
     let authScopes: [String]
     let credentialStore: String?
+    let workflows: [RuntimePluginConnectorWorkflow]
     let authStatus: String
     let credentialPresent: Bool
     let credentialSecretPresent: Bool
@@ -333,6 +375,18 @@ extension RuntimeBridge {
     let credentialLabel: String?
     let authorizedAt: Int?
     let credentialUpdatedAt: Int?
+  }
+
+  struct RuntimePluginConnectorWorkflow {
+    let workflowID: String
+    let displayName: String
+    let connectorID: String
+    let service: String
+    let action: String
+    let maxAgentSteps: Int?
+    let stages: [String]
+    let statuses: [String]
+    let commandIDs: [String]
   }
 
   struct RuntimePluginHook {

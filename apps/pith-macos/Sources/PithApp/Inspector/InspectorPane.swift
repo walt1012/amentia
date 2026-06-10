@@ -4,19 +4,20 @@ struct InspectorPane: View {
   @ObservedObject var viewModel: AppViewModel
   @AppStorage("pith.inspector.workspaceExpanded") private var workspaceExpanded = false
   @AppStorage("pith.inspector.localModelExpanded") private var localModelExpanded = false
+  @AppStorage("pith.inspector.advancedExpanded") private var advancedExpanded = false
   @AppStorage("pith.inspector.memoryExpanded") private var memoryExpanded = false
   @AppStorage("pith.inspector.pluginManagerExpanded") private var pluginManagerExpanded = false
   @AppStorage("pith.inspector.threadExpanded") private var threadExpanded = false
   @AppStorage("pith.inspector.selectedItemExpanded") private var selectedItemExpanded = false
-  @AppStorage("pith.inspector.selectedMemoryExpanded") private var selectedMemoryExpanded = false
   @AppStorage("pith.inspector.selectedPluginExpanded") private var selectedPluginExpanded = false
+  @AppStorage("pith.inspector.selectedContextExpanded") private var selectedContextExpanded = false
   @AppStorage("pith.inspector.selectedSandboxExpanded") private var selectedSandboxExpanded = false
   @AppStorage("pith.inspector.selectedAttributesExpanded") private var selectedAttributesExpanded = false
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Inspector")
+        Text("Details")
           .font(.title3.weight(.semibold))
 
         InspectorSessionCard(
@@ -26,48 +27,54 @@ struct InspectorPane: View {
           tone: viewModel.runtimeStatusTone()
         )
 
-        DisclosureGroup("Workspace Search", isExpanded: $workspaceExpanded) {
+        DisclosureGroup("Search Workspace", isExpanded: $workspaceExpanded) {
           WorkspaceSearchPanel(viewModel: viewModel)
         }
 
-        DisclosureGroup("Local Model", isExpanded: $localModelExpanded) {
+        DisclosureGroup("Local Models", isExpanded: $localModelExpanded) {
           LocalModelPanel(viewModel: viewModel)
-        }
-
-        DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
-          MemoryPanel(viewModel: viewModel)
-        }
-
-        DisclosureGroup("Plugin Manager", isExpanded: $pluginManagerExpanded) {
-          PluginManagerPanel(viewModel: viewModel)
-        }
-
-        DisclosureGroup("Thread", isExpanded: $threadExpanded) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.selectedThreadTitle())
-              .font(.headline)
-            Text(viewModel.selectedThreadPreview())
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
         }
 
         selectedItemSection
         diffDetailSection
-        selectedMemorySection
+        selectedContextSection
         selectedPluginSection
         selectedSandboxSection
+
+        DisclosureGroup("Advanced", isExpanded: $advancedExpanded) {
+          VStack(alignment: .leading, spacing: 14) {
+            DisclosureGroup("Memory", isExpanded: $memoryExpanded) {
+              MemoryPanel(viewModel: viewModel)
+            }
+
+            DisclosureGroup("Connectors", isExpanded: $pluginManagerExpanded) {
+              PluginManagerPanel(viewModel: viewModel)
+            }
+
+            DisclosureGroup("Conversation", isExpanded: $threadExpanded) {
+              VStack(alignment: .leading, spacing: 8) {
+                Text(viewModel.selectedThreadTitle())
+                  .font(.headline)
+                Text(viewModel.selectedThreadPreview())
+                  .font(.subheadline)
+                  .foregroundColor(.secondary)
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
+            }
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
       }
       .padding(20)
     }
     .frame(minWidth: 280)
+    .background(PithVisualStyle.inspectorBackground)
   }
 
   @ViewBuilder
   private var selectedItemSection: some View {
     if viewModel.shouldShowSelectedEntryInspector() {
-      DisclosureGroup("Selected Item", isExpanded: $selectedItemExpanded) {
+      DisclosureGroup("Selection", isExpanded: $selectedItemExpanded) {
         VStack(alignment: .leading, spacing: 8) {
           Text(viewModel.selectedEntryTitle())
             .font(.headline)
@@ -75,7 +82,7 @@ struct InspectorPane: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
-          DisclosureGroup("Attributes", isExpanded: $selectedAttributesExpanded) {
+          DisclosureGroup("Details", isExpanded: $selectedAttributesExpanded) {
             Text(viewModel.selectedEntryMetadata())
               .font(.caption)
               .foregroundColor(.secondary)
@@ -91,21 +98,31 @@ struct InspectorPane: View {
   @ViewBuilder
   private var diffDetailSection: some View {
     if let diffSummary = viewModel.selectedDiffSummary() {
-      GroupBox("Diff Detail") {
+      GroupBox("Change Detail") {
         DiffDetailView(summary: diffSummary, lines: viewModel.selectedDiffLines())
       }
     }
   }
 
   @ViewBuilder
-  private var selectedMemorySection: some View {
-    if let memorySummary = viewModel.selectedEntryMemorySummary() {
-      DisclosureGroup("Selected Memory Context", isExpanded: $selectedMemoryExpanded) {
-        Text(memorySummary)
-          .font(.caption)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-          .frame(maxWidth: .infinity, alignment: .leading)
+  private var selectedContextSection: some View {
+    let sections = viewModel.selectedEntryContextReceiptSections()
+    if !sections.isEmpty {
+      DisclosureGroup("Context", isExpanded: $selectedContextExpanded) {
+        VStack(alignment: .leading, spacing: 10) {
+          ForEach(sections) { section in
+            VStack(alignment: .leading, spacing: 4) {
+              Text(section.title)
+                .font(.caption.weight(.semibold))
+              Text(section.body)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
   }
@@ -113,7 +130,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedPluginSection: some View {
     if let pluginSummary = viewModel.selectedEntryPluginSummary() {
-      DisclosureGroup("Selected Plugin Context", isExpanded: $selectedPluginExpanded) {
+      DisclosureGroup("Connector Details", isExpanded: $selectedPluginExpanded) {
         Text(pluginSummary)
           .font(.caption)
           .foregroundColor(.secondary)
@@ -126,7 +143,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedSandboxSection: some View {
     if let sandboxSummary = viewModel.selectedEntrySandboxSummary() {
-      DisclosureGroup("Selected Sandbox Context", isExpanded: $selectedSandboxExpanded) {
+      DisclosureGroup("Safety Details", isExpanded: $selectedSandboxExpanded) {
         Text(sandboxSummary)
           .font(.caption)
           .foregroundColor(.secondary)
@@ -166,7 +183,11 @@ private struct InspectorSessionCard: View {
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(tone.color.opacity(0.08))
+    .background(PithVisualStyle.panelBackground)
+    .overlay(
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .stroke(tone.color.opacity(0.18), lineWidth: 1)
+    )
     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
   }
 }

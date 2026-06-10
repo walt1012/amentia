@@ -13,36 +13,54 @@ struct RuntimeHeaderSnapshot {
   let isWorkspaceSearching: Bool
   let hasModelDownload: Bool
   let hasPausedModelDownload: Bool
+  let hasToolReadinessIssue: Bool
+  let dailyDriverStage: String?
+  let dailyDriverNextAction: String?
 }
 
 enum RuntimeHeaderPresenter {
   static func statusSummary(_ snapshot: RuntimeHeaderSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Launch the local runtime to restore model, workspace, plugins, and memory."
+      return "Start the local service to restore model, workspace, connectors, and memory."
     case .launching:
-      return "Starting the local runtime and reconnecting app state..."
+      return "Starting the local service and reconnecting app state..."
     case .failed:
-      return "Runtime stopped. Relaunch to recover local work."
+      return "Local service stopped. Restart to recover local work."
     case .ready:
       if !snapshot.isLocalModelReady {
         return snapshot.modelSetupSummary
       }
       if !snapshot.hasWorkspace {
-        return "Model is ready. Open a workspace to bind tools to a project."
+        return DailyDriverStagePresenter.summary(
+          stage: snapshot.dailyDriverStage,
+          nextAction: snapshot.dailyDriverNextAction
+        ) ?? "Model is ready. Open a workspace to bind tools to a project."
       }
       if snapshot.hasActiveTurn {
-        return "Pith is running locally. Cancel only if the execution is no longer useful."
+        return DailyDriverStagePresenter.summary(
+          stage: snapshot.dailyDriverStage,
+          nextAction: snapshot.dailyDriverNextAction
+        ) ?? "Pith is running locally. Cancel only if the execution is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
-        return "Select or create a thread to start local work."
+        return DailyDriverStagePresenter.summary(
+          stage: snapshot.dailyDriverStage,
+          nextAction: snapshot.dailyDriverNextAction
+        ) ?? "Select or create a session to start local work."
       }
       if snapshot.isWaitingForFirstMessage {
         return snapshot.hasDraftMessage
-          ? "First local request is drafted. Send it to finish setup."
-          : "Ready for the first local request."
+          ? "First cowork prompt is drafted. Send it to finish setup."
+          : DailyDriverStagePresenter.summary(
+            stage: snapshot.dailyDriverStage,
+            nextAction: snapshot.dailyDriverNextAction
+          ) ?? FirstRequestPromptPresenter.firstAppOpenActionSummary()
       }
-      return "Ready for local work."
+      return DailyDriverStagePresenter.summary(
+        stage: snapshot.dailyDriverStage,
+        nextAction: snapshot.dailyDriverNextAction
+      ) ?? "Ready for local work."
     }
   }
 
@@ -57,6 +75,10 @@ enum RuntimeHeaderPresenter {
     case .ready:
       if snapshot.hasActiveTurn || snapshot.hasModelDownload || snapshot.isWorkspaceSearching {
         return .active
+      }
+      let dailyTone = DailyDriverStagePresenter.tone(stage: snapshot.dailyDriverStage)
+      if dailyTone != .neutral {
+        return dailyTone
       }
       if !snapshot.hasWorkspace
         || !snapshot.isLocalModelReady
@@ -83,7 +105,7 @@ enum RuntimeHeaderPresenter {
 
     switch snapshot.runtimeState {
     case .disconnected:
-      return snapshot.runtimeDetail != "Runtime not launched"
+      return snapshot.runtimeDetail != "Local service not started"
     case .launching, .failed:
       return true
     case .ready:
@@ -95,6 +117,7 @@ enum RuntimeHeaderPresenter {
         || !snapshot.hasWorkspace
         || !snapshot.hasRuntimeThreadSelection
         || snapshot.isWaitingForFirstMessage
+        || snapshot.hasToolReadinessIssue
     }
   }
 }

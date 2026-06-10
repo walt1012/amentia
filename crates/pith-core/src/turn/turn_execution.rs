@@ -2,15 +2,8 @@ use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
 
-use super::turn_approval_execution::{execute_shell_turn, execute_write_turn};
-use super::turn_web_search::{
-  execute_web_search_candidate_local_answer, model_confirms_web_search_candidate,
-};
-use super::turn_workspace_execution::{
-  execute_list_turn, execute_no_workspace_turn, execute_read_turn, execute_search_turn,
-  execute_web_search_turn,
-};
-use crate::plugin_commands::execute_plugin_command_snapshot;
+use super::turn_agent_loop::{AgentLoopStopReason, LOOP_MAX_STEPS};
+use super::turn_loop_runner::TurnLoopRunner;
 use crate::request_state::{PreparedTurnAction, PreparedTurnSnapshot, TurnStartExecutionOutput};
 
 pub(crate) fn execute_prepared_turn_snapshot(
@@ -24,144 +17,23 @@ pub(crate) fn execute_prepared_turn_snapshot(
   }];
   let mut pending_active_turn = None;
   let mut pending_approval = None;
-  let mut plugin_command_output = None;
+  let mut plugin_command_outputs = vec![];
   let action = std::mem::replace(&mut snapshot.action, PreparedTurnAction::NoWorkspace);
-
-  match action {
-    PreparedTurnAction::Write {
-      intent,
-      approval_id,
-    } => {
-      if let Some(workspace) = snapshot.workspace.as_ref() {
-        execute_write_turn(
-          &snapshot,
-          workspace,
-          &intent,
-          &approval_id,
-          &mut items,
-          &mut pending_approval,
-        );
-      } else {
-        execute_no_workspace_turn(&snapshot, &mut items);
-      }
-    }
-    PreparedTurnAction::Shell {
-      command,
-      approval_id,
-    } => {
-      if let Some(workspace) = snapshot.workspace.as_ref() {
-        execute_shell_turn(
-          &snapshot,
-          workspace,
-          &command,
-          &approval_id,
-          &mut items,
-          &mut pending_approval,
-        );
-      } else {
-        execute_no_workspace_turn(&snapshot, &mut items);
-      }
-    }
-    PreparedTurnAction::PluginCommand { snapshot } => {
-      let command_id = snapshot.command_id().to_string();
-      match execute_plugin_command_snapshot(*snapshot) {
-        Ok(output) => {
-          pending_approval = output.pending_approval.clone();
-          let should_capture_memory = output.capture_memory;
-          items.extend(output.items.clone());
-          if should_capture_memory {
-            plugin_command_output = Some(output);
-          }
-        }
-        Err((code, message)) => {
-          items.push(TimelineItem {
-            kind: "warning".to_string(),
-            title: "Plugin Command Failed".to_string(),
-            content: message.clone(),
-            attributes: Some(HashMap::from([
-              ("commandId".to_string(), command_id),
-              ("errorCode".to_string(), code.to_string()),
-            ])),
-          });
-          items.push(TimelineItem {
-            kind: "assistantMessage".to_string(),
-            title: "Assistant".to_string(),
-            content: "The plugin command failed before it could produce output. Inspect the command setup and retry."
-              .to_string(),
-            attributes: None,
-          });
-        }
-      }
-    }
-    PreparedTurnAction::PluginCommandRouteFailed {
-      command_id,
-      message,
-      attributes,
-    } => {
-      items.push(TimelineItem {
-        kind: "warning".to_string(),
-        title: "Plugin Command Not Ready".to_string(),
-        content: message,
-        attributes: Some(attributes),
-      });
-      items.push(TimelineItem {
-        kind: "assistantMessage".to_string(),
-        title: "Assistant".to_string(),
-        content: format!(
-          "Pith could not run `{command_id}` yet. Fix the plugin setup shown above, then retry the same command."
-        ),
-        attributes: None,
-      });
-    }
-    PreparedTurnAction::ReadFile { relative_path } => {
-      if let Some(workspace) = snapshot.workspace.as_ref() {
-        execute_read_turn(
-          &snapshot,
-          workspace,
-          &relative_path,
-          &mut items,
-          &mut pending_active_turn,
-        );
-      } else {
-        execute_no_workspace_turn(&snapshot, &mut items);
-      }
-    }
-    PreparedTurnAction::Search { query } => {
-      if let Some(workspace) = snapshot.workspace.as_ref() {
-        execute_search_turn(
-          &snapshot,
-          workspace,
-          &query,
-          &mut items,
-          &mut pending_active_turn,
-        );
-      } else {
-        execute_no_workspace_turn(&snapshot, &mut items);
-      }
-    }
-    PreparedTurnAction::WebSearch(intent) => {
-      execute_web_search_turn(&snapshot, &intent, &mut items, &mut pending_active_turn);
-    }
-    PreparedTurnAction::WebSearchCandidate(intent) => {
-      if model_confirms_web_search_candidate(&snapshot, &intent) {
-        execute_web_search_turn(&snapshot, &intent, &mut items, &mut pending_active_turn);
-      } else {
-        execute_web_search_candidate_local_answer(
-          &snapshot,
-          &intent,
-          &mut items,
-          &mut pending_active_turn,
-        );
-      }
-    }
-    PreparedTurnAction::ListWorkspace => {
-      if let Some(workspace) = snapshot.workspace.as_ref() {
-        execute_list_turn(&snapshot, workspace, &mut items, &mut pending_active_turn);
-      } else {
-        execute_no_workspace_turn(&snapshot, &mut items);
-      }
-    }
-    PreparedTurnAction::NoWorkspace => execute_no_workspace_turn(&snapshot, &mut items),
+  let max_steps = turn_action_max_steps(&action);
+  {
+    let mut runner = TurnLoopRunner::new(
+      &snapshot,
+      &mut items,
+      &mut pending_active_turn,
+      &mut pending_approval,
+      &mut plugin_command_outputs,
+      max_steps,
+    );
+    let loop_summary = runner.run(action);
+    debug_assert!(
+      loop_summary.stop_reason != AgentLoopStopReason::StepBudgetExhausted
+        || loop_summary.step_count >= max_steps
+    );
   }
 
   TurnStartExecutionOutput {
@@ -170,7 +42,16 @@ pub(crate) fn execute_prepared_turn_snapshot(
     items,
     pending_approval,
     pending_active_turn,
-    plugin_command_output,
+    plugin_command_outputs,
+  }
+}
+
+fn turn_action_max_steps(action: &PreparedTurnAction) -> usize {
+  match action {
+    PreparedTurnAction::PluginCommand { snapshot } => snapshot
+      .workflow_max_agent_steps()
+      .unwrap_or(LOOP_MAX_STEPS),
+    _ => LOOP_MAX_STEPS,
   }
 }
 
@@ -211,6 +92,6 @@ pub(crate) fn build_recovered_turn_output(
     ],
     pending_approval: None,
     pending_active_turn: None,
-    plugin_command_output: None,
+    plugin_command_outputs: vec![],
   }
 }

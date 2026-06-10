@@ -16,6 +16,10 @@ use crate::turn::turn_tool_limits::{
   SHELL_OUTPUT_PREVIEW_MAX_BYTES, WEB_SEARCH_RESULT_LIMIT,
 };
 
+const PITH_ACCOUNT_REQUIRED: &str = "false";
+const DEFAULT_LOCAL_EXECUTION_SAFETY_MODE: &str = "askBeforeChange";
+const LOCAL_EXECUTION_SAFETY_MODES: &str = "explore,askBeforeChange,approvedWorkspaceExecution";
+
 pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) context: &'a RuntimeContext,
   pub(super) model_status: &'a str,
@@ -30,6 +34,8 @@ pub(super) struct ReadinessMetricsInput<'a> {
   pub(super) workspace_thread_count: usize,
   pub(super) first_request_sent: bool,
   pub(super) execution_counts: RuntimeExecutionCounts,
+  pub(super) daily_driver_stage: &'a str,
+  pub(super) daily_driver_next_action: &'a str,
 }
 
 pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<String, String> {
@@ -47,10 +53,13 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     workspace_thread_count,
     first_request_sent,
     execution_counts,
+    daily_driver_stage,
+    daily_driver_next_action,
   } = input;
 
   let mut metrics = HashMap::new();
   insert_model_metrics(&mut metrics, model_status, model_pack_id, context_window);
+  insert_daily_driver_metrics(&mut metrics, daily_driver_stage, daily_driver_next_action);
   insert_workspace_metrics(
     &mut metrics,
     context,
@@ -58,6 +67,7 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     first_request_sent,
   );
   insert_execution_metrics(&mut metrics, execution_counts);
+  insert_local_execution_safety_metrics(&mut metrics);
   insert_memory_metrics(&mut metrics, context);
   insert_plugin_metrics(
     &mut metrics,
@@ -74,6 +84,15 @@ pub(super) fn readiness_metrics(input: ReadinessMetricsInput<'_>) -> HashMap<Str
     web_search_permission_sources,
   );
   metrics
+}
+
+fn insert_daily_driver_metrics(
+  metrics: &mut HashMap<String, String>,
+  stage: &str,
+  next_action: &str,
+) {
+  insert_metric(metrics, "dailyDriverStage", stage);
+  insert_metric(metrics, "dailyDriverNextAction", next_action);
 }
 
 fn insert_model_metrics(
@@ -146,6 +165,20 @@ fn insert_execution_metrics(
     execution_counts
       .running_workspace_search_count()
       .to_string(),
+  );
+}
+
+fn insert_local_execution_safety_metrics(metrics: &mut HashMap<String, String>) {
+  insert_metric(metrics, "pithAccountRequired", PITH_ACCOUNT_REQUIRED);
+  insert_metric(
+    metrics,
+    "defaultLocalExecutionSafetyMode",
+    DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
+  );
+  insert_metric(
+    metrics,
+    "localExecutionSafetyModes",
+    LOCAL_EXECUTION_SAFETY_MODES,
   );
 }
 

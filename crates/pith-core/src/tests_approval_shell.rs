@@ -107,6 +107,14 @@ fn approval_respond_runs_shell_after_approval() {
     items[3]["attributes"]["sandboxOutputContextMode"],
     "sandboxOutputPreview"
   );
+  assert_eq!(items[3]["attributes"]["handoffKind"], "approvedShell");
+  assert_eq!(items[3]["attributes"]["responseRole"], "actionHandoff");
+  assert_eq!(items[3]["attributes"]["command"], "ls");
+  assert_eq!(
+    items[3]["attributes"]["agentLoopSuccessfulObservationCount"],
+    "1"
+  );
+  assert_eq!(items[3]["attributes"]["agentLoopFailureCount"], "0");
   assert!(items.iter().any(|item| item["kind"] == "pluginHook"));
   assert!(items.iter().any(|item| {
     item["title"] == "Record Shell Completion"
@@ -209,4 +217,114 @@ fn approved_shell_execution_honors_pending_cancellation() {
   let readiness_response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
   let readiness = readiness_response.result.expect("readiness result");
   assert_eq!(readiness["metrics"]["runningApprovalCount"], "0");
+}
+
+#[test]
+fn approved_workspace_execution_runs_shell_without_pending_approval() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("auto-shell");
+  fs::write(workspace.join("marker.txt"), "shell target\n").expect("write shell marker");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Auto Shell Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Run shell: ls",
+        "localExecutionSafetyMode": "approvedWorkspaceExecution"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  assert_eq!(turn_result["pendingApprovals"].as_array().unwrap().len(), 0);
+  let items = turn_result["items"].as_array().expect("turn items");
+  assert!(items.iter().any(|item| {
+    item["title"] == "run_shell result"
+      && item["content"].as_str().unwrap().contains("marker.txt")
+      && item["attributes"]["actionApprovalPolicy"] == "autoApproved"
+  }));
+  assert!(items.iter().any(|item| {
+    item["attributes"]["handoffKind"] == "autoApprovedShell"
+      && item["attributes"]["localExecutionSafetyMode"] == "approvedWorkspaceExecution"
+  }));
+}
+
+#[test]
+fn explore_mode_blocks_shell_even_with_permission() {
+  let mut context = RuntimeContext::new_in_memory();
+  enable_full_access_plugin(&mut context);
+  let workspace = create_temp_workspace("explore-shell");
+  let target = workspace.join("shell-blocked.txt");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Explore Shell Thread"
+      })),
+    ),
+  );
+
+  let turn_response = handle_request(
+    &mut context,
+    request(
+      methods::TURN_START,
+      Some(json!({
+        "threadId": "thread-1",
+        "message": "Run shell: echo blocked > shell-blocked.txt",
+        "localExecutionSafetyMode": "explore"
+      })),
+    ),
+  );
+
+  let target_exists = target.exists();
+  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+
+  assert!(turn_response.error.is_none());
+  let turn_result = turn_response.result.expect("turn result");
+  assert_eq!(turn_result["pendingApprovals"].as_array().unwrap().len(), 0);
+  assert!(!target_exists);
+  let items = turn_result["items"].as_array().expect("turn items");
+  assert!(items.iter().any(|item| {
+    item["attributes"]["localExecutionSafetyMode"] == "explore"
+      && item["attributes"]["actionApprovalPolicy"] == "blocked"
+      && item["attributes"]["blockReason"] == "readOnlyMode"
+      && item["attributes"]["requiredPermission"] == "shell.exec"
+      && item["attributes"]["retryMessage"] == "Run shell: echo blocked > shell-blocked.txt"
+  }));
 }

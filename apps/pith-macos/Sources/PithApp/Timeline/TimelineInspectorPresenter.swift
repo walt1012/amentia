@@ -30,6 +30,20 @@ enum TimelineInspectorPresenter {
     return "\(entry.kind.rawValue)\n\(detail)"
   }
 
+  static func selectedEntrySourceSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
+    TimelineContextReceiptPresenter.sourceSummary(snapshot)
+  }
+
+  static func selectedEntryActionReceiptSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
+    TimelineContextReceiptPresenter.actionSummary(snapshot)
+  }
+
+  static func selectedEntryContextReceiptSections(
+    _ snapshot: TimelineInspectorSnapshot
+  ) -> [TimelineContextReceiptSection] {
+    TimelineContextReceiptPresenter.sections(snapshot)
+  }
+
   static func selectedDiffSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
     guard let entry = snapshot.selectedEntry, entry.kind == .diff else {
       return nil
@@ -52,50 +66,7 @@ enum TimelineInspectorPresenter {
   }
 
   static func selectedEntryMemorySummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
-    guard let entry = snapshot.selectedEntry else {
-      return nil
-    }
-
-    let noteCount = entry.attributes["memoryNoteCount"] ?? "0"
-    let hasMemoryNotes = noteCount != "0"
-    let hasMemoryContext = entry.attributes["memoryContextMode"] != nil
-    if !hasMemoryNotes && !hasMemoryContext {
-      return nil
-    }
-
-    var lines = ["Notes: \(noteCount)"]
-    if hasMemoryNotes {
-      let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
-      let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
-      lines.append("Titles: \(memoryTitles)")
-      lines.append("IDs: \(memoryIDs)")
-    }
-
-    if let memoryContextMode = entry.attributes["memoryContextMode"] {
-      let estimatedChars = entry.attributes["memoryContextEstimatedChars"] ?? "unknown"
-      let budgetChars = entry.attributes["memoryContextBudgetChars"] ?? "unknown"
-      let omittedCount = entry.attributes["memoryContextOmittedNoteCount"] ?? "0"
-      let truncatedCount = entry.attributes["memoryContextTruncatedNoteCount"] ?? "0"
-      let candidateCount = entry.attributes["memoryContextCandidateNoteCount"] ?? noteCount
-      let sourceCount = entry.attributes["memoryContextSourceNoteCount"] ?? candidateCount
-      let windowTokens = entry.attributes["memoryContextWindowTokens"] ?? "unknown"
-      lines.append(
-        "Memory context: \(memoryContextMode) | \(noteCount)/\(candidateCount) relevant notes | "
-          + "\(sourceCount) stored | \(estimatedChars)/\(budgetChars) chars | "
-          + "\(windowTokens) token window | "
-          + "omitted \(omittedCount) | truncated \(truncatedCount)"
-      )
-    }
-
-    if let observationTruncated = entry.attributes["observationTruncated"] {
-      let sourceChars = entry.attributes["observationSourceChars"] ?? "unknown"
-      let budgetChars = entry.attributes["observationBudgetChars"] ?? "unknown"
-      lines.append(
-        "Observation: \(sourceChars)/\(budgetChars) chars | truncated \(observationTruncated)"
-      )
-    }
-
-    return lines.joined(separator: "\n")
+    TimelineContextReceiptPresenter.memorySummary(snapshot)
   }
 
   static func selectedEntryPluginSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {
@@ -127,10 +98,9 @@ enum TimelineInspectorPresenter {
       lines.append("Approval: \(action) | \(approvalID)")
     }
 
-    if let connectorSummary = connectorSummary(entry) {
-      lines.append(connectorSummary)
-    }
-
+    lines.append(contentsOf: TimelineConnectorEvidencePresenter.summaryLines(
+      attributes: entry.attributes
+    ))
     appendPluginConnectorRecoverySummary(entry, to: &lines)
     appendPluginRunSummary(entry, to: &lines)
     appendPluginInstallSummary(entry, to: &lines)
@@ -139,8 +109,13 @@ enum TimelineInspectorPresenter {
     appendPluginRunnerSetupSummary(entry, to: &lines)
 
     if let permissionGate = entry.attributes["permissionGate"] {
-      let required = entry.attributes["requiredPermission"] ?? "unknown"
+      let required = entry.attributes["requiredPermissionLabel"]
+        ?? entry.attributes["requiredPermission"]
+        ?? "unknown"
       lines.append("Permission gate: \(permissionGate) | requires \(required)")
+      if let recoveryHint = entry.attributes["permissionRecoveryHint"] {
+        lines.append("Permission recovery: \(recoveryHint)")
+      }
     }
 
     appendPluginRunnerSummary(entry, to: &lines)
@@ -236,51 +211,19 @@ enum TimelineInspectorPresenter {
       "runBlocker",
       "runRepairHint",
       "commandInput",
-      "connectorId",
-      "connectorIds",
-      "connectorStatus",
-      "connectorRepairHint",
+      "nextCommandId",
+      "nextCommandInput",
+      "nextCommandInputHint",
+      "nextCommandInputTemplate",
+      "nextCommandLabel",
+      "retryCommandId",
+      "retryInput",
+      "retryInputEditable",
+      "retryInputHint",
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
-  }
-
-  private static func connectorSummary(_ entry: TimelineEntry) -> String? {
-    guard let connectorIDs = firstAttribute(entry, keys: [
-      "connectorId",
-      "connectorIds",
-      "pluginRunnerConnectorId",
-      "pluginRunnerConnectorIds",
-    ]) else {
-      return nil
-    }
-
-    let services = firstAttribute(entry, keys: [
-      "connectorService",
-      "connectorServices",
-      "pluginRunnerConnectorServices",
-    ]) ?? "unknown service"
-    let stores = firstAttribute(entry, keys: [
-      "credentialStore",
-      "connectorCredentialStores",
-      "pluginRunnerConnectorStores",
-    ]) ?? "unknown store"
-    let providers = firstAttribute(entry, keys: [
-      "credentialProvider",
-      "connectorCredentialProviders",
-      "pluginRunnerCredentialProviders",
-    ]) ?? "unknown provider"
-    let bindings = firstAttribute(entry, keys: [
-      "credentialBinding",
-      "connectorSecretBindings",
-      "pluginRunnerSecretBindings",
-    ]) ?? "unknown binding"
-    return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers) "
-      + "| \(bindings)"
-  }
-
-  private static func firstAttribute(_ entry: TimelineEntry, keys: [String]) -> String? {
-    keys.compactMap { key in entry.attributes[key] }.first
+      || TimelineConnectorEvidencePresenter.hasEvidence(attributes: entry.attributes)
   }
 
   private static func appendPluginInstallSummary(
@@ -352,10 +295,10 @@ enum TimelineInspectorPresenter {
       lines.append("Input: \(input)")
     }
     if let blocker = entry.attributes["runBlocker"] {
-      lines.append("Run blocker: \(blocker)")
+      lines.append("Blocked: \(blocker)")
     }
     if let repairHint = entry.attributes["runRepairHint"] {
-      lines.append("Run repair: \(repairHint)")
+      lines.append("Fix: \(repairHint)")
     }
   }
 

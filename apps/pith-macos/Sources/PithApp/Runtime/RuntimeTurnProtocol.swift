@@ -23,6 +23,45 @@ struct ThreadReadParams: Codable {
   let threadId: String
 }
 
+struct ThreadDeleteParams: Codable {
+  let threadId: String
+}
+
+struct ThreadDeleteResult: Codable {
+  let threadId: String
+  let deleted: Bool
+  let threads: [RuntimeThreadPayload]
+}
+
+struct ThreadChangePreviewParams: Codable {
+  let threadId: String
+}
+
+struct ThreadWorkspaceChangePayload: Codable {
+  let id: String
+  let relativePath: String
+  let action: String
+  let bytesWritten: Int
+  let willDeleteFile: Bool
+  let canRevert: Bool
+  let conflictReason: String?
+}
+
+struct ThreadChangePreviewResult: Codable {
+  let threadId: String
+  let changes: [ThreadWorkspaceChangePayload]
+}
+
+struct ThreadRevertChangesParams: Codable {
+  let threadId: String
+}
+
+struct ThreadRevertChangesResult: Codable {
+  let threadId: String
+  let revertedCount: Int
+  let items: [RuntimeTimelineItem]
+}
+
 struct ThreadReadResult: Codable {
   let thread: RuntimeThreadPayload
   let items: [RuntimeTimelineItem]
@@ -40,6 +79,7 @@ struct ThreadUpdatedNotificationParams: Codable {
 struct TurnStartParams: Codable {
   let threadId: String
   let message: String
+  let localExecutionSafetyMode: String?
 }
 
 struct RuntimeTimelineItem: Codable {
@@ -145,5 +185,26 @@ extension RuntimeBridge {
     let threadID: String
     let items: [RuntimeTimelineItemResult]
     let activeTurnID: String?
+  }
+
+  struct RuntimeThreadChange {
+    let id: String
+    let relativePath: String
+    let action: String
+    let bytesWritten: Int
+    let willDeleteFile: Bool
+    let canRevert: Bool
+    let conflictReason: String?
+  }
+
+  struct RuntimeThreadChangePreview {
+    let threadID: String
+    let changes: [RuntimeThreadChange]
+  }
+
+  struct RuntimeThreadRevertResult {
+    let threadID: String
+    let revertedCount: Int
+    let items: [RuntimeTimelineItemResult]
   }
 }

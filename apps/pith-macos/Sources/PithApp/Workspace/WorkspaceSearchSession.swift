@@ -35,7 +35,7 @@ struct WorkspaceSearchRuntimeState {
   init(
     query: String = "",
     results: [WorkspaceSearchMatchSummary] = [],
-    status: String = "Search the open workspace by text.",
+    status: String = "Search the open workspace for useful context.",
     isSearching: Bool = false
   ) {
     self.query = query
@@ -119,7 +119,7 @@ final class WorkspaceSearchSession {
       id: requestID,
       runtimeRequestID: runtimeRequestID,
       query: query,
-      status: "Searching for \"\(query)\"..."
+      status: "Looking through the workspace for \"\(query)\"..."
     )
   }
 
@@ -150,7 +150,7 @@ final class WorkspaceSearchSession {
   func resetStatus(hasWorkspace: Bool) -> String {
     cancelActiveSearch()
     return hasWorkspace
-      ? "Search the open workspace by text."
+      ? "Search the open workspace for useful context."
       : "Open a workspace before searching."
   }
 
@@ -172,13 +172,17 @@ final class WorkspaceSearchSession {
   }
 
   static func successStatus(query: String, matchCount: Int) -> String {
-    matchCount == 0
-      ? "No matches found for \"\(query)\"."
-      : "Found \(matchCount) match(es) for \"\(query)\"."
+    if matchCount == 0 {
+      return "No results for \"\(query)\"."
+    }
+    if matchCount == 1 {
+      return "Found 1 useful match for \"\(query)\"."
+    }
+    return "Found \(matchCount) useful matches for \"\(query)\"."
   }
 
   static func failureStatus(error: Error) -> String {
-    "Workspace search failed: \(error.localizedDescription)"
+    "Workspace search needs attention: \(error.localizedDescription)"
   }
 
   static func emptyStateSummary(
@@ -193,19 +197,19 @@ final class WorkspaceSearchSession {
       return nil
     }
     if runtimeState != .ready {
-      return "Launch the runtime to search workspace files."
+      return "Start the local service to search workspace files."
     }
     if !hasWorkspace {
       return "Open a workspace to search local files."
     }
     if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      return "Search file contents or symbols, then press Return."
+      return "Search file contents, symbols, or notes, then press Return."
     }
-    if status.hasPrefix("No matches found") {
+    if status.hasPrefix("No results") {
       return "No results yet. Try a shorter query, filename, or symbol name."
     }
-    if status.hasPrefix("Workspace search failed") {
-      return "Search failed. Check the runtime status, then try again."
+    if status.hasPrefix("Workspace search needs attention") {
+      return "Search failed. Check the local service status, then try again."
     }
 
     return nil
@@ -216,6 +220,6 @@ final class WorkspaceSearchSession {
       return nil
     }
 
-    return "Showing the first 8 matches. Narrow the query to focus the review."
+    return "Showing the first 8 matches. Narrow the query to focus the context."
   }
 }
