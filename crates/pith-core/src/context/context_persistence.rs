@@ -34,6 +34,8 @@ impl RuntimeContext {
   }
 
   pub(crate) fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
-    self.persistence_state.delete_approvals_for_thread(thread_id)
+    self
+      .persistence_state
+      .delete_approvals_for_thread(thread_id)
   }
 }

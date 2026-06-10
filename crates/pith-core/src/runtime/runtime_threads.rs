@@ -49,7 +49,10 @@ impl RuntimeThreadState {
   }
 
   pub(crate) fn remove(&mut self, thread_id: &str) -> Option<StoredThread> {
-    let index = self.threads.iter().position(|thread| thread.id() == thread_id)?;
+    let index = self
+      .threads
+      .iter()
+      .position(|thread| thread.id() == thread_id)?;
     Some(self.threads.remove(index))
   }
 
