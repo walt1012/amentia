@@ -137,8 +137,12 @@ fn sqlite_store_deletes_all_approvals_for_thread() {
   let deleted = store
     .delete_approvals_for_thread("thread-2")
     .expect("delete approvals");
-  let pending = store.load_pending_approvals().expect("load pending approvals");
-  let next_sequence = store.next_approval_sequence().expect("next approval sequence");
+  let pending = store
+    .load_pending_approvals()
+    .expect("load pending approvals");
+  let next_sequence = store
+    .next_approval_sequence()
+    .expect("next approval sequence");
 
   fs::remove_dir_all(&root).expect("cleanup temp directory");
 
