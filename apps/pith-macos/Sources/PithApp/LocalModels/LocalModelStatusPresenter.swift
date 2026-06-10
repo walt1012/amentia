@@ -248,8 +248,8 @@ enum LocalModelStatusPresenter {
     return model.downloaded ? "Downloaded" : "Download"
   }
 
-  static func tagSummary(_ model: LocalModelSummary) -> String {
-    model.tags.joined(separator: ", ")
+  static func fitSummary(_ model: LocalModelSummary, defaultModelID: String) -> String {
+    LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
   }
 
   static func pathSummary(_ model: LocalModelSummary) -> String {

@@ -135,7 +135,7 @@ private struct LocalModelRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
         .lineLimit(2)
-      Text("Tags: \(viewModel.localModelTagSummary(model))")
+      Text(viewModel.localModelFitSummary(model))
         .font(.caption2)
         .foregroundColor(.secondary)
         .lineLimit(2)
@@ -198,7 +198,7 @@ private struct ModelTroubleshootingPanel: View {
         .buttonStyle(.bordered)
         .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
-        Button("Show Helper Folder") {
+        Button("Show Local Engine Folder") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)

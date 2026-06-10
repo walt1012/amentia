@@ -133,6 +133,24 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(summary.contains("|"))
   }
 
+  func testModelFitSummaryAvoidsInternalTags() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let summary = LocalModelStatusPresenter.fitSummary(
+      selectedModel,
+      defaultModelID: selectedModel.id
+    )
+
+    XCTAssertTrue(summary.contains("Default path"))
+    XCTAssertTrue(summary.contains("lightest local loop"))
+    XCTAssertFalse(summary.contains("tiny"))
+    XCTAssertFalse(summary.contains("Q4_K_M"))
+  }
+
   func testDownloadProgressSummaryAvoidsPipeSeparators() {
     let selectedModel = model(
       id: "lfm2.5-350m",
