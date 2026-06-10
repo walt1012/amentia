@@ -134,7 +134,23 @@ Exit when:
   describe the same user path.
 - CI stays fast, split, and strict enough to block release-contract drift.
 
-## M13: Connector Platform
+## M13: Post-Release Quality and Identity
+
+Goal: make the shipped app feel intentional, maintainable, and worthy of daily
+use before expanding the platform surface.
+
+- Remove dead code, unused flows, stale scripts, and release-era scaffolding
+  that no longer protects the product.
+- Refactor only where architecture becomes clearer: preserve cohesive modules,
+  merge accidental splits, and keep domain boundaries obvious.
+- Audit the macOS app for user-facing polish: no confusing internal wording,
+  no awkward layout, no unnecessary controls in the primary path.
+- Design a refined app logo that is simple, distinctive, premium, and tied to
+  Pith's local cowork identity.
+- Ship the logo as a native macOS icon set with clean small-size readability,
+  not just a large marketing image.
+
+## M14: Connector Platform
 
 Goal: make third-party local connectors safe and useful without building a
 marketplace too early.
