@@ -53,18 +53,19 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Milestones 1-9 are closed on the active development branch. Pith now has the
-daily-driver cowork foundation: first-use model setup, workspace flow, Web
-Search, sandbox visibility, approvals, compact context receipts, actionable
-source/file evidence, plugin recovery, Notion connector proof, memory capture,
-bounded local execution, and the x86_64 macOS DMG package path.
+Pith is in Milestone 12: public macOS release readiness. The app has the
+daily-driver cowork foundation: first-use local model setup, workspace flow,
+Web Search, sandbox visibility, approvals, compact context receipts, actionable
+source/file evidence, session delete and revert safety, plugin recovery, Notion
+connector proof, memory capture, bounded local execution, and the x86_64 macOS
+DMG package path.
 
-The current focus is Milestone 10: make the single local cowork loop feel
-complete before adding another connector. Work should improve first-run setup,
-receipt/action recovery, packaged-app reliability, and release readiness rather
-than broad marketplace, generic RAG, or multi-agent scope.
+The current release gate is not another feature surface. It is the installable
+GitHub Release path: produce the DMG, checksum, `README-FIRST.txt`, and release
+manifest; verify the downloaded assets; complete a fresh-Mac acceptance pass;
+then publish the visible ad-hoc prerelease only after that evidence exists.
 
-Detailed milestone scope and implementation history live in [docs/development-plan.md](docs/development-plan.md).
+Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
 
 Model packaging note:
 
@@ -72,7 +73,7 @@ Model packaging note:
 - the actual `LFM2.5-350M-Q4_K_M.gguf` weight file is downloaded by the app into local data storage, not committed to git history
 - the in-app catalog stays intentionally small: default LFM plus modern tiny Granite, with new candidates added only after product-fit validation
 
-## Planned Runtime Shape
+## Runtime Shape
 
 - Native macOS shell in `SwiftUI`
 - Local runtime in `Rust`

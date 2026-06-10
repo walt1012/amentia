@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is in Milestone 10 daily-driver development for `Pith`.
+This repository is in Milestone 12 public release readiness for `Pith`.
 
 ## Project Rules
 
@@ -61,8 +61,9 @@ The current repository target is a stable local daily-driver loop:
 - native sandbox diagnostics and bounded subprocess execution
 - plugin metadata, discovery, permissions, and visibility foundations
 
-The active milestone focuses on making one local cowork loop excellent:
-first-run setup, actionable context receipts, safe recovery from blocked local
-actions, packaged-app proof, and release readiness. Keep broad connector
-expansion, marketplace work, generic local RAG, remote MCP transport, and
-multi-agent orchestration out of scope until that loop is excellent.
+The active milestone focuses on shipping the first usable macOS installer:
+release assets, downloaded-asset rehearsal, first-run model setup, workspace
+open, one cowork turn, Web Search, approval proof, and manual acceptance for an
+ad-hoc prerelease. Keep broad connector expansion, marketplace work, generic
+local RAG, remote MCP transport, and multi-agent orchestration out of scope
+until that release path is proven.
