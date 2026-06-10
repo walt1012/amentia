@@ -651,7 +651,7 @@ def validate_runtime_readiness(
   result = readiness["result"]
   if result["status"] != expected_status:
     raise RuntimeError(
-      f"Packaged runtime readiness was {result['status']}, expected {expected_status}."
+      f"Packaged local service status was {result['status']}, expected {expected_status}."
     )
   checks = {check["id"]: check for check in result["checks"]}
   expected_statuses = expected_statuses or {
@@ -680,7 +680,7 @@ def validate_readiness_check_status(
   if actual_status not in allowed_statuses:
     expected = ", ".join(sorted(allowed_statuses))
     raise RuntimeError(
-      f"Packaged runtime readiness check {check_id} was {actual_status}, "
+      f"Packaged local service check {check_id} was {actual_status}, "
       f"expected one of {expected}."
     )
 
@@ -693,9 +693,9 @@ def validate_daily_driver_stage(
   stage = metrics.get("dailyDriverStage")
   next_action = metrics.get("dailyDriverNextAction")
   if not isinstance(stage, str) or not stage:
-    raise RuntimeError("Packaged runtime readiness did not report dailyDriverStage.")
+    raise RuntimeError("Packaged local service status did not report dailyDriverStage.")
   if not isinstance(next_action, str) or not next_action:
-    raise RuntimeError("Packaged runtime readiness did not report dailyDriverNextAction.")
+    raise RuntimeError("Packaged local service status did not report dailyDriverNextAction.")
   if expected_stage is None:
     return
 
@@ -736,21 +736,21 @@ def validate_tooling_readiness(
     actual_value = metrics.get(key)
     if actual_value != expected_value:
       raise RuntimeError(
-        f"Packaged runtime readiness metric {key} was {actual_value}, "
+        f"Packaged local service metric {key} was {actual_value}, "
         f"expected {expected_value}."
       )
 
   if "Web Search" not in metrics.get("webSearchPermissionSources", ""):
-    raise RuntimeError("Packaged runtime readiness did not attribute Web Search permission.")
+    raise RuntimeError("Packaged local service status did not attribute Web Search permission.")
   if metrics.get("webSearchClient") not in {"curl", "fixture"}:
     raise RuntimeError(
-      "Packaged runtime readiness reported unexpected web search client: "
+      "Packaged local service status reported unexpected web search client: "
       f"{metrics.get('webSearchClient')}"
     )
   if workspace_open:
     if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
       raise RuntimeError(
-        "Packaged runtime readiness reported unexpected sandbox backend after "
+        "Packaged local service status reported unexpected sandbox backend after "
         f"workspace open. Backend: {metrics.get('sandboxBackend')}"
       )
     native_sandbox_check = checks.get("nativeSandbox")
@@ -764,7 +764,7 @@ def validate_tooling_readiness(
       and metrics.get("sandboxActive") != "true"
     ):
       raise RuntimeError(
-        "Packaged runtime readiness must report an active native sandbox after "
+        "Packaged local service status must report an active native sandbox after "
         f"workspace open. Active: {metrics.get('sandboxActive')}"
       )
     if (
@@ -772,7 +772,7 @@ def validate_tooling_readiness(
       and native_sandbox_status != "ready"
     ):
       raise RuntimeError(
-        "Packaged runtime readiness must mark native sandbox ready when the "
+        "Packaged local service status must mark native sandbox ready when the "
         f"macosSeatbelt backend is active. Status: {native_sandbox_status}"
       )
     if (
@@ -780,7 +780,7 @@ def validate_tooling_readiness(
       and metrics.get("sandboxActive") != "false"
     ):
       raise RuntimeError(
-        "Packaged runtime readiness must report inactive native sandbox when "
+        "Packaged local service status must report inactive native sandbox when "
         f"falling back to process-only. Active: {metrics.get('sandboxActive')}"
       )
     if (
@@ -788,18 +788,18 @@ def validate_tooling_readiness(
       and native_sandbox_status != "limited"
     ):
       raise RuntimeError(
-        "Packaged runtime readiness must mark native sandbox limited when "
+        "Packaged local service status must mark native sandbox limited when "
         f"falling back to process-only. Status: {native_sandbox_status}"
       )
   else:
     if metrics.get("sandboxBackend") not in {"macosSeatbelt", "processOnly"}:
       raise RuntimeError(
-        "Packaged runtime readiness reported unexpected sandbox backend: "
+        "Packaged local service status reported unexpected sandbox backend: "
         f"{metrics.get('sandboxBackend')}"
       )
     if metrics.get("sandboxActive") not in {"true", "false"}:
       raise RuntimeError(
-        "Packaged runtime readiness reported unexpected sandbox active state: "
+        "Packaged local service status reported unexpected sandbox active state: "
         f"{metrics.get('sandboxActive')}"
       )
 

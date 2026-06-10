@@ -95,6 +95,9 @@ Current constraints:
 - Public release assets stay limited to the DMG, checksum, `README-FIRST.txt`,
   and release manifest.
 - Visible ad-hoc prereleases require an explicit manual acceptance receipt.
+- The current branch is release-candidate shaped and remote CI is green, but the
+  live `v0.1.1` prerelease is not M12-complete because it predates the current
+  four-asset release contract.
 
 ## M12: Public Release
 
@@ -102,27 +105,21 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 Build now:
 
-- Freeze M12 scope to release readiness, install confidence, first-run clarity,
-  and user-facing UI polish only.
-- Run the full first-launch acceptance path on a fresh Mac: download release
-  assets, verify checksum, open DMG, pass Gatekeeper, download the default
-  model, open a workspace, run a cowork turn, use Web Search, approve one
-  bounded action, inspect proof, and validate the manual acceptance receipt.
+- Keep M12 frozen to release readiness, install confidence, first-run clarity,
+  user-facing UI polish, session safety, and local data ownership.
+- Cut the next M12 candidate from the latest green branch commit through the
+  current release workflow, producing the DMG, checksum, `README-FIRST.txt`,
+  and release manifest.
+- Run the full first-launch acceptance path from downloaded release assets:
+  verify checksum, open DMG, pass Gatekeeper, download the default model, open a
+  workspace, run a cowork turn, use Web Search, approve one bounded action,
+  inspect proof, and record the manual acceptance receipt.
 - Keep normal UI language product-level: session, workspace, local service,
-  local model, Web Search, connector, approval, and proof. Keep paths,
-  manifests, package details, and diagnostics behind Advanced.
-- Make local storage ownership explicit: users can reveal or delete Pith local
-  data without touching their workspaces.
-- Keep visuals system-adaptive and light-mode friendly: clean spacing, readable
-  cards, quiet borders, no fixed dark theme, and no fixed light theme.
-- Keep session safety user-facing: delete never touches workspace files, revert
-  explains exactly which saved files can be restored, and conflicts stay
-  non-destructive.
-- Publish only after the dry-run artifact and fresh-Mac manual acceptance
-  receipt are recorded and the release workflow validates the same four public
-  assets.
-- Treat historical two-asset prereleases as superseded; the M12 candidate must
-  be a new release tag produced by the current four-asset workflow.
+  local model, Web Search, connector, approval, proof, delete, and revert.
+  Keep paths, manifests, package details, hashes, and diagnostics behind
+  Advanced.
+- Publish only after the dry-run artifact, downloaded-asset rehearsal, live
+  four-asset validation, and fresh-Mac manual acceptance receipt agree.
 
 Exit when:
 
