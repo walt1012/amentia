@@ -200,7 +200,26 @@ jobs:
           components: rustfmt
 
       - name: Cargo fmt
-        run: cargo fmt --all -- --check
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-logs
+          if ! cargo fmt --all -- --check > .ci-logs/rustfmt.log 2>&1; then
+            cargo fmt --all
+            git diff -- . > .ci-logs/rustfmt.patch
+            cat .ci-logs/rustfmt.log
+            exit 1
+          fi
+
+      - name: Upload Rust format diff
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rustfmt-diff
+          path: |
+            .ci-logs/rustfmt.log
+            .ci-logs/rustfmt.patch
+          if-no-files-found: ignore
+          retention-days: 3
 
   rust-clippy:
     name: Rust clippy
