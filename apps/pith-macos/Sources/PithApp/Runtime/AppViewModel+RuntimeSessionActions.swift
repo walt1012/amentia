@@ -46,7 +46,7 @@ extension AppViewModel {
       pluginManagerSection = .commands
       runtimeDetail = "Open Advanced > Connectors to enable a ready command."
     case .inspectSandboxStatus:
-      runtimeDetail = "Native sandbox status is shown in runtime readiness and local execution receipts."
+      runtimeDetail = "Native sandbox status is shown with local service status and local execution receipts."
     }
   }
 

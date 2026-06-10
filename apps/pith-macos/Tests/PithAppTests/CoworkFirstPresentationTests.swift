@@ -101,6 +101,14 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testRuntimeReadinessStepUsesLocalServiceLanguage() {
+    let runtimeStep = RuntimeReadinessPresenter.steps(readinessSnapshotForFirstRequest())
+      .first { $0.id == "runtime" }
+
+    XCTAssertEqual(runtimeStep?.label, "Service")
+    XCTAssertNotEqual(runtimeStep?.label, "Engine")
+  }
+
   func testSetupProgressFramesFirstRequestAsStarterChoice() {
     let detail = SetupProgressPresenter.detail(
       setupProgressSnapshot(

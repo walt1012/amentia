@@ -322,7 +322,7 @@ enum DistributionTrustPresenter {
     let presentation = metadata.dailyDriverPresentation == "app-header-inspector"
       ? "shown in app header and inspector"
       : "presentation: \(metadata.dailyDriverPresentation)"
-    return "daily-driver next action comes from runtime readiness and is \(presentation)"
+    return "daily-driver next action comes from local service status and is \(presentation)"
   }
 
   private static func firstAppOpenSummary(_ metadata: DistributionPackageMetadata) -> String {

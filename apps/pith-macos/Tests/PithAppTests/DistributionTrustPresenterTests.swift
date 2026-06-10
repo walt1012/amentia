@@ -17,6 +17,8 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertTrue(summary.detail.contains("installer artifact <= 150 MiB"))
     XCTAssertTrue(summary.detail.contains("process-only fallback"))
     XCTAssertTrue(summary.detail.contains("daily-driver next action"))
+    XCTAssertTrue(summary.detail.contains("local service status"))
+    XCTAssertFalse(summary.detail.contains("runtime readiness"))
     XCTAssertTrue(summary.detail.contains("Understand Project"))
     XCTAssertTrue(summary.detail.contains("Pick Next Step"))
     XCTAssertTrue(summary.detail.contains("short cowork prompt"))

@@ -66,8 +66,8 @@ def first_app_open_action_clause() -> str:
 def first_run_path_copy() -> str:
   return (
     "First-run path: download the default verified local model "
-    f"({DEFAULT_MODEL_ID}), open a workspace folder, confirm Web Search readiness "
-    f"and sandbox status, {first_app_open_action_clause()}, approve a safe local "
+    f"({DEFAULT_MODEL_ID}), open a workspace folder, check Web Search and "
+    f"workspace safety, {first_app_open_action_clause()}, approve a safe local "
     "change only after reviewing it, then inspect the proof shown in the timeline."
   )
 
@@ -154,7 +154,7 @@ def release_notes(
 - Downloaded models and Pith sessions stay in local app data; users can reveal or delete them from Settings > Storage without deleting workspaces.
 - {local_execution}
 - {first_run_path}
-- The daily-driver next action comes from runtime readiness and appears in the app header and inspector.
+- The daily-driver next action comes from local service status and appears in the app header and inspector.
 - Native sandbox is used when available; process-only fallback is disclosed in app status.
 - The {size_budget} is enforced so model weights and heavyweight payloads stay out of the app.
 - SHA-256 checksum sidecar is published next to the DMG.
@@ -196,10 +196,10 @@ Install
 2. Drag Pith.app to Applications.
 3. Launch Pith and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
 4. Open a workspace folder.
-5. Confirm Web Search readiness and sandbox status in the setup surface.
+5. Check that Web Search and workspace safety are ready.
 6. {FIRST_APP_OPEN_INSTALL_STEP}
 7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
-8. Follow the next action shown by Pith; it comes from runtime readiness, not a static setup checklist.
+8. Follow the next action shown by Pith; it comes from local service status, not a static setup checklist.
 
 Trust
 {trust_note}
