@@ -70,7 +70,7 @@ enum LocalModelActivationPreparer {
 enum LocalModelActivationPlanner {
   static func selectionPlan(model: LocalModelSummary, manifestPath: String) -> LocalModelActivationPlan {
     let modelName = LocalModelDisplayPresenter.actionName(model)
-    LocalModelActivationPlan(
+    return LocalModelActivationPlan(
       timelineTitle: "Local Model Selected",
       timelineBody: "\(modelName) is now the active local model.",
       attributes: [

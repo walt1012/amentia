@@ -60,7 +60,7 @@ enum LocalModelDownloadInterruptionPlanner {
 
   static func cancellationPlan(model: LocalModelSummary) -> LocalModelDownloadInterruptionPlan {
     let modelName = LocalModelDisplayPresenter.actionName(model)
-    LocalModelDownloadInterruptionPlan(
+    return LocalModelDownloadInterruptionPlan(
       mode: .cancelled,
       runtimeDetail: "Cancelled \(modelName) download and cleared partial state.",
       timelineTitle: "Model Download Cancelled",
