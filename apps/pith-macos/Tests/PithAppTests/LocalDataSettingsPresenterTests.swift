@@ -13,8 +13,9 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       summary.storageSummary,
-      "No downloaded model files yet. Sessions, plugins, and preferences stay local."
+      "No downloaded model files yet. Sessions, connectors, and preferences stay local."
     )
+    XCTAssertTrue(summary.ownershipDetail.contains("connectors"))
     XCTAssertTrue(summary.ownershipDetail.contains("Workspaces are never deleted"))
     XCTAssertNil(summary.blockedDetail)
     XCTAssertEqual(summary.revealButtonTitle, "Show Local Data")
@@ -35,6 +36,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(
       summary.confirmationMessage.contains("workspaces and repositories will not be deleted")
     )
+    XCTAssertTrue(summary.confirmationMessage.contains("connectors"))
   }
 
   func testSummaryExplainsBlockedDeletion() {
@@ -48,6 +50,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertFalse(summary.canDeleteLocalData)
     XCTAssertTrue(summary.blockedDetail?.contains("Finish active local work") == true)
+    XCTAssertTrue(summary.blockedDetail?.contains("connector operations") == true)
   }
 
   func testResetSummaryKeepsPathOutOfRuntimeDetail() {
@@ -64,6 +67,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
     XCTAssertTrue(reset.timelineBody.contains("Workspaces on disk were not deleted"))
+    XCTAssertTrue(reset.timelineBody.contains("connectors"))
     XCTAssertEqual(
       reset.attributes["appSupportPath"],
       "/Users/example/Library/Application Support/Pith"
