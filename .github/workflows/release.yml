@@ -105,8 +105,14 @@ jobs:
           git fetch --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
           release_version="${RELEASE_TAG#v}"
           release_sha="$(git rev-parse HEAD)"
+          release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          if [[ "$release_tag_commit" != "$release_sha" ]]; then
+            echo "::error title=Release tag mismatch::Release tag $RELEASE_TAG points at $release_tag_commit, but checkout HEAD is $release_sha."
+            exit 1
+          fi
           echo "PITH_RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
           echo "PITH_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+          echo "PITH_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
 
           successful_ci_url="$(
             gh run list \
@@ -598,13 +604,12 @@ jobs:
           test -n "${PITH_RELEASE_ID:-}"
           gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \
             > release-published.json
-          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"
           set +e
           python3 scripts/release_publish_contract.py \
             --tag "$RELEASE_TAG" \
             --release-json release-published.json \
             --source-commit "$PITH_RELEASE_SHA" \
-            --tag-commit "$release_tag_commit" \
+            --tag-commit "$PITH_RELEASE_TAG_COMMIT" \
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \

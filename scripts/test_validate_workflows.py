@@ -295,6 +295,8 @@ jobs:
             exit 1
           fi
           git fetch --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          echo "PITH_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
           gh run list --workflow CI --status success --json conclusion,headSha,url
           echo "PITH_RELEASE_CI_RUN_URL=https://github.com/walt1012/pith/actions/runs/100" >> "$GITHUB_ENV"
       - name: Write release readiness report
@@ -501,12 +503,11 @@ jobs:
           test -n "${PITH_RELEASE_ID:-}"
           gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \\
             > release-published.json
-          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"
           python3 scripts/release_publish_contract.py \\
             --tag "$RELEASE_TAG" \\
             --release-json release-published.json \\
             --source-commit "$PITH_RELEASE_SHA" \\
-            --tag-commit "$release_tag_commit" \\
+            --tag-commit "$PITH_RELEASE_TAG_COMMIT" \\
             --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
@@ -1176,7 +1177,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"\n',
+        '          release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"\n',
         "",
       ),
     )
@@ -1187,7 +1188,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"\n',
+        '          release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"\n',
         '          release_tag_commit="$(\n'
         '            git ls-remote --exit-code --tags origin \\\n'
         '              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk \'{print $1}\'\n'
@@ -1207,6 +1208,18 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "generic error annotations")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        "          python3 scripts/release_publish_contract.py \\\n",
+        '          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"\n'
+        "          python3 scripts/release_publish_contract.py \\\n",
+      ),
+    )
+    assert_issue(issue_messages(root), "PITH_RELEASE_TAG_COMMIT")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -1243,7 +1256,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--tag-commit "$release_tag_commit"',
+        '--tag-commit "$PITH_RELEASE_TAG_COMMIT"',
         "--missing-tag-commit",
       ),
     )

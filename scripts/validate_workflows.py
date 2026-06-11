@@ -395,6 +395,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "--status success",
     "--json conclusion,headSha,url",
     'git fetch --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"',
+    'release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"',
+    'echo "PITH_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"',
     "PITH_RELEASE_CI_RUN_URL",
     r"^v[0-9]+\.[0-9]+\.[0-9]+$",
     "python3 scripts/validate_model_pack.py --remote",
@@ -526,10 +528,9 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     'echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"',
     'gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID"',
     "> release-published.json",
-    'release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"',
+    '--tag-commit "$PITH_RELEASE_TAG_COMMIT"',
     '--release-json release-published.json',
     '--source-commit "$PITH_RELEASE_SHA"',
-    '--tag-commit "$release_tag_commit"',
     '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
     '--expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE"',
     '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
@@ -566,6 +567,13 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       WorkflowIssue(
         RELEASE_WORKFLOW,
         "final release validation must resolve the checked-out tag with git rev-parse",
+      )
+    )
+  if 'git rev-parse "$RELEASE_TAG^{commit}"' in final_validation_step:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "final release validation must use PITH_RELEASE_TAG_COMMIT from the release gate",
       )
     )
   if "scripts/release_rehearsal_contract.py" not in release_block:
