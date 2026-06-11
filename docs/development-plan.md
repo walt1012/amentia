@@ -155,6 +155,8 @@ Finish now:
   appearance.
 - Keep timeline proof language human-readable; protocol fields, hashes, and raw
   counters belong in deeper details, not the primary cowork path.
+- Keep connector setup copy human-readable; reveal setup files only on demand,
+  and keep diagnostics/manifest wording out of the normal user path.
 - Strengthen Hermes-style execution quality where it fits Pith: every long task
   should be observable, cancellable, resumable when appropriate, and tied to a
   user-visible receipt.

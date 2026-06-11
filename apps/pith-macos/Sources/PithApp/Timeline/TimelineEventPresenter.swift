@@ -291,9 +291,9 @@ enum TimelineEventPresenter {
     diagnostics: [String],
     recoveryAttributes: [String: String]
   ) -> TimelineEntry {
-    let diagnosticBody = diagnostics.isEmpty
-      ? "No plugin diagnostics."
-      : diagnostics.map { "Diagnostic: \($0)" }.joined(separator: "\n")
+    let setupBody = diagnostics.isEmpty
+      ? "No connector setup issues."
+      : diagnostics.map { "Setup note: \($0)" }.joined(separator: "\n")
     var attributes = recoveryAttributes
     if attributes["pluginRefreshStatus"] == nil {
       attributes["pluginRefreshStatus"] = diagnostics.isEmpty
@@ -303,11 +303,11 @@ enum TimelineEventPresenter {
     attributes["pluginRefreshDiagnosticCount"] = "\(diagnostics.count)"
 
     return TimelineEntryFactory.system(
-      title: diagnostics.isEmpty ? "Plugins Refreshed" : "Plugins Refreshed With Diagnostics",
+      title: diagnostics.isEmpty ? "Connectors Refreshed" : "Connectors Need Attention",
       body: [
         pluginSummary,
         surfaceSummary,
-        diagnosticBody,
+        setupBody,
       ].joined(separator: "\n"),
       attributes: attributes
     )

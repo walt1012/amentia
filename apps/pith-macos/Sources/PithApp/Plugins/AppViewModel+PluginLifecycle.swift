@@ -4,7 +4,7 @@ import Foundation
 extension AppViewModel {
   func refreshPlugins() {
     guard canRefreshPlugins() else {
-      runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
+      runtimeDetail = pluginRefreshDisabledReason() ?? "Connector refresh is unavailable."
       return
     }
 
@@ -35,9 +35,9 @@ extension AppViewModel {
           recoveryAttributes: snapshot.refreshRecoveryAttributes
         ),
         detail: hasDiagnostics
-          ? "Plugin catalog refreshed with diagnostics."
-          : "Plugin catalog refreshed.",
-        preview: hasDiagnostics ? "Plugin refresh diagnostics" : "Plugins refreshed"
+          ? "Connector setup refreshed and needs attention."
+          : "Connector setup refreshed.",
+        preview: hasDiagnostics ? "Connector setup needs attention" : "Connectors refreshed"
       )
     }
     bindPluginLifecycleTask(task, operationID: operationID)

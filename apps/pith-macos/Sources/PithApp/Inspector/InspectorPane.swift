@@ -17,7 +17,7 @@ struct InspectorPane: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Details")
+        Text("Workspace")
           .font(.title3.weight(.semibold))
 
         InspectorSessionCard(
@@ -82,12 +82,18 @@ struct InspectorPane: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
-          DisclosureGroup("Details", isExpanded: $selectedAttributesExpanded) {
-            Text(viewModel.selectedEntryMetadata())
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .textSelection(.enabled)
-              .frame(maxWidth: .infinity, alignment: .leading)
+          DisclosureGroup("Technical Data", isExpanded: $selectedAttributesExpanded) {
+            VStack(alignment: .leading, spacing: 6) {
+              Text("Raw event data for debugging and support.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+              Text(viewModel.selectedEntryMetadata())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -130,7 +136,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedPluginSection: some View {
     if let pluginSummary = viewModel.selectedEntryPluginSummary() {
-      DisclosureGroup("Connector Details", isExpanded: $selectedPluginExpanded) {
+      DisclosureGroup("Connector Proof", isExpanded: $selectedPluginExpanded) {
         Text(pluginSummary)
           .font(.caption)
           .foregroundColor(.secondary)
@@ -143,7 +149,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedSandboxSection: some View {
     if let sandboxSummary = viewModel.selectedEntrySandboxSummary() {
-      DisclosureGroup("Safety Details", isExpanded: $selectedSandboxExpanded) {
+      DisclosureGroup("Safety Proof", isExpanded: $selectedSandboxExpanded) {
         Text(sandboxSummary)
           .font(.caption)
           .foregroundColor(.secondary)

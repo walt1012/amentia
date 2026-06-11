@@ -73,7 +73,7 @@ extension AppViewModel {
 
   func refreshPlugins(from entry: TimelineEntry) async {
     guard canRefreshPlugins(from: entry) else {
-      runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
+      runtimeDetail = pluginRefreshDisabledReason() ?? "Connector refresh is unavailable."
       return
     }
 
@@ -82,7 +82,7 @@ extension AppViewModel {
 
   func revealPluginManifest(pluginID: String) {
     guard let plugin = pluginSummary(pluginID: pluginID) else {
-      runtimeDetail = "Plugin configuration file is unavailable."
+      runtimeDetail = "Connector setup file is unavailable."
       return
     }
 

@@ -76,7 +76,7 @@ struct PluginCommandRow: View {
         .textSelection(.enabled)
 
       if let runDisabledReason {
-        Text("Blocked: \(runDisabledReason)")
+        Text("Needs attention: \(runDisabledReason)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)

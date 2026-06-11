@@ -32,7 +32,7 @@ struct PluginCapabilityRow: View {
       }
 
       if let diagnosticDetail = capability.diagnosticDetail {
-        Text("Blocked: \(diagnosticDetail)")
+        Text("Needs attention: \(diagnosticDetail)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)
@@ -150,7 +150,7 @@ struct PluginConnectorRow: View {
 
         connectorActions
 
-        Button("Config") {
+        Button("Setup") {
           onRevealManifest()
         }
         .font(.caption2)
@@ -173,7 +173,7 @@ struct PluginConnectorRow: View {
       }
 
       if let actionBlocker {
-        Text("Blocked: \(actionBlocker)")
+        Text("Needs attention: \(actionBlocker)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)

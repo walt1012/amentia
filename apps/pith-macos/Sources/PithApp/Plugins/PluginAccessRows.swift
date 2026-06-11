@@ -17,7 +17,7 @@ struct PluginPermissionRow: View {
 
         Spacer()
 
-        Button("Show Config") {
+        Button("Show Setup") {
           onRevealManifest()
         }
         .buttonStyle(.bordered)
@@ -53,15 +53,14 @@ struct InvalidPluginRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(plugin.displayName)
             .font(.caption.weight(.semibold))
-          Text("Setup file: \(plugin.manifestPath)")
+          Text("Connector setup needs attention.")
             .font(.caption2)
             .foregroundColor(.secondary)
-            .textSelection(.enabled)
         }
 
         Spacer()
 
-        Button("Show Config") {
+        Button("Show Setup") {
           onRevealManifest()
         }
         .buttonStyle(.bordered)
