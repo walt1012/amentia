@@ -381,14 +381,19 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "Context Compaction",
     ])
     XCTAssertTrue(sections[0].body.contains("Workspace: Pith"))
-    XCTAssertTrue(sections[1].body.contains("Source snapshot: yes"))
-    XCTAssertTrue(sections[1].body.contains("Reason: freshPublicInformation"))
+    XCTAssertTrue(sections[1].body.contains("Saved source proof: yes"))
+    XCTAssertTrue(
+      sections[1].body.contains("Why Pith searched: fresh public information was useful")
+    )
     XCTAssertTrue(sections[2].body.contains("Approval: requires enabled plugin permission"))
     XCTAssertTrue(sections[3].body.contains("Titles: Project rule"))
-    XCTAssertTrue(sections[3].body.contains("Ranking scores: 9, 4, 1"))
-    XCTAssertTrue(sections[4].body.contains("Observation: 4000/1800 chars | truncated yes"))
+    XCTAssertTrue(sections[3].body.contains("kept 1 of 3 relevant notes"))
+    XCTAssertFalse(sections[3].body.contains("Ranking scores"))
     XCTAssertTrue(
-      sections[4].body.contains("Memory decision: selected 1/3 notes | omitted 2 | truncated 0")
+      sections[4].body.contains("Observation context: shortened (4000 -> 1800 characters)")
+    )
+    XCTAssertTrue(
+      sections[4].body.contains("Memory notes: kept 1 of 3, skipped 2, trimmed 0")
     )
   }
 
@@ -476,12 +481,16 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     let sections = TimelineInspectorPresenter.selectedEntryContextReceiptSections(snapshot)
     let compaction = sections.first(where: { $0.id == "compaction" })
 
-    XCTAssertTrue(memorySummary?.contains("Memory context: compacted") == true)
+    XCTAssertTrue(memorySummary?.contains("Memory context: compacted notes") == true)
     XCTAssertFalse(memorySummary?.contains("Prompt:") == true)
     XCTAssertEqual(compaction?.title, "Context Compaction")
-    XCTAssertTrue(compaction?.body.contains("Prompt: 9000/7200 chars | truncated yes") == true)
     XCTAssertTrue(
-      compaction?.body.contains("Prior observations: 2200/1800 chars | truncated yes") == true
+      compaction?.body.contains("Prompt context: shortened (9000 -> 7200 characters)") == true
+    )
+    XCTAssertTrue(
+      compaction?.body.contains(
+        "Prior observations context: shortened (2200 -> 1800 characters)"
+      ) == true
     )
     XCTAssertTrue(compaction?.body.contains("Prior observation count: 2") == true)
     XCTAssertTrue(compaction?.body.contains("Sources/App.swift") == true)
@@ -511,15 +520,13 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(
       summary,
       """
-      Source mode: searchResultAttribution
-      Page fetch: no
-      Source snapshot: yes
-      Attribution: web_search
-      Reason: freshPublicInformation
-      Titles: Pith
-      URLs: https://example.com/pith
-      Snapshot kind: searchResults
-      Snapshot hash: abc123
+      Search mode: search result sources
+      Opened source pages: no
+      Saved source proof: yes
+      Why Pith searched: fresh public information was useful
+      Sources: Pith
+      Links: https://example.com/pith
+      Proof type: saved search results
       """
     )
   }
@@ -563,35 +570,35 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       ))
     )
 
-    XCTAssertTrue(summary?.contains("Remote write: notSent") == true)
-    XCTAssertTrue(summary?.contains("Remote approval required: true") == true)
-    XCTAssertTrue(summary?.contains("Remote write source: docs/handoff.md") == true)
-    XCTAssertTrue(summary?.contains("Remote proof: notRequested | notionApiResponse") == true)
+    XCTAssertTrue(summary?.contains("External action: not sent yet") == true)
+    XCTAssertTrue(summary?.contains("Approval before external write: yes") == true)
+    XCTAssertTrue(summary?.contains("Source file: docs/handoff.md") == true)
     XCTAssertTrue(
-      summary?.contains(
-        "Notion Create Page: inspected | stage inspectBeforeWrite | notion createPage"
-      ) == true
-    )
-    XCTAssertTrue(summary?.contains("Workflow target: docs/handoff.md") == true)
-    XCTAssertTrue(summary?.contains("Workflow proof: inspection") == true)
-    XCTAssertTrue(
-      summary?.contains(
-        "Next command: Publish to Notion | notion-connector::notion.publish-page-draft"
-      ) == true
+      summary?.contains("External proof: not sent yet (Notion confirmation)") == true
     )
     XCTAssertTrue(
-      summary?.contains("Next input hint: Fill parentPageId before publishing.") == true
+      summary?.contains("Notion Create Page: ready for review in review before write.") == true
     )
+    XCTAssertTrue(summary?.contains("Target: docs/handoff.md") == true)
+    XCTAssertTrue(summary?.contains("Proof: inspection") == true)
     XCTAssertTrue(
       summary?.contains(
-        "Next input template: {\"parentPageId\":\"\",\"title\":\"Draft\"}"
+        "Next step: Publish to Notion (notion-connector::notion.publish-page-draft)"
       ) == true
     )
     XCTAssertTrue(
-      summary?.contains("Retry command: notion-connector::notion.publish-page-draft") == true
+      summary?.contains("Input hint: Fill parentPageId before publishing.") == true
     )
-    XCTAssertTrue(summary?.contains("Retry input editable: true") == true)
-    XCTAssertTrue(summary?.contains("Retry input hint: Add parentPageId before retrying.") == true)
+    XCTAssertTrue(
+      summary?.contains(
+        "Draft input: {\"parentPageId\":\"\",\"title\":\"Draft\"}"
+      ) == true
+    )
+    XCTAssertTrue(
+      summary?.contains("Retry step: notion-connector::notion.publish-page-draft") == true
+    )
+    XCTAssertTrue(summary?.contains("Retry input editable: yes") == true)
+    XCTAssertTrue(summary?.contains("Retry hint: Add parentPageId before retrying.") == true)
     XCTAssertTrue(summary?.contains("Retry input: {\"parentPageId\":\"page\"}") == true)
   }
 
@@ -621,13 +628,13 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       ))
     )
 
-    XCTAssertTrue(summary?.contains("Remote proof: success | notionApiResponse") == true)
+    XCTAssertTrue(summary?.contains("External proof: completed (Notion confirmation)") == true)
     XCTAssertTrue(
       summary?.contains("Notion page: page-123 | https://www.notion.so/page-123") == true
     )
     XCTAssertTrue(summary?.contains("Notion parent: parent-456") == true)
-    XCTAssertTrue(summary?.contains("Title truncated: true") == true)
-    XCTAssertTrue(summary?.contains("Body truncated: false") == true)
+    XCTAssertTrue(summary?.contains("Title was shortened") == true)
+    XCTAssertTrue(summary?.contains("Body was complete") == true)
     XCTAssertTrue(summary?.contains("Notion blocks: 4") == true)
   }
 
@@ -729,14 +736,14 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     let action = TimelineExternalActionPresenter.primaryAction(attributes: attributes)
     let proof = TimelineExternalActionPresenter.proofSummary(attributes: attributes)
 
-    XCTAssertTrue(summary?.contains("Remote proof ID: message-123") == true)
+    XCTAssertTrue(summary?.contains("Confirmation: message-123") == true)
     XCTAssertTrue(
-      summary?.contains("Remote proof URL: https://chat.example.com/messages/message-123") == true
+      summary?.contains("Proof link: https://chat.example.com/messages/message-123") == true
     )
     XCTAssertFalse(summary?.contains("Notion page") == true)
     XCTAssertEqual(action?.title, "Open Message")
     XCTAssertEqual(proof?.title, "Message sent")
-    XCTAssertTrue(proof?.detail.contains("ID: message-123") == true)
+    XCTAssertTrue(proof?.detail.contains("Confirmation: message-123") == true)
   }
 
   func testExternalActionRejectsUntrustedOrIncompleteProof() {

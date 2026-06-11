@@ -89,8 +89,8 @@ enum TimelineConnectorEvidencePresenter {
       "connectorSecretBindings",
       "pluginRunnerSecretBindings",
     ]) ?? "unknown binding"
-    return "Connectors: \(connectorIDs) | \(services) | \(stores) | \(providers) "
-      + "| \(bindings)"
+    return "Connector: \(serviceName(attributes: attributes)). Credentials are available locally. "
+      + "Setup: \(connectorIDs), \(services), \(stores), \(providers), \(bindings)."
   }
 
   private static func appendConnectorWorkflowSummary(
@@ -106,18 +106,16 @@ enum TimelineConnectorEvidencePresenter {
     let name = attributes["connectorWorkflowName"] ?? "Connector workflow"
     let status = attributes["connectorWorkflowStatus"] ?? "unknown"
     let stage = attributes["connectorWorkflowStage"] ?? "unknown stage"
-    let service = attributes["connectorWorkflowService"] ?? "unknown service"
-    let action = attributes["connectorWorkflowAction"] ?? "unknown action"
-    lines.append("\(name): \(status) | stage \(stage) | \(service) \(action)")
+    lines.append("\(name): \(readableStatus(status)) in \(readableStage(stage)).")
 
     if let target = attributes["connectorWorkflowTarget"] {
-      lines.append("Workflow target: \(target)")
+      lines.append("Target: \(target)")
     }
     if let proof = attributes["connectorWorkflowProof"] {
-      lines.append("Workflow proof: \(proof)")
+      lines.append("Proof: \(proof)")
     }
     if let recovery = attributes["connectorWorkflowRecovery"] {
-      lines.append("Workflow recovery: \(recovery)")
+      lines.append("Recovery: \(recovery)")
     }
   }
 
@@ -139,8 +137,8 @@ enum TimelineConnectorEvidencePresenter {
     let targetService = attributes["targetService"] ?? "unknown service"
     let targetTool = attributes["targetTool"] ?? "unknown tool"
     lines.append(
-      "Remote write: \(status) | sent \(sent) | stage \(stage) | "
-        + "\(targetService) via \(targetTool)"
+      "External action: \(readableStatus(status)). Sent: \(yesNo(sent)). "
+        + "Stage: \(readableStage(stage)). Service: \(targetService) via \(targetTool)."
     )
 
     appendRemoteWriteContinuation(attributes: attributes, to: &lines)
@@ -153,23 +151,23 @@ enum TimelineConnectorEvidencePresenter {
     to lines: inout [String]
   ) {
     if let approvalRequired = attributes["remoteWriteRequiresApproval"] {
-      lines.append("Remote approval required: \(approvalRequired)")
+      lines.append("Approval before external write: \(yesNo(approvalRequired))")
     }
     if let sourceArtifact = attributes["sourceArtifact"] {
-      lines.append("Remote write source: \(sourceArtifact)")
+      lines.append("Source file: \(sourceArtifact)")
     }
     if let nextCommandID = attributes["nextCommandId"] {
       let label = attributes["nextCommandLabel"] ?? "Continue"
-      lines.append("Next command: \(label) | \(nextCommandID)")
+      lines.append("Next step: \(label) (\(nextCommandID))")
     }
     if let nextCommandInput = attributes["nextCommandInput"] {
       lines.append("Next input: \(nextCommandInput)")
     }
     if let nextCommandInputTemplate = attributes["nextCommandInputTemplate"] {
-      lines.append("Next input template: \(nextCommandInputTemplate)")
+      lines.append("Draft input: \(nextCommandInputTemplate)")
     }
     if let nextCommandInputHint = attributes["nextCommandInputHint"] {
-      lines.append("Next input hint: \(nextCommandInputHint)")
+      lines.append("Input hint: \(nextCommandInputHint)")
     }
   }
 
@@ -180,16 +178,18 @@ enum TimelineConnectorEvidencePresenter {
     if attributes["remoteProofStatus"] != nil || attributes["remoteProofKind"] != nil {
       let proofStatus = attributes["remoteProofStatus"] ?? "unknown"
       let proofKind = attributes["remoteProofKind"] ?? "unknown proof"
-      lines.append("Remote proof: \(proofStatus) | \(proofKind)")
+      lines.append(
+        "External proof: \(readableStatus(proofStatus)) (\(readableProofKind(proofKind)))"
+      )
     }
     if let proofTitle = attributes["remoteProofTitle"] {
-      lines.append("Remote proof title: \(proofTitle)")
+      lines.append("Proof title: \(proofTitle)")
     }
     if let proofID = attributes["remoteProofId"] {
-      lines.append("Remote proof ID: \(proofID)")
+      lines.append("Confirmation: \(proofID)")
     }
     if let proofURL = attributes["remoteProofUrl"] {
-      lines.append("Remote proof URL: \(proofURL)")
+      lines.append("Proof link: \(proofURL)")
     }
 
     appendNotionProofSummary(attributes: attributes, to: &lines)
@@ -217,10 +217,10 @@ enum TimelineConnectorEvidencePresenter {
     to lines: inout [String]
   ) {
     if let titleTruncated = attributes["titleTruncated"] {
-      lines.append("Title truncated: \(titleTruncated)")
+      lines.append(titleTruncated == "true" ? "Title was shortened" : "Title was complete")
     }
     if let bodyTruncated = attributes["bodyTruncated"] {
-      lines.append("Body truncated: \(bodyTruncated)")
+      lines.append(bodyTruncated == "true" ? "Body was shortened" : "Body was complete")
     }
   }
 
@@ -229,16 +229,16 @@ enum TimelineConnectorEvidencePresenter {
     to lines: inout [String]
   ) {
     if let failureReason = attributes["publishFailureReason"] {
-      lines.append("Publish failure: \(failureReason)")
+      lines.append("Publish issue: \(failureReason)")
     }
     if let retryCommandID = attributes["retryCommandId"] {
-      lines.append("Retry command: \(retryCommandID)")
+      lines.append("Retry step: \(retryCommandID)")
     }
     if let retryInputEditable = attributes["retryInputEditable"] {
-      lines.append("Retry input editable: \(retryInputEditable)")
+      lines.append("Retry input editable: \(yesNo(retryInputEditable))")
     }
     if let retryInputHint = attributes["retryInputHint"] {
-      lines.append("Retry input hint: \(retryInputHint)")
+      lines.append("Retry hint: \(retryInputHint)")
     }
     if let retryInput = attributes["retryInput"] {
       lines.append("Retry input: \(retryInput)")
@@ -297,7 +297,7 @@ enum TimelineConnectorEvidencePresenter {
       parts.append("Parent: \(parentPageID)")
     }
     if let bodyTruncated = attributes["bodyTruncated"] {
-      parts.append(bodyTruncated == "true" ? "Body truncated" : "Body complete")
+      parts.append(bodyTruncated == "true" ? "Body shortened" : "Body complete")
     }
     if let blockCount = attributes["notionBlockCount"], !blockCount.isEmpty {
       parts.append("Blocks: \(blockCount)")
@@ -318,13 +318,13 @@ enum TimelineConnectorEvidencePresenter {
 
     var parts: [String] = []
     if let proofID = attributes["remoteProofId"], !proofID.isEmpty {
-      parts.append("ID: \(proofID)")
+      parts.append("Confirmation: \(proofID)")
     }
     if let proofKind = attributes["remoteProofKind"], !proofKind.isEmpty {
-      parts.append("Proof: \(proofKind)")
+      parts.append(readableProofKind(proofKind))
     }
     if let proofURL = attributes["remoteProofUrl"], !proofURL.isEmpty {
-      parts.append("URL: \(proofURL)")
+      parts.append("Link: \(proofURL)")
     }
 
     guard !parts.isEmpty else {
@@ -350,6 +350,52 @@ enum TimelineConnectorEvidencePresenter {
         return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
       }
       .joined(separator: " ")
+  }
+
+  private static func readableStatus(_ value: String) -> String {
+    switch value {
+    case "success", "completed":
+      return "completed"
+    case "notRequested", "notSent":
+      return "not sent yet"
+    case "inspected":
+      return "ready for review"
+    default:
+      return value
+    }
+  }
+
+  private static func readableStage(_ value: String) -> String {
+    switch value {
+    case "inspectBeforeWrite":
+      return "review before write"
+    case "completed":
+      return "completed"
+    default:
+      return value
+    }
+  }
+
+  private static func readableProofKind(_ value: String) -> String {
+    switch value {
+    case "notionApiResponse":
+      return "Notion confirmation"
+    case "messageApiResponse":
+      return "message confirmation"
+    default:
+      return value
+    }
+  }
+
+  private static func yesNo(_ value: String) -> String {
+    switch value {
+    case "true":
+      return "yes"
+    case "false":
+      return "no"
+    default:
+      return value
+    }
   }
 
   private static func firstAttribute(

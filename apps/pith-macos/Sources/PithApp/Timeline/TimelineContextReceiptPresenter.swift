@@ -97,31 +97,25 @@ enum TimelineContextReceiptPresenter {
       return nil
     }
 
-    let sourceMode = entry.attributes["webSearchSourceMode"] ?? "unknown"
+    let sourceMode = entry.attributes["webSearchSourceMode"] ?? "standard search"
     let pageFetch = entry.attributes["pageFetchPerformed"] ?? "unknown"
     let snapshotAvailable = entry.attributes["sourceSnapshotAvailable"] ?? "unknown"
     var lines = [
-      "Source mode: \(sourceMode)",
-      "Page fetch: \(yesNo(pageFetch))",
-      "Source snapshot: \(yesNo(snapshotAvailable))",
+      "Search mode: \(readableSourceMode(sourceMode))",
+      "Opened source pages: \(yesNo(pageFetch))",
+      "Saved source proof: \(yesNo(snapshotAvailable))",
     ]
-    if let attribution = entry.attributes["sourceAttribution"] {
-      lines.append("Attribution: \(attribution)")
-    }
     if let reason = entry.attributes["routingReason"] {
-      lines.append("Reason: \(reason)")
+      lines.append("Why Pith searched: \(readableRoutingReason(reason))")
     }
     if let sourceTitles = entry.attributes["sourceTitles"] {
-      lines.append("Titles: \(sourceTitles)")
+      lines.append("Sources: \(sourceTitles)")
     }
     if let sourceUrls = entry.attributes["sourceUrls"] {
-      lines.append("URLs: \(sourceUrls)")
+      lines.append("Links: \(sourceUrls)")
     }
     if let snapshotKind = entry.attributes["sourceSnapshotKind"] {
-      lines.append("Snapshot kind: \(snapshotKind)")
-    }
-    if let snapshotHash = entry.attributes["sourceSnapshotHash"] {
-      lines.append("Snapshot hash: \(snapshotHash)")
+      lines.append("Proof type: \(readableSnapshotKind(snapshotKind))")
     }
 
     return TimelineContextReceiptSection(
@@ -181,31 +175,23 @@ enum TimelineContextReceiptPresenter {
       return nil
     }
 
-    var lines = ["Notes: \(noteCount)"]
+    var lines = ["Selected notes: \(noteCount)"]
     if hasMemoryNotes {
       let memoryTitles = entry.attributes["memoryNoteTitles"] ?? "Unavailable"
-      let memoryIDs = entry.attributes["memoryNoteIds"] ?? "Unavailable"
       lines.append("Titles: \(memoryTitles)")
-      lines.append("IDs: \(memoryIDs)")
     }
 
     if let memoryContextMode = entry.attributes["memoryContextMode"] {
-      let estimatedChars = entry.attributes["memoryContextEstimatedChars"] ?? "unknown"
-      let budgetChars = entry.attributes["memoryContextBudgetChars"] ?? "unknown"
       let omittedCount = entry.attributes["memoryContextOmittedNoteCount"] ?? "0"
       let truncatedCount = entry.attributes["memoryContextTruncatedNoteCount"] ?? "0"
       let candidateCount = entry.attributes["memoryContextCandidateNoteCount"] ?? noteCount
       let sourceCount = entry.attributes["memoryContextSourceNoteCount"] ?? candidateCount
-      let windowTokens = entry.attributes["memoryContextWindowTokens"] ?? "unknown"
       lines.append(
-        "Memory context: \(memoryContextMode) | \(noteCount)/\(candidateCount) relevant notes | "
-          + "\(sourceCount) stored | \(estimatedChars)/\(budgetChars) chars | "
-          + "\(windowTokens) token window | "
-          + "omitted \(omittedCount) | truncated \(truncatedCount)"
+        "Memory context: \(readableMemoryMode(memoryContextMode)) | "
+          + "kept \(noteCount) of \(candidateCount) relevant notes | "
+          + "\(sourceCount) stored notes considered | "
+          + "skipped \(omittedCount) | trimmed \(truncatedCount)"
       )
-    }
-    if let rankingScores = entry.attributes["memoryRankingScores"] {
-      lines.append("Ranking scores: \(rankingScores)")
     }
 
     return TimelineContextReceiptSection(
@@ -368,10 +354,16 @@ enum TimelineContextReceiptPresenter {
       return
     }
 
-    lines.append(
-      "\(label): \(sourceChars ?? "unknown")/\(budgetChars ?? "unknown") chars"
-        + " | truncated \(yesNo(truncated ?? "unknown"))"
-    )
+    let shortened = yesNo(truncated ?? "unknown")
+    if let sourceChars, let budgetChars {
+      lines.append(
+        "\(label) context: \(shortened == "yes" ? "shortened" : "kept") "
+          + "(\(sourceChars) -> \(budgetChars) characters)"
+      )
+      return
+    }
+
+    lines.append("\(label) context: \(shortened == "yes" ? "shortened" : "kept")")
   }
 
   private static func appendMemoryCompactionDecision(
@@ -391,8 +383,8 @@ enum TimelineContextReceiptPresenter {
     let candidateCount = attributes["memoryContextCandidateNoteCount"] ?? "unknown"
     let selectedCount = attributes["memoryNoteCount"] ?? "unknown"
     lines.append(
-      "Memory decision: selected \(selectedCount)/\(candidateCount) notes"
-        + " | omitted \(omittedCount) | truncated \(truncatedCount)"
+      "Memory notes: kept \(selectedCount) of \(candidateCount), "
+        + "skipped \(omittedCount), trimmed \(truncatedCount)"
     )
   }
 
@@ -409,6 +401,48 @@ enum TimelineContextReceiptPresenter {
       return "yes"
     case "false":
       return "no"
+    default:
+      return value
+    }
+  }
+
+  private static func readableSourceMode(_ value: String) -> String {
+    switch value {
+    case "searchResultAttribution":
+      return "search result sources"
+    case "pageFetch":
+      return "opened source pages"
+    default:
+      return value
+    }
+  }
+
+  private static func readableSnapshotKind(_ value: String) -> String {
+    switch value {
+    case "searchResults":
+      return "saved search results"
+    case "pageContent":
+      return "saved page content"
+    default:
+      return value
+    }
+  }
+
+  private static func readableRoutingReason(_ value: String) -> String {
+    switch value {
+    case "freshPublicInformation":
+      return "fresh public information was useful"
+    default:
+      return value
+    }
+  }
+
+  private static func readableMemoryMode(_ value: String) -> String {
+    switch value {
+    case "ranked":
+      return "ranked notes"
+    case "compacted":
+      return "compacted notes"
     default:
       return value
     }

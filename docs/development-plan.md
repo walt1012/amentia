@@ -153,6 +153,8 @@ Finish now:
 - Audit the macOS app for clean human UI: no confusing internal wording, no
   awkward layout, no unnecessary controls in the primary path, and no fixed dark
   appearance.
+- Keep timeline proof language human-readable; protocol fields, hashes, and raw
+  counters belong in deeper details, not the primary cowork path.
 - Strengthen Hermes-style execution quality where it fits Pith: every long task
   should be observable, cancellable, resumable when appropriate, and tied to a
   user-visible receipt.
