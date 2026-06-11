@@ -496,6 +496,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          trap 'echo "::error title=Release upload failed::Upload GitHub Release draft assets failed."' ERR
+          echo "Upload GitHub Release draft assets started" >> release-progress.txt
           release_title="Pith $RELEASE_TAG"
           release_json="$(
             gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
@@ -526,9 +528,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          trap 'echo "::error title=Release download rehearsal failed::Rehearse downloaded GitHub Release assets failed."' ERR
+          echo "Rehearse downloaded GitHub Release assets started" >> release-progress.txt
           rm -rf release-download
           mkdir -p release-download
           gh release download "$RELEASE_TAG" \
+            --pattern "Pith-$RELEASE_TAG-macos-x86_64.dmg" \
+            --pattern "Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \
+            --pattern README-FIRST.txt \
+            --pattern "Pith-$RELEASE_TAG-release-manifest.json" \
             --dir release-download \
             --clobber
           python3 scripts/release_rehearsal_contract.py \
@@ -544,6 +552,8 @@ jobs:
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
           set -euo pipefail
+          trap 'echo "::error title=Release rehearsal evidence failed::Validate release rehearsal evidence failed."' ERR
+          echo "Validate release rehearsal evidence started" >> release-progress.txt
           python3 scripts/release_evidence_contract.py \
             --mode publish-rehearsal \
             --tag "$RELEASE_TAG" \
@@ -561,6 +571,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          trap 'echo "::error title=Release visibility patch failed::Apply final GitHub Release visibility failed."' ERR
+          echo "Apply final GitHub Release visibility started" >> release-progress.txt
           release_id="$(
             gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
               python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")'
@@ -581,6 +593,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          trap 'echo "::error title=Release final validation failed::Validate final GitHub Release failed."' ERR
+          echo "Validate final GitHub Release started" >> release-progress.txt
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
             python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); assert match is not None, f"missing release {tag}"; print(json.dumps(match))' \
             > release-published.json
@@ -626,6 +640,7 @@ jobs:
             release-manual-acceptance.md
             release-published.json
             release-final-validation.log
+            release-progress.txt
           if-no-files-found: warn
           retention-days: 30
 
