@@ -25,22 +25,10 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
   "Installer assets:",
   DEFAULT_MODEL_ID,
   "Model weights are not bundled",
-  "Settings > Storage",
-  "No Pith login is required",
-  "local execution mode",
   "SHA-256 checksum sidecar",
   "README-FIRST.txt",
   "release manifest",
   "same download folder",
-  "sidecar hashes",
-  "app package metadata",
-  "smoke package metadata",
-  PACKAGED_FIRST_RUN_PROOF_PHRASE,
-  "Native sandbox",
-  "process-only fallback",
-  "daily-driver next action",
-  "local service status",
-  "package size budget",
 )
 
 

@@ -127,6 +127,9 @@ Finish now:
   Advanced.
 - Publish a visible prerelease only after downloaded-asset rehearsal, live
   four-asset validation, and fresh-Mac manual acceptance receipt agree.
+- Keep the GitHub Release page concise; detailed install, Gatekeeper,
+  verification, and package metadata belong in `README-FIRST.txt` and the
+  release manifest.
 
 Exit when:
 

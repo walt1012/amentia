@@ -139,28 +139,15 @@ def release_notes(
   draft: bool,
 ) -> str:
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
-  size_budget = release_size_budget_copy()
   installer_assets = installer_assets_copy(tag)
-  local_execution = local_execution_copy()
-  first_run_path = first_run_path_copy()
-  verification = checksum_verification_copy(tag)
-  first_run_proof = first_run_proof_copy()
   return f"""Pith {tag}
 
 - {platform_label()} DMG installer.
 - {installer_assets}
-- Local-first app bundle with runtime, plugin manifests, model metadata, and llama.cpp backend.
-- Model weights are not bundled; first launch guides the user to download one verified local model, defaulting to {DEFAULT_MODEL_ID}.
-- Downloaded models and Pith sessions stay in local app data; users can reveal or delete them from Settings > Storage without deleting workspaces.
-- {local_execution}
-- {first_run_path}
-- The daily-driver next action comes from local service status and appears in the app header and inspector.
-- Native sandbox is used when available; process-only fallback is disclosed in app status.
-- The {size_budget} is enforced so model weights and heavyweight payloads stay out of the app.
+- Model weights are not bundled; first launch downloads one verified local model, defaulting to {DEFAULT_MODEL_ID}.
 - SHA-256 checksum sidecar is published next to the DMG.
-- README-FIRST.txt and the release manifest are published as separate assets for pre-install review, including sidecar hashes.
-- Verify before first launch: {verification}
-- {first_run_proof}
+- Keep the DMG, checksum, README-FIRST.txt, and release manifest in the same download folder.
+- Read README-FIRST.txt before first launch for install, Gatekeeper, and verification steps.
 - {trust_note}
 """
 
