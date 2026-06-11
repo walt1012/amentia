@@ -93,8 +93,8 @@ Ready foundations:
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.
-- Tag-push release automation now creates and validates a draft prerelease. The
-  current successful draft candidate is `v0.1.14`.
+- Tag-push release automation creates and validates a draft prerelease.
+  `v0.1.14` is the accepted ad-hoc publish candidate.
 - CI is split by change area and remains the source of truth for Rust, Swift,
   package, policy, model, and release checks.
 
@@ -116,11 +116,10 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 Finish now:
 
-- Use `v0.1.14` as the current draft candidate unless a new blocking fix lands.
-- Run the downloaded-asset acceptance path: verify checksum, open DMG, pass the
-  unsigned Gatekeeper path, download the default model, open a workspace, run a
-  cowork turn, use Web Search, approve one bounded action, inspect proof, delete
-  a session, and revert a recorded write.
+- Publish `v0.1.14` as the current accepted ad-hoc prerelease unless a new
+  blocking fix lands.
+- Keep the downloaded-asset acceptance receipt at
+  `docs/release/manual-acceptance-receipt-v0.1.14.json` as the release gate.
 - Keep normal UI language product-level: session, workspace, local service,
   local model, Web Search, connector, approval, proof, delete, and revert.
 - Keep paths, manifests, package details, hashes, and diagnostics behind
