@@ -94,7 +94,7 @@ Ready foundations:
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.
 - Tag-push release automation now creates and validates a draft prerelease. The
-  current successful draft candidate is `v0.1.9`.
+  current successful draft candidate is `v0.1.10`.
 - CI is split by change area and remains the source of truth for Rust, Swift,
   package, policy, model, and release checks.
 
@@ -116,7 +116,7 @@ Goal: ship a usable macOS installer from GitHub Releases.
 
 Finish now:
 
-- Use `v0.1.9` as the current draft candidate unless a new blocking fix lands.
+- Use `v0.1.10` as the current draft candidate unless a new blocking fix lands.
 - Run the downloaded-asset acceptance path: verify checksum, open DMG, pass the
   unsigned Gatekeeper path, download the default model, open a workspace, run a
   cowork turn, use Web Search, approve one bounded action, inspect proof, delete
