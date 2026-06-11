@@ -73,7 +73,7 @@ when these boundaries become clearer; do not split or merge files cosmetically.
 
 ## Current State
 
-Active milestone: **M12 Public Release**.
+Active milestone: **M13 Product Quality and Identity**.
 
 Ready foundations:
 
@@ -93,17 +93,17 @@ Ready foundations:
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.
-- Tag-push release automation creates and validates a draft prerelease.
-  `v0.1.14` is the accepted ad-hoc publish candidate.
+- `v0.1.14` is published as the first visible ad-hoc prerelease with a manual
+  acceptance receipt.
 - CI is split by change area and remains the source of truth for Rust, Swift,
   package, policy, model, and release checks.
 
 Current constraints:
 
-- Keep M12 frozen to release readiness, install confidence, first-run clarity,
-  user-facing UI polish, session safety, and local data ownership.
+- Keep M13 focused on installed-app quality, first-run clarity, UI polish,
+  session safety, local data ownership, cleanup, and product identity.
 - Keep Web Search as retrieval; generic local document RAG remains deferred.
-- Keep connector expansion narrow until the release install path is accepted.
+- Keep connector expansion narrow until the M13 quality baseline is complete.
 - Do not bundle Git, model weights, package-manager payloads, extra
   architectures, or unused runtimes.
 - Release assets stay limited to the DMG, checksum, `README-FIRST.txt`, and
@@ -112,27 +112,22 @@ Current constraints:
 
 ## M12: Public Release
 
+Status: complete for the first public ad-hoc prerelease.
+
 Goal: ship a usable macOS installer from GitHub Releases.
 
-Finish now:
+Completed:
 
-- Publish `v0.1.14` as the current accepted ad-hoc prerelease unless a new
-  blocking fix lands.
+- Published `v0.1.14` as the current accepted ad-hoc prerelease.
 - Keep the downloaded-asset acceptance receipt at
   `docs/release/manual-acceptance-receipt-v0.1.14.json` as the release gate.
-- Keep normal UI language product-level: session, workspace, local service,
-  local model, Web Search, connector, approval, proof, delete, and revert.
-- Keep paths, manifests, package details, hashes, and diagnostics behind
-  Advanced.
-- Publish a visible prerelease only after downloaded-asset rehearsal, live
-  four-asset validation, and fresh-Mac manual acceptance receipt agree.
-- Keep the GitHub Release page concise; detailed install, Gatekeeper,
-  verification, and package metadata belong in `README-FIRST.txt` and the
-  release manifest.
-- Use `docs/release-acceptance.md` and the release acceptance issue template as
-  the maintainer path for recording the manual acceptance URL.
+- The release exposes exactly the DMG, checksum, `README-FIRST.txt`, and release
+  manifest.
+- The GitHub Release page stays concise; detailed install, Gatekeeper,
+  verification, and package metadata stay in `README-FIRST.txt` and the release
+  manifest.
 
-Exit when:
+Evidence:
 
 - A fresh unsigned install completes the daily cowork loop without hosted model
   dependency or manual model import.
@@ -148,6 +143,8 @@ Exit when:
 
 Goal: make the shipped app feel intentional, maintainable, and worthy of daily
 use before expanding the platform surface.
+
+Finish now:
 
 - Remove dead code, unused flows, stale scripts, and release-era scaffolding
   that no longer protects the product.

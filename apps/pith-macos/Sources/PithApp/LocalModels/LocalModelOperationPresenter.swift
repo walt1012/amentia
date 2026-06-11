@@ -81,7 +81,7 @@ enum LocalModelOperationPresenter {
     }
     let modelName = LocalModelDisplayPresenter.actionName(model)
     let size = LocalModelByteFormatter.string(model.sizeBytes)
-    return "\(role): \(modelName) is \(status). Size \(size). Pith runs one verified local model at a time."
+    return "\(role): \(modelName) is \(status). About \(size). Pith runs one verified local model at a time."
   }
 
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
@@ -105,7 +105,7 @@ enum LocalModelOperationPresenter {
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
     let localSize = LocalModelByteFormatter.string(snapshot.downloadedLocalSizeBytes)
-    return "Active: \(activeModel). Downloaded \(snapshot.downloadedModelCount) of \(snapshot.totalModelCount). Local size \(localSize)."
+    return "Active: \(activeModel). \(snapshot.downloadedModelCount) of \(snapshot.totalModelCount) models are ready. They use \(localSize) on this Mac."
   }
 
   static func recoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
@@ -227,8 +227,7 @@ enum LocalModelOperationPresenter {
 
   private static func modelDetail(_ model: LocalModelSummary) -> String {
     let size = LocalModelByteFormatter.string(model.sizeBytes)
-    let context = "\(model.contextSize) active context, \(model.modelContextSize) model limit"
-    return "Size \(size). License \(model.license). Context \(context)."
+    return "About \(size). Open model license: \(model.license). Pith verifies the file before it can run."
   }
 
   private static func readyRecoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {

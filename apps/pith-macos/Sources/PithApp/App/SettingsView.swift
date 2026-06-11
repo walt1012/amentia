@@ -59,7 +59,17 @@ struct SettingsView: View {
   private var distributionSection: some View {
     Section("Distribution") {
       Text(distributionTrust.title)
+      Text(distributionTrust.summary)
+        .foregroundColor(.secondary)
       Text(distributionTrust.detail)
+        .foregroundColor(.secondary)
+
+      DisclosureGroup("Advanced") {
+        Text(distributionTrust.advancedDetail)
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
     }
   }
 }

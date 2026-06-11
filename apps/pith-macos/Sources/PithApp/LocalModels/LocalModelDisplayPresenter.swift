@@ -17,11 +17,11 @@ enum LocalModelDisplayPresenter {
   }
 
   static func setupMetadata(_ model: LocalModelSummary) -> String {
-    "Size \(LocalModelByteFormatter.string(model.sizeBytes)). License \(model.license). Active context \(model.contextSize) tokens."
+    "About \(LocalModelByteFormatter.string(model.sizeBytes)). \(licenseSummary(model.license))."
   }
 
   static func statusMetadata(status: String, sizeBytes: Int64, license: String) -> String {
-    "\(status). Size \(LocalModelByteFormatter.string(sizeBytes)). License \(license)."
+    "\(statusSummary(status)). About \(LocalModelByteFormatter.string(sizeBytes)). \(licenseSummary(license))."
   }
 
   static func firstUseFit(_ model: LocalModelSummary, defaultModelID: String) -> String {
@@ -34,6 +34,27 @@ enum LocalModelDisplayPresenter {
     }
 
     return "Optional local model for longer or heavier cowork tasks."
+  }
+
+  private static func statusSummary(_ status: String) -> String {
+    switch status {
+    case "downloading":
+      return "Downloading now"
+    case "paused":
+      return "Download paused"
+    case "active":
+      return "Ready and active"
+    case "downloaded":
+      return "Ready to use"
+    case "verify before use":
+      return "Found on this Mac, needs verification"
+    default:
+      return "Available to download"
+    }
+  }
+
+  private static func licenseSummary(_ license: String) -> String {
+    "Open model license: \(license)"
   }
 }
 

@@ -207,6 +207,7 @@ struct DistributionTrustSummary: Equatable {
   let title: String
   let summary: String
   let detail: String
+  let advancedDetail: String
   let setupDetail: String?
 }
 
@@ -228,35 +229,49 @@ enum DistributionTrustPresenter {
     let identity = identitySummary(metadata)
     let execution = localExecutionSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
-    let releaseProof = "\(identity); \(modelDelivery); \(weightPolicy); \(execution); \(packageSize); \(sandbox); \(dailyDriver); \(firstOpen); \(source)."
+    let releaseProof = [
+      identity,
+      modelDelivery,
+      weightPolicy,
+      execution,
+      packageSize,
+      sandbox,
+      dailyDriver,
+      firstOpen,
+      source,
+    ].joined(separator: "; ")
 
     switch metadata.distributionTrust {
     case "developer-id-signed-notarized":
       return DistributionTrustSummary(
-        title: "Trusted Installer",
-        summary: "Developer ID signed and notarized for \(platform).",
-        detail: "Install from the DMG, launch normally, then choose one verified local model. \(releaseProof)",
+        title: "Verified Installer",
+        summary: "Signed and notarized for \(platform).",
+        detail: "Install from the DMG, launch normally, then choose one verified local model. Pith does not require a Pith account.",
+        advancedDetail: "Distribution proof: Developer ID signed and notarized; \(releaseProof).",
         setupDetail: nil
       )
     case "ad-hoc-not-notarized":
       return DistributionTrustSummary(
-        title: "Untrusted Ad-Hoc Build",
-        summary: "Ad-hoc signed and not notarized for \(platform).",
-        detail: "If macOS blocks first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open. \(releaseProof)",
-        setupDetail: "Installer trust: if macOS blocked first launch, use Privacy & Security > Open Anyway or Control-click Pith.app and choose Open."
+        title: "Manual Open Required",
+        summary: "This prerelease may need one extra macOS approval before first launch.",
+        detail: "If macOS blocks Pith, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Pith.app and choose Open. After that, setup continues in app.",
+        advancedDetail: "Distribution proof: ad-hoc signed and not notarized for \(platform); \(releaseProof).",
+        setupDetail: "Installer trust: if macOS blocks Pith, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Pith.app and choose Open."
       )
     case "unsigned-local-build":
       return DistributionTrustSummary(
-        title: "Unsigned Build",
-        summary: "Unsigned local build for \(platform).",
-        detail: "Use this only for development or explicit testing. Public users should prefer Developer ID builds or clearly marked ad-hoc prereleases. \(source).",
-        setupDetail: "Installer trust: this is an unsigned build, so macOS may require manual approval before first launch."
+        title: "Local Development Build",
+        summary: "This build was made locally and may need manual macOS approval.",
+        detail: "Use this build only for development or explicit testing. Public users should install the latest GitHub Release.",
+        advancedDetail: "Distribution proof: unsigned local build for \(platform); \(releaseProof).",
+        setupDetail: "Installer trust: this local build may require manual macOS approval before first launch."
       )
     default:
       return DistributionTrustSummary(
-        title: "Development Build",
-        summary: "Package metadata is unavailable in this run.",
-        detail: "Release DMGs include PithPackage.json, README-FIRST.txt, SHA-256 checksum, and a release manifest.",
+        title: "Development Run",
+        summary: "Package information is not available in this run.",
+        detail: "Use the GitHub Release DMG for install testing.",
+        advancedDetail: "Release DMGs include PithPackage.json, README-FIRST.txt, SHA-256 checksum, and a release manifest.",
         setupDetail: nil
       )
     }

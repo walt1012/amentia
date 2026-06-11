@@ -53,19 +53,17 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Pith is in Milestone 12: public macOS release readiness. The app has the
-daily-driver cowork foundation: first-use local model setup, workspace flow,
-Web Search, sandbox visibility, approvals, compact context receipts, actionable
-source/file evidence, session delete and revert safety, plugin recovery, Notion
-connector proof, memory capture, bounded local execution, and the x86_64 macOS
-DMG package path.
+Pith has a public ad-hoc macOS prerelease:
+[v0.1.14](https://github.com/walt1012/pith/releases/tag/v0.1.14).
+The app has the daily-driver cowork foundation: first-use local model setup,
+workspace flow, Web Search, sandbox visibility, approvals, compact context
+receipts, actionable source/file evidence, session delete and revert safety,
+plugin recovery, Notion connector proof, memory capture, bounded local
+execution, and the x86_64 macOS DMG package path.
 
-The current release gate is not another feature surface. It is the installable
-GitHub Release path: produce the DMG, checksum, `README-FIRST.txt`, and release
-manifest; verify the downloaded assets; complete a fresh-Mac acceptance pass;
-then publish the visible ad-hoc prerelease only after that evidence exists.
-Maintainer release acceptance is documented in
-[docs/release-acceptance.md](docs/release-acceptance.md).
+The active work is Milestone 13: product quality and identity. Keep the app
+small, human, and usable from the installed package before expanding the
+connector platform.
 
 Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
 
