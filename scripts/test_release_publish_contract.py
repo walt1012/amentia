@@ -199,6 +199,23 @@ def main() -> int:
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=False,
   )
+  missing_draft_url = release_payload(
+    draft=True,
+    prerelease=True,
+    allow_untrusted_ad_hoc=False,
+  )
+  for asset in missing_draft_url["assets"]:
+    asset["browser_download_url"] = ""
+  validate_published_release(
+    missing_draft_url,
+    tag=TAG,
+    source_commit=SOURCE_COMMIT,
+    tag_commit=SOURCE_COMMIT,
+    expected_draft=True,
+    expected_prerelease=True,
+    signing_mode="ad-hoc",
+    allow_untrusted_ad_hoc=False,
+  )
   validate_existing_release_assets_before_upload(
     release_payload(assets=sorted(expected_installer_asset_names(TAG))[:2]),
     tag=TAG,

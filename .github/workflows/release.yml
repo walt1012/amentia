@@ -588,6 +588,7 @@ jobs:
             git ls-remote --exit-code --tags origin \
               "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk '{print $1}'
           )"
+          set +e
           python3 scripts/release_publish_contract.py \
             --tag "$RELEASE_TAG" \
             --release-json release-published.json \
@@ -597,7 +598,18 @@ jobs:
             --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
-            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE" \
+            2>&1 | tee release-final-validation.log
+          validation_status="${PIPESTATUS[0]}"
+          set -e
+          if [[ "$validation_status" -ne 0 ]]; then
+            message="$(
+              tail -n 20 release-final-validation.log |
+                python3 -c 'import sys; print(sys.stdin.read().replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            )"
+            echo "::error title=Published release contract::$message"
+            exit "$validation_status"
+          fi
 
       - name: Upload release rehearsal summary
         if: always() && env.RELEASE_DRY_RUN != 'true'
@@ -612,6 +624,8 @@ jobs:
             release-rehearsal.md
             release-rehearsal.json
             release-manual-acceptance.md
+            release-published.json
+            release-final-validation.log
           if-no-files-found: warn
           retention-days: 30
 

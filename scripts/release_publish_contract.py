@@ -179,6 +179,8 @@ def validate_release_asset_download(
 
   download_url = asset.get("browser_download_url")
   if draft:
+    if download_url in (None, ""):
+      return
     expected_prefix = f"https://github.com/{RELEASE_REPOSITORY}/releases/download/"
     if (
       not isinstance(download_url, str)
