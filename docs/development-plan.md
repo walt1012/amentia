@@ -118,10 +118,11 @@ Build now:
   local model, Web Search, connector, approval, proof, delete, and revert.
   Keep paths, manifests, package details, hashes, and diagnostics behind
   Advanced.
-- Publish only after the dry-run artifact, downloaded-asset rehearsal, live
-  four-asset validation, and fresh-Mac manual acceptance receipt agree.
-- Keep release readiness reports explicit that tag-push dry-runs do not publish
-  or imply a visible release.
+- Publish a draft prerelease from tag push, then make it visible only after the
+  downloaded-asset rehearsal, live four-asset validation, and fresh-Mac manual
+  acceptance receipt agree.
+- Keep release readiness reports explicit that tag-push drafts do not imply a
+  trusted or visible release.
 
 Exit when:
 

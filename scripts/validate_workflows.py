@@ -369,14 +369,14 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "manual_acceptance_evidence:",
     "dry_run:",
     "RELEASE_DRAFT:",
-    "RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}",
+    "RELEASE_DRAFT: ${{ github.event_name != 'workflow_dispatch' || inputs.draft }}",
     "RELEASE_PRERELEASE:",
-    "RELEASE_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}",
+    "RELEASE_PRERELEASE: ${{ github.event_name != 'workflow_dispatch' || inputs.prerelease }}",
     "RELEASE_ALLOW_UNTRUSTED_AD_HOC:",
     "RELEASE_MANUAL_ACCEPTANCE_CONFIRMED:",
     "RELEASE_MANUAL_ACCEPTANCE_EVIDENCE:",
     "RELEASE_DRY_RUN:",
-    "RELEASE_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}",
+    "RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}",
   ):
     if term not in text:
       issues.append(

@@ -388,7 +388,7 @@ def validate_release_readiness_checklist(
       "remote tag verification command",
       "CI lookup command",
       "successful CI run matches the source commit",
-      "release workflow as a dry-run",
+      "manual dry-run",
       artifact_name,
       "dry-run evidence validation command",
       "DMG checksum",

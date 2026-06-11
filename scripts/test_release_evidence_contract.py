@@ -84,7 +84,7 @@ def pre_dispatch_checklist() -> list[str]:
       "if it does not already exist."
     ),
     f"Confirm tag {TAG} points at source commit {SOURCE_COMMIT}.",
-    "Push the tag to origin; tag-push release events run as dry-run by default.",
+    "Push the tag to origin; tag-push release events create or update a draft prerelease by default.",
     (
       "Run the remote tag verification command before dispatching "
       "a manual release workflow."
@@ -97,7 +97,7 @@ def pre_dispatch_checklist() -> list[str]:
       "Confirm the successful CI run matches the source commit: "
       "https://github.com/walt1012/pith/actions/runs/1."
     ),
-    "Run the release workflow as a dry-run before any publish attempt.",
+    "Use manual dry-run only when rehearsing release assets without mutating the draft release.",
     (
       "Use the dry-run artifact lookup command to find the "
       f"release-dry-run-{TAG} workflow run."

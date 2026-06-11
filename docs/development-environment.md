@@ -162,7 +162,8 @@ modes:
   DMG, SHA-256 checksum, install guide, and release manifest to a normal GitHub
   Release.
 - Ad-hoc mode builds the same x86_64 DMG shape when Developer ID secrets are
-  missing. Tag-triggered builds and ordinary manual runs stay draft-only, but a
+  missing. Tag-triggered builds create or update a draft prerelease by default,
+  while manual dry-runs can rehearse assets without mutating that draft. A
   manual run can publish a visible untrusted prerelease when
   `publish_untrusted_ad_hoc=true`, `manual_acceptance_confirmed=true`, and
   `draft=false` are all set, and `manual_acceptance_evidence` points to the
@@ -195,8 +196,8 @@ Release publishing requires these repository secrets:
 - `APPLE_APP_SPECIFIC_PASSWORD`
 
 The release workflow must never publish an ad-hoc or non-notarized installer as
-a normal trusted release. Without Developer ID secrets, it defaults to a draft
-release and refuses to update an already-public release unless
+a normal trusted release. Without Developer ID secrets, tag pushes default to a
+draft release and refuse to update an already-public release unless
 `publish_untrusted_ad_hoc=true` is set explicitly. A visible ad-hoc prerelease
 also requires `manual_acceptance_confirmed=true`, which means the generated
 manual acceptance receipt was filled and validated after a fresh-Mac run, plus

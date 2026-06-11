@@ -302,11 +302,11 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
   return [
     f"Create tag {readiness.tag} at source commit {readiness.source_commit} if it does not already exist.",
     f"Confirm tag {readiness.tag} points at source commit {readiness.source_commit}.",
-    "Push the tag to origin; tag-push release events run as dry-run by default.",
+    "Push the tag to origin; tag-push release events create or update a draft prerelease by default.",
     "Run the remote tag verification command before dispatching a manual release workflow.",
     "Use the CI lookup command to copy the successful CI URL for this exact source commit.",
     f"Confirm the successful CI run matches the source commit: {readiness.ci_run_url or 'not recorded'}.",
-    "Run the release workflow as a dry-run before any publish attempt.",
+    "Use manual dry-run only when rehearsing release assets without mutating the draft release.",
     f"Use the dry-run artifact lookup command to find the release-dry-run-{readiness.tag} workflow run.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
     "Run the dry-run evidence validation command before manual acceptance.",

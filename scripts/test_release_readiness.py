@@ -225,7 +225,7 @@ def assert_blocks_visible_ad_hoc_without_acceptance() -> None:
     raise AssertionError("visible ad-hoc blocker should name manual acceptance")
 
 
-def assert_tag_push_dry_run_does_not_claim_visible_release() -> None:
+def assert_tag_push_draft_release_does_not_claim_visible_release() -> None:
   readiness = plan_readiness(
     tag="v0.1.0",
     source_commit=VALID_COMMIT,
@@ -233,24 +233,24 @@ def assert_tag_push_dry_run_does_not_claim_visible_release() -> None:
     tag_points_at_commit_value=True,
     workflow_inputs_ready=True,
     ci_run_url=VALID_CI_URL,
-    dry_run=True,
+    dry_run=False,
     signing_mode="ad-hoc",
-    requested_draft=False,
-    requested_prerelease=False,
+    requested_draft=True,
+    requested_prerelease=True,
     allow_untrusted_ad_hoc=False,
     manual_acceptance_confirmed=False,
     manual_acceptance_evidence="",
   )
   if not readiness.ready:
-    raise AssertionError(f"tag-push dry-run should be ready: {readiness.blockers}")
+    raise AssertionError(f"tag-push draft release should be ready: {readiness.blockers}")
   report = readiness_report(readiness)
   if "visible stable" in report:
-    raise AssertionError("tag-push dry-run report must not claim a visible stable release")
-  expected_visibility = "not published; dry-run only"
+    raise AssertionError("tag-push draft release report must not claim a visible stable release")
+  expected_visibility = "draft prerelease"
   if readiness_visibility_label(readiness) != expected_visibility:
-    raise AssertionError("dry-run visibility should describe no release mutation")
+    raise AssertionError("tag-push visibility should describe a draft prerelease")
   if readiness_json(readiness).get("releaseVisibility") != expected_visibility:
-    raise AssertionError("readiness JSON should expose dry-run release visibility")
+    raise AssertionError("readiness JSON should expose draft prerelease visibility")
 
 
 def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
@@ -356,10 +356,10 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
   for phrase in (
     "Create tag v0.1.0",
     "Push the tag to origin",
-    "tag-push release events run as dry-run",
+    "tag-push release events create or update a draft prerelease",
     "remote tag verification command",
     "CI lookup command",
-    "release workflow as a dry-run",
+    "manual dry-run",
     "dry-run artifact lookup command",
     "release-dry-run-v0.1.0",
     "dry-run evidence validation command",
@@ -375,7 +375,7 @@ def main() -> int:
   assert_ready_dry_run_report()
   assert_blocks_missing_ci_and_tag()
   assert_blocks_visible_ad_hoc_without_acceptance()
-  assert_tag_push_dry_run_does_not_claim_visible_release()
+  assert_tag_push_draft_release_does_not_claim_visible_release()
   assert_accepted_visible_ad_hoc_report_preserves_inputs()
   assert_rejects_invalid_tag()
   assert_required_release_inputs_cover_dispatch_controls()
