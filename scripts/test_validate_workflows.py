@@ -169,7 +169,7 @@ jobs:
         with:
           key: llama-backend-${{ runner.os }}-${{ runner.arch }}-${{ env.LLAMA_CPP_REF }}-v1
       - name: Build pinned llama.cpp backend
-        run: python3 scripts/package_macos_app.py --stage-llama-backend llama-cli --stage-llama-output cache
+        run: bash scripts/build_macos_llama_backend.sh
       - name: Validate packaged llama.cpp backend
         run: test -x "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
       - name: Build x86_64 macOS app bundle
@@ -316,6 +316,8 @@ jobs:
           cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
+      - name: Build pinned llama.cpp backend
+        run: bash scripts/build_macos_llama_backend.sh
       - name: Create release DMG
         run: |
           dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"

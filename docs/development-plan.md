@@ -160,6 +160,8 @@ Finish now:
 - Strengthen Hermes-style execution quality where it fits Pith: every long task
   should be observable, cancellable, resumable when appropriate, and tied to a
   user-visible receipt.
+- Keep CI fast and disciplined: workflows orchestrate, shared scripts own
+  repeated build logic, and transient network fetches must retry before failing.
 - Keep memory and skill-like guidance bounded and curated; avoid pseudo-RAG or
   unbounded prompt stuffing.
 - Design a refined app logo that is simple, distinctive, premium, and tied to

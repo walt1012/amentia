@@ -26,6 +26,7 @@ SWIFT_PATTERNS = (
   "apps/pith-macos/*",
 )
 LLAMA_PATTERNS = (
+  "scripts/build_macos_llama_backend.sh",
   "scripts/macos_llama_backend.py",
   "scripts/package_macos_app.py",
 )
@@ -36,6 +37,7 @@ PACKAGE_PATTERNS = (
   "apps/pith-macos/*",
   "models/*",
   "plugins/*",
+  "scripts/build_macos_llama_backend.sh",
   "scripts/create_macos_dmg.py",
   "scripts/macos_llama_backend.py",
   "scripts/package_contract.py",

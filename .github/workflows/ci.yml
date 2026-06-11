@@ -542,32 +542,7 @@ jobs:
         if: steps.llama_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          source_dir="$RUNNER_TEMP/llama.cpp"
-          build_dir="$RUNNER_TEMP/llama.cpp-build"
-          git init "$source_dir"
-          git -C "$source_dir" remote add origin https://github.com/ggml-org/llama.cpp.git
-          git -C "$source_dir" fetch --depth 1 origin "$LLAMA_CPP_REF"
-          git -C "$source_dir" checkout --detach FETCH_HEAD
-          cmake \
-            -S "$source_dir" \
-            -B "$build_dir" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-            -DBUILD_SHARED_LIBS=OFF
-          if ! cmake --build "$build_dir" --config Release --parallel 3 > "$RUNNER_TEMP/llama-build.log" 2>&1; then
-            tail -n 160 "$RUNNER_TEMP/llama-build.log"
-            exit 1
-          fi
-          backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
-          test -x "$backend"
-          rm -rf "$LLAMA_BACKEND_CACHE_DIR"
-          mkdir -p "$LLAMA_BACKEND_CACHE_DIR"
-          python3 scripts/package_macos_app.py \
-            --stage-llama-backend "$backend" \
-            --stage-llama-output "$LLAMA_BACKEND_CACHE_DIR"
-          chmod +x "$LLAMA_BACKEND_CACHE_DIR/$LLAMA_BINARY"
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+          bash scripts/build_macos_llama_backend.sh
 
       - name: Validate staged llama.cpp backend
         run: |
@@ -725,32 +700,7 @@ jobs:
         if: steps.package_llama_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          source_dir="$RUNNER_TEMP/llama.cpp"
-          build_dir="$RUNNER_TEMP/llama.cpp-build"
-          git init "$source_dir"
-          git -C "$source_dir" remote add origin https://github.com/ggml-org/llama.cpp.git
-          git -C "$source_dir" fetch --depth 1 origin "$LLAMA_CPP_REF"
-          git -C "$source_dir" checkout --detach FETCH_HEAD
-          cmake \
-            -S "$source_dir" \
-            -B "$build_dir" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-            -DBUILD_SHARED_LIBS=OFF
-          if ! cmake --build "$build_dir" --config Release --parallel 3 > "$RUNNER_TEMP/llama-build.log" 2>&1; then
-            tail -n 160 "$RUNNER_TEMP/llama-build.log"
-            exit 1
-          fi
-          backend="$(find "$build_dir" -type f \( -name llama-cli -o -name main \) | head -n 1)"
-          test -x "$backend"
-          rm -rf "$LLAMA_BACKEND_CACHE_DIR"
-          mkdir -p "$LLAMA_BACKEND_CACHE_DIR"
-          python3 scripts/package_macos_app.py \
-            --stage-llama-backend "$backend" \
-            --stage-llama-output "$LLAMA_BACKEND_CACHE_DIR"
-          chmod +x "$LLAMA_BACKEND_CACHE_DIR/$LLAMA_BINARY"
-          mkdir -p "$PREBUILT_ARTIFACT_DIR"
-          cp -R "$LLAMA_BACKEND_CACHE_DIR"/. "$PREBUILT_ARTIFACT_DIR"/
+          bash scripts/build_macos_llama_backend.sh
 
       - name: Validate packaged llama.cpp backend
         run: |
