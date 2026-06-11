@@ -501,10 +501,7 @@ jobs:
           test -n "${PITH_RELEASE_ID:-}"
           gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \\
             > release-published.json
-          release_tag_commit="$(
-            git ls-remote --exit-code --tags origin \\
-              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk '{print $1}'
-          )"
+          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"
           python3 scripts/release_publish_contract.py \\
             --tag "$RELEASE_TAG" \\
             --release-json release-published.json \\
@@ -1179,14 +1176,37 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '          release_tag_commit="$(\n'
-        '            git ls-remote --exit-code --tags origin \\\n'
-        '              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk \'{print $1}\'\n'
-        '          )"\n',
+        '          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"\n',
         "",
       ),
     )
     assert_issue(issue_messages(root), "release_tag_commit")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"\n',
+        '          release_tag_commit="$(\n'
+        '            git ls-remote --exit-code --tags origin \\\n'
+        '              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk \'{print $1}\'\n'
+        '          )"\n',
+      ),
+    )
+    assert_issue(issue_messages(root), "git rev-parse")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          test -n "${PITH_RELEASE_ID:-}"\n',
+        "          trap 'echo \"::error title=Release final validation failed::Validate final GitHub Release failed.\"' ERR\n"
+        '          test -n "${PITH_RELEASE_ID:-}"\n',
+      ),
+    )
+    assert_issue(issue_messages(root), "generic error annotations")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

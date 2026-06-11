@@ -594,15 +594,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          trap 'echo "::error title=Release final validation failed::Validate final GitHub Release failed."' ERR
           echo "Validate final GitHub Release started" >> release-progress.txt
           test -n "${PITH_RELEASE_ID:-}"
           gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \
             > release-published.json
-          release_tag_commit="$(
-            git ls-remote --exit-code --tags origin \
-              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk '{print $1}'
-          )"
+          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"
           set +e
           python3 scripts/release_publish_contract.py \
             --tag "$RELEASE_TAG" \

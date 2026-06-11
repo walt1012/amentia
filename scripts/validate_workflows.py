@@ -526,9 +526,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     'echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"',
     'gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID"',
     "> release-published.json",
-    'release_tag_commit="$(',
-    "git ls-remote --exit-code --tags origin",
-    '"refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}"',
+    'release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"',
     '--release-json release-published.json',
     '--source-commit "$PITH_RELEASE_SHA"',
     '--tag-commit "$release_tag_commit"',
@@ -554,6 +552,20 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       WorkflowIssue(
         RELEASE_WORKFLOW,
         "published release contract must use PITH_RELEASE_SHA instead of undefined SOURCE_COMMIT",
+      )
+    )
+  if "::error title=Release final validation failed" in final_validation_step:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "final release validation must not emit generic error annotations on recoverable checks",
+      )
+    )
+  if "git ls-remote --exit-code --tags origin" in final_validation_step:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "final release validation must resolve the checked-out tag with git rev-parse",
       )
     )
   if "scripts/release_rehearsal_contract.py" not in release_block:
