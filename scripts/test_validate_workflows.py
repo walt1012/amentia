@@ -490,6 +490,7 @@ jobs:
               python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")'
           )"
           test -n "$release_id"
+          echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           gh api \\
             -X PATCH \\
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \\
@@ -497,8 +498,8 @@ jobs:
       - name: Validate final GitHub Release
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
-            python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); assert match is not None, f"missing release {tag}"; print(json.dumps(match))' \\
+          test -n "${PITH_RELEASE_ID:-}"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \\
             > release-published.json
           release_tag_commit="$(
             git ls-remote --exit-code --tags origin \\
