@@ -93,7 +93,8 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertEqual(guidance.title, "Download Local Model")
-    XCTAssertTrue(guidance.detail.contains("Size"))
+    XCTAssertTrue(guidance.detail.contains("About"))
+    XCTAssertTrue(guidance.detail.contains("Open model license"))
     XCTAssertFalse(guidance.title.contains("Engine"))
     XCTAssertFalse(guidance.detail.contains("|"))
   }
@@ -128,8 +129,8 @@ final class LocalModelPresenterTests: XCTestCase {
       snapshot: statusSnapshot(selectedModel: selectedModel)
     )
 
-    XCTAssertTrue(summary.contains("active"))
-    XCTAssertTrue(summary.contains("License"))
+    XCTAssertTrue(summary.contains("Ready and active"))
+    XCTAssertTrue(summary.contains("Open model license"))
     XCTAssertFalse(summary.contains("|"))
   }
 

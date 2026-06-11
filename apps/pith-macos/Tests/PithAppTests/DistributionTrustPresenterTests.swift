@@ -7,22 +7,26 @@ final class DistributionTrustPresenterTests: XCTestCase {
       try metadata(signing: "ad-hoc")
     )
 
-    XCTAssertEqual(summary.title, "Untrusted Ad-Hoc Build")
+    XCTAssertEqual(summary.title, "Manual Open Required")
+    XCTAssertTrue(summary.summary.contains("one extra macOS approval"))
     XCTAssertTrue(summary.detail.contains("Open Anyway"))
-    XCTAssertTrue(summary.detail.contains("model weights are not bundled"))
-    XCTAssertTrue(summary.detail.contains("no Pith account required"))
-    XCTAssertTrue(summary.detail.contains("local execution mode: ask-before-change"))
-    XCTAssertTrue(summary.detail.contains("package size budget"))
-    XCTAssertTrue(summary.detail.contains("app <= 250 MiB"))
-    XCTAssertTrue(summary.detail.contains("installer artifact <= 150 MiB"))
-    XCTAssertTrue(summary.detail.contains("process-only fallback"))
-    XCTAssertTrue(summary.detail.contains("daily-driver next action"))
-    XCTAssertTrue(summary.detail.contains("local service status"))
-    XCTAssertFalse(summary.detail.contains("runtime readiness"))
-    XCTAssertTrue(summary.detail.contains("Understand Project"))
-    XCTAssertTrue(summary.detail.contains("Pick Next Step"))
-    XCTAssertTrue(summary.detail.contains("short cowork prompt"))
-    XCTAssertTrue(summary.detail.contains("source: 0123456789ab"))
+    XCTAssertTrue(summary.detail.contains("setup continues in app"))
+    XCTAssertFalse(summary.detail.contains("package size budget"))
+    XCTAssertFalse(summary.detail.contains("source:"))
+    XCTAssertTrue(summary.advancedDetail.contains("model weights are not bundled"))
+    XCTAssertTrue(summary.advancedDetail.contains("no Pith account required"))
+    XCTAssertTrue(summary.advancedDetail.contains("local execution mode: ask-before-change"))
+    XCTAssertTrue(summary.advancedDetail.contains("package size budget"))
+    XCTAssertTrue(summary.advancedDetail.contains("app <= 250 MiB"))
+    XCTAssertTrue(summary.advancedDetail.contains("installer artifact <= 150 MiB"))
+    XCTAssertTrue(summary.advancedDetail.contains("process-only fallback"))
+    XCTAssertTrue(summary.advancedDetail.contains("daily-driver next action"))
+    XCTAssertTrue(summary.advancedDetail.contains("local service status"))
+    XCTAssertFalse(summary.advancedDetail.contains("runtime readiness"))
+    XCTAssertTrue(summary.advancedDetail.contains("Understand Project"))
+    XCTAssertTrue(summary.advancedDetail.contains("Pick Next Step"))
+    XCTAssertTrue(summary.advancedDetail.contains("short cowork prompt"))
+    XCTAssertTrue(summary.advancedDetail.contains("source: 0123456789ab"))
     XCTAssertTrue(summary.setupDetail?.contains("Control-click Pith.app") == true)
   }
 
@@ -31,18 +35,20 @@ final class DistributionTrustPresenterTests: XCTestCase {
       try metadata(signing: "developer-id", distributionTrust: "developer-id-signed-notarized")
     )
 
-    XCTAssertEqual(summary.title, "Trusted Installer")
-    XCTAssertTrue(summary.summary.contains("Developer ID signed and notarized"))
+    XCTAssertEqual(summary.title, "Verified Installer")
+    XCTAssertTrue(summary.summary.contains("Signed and notarized"))
     XCTAssertNil(summary.setupDetail)
     XCTAssertFalse(summary.detail.contains("Open Anyway"))
+    XCTAssertTrue(summary.advancedDetail.contains("Developer ID signed and notarized"))
   }
 
   func testDevelopmentFallbackNamesReleaseAssets() {
     let summary = DistributionTrustPresenter.summary(.development)
 
-    XCTAssertEqual(summary.title, "Development Build")
-    XCTAssertTrue(summary.detail.contains("README-FIRST.txt"))
-    XCTAssertTrue(summary.detail.contains("release manifest"))
+    XCTAssertEqual(summary.title, "Development Run")
+    XCTAssertTrue(summary.detail.contains("GitHub Release DMG"))
+    XCTAssertTrue(summary.advancedDetail.contains("README-FIRST.txt"))
+    XCTAssertTrue(summary.advancedDetail.contains("release manifest"))
   }
 
   func testManifestParsingKeepsPackageContract() throws {
