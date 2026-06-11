@@ -393,7 +393,8 @@ jobs:
           --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
-          printf '%s' "$release_json" > release-existing.json
+          gh release view "$RELEASE_TAG" --json databaseId,isDraft,tagName,name,assets > release-existing.json
+          existing_draft="$(python3 -c 'import json; print(str(json.load(open("release-existing.json"))["isDraft"]).lower())')"
           python3 scripts/release_publish_contract.py \\
             --mode preupload-existing-assets \\
             --tag "$RELEASE_TAG" \\
@@ -487,10 +488,7 @@ jobs:
       - name: Apply final GitHub Release visibility
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
-          release_id="$(
-            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
-              python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")'
-          )"
+          release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"
           test -n "$release_id"
           echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           gh api \\
@@ -1208,6 +1206,20 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "generic error annotations")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      release=VALID_RELEASE.replace(
+        '          release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"\n',
+        '          release_id="$(\n'
+        '            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |\n'
+        '              python3 -c \'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")\'\n'
+        '          )"\n',
+      ),
+    )
+    assert_issue(issue_messages(root), "gh release view")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

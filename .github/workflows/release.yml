@@ -397,13 +397,11 @@ jobs:
           release_title="Pith $RELEASE_TAG"
           release_exists="false"
           existing_draft=""
-          if release_json="$(
-            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
-              python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(json.dumps(match) if match else "")'
-          )" && [[ -n "$release_json" ]]; then
+          if gh release view "$RELEASE_TAG" \
+            --json databaseId,isDraft,tagName,name,assets \
+            > release-existing.json 2>/dev/null; then
             release_exists="true"
-            printf '%s' "$release_json" > release-existing.json
-            existing_draft="$(python3 -c 'import json, sys; print(str(json.loads(sys.argv[1])["draft"]).lower())' "$release_json")"
+            existing_draft="$(python3 -c 'import json; print(str(json.load(open("release-existing.json"))["isDraft"]).lower())')"
           fi
 
           python3 scripts/release_state.py \
@@ -505,11 +503,7 @@ jobs:
           trap 'echo "::error title=Release upload failed::Upload GitHub Release draft assets failed."' ERR
           echo "Upload GitHub Release draft assets started" >> release-progress.txt
           release_title="Pith $RELEASE_TAG"
-          release_json="$(
-            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
-              python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(json.dumps(match) if match else "")'
-          )"
-          if [[ -n "$release_json" ]]; then
+          if gh release view "$RELEASE_TAG" --json databaseId >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \
               --title "$release_title" \
               --notes-file release-notes.md
@@ -579,10 +573,7 @@ jobs:
           set -euo pipefail
           trap 'echo "::error title=Release visibility patch failed::Apply final GitHub Release visibility failed."' ERR
           echo "Apply final GitHub Release visibility started" >> release-progress.txt
-          release_id="$(
-            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
-              python3 -c 'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")'
-          )"
+          release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"
           test -n "$release_id"
           echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           gh api \

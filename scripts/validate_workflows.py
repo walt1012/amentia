@@ -461,7 +461,9 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--json-output release-readiness.json',
     '--ci-run-url "$PITH_RELEASE_CI_RUN_URL"',
     'cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"',
-    'printf \'%s\' "$release_json" > release-existing.json',
+    'gh release view "$RELEASE_TAG"',
+    "--json databaseId,isDraft,tagName,name,assets",
+    'existing_draft="$(python3 -c \'import json; print(str(json.load(open("release-existing.json"))["isDraft"]).lower())\')"',
     '--mode preupload-existing-assets',
     '--release-json release-existing.json',
     "Upload GitHub Release draft assets",
@@ -516,6 +518,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Upload release rehearsal summary\n        if: always() && env.RELEASE_DRY_RUN != 'true'",
     "-X PATCH",
     "--input release-state.json",
+    'release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"',
   ):
     if term not in release_block:
       issues.append(
@@ -548,6 +551,13 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     release_block,
     "Validate final GitHub Release",
   )
+  if "releases?per_page=100" in release_block:
+    issues.append(
+      WorkflowIssue(
+        RELEASE_WORKFLOW,
+        "release workflow must use gh release view instead of REST release list matching",
+      )
+    )
   if "$SOURCE_COMMIT" in final_validation_step:
     issues.append(
       WorkflowIssue(
