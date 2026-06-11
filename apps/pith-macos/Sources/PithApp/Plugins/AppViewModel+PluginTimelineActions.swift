@@ -28,7 +28,7 @@ extension AppViewModel {
     guard canEnablePlugin(from: entry),
           let pluginID = pluginID(from: entry)
     else {
-      runtimeDetail = "Plugin enable action is unavailable."
+      runtimeDetail = "Connector enable action is unavailable."
       return
     }
 
@@ -39,7 +39,7 @@ extension AppViewModel {
     guard canAuthorizePluginConnector(from: entry),
           let connectorID = pluginConnectorID(from: entry)
     else {
-      runtimeDetail = "Plugin connector authorization is unavailable."
+      runtimeDetail = "Connector authorization is unavailable."
       return
     }
 
@@ -61,13 +61,13 @@ extension AppViewModel {
     guard canRevealPluginSource(from: entry),
           let sourcePath = pluginSourcePath(from: entry)
     else {
-      runtimeDetail = "Plugin source path is unavailable."
+      runtimeDetail = "Connector source path is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       sourcePath,
-      successDetail: "Revealed plugin source."
+      successDetail: "Revealed connector source."
     )
   }
 
@@ -88,20 +88,20 @@ extension AppViewModel {
 
     runtimeDetail = FileRevealService.revealFilePath(
       plugin.manifestPath,
-      successDetail: "Revealed \(plugin.displayName) configuration file."
+      successDetail: "Revealed \(plugin.displayName) setup file."
     )
   }
 
   func revealPluginSourcePath(_ sourcePath: String) {
     let sourcePath = sourcePath.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !sourcePath.isEmpty else {
-      runtimeDetail = "Plugin source path is unavailable."
+      runtimeDetail = "Connector source path is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       sourcePath,
-      successDetail: "Revealed plugin source."
+      successDetail: "Revealed connector source."
     )
   }
 

@@ -184,9 +184,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let optionalPluginChecks = readyChecks() + [
       RuntimeReadinessCheckSummary(
         id: "plugins",
-        title: "Plugins",
+        title: "Connectors",
         status: "optional",
-        detail: "No plugin command capabilities are required."
+        detail: "No connector action capabilities are required."
       )
     ]
 
@@ -255,13 +255,13 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let step = ReadinessStepSummary(
       id: "tools",
       label: "Actions",
-      detail: "Plugins Setup",
+      detail: "Connectors Setup",
       tone: .warning
     )
     let snapshot = readinessActionSnapshot(checks: [
       RuntimeReadinessCheckSummary(
         id: "plugins",
-        title: "Plugins",
+        title: "Connectors",
         status: "setup_required",
         detail: "Enable command capability"
       )

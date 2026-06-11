@@ -27,20 +27,20 @@ struct LocalDataResetSummary: Equatable {
 
 enum LocalDataSettingsPresenter {
   static let deleteBlockedDetail =
-    "Finish active local work, model downloads, model checks, or plugin operations before deleting local data."
+    "Finish active local work, model downloads, model checks, or connector operations before deleting local data."
 
   static func summary(_ snapshot: LocalDataSettingsSnapshot) -> LocalDataSettingsSummary {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
-        "Pith local data includes models, sessions, plugins, download recovery data, and preferences. Workspaces are never deleted here.",
+        "Pith local data includes models, sessions, connectors, download recovery data, and preferences. Workspaces are never deleted here.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
       localDataPath: snapshot.localDataPath,
       revealButtonTitle: "Show Local Data",
       deleteButtonTitle: "Delete Local Data...",
       confirmationTitle: "Delete Pith Local Data?",
       confirmationMessage:
-        "Pith will remove its downloaded models, sessions, plugins, download recovery data, and preferences. Your workspaces and repositories will not be deleted.",
+        "Pith will remove its downloaded models, sessions, connectors, download recovery data, and preferences. Your workspaces and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
@@ -50,7 +50,7 @@ enum LocalDataSettingsPresenter {
       runtimeDetail: "Deleted Pith local data. Restart the local service to set up again.",
       timelineTitle: "Local Data Deleted",
       timelineBody:
-        "Pith removed downloaded models, sessions, plugins, download recovery data, and known preferences. Workspaces on disk were not deleted.",
+        "Pith removed downloaded models, sessions, connectors, download recovery data, and known preferences. Workspaces on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
         "recreatedDirectoryCount": "\(result.recreatedDirectoryCount)",
@@ -63,7 +63,7 @@ enum LocalDataSettingsPresenter {
       return "Downloaded models use \(LocalModelByteFormatter.string(downloadedModelBytes)) on this Mac."
     }
 
-    return "No downloaded model files yet. Sessions, plugins, and preferences stay local."
+    return "No downloaded model files yet. Sessions, connectors, and preferences stay local."
   }
 
   private static func blockedDetail(canDeleteLocalData: Bool) -> String? {

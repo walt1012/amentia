@@ -311,7 +311,7 @@ enum TimelineContextReceiptPresenter {
     case "requiresApproval":
       return "requires approval"
     case "requiresPluginPermission":
-      return "requires enabled plugin permission"
+      return "requires enabled connector permission"
     case "readOnlyAllowed":
       return "read-only allowed"
     default:
@@ -515,7 +515,7 @@ enum TimelineContextReceiptPresenter {
     case "requiresApproval":
       return "needs approval"
     case "requiresPluginPermission":
-      return "needs plugin permission"
+      return "needs connector permission"
     case "readOnlyAllowed":
       return "read-only"
     default:

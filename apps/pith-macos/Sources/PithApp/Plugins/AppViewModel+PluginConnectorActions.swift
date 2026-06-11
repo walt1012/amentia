@@ -23,7 +23,7 @@ extension AppViewModel {
       detail: "Authorizing connector..."
     ) else {
       runtimeDetail = pluginConnectorAuthorizeDisabledReason(connectorID: connectorID)
-        ?? "Finish the current plugin operation before authorizing a connector."
+        ?? "Finish the current connector operation before authorizing a connector."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -45,7 +45,7 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorAuthorized(connector),
-          detail: "Connector authorized. Plugin commands were refreshed.",
+          detail: "Connector authorized. Actions were refreshed.",
           preview: "Connector authorized"
         )
       } catch {
@@ -76,7 +76,7 @@ extension AppViewModel {
       detail: "Clearing connector credential..."
     ) else {
       runtimeDetail = pluginConnectorClearDisabledReason(connectorID: connectorID)
-        ?? "Finish the current plugin operation before clearing a connector credential."
+        ?? "Finish the current connector operation before clearing a connector credential."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -96,7 +96,7 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorCredentialCleared(connector),
-          detail: "Connector credential cleared. Plugin commands were refreshed.",
+          detail: "Connector credential cleared. Actions were refreshed.",
           preview: "Connector credential cleared"
         )
       } catch {

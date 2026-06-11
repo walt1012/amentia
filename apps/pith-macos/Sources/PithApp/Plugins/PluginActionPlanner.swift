@@ -57,7 +57,7 @@ enum PluginActionPlanner {
       return "Local service is not ready."
     }
     if !connector.enabled {
-      return "Connector plugin is disabled."
+      return "Connector is disabled."
     }
     if !connector.authRequired {
       return "Connector does not require authorization."
@@ -69,7 +69,7 @@ enum PluginActionPlanner {
       return "Finish or cancel the active task first."
     }
     if snapshot.hasLifecycleOperation {
-      return "Finish the current plugin operation first."
+      return "Finish the current connector operation first."
     }
 
     return nil
@@ -100,7 +100,7 @@ enum PluginActionPlanner {
       return "Finish or cancel the active task first."
     }
     if snapshot.hasLifecycleOperation {
-      return "Finish the current plugin operation first."
+      return "Finish the current connector operation first."
     }
 
     return nil
@@ -207,7 +207,7 @@ enum PluginActionPlanner {
       return "Finish or cancel the active task first."
     }
     if snapshot.hasLifecycleOperation {
-      return "Finish the current plugin operation first."
+      return "Finish the current connector operation first."
     }
 
     return nil

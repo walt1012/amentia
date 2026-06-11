@@ -47,7 +47,7 @@ enum PluginCommandInputDialogPresenter {
 
     var prompt = override
       ?? fieldDescription
-      ?? "Pass a short text input to this plugin command."
+      ?? "Pass a short text input to this connector action."
     if isNotionPublishCommand(command) {
       prompt += "\n\nInput: a valid parentPageId, Notion page URL, or parent alias, with optional title and body. You can paste only the parent page URL to use the default title. The parent page must be shared with the Notion integration before publishing. Pith still requests approval before the remote write."
     }

@@ -16,7 +16,7 @@ enum MemoryPresenter {
 
   static func detailSummary(_ snapshot: MemorySnapshot) -> String {
     guard let status = snapshot.status else {
-      return "Pith uses built-in memory instead of a memory plugin. Workspace notes are stored locally by the runtime."
+      return "Pith uses built-in local memory. Workspace notes stay on this Mac."
     }
 
     if snapshot.notes.isEmpty {

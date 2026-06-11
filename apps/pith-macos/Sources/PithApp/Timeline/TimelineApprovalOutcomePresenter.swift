@@ -38,7 +38,7 @@ enum TimelineApprovalOutcomePresenter {
     case "run_shell":
       return "the approved shell command"
     case "run_plugin_command":
-      return attributes["commandId"].map { "`\($0)`" } ?? "the approved plugin command"
+      return attributes["commandId"].map { "`\($0)`" } ?? "the approved connector action"
     default:
       return attributes["action"] ?? "the approved action"
     }

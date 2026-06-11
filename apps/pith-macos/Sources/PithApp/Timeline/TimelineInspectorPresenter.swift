@@ -76,8 +76,8 @@ enum TimelineInspectorPresenter {
 
     var lines: [String] = []
     if let pluginID = entry.attributes["pluginId"] {
-      let displayName = entry.attributes["pluginDisplayName"] ?? "Plugin"
-      lines.append("Plugin: \(displayName) | \(pluginID)")
+      let displayName = entry.attributes["pluginDisplayName"] ?? "Connector"
+      lines.append("Connector: \(displayName) | \(pluginID)")
     }
 
     if let commandID = entry.attributes["commandId"] {
@@ -310,8 +310,8 @@ enum TimelineInspectorPresenter {
       return
     }
 
-    let operation = entry.attributes["pluginLifecycleOperation"] ?? "plugin"
-    lines.append("Lifecycle: \(operation) | \(status)")
+    let operation = entry.attributes["pluginLifecycleOperation"] ?? "connector"
+    lines.append("Connector lifecycle: \(operation) | \(status)")
     if let blocker = entry.attributes["lifecycleBlocker"] {
       lines.append("Lifecycle blocker: \(blocker)")
     }
@@ -350,7 +350,7 @@ enum TimelineInspectorPresenter {
       lines.append("Runner path: \(resolvedEntrypoint)")
     }
     if let pluginRoot = entry.attributes["pluginRunnerPluginRoot"] {
-      lines.append("Plugin root: \(pluginRoot)")
+      lines.append("Connector root: \(pluginRoot)")
     }
   }
 
@@ -369,11 +369,11 @@ enum TimelineInspectorPresenter {
     let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
     let failureKind = entry.attributes["pluginRunnerFailureKind"] ?? "unknown"
     lines.append(
-      "Plugin runner: \(failureKind) | \(reason) | status \(status) | exit \(code)"
+      "Connector runner: \(failureKind) | \(reason) | status \(status) | exit \(code)"
     )
 
     if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
-      lines.append("Plugin runner error: \(errorCode)")
+      lines.append("Connector runner error: \(errorCode)")
     }
     if let recoveryHint = entry.attributes["pluginRunnerRecoveryHint"] {
       lines.append("Recovery: \(recoveryHint)")

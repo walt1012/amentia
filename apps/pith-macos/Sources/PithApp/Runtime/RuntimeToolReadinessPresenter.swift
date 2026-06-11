@@ -70,7 +70,7 @@ enum RuntimeToolReadinessPresenter {
     case "nativeSandbox":
       return "Sandbox"
     case "plugins":
-      return "Plugins"
+      return "Connectors"
     default:
       return check.title
     }
@@ -85,7 +85,7 @@ enum RuntimeToolReadinessPresenter {
     case "nativeSandbox":
       return "Native sandbox"
     case "plugins":
-      return "Plugins"
+      return "Connectors"
     default:
       return check.title
     }

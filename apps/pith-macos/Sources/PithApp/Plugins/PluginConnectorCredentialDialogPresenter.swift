@@ -74,7 +74,7 @@ enum PluginConnectorCredentialDialogPresenter {
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
     var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
       + "\(scopes) Credential store: \(store). "
-      + "Secrets are passed to plugin runners through per-run environment bindings. "
+      + "Secrets are passed only to the local connector runner for each approved run. "
     if requiresLocalSecret(connector) {
       prompt += "A local token or API key is required for this connector."
     } else {
@@ -143,7 +143,7 @@ enum PluginConnectorCredentialDialogPresenter {
     }
 
     return "Paste the local token or API key before authorizing this connector. "
-      + "Pith will keep it local and pass it to plugin runners through per-run environment bindings."
+      + "Pith will keep it local and pass it only to the local connector runner for each approved run."
   }
 
   private static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {

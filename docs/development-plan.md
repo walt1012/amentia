@@ -144,30 +144,31 @@ Evidence:
 Goal: make the shipped app feel intentional, maintainable, and worthy of daily
 use before expanding the platform surface.
 
-Finish now:
+Scope now:
 
-- Remove dead code, unused flows, stale scripts, and release-era scaffolding
-  that no longer protects the product.
-- Refactor for architecture clarity: preserve cohesive modules, merge accidental
-  splits, and keep domain boundaries obvious.
-- Audit the macOS app for clean human UI: no confusing internal wording, no
-  awkward layout, no unnecessary controls in the primary path, and no fixed dark
-  appearance.
-- Keep timeline proof language human-readable; protocol fields, hashes, and raw
-  counters belong in deeper details, not the primary cowork path.
-- Keep connector setup copy human-readable; reveal setup files only on demand,
-  and keep diagnostics/manifest wording out of the normal user path.
-- Strengthen Hermes-style execution quality where it fits Pith: every long task
-  should be observable, cancellable, resumable when appropriate, and tied to a
-  user-visible receipt.
-- Keep CI fast and disciplined: workflows orchestrate, shared scripts own
-  repeated build logic, and transient network fetches must retry before failing.
-- Keep memory and skill-like guidance bounded and curated; avoid pseudo-RAG or
-  unbounded prompt stuffing.
-- Design a refined app logo that is simple, distinctive, premium, and tied to
-  Pith's local cowork identity.
-- Ship the logo as a native macOS icon set with clean small-size readability,
-  not just a large marketing image.
+- Clean the installed app experience: human UI copy, clear first-run model
+  setup, light-mode/system appearance support, and no internal wording in the
+  normal cowork path.
+- Keep proof useful but quiet: receipts are human-readable first; protocol
+  fields, raw counters, hashes, paths, and setup files stay in technical detail
+  surfaces or reveal-on-demand actions.
+- Preserve architecture clarity: remove dead code and stale release scaffolding,
+  merge accidental splits when they obscure ownership, and avoid cosmetic moves.
+- Keep execution reliable: long work is observable, cancellable, resumable when
+  appropriate, receipt-backed, and CI-verified through shared scripts instead of
+  repeated workflow shell blocks.
+- Finish product identity with a refined native macOS icon set that remains
+  legible at small sizes.
+
+Exit criteria:
+
+- A fresh install can download a model, run the cowork loop, use Web Search,
+  manage sessions, and recover or revert approved work without expert context.
+- User-facing connector surfaces say Connectors and Actions; `plugin` remains
+  an implementation/protocol term only.
+- CI stays fast, split, strict, and green for the release package path.
+- The app has a polished icon and no obvious stale, unused, or confusing UI
+  surfaces left in the primary path.
 
 ## M14: Connector and Skill Platform
 

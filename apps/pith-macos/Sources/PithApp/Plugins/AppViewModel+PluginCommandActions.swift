@@ -20,7 +20,7 @@ extension AppViewModel {
     informativeText: String?
   ) {
     guard let command = pluginCommands.first(where: { $0.id == commandID }) else {
-      runtimeDetail = "Plugin command is not loaded."
+      runtimeDetail = "Connector action is not loaded."
       return
     }
     let snapshot = pluginActionSnapshot()
@@ -48,11 +48,11 @@ extension AppViewModel {
       initialValue: initialInput,
       informativeText: informativeText
     ) else {
-      runtimeDetail = "Plugin command input was cancelled."
+      runtimeDetail = "Connector action input was cancelled."
       return
     }
     if command.requiresPlainInput && input.isEmpty {
-      runtimeDetail = "Plugin command input is required."
+      runtimeDetail = "Connector action input is required."
       return
     }
 
@@ -103,7 +103,7 @@ extension AppViewModel {
     guard canRunPluginCommandWithInput(from: entry),
           let commandID = pluginRetryCommandID(from: entry)
     else {
-      runtimeDetail = "Plugin command input run is unavailable."
+      runtimeDetail = "Connector action input is unavailable."
       return
     }
 
@@ -118,7 +118,7 @@ extension AppViewModel {
     guard canRetryPluginCommand(from: entry),
           let commandID = pluginRetryCommandID(from: entry)
     else {
-      runtimeDetail = "Plugin command retry is unavailable."
+      runtimeDetail = "Connector action retry is unavailable."
       return
     }
 
@@ -154,7 +154,7 @@ extension AppViewModel {
     guard canRunPluginFollowUp(from: entry),
           let commandID = pluginFollowUpCommandID(from: entry)
     else {
-      runtimeDetail = "Plugin follow-up is unavailable."
+      runtimeDetail = "Connector follow-up is unavailable."
       return
     }
 

@@ -3,27 +3,27 @@ import Foundation
 enum TimelineEventPresenter {
   static let generatingLocalResponseDetail = "Generating local response..."
   static let pendingTurnCancelledDetail = "Local execution request cancelled."
-  static let runningPluginCommandDetail = "Running local plugin command..."
+  static let runningPluginCommandDetail = "Running connector action..."
   static let pluginCommandNeedsExecutionContractDetail =
-    "Plugin command needs a supported execution contract before it can run."
+    "Connector action needs a supported local execution contract before it can run."
   static let pluginCommandNeedsConnectorAuthDetail =
-    "Authorize the required connector before running this plugin command."
-  static let pendingPluginCommandCancelledDetail = "Local plugin command cancelled."
-  static let pluginLifecycleCancelledDetail = "Plugin lifecycle operation cancelled."
+    "Authorize the required connector before running this action."
+  static let pendingPluginCommandCancelledDetail = "Connector action cancelled."
+  static let pluginLifecycleCancelledDetail = "Connector operation cancelled."
   static let pluginCommandBlockedDefaultDetail =
-    "Local plugin command is blocked. Inspect the blocked item for the repair hint."
+    "Connector action needs attention. Select the item for the repair hint."
   static let pluginCommandFailedDetail =
-    "Local plugin command failed. Inspect the failed runner item for logs."
+    "Connector action failed. Select the failed item for details."
   static let cancellingTurnDetail = "Cancelling local execution..."
-  static let cancellingPluginCommandDetail = "Cancelling local plugin command..."
+  static let cancellingPluginCommandDetail = "Cancelling connector action..."
 
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
-  static let cancelledPluginCommandPreview = "Cancelled plugin command"
-  static let cancelledPluginLifecyclePreview = "Plugin operation cancelled"
-  static let cancellingPluginCommandPreview = "Cancelling plugin command"
-  static let blockedPluginCommandPreview = "Plugin command blocked"
-  static let failedPluginCommandPreview = "Plugin command failed"
+  static let cancelledPluginCommandPreview = "Cancelled connector action"
+  static let cancelledPluginLifecyclePreview = "Connector operation cancelled"
+  static let cancellingPluginCommandPreview = "Cancelling connector action"
+  static let blockedPluginCommandPreview = "Connector action needs attention"
+  static let failedPluginCommandPreview = "Connector action failed"
 
   static func pluginCommandFailureDetail(
     from items: [RuntimeBridge.RuntimeTimelineItemResult]
@@ -37,12 +37,12 @@ enum TimelineEventPresenter {
     if let recoveryHint = failedItem.attributes["pluginRunnerRecoveryHint"],
        !recoveryHint.isEmpty
     {
-      return "Plugin command failed. \(recoveryHint)"
+      return "Connector action failed. \(recoveryHint)"
     }
     if let failureKind = failedItem.attributes["pluginRunnerFailureKind"],
        !failureKind.isEmpty
     {
-      return "Plugin command failed: \(failureKind). Select the failed item for details."
+      return "Connector action failed: \(failureKind). Select the failed item for details."
     }
 
     return pluginCommandFailedDetail
@@ -60,12 +60,12 @@ enum TimelineEventPresenter {
     if let repairHint = blockedItem.attributes["runRepairHint"],
        !repairHint.isEmpty
     {
-      return "Plugin command blocked. \(repairHint)"
+      return "Connector action needs attention. \(repairHint)"
     }
     if let blocker = blockedItem.attributes["runBlocker"],
        !blocker.isEmpty
     {
-      return "Plugin command blocked: \(blocker)"
+      return "Connector action needs attention: \(blocker)"
     }
 
     return pluginCommandBlockedDefaultDetail
@@ -249,7 +249,7 @@ enum TimelineEventPresenter {
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
 
     return TimelineEntryFactory.warning(
-      title: "Plugin Install Preview Failed",
+      title: "Connector Preview Failed",
       body: body,
       attributes: pluginInstallFailureAttributes(
         error,
@@ -261,7 +261,7 @@ enum TimelineEventPresenter {
   }
 
   static func pluginInstallBlocked(preview: PluginInstallPreview) -> TimelineEntry {
-    let blocker = preview.installBlocker ?? "Plugin cannot be installed yet."
+    let blocker = preview.installBlocker ?? "Connector cannot be installed yet."
     let body = [
       blocker,
       "Surface: \(preview.surfaceSummary.summary)",
@@ -273,7 +273,7 @@ enum TimelineEventPresenter {
     .joined(separator: "\n\n")
 
     return TimelineEntryFactory.warning(
-      title: "Plugin Install Blocked",
+      title: "Connector Install Needs Attention",
       body: body,
       attributes: [
         "pluginId": preview.pluginID,
@@ -315,8 +315,8 @@ enum TimelineEventPresenter {
 
   static func pluginLifecycleCancelled() -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Plugin Operation Cancelled",
-      body: "The current plugin lifecycle operation was cancelled before it finished.",
+      title: "Connector Operation Cancelled",
+      body: "The current connector operation was cancelled before it finished.",
       attributes: [
         "pluginLifecycleOperation": "lifecycle",
         "pluginLifecycleStatus": "cancelled",
@@ -329,9 +329,9 @@ enum TimelineEventPresenter {
     preview: PluginInstallPreview
   ) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Plugin Installed",
+      title: "Connector Installed",
       body: [
-        "\(plugin.displayName) is now available in the local plugin manager.",
+        "\(plugin.displayName) is now available in Connectors.",
         "Surface: \(preview.surfaceSummary.summary)",
         "Source: \(preview.sourcePath)",
         "Installed To: \(preview.installPath)",
@@ -357,7 +357,7 @@ enum TimelineEventPresenter {
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
 
     return TimelineEntryFactory.warning(
-      title: "Plugin Install Failed",
+      title: "Connector Install Failed",
       body: body,
       attributes: pluginInstallFailureAttributes(
         error,
@@ -373,7 +373,7 @@ enum TimelineEventPresenter {
     enabled: Bool
   ) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: enabled ? "Plugin Enabled" : "Plugin Disabled",
+      title: enabled ? "Connector Enabled" : "Connector Disabled",
       body: "\(plugin.displayName) is now \(enabled ? "enabled" : "disabled").",
       attributes: [
         "pluginId": plugin.id,
@@ -384,7 +384,7 @@ enum TimelineEventPresenter {
 
   static func pluginUpdateFailed(pluginID: String, enabled: Bool, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Plugin Update Failed",
+      title: "Connector Update Failed",
       body: error.localizedDescription,
       attributes: pluginLifecycleFailureAttributes(
         error,
@@ -397,9 +397,9 @@ enum TimelineEventPresenter {
 
   static func pluginRemoved(_ plugin: RuntimeBridge.RuntimePluginRemoval) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Plugin Removed",
+      title: "Connector Removed",
       body:
-        "\(plugin.displayName) was removed from the local plugin catalog.\nRemoved Path: \(plugin.removedPath)",
+        "\(plugin.displayName) was removed from Connectors.\nRemoved Path: \(plugin.removedPath)",
       attributes: [
         "pluginId": plugin.pluginID,
         "removedPath": plugin.removedPath,
@@ -409,7 +409,7 @@ enum TimelineEventPresenter {
 
   static func pluginRemovalFailed(pluginID: String, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Plugin Removal Failed",
+      title: "Connector Removal Failed",
       body: error.localizedDescription,
       attributes: pluginLifecycleFailureAttributes(
         error,
@@ -483,7 +483,7 @@ enum TimelineEventPresenter {
     detail: String?,
     input: String?
   ) -> TimelineEntry {
-    let blocker = detail ?? command.runBlocker ?? "Plugin command is not ready."
+    let blocker = detail ?? command.runBlocker ?? "Connector action is not ready."
     let repair = command.runRepairHint?.trimmingCharacters(in: .whitespacesAndNewlines)
     let body = repair?.isEmpty == false
       ? "\(blocker)\n\nRepair Hint: \(repair ?? "")"
@@ -521,7 +521,7 @@ enum TimelineEventPresenter {
     }
 
     return TimelineEntryFactory.warning(
-      title: "Plugin Command Blocked",
+      title: "Connector Action Needs Attention",
       body: body,
       attributes: attributes
     )
@@ -529,8 +529,8 @@ enum TimelineEventPresenter {
 
   static func pluginCommandCancelled() -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Plugin Command Cancelled",
-      body: "The pending local plugin command was cancelled before streaming started.",
+      title: "Connector Action Cancelled",
+      body: "The pending connector action was cancelled before streaming started.",
       attributes: [:]
     )
   }
@@ -547,7 +547,7 @@ enum TimelineEventPresenter {
     }
 
     return TimelineEntryFactory.warning(
-      title: isBlocked ? "Plugin Command Blocked" : "Plugin Command Failed",
+      title: isBlocked ? "Connector Action Needs Attention" : "Connector Action Failed",
       body: error.localizedDescription,
       attributes: attributes
     )

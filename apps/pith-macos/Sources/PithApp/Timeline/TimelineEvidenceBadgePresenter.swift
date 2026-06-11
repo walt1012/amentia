@@ -51,7 +51,7 @@ enum TimelineEvidenceBadgePresenter {
     case "requiresApproval":
       return TimelineEvidenceBadgeSummary(label: "Approval Required", tone: .warning)
     case "requiresPluginPermission":
-      return TimelineEvidenceBadgeSummary(label: "Plugin Permission", tone: .active)
+      return TimelineEvidenceBadgeSummary(label: "Connector Permission", tone: .active)
     default:
       return TimelineEvidenceBadgeSummary(label: "Ask Mode", tone: .ready)
     }

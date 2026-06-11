@@ -141,7 +141,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     XCTAssertTrue(summary?.contains("Boundary: network") == true)
-    XCTAssertTrue(summary?.contains("Approval: requires enabled plugin permission") == true)
+    XCTAssertTrue(summary?.contains("Approval: requires enabled connector permission") == true)
     XCTAssertTrue(summary?.contains("Reason: freshPublicInformation") == true)
   }
 
@@ -267,13 +267,13 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
         id: "entry-1",
         kind: .warning,
-        title: "Plugin Permission Required",
+        title: "Connector Permission Required",
         body: "Pith could not search the web.",
         attributes: [
           "permissionGate": "requiresPluginPermission",
           "requiredPermission": "tool:web_search",
           "requiredPermissionLabel": "Web Search",
-          "permissionRecoveryHint": "Enable the bundled Web Search plugin.",
+          "permissionRecoveryHint": "Enable the bundled Web Search connector.",
         ]
       ))
     )
@@ -282,7 +282,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       summary?.contains("Permission gate: requiresPluginPermission | requires Web Search") == true
     )
     XCTAssertTrue(
-      summary?.contains("Permission recovery: Enable the bundled Web Search plugin.") == true
+      summary?.contains("Permission recovery: Enable the bundled Web Search connector.") == true
     )
     XCTAssertFalse(summary?.contains("requires tool:web_search") == true)
   }
@@ -305,7 +305,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     let entry = TimelineEntry(
       id: "entry-1",
       kind: .warning,
-      title: "Plugin Permission Required",
+      title: "Connector Permission Required",
       body: "Pith could not search the web.",
       attributes: [
         "permissionGate": "requiresPluginPermission",
@@ -385,7 +385,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(
       sections[1].body.contains("Why Pith searched: fresh public information was useful")
     )
-    XCTAssertTrue(sections[2].body.contains("Approval: requires enabled plugin permission"))
+    XCTAssertTrue(sections[2].body.contains("Approval: requires enabled connector permission"))
     XCTAssertTrue(sections[3].body.contains("Titles: Project rule"))
     XCTAssertTrue(sections[3].body.contains("kept 1 of 3 relevant notes"))
     XCTAssertFalse(sections[3].body.contains("Ranking scores"))
