@@ -37,6 +37,9 @@ define release, CI, package, model, or workflow behavior.
 - Tag-push and ordinary manual release runs default to dry-run behavior.
 - Without Developer ID credentials, a visible ad-hoc prerelease requires a
   validated fresh-Mac manual acceptance receipt.
+- Maintainers should use `docs/release-acceptance.md` and the release
+  acceptance issue template to create the receipt URL used by the release
+  workflow.
 - Do not publish model weights, package-manager payloads, stale assets, or extra
   archives on the GitHub Release page.
 

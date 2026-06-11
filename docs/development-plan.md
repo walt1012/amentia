@@ -130,6 +130,8 @@ Finish now:
 - Keep the GitHub Release page concise; detailed install, Gatekeeper,
   verification, and package metadata belong in `README-FIRST.txt` and the
   release manifest.
+- Use `docs/release-acceptance.md` and the release acceptance issue template as
+  the maintainer path for recording the manual acceptance URL.
 
 Exit when:
 

@@ -64,6 +64,8 @@ The current release gate is not another feature surface. It is the installable
 GitHub Release path: produce the DMG, checksum, `README-FIRST.txt`, and release
 manifest; verify the downloaded assets; complete a fresh-Mac acceptance pass;
 then publish the visible ad-hoc prerelease only after that evidence exists.
+Maintainer release acceptance is documented in
+[docs/release-acceptance.md](docs/release-acceptance.md).
 
 Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
 
