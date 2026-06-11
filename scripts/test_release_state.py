@@ -451,6 +451,11 @@ def assert_main_writes_release_summary() -> None:
       raise AssertionError("release summary should include dry-run next actions")
     if "PITH_RELEASE_STATE_DRAFT=false" not in env_file.read_text(encoding="utf-8"):
       raise AssertionError("release env should record final draft state")
+    release_state = json.loads(state_file.read_text(encoding="utf-8"))
+    if release_state.get("tag_name") != "v0.1.0":
+      raise AssertionError("release state payload should preserve the release tag")
+    if release_state.get("target_commitish") != "0123456789abcdef0123456789abcdef01234567":
+      raise AssertionError("release state payload should preserve the target commit")
     plan = json.loads(plan_file.read_text(encoding="utf-8"))
     if plan["workflowMode"] != "dry-run":
       raise AssertionError("release plan JSON should record workflow mode")

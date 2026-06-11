@@ -405,6 +405,8 @@ def main() -> int:
   Path(args.state_output).write_text(
     json.dumps(
       {
+        "tag_name": args.tag,
+        "target_commitish": args.source_commit,
         "name": args.title,
         "body": release_body(
           notes,
