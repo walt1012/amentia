@@ -13,7 +13,7 @@ pub(super) fn web_search_check(
     "limited"
   };
   let detail = if permission_sources.is_empty() {
-    "Enable the Web Search plugin to grant Web Search permission.".to_string()
+    "Enable Web Search in Connectors to allow current-information lookup.".to_string()
   } else {
     format!(
       "{} Permission granted by {}.",
@@ -48,7 +48,7 @@ mod tests {
     let check = web_search_check(&status(true), &[]);
 
     assert_eq!(check.status, "setup_required");
-    assert!(check.detail.contains("Enable the Web Search plugin"));
+    assert!(check.detail.contains("Enable Web Search in Connectors"));
   }
 
   #[test]

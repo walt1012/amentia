@@ -160,7 +160,7 @@ fn runtime_readiness_web_search_requires_enabled_network_plugin() {
   assert!(web_search["detail"]
     .as_str()
     .expect("detail")
-    .contains("Enable the Web Search plugin"));
+    .contains("Enable Web Search in Connectors"));
   assert_eq!(result["metrics"]["webSearchPermissionGranted"], "false");
   assert_eq!(result["metrics"]["webSearchPermissionSources"], "");
 }

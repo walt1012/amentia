@@ -37,9 +37,9 @@ pub(super) fn execution_control_check(
 pub(super) fn bounded_runtime_check() -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "boundedRuntime".to_string(),
-    title: "Bounded Runtime".to_string(),
+    title: "Bounded Local Work".to_string(),
     status: "ready".to_string(),
-    detail: "Shell, llama.cpp, web search, git helpers, and plugin runners are bounded."
+    detail: "Shell, llama.cpp, web search, git helpers, and connector actions are bounded."
       .to_string(),
   }
 }
@@ -88,7 +88,7 @@ fn execution_control_detail(
   }
   if running_plugin_command_count > 0 {
     return format!(
-      "{running_plugin_command_count} plugin command execution(s) are active and cancellable."
+      "{running_plugin_command_count} connector action execution(s) are active and cancellable."
     );
   }
   if running_workspace_search_count > 0 {

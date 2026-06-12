@@ -1434,7 +1434,7 @@ printf '{"content":"ok"}\n'
   assert!(commands[0]["runBlocker"]
     .as_str()
     .expect("run blocker")
-    .contains("connector-backed plugin command"));
+    .contains("connector action"));
 }
 
 #[test]

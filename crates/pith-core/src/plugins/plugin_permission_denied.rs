@@ -32,7 +32,7 @@ pub(crate) fn build_permission_denied_items(
   vec![
     TimelineItem {
       kind: "warning".to_string(),
-      title: "Plugin Permission Required".to_string(),
+      title: "Connector Permission Required".to_string(),
       content: format!(
         "Pith could not {blocked_action}{action_scope} because {permission_label} is not enabled."
       ),
@@ -63,13 +63,13 @@ fn permission_recovery_hint(permission: &str, blocked_action: &str, granted_by: 
   match permission {
     "tool:web_search" => {
       concat!(
-        "Enable the bundled Web Search plugin from the readiness chip or ",
-        "Plugin Manager Access, then retry the request."
+        "Enable Web Search from the readiness chip or Connectors Access, ",
+        "then retry the request."
       )
       .to_string()
     }
     _ => format!(
-      "Enable a plugin that grants `{permission}` before asking Pith to {blocked_action}. Currently granted by: {granted_by}."
+      "Enable a connector that grants `{permission}` before asking Pith to {blocked_action}. Currently granted by: {granted_by}."
     ),
   }
 }
@@ -127,7 +127,7 @@ mod tests {
     let attributes = items[0].attributes.as_ref().expect("attributes");
 
     assert!(items[0].content.contains("Web Search is not enabled"));
-    assert!(items[1].content.contains("bundled Web Search plugin"));
+    assert!(items[1].content.contains("Enable Web Search"));
     assert_eq!(
       attributes.get("requiredPermissionLabel"),
       Some(&"Web Search".to_string())
@@ -135,6 +135,6 @@ mod tests {
     assert!(attributes
       .get("permissionRecoveryHint")
       .expect("recovery hint")
-      .contains("Plugin Manager Access"));
+      .contains("Connectors Access"));
   }
 }

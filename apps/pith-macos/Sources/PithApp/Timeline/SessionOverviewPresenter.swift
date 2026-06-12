@@ -12,7 +12,7 @@ enum SessionOverviewPresenter {
   }
 
   static func selectedThreadPreview(_ snapshot: SessionOverviewSnapshot) -> String {
-    snapshot.selectedThread?.preview ?? "Select a thread to inspect its runtime state."
+    snapshot.selectedThread?.preview ?? "Select a session to inspect its current state."
   }
 
   static func workspaceDisplayName(_ snapshot: SessionOverviewSnapshot) -> String {

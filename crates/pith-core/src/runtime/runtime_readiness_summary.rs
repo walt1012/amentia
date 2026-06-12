@@ -43,7 +43,7 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
       "Enable Web Search so Pith can retrieve current information when needed.".to_string()
     }
     "needs_approval" => {
-      format!("Runtime is waiting on {pending_approval_count} approval(s) before continuing.")
+      format!("Pith is waiting on {pending_approval_count} approval(s) before continuing.")
     }
     "running" => {
       let active_execution_count = active_turn_count
@@ -51,9 +51,9 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
         .saturating_add(running_approval_count)
         .saturating_add(running_plugin_command_count)
         .saturating_add(running_workspace_search_count);
-      format!("Runtime is running {active_execution_count} local execution(s).")
+      format!("Pith is running {active_execution_count} local execution(s).")
     }
-    "ready" if !first_request_sent => "Runtime ready for the first local request.".to_string(),
-    _ => "Runtime ready: model, workspace, tools, context, and plugins are controlled.".to_string(),
+    "ready" if !first_request_sent => "Pith is ready for the first local request.".to_string(),
+    _ => "Pith is ready: model, workspace, tools, context, and connectors are controlled.".to_string(),
   }
 }

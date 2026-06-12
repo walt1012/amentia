@@ -1290,7 +1290,7 @@ fn turn_start_routes_plugin_command_follow_up_through_loop() {
 fn bundled_builtin_plugin_commands_return_owned_results() {
   let mut context = RuntimeContext::new_in_memory();
   let workspace = create_temp_workspace("bundled-plugin-results");
-  fs::write(workspace.join("README.md"), "# Bundled Plugin Results\n").expect("write readme");
+  fs::write(workspace.join("README.md"), "# Bundled Connector Results\n").expect("write readme");
   replace_plugin_catalog(
     &mut context,
     vec![
@@ -2367,7 +2367,7 @@ fn approval_respond_returns_structured_plugin_command_readiness_error() {
   assert!(data["runBlocker"]
     .as_str()
     .expect("run blocker")
-    .contains("connector-backed plugin command"));
+    .contains("connector action"));
   assert!(data["runRepairHint"]
     .as_str()
     .expect("repair hint")
@@ -2533,7 +2533,7 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     "thread-1::notion-mcp::notion-mcp.create-task"
   );
   assert_eq!(items[1]["kind"], "approvalRequested");
-  assert_eq!(items[1]["title"], "Plugin Approval Requested");
+  assert_eq!(items[1]["title"], "Connector Action Approval Requested");
   assert_eq!(
     items[1]["attributes"]["pluginCommandRunId"],
     items[0]["attributes"]["pluginCommandRunId"]

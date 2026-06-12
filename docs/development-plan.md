@@ -97,6 +97,9 @@ Ready foundations:
   acceptance receipt.
 - CI is split by change area and remains the source of truth for Rust, Swift,
   package, policy, model, and release checks.
+- Primary readiness, approval, permission, and action-result copy now uses
+  Connectors and Actions instead of exposing plugin/runtime wording on the
+  normal user path.
 
 Current constraints:
 

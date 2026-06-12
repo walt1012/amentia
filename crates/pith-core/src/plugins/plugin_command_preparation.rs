@@ -43,7 +43,7 @@ pub fn prepare_plugin_command_run(
         -32004,
         "missingThread",
         "Thread not found",
-        "Select or create a thread, then run the plugin command again.",
+        "Select or create a thread, then run the connector action again.",
       )
       .into_response(request.id),
     );

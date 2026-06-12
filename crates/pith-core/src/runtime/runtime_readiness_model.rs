@@ -32,7 +32,7 @@ pub(super) fn context_check(context_window: &str, output_cap: &str) -> RuntimeRe
     title: "Context".to_string(),
     status: "ready".to_string(),
     detail: format!(
-      "Context packing uses a {context_window} token runtime window with {output_cap} output cap."
+      "Context packing uses a {context_window} token local model window with {output_cap} output cap."
     ),
   }
 }

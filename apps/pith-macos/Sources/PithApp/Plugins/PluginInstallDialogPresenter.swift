@@ -49,11 +49,11 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("does not contain pith-plugin.json") {
-      return "Choose a connector folder that contains pith-plugin.json, or select that setup file directly."
+      return "Choose a complete connector folder, or select its setup file directly."
     }
 
     if message.contains("must be a plugin directory or pith-plugin.json file") {
-      return "Choose the connector directory itself or its pith-plugin.json file."
+      return "Choose the connector directory itself or its setup file."
     }
 
     if message.contains("is already installed") {
@@ -69,7 +69,7 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("Select a plugin folder or a pith-plugin.json manifest") {
-      return "Point the installer at a connector directory or its pith-plugin.json setup file."
+      return "Point the installer at a connector directory or its setup file."
     }
 
     if message.contains("Plugin manifest name") {
@@ -79,7 +79,7 @@ enum PluginInstallDialogPresenter {
     if message.contains("correct format")
       || message.contains("is missing")
     {
-      return "Check that pith-plugin.json is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
+      return "Check that the connector setup file is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
     }
 
     if message.contains("failed to create plugin install root")

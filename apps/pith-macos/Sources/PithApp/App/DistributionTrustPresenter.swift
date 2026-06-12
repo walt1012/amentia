@@ -308,7 +308,7 @@ enum DistributionTrustPresenter {
     let network = metadata.sandboxNetworkDefault == "disabled"
       ? "network off by default"
       : "network default: \(metadata.sandboxNetworkDefault)"
-    return "workspace sandbox checks run at runtime; \(fallback); \(network)"
+    return "workspace sandbox checks run when Pith starts; \(fallback); \(network)"
   }
 
   private static func packageSizeSummary(_ metadata: DistributionPackageMetadata) -> String {

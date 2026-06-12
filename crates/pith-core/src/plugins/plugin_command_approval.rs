@@ -8,7 +8,7 @@ use crate::approval_types::PendingApproval;
 
 pub(crate) const PLUGIN_COMMAND_APPROVAL_ACTION: &str = "run_plugin_command";
 pub(crate) const PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON: &str =
-  "Connector-backed plugin commands require approval before runner launch.";
+  "Connector actions require approval before launch.";
 
 pub(super) fn plugin_command_requires_user_approval(
   command: &HostPluginCommandEntry,
@@ -117,7 +117,7 @@ pub(super) fn build_plugin_command_approval_request(
     vec![
       TimelineItem {
         kind: "approvalRequested".to_string(),
-        title: "Plugin Approval Requested".to_string(),
+        title: "Connector Action Approval Requested".to_string(),
         content: format!(
           "Pith needs approval before running {} from {} in {}.\nConnectors: {} ({})\nCredentials: {} | stores {} | bindings {}",
           command.title,
@@ -134,9 +134,8 @@ pub(super) fn build_plugin_command_approval_request(
       TimelineItem {
         kind: "assistantMessage".to_string(),
         title: "Assistant".to_string(),
-        content:
-          "Pith is waiting for your approval before running this connector-backed plugin command."
-            .to_string(),
+        content: "Pith is waiting for your approval before running this connector action."
+          .to_string(),
         attributes: Some(HashMap::from([
           ("approvalId".to_string(), approval.id.clone()),
           ("commandId".to_string(), command.command_id.clone()),

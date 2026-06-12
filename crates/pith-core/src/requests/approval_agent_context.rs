@@ -312,8 +312,8 @@ mod tests {
       },
       TimelineItem {
         kind: "pluginResult".to_string(),
-        title: "Plugin Result".to_string(),
-        content: "Plugin output.".to_string(),
+        title: "Connector Action Result".to_string(),
+        content: "Connector action output.".to_string(),
         attributes: None,
       },
     ];

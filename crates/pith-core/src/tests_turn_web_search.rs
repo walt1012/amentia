@@ -59,7 +59,7 @@ fn turn_start_web_search_uses_enabled_web_search_permission() {
   assert_eq!(items[2]["title"], "Turn Cancelled");
   assert!(items
     .iter()
-    .all(|item| item["title"] != "Plugin Permission Required"));
+    .all(|item| item["title"] != "Connector Permission Required"));
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn turn_start_web_search_respects_disabled_web_search_plugin() {
   let items = result["items"].as_array().expect("items");
   let permission_item = items
     .iter()
-    .find(|item| item["title"] == "Plugin Permission Required")
+    .find(|item| item["title"] == "Connector Permission Required")
     .expect("permission item");
 
   assert_eq!(
@@ -157,7 +157,7 @@ fn turn_start_web_search_requires_web_search_tool_permission_not_any_network_plu
   let items = result["items"].as_array().expect("items");
   let permission_item = items
     .iter()
-    .find(|item| item["title"] == "Plugin Permission Required")
+    .find(|item| item["title"] == "Connector Permission Required")
     .expect("permission item");
 
   assert_eq!(
@@ -221,7 +221,7 @@ fn turn_start_routes_fresh_public_requests_to_enabled_web_search() {
   assert_eq!(items[2]["title"], "Turn Cancelled");
   assert!(items
     .iter()
-    .all(|item| item["title"] != "Plugin Permission Required"));
+    .all(|item| item["title"] != "Connector Permission Required"));
 }
 
 #[test]

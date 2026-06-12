@@ -23,7 +23,7 @@ enum AppFilePicker {
     panel.canChooseFiles = true
     panel.allowsMultipleSelection = false
     panel.prompt = "Add Connector"
-    panel.message = "Choose a connector folder or its pith-plugin.json setup file."
+    panel.message = "Choose a local connector folder. Advanced users can select its setup file directly."
 
     guard panel.runModal() == .OK else {
       return nil

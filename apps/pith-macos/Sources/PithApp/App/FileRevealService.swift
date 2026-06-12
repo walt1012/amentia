@@ -8,7 +8,7 @@ enum FileRevealService {
     successDetail: String
   ) -> String {
     guard let value = modelHealth?.metrics[metricKey], !value.isEmpty else {
-      return "Local model guidance is unavailable until the runtime reports model health."
+      return "Local model guidance is unavailable until Pith finishes checking the selected model."
     }
 
     let targetURL = URL(fileURLWithPath: value)
