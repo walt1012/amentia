@@ -3,10 +3,13 @@
     <filter id="soft-card-shadow" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#000000" flood-opacity="0.05"/>
     </filter>
+    <clipPath id="bowl-left-edge">
+      <rect x="396" y="0" width="858" height="1254"/>
+    </clipPath>
   </defs>
   <rect x="116" y="98" width="1022" height="1022" rx="210" fill="#ffffff" stroke="#e9ecef" stroke-width="5" filter="url(#soft-card-shadow)"/>
   <g fill="#2f82f3">
-    <circle cx="655" cy="507" r="262"/>
+    <circle cx="655" cy="507" r="262" clip-path="url(#bowl-left-edge)"/>
     <path d="M396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946V486Z"/>
   </g>
   <circle cx="655" cy="507" r="140" fill="#ffffff"/>
