@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Pith blue p icon source">
   <rect x="92" y="90" width="840" height="840" rx="164" fill="#ffffff" stroke="#e7eaee" stroke-width="6"/>
   <g fill="#2f82f3">
-    <rect x="366" y="416" width="116" height="402" rx="58"/>
-    <path d="M430 462C430 314 546 218 666 218C802 218 902 322 902 458C902 608 780 722 622 722C548 722 488 700 436 654V556C482 606 544 634 616 634C720 634 806 558 806 458C806 364 738 294 648 294C556 294 490 360 490 448C490 508 526 546 584 546C640 546 684 504 684 448C684 394 644 354 590 354C548 354 514 376 494 414C506 336 568 286 648 286C744 286 820 360 820 456C820 570 728 660 612 660C504 660 430 584 430 462Z"/>
+    <circle cx="540" cy="416" r="216"/>
+    <rect x="323" y="416" width="98" height="406" rx="49"/>
   </g>
-  <circle cx="590" cy="454" r="120" fill="#ffffff"/>
-  <path fill="#ffffff" d="M430 562L506 486C526 512 554 530 590 536L512 612C478 602 450 584 430 562Z"/>
+  <circle cx="540" cy="416" r="112" fill="#ffffff"/>
+  <path
+    d="M421 584V542C421 530 427 518 436 510L456 490"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="24"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>
