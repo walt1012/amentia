@@ -26,13 +26,13 @@ extension RuntimeBridge {
     )
     let result = try responseResult(from: response)
 
-    return ThreadSummary(
+    return RuntimeSummaryMapper.threadSummary(from: RuntimeThreadSummary(
       id: result.thread.id,
       title: result.thread.title,
-      preview: result.thread.status,
+      status: result.thread.status,
       workspaceRootPath: result.thread.workspace?.rootPath,
       workspaceDisplayName: result.thread.workspace?.displayName
-    )
+    ))
   }
 
   func deleteThread(threadID: String) async throws -> [RuntimeThreadSummary] {

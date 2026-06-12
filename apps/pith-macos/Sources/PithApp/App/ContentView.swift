@@ -88,14 +88,7 @@ struct ContentView: View {
           )
         } else {
           ForEach(viewModel.threads) { thread in
-            VStack(alignment: .leading, spacing: 4) {
-              Text(thread.title)
-                .font(.headline)
-              Text(thread.preview)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            }
-            .padding(.vertical, 4)
+            SidebarSessionRow(thread: thread)
             .tag(thread.id)
             .contextMenu {
               Button("Review Session Changes...") {
@@ -124,6 +117,24 @@ struct ContentView: View {
     .background(PithVisualStyle.windowBackground)
   }
 
+}
+
+private struct SidebarSessionRow: View {
+  let thread: ThreadSummary
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(thread.title)
+        .font(.headline)
+        .lineLimit(1)
+      Text(thread.preview)
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .lineLimit(2)
+    }
+    .padding(.vertical, 4)
+    .help(thread.preview)
+  }
 }
 
 private struct SessionRevertCandidate: Identifiable {

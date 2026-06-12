@@ -7,7 +7,10 @@ enum RuntimeSummaryMapper {
     ThreadSummary(
       id: runtimeThread.id,
       title: runtimeThread.title,
-      preview: runtimeThread.status,
+      preview: SessionOverviewPresenter.runtimeThreadPreview(
+        status: runtimeThread.status,
+        workspaceDisplayName: runtimeThread.workspaceDisplayName
+      ),
       workspaceRootPath: runtimeThread.workspaceRootPath,
       workspaceDisplayName: runtimeThread.workspaceDisplayName
     )

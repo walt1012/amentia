@@ -92,6 +92,8 @@ Ready foundations:
   a durable change ledger and can be previewed or reverted per session when
   files still match Pith's recorded writes. Delete and revert prompts now make
   that boundary explicit in user-facing language.
+- Session sidebar previews translate runtime states into human cowork language
+  instead of exposing internal status strings.
 - Connector baseline has local plugin registry, execution gates, credentials,
   retries, generic timeline evidence, memory capture, and Notion as the
   reference connector.

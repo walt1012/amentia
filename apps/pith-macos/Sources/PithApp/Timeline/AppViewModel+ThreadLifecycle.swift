@@ -266,7 +266,7 @@ extension AppViewModel {
     applyThreadEntries(threadID: state.id, entries: entries)
     updatePendingApprovals(threadID: state.id, approvals: state.pendingApprovals)
     updateActiveTurn(threadID: state.id, activeTurnID: state.activeTurnID)
-    refreshThreadPreview(threadID: state.id, preview: state.status)
+    refreshThreadPreview(threadID: state.id, preview: runtimeThreadPreview(for: state))
   }
 
   private func applyCreatedThread(_ thread: ThreadSummary) async {
@@ -289,7 +289,7 @@ extension AppViewModel {
     applyThreadEntries(threadID: result.id, entries: entries)
     updatePendingApprovals(threadID: result.id, approvals: result.pendingApprovals)
     updateActiveTurn(threadID: result.id, activeTurnID: result.activeTurnID)
-    refreshThreadPreview(threadID: result.id, preview: result.status)
+    refreshThreadPreview(threadID: result.id, preview: runtimeThreadPreview(for: result))
   }
 
   private func applyWorkspaceThreadSelection(_ workspaceThreads: [ThreadSummary]) {
@@ -331,6 +331,16 @@ extension AppViewModel {
 
   private func threadTitle(for threadID: String) -> String {
     timelineState.threadTitle(for: threadID)
+  }
+
+  private func runtimeThreadPreview(for state: RuntimeBridge.RuntimeThreadState) -> String {
+    SessionOverviewPresenter.runtimeThreadPreview(
+      status: state.status,
+      workspaceDisplayName: threads.first(where: { $0.id == state.id })?.workspaceDisplayName
+        ?? workspace?.displayName,
+      pendingApprovalCount: state.pendingApprovals.count,
+      hasActiveTurn: state.activeTurnID != nil
+    )
   }
 }
 
