@@ -157,8 +157,9 @@ Scope now:
 - Keep execution reliable: long work is observable, cancellable, resumable when
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
-- Finish product identity with a refined native macOS icon set that remains
-  legible at small sizes.
+- Finish product identity around a refined blue lowercase `p` mark, rebuild it
+  as vector source, and derive a native macOS icon set that remains legible at
+  small sizes.
 
 Exit criteria:
 
@@ -167,8 +168,8 @@ Exit criteria:
 - User-facing connector surfaces say Connectors and Actions; `plugin` remains
   an implementation/protocol term only.
 - CI stays fast, split, strict, and green for the release package path.
-- The app has a polished icon and no obvious stale, unused, or confusing UI
-  surfaces left in the primary path.
+- The app has a polished blue `p` Dock icon and no obvious stale, unused, or
+  confusing UI surfaces left in the primary path.
 
 ## M14: Connector and Skill Platform
 
