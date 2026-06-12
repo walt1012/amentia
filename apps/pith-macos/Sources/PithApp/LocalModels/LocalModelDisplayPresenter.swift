@@ -16,8 +16,30 @@ enum LocalModelDisplayPresenter {
     actionName(model)
   }
 
-  static func setupMetadata(_ model: LocalModelSummary) -> String {
-    "About \(LocalModelByteFormatter.string(model.sizeBytes)). \(licenseSummary(model.license))."
+  static func setupFitSummary(_ model: LocalModelSummary, defaultModelID: String) -> String {
+    if model.id == defaultModelID {
+      return "Fastest first setup for getting Pith running quickly."
+    }
+
+    if model.tags.contains("recommended") {
+      return "Balanced tiny model for tools, code, and everyday cowork tasks."
+    }
+
+    if model.tags.contains("long-context") {
+      return "Stronger small model for longer context and heavier local work."
+    }
+
+    return "Optional local model for specialized cowork tasks."
+  }
+
+  static func setupCapabilitySummary(_ model: LocalModelSummary) -> String {
+    let activeContext = compactTokenCount(model.contextSize)
+    let modelLimit = compactTokenCount(model.modelContextSize)
+    return "Context: \(activeContext) active / \(modelLimit) model limit. Output: \(model.maxOutputTokens) tokens."
+  }
+
+  static func setupFootprintSummary(_ model: LocalModelSummary) -> String {
+    "\(LocalModelByteFormatter.string(model.sizeBytes)) download. \(licenseSummary(model.license))."
   }
 
   static func statusMetadata(status: String, sizeBytes: Int64, license: String) -> String {
@@ -55,6 +77,14 @@ enum LocalModelDisplayPresenter {
 
   private static func licenseSummary(_ license: String) -> String {
     "Open model license: \(license)"
+  }
+
+  private static func compactTokenCount(_ value: Int) -> String {
+    if value >= 1_000 {
+      return "\(value / 1_000)K"
+    }
+
+    return "\(value)"
   }
 }
 

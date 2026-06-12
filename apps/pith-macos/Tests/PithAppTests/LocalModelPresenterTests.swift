@@ -152,6 +152,90 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(summary.contains("Q4_K_M"))
   }
 
+  func testFirstUseModelChoiceSummariesExplainCuratedFit() {
+    let defaultModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false,
+      tags: ["default", "tiny", "edge"]
+    )
+    let recommendedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: false,
+      active: false,
+      tags: ["recommended", "tiny", "tools", "code"]
+    )
+    let longContextModel = model(
+      id: "minicpm5-1b",
+      displayName: "MiniCPM5-1B Q4_K_M",
+      downloaded: false,
+      active: false,
+      contextSize: 8192,
+      modelContextSize: 131_072,
+      maxOutputTokens: 384,
+      tags: ["optional", "small", "tools", "code", "long-context"]
+    )
+
+    XCTAssertTrue(
+      LocalModelDisplayPresenter.setupFitSummary(
+        defaultModel,
+        defaultModelID: defaultModel.id
+      ).contains("Fastest first setup")
+    )
+    XCTAssertTrue(
+      LocalModelDisplayPresenter.setupFitSummary(
+        recommendedModel,
+        defaultModelID: defaultModel.id
+      ).contains("Balanced tiny model")
+    )
+    XCTAssertTrue(
+      LocalModelDisplayPresenter.setupFitSummary(
+        longContextModel,
+        defaultModelID: defaultModel.id
+      ).contains("longer context")
+    )
+  }
+
+  func testFirstUseModelChoiceSummariesShowCapabilityAndLicense() {
+    let selectedModel = model(
+      id: "minicpm5-1b",
+      displayName: "MiniCPM5-1B Q4_K_M",
+      downloaded: false,
+      active: false,
+      contextSize: 8192,
+      modelContextSize: 131_072,
+      maxOutputTokens: 384,
+      tags: ["optional", "small", "long-context"]
+    )
+
+    let capability = LocalModelDisplayPresenter.setupCapabilitySummary(selectedModel)
+    let footprint = LocalModelDisplayPresenter.setupFootprintSummary(selectedModel)
+
+    XCTAssertEqual(capability, "Context: 8K active / 131K model limit. Output: 384 tokens.")
+    XCTAssertTrue(footprint.contains("download"))
+    XCTAssertTrue(footprint.contains("Open model license: apache-2.0"))
+    XCTAssertFalse(capability.contains("Q4_K_M"))
+    XCTAssertFalse(footprint.contains("Q4_K_M"))
+  }
+
+  func testSetupGuidanceDescribesThreeModelTiers() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let guidance = LocalModelOperationPresenter.setupGuidance(
+      operationSnapshot(selectedModel: selectedModel, totalModelCount: 3)
+    )
+
+    XCTAssertTrue(guidance.actionSummary.contains("fast default"))
+    XCTAssertTrue(guidance.actionSummary.contains("balanced tiny model"))
+    XCTAssertTrue(guidance.actionSummary.contains("stronger small model"))
+  }
+
   func testModelIntegrityErrorsAvoidRawPathsAndHashes() {
     let missingSize = LocalModelIntegrityError.missingSize(path: "/Users/example/model.gguf")
     let mismatch = LocalModelIntegrityError.checksumMismatch(
@@ -278,7 +362,11 @@ final class LocalModelPresenterTests: XCTestCase {
     id: String,
     displayName: String,
     downloaded: Bool,
-    active: Bool
+    active: Bool,
+    contextSize: Int = 4096,
+    modelContextSize: Int = 32_768,
+    maxOutputTokens: Int = 160,
+    tags: [String] = ["tiny"]
   ) -> LocalModelSummary {
     LocalModelSummary(
       id: id,
@@ -289,11 +377,11 @@ final class LocalModelPresenterTests: XCTestCase {
       homepage: "https://example.com/\(id)",
       sizeBytes: 222_000_000,
       sha256: String(repeating: "a", count: 64),
-      contextSize: 4096,
-      modelContextSize: 32_768,
-      maxOutputTokens: 160,
+      contextSize: contextSize,
+      modelContextSize: modelContextSize,
+      maxOutputTokens: maxOutputTokens,
       license: "apache-2.0",
-      tags: ["tiny"],
+      tags: tags,
       installPath: "/tmp/\(id).gguf",
       downloaded: downloaded,
       active: active,

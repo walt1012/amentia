@@ -81,6 +81,8 @@ Ready foundations:
   resume, cancel, recovery, local data reset, and one active model.
 - First-run setup uses product-level language and hides raw GGUF details, paths,
   manifests, and hashes from the normal path.
+- First-run model choice presents curated options by fit, footprint, context,
+  output budget, and license without requiring model-file knowledge.
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.

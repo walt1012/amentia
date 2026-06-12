@@ -109,15 +109,15 @@ private struct SetupModelOptionRow: View {
           }
         }
 
-        Text(model.description)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-
-        Text(detail)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-
         Text(fit)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
+        Text(capability)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+
+        Text(footprint)
           .font(.caption2)
           .foregroundColor(.secondary)
       }
@@ -129,12 +129,16 @@ private struct SetupModelOptionRow: View {
     .disabled(isDisabled)
   }
 
-  private var detail: String {
-    LocalModelDisplayPresenter.setupMetadata(model)
+  private var capability: String {
+    LocalModelDisplayPresenter.setupCapabilitySummary(model)
+  }
+
+  private var footprint: String {
+    LocalModelDisplayPresenter.setupFootprintSummary(model)
   }
 
   private var fit: String {
-    LocalModelDisplayPresenter.firstUseFit(model, defaultModelID: defaultModelID)
+    LocalModelDisplayPresenter.setupFitSummary(model, defaultModelID: defaultModelID)
   }
 }
 
