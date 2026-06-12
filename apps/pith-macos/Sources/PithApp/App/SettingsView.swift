@@ -47,6 +47,8 @@ struct SettingsView: View {
     Section("Local Models") {
       Text("Pith downloads and verifies one local model in app.")
       Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
+      Text("Downloaded model files stay in Pith local data and can be removed from Storage.")
+        .foregroundColor(.secondary)
     }
   }
 
@@ -84,6 +86,8 @@ private struct SettingsStorageSection: View {
     Section("Storage") {
       Text(summary.storageSummary)
       Text(summary.ownershipDetail)
+        .foregroundColor(.secondary)
+      Text(summary.uninstallDetail)
         .foregroundColor(.secondary)
       if let blockedDetail = summary.blockedDetail {
         Text(blockedDetail)

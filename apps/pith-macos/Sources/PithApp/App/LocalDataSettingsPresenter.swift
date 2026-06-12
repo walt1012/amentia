@@ -9,6 +9,7 @@ struct LocalDataSettingsSnapshot: Equatable {
 struct LocalDataSettingsSummary: Equatable {
   let storageSummary: String
   let ownershipDetail: String
+  let uninstallDetail: String
   let blockedDetail: String?
   let localDataPath: String
   let revealButtonTitle: String
@@ -34,13 +35,15 @@ enum LocalDataSettingsPresenter {
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
         "Pith local data includes models, sessions, connectors, download recovery data, and preferences. Workspaces are never deleted here.",
+      uninstallDetail:
+        "Removing Pith.app does not remove this data. Use Delete Local Data here when you want Pith to forget local setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
       localDataPath: snapshot.localDataPath,
       revealButtonTitle: "Show Local Data",
       deleteButtonTitle: "Delete Local Data...",
       confirmationTitle: "Delete Pith Local Data?",
       confirmationMessage:
-        "Pith will remove its downloaded models, sessions, connectors, download recovery data, and preferences. Your workspaces and repositories will not be deleted.",
+        "Pith will remove downloaded models, sessions, connectors, download recovery data, and preferences from this Mac. Your workspaces and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }

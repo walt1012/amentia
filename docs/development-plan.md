@@ -83,6 +83,8 @@ Ready foundations:
   manifests, and hashes from the normal path.
 - First-run model choice presents curated options by fit, footprint, context,
   output budget, and license without requiring model-file knowledge.
+- Settings explains local data ownership, uninstall behavior, and the supported
+  path for removing downloaded models and saved setup.
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.

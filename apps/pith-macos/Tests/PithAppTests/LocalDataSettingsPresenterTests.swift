@@ -17,6 +17,8 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     )
     XCTAssertTrue(summary.ownershipDetail.contains("connectors"))
     XCTAssertTrue(summary.ownershipDetail.contains("Workspaces are never deleted"))
+    XCTAssertTrue(summary.uninstallDetail.contains("Removing Pith.app does not remove this data"))
+    XCTAssertTrue(summary.uninstallDetail.contains("Delete Local Data"))
     XCTAssertNil(summary.blockedDetail)
     XCTAssertEqual(summary.revealButtonTitle, "Show Local Data")
     XCTAssertEqual(summary.deleteButtonTitle, "Delete Local Data...")
@@ -36,6 +38,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(
       summary.confirmationMessage.contains("workspaces and repositories will not be deleted")
     )
+    XCTAssertTrue(summary.confirmationMessage.contains("from this Mac"))
     XCTAssertTrue(summary.confirmationMessage.contains("connectors"))
   }
 
