@@ -90,7 +90,8 @@ Ready foundations:
   evidence.
 - Sessions can be deleted without touching workspace files; approved writes feed
   a durable change ledger and can be previewed or reverted per session when
-  files still match Pith's recorded writes.
+  files still match Pith's recorded writes. Delete and revert prompts now make
+  that boundary explicit in user-facing language.
 - Connector baseline has local plugin registry, execution gates, credentials,
   retries, generic timeline evidence, memory capture, and Notion as the
   reference connector.

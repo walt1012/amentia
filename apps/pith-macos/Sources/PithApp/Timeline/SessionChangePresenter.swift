@@ -7,6 +7,12 @@ struct SessionRevertPrompt {
   let confirmButtonTitle: String
 }
 
+struct SessionDeletePrompt {
+  let title: String
+  let message: String
+  let confirmButtonTitle: String
+}
+
 enum SessionChangePresenter {
   static let activeWorkBlocksDeleteDetail = "Finish or cancel the current local work before deleting a session."
   static let activeWorkBlocksRevertDetail = "Finish or cancel the current local work before reverting session changes."
@@ -32,6 +38,19 @@ enum SessionChangePresenter {
     default:
       return "Reverted \(revertedCount) files saved by this session."
     }
+  }
+
+  static func deletePrompt() -> SessionDeletePrompt {
+    SessionDeletePrompt(
+      title: "Delete Session?",
+      message: """
+      Pith will delete this session's messages, timeline, and pending approvals.
+
+      Workspace files and repositories will not be deleted or reverted.
+      If you want to undo files Pith saved, use Review Session Changes before deleting the session.
+      """,
+      confirmButtonTitle: "Delete Session"
+    )
   }
 
   static func revertPrompt(for preview: RuntimeBridge.RuntimeThreadChangePreview) -> SessionRevertPrompt {

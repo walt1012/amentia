@@ -47,12 +47,11 @@ struct ContentView: View {
       viewModel.startDailyUseSessionIfNeeded()
     }
     .alert(item: $sessionDeleteCandidate) { thread in
+      let prompt = SessionChangePresenter.deletePrompt()
       Alert(
-        title: Text("Delete Session?"),
-        message: Text(
-          "Pith will delete this session's messages, timeline, and pending approvals. Workspace files and repositories will not be changed."
-        ),
-        primaryButton: .destructive(Text("Delete Session")) {
+        title: Text(prompt.title),
+        message: Text(prompt.message),
+        primaryButton: .destructive(Text(prompt.confirmButtonTitle)) {
           viewModel.deleteThread(thread)
         },
         secondaryButton: .cancel()
@@ -99,7 +98,7 @@ struct ContentView: View {
             .padding(.vertical, 4)
             .tag(thread.id)
             .contextMenu {
-              Button("Revert Session Changes...") {
+              Button("Review Session Changes...") {
                 Task {
                   if let preview = await viewModel.previewThreadChanges(thread) {
                     sessionRevertCandidate = SessionRevertCandidate(
