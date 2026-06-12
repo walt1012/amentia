@@ -1,14 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Pith blue p icon source">
-  <defs>
-    <linearGradient id="tile" x1="180" y1="112" x2="844" y2="914" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#fbfdff"/>
-    </linearGradient>
-  </defs>
-  <rect x="92" y="90" width="840" height="840" rx="164" fill="url(#tile)" stroke="#e7eaee" stroke-width="6"/>
-  <path
-    fill="#2f82f3"
-    fill-rule="evenodd"
-    d="M374 742V414C374 292 470 202 608 202C744 202 848 308 848 448C848 596 734 706 598 706C552 706 510 696 474 678V742C474 790 452 818 424 818C396 818 374 790 374 742ZM474 450C474 514 526 566 606 566C688 566 746 514 746 448C746 384 688 334 606 334C526 334 474 384 474 450ZM474 568C500 590 540 604 588 604C690 604 768 536 768 448C768 360 698 292 606 292C506 292 438 354 438 450V566L474 526V568Z"
-  />
+  <rect x="92" y="90" width="840" height="840" rx="164" fill="#ffffff" stroke="#e7eaee" stroke-width="6"/>
+  <g fill="#2f82f3">
+    <rect x="366" y="416" width="116" height="402" rx="58"/>
+    <path d="M430 462C430 314 546 218 666 218C802 218 902 322 902 458C902 608 780 722 622 722C548 722 488 700 436 654V556C482 606 544 634 616 634C720 634 806 558 806 458C806 364 738 294 648 294C556 294 490 360 490 448C490 508 526 546 584 546C640 546 684 504 684 448C684 394 644 354 590 354C548 354 514 376 494 414C506 336 568 286 648 286C744 286 820 360 820 456C820 570 728 660 612 660C504 660 430 584 430 462Z"/>
+  </g>
+  <circle cx="590" cy="454" r="120" fill="#ffffff"/>
+  <path fill="#ffffff" d="M430 562L506 486C526 512 554 530 590 536L512 612C478 602 450 584 430 562Z"/>
 </svg>
