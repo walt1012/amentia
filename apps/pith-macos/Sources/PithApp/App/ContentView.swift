@@ -48,7 +48,7 @@ struct ContentView: View {
     }
     .alert(item: $sessionDeleteCandidate) { thread in
       let prompt = SessionChangePresenter.deletePrompt()
-      Alert(
+      return Alert(
         title: Text(prompt.title),
         message: Text(prompt.message),
         primaryButton: .destructive(Text(prompt.confirmButtonTitle)) {
