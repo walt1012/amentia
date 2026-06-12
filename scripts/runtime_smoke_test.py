@@ -835,7 +835,7 @@ def main() -> int:
       check["id"]: check for check in plugin_readiness["result"]["checks"]
     }
     assert plugin_checks["plugins"]["status"] == "ready"
-    assert "command capability" in plugin_checks["plugins"]["detail"]
+    assert "action capability" in plugin_checks["plugins"]["detail"]
     assert int(plugin_readiness["result"]["metrics"]["pluginCommandCount"]) >= 3
     assert int(plugin_readiness["result"]["metrics"]["enabledPluginCommandCount"]) >= 3
 
