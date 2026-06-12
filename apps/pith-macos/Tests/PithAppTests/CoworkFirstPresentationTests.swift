@@ -153,6 +153,43 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(detail, "Next: Repair Model")
   }
 
+  func testSetupProgressUsesWorkLanguageWhileBusy() {
+    let activeDetail = SetupProgressPresenter.detail(
+      setupProgressSnapshot(hasActiveTurn: true)
+    )
+    let modelDetail = SetupProgressPresenter.detail(
+      setupProgressSnapshot(
+        isLocalModelReady: false,
+        modelReadinessDetail: "Working"
+      )
+    )
+
+    XCTAssertEqual(activeDetail, "Working")
+    XCTAssertEqual(modelDetail, "Next: Finish Work")
+    XCTAssertFalse(activeDetail.contains("Turn"))
+    XCTAssertFalse(modelDetail.contains("Turn"))
+  }
+
+  func testTimelineResponsePreviewAvoidsTurnIDs() {
+    XCTAssertEqual(
+      TimelineEventPresenter.turnPreview(turnID: "turn-1", activeTurnID: nil),
+      "Response ready"
+    )
+    XCTAssertEqual(
+      TimelineEventPresenter.turnPreview(turnID: "turn-1", activeTurnID: "turn-1"),
+      "Response in progress"
+    )
+  }
+
+  func testTimelineFailureUsesRequestLanguage() {
+    let entry = TimelineEventPresenter.turnFailed(
+      error: RuntimeBridge.RuntimeError.rpc("failed")
+    )
+
+    XCTAssertEqual(entry.title, "Request Failed")
+    XCTAssertFalse(entry.title.contains("Turn"))
+  }
+
   func testReadinessStripStaysVisibleForToolSetup() {
     XCTAssertTrue(
       RuntimeReadinessStripPresenter.shouldShow(

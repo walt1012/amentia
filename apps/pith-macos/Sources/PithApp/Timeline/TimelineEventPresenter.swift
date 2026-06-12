@@ -72,7 +72,7 @@ enum TimelineEventPresenter {
   }
 
   static func turnPreview(turnID: String, activeTurnID: String?) -> String {
-    activeTurnID == nil ? "\(turnID) ready" : "Streaming response"
+    activeTurnID == nil ? "Response ready" : "Response in progress"
   }
 
   static func threadCreationFailed(error: Error) -> TimelineEntry {
@@ -101,7 +101,7 @@ enum TimelineEventPresenter {
 
   static func turnFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Turn Failed",
+      title: "Request Failed",
       body: error.localizedDescription,
       attributes: [:]
     )

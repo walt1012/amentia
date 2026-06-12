@@ -44,9 +44,9 @@ enum LocalModelDownloadCompletionPlanner {
     if activationRequested {
       return LocalModelDownloadCompletionPlan(
         mode: .waitingForTurn,
-        runtimeDetail: "Downloaded \(modelName). Finish the current turn before selecting it.",
+        runtimeDetail: "Downloaded \(modelName). Finish the current work before selecting it.",
         timelineBody:
-          "\(modelName) was downloaded, but activation is waiting for the current local turn to finish.",
+          "\(modelName) was downloaded, but selection is waiting for current local work to finish.",
         attributes: baseAttributes(model: model, sourceURL: sourceURL).merging(
           [
             "result": "downloaded_pending_activation",

@@ -126,7 +126,7 @@ extension AppViewModel {
       return
     }
     guard !hasActiveOrPendingTurn() else {
-      runtimeDetail = "Finish or stop the current turn before switching models."
+      runtimeDetail = "Finish or stop the current work before switching models."
       return
     }
     guard !modelDownloadCoordinator.isDownloading,
@@ -165,7 +165,7 @@ extension AppViewModel {
           return
         }
         guard !hasActiveOrPendingTurn() else {
-          runtimeDetail = "Finish or stop the current turn before switching models."
+          runtimeDetail = "Finish or stop the current work before switching models."
           return
         }
         runtimeBridge.configureActiveLocalModel(

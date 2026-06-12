@@ -312,6 +312,36 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertTrue(summary.contains("selected model choices remain local"))
   }
 
+  func testActiveWorkModelGuidanceAvoidsTurnAndStreamingLanguage() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let snapshot = operationSnapshot(
+      isLocalModelReady: true,
+      hasActiveTurn: true,
+      selectedModel: selectedModel,
+      activeModelDisplayName: "LFM2.5-350M"
+    )
+
+    let guidance = LocalModelOperationPresenter.setupGuidance(snapshot)
+    let managerSummary = LocalModelOperationPresenter.managerSummary(snapshot)
+    let recoverySummary = LocalModelOperationPresenter.recoverySummary(snapshot)
+
+    XCTAssertEqual(guidance.readinessDetail, "Working")
+    XCTAssertTrue(guidance.summary.contains("current work"))
+    XCTAssertTrue(guidance.detail.contains("current work"))
+    XCTAssertTrue(managerSummary.contains("current work"))
+    XCTAssertTrue(recoverySummary.contains("current work"))
+    XCTAssertFalse(guidance.summary.contains("turn"))
+    XCTAssertFalse(guidance.detail.contains("turn"))
+    XCTAssertFalse(guidance.readinessDetail.contains("Streaming"))
+    XCTAssertFalse(managerSummary.contains("turn"))
+    XCTAssertFalse(recoverySummary.contains("turn"))
+  }
+
   private func statusSnapshot(
     selectedModel: LocalModelSummary,
     modelDownloadID: String? = nil,

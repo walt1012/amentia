@@ -23,7 +23,7 @@ extension AppViewModel {
 
   func selectedModelActivationBlockedDetail() -> String {
     if hasActiveOrPendingTurn() {
-      return "Finish or stop the current turn before switching models."
+      return "Finish or stop the current work before switching models."
     }
     if runtimeState == .launching {
       return "Wait for Pith's local service to finish starting before switching models."

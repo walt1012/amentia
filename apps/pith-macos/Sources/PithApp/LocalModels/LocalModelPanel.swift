@@ -198,7 +198,7 @@ private struct ModelTroubleshootingPanel: View {
         .buttonStyle(.bordered)
         .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
-        Button("Show Local Service Folder") {
+        Button("Show Model Support Folder") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)

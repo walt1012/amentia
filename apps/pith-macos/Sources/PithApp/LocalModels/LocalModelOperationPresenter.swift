@@ -100,7 +100,7 @@ enum LocalModelOperationPresenter {
       return "Paused \(displayName(model)). Continue or cancel before starting another download."
     }
     if snapshot.hasActiveTurn {
-      return "Active: \(snapshot.activeModelDisplayName ?? "local model"). Switching waits for the current turn."
+      return "Active: \(snapshot.activeModelDisplayName ?? "local model"). Switching waits for the current work."
     }
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
@@ -149,10 +149,10 @@ enum LocalModelOperationPresenter {
     if snapshot.hasActiveTurn {
       return LocalModelSetupGuidance(
         title: "Local Model Working",
-        summary: "Pith is using the active local model for the current turn.",
-        detail: "Finish or stop the current turn before switching the active model.",
-        actionSummary: "Finish or stop the current turn before switching the active model.",
-        readinessDetail: "Streaming",
+        summary: "Pith is using the active local model for current work.",
+        detail: "Finish or stop the current work before switching the active model.",
+        actionSummary: "Finish or stop the current work before switching the active model.",
+        readinessDetail: "Working",
         tone: .active
       )
     }
@@ -240,7 +240,7 @@ enum LocalModelOperationPresenter {
     }
 
     if snapshot.hasActiveTurn {
-      return "Finish or stop the current turn before changing models."
+      return "Finish or stop the current work before changing models."
     }
 
     if snapshot.isLocalModelReady {

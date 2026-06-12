@@ -30,7 +30,7 @@ extension AppViewModel {
     runtimeDetail = FileRevealService.revealSuggestedPath(
       metricKey: "suggestedBinaryPath",
       modelHealth: modelHealth,
-      successDetail: "Opened the local service folder."
+      successDetail: "Opened the model support folder."
     )
   }
 

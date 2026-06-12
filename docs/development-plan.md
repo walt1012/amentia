@@ -83,6 +83,8 @@ Ready foundations:
   manifests, and hashes from the normal path.
 - First-run model choice presents curated options by fit, footprint, context,
   output budget, and license without requiring model-file knowledge.
+- Model management copy now uses daily-work language for active work and local
+  support folders instead of exposing turn or local-service internals.
 - Settings explains local data ownership, uninstall behavior, and the supported
   path for removing downloaded models and saved setup.
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
@@ -105,8 +107,8 @@ Ready foundations:
 - CI is split by change area and remains the source of truth for Rust, Swift,
   package, policy, model, and release checks.
 - Primary readiness, approval, permission, and action-result copy now uses
-  Connectors and Actions instead of exposing plugin/runtime wording on the
-  normal user path.
+  Connectors, Actions, requests, and work language instead of exposing plugin,
+  runtime, or turn wording on the normal user path.
 
 Current constraints:
 

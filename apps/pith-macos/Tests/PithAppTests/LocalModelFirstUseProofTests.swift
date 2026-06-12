@@ -111,6 +111,40 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     XCTAssertTrue(startPlan.runtimeDetail.hasPrefix("Continuing"))
   }
 
+  func testDownloadCompletionWaitingForWorkAvoidsTurnLanguage() throws {
+    let rootURL = try temporaryDirectory()
+    defer {
+      try? FileManager.default.removeItem(at: rootURL)
+    }
+
+    let modelURL = rootURL
+      .appendingPathComponent("catalog", isDirectory: true)
+      .appendingPathComponent("waiting-proof", isDirectory: true)
+      .appendingPathComponent("waiting-proof.gguf")
+    let model = localModelSummary(
+      modelURL: modelURL,
+      sizeBytes: 128 * 1024 * 1024,
+      sha256: String(repeating: "a", count: 64)
+    )
+
+    let plan = LocalModelDownloadCompletionPlanner.plan(
+      model: model,
+      sourceURL: try XCTUnwrap(URL(string: model.downloadURL)),
+      activationRequested: true,
+      canActivateNow: false,
+      manifestPath: nil
+    )
+
+    guard case .waitingForTurn = plan.mode else {
+      XCTFail("Expected activation to wait while local work is active.")
+      return
+    }
+    XCTAssertTrue(plan.runtimeDetail.contains("current work"))
+    XCTAssertTrue(plan.timelineBody.contains("current local work"))
+    XCTAssertFalse(plan.runtimeDetail.contains("turn"))
+    XCTAssertFalse(plan.timelineBody.contains("turn"))
+  }
+
   func testLaunchValidationRejectsReplacedModel() throws {
     let rootURL = try temporaryDirectory()
     defer {

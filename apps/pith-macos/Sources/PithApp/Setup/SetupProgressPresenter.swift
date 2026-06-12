@@ -25,7 +25,7 @@ enum SetupProgressPresenter {
 
   static func detail(_ snapshot: SetupProgressSnapshot) -> String {
     if snapshot.hasActiveTurn {
-      return "Turn running"
+      return "Working"
     }
     if let nextStep = nextStep(snapshot) {
       return "Next: \(nextStep)"
@@ -92,8 +92,8 @@ enum SetupProgressPresenter {
       return "Continue Download"
     case "Blocked":
       return "Free Model Space"
-    case "Streaming":
-      return "Finish Turn"
+    case "Working":
+      return "Finish Work"
     case "Select":
       return "Use Model"
     case "Repair":
