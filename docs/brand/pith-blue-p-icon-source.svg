@@ -1,16 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Pith blue p icon source">
-  <rect x="92" y="90" width="840" height="840" rx="164" fill="#ffffff" stroke="#e7eaee" stroke-width="6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="Pith blue p icon source">
+  <defs>
+    <filter id="soft-card-shadow" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#000000" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+  <rect x="116" y="98" width="1022" height="1022" rx="210" fill="#ffffff" stroke="#e9ecef" stroke-width="5" filter="url(#soft-card-shadow)"/>
   <g fill="#2f82f3">
-    <circle cx="540" cy="416" r="216"/>
-    <rect x="323" y="416" width="98" height="406" rx="49"/>
+    <circle cx="655" cy="507" r="262"/>
+    <path d="M396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946V486Z"/>
   </g>
-  <circle cx="540" cy="416" r="112" fill="#ffffff"/>
-  <path
-    d="M421 584V542C421 530 427 518 436 510L456 490"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="24"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
+  <circle cx="655" cy="507" r="140" fill="#ffffff"/>
+  <path d="M558 609C548 622 536 632 527 642V741" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
