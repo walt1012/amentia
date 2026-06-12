@@ -466,6 +466,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     isWaitingForFirstMessage: Bool = true,
     hasDraft: Bool = false,
     isLocalModelReady: Bool = true,
+    hasActiveTurn: Bool = false,
     modelReadinessDetail: String = "Ready"
   ) -> SetupProgressSnapshot {
     SetupProgressSnapshot(
@@ -476,7 +477,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       isLocalModelReady: isLocalModelReady,
       hasWorkspace: true,
       hasRuntimeThreadSelection: true,
-      hasActiveTurn: false,
+      hasActiveTurn: hasActiveTurn,
       isWaitingForFirstMessage: isWaitingForFirstMessage,
       hasDraft: hasDraft,
       modelReadinessDetail: modelReadinessDetail
