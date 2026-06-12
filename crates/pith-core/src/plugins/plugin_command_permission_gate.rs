@@ -147,12 +147,8 @@ mod tests {
       memory_note_tags: vec![],
     };
 
-    let items = build_plugin_command_denial(
-      &command,
-      None,
-      "network.outbound",
-      "run a connector action",
-    );
+    let items =
+      build_plugin_command_denial(&command, None, "network.outbound", "run a connector action");
     let attributes = items[0].attributes.as_ref().expect("attributes");
 
     assert_eq!(
