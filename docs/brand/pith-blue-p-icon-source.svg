@@ -5,7 +5,9 @@
     </filter>
   </defs>
   <rect x="116" y="98" width="1022" height="1022" rx="210" fill="#ffffff" stroke="#e9ecef" stroke-width="5" filter="url(#soft-card-shadow)"/>
-  <path fill="#2f82f3" d="M396 460.8A264 260 0 1 1 396 553.2ZM396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946Z"/>
-  <ellipse cx="656" cy="507" rx="139" ry="141" fill="#ffffff"/>
-  <path d="M567 605L525 647V820" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <g transform="translate(-16 -8)">
+    <path fill="#2f82f3" d="M396 460.8A264 260 0 1 1 396 553.2ZM396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946Z"/>
+    <ellipse cx="656" cy="507" rx="139" ry="141" fill="#ffffff"/>
+    <path d="M567 605L525 647V820" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="butt" stroke-linejoin="miter"/>
+  </g>
 </svg>
