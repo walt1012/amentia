@@ -3,15 +3,9 @@
     <filter id="soft-card-shadow" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#000000" flood-opacity="0.05"/>
     </filter>
-    <clipPath id="bowl-left-edge">
-      <rect x="396" y="0" width="858" height="1254"/>
-    </clipPath>
   </defs>
   <rect x="116" y="98" width="1022" height="1022" rx="210" fill="#ffffff" stroke="#e9ecef" stroke-width="5" filter="url(#soft-card-shadow)"/>
-  <g fill="#2f82f3">
-    <circle cx="655" cy="507" r="262" clip-path="url(#bowl-left-edge)"/>
-    <path d="M396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946V486Z"/>
-  </g>
+  <path fill="#2f82f3" d="M396 467.7A262 262 0 1 1 396 546.3ZM396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946Z"/>
   <circle cx="655" cy="507" r="140" fill="#ffffff"/>
-  <path fill="#ffffff" d="M558 609C550 620 538 631 529 640C520 650 515 658 515 672V790H539V657C539 653 541 649 544 646C554 636 565 626 573 616Z"/>
+  <path d="M569 605L527 647V820" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="butt" stroke-linejoin="miter"/>
 </svg>
