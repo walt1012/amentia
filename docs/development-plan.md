@@ -226,5 +226,7 @@ Goal: make Pith better over time without turning it into a remote server agent.
 - No multi-agent orchestration before the single cowork loop is excellent.
 - No marketplace or remote MCP transport until local connector execution is safe
   and useful.
+- Keep established ecosystem terms such as plugin, skill, and MCP when they
+  describe real interfaces; clarify them instead of renaming them away.
 - No cosmetic refactor that only moves code around.
 - English-only source, docs, commits, branches, and PR text.
