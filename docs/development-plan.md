@@ -157,9 +157,9 @@ Scope now:
 - Keep execution reliable: long work is observable, cancellable, resumable when
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
-- Finish product identity around a refined blue lowercase `p` mark, rebuild it
-  as vector source, and derive a native macOS icon set that remains legible at
-  small sizes.
+- Finish product identity around a refined blue lowercase `p` mark, keep the
+  vector source and PNG candidate aligned, and ship it through the native macOS
+  icon package contract.
 
 Exit criteria:
 

@@ -65,6 +65,10 @@ def main() -> int:
     classify_changed_paths(["scripts/package_macos_app.py"]),
     CiChanges(False, False, True, True),
   )
+  assert_equal(
+    classify_changed_paths(["docs/brand/pith-blue-p-icon-source.svg"]),
+    CiChanges(False, False, True, False),
+  )
   assert_equal(classify_changed_paths([".github/workflows/ci.yml"]), CiChanges.all())
   assert_equal(classify_changed_paths([], force_all=True), CiChanges.all())
   print("CI change classification tests passed")

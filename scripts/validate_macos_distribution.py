@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ from package_contract import (
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
 PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
+APP_ICON_RELATIVE_PATH = Path("Contents/Resources/Pith.icns")
 SOURCE_COMMIT_HEX_LENGTH = 40
 
 
@@ -39,6 +41,7 @@ def main() -> int:
   app_path = args.app_path.resolve()
   try:
     require_file(app_path / "Contents" / "Info.plist", "Info.plist")
+    validate_app_icon(app_path)
     validate_package_manifest(app_path)
     require_tool("codesign")
     require_tool("spctl")
@@ -86,6 +89,21 @@ def validate_dmg(dmg_path: Path) -> None:
     ]
   )
   run(["xcrun", "stapler", "validate", str(dmg_path)])
+
+
+def validate_app_icon(app_path: Path) -> None:
+  icon_path = app_path / APP_ICON_RELATIVE_PATH
+  require_file(icon_path, "Pith.icns")
+  data = icon_path.read_bytes()
+  if len(data) < 8 or data[:4] != b"icns":
+    raise RuntimeError(f"Pith.icns must be an ICNS file: {icon_path}")
+  declared_size = struct.unpack(">I", data[4:8])[0]
+  actual_size = icon_path.stat().st_size
+  if declared_size != actual_size:
+    raise RuntimeError(
+      f"Pith.icns size header must match file size: {icon_path}: "
+      f"{declared_size} != {actual_size}"
+    )
 
 
 def validate_package_manifest(app_path: Path) -> None:

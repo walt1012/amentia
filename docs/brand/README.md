@@ -10,9 +10,11 @@ the shape custom without hurting small-size legibility.
 
 Current candidate:
 
+- `pith-blue-p-icon-source.svg`
 - `pith-blue-p-icon-candidate.png`
 
 Next step:
 
-- Rebuild the candidate as a clean vector source, then derive the macOS Dock
-  iconset and package contract from that source.
+- Keep the vector source and PNG candidate visually aligned. The packaging
+  script derives the macOS `Pith.icns` Dock icon from the PNG candidate during
+  app bundle creation.

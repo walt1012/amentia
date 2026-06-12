@@ -25,7 +25,7 @@ from package_contract import (
   SUPPORTED_ARCH,
   package_distribution_trust,
 )
-from validate_macos_distribution import validate_package_manifest
+from validate_macos_distribution import validate_app_icon, validate_package_manifest
 
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
@@ -34,7 +34,7 @@ SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 def assert_raises(action, message: str) -> None:
   try:
     action()
-  except RuntimeError:
+  except (RuntimeError, FileNotFoundError):
     return
   raise AssertionError(message)
 
@@ -78,7 +78,32 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
   )
 
 
+def write_icns(path: Path, declared_size: int, body: bytes = b"") -> None:
+  path.parent.mkdir(parents=True, exist_ok=True)
+  path.write_bytes(b"icns" + declared_size.to_bytes(4, "big") + body)
+
+
 def main() -> int:
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
+    app_path = Path(root) / "Pith.app"
+    write_icns(app_path / "Contents" / "Resources" / "Pith.icns", 12, b"abcd")
+    validate_app_icon(app_path)
+
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
+    app_path = Path(root) / "Pith.app"
+    assert_raises(
+      lambda: validate_app_icon(app_path),
+      "public distribution should require a packaged app icon",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
+    app_path = Path(root) / "Pith.app"
+    write_icns(app_path / "Contents" / "Resources" / "Pith.icns", 8, b"abcd")
+    assert_raises(
+      lambda: validate_app_icon(app_path),
+      "public distribution should reject invalid ICNS headers",
+    )
+
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
     app_path = Path(root) / "Pith.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)

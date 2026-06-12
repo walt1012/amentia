@@ -10,8 +10,10 @@ import plistlib
 import re
 import shutil
 import stat
+import struct
 import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -51,6 +53,21 @@ from release_identity import normalize_product_version
 APP_EXECUTABLE_NAME = "Pith"
 SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
+APP_ICON_FILE_NAME = "Pith.icns"
+APP_ICON_SOURCE_RELATIVE_PATH = Path("docs/brand/pith-blue-p-icon-candidate.png")
+APP_ICON_MIN_SOURCE_SIZE = 1024
+APP_ICONSET_RENDITIONS = (
+  (16, 1),
+  (16, 2),
+  (32, 1),
+  (32, 2),
+  (128, 1),
+  (128, 2),
+  (256, 1),
+  (256, 2),
+  (512, 1),
+  (512, 2),
+)
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.pith.Pith"
 DEFAULT_VERSION = "0.1.0"
@@ -68,6 +85,7 @@ REQUIRED_ZIP_BASE_ENTRIES = {
   "Pith.app/Contents/Info.plist",
   "Pith.app/Contents/MacOS/Pith",
   "Pith.app/Contents/MacOS/pith-runtime-bin",
+  "Pith.app/Contents/Resources/Pith.icns",
   "Pith.app/Contents/Resources/PithPackage.json",
 }
 REQUIRED_PACKAGED_MODEL_FIELDS = {
@@ -88,6 +106,7 @@ REQUIRED_INFO_PLIST_VALUES = {
   "CFBundleDevelopmentRegion": "en",
   "CFBundleDisplayName": APP_NAME,
   "CFBundleExecutable": APP_EXECUTABLE_NAME,
+  "CFBundleIconFile": APP_ICON_FILE_NAME,
   "CFBundleIdentifier": DEFAULT_BUNDLE_ID,
   "CFBundleInfoDictionaryVersion": "6.0",
   "CFBundleName": APP_NAME,
@@ -306,6 +325,7 @@ def package_app(
   )
   (contents_path / "PkgInfo").write_text("APPL????\n", encoding="utf-8")
 
+  create_app_icon(repo_root, resources_path / APP_ICON_FILE_NAME)
   copy_executable(app_binary, macos_path / APP_EXECUTABLE_NAME)
   copy_executable(runtime_binary, macos_path / RUNTIME_EXECUTABLE_NAME)
   copy_tree_if_present(repo_root / "models", resources_path / "models")
@@ -333,6 +353,68 @@ def reset_directory(path: Path) -> None:
 def require_file(path: Path, label: str) -> None:
   if not path.is_file():
     raise FileNotFoundError(f"Missing {label}: {path}")
+
+
+def create_app_icon(repo_root: Path, destination: Path) -> None:
+  source = repo_root / APP_ICON_SOURCE_RELATIVE_PATH
+  require_file(source, "macOS app icon source")
+  assert_png_source_can_drive_app_icon(source)
+  for tool in ("sips", "iconutil"):
+    if shutil.which(tool) is None:
+      raise FileNotFoundError(f"macOS app icon generation requires {tool}")
+
+  destination.parent.mkdir(parents=True, exist_ok=True)
+  with tempfile.TemporaryDirectory(prefix="pith-iconset-") as temp_root:
+    iconset_path = Path(temp_root) / "Pith.iconset"
+    iconset_path.mkdir()
+    for point_size, scale in APP_ICONSET_RENDITIONS:
+      pixel_size = point_size * scale
+      suffix = "@2x" if scale == 2 else ""
+      output_path = iconset_path / f"icon_{point_size}x{point_size}{suffix}.png"
+      run(
+        [
+          "sips",
+          "-z",
+          str(pixel_size),
+          str(pixel_size),
+          str(source),
+          "--out",
+          str(output_path),
+        ],
+        repo_root,
+      )
+    run(["iconutil", "-c", "icns", str(iconset_path), "-o", str(destination)], repo_root)
+  assert_macos_icon_packaged(destination)
+
+
+def assert_png_source_can_drive_app_icon(path: Path) -> None:
+  width, height = png_dimensions(path)
+  if width < APP_ICON_MIN_SOURCE_SIZE or height < APP_ICON_MIN_SOURCE_SIZE:
+    raise RuntimeError(
+      "macOS app icon source must be at least "
+      f"{APP_ICON_MIN_SOURCE_SIZE}x{APP_ICON_MIN_SOURCE_SIZE}: {path}"
+    )
+
+
+def png_dimensions(path: Path) -> tuple[int, int]:
+  data = path.read_bytes()
+  if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise RuntimeError(f"macOS app icon source must be a PNG file: {path}")
+  return struct.unpack(">II", data[16:24])
+
+
+def assert_macos_icon_packaged(path: Path) -> None:
+  require_file(path, "macOS app icon")
+  data = path.read_bytes()
+  if len(data) < 8 or data[:4] != b"icns":
+    raise RuntimeError(f"macOS app icon must be an ICNS file: {path}")
+  declared_size = struct.unpack(">I", data[4:8])[0]
+  actual_size = path.stat().st_size
+  if declared_size != actual_size:
+    raise RuntimeError(
+      f"macOS app icon size header must match file size: {path}: "
+      f"{declared_size} != {actual_size}"
+    )
 
 
 def validate_swift_package_rules(repo_root: Path) -> None:
@@ -485,6 +567,7 @@ def validate_app_bundle(
     app_path / "Contents" / "PkgInfo",
     app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME,
     app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME,
+    app_path / "Contents" / "Resources" / APP_ICON_FILE_NAME,
     app_path / "Contents" / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME,
     app_path / "Contents" / "Resources" / DEFAULT_MODEL_MANIFEST_RELATIVE_PATH,
     app_path / "Contents" / "Resources" / "plugins" / "bundled",
@@ -503,6 +586,7 @@ def validate_app_bundle(
     / LLAMA_BACKEND_EXECUTABLE_NAME
   )
   assert_info_plist_matches_product_rules(app_path, expected_version)
+  assert_macos_icon_packaged(app_path / "Contents" / "Resources" / APP_ICON_FILE_NAME)
   assert_pkg_info_matches_app_bundle(app_path)
   assert_package_manifest_matches_bundle(
     app_path,

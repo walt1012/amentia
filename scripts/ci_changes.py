@@ -35,6 +35,7 @@ PACKAGE_PATTERNS = (
   "Cargo.lock",
   "crates/*",
   "apps/pith-macos/*",
+  "docs/brand/*",
   "models/*",
   "plugins/*",
   "scripts/build_macos_llama_backend.sh",

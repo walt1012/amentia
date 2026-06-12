@@ -21,6 +21,8 @@ from package_macos_app import (
   DAILY_DRIVER_PRESENTATION,
   DAILY_DRIVER_STAGE_SOURCE,
   LLAMA_BACKEND_RELATIVE_PARENT,
+  assert_macos_icon_packaged,
+  assert_png_source_can_drive_app_icon,
   assert_bundled_plugin_connector_workflows,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
@@ -29,6 +31,7 @@ from package_macos_app import (
   normalize_source_commit,
   normalize_version,
   parse_lipo_architectures,
+  png_dimensions,
   write_package_manifest,
 )
 from package_contract import (
@@ -53,9 +56,23 @@ def assert_equal(actual: object, expected: object) -> None:
 def assert_raises(action, message: str) -> None:
   try:
     action()
-  except RuntimeError:
+  except (RuntimeError, FileNotFoundError):
     return
   raise AssertionError(message)
+
+
+def write_png_header(path: Path, width: int, height: int) -> None:
+  path.write_bytes(
+    b"\x89PNG\r\n\x1a\n"
+    + b"\x00\x00\x00\rIHDR"
+    + width.to_bytes(4, "big")
+    + height.to_bytes(4, "big")
+    + b"\x08\x06\x00\x00\x00"
+  )
+
+
+def write_icns_header(path: Path, declared_size: int, body: bytes = b"") -> None:
+  path.write_bytes(b"icns" + declared_size.to_bytes(4, "big") + body)
 
 
 def main() -> int:
@@ -78,6 +95,33 @@ def main() -> int:
     lambda: normalize_source_commit("short"),
     "short source commits should fail package metadata validation",
   )
+  with tempfile.TemporaryDirectory(prefix="pith-package-icon-") as root:
+    root_path = Path(root)
+    png_path = root_path / "icon.png"
+    write_png_header(png_path, 1254, 1254)
+    assert_equal(png_dimensions(png_path), (1254, 1254))
+    assert_png_source_can_drive_app_icon(png_path)
+    small_png_path = root_path / "small.png"
+    write_png_header(small_png_path, 512, 512)
+    assert_raises(
+      lambda: assert_png_source_can_drive_app_icon(small_png_path),
+      "small icon source should fail macOS icon generation guard",
+    )
+    invalid_png_path = root_path / "icon.txt"
+    invalid_png_path.write_text("not png", encoding="utf-8")
+    assert_raises(
+      lambda: png_dimensions(invalid_png_path),
+      "non-PNG icon source should fail",
+    )
+    icns_path = root_path / "Pith.icns"
+    write_icns_header(icns_path, 12, b"abcd")
+    assert_macos_icon_packaged(icns_path)
+    broken_icns_path = root_path / "Broken.icns"
+    write_icns_header(broken_icns_path, 8, b"abcd")
+    assert_raises(
+      lambda: assert_macos_icon_packaged(broken_icns_path),
+      "invalid ICNS size header should fail",
+    )
   with tempfile.TemporaryDirectory(prefix="pith-package-manifest-") as root:
     manifest_path = Path(root) / "PithPackage.json"
     write_package_manifest(
