@@ -222,7 +222,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let optionalPluginChecks = readyChecks() + [
       RuntimeReadinessCheckSummary(
         id: "plugins",
-        title: "Connectors",
+        title: "Plugins",
         status: "optional",
         detail: "No plugin action capabilities are required."
       )
@@ -293,15 +293,15 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let step = ReadinessStepSummary(
       id: "tools",
       label: "Actions",
-      detail: "Connectors Setup",
+      detail: "Plugins Setup",
       tone: .warning
     )
     let snapshot = readinessActionSnapshot(checks: [
       RuntimeReadinessCheckSummary(
         id: "plugins",
-        title: "Connectors",
+        title: "Plugins",
         status: "setup_required",
-        detail: "Enable command capability"
+        detail: "Enable action capability"
       )
     ])
     let action = RuntimeReadinessActionPlanner.action(for: step, snapshot: snapshot)
@@ -400,6 +400,48 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(placeholder, "Review the restored prompt, then send")
     XCTAssertEqual(summary, "Ask mode is ready. Review the restored prompt, then send it.")
+  }
+
+  func testActiveWorkCopyAvoidsLocalExecutionTerminology() {
+    let composer = composerSnapshot(hasDraftMessage: false, hasActiveTurn: true)
+    let inspector = InspectorSessionSnapshot(
+      runtimeState: .ready,
+      isLocalModelReady: true,
+      hasWorkspace: true,
+      workspaceDisplayName: "Pith",
+      hasRuntimeThreadSelection: true,
+      selectedThreadTitle: "Cowork",
+      hasActiveTurn: true,
+      setupReadyStepCount: SetupFlowState.stepCount,
+      setupStepCount: SetupFlowState.stepCount,
+      setupProgressDetail: "Working",
+      isWaitingForFirstMessage: false,
+      runtimeReadinessStatus: "running",
+      dailyDriverStage: "running",
+      dailyDriverNextAction: nil,
+      runtimeReadinessChecks: [],
+      runtimeReadinessMetrics: localExecutionMetrics,
+      selectedLocalExecutionSafetyMode: "askBeforeChange"
+    )
+
+    XCTAssertEqual(
+      ComposerStatusPresenter.placeholder(composer),
+      "Pith is working locally. Cancel to stop it."
+    )
+    XCTAssertEqual(
+      ComposerStatusPresenter.statusSummary(composer),
+      "Pith is working locally. Cancel the request if it is no longer useful."
+    )
+    XCTAssertEqual(InspectorSessionPresenter.title(inspector), "Pith Is Working")
+    XCTAssertFalse(ComposerStatusPresenter.placeholder(composer).contains("local execution"))
+    XCTAssertFalse(InspectorSessionPresenter.title(inspector).contains("Execution"))
+  }
+
+  func testActionSafetyFallbackAvoidsExecutionTerminology() {
+    XCTAssertEqual(
+      LocalExecutionSafetyModePresenter.userDetail("custom"),
+      "Custom action safety mode."
+    )
   }
 
   func testFirstReadyTimelineEventFramesCoworkRequest() {
@@ -543,7 +585,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(cancelled.body, "The pending request was cancelled before it finished.")
     XCTAssertEqual(
       TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail,
-      "Connector action needs a supported local runner before it can run."
+      "Plugin action needs a supported local runner before it can run."
     )
     XCTAssertFalse(cancelled.body.contains("local execution"))
     XCTAssertFalse(
@@ -674,7 +716,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   private func composerSnapshot(
     hasDraftMessage: Bool,
-    hasRestoredLocalExecutionDraft: Bool = false
+    hasRestoredLocalExecutionDraft: Bool = false,
+    hasActiveTurn: Bool = false
   ) -> ComposerStatusSnapshot {
     ComposerStatusSnapshot(
       runtimeState: .ready,
@@ -683,7 +726,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       isLocalModelReady: true,
       hasWorkspace: true,
       hasRuntimeThreadSelection: true,
-      hasActiveTurn: false,
+      hasActiveTurn: hasActiveTurn,
       isWaitingForFirstMessage: true,
       hasDraftMessage: hasDraftMessage,
       hasRestoredLocalExecutionDraft: hasRestoredLocalExecutionDraft

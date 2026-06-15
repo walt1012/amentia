@@ -76,11 +76,11 @@ enum PluginConnectorCredentialDialogPresenter {
       : "Pith stores the authorization locally."
     var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
       + "\(scopes) \(storage) "
-      + "Secrets are passed only to the local connector runner for each approved run. "
+      + "Secrets are passed only to the local plugin runner for each approved run. "
     if requiresLocalSecret(connector) {
-      prompt += "A local token or API key is required for this connector."
+      prompt += "A local token or API key is required for this connection."
     } else {
-      prompt += "Leave the secret empty only when this connector can be authorized without a token."
+      prompt += "Leave the secret empty only when this connection can be authorized without a token."
     }
     if isNotion(connector) {
       prompt += notionSetupPrompt()
@@ -94,7 +94,7 @@ enum PluginConnectorCredentialDialogPresenter {
       "",
       "Notion setup: create an internal Notion integration and copy its internal integration token.",
       "Paste that token as the secret, then share every target parent page with the integration before publishing.",
-      "Pith keeps the token local, passes it only to the local Notion connector runner, and does not claim OAuth yet.",
+      "Pith keeps the token local, passes it only to the local Notion plugin runner, and does not claim OAuth yet.",
       "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response proof.",
     ].joined(separator: "\n")
   }
@@ -119,8 +119,8 @@ enum PluginConnectorCredentialDialogPresenter {
     alert.alertStyle = .warning
     alert.messageText = "Authorize \(connector.displayName) Without a Secret?"
     alert.informativeText =
-      "Pith can remember that this connector is allowed without saving a token or API key. "
-      + "Use this only for connector flows that do not need a local secret."
+      "Pith can remember that this connection is allowed without saving a token or API key. "
+      + "Use this only for connection flows that do not need a local secret."
     alert.addButton(withTitle: "Authorize")
     alert.addButton(withTitle: "Back")
     return alert.runModal() == .alertFirstButtonReturn
@@ -138,14 +138,14 @@ enum PluginConnectorCredentialDialogPresenter {
   static func missingSecretWarningText(_ connector: PluginConnectorSummary) -> String {
     if isNotion(connector) {
       return [
-        "Paste the Notion internal integration token before authorizing this connector.",
+        "Paste the Notion internal integration token before authorizing this connection.",
         "If you have not created one yet, create an internal Notion integration first and share the target parent page with it.",
-        "Pith keeps the token local and passes it only to the Notion connector during approved runs.",
+        "Pith keeps the token local and passes it only to the Notion plugin runner during approved runs.",
       ].joined(separator: " ")
     }
 
-    return "Paste the local token or API key before authorizing this connector. "
-      + "Pith will keep it local and pass it only to the local connector runner for each approved run."
+    return "Paste the local token or API key before authorizing this connection. "
+      + "Pith will keep it local and pass it only to the local plugin runner for each approved run."
   }
 
   private static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {

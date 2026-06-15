@@ -246,7 +246,7 @@ fn shell_plan_summary(policy: &LocalChangeExecutionPolicy, workspace: &Workspace
       workspace.display_name
     ),
     LocalChangeExecutionPolicy::Denied(_) => format!(
-      "Check local execution mode and connector permissions before running a shell command in {}.",
+      "Check action safety mode and plugin permissions before running a shell command in {}.",
       workspace.display_name
     ),
   }

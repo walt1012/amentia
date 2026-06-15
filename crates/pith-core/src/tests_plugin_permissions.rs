@@ -58,7 +58,7 @@ fn file_reads_require_plugin_permission() {
   assert!(response.error.is_none());
   let result = response.result.expect("turn result");
   let items = result["items"].as_array().expect("items");
-  assert_eq!(items[2]["title"], "Connector Permission Required");
+  assert_eq!(items[2]["title"], "Plugin Permission Required");
   assert_eq!(items[2]["attributes"]["requiredPermission"], "file.read");
   assert_eq!(items[3]["kind"], "assistantMessage");
 }
@@ -114,7 +114,7 @@ fn shell_requests_require_plugin_permission_before_approval() {
   assert!(response.error.is_none());
   let result = response.result.expect("turn result");
   let items = result["items"].as_array().expect("items");
-  assert_eq!(items[2]["title"], "Connector Permission Required");
+  assert_eq!(items[2]["title"], "Plugin Permission Required");
   assert_eq!(items[2]["attributes"]["requiredPermission"], "shell.exec");
   assert!(result["pendingApprovals"]
     .as_array()
@@ -194,7 +194,7 @@ fn approval_resolution_rechecks_plugin_permissions() {
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");
   let items = approval_result["items"].as_array().expect("approval items");
-  assert_eq!(items[1]["title"], "Connector Permission Required");
+  assert_eq!(items[1]["title"], "Plugin Permission Required");
   assert_eq!(items[1]["attributes"]["requiredPermission"], "file.write");
   assert!(!written_file.exists());
 }

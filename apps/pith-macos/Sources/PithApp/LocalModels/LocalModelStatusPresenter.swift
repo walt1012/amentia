@@ -96,7 +96,7 @@ enum LocalModelStatusPresenter {
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Model readiness unavailable."
+      return "Model setup unavailable."
     }
 
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"

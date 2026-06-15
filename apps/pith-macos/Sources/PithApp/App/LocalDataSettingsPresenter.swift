@@ -34,7 +34,7 @@ enum LocalDataSettingsPresenter {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
-        "Pith local data includes models, sessions, connectors, download recovery data, and preferences. Project folders are never deleted here.",
+        "Pith local data includes models, sessions, plugins, connection credentials, download recovery data, and preferences. Project folders are never deleted here.",
       uninstallDetail:
         "Removing Pith.app does not remove this data. Use Delete Local Data here when you want Pith to forget local setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
@@ -43,7 +43,7 @@ enum LocalDataSettingsPresenter {
       deleteButtonTitle: "Delete Local Data...",
       confirmationTitle: "Delete Pith Local Data?",
       confirmationMessage:
-        "Pith will remove downloaded models, sessions, connectors, download recovery data, and preferences from this Mac. Your project folders and repositories will not be deleted.",
+        "Pith will remove downloaded models, sessions, plugins, connection credentials, download recovery data, and preferences from this Mac. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
@@ -53,7 +53,7 @@ enum LocalDataSettingsPresenter {
       runtimeDetail: "Deleted Pith local data. Restart Pith to set up again.",
       timelineTitle: "Local Data Deleted",
       timelineBody:
-        "Pith removed downloaded models, sessions, connectors, download recovery data, and known preferences. Project folders on disk were not deleted.",
+        "Pith removed downloaded models, sessions, plugins, connection credentials, download recovery data, and known preferences. Project folders on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
         "recreatedDirectoryCount": "\(result.recreatedDirectoryCount)",
@@ -66,7 +66,7 @@ enum LocalDataSettingsPresenter {
       return "Downloaded models use \(LocalModelByteFormatter.string(downloadedModelBytes)) on this Mac."
     }
 
-    return "No downloaded model files yet. Sessions, connectors, and preferences stay local."
+    return "No downloaded model files yet. Sessions, plugins, connections, and preferences stay local."
   }
 
   private static func blockedDetail(canDeleteLocalData: Bool) -> String? {

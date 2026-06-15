@@ -16,10 +16,10 @@ pub(super) fn plugin_check(
 
   RuntimeReadinessCheck {
     id: "plugins".to_string(),
-    title: "Connectors".to_string(),
+    title: "Plugins".to_string(),
     status: status.to_string(),
     detail: format!(
-      "{enabled_plugin_count} enabled of {plugin_count} discovered connector(s); \
+      "{enabled_plugin_count} enabled of {plugin_count} discovered plugin(s); \
        {enabled_command_count} enabled of {command_count} action capability(s)."
     ),
   }
@@ -34,7 +34,9 @@ mod tests {
     let check = plugin_check(1, 1, 0, 1);
 
     assert_eq!(check.status, "setup_required");
+    assert_eq!(check.title, "Plugins");
     assert!(check.detail.contains("0 enabled of 1 action capability"));
+    assert!(check.detail.contains("1 enabled of 1 discovered plugin"));
   }
 
   #[test]

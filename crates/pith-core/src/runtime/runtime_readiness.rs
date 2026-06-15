@@ -250,13 +250,13 @@ fn daily_driver_stage(input: DailyDriverStageInput) -> DailyDriverStage {
   if !workspace_ready {
     return DailyDriverStage {
       stage: "workspace_setup",
-      next_action: "Open a workspace to scope tools and memory.",
+      next_action: "Open a project to scope tools and memory.",
     };
   }
   if !thread_ready {
     return DailyDriverStage {
       stage: "thread_setup",
-      next_action: "Create or select a workspace-bound thread.",
+      next_action: "Create or select a project-bound session.",
     };
   }
   if pending_approval_count > 0 {

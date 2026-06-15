@@ -18,7 +18,7 @@ pub(super) fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck
       .current()
       .map(|workspace| format!("Tools are bound to {}.", workspace.display_name))
       .unwrap_or_else(|| {
-        "Open a workspace to bind file, shell, memory, and approvals.".to_string()
+        "Open a project to bind file, shell, memory, and approvals.".to_string()
       }),
   }
 }
@@ -36,9 +36,9 @@ pub(super) fn thread_check(
       "setup_required".to_string()
     },
     detail: if thread_ready {
-      format!("{workspace_thread_count} thread(s) are bound to the current workspace.")
+      format!("{workspace_thread_count} session(s) are bound to the current project.")
     } else {
-      "Create or resume a thread bound to the current workspace.".to_string()
+      "Create or resume a session bound to the current project.".to_string()
     },
   }
 }
@@ -58,11 +58,11 @@ pub(super) fn first_request_check(
       "waiting".to_string()
     },
     detail: if first_request_sent {
-      "At least one local request has been sent in the current workspace.".to_string()
+      "At least one local request has been sent in the current project.".to_string()
     } else if thread_ready {
       "Send one short local request to complete first-use setup.".to_string()
     } else {
-      "Create or resume a workspace-bound thread before sending the first request.".to_string()
+      "Create or resume a project-bound session before sending the first request.".to_string()
     },
   }
 }

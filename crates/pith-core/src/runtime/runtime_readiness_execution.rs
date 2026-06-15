@@ -39,7 +39,7 @@ pub(super) fn bounded_runtime_check() -> RuntimeReadinessCheck {
     id: "boundedRuntime".to_string(),
     title: "Bounded Local Work".to_string(),
     status: "ready".to_string(),
-    detail: "Shell, llama.cpp, web search, git helpers, and connector actions are bounded."
+    detail: "Shell, llama.cpp, web search, git helpers, and plugin actions are bounded."
       .to_string(),
   }
 }
@@ -78,22 +78,22 @@ fn execution_control_detail(
     return format!("{pending_approval_count} approval request(s) are pending.");
   }
   if active_turn_count > 0 {
-    return format!("{active_turn_count} turn response(s) are streaming and cancellable.");
+    return format!("{active_turn_count} request response(s) are streaming and cancellable.");
   }
   if running_turn_count > 0 {
-    return format!("{running_turn_count} turn execution(s) are active and cancellable.");
+    return format!("{running_turn_count} request execution(s) are active and cancellable.");
   }
   if running_approval_count > 0 {
     return format!("{running_approval_count} approval execution(s) are active and cancellable.");
   }
   if running_plugin_command_count > 0 {
     return format!(
-      "{running_plugin_command_count} connector action execution(s) are active and cancellable."
+      "{running_plugin_command_count} plugin action execution(s) are active and cancellable."
     );
   }
   if running_workspace_search_count > 0 {
     return format!(
-      "{running_workspace_search_count} workspace search(es) are active and cancellable."
+      "{running_workspace_search_count} project search(es) are active and cancellable."
     );
   }
 

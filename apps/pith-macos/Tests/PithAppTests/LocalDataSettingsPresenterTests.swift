@@ -13,9 +13,10 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       summary.storageSummary,
-      "No downloaded model files yet. Sessions, connectors, and preferences stay local."
+      "No downloaded model files yet. Sessions, plugins, connections, and preferences stay local."
     )
-    XCTAssertTrue(summary.ownershipDetail.contains("connectors"))
+    XCTAssertTrue(summary.ownershipDetail.contains("plugins"))
+    XCTAssertTrue(summary.ownershipDetail.contains("connection credentials"))
     XCTAssertTrue(summary.ownershipDetail.contains("Project folders are never deleted"))
     XCTAssertTrue(summary.uninstallDetail.contains("Removing Pith.app does not remove this data"))
     XCTAssertTrue(summary.uninstallDetail.contains("Delete Local Data"))
@@ -39,7 +40,8 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       summary.confirmationMessage.contains("project folders and repositories will not be deleted")
     )
     XCTAssertTrue(summary.confirmationMessage.contains("from this Mac"))
-    XCTAssertTrue(summary.confirmationMessage.contains("connectors"))
+    XCTAssertTrue(summary.confirmationMessage.contains("plugins"))
+    XCTAssertTrue(summary.confirmationMessage.contains("connection credentials"))
   }
 
   func testSummaryExplainsBlockedDeletion() {
@@ -70,7 +72,8 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
     XCTAssertTrue(reset.timelineBody.contains("Project folders on disk were not deleted"))
-    XCTAssertTrue(reset.timelineBody.contains("connectors"))
+    XCTAssertTrue(reset.timelineBody.contains("plugins"))
+    XCTAssertTrue(reset.timelineBody.contains("connection credentials"))
     XCTAssertEqual(
       reset.attributes["appSupportPath"],
       "/Users/example/Library/Application Support/Pith"

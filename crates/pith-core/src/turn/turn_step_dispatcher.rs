@@ -213,7 +213,7 @@ impl<'a> TurnStepDispatcher<'a> {
       Err((code, message)) => {
         self.items.push(TimelineItem {
           kind: "warning".to_string(),
-          title: "Connector Action Failed".to_string(),
+          title: "Plugin Action Failed".to_string(),
           content: message.clone(),
           attributes: Some(HashMap::from([
             ("commandId".to_string(), command_id),
@@ -223,7 +223,7 @@ impl<'a> TurnStepDispatcher<'a> {
         self.items.push(TimelineItem {
           kind: "assistantMessage".to_string(),
           title: "Assistant".to_string(),
-          content: "The connector action failed before it could produce output. Inspect the connector setup and retry."
+          content: "The plugin action failed before it could produce output. Inspect the plugin setup and retry."
             .to_string(),
           attributes: None,
         });
@@ -239,7 +239,7 @@ impl<'a> TurnStepDispatcher<'a> {
   ) {
     self.items.push(TimelineItem {
       kind: "warning".to_string(),
-      title: "Connector Action Not Ready".to_string(),
+      title: "Plugin Action Not Ready".to_string(),
       content: message,
       attributes: Some(attributes),
     });
@@ -247,7 +247,7 @@ impl<'a> TurnStepDispatcher<'a> {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
       content: format!(
-        "Pith could not run `{command_id}` yet. Fix the connector setup shown above, then retry the same action."
+        "Pith could not run `{command_id}` yet. Fix the plugin setup shown above, then retry the same action."
       ),
       attributes: None,
     });

@@ -130,7 +130,7 @@ struct TimelineCard: View {
           }
 
           if showsPluginAuthorizeAction {
-            Button("Authorize Connector") {
+            Button("Authorize Connection") {
               onAuthorizePluginConnector()
             }
             .buttonStyle(.borderedProminent)

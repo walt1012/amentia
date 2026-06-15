@@ -295,7 +295,7 @@ enum DistributionTrustPresenter {
     let modes = metadata.localExecutionSafetyModes
       .map { LocalExecutionSafetyModePresenter.detailed($0) }
       .joined(separator: ", ")
-    return "local execution mode: \(defaultMode); modes: \(modes)"
+    return "action safety mode: \(defaultMode); modes: \(modes)"
   }
 
   private static func sandboxSummary(_ metadata: DistributionPackageMetadata) -> String {

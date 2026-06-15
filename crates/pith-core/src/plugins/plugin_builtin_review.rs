@@ -25,7 +25,7 @@ pub(super) fn build_review_diff_summary_result(
   }
   let Some(workspace) = workspace else {
     return (
-      "Open a workspace before inspecting the current diff.".to_string(),
+      "Open a project before inspecting the current diff.".to_string(),
       HashMap::new(),
     );
   };
@@ -45,7 +45,7 @@ pub(super) fn build_review_diff_summary_result(
       workspace.display_name
     ),
     _ => format!(
-      "Could not read a git diff in {}. Ensure the workspace is a git repository and git is available.",
+      "Could not read a git diff in {}. Ensure the project is a git repository and git is available.",
       workspace.display_name
     ),
   };

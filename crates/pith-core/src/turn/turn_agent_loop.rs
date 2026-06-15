@@ -547,7 +547,7 @@ mod tests {
   fn observation_summary_recovers_search_next_action() {
     let observation = AgentLoopObservation::from_items(&[TimelineItem {
       kind: "pluginResult".to_string(),
-      title: "Connector Action Result".to_string(),
+      title: "Plugin Action Result".to_string(),
       content: String::new(),
       attributes: Some(HashMap::from([
         ("tool".to_string(), "workspace-notes".to_string()),
@@ -568,7 +568,7 @@ mod tests {
   fn observation_summary_recovers_web_search_next_action() {
     let observation = AgentLoopObservation::from_items(&[TimelineItem {
       kind: "pluginResult".to_string(),
-      title: "Connector Action Result".to_string(),
+      title: "Plugin Action Result".to_string(),
       content: String::new(),
       attributes: Some(HashMap::from([
         ("tool".to_string(), "notion.prepare-page-draft".to_string()),
@@ -599,7 +599,7 @@ mod tests {
   fn observation_summary_recovers_shell_next_action_with_approval() {
     let observation = AgentLoopObservation::from_items(&[TimelineItem {
       kind: "pluginResult".to_string(),
-      title: "Connector Action Result".to_string(),
+      title: "Plugin Action Result".to_string(),
       content: String::new(),
       attributes: Some(HashMap::from([
         ("tool".to_string(), "review-assistant".to_string()),
@@ -634,7 +634,7 @@ mod tests {
   fn observation_summary_recovers_write_next_action_without_bypassing_approval() {
     let observation = AgentLoopObservation::from_items(&[TimelineItem {
       kind: "pluginResult".to_string(),
-      title: "Connector Action Result".to_string(),
+      title: "Plugin Action Result".to_string(),
       content: String::new(),
       attributes: Some(HashMap::from([
         ("tool".to_string(), "workspace-notes".to_string()),
@@ -674,7 +674,7 @@ mod tests {
   fn observation_summary_recovers_plugin_command_next_action() {
     let observation = AgentLoopObservation::from_items(&[TimelineItem {
       kind: "pluginResult".to_string(),
-      title: "Connector Action Result".to_string(),
+      title: "Plugin Action Result".to_string(),
       content: String::new(),
       attributes: Some(HashMap::from([
         ("tool".to_string(), "source-plugin.run".to_string()),

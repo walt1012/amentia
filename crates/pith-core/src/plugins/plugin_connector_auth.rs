@@ -14,17 +14,17 @@ use crate::secure_credentials;
 use crate::RuntimeContext;
 
 const MISSING_CONNECTOR_REPAIR_HINT: &str =
-  "Refresh plugins, reinstall the connector plugin, or use a connector id from the connector panel.";
+  "Refresh plugins, reinstall the plugin, or choose an available connection from the plugin panel.";
 const AUTHORIZE_DISABLED_CONNECTOR_REPAIR_HINT: &str =
-  "Enable the connector plugin before authorizing it.";
+  "Enable the plugin before authorizing this connection.";
 const NOT_REQUIRED_CONNECTOR_REPAIR_HINT: &str =
-  "Run the command without connector authorization; this connector does not require credentials.";
+  "Run the action without connection authorization; this connection does not require credentials.";
 const MISSING_SECRET_REPAIR_HINT: &str =
-  "Paste the connector token or API key, then retry connector authorization.";
+  "Paste the connection token or API key, then retry authorization.";
 const AUTHORIZE_STORE_REPAIR_HINT: &str =
-  "Check local storage permissions, then retry connector authorization.";
+  "Check local storage permissions, then retry connection authorization.";
 const CLEAR_STORE_REPAIR_HINT: &str =
-  "Check local storage permissions, then retry clearing the connector credential.";
+  "Check local storage permissions, then retry clearing the connection credential.";
 
 pub(crate) fn handle_plugin_connector_authorize(
   context: &mut RuntimeContext,

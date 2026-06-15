@@ -51,7 +51,7 @@ pub(super) fn expand_connector_saved_artifact_input(
   let artifact_context = match workspace {
     Some(workspace) => bounded_artifact_preview(workspace, &path),
     None => format!(
-      "{CONNECTOR_SAVED_ARTIFACT_READ_ERROR_PREFIX}Open a workspace before using saved artifacts."
+      "{CONNECTOR_SAVED_ARTIFACT_READ_ERROR_PREFIX}Open a project before using saved artifacts."
     ),
   };
 

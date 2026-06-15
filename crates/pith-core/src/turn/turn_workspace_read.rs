@@ -50,7 +50,7 @@ fn execute_read_step(
       )
     } else {
       format!(
-        "Check connector permissions before inspecting {} in {}.",
+        "Check plugin permissions before inspecting {} in {}.",
         relative_path, workspace.display_name
       )
     },

@@ -162,7 +162,7 @@ struct PluginCommandRow: View {
 
     ForEach(missingConnectorIds, id: \.self) { connectorID in
       HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text("Missing connector: \(connectorID)")
+        Text("Missing connection: \(connectorID)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)

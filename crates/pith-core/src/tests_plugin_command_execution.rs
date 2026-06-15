@@ -492,11 +492,11 @@ fn plugin_command_run_reports_repair_metadata_when_thread_is_missing() {
   assert_eq!(data["pluginId"], "workspace-notes");
   assert_eq!(data["commandId"], "workspace-notes::workspace.capture-note");
   assert_eq!(data["runStatus"], "missingThread");
-  assert_eq!(data["runBlocker"], "Thread not found");
+  assert_eq!(data["runBlocker"], "Session not found");
   assert!(data["runRepairHint"]
     .as_str()
     .expect("run repair hint")
-    .contains("Select or create a thread"));
+    .contains("Select or create a session"));
 }
 
 #[test]
@@ -2367,7 +2367,7 @@ fn approval_respond_returns_structured_plugin_command_readiness_error() {
   assert!(data["runBlocker"]
     .as_str()
     .expect("run blocker")
-    .contains("connector action"));
+    .contains("plugin action"));
   assert!(data["runRepairHint"]
     .as_str()
     .expect("repair hint")
@@ -2533,7 +2533,7 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
     "thread-1::notion-mcp::notion-mcp.create-task"
   );
   assert_eq!(items[1]["kind"], "approvalRequested");
-  assert_eq!(items[1]["title"], "Connector Action Approval Requested");
+  assert_eq!(items[1]["title"], "Plugin Action Approval Requested");
   assert_eq!(
     items[1]["attributes"]["pluginCommandRunId"],
     items[0]["attributes"]["pluginCommandRunId"]

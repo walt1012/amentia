@@ -31,7 +31,7 @@ pub(crate) fn handle_turn_cancel(
     .thread_state
     .find_mut(active_turn_snapshot.thread_id())
   else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return JsonRpcResponse::error(request.id, -32004, "Session not found");
   };
   let cancelled_thread_id = thread.id().to_string();
 
@@ -85,7 +85,7 @@ pub(crate) fn handle_turn_cancel_running(
     };
 
   if context.thread_state.find(&params.thread_id).is_none() {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return JsonRpcResponse::error(request.id, -32004, "Session not found");
   }
 
   let cancellation = context

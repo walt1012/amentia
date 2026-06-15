@@ -82,7 +82,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ])
 
     XCTAssertEqual(badges.count, 1)
-    XCTAssertEqual(badges.first?.label, "Connector Prepared")
+    XCTAssertEqual(badges.first?.label, "Connection Prepared")
     XCTAssertEqual(badges.first?.tone, .active)
   }
 
@@ -93,7 +93,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ])
 
     XCTAssertEqual(badges.count, 1)
-    XCTAssertEqual(badges.first?.label, "Connector Retry Needed")
+    XCTAssertEqual(badges.first?.label, "Connection Retry Needed")
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
@@ -141,7 +141,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     XCTAssertTrue(summary?.contains("Boundary: network") == true)
-    XCTAssertTrue(summary?.contains("Approval: requires enabled connector permission") == true)
+    XCTAssertTrue(summary?.contains("Approval: requires enabled plugin permission") == true)
     XCTAssertTrue(summary?.contains("Reason: freshPublicInformation") == true)
   }
 
@@ -193,7 +193,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     let summary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
       id: "entry-1",
       kind: .warning,
-      title: "Local Execution Blocked",
+        title: "Action Blocked",
       body: "Pith did not run a shell command.",
       attributes: [
         "tool": "run_shell",
@@ -300,19 +300,19 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
         id: "entry-1",
         kind: .warning,
-        title: "Connector Permission Required",
+        title: "Plugin Permission Required",
         body: "Pith could not search the web.",
         attributes: [
           "permissionGate": "requiresPluginPermission",
           "requiredPermission": "tool:web_search",
           "requiredPermissionLabel": "Web Search",
-          "permissionRecoveryHint": "Enable the bundled Web Search connector.",
+          "permissionRecoveryHint": "Enable the bundled Web Search plugin.",
         ]
       ))
     )
 
     XCTAssertTrue(summary?.contains("Permission needed: Web Search") == true)
-    XCTAssertTrue(summary?.contains("Fix: Enable the bundled Web Search connector.") == true)
+    XCTAssertTrue(summary?.contains("Fix: Enable the bundled Web Search plugin.") == true)
     XCTAssertFalse(summary?.contains("requires tool:web_search") == true)
 
     let fallbackSummary = TimelineInspectorPresenter.selectedEntryPluginSummary(
@@ -349,7 +349,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     let entry = TimelineEntry(
       id: "entry-1",
       kind: .warning,
-      title: "Connector Permission Required",
+      title: "Plugin Permission Required",
       body: "Pith could not search the web.",
       attributes: [
         "permissionGate": "requiresPluginPermission",
@@ -429,7 +429,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(
       sections[1].body.contains("Why Pith searched: fresh public information was useful")
     )
-    XCTAssertTrue(sections[2].body.contains("Approval: requires enabled connector permission"))
+    XCTAssertTrue(sections[2].body.contains("Approval: requires enabled plugin permission"))
     XCTAssertTrue(sections[3].body.contains("Titles: Project rule"))
     XCTAssertTrue(sections[3].body.contains("kept 1 of 3 relevant notes"))
     XCTAssertFalse(sections[3].body.contains("Ranking scores"))

@@ -41,7 +41,7 @@ enum RuntimeHeaderPresenter {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Pith is running locally. Cancel only if the execution is no longer useful."
+        ) ?? "Pith is working locally. Cancel only if the request is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
         return DailyDriverStagePresenter.summary(

@@ -45,7 +45,7 @@ pub(crate) fn handle_thread_read(
   }
 
   let Some((thread, items)) = context.thread_state.snapshot(&params.thread_id) else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return JsonRpcResponse::error(request.id, -32004, "Session not found");
   };
   let thread_id = thread.id.clone();
 
@@ -80,7 +80,7 @@ pub(crate) fn handle_thread_delete(
   }
 
   let Some(_removed_thread) = context.thread_state.remove(&params.thread_id) else {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return JsonRpcResponse::error(request.id, -32004, "Session not found");
   };
   context
     .execution_state

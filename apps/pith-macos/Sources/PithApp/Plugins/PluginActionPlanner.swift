@@ -50,20 +50,20 @@ enum PluginActionPlanner {
     snapshot: PluginActionSnapshot
   ) -> String? {
     guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
-      return "Connector is not loaded."
+      return "Connection is not loaded."
     }
 
     if snapshot.runtimeState != .ready {
       return "Pith is not ready."
     }
     if !connector.enabled {
-      return "Connector is disabled."
+      return "Connection is disabled."
     }
     if !connector.authRequired {
-      return "Connector does not require authorization."
+      return "Connection does not require authorization."
     }
     if connector.authStatus != "needsAuth" {
-      return "Connector is already authorized."
+      return "Connection is already authorized."
     }
     if snapshot.hasActiveOrPendingTurn {
       return "Finish or cancel the active task first."
@@ -87,14 +87,14 @@ enum PluginActionPlanner {
     snapshot: PluginActionSnapshot
   ) -> String? {
     guard let connector = snapshot.connectors.first(where: { $0.id == connectorID }) else {
-      return "Connector is not loaded."
+      return "Connection is not loaded."
     }
 
     if snapshot.runtimeState != .ready {
       return "Pith is not ready."
     }
     if !connector.credentialPresent {
-      return "Connector has no stored credential."
+      return "Connection has no stored credential."
     }
     if snapshot.hasActiveOrPendingTurn {
       return "Finish or cancel the active task first."
@@ -178,27 +178,27 @@ enum PluginActionPlanner {
     snapshot: PluginActionSnapshot
   ) -> String? {
     guard let command = snapshot.commands.first(where: { $0.id == commandID }) else {
-      return "Command was not found."
+      return "Action was not found."
     }
 
     if command.runStatus != "ready" {
-      return command.runBlocker ?? "Command is not ready."
+      return command.runBlocker ?? "Action is not ready."
     }
     guard command.execution?.supported == true else {
-      return "Command needs a supported execution contract."
+      return "Action needs a supported local runner."
     }
 
     if !command.unsupportedRequiredInputFieldNames.isEmpty {
-      return "Command requires unsupported input fields: \(command.unsupportedRequiredInputFieldNames.joined(separator: ", "))."
+      return "Action requires unsupported input fields: \(command.unsupportedRequiredInputFieldNames.joined(separator: ", "))."
     }
     if command.requiresConnectorInput && command.declaredConnectorIds.isEmpty {
-      return "Command requires connector input, but no connector is declared."
+      return "Action requires connection input, but no connection is declared."
     }
     if snapshot.runtimeState != .ready {
       return "Pith is not ready."
     }
     if command.requiresWorkspaceInput && !snapshot.hasRuntimeThreadSelection {
-      return "Command requires a project-bound session."
+      return "Action requires a project-bound session."
     }
     if !snapshot.hasRuntimeThreadSelection || snapshot.selectedThreadID == nil {
       return "Select or create a session first."
@@ -222,10 +222,10 @@ enum PluginActionPlanner {
     }
 
     guard let command = snapshot.commands.first(where: { $0.id == commandID }) else {
-      return "Command is not loaded."
+      return "Action is not loaded."
     }
     if command.requiresPlainInput {
-      return "Command requires input. Use Run with Input."
+      return "Action requires input. Use Run with Input."
     }
 
     return nil

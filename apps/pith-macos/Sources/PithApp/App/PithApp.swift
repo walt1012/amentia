@@ -52,7 +52,7 @@ struct PithApp: App {
           .disabled(!viewModel.canRunSetupCalloutSecondaryAction())
         }
 
-        Button("Add Local Connector") {
+        Button("Add Plugin") {
           viewModel.installPlugin()
         }
         .keyboardShortcut("i", modifiers: [.command, .shift])

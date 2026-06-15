@@ -24,7 +24,7 @@ struct SettingsView: View {
   }
 
   private var localExecutionSection: some View {
-    Section("Local Execution") {
+    Section("Action Safety") {
       Picker(
         "Mode",
         selection: Binding(

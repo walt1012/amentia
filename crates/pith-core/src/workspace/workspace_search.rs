@@ -73,7 +73,7 @@ pub fn prepare_workspace_search(
     return Err(JsonRpcResponse::error(
       request.id,
       -32040,
-      "Open a workspace before searching",
+      "Open a project before searching",
     ));
   };
 

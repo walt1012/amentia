@@ -380,7 +380,7 @@ fn write_plan_summary(
       intent.relative_path, workspace.display_name
     ),
     LocalChangeExecutionPolicy::Denied(_) => format!(
-      "Check local execution mode and connector permissions before writing {} in {}.",
+      "Check action safety mode and plugin permissions before writing {} in {}.",
       intent.relative_path, workspace.display_name
     ),
   }

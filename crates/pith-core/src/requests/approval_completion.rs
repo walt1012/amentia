@@ -29,7 +29,7 @@ pub fn complete_prepared_approval_respond(
     .remove_running_approval(&approval.id);
 
   let Some(thread) = context.thread_state.find_mut(&approval.thread_id) else {
-    return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
+    return JsonRpcResponse::error(completed.request_id, -32004, "Session not found");
   };
   thread.append_items(items.clone());
   thread.mark_ready();

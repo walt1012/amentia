@@ -37,11 +37,11 @@ enum RuntimeStateLoader {
     } catch {
       return RuntimeReadinessSummary(
         status: "unavailable",
-        summary: "Local model readiness unavailable: \(error.localizedDescription)",
+        summary: "Local model setup unavailable: \(error.localizedDescription)",
         checks: [
           RuntimeReadinessCheckSummary(
-            id: "runtime-readiness",
-            title: "Local Model Readiness",
+            id: "model-setup",
+            title: "Local Model Setup",
             status: "unavailable",
             detail: error.localizedDescription
           )

@@ -20,7 +20,7 @@ pub(crate) fn handle_thread_change_preview(
     };
 
   if context.thread_state.find(&params.thread_id).is_none() {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return JsonRpcResponse::error(request.id, -32004, "Session not found");
   }
 
   let changes = match active_workspace_changes_for_thread(context, &params.thread_id) {
@@ -58,7 +58,7 @@ pub(crate) fn handle_thread_revert_changes(
     );
   }
   if context.thread_state.find(&params.thread_id).is_none() {
-    return JsonRpcResponse::error(request.id, -32004, "Thread not found");
+    return JsonRpcResponse::error(request.id, -32004, "Session not found");
   }
 
   let changes = match active_workspace_changes_for_thread(context, &params.thread_id) {

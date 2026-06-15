@@ -31,7 +31,7 @@ enum InspectorSessionPresenter {
       return "Pith Needs Restart"
     case .ready:
       if snapshot.hasActiveTurn {
-        return "Local Execution Running"
+        return "Pith Is Working"
       }
       if !snapshot.isLocalModelReady {
         return "Model Setup Needed"
@@ -59,7 +59,7 @@ enum InspectorSessionPresenter {
       return "Use the restart action in the timeline header to recover local work."
     case .ready:
       if snapshot.hasActiveTurn {
-        return "Pith is running locally. Keep review focused on the timeline unless the execution should be cancelled."
+        return "Pith is working locally. Keep review focused on the timeline unless the request should be cancelled."
       }
       if !snapshot.isLocalModelReady {
         return "Complete the model step from the timeline callout before starting agent work."

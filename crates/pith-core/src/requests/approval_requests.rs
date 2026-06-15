@@ -59,7 +59,7 @@ pub fn prepare_approval_respond(
       return Err(JsonRpcResponse::error(
         request.id,
         -32004,
-        "Thread not found",
+        "Session not found",
       ));
     };
     thread.bind_workspace_if_missing(current_workspace);
@@ -67,7 +67,7 @@ pub fn prepare_approval_respond(
       return Err(JsonRpcResponse::error(
         request.id,
         -32031,
-        "Open a workspace for this thread before resolving approvals",
+        "Open a project for this session before resolving approvals",
       ));
     };
     let agent_context = ApprovalAgentContext::from_thread_items(&approval, thread.items());
@@ -98,7 +98,7 @@ pub fn prepare_approval_respond(
     return Err(JsonRpcResponse::error(
       request.id,
       -32004,
-      "Thread not found",
+      "Session not found",
     ));
   }
   context

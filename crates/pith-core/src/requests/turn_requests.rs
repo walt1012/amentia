@@ -50,7 +50,7 @@ pub fn prepare_turn_start(
       return Err(JsonRpcResponse::error(
         request.id,
         -32004,
-        "Thread not found",
+        "Session not found",
       ));
     };
 
@@ -162,7 +162,7 @@ pub fn complete_prepared_turn_start(
   }
 
   let Some(thread) = context.thread_state.find_mut(&output.thread_id) else {
-    return JsonRpcResponse::error(completed.request_id, -32004, "Thread not found");
+    return JsonRpcResponse::error(completed.request_id, -32004, "Session not found");
   };
 
   if was_cancelled {

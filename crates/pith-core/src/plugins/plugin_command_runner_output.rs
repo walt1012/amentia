@@ -1039,7 +1039,7 @@ mod tests {
       "items": [
         {
           "kind": "pluginResult",
-          "title": "Connector Workflow",
+          "title": "Connection Workflow",
           "content": "Prepared a connector workflow.",
           "attributes": {
             "connectorWorkflowId": "notion.create-page",
@@ -1089,7 +1089,7 @@ mod tests {
       "items": [
         {
           "kind": "pluginResult",
-          "title": "Connector Workflow",
+          "title": "Connection Workflow",
           "content": "Prepared a connector workflow.",
           "attributes": {
             "connectorWorkflowId": "notion.create-page",
@@ -1121,7 +1121,7 @@ mod tests {
       "items": [
         {
           "kind": "pluginResult",
-          "title": "Connector Workflow",
+          "title": "Connection Workflow",
           "content": "Prepared a connector workflow.",
           "attributes": {
             "connectorWorkflowId": "team-chat.send-message",
@@ -1181,7 +1181,7 @@ mod tests {
       "items": [
         {
           "kind": "pluginResult",
-          "title": "Connector Workflow",
+          "title": "Connection Workflow",
           "content": "Prepared a connector workflow.",
           "attributes": {
             "connectorWorkflowId": "notion.create-page",
@@ -1219,7 +1219,7 @@ mod tests {
       "items": [
         {
           "kind": "pluginResult",
-          "title": "Connector Workflow",
+          "title": "Connection Workflow",
           "content": "Prepared a connector workflow.",
           "attributes": {
             "connectorWorkflowId": "notion.create-page",

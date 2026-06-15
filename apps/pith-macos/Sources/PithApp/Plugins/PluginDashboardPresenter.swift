@@ -191,7 +191,7 @@ enum PluginDashboardPresenter {
 
   static func connectorDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.connectors.isEmpty else {
-      return "Add or enable a local connector to work with another app."
+      return "Add or enable a plugin connection to work with another app."
     }
 
     return snapshot.connectors
@@ -333,7 +333,7 @@ enum PluginDashboardPresenter {
       parts.append("input: \(command.requiredInputFieldNames.joined(separator: ", "))")
     }
     if !command.visibleConnectorIds.isEmpty {
-      parts.append("connectors: \(connectorStatusList(command, connectors: connectors))")
+      parts.append("connections: \(connectorStatusList(command, connectors: connectors))")
     }
     if let runBlocker = command.runBlocker, command.runStatus != "ready" {
       parts.append("blocked: \(runBlocker)")

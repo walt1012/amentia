@@ -39,7 +39,7 @@ enum ComposerStatusPresenter {
     }
 
     if snapshot.hasActiveTurn {
-      return "Pith is running a local execution. Cancel to stop it."
+      return "Pith is working locally. Cancel to stop it."
     }
 
     if snapshot.hasRestoredLocalExecutionDraft {
@@ -77,7 +77,7 @@ enum ComposerStatusPresenter {
       }
 
       if snapshot.hasActiveTurn {
-        return "Pith is running locally. Cancel the execution if it is no longer useful."
+        return "Pith is working locally. Cancel the request if it is no longer useful."
       }
 
       if snapshot.hasRestoredLocalExecutionDraft {

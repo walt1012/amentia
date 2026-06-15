@@ -12,7 +12,7 @@ pub(super) fn execute_no_workspace_turn(
     &snapshot.memory_notes,
     &snapshot.message,
     None,
-    "Wait for a workspace before running filesystem tools.".to_string(),
+    "Open a project before running filesystem tools.".to_string(),
     Some(&snapshot.cancellation),
   ));
   if snapshot.cancellation.is_cancelled() {
@@ -23,8 +23,8 @@ pub(super) fn execute_no_workspace_turn(
   }
   items.push(TimelineItem {
     kind: "warning".to_string(),
-    title: "Workspace Required".to_string(),
-    content: "Open a workspace before asking Pith to inspect files.".to_string(),
+    title: "Project Required".to_string(),
+    content: "Open a project before asking Pith to inspect files.".to_string(),
     attributes: None,
   });
   items.push(TimelineItem {

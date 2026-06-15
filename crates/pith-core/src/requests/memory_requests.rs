@@ -20,7 +20,7 @@ pub(crate) fn handle_memory_create(
     return JsonRpcResponse::error(
       request.id,
       -32040,
-      "Open a workspace before creating memory notes",
+      "Open a project before creating memory notes",
     );
   };
 

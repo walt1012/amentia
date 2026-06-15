@@ -3,19 +3,19 @@ use std::collections::HashMap;
 pub(super) fn readiness_repair_hint(run_status: &str, run_blocker: &str) -> String {
   match run_status {
     "invalidCommandManifest" => plugin_definition_manifest_repair_hint("command", run_blocker),
-    "missingExecution" => "Add an execution contract before running this command.".to_string(),
+    "missingExecution" => "Add a local runner before running this action.".to_string(),
     "unsupportedExecution" => "Use a supported driver: builtin, stdio, or MCP stdio.".to_string(),
     "missingConnector" => {
       "Declare the connector in the plugin manifest or remove it from the command contract."
         .to_string()
     }
     "missingPermission" => {
-      "Add the required permission to the plugin manifest or narrow the command capability."
+      "Add the required permission to the plugin setup file or narrow the action capability."
         .to_string()
     }
     "runnerSetup" => runner_setup_repair_hint(run_blocker),
-    "needsConnectorAuth" => "Authorize the connector before running this command.".to_string(),
-    _ => "Inspect the plugin manifest and command contract, then refresh plugins.".to_string(),
+    "needsConnectorAuth" => "Authorize the connection before running this action.".to_string(),
+    _ => "Inspect the plugin setup and action contract, then refresh plugins.".to_string(),
   }
 }
 
@@ -180,7 +180,7 @@ fn runner_setup_repair_hint(detail: &str) -> String {
     return "Add the runner file to the plugin bundle or update the entrypoint path.".to_string();
   }
   if detail.contains("workspace root could not be resolved") {
-    return "Reopen an existing workspace before running the plugin command.".to_string();
+    return "Reopen an existing project before running the plugin action.".to_string();
   }
   if detail.contains("sandbox temporary") && detail.contains("crosses a symlink") {
     return "Replace the symlinked sandbox temporary path with a real directory inside the workspace."

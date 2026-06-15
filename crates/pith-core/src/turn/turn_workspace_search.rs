@@ -42,7 +42,7 @@ fn execute_search_step(
       )
     } else {
       format!(
-        "Check connector permissions before searching {} for \"{}\".",
+        "Check plugin permissions before searching {} for \"{}\".",
         workspace.display_name, query
       )
     },

@@ -47,8 +47,8 @@ fn complete_plugin_command_items(
         &command,
         -32004,
         "missingThread",
-        "Thread not found",
-        "Select or create a thread, then run the connector action again.",
+        "Session not found",
+        "Select or create a session, then run the plugin action again.",
         input.as_deref(),
       ));
     };
@@ -67,7 +67,7 @@ fn complete_plugin_command_items(
       -32010,
       "persistFailed",
       error.to_string(),
-      "Check local storage permissions, then retry the connector action.",
+      "Check local storage permissions, then retry the plugin action.",
       input.as_deref(),
     )
   })?;
@@ -103,7 +103,7 @@ fn complete_plugin_command_items(
         -32010,
         "persistFailed",
         error.to_string(),
-        "Check local storage permissions, then retry the connector action.",
+        "Check local storage permissions, then retry the plugin action.",
         input.as_deref(),
       )
     })?;

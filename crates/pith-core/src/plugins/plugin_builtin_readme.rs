@@ -21,7 +21,7 @@ pub(super) fn build_workspace_readme_note_result(
       .to_string();
   }
   let Some(workspace) = workspace else {
-    return "Open a workspace before capturing a workspace note.".to_string();
+    return "Open a project before capturing a project memory note.".to_string();
   };
 
   match read_file(

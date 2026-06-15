@@ -47,7 +47,7 @@ struct InspectorPane: View {
               MemoryPanel(viewModel: viewModel)
             }
 
-            DisclosureGroup("Connectors", isExpanded: $pluginManagerExpanded) {
+            DisclosureGroup("Plugins", isExpanded: $pluginManagerExpanded) {
               PluginManagerPanel(viewModel: viewModel)
             }
 
@@ -136,7 +136,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedPluginSection: some View {
     if let pluginSummary = viewModel.selectedEntryPluginSummary() {
-      DisclosureGroup("Connector Proof", isExpanded: $selectedPluginExpanded) {
+      DisclosureGroup("Connection Proof", isExpanded: $selectedPluginExpanded) {
         Text(pluginSummary)
           .font(.caption)
           .foregroundColor(.secondary)

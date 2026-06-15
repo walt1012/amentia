@@ -7,8 +7,8 @@ use super::plugin_command_recovery_hints::readiness_repair_hint;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 use super::plugin_permissions::build_permission_denied_items;
 
-const MCP_STDIO_PLUGIN_ACTION: &str = "run an MCP stdio connector action";
-const CONNECTOR_PLUGIN_ACTION: &str = "run a connector action";
+const MCP_STDIO_PLUGIN_ACTION: &str = "run an MCP stdio plugin action";
+const CONNECTOR_PLUGIN_ACTION: &str = "run a plugin action";
 
 pub(crate) fn plugin_command_permission_blocker(
   command: &HostPluginCommandEntry,
@@ -148,7 +148,7 @@ mod tests {
     };
 
     let items =
-      build_plugin_command_denial(&command, None, "network.outbound", "run a connector action");
+      build_plugin_command_denial(&command, None, "network.outbound", "run a plugin action");
     let attributes = items[0].attributes.as_ref().expect("attributes");
 
     assert_eq!(
@@ -207,7 +207,7 @@ mod tests {
     let connector_command = HostPluginCommandEntry {
       command_id: "test-plugin::connector-run".to_string(),
       title: "Run Connector Plugin".to_string(),
-      description: "Run a connector action.".to_string(),
+      description: "Run a plugin action.".to_string(),
       prompt: "Run the plugin.".to_string(),
       plugin_id: "test-plugin".to_string(),
       plugin_display_name: "Test Plugin".to_string(),
@@ -234,8 +234,8 @@ mod tests {
     let connector_blocker =
       plugin_command_permission_blocker(&connector_command, true).expect("connector blocker");
 
-    assert!(mcp_blocker.contains("MCP stdio connector action"));
-    assert!(connector_blocker.contains("connector action"));
+    assert!(mcp_blocker.contains("MCP stdio plugin action"));
+    assert!(connector_blocker.contains("plugin action"));
     assert!(!connector_blocker.contains("MCP"));
   }
 }

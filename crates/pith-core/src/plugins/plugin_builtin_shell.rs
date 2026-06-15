@@ -9,7 +9,7 @@ pub(super) fn build_shell_session_summary_result(
 ) -> String {
   let workspace_label = workspace
     .map(|workspace| workspace.display_name.as_str())
-    .unwrap_or("the current workspace");
+    .unwrap_or("the current project");
   let shell_notes = memory_notes
     .iter()
     .filter(|note| {

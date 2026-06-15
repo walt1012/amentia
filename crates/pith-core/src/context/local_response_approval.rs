@@ -28,7 +28,7 @@ pub(crate) fn summarize_denied_approval(
   } else if action == "run_plugin_command" {
     let command = command.unwrap_or_default();
     format!(
-      "Pith skipped the connector action `{}` because the approval was denied.",
+      "Pith skipped the plugin action `{}` because the approval was denied.",
       command
     )
   } else {

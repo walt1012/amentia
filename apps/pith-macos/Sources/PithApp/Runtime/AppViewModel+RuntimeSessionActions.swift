@@ -41,7 +41,7 @@ extension AppViewModel {
       setPluginEnabled(pluginID: webSearchPluginID, enabled: true)
     case .openPluginAccess:
       pluginManagerSection = .access
-      runtimeDetail = "Open Advanced > Connectors to enable Web Search access."
+      runtimeDetail = "Open Advanced > Plugins to enable Web Search access."
     case .openPluginCommands:
       pluginManagerSection = .commands
       runtimeDetail = "Open Advanced > Plugins to enable a ready action."

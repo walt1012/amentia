@@ -15,7 +15,7 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertFalse(summary.detail.contains("source:"))
     XCTAssertTrue(summary.advancedDetail.contains("model weights are not bundled"))
     XCTAssertTrue(summary.advancedDetail.contains("no Pith account required"))
-    XCTAssertTrue(summary.advancedDetail.contains("local execution mode: ask-before-change"))
+    XCTAssertTrue(summary.advancedDetail.contains("action safety mode: ask-before-change"))
     XCTAssertTrue(summary.advancedDetail.contains("package size budget"))
     XCTAssertTrue(summary.advancedDetail.contains("app <= 250 MiB"))
     XCTAssertTrue(summary.advancedDetail.contains("installer artifact <= 150 MiB"))

@@ -42,8 +42,8 @@ pub fn prepare_plugin_command_run(
         &command,
         -32004,
         "missingThread",
-        "Thread not found",
-        "Select or create a thread, then run the connector action again.",
+        "Session not found",
+        "Select or create a session, then run the plugin action again.",
       )
       .into_response(request.id),
     );
@@ -578,7 +578,7 @@ fn validate_plugin_command_input_contract(
             command.command_id
           ),
           "missingWorkspaceInput",
-          "Open a workspace before running this command or make the field optional.",
+          "Open a project before running this action or make the field optional.",
         ));
       }
       "connectors" if !connector_refs.is_empty() => {}
@@ -788,7 +788,7 @@ mod tests {
     let error = PluginCommandPreparationError::from_input_contract(
       &command,
       PluginCommandInputContractError::new(
-        "Missing connector input.".to_string(),
+        "Missing connection input.".to_string(),
         "missingConnectorInput",
         "Declare and authorize a connector.",
       ),

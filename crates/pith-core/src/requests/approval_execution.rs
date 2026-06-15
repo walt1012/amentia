@@ -73,7 +73,7 @@ fn execute_approval_snapshot(snapshot: PreparedApprovalSnapshot) -> ApprovalExec
         }
         Err((code, message)) => {
           events.push_item(warning_item(
-            "Connector Action Failed",
+            "Plugin Action Failed",
             format!("{message}\n\nError code: {code}"),
             Some(HashMap::from([
               ("approvalId".to_string(), approval.id.clone()),

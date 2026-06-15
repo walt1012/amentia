@@ -861,7 +861,7 @@ printf '{"content":"ok"}\n'
   assert_eq!(blocked_data["connectorIds"], "notion-tools::notion");
   assert_eq!(
     blocked_data["runRepairHint"],
-    "Authorize the connector before running this command."
+    "Authorize the connection before running this action."
   );
 
   let authorize_response = handle_request(
@@ -1434,7 +1434,7 @@ printf '{"content":"ok"}\n'
   assert!(commands[0]["runBlocker"]
     .as_str()
     .expect("run blocker")
-    .contains("connector action"));
+    .contains("plugin action"));
 }
 
 #[test]

@@ -14,18 +14,17 @@ pub(super) fn build_local_execution_blocked_items(
   vec![
     TimelineItem {
       kind: "warning".to_string(),
-      title: "Local Execution Blocked".to_string(),
+      title: "Action Blocked".to_string(),
       content: format!(
-        "Pith did not {blocked_action} in {workspace_name} because the selected local execution mode blocks this action."
+        "Pith did not {blocked_action} in {workspace_name} because the selected action safety mode blocks this action."
       ),
       attributes: Some(attributes.clone()),
     },
     TimelineItem {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
-      content:
-        "Switch local execution mode before asking Pith to make local workspace changes."
-          .to_string(),
+      content: "Switch action safety mode before asking Pith to make local project changes."
+        .to_string(),
       attributes: Some(attributes),
     },
   ]

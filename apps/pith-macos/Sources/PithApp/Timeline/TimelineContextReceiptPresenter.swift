@@ -278,7 +278,7 @@ enum TimelineContextReceiptPresenter {
     case "network":
       return "network"
     case "localPlugin":
-      return "local connector"
+      return "local plugin"
     case "localRuntime":
       return "Pith"
     default:
@@ -311,7 +311,7 @@ enum TimelineContextReceiptPresenter {
     case "requiresApproval":
       return "requires approval"
     case "requiresPluginPermission":
-      return "requires enabled connector permission"
+      return "requires enabled plugin permission"
     case "readOnlyAllowed":
       return "read-only allowed"
     default:
@@ -515,7 +515,7 @@ enum TimelineContextReceiptPresenter {
     case "requiresApproval":
       return "needs approval"
     case "requiresPluginPermission":
-      return "needs connector permission"
+      return "needs plugin permission"
     case "readOnlyAllowed":
       return "read-only"
     default:

@@ -76,7 +76,7 @@ pub(super) fn build_plugin_command_timeline_item(
 
   let workspace_label = workspace
     .map(|entry| entry.display_name.clone())
-    .unwrap_or_else(|| "No Workspace".to_string());
+    .unwrap_or_else(|| "No Project".to_string());
   let mut content = format!(
     "Run {} from {} in {}.\n{}",
     command.title, command.plugin_display_name, workspace_label, command.description

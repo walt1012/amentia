@@ -43,7 +43,7 @@ fn execute_list_step(
       )
     } else {
       format!(
-        "Check connector permissions before inspecting the root of {}.",
+        "Check plugin permissions before inspecting the root of {}.",
         workspace.display_name
       )
     },

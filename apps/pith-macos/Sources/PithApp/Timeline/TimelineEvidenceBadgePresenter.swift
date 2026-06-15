@@ -51,7 +51,7 @@ enum TimelineEvidenceBadgePresenter {
     case "requiresApproval":
       return TimelineEvidenceBadgeSummary(label: "Approval Required", tone: .warning)
     case "requiresPluginPermission":
-      return TimelineEvidenceBadgeSummary(label: "Connector Permission", tone: .active)
+      return TimelineEvidenceBadgeSummary(label: "Plugin Permission", tone: .active)
     default:
       return TimelineEvidenceBadgeSummary(label: "Ask Mode", tone: .ready)
     }
@@ -98,15 +98,15 @@ enum TimelineEvidenceBadgePresenter {
 
     switch status {
     case "completed":
-      return TimelineEvidenceBadgeSummary(label: "Connector Done", tone: .ready)
+      return TimelineEvidenceBadgeSummary(label: "Connection Done", tone: .ready)
     case "retryNeeded":
-      return TimelineEvidenceBadgeSummary(label: "Connector Retry Needed", tone: .warning)
+      return TimelineEvidenceBadgeSummary(label: "Connection Retry Needed", tone: .warning)
     case "inspected":
-      return TimelineEvidenceBadgeSummary(label: "Connector Inspected", tone: .active)
+      return TimelineEvidenceBadgeSummary(label: "Connection Inspected", tone: .active)
     case "prepared":
-      return TimelineEvidenceBadgeSummary(label: "Connector Prepared", tone: .active)
+      return TimelineEvidenceBadgeSummary(label: "Connection Prepared", tone: .active)
     default:
-      return TimelineEvidenceBadgeSummary(label: "Connector Workflow", tone: .active)
+      return TimelineEvidenceBadgeSummary(label: "Connection Workflow", tone: .active)
     }
   }
 }

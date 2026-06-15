@@ -32,7 +32,7 @@ pub(crate) fn build_permission_denied_items(
   vec![
     TimelineItem {
       kind: "warning".to_string(),
-      title: "Connector Permission Required".to_string(),
+      title: "Plugin Permission Required".to_string(),
       content: format!(
         "Pith could not {blocked_action}{action_scope} because {permission_label} is not enabled."
       ),
@@ -51,10 +51,10 @@ fn readable_permission(permission: &str) -> &str {
   match permission {
     "tool:web_search" => "Web Search",
     "network.outbound" => "network access",
-    "file.read" => "workspace read permission",
-    "file.write" => "workspace write permission",
+    "file.read" => "project read permission",
+    "file.write" => "project write permission",
     "shell.exec" => "shell execution permission",
-    "mcp.connect" => "MCP connector permission",
+    "mcp.connect" => "MCP connection permission",
     _ => permission,
   }
 }
@@ -63,13 +63,13 @@ fn permission_recovery_hint(permission: &str, blocked_action: &str, granted_by: 
   match permission {
     "tool:web_search" => {
       concat!(
-        "Enable Web Search from the readiness chip or Connectors Access, ",
+        "Enable Web Search from the readiness chip or Plugins > Permissions, ",
         "then retry the request."
       )
       .to_string()
     }
     _ => format!(
-      "Enable a connector that grants `{permission}` before asking Pith to {blocked_action}. Currently granted by: {granted_by}."
+      "Enable a plugin that grants `{permission}` before asking Pith to {blocked_action}. Currently granted by: {granted_by}."
     ),
   }
 }
@@ -135,6 +135,6 @@ mod tests {
     assert!(attributes
       .get("permissionRecoveryHint")
       .expect("recovery hint")
-      .contains("Connectors Access"));
+      .contains("Plugins > Permissions"));
   }
 }

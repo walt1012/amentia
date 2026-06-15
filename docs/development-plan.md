@@ -121,6 +121,10 @@ Ready foundations:
 - Project open/restore, memory, and plugin setup messages now keep absolute
   paths and setup-file internals out of the default timeline while retaining
   support attributes for troubleshooting.
+- Core readiness, approvals, action-blocked states, Web Search permission gates,
+  plugin runner events, and Swift inspector/settings copy now use project,
+  session, action safety, plugins, and connections language instead of
+  workspace/thread/local-execution/connector-action UI terms.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.

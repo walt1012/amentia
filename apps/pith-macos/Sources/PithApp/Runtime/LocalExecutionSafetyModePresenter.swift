@@ -56,7 +56,7 @@ enum LocalExecutionSafetyModePresenter {
     case "approvedWorkspaceExecution":
       return "Runs permitted project writes and shell commands without another approval."
     default:
-      return "Custom local execution mode."
+      return "Custom action safety mode."
     }
   }
 
