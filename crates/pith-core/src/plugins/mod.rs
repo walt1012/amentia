@@ -26,6 +26,7 @@ pub(crate) mod plugin_command_runner_memory;
 pub(crate) mod plugin_command_runner_output;
 pub(crate) mod plugin_command_runner_proof;
 pub(crate) mod plugin_command_runner_sandbox;
+pub(crate) mod plugin_command_runner_timeline_output;
 pub(crate) mod plugin_command_text;
 pub(crate) mod plugin_command_timeline;
 pub(crate) mod plugin_command_types;
