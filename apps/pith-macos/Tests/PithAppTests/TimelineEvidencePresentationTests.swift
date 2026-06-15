@@ -116,11 +116,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       summary,
       """
       Mode: ask-before-change
-      Boundary: workspace
+      Boundary: project
       Approval: read-only allowed
       Pith account required: no
       Tool: read_file
-      Workspace: Pith
+      Project: Pith
       """
     )
   }
