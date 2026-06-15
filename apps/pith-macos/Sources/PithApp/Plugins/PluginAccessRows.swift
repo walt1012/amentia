@@ -80,17 +80,10 @@ struct InvalidPluginRow: View {
         }
       }
 
-      Text(plugin.validationError ?? "Plugin setup did not pass validation.")
+      Text(PluginStatusDisplay.validationDetail(plugin))
         .font(.caption2)
         .foregroundColor(.orange)
         .textSelection(.enabled)
-
-      if let validationHint = plugin.validationHint {
-        Text("Fix: \(validationHint)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
 
       if let refreshDisabledReason {
         Text("Refresh blocked: \(refreshDisabledReason)")

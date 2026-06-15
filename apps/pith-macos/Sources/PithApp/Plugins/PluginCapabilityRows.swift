@@ -7,7 +7,7 @@ struct PluginCapabilityRow: View {
     VStack(alignment: .leading, spacing: 4) {
       HStack(alignment: .top, spacing: 12) {
         VStack(alignment: .leading, spacing: 2) {
-          Text(capability.displayTitle)
+          Text(PluginCapabilityPresenter.title(capability))
             .font(.caption.weight(.semibold))
           Text(capability.pluginDisplayName)
             .font(.caption2)
@@ -24,48 +24,53 @@ struct PluginCapabilityRow: View {
           .textSelection(.enabled)
       }
 
-      if let diagnosticSummary = capability.diagnosticSummary {
+      if let diagnosticSummary = PluginCapabilityPresenter.diagnosticSummary(capability) {
         Text(diagnosticSummary)
           .font(.caption2)
-          .foregroundColor(capability.diagnosticColor)
+          .foregroundColor(PluginCapabilityPresenter.diagnosticColor(capability))
           .textSelection(.enabled)
       }
 
-      if let diagnosticDetail = capability.diagnosticDetail {
+      if let diagnosticDetail = PluginCapabilityPresenter.diagnosticDetail(capability) {
         Text("Needs attention: \(diagnosticDetail)")
           .font(.caption2)
           .foregroundColor(.orange)
           .textSelection(.enabled)
       }
-
-      if let metadataSummary = capability.metadataSummary {
-        Text(metadataSummary)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
     }
-    .softPanel(tone: capability.diagnosticDetail == nil ? .neutral : .warning)
+    .softPanel(
+      tone: PluginCapabilityPresenter.diagnosticDetail(capability) == nil ? .neutral : .warning
+    )
   }
 }
 
-private extension PluginCapabilitySummary {
-  var diagnosticSummary: String? {
-    if let serverStatus = metadata["serverStatus"] {
+enum PluginCapabilityPresenter {
+  static func title(_ capability: PluginCapabilitySummary) -> String {
+    PluginCapabilityDisplay.surface(capability.kind)
+  }
+
+  static func diagnosticSummary(_ capability: PluginCapabilitySummary) -> String? {
+    if let serverStatus = capability.metadata["serverStatus"] {
       return "MCP server: \(displayStatus(serverStatus))"
     }
-    if let definitionStatus = metadata["definitionStatus"] {
-      return "\(displaySurface) definition: \(displayStatus(definitionStatus))"
+    if let definitionStatus = capability.metadata["definitionStatus"] {
+      return "\(title(capability)) definition: \(displayStatus(definitionStatus))"
     }
     return nil
   }
 
-  var diagnosticDetail: String? {
-    metadata["serverError"] ?? metadata["definitionError"]
+  static func diagnosticDetail(_ capability: PluginCapabilitySummary) -> String? {
+    if capability.metadata["serverError"] != nil {
+      return "Add the missing MCP command in plugin setup."
+    }
+    if capability.metadata["definitionError"] != nil {
+      return "Review this capability definition in plugin setup."
+    }
+    return nil
   }
 
-  var diagnosticColor: Color {
-    switch metadata["serverStatus"] ?? metadata["definitionStatus"] {
+  static func diagnosticColor(_ capability: PluginCapabilitySummary) -> Color {
+    switch capability.metadata["serverStatus"] ?? capability.metadata["definitionStatus"] {
     case "ready":
       return .secondary
     case nil:
@@ -75,34 +80,7 @@ private extension PluginCapabilitySummary {
     }
   }
 
-  var displayTitle: String {
-    "\(displaySurface): \(identifier)"
-  }
-
-  var metadataSummary: String? {
-    let diagnosticKeys = Set([
-      "definitionError",
-      "definitionStatus",
-      "serverError",
-      "serverStatus"
-    ])
-    let visibleMetadata = metadata
-      .filter { !diagnosticKeys.contains($0.key) }
-      .sorted(by: { $0.key < $1.key })
-    guard !visibleMetadata.isEmpty else {
-      return nil
-    }
-
-    return visibleMetadata
-      .map { "\($0.key): \($0.value)" }
-      .joined(separator: " | ")
-  }
-
-  var displaySurface: String {
-    PluginCapabilityDisplay.surface(kind)
-  }
-
-  func displayStatus(_ status: String) -> String {
+  private static func displayStatus(_ status: String) -> String {
     switch status {
     case "missingCommand":
       return "missing command"

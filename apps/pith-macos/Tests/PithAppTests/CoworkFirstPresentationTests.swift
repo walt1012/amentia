@@ -542,6 +542,36 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(detail.contains("Unknown validation error"))
   }
 
+  func testPluginCapabilityPresenterHidesRawMetadata() {
+    let capability = PluginCapabilitySummary(
+      id: "notion::mcp_server::notion-pages",
+      kind: "mcp_server",
+      identifier: "notion-pages",
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      permissions: ["network.outbound"],
+      manifestPath: "/tmp/notion/pith-plugin.json",
+      metadata: [
+        "definitionPath": "/tmp/notion/mcp/notion-pages.json",
+        "definitionStatus": "missing",
+        "definitionError": "failed to read /tmp/notion/mcp/notion-pages.json",
+        "surface": "mcp_server",
+      ]
+    )
+
+    let title = PluginCapabilityPresenter.title(capability)
+    let summary = PluginCapabilityPresenter.diagnosticSummary(capability) ?? ""
+    let detail = PluginCapabilityPresenter.diagnosticDetail(capability) ?? ""
+    let visibleText = [title, summary, detail].joined(separator: "\n")
+
+    XCTAssertEqual(title, "MCP server")
+    XCTAssertTrue(detail.contains("plugin setup"))
+    XCTAssertFalse(visibleText.contains("notion-pages"))
+    XCTAssertFalse(visibleText.contains("/tmp/notion"))
+    XCTAssertFalse(visibleText.contains("definitionPath"))
+    XCTAssertFalse(visibleText.contains("mcp_server"))
+  }
+
   func testPluginInstallConfirmationAvoidsRawPathsAndManifestTerms() {
     let preview = PluginInstallPreview(
       pluginID: "notion",

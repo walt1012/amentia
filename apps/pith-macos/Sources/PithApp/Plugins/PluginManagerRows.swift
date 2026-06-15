@@ -56,17 +56,10 @@ struct PluginRow: View {
           .textSelection(.enabled)
       }
 
-      if let validationError = plugin.validationError {
-        Text(validationError)
+      if plugin.validationError != nil || plugin.validationHint != nil {
+        Text(PluginStatusDisplay.validationDetail(plugin))
           .font(.caption2)
           .foregroundColor(.orange)
-          .textSelection(.enabled)
-      }
-
-      if let validationHint = plugin.validationHint {
-        Text("Fix: \(validationHint)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
     }
@@ -74,11 +67,6 @@ struct PluginRow: View {
   }
 
   private var displayStatus: String {
-    switch plugin.status {
-    case "ready":
-      return "Ready"
-    default:
-      return plugin.status
-    }
+    PluginStatusDisplay.pluginStatus(plugin.status).capitalized
   }
 }

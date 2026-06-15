@@ -200,6 +200,10 @@ enum PluginStatusDisplay {
   }
 
   static func validationIssue(_ plugin: PluginSummary) -> String {
+    "\(plugin.displayName): \(validationDetail(plugin))"
+  }
+
+  static func validationDetail(_ plugin: PluginSummary) -> String {
     let issue = plugin.validationError?.trimmingCharacters(in: .whitespacesAndNewlines)
     let summary: String
     if let issue = issue, !issue.isEmpty {
@@ -211,10 +215,10 @@ enum PluginStatusDisplay {
     guard let hint = plugin.validationHint?.trimmingCharacters(in: .whitespacesAndNewlines),
           !hint.isEmpty
     else {
-      return "\(plugin.displayName): \(summary)"
+      return summary
     }
 
-    return "\(plugin.displayName): \(summary) Fix: \(hint)"
+    return "\(summary) Fix: \(hint)"
   }
 
   static func connectionStatus(_ status: String) -> String {

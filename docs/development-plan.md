@@ -142,6 +142,8 @@ Ready foundations:
 - Plugin action and connection surfaces now share user-facing status labels so
   setup issues, missing connections, and authorization states stay actionable
   without exposing raw IDs or protocol statuses by default.
+- Plugin capability and setup rows now hide raw capability identifiers,
+  metadata paths, and duplicate validation text from the default management UI.
 
 Current constraints:
 
