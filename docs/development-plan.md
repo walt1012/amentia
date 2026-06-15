@@ -200,7 +200,8 @@ marketplace too early.
   proof, memory capture, and timeline evidence stay service-agnostic.
 - Continue splitting plugin runner output contracts before broad connector
   expansion: schema, memory-note capture, timeline item conversion, and proof
-  validation are isolated; keep future connector proof rules separately
+  validation are isolated; runner setup and entrypoint path validation are
+  separated from execution; keep future connector proof rules separately
   testable.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.

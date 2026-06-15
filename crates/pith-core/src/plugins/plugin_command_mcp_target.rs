@@ -10,6 +10,7 @@ use pith_protocol::WorkspaceSummary;
 use serde_json::json;
 
 use super::plugin_command_runner::{PluginRunnerFailure, PluginRunnerRunResult};
+use super::plugin_command_runner_setup::unsupported_execution_error;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 
 const PLUGIN_MANIFEST_MAX_BYTES: usize = 64 * 1024;
@@ -47,7 +48,7 @@ pub(super) fn mcp_target_for_execution(
     .as_deref()
     .map(str::trim)
     .filter(|entrypoint| !entrypoint.is_empty())
-    .ok_or_else(|| super::plugin_command_runner::unsupported_execution_error(command))?;
+    .ok_or_else(|| unsupported_execution_error(command))?;
   let Some((server_id, tool_name)) = entrypoint.split_once('.') else {
     return Err(
       PluginRunnerFailure::empty(

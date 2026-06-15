@@ -4,7 +4,7 @@ use super::plugin_command_execution::is_supported_plugin_command_execution;
 use super::plugin_command_mcp_runner::mcp_runner_setup_blocker;
 use super::plugin_command_permission_gate::plugin_command_permission_blocker;
 use super::plugin_command_recovery_hints::readiness_repair_hint;
-use super::plugin_command_runner::stdio_runner_setup_blocker;
+use super::plugin_command_runner_setup::stdio_runner_setup_blocker;
 use super::plugin_connector_requirements::command_connector_requirements;
 use crate::runtime_plugins::RuntimePluginState;
 

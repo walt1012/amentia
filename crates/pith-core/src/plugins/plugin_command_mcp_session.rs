@@ -17,11 +17,12 @@ use super::plugin_command_mcp_output::PluginMcpOutputScan;
 use super::plugin_command_mcp_target::PluginMcpTarget;
 use super::plugin_command_runner::{
   insert_log_preview, insert_stdin_writer_attributes, merged_attributes, plugin_runner_input_bytes,
-  stderr_suffix, validate_runner_entrypoint, PluginRunnerFailure, PluginRunnerProcessOutput,
-  PluginRunnerRunResult, PLUGIN_RUNNER_GRACE_PERIOD, PLUGIN_RUNNER_OUTPUT_LIMIT,
-  PLUGIN_RUNNER_POLL_INTERVAL, PLUGIN_RUNNER_TIMEOUT,
+  stderr_suffix, PluginRunnerFailure, PluginRunnerProcessOutput, PluginRunnerRunResult,
+  PLUGIN_RUNNER_GRACE_PERIOD, PLUGIN_RUNNER_OUTPUT_LIMIT, PLUGIN_RUNNER_POLL_INTERVAL,
+  PLUGIN_RUNNER_TIMEOUT,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
+use super::plugin_command_runner_setup::validate_runner_entrypoint;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 
 pub(super) struct PluginMcpSessionRequest<'a> {

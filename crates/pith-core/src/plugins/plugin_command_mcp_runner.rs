@@ -11,11 +11,14 @@ use super::plugin_command_mcp_target::{
   mcp_tool_call_payload,
 };
 use super::plugin_command_runner::{
-  command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
-  insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes, merged_attributes,
-  plugin_root_for_command, plugin_runner_setup_attributes, plugin_runner_setup_failed_attributes,
-  plugin_runner_setup_phase_attributes, runner_entrypoint_setup_blocker, safe_entrypoint_path,
+  merged_attributes, plugin_runner_setup_failed_attributes, plugin_runner_setup_phase_attributes,
   PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
+};
+use super::plugin_command_runner_setup::{
+  command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
+  insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes,
+  plugin_root_for_command, plugin_runner_setup_attributes, runner_entrypoint_setup_blocker,
+  safe_entrypoint_path,
 };
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
