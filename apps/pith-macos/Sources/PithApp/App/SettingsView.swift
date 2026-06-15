@@ -23,7 +23,8 @@ struct SettingsView: View {
       .padding(20)
     }
     .background(PithVisualStyle.paneBackground)
-    .frame(width: 500, minHeight: 560)
+    .frame(width: 500)
+    .frame(minHeight: 560)
   }
 
   private var settingsHeader: some View {
