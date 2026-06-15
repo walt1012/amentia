@@ -1,72 +1,22 @@
 use std::collections::HashMap;
 
-use pith_plugin_host::{
-  PluginCommandEntry as HostPluginCommandEntry, PluginConnectorWorkflowEntry,
-};
+use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::TimelineItem;
-use serde::Deserialize;
 
+use super::plugin_command_runner_contracts::{
+  PluginRunnerOutputEnvelope, PluginRunnerTimelineItemEnvelope,
+  PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
+};
 use super::plugin_command_runner::{
   PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
-use super::plugin_command_types::PluginRunnerMemoryNoteDraft;
+use super::plugin_command_runner_memory::plugin_runner_memory_notes;
+use super::plugin_command_runner_proof::{
+  insert_plugin_runner_timeline_contracts, plugin_runner_expected_workflow_id,
+  plugin_runner_items_include_workflow, plugin_runner_timeline_contracts_are_valid,
+};
 
 const PLUGIN_RUNNER_LOG_PREVIEW_LIMIT: usize = 2048;
-const PLUGIN_RUNNER_MEMORY_NOTE_LIMIT: usize = 4;
-const PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT: usize = 120;
-const PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT: usize = 4096;
-const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
-const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
-const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
-  &["pluginResult", "toolResult", "warning", "system"];
-const PLUGIN_RUNNER_CONNECTOR_WORKFLOW_CONTRACT: &str = "pith.connectorWorkflow.v1";
-const PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES: &[&str] =
-  &["completed", "inspected", "prepared", "retryNeeded"];
-const PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT: &str = "pith.connectorRemoteWrite.v1";
-const PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE: &str = "completed";
-const PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE: &str = "failedBeforeProof";
-const PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE: &str = "inspectBeforeWrite";
-const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED: &str = "completed";
-const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT: &str = "notSent";
-const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_PENDING: &str = "pending";
-const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_UNCONFIRMED: &str = "unconfirmed";
-
-struct PluginRunnerMemoryNoteSelection {
-  notes: Vec<PluginRunnerMemoryNoteDraft>,
-  invalid_count: usize,
-  truncated_count: usize,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginRunnerOutputEnvelope {
-  content: Option<String>,
-  message: Option<String>,
-  #[serde(default)]
-  items: Vec<PluginRunnerTimelineItemEnvelope>,
-  #[serde(default)]
-  memory_notes: Vec<PluginRunnerMemoryNoteEnvelope>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginRunnerTimelineItemEnvelope {
-  kind: String,
-  title: String,
-  content: String,
-  #[serde(default)]
-  attributes: HashMap<String, String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginRunnerMemoryNoteEnvelope {
-  title: Option<String>,
-  body: Option<String>,
-  source: Option<String>,
-  #[serde(default)]
-  tags: Vec<String>,
-}
 
 pub(super) fn plugin_runner_output(
   command: &HostPluginCommandEntry,
@@ -302,65 +252,6 @@ fn insert_plugin_runner_output_attributes(
   );
 }
 
-fn plugin_runner_memory_notes(
-  notes: Vec<PluginRunnerMemoryNoteEnvelope>,
-) -> PluginRunnerMemoryNoteSelection {
-  let mut selected_notes = vec![];
-  let mut invalid_count = 0;
-  let mut truncated_count = 0;
-
-  for note in notes {
-    let Some(note) = plugin_runner_memory_note(note) else {
-      invalid_count += 1;
-      continue;
-    };
-    if selected_notes.len() < PLUGIN_RUNNER_MEMORY_NOTE_LIMIT {
-      selected_notes.push(note);
-    } else {
-      truncated_count += 1;
-    }
-  }
-
-  PluginRunnerMemoryNoteSelection {
-    notes: selected_notes,
-    invalid_count,
-    truncated_count,
-  }
-}
-
-fn plugin_runner_memory_note(
-  note: PluginRunnerMemoryNoteEnvelope,
-) -> Option<PluginRunnerMemoryNoteDraft> {
-  let title = note.title.as_deref().map(str::trim).unwrap_or_default();
-  let body = note.body.as_deref().map(str::trim).unwrap_or_default();
-  if title.is_empty() || body.is_empty() {
-    return None;
-  }
-
-  Some(PluginRunnerMemoryNoteDraft {
-    title: bounded_runner_memory_text(title, PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT),
-    body: bounded_runner_memory_text(body, PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT),
-    source: note
-      .source
-      .as_deref()
-      .map(str::trim)
-      .filter(|source| !source.is_empty())
-      .map(str::to_string),
-    tags: note
-      .tags
-      .into_iter()
-      .take(PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT)
-      .map(|tag| tag.trim().to_string())
-      .filter(|tag| !tag.is_empty())
-      .map(|tag| bounded_runner_memory_text(&tag, PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT))
-      .collect(),
-  })
-}
-
-fn bounded_runner_memory_text(value: &str, limit: usize) -> String {
-  value.chars().take(limit).collect()
-}
-
 fn plugin_runner_content(output: &str) -> String {
   if output.trim().is_empty() {
     return "Plugin command completed without output.".to_string();
@@ -402,14 +293,10 @@ fn plugin_runner_timeline_item(
     .entry("sourcePath".to_string())
     .or_insert_with(|| command.source_path.clone());
 
-  if !plugin_runner_remote_write_contract_is_valid(&attributes) {
+  if !plugin_runner_timeline_contracts_are_valid(command, &attributes) {
     return None;
   }
-  if !plugin_runner_connector_workflow_contract_is_valid(command, &attributes) {
-    return None;
-  }
-  insert_plugin_runner_remote_write_contract(&mut attributes);
-  insert_plugin_runner_connector_workflow_contract(&mut attributes);
+  insert_plugin_runner_timeline_contracts(&mut attributes);
 
   Some(TimelineItem {
     kind: kind.to_string(),
@@ -421,214 +308,6 @@ fn plugin_runner_timeline_item(
 
 fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
   PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS.contains(&kind)
-}
-
-fn plugin_runner_connector_workflow_contract_is_valid(
-  command: &HostPluginCommandEntry,
-  attributes: &HashMap<String, String>,
-) -> bool {
-  if !plugin_runner_has_connector_workflow(attributes) {
-    return true;
-  }
-
-  let required_keys = [
-    "connectorWorkflowId",
-    "connectorWorkflowService",
-    "connectorWorkflowAction",
-    "connectorWorkflowStage",
-    "connectorWorkflowStatus",
-    "connectorWorkflowTarget",
-    "connectorWorkflowProof",
-  ];
-  if required_keys
-    .iter()
-    .any(|key| plugin_runner_attribute_value(attributes, key).is_none())
-  {
-    return false;
-  }
-
-  let Some(workflow_id) = plugin_runner_attribute_value(attributes, "connectorWorkflowId") else {
-    return false;
-  };
-  let Some(service) = plugin_runner_attribute_value(attributes, "connectorWorkflowService") else {
-    return false;
-  };
-  let Some(action) = plugin_runner_attribute_value(attributes, "connectorWorkflowAction") else {
-    return false;
-  };
-  let Some(stage) = plugin_runner_attribute_value(attributes, "connectorWorkflowStage") else {
-    return false;
-  };
-  let Some(status) = plugin_runner_attribute_value(attributes, "connectorWorkflowStatus") else {
-    return false;
-  };
-
-  let Some(workflow) = plugin_runner_expected_workflow(command) else {
-    if let Some(expected_workflow_id) = plugin_runner_expected_workflow_id(command) {
-      if workflow_id != expected_workflow_id {
-        return false;
-      }
-    }
-    return PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES.contains(&status)
-      && plugin_runner_connector_service_is_bound(attributes, service);
-  };
-  if workflow_id != workflow.workflow_id.as_str()
-    || service != workflow.service.as_str()
-    || action != workflow.action.as_str()
-    || !plugin_runner_workflow_list_contains(&workflow.stages, stage)
-    || !plugin_runner_workflow_list_contains(&workflow.statuses, status)
-  {
-    return false;
-  }
-  if !plugin_runner_connector_service_is_bound(attributes, service) {
-    return false;
-  }
-
-  true
-}
-
-fn plugin_runner_has_connector_workflow(attributes: &HashMap<String, String>) -> bool {
-  attributes
-    .keys()
-    .any(|key| key.starts_with("connectorWorkflow"))
-}
-
-fn plugin_runner_expected_workflow_id(command: &HostPluginCommandEntry) -> Option<&str> {
-  if let Some(workflow) = plugin_runner_expected_workflow(command) {
-    return Some(workflow.workflow_id.as_str());
-  }
-
-  command
-    .execution
-    .as_ref()
-    .and_then(|execution| execution.workflow_id.as_deref())
-    .map(str::trim)
-    .filter(|workflow_id| !workflow_id.is_empty())
-}
-
-fn plugin_runner_expected_workflow(
-  command: &HostPluginCommandEntry,
-) -> Option<&PluginConnectorWorkflowEntry> {
-  command
-    .execution
-    .as_ref()
-    .and_then(|execution| execution.workflow.as_ref())
-}
-
-fn plugin_runner_workflow_list_contains(values: &[String], expected: &str) -> bool {
-  values.iter().any(|value| value == expected)
-}
-
-fn plugin_runner_items_include_workflow(items: &[TimelineItem], workflow_id: &str) -> bool {
-  items.iter().any(|item| {
-    item
-      .attributes
-      .as_ref()
-      .and_then(|attributes| plugin_runner_attribute_value(attributes, "connectorWorkflowId"))
-      == Some(workflow_id)
-  })
-}
-
-fn plugin_runner_connector_service_is_bound(
-  attributes: &HashMap<String, String>,
-  service: &str,
-) -> bool {
-  !attributes.contains_key("pluginRunnerConnectorServices")
-    || plugin_runner_target_service_is_bound(attributes, service)
-}
-
-fn plugin_runner_remote_write_contract_is_valid(attributes: &HashMap<String, String>) -> bool {
-  let remote_write = attributes
-    .get("remoteWrite")
-    .map(|value| value.trim())
-    .unwrap_or_default();
-
-  match remote_write {
-    "" | "false" => {
-      plugin_runner_attribute_value(attributes, "remoteWriteStage")
-        != Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
-    }
-    "true" => {
-      let Some(target_service) = plugin_runner_attribute_value(attributes, "targetService") else {
-        return false;
-      };
-      plugin_runner_attribute_value(attributes, "remoteWriteStage")
-        == Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
-        && plugin_runner_target_service_is_bound(attributes, target_service)
-        && plugin_runner_attribute_value(attributes, "targetTool").is_some()
-    }
-    _ => false,
-  }
-}
-
-fn plugin_runner_target_service_is_bound(
-  attributes: &HashMap<String, String>,
-  target_service: &str,
-) -> bool {
-  plugin_runner_attribute_value(attributes, "pluginRunnerConnectorServices")
-    .map(|services| {
-      services
-        .split(',')
-        .map(str::trim)
-        .any(|service| service == target_service)
-    })
-    .unwrap_or(false)
-}
-
-fn plugin_runner_attribute_value<'a>(
-  attributes: &'a HashMap<String, String>,
-  key: &str,
-) -> Option<&'a str> {
-  attributes
-    .get(key)
-    .map(|value| value.trim())
-    .filter(|value| !value.is_empty())
-}
-
-fn insert_plugin_runner_remote_write_contract(attributes: &mut HashMap<String, String>) {
-  if attributes.contains_key("remoteWrite") || attributes.contains_key("remoteWriteStage") {
-    attributes.insert(
-      "pluginRunnerRemoteWriteContract".to_string(),
-      PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT.to_string(),
-    );
-    attributes.insert(
-      "remoteWriteStatus".to_string(),
-      plugin_runner_remote_write_status(attributes).to_string(),
-    );
-  }
-}
-
-fn insert_plugin_runner_connector_workflow_contract(attributes: &mut HashMap<String, String>) {
-  if plugin_runner_has_connector_workflow(attributes) {
-    attributes.insert(
-      "pluginRunnerConnectorWorkflowContract".to_string(),
-      PLUGIN_RUNNER_CONNECTOR_WORKFLOW_CONTRACT.to_string(),
-    );
-  }
-}
-
-fn plugin_runner_remote_write_status(attributes: &HashMap<String, String>) -> &'static str {
-  let remote_write = attributes
-    .get("remoteWrite")
-    .map(|value| value.trim())
-    .unwrap_or_default();
-  let remote_write_stage = plugin_runner_attribute_value(attributes, "remoteWriteStage");
-
-  if remote_write == "true"
-    && remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE)
-  {
-    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED;
-  }
-  if remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE) {
-    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_UNCONFIRMED;
-  }
-  if remote_write == "false" {
-    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT;
-  }
-  if remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE) {
-    return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT;
-  }
-  PLUGIN_RUNNER_REMOTE_WRITE_STATUS_PENDING
 }
 
 fn plugin_runner_owned_attributes(attributes: HashMap<String, String>) -> HashMap<String, String> {

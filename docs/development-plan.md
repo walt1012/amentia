@@ -198,9 +198,9 @@ marketplace too early.
   actions, skills, MCP servers, checks, and tools as bundle capabilities.
 - Generalize connector contracts only after credentials, approvals, retries,
   proof, memory capture, and timeline evidence stay service-agnostic.
-- Split plugin runner output contracts before broad connector expansion:
-  envelope parsing, timeline proof, remote write proof, and memory-note capture
-  should be separately testable.
+- Continue splitting plugin runner output contracts before broad connector
+  expansion: schema, memory-note capture, and timeline proof are isolated; keep
+  future connector proof rules separately testable.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
