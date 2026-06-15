@@ -93,7 +93,7 @@ Current capabilities:
 - Primary window polish: native sidebar density, calm timeline cards, focused
   composer, readiness, first-run setup, model management, project search,
   plugin management, inspector sections, settings surfaces, and subtle
-  state-driven motion.
+  state-driven motion without fixed dark styling.
 - Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
   guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
   and split CI as the source of truth.

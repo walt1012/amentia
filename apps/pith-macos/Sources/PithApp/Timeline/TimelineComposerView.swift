@@ -4,71 +4,34 @@ struct TimelineComposerView: View {
   @ObservedObject var viewModel: AppViewModel
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack(alignment: .center, spacing: 10) {
-        Image(systemName: composerIconName)
-          .font(.body.weight(.medium))
-          .foregroundColor(composerTone.color)
-          .frame(width: 18)
+    VStack(alignment: .leading, spacing: 8) {
+      ComposerStatusLine(
+        summary: viewModel.composerStatusSummary(),
+        tone: composerTone,
+        isActive: viewModel.showsComposerActivity(),
+        canUseComposer: viewModel.canUseComposer()
+      )
 
-        TextField(viewModel.composerPlaceholder(), text: $viewModel.draftMessage)
-          .textFieldStyle(.plain)
-          .font(.body)
-          .disabled(!viewModel.canUseComposer())
-          .onSubmit {
-            if viewModel.canSendDraftMessage() {
-              viewModel.sendDraftMessage()
-            }
-          }
-
-        Button("Send") {
+      ComposerInputBar(
+        placeholder: viewModel.composerPlaceholder(),
+        draftMessage: $viewModel.draftMessage,
+        tone: composerTone,
+        iconName: composerIconName,
+        canUseComposer: viewModel.canUseComposer(),
+        canSend: viewModel.canSendDraftMessage(),
+        canCancel: viewModel.canCancelActiveTurn(),
+        onSend: {
           viewModel.sendDraftMessage()
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.small)
-        .disabled(!viewModel.canSendDraftMessage())
-
-        Button("Stop") {
+        },
+        onCancel: {
           viewModel.cancelActiveTurn()
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .disabled(!viewModel.canCancelActiveTurn())
-      }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 10)
-      .background(PithVisualStyle.panelBackground)
-      .overlay(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .stroke(composerTone.color.opacity(0.20), lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-      HStack(spacing: 6) {
-        if viewModel.showsComposerActivity() {
-          ProgressView()
-            .controlSize(.small)
-        } else {
-          Circle()
-            .fill(composerTone.color.opacity(0.75))
-            .frame(width: 6, height: 6)
-        }
-        Text(viewModel.composerStatusSummary())
-          .font(.caption2)
-          .foregroundColor(composerTone == .danger ? .red : .secondary)
-          .lineLimit(1)
-
-        Spacer()
-
-        Text("Return to send")
-          .font(.caption2)
-          .foregroundColor(.secondary.opacity(viewModel.canUseComposer() ? 0.85 : 0.45))
-      }
     }
     .frame(maxWidth: 900, alignment: .leading)
     .frame(maxWidth: .infinity, alignment: .center)
     .padding(.horizontal, 24)
-    .padding(.vertical, 14)
+    .padding(.vertical, 12)
     .background(PithVisualStyle.paneBackground)
     .animation(PithMotionStyle.quick, value: viewModel.canUseComposer())
     .animation(PithMotionStyle.quick, value: viewModel.canCancelActiveTurn())
@@ -98,5 +61,95 @@ struct TimelineComposerView: View {
       return "paperplane"
     }
     return "lock"
+  }
+}
+
+private struct ComposerStatusLine: View {
+  let summary: String
+  let tone: StatusTone
+  let isActive: Bool
+  let canUseComposer: Bool
+
+  var body: some View {
+    HStack(spacing: 7) {
+      if isActive {
+        ProgressView()
+          .controlSize(.small)
+      } else {
+        Circle()
+          .fill(tone.color.opacity(canUseComposer ? 0.78 : 0.42))
+          .frame(width: 6, height: 6)
+      }
+
+      Text(summary)
+        .font(.caption)
+        .foregroundColor(tone == .danger ? .red : .secondary)
+        .lineLimit(1)
+
+      Spacer()
+
+      Text(canUseComposer ? "Return sends; Stop cancels work" : "Complete setup to type")
+        .font(.caption2)
+        .foregroundColor(.secondary.opacity(canUseComposer ? 0.82 : 0.46))
+        .lineLimit(1)
+    }
+  }
+}
+
+private struct ComposerInputBar: View {
+  let placeholder: String
+  @Binding var draftMessage: String
+  let tone: StatusTone
+  let iconName: String
+  let canUseComposer: Bool
+  let canSend: Bool
+  let canCancel: Bool
+  let onSend: () -> Void
+  let onCancel: () -> Void
+
+  var body: some View {
+    HStack(alignment: .center, spacing: 10) {
+      ZStack {
+        Circle()
+          .fill(tone.color.opacity(0.11))
+          .frame(width: 30, height: 30)
+        Image(systemName: iconName)
+          .font(.body.weight(.semibold))
+          .foregroundColor(tone.color)
+      }
+
+      TextField(placeholder, text: $draftMessage)
+        .textFieldStyle(.plain)
+        .font(.body)
+        .disabled(!canUseComposer)
+        .onSubmit {
+          if canSend {
+            onSend()
+          }
+        }
+
+      Button("Send") {
+        onSend()
+      }
+      .buttonStyle(.borderedProminent)
+      .controlSize(.small)
+      .disabled(!canSend)
+
+      Button("Stop") {
+        onCancel()
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.small)
+      .disabled(!canCancel)
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 10)
+    .background(PithVisualStyle.panelBackground)
+    .overlay(
+      RoundedRectangle(cornerRadius: 16, style: .continuous)
+        .stroke(tone.color.opacity(canUseComposer ? 0.22 : 0.12), lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .shadow(color: PithVisualStyle.panelShadow, radius: 9, x: 0, y: 3)
   }
 }
