@@ -27,9 +27,7 @@ pub(super) fn insert_plugin_runner_timeline_contracts(attributes: &mut HashMap<S
   insert_plugin_runner_connector_workflow_contract(attributes);
 }
 
-pub(super) fn plugin_runner_expected_workflow_id(
-  command: &HostPluginCommandEntry,
-) -> Option<&str> {
+pub(super) fn plugin_runner_expected_workflow_id(command: &HostPluginCommandEntry) -> Option<&str> {
   if let Some(workflow) = plugin_runner_expected_workflow(command) {
     return Some(workflow.workflow_id.as_str());
   }

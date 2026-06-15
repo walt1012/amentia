@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::TimelineItem;
 
+use super::plugin_command_runner::{
+  PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
+};
 use super::plugin_command_runner_contracts::{
   PluginRunnerOutputEnvelope, PluginRunnerTimelineItemEnvelope,
   PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
-};
-use super::plugin_command_runner::{
-  PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
 use super::plugin_command_runner_memory::plugin_runner_memory_notes;
 use super::plugin_command_runner_proof::{
