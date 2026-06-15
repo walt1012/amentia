@@ -145,6 +145,9 @@ Scope now:
 - Clean the installed app experience: human UI copy, clear first-run model
   setup, light-mode/system appearance support, and no internal wording in the
   normal cowork path.
+- Polish the primary window: native sidebar density, readable timeline width,
+  calm inspector sections, and subtle state-driven motion inspired by Codex and
+  Claude rather than decorative animation.
 - Keep proof useful but quiet: receipts are human-readable first; protocol
   fields, raw counters, hashes, paths, and setup files stay in technical detail
   surfaces or reveal-on-demand actions.

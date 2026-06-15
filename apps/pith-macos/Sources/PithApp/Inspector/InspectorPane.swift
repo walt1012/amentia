@@ -30,10 +30,12 @@ struct InspectorPane: View {
         DisclosureGroup("Search Project", isExpanded: $workspaceExpanded) {
           WorkspaceSearchPanel(viewModel: viewModel)
         }
+        .inspectorSectionCard()
 
         DisclosureGroup("Local Models", isExpanded: $localModelExpanded) {
           LocalModelPanel(viewModel: viewModel)
         }
+        .inspectorSectionCard()
 
         selectedItemSection
         diffDetailSection
@@ -64,8 +66,16 @@ struct InspectorPane: View {
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .inspectorSectionCard()
       }
       .padding(20)
+      .animation(PithMotionStyle.sectionReveal, value: workspaceExpanded)
+      .animation(PithMotionStyle.sectionReveal, value: localModelExpanded)
+      .animation(PithMotionStyle.sectionReveal, value: selectedItemExpanded)
+      .animation(PithMotionStyle.sectionReveal, value: selectedContextExpanded)
+      .animation(PithMotionStyle.sectionReveal, value: selectedPluginExpanded)
+      .animation(PithMotionStyle.sectionReveal, value: selectedSandboxExpanded)
+      .animation(PithMotionStyle.sectionReveal, value: advancedExpanded)
     }
     .frame(minWidth: 280)
     .background(PithVisualStyle.inspectorBackground)
@@ -98,6 +108,8 @@ struct InspectorPane: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
+      .inspectorSectionCard()
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 
@@ -107,6 +119,8 @@ struct InspectorPane: View {
       GroupBox("Change Detail") {
         DiffDetailView(summary: diffSummary, lines: viewModel.selectedDiffLines())
       }
+      .inspectorSectionCard()
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 
@@ -130,6 +144,8 @@ struct InspectorPane: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
+      .inspectorSectionCard()
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 
@@ -143,6 +159,8 @@ struct InspectorPane: View {
           .textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
+      .inspectorSectionCard()
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 
@@ -156,6 +174,8 @@ struct InspectorPane: View {
           .textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
+      .inspectorSectionCard()
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 }
@@ -195,5 +215,26 @@ private struct InspectorSessionCard: View {
         .stroke(tone.color.opacity(0.18), lineWidth: 1)
     )
     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+  }
+}
+
+private struct InspectorSectionCard: ViewModifier {
+  func body(content: Content) -> some View {
+    content
+      .padding(12)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(PithVisualStyle.panelBackground)
+      .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .stroke(PithVisualStyle.panelBorder, lineWidth: 1)
+      )
+      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .shadow(color: PithVisualStyle.panelShadow, radius: 6, x: 0, y: 2)
+  }
+}
+
+private extension View {
+  func inspectorSectionCard() -> some View {
+    modifier(InspectorSectionCard())
   }
 }

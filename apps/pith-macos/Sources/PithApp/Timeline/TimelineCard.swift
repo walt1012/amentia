@@ -29,53 +29,25 @@ struct TimelineCard: View {
   let onRecoverLocalExecution: () -> Void
   let onOpenExternalAction: () -> Void
   let onCopyExternalAction: () -> Void
+  @State private var isHovered = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .center, spacing: 8) {
-        Text(kindLabel)
-          .font(.caption2.weight(.semibold))
-          .foregroundColor(kindColor)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
-          .background(kindColor.opacity(0.12))
-          .clipShape(Capsule())
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        TimelineChip(label: kindLabel, color: kindColor, isProminent: true)
 
         Text(entry.title)
-          .font(.headline)
+          .font(.headline.weight(.semibold))
+          .lineLimit(2)
 
-        Spacer()
+        Spacer(minLength: 12)
 
         if let streamingLabel {
-          Text(streamingLabel)
-            .font(.caption2.weight(.semibold))
-            .foregroundColor(streamingColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(streamingColor.opacity(0.12))
-            .clipShape(Capsule())
-        }
-
-        if let sandboxBadge {
-          Text(sandboxBadge.label)
-            .font(.caption2.weight(.semibold))
-            .foregroundColor(sandboxBadge.tone.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(sandboxBadge.tone.color.opacity(0.12))
-            .clipShape(Capsule())
-        }
-
-        ForEach(evidenceBadges, id: \.self) { badge in
-          Text(badge.label)
-            .font(.caption2.weight(.semibold))
-            .foregroundColor(badge.tone.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(badge.tone.color.opacity(0.12))
-            .clipShape(Capsule())
+          TimelineChip(label: streamingLabel, color: streamingColor, isProminent: true)
         }
       }
+
+      badgeRow
 
       if let streamingProgressValue {
         ProgressView(value: streamingProgressValue)
@@ -109,99 +81,107 @@ struct TimelineCard: View {
       }
 
       if showsActionRow {
-        HStack(spacing: 12) {
-          if showsApprovalActions {
-            Button("Approve") {
-              onApprove()
-            }
-            .buttonStyle(.borderedProminent)
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 10) {
+            if showsApprovalActions {
+              Button("Approve") {
+                onApprove()
+              }
+              .buttonStyle(.borderedProminent)
 
-            Button("Deny") {
-              onDeny()
+              Button("Deny") {
+                onDeny()
+              }
+              .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
-          }
 
-          if showsPluginEnableAction {
-            Button("Enable") {
-              onEnablePlugin()
+            if showsPluginEnableAction {
+              Button("Enable") {
+                onEnablePlugin()
+              }
+              .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-          }
 
-          if showsPluginAuthorizeAction {
-            Button("Authorize Connection") {
-              onAuthorizePluginConnector()
+            if showsPluginAuthorizeAction {
+              Button("Authorize Connection") {
+                onAuthorizePluginConnector()
+              }
+              .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-          }
 
-          if showsPluginInputAction {
-            Button(pluginInputTitle) {
-              onRunPluginCommandWithInput()
+            if showsPluginInputAction {
+              Button(pluginInputTitle) {
+                onRunPluginCommandWithInput()
+              }
+              .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
-          }
 
-          if showsPluginRetryAction {
-            Button(pluginRetryTitle) {
-              onRetry()
+            if showsPluginRetryAction {
+              Button(pluginRetryTitle) {
+                onRetry()
+              }
+              .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
-          }
 
-          if showsPluginFollowUpAction {
-            Button(pluginFollowUpTitle) {
-              onRunPluginFollowUp()
+            if showsPluginFollowUpAction {
+              Button(pluginFollowUpTitle) {
+                onRunPluginFollowUp()
+              }
+              .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-          }
 
-          if showsPluginSourceAction {
-            Button("Show Source") {
-              onRevealPluginSource()
+            if showsPluginSourceAction {
+              Button("Show Source") {
+                onRevealPluginSource()
+              }
+              .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
-          }
 
-          if showsPluginRefreshAction {
-            Button("Refresh") {
-              onRefreshPlugins()
+            if showsPluginRefreshAction {
+              Button("Refresh") {
+                onRefreshPlugins()
+              }
+              .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
-          }
 
-          if let localExecutionRecoveryTitle {
-            Button(localExecutionRecoveryTitle) {
-              onRecoverLocalExecution()
+            if let localExecutionRecoveryTitle {
+              Button(localExecutionRecoveryTitle) {
+                onRecoverLocalExecution()
+              }
+              .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-          }
 
-          if let externalActionTitle {
-            Button(externalActionTitle) {
-              onOpenExternalAction()
+            if let externalActionTitle {
+              Button(externalActionTitle) {
+                onOpenExternalAction()
+              }
+              .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-          }
 
-          if let externalCopyActionTitle {
-            Button(externalCopyActionTitle) {
-              onCopyExternalAction()
+            if let externalCopyActionTitle {
+              Button(externalCopyActionTitle) {
+                onCopyExternalAction()
+              }
+              .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
           }
         }
-        .padding(.top, 4)
+        .padding(.top, 2)
       }
     }
     .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     .onTapGesture {
       onSelect()
     }
-    .padding(16)
+    .onHover { hovering in
+      isHovered = hovering
+    }
+    .padding(4)
     .frame(maxWidth: .infinity, alignment: .leading)
+    .scaleEffect(isSelected || isHovered ? 1.003 : 1)
     .softPanel(tone: entryTone, isSelected: isSelected)
+    .animation(PithMotionStyle.quick, value: isSelected)
+    .animation(PithMotionStyle.quick, value: isHovered)
   }
 
   private var entryTone: StatusTone {
@@ -233,6 +213,24 @@ struct TimelineCard: View {
       || localExecutionRecoveryTitle != nil
       || externalActionTitle != nil
       || externalCopyActionTitle != nil
+  }
+
+  @ViewBuilder
+  private var badgeRow: some View {
+    if sandboxBadge != nil || !evidenceBadges.isEmpty {
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 6) {
+          if let sandboxBadge {
+            TimelineChip(label: sandboxBadge.label, color: sandboxBadge.tone.color)
+          }
+
+          ForEach(evidenceBadges, id: \.self) { badge in
+            TimelineChip(label: badge.label, color: badge.tone.color)
+          }
+        }
+      }
+      .transition(.opacity)
+    }
   }
 
   private func proofSummaryView(_ summary: TimelineProofSummary) -> some View {
@@ -432,5 +430,26 @@ struct TimelineCard: View {
 
     let percentage = Int(((streamedValue / totalValue) * 100).rounded())
     return "\(min(percentage, 100))%"
+  }
+}
+
+private struct TimelineChip: View {
+  let label: String
+  let color: Color
+  var isProminent = false
+
+  var body: some View {
+    Text(label)
+      .font(.caption2.weight(isProminent ? .semibold : .medium))
+      .foregroundColor(color)
+      .lineLimit(1)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(color.opacity(isProminent ? 0.12 : 0.08))
+      .overlay(
+        Capsule()
+          .stroke(color.opacity(isProminent ? 0.18 : 0.12), lineWidth: 1)
+      )
+      .clipShape(Capsule())
   }
 }

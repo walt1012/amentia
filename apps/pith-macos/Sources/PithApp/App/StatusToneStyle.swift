@@ -11,6 +11,12 @@ enum PithVisualStyle {
   static let panelShadow = Color(nsColor: .shadowColor).opacity(0.04)
 }
 
+enum PithMotionStyle {
+  static let quick = Animation.easeOut(duration: 0.16)
+  static let timelineReveal = Animation.spring(response: 0.34, dampingFraction: 0.86)
+  static let sectionReveal = Animation.easeInOut(duration: 0.18)
+}
+
 enum StatusTone: String, Hashable {
   case neutral
   case ready

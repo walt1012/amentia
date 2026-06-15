@@ -10,7 +10,11 @@ struct TimelinePane: View {
         setupSurface
         TimelineReadinessStrip(viewModel: viewModel)
       }
-      .padding(20)
+      .frame(maxWidth: 900, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .center)
+      .padding(.horizontal, 24)
+      .padding(.vertical, 18)
+      .animation(PithMotionStyle.sectionReveal, value: runtimeStateLabel)
 
       Divider()
 
@@ -81,9 +85,20 @@ struct TimelinePane: View {
                 viewModel.copyTimelineExternalActionURL(from: entry)
               }
             )
+            .transition(
+              .asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .bottom)),
+                removal: .opacity
+              )
+            )
           }
         }
-        .padding(20)
+        .frame(maxWidth: 860, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
+        .animation(PithMotionStyle.timelineReveal, value: viewModel.timeline.count)
+        .animation(PithMotionStyle.quick, value: viewModel.selectedEntryID)
       }
 
       Divider()
@@ -158,6 +173,7 @@ struct TimelinePane: View {
         value: viewModel.setupProgressValue(),
         tone: viewModel.setupProgressTone()
       )
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     if viewModel.shouldShowSetupCallout() {
@@ -174,6 +190,7 @@ struct TimelinePane: View {
             viewModel.runModelSetupCalloutAction()
           }
         )
+        .transition(.opacity.combined(with: .move(edge: .top)))
       }
 
       SetupCallout(
@@ -192,6 +209,7 @@ struct TimelinePane: View {
           viewModel.runSetupCalloutSecondaryAction()
         }
       )
+      .transition(.opacity.combined(with: .move(edge: .top)))
     } else if viewModel.shouldShowFirstRequestCallout() {
       SetupCallout(
         title: viewModel.firstRequestCalloutTitle(),
@@ -209,6 +227,7 @@ struct TimelinePane: View {
           viewModel.runFirstRequestCalloutSecondaryAction()
         }
       )
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 

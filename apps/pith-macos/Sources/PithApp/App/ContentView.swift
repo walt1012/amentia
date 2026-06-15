@@ -115,6 +115,7 @@ struct ContentView: View {
     .frame(minWidth: 240)
     .listStyle(.sidebar)
     .background(PithVisualStyle.windowBackground)
+    .animation(PithMotionStyle.sectionReveal, value: viewModel.threads.count)
   }
 
 }
@@ -123,16 +124,23 @@ private struct SidebarSessionRow: View {
   let thread: ThreadSummary
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(thread.title)
-        .font(.headline)
-        .lineLimit(1)
-      Text(thread.preview)
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: "bubble.left.and.bubble.right")
         .font(.caption)
         .foregroundColor(.secondary)
-        .lineLimit(2)
+        .frame(width: 16)
+
+      VStack(alignment: .leading, spacing: 3) {
+        Text(thread.title)
+          .font(.subheadline.weight(.medium))
+          .lineLimit(1)
+        Text(thread.preview)
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .lineLimit(2)
+      }
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, 3)
     .help(thread.preview)
   }
 }
@@ -158,6 +166,9 @@ private struct SidebarEmptyState: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
+      Image(systemName: "sparkles")
+        .font(.title3)
+        .foregroundColor(.secondary)
       Text(title)
         .font(.subheadline.weight(.semibold))
       Text(detail)
