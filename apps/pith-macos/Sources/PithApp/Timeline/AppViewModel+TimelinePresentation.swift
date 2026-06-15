@@ -66,8 +66,8 @@ extension AppViewModel {
     SessionOverviewPresenter.workspaceDisplayName(sessionOverviewSnapshot())
   }
 
-  func workspacePath() -> String {
-    SessionOverviewPresenter.workspacePath(sessionOverviewSnapshot())
+  func workspaceSearchScopeSummary() -> String {
+    SessionOverviewPresenter.workspaceSearchScopeSummary(sessionOverviewSnapshot())
   }
 
   func isPendingApproval(_ entry: TimelineEntry) -> Bool {

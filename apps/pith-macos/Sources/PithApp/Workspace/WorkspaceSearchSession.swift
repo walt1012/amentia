@@ -200,7 +200,7 @@ final class WorkspaceSearchSession {
       return "Start Pith to search project files."
     }
     if !hasWorkspace {
-      return "Open a project to search local files."
+      return "Open a project to search its files."
     }
     if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       return "Search file contents, symbols, or notes, then press Return."

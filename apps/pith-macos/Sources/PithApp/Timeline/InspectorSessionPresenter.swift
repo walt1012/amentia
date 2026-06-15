@@ -56,7 +56,7 @@ enum InspectorSessionPresenter {
     case .launching:
       return "Pith is reconnecting the local model, project, session, memory, and connections."
     case .failed:
-      return "Use the restart action in the timeline header to recover local work."
+      return "Use the restart action in the timeline header to recover the session."
     case .ready:
       if snapshot.hasActiveTurn {
         return "Pith is working locally. Keep review focused on the timeline unless the request should be cancelled."

@@ -759,7 +759,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     [
       RuntimeReadinessCheckSummary(
         id: "executionControls",
-        title: "Execution Controls",
+        title: "Action Safety",
         status: "ready",
         detail: "Ready"
       )

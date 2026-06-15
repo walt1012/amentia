@@ -1,7 +1,7 @@
 use pith_protocol::RuntimeReadinessCheck;
 
 const DEFAULT_EXECUTION_CONTROL_DETAIL: &str =
-  "Default mode: ask-before-change; risky actions require approval and can be cancelled.";
+  "Default mode: Pith asks before changing files; risky actions need approval and can be cancelled.";
 
 pub(super) fn execution_control_check(
   pending_approval_count: usize,
@@ -13,7 +13,7 @@ pub(super) fn execution_control_check(
 ) -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "executionControls".to_string(),
-    title: "Execution Controls".to_string(),
+    title: "Action Safety".to_string(),
     status: execution_control_status(
       pending_approval_count,
       active_turn_count,
@@ -37,7 +37,7 @@ pub(super) fn execution_control_check(
 pub(super) fn bounded_runtime_check() -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "boundedRuntime".to_string(),
-    title: "Bounded Local Work".to_string(),
+    title: "Reliable Local Work".to_string(),
     status: "ready".to_string(),
     detail: "Shell, llama.cpp, web search, git helpers, and plugin actions are bounded."
       .to_string(),

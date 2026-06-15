@@ -28,7 +28,7 @@ struct LocalDataResetSummary: Equatable {
 
 enum LocalDataSettingsPresenter {
   static let deleteBlockedDetail =
-    "Finish active local work, model downloads, model checks, or plugin and connection operations before deleting local data."
+    "Finish active work, model downloads, model checks, or plugin and connection operations before deleting local data."
 
   static func summary(_ snapshot: LocalDataSettingsSnapshot) -> LocalDataSettingsSummary {
     LocalDataSettingsSummary(

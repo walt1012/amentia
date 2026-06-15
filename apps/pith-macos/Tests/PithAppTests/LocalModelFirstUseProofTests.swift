@@ -136,11 +136,11 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     )
 
     guard case .waitingForTurn = plan.mode else {
-      XCTFail("Expected activation to wait while local work is active.")
+      XCTFail("Expected activation to wait while work is active.")
       return
     }
     XCTAssertTrue(plan.runtimeDetail.contains("current work"))
-    XCTAssertTrue(plan.timelineBody.contains("current local work"))
+    XCTAssertTrue(plan.timelineBody.contains("current work"))
     XCTAssertFalse(plan.runtimeDetail.contains("turn"))
     XCTAssertFalse(plan.timelineBody.contains("turn"))
   }

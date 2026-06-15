@@ -1,7 +1,7 @@
 import Foundation
 
 enum TimelineEventPresenter {
-  static let generatingLocalResponseDetail = "Generating local response..."
+  static let generatingLocalResponseDetail = "Pith is preparing a response..."
   static let pendingTurnCancelledDetail = "Request cancelled."
   static let runningPluginCommandDetail = "Running plugin action..."
   static let pluginCommandNeedsExecutionContractDetail =
@@ -86,14 +86,14 @@ enum TimelineEventPresenter {
   static func threadCreated(_ thread: ThreadSummary) -> TimelineEntry {
     TimelineEntryFactory.system(
       title: "Session Created",
-      body: "Created \(thread.title) for local work.",
+      body: "Created \(thread.title) for this project.",
       attributes: [:]
     )
   }
 
   static func pendingTurnCancelled() -> TimelineEntry {
     return TimelineEntryFactory.warning(
-      title: "Execution Cancelled",
+      title: "Request Cancelled",
       body: "The pending request was cancelled before it finished.",
       attributes: [:]
     )
@@ -121,7 +121,7 @@ enum TimelineEventPresenter {
 
   static func turnCancelFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Execution Cancel Failed",
+      title: "Cancel Failed",
       body: error.localizedDescription,
       attributes: [:]
     )

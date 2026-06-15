@@ -26,7 +26,7 @@ enum LocalModelDisplayPresenter {
     }
 
     if model.tags.contains("long-context") {
-      return "Stronger small model for longer context and heavier local work."
+      return "Stronger small model for longer context and heavier project work."
     }
 
     return "Optional local model for specialized cowork tasks."

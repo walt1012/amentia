@@ -201,7 +201,7 @@ enum DailyDriverStagePresenter {
     case "approval_review":
       return "Review the pending approval before work continues."
     case "local_execution":
-      return "Wait for local work or cancel it if it is no longer useful."
+      return "Wait for current work or cancel it if it is no longer useful."
     case "first_request":
       return "Send the first cowork prompt."
     case "ready":

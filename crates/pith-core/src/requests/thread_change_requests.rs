@@ -54,7 +54,7 @@ pub(crate) fn handle_thread_revert_changes(
     return JsonRpcResponse::error(
       request.id,
       -32012,
-      "Cannot revert session changes while local work is running.",
+      "Cannot revert session changes while current work is running.",
     );
   }
   if context.thread_state.find(&params.thread_id).is_none() {

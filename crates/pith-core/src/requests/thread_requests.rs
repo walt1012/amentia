@@ -75,7 +75,7 @@ pub(crate) fn handle_thread_delete(
     return JsonRpcResponse::error(
       request.id,
       -32012,
-      "Cannot delete a session while local work is running.",
+      "Cannot delete a session while current work is running.",
     );
   }
 

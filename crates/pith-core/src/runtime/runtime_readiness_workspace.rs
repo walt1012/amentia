@@ -11,13 +11,15 @@ pub(super) fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck
 
   RuntimeReadinessCheck {
     id: "workspace".to_string(),
-    title: "Workspace".to_string(),
+    title: "Project".to_string(),
     status: status.to_string(),
     detail: context
       .workspace_state
       .current()
-      .map(|workspace| format!("Tools are bound to {}.", workspace.display_name))
-      .unwrap_or_else(|| "Open a project to bind file, shell, memory, and approvals.".to_string()),
+      .map(|workspace| format!("Project tools are ready for {}.", workspace.display_name))
+      .unwrap_or_else(|| {
+        "Open a project folder to enable files, actions, memory, and approvals.".to_string()
+      }),
   }
 }
 
@@ -27,16 +29,16 @@ pub(super) fn thread_check(
 ) -> RuntimeReadinessCheck {
   RuntimeReadinessCheck {
     id: "thread".to_string(),
-    title: "Thread".to_string(),
+    title: "Session".to_string(),
     status: if thread_ready {
       "ready".to_string()
     } else {
       "setup_required".to_string()
     },
     detail: if thread_ready {
-      format!("{workspace_thread_count} session(s) are bound to the current project.")
+      format!("{workspace_thread_count} session(s) are ready in the current project.")
     } else {
-      "Create or resume a session bound to the current project.".to_string()
+      "Create or resume a session for the current project.".to_string()
     },
   }
 }
@@ -56,9 +58,9 @@ pub(super) fn first_request_check(
       "waiting".to_string()
     },
     detail: if first_request_sent {
-      "At least one local request has been sent in the current project.".to_string()
+      "At least one request has been sent in the current project.".to_string()
     } else if thread_ready {
-      "Send one short local request to complete first-use setup.".to_string()
+      "Send one short request to complete first-use setup.".to_string()
     } else {
       "Create or resume a project-bound session before sending the first request.".to_string()
     },

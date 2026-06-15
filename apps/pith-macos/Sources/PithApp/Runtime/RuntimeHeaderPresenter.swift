@@ -26,7 +26,7 @@ enum RuntimeHeaderPresenter {
     case .launching:
       return "Starting Pith and reconnecting local state..."
     case .failed:
-      return "Pith stopped. Restart to recover local work."
+      return "Pith stopped. Restart to recover the session."
     case .ready:
       if !snapshot.isLocalModelReady {
         return snapshot.modelSetupSummary
@@ -35,19 +35,19 @@ enum RuntimeHeaderPresenter {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Model is ready. Open a project to bind tools to local files."
+        ) ?? "Model is ready. Open a project so Pith can inspect and edit files safely."
       }
       if snapshot.hasActiveTurn {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Pith is working locally. Cancel only if the request is no longer useful."
+        ) ?? "Pith is working. Cancel only if the request is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Select or create a session to start local work."
+        ) ?? "Select or create a session to start working."
       }
       if snapshot.isWaitingForFirstMessage {
         return snapshot.hasDraftMessage
@@ -60,7 +60,7 @@ enum RuntimeHeaderPresenter {
       return DailyDriverStagePresenter.summary(
         stage: snapshot.dailyDriverStage,
         nextAction: snapshot.dailyDriverNextAction
-      ) ?? "Ready for local work."
+      ) ?? "Ready to work."
     }
   }
 

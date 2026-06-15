@@ -228,7 +228,7 @@ enum PluginDashboardPresenter {
 
   static func commandDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.commands.isEmpty else {
-      return "Enable a plugin with actions to run reusable local workflows."
+      return "Enable a plugin with actions to run reusable workflows."
     }
 
     return snapshot.commands

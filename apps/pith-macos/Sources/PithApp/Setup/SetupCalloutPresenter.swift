@@ -39,7 +39,7 @@ enum SetupCalloutPresenter {
       return "Create or select a session before starting the first cowork task."
     }
 
-    return "Pith is ready for local work."
+    return "Pith is ready to work."
   }
 
   static func detail(_ snapshot: SetupCalloutSnapshot) -> String {

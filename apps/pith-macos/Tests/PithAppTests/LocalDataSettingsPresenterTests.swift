@@ -54,7 +54,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     )
 
     XCTAssertFalse(summary.canDeleteLocalData)
-    XCTAssertTrue(summary.blockedDetail?.contains("Finish active local work") == true)
+    XCTAssertTrue(summary.blockedDetail?.contains("Finish active work") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("plugin and connection operations") == true)
   }
 

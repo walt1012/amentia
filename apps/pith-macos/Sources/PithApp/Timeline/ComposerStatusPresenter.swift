@@ -31,7 +31,7 @@ enum ComposerStatusPresenter {
     }
 
     if !snapshot.hasWorkspace {
-      return "Open a project to start local work"
+      return "Open a project to start working"
     }
 
     if !snapshot.hasRuntimeThreadSelection {
@@ -39,7 +39,7 @@ enum ComposerStatusPresenter {
     }
 
     if snapshot.hasActiveTurn {
-      return "Pith is working locally. Cancel to stop it."
+      return "Pith is working. Cancel to stop it."
     }
 
     if snapshot.hasRestoredLocalExecutionDraft {
@@ -52,7 +52,7 @@ enum ComposerStatusPresenter {
         : "Choose a starter prompt or type the first cowork prompt"
     }
 
-    return "Ask Pith to inspect files, review diffs, or make a safe local change"
+    return "Ask Pith to inspect files, review diffs, or make a safe change"
   }
 
   static func statusSummary(_ snapshot: ComposerStatusSnapshot) -> String {
@@ -69,15 +69,15 @@ enum ComposerStatusPresenter {
       }
 
       if !snapshot.hasWorkspace {
-        return "Open a project to bind tools to local files."
+        return "Open a project so Pith can safely inspect and edit files."
       }
 
       if !snapshot.hasRuntimeThreadSelection {
-        return "Create a session to start local work."
+        return "Create a session to start working."
       }
 
       if snapshot.hasActiveTurn {
-        return "Pith is working locally. Cancel the request if it is no longer useful."
+        return "Pith is working. Cancel the request if it is no longer useful."
       }
 
       if snapshot.hasRestoredLocalExecutionDraft {
@@ -91,7 +91,7 @@ enum ComposerStatusPresenter {
         return "Choose a starter prompt or type a short cowork prompt."
       }
 
-      return "Ready for local work."
+      return "Ready to work."
     }
   }
 }

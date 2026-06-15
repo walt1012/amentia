@@ -273,7 +273,7 @@ fn daily_driver_stage(input: DailyDriverStageInput) -> DailyDriverStage {
   {
     return DailyDriverStage {
       stage: "local_execution",
-      next_action: "Wait for local work or cancel it if it is no longer useful.",
+      next_action: "Wait for current work or cancel it if it is no longer useful.",
     };
   }
   if !web_search_permission_ready {

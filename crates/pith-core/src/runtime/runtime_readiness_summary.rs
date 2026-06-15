@@ -51,9 +51,9 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
         .saturating_add(running_approval_count)
         .saturating_add(running_plugin_command_count)
         .saturating_add(running_workspace_search_count);
-      format!("Pith is working on {active_execution_count} local request(s).")
+      format!("Pith is working on {active_execution_count} request(s).")
     }
-    "ready" if !first_request_sent => "Pith is ready for the first local request.".to_string(),
+    "ready" if !first_request_sent => "Pith is ready for the first request.".to_string(),
     _ => "Pith is ready: model, project, tools, context, plugins, and connections are controlled."
       .to_string(),
   }
@@ -84,10 +84,10 @@ mod tests {
   }
 
   #[test]
-  fn summary_uses_local_request_language_while_running() {
+  fn summary_uses_request_language_while_running() {
     let summary = readiness_summary(input("running", true, true, true, 2));
 
-    assert_eq!(summary, "Pith is working on 2 local request(s).");
+    assert_eq!(summary, "Pith is working on 2 request(s).");
     assert!(!summary.contains("local execution"));
   }
 

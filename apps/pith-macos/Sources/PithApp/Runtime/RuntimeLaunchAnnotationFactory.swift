@@ -92,7 +92,7 @@ enum RuntimeLaunchAnnotationFactory {
         TimelineEntryFactory.system(
           title: "Local Model Ready",
           body:
-            "\(LocalModelDisplayPresenter.cleanDisplayName(modelHealth.displayName)) is ready for local work.",
+            "\(LocalModelDisplayPresenter.cleanDisplayName(modelHealth.displayName)) is ready to work.",
           attributes: attributes
         )
       ]

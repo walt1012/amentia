@@ -14,8 +14,8 @@ struct SessionDeletePrompt {
 }
 
 enum SessionChangePresenter {
-  static let activeWorkBlocksDeleteDetail = "Finish or cancel the current local work before deleting a session."
-  static let activeWorkBlocksRevertDetail = "Finish or cancel the current local work before reverting session changes."
+  static let activeWorkBlocksDeleteDetail = "Finish or cancel the current work before deleting a session."
+  static let activeWorkBlocksRevertDetail = "Finish or cancel the current work before reverting session changes."
   static let noRevertableChangesDetail = "This session has not saved any project files."
   static let deleteSuccessDetail = "Deleted session. Project files were not changed."
 

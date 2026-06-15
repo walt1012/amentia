@@ -88,7 +88,7 @@ Ready foundations:
   support folders instead of exposing turn or local-service internals.
 - Settings explains local data ownership, uninstall behavior, and the supported
   path for removing downloaded models and saved setup.
-- Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
+- Project cowork loop has project-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.
 - Sessions can be deleted without touching project files; approved writes feed
@@ -136,6 +136,9 @@ Ready foundations:
   product language for requests and work. Established ecosystem words such as
   plugin, skill, MCP, connection, and action stay visible when they describe a
   real interface.
+- Project search and readiness now hide support paths in the default UI and use
+  project, session, and action-safety language while preserving internal
+  protocol names for stable APIs.
 
 Current constraints:
 
@@ -249,7 +252,7 @@ marketplace too early.
 Goal: make Pith better over time without turning it into a remote server agent.
 
 - Add a local follow-up queue for user-approved next actions.
-- Add scheduled local work only after approvals, sandbox policy, and receipts
+- Add scheduled work only after approvals, sandbox policy, and receipts
   work headlessly and fail closed.
 - Add cross-session recall through bounded memory and session search before any
   local document RAG.

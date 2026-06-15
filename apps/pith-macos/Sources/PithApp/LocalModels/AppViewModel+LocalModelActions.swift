@@ -193,7 +193,7 @@ extension AppViewModel {
   func resetActiveLocalModel() {
     guard canResetActiveLocalModel() else {
       runtimeDetail =
-        "Finish Pith startup, model download, model selection check, or active local work before resetting model selection."
+        "Finish Pith startup, model download, model selection check, or active work before resetting model selection."
       return
     }
 

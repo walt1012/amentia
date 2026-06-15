@@ -16,11 +16,10 @@ struct WorkspaceSearchPanel: View {
         .font(.caption)
         .foregroundColor(.secondary)
 
-      Text(viewModel.workspacePath())
+      Text(viewModel.workspaceSearchScopeSummary())
         .font(.caption2)
         .foregroundColor(.secondary)
         .lineLimit(2)
-        .textSelection(.enabled)
 
       TextField("Search files, symbols, or notes", text: $viewModel.workspaceSearchQuery)
         .textFieldStyle(.roundedBorder)

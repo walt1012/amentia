@@ -86,8 +86,12 @@ enum SessionOverviewPresenter {
     snapshot.workspace?.displayName ?? "No Project"
   }
 
-  static func workspacePath(_ snapshot: SessionOverviewSnapshot) -> String {
-    snapshot.workspace?.rootPath ?? "Open a local project folder to enable project-scoped tools."
+  static func workspaceSearchScopeSummary(_ snapshot: SessionOverviewSnapshot) -> String {
+    guard let workspace = snapshot.workspace else {
+      return "Open a project folder to search files and notes."
+    }
+
+    return "Search stays inside \(workspace.displayName) and runs on this Mac."
   }
 
   static func shouldShowSelectedEntryInspector(_ snapshot: SessionOverviewSnapshot) -> Bool {
