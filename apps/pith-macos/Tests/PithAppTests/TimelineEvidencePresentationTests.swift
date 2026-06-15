@@ -165,6 +165,25 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Approval: auto approved") == true)
   }
 
+  func testInspectorSupportDetailsStartWithReadableType() {
+    let metadata = TimelineInspectorPresenter.selectedEntryMetadata(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .assistantMessage,
+        title: "Assistant",
+        body: "Work complete.",
+        attributes: [
+          "pluginDisplayName": "Notion",
+          "remoteWriteStatus": "completed",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(metadata.hasPrefix("Type: assistant message"))
+    XCTAssertTrue(metadata.contains("pluginDisplayName: Notion"))
+    XCTAssertFalse(metadata.hasPrefix("assistantMessage\n"))
+  }
+
   func testTimelineCardSummaryKeepsActionEvidenceCompact() {
     let summary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
       id: "entry-1",

@@ -18,8 +18,9 @@ enum TimelineInspectorPresenter {
       return "No timeline item is selected."
     }
 
+    let typeLine = "Type: \(readableStatus(entry.kind.rawValue))"
     if entry.attributes.isEmpty {
-      return entry.kind.rawValue
+      return typeLine
     }
 
     let detail = entry.attributes
@@ -27,7 +28,7 @@ enum TimelineInspectorPresenter {
       .map { "\($0.key): \($0.value)" }
       .joined(separator: "\n")
 
-    return "\(entry.kind.rawValue)\n\(detail)"
+    return "\(typeLine)\n\(detail)"
   }
 
   static func selectedEntrySourceSummary(_ snapshot: TimelineInspectorSnapshot) -> String? {

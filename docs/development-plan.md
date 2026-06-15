@@ -76,74 +76,23 @@ when these boundaries become clearer; do not split or merge files cosmetically.
 
 Active milestone: **M13 Product Quality and Identity**.
 
-Ready foundations:
+Current capabilities:
 
-- Local model setup supports in-app download, verification, activation, pause,
-  resume, cancel, recovery, local data reset, and one active model.
-- First-run setup uses product-level language and hides raw GGUF details, paths,
-  manifests, and hashes from the normal path.
-- First-run model choice presents curated options by fit, footprint, context,
-  output budget, and license without requiring model-file knowledge.
-- Model management copy now uses daily-work language for active work and local
-  support folders instead of exposing turn or local-service internals.
-- Settings explains local data ownership, uninstall behavior, and the supported
-  path for removing downloaded models and saved setup.
-- Project cowork loop has project-scoped tools, Web Search retrieval,
-  approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
-  evidence.
-- Sessions can be deleted without touching project files; approved writes feed
-  a durable change ledger and can be previewed or reverted per session when
-  files still match Pith's recorded writes. Delete and revert prompts now make
-  that boundary explicit in user-facing language.
-- Session sidebar previews translate runtime states into human cowork language
-  instead of exposing internal status strings.
-- Connection baseline has local plugin registry, execution gates, credentials,
-  retries, generic timeline evidence, memory capture, and Notion as the
-  reference connection.
-- Extension UI now uses the Codex/Claude-style hierarchy: Plugins are installed
-  bundles; Actions, Connections, Skills, MCP servers, Tools, and Checks are
-  capabilities. Raw manifest capability strings stay out of primary summaries.
-- Plugin install and management surfaces use human capability and permission
-  labels; local paths, manifest strings, and credential binding details stay in
-  reveal-on-demand support paths.
-- Plugin lifecycle timeline entries now use `Plugin` for bundle operations and
-  `Connection` for authorization evidence; raw paths and credential binding
-  internals stay out of normal timeline bodies.
-- Inspector proof now favors user-readable receipts for plugins, connections,
-  sandboxing, runner setup, and MCP checks; raw IDs, paths, output byte counts,
-  and launch commands stay in Support Details.
-- First-run setup, readiness, model setup, composer, header, and default
-  timeline copy now say Pith/project/session instead of local-service/runtime
-  wording in the normal user path.
-- Primary project setup, search, safety, receipt, release, and local-data copy
-  now uses Project/project folder language while workspace remains an internal
-  protocol and sandbox boundary.
-- Project open/restore, memory, and plugin setup messages now keep absolute
-  paths and setup-file internals out of the default timeline while retaining
-  support attributes for troubleshooting.
-- Core readiness, approvals, action-blocked states, Web Search permission gates,
-  plugin runner events, and Swift inspector/settings copy now use project,
-  session, action safety, plugins, and connections language instead of
-  workspace/thread/local-execution/connector-action UI terms.
-- macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
-  unsigned install guidance, package-size checks, release copy, manifest,
-  checksum, and packaged smoke proof.
-- `v0.1.14` is published as the first visible ad-hoc prerelease with a manual
-  acceptance receipt.
-- CI is split by change area and remains the source of truth for Rust, Swift,
-  package, policy, model, and release checks.
-- Primary readiness, approval, permission, and action-result copy now uses
-  product language for requests and work. Established ecosystem words such as
-  plugin, skill, MCP, connection, and action stay visible when they describe a
-  real interface.
-- Project search and readiness now hide support paths in the default UI and use
-  project, session, and action-safety language while preserving internal
-  protocol names for stable APIs.
-- Plugin action and connection surfaces now share user-facing status labels so
-  setup issues, missing connections, and authorization states stay actionable
-  without exposing raw IDs or protocol statuses by default.
-- Plugin capability and setup rows now hide raw capability identifiers,
-  metadata paths, and duplicate validation text from the default management UI.
+- Local model setup: in-app download, verification, activation, pause, resume,
+  cancel, recovery, local data reset, curated model choice, and one active
+  model.
+- Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
+  diagnostics, bounded subprocesses, human receipts, session delete, and
+  session-level change preview/revert.
+- Extension baseline: local plugin registry, installation lifecycle, actions,
+  connections, skills, MCP servers, tools, checks, credentials, retries, generic
+  proof surfaces, and Notion as the reference connection.
+- Product language: normal setup, model, project, session, readiness, timeline,
+  inspector, plugin, connection, permission, and local-data paths avoid raw
+  protocol names, paths, IDs, hashes, and manifest details by default.
+- Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
+  guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
+  and split CI as the source of truth.
 
 Current constraints:
 
