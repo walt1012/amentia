@@ -91,8 +91,9 @@ Current capabilities:
   inspector, plugin, connection, permission, and local-data paths avoid raw
   protocol names, paths, IDs, hashes, and manifest details by default.
 - Primary window polish: native sidebar density, calm timeline cards, focused
-  composer, readiness, model management, project search, plugin management,
-  inspector sections, settings surfaces, and subtle state-driven motion.
+  composer, readiness, first-run setup, model management, project search,
+  plugin management, inspector sections, settings surfaces, and subtle
+  state-driven motion.
 - Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
   guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
   and split CI as the source of truth.

@@ -13,7 +13,7 @@ from package_contract import (
 PACKAGED_FIRST_RUN_PROOF_PHRASE = "packaged first-run smoke receipt"
 PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
 FIRST_APP_OPEN_ACTION_COPY = (
-  "Choose Understand Project, Pick Next Step, or type a short cowork prompt."
+  "Start with Understand Project, Pick Next Step, or a short cowork prompt."
 )
 FIRST_APP_OPEN_INSTALL_STEP = (
   "Start coworking with Understand Project, Pick Next Step, "

@@ -6,7 +6,7 @@ enum FirstRequestPromptPresenter {
   static let planNextStepID = "plan-next-step"
 
   static func firstAppOpenActionSummary() -> String {
-    "Choose Understand Project, Pick Next Step, or type a short cowork prompt."
+    "Start with Understand Project, Pick Next Step, or a short cowork prompt."
   }
 
   static func firstAppOpenActionTrustSummary() -> String {

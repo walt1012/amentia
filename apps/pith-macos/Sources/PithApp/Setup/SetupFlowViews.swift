@@ -7,21 +7,31 @@ struct SetupProgressView: View {
   let tone: StatusTone
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      HStack {
-        Text(summary)
-          .font(.caption2.weight(.semibold))
-          .foregroundColor(tone.color)
-        Spacer()
-        Text(detail)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .lineLimit(1)
+    HStack(alignment: .center, spacing: 12) {
+      ZStack {
+        Circle()
+          .fill(tone.color.opacity(0.12))
+          .frame(width: 30, height: 30)
+        Circle()
+          .fill(tone.color)
+          .frame(width: 8, height: 8)
       }
-      ProgressView(value: value)
-        .progressViewStyle(.linear)
-        .tint(tone.color)
+
+      VStack(alignment: .leading, spacing: 5) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          Text(summary)
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.primary)
+          StatusPill(label: detail, tone: tone)
+          Spacer()
+        }
+
+        ProgressView(value: value)
+          .progressViewStyle(.linear)
+          .tint(tone.color)
+      }
     }
+    .softPanel(tone: tone)
   }
 }
 
@@ -35,12 +45,35 @@ struct SetupModelChooser: View {
   let canRunAction: Bool
   let onAction: () -> Void
 
+  private let columns = [
+    GridItem(.adaptive(minimum: 250), spacing: 10, alignment: .top),
+  ]
+
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text("Choose Local Model")
-          .font(.caption.weight(.semibold))
-        StatusPill(label: "One active model", tone: .neutral)
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(alignment: .top, spacing: 12) {
+        ZStack {
+          Circle()
+            .fill(Color.accentColor.opacity(0.11))
+            .frame(width: 34, height: 34)
+          Image(systemName: "cpu")
+            .font(.body.weight(.semibold))
+            .foregroundColor(.accentColor)
+        }
+
+        VStack(alignment: .leading, spacing: 4) {
+          HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("Choose Local Model")
+              .font(.headline.weight(.semibold))
+            StatusPill(label: "One active model", tone: .neutral)
+          }
+          Text(detail)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
         Spacer()
 
         if let actionTitle {
@@ -53,12 +86,7 @@ struct SetupModelChooser: View {
         }
       }
 
-      Text(detail)
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
-
-      VStack(alignment: .leading, spacing: 8) {
+      LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
         ForEach(models) { model in
           SetupModelOptionRow(
             model: model,
@@ -73,7 +101,7 @@ struct SetupModelChooser: View {
         }
       }
     }
-    .softPanel()
+    .softPanel(tone: .active)
   }
 }
 
@@ -87,11 +115,23 @@ private struct SetupModelOptionRow: View {
 
   var body: some View {
     Button(action: onSelect) {
-      VStack(alignment: .leading, spacing: 5) {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+      VStack(alignment: .leading, spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
           Text(LocalModelDisplayPresenter.setupTitle(model))
-            .font(.caption.weight(.semibold))
+            .font(.subheadline.weight(.semibold))
             .foregroundColor(.primary)
+            .lineLimit(2)
+
+          Spacer(minLength: 8)
+
+          if isSelected {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.body)
+              .foregroundColor(.accentColor)
+          }
+        }
+
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
           if isDefault {
             SetupModelBadge(label: "Default", tone: .ready)
           }
@@ -102,10 +142,6 @@ private struct SetupModelOptionRow: View {
             SetupModelBadge(label: "Active", tone: .active)
           } else if model.downloaded {
             SetupModelBadge(label: "Downloaded", tone: .neutral)
-          }
-          if isSelected {
-            Spacer()
-            SetupModelBadge(label: "Selected", tone: .warning)
           }
         }
 
@@ -121,7 +157,7 @@ private struct SetupModelOptionRow: View {
           .font(.caption2)
           .foregroundColor(.secondary)
       }
-      .padding(8)
+      .padding(10)
       .frame(maxWidth: .infinity, alignment: .leading)
       .softPanel(isSelected: isSelected)
     }
@@ -170,25 +206,28 @@ struct SetupCallout: View {
   let onSecondaryAction: () -> Void
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
-      Image(systemName: iconName)
-        .font(.body.weight(.semibold))
-        .foregroundColor(tone.color)
-        .frame(width: 28, height: 28)
-        .background(tone.color.opacity(0.10))
-        .clipShape(Circle())
-
-      VStack(alignment: .leading, spacing: 4) {
-        Text(title)
-          .font(.caption.weight(.semibold))
+    HStack(alignment: .top, spacing: 14) {
+      ZStack {
+        Circle()
+          .fill(tone.color.opacity(0.12))
+          .frame(width: 36, height: 36)
+        Image(systemName: iconName)
+          .font(.body.weight(.semibold))
           .foregroundColor(tone.color)
+      }
+
+      VStack(alignment: .leading, spacing: 6) {
+        Text(title)
+          .font(.headline.weight(.semibold))
+          .foregroundColor(.primary)
         Text(summary)
-          .font(.caption2)
-          .foregroundColor(.secondary)
+          .font(.caption)
+          .foregroundColor(.primary)
           .fixedSize(horizontal: false, vertical: true)
         Text(detail)
           .font(.caption2)
           .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -200,6 +239,7 @@ struct SetupCallout: View {
             onAction()
           }
           .buttonStyle(.borderedProminent)
+          .controlSize(.small)
           .disabled(!canRunAction)
         }
 
@@ -208,6 +248,7 @@ struct SetupCallout: View {
             onSecondaryAction()
           }
           .buttonStyle(.bordered)
+          .controlSize(.small)
           .disabled(!canRunSecondaryAction)
         }
       }
