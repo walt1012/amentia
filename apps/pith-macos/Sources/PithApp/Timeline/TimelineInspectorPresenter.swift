@@ -18,7 +18,7 @@ enum TimelineInspectorPresenter {
       return "No timeline item is selected."
     }
 
-    let typeLine = "Type: \(readableStatus(entry.kind.rawValue))"
+    let typeLine = "Type: \(readableEventType(entry.kind.rawValue))"
     if entry.attributes.isEmpty {
       return typeLine
     }
@@ -416,6 +416,15 @@ enum TimelineInspectorPresenter {
       }
 
     return words.isEmpty ? value : words.joined(separator: " ")
+  }
+
+  private static func readableEventType(_ value: String) -> String {
+    let spaced = value.replacingOccurrences(
+      of: #"([a-z0-9])([A-Z])"#,
+      with: "$1 $2",
+      options: .regularExpression
+    )
+    return readableIdentifier(spaced).lowercased()
   }
 
   private static func readablePermission(_ value: String) -> String {
