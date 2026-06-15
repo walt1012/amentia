@@ -70,7 +70,8 @@ The daily loop is:
 Memory owns meaning and ranking. Storage owns durable records. Connector
 evidence stays generic at protocol and timeline layers; service-specific detail
 belongs in connector attributes and narrow presenter adapters. Refactor only
-when these boundaries become clearer; do not split or merge files cosmetically.
+when ownership, contracts, or user-facing clarity improve; do not split or merge
+files cosmetically.
 
 ## Current State
 
@@ -156,7 +157,8 @@ Scope now:
   fields, raw counters, hashes, paths, and setup files stay in technical detail
   surfaces or reveal-on-demand actions.
 - Preserve architecture clarity: remove dead code and stale release scaffolding,
-  merge accidental splits when they obscure ownership, and avoid cosmetic moves.
+  keep root views composition-only, split presenter or runner ownership only
+  when contracts are mixed, and avoid cosmetic moves.
 - Keep execution reliable: long work is observable, cancellable, resumable when
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
@@ -169,8 +171,9 @@ Scope now:
 - Keep plugin management clean enough for real users: confirmation dialogs show
   what a plugin can do, what access it needs, and what Pith will store without
   exposing source paths or manifest capability strings.
-- Keep timeline and inspector evidence product-first: show capabilities,
-  permissions, proof, and authorization state before paths or protocol fields.
+- Keep timeline and inspector evidence product-first: domain presenters own copy
+  and proof for runtime, model, session, plugin, connection, and action
+  surfaces; paths and protocol fields stay secondary.
 - Keep support diagnostics available without letting them dominate the default
   inspector path.
 
@@ -195,6 +198,9 @@ marketplace too early.
   actions, skills, MCP servers, checks, and tools as bundle capabilities.
 - Generalize connector contracts only after credentials, approvals, retries,
   proof, memory capture, and timeline evidence stay service-agnostic.
+- Split plugin runner output contracts before broad connector expansion:
+  envelope parsing, timeline proof, remote write proof, and memory-note capture
+  should be separately testable.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
@@ -243,5 +249,6 @@ Goal: make Pith better over time without turning it into a remote server agent.
   and useful.
 - Keep established ecosystem terms such as plugin, skill, and MCP when they
   describe real interfaces; clarify them instead of renaming them away.
-- No cosmetic refactor that only moves code around.
+- No cosmetic or line-count-only refactor; split by ownership, contract clarity,
+  or user-facing clarity.
 - English-only source, docs, commits, branches, and PR text.
