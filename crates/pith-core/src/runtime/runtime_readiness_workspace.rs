@@ -17,9 +17,7 @@ pub(super) fn workspace_check(context: &RuntimeContext) -> RuntimeReadinessCheck
       .workspace_state
       .current()
       .map(|workspace| format!("Tools are bound to {}.", workspace.display_name))
-      .unwrap_or_else(|| {
-        "Open a project to bind file, shell, memory, and approvals.".to_string()
-      }),
+      .unwrap_or_else(|| "Open a project to bind file, shell, memory, and approvals.".to_string()),
   }
 }
 

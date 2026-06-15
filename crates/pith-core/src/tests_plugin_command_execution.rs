@@ -1452,7 +1452,7 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
   assert!(data["runRepairHint"]
     .as_str()
     .expect("repair hint")
-    .contains("execution contract"));
+    .contains("local runner"));
 }
 
 #[cfg(unix)]

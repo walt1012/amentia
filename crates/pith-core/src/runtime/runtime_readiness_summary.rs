@@ -54,10 +54,8 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
       format!("Pith is working on {active_execution_count} local request(s).")
     }
     "ready" if !first_request_sent => "Pith is ready for the first local request.".to_string(),
-    _ => {
-      "Pith is ready: model, project, tools, context, plugins, and connections are controlled."
-        .to_string()
-    }
+    _ => "Pith is ready: model, project, tools, context, plugins, and connections are controlled."
+      .to_string(),
   }
 }
 

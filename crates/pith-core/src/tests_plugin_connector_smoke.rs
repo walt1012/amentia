@@ -116,7 +116,7 @@ fn third_party_connector_plugin_smoke_path_supports_repair_and_retry() {
   assert!(command["runRepairHint"]
     .as_str()
     .expect("command repair hint")
-    .contains("Authorize the connector"));
+    .contains("Authorize the connection"));
 
   let blocked_run = run_smoke_command_before_auth(&mut context);
   assert_eq!(blocked_run["connectorId"], "notion-smoke::notion");
@@ -125,7 +125,7 @@ fn third_party_connector_plugin_smoke_path_supports_repair_and_retry() {
   assert!(blocked_run["runRepairHint"]
     .as_str()
     .expect("blocked repair hint")
-    .contains("Authorize the connector"));
+    .contains("Authorize the connection"));
 
   let authorize_response = handle_request(
     &mut context,

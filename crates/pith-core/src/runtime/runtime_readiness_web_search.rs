@@ -48,7 +48,9 @@ mod tests {
     let check = web_search_check(&status(true), &[]);
 
     assert_eq!(check.status, "setup_required");
-    assert!(check.detail.contains("Enable Web Search in Plugins > Permissions"));
+    assert!(check
+      .detail
+      .contains("Enable Web Search in Plugins > Permissions"));
   }
 
   #[test]

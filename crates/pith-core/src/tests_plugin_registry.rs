@@ -841,7 +841,7 @@ printf '{"content":"ok"}\n'
   assert!(command["runRepairHint"]
     .as_str()
     .expect("repair hint")
-    .contains("Authorize the connector"));
+    .contains("Authorize the connection"));
 
   let blocked_response = handle_request(
     &mut context,
@@ -1685,7 +1685,7 @@ fn plugin_connector_authorize_returns_repair_metadata_when_disabled() {
   assert!(data["connectorRepairHint"]
     .as_str()
     .expect("connector repair hint")
-    .contains("Enable the connector plugin"));
+    .contains("Enable the plugin"));
 }
 
 #[test]
