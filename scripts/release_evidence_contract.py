@@ -689,7 +689,7 @@ def validate_manual_prerelease_checks(data: dict[str, object]) -> None:
       "Web Search",
       "reviewing the diff",
       "Restart Pith",
-      "local service status",
+      "Pith status",
       "model state",
       "recent proof recover",
     ),

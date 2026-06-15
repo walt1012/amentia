@@ -379,7 +379,7 @@ def release_rehearsal_payload() -> dict[str, object]:
       "Let the model use Web Search when useful and inspect the source proof in the timeline.",
       "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
       (
-        "Restart Pith and confirm local service status, selected workspace, "
+        "Restart Pith and confirm Pith status, selected workspace, "
         "model state, and recent proof recover."
       ),
     ],
@@ -433,7 +433,7 @@ Decision:
 - [ ] Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.
 - [ ] Let the model use Web Search when useful and inspect the source proof in the timeline.
 - [ ] Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.
-- [ ] Restart Pith and confirm local service status, selected workspace, model state, and recent proof recover.
+- [ ] Restart Pith and confirm Pith status, selected workspace, model state, and recent proof recover.
 
 ## Evidence To Record
 - Approval and diff receipt inspected.

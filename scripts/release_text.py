@@ -186,7 +186,7 @@ Install
 5. Check that Web Search and workspace safety are ready.
 6. {FIRST_APP_OPEN_INSTALL_STEP}
 7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
-8. Follow the next action shown by Pith; it comes from local service status, not a static setup checklist.
+8. Follow the next action shown by Pith; it comes from Pith status, not a static setup checklist.
 
 Trust
 {trust_note}

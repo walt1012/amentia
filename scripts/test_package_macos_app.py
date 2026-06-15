@@ -278,7 +278,7 @@ def main() -> int:
     executable.write_text(
       "\n".join(
         [
-          "Start the local service to restore model choices",
+          "Start Pith to restore model choices",
           "paused downloads",
           "selected model choices remain local",
           "to keep resume data",
@@ -297,7 +297,7 @@ def main() -> int:
       encoding="utf-8",
     )
     assert_packaged_app_copy_is_present(root_path / "Pith.app")
-    executable.write_text("Start the local service to restore model choices\n", encoding="utf-8")
+    executable.write_text("Start Pith to restore model choices\n", encoding="utf-8")
     assert_raises(
       lambda: assert_packaged_app_copy_is_present(root_path / "Pith.app"),
       "missing packaged recovery copy should fail package validation",

@@ -169,12 +169,12 @@ def main() -> int:
       "workspace readiness",
       "Web Search",
       "reviewing the diff",
-      "local service status",
+      "Pith status",
     ):
       if phrase not in manual_checks:
         raise AssertionError(f"manual prerelease checks should include {phrase}")
-    if "runtime readiness" in manual_checks:
-      raise AssertionError("manual prerelease checks should use local service language")
+    if "runtime readiness" in manual_checks or "local service status" in manual_checks:
+      raise AssertionError("manual prerelease checks should use Pith status language")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     first_app_open_checks = "\n".join(summary["firstAppOpenChecks"])

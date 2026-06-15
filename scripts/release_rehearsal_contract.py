@@ -51,7 +51,7 @@ MANUAL_PRERELEASE_CHECKS = (
   "Run Understand Project, Pick Next Step, or a short cowork prompt from the first app-open surface.",
   "Let the model use Web Search when useful and inspect the source proof in the timeline.",
   "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
-  "Restart Pith and confirm local service status, selected workspace, model state, and recent proof recover.",
+  "Restart Pith and confirm Pith status, selected workspace, model state, and recent proof recover.",
 )
 RELEASE_DECISION = {
   "automatedRehearsal": "passed",

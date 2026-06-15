@@ -51,7 +51,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Understand Project",
   "Pick Next Step",
   "Follow the next action",
-  "local service status",
+  "Pith status",
   "sandbox status",
   "process-only fallback",
   "SHA-256 `.sha256` file",

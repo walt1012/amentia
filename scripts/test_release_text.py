@@ -195,7 +195,7 @@ def main() -> int:
   require_contains(guide, "inspect the proof")
   require_contains(guide, FIRST_APP_OPEN_INSTALL_STEP)
   require_contains(guide, "Follow the next action")
-  require_contains(guide, "local service status")
+  require_contains(guide, "Pith status")
   require_contains(guide, "SHA-256 `.sha256` file")
   require_contains(guide, "same download folder")
   require_contains(guide, "shasum -a 256 -c Pith-v0.1.0-macos-x86_64.dmg.sha256")
