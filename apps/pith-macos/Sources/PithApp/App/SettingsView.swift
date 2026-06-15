@@ -6,25 +6,39 @@ struct SettingsView: View {
   private let distributionTrust = DistributionTrustPresenter.summary()
 
   var body: some View {
-    Form {
-      localExecutionSection
-      localModelSection
-      SettingsStorageSection(
-        summary: viewModel.localDataSettingsSummary(),
-        reveal: viewModel.revealLocalDataFolder,
-        delete: viewModel.deleteLocalData,
-        confirmsLocalDataDelete: $confirmsLocalDataDelete
-      )
-      platformSection
-      distributionSection
+    ScrollView {
+      VStack(alignment: .leading, spacing: 14) {
+        settingsHeader
+        localExecutionSection
+        localModelSection
+        SettingsStorageSection(
+          summary: viewModel.localDataSettingsSummary(),
+          reveal: viewModel.revealLocalDataFolder,
+          delete: viewModel.deleteLocalData,
+          confirmsLocalDataDelete: $confirmsLocalDataDelete
+        )
+        platformSection
+        distributionSection
+      }
+      .padding(20)
     }
-    .padding(20)
     .background(PithVisualStyle.paneBackground)
-    .frame(width: 460)
+    .frame(width: 500, minHeight: 560)
+  }
+
+  private var settingsHeader: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text("Pith Settings")
+        .font(.title3.weight(.semibold))
+      Text("Local-first cowork setup, safety, storage, and release trust.")
+        .font(.caption)
+        .foregroundColor(.secondary)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var localExecutionSection: some View {
-    Section("Action Safety") {
+    SettingsCard(title: "Action Safety", systemImage: "shield", tone: .active) {
       Picker(
         "Mode",
         selection: Binding(
@@ -40,31 +54,46 @@ struct SettingsView: View {
       Text(LocalExecutionSafetyModePresenter.userDetail(
         viewModel.selectedLocalExecutionSafetyMode
       ))
+      .font(.caption)
+      .foregroundColor(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
     }
   }
 
   private var localModelSection: some View {
-    Section("Local Models") {
+    SettingsCard(title: "Local Models", systemImage: "cpu", tone: .ready) {
       Text("Pith downloads and verifies one local model in app.")
+        .font(.caption)
       Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
+        .font(.caption)
+        .foregroundColor(.secondary)
       Text("Downloaded model files stay in Pith local data and can be removed from Storage.")
+        .font(.caption2)
         .foregroundColor(.secondary)
     }
   }
 
   private var platformSection: some View {
-    Section("Platform") {
+    SettingsCard(title: "Platform", systemImage: "desktopcomputer", tone: .neutral) {
       Text("Built for macOS 12+ on Intel.")
+        .font(.caption)
     }
   }
 
   private var distributionSection: some View {
-    Section("Distribution") {
-      Text(distributionTrust.title)
+    SettingsCard(title: "Distribution", systemImage: "checkmark.seal", tone: distributionTone) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text(distributionTrust.title)
+          .font(.caption.weight(.semibold))
+        StatusPill(label: distributionTrustLabel, tone: distributionTone)
+      }
       Text(distributionTrust.summary)
+        .font(.caption)
         .foregroundColor(.secondary)
       Text(distributionTrust.detail)
+        .font(.caption2)
         .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
 
       DisclosureGroup("Advanced") {
         Text(distributionTrust.advancedDetail)
@@ -73,6 +102,70 @@ struct SettingsView: View {
           .textSelection(.enabled)
       }
     }
+  }
+
+  private var distributionTone: StatusTone {
+    switch distributionTrust.title {
+    case "Verified Installer":
+      return .ready
+    case "Manual Open Required", "Local Development Build":
+      return .warning
+    default:
+      return .neutral
+    }
+  }
+
+  private var distributionTrustLabel: String {
+    switch distributionTrust.title {
+    case "Verified Installer":
+      return "Verified"
+    case "Manual Open Required":
+      return "Manual Open"
+    case "Local Development Build":
+      return "Local Build"
+    default:
+      return "Development"
+    }
+  }
+}
+
+private struct SettingsCard<Content: View>: View {
+  let title: String
+  let systemImage: String
+  let tone: StatusTone
+  let content: Content
+
+  init(
+    title: String,
+    systemImage: String,
+    tone: StatusTone,
+    @ViewBuilder content: () -> Content
+  ) {
+    self.title = title
+    self.systemImage = systemImage
+    self.tone = tone
+    self.content = content()
+  }
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      ZStack {
+        Circle()
+          .fill(tone.color.opacity(0.11))
+          .frame(width: 32, height: 32)
+        Image(systemName: systemImage)
+          .font(.body.weight(.semibold))
+          .foregroundColor(tone.color)
+      }
+
+      VStack(alignment: .leading, spacing: 8) {
+        Text(title)
+          .font(.headline.weight(.semibold))
+        content
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .softPanel(tone: tone)
   }
 }
 
@@ -83,11 +176,14 @@ private struct SettingsStorageSection: View {
   @Binding var confirmsLocalDataDelete: Bool
 
   var body: some View {
-    Section("Storage") {
+    SettingsCard(title: "Storage", systemImage: "externaldrive", tone: .neutral) {
       Text(summary.storageSummary)
+        .font(.caption)
       Text(summary.ownershipDetail)
+        .font(.caption)
         .foregroundColor(.secondary)
       Text(summary.uninstallDetail)
+        .font(.caption2)
         .foregroundColor(.secondary)
       if let blockedDetail = summary.blockedDetail {
         Text(blockedDetail)
@@ -106,12 +202,14 @@ private struct SettingsStorageSection: View {
         Button(summary.revealButtonTitle) {
           reveal()
         }
+        .controlSize(.small)
 
         Spacer()
 
         Button(summary.deleteButtonTitle, role: .destructive) {
           confirmsLocalDataDelete = true
         }
+        .controlSize(.small)
         .disabled(!summary.canDeleteLocalData)
       }
     }

@@ -92,7 +92,7 @@ Current capabilities:
   protocol names, paths, IDs, hashes, and manifest details by default.
 - Primary window polish: native sidebar density, calm timeline cards, focused
   composer, readiness, model management, project search, plugin management,
-  inspector sections, and subtle state-driven motion.
+  inspector sections, settings surfaces, and subtle state-driven motion.
 - Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
   guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
   and split CI as the source of truth.
