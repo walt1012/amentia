@@ -187,6 +187,139 @@ enum PluginPermissionDisplay {
   }
 }
 
+enum PluginStatusDisplay {
+  static func pluginStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    case "disabled":
+      return "disabled"
+    default:
+      return "needs attention"
+    }
+  }
+
+  static func validationIssue(_ plugin: PluginSummary) -> String {
+    let issue = plugin.validationError?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let summary: String
+    if let issue = issue, !issue.isEmpty {
+      summary = issue
+    } else {
+      summary = "Setup needs review."
+    }
+
+    guard let hint = plugin.validationHint?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !hint.isEmpty
+    else {
+      return "\(plugin.displayName): \(summary)"
+    }
+
+    return "\(plugin.displayName): \(summary) Fix: \(hint)"
+  }
+
+  static func connectionStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    case "needsAuth":
+      return "needs sign in"
+    case "disabled":
+      return "disabled"
+    default:
+      return "needs attention"
+    }
+  }
+
+  static func authorizationStatus(
+    _ status: String,
+    credentialPresent: Bool
+  ) -> String {
+    if credentialPresent {
+      return "authorized locally"
+    }
+
+    switch status {
+    case "ready":
+      return "ready"
+    case "needsAuth":
+      return "needs sign in"
+    default:
+      return "not authorized"
+    }
+  }
+
+  static func commandStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    case "needsConnectorAuth":
+      return "needs connection"
+    case "unsupportedExecution":
+      return "action not supported yet"
+    case "missingExecution":
+      return "needs setup"
+    default:
+      return "needs attention"
+    }
+  }
+
+  static func missingConnectionSummary(count: Int) -> String {
+    count == 1
+      ? "A required connection is missing."
+      : "\(count) required connections are missing."
+  }
+
+  static func inputFieldLabel(_ name: String) -> String {
+    switch name {
+    case "workspace":
+      return "selected project"
+    case "connectors":
+      return "authorized connections"
+    case "input":
+      return "your input"
+    default:
+      return name.replacingOccurrences(of: "_", with: " ")
+    }
+  }
+
+  static func executionSummary(_ execution: PluginCommandExecutionSummary?) -> String {
+    guard let execution else {
+      return "needs setup"
+    }
+
+    guard execution.supported else {
+      return "action not supported yet"
+    }
+
+    if let workflow = execution.workflow {
+      return "workflow ready: \(workflow.workflowLabel)"
+    }
+
+    switch execution.kind {
+    case "builtin":
+      return "built-in Pith action"
+    case "mcp":
+      return "MCP action"
+    default:
+      return "action ready"
+    }
+  }
+
+  static func serviceName(_ service: String) -> String {
+    switch service.lowercased() {
+    case "github":
+      return "GitHub"
+    case "notion":
+      return "Notion"
+    default:
+      return service
+        .replacingOccurrences(of: "_", with: " ")
+        .replacingOccurrences(of: "-", with: " ")
+        .capitalized
+    }
+  }
+}
+
 extension PluginSummary {
   var sourceLabel: String {
     switch provenance {

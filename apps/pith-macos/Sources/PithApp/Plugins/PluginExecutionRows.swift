@@ -43,7 +43,7 @@ struct PluginCommandRow: View {
         }
 
         if showsManifestAction {
-          Button("Source") {
+          Button("Setup") {
             onRevealSource()
           }
           .font(.caption2)
@@ -60,12 +60,12 @@ struct PluginCommandRow: View {
         .font(.caption2)
         .foregroundColor(.secondary)
 
-      Text("Runs: \(executionLabel)")
+      Text("Action setup: \(executionLabel)")
         .font(.caption2)
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
 
-      Text("State: \(runStateLabel)")
+      Text("Status: \(runStateLabel)")
         .font(.caption2)
         .foregroundColor(command.runStatus == "ready" ? .secondary : .orange)
         .textSelection(.enabled)
@@ -93,13 +93,6 @@ struct PluginCommandRow: View {
 
       if command.approvalRequired {
         Text("Approval: \(approvalLabel)")
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
-      }
-
-      if let contractLabel {
-        Text(contractLabel)
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -160,16 +153,15 @@ struct PluginCommandRow: View {
       }
     }
 
-    ForEach(missingConnectorIds, id: \.self) { connectorID in
+    if !missingConnectorIds.isEmpty {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text("Missing connection: \(connectorID)")
+        Text(PluginStatusDisplay.missingConnectionSummary(count: missingConnectorIds.count))
           .font(.caption2)
           .foregroundColor(.orange)
-          .textSelection(.enabled)
 
         Spacer()
 
-        Button("Source") {
+        Button("Setup") {
           onRevealSource()
         }
         .font(.caption2)
@@ -178,41 +170,19 @@ struct PluginCommandRow: View {
   }
 
   private var executionLabel: String {
-    guard let execution = command.execution else {
-      return "missing contract"
-    }
-
-    let suffix = execution.supported ? "supported" : "not supported yet"
-    var label = "\(execution.kind) via \(execution.driver) (\(suffix))"
-    if let workflow = execution.workflow {
-      label += " | workflow: \(workflow.workflowLabel)"
-    } else if let workflowID = execution.workflowID {
-      label += " | workflow: \(workflowID)"
-    }
-    return label
+    PluginStatusDisplay.executionSummary(command.execution)
   }
 
   private var runStateLabel: String {
     if let blocker = command.runBlocker {
-      return "\(command.runStatus) | \(blocker)"
+      return "\(PluginStatusDisplay.commandStatus(command.runStatus)) | \(blocker)"
     }
 
-    return command.runStatus
+    return PluginStatusDisplay.commandStatus(command.runStatus)
   }
 
   private var approvalLabel: String {
-    command.approvalReason ?? "Required before runner launch."
-  }
-
-  private var contractLabel: String? {
-    guard let execution = command.execution,
-          let input = execution.input,
-          let output = execution.output
-    else {
-      return nil
-    }
-
-    return "Contract: \(input.envelope) -> \(output.envelope)"
+    command.approvalReason ?? "Required before this action runs."
   }
 
   private var requiredInputLabel: String? {
@@ -220,7 +190,8 @@ struct PluginCommandRow: View {
       return nil
     }
 
-    return "Required input fields: \(command.requiredInputFieldNames.joined(separator: ", "))"
+    let labels = command.requiredInputFieldNames.map(PluginStatusDisplay.inputFieldLabel)
+    return "Input: \(labels.joined(separator: ", "))"
   }
 
   private var showsManifestAction: Bool {
@@ -232,9 +203,12 @@ struct PluginCommandRow: View {
   }
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
-    let authorization = connector.credentialPresent ? "authorization saved" : "not authorized"
-    return "Connection: \(connector.displayName) | \(connector.status) "
-      + "| \(displayConnectionStatus(connector.authStatus)) | \(authorization)"
+    let status = PluginStatusDisplay.connectionStatus(connector.status)
+    let authorization = PluginStatusDisplay.authorizationStatus(
+      connector.authStatus,
+      credentialPresent: connector.credentialPresent
+    )
+    return "Connection: \(connector.displayName) | \(status) | \(authorization)"
   }
 
   private var missingConnectorIds: [String] {
@@ -252,17 +226,6 @@ struct PluginCommandRow: View {
     default:
       return .secondary
     }
-  }
-}
-
-private func displayConnectionStatus(_ status: String) -> String {
-  switch status {
-  case "ready":
-    return "ready"
-  case "needsAuth":
-    return "needs sign in"
-  default:
-    return status
   }
 }
 

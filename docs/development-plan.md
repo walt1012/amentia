@@ -139,6 +139,9 @@ Ready foundations:
 - Project search and readiness now hide support paths in the default UI and use
   project, session, and action-safety language while preserving internal
   protocol names for stable APIs.
+- Plugin action and connection surfaces now share user-facing status labels so
+  setup issues, missing connections, and authorization states stay actionable
+  without exposing raw IDs or protocol statuses by default.
 
 Current constraints:
 

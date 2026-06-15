@@ -132,7 +132,9 @@ struct PluginConnectorRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(connector.displayName)
             .font(.caption.weight(.semibold))
-          Text("\(connector.service) | \(connector.status)")
+          Text(
+            "\(PluginStatusDisplay.serviceName(connector.service)) | \(PluginStatusDisplay.connectionStatus(connector.status))"
+          )
             .font(.caption2)
             .foregroundColor(statusColor)
         }
@@ -239,16 +241,10 @@ struct PluginConnectorRow: View {
 private extension PluginConnectorSummary {
   var authSummary: String {
     var parts = [
-      "Connection: \(displayStatus(authStatus))"
+      "Connection: \(PluginStatusDisplay.authorizationStatus(authStatus, credentialPresent: credentialPresent))"
     ]
-    if authRequired {
-      parts.append("sign-in required")
-    }
     if !authScopes.isEmpty {
       parts.append("access: \(authScopes.joined(separator: ", "))")
-    }
-    if credentialPresent {
-      parts.append("authorization saved")
     }
     if let credentialLabel {
       parts.append(credentialLabel)
@@ -263,14 +259,4 @@ private extension PluginConnectorSummary {
     return "Can run: \(labels)"
   }
 
-  private func displayStatus(_ status: String) -> String {
-    switch status {
-    case "ready":
-      return "ready"
-    case "needsAuth":
-      return "needs sign in"
-    default:
-      return status
-    }
-  }
 }

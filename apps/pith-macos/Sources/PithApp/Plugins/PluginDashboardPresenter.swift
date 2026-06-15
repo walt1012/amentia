@@ -51,7 +51,7 @@ enum PluginDashboardPresenter {
           : plugin.capabilitySummary
         let validation = plugin.validationError == nil ? "ready" : "needs attention"
         let hint = plugin.validationHint.map { " | fix: \($0)" } ?? ""
-        return "\(plugin.displayName) \(plugin.version) | \(displayPluginStatus(plugin.status)) | \(plugin.sourceLabel) | \(capabilities) | \(validation)\(hint)"
+        return "\(plugin.displayName) \(plugin.version) | \(PluginStatusDisplay.pluginStatus(plugin.status)) | \(plugin.sourceLabel) | \(capabilities) | \(validation)\(hint)"
       }
       .joined(separator: "\n")
 
@@ -129,8 +129,7 @@ enum PluginDashboardPresenter {
 
     return invalidPlugins
       .map { plugin in
-        let hint = plugin.validationHint.map { " Repair hint: \($0)" } ?? ""
-        return "\(plugin.displayName): \(plugin.validationError ?? "Unknown validation error")\(hint)"
+        PluginStatusDisplay.validationIssue(plugin)
       }
       .joined(separator: "\n")
   }
@@ -295,18 +294,11 @@ enum PluginDashboardPresenter {
 
   private static func connectorDetail(_ connector: PluginConnectorSummary) -> String {
     var parts = [
-      "\(connector.displayName): \(connector.status)",
-      "connection: \(connector.authStatus)",
-      "source: \(connector.pluginDisplayName)"
+      "\(connector.displayName): \(PluginStatusDisplay.connectionStatus(connector.status))",
+      "Authorization: \(PluginStatusDisplay.authorizationStatus(connector.authStatus, credentialPresent: connector.credentialPresent))",
+      "Plugin: \(connector.pluginDisplayName)"
     ]
 
-    if connector.authRequired {
-      if connector.credentialPresent {
-        parts.append("authorization saved")
-      } else {
-        parts.append("sign-in required")
-      }
-    }
     if !connector.workflows.isEmpty {
       let workflowLabels = connector.workflows
         .map(\.workflowLabel)
@@ -323,14 +315,17 @@ enum PluginDashboardPresenter {
   ) -> String {
     var parts = [
       "\(command.pluginDisplayName): \(command.title)",
-      "status: \(displayCommandStatus(command.runStatus))"
+      "status: \(PluginStatusDisplay.commandStatus(command.runStatus))"
     ]
 
     if command.approvalRequired {
       parts.append("approval")
     }
     if !command.requiredInputFieldNames.isEmpty {
-      parts.append("input: \(command.requiredInputFieldNames.joined(separator: ", "))")
+      let inputs = command.requiredInputFieldNames
+        .map(PluginStatusDisplay.inputFieldLabel)
+        .joined(separator: ", ")
+      parts.append("input: \(inputs)")
     }
     if !command.visibleConnectorIds.isEmpty {
       parts.append("connections: \(connectorStatusList(command, connectors: connectors))")
@@ -352,47 +347,21 @@ enum PluginDashboardPresenter {
     command.visibleConnectorIds
       .map { connectorID in
         guard let connector = connectors.first(where: { $0.id == connectorID }) else {
-          return "\(connectorID): missing"
+          return PluginStatusDisplay.missingConnectionSummary(count: 1)
         }
-        return "\(connector.displayName): \(displayConnectionStatus(connector.authStatus))"
+        return "\(connector.displayName): \(PluginStatusDisplay.authorizationStatus(connector.authStatus, credentialPresent: connector.credentialPresent))"
       }
       .joined(separator: ", ")
   }
 
   private static func hookDetail(_ hook: PluginHookSummary) -> String {
-    let status = hook.status == "ready" ? hook.event : "\(hook.event) | \(hook.status)"
+    let status = hook.status == "ready"
+      ? hook.event
+      : "\(hook.event) | \(PluginStatusDisplay.commandStatus(hook.status))"
     if let runBlocker = hook.runBlocker {
       return "\(hook.pluginDisplayName): \(hook.title) (\(status)) | \(runBlocker)"
     }
     return "\(hook.pluginDisplayName): \(hook.title) (\(status))"
   }
 
-  private static func displayConnectionStatus(_ status: String) -> String {
-    switch status {
-    case "ready":
-      return "ready"
-    case "needsAuth":
-      return "needs sign in"
-    default:
-      return status
-    }
-  }
-
-  private static func displayPluginStatus(_ status: String) -> String {
-    switch status {
-    case "ready":
-      return "ready"
-    default:
-      return status
-    }
-  }
-
-  private static func displayCommandStatus(_ status: String) -> String {
-    switch status {
-    case "ready":
-      return "ready"
-    default:
-      return status
-    }
-  }
 }

@@ -499,6 +499,49 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(registry, "1 action | 1 connection | 1 skill | 1 MCP server")
   }
 
+  func testPluginDashboardHidesRawConnectionIdentifiers() {
+    let snapshot = pluginDashboardSnapshot(
+      connectors: [
+        pluginConnectorSummary(
+          id: "notion::main",
+          displayName: "Notion",
+          status: "needsAuth",
+          authStatus: "needsAuth",
+          credentialPresent: false
+        )
+      ],
+      commands: [
+        pluginCommandSummary(requiredConnectorIds: ["notion::missing"])
+      ]
+    )
+
+    let connectorDetail = PluginDashboardPresenter.connectorDetailSummary(snapshot)
+    let commandDetail = PluginDashboardPresenter.commandDetailSummary(snapshot)
+
+    XCTAssertTrue(connectorDetail.contains("Authorization: needs sign in"))
+    XCTAssertFalse(connectorDetail.contains("needsAuth"))
+    XCTAssertTrue(commandDetail.contains("A required connection is missing."))
+    XCTAssertFalse(commandDetail.contains("notion::missing"))
+    XCTAssertFalse(commandDetail.contains("connectors"))
+  }
+
+  func testPluginValidationFallbackAvoidsUnknownErrorCopy() {
+    let snapshot = pluginDashboardSnapshot(
+      plugins: [
+        pluginSummary(
+          status: "invalid",
+          validationError: nil,
+          validationHint: nil
+        )
+      ]
+    )
+
+    let detail = PluginDashboardPresenter.invalidPluginDetailSummary(snapshot)
+
+    XCTAssertTrue(detail.contains("Setup needs review."))
+    XCTAssertFalse(detail.contains("Unknown validation error"))
+  }
+
   func testPluginInstallConfirmationAvoidsRawPathsAndManifestTerms() {
     let preview = PluginInstallPreview(
       pluginID: "notion",
@@ -814,32 +857,13 @@ final class CoworkFirstPresentationTests: XCTestCase {
     "localExecutionSafetyModes": "explore,askBeforeChange,approvedWorkspaceExecution",
   ]
 
-  private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
+  private func pluginDashboardSnapshot(
+    plugins: [PluginSummary]? = nil,
+    connectors: [PluginConnectorSummary] = [],
+    commands: [PluginCommandSummary] = []
+  ) -> PluginDashboardSnapshot {
     PluginDashboardSnapshot(
-      plugins: [
-        PluginSummary(
-          id: "notion",
-          name: "notion",
-          version: "1.0.0",
-          displayName: "Notion",
-          status: "ready",
-          description: "Local Notion plugin",
-          authorName: nil,
-          enabled: true,
-          defaultEnabled: true,
-          capabilities: [
-            "command:notion.run",
-            "connector:notion",
-            "skill:notion.notes",
-            "mcp_server:notion",
-          ],
-          permissions: ["network.outbound"],
-          manifestPath: "/tmp/notion/pith-plugin.json",
-          provenance: "local",
-          validationError: nil,
-          validationHint: nil
-        )
-      ],
+      plugins: plugins ?? [pluginSummary()],
       registrySummary: PluginCapabilityRegistrySummary(
         enabledPluginCount: 1,
         totalCapabilityCount: 4,
@@ -851,12 +875,97 @@ final class CoworkFirstPresentationTests: XCTestCase {
         ]
       ),
       capabilities: [],
-      connectors: [],
-      commands: [],
+      connectors: connectors,
+      commands: commands,
       hooks: [],
       diagnostics: [],
       refreshRecoveryAttributes: [:],
       hasLifecycleOperation: false
+    )
+  }
+
+  private func pluginSummary(
+    status: String = "ready",
+    validationError: String? = nil,
+    validationHint: String? = nil
+  ) -> PluginSummary {
+    PluginSummary(
+      id: "notion",
+      name: "notion",
+      version: "1.0.0",
+      displayName: "Notion",
+      status: status,
+      description: "Local Notion plugin",
+      authorName: nil,
+      enabled: true,
+      defaultEnabled: true,
+      capabilities: [
+        "command:notion.run",
+        "connector:notion",
+        "skill:notion.notes",
+        "mcp_server:notion",
+      ],
+      permissions: ["network.outbound"],
+      manifestPath: "/tmp/notion/pith-plugin.json",
+      provenance: "local",
+      validationError: validationError,
+      validationHint: validationHint
+    )
+  }
+
+  private func pluginConnectorSummary(
+    id: String,
+    displayName: String,
+    status: String,
+    authStatus: String,
+    credentialPresent: Bool
+  ) -> PluginConnectorSummary {
+    PluginConnectorSummary(
+      id: id,
+      displayName: displayName,
+      service: "notion",
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      enabled: true,
+      status: status,
+      permissions: ["network.outbound"],
+      manifestPath: "/tmp/notion/pith-plugin.json",
+      homepage: nil,
+      authType: "apiKey",
+      authRequired: true,
+      authScopes: ["pages"],
+      credentialStore: "keychain",
+      workflows: [],
+      authStatus: authStatus,
+      credentialPresent: credentialPresent,
+      credentialSecretPresent: credentialPresent,
+      credentialProvider: nil,
+      credentialHandle: nil,
+      credentialLabel: nil,
+      authorizedAt: nil,
+      credentialUpdatedAt: nil
+    )
+  }
+
+  private func pluginCommandSummary(requiredConnectorIds: [String]) -> PluginCommandSummary {
+    PluginCommandSummary(
+      id: "notion.publish",
+      title: "Publish Note",
+      description: "Publish a local note.",
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      permissions: [],
+      sourcePath: "/tmp/notion/pith-plugin.json",
+      execution: nil,
+      executionKind: nil,
+      memorySummary: nil,
+      runStatus: "needsConnectorAuth",
+      runBlocker: nil,
+      runRepairHint: nil,
+      declaredConnectorIds: [],
+      requiredConnectorIds: requiredConnectorIds,
+      approvalRequired: false,
+      approvalReason: nil
     )
   }
 }
