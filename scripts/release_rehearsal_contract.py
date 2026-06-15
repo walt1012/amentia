@@ -37,8 +37,8 @@ from release_copy_contract import (
 FIRST_APP_OPEN_CHECKS = (
   "Launch Pith from Applications after handling Gatekeeper if needed.",
   f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
-  "Open a workspace folder.",
-  "Check that Web Search and workspace safety are ready.",
+  "Open a project folder.",
+  "Check that Web Search and project safety are ready.",
   FIRST_APP_OPEN_ACTION_COPY,
   "Follow the daily-driver next action shown in the app header and inspector.",
 )
@@ -47,11 +47,11 @@ MANUAL_PRERELEASE_CHECKS = (
   "Open the release manifest and confirm macOS x86_64, in-app model delivery, no bundled model weights, and no Pith login.",
   "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
   f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
-  "Open a real workspace folder and confirm the header or inspector reports workspace readiness.",
+  "Open a real project folder and confirm the header or inspector reports project readiness.",
   "Run Understand Project, Pick Next Step, or a short cowork prompt from the first app-open surface.",
   "Let the model use Web Search when useful and inspect the source proof in the timeline.",
-  "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
-  "Restart Pith and confirm Pith status, selected workspace, model state, and recent proof recover.",
+  "Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.",
+  "Restart Pith and confirm Pith status, selected project, model state, and recent proof recover.",
 )
 RELEASE_DECISION = {
   "automatedRehearsal": "passed",

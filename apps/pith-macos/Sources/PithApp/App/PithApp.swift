@@ -31,7 +31,7 @@ struct PithApp: App {
 
         Divider()
 
-        Button("Open Workspace") {
+        Button("Open Project") {
           viewModel.openWorkspace()
         }
         .keyboardShortcut("o", modifiers: [.command])

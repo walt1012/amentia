@@ -198,7 +198,7 @@ enum PluginActionPlanner {
       return "Pith is not ready."
     }
     if command.requiresWorkspaceInput && !snapshot.hasRuntimeThreadSelection {
-      return "Command requires a workspace-bound session."
+      return "Command requires a project-bound session."
     }
     if !snapshot.hasRuntimeThreadSelection || snapshot.selectedThreadID == nil {
       return "Select or create a session first."

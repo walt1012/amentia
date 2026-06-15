@@ -139,11 +139,11 @@ enum TimelineInspectorPresenter {
       )
 
       if entry.attributes["sandboxTempRoot"] != nil {
-        lines.append("Temporary files stayed inside the selected workspace.")
+        lines.append("Temporary files stayed inside the selected project.")
       }
 
       if entry.attributes["sandboxWritableRoots"] != nil {
-        lines.append("Writes were limited to approved workspace locations.")
+        lines.append("Writes were limited to approved project locations.")
       }
 
       if let detail = entry.attributes["sandboxDetail"] {

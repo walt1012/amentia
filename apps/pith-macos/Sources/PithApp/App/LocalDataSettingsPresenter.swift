@@ -34,7 +34,7 @@ enum LocalDataSettingsPresenter {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
-        "Pith local data includes models, sessions, connectors, download recovery data, and preferences. Workspaces are never deleted here.",
+        "Pith local data includes models, sessions, connectors, download recovery data, and preferences. Project folders are never deleted here.",
       uninstallDetail:
         "Removing Pith.app does not remove this data. Use Delete Local Data here when you want Pith to forget local setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
@@ -43,7 +43,7 @@ enum LocalDataSettingsPresenter {
       deleteButtonTitle: "Delete Local Data...",
       confirmationTitle: "Delete Pith Local Data?",
       confirmationMessage:
-        "Pith will remove downloaded models, sessions, connectors, download recovery data, and preferences from this Mac. Your workspaces and repositories will not be deleted.",
+        "Pith will remove downloaded models, sessions, connectors, download recovery data, and preferences from this Mac. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
@@ -53,7 +53,7 @@ enum LocalDataSettingsPresenter {
       runtimeDetail: "Deleted Pith local data. Restart Pith to set up again.",
       timelineTitle: "Local Data Deleted",
       timelineBody:
-        "Pith removed downloaded models, sessions, connectors, download recovery data, and known preferences. Workspaces on disk were not deleted.",
+        "Pith removed downloaded models, sessions, connectors, download recovery data, and known preferences. Project folders on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
         "recreatedDirectoryCount": "\(result.recreatedDirectoryCount)",

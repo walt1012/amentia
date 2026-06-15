@@ -69,7 +69,7 @@ enum SetupProgressPresenter {
         return modelNextStep(snapshot.modelReadinessDetail)
       }
       if !snapshot.hasWorkspace {
-        return "Open Workspace"
+        return "Open Project"
       }
       if !snapshot.hasRuntimeThreadSelection {
         return "Create Session"

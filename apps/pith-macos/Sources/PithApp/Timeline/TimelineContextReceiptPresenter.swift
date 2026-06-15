@@ -67,7 +67,7 @@ enum TimelineContextReceiptPresenter {
 
     var lines: [String] = []
     appendLine("Tool", entry.attributes["tool"] ?? entry.attributes["agentToolName"], to: &lines)
-    appendLine("Workspace", entry.attributes["workspaceDisplayName"], to: &lines)
+    appendLine("Project", entry.attributes["workspaceDisplayName"], to: &lines)
     appendLine("Path", entry.attributes["relativePath"], to: &lines)
     appendLine("Query", entry.attributes["query"], to: &lines)
     appendLine("Max bytes", entry.attributes["maxBytes"], to: &lines)
@@ -85,7 +85,7 @@ enum TimelineContextReceiptPresenter {
 
     return TimelineContextReceiptSection(
       id: "workspace",
-      title: "Workspace Context",
+      title: "Project Context",
       body: lines.joined(separator: "\n")
     )
   }
@@ -151,7 +151,7 @@ enum TimelineContextReceiptPresenter {
       lines.append("Tool: \(tool)")
     }
     if let workspace = entry.attributes["workspaceDisplayName"] {
-      lines.append("Workspace: \(workspace)")
+      lines.append("Project: \(workspace)")
     }
     if let reason = entry.attributes["routingReason"] {
       lines.append("Reason: \(reason)")
@@ -274,7 +274,7 @@ enum TimelineContextReceiptPresenter {
   private static func readableBoundary(_ value: String?) -> String {
     switch value {
     case "workspace":
-      return "workspace"
+      return "project"
     case "network":
       return "network"
     case "localPlugin":

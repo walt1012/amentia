@@ -12,7 +12,7 @@ struct WorkspaceSearchPanel: View {
         StatusPill(label: "Local", tone: .neutral)
       }
 
-      Text("Search the open workspace before asking Pith to act.")
+      Text("Search the open project before asking Pith to act.")
         .font(.caption)
         .foregroundColor(.secondary)
 

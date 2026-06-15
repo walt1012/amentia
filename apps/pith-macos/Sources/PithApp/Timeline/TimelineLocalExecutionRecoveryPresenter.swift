@@ -54,7 +54,7 @@ enum TimelineLocalExecutionRecoveryPresenter {
     case "write_file":
       return "prepare a file write"
     default:
-      return "make a local workspace change"
+      return "make a local project change"
     }
   }
 }

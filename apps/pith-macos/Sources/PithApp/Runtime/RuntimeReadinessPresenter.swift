@@ -62,15 +62,15 @@ enum RuntimeReadinessPresenter {
 
   private static func workspaceStep(_ snapshot: RuntimeReadinessSnapshot) -> ReadinessStepSummary {
     guard snapshot.runtimeState == .ready else {
-      return ReadinessStepSummary(id: "workspace", label: "Workspace", detail: "Waiting", tone: .neutral)
+      return ReadinessStepSummary(id: "workspace", label: "Project", detail: "Waiting", tone: .neutral)
     }
     guard let workspaceDisplayName = snapshot.workspaceDisplayName else {
-      return ReadinessStepSummary(id: "workspace", label: "Workspace", detail: "Open", tone: .warning)
+      return ReadinessStepSummary(id: "workspace", label: "Project", detail: "Open", tone: .warning)
     }
 
     return ReadinessStepSummary(
       id: "workspace",
-      label: "Workspace",
+      label: "Project",
       detail: workspaceDisplayName,
       tone: .ready
     )
@@ -193,9 +193,9 @@ enum DailyDriverStagePresenter {
     case "model_setup":
       return "Download and select a verified local model."
     case "workspace_setup":
-      return "Open a workspace to scope tools and memory."
+      return "Open a project to scope tools and memory."
     case "thread_setup":
-      return "Create or select a workspace-bound session."
+      return "Create or select a project-bound session."
     case "retrieval_setup":
       return "Enable Web Search so Pith can retrieve current information when needed."
     case "approval_review":

@@ -35,7 +35,7 @@ struct WorkspaceSearchRuntimeState {
   init(
     query: String = "",
     results: [WorkspaceSearchMatchSummary] = [],
-    status: String = "Search the open workspace for useful context.",
+    status: String = "Search the open project for useful context.",
     isSearching: Bool = false
   ) {
     self.query = query
@@ -119,7 +119,7 @@ final class WorkspaceSearchSession {
       id: requestID,
       runtimeRequestID: runtimeRequestID,
       query: query,
-      status: "Looking through the workspace for \"\(query)\"..."
+      status: "Looking through the project for \"\(query)\"..."
     )
   }
 
@@ -150,8 +150,8 @@ final class WorkspaceSearchSession {
   func resetStatus(hasWorkspace: Bool) -> String {
     cancelActiveSearch()
     return hasWorkspace
-      ? "Search the open workspace for useful context."
-      : "Open a workspace before searching."
+      ? "Search the open project for useful context."
+      : "Open a project before searching."
   }
 
   func changedQueryStatus() -> String {
@@ -182,7 +182,7 @@ final class WorkspaceSearchSession {
   }
 
   static func failureStatus(error: Error) -> String {
-    "Workspace search needs attention: \(error.localizedDescription)"
+    "Project search needs attention: \(error.localizedDescription)"
   }
 
   static func emptyStateSummary(
@@ -197,10 +197,10 @@ final class WorkspaceSearchSession {
       return nil
     }
     if runtimeState != .ready {
-      return "Start Pith to search workspace files."
+      return "Start Pith to search project files."
     }
     if !hasWorkspace {
-      return "Open a workspace to search local files."
+      return "Open a project to search local files."
     }
     if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       return "Search file contents, symbols, or notes, then press Return."
@@ -208,7 +208,7 @@ final class WorkspaceSearchSession {
     if status.hasPrefix("No results") {
       return "No results yet. Try a shorter query, filename, or symbol name."
     }
-    if status.hasPrefix("Workspace search needs attention") {
+    if status.hasPrefix("Project search needs attention") {
       return "Search failed. Check Pith status, then try again."
     }
 

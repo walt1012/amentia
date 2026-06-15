@@ -31,7 +31,7 @@ struct ContentView: View {
         }
 
         if viewModel.canOpenWorkspace() {
-          Button("Open Workspace") {
+          Button("Open Project") {
             viewModel.openWorkspace()
           }
         }

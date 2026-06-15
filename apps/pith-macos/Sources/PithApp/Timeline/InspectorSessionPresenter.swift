@@ -37,7 +37,7 @@ enum InspectorSessionPresenter {
         return "Model Setup Needed"
       }
       if !snapshot.hasWorkspace {
-        return "Workspace Needed"
+        return "Project Needed"
       }
       if !snapshot.hasRuntimeThreadSelection {
         return "Session Needed"
@@ -65,7 +65,7 @@ enum InspectorSessionPresenter {
         return "Complete the model step from the timeline callout before starting agent work."
       }
       if !snapshot.hasWorkspace {
-        return "Open one workspace so file, shell, search, diff, and memory actions stay scoped."
+        return "Open one project so file, shell, search, diff, and memory actions stay scoped."
       }
       if !snapshot.hasRuntimeThreadSelection {
         return "Create or select a session to keep messages, approvals, memory, and cancellation together."
@@ -96,7 +96,7 @@ enum InspectorSessionPresenter {
     )
     let selectedModeSummary = "Mode "
       + LocalExecutionSafetyModePresenter.compact(snapshot.selectedLocalExecutionSafetyMode)
-    let workspaceSummary = snapshot.workspaceDisplayName ?? "No workspace"
+    let workspaceSummary = snapshot.workspaceDisplayName ?? "No project"
     let threadSummary = snapshot.hasRuntimeThreadSelection ? snapshot.selectedThreadTitle : "No session"
     return [readinessSummary, toolSummary, selectedModeSummary, workspaceSummary, threadSummary]
       .compactMap { $0 }

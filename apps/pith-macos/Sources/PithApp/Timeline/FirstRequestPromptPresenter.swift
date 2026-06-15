@@ -19,7 +19,7 @@ enum FirstRequestPromptPresenter {
 
   static func calloutDetail(workspaceDisplayName: String?) -> String {
     guard let workspaceDisplayName, !workspaceDisplayName.isEmpty else {
-      return "Choose a workspace before starting the first cowork session."
+      return "Choose a project before starting the first cowork session."
     }
 
     return "Pith will use \(workspaceDisplayName) as the working context. Short, specific cowork prompts work best for the local model."
@@ -34,7 +34,7 @@ enum FirstRequestPromptPresenter {
   }
 
   static func suggestions(workspaceDisplayName: String?) -> [ComposerSuggestionSummary] {
-    let workspaceName = workspaceDisplayName ?? "this workspace"
+    let workspaceName = workspaceDisplayName ?? "this project"
     return [
       ComposerSuggestionSummary(
         id: mapWorkspaceID,

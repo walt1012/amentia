@@ -19,7 +19,7 @@ enum SetupCalloutPresenter {
       return snapshot.modelGuidance.title
     }
     if !snapshot.hasWorkspace {
-      return "Open Workspace"
+      return "Open Project"
     }
     if !snapshot.hasRuntimeThreadSelection {
       return "Create Session"
@@ -33,7 +33,7 @@ enum SetupCalloutPresenter {
       return snapshot.modelGuidance.summary
     }
     if !snapshot.hasWorkspace {
-      return "Choose the project Pith should inspect, search, and edit locally."
+      return "Choose the project folder Pith should inspect, search, and edit locally."
     }
     if !snapshot.hasRuntimeThreadSelection {
       return "Create or select a session before starting the first cowork task."
@@ -89,7 +89,7 @@ enum SetupCalloutPresenter {
       return snapshot.modelPrimaryActionTitle
     }
     if !snapshot.hasWorkspace {
-      return "Open Workspace"
+      return "Open Project"
     }
     if !snapshot.hasRuntimeThreadSelection {
       return "New Session"

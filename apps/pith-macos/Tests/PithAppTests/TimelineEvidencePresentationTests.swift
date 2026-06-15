@@ -161,7 +161,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       ))
     )
 
-    XCTAssertTrue(summary?.contains("Mode: approved workspace execution") == true)
+    XCTAssertTrue(summary?.contains("Mode: approved project execution") == true)
     XCTAssertTrue(summary?.contains("Approval: auto approved") == true)
   }
 
@@ -231,7 +231,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
 
     XCTAssertTrue(summary?.contains("Sandbox: active | network denied") == true)
     XCTAssertTrue(
-      summary?.contains("Temporary files stayed inside the selected workspace.") == true
+      summary?.contains("Temporary files stayed inside the selected project.") == true
     )
     XCTAssertTrue(summary?.contains("Full output was saved for troubleshooting.") == true)
     XCTAssertFalse(summary?.contains("/Users/example") == true)
@@ -418,13 +418,13 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     XCTAssertEqual(sections.map(\.title), [
-      "Workspace Context",
+      "Project Context",
       "Web Search Sources",
       "Local Action",
       "Memory Context",
       "Context Compaction",
     ])
-    XCTAssertTrue(sections[0].body.contains("Workspace: Pith"))
+    XCTAssertTrue(sections[0].body.contains("Project: Pith"))
     XCTAssertTrue(sections[1].body.contains("Saved source proof: yes"))
     XCTAssertTrue(
       sections[1].body.contains("Why Pith searched: fresh public information was useful")
@@ -464,7 +464,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     let workspace = sections.first(where: { $0.id == "workspace" })
-    XCTAssertEqual(workspace?.title, "Workspace Context")
+    XCTAssertEqual(workspace?.title, "Project Context")
     XCTAssertTrue(workspace?.body.contains("Tool: search_files") == true)
     XCTAssertTrue(workspace?.body.contains("Query: Search target") == true)
     XCTAssertTrue(workspace?.body.contains("Result count: 2") == true)

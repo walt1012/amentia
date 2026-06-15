@@ -29,7 +29,7 @@ enum RuntimeLaunchAnnotationFactory {
     if let restoredWorkspace = snapshot.restoredWorkspace {
       entries.append(
         TimelineEntryFactory.system(
-          title: "Workspace Restored",
+          title: "Project Restored",
           body: "Restored \(restoredWorkspace.displayName) at \(restoredWorkspace.rootPath).",
           attributes: [
             "workspacePath": restoredWorkspace.rootPath
@@ -41,8 +41,8 @@ enum RuntimeLaunchAnnotationFactory {
     if let skippedWorkspaceRestorePath = snapshot.skippedWorkspaceRestorePath {
       entries.append(
         TimelineEntryFactory.warning(
-          title: "Workspace Restore Skipped",
-          body: "The last workspace no longer exists. Open a workspace to continue.",
+          title: "Project Restore Skipped",
+          body: "The last project folder no longer exists. Open a project to continue.",
           attributes: [
             "workspacePath": skippedWorkspaceRestorePath
           ]
@@ -53,7 +53,7 @@ enum RuntimeLaunchAnnotationFactory {
     if let workspaceRestoreErrorDetail = snapshot.workspaceRestoreErrorDetail {
       entries.append(
         TimelineEntryFactory.warning(
-          title: "Workspace Restore Failed",
+          title: "Project Restore Failed",
           body: workspaceRestoreErrorDetail,
           attributes: [:]
         )

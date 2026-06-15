@@ -83,11 +83,11 @@ enum SessionOverviewPresenter {
   }
 
   static func workspaceDisplayName(_ snapshot: SessionOverviewSnapshot) -> String {
-    snapshot.workspace?.displayName ?? "No Workspace"
+    snapshot.workspace?.displayName ?? "No Project"
   }
 
   static func workspacePath(_ snapshot: SessionOverviewSnapshot) -> String {
-    snapshot.workspace?.rootPath ?? "Open a local workspace to enable project-scoped tools."
+    snapshot.workspace?.rootPath ?? "Open a local project folder to enable project-scoped tools."
   }
 
   static func shouldShowSelectedEntryInspector(_ snapshot: SessionOverviewSnapshot) -> Bool {

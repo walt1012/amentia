@@ -13,7 +13,7 @@ enum TimelineSessionState {
       thread: ThreadSummary(
         id: welcomeThreadID,
         title: "Welcome to Pith",
-        preview: "Open a workspace to begin local work.",
+        preview: "Open a project to begin local work.",
         workspaceRootPath: nil,
         workspaceDisplayName: nil
       ),

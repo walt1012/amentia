@@ -166,7 +166,7 @@ def main() -> int:
     for phrase in (
       "SHA-256 sidecar",
       DEFAULT_MODEL_ID,
-      "workspace readiness",
+      "project readiness",
       "Web Search",
       "reviewing the diff",
       "Pith status",
@@ -178,7 +178,7 @@ def main() -> int:
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     first_app_open_checks = "\n".join(summary["firstAppOpenChecks"])
-    if "Check that Web Search and workspace safety are ready." not in first_app_open_checks:
+    if "Check that Web Search and project safety are ready." not in first_app_open_checks:
       raise AssertionError("first app-open checks should use product-level setup language")
     if "Web Search readiness" in first_app_open_checks:
       raise AssertionError("first app-open checks should not use internal readiness wording")

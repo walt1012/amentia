@@ -26,7 +26,7 @@ enum LocalExecutionSafetyModePresenter {
     case "askBeforeChange":
       return "ask-before-change"
     case "approvedWorkspaceExecution":
-      return "approved workspace execution"
+      return "approved project execution"
     case "explore":
       return "explore"
     default:
@@ -41,7 +41,7 @@ enum LocalExecutionSafetyModePresenter {
     case "askBeforeChange":
       return "Ask Before Change"
     case "approvedWorkspaceExecution":
-      return "Approved Workspace"
+      return "Approved Project"
     default:
       return value
     }
@@ -54,7 +54,7 @@ enum LocalExecutionSafetyModePresenter {
     case "askBeforeChange":
       return "Default. Pith asks before file writes and shell commands."
     case "approvedWorkspaceExecution":
-      return "Runs permitted workspace writes and shell commands without another approval."
+      return "Runs permitted project writes and shell commands without another approval."
     default:
       return "Custom local execution mode."
     }

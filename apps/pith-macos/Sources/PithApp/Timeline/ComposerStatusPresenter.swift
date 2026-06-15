@@ -31,7 +31,7 @@ enum ComposerStatusPresenter {
     }
 
     if !snapshot.hasWorkspace {
-      return "Open a workspace to start local work"
+      return "Open a project to start local work"
     }
 
     if !snapshot.hasRuntimeThreadSelection {
@@ -69,7 +69,7 @@ enum ComposerStatusPresenter {
       }
 
       if !snapshot.hasWorkspace {
-        return "Open a workspace to bind tools to a local project."
+        return "Open a project to bind tools to local files."
       }
 
       if !snapshot.hasRuntimeThreadSelection {

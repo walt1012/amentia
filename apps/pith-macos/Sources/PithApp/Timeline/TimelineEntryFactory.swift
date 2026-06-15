@@ -48,7 +48,7 @@ enum TimelineEntryFactory {
         kind: .assistantMessage,
         title: "Local-First Work",
         body:
-          "Pith works against local workspaces and does not call external model APIs for core responses.",
+          "Pith works against local project folders and does not call external model APIs for core responses.",
         attributes: [
           "model": "local"
         ]

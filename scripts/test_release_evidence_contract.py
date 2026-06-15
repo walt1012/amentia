@@ -355,8 +355,8 @@ def release_rehearsal_payload() -> dict[str, object]:
     "firstAppOpenChecks": [
       "Launch Pith from Applications after handling Gatekeeper if needed.",
       f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
-      "Open a workspace folder.",
-      "Check that Web Search and workspace safety are ready.",
+      "Open a project folder.",
+      "Check that Web Search and project safety are ready.",
       "Use the first app-open action.",
       "Follow the daily-driver next action shown in the app header and inspector.",
     ],
@@ -369,17 +369,17 @@ def release_rehearsal_payload() -> dict[str, object]:
       "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
       f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
       (
-        "Open a real workspace folder and confirm the header or inspector "
-        "reports workspace readiness."
+        "Open a real project folder and confirm the header or inspector "
+        "reports project readiness."
       ),
       (
         "Run Understand Project, Pick Next Step, or a short cowork prompt "
         "from the first app-open surface."
       ),
       "Let the model use Web Search when useful and inspect the source proof in the timeline.",
-      "Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.",
+      "Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.",
       (
-        "Restart Pith and confirm Pith status, selected workspace, "
+        "Restart Pith and confirm Pith status, selected project, "
         "model state, and recent proof recover."
       ),
     ],
@@ -409,11 +409,11 @@ Result: `passed`
 - First app open: model, workspace
 
 ## First App Open
-- Check that Web Search and workspace safety are ready.
+- Check that Web Search and project safety are ready.
 
 ## Manual Prerelease Acceptance
 - [ ] Let the model use Web Search when useful and inspect the source proof in the timeline.
-- [ ] Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.
+- [ ] Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.
 """
 
 
@@ -432,8 +432,8 @@ Decision:
 - [ ] Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.
 - [ ] Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.
 - [ ] Let the model use Web Search when useful and inspect the source proof in the timeline.
-- [ ] Approve one safe local workspace change only after reviewing the diff, then confirm the timeline receipt.
-- [ ] Restart Pith and confirm Pith status, selected workspace, model state, and recent proof recover.
+- [ ] Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.
+- [ ] Restart Pith and confirm Pith status, selected project, model state, and recent proof recover.
 
 ## Evidence To Record
 - Approval and diff receipt inspected.
@@ -957,7 +957,7 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
     stale["firstAppOpenChecks"] = [
       check
       for check in stale["firstAppOpenChecks"]
-      if "workspace folder" not in check
+      if "project folder" not in check
     ]
     rehearsal_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
     expect_failure(

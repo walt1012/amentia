@@ -66,8 +66,8 @@ def first_app_open_action_clause() -> str:
 def first_run_path_copy() -> str:
   return (
     "First-run path: download the default verified local model "
-    f"({DEFAULT_MODEL_ID}), open a workspace folder, check Web Search and "
-    f"workspace safety, {first_app_open_action_clause()}, approve a safe local "
+    f"({DEFAULT_MODEL_ID}), open a project folder, check Web Search and "
+    f"project safety, {first_app_open_action_clause()}, approve a safe local "
     "change only after reviewing it, then inspect the proof shown in the timeline."
   )
 
@@ -182,8 +182,8 @@ Install
 1. Open this DMG.
 2. Drag Pith.app to Applications.
 3. Launch Pith and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
-4. Open a workspace folder.
-5. Check that Web Search and workspace safety are ready.
+4. Open a project folder.
+5. Check that Web Search and project safety are ready.
 6. {FIRST_APP_OPEN_INSTALL_STEP}
 7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
 8. Follow the next action shown by Pith; it comes from Pith status, not a static setup checklist.
@@ -201,7 +201,7 @@ Notes
 - {first_run_path}
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
-- Downloaded models and Pith sessions stay in local app data. Use Settings > Storage to reveal or delete Pith local data without deleting workspace folders.
+- Downloaded models and Pith sessions stay in local app data. Use Settings > Storage to reveal or delete Pith local data without deleting project folders.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, app package metadata, smoke package metadata, and first-run contract.
 - {first_run_proof}

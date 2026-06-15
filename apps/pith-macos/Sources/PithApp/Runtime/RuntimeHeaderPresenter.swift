@@ -35,7 +35,7 @@ enum RuntimeHeaderPresenter {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Model is ready. Open a workspace to bind tools to a project."
+        ) ?? "Model is ready. Open a project to bind tools to local files."
       }
       if snapshot.hasActiveTurn {
         return DailyDriverStagePresenter.summary(

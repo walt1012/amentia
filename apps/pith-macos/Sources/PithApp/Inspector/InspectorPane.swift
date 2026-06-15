@@ -17,7 +17,7 @@ struct InspectorPane: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Workspace")
+        Text("Project")
           .font(.title3.weight(.semibold))
 
         InspectorSessionCard(
@@ -27,7 +27,7 @@ struct InspectorPane: View {
           tone: viewModel.runtimeStatusTone()
         )
 
-        DisclosureGroup("Search Workspace", isExpanded: $workspaceExpanded) {
+        DisclosureGroup("Search Project", isExpanded: $workspaceExpanded) {
           WorkspaceSearchPanel(viewModel: viewModel)
         }
 

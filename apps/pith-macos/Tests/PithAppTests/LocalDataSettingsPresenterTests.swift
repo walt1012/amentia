@@ -16,7 +16,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       "No downloaded model files yet. Sessions, connectors, and preferences stay local."
     )
     XCTAssertTrue(summary.ownershipDetail.contains("connectors"))
-    XCTAssertTrue(summary.ownershipDetail.contains("Workspaces are never deleted"))
+    XCTAssertTrue(summary.ownershipDetail.contains("Project folders are never deleted"))
     XCTAssertTrue(summary.uninstallDetail.contains("Removing Pith.app does not remove this data"))
     XCTAssertTrue(summary.uninstallDetail.contains("Delete Local Data"))
     XCTAssertNil(summary.blockedDetail)
@@ -36,7 +36,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(summary.storageSummary.contains("Downloaded models use"))
     XCTAssertTrue(summary.storageSummary.contains("on this Mac"))
     XCTAssertTrue(
-      summary.confirmationMessage.contains("workspaces and repositories will not be deleted")
+      summary.confirmationMessage.contains("project folders and repositories will not be deleted")
     )
     XCTAssertTrue(summary.confirmationMessage.contains("from this Mac"))
     XCTAssertTrue(summary.confirmationMessage.contains("connectors"))
@@ -69,7 +69,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       "Deleted Pith local data. Restart Pith to set up again."
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
-    XCTAssertTrue(reset.timelineBody.contains("Workspaces on disk were not deleted"))
+    XCTAssertTrue(reset.timelineBody.contains("Project folders on disk were not deleted"))
     XCTAssertTrue(reset.timelineBody.contains("connectors"))
     XCTAssertEqual(
       reset.attributes["appSupportPath"],

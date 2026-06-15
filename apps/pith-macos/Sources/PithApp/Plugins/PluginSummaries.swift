@@ -168,15 +168,15 @@ enum PluginPermissionDisplay {
   static func label(_ permission: String) -> String {
     switch permission {
     case "file.read":
-      return "Workspace read"
+      return "Project read"
     case "file.write":
-      return "Workspace write"
+      return "Project write"
     case "shell.exec":
       return "Shell commands"
     case "network.outbound":
       return "Network access"
     case "workspace.background":
-      return "Background workspace work"
+      return "Background project work"
     case "model.invoke":
       return "Local model use"
     case "mcp.connect":

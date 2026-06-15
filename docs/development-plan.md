@@ -91,7 +91,7 @@ Ready foundations:
 - Workspace cowork loop has workspace-scoped tools, Web Search retrieval,
   approvals, sandbox diagnostics, bounded subprocesses, receipts, and recovery
   evidence.
-- Sessions can be deleted without touching workspace files; approved writes feed
+- Sessions can be deleted without touching project files; approved writes feed
   a durable change ledger and can be previewed or reverted per session when
   files still match Pith's recorded writes. Delete and revert prompts now make
   that boundary explicit in user-facing language.
@@ -115,6 +115,9 @@ Ready foundations:
 - First-run setup, readiness, model setup, composer, header, and default
   timeline copy now say Pith/project/session instead of local-service/runtime
   wording in the normal user path.
+- Primary project setup, search, safety, receipt, release, and local-data copy
+  now uses Project/project folder language while workspace remains an internal
+  protocol and sandbox boundary.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.

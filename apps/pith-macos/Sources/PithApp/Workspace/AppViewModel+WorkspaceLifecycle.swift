@@ -17,7 +17,7 @@ extension AppViewModel {
       return
     }
     let failureThreadID = selectedThreadID
-    runtimeDetail = "Opening workspace..."
+    runtimeDetail = "Opening project..."
 
     let task = Task {
       do {
