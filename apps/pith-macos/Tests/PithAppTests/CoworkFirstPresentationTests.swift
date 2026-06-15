@@ -426,11 +426,11 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       ComposerStatusPresenter.placeholder(composer),
-      "Pith is working locally. Cancel to stop it."
+      "Pith is working. Cancel to stop it."
     )
     XCTAssertEqual(
       ComposerStatusPresenter.statusSummary(composer),
-      "Pith is working locally. Cancel the request if it is no longer useful."
+      "Pith is working. Cancel the request if it is no longer useful."
     )
     XCTAssertEqual(InspectorSessionPresenter.title(inspector), "Pith Is Working")
     XCTAssertFalse(ComposerStatusPresenter.placeholder(composer).contains("local execution"))

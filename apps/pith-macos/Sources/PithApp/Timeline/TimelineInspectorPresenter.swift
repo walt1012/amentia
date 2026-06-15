@@ -130,7 +130,6 @@ enum TimelineInspectorPresenter {
     var lines: [String] = []
     if hasSandbox {
       let mode = entry.attributes["sandboxMode"] ?? "unknown"
-      let backend = entry.attributes["sandboxBackend"] ?? "unknown"
       let active = entry.attributes["sandboxActive"] ?? "unknown"
       let networkPolicy = entry.attributes["sandboxNetworkPolicy"]
         ?? sandboxNetworkPolicySummary(entry.attributes["sandboxNetworkAllowed"])
