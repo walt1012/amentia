@@ -14,13 +14,13 @@ use super::plugin_command_runner::{
   merged_attributes, plugin_runner_setup_failed_attributes, plugin_runner_setup_phase_attributes,
   PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
+use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_runner_setup::{
   command_allows_network, insert_connector_runner_attributes, insert_plugin_root_attribute,
   insert_resolved_entrypoint_attribute, insert_runner_input_value_attributes,
   plugin_root_for_command, plugin_runner_setup_attributes, runner_entrypoint_setup_blocker,
   safe_entrypoint_path,
 };
-use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_types::PluginConnectorExecutionRef;
 
 pub(super) fn is_supported_mcp_execution(
