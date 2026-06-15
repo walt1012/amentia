@@ -49,7 +49,7 @@ def installer_assets_copy(tag: str) -> str:
 def local_execution_copy() -> str:
   modes = ", ".join(LOCAL_EXECUTION_SAFETY_MODES)
   return (
-    "No Pith login is required; local execution mode defaults to "
+    "No Pith login is required; action safety mode defaults to "
     f"{DEFAULT_LOCAL_EXECUTION_SAFETY_MODE}; available modes are {modes}."
   )
 

@@ -219,9 +219,9 @@ def main() -> int:
     if manifest["identity"]["pithAccountRequired"] is not False:
       raise AssertionError("release manifest should not require a Pith account")
     if manifest["localExecution"]["defaultSafetyMode"] != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE:
-      raise AssertionError("release manifest should record default local execution mode")
+      raise AssertionError("release manifest should record default action safety mode")
     if manifest["localExecution"]["safetyModes"] != list(LOCAL_EXECUTION_SAFETY_MODES):
-      raise AssertionError("release manifest should record local execution modes")
+      raise AssertionError("release manifest should record action safety modes")
     if manifest["sandbox"]["fallback"] != SANDBOX_CONTRACT["fallback"]:
       raise AssertionError("release manifest should disclose the sandbox fallback")
     if manifest["dailyDriver"]["stageSource"] != DAILY_DRIVER_CONTRACT["stageSource"]:

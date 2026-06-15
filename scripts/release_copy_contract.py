@@ -39,7 +39,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Settings > Storage",
   "First-run path:",
   "No Pith login is required",
-  "local execution mode",
+  "action safety mode",
   DEFAULT_MODEL_ID,
   "Gatekeeper",
   "Open a project folder.",

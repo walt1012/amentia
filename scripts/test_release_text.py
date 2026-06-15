@@ -183,7 +183,7 @@ def main() -> int:
   require_contains(guide, "Control-click Pith.app and choose Open.")
   require_contains(guide, "Installer assets:")
   require_contains(guide, "No Pith login is required")
-  require_contains(guide, "local execution mode")
+  require_contains(guide, "action safety mode")
   require_contains(guide, "Pith-v0.1.0-macos-x86_64.dmg")
   require_contains(guide, "Pith-v0.1.0-release-manifest.json")
   require_contains(guide, "download one verified local model")

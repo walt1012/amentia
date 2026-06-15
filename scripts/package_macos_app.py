@@ -147,7 +147,7 @@ REQUIRED_APP_COPY_SNIPPETS = (
   "Open Anyway",
   "Control-click Pith.app",
   "no Pith account required",
-  "local execution mode",
+  "action safety mode",
   "package size budget",
 )
 
