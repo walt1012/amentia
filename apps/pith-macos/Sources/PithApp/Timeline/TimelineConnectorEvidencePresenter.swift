@@ -61,36 +61,20 @@ enum TimelineConnectorEvidencePresenter {
   ]
 
   private static func connectorSummary(attributes: [String: String]) -> String? {
-    guard let connectorIDs = firstAttribute(attributes, keys: [
+    guard firstAttribute(attributes, keys: [
       "connectorId",
       "connectorIds",
       "pluginRunnerConnectorId",
       "pluginRunnerConnectorIds",
-    ]) else {
+    ]) != nil else {
       return nil
     }
 
-    let services = firstAttribute(attributes, keys: [
-      "connectorService",
-      "connectorServices",
-      "pluginRunnerConnectorServices",
-    ]) ?? "unknown service"
-    let stores = firstAttribute(attributes, keys: [
-      "credentialStore",
-      "connectorCredentialStores",
-      "pluginRunnerConnectorStores",
-    ]) ?? "unknown store"
-    let providers = firstAttribute(attributes, keys: [
-      "credentialProvider",
-      "connectorCredentialProviders",
-    ]) ?? "unknown provider"
-    let bindings = firstAttribute(attributes, keys: [
-      "credentialBinding",
-      "connectorSecretBindings",
-      "pluginRunnerSecretBindings",
-    ]) ?? "unknown binding"
-    return "Connector: \(serviceName(attributes: attributes)). Credentials are available locally. "
-      + "Setup: \(connectorIDs), \(services), \(stores), \(providers), \(bindings)."
+    let authorization = firstAttribute(attributes, keys: [
+      "authorizationSummary",
+      "connectorAuthorizationSummary",
+    ]) ?? authorizationSummary(attributes: attributes)
+    return "Connection: \(serviceName(attributes: attributes)). Authorization: \(authorization)."
   }
 
   private static func appendConnectorWorkflowSummary(
@@ -144,6 +128,25 @@ enum TimelineConnectorEvidencePresenter {
     appendRemoteWriteContinuation(attributes: attributes, to: &lines)
     appendRemoteProofSummary(attributes: attributes, to: &lines)
     appendRetrySummary(attributes: attributes, to: &lines)
+  }
+
+  private static func authorizationSummary(attributes: [String: String]) -> String {
+    if attributes["credentialPresent"] == "true" {
+      return "saved locally"
+    }
+
+    guard firstAttribute(attributes, keys: [
+      "credentialStore",
+      "connectorCredentialStores",
+      "pluginRunnerConnectorStores",
+      "credentialBinding",
+      "connectorSecretBindings",
+      "pluginRunnerSecretBindings",
+    ]) != nil else {
+      return "not saved"
+    }
+
+    return "available locally"
   }
 
   private static func appendRemoteWriteContinuation(

@@ -122,7 +122,7 @@ struct PluginCommandRow: View {
       connectorRows
 
       if !command.permissions.isEmpty {
-        Text("Needs: \(command.permissions.joined(separator: ", "))")
+        Text("Needs: \(PluginPermissionDisplay.summary(command.permissions))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -232,9 +232,9 @@ struct PluginCommandRow: View {
   }
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
-    let secret = connector.credentialSecretPresent ? "env-bound" : "no secret"
+    let authorization = connector.credentialPresent ? "authorization saved" : "not authorized"
     return "Connection: \(connector.displayName) | \(connector.status) "
-      + "| \(displayConnectionStatus(connector.authStatus)) | \(secret)"
+      + "| \(displayConnectionStatus(connector.authStatus)) | \(authorization)"
   }
 
   private var missingConnectorIds: [String] {
@@ -325,7 +325,7 @@ struct PluginHookRow: View {
       }
 
       if !hook.permissions.isEmpty {
-        Text("Needs: \(hook.permissions.joined(separator: ", "))")
+        Text("Needs: \(PluginPermissionDisplay.summary(hook.permissions))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)

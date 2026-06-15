@@ -13,7 +13,7 @@ struct PluginRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(plugin.displayName)
             .font(.subheadline.weight(.semibold))
-          Text("\(plugin.version) | \(plugin.provenance) | \(displayStatus)")
+          Text("\(plugin.version) | \(plugin.sourceLabel) | \(displayStatus)")
             .font(.caption2)
             .foregroundColor(.secondary)
         }
@@ -43,14 +43,14 @@ struct PluginRow: View {
         .foregroundColor(.secondary)
 
       if !plugin.capabilities.isEmpty {
-        Text("Can use: \(plugin.capabilities.joined(separator: ", "))")
+        Text("Capabilities: \(plugin.capabilitySummary)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
       }
 
       if !plugin.permissions.isEmpty {
-        Text("Needs: \(plugin.permissions.joined(separator: ", "))")
+        Text("Needs: \(plugin.permissionSummary)")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)

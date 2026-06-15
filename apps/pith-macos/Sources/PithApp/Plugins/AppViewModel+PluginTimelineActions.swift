@@ -28,7 +28,7 @@ extension AppViewModel {
     guard canEnablePlugin(from: entry),
           let pluginID = pluginID(from: entry)
     else {
-      runtimeDetail = "Connector enable action is unavailable."
+      runtimeDetail = "Plugin enable action is unavailable."
       return
     }
 
@@ -39,7 +39,7 @@ extension AppViewModel {
     guard canAuthorizePluginConnector(from: entry),
           let connectorID = pluginConnectorID(from: entry)
     else {
-      runtimeDetail = "Connector authorization is unavailable."
+      runtimeDetail = "Connection authorization is unavailable."
       return
     }
 
@@ -61,19 +61,19 @@ extension AppViewModel {
     guard canRevealPluginSource(from: entry),
           let sourcePath = pluginSourcePath(from: entry)
     else {
-      runtimeDetail = "Connector source path is unavailable."
+      runtimeDetail = "Plugin source path is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       sourcePath,
-      successDetail: "Revealed connector source."
+      successDetail: "Revealed plugin source."
     )
   }
 
   func refreshPlugins(from entry: TimelineEntry) async {
     guard canRefreshPlugins(from: entry) else {
-      runtimeDetail = pluginRefreshDisabledReason() ?? "Connector refresh is unavailable."
+      runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
       return
     }
 
@@ -82,7 +82,7 @@ extension AppViewModel {
 
   func revealPluginManifest(pluginID: String) {
     guard let plugin = pluginSummary(pluginID: pluginID) else {
-      runtimeDetail = "Connector setup file is unavailable."
+      runtimeDetail = "Plugin setup file is unavailable."
       return
     }
 
@@ -95,13 +95,13 @@ extension AppViewModel {
   func revealPluginSourcePath(_ sourcePath: String) {
     let sourcePath = sourcePath.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !sourcePath.isEmpty else {
-      runtimeDetail = "Connector source path is unavailable."
+      runtimeDetail = "Plugin source path is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       sourcePath,
-      successDetail: "Revealed connector source."
+      successDetail: "Revealed plugin source."
     )
   }
 

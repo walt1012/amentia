@@ -442,15 +442,129 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let snapshot = pluginDashboardSnapshot()
     let detail = PluginDashboardPresenter.pluginDetailSummary(snapshot)
     let registry = PluginDashboardPresenter.registryDetailSummary(snapshot)
+    let permissions = PluginDashboardPresenter.permissionDetailSummary(snapshot)
 
     XCTAssertEqual(PluginDashboardPresenter.pluginCountSummary(snapshot), "1 plugin ready")
     XCTAssertTrue(detail.contains("1 action"))
     XCTAssertTrue(detail.contains("1 connection"))
     XCTAssertTrue(detail.contains("1 skill"))
     XCTAssertTrue(detail.contains("1 MCP server"))
+    XCTAssertTrue(permissions.contains("Network access"))
     XCTAssertFalse(detail.contains("command:"))
     XCTAssertFalse(detail.contains("mcp_server:"))
+    XCTAssertFalse(permissions.contains("network.outbound"))
     XCTAssertEqual(registry, "1 action | 1 connection | 1 skill | 1 MCP server")
+  }
+
+  func testPluginInstallConfirmationAvoidsRawPathsAndManifestTerms() {
+    let preview = PluginInstallPreview(
+      pluginID: "notion",
+      sourcePath: "/Users/example/Desktop/notion-plugin",
+      manifestPath: "/Users/example/Desktop/notion-plugin/pith-plugin.json",
+      installPath: "/Users/example/Library/Application Support/Pith/plugins/notion",
+      displayName: "Notion",
+      version: "1.0.0",
+      description: "Work with Notion locally.",
+      authorName: "Pith",
+      capabilities: [
+        "command:notion.run",
+        "connector:notion",
+        "mcp_server:notion",
+      ],
+      permissions: [
+        "network.outbound",
+        "mcp.connect",
+      ],
+      defaultEnabled: true,
+      installStatus: "ready",
+      installBlocker: nil,
+      installRepairHint: nil
+    )
+
+    let text = PluginInstallDialogPresenter.installInformativeText(preview: preview)
+
+    XCTAssertTrue(text.contains("Source: Local folder you selected"))
+    XCTAssertTrue(text.contains("Installed: Stored in Pith support data"))
+    XCTAssertTrue(text.contains("Capabilities: 1 action | 1 connection | 1 MCP server"))
+    XCTAssertTrue(text.contains("Permissions: MCP access, Network access"))
+    XCTAssertFalse(text.contains("/Users/example"))
+    XCTAssertFalse(text.contains("command:"))
+    XCTAssertFalse(text.contains("mcp_server:"))
+    XCTAssertFalse(text.contains("network.outbound"))
+    XCTAssertFalse(text.contains("1 permission"))
+  }
+
+  func testPluginLifecycleTimelineUsesProductLanguage() {
+    let preview = PluginInstallPreview(
+      pluginID: "notion",
+      sourcePath: "/Users/example/Desktop/notion-plugin",
+      manifestPath: "/Users/example/Desktop/notion-plugin/pith-plugin.json",
+      installPath: "/Users/example/Library/Application Support/Pith/plugins/notion",
+      displayName: "Notion",
+      version: "1.0.0",
+      description: "Work with Notion locally.",
+      authorName: "Pith",
+      capabilities: [
+        "command:notion.run",
+        "connector:notion",
+      ],
+      permissions: [
+        "network.outbound",
+      ],
+      defaultEnabled: true,
+      installStatus: "ready",
+      installBlocker: nil,
+      installRepairHint: nil
+    )
+    let plugin = RuntimeBridge.RuntimePlugin(
+      id: "notion",
+      name: "notion",
+      version: "1.0.0",
+      displayName: "Notion",
+      status: "ready",
+      description: "Work with Notion locally.",
+      authorName: "Pith",
+      enabled: true,
+      defaultEnabled: true,
+      capabilities: preview.capabilities,
+      permissions: preview.permissions,
+      manifestPath: preview.manifestPath,
+      provenance: "local",
+      validationError: nil,
+      validationHint: nil
+    )
+    let installed = TimelineEventPresenter.pluginInstalled(plugin, preview: preview)
+    let removed = TimelineEventPresenter.pluginRemoved(
+      RuntimeBridge.RuntimePluginRemoval(
+        pluginID: "notion",
+        displayName: "Notion",
+        removedPath: "/Users/example/Library/Application Support/Pith/plugins/notion"
+      )
+    )
+
+    XCTAssertEqual(installed.title, "Plugin Installed")
+    XCTAssertTrue(installed.body.contains("Capabilities: 1 action | 1 connection"))
+    XCTAssertTrue(installed.body.contains("Permissions: Network access"))
+    XCTAssertFalse(installed.body.contains("Surface:"))
+    XCTAssertFalse(installed.body.contains("/Users/example"))
+    XCTAssertEqual(removed.title, "Plugin Removed")
+    XCTAssertFalse(removed.body.contains("Removed Path"))
+    XCTAssertFalse(removed.body.contains("/Users/example"))
+  }
+
+  func testConnectionEvidenceUsesAuthorizationSummary() {
+    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+      "connectorId": "notion",
+      "connectorService": "notion",
+      "credentialBinding": "env-bound",
+    ])
+
+    XCTAssertEqual(
+      lines.first,
+      "Connection: Notion. Authorization: available locally."
+    )
+    XCTAssertFalse(lines.joined(separator: "\n").contains("env-bound"))
+    XCTAssertFalse(lines.joined(separator: "\n").contains("credentialBinding"))
   }
 
   private func headerSnapshot(

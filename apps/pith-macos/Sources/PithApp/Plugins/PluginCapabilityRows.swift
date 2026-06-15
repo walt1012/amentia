@@ -18,7 +18,7 @@ struct PluginCapabilityRow: View {
       }
 
       if !capability.permissions.isEmpty {
-        Text("Needs: \(capability.permissions.joined(separator: ", "))")
+        Text("Needs: \(PluginPermissionDisplay.summary(capability.permissions))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -99,24 +99,7 @@ private extension PluginCapabilitySummary {
   }
 
   var displaySurface: String {
-    switch kind {
-    case "command":
-      return "Action"
-    case "connector":
-      return "Connection"
-    case "skill":
-      return "Skill"
-    case "tool":
-      return "Tool"
-    case "hook":
-      return "Check"
-    case "mcp_server":
-      return "MCP server"
-    case "connector_workflow":
-      return "Workflow"
-    default:
-      return kind.replacingOccurrences(of: "_", with: " ")
-    }
+    PluginCapabilityDisplay.surface(kind)
   }
 
   func displayStatus(_ status: String) -> String {
@@ -188,7 +171,7 @@ struct PluginConnectorRow: View {
       }
 
       if !connector.permissions.isEmpty {
-        Text("Needs: \(connector.permissions.joined(separator: ", "))")
+        Text("Needs: \(PluginPermissionDisplay.summary(connector.permissions))")
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -255,14 +238,22 @@ struct PluginConnectorRow: View {
 
 private extension PluginConnectorSummary {
   var authSummary: String {
-    let type = authType ?? "none"
-    let required = authRequired ? "required" : "optional"
-    let scopes = authScopes.isEmpty ? "no scopes" : authScopes.joined(separator: ", ")
-    let store = credentialStore ?? "none"
-    let credential = credentialLabel ?? "no credential"
-    let binding = credentialBinding
-    return "Connection: \(type) | \(displayStatus(authStatus)) | \(required) | \(scopes) "
-      + "| secure store: \(store) | credential: \(binding) | \(credential)"
+    var parts = [
+      "Connection: \(displayStatus(authStatus))"
+    ]
+    if authRequired {
+      parts.append("sign-in required")
+    }
+    if !authScopes.isEmpty {
+      parts.append("access: \(authScopes.joined(separator: ", "))")
+    }
+    if credentialPresent {
+      parts.append("authorization saved")
+    }
+    if let credentialLabel {
+      parts.append(credentialLabel)
+    }
+    return parts.joined(separator: " | ")
   }
 
   var workflowSummary: String {
@@ -281,13 +272,5 @@ private extension PluginConnectorSummary {
     default:
       return status
     }
-  }
-
-  private var credentialBinding: String {
-    if !credentialPresent {
-      return "none"
-    }
-
-    return credentialSecretPresent ? "env-bound" : "marker-only"
   }
 }

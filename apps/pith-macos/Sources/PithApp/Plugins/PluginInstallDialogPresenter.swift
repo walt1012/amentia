@@ -6,39 +6,45 @@ enum PluginInstallDialogPresenter {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = "Add Plugin?"
-    alert.informativeText = """
-      Plugin: \(preview.displayName) \(preview.version)
-      Provenance: Local import
-      Author: \(preview.authorName ?? "Unknown")
-      Source Folder: \(preview.sourcePath)
-      Install Location: \(preview.installPath)
-      Starts Enabled: \(preview.defaultEnabled ? "Yes" : "No")
-      Access: \(preview.surfaceSummary.summary)
-      Needs: \(summaryLine(preview.permissions, empty: "none"))
-      Can use: \(summaryLine(preview.capabilities, empty: "none"))
-
-      \(preview.description)
-      """
+    alert.informativeText = installInformativeText(preview: preview)
     alert.addButton(withTitle: "Install")
     alert.addButton(withTitle: "Cancel")
     return alert.runModal() == .alertFirstButtonReturn
+  }
+
+  static func installInformativeText(preview: PluginInstallPreview) -> String {
+    """
+      Plugin: \(preview.displayName) \(preview.version)
+      Author: \(preview.authorName ?? "Unknown")
+      Source: Local folder you selected
+      Installed: Stored in Pith support data
+      Starts Enabled: \(preview.defaultEnabled ? "Yes" : "No")
+      Capabilities: \(capabilitySummary(preview.capabilities))
+      Permissions: \(PluginPermissionDisplay.summary(preview.permissions, empty: "No extra local permissions"))
+
+      \(preview.description)
+      """
   }
 
   static func confirmRemoval(plugin: PluginSummary) -> Bool {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = "Remove Plugin?"
-    alert.informativeText = """
-      Plugin: \(plugin.displayName) \(plugin.version)
-      Provenance: \(plugin.provenance)
-      Needs: \(summaryLine(plugin.permissions, empty: "none"))
-      Can use: \(summaryLine(plugin.capabilities, empty: "none"))
-
-      Removing this plugin updates the local catalog and can disable related connections, actions, checks, and permissions.
-      """
+    alert.informativeText = removalInformativeText(plugin: plugin)
     alert.addButton(withTitle: "Remove")
     alert.addButton(withTitle: "Cancel")
     return alert.runModal() == .alertFirstButtonReturn
+  }
+
+  static func removalInformativeText(plugin: PluginSummary) -> String {
+    """
+      Plugin: \(plugin.displayName) \(plugin.version)
+      Source: \(plugin.sourceLabel)
+      Capabilities: \(plugin.capabilitySummary.isEmpty ? "No declared capabilities" : plugin.capabilitySummary)
+      Permissions: \(plugin.permissionSummary)
+
+      Removing this plugin updates the local catalog and can disable related connections, actions, checks, and permissions.
+      """
   }
 
   static func repairHint(for error: Error) -> String {
@@ -92,11 +98,8 @@ enum PluginInstallDialogPresenter {
     return ""
   }
 
-  private static func summaryLine(_ values: [String], empty: String) -> String {
-    if values.isEmpty {
-      return empty
-    }
-
-    return values.joined(separator: ", ")
+  private static func capabilitySummary(_ capabilities: [String]) -> String {
+    let summary = PluginCapabilityDisplay.summary(capabilities)
+    return summary.isEmpty ? "No declared capabilities" : summary
   }
 }

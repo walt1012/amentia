@@ -68,17 +68,19 @@ enum PluginConnectorCredentialDialogPresenter {
 
   static func credentialPrompt(_ connector: PluginConnectorSummary) -> String {
     let authType = displayAuthType(connector.authType)
-    let store = connector.credentialStore ?? "local"
     let scopes = connector.authScopes.isEmpty
       ? "No declared scopes."
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
+    let storage = connector.credentialStore == "none"
+      ? "Pith will not save a secret."
+      : "Pith stores the authorization locally."
     var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
-      + "\(scopes) Credential store: \(store). "
+      + "\(scopes) \(storage) "
       + "Secrets are passed only to the local connector runner for each approved run. "
     if requiresLocalSecret(connector) {
       prompt += "A local token or API key is required for this connector."
     } else {
-      prompt += "Leave the secret empty only when this connector uses marker-only authorization."
+      prompt += "Leave the secret empty only when this connector can be authorized without a token."
     }
     if isNotion(connector) {
       prompt += notionSetupPrompt()
@@ -117,9 +119,9 @@ enum PluginConnectorCredentialDialogPresenter {
     alert.alertStyle = .warning
     alert.messageText = "Authorize \(connector.displayName) Without a Secret?"
     alert.informativeText =
-      "Pith can store an authorization marker without a token or API key. "
+      "Pith can remember that this connector is allowed without saving a token or API key. "
       + "Use this only for connector flows that do not need a local secret."
-    alert.addButton(withTitle: "Authorize Marker")
+    alert.addButton(withTitle: "Authorize")
     alert.addButton(withTitle: "Back")
     return alert.runModal() == .alertFirstButtonReturn
   }
@@ -138,7 +140,7 @@ enum PluginConnectorCredentialDialogPresenter {
       return [
         "Paste the Notion internal integration token before authorizing this connector.",
         "If you have not created one yet, create an internal Notion integration first and share the target parent page with it.",
-        "Pith keeps the token local and passes it only through per-run environment bindings.",
+        "Pith keeps the token local and passes it only to the Notion connector during approved runs.",
       ].joined(separator: " ")
     }
 
@@ -156,7 +158,7 @@ enum PluginConnectorCredentialDialogPresenter {
     if isNotion(connector) {
       return "Paste the Notion internal integration token"
     }
-    return "Token or API key, or leave blank for marker-only auth"
+    return "Token or API key, or leave blank when no secret is needed"
   }
 
   private static func isNotion(_ connector: PluginConnectorSummary) -> Bool {

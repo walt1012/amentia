@@ -28,7 +28,7 @@ struct PluginPermissionRow: View {
           .font(.caption2)
           .foregroundColor(.secondary)
       } else {
-        Text(plugin.permissions.joined(separator: ", "))
+        Text(PluginPermissionDisplay.summary(plugin.permissions))
           .font(.caption2)
           .foregroundColor(.secondary)
           .textSelection(.enabled)
@@ -53,7 +53,7 @@ struct InvalidPluginRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(plugin.displayName)
             .font(.caption.weight(.semibold))
-          Text("Connector setup needs attention.")
+          Text("Plugin setup needs attention.")
             .font(.caption2)
             .foregroundColor(.secondary)
         }
@@ -80,7 +80,7 @@ struct InvalidPluginRow: View {
         }
       }
 
-      Text(plugin.validationError ?? "Connector setup did not pass validation.")
+      Text(plugin.validationError ?? "Plugin setup did not pass validation.")
         .font(.caption2)
         .foregroundColor(.orange)
         .textSelection(.enabled)

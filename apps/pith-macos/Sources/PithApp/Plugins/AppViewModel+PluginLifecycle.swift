@@ -4,14 +4,14 @@ import Foundation
 extension AppViewModel {
   func refreshPlugins() {
     guard canRefreshPlugins() else {
-      runtimeDetail = pluginRefreshDisabledReason() ?? "Connector refresh is unavailable."
+      runtimeDetail = pluginRefreshDisabledReason() ?? "Plugin refresh is unavailable."
       return
     }
 
     guard let operationID = beginPluginLifecycleOperation(
-      detail: "Refreshing connectors..."
+      detail: "Refreshing plugins..."
     ) else {
-      runtimeDetail = "Finish the current connector operation before refreshing connectors."
+      runtimeDetail = "Finish the current plugin operation before refreshing plugins."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -35,9 +35,9 @@ extension AppViewModel {
           recoveryAttributes: snapshot.refreshRecoveryAttributes
         ),
         detail: hasDiagnostics
-          ? "Connector setup refreshed and needs attention."
-          : "Connector setup refreshed.",
-        preview: hasDiagnostics ? "Connector setup needs attention" : "Connectors refreshed"
+          ? "Plugin setup refreshed and needs attention."
+          : "Plugin setup refreshed.",
+        preview: hasDiagnostics ? "Plugin setup needs attention" : "Plugins refreshed"
       )
     }
     bindPluginLifecycleTask(task, operationID: operationID)
@@ -55,7 +55,7 @@ extension AppViewModel {
     guard let operationID = beginPluginLifecycleOperation(
       detail: "Inspecting plugin..."
     ) else {
-      runtimeDetail = "Finish the current connector operation before starting another."
+      runtimeDetail = "Finish the current plugin operation before starting another."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -77,17 +77,17 @@ extension AppViewModel {
           return
         }
         guard preview.canInstall else {
-          let detail = preview.installBlocker ?? "Connector cannot be installed yet."
+          let detail = preview.installBlocker ?? "Plugin cannot be installed yet."
           appendPluginStatusEntry(
             to: timelineThreadID,
             TimelineEventPresenter.pluginInstallBlocked(preview: preview),
             detail: detail,
-            preview: "Connector install needs attention"
+            preview: "Plugin install needs attention"
           )
           return
         }
         guard PluginInstallDialogPresenter.confirmInstall(preview: preview) else {
-          runtimeDetail = "Connector install was cancelled."
+          runtimeDetail = "Plugin install was cancelled."
           return
         }
         confirmedPreview = preview
@@ -107,9 +107,9 @@ extension AppViewModel {
           to: timelineThreadID,
           TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview),
           detail: installedPlugin.enabled
-            ? "Connector installed and enabled."
-            : "Connector installed. Enable it before running actions.",
-          preview: "Connector installed"
+            ? "Plugin installed and enabled."
+            : "Plugin installed. Enable it before running actions.",
+          preview: "Plugin installed"
         )
       } catch {
         guard !Task.isCancelled,
@@ -134,9 +134,9 @@ extension AppViewModel {
     }
 
     guard let operationID = beginPluginLifecycleOperation(
-      detail: enabled ? "Enabling connector..." : "Disabling connector..."
+      detail: enabled ? "Enabling plugin..." : "Disabling plugin..."
     ) else {
-      runtimeDetail = "Finish the current connector operation before changing another connector."
+      runtimeDetail = "Finish the current plugin operation before changing another plugin."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -162,7 +162,7 @@ extension AppViewModel {
           to: timelineThreadID,
           TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled),
           detail: "\(updatedPlugin.displayName) is now \(enabled ? "enabled" : "disabled").",
-          preview: enabled ? "Connector enabled" : "Connector disabled"
+          preview: enabled ? "Plugin enabled" : "Plugin disabled"
         )
       } catch {
         guard !Task.isCancelled,
@@ -178,7 +178,7 @@ extension AppViewModel {
             error: error
           ),
           detail: error.localizedDescription,
-          preview: enabled ? "Connector enable failed" : "Connector disable failed"
+          preview: enabled ? "Plugin enable failed" : "Plugin disable failed"
         )
       }
     }
@@ -193,14 +193,14 @@ extension AppViewModel {
     }
 
     guard PluginInstallDialogPresenter.confirmRemoval(plugin: plugin) else {
-      runtimeDetail = "Connector removal was cancelled."
+      runtimeDetail = "Plugin removal was cancelled."
       return
     }
 
     guard let operationID = beginPluginLifecycleOperation(
       detail: "Removing plugin..."
     ) else {
-      runtimeDetail = "Finish the current connector operation before removing another connector."
+      runtimeDetail = "Finish the current plugin operation before removing another plugin."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -220,8 +220,8 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginRemoved(removedPlugin),
-          detail: "\(removedPlugin.displayName) was removed from Connectors.",
-          preview: "Connector removed"
+          detail: "\(removedPlugin.displayName) was removed.",
+          preview: "Plugin removed"
         )
       } catch {
         guard !Task.isCancelled,
@@ -233,7 +233,7 @@ extension AppViewModel {
           to: timelineThreadID,
           TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error),
           detail: error.localizedDescription,
-          preview: "Connector removal failed"
+          preview: "Plugin removal failed"
         )
       }
     }
@@ -256,7 +256,7 @@ extension AppViewModel {
           sourcePath: sourcePath
         ),
         detail: error.localizedDescription,
-        preview: "Connector preview failed"
+        preview: "Plugin preview failed"
       )
       return
     }
@@ -269,7 +269,7 @@ extension AppViewModel {
         sourcePath: confirmedPreview?.sourcePath
       ),
       detail: error.localizedDescription,
-      preview: "Connector install failed"
+      preview: "Plugin install failed"
     )
   }
 }

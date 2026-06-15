@@ -12,7 +12,7 @@ Pith is a small, strong, local-first macOS cowork agent for real daily work.
   `LFM2.5-350M`.
 - Retrieval: Web Search is the active retrieval layer. Generic local document
   RAG stays deferred until the daily cowork loop is excellent.
-- Extensions: plugins are installable bundles; skills, actions, connectors,
+- Extensions: plugins are installable bundles; skills, actions, connections,
   MCP servers, checks, and tools are bounded local capabilities, not prompt
   templates or marketplace theater.
 - Delivery: users install a downloadable macOS package from GitHub Releases.
@@ -21,7 +21,7 @@ Pith is a small, strong, local-first macOS cowork agent for real daily work.
 
 Pith learns from Codex and Claude Code at durable boundaries: workspace context,
 bounded tools, Web Search, approvals, sandbox visibility, session continuity,
-reviewable evidence, and MCP-style local connectors.
+reviewable evidence, and MCP-style local connections.
 
 Pith also learns from Hermes Agent, but only where it supports the local macOS
 cowork goal:
@@ -97,12 +97,18 @@ Ready foundations:
   that boundary explicit in user-facing language.
 - Session sidebar previews translate runtime states into human cowork language
   instead of exposing internal status strings.
-- Connector baseline has local plugin registry, execution gates, credentials,
+- Connection baseline has local plugin registry, execution gates, credentials,
   retries, generic timeline evidence, memory capture, and Notion as the
-  reference connector.
+  reference connection.
 - Extension UI now uses the Codex/Claude-style hierarchy: Plugins are installed
   bundles; Actions, Connections, Skills, MCP servers, Tools, and Checks are
   capabilities. Raw manifest capability strings stay out of primary summaries.
+- Plugin install and management surfaces use human capability and permission
+  labels; local paths, manifest strings, and credential binding details stay in
+  reveal-on-demand support paths.
+- Plugin lifecycle timeline entries now use `Plugin` for bundle operations and
+  `Connection` for authorization evidence; raw paths and credential binding
+  internals stay out of normal timeline bodies.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.
@@ -112,7 +118,7 @@ Ready foundations:
   package, policy, model, and release checks.
 - Primary readiness, approval, permission, and action-result copy now uses
   product language for requests and work. Established ecosystem words such as
-  plugin, skill, MCP, connector, and action stay visible when they describe a
+  plugin, skill, MCP, connection, and action stay visible when they describe a
   real interface.
 
 Current constraints:
@@ -180,6 +186,11 @@ Scope now:
 - Keep extension management understandable: plugin installation is the bundle
   workflow, while capabilities are grouped as Actions, Connections, Skills,
   MCP, Tools, and Checks.
+- Keep plugin management clean enough for real users: confirmation dialogs show
+  what a plugin can do, what access it needs, and what Pith will store without
+  exposing source paths or manifest capability strings.
+- Keep timeline and inspector evidence product-first: show capabilities,
+  permissions, proof, and authorization state before paths or protocol fields.
 
 Exit criteria:
 

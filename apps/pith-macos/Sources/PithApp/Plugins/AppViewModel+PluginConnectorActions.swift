@@ -5,25 +5,25 @@ extension AppViewModel {
   func authorizePluginConnector(connectorID: String) {
     guard canAuthorizePluginConnector(connectorID: connectorID) else {
       runtimeDetail = pluginConnectorAuthorizeDisabledReason(connectorID: connectorID)
-        ?? "Connector cannot be authorized yet."
+        ?? "Connection cannot be authorized yet."
       return
     }
     guard let connector = pluginConnectors.first(where: { $0.id == connectorID }) else {
-      runtimeDetail = "Connector is not loaded."
+      runtimeDetail = "Connection is not loaded."
       return
     }
     guard let credentialInput = PluginConnectorCredentialDialogPresenter.credentialInput(
       connector: connector
     ) else {
-      runtimeDetail = "Connector authorization was cancelled."
+      runtimeDetail = "Connection authorization was cancelled."
       return
     }
 
     guard let operationID = beginPluginLifecycleOperation(
-      detail: "Authorizing connector..."
+      detail: "Authorizing connection..."
     ) else {
       runtimeDetail = pluginConnectorAuthorizeDisabledReason(connectorID: connectorID)
-        ?? "Finish the current connector operation before authorizing a connector."
+        ?? "Finish the current connection operation before authorizing another connection."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -45,8 +45,8 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorAuthorized(connector),
-          detail: "Connector authorized. Actions were refreshed.",
-          preview: "Connector authorized"
+          detail: "Connection authorized. Actions were refreshed.",
+          preview: "Connection authorized"
         )
       } catch {
         guard !Task.isCancelled,
@@ -58,7 +58,7 @@ extension AppViewModel {
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error),
           detail: error.localizedDescription,
-          preview: "Connector authorization failed"
+          preview: "Connection authorization failed"
         )
       }
     }
@@ -68,15 +68,15 @@ extension AppViewModel {
   func clearPluginConnectorCredential(connectorID: String) {
     guard canClearPluginConnectorCredential(connectorID: connectorID) else {
       runtimeDetail = pluginConnectorClearDisabledReason(connectorID: connectorID)
-        ?? "Connector credential cannot be cleared yet."
+        ?? "Connection authorization cannot be cleared yet."
       return
     }
 
     guard let operationID = beginPluginLifecycleOperation(
-      detail: "Clearing connector credential..."
+      detail: "Clearing connection authorization..."
     ) else {
       runtimeDetail = pluginConnectorClearDisabledReason(connectorID: connectorID)
-        ?? "Finish the current connector operation before clearing a connector credential."
+        ?? "Finish the current connection operation before clearing saved authorization."
       return
     }
     let timelineThreadID = selectedThreadID
@@ -96,8 +96,8 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelineEventPresenter.pluginConnectorCredentialCleared(connector),
-          detail: "Connector credential cleared. Actions were refreshed.",
-          preview: "Connector credential cleared"
+          detail: "Connection authorization cleared. Actions were refreshed.",
+          preview: "Connection authorization cleared"
         )
       } catch {
         guard !Task.isCancelled,
@@ -112,7 +112,7 @@ extension AppViewModel {
             error: error
           ),
           detail: error.localizedDescription,
-          preview: "Connector credential clear failed"
+          preview: "Connection authorization clear failed"
         )
       }
     }

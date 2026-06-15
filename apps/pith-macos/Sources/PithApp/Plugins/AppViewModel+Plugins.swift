@@ -53,7 +53,7 @@ extension AppViewModel {
       return "Finish or cancel the active task first."
     }
     if hasPluginLifecycleOperation() {
-      return "Finish the current connector operation first."
+      return "Finish the current plugin operation first."
     }
 
     return nil

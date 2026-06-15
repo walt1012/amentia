@@ -249,7 +249,7 @@ enum TimelineEventPresenter {
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
 
     return TimelineEntryFactory.warning(
-      title: "Connector Preview Failed",
+      title: "Plugin Preview Failed",
       body: body,
       attributes: pluginInstallFailureAttributes(
         error,
@@ -261,10 +261,11 @@ enum TimelineEventPresenter {
   }
 
   static func pluginInstallBlocked(preview: PluginInstallPreview) -> TimelineEntry {
-    let blocker = preview.installBlocker ?? "Connector cannot be installed yet."
+    let blocker = preview.installBlocker ?? "Plugin cannot be installed yet."
     let body = [
       blocker,
-      "Surface: \(preview.surfaceSummary.summary)",
+      "Capabilities: \(pluginCapabilitySummary(preview.capabilities))",
+      "Permissions: \(PluginPermissionDisplay.summary(preview.permissions))",
       preview.installRepairHint?.isEmpty == false
         ? "Repair Hint: \(preview.installRepairHint ?? "")"
         : nil,
@@ -273,7 +274,7 @@ enum TimelineEventPresenter {
     .joined(separator: "\n\n")
 
     return TimelineEntryFactory.warning(
-      title: "Connector Install Needs Attention",
+      title: "Plugin Install Needs Attention",
       body: body,
       attributes: [
         "pluginId": preview.pluginID,
@@ -292,7 +293,7 @@ enum TimelineEventPresenter {
     recoveryAttributes: [String: String]
   ) -> TimelineEntry {
     let setupBody = diagnostics.isEmpty
-      ? "No connector setup issues."
+      ? "No plugin setup issues."
       : diagnostics.map { "Setup note: \($0)" }.joined(separator: "\n")
     var attributes = recoveryAttributes
     if attributes["pluginRefreshStatus"] == nil {
@@ -303,7 +304,7 @@ enum TimelineEventPresenter {
     attributes["pluginRefreshDiagnosticCount"] = "\(diagnostics.count)"
 
     return TimelineEntryFactory.system(
-      title: diagnostics.isEmpty ? "Connectors Refreshed" : "Connectors Need Attention",
+      title: diagnostics.isEmpty ? "Plugins Refreshed" : "Plugins Need Attention",
       body: [
         pluginSummary,
         surfaceSummary,
@@ -315,8 +316,8 @@ enum TimelineEventPresenter {
 
   static func pluginLifecycleCancelled() -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Connector Operation Cancelled",
-      body: "The current connector operation was cancelled before it finished.",
+      title: "Plugin Operation Cancelled",
+      body: "The current plugin operation was cancelled before it finished.",
       attributes: [
         "pluginLifecycleOperation": "lifecycle",
         "pluginLifecycleStatus": "cancelled",
@@ -329,12 +330,11 @@ enum TimelineEventPresenter {
     preview: PluginInstallPreview
   ) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Connector Installed",
+      title: "Plugin Installed",
       body: [
-        "\(plugin.displayName) is now available in Connectors.",
-        "Surface: \(preview.surfaceSummary.summary)",
-        "Source: \(preview.sourcePath)",
-        "Installed To: \(preview.installPath)",
+        "\(plugin.displayName) is now available.",
+        "Capabilities: \(pluginCapabilitySummary(preview.capabilities))",
+        "Permissions: \(PluginPermissionDisplay.summary(preview.permissions))",
       ].joined(separator: "\n"),
       attributes: [
         "pluginId": plugin.id,
@@ -357,7 +357,7 @@ enum TimelineEventPresenter {
       : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
 
     return TimelineEntryFactory.warning(
-      title: "Connector Install Failed",
+      title: "Plugin Install Failed",
       body: body,
       attributes: pluginInstallFailureAttributes(
         error,
@@ -373,7 +373,7 @@ enum TimelineEventPresenter {
     enabled: Bool
   ) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: enabled ? "Connector Enabled" : "Connector Disabled",
+      title: enabled ? "Plugin Enabled" : "Plugin Disabled",
       body: "\(plugin.displayName) is now \(enabled ? "enabled" : "disabled").",
       attributes: [
         "pluginId": plugin.id,
@@ -384,7 +384,7 @@ enum TimelineEventPresenter {
 
   static func pluginUpdateFailed(pluginID: String, enabled: Bool, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Connector Update Failed",
+      title: "Plugin Update Failed",
       body: error.localizedDescription,
       attributes: pluginLifecycleFailureAttributes(
         error,
@@ -397,9 +397,8 @@ enum TimelineEventPresenter {
 
   static func pluginRemoved(_ plugin: RuntimeBridge.RuntimePluginRemoval) -> TimelineEntry {
     TimelineEntryFactory.system(
-      title: "Connector Removed",
-      body:
-        "\(plugin.displayName) was removed from Connectors.\nRemoved Path: \(plugin.removedPath)",
+      title: "Plugin Removed",
+      body: "\(plugin.displayName) was removed.",
       attributes: [
         "pluginId": plugin.pluginID,
         "removedPath": plugin.removedPath,
@@ -409,7 +408,7 @@ enum TimelineEventPresenter {
 
   static func pluginRemovalFailed(pluginID: String, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Connector Removal Failed",
+      title: "Plugin Removal Failed",
       body: error.localizedDescription,
       attributes: pluginLifecycleFailureAttributes(
         error,
@@ -426,7 +425,7 @@ enum TimelineEventPresenter {
     let body = [
       "\(connector.displayName) is ready for \(connector.service) through "
         + "\(connector.pluginDisplayName).",
-      "Credential Binding: \(connectorCredentialBinding(connector))",
+      "Authorization: \(connectorAuthorizationSummary(connector))",
     ].joined(separator: "\n")
 
     return TimelineEntryFactory.system(
@@ -563,7 +562,7 @@ enum TimelineEventPresenter {
       "connectorService": connector.service,
       "authStatus": connector.authStatus,
       "credentialPresent": "\(connector.credentialPresent)",
-      "credentialBinding": connectorCredentialBinding(connector),
+      "authorizationSummary": connectorAuthorizationSummary(connector),
     ]
 
     if let authType = connector.authType {
@@ -588,14 +587,19 @@ enum TimelineEventPresenter {
     return attributes
   }
 
-  private static func connectorCredentialBinding(
+  private static func connectorAuthorizationSummary(
     _ connector: RuntimeBridge.RuntimePluginConnector
   ) -> String {
     if !connector.credentialPresent {
-      return "none"
+      return "not saved"
     }
 
-    return connector.credentialSecretPresent ? "env-bound" : "marker-only"
+    return connector.credentialSecretPresent ? "saved locally" : "authorized without a secret"
+  }
+
+  private static func pluginCapabilitySummary(_ capabilities: [String]) -> String {
+    let summary = PluginCapabilityDisplay.summary(capabilities)
+    return summary.isEmpty ? "No declared capabilities" : summary
   }
 
   private static func recoveryAttributes(_ error: Error) -> [String: String] {

@@ -252,9 +252,9 @@ enum TimelineInspectorPresenter {
     }
 
     let count = entry.attributes["pluginRefreshDiagnosticCount"] ?? "0"
-    lines.append("Connector refresh: \(status) | setup notes \(count)")
+    lines.append("Plugin refresh: \(status) | setup notes \(count)")
     if let repairHint = entry.attributes["pluginRefreshRepairHint"] {
-      lines.append("Connector refresh repair: \(repairHint)")
+      lines.append("Plugin refresh repair: \(repairHint)")
     }
   }
 

@@ -16,14 +16,15 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertTrue(prompt.contains("passes it only to the local Notion connector runner"))
     XCTAssertTrue(prompt.contains("first publish still verifies"))
     XCTAssertTrue(prompt.contains("does not claim OAuth yet"))
+    XCTAssertFalse(prompt.contains("Credential store"))
 
     let warning = PluginConnectorCredentialDialogPresenter.missingSecretWarningText(connector)
     XCTAssertTrue(warning.contains("Notion internal integration token"))
     XCTAssertTrue(warning.contains("share the target parent page"))
-    XCTAssertTrue(warning.contains("per-run environment bindings"))
+    XCTAssertTrue(warning.contains("during approved runs"))
   }
 
-  func testMarkerOnlyPromptRemainsAvailableForNonApiKeyConnectors() {
+  func testSecretlessAuthorizationPromptRemainsAvailableForNonApiKeyConnectors() {
     let connector = PluginConnectorSummary(
       id: "local-marker::calendar",
       displayName: "Local Calendar",
@@ -54,7 +55,7 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertTrue(
       PluginConnectorCredentialDialogPresenter
         .credentialPrompt(connector)
-        .contains("marker-only authorization")
+        .contains("authorized without a token")
     )
     XCTAssertTrue(
       PluginConnectorCredentialDialogPresenter

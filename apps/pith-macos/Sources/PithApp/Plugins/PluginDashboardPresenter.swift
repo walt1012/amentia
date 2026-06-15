@@ -46,10 +46,12 @@ enum PluginDashboardPresenter {
 
     let pluginDetails = snapshot.plugins
       .map { plugin in
-        let capabilities = pluginCapabilitySummary(plugin.capabilities)
+        let capabilities = plugin.capabilitySummary.isEmpty
+          ? "No declared capabilities"
+          : plugin.capabilitySummary
         let validation = plugin.validationError == nil ? "ready" : "needs attention"
         let hint = plugin.validationHint.map { " | fix: \($0)" } ?? ""
-        return "\(plugin.displayName) \(plugin.version) | \(displayPluginStatus(plugin.status)) | \(plugin.provenance) | \(capabilities) | \(validation)\(hint)"
+        return "\(plugin.displayName) \(plugin.version) | \(displayPluginStatus(plugin.status)) | \(plugin.sourceLabel) | \(capabilities) | \(validation)\(hint)"
       }
       .joined(separator: "\n")
 
@@ -99,7 +101,7 @@ enum PluginDashboardPresenter {
           .map(\.displayName)
           .sorted()
           .joined(separator: ", ")
-        return "\(permission): \(grantingPlugins)"
+        return "\(PluginPermissionDisplay.label(permission)): \(grantingPlugins)"
       }
       .joined(separator: "\n")
   }
@@ -152,7 +154,7 @@ enum PluginDashboardPresenter {
       return "Enable a ready plugin to make its capabilities available."
     }
 
-    let kindSummary = capabilityKindSummary(registrySummary.capabilityCountsByKind)
+    let kindSummary = PluginCapabilityDisplay.summary(registrySummary.capabilityCountsByKind)
     if kindSummary.isEmpty {
       return "No plugin capabilities are available yet."
     }
@@ -299,12 +301,10 @@ enum PluginDashboardPresenter {
     ]
 
     if connector.authRequired {
-      parts.append("store: \(connector.credentialStore ?? "unknown")")
       if connector.credentialPresent {
-        let binding = connector.credentialSecretPresent ? "env-bound" : "marker-only"
-        parts.append("credential: \(binding)")
+        parts.append("authorization saved")
       } else {
-        parts.append("fix: authorize connection")
+        parts.append("sign-in required")
       }
     }
     if !connector.workflows.isEmpty {
@@ -378,59 +378,6 @@ enum PluginDashboardPresenter {
     }
   }
 
-  private static func pluginCapabilitySummary(_ capabilities: [String]) -> String {
-    let counts = capabilities.reduce(into: [String: Int]()) { result, capability in
-      guard let (kind, _) = capability.splitOnce(separator: ":") else {
-        return
-      }
-      result[String(kind), default: 0] += 1
-    }
-    let summary = capabilityKindSummary(counts)
-    return summary.isEmpty ? "No declared capabilities" : summary
-  }
-
-  private static func capabilityKindSummary(_ counts: [String: Int]) -> String {
-    capabilityKindOrder
-      .compactMap { kind in
-        guard let count = counts[kind], count > 0 else {
-          return nil
-        }
-        return "\(count) \(capabilityLabel(kind, count: count))"
-      }
-      .joined(separator: " | ")
-  }
-
-  private static let capabilityKindOrder = [
-    "command",
-    "connector",
-    "skill",
-    "mcp_server",
-    "tool",
-    "hook",
-    "connector_workflow",
-    "agent",
-    "prompt_pack",
-    "settings",
-  ]
-
-  private static func capabilityLabel(_ kind: String, count: Int) -> String {
-    switch kind {
-    case "command":
-      return count == 1 ? "action" : "actions"
-    case "connector":
-      return count == 1 ? "connection" : "connections"
-    case "mcp_server":
-      return count == 1 ? "MCP server" : "MCP servers"
-    case "hook":
-      return count == 1 ? "check" : "checks"
-    case "connector_workflow":
-      return count == 1 ? "workflow" : "workflows"
-    default:
-      let label = kind.replacingOccurrences(of: "_", with: " ")
-      return count == 1 ? label : "\(label)s"
-    }
-  }
-
   private static func displayPluginStatus(_ status: String) -> String {
     switch status {
     case "ready":
@@ -447,15 +394,5 @@ enum PluginDashboardPresenter {
     default:
       return status
     }
-  }
-}
-
-private extension String {
-  func splitOnce(separator: Character) -> (Substring, Substring)? {
-    guard let index = firstIndex(of: separator) else {
-      return nil
-    }
-
-    return (self[..<index], self[self.index(after: index)...])
   }
 }

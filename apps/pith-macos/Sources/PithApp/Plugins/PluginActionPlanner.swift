@@ -69,7 +69,7 @@ enum PluginActionPlanner {
       return "Finish or cancel the active task first."
     }
     if snapshot.hasLifecycleOperation {
-      return "Finish the current connector operation first."
+      return "Finish the current connection operation first."
     }
 
     return nil
@@ -100,7 +100,7 @@ enum PluginActionPlanner {
       return "Finish or cancel the active task first."
     }
     if snapshot.hasLifecycleOperation {
-      return "Finish the current connector operation first."
+      return "Finish the current connection operation first."
     }
 
     return nil
@@ -207,7 +207,7 @@ enum PluginActionPlanner {
       return "Finish or cancel the active task first."
     }
     if snapshot.hasLifecycleOperation {
-      return "Finish the current connector operation first."
+      return "Finish the current plugin operation first."
     }
 
     return nil
