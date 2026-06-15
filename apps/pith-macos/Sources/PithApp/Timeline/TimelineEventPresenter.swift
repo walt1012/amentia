@@ -2,10 +2,10 @@ import Foundation
 
 enum TimelineEventPresenter {
   static let generatingLocalResponseDetail = "Generating local response..."
-  static let pendingTurnCancelledDetail = "Local execution request cancelled."
+  static let pendingTurnCancelledDetail = "Request cancelled."
   static let runningPluginCommandDetail = "Running connector action..."
   static let pluginCommandNeedsExecutionContractDetail =
-    "Connector action needs a supported local execution contract before it can run."
+    "Connector action needs a supported local runner before it can run."
   static let pluginCommandNeedsConnectorAuthDetail =
     "Authorize the required connector before running this action."
   static let pendingPluginCommandCancelledDetail = "Connector action cancelled."
@@ -14,7 +14,7 @@ enum TimelineEventPresenter {
     "Connector action needs attention. Select the item for the repair hint."
   static let pluginCommandFailedDetail =
     "Connector action failed. Select the failed item for details."
-  static let cancellingTurnDetail = "Cancelling local execution..."
+  static let cancellingTurnDetail = "Cancelling request..."
   static let cancellingPluginCommandDetail = "Cancelling connector action..."
 
   static let cancelledResponsePreview = "Cancelled response"
@@ -94,7 +94,7 @@ enum TimelineEventPresenter {
   static func pendingTurnCancelled() -> TimelineEntry {
     return TimelineEntryFactory.warning(
       title: "Execution Cancelled",
-      body: "The pending local execution request was cancelled before it finished.",
+      body: "The pending request was cancelled before it finished.",
       attributes: [:]
     )
   }
@@ -150,8 +150,10 @@ enum TimelineEventPresenter {
   static func workspaceOpened(_ workspace: RuntimeBridge.RuntimeWorkspace) -> TimelineEntry {
     TimelineEntryFactory.system(
       title: "Project Opened",
-      body: "Opened \(workspace.displayName) at \(workspace.rootPath).",
-      attributes: [:]
+      body: "Opened \(workspace.displayName) as the active project.",
+      attributes: [
+        "workspacePath": workspace.rootPath
+      ]
     )
   }
 
@@ -222,7 +224,7 @@ enum TimelineEventPresenter {
   static func memoryNoteSaved(_ note: RuntimeBridge.RuntimeMemoryNote) -> TimelineEntry {
     TimelineEntryFactory.system(
       title: "Memory Note Saved",
-      body: "Saved built-in workspace note \(note.title).",
+      body: "Saved project memory note \(note.title).",
       attributes: [
         "memoryNoteId": note.id,
         "memoryScope": note.scope,

@@ -495,6 +495,83 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(text.contains("1 permission"))
   }
 
+  func testProjectAndMemoryTimelineAvoidRawSupportDetails() {
+    let workspace = RuntimeBridge.RuntimeWorkspace(
+      rootPath: "/Users/example/Projects/Pith",
+      displayName: "Pith",
+      threadCount: 1
+    )
+    let opened = TimelineEventPresenter.workspaceOpened(workspace)
+    let restored = RuntimeLaunchAnnotationFactory.entries(RuntimeLaunchAnnotationSnapshot(
+      serverName: "pith-runtime",
+      serverVersion: "0.1.0",
+      shouldAnnotateSetupLaunch: false,
+      restoredWorkspace: WorkspaceSummary(
+        rootPath: workspace.rootPath,
+        displayName: workspace.displayName
+      ),
+      skippedWorkspaceRestorePath: nil,
+      workspaceRestoreErrorDetail: nil,
+      modelHealth: nil,
+      isLocalModelReady: false,
+      localModelRequiredSummary: "Choose a local model to continue."
+    )).first { $0.title == "Project Restored" }
+    let memory = TimelineEventPresenter.memoryNoteSaved(RuntimeBridge.RuntimeMemoryNote(
+      id: "note-1",
+      title: "Review habit",
+      body: "Use concise project summaries.",
+      scope: "Pith",
+      source: "workspace",
+      createdAt: 1,
+      tags: ["workspace"]
+    ))
+
+    XCTAssertEqual(opened.body, "Opened Pith as the active project.")
+    XCTAssertEqual(opened.attributes["workspacePath"], "/Users/example/Projects/Pith")
+    XCTAssertFalse(opened.body.contains("/Users/example"))
+    XCTAssertEqual(restored?.body, "Restored Pith as the active project.")
+    XCTAssertFalse(restored?.body.contains("/Users/example") == true)
+    XCTAssertEqual(memory.body, "Saved project memory note Review habit.")
+    XCTAssertFalse(memory.body.contains("built-in workspace"))
+  }
+
+  func testTimelineStatusCopyAvoidsInternalExecutionTerms() {
+    let cancelled = TimelineEventPresenter.pendingTurnCancelled()
+
+    XCTAssertEqual(TimelineEventPresenter.pendingTurnCancelledDetail, "Request cancelled.")
+    XCTAssertEqual(TimelineEventPresenter.cancellingTurnDetail, "Cancelling request...")
+    XCTAssertEqual(cancelled.body, "The pending request was cancelled before it finished.")
+    XCTAssertEqual(
+      TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail,
+      "Connector action needs a supported local runner before it can run."
+    )
+    XCTAssertFalse(cancelled.body.contains("local execution"))
+    XCTAssertFalse(
+      TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail.contains("contract")
+    )
+  }
+
+  func testPluginInstallRepairHintsUseSetupLanguage() {
+    XCTAssertEqual(
+      PluginInstallDialogPresenter.repairHint(for: TestPresentationError(
+        message: "Plugin does not contain pith-plugin.json"
+      )),
+      "Choose a complete plugin folder, or select the plugin setup file directly."
+    )
+    XCTAssertEqual(
+      PluginInstallDialogPresenter.repairHint(for: TestPresentationError(
+        message: "Plugin cannot contain nested pith-plugin.json manifests"
+      )),
+      "Remove nested plugin bundles before installing. Install each plugin as its own folder."
+    )
+    XCTAssertEqual(
+      PluginInstallDialogPresenter.repairHint(for: TestPresentationError(
+        message: "Select a plugin folder or a pith-plugin.json manifest"
+      )),
+      "Point the installer at a plugin directory or the plugin setup file."
+    )
+  }
+
   func testPluginLifecycleTimelineUsesProductLanguage() {
     let preview = PluginInstallPreview(
       pluginID: "notion",
@@ -738,5 +815,13 @@ final class CoworkFirstPresentationTests: XCTestCase {
       refreshRecoveryAttributes: [:],
       hasLifecycleOperation: false
     )
+  }
+}
+
+private struct TestPresentationError: LocalizedError {
+  let message: String
+
+  var errorDescription: String? {
+    message
   }
 }

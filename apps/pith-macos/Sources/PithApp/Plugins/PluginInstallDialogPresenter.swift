@@ -55,11 +55,11 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("does not contain pith-plugin.json") {
-      return "Choose a complete plugin folder, or select its setup file directly."
+      return "Choose a complete plugin folder, or select the plugin setup file directly."
     }
 
     if message.contains("must be a plugin directory or pith-plugin.json file") {
-      return "Choose the plugin directory itself or its setup file."
+      return "Choose the plugin directory itself or the plugin setup file."
     }
 
     if message.contains("is already installed") {
@@ -67,7 +67,7 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("cannot contain nested pith-plugin.json manifests") {
-      return "Remove nested plugin bundles before installing. Install each plugin as its own top-level folder."
+      return "Remove nested plugin bundles before installing. Install each plugin as its own folder."
     }
 
     if message.contains("cannot contain symbolic links") {
@@ -75,7 +75,7 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("Select a plugin folder or a pith-plugin.json manifest") {
-      return "Point the installer at a plugin directory or its setup file."
+      return "Point the installer at a plugin directory or the plugin setup file."
     }
 
     if message.contains("Plugin manifest name") {

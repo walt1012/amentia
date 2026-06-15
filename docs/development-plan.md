@@ -118,6 +118,9 @@ Ready foundations:
 - Primary project setup, search, safety, receipt, release, and local-data copy
   now uses Project/project folder language while workspace remains an internal
   protocol and sandbox boundary.
+- Project open/restore, memory, and plugin setup messages now keep absolute
+  paths and setup-file internals out of the default timeline while retaining
+  support attributes for troubleshooting.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.

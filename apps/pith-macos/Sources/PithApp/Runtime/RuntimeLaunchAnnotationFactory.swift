@@ -30,7 +30,7 @@ enum RuntimeLaunchAnnotationFactory {
       entries.append(
         TimelineEntryFactory.system(
           title: "Project Restored",
-          body: "Restored \(restoredWorkspace.displayName) at \(restoredWorkspace.rootPath).",
+          body: "Restored \(restoredWorkspace.displayName) as the active project.",
           attributes: [
             "workspacePath": restoredWorkspace.rootPath
           ]

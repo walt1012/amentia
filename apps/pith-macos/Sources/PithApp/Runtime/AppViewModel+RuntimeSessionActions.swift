@@ -44,9 +44,9 @@ extension AppViewModel {
       runtimeDetail = "Open Advanced > Connectors to enable Web Search access."
     case .openPluginCommands:
       pluginManagerSection = .commands
-      runtimeDetail = "Open Advanced > Connectors to enable a ready command."
+      runtimeDetail = "Open Advanced > Plugins to enable a ready action."
     case .inspectSandboxStatus:
-      runtimeDetail = "Native sandbox status is shown with Pith status and local execution receipts."
+      runtimeDetail = "Native sandbox status is shown with Pith status and action receipts."
     }
   }
 
