@@ -7,7 +7,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       summary,
-      "Choose Understand Project, Pick Next Step, or type a short cowork prompt."
+      "Start with Understand Project, Pick Next Step, or a short cowork prompt."
     )
   }
 
