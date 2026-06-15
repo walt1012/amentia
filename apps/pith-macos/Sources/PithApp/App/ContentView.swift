@@ -7,7 +7,11 @@ struct ContentView: View {
 
   var body: some View {
     NavigationView {
-      sidebar
+      SessionSidebarView(
+        viewModel: viewModel,
+        sessionDeleteCandidate: $sessionDeleteCandidate,
+        sessionRevertCandidate: $sessionRevertCandidate
+      )
       TimelinePane(viewModel: viewModel)
       InspectorPane(viewModel: viewModel)
     }
@@ -76,106 +80,5 @@ struct ContentView: View {
         secondaryButton: .cancel()
       )
     }
-  }
-
-  private var sidebar: some View {
-    List(selection: Binding(get: { viewModel.selectedThreadID }, set: { viewModel.selectThread(id: $0) })) {
-      Section("Sessions") {
-        if viewModel.threads.isEmpty {
-          SidebarEmptyState(
-            title: "No Sessions Yet",
-            detail: viewModel.sidebarEmptyStateDetail()
-          )
-        } else {
-          ForEach(viewModel.threads) { thread in
-            SidebarSessionRow(thread: thread)
-            .tag(thread.id)
-            .contextMenu {
-              Button("Review Session Changes...") {
-                Task {
-                  if let preview = await viewModel.previewThreadChanges(thread) {
-                    sessionRevertCandidate = SessionRevertCandidate(
-                      thread: thread,
-                      preview: preview
-                    )
-                  }
-                }
-              }
-              .disabled(!viewModel.canRevertThreadChanges(thread))
-
-              Button("Delete Session...", role: .destructive) {
-                sessionDeleteCandidate = thread
-              }
-              .disabled(!viewModel.canDeleteThread(thread))
-            }
-          }
-        }
-      }
-    }
-    .frame(minWidth: 240)
-    .listStyle(.sidebar)
-    .background(PithVisualStyle.windowBackground)
-    .animation(PithMotionStyle.sectionReveal, value: viewModel.threads.count)
-  }
-
-}
-
-private struct SidebarSessionRow: View {
-  let thread: ThreadSummary
-
-  var body: some View {
-    HStack(alignment: .top, spacing: 8) {
-      Image(systemName: "bubble.left.and.bubble.right")
-        .font(.caption)
-        .foregroundColor(.secondary)
-        .frame(width: 16)
-
-      VStack(alignment: .leading, spacing: 3) {
-        Text(thread.title)
-          .font(.subheadline.weight(.medium))
-          .lineLimit(1)
-        Text(thread.preview)
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .lineLimit(2)
-      }
-    }
-    .padding(.vertical, 3)
-    .help(thread.preview)
-  }
-}
-
-private struct SessionRevertCandidate: Identifiable {
-  let thread: ThreadSummary
-  let preview: RuntimeBridge.RuntimeThreadChangePreview
-
-  var id: String {
-    thread.id
-  }
-}
-
-private extension AppViewModel {
-  func sidebarEmptyStateDetail() -> String {
-    "\(setupProgressSummary()). \(setupProgressDetail())."
-  }
-}
-
-private struct SidebarEmptyState: View {
-  let title: String
-  let detail: String
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Image(systemName: "sparkles")
-        .font(.title3)
-        .foregroundColor(.secondary)
-      Text(title)
-        .font(.subheadline.weight(.semibold))
-      Text(detail)
-        .font(.caption)
-        .foregroundColor(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-    .padding(.vertical, 8)
   }
 }
