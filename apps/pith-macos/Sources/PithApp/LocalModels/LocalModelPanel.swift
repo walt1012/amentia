@@ -6,12 +6,24 @@ struct LocalModelPanel: View {
   @AppStorage("pith.inspector.modelTroubleshootingExpanded") private var modelTroubleshootingExpanded = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(viewModel.modelDisplayName())
-        .font(.headline)
-      Text(viewModel.modelStatusSummary())
-        .font(.subheadline)
-        .foregroundColor(.secondary)
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .top, spacing: 10) {
+        ModelStatusGlyph(tone: modelTone, isActive: viewModel.showsModelActivity())
+
+        VStack(alignment: .leading, spacing: 4) {
+          Text(viewModel.modelDisplayName())
+            .font(.headline.weight(.semibold))
+            .lineLimit(2)
+          Text(viewModel.modelStatusSummary())
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        Spacer()
+
+        StatusPill(label: modelPillLabel, tone: modelTone)
+      }
 
       HStack(spacing: 6) {
         if viewModel.showsModelActivity() {
@@ -19,20 +31,22 @@ struct LocalModelPanel: View {
             .controlSize(.small)
         }
         Text(viewModel.modelActionSummary())
-          .font(.caption)
+          .font(.caption2)
           .foregroundColor(viewModel.isModelActionBlocking() ? .orange : .secondary)
+          .lineLimit(2)
       }
-
-      Text(viewModel.modelRecoverySummary())
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
 
       if viewModel.shouldShowModelDownloadProgress() {
         ModelDownloadProgressView(
           value: viewModel.modelDownloadProgressValue(),
           summary: viewModel.modelDownloadProgressSummary()
         )
+        .transition(.opacity.combined(with: .move(edge: .top)))
+      } else {
+        Text(viewModel.modelRecoverySummary())
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
 
       if let primaryActionTitle = viewModel.localModelPrimaryActionTitle() {
@@ -41,6 +55,7 @@ struct LocalModelPanel: View {
             viewModel.runLocalModelPrimaryAction()
           }
           .buttonStyle(.borderedProminent)
+          .controlSize(.small)
           .disabled(!viewModel.canRunLocalModelPrimaryAction())
 
           if let secondaryActionTitle = viewModel.localModelSecondaryActionTitle() {
@@ -48,6 +63,7 @@ struct LocalModelPanel: View {
               viewModel.runLocalModelSecondaryAction()
             }
             .buttonStyle(.bordered)
+            .controlSize(.small)
             .disabled(!viewModel.canRunLocalModelSecondaryAction())
           }
         }
@@ -63,6 +79,34 @@ struct LocalModelPanel: View {
     }
     .softPanel()
     .frame(maxWidth: .infinity, alignment: .leading)
+    .animation(PithMotionStyle.sectionReveal, value: viewModel.showsModelActivity())
+    .animation(PithMotionStyle.sectionReveal, value: viewModel.shouldShowModelDownloadProgress())
+  }
+
+  private var modelTone: StatusTone {
+    if viewModel.isModelActionBlocking() {
+      return .warning
+    }
+    if viewModel.showsModelActivity() {
+      return .active
+    }
+    if viewModel.modelStatusSummary() != "Ready to use" {
+      return .neutral
+    }
+    return .ready
+  }
+
+  private var modelPillLabel: String {
+    if viewModel.showsModelActivity() {
+      return "Working"
+    }
+    if viewModel.isModelActionBlocking() {
+      return "Needs Action"
+    }
+    if viewModel.modelStatusSummary() != "Ready to use" {
+      return "Setup"
+    }
+    return "Ready"
   }
 
   private var modelManager: some View {
@@ -113,15 +157,37 @@ private struct ModelDownloadProgressView: View {
   }
 }
 
+private struct ModelStatusGlyph: View {
+  let tone: StatusTone
+  let isActive: Bool
+
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(tone.color.opacity(0.11))
+        .frame(width: 32, height: 32)
+      if isActive {
+        ProgressView()
+          .controlSize(.small)
+      } else {
+        Circle()
+          .fill(tone.color.opacity(0.82))
+          .frame(width: 9, height: 9)
+      }
+    }
+  }
+}
+
 private struct LocalModelRow: View {
   let model: LocalModelSummary
   @ObservedObject var viewModel: AppViewModel
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 5) {
+    VStack(alignment: .leading, spacing: 7) {
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(LocalModelDisplayPresenter.setupTitle(model))
           .font(.caption.weight(.semibold))
+          .lineLimit(1)
         Spacer()
         StatusPill(
           label: viewModel.localModelChoiceSummary(model),
@@ -131,33 +197,39 @@ private struct LocalModelRow: View {
       Text(model.description)
         .font(.caption2)
         .foregroundColor(.secondary)
-      Text(viewModel.localModelStatusSummary(model))
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .lineLimit(2)
       Text(viewModel.localModelFitSummary(model))
         .font(.caption2)
         .foregroundColor(.secondary)
         .lineLimit(2)
 
-      HStack(spacing: 8) {
-        Button(modelUseButtonTitle) {
-          viewModel.activateRecommendedModel(modelID: model.id)
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(!viewModel.canActivateRecommendedModel(modelID: model.id))
+      Text(viewModel.localModelStatusSummary(model))
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .lineLimit(2)
 
-        Button(viewModel.localModelDownloadButtonTitle(model)) {
-          viewModel.downloadRecommendedModel(modelID: model.id)
-        }
-        .buttonStyle(.bordered)
-        .disabled(!viewModel.canDownloadRecommendedModel(modelID: model.id))
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 8) {
+          Button(modelUseButtonTitle) {
+            viewModel.activateRecommendedModel(modelID: model.id)
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.small)
+          .disabled(!viewModel.canActivateRecommendedModel(modelID: model.id))
 
-        Button("Show File") {
-          viewModel.revealRecommendedModel(modelID: model.id)
+          Button(viewModel.localModelDownloadButtonTitle(model)) {
+            viewModel.downloadRecommendedModel(modelID: model.id)
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .disabled(!viewModel.canDownloadRecommendedModel(modelID: model.id))
+
+          Button("Show File") {
+            viewModel.revealRecommendedModel(modelID: model.id)
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .disabled(!model.hasLocalFile)
         }
-        .buttonStyle(.bordered)
-        .disabled(!model.hasLocalFile)
       }
 
       if model.needsVerification {
