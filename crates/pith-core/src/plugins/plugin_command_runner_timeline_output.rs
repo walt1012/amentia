@@ -19,9 +19,7 @@ pub(super) fn plugin_runner_timeline_items(
   let total_item_count = items.len();
   let valid_items = items
     .into_iter()
-    .filter_map(|item| {
-      plugin_runner_timeline_item(command, execution_kind, base_attributes, item)
-    })
+    .filter_map(|item| plugin_runner_timeline_item(command, execution_kind, base_attributes, item))
     .collect::<Vec<_>>();
   let invalid_item_count = total_item_count.saturating_sub(valid_items.len());
 
