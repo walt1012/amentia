@@ -201,8 +201,8 @@ marketplace too early.
 - Continue splitting plugin runner output contracts before broad connector
   expansion: schema, memory-note capture, timeline item conversion, and proof
   validation are isolated; runner setup and entrypoint path validation are
-  separated from execution; keep future connector proof rules separately
-  testable.
+  separated from execution; output contract tests are isolated from production
+  parsing; keep future connector proof rules separately testable.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
