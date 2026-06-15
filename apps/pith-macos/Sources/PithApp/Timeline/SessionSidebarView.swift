@@ -2,8 +2,8 @@ import SwiftUI
 
 struct SessionSidebarView: View {
   @ObservedObject var viewModel: AppViewModel
-  @Binding var sessionDeleteCandidate: ThreadSummary?
-  @Binding var sessionRevertCandidate: SessionRevertCandidate?
+  @State private var sessionDeleteCandidate: ThreadSummary?
+  @State private var sessionRevertCandidate: SessionRevertCandidate?
 
   var body: some View {
     List(selection: selectedSessionBinding) {
@@ -43,6 +43,36 @@ struct SessionSidebarView: View {
     .listStyle(.sidebar)
     .background(PithVisualStyle.windowBackground)
     .animation(PithMotionStyle.sectionReveal, value: viewModel.threads.count)
+    .alert(item: $sessionDeleteCandidate) { thread in
+      let prompt = SessionChangePresenter.deletePrompt()
+      return Alert(
+        title: Text(prompt.title),
+        message: Text(prompt.message),
+        primaryButton: .destructive(Text(prompt.confirmButtonTitle)) {
+          viewModel.deleteThread(thread)
+        },
+        secondaryButton: .cancel()
+      )
+    }
+    .alert(item: $sessionRevertCandidate) { candidate in
+      let prompt = SessionChangePresenter.revertPrompt(for: candidate.preview)
+      if !prompt.allowsRevert {
+        return Alert(
+          title: Text(prompt.title),
+          message: Text(prompt.message),
+          dismissButton: .default(Text("OK"))
+        )
+      }
+
+      return Alert(
+        title: Text(prompt.title),
+        message: Text(prompt.message),
+        primaryButton: .destructive(Text(prompt.confirmButtonTitle)) {
+          viewModel.revertThreadChanges(candidate.thread)
+        },
+        secondaryButton: .cancel()
+      )
+    }
   }
 
   private var selectedSessionBinding: Binding<String?> {
@@ -53,7 +83,7 @@ struct SessionSidebarView: View {
   }
 }
 
-struct SessionRevertCandidate: Identifiable {
+private struct SessionRevertCandidate: Identifiable {
   let thread: ThreadSummary
   let preview: RuntimeBridge.RuntimeThreadChangePreview
 
