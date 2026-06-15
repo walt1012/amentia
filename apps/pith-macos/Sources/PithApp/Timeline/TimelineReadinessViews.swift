@@ -5,19 +5,21 @@ struct TimelineReadinessStrip: View {
 
   var body: some View {
     if viewModel.shouldShowReadinessSteps() {
-      HStack(spacing: 8) {
-        ForEach(viewModel.runtimeReadinessSteps()) { step in
-          ReadinessChip(
-            step: step,
-            actionTitle: viewModel.readinessStepActionTitle(step),
-            canRunAction: viewModel.canRunReadinessStepAction(step),
-            onAction: {
-              viewModel.runReadinessStepAction(step)
-            }
-          )
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 8) {
+          ForEach(viewModel.runtimeReadinessSteps()) { step in
+            ReadinessChip(
+              step: step,
+              actionTitle: viewModel.readinessStepActionTitle(step),
+              canRunAction: viewModel.canRunReadinessStepAction(step),
+              onAction: {
+                viewModel.runReadinessStepAction(step)
+              }
+            )
+          }
         }
-        Spacer()
       }
+      .transition(.opacity.combined(with: .move(edge: .top)))
     }
   }
 }
@@ -43,6 +45,10 @@ private struct ReadinessChip: View {
 
   private var content: some View {
     HStack(spacing: 5) {
+      Circle()
+        .fill(step.tone.color.opacity(0.85))
+        .frame(width: 6, height: 6)
+
       Text(step.label)
         .font(.caption2.weight(.medium))
         .foregroundColor(.secondary)
@@ -60,9 +66,13 @@ private struct ReadinessChip: View {
           .foregroundColor(canRunAction ? step.tone.color : .secondary)
       }
     }
-    .padding(.horizontal, 8)
+    .padding(.horizontal, 9)
     .padding(.vertical, 5)
     .background(step.tone.color.opacity(actionTitle == nil ? 0.10 : 0.16))
+    .overlay(
+      Capsule()
+        .stroke(step.tone.color.opacity(actionTitle == nil ? 0.12 : 0.22), lineWidth: 1)
+    )
     .clipShape(Capsule())
   }
 }

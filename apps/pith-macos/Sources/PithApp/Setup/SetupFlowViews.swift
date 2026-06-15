@@ -171,6 +171,13 @@ struct SetupCallout: View {
 
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
+      Image(systemName: iconName)
+        .font(.body.weight(.semibold))
+        .foregroundColor(tone.color)
+        .frame(width: 28, height: 28)
+        .background(tone.color.opacity(0.10))
+        .clipShape(Circle())
+
       VStack(alignment: .leading, spacing: 4) {
         Text(title)
           .font(.caption.weight(.semibold))
@@ -183,6 +190,7 @@ struct SetupCallout: View {
           .font(.caption2)
           .foregroundColor(.secondary)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
 
       Spacer()
 
@@ -205,5 +213,20 @@ struct SetupCallout: View {
       }
     }
     .softPanel(tone: tone)
+  }
+
+  private var iconName: String {
+    switch tone {
+    case .ready:
+      return "checkmark"
+    case .active:
+      return "sparkles"
+    case .warning:
+      return "exclamationmark"
+    case .danger:
+      return "xmark"
+    case .neutral:
+      return "circle"
+    }
   }
 }
