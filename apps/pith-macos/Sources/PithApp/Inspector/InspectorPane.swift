@@ -82,9 +82,9 @@ struct InspectorPane: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .textSelection(.enabled)
-          DisclosureGroup("Technical Data", isExpanded: $selectedAttributesExpanded) {
+          DisclosureGroup("Support Details", isExpanded: $selectedAttributesExpanded) {
             VStack(alignment: .leading, spacing: 6) {
-              Text("Raw event data for debugging and support.")
+              Text("Event details for troubleshooting. Most daily work does not need this.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
               Text(viewModel.selectedEntryMetadata())

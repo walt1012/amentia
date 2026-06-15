@@ -206,6 +206,39 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Action blocked by read-only mode")
   }
 
+  func testSandboxProofHidesRawSupportPaths() {
+    let summary = TimelineInspectorPresenter.selectedEntrySandboxSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .tool,
+        title: "Shell Result",
+        body: "Command finished.",
+        attributes: [
+          "sandboxMode": "workspace-write",
+          "sandboxBackend": "macosSeatbelt",
+          "sandboxActive": "true",
+          "sandboxNetworkPolicy": "network denied",
+          "sandboxTempRoot": "/Users/example/work/.pith/sandbox-tmp",
+          "sandboxWritableRoots": "/Users/example/work",
+          "sandboxOutputContextMode": "condensed",
+          "sandboxOutputSavedBytes": "4096",
+          "sandboxOutputArtifactDirectory": "/Users/example/work/.pith/artifacts",
+          "sandboxOutputStdoutArtifactPath": "/Users/example/work/.pith/artifacts/stdout.txt",
+          "sandboxOutputStderrArtifactPath": "/Users/example/work/.pith/artifacts/stderr.txt",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(summary?.contains("Sandbox: active | network denied") == true)
+    XCTAssertTrue(
+      summary?.contains("Temporary files stayed inside the selected workspace.") == true
+    )
+    XCTAssertTrue(summary?.contains("Full output was saved for troubleshooting.") == true)
+    XCTAssertFalse(summary?.contains("/Users/example") == true)
+    XCTAssertFalse(summary?.contains("Temp root") == true)
+    XCTAssertFalse(summary?.contains("Writable roots") == true)
+  }
+
   func testLocalExecutionRecoveryOffersAskModeForReadOnlyBlock() {
     let action = TimelineLocalExecutionRecoveryPresenter.recoveryAction(
       attributes: [
@@ -278,13 +311,24 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       ))
     )
 
-    XCTAssertTrue(
-      summary?.contains("Permission gate: requiresPluginPermission | requires Web Search") == true
-    )
-    XCTAssertTrue(
-      summary?.contains("Permission recovery: Enable the bundled Web Search connector.") == true
-    )
+    XCTAssertTrue(summary?.contains("Permission needed: Web Search") == true)
+    XCTAssertTrue(summary?.contains("Fix: Enable the bundled Web Search connector.") == true)
     XCTAssertFalse(summary?.contains("requires tool:web_search") == true)
+
+    let fallbackSummary = TimelineInspectorPresenter.selectedEntryPluginSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-2",
+        kind: .warning,
+        title: "Permission Required",
+        body: "Pith could not search the web.",
+        attributes: [
+          "permissionGate": "requiresPluginPermission",
+          "requiredPermission": "tool:web_search",
+        ]
+      ))
+    )
+    XCTAssertTrue(fallbackSummary?.contains("Permission needed: Web Search") == true)
+    XCTAssertFalse(fallbackSummary?.contains("tool:web_search") == true)
   }
 
   @MainActor
@@ -581,11 +625,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
     XCTAssertTrue(summary?.contains("Target: docs/handoff.md") == true)
     XCTAssertTrue(summary?.contains("Proof: inspection") == true)
-    XCTAssertTrue(
-      summary?.contains(
-        "Next step: Publish to Notion (notion-connector::notion.publish-page-draft)"
-      ) == true
-    )
+    XCTAssertTrue(summary?.contains("Next step: Publish to Notion") == true)
+    XCTAssertFalse(summary?.contains("Next step: Publish to Notion (") == true)
     XCTAssertTrue(
       summary?.contains("Input hint: Fill parentPageId before publishing.") == true
     )
@@ -594,9 +635,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
         "Draft input: {\"parentPageId\":\"\",\"title\":\"Draft\"}"
       ) == true
     )
-    XCTAssertTrue(
-      summary?.contains("Retry step: notion-connector::notion.publish-page-draft") == true
-    )
+    XCTAssertTrue(summary?.contains("Retry step: Notion Publish Page Draft") == true)
     XCTAssertTrue(summary?.contains("Retry input editable: yes") == true)
     XCTAssertTrue(summary?.contains("Retry hint: Add parentPageId before retrying.") == true)
     XCTAssertTrue(summary?.contains("Retry input: {\"parentPageId\":\"page\"}") == true)

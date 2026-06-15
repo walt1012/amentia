@@ -109,6 +109,9 @@ Ready foundations:
 - Plugin lifecycle timeline entries now use `Plugin` for bundle operations and
   `Connection` for authorization evidence; raw paths and credential binding
   internals stay out of normal timeline bodies.
+- Inspector proof now favors user-readable receipts for plugins, connections,
+  sandboxing, runner setup, and MCP checks; raw IDs, paths, output byte counts,
+  and launch commands stay in Support Details.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.
@@ -191,6 +194,8 @@ Scope now:
   exposing source paths or manifest capability strings.
 - Keep timeline and inspector evidence product-first: show capabilities,
   permissions, proof, and authorization state before paths or protocol fields.
+- Keep support diagnostics available without letting them dominate the default
+  inspector path.
 
 Exit criteria:
 

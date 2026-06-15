@@ -160,8 +160,8 @@ enum TimelineConnectorEvidencePresenter {
       lines.append("Source file: \(sourceArtifact)")
     }
     if let nextCommandID = attributes["nextCommandId"] {
-      let label = attributes["nextCommandLabel"] ?? "Continue"
-      lines.append("Next step: \(label) (\(nextCommandID))")
+      let label = attributes["nextCommandLabel"] ?? readableCommandLabel(nextCommandID)
+      lines.append("Next step: \(label)")
     }
     if let nextCommandInput = attributes["nextCommandInput"] {
       lines.append("Next input: \(nextCommandInput)")
@@ -235,7 +235,7 @@ enum TimelineConnectorEvidencePresenter {
       lines.append("Publish issue: \(failureReason)")
     }
     if let retryCommandID = attributes["retryCommandId"] {
-      lines.append("Retry step: \(retryCommandID)")
+      lines.append("Retry step: \(readableCommandLabel(retryCommandID))")
     }
     if let retryInputEditable = attributes["retryInputEditable"] {
       lines.append("Retry input editable: \(yesNo(retryInputEditable))")
@@ -353,6 +353,20 @@ enum TimelineConnectorEvidencePresenter {
         return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
       }
       .joined(separator: " ")
+  }
+
+  private static func readableCommandLabel(_ value: String) -> String {
+    let tail = value.components(separatedBy: "::").last ?? value
+    let words = tail
+      .split { character in
+        character == "." || character == "_" || character == "-" || character == ":"
+      }
+      .map { word in
+        let lowercased = word.lowercased()
+        return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
+      }
+
+    return words.isEmpty ? "Continue" : words.joined(separator: " ")
   }
 
   private static func readableStatus(_ value: String) -> String {

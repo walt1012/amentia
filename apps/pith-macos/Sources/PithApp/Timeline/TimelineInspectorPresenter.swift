@@ -75,27 +75,19 @@ enum TimelineInspectorPresenter {
     }
 
     var lines: [String] = []
-    if let pluginID = entry.attributes["pluginId"] {
-      let displayName = entry.attributes["pluginDisplayName"] ?? "Connector"
-      lines.append("Connector: \(displayName) | \(pluginID)")
+    if let displayName = entry.attributes["pluginDisplayName"] {
+      lines.append("Plugin: \(displayName)")
+    } else if entry.attributes["pluginId"] != nil {
+      lines.append("Plugin: available")
     }
 
     if let commandID = entry.attributes["commandId"] {
-      let executionKind = entry.attributes["executionKind"] ?? "unknown execution"
-      lines.append("Command: \(commandID) | \(executionKind)")
+      lines.append("Action: \(readableIdentifier(commandID))")
     }
 
-    if let runID = entry.attributes["pluginCommandRunId"] {
-      lines.append("Run: \(runID)")
-    }
-
-    if let sourcePath = entry.attributes["sourcePath"] {
-      lines.append("Source: \(sourcePath)")
-    }
-
-    if let approvalID = entry.attributes["approvalId"] {
+    if entry.attributes["approvalId"] != nil {
       let action = entry.attributes["action"] ?? "unknown"
-      lines.append("Approval: \(action) | \(approvalID)")
+      lines.append("Approval: \(readableIdentifier(action))")
     }
 
     lines.append(contentsOf: TimelineConnectorEvidencePresenter.summaryLines(
@@ -108,13 +100,13 @@ enum TimelineInspectorPresenter {
     appendPluginLifecycleSummary(entry, to: &lines)
     appendPluginRunnerSetupSummary(entry, to: &lines)
 
-    if let permissionGate = entry.attributes["permissionGate"] {
+    if entry.attributes["permissionGate"] != nil {
       let required = entry.attributes["requiredPermissionLabel"]
-        ?? entry.attributes["requiredPermission"]
+        ?? entry.attributes["requiredPermission"].map(readablePermission)
         ?? "unknown"
-      lines.append("Permission gate: \(permissionGate) | requires \(required)")
+      lines.append("Permission needed: \(required)")
       if let recoveryHint = entry.attributes["permissionRecoveryHint"] {
-        lines.append("Permission recovery: \(recoveryHint)")
+        lines.append("Fix: \(recoveryHint)")
       }
     }
 
@@ -143,15 +135,15 @@ enum TimelineInspectorPresenter {
       let networkPolicy = entry.attributes["sandboxNetworkPolicy"]
         ?? sandboxNetworkPolicySummary(entry.attributes["sandboxNetworkAllowed"])
       lines.append(
-        "Sandbox: \(mode) | backend \(backend) | active \(active) | \(networkPolicy)"
+        "Sandbox: \(readableStatus(active)) | \(networkPolicy) | mode \(mode)"
       )
 
-      if let temporaryRoot = entry.attributes["sandboxTempRoot"] {
-        lines.append("Temp root: \(temporaryRoot)")
+      if entry.attributes["sandboxTempRoot"] != nil {
+        lines.append("Temporary files stayed inside the selected workspace.")
       }
 
-      if let writableRoots = entry.attributes["sandboxWritableRoots"] {
-        lines.append("Writable roots:\n\(writableRoots)")
+      if entry.attributes["sandboxWritableRoots"] != nil {
+        lines.append("Writes were limited to approved workspace locations.")
       }
 
       if let detail = entry.attributes["sandboxDetail"] {
@@ -160,32 +152,24 @@ enum TimelineInspectorPresenter {
     }
 
     if let outputContextMode = entry.attributes["sandboxOutputContextMode"] {
-      let retainedStdout = entry.attributes["sandboxOutputRetainedStdoutBytes"] ?? "unknown"
-      let sourceStdout = entry.attributes["sandboxOutputSourceStdoutBytes"] ?? "unknown"
-      let retainedStderr = entry.attributes["sandboxOutputRetainedStderrBytes"] ?? "unknown"
-      let sourceStderr = entry.attributes["sandboxOutputSourceStderrBytes"] ?? "unknown"
-      let savedBytes = entry.attributes["sandboxOutputSavedBytes"] ?? "unknown"
-      let savingsPercent = entry.attributes["sandboxOutputSavingsPercent"] ?? "unknown"
       lines.append(
-        "Output: \(outputContextMode) | stdout \(retainedStdout)/\(sourceStdout) bytes | "
-          + "stderr \(retainedStderr)/\(sourceStderr) bytes | "
-          + "saved \(savedBytes) bytes (\(savingsPercent)%)"
+        "Output: \(outputContextMode). Long command output was condensed for context."
       )
     }
 
-    if let artifactDirectory = entry.attributes["sandboxOutputArtifactDirectory"] {
-      lines.append("Artifact: \(artifactDirectory)")
+    if entry.attributes["sandboxOutputArtifactDirectory"] != nil {
+      lines.append("Full output was saved for troubleshooting.")
     }
     if entry.attributes["sandboxOutputArtifactsTruncated"] == "true",
        let artifactLimit = entry.attributes["sandboxOutputArtifactMaxBytesPerStream"]
     {
-      lines.append("Artifact cap: \(artifactLimit) bytes per stream")
+      lines.append("Saved output was capped at \(artifactLimit) bytes per stream.")
     }
-    if let stdoutArtifact = entry.attributes["sandboxOutputStdoutArtifactPath"] {
-      lines.append("Captured stdout: \(stdoutArtifact)")
+    if entry.attributes["sandboxOutputStdoutArtifactPath"] != nil {
+      lines.append("Captured standard output is available in Support Details.")
     }
-    if let stderrArtifact = entry.attributes["sandboxOutputStderrArtifactPath"] {
-      lines.append("Captured stderr: \(stderrArtifact)")
+    if entry.attributes["sandboxOutputStderrArtifactPath"] != nil {
+      lines.append("Captured error output is available in Support Details.")
     }
 
     return lines.joined(separator: "\n")
@@ -269,10 +253,10 @@ enum TimelineInspectorPresenter {
     }
 
     if let status = entry.attributes["connectorStatus"] {
-      lines.append("Connector status: \(status)")
+      lines.append("Connection status: \(readableStatus(status))")
     }
     if let repairHint = entry.attributes["connectorRepairHint"] {
-      lines.append("Connector repair: \(repairHint)")
+      lines.append("Connection fix: \(repairHint)")
     }
   }
 
@@ -310,13 +294,13 @@ enum TimelineInspectorPresenter {
       return
     }
 
-    let operation = entry.attributes["pluginLifecycleOperation"] ?? "connector"
-    lines.append("Connector lifecycle: \(operation) | \(status)")
+    let operation = entry.attributes["pluginLifecycleOperation"] ?? "plugin"
+    lines.append("Plugin operation: \(readableIdentifier(operation)) | \(readableStatus(status))")
     if let blocker = entry.attributes["lifecycleBlocker"] {
-      lines.append("Lifecycle blocker: \(blocker)")
+      lines.append("Blocked: \(blocker)")
     }
     if let repairHint = entry.attributes["lifecycleRepairHint"] {
-      lines.append("Lifecycle repair: \(repairHint)")
+      lines.append("Fix: \(repairHint)")
     }
   }
 
@@ -330,27 +314,22 @@ enum TimelineInspectorPresenter {
       return
     }
 
-    let driver = entry.attributes["pluginRunnerExecutionDriver"] ?? "unknown driver"
     let kind = entry.attributes["pluginRunnerExecutionKind"]
       ?? entry.attributes["executionKind"]
-      ?? "unknown execution"
-    let entrypoint = entry.attributes["pluginRunnerEntrypoint"] ?? "unknown entrypoint"
-    lines.append("Runner: \(driver) | \(kind) | \(entrypoint)")
+      ?? "local action"
+    lines.append("Plugin runner: \(readableIdentifier(kind))")
 
     if let setupStatus = entry.attributes["pluginRunnerSetupStatus"] {
       let phase = entry.attributes["pluginRunnerSetupPhase"] ?? "unknown"
-      lines.append("Runner setup: \(setupStatus) | \(phase)")
+      lines.append("Runner setup: \(readableStatus(setupStatus)) | \(readableIdentifier(phase))")
     }
     if let check = entry.attributes["pluginRunnerEntrypointCheck"] {
-      let fileKind = entry.attributes["pluginRunnerEntrypointFileKind"] ?? "unknown file"
-      let executable = entry.attributes["pluginRunnerEntrypointExecutable"] ?? "unknown"
-      lines.append("Runner entrypoint: \(check) | \(fileKind) | executable \(executable)")
+      lines.append("Runner file check: \(readableStatus(check))")
     }
-    if let resolvedEntrypoint = entry.attributes["pluginRunnerResolvedEntrypoint"] {
-      lines.append("Runner path: \(resolvedEntrypoint)")
-    }
-    if let pluginRoot = entry.attributes["pluginRunnerPluginRoot"] {
-      lines.append("Connector root: \(pluginRoot)")
+    if entry.attributes["pluginRunnerResolvedEntrypoint"] != nil
+      || entry.attributes["pluginRunnerPluginRoot"] != nil
+    {
+      lines.append("Runner paths are available in Support Details.")
     }
   }
 
@@ -369,30 +348,28 @@ enum TimelineInspectorPresenter {
     let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
     let failureKind = entry.attributes["pluginRunnerFailureKind"] ?? "unknown"
     lines.append(
-      "Connector runner: \(failureKind) | \(reason) | status \(status) | exit \(code)"
+      "Plugin runner: \(readableIdentifier(failureKind)) | \(readableIdentifier(reason)) | "
+        + "status \(readableStatus(status)) | exit \(code)"
     )
 
     if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
-      lines.append("Connector runner error: \(errorCode)")
+      lines.append("Runner error: \(readableIdentifier(errorCode))")
     }
     if let recoveryHint = entry.attributes["pluginRunnerRecoveryHint"] {
       lines.append("Recovery: \(recoveryHint)")
     }
 
-    let retainedStdout = entry.attributes["pluginRunnerStdoutRetainedBytes"] ?? "unknown"
-    let sourceStdout = entry.attributes["pluginRunnerStdoutSourceBytes"] ?? "unknown"
-    let retainedStderr = entry.attributes["pluginRunnerStderrRetainedBytes"] ?? "unknown"
-    let sourceStderr = entry.attributes["pluginRunnerStderrSourceBytes"] ?? "unknown"
-    lines.append(
-      "Runner output: stdout \(retainedStdout)/\(sourceStdout) bytes | "
-        + "stderr \(retainedStderr)/\(sourceStderr) bytes"
-    )
+    if entry.attributes["pluginRunnerStdoutRetainedBytes"] != nil
+      || entry.attributes["pluginRunnerStderrRetainedBytes"] != nil
+    {
+      lines.append("Runner output was condensed for context.")
+    }
 
     if let stderrPreview = entry.attributes["pluginRunnerStderrPreview"] {
-      lines.append("Runner stderr preview:\n\(stderrPreview)")
+      lines.append("Runner error preview:\n\(stderrPreview)")
     }
     if let stdoutPreview = entry.attributes["pluginRunnerStdoutPreview"] {
-      lines.append("Runner stdout preview:\n\(stdoutPreview)")
+      lines.append("Runner output preview:\n\(stdoutPreview)")
     }
   }
 
@@ -404,21 +381,17 @@ enum TimelineInspectorPresenter {
       return
     }
 
-    let server = entry.attributes["mcpServerId"] ?? "unknown"
-    let tool = entry.attributes["mcpToolName"] ?? "unknown"
-    let initializeSeen = entry.attributes["mcpInitializeResponseSeen"] ?? "unknown"
-    let toolSeen = entry.attributes["mcpToolResponseSeen"] ?? "unknown"
-    let invalidLines = entry.attributes["mcpInvalidJsonLineCount"] ?? "0"
+    let server = entry.attributes["mcpServerId"].map(readableIdentifier) ?? "unknown"
+    let tool = entry.attributes["mcpToolName"].map(readableIdentifier) ?? "unknown"
     lines.append(
-      "MCP: \(protocolStatus) | server \(server) | tool \(tool) | "
-        + "initialize \(initializeSeen) | tool response \(toolSeen) | invalid stdout \(invalidLines)"
+      "MCP: \(readableStatus(protocolStatus)) | server \(server) | tool \(tool)"
     )
 
-    if let serverCommand = entry.attributes["mcpServerCommand"] {
-      lines.append("MCP server command: \(serverCommand)")
+    if entry.attributes["mcpServerCommand"] != nil {
+      lines.append("MCP launch command is available in Support Details.")
     }
     if let errorCode = entry.attributes["mcpErrorCode"] {
-      lines.append("MCP error code: \(errorCode)")
+      lines.append("MCP error: \(readableIdentifier(errorCode))")
     }
     if let structuredContentStatus = entry.attributes["mcpStructuredContentStatus"] {
       lines.append("MCP structured content: \(structuredContentStatus)")
@@ -427,7 +400,46 @@ enum TimelineInspectorPresenter {
       lines.append("MCP content: \(contentStatus)")
     }
     if let invalidPreview = entry.attributes["mcpLastInvalidJsonPreview"] {
-      lines.append("MCP invalid stdout preview:\n\(invalidPreview)")
+      lines.append("MCP invalid response preview:\n\(invalidPreview)")
+    }
+  }
+
+  private static func readableIdentifier(_ value: String) -> String {
+    let tail = value.components(separatedBy: "::").last ?? value
+    let words = tail
+      .split { character in
+        character == "." || character == "_" || character == "-" || character == ":"
+      }
+      .map { word in
+        let lowercased = word.lowercased()
+        return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
+      }
+
+    return words.isEmpty ? value : words.joined(separator: " ")
+  }
+
+  private static func readablePermission(_ value: String) -> String {
+    if value.hasPrefix("tool:") {
+      return readableIdentifier(String(value.dropFirst("tool:".count)))
+    }
+    if value.hasPrefix("permission:") {
+      return readableIdentifier(String(value.dropFirst("permission:".count)))
+    }
+    return readableIdentifier(value)
+  }
+
+  private static func readableStatus(_ value: String) -> String {
+    switch value {
+    case "true":
+      return "active"
+    case "false":
+      return "inactive"
+    case "success", "completed", "ready":
+      return "ready"
+    case "notSent", "notRequested":
+      return "not sent yet"
+    default:
+      return readableIdentifier(value).lowercased()
     }
   }
 
