@@ -101,11 +101,12 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
-  func testRuntimeReadinessStepUsesLocalServiceLanguage() {
+  func testRuntimeReadinessStepUsesProductLanguage() {
     let runtimeStep = RuntimeReadinessPresenter.steps(readinessSnapshotForFirstRequest())
       .first { $0.id == "runtime" }
 
-    XCTAssertEqual(runtimeStep?.label, "Service")
+    XCTAssertEqual(runtimeStep?.label, "Pith")
+    XCTAssertNotEqual(runtimeStep?.label, "Service")
     XCTAssertNotEqual(runtimeStep?.label, "Engine")
   }
 
@@ -665,7 +666,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasDraftMessage: hasDraftMessage,
       runtimeReadinessChecks: checks,
       canEnableWebSearchPlugin: canEnableWebSearchPlugin,
-      runtimeLaunchButtonTitle: "Start Local Service",
+      runtimeLaunchButtonTitle: "Start Pith",
       modelSetupActionTitle: nil
     )
   }

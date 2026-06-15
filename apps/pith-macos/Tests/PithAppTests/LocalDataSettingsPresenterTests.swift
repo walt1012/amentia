@@ -66,7 +66,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       reset.runtimeDetail,
-      "Deleted Pith local data. Restart the local service to set up again."
+      "Deleted Pith local data. Restart Pith to set up again."
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
     XCTAssertTrue(reset.timelineBody.contains("Workspaces on disk were not deleted"))

@@ -37,13 +37,13 @@ enum RuntimeReadinessPresenter {
   private static func runtimeStep(_ snapshot: RuntimeReadinessSnapshot) -> ReadinessStepSummary {
     switch snapshot.runtimeState {
     case .ready:
-      return ReadinessStepSummary(id: "runtime", label: "Service", detail: "Ready", tone: .ready)
+      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Ready", tone: .ready)
     case .launching:
-      return ReadinessStepSummary(id: "runtime", label: "Service", detail: "Starting", tone: .active)
+      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Starting", tone: .active)
     case .failed:
-      return ReadinessStepSummary(id: "runtime", label: "Service", detail: "Relaunch", tone: .danger)
+      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Restart", tone: .danger)
     case .disconnected:
-      return ReadinessStepSummary(id: "runtime", label: "Service", detail: "Launch", tone: .warning)
+      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Start", tone: .warning)
     }
   }
 

@@ -28,28 +28,28 @@ enum LocalModelOperationPresenter {
     switch snapshot.runtimeState {
     case .disconnected:
       return LocalModelSetupGuidance(
-        title: "Start Local Service",
-        summary: "Start Pith's local service before choosing or running a model.",
+        title: "Start Pith",
+        summary: "Start Pith before choosing or running a model.",
         detail: "Model choices and downloads stay on this Mac.",
-        actionSummary: "Start Pith's local service to continue model setup.",
+        actionSummary: "Start Pith to continue model setup.",
         readinessDetail: "Launch",
         tone: .warning
       )
     case .launching:
       return LocalModelSetupGuidance(
-        title: "Checking Local Service",
-        summary: "Pith is reconnecting your local service and selected model.",
-        detail: "Your model choices and download progress will appear after the local service is ready.",
-        actionSummary: "Checking local service setup...",
+        title: "Starting Pith",
+        summary: "Pith is reconnecting your selected local model.",
+        detail: "Your model choices and download progress will appear after Pith is ready.",
+        actionSummary: "Checking Pith setup...",
         readinessDetail: "Checking",
         tone: .active
       )
     case .failed:
       return LocalModelSetupGuidance(
-        title: "Restart Local Service",
-        summary: "Pith's local service stopped before model setup could be completed.",
-        detail: "Restart the local service to restore model choices, downloads, and the active model.",
-        actionSummary: "Restart the local service before changing models.",
+        title: "Restart Pith",
+        summary: "Pith stopped before model setup could be completed.",
+        detail: "Restart Pith to restore model choices, downloads, and the active model.",
+        actionSummary: "Restart Pith before changing models.",
         readinessDetail: "Relaunch",
         tone: .danger
       )
@@ -111,11 +111,11 @@ enum LocalModelOperationPresenter {
   static func recoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start the local service to restore model choices and paused downloads from this Mac."
+      return "Start Pith to restore model choices and paused downloads from this Mac."
     case .launching:
-      return "Reconnecting local service state before showing the next action."
+      return "Reconnecting Pith before showing the next action."
     case .failed:
-      return "Restart the local service. Paused downloads and selected model choices remain local."
+      return "Restart Pith. Paused downloads and selected model choices remain local."
     case .ready:
       return readyRecoverySummary(snapshot)
     }
@@ -218,7 +218,7 @@ enum LocalModelOperationPresenter {
     return LocalModelSetupGuidance(
       title: "Repair Model Setup",
       summary: "Local model choices are unavailable until setup is refreshed.",
-      detail: "Refresh local model setup or restart the local service to restore model choices.",
+      detail: "Refresh local model setup or restart Pith to restore model choices.",
       actionSummary: "Refresh local model setup before choosing a model.",
       readinessDetail: snapshot.totalModelCount == 0 ? "Repair" : "Choose",
       tone: .warning
@@ -245,7 +245,7 @@ enum LocalModelOperationPresenter {
 
     if snapshot.isLocalModelReady {
       let activeModel = snapshot.activeModelDisplayName ?? "the active model"
-      return "\(activeModel) is selected. Local service restart will reuse this model."
+      return "\(activeModel) is selected. Restarting Pith will reuse this model."
     }
 
     if let model = snapshot.selectedSetupModel, model.downloaded {
@@ -264,7 +264,7 @@ enum LocalModelOperationPresenter {
       return "Download \(displayName(model)). Paused downloads can continue; cancelled downloads clear partial files."
     }
 
-    return "Refresh local model setup or restart the local service to restore model choices."
+    return "Refresh local model setup or restart Pith to restore model choices."
   }
 
   private static func displayName(_ model: LocalModelSummary) -> String {

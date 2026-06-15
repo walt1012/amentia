@@ -17,11 +17,11 @@ enum ComposerStatusPresenter {
   static func placeholder(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start the local service to begin"
+      return "Start Pith to begin"
     case .launching:
-      return "Local service is starting..."
+      return "Pith is starting..."
     case .failed:
-      return "Restart the local service to recover"
+      return "Restart Pith to recover"
     case .ready:
       break
     }
@@ -58,11 +58,11 @@ enum ComposerStatusPresenter {
   static func statusSummary(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start the local service to begin."
+      return "Start Pith to begin."
     case .launching:
-      return "Starting the local service..."
+      return "Starting Pith..."
     case .failed:
-      return "Restart the local service to recover."
+      return "Restart Pith to recover."
     case .ready:
       if !snapshot.isLocalModelReady {
         return "\(snapshot.modelSetupSummary) Continue model setup to run locally."

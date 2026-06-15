@@ -37,7 +37,7 @@ extension AppViewModel {
       return
     }
 
-    runtimeBridge.stopRuntime(detail: "Local data reset. Restart the local service to continue.")
+    runtimeBridge.stopRuntime(detail: "Local data reset. Restart Pith to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()

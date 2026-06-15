@@ -20,11 +20,11 @@ enum SessionActionPlanner {
   static func runtimeLaunchButtonTitle(_ snapshot: SessionActionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .ready, .failed:
-      return "Restart Local Service"
+      return "Restart Pith"
     case .launching:
-      return "Starting Local Service"
+      return "Starting Pith"
     case .disconnected:
-      return "Start Local Service"
+      return "Start Pith"
     }
   }
 

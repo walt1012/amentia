@@ -36,8 +36,8 @@ enum LocalModelDownloadCompletionPlanner {
           ],
           uniquingKeysWith: { _, new in new }
         ),
-        relaunchRunningDetail: "Restarting local service with \(modelName)...",
-        relaunchIdleDetail: "\(modelName) will be used when the local service starts."
+        relaunchRunningDetail: "Restarting Pith with \(modelName)...",
+        relaunchIdleDetail: "\(modelName) will be used when Pith starts."
       )
     }
 

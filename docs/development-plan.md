@@ -112,6 +112,9 @@ Ready foundations:
 - Inspector proof now favors user-readable receipts for plugins, connections,
   sandboxing, runner setup, and MCP checks; raw IDs, paths, output byte counts,
   and launch commands stay in Support Details.
+- First-run setup, readiness, model setup, composer, header, and default
+  timeline copy now say Pith/project/session instead of local-service/runtime
+  wording in the normal user path.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.

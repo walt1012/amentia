@@ -35,7 +35,7 @@ enum RuntimeRelaunchPlanner {
         runtimeDetail: runningDetail,
         stopDetail: runningDetail,
         launchDetail: runningDetail,
-        launchTimeoutDetail: "Local service is still starting. Restart it after model setup finishes."
+        launchTimeoutDetail: "Pith is still starting. Restart after model setup finishes."
       )
     case .disconnected, .failed:
       return RuntimeRelaunchPlan(

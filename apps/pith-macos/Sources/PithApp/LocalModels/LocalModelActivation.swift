@@ -79,8 +79,8 @@ enum LocalModelActivationPlanner {
         "modelPath": model.installPath,
         "result": "selected",
       ],
-      relaunchRunningDetail: "Restarting local service with \(modelName)...",
-      relaunchIdleDetail: "\(modelName) will be used when the local service starts."
+      relaunchRunningDetail: "Restarting Pith with \(modelName)...",
+      relaunchIdleDetail: "\(modelName) will be used when Pith starts."
     )
   }
 
@@ -91,8 +91,8 @@ enum LocalModelActivationPlanner {
       attributes: [
         "result": "reset"
       ],
-      relaunchRunningDetail: "Restarting local service with automatic model discovery...",
-      relaunchIdleDetail: "Automatic model discovery will be used when the local service starts."
+      relaunchRunningDetail: "Restarting Pith with automatic model discovery...",
+      relaunchIdleDetail: "Automatic model discovery will be used when Pith starts."
     )
   }
 

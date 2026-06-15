@@ -197,7 +197,7 @@ final class WorkspaceSearchSession {
       return nil
     }
     if runtimeState != .ready {
-      return "Start the local service to search workspace files."
+      return "Start Pith to search workspace files."
     }
     if !hasWorkspace {
       return "Open a workspace to search local files."
@@ -209,7 +209,7 @@ final class WorkspaceSearchSession {
       return "No results yet. Try a shorter query, filename, or symbol name."
     }
     if status.hasPrefix("Workspace search needs attention") {
-      return "Search failed. Check the local service status, then try again."
+      return "Search failed. Check Pith status, then try again."
     }
 
     return nil

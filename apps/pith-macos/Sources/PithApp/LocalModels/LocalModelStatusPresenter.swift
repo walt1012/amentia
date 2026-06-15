@@ -22,11 +22,11 @@ enum LocalModelStatusPresenter {
     guard let modelHealth = snapshot.modelHealth else {
       switch snapshot.runtimeState {
       case .disconnected:
-        return "Start Pith's local service to inspect model setup."
+        return "Start Pith to inspect model setup."
       case .launching:
-        return "Checking local service setup..."
+        return "Checking Pith setup..."
       case .failed:
-        return "Restart the local service to recover model setup."
+        return "Restart Pith to recover model setup."
       case .ready:
         return "Choose and download one local model to continue."
       }

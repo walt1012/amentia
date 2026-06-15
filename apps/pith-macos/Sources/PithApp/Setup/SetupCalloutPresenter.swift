@@ -25,7 +25,7 @@ enum SetupCalloutPresenter {
       return "Create Session"
     }
 
-    return "Local Setup Complete"
+    return "Pith Ready"
   }
 
   static func summary(_ snapshot: SetupCalloutSnapshot) -> String {
@@ -50,7 +50,7 @@ enum SetupCalloutPresenter {
       )
     }
     if !snapshot.hasWorkspace {
-      return "Workspace binding keeps file reads, search, shell actions, diffs, and memory scoped to one local project."
+      return "Pith keeps file reads, search, shell actions, diffs, and memory inside the project you choose."
     }
     if !snapshot.hasRuntimeThreadSelection {
       return "Sessions keep messages, approvals, cancellation, and useful memory together."

@@ -24,11 +24,11 @@ enum InspectorSessionPresenter {
   static func title(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Local Service Offline"
+      return "Pith Offline"
     case .launching:
-      return "Starting Local Service"
+      return "Starting Pith"
     case .failed:
-      return "Local Service Needs Restart"
+      return "Pith Needs Restart"
     case .ready:
       if snapshot.hasActiveTurn {
         return "Local Execution Running"
@@ -52,11 +52,11 @@ enum InspectorSessionPresenter {
   static func detail(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith's local service before inspecting project actions, model state, memory, or connectors."
+      return "Start Pith before inspecting project actions, model state, memory, or connections."
     case .launching:
-      return "Pith is reconnecting local model, workspace, session, memory, and connector state."
+      return "Pith is reconnecting the local model, project, session, memory, and connections."
     case .failed:
-      return "Use the restart action in the timeline header to recover the local service."
+      return "Use the restart action in the timeline header to recover local work."
     case .ready:
       if snapshot.hasActiveTurn {
         return "Pith is running locally. Keep review focused on the timeline unless the execution should be cancelled."
@@ -106,7 +106,7 @@ enum InspectorSessionPresenter {
   private static func runtimeReadinessSummary(_ status: String) -> String {
     switch status {
     case "ready":
-      return "Local service ready"
+      return "Pith ready"
     case "running":
       return "Local work running"
     case "needs_approval":
@@ -114,7 +114,7 @@ enum InspectorSessionPresenter {
     case "setup_required":
       return "Setup needed"
     default:
-      return "Local service \(status)"
+      return "Pith \(status)"
     }
   }
 

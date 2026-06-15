@@ -38,9 +38,9 @@ enum TimelineEntryFactory {
         id: "welcome-start-local-setup",
         kind: .system,
         title: "Start Local Setup",
-        body: "Start the local service, choose a local model, open a workspace, create or select a session, then start a short cowork session.",
+        body: "Start Pith, choose a local model, open a project, create or select a session, then start a short cowork session.",
         attributes: [
-          "path": "local service -> model -> workspace -> session -> first prompt"
+          "path": "pith -> model -> project -> session -> first prompt"
         ]
       ),
       TimelineEntry(
@@ -62,9 +62,9 @@ enum TimelineEntryFactory {
         id: "default-thread-ready:\(title)",
         kind: .system,
         title: "Session Ready",
-        body: "\(title) is ready after local service, model, workspace, and session setup. Send one short cowork prompt to finish first-use setup.",
+        body: "\(title) is ready after Pith, model, project, and session setup. Send one short cowork prompt to finish first-use setup.",
         attributes: [
-          "setup": "local service, model, workspace, session, first prompt"
+          "setup": "pith, model, project, session, first prompt"
         ]
       ),
     ]

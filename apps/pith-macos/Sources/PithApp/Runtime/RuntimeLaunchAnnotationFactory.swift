@@ -19,8 +19,8 @@ enum RuntimeLaunchAnnotationFactory {
     if snapshot.shouldAnnotateSetupLaunch {
       entries.append(
         TimelineEntryFactory.system(
-          title: "Local Service Ready",
-          body: "Connected to Pith's local service.",
+          title: "Pith Ready",
+          body: "Pith reconnected local model, project, session, memory, and connections.",
           attributes: [:]
         )
       )

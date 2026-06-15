@@ -280,7 +280,7 @@ enum TimelineContextReceiptPresenter {
     case "localPlugin":
       return "local connector"
     case "localRuntime":
-      return "local service"
+      return "Pith"
     default:
       return value ?? "unknown"
     }

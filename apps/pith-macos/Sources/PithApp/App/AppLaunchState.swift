@@ -47,7 +47,7 @@ struct AppLaunchState {
     activeModelInvalidationDetail: String?,
     appSupportSetupDetail: String?
   ) -> String {
-    var details = ["Local service not started"]
+    var details = ["Pith not started"]
     if pausedDownload != nil {
       details.append("paused model download available")
     }

@@ -159,7 +159,7 @@ enum TimelineEventPresenter {
     TimelineEntryFactory.system(
       title: "Cowork Session Ready",
       body:
-        "Local service, model, workspace, and session are ready. Send one short cowork prompt to finish first-use setup.",
+        "Pith, the local model, project, and session are ready. Send one short cowork prompt to finish first-use setup.",
       attributes: [
         "setup": "first-request"
       ]
@@ -168,8 +168,8 @@ enum TimelineEventPresenter {
 
   static func runtimeDisconnected(detail: String) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Local Service Disconnected",
-      body: "\(detail) Use Restart Local Service to recover the session.",
+      title: "Pith Disconnected",
+      body: "\(detail) Use Restart Pith to recover the session.",
       attributes: [
         "recovery": "relaunch-runtime"
       ]
@@ -178,7 +178,7 @@ enum TimelineEventPresenter {
 
   static func runtimeLaunchFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Local Service Launch Failed",
+      title: "Pith Launch Failed",
       body: error.localizedDescription,
       attributes: [:]
     )

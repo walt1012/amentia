@@ -22,11 +22,11 @@ enum RuntimeHeaderPresenter {
   static func statusSummary(_ snapshot: RuntimeHeaderSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start the local service to restore model, workspace, connectors, and memory."
+      return "Start Pith to restore model, project, connections, and memory."
     case .launching:
-      return "Starting the local service and reconnecting app state..."
+      return "Starting Pith and reconnecting local state..."
     case .failed:
-      return "Local service stopped. Restart to recover local work."
+      return "Pith stopped. Restart to recover local work."
     case .ready:
       if !snapshot.isLocalModelReady {
         return snapshot.modelSetupSummary
@@ -105,7 +105,7 @@ enum RuntimeHeaderPresenter {
 
     switch snapshot.runtimeState {
     case .disconnected:
-      return snapshot.runtimeDetail != "Local service not started"
+      return snapshot.runtimeDetail != "Pith not started"
     case .launching, .failed:
       return true
     case .ready:

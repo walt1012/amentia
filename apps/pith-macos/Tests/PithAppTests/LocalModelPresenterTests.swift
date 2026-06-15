@@ -308,7 +308,7 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(runtimeState: .failed)
     )
 
-    XCTAssertTrue(summary.contains("Restart the local service"))
+    XCTAssertTrue(summary.contains("Restart Pith"))
     XCTAssertTrue(summary.contains("selected model choices remain local"))
   }
 

@@ -50,7 +50,7 @@ enum LocalDataSettingsPresenter {
 
   static func resetSummary(_ result: AppDataResetResult) -> LocalDataResetSummary {
     LocalDataResetSummary(
-      runtimeDetail: "Deleted Pith local data. Restart the local service to set up again.",
+      runtimeDetail: "Deleted Pith local data. Restart Pith to set up again.",
       timelineTitle: "Local Data Deleted",
       timelineBody:
         "Pith removed downloaded models, sessions, connectors, download recovery data, and known preferences. Workspaces on disk were not deleted.",
