@@ -223,7 +223,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
         id: "plugins",
         title: "Connectors",
         status: "optional",
-        detail: "No connector action capabilities are required."
+        detail: "No plugin action capabilities are required."
       )
     ]
 
@@ -417,6 +417,42 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(entry.body.contains("PITH_RUNTIME_PATH"))
   }
 
+  func testPluginSurfaceSummarySeparatesBundleFromCapabilities() {
+    let surface = PluginSurfaceClassifier.summary(
+      capabilities: [
+        "command:run",
+        "connector:notion",
+        "skill:workspace",
+        "mcp_server:notion",
+        "tool:web_search",
+        "hook:verify",
+        "connector_workflow:publish",
+      ],
+      permissions: ["network.outbound"]
+    )
+
+    XCTAssertEqual(
+      surface.summary,
+      "1 action | 1 connection | 1 skill | 1 MCP server | 1 tool | 1 check | 1 workflow | 1 permission"
+    )
+    XCTAssertEqual(surface.preferredSection, .commands)
+  }
+
+  func testPluginDashboardUsesHumanCapabilityLanguage() {
+    let snapshot = pluginDashboardSnapshot()
+    let detail = PluginDashboardPresenter.pluginDetailSummary(snapshot)
+    let registry = PluginDashboardPresenter.registryDetailSummary(snapshot)
+
+    XCTAssertEqual(PluginDashboardPresenter.pluginCountSummary(snapshot), "1 plugin ready")
+    XCTAssertTrue(detail.contains("1 action"))
+    XCTAssertTrue(detail.contains("1 connection"))
+    XCTAssertTrue(detail.contains("1 skill"))
+    XCTAssertTrue(detail.contains("1 MCP server"))
+    XCTAssertFalse(detail.contains("command:"))
+    XCTAssertFalse(detail.contains("mcp_server:"))
+    XCTAssertEqual(registry, "1 action | 1 connection | 1 skill | 1 MCP server")
+  }
+
   private func headerSnapshot(
     hasDraftMessage: Bool,
     isWaitingForFirstMessage: Bool = true,
@@ -542,4 +578,50 @@ final class CoworkFirstPresentationTests: XCTestCase {
     "defaultLocalExecutionSafetyMode": "askBeforeChange",
     "localExecutionSafetyModes": "explore,askBeforeChange,approvedWorkspaceExecution",
   ]
+
+  private func pluginDashboardSnapshot() -> PluginDashboardSnapshot {
+    PluginDashboardSnapshot(
+      plugins: [
+        PluginSummary(
+          id: "notion",
+          name: "notion",
+          version: "1.0.0",
+          displayName: "Notion",
+          status: "ready",
+          description: "Local Notion plugin",
+          authorName: nil,
+          enabled: true,
+          defaultEnabled: true,
+          capabilities: [
+            "command:notion.run",
+            "connector:notion",
+            "skill:notion.notes",
+            "mcp_server:notion",
+          ],
+          permissions: ["network.outbound"],
+          manifestPath: "/tmp/notion/pith-plugin.json",
+          provenance: "local",
+          validationError: nil,
+          validationHint: nil
+        )
+      ],
+      registrySummary: PluginCapabilityRegistrySummary(
+        enabledPluginCount: 1,
+        totalCapabilityCount: 4,
+        capabilityCountsByKind: [
+          "command": 1,
+          "connector": 1,
+          "skill": 1,
+          "mcp_server": 1,
+        ]
+      ),
+      capabilities: [],
+      connectors: [],
+      commands: [],
+      hooks: [],
+      diagnostics: [],
+      refreshRecoveryAttributes: [:],
+      hasLifecycleOperation: false
+    )
+  }
 }

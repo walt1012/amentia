@@ -28,7 +28,7 @@ struct PluginManagerPanel: View {
         .font(.caption2)
         .disabled(!viewModel.canRefreshPlugins())
 
-        Button("Add Local Connector") {
+        Button("Add Plugin") {
           viewModel.installPlugin()
         }
         .buttonStyle(.bordered)

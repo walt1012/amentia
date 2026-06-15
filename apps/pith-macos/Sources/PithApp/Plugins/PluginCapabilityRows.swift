@@ -101,13 +101,21 @@ private extension PluginCapabilitySummary {
   var displaySurface: String {
     switch kind {
     case "command":
-      return "Command"
+      return "Action"
+    case "connector":
+      return "Connection"
+    case "skill":
+      return "Skill"
+    case "tool":
+      return "Tool"
     case "hook":
-      return "Hook"
+      return "Check"
     case "mcp_server":
       return "MCP server"
+    case "connector_workflow":
+      return "Workflow"
     default:
-      return kind
+      return kind.replacingOccurrences(of: "_", with: " ")
     }
   }
 

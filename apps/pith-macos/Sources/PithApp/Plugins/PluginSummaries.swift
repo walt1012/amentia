@@ -22,15 +22,21 @@ struct PluginSurfaceSummary: Hashable {
   let commandCount: Int
   let connectorCount: Int
   let mcpServerCount: Int
+  let skillCount: Int
+  let toolCount: Int
   let hookCount: Int
+  let workflowCount: Int
   let permissionCount: Int
 
   var preferredSection: PluginManagerSection {
-    if connectorCount > 0 || mcpServerCount > 0 {
-      return .connectors
-    }
     if commandCount > 0 {
       return .commands
+    }
+    if connectorCount > 0 {
+      return .connectors
+    }
+    if skillCount > 0 || mcpServerCount > 0 || toolCount > 0 || workflowCount > 0 {
+      return .capabilities
     }
     if hookCount > 0 {
       return .hooks
@@ -42,16 +48,29 @@ struct PluginSurfaceSummary: Hashable {
   }
 
   var summary: String {
-    var parts = [
-      "\(commandCount) command\(commandCount == 1 ? "" : "s")",
-      "\(connectorCount) connector\(connectorCount == 1 ? "" : "s")",
-      "\(hookCount) hook\(hookCount == 1 ? "" : "s")",
-    ]
+    var parts: [String] = []
+    appendCount(commandCount, singular: "action", to: &parts)
+    appendCount(connectorCount, singular: "connection", to: &parts)
+    appendCount(skillCount, singular: "skill", to: &parts)
     if mcpServerCount > 0 {
       parts.append("\(mcpServerCount) MCP server\(mcpServerCount == 1 ? "" : "s")")
     }
-    parts.append("\(permissionCount) permission\(permissionCount == 1 ? "" : "s")")
+    appendCount(toolCount, singular: "tool", to: &parts)
+    appendCount(hookCount, singular: "check", to: &parts)
+    appendCount(workflowCount, singular: "workflow", to: &parts)
+    if parts.isEmpty {
+      parts.append("No declared capabilities")
+    }
+    appendCount(permissionCount, singular: "permission", to: &parts)
     return parts.joined(separator: " | ")
+  }
+
+  private func appendCount(_ count: Int, singular: String, to parts: inout [String]) {
+    guard count > 0 else {
+      return
+    }
+
+    parts.append("\(count) \(singular)\(count == 1 ? "" : "s")")
   }
 }
 
@@ -64,7 +83,10 @@ enum PluginSurfaceClassifier {
       commandCount: count(capabilities, kind: "command"),
       connectorCount: count(capabilities, kind: "connector"),
       mcpServerCount: count(capabilities, kind: "mcp_server"),
+      skillCount: count(capabilities, kind: "skill"),
+      toolCount: count(capabilities, kind: "tool"),
       hookCount: count(capabilities, kind: "hook"),
+      workflowCount: count(capabilities, kind: "connector_workflow"),
       permissionCount: permissions.count
     )
   }
@@ -222,10 +244,6 @@ struct PluginCommandEnvelopeFieldSummary: Hashable {
 }
 
 extension PluginCommandSummary {
-  var explicitTurnRoute: String {
-    "/plugin \(id)"
-  }
-
   var acceptsPlainInput: Bool {
     inputField?.isPlainTextInput == true
   }

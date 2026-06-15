@@ -15,13 +15,13 @@ struct PluginDashboardSnapshot {
 enum PluginDashboardPresenter {
   static func pluginCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     if snapshot.plugins.isEmpty {
-      return "No local connectors yet."
+      return "No plugins yet."
     }
 
     let readyCount = readyPluginList(snapshot).count
     let invalidCount = snapshot.plugins.count - readyCount
     if invalidCount == 0 {
-      return "\(readyCount) local \(readyCount == 1 ? "connector" : "connectors") ready"
+      return "\(readyCount) plugin\(readyCount == 1 ? "" : "s") ready"
     }
 
     return "\(readyCount) ready, \(invalidCount) need attention"
@@ -31,25 +31,25 @@ enum PluginDashboardPresenter {
     let localPlugins = snapshot.plugins.filter { $0.provenance == "local" }
 
     if localPlugins.isEmpty {
-      return "No local connectors installed yet."
+      return "No local plugins installed yet."
     }
 
-    return "\(localPlugins.count) local connector\(localPlugins.count == 1 ? "" : "s")"
+    return "\(localPlugins.count) local plugin\(localPlugins.count == 1 ? "" : "s")"
   }
 
   static func pluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     let diagnostics = pluginLoadDiagnostics(snapshot)
     guard !snapshot.plugins.isEmpty else {
       return diagnostics
-        ?? "Pith discovers local connectors from the app and your connector folder."
+        ?? "Pith discovers plugins from the app and your plugin folder."
     }
 
     let pluginDetails = snapshot.plugins
       .map { plugin in
-        let capabilities = plugin.capabilities.isEmpty ? "none" : plugin.capabilities.joined(separator: ", ")
-        let validation = plugin.validationError ?? "ok"
+        let capabilities = pluginCapabilitySummary(plugin.capabilities)
+        let validation = plugin.validationError == nil ? "ready" : "needs attention"
         let hint = plugin.validationHint.map { " | fix: \($0)" } ?? ""
-        return "\(plugin.displayName) \(plugin.version) | \(plugin.status) | \(plugin.provenance) | can use: \(capabilities) | check: \(validation)\(hint)"
+        return "\(plugin.displayName) \(plugin.version) | \(displayPluginStatus(plugin.status)) | \(plugin.provenance) | \(capabilities) | \(validation)\(hint)"
       }
       .joined(separator: "\n")
 
@@ -69,26 +69,26 @@ enum PluginDashboardPresenter {
     let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
 
     guard !readyPlugins.isEmpty else {
-      return "Connector permissions are not loaded yet."
+      return "Plugin permissions are not loaded yet."
     }
 
     if uniquePermissions.isEmpty {
-      return "\(readyPlugins.count) ready connector\(readyPlugins.count == 1 ? "" : "s"), no extra permissions"
+      return "\(readyPlugins.count) ready plugin\(readyPlugins.count == 1 ? "" : "s"), no extra permissions"
     }
 
-    return "\(uniquePermissions.count) permission\(uniquePermissions.count == 1 ? "" : "s") across \(readyPlugins.count) ready connector\(readyPlugins.count == 1 ? "" : "s")"
+    return "\(uniquePermissions.count) permission\(uniquePermissions.count == 1 ? "" : "s") across \(readyPlugins.count) ready plugin\(readyPlugins.count == 1 ? "" : "s")"
   }
 
   static func permissionDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     let readyPlugins = readyPluginList(snapshot)
 
     guard !readyPlugins.isEmpty else {
-      return "Connector permissions appear here after Pith loads local connectors."
+      return "Plugin permissions appear here after Pith loads local plugins."
     }
 
     let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))
     if uniquePermissions.isEmpty {
-      return "The current ready connectors do not request extra local permissions."
+      return "The current ready plugins do not request extra local permissions."
     }
 
     return uniquePermissions
@@ -115,14 +115,14 @@ enum PluginDashboardPresenter {
       return "No Setup Issues"
     }
 
-    return "\(invalidPlugins.count) connector setup issue\(invalidPlugins.count == 1 ? "" : "s")"
+    return "\(invalidPlugins.count) plugin setup issue\(invalidPlugins.count == 1 ? "" : "s")"
   }
 
   static func invalidPluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     let invalidPlugins = invalidPluginList(snapshot)
 
     guard !invalidPlugins.isEmpty else {
-      return "All discovered connectors match the current local connector format."
+      return "All discovered plugins match the current local plugin format."
     }
 
     return invalidPlugins
@@ -139,25 +139,22 @@ enum PluginDashboardPresenter {
 
   static func registryCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard let registrySummary = snapshot.registrySummary else {
-      return "Connection capabilities are not loaded yet."
+      return "Plugin capabilities are not loaded yet."
     }
 
     let capabilityLabel = registrySummary.totalCapabilityCount == 1 ? "capability" : "capabilities"
-    let connectorLabel = registrySummary.enabledPluginCount == 1 ? "connector" : "connectors"
-    return "\(registrySummary.totalCapabilityCount) \(capabilityLabel) from \(registrySummary.enabledPluginCount) enabled \(connectorLabel)"
+    let pluginLabel = registrySummary.enabledPluginCount == 1 ? "plugin" : "plugins"
+    return "\(registrySummary.totalCapabilityCount) \(capabilityLabel) from \(registrySummary.enabledPluginCount) enabled \(pluginLabel)"
   }
 
   static func registryDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard let registrySummary = snapshot.registrySummary else {
-      return "Enable a ready connector to make its actions available."
+      return "Enable a ready plugin to make its capabilities available."
     }
 
-    let kindSummary = registrySummary.capabilityCountsByKind
-      .sorted(by: { $0.key < $1.key })
-      .map { "\($0.key): \($0.value)" }
-      .joined(separator: " | ")
+    let kindSummary = capabilityKindSummary(registrySummary.capabilityCountsByKind)
     if kindSummary.isEmpty {
-      return "No connector actions are available yet."
+      return "No plugin capabilities are available yet."
     }
 
     return kindSummary
@@ -229,7 +226,7 @@ enum PluginDashboardPresenter {
 
   static func commandDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.commands.isEmpty else {
-      return "Enable a connector with actions to run reusable local workflows."
+      return "Enable a plugin with actions to run reusable local workflows."
     }
 
     return snapshot.commands
@@ -266,7 +263,7 @@ enum PluginDashboardPresenter {
 
   static func hookDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.hooks.isEmpty else {
-      return "Enable a connector with checks to verify local events."
+      return "Enable a plugin with checks to verify local events."
     }
 
     return snapshot.hooks.map(hookDetail).joined(separator: "\n")
@@ -290,7 +287,7 @@ enum PluginDashboardPresenter {
     }
 
     return snapshot.diagnostics
-      .map { "Connector load issue: \($0)" }
+      .map { "Plugin load issue: \($0)" }
       .joined(separator: "\n")
   }
 
@@ -326,8 +323,7 @@ enum PluginDashboardPresenter {
   ) -> String {
     var parts = [
       "\(command.pluginDisplayName): \(command.title)",
-      "status: \(command.runStatus)",
-      "run: \(command.explicitTurnRoute)"
+      "status: \(displayCommandStatus(command.runStatus))"
     ]
 
     if command.approvalRequired {
@@ -380,5 +376,86 @@ enum PluginDashboardPresenter {
     default:
       return status
     }
+  }
+
+  private static func pluginCapabilitySummary(_ capabilities: [String]) -> String {
+    let counts = capabilities.reduce(into: [String: Int]()) { result, capability in
+      guard let (kind, _) = capability.splitOnce(separator: ":") else {
+        return
+      }
+      result[String(kind), default: 0] += 1
+    }
+    let summary = capabilityKindSummary(counts)
+    return summary.isEmpty ? "No declared capabilities" : summary
+  }
+
+  private static func capabilityKindSummary(_ counts: [String: Int]) -> String {
+    capabilityKindOrder
+      .compactMap { kind in
+        guard let count = counts[kind], count > 0 else {
+          return nil
+        }
+        return "\(count) \(capabilityLabel(kind, count: count))"
+      }
+      .joined(separator: " | ")
+  }
+
+  private static let capabilityKindOrder = [
+    "command",
+    "connector",
+    "skill",
+    "mcp_server",
+    "tool",
+    "hook",
+    "connector_workflow",
+    "agent",
+    "prompt_pack",
+    "settings",
+  ]
+
+  private static func capabilityLabel(_ kind: String, count: Int) -> String {
+    switch kind {
+    case "command":
+      return count == 1 ? "action" : "actions"
+    case "connector":
+      return count == 1 ? "connection" : "connections"
+    case "mcp_server":
+      return count == 1 ? "MCP server" : "MCP servers"
+    case "hook":
+      return count == 1 ? "check" : "checks"
+    case "connector_workflow":
+      return count == 1 ? "workflow" : "workflows"
+    default:
+      let label = kind.replacingOccurrences(of: "_", with: " ")
+      return count == 1 ? label : "\(label)s"
+    }
+  }
+
+  private static func displayPluginStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    default:
+      return status
+    }
+  }
+
+  private static func displayCommandStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    default:
+      return status
+    }
+  }
+}
+
+private extension String {
+  func splitOnce(separator: Character) -> (Substring, Substring)? {
+    guard let index = firstIndex(of: separator) else {
+      return nil
+    }
+
+    return (self[..<index], self[self.index(after: index)...])
   }
 }

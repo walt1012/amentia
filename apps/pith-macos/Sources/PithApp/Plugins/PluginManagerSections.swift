@@ -2,6 +2,7 @@ import SwiftUI
 
 enum PluginManagerSection: String, CaseIterable, Identifiable {
   case catalog = "Catalog"
+  case capabilities = "Capabilities"
   case access = "Access"
   case connectors = "Connectors"
   case commands = "Commands"
@@ -13,6 +14,8 @@ enum PluginManagerSection: String, CaseIterable, Identifiable {
     switch self {
     case .catalog:
       return "Installed"
+    case .capabilities:
+      return "Capabilities"
     case .access:
       return "Permissions"
     case .connectors:
@@ -33,6 +36,8 @@ struct PluginManagerSectionView: View {
     switch section {
     case .catalog:
       PluginCatalogSection(viewModel: viewModel)
+    case .capabilities:
+      PluginCapabilitiesSection(viewModel: viewModel)
     case .access:
       PluginAccessSection(viewModel: viewModel)
     case .commands:
@@ -71,13 +76,22 @@ private struct PluginCatalogSection: View {
           )
         }
       }
+    }
+  }
+}
+
+private struct PluginCapabilitiesSection: View {
+  @ObservedObject var viewModel: AppViewModel
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text(viewModel.pluginRegistryDetailSummary())
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
 
       if !viewModel.pluginCapabilityPreview().isEmpty {
         Divider()
-        Text(viewModel.pluginRegistryDetailSummary())
-          .font(.caption2)
-          .foregroundColor(.secondary)
-          .textSelection(.enabled)
         ForEach(viewModel.pluginCapabilityPreview()) { capability in
           PluginCapabilityRow(capability: capability)
         }

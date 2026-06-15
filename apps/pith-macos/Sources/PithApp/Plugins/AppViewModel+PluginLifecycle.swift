@@ -53,7 +53,7 @@ extension AppViewModel {
     }
 
     guard let operationID = beginPluginLifecycleOperation(
-      detail: "Inspecting local connector..."
+      detail: "Inspecting plugin..."
     ) else {
       runtimeDetail = "Finish the current connector operation before starting another."
       return
@@ -91,7 +91,7 @@ extension AppViewModel {
           return
         }
         confirmedPreview = preview
-        runtimeDetail = "Installing local connector..."
+        runtimeDetail = "Installing plugin..."
         let installedPlugin = try await PluginLifecycleCoordinator.installConfirmedPlugin(
           preview: preview,
           runtimeBridge: runtimeBridge
@@ -198,7 +198,7 @@ extension AppViewModel {
     }
 
     guard let operationID = beginPluginLifecycleOperation(
-      detail: "Removing local connector..."
+      detail: "Removing plugin..."
     ) else {
       runtimeDetail = "Finish the current connector operation before removing another connector."
       return

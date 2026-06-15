@@ -58,7 +58,7 @@ enum PluginCommandCoordinator {
         detail: PluginActionPlanner.commandRunDisabledReason(
           commandID: commandID,
           snapshot: snapshot
-        ) ?? "Connector action cannot run yet."
+        ) ?? "Action cannot run yet."
       )
     }
 

@@ -12,7 +12,8 @@ Pith is a small, strong, local-first macOS cowork agent for real daily work.
   `LFM2.5-350M`.
 - Retrieval: Web Search is the active retrieval layer. Generic local document
   RAG stays deferred until the daily cowork loop is excellent.
-- Extensions: plugins and connectors must be real local capabilities, not prompt
+- Extensions: plugins are installable bundles; skills, actions, connectors,
+  MCP servers, checks, and tools are bounded local capabilities, not prompt
   templates or marketplace theater.
 - Delivery: users install a downloadable macOS package from GitHub Releases.
 
@@ -25,8 +26,8 @@ reviewable evidence, and MCP-style local connectors.
 Pith also learns from Hermes Agent, but only where it supports the local macOS
 cowork goal:
 
-- Keep the core narrow and move optional capability to tools, connectors, and
-  skills.
+- Keep the core narrow and move optional capability to plugins, tools,
+  connectors, MCP, checks, and skills.
 - Make execution observable, interruptible, resumable, and receipt-backed.
 - Keep memory and skills bounded, curated, and progressively loaded.
 - Prefer edge expansion over core bloat.
@@ -41,7 +42,7 @@ The daily loop is:
 
 1. Understand the workspace and request.
 2. Retrieve only useful context.
-3. Choose a bounded tool or connector.
+3. Choose a bounded tool, action, connector, or skill.
 4. Explain the action with a compact receipt.
 5. Ask before writes or external effects.
 6. Execute, show proof, remember useful state, and continue.
@@ -99,6 +100,9 @@ Ready foundations:
 - Connector baseline has local plugin registry, execution gates, credentials,
   retries, generic timeline evidence, memory capture, and Notion as the
   reference connector.
+- Extension UI now uses the Codex/Claude-style hierarchy: Plugins are installed
+  bundles; Actions, Connections, Skills, MCP servers, Tools, and Checks are
+  capabilities. Raw manifest capability strings stay out of primary summaries.
 - macOS packaging produces an unsigned x86_64 DMG with app bundle metadata,
   unsigned install guidance, package-size checks, release copy, manifest,
   checksum, and packaged smoke proof.
@@ -107,8 +111,9 @@ Ready foundations:
 - CI is split by change area and remains the source of truth for Rust, Swift,
   package, policy, model, and release checks.
 - Primary readiness, approval, permission, and action-result copy now uses
-  Connectors, Actions, requests, and work language instead of exposing plugin,
-  runtime, or turn wording on the normal user path.
+  product language for requests and work. Established ecosystem words such as
+  plugin, skill, MCP, connector, and action stay visible when they describe a
+  real interface.
 
 Current constraints:
 
@@ -172,25 +177,33 @@ Scope now:
 - Finish product identity around a refined blue lowercase `p` mark, keep the
   vector source and PNG candidate aligned, and ship it through the native macOS
   icon package contract.
+- Keep extension management understandable: plugin installation is the bundle
+  workflow, while capabilities are grouped as Actions, Connections, Skills,
+  MCP, Tools, and Checks.
 
 Exit criteria:
 
 - A fresh install can download a model, run the cowork loop, use Web Search,
   manage sessions, and recover or revert approved work without expert context.
-- User-facing connector surfaces say Connectors and Actions; `plugin` remains
-  an implementation/protocol term only.
+- Extension surfaces use precise ecosystem language: Plugins are installed
+  bundles; Actions, Connections, Skills, MCP, Tools, and Checks are capabilities
+  when present. Slash routes and manifest strings stay out of the primary path.
 - CI stays fast, split, strict, and green for the release package path.
 - The app has a polished blue `p` Dock icon and no obvious stale, unused, or
   confusing UI surfaces left in the primary path.
 
 ## M14: Connector and Skill Platform
 
-Goal: make third-party local connectors safe and useful without building a
+Goal: make third-party local plugins safe and useful without building a
 marketplace too early.
 
 - Keep Notion as the reference connector until the release loop proves stable.
+- Treat plugin import/removal as the bundle lifecycle; treat connectors,
+  actions, skills, MCP servers, checks, and tools as bundle capabilities.
 - Generalize connector contracts only after credentials, approvals, retries,
   proof, memory capture, and timeline evidence stay service-agnostic.
+- Make skill and MCP capability metadata progressively loaded and reviewable
+  before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
   removal before adding broad service catalogs.
 - Add a small skill-like instruction layer only if it is progressively loaded,
