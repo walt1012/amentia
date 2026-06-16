@@ -6,6 +6,9 @@ use pith_protocol::TimelineItem;
 use super::plugin_command_runner_contracts::{
   PluginRunnerTimelineItemEnvelope, PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
 };
+use super::plugin_command_runner_attribute_policy::{
+  merge_plugin_runner_attributes, plugin_runner_owned_attributes,
+};
 use super::plugin_command_runner_proof::{
   insert_plugin_runner_timeline_contracts, plugin_runner_timeline_contracts_are_valid,
 };
@@ -34,15 +37,7 @@ pub(super) fn plugin_runner_timeline_items_with_attributes(
     .into_iter()
     .map(|mut item| {
       let item_attributes = item.attributes.get_or_insert_with(HashMap::new);
-      for (key, value) in attributes {
-        if plugin_runner_reserved_attribute(key) {
-          item_attributes.insert(key.clone(), value.clone());
-        } else {
-          item_attributes
-            .entry(key.clone())
-            .or_insert_with(|| value.clone());
-        }
-      }
+      merge_plugin_runner_attributes(item_attributes, attributes);
       item
     })
     .collect()
@@ -91,49 +86,4 @@ fn plugin_runner_timeline_item(
 
 fn plugin_runner_timeline_kind_is_allowed(kind: &str) -> bool {
   PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS.contains(&kind)
-}
-
-fn plugin_runner_owned_attributes(attributes: HashMap<String, String>) -> HashMap<String, String> {
-  attributes
-    .into_iter()
-    .filter(|(key, _)| !plugin_runner_reserved_attribute(key))
-    .collect()
-}
-
-fn plugin_runner_reserved_attribute(key: &str) -> bool {
-  matches!(
-    key,
-    "action"
-      | "approvalId"
-      | "commandId"
-      | "commandInput"
-      | "connectorId"
-      | "connectorIds"
-      | "connectorRepairHint"
-      | "connectorStatus"
-      | "decision"
-      | "executionKind"
-      | "memoryNoteId"
-      | "memoryNoteTitle"
-      | "memoryScope"
-      | "permissionGate"
-      | "pluginCommandRunId"
-      | "pluginCommandStatus"
-      | "pluginDisplayName"
-      | "pluginId"
-      | "pluginInstallStatus"
-      | "pluginLifecycleStatus"
-      | "pluginSourcePath"
-      | "requiredPermission"
-      | "runBlocker"
-      | "runRepairHint"
-      | "runStatus"
-      | "remoteWriteStatus"
-      | "sourcePath"
-      | "streamingStatus"
-      | "turnId"
-  ) || (key.starts_with("connector") && !key.starts_with("connectorWorkflow"))
-    || key.starts_with("mcp")
-    || key.starts_with("pluginRunner")
-    || key.starts_with("sandbox")
 }

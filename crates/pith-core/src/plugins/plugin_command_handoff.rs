@@ -2,53 +2,10 @@ use std::collections::HashMap;
 
 use pith_protocol::TimelineItem;
 
+use super::plugin_command_handoff_attributes::copy_observation_handoff_attributes;
 use super::plugin_command_types::PluginCommandOutput;
 
 const HANDOFF_PREVIEW_LIMIT: usize = 360;
-const OBSERVATION_HANDOFF_KEYS: &[&str] = &[
-  "connectorId",
-  "connectorIds",
-  "connectorServices",
-  "targetService",
-  "targetTool",
-  "draftMode",
-  "remoteWrite",
-  "remoteWriteStage",
-  "remoteWriteStatus",
-  "remoteWriteRequiresApproval",
-  "remoteProofKind",
-  "remoteProofStatus",
-  "remoteProofId",
-  "remoteProofUrl",
-  "remoteProofTitle",
-  "remoteProofActionTitle",
-  "remoteProofCopyTitle",
-  "notionPageId",
-  "notionPageUrl",
-  "notionParentPageId",
-  "notionBlockCount",
-  "bodyTruncated",
-  "sourceArtifact",
-  "sourceArtifactPreviewProvided",
-  "publishRetryable",
-  "publishFailureReason",
-  "retryCommandId",
-  "retryInput",
-  "connectorWorkflowId",
-  "connectorWorkflowName",
-  "connectorWorkflowService",
-  "connectorWorkflowAction",
-  "connectorWorkflowStage",
-  "connectorWorkflowStatus",
-  "connectorWorkflowTarget",
-  "connectorWorkflowProof",
-  "connectorWorkflowRecovery",
-];
-const RUNNER_CONNECTOR_HANDOFF_KEYS: &[(&str, &str)] = &[
-  ("pluginRunnerConnectorId", "connectorId"),
-  ("pluginRunnerConnectorIds", "connectorIds"),
-  ("pluginRunnerConnectorServices", "connectorServices"),
-];
 
 pub(crate) fn ensure_plugin_command_handoff(
   output: &mut PluginCommandOutput,
@@ -149,25 +106,6 @@ fn bounded_preview(content: &str) -> String {
     preview.push_str("...");
   }
   preview
-}
-
-fn copy_observation_handoff_attributes(
-  attributes: &mut HashMap<String, String>,
-  observation_attributes: Option<&HashMap<String, String>>,
-) {
-  let Some(observation_attributes) = observation_attributes else {
-    return;
-  };
-  for key in OBSERVATION_HANDOFF_KEYS.iter().copied() {
-    if let Some(value) = observation_attributes.get(key) {
-      attributes.insert(key.to_string(), value.clone());
-    }
-  }
-  for (source_key, target_key) in RUNNER_CONNECTOR_HANDOFF_KEYS.iter().copied() {
-    if let Some(value) = observation_attributes.get(source_key) {
-      attributes.insert(target_key.to_string(), value.clone());
-    }
-  }
 }
 
 #[cfg(test)]
