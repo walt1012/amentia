@@ -190,9 +190,7 @@ pub(super) fn mcp_text_content_looks_like_pith_output(text: &str) -> bool {
     .is_some_and(|value| mcp_structured_content_looks_like_pith_output(&value))
 }
 
-pub(super) fn mcp_content_stats(
-  result: &PluginMcpToolResultEnvelope,
-) -> PluginMcpContentStats {
+pub(super) fn mcp_content_stats(result: &PluginMcpToolResultEnvelope) -> PluginMcpContentStats {
   let mut unsupported_types = vec![];
   let mut text_count = 0;
   let mut usable_text_count = 0;
