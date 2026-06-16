@@ -154,9 +154,15 @@ mod tests {
       "connectorWorkflowId".to_string(),
       "notion.create-page".to_string(),
     );
-    attributes.insert("connectorWorkflowStatus".to_string(), "prepared".to_string());
+    attributes.insert(
+      "connectorWorkflowStatus".to_string(),
+      "prepared".to_string(),
+    );
 
-    assert!(!plugin_runner_connector_workflow_contract_is_valid(&command, &attributes));
+    assert!(!plugin_runner_connector_workflow_contract_is_valid(
+      &command,
+      &attributes
+    ));
   }
 
   #[test]
