@@ -190,7 +190,8 @@ Remaining quality bar:
 - A fresh install can download, verify, activate, re-download, recover, and
   invoke a local model without expert context; readiness must fail early if the
   packaged backend cannot launch, and generation must use bounded file-backed
-  prompt input with a visible short self-check from the model manager.
+  prompt input with a visible short self-check from first-use setup and the
+  model manager.
 - Users can delete a session, review or revert session changes, and Reset Pith
   from visible UI without learning hidden menus; Reset Pith must remove
   app-owned folders, paused downloads, preferences, caches, saved app state, and

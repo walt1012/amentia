@@ -49,6 +49,9 @@ enum LocalModelActionPlanner {
     if snapshot.canBootstrapModelPackMetadata {
       return .bootstrapModelPackMetadata
     }
+    if snapshot.canProbeModel || snapshot.isCheckingModel {
+      return .probeModel
+    }
 
     return nil
   }

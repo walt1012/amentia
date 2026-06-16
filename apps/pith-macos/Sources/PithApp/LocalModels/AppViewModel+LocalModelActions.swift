@@ -223,12 +223,12 @@ extension AppViewModel {
 
   func probeLocalModel() {
     guard canProbeLocalModel() else {
-      runtimeDetail = "Finish startup, model download, model selection, or active work before checking the model."
+      runtimeDetail = LocalModelProbePresenter.blockedDetail
       return
     }
 
     isCheckingLocalModel = true
-    runtimeDetail = "Checking the active local model..."
+    runtimeDetail = LocalModelProbePresenter.startedDetail()
     Task {
       defer {
         isCheckingLocalModel = false
@@ -236,64 +236,24 @@ extension AppViewModel {
 
       do {
         let probe = try await runtimeBridge.probeModel()
-        applyLocalModelProbe(probe)
+        applyLocalModelProbePresentation(LocalModelProbePresenter.presentation(for: probe))
       } catch {
-        applyLocalModelProbeFailure(error)
-      }
-    }
-  }
-
-  private func applyLocalModelProbe(_ probe: RuntimeBridge.RuntimeModelProbe) {
-    if probe.status == "ready" {
-      runtimeDetail = "Local model check passed."
-      var attributes = [
-        "modelId": probe.modelID,
-        "backend": probe.backend,
-        "status": probe.status,
-      ]
-      if let sample = probe.sample?.trimmingCharacters(in: .whitespacesAndNewlines),
-         !sample.isEmpty
-      {
-        attributes["sample"] = sample
-      }
-      appendEntry(
-        to: selectedThreadID,
-        TimelineEventPresenter.localModelProbe(
-          title: "Local Model Checked",
-          body: "The active local model answered a short local prompt.",
-          attributes: attributes
+        applyLocalModelProbePresentation(
+          LocalModelProbePresenter.requestFailurePresentation(error: error)
         )
-      )
-      return
+      }
     }
-
-    runtimeDetail = "Local model check failed. Re-download the model or restart Pith, then check again."
-    appendEntry(
-      to: selectedThreadID,
-      TimelineEventPresenter.localModelProbe(
-        title: "Local Model Check Failed",
-        body: probe.detail,
-        kind: .warning,
-        attributes: [
-          "modelId": probe.modelID,
-          "backend": probe.backend,
-          "status": probe.status,
-        ]
-      )
-    )
   }
 
-  private func applyLocalModelProbeFailure(_ error: Error) {
-    runtimeDetail = "Local model check failed: \(error.localizedDescription)"
+  private func applyLocalModelProbePresentation(_ presentation: LocalModelProbePresentation) {
+    runtimeDetail = presentation.runtimeDetail
     appendEntry(
       to: selectedThreadID,
       TimelineEventPresenter.localModelProbe(
-        title: "Local Model Check Failed",
-        body: error.localizedDescription,
-        kind: .warning,
-        attributes: [
-          "status": "request_failed"
-        ]
+        title: presentation.timelineTitle,
+        body: presentation.timelineBody,
+        kind: presentation.timelineKind,
+        attributes: presentation.attributes
       )
     )
   }

@@ -342,6 +342,62 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(recoverySummary.contains("turn"))
   }
 
+  func testSetupPrimaryActionOffersModelCheckWhenReady() {
+    let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
+      isLocalModelReady: true,
+      canProbeModel: true
+    ))
+
+    guard let action else {
+      XCTFail("Expected ready model setup to offer model check")
+      return
+    }
+    guard case .probeModel = action else {
+      XCTFail("Expected ready model setup to offer model check")
+      return
+    }
+
+    XCTAssertEqual(
+      LocalModelActionPlanner.primaryTitle(for: action, snapshot: actionSnapshot(
+        isLocalModelReady: true,
+        canProbeModel: true
+      )),
+      "Check Model"
+    )
+  }
+
+  func testModelProbeSuccessPresentationKeepsDefaultCopySimple() {
+    let presentation = LocalModelProbePresenter.presentation(for: RuntimeBridge.RuntimeModelProbe(
+      status: "ready",
+      detail: "The active local model answered a short probe.",
+      backend: "llama.cpp",
+      modelID: "lfm2.5-350m",
+      sample: "Pith model ready."
+    ))
+
+    XCTAssertEqual(presentation.runtimeDetail, "Local model check passed.")
+    XCTAssertEqual(presentation.timelineTitle, "Local Model Checked")
+    XCTAssertEqual(presentation.timelineKind, .system)
+    XCTAssertEqual(presentation.attributes["sample"], "Pith model ready.")
+    XCTAssertFalse(presentation.runtimeDetail.contains("llama"))
+  }
+
+  func testModelProbeFailurePresentationGivesRecoveryPath() {
+    let presentation = LocalModelProbePresenter.presentation(for: RuntimeBridge.RuntimeModelProbe(
+      status: "error",
+      detail: "Local llama.cpp inference failed.",
+      backend: "llama.cpp",
+      modelID: "lfm2.5-350m",
+      sample: nil
+    ))
+
+    XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
+    XCTAssertEqual(presentation.timelineKind, .warning)
+    XCTAssertTrue(presentation.runtimeDetail.contains("Re-download the model"))
+    XCTAssertTrue(presentation.runtimeDetail.contains("restart Pith"))
+    XCTAssertNil(presentation.attributes["sample"])
+  }
+
   private func statusSnapshot(
     selectedModel: LocalModelSummary,
     modelDownloadID: String? = nil,
@@ -385,6 +441,38 @@ final class LocalModelPresenterTests: XCTestCase {
       totalModelCount: totalModelCount,
       activeModelDisplayName: activeModelDisplayName,
       downloadedLocalSizeBytes: downloadedLocalSizeBytes
+    )
+  }
+
+  private func actionSnapshot(
+    runtimeState: RuntimeBridge.ConnectionState = .ready,
+    isLocalModelReady: Bool = false,
+    hasModelDownload: Bool = false,
+    pausedModelDownloadID: String? = nil,
+    selectedDownloadBlockedDetail: String? = nil,
+    canPauseDownload: Bool = false,
+    canDownloadPausedModel: Bool = false,
+    canDownloadSelectedModel: Bool = false,
+    canBootstrapModelPackMetadata: Bool = false,
+    canCancelDownload: Bool = false,
+    canProbeModel: Bool = false,
+    isCheckingModel: Bool = false,
+    defaultDownloadTitle: String = "Download Model"
+  ) -> LocalModelActionSnapshot {
+    LocalModelActionSnapshot(
+      runtimeState: runtimeState,
+      isLocalModelReady: isLocalModelReady,
+      hasModelDownload: hasModelDownload,
+      pausedModelDownloadID: pausedModelDownloadID,
+      selectedDownloadBlockedDetail: selectedDownloadBlockedDetail,
+      canPauseDownload: canPauseDownload,
+      canDownloadPausedModel: canDownloadPausedModel,
+      canDownloadSelectedModel: canDownloadSelectedModel,
+      canBootstrapModelPackMetadata: canBootstrapModelPackMetadata,
+      canCancelDownload: canCancelDownload,
+      canProbeModel: canProbeModel,
+      isCheckingModel: isCheckingModel,
+      defaultDownloadTitle: defaultDownloadTitle
     )
   }
 
