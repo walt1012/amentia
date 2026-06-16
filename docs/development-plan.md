@@ -205,7 +205,7 @@ marketplace too early.
   parsing; shared stdio process execution is separated from runner routing;
   plugin command input contracts and preparation error contracts are isolated;
   MCP output protocol scanning and runner stdout parsing are isolated; keep
-  future connector proof rules separately testable.
+  remote-write and workflow proof rules separately testable.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
