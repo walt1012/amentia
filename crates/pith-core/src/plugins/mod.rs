@@ -27,6 +27,7 @@ pub(crate) mod plugin_command_runner;
 pub(crate) mod plugin_command_runner_contracts;
 pub(crate) mod plugin_command_runner_memory;
 pub(crate) mod plugin_command_runner_output;
+pub(crate) mod plugin_command_runner_output_parser;
 pub(crate) mod plugin_command_runner_process;
 pub(crate) mod plugin_command_runner_proof;
 pub(crate) mod plugin_command_runner_sandbox;

@@ -11,7 +11,7 @@ use pith_process::{
 };
 
 use super::plugin_command_runner::{merged_attributes, PluginRunnerFailure, PluginRunnerRunResult};
-use super::plugin_command_runner_output::bounded_log_preview;
+use super::plugin_command_runner_output_parser::bounded_log_preview;
 use super::plugin_command_runner_sandbox::PluginRunnerSandbox;
 use super::plugin_command_runner_setup::validate_runner_entrypoint;
 use super::plugin_command_types::PluginConnectorExecutionRef;

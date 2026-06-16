@@ -5,8 +5,10 @@ use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use super::plugin_command_runner::{
   PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
-use super::plugin_command_runner_contracts::PluginRunnerOutputEnvelope;
 use super::plugin_command_runner_memory::plugin_runner_memory_notes;
+use super::plugin_command_runner_output_parser::{
+  parse_plugin_runner_output, PluginRunnerParsedOutput,
+};
 use super::plugin_command_runner_proof::{
   plugin_runner_expected_workflow_id, plugin_runner_items_include_workflow,
 };
@@ -14,42 +16,15 @@ use super::plugin_command_runner_timeline_output::{
   plugin_runner_timeline_items, plugin_runner_timeline_items_with_attributes,
 };
 
-const PLUGIN_RUNNER_LOG_PREVIEW_LIMIT: usize = 2048;
-
 pub(super) fn plugin_runner_output(
   command: &HostPluginCommandEntry,
   execution_kind: &str,
   output: &str,
   mut attributes: HashMap<String, String>,
 ) -> PluginRunnerRunResult<PluginRunnerResult> {
-  let envelope = match serde_json::from_str::<PluginRunnerOutputEnvelope>(output) {
-    Ok(envelope) => envelope,
-    Err(error) => {
-      if plugin_runner_output_looks_like_json(output) {
-        attributes.insert(
-          "pluginRunnerOutputStatus".to_string(),
-          "malformedEnvelope".to_string(),
-        );
-        attributes.insert("pluginRunnerOutputParsed".to_string(), "false".to_string());
-        attributes.insert(
-          "pluginRunnerOutputParseError".to_string(),
-          bounded_log_preview(&error.to_string()),
-        );
-        return Err(
-          PluginRunnerFailure::with_output(
-            -32054,
-            format!(
-              "Plugin command `{}` returned a malformed JSON output envelope: {error}",
-              command.command_id
-            ),
-            output.to_string(),
-            String::new(),
-            attributes,
-          )
-          .boxed(),
-        );
-      }
-
+  let envelope = match parse_plugin_runner_output(output) {
+    PluginRunnerParsedOutput::Envelope(envelope) => envelope,
+    PluginRunnerParsedOutput::PlainText(content) => {
       attributes.insert(
         "pluginRunnerOutputStatus".to_string(),
         "plainText".to_string(),
@@ -57,11 +32,35 @@ pub(super) fn plugin_runner_output(
       attributes.insert("pluginRunnerOutputParsed".to_string(), "false".to_string());
       return Ok(PluginRunnerResult {
         execution_kind: execution_kind.to_string(),
-        content: plugin_runner_content(output),
+        content,
         items: vec![],
         memory_notes: vec![],
         attributes,
       });
+    }
+    PluginRunnerParsedOutput::MalformedJson {
+      parse_error,
+      parse_error_preview,
+    } => {
+      attributes.insert(
+        "pluginRunnerOutputStatus".to_string(),
+        "malformedEnvelope".to_string(),
+      );
+      attributes.insert("pluginRunnerOutputParsed".to_string(), "false".to_string());
+      attributes.insert("pluginRunnerOutputParseError".to_string(), parse_error_preview);
+      return Err(
+        PluginRunnerFailure::with_output(
+          -32054,
+          format!(
+            "Plugin command `{}` returned a malformed JSON output envelope: {parse_error}",
+            command.command_id
+          ),
+          output.to_string(),
+          String::new(),
+          attributes,
+        )
+        .boxed(),
+      );
     }
   };
   let content = envelope
@@ -75,15 +74,15 @@ pub(super) fn plugin_runner_output(
   let memory_note_selection = plugin_runner_memory_notes(envelope.memory_notes);
   let missing_workflow_item = plugin_runner_expected_workflow_id(command)
     .is_some_and(|workflow_id| !plugin_runner_items_include_workflow(&items, workflow_id));
-  insert_plugin_runner_output_attributes(
-    &mut attributes,
-    &content,
-    items.len(),
-    invalid_item_count,
-    memory_note_selection.notes.len(),
-    memory_note_selection.invalid_count,
-    memory_note_selection.truncated_count,
-  );
+  let output_stats = PluginRunnerOutputAttributeStats {
+    content_bytes: content.len(),
+    valid_timeline_item_count: items.len(),
+    invalid_timeline_item_count: invalid_item_count,
+    memory_note_count: memory_note_selection.notes.len(),
+    invalid_memory_note_count: memory_note_selection.invalid_count,
+    truncated_memory_note_count: memory_note_selection.truncated_count,
+  };
+  insert_plugin_runner_output_attributes(&mut attributes, &output_stats);
   if missing_workflow_item {
     attributes.insert(
       "pluginRunnerOutputStatus".to_string(),
@@ -165,64 +164,44 @@ pub(super) fn plugin_runner_output(
   })
 }
 
-pub(super) fn bounded_log_preview(content: &str) -> String {
-  let mut preview = content
-    .chars()
-    .take(PLUGIN_RUNNER_LOG_PREVIEW_LIMIT)
-    .collect::<String>();
-  if content.chars().count() > PLUGIN_RUNNER_LOG_PREVIEW_LIMIT {
-    preview.push_str("\n[truncated]");
-  }
-  preview
+struct PluginRunnerOutputAttributeStats {
+  content_bytes: usize,
+  valid_timeline_item_count: usize,
+  invalid_timeline_item_count: usize,
+  memory_note_count: usize,
+  invalid_memory_note_count: usize,
+  truncated_memory_note_count: usize,
 }
 
 fn insert_plugin_runner_output_attributes(
   attributes: &mut HashMap<String, String>,
-  content: &str,
-  valid_item_count: usize,
-  invalid_item_count: usize,
-  memory_note_count: usize,
-  invalid_memory_note_count: usize,
-  truncated_memory_note_count: usize,
+  stats: &PluginRunnerOutputAttributeStats,
 ) {
   attributes.insert("pluginRunnerOutputParsed".to_string(), "true".to_string());
   attributes.insert(
     "pluginRunnerOutputContentBytes".to_string(),
-    content.len().to_string(),
+    stats.content_bytes.to_string(),
   );
   attributes.insert(
     "pluginRunnerOutputValidTimelineItemCount".to_string(),
-    valid_item_count.to_string(),
+    stats.valid_timeline_item_count.to_string(),
   );
   attributes.insert(
     "pluginRunnerOutputInvalidTimelineItemCount".to_string(),
-    invalid_item_count.to_string(),
+    stats.invalid_timeline_item_count.to_string(),
   );
   attributes.insert(
     "pluginRunnerOutputMemoryNoteCount".to_string(),
-    memory_note_count.to_string(),
+    stats.memory_note_count.to_string(),
   );
   attributes.insert(
     "pluginRunnerOutputInvalidMemoryNoteCount".to_string(),
-    invalid_memory_note_count.to_string(),
+    stats.invalid_memory_note_count.to_string(),
   );
   attributes.insert(
     "pluginRunnerOutputTruncatedMemoryNoteCount".to_string(),
-    truncated_memory_note_count.to_string(),
+    stats.truncated_memory_note_count.to_string(),
   );
-}
-
-fn plugin_runner_content(output: &str) -> String {
-  if output.trim().is_empty() {
-    return "Plugin command completed without output.".to_string();
-  }
-
-  output.to_string()
-}
-
-fn plugin_runner_output_looks_like_json(output: &str) -> bool {
-  let trimmed = output.trim_start();
-  trimmed.starts_with('{') || trimmed.starts_with('[')
 }
 
 #[cfg(test)]
