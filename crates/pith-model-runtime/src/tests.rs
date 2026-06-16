@@ -140,7 +140,9 @@ fn runtime_rejects_backend_that_cannot_launch() {
 
   assert_eq!(health.backend, "unconfigured");
   assert_eq!(health.status, "unavailable");
-  assert!(health.detail.contains("local inference setup verification failed"));
+  assert!(health
+    .detail
+    .contains("local inference setup verification failed"));
   assert!(health.detail.contains("backend"));
   assert_eq!(health.metrics["readiness"], "misconfigured");
 
