@@ -145,6 +145,55 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     XCTAssertFalse(plan.timelineBody.contains("turn"))
   }
 
+  func testDownloadedOnlyCompletionKeepsLocalPathOutOfUserCopy() throws {
+    let rootURL = try temporaryDirectory()
+    defer {
+      try? FileManager.default.removeItem(at: rootURL)
+    }
+
+    let modelURL = rootURL
+      .appendingPathComponent("catalog", isDirectory: true)
+      .appendingPathComponent("downloaded-only-proof", isDirectory: true)
+      .appendingPathComponent("downloaded-only-proof.gguf")
+    let model = localModelSummary(
+      modelURL: modelURL,
+      sizeBytes: 128 * 1024 * 1024,
+      sha256: String(repeating: "a", count: 64)
+    )
+
+    let plan = LocalModelDownloadCompletionPlanner.plan(
+      model: model,
+      sourceURL: try XCTUnwrap(URL(string: model.downloadURL)),
+      activationRequested: false,
+      canActivateNow: false,
+      manifestPath: nil
+    )
+
+    guard case .downloadedOnly = plan.mode else {
+      XCTFail("Expected a downloaded-only completion plan.")
+      return
+    }
+    XCTAssertTrue(plan.runtimeDetail.contains("Use it when you are ready"))
+    XCTAssertTrue(plan.timelineBody.contains("can be selected later"))
+    XCTAssertFalse(plan.runtimeDetail.contains(model.installPath))
+    XCTAssertFalse(plan.timelineBody.contains(model.installPath))
+    XCTAssertEqual(plan.attributes["modelPath"], model.installPath)
+  }
+
+  func testRelaunchDuringStartupStillRestartsAfterStartupSettles() {
+    let plan = RuntimeRelaunchPlanner.plan(
+      runtimeState: .launching,
+      runningDetail: "Restarting Pith with LFM2.5-350M...",
+      idleDetail: "LFM2.5-350M will be used when Pith starts."
+    )
+
+    guard case .stopAndLaunchAfterCurrentLaunchSettles = plan.action else {
+      XCTFail("Expected model setup during launch to request a follow-up relaunch.")
+      return
+    }
+    XCTAssertEqual(plan.launchDetail, "Restarting Pith with LFM2.5-350M...")
+  }
+
   func testLaunchValidationRejectsReplacedModel() throws {
     let rootURL = try temporaryDirectory()
     defer {

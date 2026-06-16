@@ -80,8 +80,8 @@ Active milestone: **M14 Connector and Skill Platform**.
 Current capabilities:
 
 - Local model setup: in-app download, verification, activation, pause, resume,
-  cancel, recovery, backend launch probing, Reset Pith, curated model choice,
-  and one active model.
+  cancel, recovery, backend launch probing, reliable relaunch after model
+  selection, Reset Pith, curated model choice, and one active model.
 - Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
   diagnostics, bounded subprocesses, human receipts, session delete, and
   session-level change preview/revert.

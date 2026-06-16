@@ -59,9 +59,6 @@ extension AppViewModel {
           runtimeDetail = plan.launchTimeoutDetail ?? idleDetail
           return
         }
-        if runtimeState == .ready {
-          return
-        }
         guard runtimeRelaunchCoordinator.isCurrent(requestToken) else {
           return
         }

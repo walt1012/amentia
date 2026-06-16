@@ -60,8 +60,8 @@ enum LocalModelDownloadCompletionPlanner {
 
     return LocalModelDownloadCompletionPlan(
       mode: .downloadedOnly,
-      runtimeDetail: "Downloaded \(modelName) to \(model.installPath).",
-      timelineBody: "\(modelName) was downloaded to \(model.installPath).",
+      runtimeDetail: "Downloaded \(modelName). Use it when you are ready to switch models.",
+      timelineBody: "\(modelName) was downloaded and can be selected later.",
       attributes: baseAttributes(model: model, sourceURL: sourceURL).merging(
         [
           "result": "downloaded",
