@@ -37,7 +37,7 @@ final class AppSupportDirectoriesTests: XCTestCase {
     }
   }
 
-  func testDeleteLocalDataRemovesOnlyAppOwnedRootAndRecreatesLayout() throws {
+  func testDeleteLocalDataRemovesOnlyAppOwnedRootAndLeavesNoAppFolders() throws {
     let parentURL = try temporaryDirectory()
     let rootURL = parentURL.appendingPathComponent("Pith", isDirectory: true)
     let outsideURL = parentURL.appendingPathComponent("workspace", isDirectory: true)
@@ -61,14 +61,10 @@ final class AppSupportDirectoriesTests: XCTestCase {
     )
 
     XCTAssertEqual(result.appSupportPath, rootURL.path)
-    XCTAssertEqual(result.recreatedDirectoryCount, expectedDirectories(rootURL: rootURL).count)
+    XCTAssertEqual(result.remainingAppOwnedDirectoryCount, 0)
     XCTAssertFalse(FileManager.default.fileExists(atPath: modelFile.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: rootURL.path))
     XCTAssertTrue(FileManager.default.fileExists(atPath: workspaceFile.path))
-    for directory in expectedDirectories(rootURL: rootURL) {
-      var isDirectory = ObjCBool(false)
-      XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory))
-      XCTAssertTrue(isDirectory.boolValue)
-    }
   }
 
   private func expectedDirectories(rootURL: URL) -> [URL] {

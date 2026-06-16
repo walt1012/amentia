@@ -18,6 +18,7 @@ extension AppViewModel {
 
   func canDeleteLocalData() -> Bool {
     runtimeState != .launching
+      && !localDataResetInProgress
       && !hasActiveOrPendingTurn()
       && !modelDownloadCoordinator.isDownloading
       && !localModelActivationCoordinator.isActivating
@@ -37,6 +38,10 @@ extension AppViewModel {
       return
     }
 
+    localDataResetInProgress = true
+    defer {
+      localDataResetInProgress = false
+    }
     runtimeBridge.stopRuntime(detail: "Pith reset. Restart Pith to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()

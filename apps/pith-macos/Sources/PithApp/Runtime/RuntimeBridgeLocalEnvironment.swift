@@ -53,6 +53,9 @@ enum RuntimeBridgeLocalEnvironment {
 
   static func runtimeEnvironment() async -> [String: String] {
     var environment = sanitizedInheritedEnvironment()
+    if let setupError = AppSupportDirectories.prepareAppOwnedDirectories() {
+      environment["PITH_APP_SUPPORT_SETUP_ERROR"] = setupError
+    }
     environment["PITH_DATA_DIR"] = AppSupportDirectories.storageDirectory().path
     environment["PITH_LOCAL_PLUGIN_DIR"] = AppSupportDirectories.pluginInstallDirectory().path
     applyBundleResourceEnvironment(to: &environment)

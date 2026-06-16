@@ -7,6 +7,7 @@ import stat
 import tempfile
 import zipfile
 import json
+import zlib
 from pathlib import Path
 
 from macos_llama_backend import (
@@ -61,13 +62,38 @@ def assert_raises(action, message: str) -> None:
   raise AssertionError(message)
 
 
-def write_png_header(path: Path, width: int, height: int) -> None:
-  path.write_bytes(
-    b"\x89PNG\r\n\x1a\n"
-    + b"\x00\x00\x00\rIHDR"
-    + width.to_bytes(4, "big")
+def write_png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
+  return (
+    len(payload).to_bytes(4, "big")
+    + chunk_type
+    + payload
+    + zlib.crc32(chunk_type + payload).to_bytes(4, "big")
+  )
+
+
+def write_rgba_png(path: Path, width: int, height: int, corner_alpha: int = 0) -> None:
+  ihdr = (
+    width.to_bytes(4, "big")
     + height.to_bytes(4, "big")
     + b"\x08\x06\x00\x00\x00"
+  )
+  rows = []
+  for y in range(height):
+    row = bytearray()
+    for x in range(width):
+      alpha = corner_alpha if (x, y) in {
+        (0, 0),
+        (width - 1, 0),
+        (0, height - 1),
+        (width - 1, height - 1),
+      } else 255
+      row.extend((255, 255, 255, alpha))
+    rows.append(b"\x00" + bytes(row))
+  path.write_bytes(
+    b"\x89PNG\r\n\x1a\n"
+    + write_png_chunk(b"IHDR", ihdr)
+    + write_png_chunk(b"IDAT", zlib.compress(b"".join(rows)))
+    + write_png_chunk(b"IEND", b"")
   )
 
 
@@ -98,14 +124,20 @@ def main() -> int:
   with tempfile.TemporaryDirectory(prefix="pith-package-icon-") as root:
     root_path = Path(root)
     png_path = root_path / "icon.png"
-    write_png_header(png_path, 1254, 1254)
+    write_rgba_png(png_path, 1254, 1254)
     assert_equal(png_dimensions(png_path), (1254, 1254))
     assert_png_source_can_drive_app_icon(png_path)
     small_png_path = root_path / "small.png"
-    write_png_header(small_png_path, 512, 512)
+    write_rgba_png(small_png_path, 512, 512)
     assert_raises(
       lambda: assert_png_source_can_drive_app_icon(small_png_path),
       "small icon source should fail macOS icon generation guard",
+    )
+    opaque_png_path = root_path / "opaque.png"
+    write_rgba_png(opaque_png_path, 1254, 1254, corner_alpha=255)
+    assert_raises(
+      lambda: assert_png_source_can_drive_app_icon(opaque_png_path),
+      "opaque icon corners should fail macOS rounded icon guard",
     )
     invalid_png_path = root_path / "icon.txt"
     invalid_png_path.write_text("not png", encoding="utf-8")

@@ -80,8 +80,8 @@ Active milestone: **M14 Connector and Skill Platform**.
 Current capabilities:
 
 - Local model setup: in-app download, verification, activation, pause, resume,
-  cancel, recovery, Reset Pith, curated model choice, and one active
-  model.
+  cancel, recovery, backend launch probing, Reset Pith, curated model choice,
+  and one active model.
 - Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
   diagnostics, bounded subprocesses, human receipts, session delete, and
   session-level change preview/revert.
@@ -97,13 +97,14 @@ Current capabilities:
   surfaces, and subtle state-driven motion without fixed dark styling.
 - Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
   guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
-  and split CI as the source of truth.
+  transparent-corner macOS icon packaging, and split CI as the source of truth.
 
 Current constraints:
 
 - Installed-app blockers beat platform expansion: first-run model download and
-  activation, human default UI, visible session deletion, and Reset Pith must
-  stay reliable before more M14 connector surface area.
+  activation, packaged backend launch, human default UI, visible session
+  deletion, and Reset Pith must stay reliable before more M14 connector surface
+  area.
 - Treat M13 as the installed-app quality baseline; only return to product polish
   when real use exposes confusing copy, stale UI, or release blockers.
 - Keep Web Search as retrieval; generic local document RAG remains deferred.
@@ -169,8 +170,8 @@ Completed baseline:
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
 - Finish product identity around a refined blue lowercase `p` mark, keep the
-  vector source and PNG candidate aligned, and ship it through the native macOS
-  icon package contract.
+  vector source and PNG candidate aligned, require transparent outer icon
+  corners, and ship it through the native macOS icon package contract.
 - Keep extension management understandable: plugin installation is the bundle
   workflow, while capabilities are grouped as Actions, Connections, Skills,
   MCP, Tools, and Checks.
@@ -186,9 +187,11 @@ Completed baseline:
 Remaining quality bar:
 
 - A fresh install can download, verify, activate, re-download, and recover a
-  local model without expert context.
+  local model without expert context; local model readiness must fail early if
+  the packaged backend cannot launch.
 - Users can delete a session, review or revert session changes, and Reset Pith
-  from visible UI without learning hidden menus.
+  from visible UI without learning hidden menus; Reset Pith must remove
+  app-owned folders, paused downloads, preferences, and local connector secrets.
 - The default path avoids raw runtime, manifest, checksum, ID, and backend
   wording; advanced diagnostics remain available only when useful.
 - Pith can run the cowork loop, use Web Search, manage sessions, and recover or

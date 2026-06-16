@@ -53,10 +53,10 @@ enum LocalDataSettingsPresenter {
       runtimeDetail: "Reset Pith. Restart Pith to set up again.",
       timelineTitle: "Pith Reset",
       timelineBody:
-        "Pith removed downloaded models, sessions, plugins, connection credentials, paused downloads, and preferences. Project folders on disk were not deleted.",
+        "Pith removed downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, and app-owned folders. Project folders on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
-        "recreatedDirectoryCount": "\(result.recreatedDirectoryCount)",
+        "remainingAppOwnedDirectoryCount": "\(result.remainingAppOwnedDirectoryCount)",
       ]
     )
   }

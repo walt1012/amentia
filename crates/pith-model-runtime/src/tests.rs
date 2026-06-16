@@ -84,10 +84,9 @@ fn runtime_health_uses_selected_manifest_identity() {
 fn runtime_accepts_manifest_verified_model_file() {
   let temp_root = unique_temp_directory("model-verified");
   fs::create_dir_all(&temp_root).expect("temp root");
-  let binary_path = temp_root.join("llama-cli");
+  let binary_path = env::current_exe().expect("current test executable");
   let model_path = temp_root.join("test-model.gguf");
   let manifest_path = temp_root.join("model-pack.json");
-  fs::write(&binary_path, "fake binary").expect("binary");
   fs::write(&model_path, b"GGUFmodel bytes").expect("model");
   let manifest = test_manifest(
     "test-model.gguf",
@@ -114,13 +113,47 @@ fn runtime_accepts_manifest_verified_model_file() {
 }
 
 #[test]
-fn runtime_rejects_model_with_wrong_manifest_checksum() {
-  let temp_root = unique_temp_directory("model-bad-checksum");
+fn runtime_rejects_backend_that_cannot_launch() {
+  let temp_root = unique_temp_directory("backend-launch-failure");
   fs::create_dir_all(&temp_root).expect("temp root");
   let binary_path = temp_root.join("llama-cli");
   let model_path = temp_root.join("test-model.gguf");
   let manifest_path = temp_root.join("model-pack.json");
-  fs::write(&binary_path, "fake binary").expect("binary");
+  fs::write(&binary_path, "not an executable backend").expect("binary");
+  fs::write(&model_path, b"GGUFmodel bytes").expect("model");
+  let manifest = test_manifest(
+    "test-model.gguf",
+    Some(sha256_hex(&model_path).expect("model sha256")),
+    Some(fs::metadata(&model_path).expect("model metadata").len()),
+  );
+
+  let runtime = LocalModelRuntime::from_resolution(
+    Some(ManifestResolution {
+      manifest,
+      manifest_path,
+      source: "test".to_string(),
+    }),
+    Some(binary_path),
+    Some(model_path),
+  );
+  let health = runtime.health();
+
+  assert_eq!(health.backend, "unconfigured");
+  assert_eq!(health.status, "unavailable");
+  assert!(health.detail.contains("local inference setup verification failed"));
+  assert!(health.detail.contains("backend"));
+  assert_eq!(health.metrics["readiness"], "misconfigured");
+
+  remove_temp_directory(&temp_root);
+}
+
+#[test]
+fn runtime_rejects_model_with_wrong_manifest_checksum() {
+  let temp_root = unique_temp_directory("model-bad-checksum");
+  fs::create_dir_all(&temp_root).expect("temp root");
+  let binary_path = env::current_exe().expect("current test executable");
+  let model_path = temp_root.join("test-model.gguf");
+  let manifest_path = temp_root.join("model-pack.json");
   fs::write(&model_path, b"GGUFmodel bytes").expect("model");
 
   let runtime = LocalModelRuntime::from_resolution(

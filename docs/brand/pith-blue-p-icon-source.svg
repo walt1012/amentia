@@ -1,13 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="Pith blue p icon source">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="Pith blue p app icon">
   <defs>
-    <filter id="soft-card-shadow" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#000000" flood-opacity="0.05"/>
-    </filter>
+    <mask id="pith-p-mask" maskUnits="userSpaceOnUse">
+      <rect width="1254" height="1254" fill="#000000"/>
+      <ellipse cx="638" cy="511" rx="273" ry="271" fill="#ffffff"/>
+      <rect x="365" y="445" width="124" height="565" rx="62" fill="#ffffff"/>
+      <rect x="365" y="507" width="124" height="440" fill="#ffffff"/>
+      <ellipse cx="636.5" cy="510" rx="147.5" ry="149" fill="#000000"/>
+      <path d="M 524 608 L 500 632 L 500 742" fill="none" stroke="#000000" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
   </defs>
-  <rect x="116" y="98" width="1022" height="1022" rx="210" fill="#ffffff" stroke="#e9ecef" stroke-width="5" filter="url(#soft-card-shadow)"/>
-  <g transform="translate(-16 -8)">
-    <path fill="#2f82f3" d="M396 460.8A264 260 0 1 1 396 553.2ZM396 486H515V946C515 979 489 1006 455.5 1006C422 1006 396 979 396 946Z"/>
-    <ellipse cx="656" cy="507" rx="139" ry="141" fill="#ffffff"/>
-    <path d="M567 605L525 647V820" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="butt" stroke-linejoin="miter"/>
-  </g>
+  <rect x="112" y="100" width="1030" height="1030" rx="214" fill="#ffffff" stroke="#e8edf3" stroke-width="5"/>
+  <rect width="1254" height="1254" fill="#2f82f3" mask="url(#pith-p-mask)"/>
 </svg>

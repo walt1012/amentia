@@ -20,7 +20,7 @@ use discovery::{
 };
 use health::{display_path, missing_runtime_detail, model_metrics};
 use inference::{generate_with_llama_cpp, generation_failure_text, request_is_cancelled};
-use validation::validate_runtime_model_file;
+use validation::{validate_runtime_backend, validate_runtime_model_file};
 
 #[derive(Debug, Clone)]
 pub struct LocalModelRuntime {
@@ -91,7 +91,9 @@ impl LocalModelRuntime {
 
     match (binary_path, model_path) {
       (Some(binary_path), Some(model_path)) if binary_path.is_file() && model_path.is_file() => {
-        match validate_runtime_model_file(&model_path, manifest.as_ref()) {
+        match validate_runtime_backend(&binary_path)
+          .and_then(|_| validate_runtime_model_file(&model_path, manifest.as_ref()))
+        {
           Ok(()) => Self {
             pack,
             manifest,
@@ -108,7 +110,7 @@ impl LocalModelRuntime {
             source,
             backend: ModelBackend::Unconfigured {
               detail: format!(
-                "Local model runtime is unavailable because model integrity verification failed: {error}"
+                "Local model runtime is unavailable because local inference setup verification failed: {error}"
               ),
               binary_path: Some(binary_path),
               model_path: Some(model_path),

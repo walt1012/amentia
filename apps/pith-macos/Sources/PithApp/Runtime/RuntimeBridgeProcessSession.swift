@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 final class RuntimeBridgeProcessSession {
@@ -10,6 +11,8 @@ final class RuntimeBridgeProcessSession {
   private let recentErrorOutputQueue = DispatchQueue(label: "pith.runtime.bridge.stderr-tail")
   private let recentErrorOutputLimit = 4096
   private let recentErrorSummaryLimit = 900
+  private let terminationGraceSeconds = 2.0
+  private let terminationPollSeconds = 0.05
   private var recentErrorOutput = ""
   private var readerTask: Task<Void, Never>?
   private var errorReaderTask: Task<Void, Never>?
@@ -89,10 +92,24 @@ final class RuntimeBridgeProcessSession {
 
     if process.isRunning {
       process.terminate()
+      waitForTerminationOrKill()
     }
 
     try? outputHandle.close()
     try? errorHandle.close()
+  }
+
+  private func waitForTerminationOrKill() {
+    let deadline = Date().addingTimeInterval(terminationGraceSeconds)
+    while process.isRunning && Date() < deadline {
+      Thread.sleep(forTimeInterval: terminationPollSeconds)
+    }
+    guard process.isRunning else {
+      return
+    }
+
+    Darwin.kill(process.processIdentifier, SIGKILL)
+    process.waitUntilExit()
   }
 
   private func startReaderLoop(

@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import zlib
 from pathlib import Path, PurePosixPath
 
 from macos_llama_backend import (
@@ -394,6 +395,7 @@ def assert_png_source_can_drive_app_icon(path: Path) -> None:
       "macOS app icon source must be at least "
       f"{APP_ICON_MIN_SOURCE_SIZE}x{APP_ICON_MIN_SOURCE_SIZE}: {path}"
     )
+  assert_png_source_has_transparent_corners(path)
 
 
 def png_dimensions(path: Path) -> tuple[int, int]:
@@ -401,6 +403,140 @@ def png_dimensions(path: Path) -> tuple[int, int]:
   if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
     raise RuntimeError(f"macOS app icon source must be a PNG file: {path}")
   return struct.unpack(">II", data[16:24])
+
+
+def assert_png_source_has_transparent_corners(path: Path) -> None:
+  image = decode_rgba_png(path)
+  width, height = image["width"], image["height"]
+  pixels = image["pixels"]
+  corners = [
+    pixels[0][0],
+    pixels[0][width - 1],
+    pixels[height - 1][0],
+    pixels[height - 1][width - 1],
+  ]
+  if any(pixel[3] != 0 for pixel in corners):
+    raise RuntimeError(
+      "macOS app icon source must use transparent outer corners so the "
+      f"installed Dock icon is a rounded app tile: {path}"
+    )
+
+
+def decode_rgba_png(path: Path) -> dict[str, object]:
+  data = path.read_bytes()
+  if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise RuntimeError(f"macOS app icon source must be a PNG file: {path}")
+
+  chunks = png_chunks(data, path)
+  ihdr = chunks.get("IHDR", [None])[0]
+  if ihdr is None:
+    raise RuntimeError(f"PNG icon source is missing IHDR: {path}")
+  width, height = struct.unpack(">II", ihdr[:8])
+  bit_depth = ihdr[8]
+  color_type = ihdr[9]
+  if bit_depth != 8 or color_type != 6:
+    raise RuntimeError(
+      "macOS app icon source must be an 8-bit RGBA PNG with alpha transparency: "
+      f"{path}"
+    )
+
+  idat = b"".join(chunks.get("IDAT", []))
+  if not idat:
+    raise RuntimeError(f"PNG icon source is missing image data: {path}")
+  raw = zlib.decompress(idat)
+  return {
+    "width": width,
+    "height": height,
+    "pixels": unfilter_rgba_png(raw, width, height, path),
+  }
+
+
+def png_chunks(data: bytes, path: Path) -> dict[str, list[bytes]]:
+  chunks: dict[str, list[bytes]] = {}
+  position = 8
+  while position + 8 <= len(data):
+    length = struct.unpack(">I", data[position:position + 4])[0]
+    chunk_type = data[position + 4:position + 8].decode("ascii", errors="replace")
+    chunk_start = position + 8
+    chunk_end = chunk_start + length
+    if chunk_end + 4 > len(data):
+      raise RuntimeError(f"PNG chunk exceeds file length: {path}: {chunk_type}")
+    chunks.setdefault(chunk_type, []).append(data[chunk_start:chunk_end])
+    position = chunk_end + 4
+    if chunk_type == "IEND":
+      break
+  return chunks
+
+
+def unfilter_rgba_png(
+  raw: bytes,
+  width: int,
+  height: int,
+  path: Path,
+) -> list[list[tuple[int, int, int, int]]]:
+  bytes_per_pixel = 4
+  row_length = width * bytes_per_pixel
+  expected = height * (1 + row_length)
+  if len(raw) != expected:
+    raise RuntimeError(
+      f"PNG icon source has unexpected image data length: {path}: {len(raw)} != {expected}"
+    )
+
+  rows: list[bytearray] = []
+  offset = 0
+  for _row_index in range(height):
+    filter_type = raw[offset]
+    offset += 1
+    row = bytearray(raw[offset:offset + row_length])
+    offset += row_length
+    previous = rows[-1] if rows else bytearray(row_length)
+    unfilter_png_row(row, previous, filter_type, bytes_per_pixel, path)
+    rows.append(row)
+
+  return [
+    [
+      tuple(row[column:column + 4])  # type: ignore[misc]
+      for column in range(0, row_length, bytes_per_pixel)
+    ]
+    for row in rows
+  ]
+
+
+def unfilter_png_row(
+  row: bytearray,
+  previous: bytearray,
+  filter_type: int,
+  bytes_per_pixel: int,
+  path: Path,
+) -> None:
+  for index, value in enumerate(row):
+    left = row[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+    up = previous[index]
+    upper_left = previous[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+    if filter_type == 0:
+      continue
+    if filter_type == 1:
+      row[index] = (value + left) & 0xFF
+    elif filter_type == 2:
+      row[index] = (value + up) & 0xFF
+    elif filter_type == 3:
+      row[index] = (value + ((left + up) // 2)) & 0xFF
+    elif filter_type == 4:
+      row[index] = (value + paeth_predictor(left, up, upper_left)) & 0xFF
+    else:
+      raise RuntimeError(f"PNG icon source uses unsupported row filter {filter_type}: {path}")
+
+
+def paeth_predictor(left: int, up: int, upper_left: int) -> int:
+  estimate = left + up - upper_left
+  distance_left = abs(estimate - left)
+  distance_up = abs(estimate - up)
+  distance_upper_left = abs(estimate - upper_left)
+  if distance_left <= distance_up and distance_left <= distance_upper_left:
+    return left
+  if distance_up <= distance_upper_left:
+    return up
+  return upper_left
 
 
 def assert_macos_icon_packaged(path: Path) -> None:
@@ -607,6 +743,7 @@ def validate_app_bundle(
   assert_portable_llama_backend(
     app_path / "Contents" / "Resources" / LLAMA_BACKEND_RELATIVE_PARENT
   )
+  assert_llama_backend_launches(app_path)
   assert_llama_backend_dependencies_match_arch(app_path)
   assert_packaged_app_copy_is_present(app_path)
   assert_no_model_weights_are_bundled(app_path)
@@ -627,6 +764,28 @@ def assert_llama_backend_dependencies_match_arch(app_path: Path) -> None:
     return
   for dylib in sorted(lib_directory.glob("*.dylib")):
     assert_only_x86_64_if_lipo_is_available(dylib)
+
+
+def assert_llama_backend_launches(app_path: Path) -> None:
+  backend = (
+    app_path
+    / "Contents"
+    / "Resources"
+    / LLAMA_BACKEND_RELATIVE_PARENT
+    / LLAMA_BACKEND_EXECUTABLE_NAME
+  )
+  completed = subprocess.run(
+    [str(backend), "--help"],
+    text=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    timeout=10,
+  )
+  if completed.returncode != 0:
+    raise RuntimeError(
+      "Packaged llama.cpp backend failed to launch. "
+      f"Exit {completed.returncode}. Output: {completed.stdout[-1000:]}"
+    )
 
 
 def assert_info_plist_matches_product_rules(app_path: Path, expected_version: str) -> None:

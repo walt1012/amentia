@@ -1,22 +1,25 @@
 import Foundation
+import Security
 
 struct AppDataResetResult: Equatable {
   let appSupportPath: String
-  let recreatedDirectoryCount: Int
+  let remainingAppOwnedDirectoryCount: Int
 }
 
 enum AppDataResetService {
+  private static let connectorCredentialService = "app.pith.plugin-connectors"
+
   static func deleteLocalData(
     rootDirectory: URL = AppSupportDirectories.rootDirectory(),
     allowsNonDefaultRoot: Bool = false
   ) throws -> AppDataResetResult {
     try validateResetRoot(rootDirectory, allowsNonDefaultRoot: allowsNonDefaultRoot)
+    try removeConnectorCredentials()
     try removeAppSupportRoot(rootDirectory)
     clearKnownPreferences()
-    try AppSupportDirectories.prepareAppOwnedDirectories(rootDirectory: rootDirectory)
     return AppDataResetResult(
       appSupportPath: rootDirectory.path,
-      recreatedDirectoryCount: AppSupportDirectories.appOwnedDirectoryCount
+      remainingAppOwnedDirectoryCount: 0
     )
   }
 
@@ -34,6 +37,17 @@ enum AppDataResetService {
     }
 
     try manager.removeItem(at: rootDirectory)
+  }
+
+  private static func removeConnectorCredentials() throws {
+    let query: [String: Any] = [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: connectorCredentialService,
+    ]
+    let status = SecItemDelete(query as CFDictionary)
+    guard status == errSecSuccess || status == errSecItemNotFound else {
+      throw AppDataResetError.credentialCleanupFailed(status: status)
+    }
   }
 
   private static func validateResetRoot(
@@ -58,6 +72,7 @@ enum AppDataResetService {
 enum AppDataResetError: LocalizedError, Equatable {
   case unsafeRoot(path: String)
   case symbolicLink(path: String)
+  case credentialCleanupFailed(status: OSStatus)
 
   var errorDescription: String? {
     switch self {
@@ -65,6 +80,8 @@ enum AppDataResetError: LocalizedError, Equatable {
       return "Refusing to delete an unsafe app data path: \(path)"
     case .symbolicLink(let path):
       return "Refusing to delete app data through a symbolic link: \(path)"
+    case .credentialCleanupFailed(let status):
+      return "Failed to remove saved connection credentials from Keychain: \(status)"
     }
   }
 }

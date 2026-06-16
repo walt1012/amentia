@@ -116,7 +116,11 @@ enum LocalModelStatusPresenter {
       return "Launch Pith to inspect local model setup."
     }
 
-    return modelHealth.metrics["installHint"] ?? "Setup hint unavailable."
+    if modelHealth.status == "ready" {
+      return "Local model setup is ready."
+    }
+
+    return userFacingModelRepairDetail(snapshot, modelHealth: modelHealth)
   }
 
   private static func userFacingModelRepairDetail(

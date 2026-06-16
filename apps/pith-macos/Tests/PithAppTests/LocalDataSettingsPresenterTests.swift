@@ -81,7 +81,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     let reset = LocalDataSettingsPresenter.resetSummary(
       AppDataResetResult(
         appSupportPath: "/Users/example/Library/Application Support/Pith",
-        recreatedDirectoryCount: 7
+        remainingAppOwnedDirectoryCount: 0
       )
     )
 
@@ -94,10 +94,11 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(reset.timelineBody.contains("plugins"))
     XCTAssertTrue(reset.timelineBody.contains("connection credentials"))
     XCTAssertTrue(reset.timelineBody.contains("paused downloads"))
+    XCTAssertTrue(reset.timelineBody.contains("app-owned folders"))
     XCTAssertEqual(
       reset.attributes["appSupportPath"],
       "/Users/example/Library/Application Support/Pith"
     )
-    XCTAssertEqual(reset.attributes["recreatedDirectoryCount"], "7")
+    XCTAssertEqual(reset.attributes["remainingAppOwnedDirectoryCount"], "0")
   }
 }
