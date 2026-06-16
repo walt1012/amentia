@@ -285,9 +285,7 @@ mod tests {
     );
   }
 
-  fn test_command(
-    execution: Option<HostPluginCommandExecutionEntry>,
-  ) -> HostPluginCommandEntry {
+  fn test_command(execution: Option<HostPluginCommandExecutionEntry>) -> HostPluginCommandEntry {
     HostPluginCommandEntry {
       command_id: "test-plugin::run".to_string(),
       title: "Run Test Plugin".to_string(),
