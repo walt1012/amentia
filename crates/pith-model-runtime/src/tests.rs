@@ -108,6 +108,8 @@ fn runtime_accepts_manifest_verified_model_file() {
   assert_eq!(health.backend, "llama.cpp");
   assert_eq!(health.status, "ready");
   assert_eq!(health.metrics["readiness"], "ready");
+  assert_eq!(health.metrics["invocationMode"], "bounded-llama-cpp");
+  assert_eq!(health.metrics["promptInput"], "temporary-file");
 
   remove_temp_directory(&temp_root);
 }

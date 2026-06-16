@@ -81,7 +81,8 @@ Current capabilities:
 
 - Local model setup: in-app download, verification, activation, pause, resume,
   cancel, recovery, backend launch probing, reliable relaunch after model
-  selection, Reset Pith, curated model choice, and one active model.
+  selection, file-backed bounded inference, Reset Pith, curated model choice,
+  and one active model.
 - Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
   diagnostics, bounded subprocesses, human receipts, session delete, and
   session-level change preview/revert.
@@ -186,9 +187,10 @@ Completed baseline:
 
 Remaining quality bar:
 
-- A fresh install can download, verify, activate, re-download, and recover a
-  local model without expert context; local model readiness must fail early if
-  the packaged backend cannot launch.
+- A fresh install can download, verify, activate, re-download, recover, and
+  invoke a local model without expert context; readiness must fail early if the
+  packaged backend cannot launch, and generation must use bounded file-backed
+  prompt input.
 - Users can delete a session, review or revert session changes, and Reset Pith
   from visible UI without learning hidden menus; Reset Pith must remove
   app-owned folders, paused downloads, preferences, caches, saved app state, and
