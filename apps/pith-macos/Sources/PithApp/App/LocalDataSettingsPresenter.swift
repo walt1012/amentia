@@ -34,16 +34,16 @@ enum LocalDataSettingsPresenter {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
-        "Pith keeps downloaded models, sessions, plugins, connection credentials, and preferences on this Mac. Project folders are never deleted here.",
+        "Pith keeps downloaded models, sessions, plugins, connection credentials, preferences, caches, and window state on this Mac. Project folders are never deleted here.",
       uninstallDetail:
         "Removing Pith.app does not remove this data. Use Reset Pith when you want a fresh first-run setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
       localDataPath: snapshot.localDataPath,
       revealButtonTitle: "Show Pith Data",
-      deleteButtonTitle: "Reset Pith...",
-      confirmationTitle: "Reset Pith on This Mac?",
+      deleteButtonTitle: "Delete All Pith Data...",
+      confirmationTitle: "Delete All Pith Data on This Mac?",
       confirmationMessage:
-        "Pith will remove downloaded models, sessions, plugins, connection credentials, paused downloads, and preferences from this Mac. Your project folders and repositories will not be deleted.",
+        "Pith will remove all app-owned local data: downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, and saved app state. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
@@ -53,7 +53,7 @@ enum LocalDataSettingsPresenter {
       runtimeDetail: "Reset Pith. Restart Pith to set up again.",
       timelineTitle: "Pith Reset",
       timelineBody:
-        "Pith removed downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, and app-owned folders. Project folders on disk were not deleted.",
+        "Pith removed all app-owned local data, including downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, saved app state, and app-owned folders. Project folders on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
         "remainingAppOwnedDirectoryCount": "\(result.remainingAppOwnedDirectoryCount)",
@@ -66,7 +66,7 @@ enum LocalDataSettingsPresenter {
       return "Downloaded models use \(LocalModelByteFormatter.string(downloadedModelBytes)) on this Mac."
     }
 
-    return "No downloaded model files yet. Sessions, plugins, connections, and preferences stay on this Mac."
+    return "No downloaded model files yet. Sessions, plugins, connections, preferences, and caches stay on this Mac."
   }
 
   private static func blockedDetail(canDeleteLocalData: Bool) -> String? {

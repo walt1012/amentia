@@ -8,6 +8,8 @@ struct AppDataResetResult: Equatable {
 
 enum AppDataResetService {
   private static let connectorCredentialService = "app.pith.plugin-connectors"
+  private static let appBundleIdentifier = "app.pith.Pith"
+  private static let appDisplayName = "Pith"
 
   static func deleteLocalData(
     rootDirectory: URL = AppSupportDirectories.rootDirectory(),
@@ -17,6 +19,9 @@ enum AppDataResetService {
     try removeConnectorCredentials()
     try removeAppSupportRoot(rootDirectory)
     clearKnownPreferences()
+    if shouldRemoveSystemResidue(allowsNonDefaultRoot: allowsNonDefaultRoot) {
+      try removeSystemResidue()
+    }
     return AppDataResetResult(
       appSupportPath: rootDirectory.path,
       remainingAppOwnedDirectoryCount: 0
@@ -37,6 +42,53 @@ enum AppDataResetService {
     }
 
     try manager.removeItem(at: rootDirectory)
+  }
+
+  private static func shouldRemoveSystemResidue(allowsNonDefaultRoot: Bool) -> Bool {
+    let hasOverride = ProcessInfo.processInfo.environment["PITH_APP_SUPPORT_DIR"]?.isEmpty == false
+    return !allowsNonDefaultRoot && !hasOverride
+  }
+
+  private static func removeSystemResidue() throws {
+    UserDefaults.standard.removePersistentDomain(forName: appBundleIdentifier)
+
+    guard let libraryDirectory = userLibraryDirectory() else {
+      return
+    }
+
+    for path in systemResiduePaths(libraryDirectory: libraryDirectory) {
+      try removeIfPresent(path)
+    }
+  }
+
+  static func systemResiduePaths(libraryDirectory: URL) -> [URL] {
+    [
+      libraryDirectory
+        .appendingPathComponent("Preferences", isDirectory: true)
+        .appendingPathComponent("\(appBundleIdentifier).plist", isDirectory: false),
+      libraryDirectory
+        .appendingPathComponent("Caches", isDirectory: true)
+        .appendingPathComponent(appBundleIdentifier, isDirectory: true),
+      libraryDirectory
+        .appendingPathComponent("Caches", isDirectory: true)
+        .appendingPathComponent(appDisplayName, isDirectory: true),
+      libraryDirectory
+        .appendingPathComponent("Saved Application State", isDirectory: true)
+        .appendingPathComponent("\(appBundleIdentifier).savedState", isDirectory: true),
+    ]
+  }
+
+  private static func removeIfPresent(_ url: URL) throws {
+    let manager = FileManager.default
+    guard manager.fileExists(atPath: url.path) else {
+      return
+    }
+
+    try manager.removeItem(at: url)
+  }
+
+  private static func userLibraryDirectory() -> URL? {
+    FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
   }
 
   private static func removeConnectorCredentials() throws {

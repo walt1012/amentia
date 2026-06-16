@@ -30,16 +30,19 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       summary.storageSummary,
-      "No downloaded model files yet. Sessions, plugins, connections, and preferences stay on this Mac."
+      "No downloaded model files yet. Sessions, plugins, connections, preferences, and caches stay on this Mac."
     )
     XCTAssertTrue(summary.ownershipDetail.contains("plugins"))
     XCTAssertTrue(summary.ownershipDetail.contains("connection credentials"))
+    XCTAssertTrue(summary.ownershipDetail.contains("caches"))
+    XCTAssertTrue(summary.ownershipDetail.contains("window state"))
     XCTAssertTrue(summary.ownershipDetail.contains("Project folders are never deleted"))
     XCTAssertTrue(summary.uninstallDetail.contains("Removing Pith.app does not remove this data"))
     XCTAssertTrue(summary.uninstallDetail.contains("Reset Pith"))
     XCTAssertNil(summary.blockedDetail)
     XCTAssertEqual(summary.revealButtonTitle, "Show Pith Data")
-    XCTAssertEqual(summary.deleteButtonTitle, "Reset Pith...")
+    XCTAssertEqual(summary.deleteButtonTitle, "Delete All Pith Data...")
+    XCTAssertTrue(summary.confirmationTitle.contains("Delete All Pith Data"))
   }
 
   func testSummaryExplainsDownloadedModelStorage() {
@@ -56,10 +59,13 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(
       summary.confirmationMessage.contains("project folders and repositories will not be deleted")
     )
+    XCTAssertTrue(summary.confirmationMessage.contains("all app-owned local data"))
     XCTAssertTrue(summary.confirmationMessage.contains("from this Mac"))
     XCTAssertTrue(summary.confirmationMessage.contains("plugins"))
     XCTAssertTrue(summary.confirmationMessage.contains("connection credentials"))
     XCTAssertTrue(summary.confirmationMessage.contains("paused downloads"))
+    XCTAssertTrue(summary.confirmationMessage.contains("caches"))
+    XCTAssertTrue(summary.confirmationMessage.contains("saved app state"))
   }
 
   func testSummaryExplainsBlockedDeletion() {
@@ -90,15 +96,34 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       "Reset Pith. Restart Pith to set up again."
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
+    XCTAssertTrue(reset.timelineBody.contains("all app-owned local data"))
     XCTAssertTrue(reset.timelineBody.contains("Project folders on disk were not deleted"))
     XCTAssertTrue(reset.timelineBody.contains("plugins"))
     XCTAssertTrue(reset.timelineBody.contains("connection credentials"))
     XCTAssertTrue(reset.timelineBody.contains("paused downloads"))
+    XCTAssertTrue(reset.timelineBody.contains("caches"))
+    XCTAssertTrue(reset.timelineBody.contains("saved app state"))
     XCTAssertTrue(reset.timelineBody.contains("app-owned folders"))
     XCTAssertEqual(
       reset.attributes["appSupportPath"],
       "/Users/example/Library/Application Support/Pith"
     )
     XCTAssertEqual(reset.attributes["remainingAppOwnedDirectoryCount"], "0")
+  }
+
+  func testSystemResiduePathsAreScopedToPithBundle() {
+    let libraryURL = URL(fileURLWithPath: "/Users/example/Library", isDirectory: true)
+    let paths = AppDataResetService.systemResiduePaths(libraryDirectory: libraryURL)
+      .map(\.path)
+
+    XCTAssertEqual(
+      paths,
+      [
+        "/Users/example/Library/Preferences/app.pith.Pith.plist",
+        "/Users/example/Library/Caches/app.pith.Pith",
+        "/Users/example/Library/Caches/Pith",
+        "/Users/example/Library/Saved Application State/app.pith.Pith.savedState",
+      ]
+    )
   }
 }

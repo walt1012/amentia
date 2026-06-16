@@ -191,7 +191,8 @@ Remaining quality bar:
   the packaged backend cannot launch.
 - Users can delete a session, review or revert session changes, and Reset Pith
   from visible UI without learning hidden menus; Reset Pith must remove
-  app-owned folders, paused downloads, preferences, and local connector secrets.
+  app-owned folders, paused downloads, preferences, caches, saved app state, and
+  local connector secrets.
 - The default path avoids raw runtime, manifest, checksum, ID, and backend
   wording; advanced diagnostics remain available only when useful.
 - Pith can run the cowork loop, use Web Search, manage sessions, and recover or

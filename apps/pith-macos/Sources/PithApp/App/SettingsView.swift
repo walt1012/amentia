@@ -177,7 +177,7 @@ private struct SettingsStorageSection: View {
   @Binding var confirmsLocalDataDelete: Bool
 
   var body: some View {
-    SettingsCard(title: "Storage", systemImage: "externaldrive", tone: .neutral) {
+    SettingsCard(title: "Storage & Reset", systemImage: "externaldrive", tone: .neutral) {
       Text(summary.storageSummary)
         .font(.caption)
       Text(summary.ownershipDetail)
@@ -215,7 +215,7 @@ private struct SettingsStorageSection: View {
       }
     }
     .alert(summary.confirmationTitle, isPresented: $confirmsLocalDataDelete) {
-      Button("Reset Pith", role: .destructive) {
+      Button("Delete All Pith Data", role: .destructive) {
         delete()
       }
       Button("Cancel", role: .cancel) {}

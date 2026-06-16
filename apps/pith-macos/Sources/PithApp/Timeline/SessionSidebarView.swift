@@ -51,7 +51,7 @@ struct SessionSidebarView: View {
         }
         .disabled(selectedSession.map { !viewModel.canDeleteThread($0) } ?? true)
 
-        Button("Reset Pith...", role: .destructive) {
+        Button(resetSummary.deleteButtonTitle, role: .destructive) {
           confirmsResetPith = true
         }
         .disabled(!viewModel.canDeleteLocalData())
@@ -92,7 +92,7 @@ struct SessionSidebarView: View {
       )
     }
     .alert(resetSummary.confirmationTitle, isPresented: $confirmsResetPith) {
-      Button("Reset Pith", role: .destructive) {
+      Button("Delete All Pith Data", role: .destructive) {
         viewModel.deleteLocalData()
       }
       Button("Cancel", role: .cancel) {}
