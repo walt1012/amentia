@@ -43,7 +43,7 @@ enum LocalDataSettingsPresenter {
       deleteButtonTitle: "Delete All Pith Data...",
       confirmationTitle: "Delete All Pith Data on This Mac?",
       confirmationMessage:
-        "Pith will remove all app-owned local data: downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, and saved app state. Your project folders and repositories will not be deleted.",
+        "Pith will remove all app-owned local data from this Mac: downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, and saved app state. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
