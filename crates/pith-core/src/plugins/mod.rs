@@ -11,6 +11,7 @@ pub(crate) mod plugin_command_git;
 pub(crate) mod plugin_command_handoff;
 pub(crate) mod plugin_command_input_contract;
 pub(crate) mod plugin_command_mcp_output;
+pub(crate) mod plugin_command_mcp_output_protocol;
 pub(crate) mod plugin_command_mcp_runner;
 pub(crate) mod plugin_command_mcp_session;
 pub(crate) mod plugin_command_mcp_target;

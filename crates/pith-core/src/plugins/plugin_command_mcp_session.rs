@@ -13,7 +13,7 @@ use pith_process::{
   terminate_process_group_or_child, write_pipe_in_background, BoundedPipeOutput,
 };
 
-use super::plugin_command_mcp_output::PluginMcpOutputScan;
+use super::plugin_command_mcp_output_protocol::PluginMcpOutputScan;
 use super::plugin_command_mcp_target::PluginMcpTarget;
 use super::plugin_command_runner::{merged_attributes, PluginRunnerFailure, PluginRunnerRunResult};
 use super::plugin_command_runner_process::{
