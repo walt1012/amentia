@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use pith_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use pith_protocol::TimelineItem;
 
-use super::plugin_command_runner_contracts::{
-  PluginRunnerTimelineItemEnvelope, PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
-};
 use super::plugin_command_runner_attribute_policy::{
   merge_plugin_runner_attributes, plugin_runner_owned_attributes,
+};
+use super::plugin_command_runner_contracts::{
+  PluginRunnerTimelineItemEnvelope, PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
 };
 use super::plugin_command_runner_proof::{
   insert_plugin_runner_timeline_contracts, plugin_runner_timeline_contracts_are_valid,

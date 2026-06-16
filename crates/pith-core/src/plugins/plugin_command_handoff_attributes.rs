@@ -74,9 +74,18 @@ mod tests {
   fn copies_reviewable_connector_evidence_only() {
     let mut attributes = HashMap::new();
     let observation_attributes = HashMap::from([
-      ("remoteProofUrl".to_string(), "https://example.com/proof".to_string()),
-      ("connectorWorkflowStatus".to_string(), "prepared".to_string()),
-      ("pluginRunnerOutputStatus".to_string(), "envelope".to_string()),
+      (
+        "remoteProofUrl".to_string(),
+        "https://example.com/proof".to_string(),
+      ),
+      (
+        "connectorWorkflowStatus".to_string(),
+        "prepared".to_string(),
+      ),
+      (
+        "pluginRunnerOutputStatus".to_string(),
+        "envelope".to_string(),
+      ),
       ("internalTrace".to_string(), "hidden".to_string()),
     ]);
 

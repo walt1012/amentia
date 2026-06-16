@@ -96,11 +96,17 @@ mod tests {
   #[test]
   fn runner_attributes_override_reserved_keys_only() {
     let mut item_attributes = HashMap::from([
-      ("pluginRunnerOutputStatus".to_string(), "spoofed".to_string()),
+      (
+        "pluginRunnerOutputStatus".to_string(),
+        "spoofed".to_string(),
+      ),
       ("customSignal".to_string(), "plugin-value".to_string()),
     ]);
     let runner_attributes = HashMap::from([
-      ("pluginRunnerOutputStatus".to_string(), "envelope".to_string()),
+      (
+        "pluginRunnerOutputStatus".to_string(),
+        "envelope".to_string(),
+      ),
       ("customSignal".to_string(), "runner-value".to_string()),
     ]);
 
