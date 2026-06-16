@@ -44,6 +44,7 @@ pub(super) fn model_confirms_web_search_candidate(
       intent.routing_reason
     ),
     max_tokens: WEB_SEARCH_ROUTE_DECISION_TOKENS,
+    timeout: None,
     cancellation: Some(snapshot.cancellation.clone()),
   });
 

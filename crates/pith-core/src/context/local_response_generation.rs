@@ -24,6 +24,7 @@ pub(super) fn generate_local_summary(
     role: ModelRole::Summarizer,
     prompt: prompt.text.clone(),
     max_tokens: 160,
+    timeout: None,
     cancellation: cancellation.cloned(),
   });
 

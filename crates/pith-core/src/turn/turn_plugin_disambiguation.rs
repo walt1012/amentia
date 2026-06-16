@@ -36,6 +36,7 @@ pub(crate) fn maybe_disambiguate_plugin_route(
     role: ModelRole::Planner,
     prompt: connector_disambiguation_prompt(message, &route),
     max_tokens: CONNECTOR_ROUTE_DECISION_TOKENS,
+    timeout: None,
     cancellation: Some(cancellation.clone()),
   });
   if response.status != "ready" {

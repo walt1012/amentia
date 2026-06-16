@@ -33,6 +33,8 @@ extension AppViewModel {
       break
     case .bootstrapModelPackMetadata:
       bootstrapModelPackMetadata()
+    case .probeModel:
+      probeLocalModel()
     }
   }
 

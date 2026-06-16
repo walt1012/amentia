@@ -17,6 +17,7 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::MEMORY_STATUS => memory_requests::handle_memory_status(context, request),
     methods::MODEL_BOOTSTRAP => model_requests::handle_model_bootstrap(context, request),
     methods::MODEL_HEALTH => model_requests::handle_model_health(context, request),
+    methods::MODEL_PROBE => model_requests::handle_model_probe(context, request),
     methods::PLUGIN_CAPABILITY_REGISTRY => {
       plugin_requests::handle_plugin_capability_registry(context, request)
     }

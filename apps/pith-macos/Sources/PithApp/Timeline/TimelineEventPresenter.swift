@@ -221,6 +221,20 @@ enum TimelineEventPresenter {
     )
   }
 
+  static func localModelProbe(
+    title: String,
+    body: String,
+    kind: TimelineEntry.Kind = .system,
+    attributes: [String: String]
+  ) -> TimelineEntry {
+    TimelineEntryFactory.entry(
+      kind: kind,
+      title: title,
+      body: body,
+      attributes: attributes
+    )
+  }
+
   static func memoryNoteSaved(_ note: RuntimeBridge.RuntimeMemoryNote) -> TimelineEntry {
     TimelineEntryFactory.system(
       title: "Memory Note Saved",

@@ -1,4 +1,12 @@
-use pith_model_runtime::{LocalModelRuntime, ModelBootstrap, ModelHealth};
+use std::time::Duration;
+
+use pith_model_runtime::{
+  GenerateRequest, GenerateResponse, LocalModelRuntime, ModelBootstrap, ModelHealth, ModelRole,
+};
+
+const MODEL_PROBE_PROMPT: &str =
+  "Reply with exactly this short phrase if local generation is working: Pith model ready.";
+const MODEL_PROBE_TIMEOUT: Duration = Duration::from_secs(45);
 
 #[derive(Debug, Clone)]
 pub(crate) struct RuntimeModelState {
@@ -24,6 +32,16 @@ impl RuntimeModelState {
 
   pub(crate) fn health(&self) -> ModelHealth {
     self.runtime.health()
+  }
+
+  pub(crate) fn probe(&self) -> GenerateResponse {
+    self.runtime.generate(GenerateRequest {
+      role: ModelRole::Summarizer,
+      prompt: MODEL_PROBE_PROMPT.to_string(),
+      max_tokens: 16,
+      timeout: Some(MODEL_PROBE_TIMEOUT),
+      cancellation: None,
+    })
   }
 
   pub(crate) fn bootstrap_pack_metadata(&self) -> anyhow::Result<ModelBootstrap> {

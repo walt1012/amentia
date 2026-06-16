@@ -42,6 +42,7 @@ pub(crate) fn build_plan_item(
     role: ModelRole::Planner,
     prompt: prompt.text.clone(),
     max_tokens: 80,
+    timeout: None,
     cancellation: cancellation.cloned(),
   });
   let mut attributes = HashMap::from([

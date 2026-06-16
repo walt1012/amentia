@@ -28,3 +28,14 @@ pub struct ModelBootstrapResult {
   pub readme_path: Option<String>,
   pub copied_files: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelProbeResult {
+  pub status: String,
+  pub detail: String,
+  pub backend: String,
+  pub model_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub sample: Option<String>,
+}

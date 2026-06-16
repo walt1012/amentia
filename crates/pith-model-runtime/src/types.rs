@@ -4,6 +4,7 @@ use std::sync::{
   atomic::{AtomicBool, Ordering},
   Arc,
 };
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
@@ -63,6 +64,7 @@ pub struct GenerateRequest {
   pub role: ModelRole,
   pub prompt: String,
   pub max_tokens: usize,
+  pub timeout: Option<Duration>,
   pub cancellation: Option<GenerationCancellation>,
 }
 

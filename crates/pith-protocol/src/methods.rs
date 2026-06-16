@@ -6,6 +6,7 @@ pub const MEMORY_LIST: &str = "memory/list";
 pub const MEMORY_STATUS: &str = "memory/status";
 pub const MODEL_BOOTSTRAP: &str = "model/bootstrap";
 pub const MODEL_HEALTH: &str = "model/health";
+pub const MODEL_PROBE: &str = "model/probe";
 pub const PLUGIN_CAPABILITY_REGISTRY: &str = "plugin/capabilityRegistry";
 pub const PLUGIN_COMMAND_REGISTRY: &str = "plugin/commandRegistry";
 pub const PLUGIN_COMMAND_RUN: &str = "plugin/commandRun";

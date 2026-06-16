@@ -1,5 +1,5 @@
-use pith_model_runtime::{ModelBootstrap, ModelHealth};
-use pith_protocol::{ModelBootstrapResult, ModelHealthResult};
+use pith_model_runtime::{GenerateResponse, ModelBootstrap, ModelHealth};
+use pith_protocol::{ModelBootstrapResult, ModelHealthResult, ModelProbeResult};
 
 pub(crate) fn to_protocol_model_health(health: ModelHealth) -> ModelHealthResult {
   ModelHealthResult {
@@ -25,5 +25,72 @@ pub(crate) fn to_protocol_model_bootstrap(result: ModelBootstrap) -> ModelBootst
       .into_iter()
       .map(|path| path.display().to_string())
       .collect(),
+  }
+}
+
+pub(crate) fn to_protocol_model_probe(response: GenerateResponse) -> ModelProbeResult {
+  let is_ready = response.status == "ready";
+  let detail = if is_ready {
+    "The active local model answered a short probe.".to_string()
+  } else {
+    response.text.clone()
+  };
+  let sample = if is_ready {
+    Some(compact_probe_sample(&response.text))
+  } else {
+    None
+  };
+
+  ModelProbeResult {
+    status: response.status,
+    detail,
+    backend: response.backend,
+    model_id: response.model_id,
+    sample,
+  }
+}
+
+fn compact_probe_sample(text: &str) -> String {
+  let trimmed = text.trim();
+  if trimmed.chars().count() <= 120 {
+    return trimmed.to_string();
+  }
+
+  trimmed.chars().take(117).collect::<String>() + "..."
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn model_probe_ready_result_keeps_compact_sample() {
+    let result = to_protocol_model_probe(GenerateResponse {
+      text: "Pith model ready.".to_string(),
+      backend: "llama.cpp".to_string(),
+      status: "ready".to_string(),
+      model_id: "test-model".to_string(),
+    });
+
+    assert_eq!(result.status, "ready");
+    assert_eq!(
+      result.detail,
+      "The active local model answered a short probe."
+    );
+    assert_eq!(result.sample, Some("Pith model ready.".to_string()));
+  }
+
+  #[test]
+  fn model_probe_failure_result_keeps_repair_detail_without_sample() {
+    let result = to_protocol_model_probe(GenerateResponse {
+      text: "Pith could not produce a local response.".to_string(),
+      backend: "unconfigured".to_string(),
+      status: "unavailable".to_string(),
+      model_id: "test-model".to_string(),
+    });
+
+    assert_eq!(result.status, "unavailable");
+    assert_eq!(result.detail, "Pith could not produce a local response.");
+    assert_eq!(result.sample, None);
   }
 }

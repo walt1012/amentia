@@ -36,6 +36,7 @@ fn unconfigured_generation_returns_unavailable_error() {
     role: ModelRole::Summarizer,
     prompt: "Summarize this test prompt.".to_string(),
     max_tokens: 96,
+    timeout: None,
     cancellation: None,
   });
 

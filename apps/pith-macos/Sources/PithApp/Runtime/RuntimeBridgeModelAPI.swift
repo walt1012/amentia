@@ -34,6 +34,14 @@ extension RuntimeBridge {
     let copiedFiles: [String]
   }
 
+  struct RuntimeModelProbe {
+    let status: String
+    let detail: String
+    let backend: String
+    let modelID: String
+    let sample: String?
+  }
+
   func modelHealth() async throws -> RuntimeModelHealth {
     let response: JSONRPCResponse<ModelHealthResult> = try await sendRequest(
       method: "model/health",
@@ -90,6 +98,22 @@ extension RuntimeBridge {
       copiedFiles: result.copiedFiles
     )
   }
+
+  func probeModel() async throws -> RuntimeModelProbe {
+    let response: JSONRPCResponse<ModelProbeResult> = try await sendRequest(
+      method: "model/probe",
+      params: OptionalRequestParams.none
+    )
+    let result = try responseResult(from: response)
+
+    return RuntimeModelProbe(
+      status: result.status,
+      detail: result.detail,
+      backend: result.backend,
+      modelID: result.modelId,
+      sample: result.sample
+    )
+  }
 }
 
 struct ModelHealthResult: Codable {
@@ -123,4 +147,12 @@ struct ModelBootstrapResult: Codable {
   let manifestPath: String
   let readmePath: String?
   let copiedFiles: [String]
+}
+
+struct ModelProbeResult: Codable {
+  let status: String
+  let detail: String
+  let backend: String
+  let modelId: String
+  let sample: String?
 }

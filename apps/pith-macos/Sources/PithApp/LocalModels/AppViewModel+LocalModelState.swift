@@ -105,6 +105,8 @@ extension AppViewModel {
       canDownloadSelectedModel: canDownloadLocalModel(),
       canBootstrapModelPackMetadata: canBootstrapModelPackMetadata(),
       canCancelDownload: canCancelModelDownload(),
+      canProbeModel: canProbeLocalModel(),
+      isCheckingModel: isCheckingLocalModel,
       defaultDownloadTitle: defaultModelDownloadButtonTitle()
     )
   }

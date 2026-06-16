@@ -15,6 +15,7 @@ final class AppViewModel: ObservableObject {
   @Published private var pluginState: PluginRuntimeState
   @Published var pluginManagerSection: PluginManagerSection
   @Published var localDataResetInProgress: Bool
+  @Published var isCheckingLocalModel: Bool
   @Published var selectedLocalExecutionSafetyMode: String {
     didSet {
       AppPreferences.storeLocalExecutionSafetyMode(selectedLocalExecutionSafetyMode)
@@ -62,6 +63,7 @@ final class AppViewModel: ObservableObject {
     self.pluginState = PluginRuntimeState()
     self.pluginManagerSection = .catalog
     self.localDataResetInProgress = false
+    self.isCheckingLocalModel = false
     self.selectedLocalExecutionSafetyMode = AppPreferences.storedLocalExecutionSafetyMode()
     self.modelDownloadCoordinator = LocalModelDownloadCoordinator(
       resumeData: launchState.pausedDownload?.resumeData

@@ -1,6 +1,8 @@
 use pith_protocol::{JsonRpcRequest, JsonRpcResponse};
 
-use crate::protocol_adapters::{to_protocol_model_bootstrap, to_protocol_model_health};
+use crate::protocol_adapters::{
+  to_protocol_model_bootstrap, to_protocol_model_health, to_protocol_model_probe,
+};
 use crate::RuntimeContext;
 
 pub(crate) fn handle_model_bootstrap(
@@ -23,5 +25,15 @@ pub(crate) fn handle_model_health(
   JsonRpcResponse::success(
     request.id,
     &to_protocol_model_health(context.model_state.health()),
+  )
+}
+
+pub(crate) fn handle_model_probe(
+  context: &RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  JsonRpcResponse::success(
+    request.id,
+    &to_protocol_model_probe(context.model_state.probe()),
   )
 }

@@ -37,6 +37,7 @@ pub(crate) fn generate_with_llama_cpp(
     model_path,
     context_size,
     max_tokens,
+    request.timeout,
     &request.prompt,
     request.cancellation.as_ref(),
   )
@@ -69,10 +70,11 @@ fn run_llama_cpp_with_timeout(
   model_path: &Path,
   context_size: usize,
   max_tokens: usize,
+  timeout: Option<Duration>,
   prompt: &str,
   cancellation: Option<&GenerationCancellation>,
 ) -> Result<Output> {
-  let timeout = llama_cpp_timeout();
+  let timeout = timeout.unwrap_or_else(llama_cpp_timeout);
   let prompt_file =
     PromptFile::create(prompt).context("failed to prepare llama.cpp prompt input")?;
   let mut child = build_llama_cpp_command(binary_path)
@@ -412,6 +414,7 @@ printf 'fake model response\\n'\n",
         role: ModelRole::Summarizer,
         prompt: "secret prompt".to_string(),
         max_tokens: 16,
+        timeout: Some(Duration::from_secs(5)),
         cancellation: None,
       },
       None,
