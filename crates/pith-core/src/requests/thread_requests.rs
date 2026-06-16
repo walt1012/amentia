@@ -92,6 +92,9 @@ pub(crate) fn handle_thread_delete(
   if let Err(error) = context.delete_approvals_for_thread(&params.thread_id) {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
+  if let Err(error) = context.delete_workspace_changes_for_thread(&params.thread_id) {
+    return JsonRpcResponse::error(request.id, -32010, error.to_string());
+  }
 
   JsonRpcResponse::success(
     request.id,

@@ -80,7 +80,7 @@ Active milestone: **M14 Connector and Skill Platform**.
 Current capabilities:
 
 - Local model setup: in-app download, verification, activation, pause, resume,
-  cancel, recovery, local data reset, curated model choice, and one active
+  cancel, recovery, Reset Pith, curated model choice, and one active
   model.
 - Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
   diagnostics, bounded subprocesses, human receipts, session delete, and
@@ -101,6 +101,9 @@ Current capabilities:
 
 Current constraints:
 
+- Installed-app blockers beat platform expansion: first-run model download and
+  activation, human default UI, visible session deletion, and Reset Pith must
+  stay reliable before more M14 connector surface area.
 - Treat M13 as the installed-app quality baseline; only return to product polish
   when real use exposes confusing copy, stale UI, or release blockers.
 - Keep Web Search as retrieval; generic local document RAG remains deferred.
@@ -182,8 +185,14 @@ Completed baseline:
 
 Remaining quality bar:
 
-- A fresh install can download a model, run the cowork loop, use Web Search,
-  manage sessions, and recover or revert approved work without expert context.
+- A fresh install can download, verify, activate, re-download, and recover a
+  local model without expert context.
+- Users can delete a session, review or revert session changes, and Reset Pith
+  from visible UI without learning hidden menus.
+- The default path avoids raw runtime, manifest, checksum, ID, and backend
+  wording; advanced diagnostics remain available only when useful.
+- Pith can run the cowork loop, use Web Search, manage sessions, and recover or
+  revert approved work without expert context.
 - Extension surfaces use precise ecosystem language: Plugins are installed
   bundles; Actions, Connections, Skills, MCP, Tools, and Checks are capabilities
   when present. Slash routes and manifest strings stay out of the primary path.

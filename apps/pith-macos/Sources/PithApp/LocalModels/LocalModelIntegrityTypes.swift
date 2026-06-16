@@ -41,7 +41,7 @@ enum LocalModelIntegrityError: LocalizedError {
     case .missingChecksum(let displayName):
       return "\(displayName) is missing verification metadata."
     case .checksumMismatch(let displayName, _, _):
-      return "\(displayName) did not match the verified download. Replace it with a fresh download."
+      return "\(displayName) did not match the verified download. Download it again."
     }
   }
 }

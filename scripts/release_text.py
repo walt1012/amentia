@@ -201,7 +201,7 @@ Notes
 - {first_run_path}
 - Pith runs local model work on this Mac.
 - Model weights are not bundled in the app package.
-- Downloaded models and Pith sessions stay in local app data. Use Settings > Storage to reveal or delete Pith local data without deleting project folders.
+- Downloaded models and Pith sessions stay in local app data. Use Settings > Storage to reveal data or Reset Pith without deleting project folders.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, app package metadata, smoke package metadata, and first-run contract.
 - {first_run_proof}

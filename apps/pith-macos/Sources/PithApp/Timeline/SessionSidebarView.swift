@@ -4,6 +4,7 @@ struct SessionSidebarView: View {
   @ObservedObject var viewModel: AppViewModel
   @State private var sessionDeleteCandidate: ThreadSummary?
   @State private var sessionRevertCandidate: SessionRevertCandidate?
+  @State private var confirmsResetPith = false
 
   var body: some View {
     List(selection: selectedSessionBinding) {
@@ -37,6 +38,23 @@ struct SessionSidebarView: View {
               }
           }
         }
+      }
+
+      Section("Manage") {
+        Button("Review Changes...") {
+          reviewSelectedSessionChanges()
+        }
+        .disabled(selectedSession.map { !viewModel.canRevertThreadChanges($0) } ?? true)
+
+        Button("Delete Session...", role: .destructive) {
+          sessionDeleteCandidate = selectedSession
+        }
+        .disabled(selectedSession.map { !viewModel.canDeleteThread($0) } ?? true)
+
+        Button("Reset Pith...", role: .destructive) {
+          confirmsResetPith = true
+        }
+        .disabled(!viewModel.canDeleteLocalData())
       }
     }
     .frame(minWidth: 240)
@@ -73,6 +91,14 @@ struct SessionSidebarView: View {
         secondaryButton: .cancel()
       )
     }
+    .alert(resetSummary.confirmationTitle, isPresented: $confirmsResetPith) {
+      Button("Reset Pith", role: .destructive) {
+        viewModel.deleteLocalData()
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text(resetSummary.confirmationMessage)
+    }
   }
 
   private var selectedSessionBinding: Binding<String?> {
@@ -80,6 +106,29 @@ struct SessionSidebarView: View {
       get: { viewModel.selectedThreadID },
       set: { viewModel.selectThread(id: $0) }
     )
+  }
+
+  private var selectedSession: ThreadSummary? {
+    viewModel.threads.first { $0.id == viewModel.selectedThreadID }
+  }
+
+  private var resetSummary: LocalDataSettingsSummary {
+    viewModel.localDataSettingsSummary()
+  }
+
+  private func reviewSelectedSessionChanges() {
+    guard let selectedSession else {
+      return
+    }
+
+    Task {
+      if let preview = await viewModel.previewThreadChanges(selectedSession) {
+        sessionRevertCandidate = SessionRevertCandidate(
+          thread: selectedSession,
+          preview: preview
+        )
+      }
+    }
   }
 }
 

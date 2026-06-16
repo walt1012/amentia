@@ -247,8 +247,8 @@ paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and
 checks report the selected model. Normal app installs set `PITH_DATA_DIR` to
 `~/Library/Application Support/Pith/storage`, so downloaded GGUF files live under
 `~/Library/Application Support/Pith/storage/models`. Removing `Pith.app` does not
-delete that user data; Settings > Storage can reveal or delete Pith local data
-without deleting workspace folders.
+delete that user data; Settings > Storage can reveal data or Reset Pith without
+deleting workspace folders.
 
 If either path is missing, Pith reports the local model as unavailable and blocks agent work until a verified local model is selected. A development-only setup example is:
 

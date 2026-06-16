@@ -83,6 +83,15 @@ extension AppViewModel {
       return
     }
 
+    if model.needsVerification && !modelDownloadState.hasPausedDownload {
+      removeIncompleteModelFile(modelID: model.id)
+      refreshLocalModelCatalog()
+      if let verifiedModel = localModel(for: model.id), verifiedModel.downloaded {
+        activateRecommendedModel(modelID: verifiedModel.id)
+        return
+      }
+    }
+
     let requestPlan = localModelDownloadRequestPlan(for: model)
     guard let downloadURL = requestPlan.downloadURL else {
       runtimeDetail = requestPlan.blockedDetail ?? "The selected local model is not ready to download."

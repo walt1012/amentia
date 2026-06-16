@@ -68,7 +68,7 @@ struct SettingsView: View {
       Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
         .font(.caption)
         .foregroundColor(.secondary)
-      Text("Downloaded model files stay in Pith local data and can be removed from Storage.")
+      Text("Reset Pith removes downloaded models and starts setup fresh.")
         .font(.caption2)
         .foregroundColor(.secondary)
     }
@@ -215,7 +215,7 @@ private struct SettingsStorageSection: View {
       }
     }
     .alert(summary.confirmationTitle, isPresented: $confirmsLocalDataDelete) {
-      Button("Delete Local Data", role: .destructive) {
+      Button("Reset Pith", role: .destructive) {
         delete()
       }
       Button("Cancel", role: .cancel) {}

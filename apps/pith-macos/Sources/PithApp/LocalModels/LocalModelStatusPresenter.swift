@@ -69,7 +69,11 @@ enum LocalModelStatusPresenter {
       return "Choose a verified model from Pith's curated list before running. Removed or external model selections need to be picked again."
     }
 
-    return modelHealth.detail
+    if modelHealth.status != "ready" {
+      return userFacingModelRepairDetail(snapshot, modelHealth: modelHealth)
+    }
+
+    return "The selected local model is ready. Pith will use it for cowork tasks on this Mac."
   }
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -113,6 +117,27 @@ enum LocalModelStatusPresenter {
     }
 
     return modelHealth.metrics["installHint"] ?? "Setup hint unavailable."
+  }
+
+  private static func userFacingModelRepairDetail(
+    _ snapshot: LocalModelStatusSnapshot,
+    modelHealth: ModelHealthSummary
+  ) -> String {
+    let selectedModelName = snapshot.selectedSetupModel
+      .map(LocalModelDisplayPresenter.actionName)
+      ?? LocalModelDisplayPresenter.cleanDisplayName(modelHealth.displayName)
+    let readiness = modelHealth.metrics["readiness"] ?? "unknown"
+
+    switch readiness {
+    case "model_missing", "manifest_only", "unconfigured":
+      return "Download \(selectedModelName) in Pith, then Pith will select and run it automatically."
+    case "binary_missing":
+      return "Pith's local model runner is missing from the app package. Reinstall Pith from the latest release."
+    case "misconfigured":
+      return "Model setup is incomplete. Use Repair Model, or re-download the selected model."
+    default:
+      return "Model setup needs attention. Use the model action below to repair or download a verified local model."
+    }
   }
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -242,7 +267,7 @@ enum LocalModelStatusPresenter {
       return "Continue"
     }
     if model.needsVerification {
-      return "Replace"
+      return "Re-download"
     }
 
     return model.downloaded ? "Downloaded" : "Download"

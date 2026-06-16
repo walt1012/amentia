@@ -93,8 +93,8 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertEqual(guidance.title, "Download Local Model")
-    XCTAssertTrue(guidance.detail.contains("About"))
-    XCTAssertTrue(guidance.detail.contains("Open model license"))
+    XCTAssertTrue(guidance.detail.contains("Download size"))
+    XCTAssertTrue(guidance.detail.contains("License"))
     XCTAssertFalse(guidance.title.contains("Engine"))
     XCTAssertFalse(guidance.detail.contains("|"))
   }
@@ -130,7 +130,7 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertTrue(summary.contains("Ready and active"))
-    XCTAssertTrue(summary.contains("Open model license"))
+    XCTAssertTrue(summary.contains("License"))
     XCTAssertFalse(summary.contains("|"))
   }
 
@@ -213,9 +213,9 @@ final class LocalModelPresenterTests: XCTestCase {
     let capability = LocalModelDisplayPresenter.setupCapabilitySummary(selectedModel)
     let footprint = LocalModelDisplayPresenter.setupFootprintSummary(selectedModel)
 
-    XCTAssertEqual(capability, "Context: 8K active / 131K model limit. Output: 384 tokens.")
+    XCTAssertTrue(capability.contains("larger files"))
     XCTAssertTrue(footprint.contains("download"))
-    XCTAssertTrue(footprint.contains("Open model license: apache-2.0"))
+    XCTAssertTrue(footprint.contains("License: apache-2.0"))
     XCTAssertFalse(capability.contains("Q4_K_M"))
     XCTAssertFalse(footprint.contains("Q4_K_M"))
   }
@@ -248,7 +248,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertTrue(missingSize.localizedDescription.contains("downloading it again"))
     XCTAssertFalse(mismatch.localizedDescription.contains(String(repeating: "a", count: 64)))
     XCTAssertFalse(mismatch.localizedDescription.contains(String(repeating: "b", count: 64)))
-    XCTAssertTrue(mismatch.localizedDescription.contains("fresh download"))
+    XCTAssertTrue(mismatch.localizedDescription.contains("Download it again"))
   }
 
   func testDownloadProgressSummaryAvoidsPipeSeparators() {

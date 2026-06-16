@@ -227,7 +227,7 @@ enum LocalModelOperationPresenter {
 
   private static func modelDetail(_ model: LocalModelSummary) -> String {
     let size = LocalModelByteFormatter.string(model.sizeBytes)
-    return "About \(size). Open model license: \(model.license). Pith verifies the file before it can run."
+    return "Download size: \(size). License: \(model.license). Pith verifies the file before it can run."
   }
 
   private static func readyRecoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {

@@ -105,7 +105,8 @@ enum LocalModelActivationPlanner {
       switch activationError {
       case .integrityCheckFailed(let underlyingError):
         return LocalModelActivationFailurePlan(
-          runtimeDetail: "Model integrity check failed: \(underlyingError.localizedDescription)",
+          runtimeDetail:
+            "Model check failed: \(underlyingError.localizedDescription) Pith removed the bad file. Download the model again to repair setup.",
           removesModelFile: true,
           refreshesCatalog: true
         )

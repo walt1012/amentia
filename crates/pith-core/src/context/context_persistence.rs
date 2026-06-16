@@ -61,4 +61,10 @@ impl RuntimeContext {
       .persistence_state
       .mark_workspace_change_reverted(change_id)
   }
+
+  pub(crate) fn delete_workspace_changes_for_thread(&self, thread_id: &str) -> Result<usize> {
+    self
+      .persistence_state
+      .delete_workspace_changes_for_thread(thread_id)
+  }
 }

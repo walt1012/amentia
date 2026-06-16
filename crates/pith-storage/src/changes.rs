@@ -88,4 +88,14 @@ impl RuntimeStore {
 
     Ok(())
   }
+
+  pub fn delete_workspace_changes_for_thread(&self, thread_id: &str) -> Result<usize> {
+    let connection = self.open_connection()?;
+    let deleted = connection.execute(
+      "DELETE FROM workspace_changes WHERE thread_id = ?1",
+      params![thread_id],
+    )?;
+
+    Ok(deleted)
+  }
 }

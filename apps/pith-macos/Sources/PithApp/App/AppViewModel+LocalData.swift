@@ -37,7 +37,7 @@ extension AppViewModel {
       return
     }
 
-    runtimeBridge.stopRuntime(detail: "Local data reset. Restart Pith to continue.")
+    runtimeBridge.stopRuntime(detail: "Pith reset. Restart Pith to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()
@@ -56,11 +56,11 @@ extension AppViewModel {
       let result = try AppDataResetService.deleteLocalData()
       applyLocalDataResetSuccess(result)
     } catch {
-      runtimeDetail = "Local data reset failed: \(error.localizedDescription)"
+      runtimeDetail = "Pith reset failed: \(error.localizedDescription)"
       appendEntry(
         to: selectedThreadID,
         TimelineEntryFactory.warning(
-          title: "Local Data Reset Failed",
+          title: "Pith Reset Failed",
           body: error.localizedDescription
         )
       )

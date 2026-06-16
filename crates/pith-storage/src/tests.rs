@@ -19,6 +19,20 @@ fn create_temp_directory(label: &str) -> PathBuf {
   path
 }
 
+fn workspace_change(id: &str, thread_id: &str) -> StoredWorkspaceChangeRecord {
+  StoredWorkspaceChangeRecord {
+    id: id.to_string(),
+    thread_id: thread_id.to_string(),
+    approval_id: Some(id.to_string()),
+    workspace_root_path: "/tmp/pith-workspace".to_string(),
+    relative_path: "notes.txt".to_string(),
+    action: "write_file".to_string(),
+    previous_content: Some(b"before".to_vec()),
+    next_content: b"after".to_vec(),
+    reverted_at: None,
+  }
+}
+
 #[test]
 fn sqlite_store_round_trips_threads_and_workspace() {
   let root = create_temp_directory("sqlite-roundtrip");
@@ -182,6 +196,38 @@ fn sqlite_store_round_trips_workspace_change_ledger() {
   assert_eq!(changes.len(), 1);
   assert_eq!(changes[0].id, change.id);
   assert!(changes[0].reverted_at.is_some());
+}
+
+#[test]
+fn sqlite_store_deletes_workspace_changes_for_thread() {
+  let root = create_temp_directory("workspace-change-delete-thread");
+  let store = RuntimeStore::new(root.join("pith.db"), root.join("threads.json"));
+  let mut first_change = workspace_change("change-1", "thread-1");
+  let second_change = workspace_change("change-2", "thread-2");
+  first_change.relative_path = "first.txt".to_string();
+
+  store
+    .save_workspace_change(&first_change)
+    .expect("save first workspace change");
+  store
+    .save_workspace_change(&second_change)
+    .expect("save second workspace change");
+  let deleted = store
+    .delete_workspace_changes_for_thread("thread-1")
+    .expect("delete workspace changes");
+  let first_thread_changes = store
+    .load_workspace_changes_for_thread("thread-1")
+    .expect("load first thread changes");
+  let second_thread_changes = store
+    .load_workspace_changes_for_thread("thread-2")
+    .expect("load second thread changes");
+
+  fs::remove_dir_all(&root).expect("cleanup temp directory");
+
+  assert_eq!(deleted, 1);
+  assert!(first_thread_changes.is_empty());
+  assert_eq!(second_thread_changes.len(), 1);
+  assert_eq!(second_thread_changes[0].id, "change-2");
 }
 
 #[test]

@@ -4,6 +4,7 @@ enum AppPreferences {
   private static let lastWorkspacePathKey = "pith.lastWorkspacePath"
   private static let selectedSetupModelIDKey = "pith.selectedSetupModelID"
   private static let localExecutionSafetyModeKey = "pith.localExecutionSafetyMode"
+  private static let appPreferenceKeyPrefix = "pith."
 
   static func storedSelectedSetupModelID(matching models: [LocalModelSummary]) -> String? {
     guard let modelID = UserDefaults.standard.string(forKey: selectedSetupModelIDKey),
@@ -55,8 +56,9 @@ enum AppPreferences {
   }
 
   static func clearStoredPreferences() {
-    UserDefaults.standard.removeObject(forKey: lastWorkspacePathKey)
-    UserDefaults.standard.removeObject(forKey: selectedSetupModelIDKey)
-    UserDefaults.standard.removeObject(forKey: localExecutionSafetyModeKey)
+    let defaults = UserDefaults.standard
+    for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(appPreferenceKeyPrefix) {
+      defaults.removeObject(forKey: key)
+    }
   }
 }

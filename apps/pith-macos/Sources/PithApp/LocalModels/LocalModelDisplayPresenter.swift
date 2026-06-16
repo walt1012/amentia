@@ -33,17 +33,23 @@ enum LocalModelDisplayPresenter {
   }
 
   static func setupCapabilitySummary(_ model: LocalModelSummary) -> String {
-    let activeContext = compactTokenCount(model.contextSize)
-    let modelLimit = compactTokenCount(model.modelContextSize)
-    return "Context: \(activeContext) active / \(modelLimit) model limit. Output: \(model.maxOutputTokens) tokens."
+    if model.tags.contains("long-context") {
+      return "Better for larger files, longer sessions, and heavier cowork tasks."
+    }
+
+    if model.tags.contains("recommended") {
+      return "Good everyday balance for project help, tools, and code review."
+    }
+
+    return "Best for fast first setup, simple edits, and lightweight cowork."
   }
 
   static func setupFootprintSummary(_ model: LocalModelSummary) -> String {
-    "\(LocalModelByteFormatter.string(model.sizeBytes)) download. \(licenseSummary(model.license))."
+    "Download: \(LocalModelByteFormatter.string(model.sizeBytes)). License: \(model.license)."
   }
 
   static func statusMetadata(status: String, sizeBytes: Int64, license: String) -> String {
-    "\(statusSummary(status)). About \(LocalModelByteFormatter.string(sizeBytes)). \(licenseSummary(license))."
+    "\(statusSummary(status)). About \(LocalModelByteFormatter.string(sizeBytes)). License: \(license)."
   }
 
   static func firstUseFit(_ model: LocalModelSummary, defaultModelID: String) -> String {
@@ -73,18 +79,6 @@ enum LocalModelDisplayPresenter {
     default:
       return "Available to download"
     }
-  }
-
-  private static func licenseSummary(_ license: String) -> String {
-    "Open model license: \(license)"
-  }
-
-  private static func compactTokenCount(_ value: Int) -> String {
-    if value >= 1_000 {
-      return "\(value / 1_000)K"
-    }
-
-    return "\(value)"
   }
 }
 
