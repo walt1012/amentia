@@ -214,7 +214,7 @@ final class LocalModelPresenterTests: XCTestCase {
     let footprint = LocalModelDisplayPresenter.setupFootprintSummary(selectedModel)
 
     XCTAssertTrue(capability.contains("larger files"))
-    XCTAssertTrue(footprint.contains("download"))
+    XCTAssertTrue(footprint.contains("Download:"))
     XCTAssertTrue(footprint.contains("License: apache-2.0"))
     XCTAssertFalse(capability.contains("Q4_K_M"))
     XCTAssertFalse(footprint.contains("Q4_K_M"))
