@@ -59,7 +59,7 @@ enum PluginCapabilityPresenter {
       return "Connection: \(displayName)"
     }
 
-    PluginCapabilityDisplay.surface(capability.kind)
+    return PluginCapabilityDisplay.surface(capability.kind)
   }
 
   static func reviewSummary(_ capability: PluginCapabilitySummary) -> String? {
