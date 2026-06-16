@@ -75,7 +75,7 @@ files cosmetically.
 
 ## Current State
 
-Active milestone: **M13 Product Quality and Identity**.
+Active milestone: **M14 Connector and Skill Platform**.
 
 Current capabilities:
 
@@ -101,10 +101,11 @@ Current capabilities:
 
 Current constraints:
 
-- Keep M13 focused on installed-app quality, first-run clarity, UI polish,
-  session safety, local data ownership, cleanup, and product identity.
+- Treat M13 as the installed-app quality baseline; only return to product polish
+  when real use exposes confusing copy, stale UI, or release blockers.
 - Keep Web Search as retrieval; generic local document RAG remains deferred.
-- Keep connector expansion narrow until the M13 quality baseline is complete.
+- Keep M14 focused on safe local extension execution before broad connector
+  catalogs, marketplaces, or remote transports.
 - Do not bundle Git, model weights, package-manager payloads, extra
   architectures, or unused runtimes.
 - Release assets stay limited to the DMG, checksum, `README-FIRST.txt`, and
@@ -142,10 +143,12 @@ Evidence:
 
 ## M13: Product Quality and Identity
 
+Status: baseline established; continue only as needed for daily-use quality.
+
 Goal: make the shipped app feel intentional, maintainable, and worthy of daily
 use before expanding the platform surface.
 
-Scope now:
+Completed baseline:
 
 - Clean the installed app experience: human UI copy, clear first-run model
   setup, light-mode/system appearance support, and no internal wording in the
@@ -177,7 +180,7 @@ Scope now:
 - Keep support diagnostics available without letting them dominate the default
   inspector path.
 
-Exit criteria:
+Remaining quality bar:
 
 - A fresh install can download a model, run the cowork loop, use Web Search,
   manage sessions, and recover or revert approved work without expert context.
@@ -190,35 +193,38 @@ Exit criteria:
 
 ## M14: Connector and Skill Platform
 
+Status: active.
+
 Goal: make third-party local plugins safe and useful without building a
 marketplace too early.
 
-- Keep Notion as the reference connector until the release loop proves stable.
-- Treat plugin import/removal as the bundle lifecycle; treat connectors,
-  actions, skills, MCP servers, checks, and tools as bundle capabilities.
-- Generalize connector contracts only after credentials, approvals, retries,
-  proof, memory capture, and timeline evidence stay service-agnostic.
-- Continue splitting plugin runner output contracts before broad connector
-  expansion: schema, memory-note capture, timeline item conversion, and proof
-  validation are isolated; runner setup and entrypoint path validation are
-  separated from execution; output contract tests are isolated from production
-  parsing; shared stdio process execution is separated from runner routing;
-  plugin command input contracts and preparation error contracts are isolated;
-  MCP output protocol scanning, runner stdout parsing, timeline attribute
-  ownership, and handoff metadata forwarding are isolated; keep remote-write and
-  workflow proof rules separately testable.
-- Make skill and MCP capability metadata progressively loaded and reviewable
-  before adding broad catalogs or remote transports.
-- Prove connector import, local enablement, credential storage, revocation, and
-  removal before adding broad service catalogs; removal should attempt every
-  connector secret cleanup before reporting recoverable cleanup failures, and
-  credential clearing should forget runtime secrets after secure deletion.
-- Add a small skill-like instruction layer only if it is progressively loaded,
-  bounded, user-reviewable, and stored locally.
-- Keep connector evidence generic in the timeline; service-specific detail must
-  stay in connector attributes and narrow presenters.
-- Add import/distribution only after connector secrets can be installed, used,
-  revoked, and forgotten safely.
+Completed:
+
+- Plugin installation/removal is the bundle lifecycle; connectors, actions,
+  skills, MCP servers, tools, and checks are capabilities inside bundles.
+- Notion is the reference connector while the generic local connector contract
+  matures.
+- Plugin runner execution is split by ownership: setup, entrypoint validation,
+  subprocess execution, stdout parsing, MCP output protocol scanning, output
+  schema, memory-note capture, timeline conversion, proof validation, metadata
+  ownership, and handoff forwarding are separately testable.
+- Remote-write proof and connector-workflow proof are generic timeline
+  contracts, not Notion-specific code paths.
+- Connector credentials are stored as metadata in durable storage and secrets in
+  the secure local store; clear/remove paths forget runtime secrets and attempt
+  full connector cleanup before reporting recoverable failures.
+
+Next:
+
+- Make capability metadata progressively loaded and reviewable before adding
+  broad catalogs or remote transports.
+- Keep connector evidence generic in timeline data while moving
+  service-specific copy into narrow presenters.
+- Prove connector import, local enablement, credential use, revocation, removal,
+  retries, receipts, and memory capture with one reference connector before
+  adding more services.
+- Add a small skill-like instruction layer only if it is bounded,
+  user-reviewable, progressively loaded, and stored locally.
 - Treat hooks as verification and automation points first, not arbitrary
   always-on automation.
 
