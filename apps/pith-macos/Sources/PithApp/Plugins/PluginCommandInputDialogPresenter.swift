@@ -35,7 +35,7 @@ enum PluginCommandInputDialogPresenter {
     return textView.string.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
-  private static func inputPrompt(
+  static func inputPrompt(
     _ command: PluginCommandSummary,
     override: String?
   ) -> String {
@@ -48,14 +48,9 @@ enum PluginCommandInputDialogPresenter {
     var prompt = override
       ?? fieldDescription
       ?? "Pass a short text input to this action."
-    if isNotionPublishCommand(command) {
-      prompt += "\n\nInput: a valid parentPageId, Notion page URL, or parent alias, with optional title and body. You can paste only the parent page URL to use the default title. The parent page must be shared with the Notion integration before publishing. Pith still requests approval before the remote write."
+    if let serviceAppendix = PluginConnectorServiceGuide.commandInputAppendix(command: command) {
+      prompt += "\n\n\(serviceAppendix)"
     }
     return prompt
-  }
-
-  private static func isNotionPublishCommand(_ command: PluginCommandSummary) -> Bool {
-    command.id.hasSuffix("::notion.publish-page-draft")
-      || command.execution?.kind == "mcp.notion.publishPageDraft"
   }
 }

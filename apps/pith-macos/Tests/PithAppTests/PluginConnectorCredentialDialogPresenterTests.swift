@@ -24,6 +24,88 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertTrue(warning.contains("during approved runs"))
   }
 
+  func testServiceGuideAddsNotionCommandInputHelpFromWorkflowService() {
+    let command = PluginCommandSummary(
+      id: "pages.create",
+      title: "Create Page",
+      description: "Create a remote page.",
+      pluginID: "notion-connector",
+      pluginDisplayName: "Notion Connector",
+      permissions: ["network.outbound"],
+      sourcePath: "/plugins/notion-connector/pith-plugin.json",
+      execution: PluginCommandExecutionSummary(
+        kind: "mcp.remote.createPage",
+        driver: "node",
+        entrypoint: nil,
+        workflowID: "notion.create-page",
+        workflow: PluginCommandWorkflowSummary(
+          workflowID: "notion.create-page",
+          displayName: "Create Page",
+          connectorID: "notion-connector::notion",
+          service: "notion",
+          action: "createPage",
+          maxAgentSteps: 2,
+          stages: ["inspectBeforeWrite", "completed"],
+          statuses: ["inspected", "success"],
+          commandIDs: ["pages.create"]
+        ),
+        input: PluginCommandEnvelopeSummary(envelope: "text", fields: [
+          PluginCommandEnvelopeFieldSummary(
+            name: "input",
+            kind: "text",
+            required: true,
+            description: "Page request."
+          ),
+        ]),
+        output: PluginCommandEnvelopeSummary(envelope: "json", fields: []),
+        supported: true
+      ),
+      executionKind: "mcp.remote.createPage",
+      memorySummary: nil,
+      runStatus: "ready",
+      runBlocker: nil,
+      runRepairHint: nil,
+      declaredConnectorIds: ["notion-connector::notion"],
+      requiredConnectorIds: ["notion-connector::notion"],
+      approvalRequired: true,
+      approvalReason: "Connection access"
+    )
+
+    let prompt = PluginCommandInputDialogPresenter.inputPrompt(command, override: nil)
+
+    XCTAssertTrue(prompt.contains("Page request."))
+    XCTAssertTrue(prompt.contains("parentPageId"))
+    XCTAssertTrue(prompt.contains("Notion integration"))
+    XCTAssertTrue(prompt.contains("approval before the external action"))
+    XCTAssertFalse(prompt.contains("notion-connector::notion"))
+  }
+
+  func testServiceGuideLeavesGenericCommandInputUnchanged() {
+    let command = PluginCommandSummary(
+      id: "calendar.create",
+      title: "Create Event",
+      description: "Create a local event.",
+      pluginID: "calendar",
+      pluginDisplayName: "Calendar",
+      permissions: [],
+      sourcePath: "/plugins/calendar/pith-plugin.json",
+      execution: nil,
+      executionKind: nil,
+      memorySummary: nil,
+      runStatus: "ready",
+      runBlocker: nil,
+      runRepairHint: nil,
+      declaredConnectorIds: [],
+      requiredConnectorIds: [],
+      approvalRequired: false,
+      approvalReason: nil
+    )
+
+    let prompt = PluginCommandInputDialogPresenter.inputPrompt(command, override: nil)
+
+    XCTAssertEqual(prompt, "Pass a short text input to this action.")
+  }
+
   func testSecretlessAuthorizationPromptRemainsAvailableForNonApiKeyConnectors() {
     let connector = PluginConnectorSummary(
       id: "local-marker::calendar",

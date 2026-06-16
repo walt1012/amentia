@@ -213,13 +213,15 @@ Completed:
 - Connector credentials are stored as metadata in durable storage and secrets in
   the secure local store; clear/remove paths forget runtime secrets and attempt
   full connector cleanup before reporting recoverable failures.
+- Service-specific connector help is isolated behind narrow presenters so the
+  common plugin, credential, command-input, and proof paths stay generic.
 
 Next:
 
 - Make capability metadata progressively loaded and reviewable before adding
   broad catalogs or remote transports.
-- Keep connector evidence generic in timeline data while moving
-  service-specific copy into narrow presenters.
+- Keep connector evidence generic in timeline data as more services are added;
+  only service copy and service proof labels belong in narrow presenters.
 - Prove connector import, local enablement, credential use, revocation, removal,
   retries, receipts, and memory capture with one reference connector before
   adding more services.

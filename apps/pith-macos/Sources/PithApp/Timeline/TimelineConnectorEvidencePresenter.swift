@@ -394,9 +394,11 @@ enum TimelineConnectorEvidencePresenter {
   }
 
   private static func readableProofKind(_ value: String) -> String {
+    if let serviceLabel = PluginConnectorServiceGuide.proofKindLabel(value) {
+      return serviceLabel
+    }
+
     switch value {
-    case "notionApiResponse":
-      return "Notion confirmation"
     case "messageApiResponse":
       return "message confirmation"
     default:

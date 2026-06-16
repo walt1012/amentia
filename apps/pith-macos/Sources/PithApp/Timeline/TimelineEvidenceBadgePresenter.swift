@@ -77,15 +77,15 @@ enum TimelineEvidenceBadgePresenter {
 
     switch status {
     case "completed":
-      return TimelineEvidenceBadgeSummary(label: "Remote Write Done", tone: .ready)
+      return TimelineEvidenceBadgeSummary(label: "External Action Done", tone: .ready)
     case "notSent":
-      return TimelineEvidenceBadgeSummary(label: "Remote Write Not Sent", tone: .warning)
+      return TimelineEvidenceBadgeSummary(label: "External Action Not Sent", tone: .warning)
     case "unconfirmed":
-      return TimelineEvidenceBadgeSummary(label: "Remote Write Unconfirmed", tone: .warning)
+      return TimelineEvidenceBadgeSummary(label: "External Action Unconfirmed", tone: .warning)
     case "pending":
-      return TimelineEvidenceBadgeSummary(label: "Remote Write Pending", tone: .active)
+      return TimelineEvidenceBadgeSummary(label: "External Action Pending", tone: .active)
     default:
-      return TimelineEvidenceBadgeSummary(label: "Remote Write Unknown", tone: .warning)
+      return TimelineEvidenceBadgeSummary(label: "External Action Unknown", tone: .warning)
     }
   }
 

@@ -61,7 +61,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ])
 
     XCTAssertEqual(badges.count, 1)
-    XCTAssertEqual(badges.first?.label, "Remote Write Not Sent")
+    XCTAssertEqual(badges.first?.label, "External Action Not Sent")
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
@@ -71,7 +71,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ])
 
     XCTAssertEqual(badges.count, 1)
-    XCTAssertEqual(badges.first?.label, "Remote Write Unconfirmed")
+    XCTAssertEqual(badges.first?.label, "External Action Unconfirmed")
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
