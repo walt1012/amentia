@@ -115,6 +115,29 @@ where
   cleanup_error
 }
 
+fn plugin_remove_error_response(
+  request_id: serde_json::Value,
+  code: i32,
+  status: &str,
+  plugin_id: Option<&str>,
+  source_path: &str,
+  message: impl Into<String>,
+  repair_hint: Option<&str>,
+) -> JsonRpcResponse {
+  plugin_lifecycle_error_response(
+    request_id,
+    code,
+    message,
+    PluginLifecycleRecovery {
+      operation: "remove",
+      status,
+      plugin_id,
+      source_path: Some(source_path),
+      repair_hint,
+    },
+  )
+}
+
 #[cfg(test)]
 mod tests {
   use super::delete_connector_secrets;
@@ -141,27 +164,4 @@ mod tests {
     assert_eq!(attempts, vec!["first", "second", "third"]);
     assert!(error.to_string().contains("first"));
   }
-}
-
-fn plugin_remove_error_response(
-  request_id: serde_json::Value,
-  code: i32,
-  status: &str,
-  plugin_id: Option<&str>,
-  source_path: &str,
-  message: impl Into<String>,
-  repair_hint: Option<&str>,
-) -> JsonRpcResponse {
-  plugin_lifecycle_error_response(
-    request_id,
-    code,
-    message,
-    PluginLifecycleRecovery {
-      operation: "remove",
-      status,
-      plugin_id,
-      source_path: Some(source_path),
-      repair_hint,
-    },
-  )
 }
