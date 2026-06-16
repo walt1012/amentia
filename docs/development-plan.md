@@ -203,7 +203,8 @@ marketplace too early.
   validation are isolated; runner setup and entrypoint path validation are
   separated from execution; output contract tests are isolated from production
   parsing; shared stdio process execution is separated from runner routing;
-  keep future connector proof rules separately testable.
+  plugin command input contracts are isolated; keep future connector proof
+  rules separately testable.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
