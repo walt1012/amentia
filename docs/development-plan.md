@@ -215,11 +215,14 @@ Completed:
   full connector cleanup before reporting recoverable failures.
 - Service-specific connector help is isolated behind narrow presenters so the
   common plugin, credential, command-input, and proof paths stay generic.
+- Capability metadata is reviewed through product copy for connections, skills,
+  MCP servers, actions, and checks without exposing manifest paths or raw
+  protocol keys in the default plugin manager.
 
 Next:
 
-- Make capability metadata progressively loaded and reviewable before adding
-  broad catalogs or remote transports.
+- Make capability metadata progressively loaded before adding broad catalogs or
+  remote transports.
 - Keep connector evidence generic in timeline data as more services are added;
   only service copy and service proof labels belong in narrow presenters.
 - Prove connector import, local enablement, credential use, revocation, removal,

@@ -560,16 +560,78 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
 
     let title = PluginCapabilityPresenter.title(capability)
+    let review = PluginCapabilityPresenter.reviewSummary(capability) ?? ""
     let summary = PluginCapabilityPresenter.diagnosticSummary(capability) ?? ""
     let detail = PluginCapabilityPresenter.diagnosticDetail(capability) ?? ""
-    let visibleText = [title, summary, detail].joined(separator: "\n")
+    let visibleText = [title, review, summary, detail].joined(separator: "\n")
 
     XCTAssertEqual(title, "MCP server")
+    XCTAssertEqual(review, "MCP: local server, needs a local command.")
     XCTAssertTrue(detail.contains("plugin setup"))
     XCTAssertFalse(visibleText.contains("notion-pages"))
     XCTAssertFalse(visibleText.contains("/tmp/notion"))
     XCTAssertFalse(visibleText.contains("definitionPath"))
     XCTAssertFalse(visibleText.contains("mcp_server"))
+  }
+
+  func testPluginCapabilityReviewSummarizesConnectorWithoutRawMetadata() {
+    let capability = PluginCapabilitySummary(
+      id: "notion::connector:notion",
+      kind: "connector",
+      identifier: "notion",
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      permissions: ["network.outbound", "mcp.connect"],
+      manifestPath: "/tmp/notion/pith-plugin.json",
+      metadata: [
+        "surface": "connector",
+        "displayName": "Notion",
+        "service": "notion",
+        "authType": "oauth2",
+        "authRequired": "true",
+        "authScopes": "read_content, insert_content",
+        "credentialStore": "local",
+        "homepage": "https://www.notion.so",
+      ]
+    )
+
+    let title = PluginCapabilityPresenter.title(capability)
+    let review = PluginCapabilityPresenter.reviewSummary(capability) ?? ""
+    let visibleText = [title, review].joined(separator: "\n")
+
+    XCTAssertEqual(title, "Connection: Notion")
+    XCTAssertTrue(review.contains("Service: Notion"))
+    XCTAssertTrue(review.contains("authorization required"))
+    XCTAssertTrue(review.contains("auth: OAuth 2.0"))
+    XCTAssertTrue(review.contains("access: read_content, insert_content"))
+    XCTAssertTrue(review.contains("stored: local only"))
+    XCTAssertFalse(visibleText.contains("connector:notion"))
+    XCTAssertFalse(visibleText.contains("credentialStore"))
+    XCTAssertFalse(visibleText.contains("https://www.notion.so"))
+    XCTAssertFalse(visibleText.contains("/tmp/notion"))
+  }
+
+  func testPluginCapabilityReviewUsesSkillDescriptionButHidesPath() {
+    let capability = PluginCapabilitySummary(
+      id: "notes::skill:workspace",
+      kind: "skill",
+      identifier: "workspace",
+      pluginID: "notes",
+      pluginDisplayName: "Notes",
+      permissions: [],
+      manifestPath: "/tmp/notes/pith-plugin.json",
+      metadata: [
+        "surface": "skill",
+        "description": "Use project notes as bounded local guidance.",
+        "path": "skills/workspace/SKILL.md",
+      ]
+    )
+
+    let review = PluginCapabilityPresenter.reviewSummary(capability) ?? ""
+
+    XCTAssertEqual(review, "Guidance: Use project notes as bounded local guidance.")
+    XCTAssertFalse(review.contains("skills/workspace"))
+    XCTAssertFalse(review.contains("SKILL.md"))
   }
 
   func testPluginInstallConfirmationAvoidsRawPathsAndManifestTerms() {
