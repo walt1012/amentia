@@ -47,7 +47,10 @@ pub(super) fn plugin_runner_output(
         "malformedEnvelope".to_string(),
       );
       attributes.insert("pluginRunnerOutputParsed".to_string(), "false".to_string());
-      attributes.insert("pluginRunnerOutputParseError".to_string(), parse_error_preview);
+      attributes.insert(
+        "pluginRunnerOutputParseError".to_string(),
+        parse_error_preview,
+      );
       return Err(
         PluginRunnerFailure::with_output(
           -32054,
