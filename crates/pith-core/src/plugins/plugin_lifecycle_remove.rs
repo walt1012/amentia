@@ -34,7 +34,6 @@ pub(crate) fn handle_plugin_remove(
       }
     };
 
-  let mut cleanup_error = None;
   let connector_ids = context
     .plugin_state
     .connector_entries()
@@ -42,10 +41,8 @@ pub(crate) fn handle_plugin_remove(
     .filter(|connector| connector.plugin_id == removed_plugin.plugin_id)
     .map(|connector| connector.connector_id)
     .collect::<Vec<_>>();
-  cleanup_error = delete_connector_secrets(
-    connector_ids,
-    secure_credentials::delete_connector_secret,
-  );
+  let mut cleanup_error =
+    delete_connector_secrets(connector_ids, secure_credentials::delete_connector_secret);
   if let Err(error) =
     context.delete_plugin_connector_credentials_for_plugin(&removed_plugin.plugin_id)
   {
