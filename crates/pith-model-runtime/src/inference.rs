@@ -73,7 +73,8 @@ fn run_llama_cpp_with_timeout(
   cancellation: Option<&GenerationCancellation>,
 ) -> Result<Output> {
   let timeout = llama_cpp_timeout();
-  let prompt_file = PromptFile::create(prompt).context("failed to prepare llama.cpp prompt input")?;
+  let prompt_file =
+    PromptFile::create(prompt).context("failed to prepare llama.cpp prompt input")?;
   let mut child = build_llama_cpp_command(binary_path)
     .args(llama_cpp_arguments(
       model_path,

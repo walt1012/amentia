@@ -77,7 +77,10 @@ pub(crate) fn model_metrics(
     if is_runtime_ready { "true" } else { "false" }.to_string(),
   );
   if is_runtime_ready {
-    metrics.insert("invocationMode".to_string(), "bounded-llama-cpp".to_string());
+    metrics.insert(
+      "invocationMode".to_string(),
+      "bounded-llama-cpp".to_string(),
+    );
     metrics.insert("promptInput".to_string(), "temporary-file".to_string());
   }
   metrics.insert(
