@@ -78,9 +78,9 @@ enum PluginConnectorServiceGuide {
     command: PluginCommandSummary
   ) -> Bool {
     let normalizedTarget = normalizedService(service)
-    let workflowService = command.execution?.workflow?.service
-      .map(normalizedService)
-    if workflowService == normalizedTarget {
+    if let workflowService = command.execution?.workflow?.service,
+       normalizedService(workflowService) == normalizedTarget
+    {
       return true
     }
 
