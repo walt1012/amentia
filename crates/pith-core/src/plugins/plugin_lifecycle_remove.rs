@@ -42,12 +42,10 @@ pub(crate) fn handle_plugin_remove(
     .filter(|connector| connector.plugin_id == removed_plugin.plugin_id)
     .map(|connector| connector.connector_id)
     .collect::<Vec<_>>();
-  for connector_id in connector_ids {
-    if let Err(error) = secure_credentials::delete_connector_secret(&connector_id) {
-      cleanup_error = Some(error);
-      break;
-    }
-  }
+  cleanup_error = delete_connector_secrets(
+    connector_ids,
+    secure_credentials::delete_connector_secret,
+  );
   if let Err(error) =
     context.delete_plugin_connector_credentials_for_plugin(&removed_plugin.plugin_id)
   {
@@ -100,6 +98,52 @@ pub(crate) fn handle_plugin_remove(
       removed_path: removed_plugin.removed_path,
     },
   )
+}
+
+fn delete_connector_secrets<F>(
+  connector_ids: Vec<String>,
+  mut delete_secret: F,
+) -> Option<anyhow::Error>
+where
+  F: FnMut(&str) -> anyhow::Result<()>,
+{
+  let mut cleanup_error = None;
+  for connector_id in connector_ids {
+    if let Err(error) = delete_secret(&connector_id) {
+      if cleanup_error.is_none() {
+        cleanup_error = Some(error);
+      }
+    }
+  }
+  cleanup_error
+}
+
+#[cfg(test)]
+mod tests {
+  use super::delete_connector_secrets;
+
+  #[test]
+  fn connector_secret_cleanup_attempts_every_connector() {
+    let mut attempts = Vec::new();
+    let error = delete_connector_secrets(
+      vec![
+        "first".to_string(),
+        "second".to_string(),
+        "third".to_string(),
+      ],
+      |connector_id| {
+        attempts.push(connector_id.to_string());
+        if connector_id == "first" || connector_id == "third" {
+          return Err(anyhow::anyhow!("failed to delete {connector_id}"));
+        }
+        Ok(())
+      },
+    )
+    .expect("cleanup error");
+
+    assert_eq!(attempts, vec!["first", "second", "third"]);
+    assert!(error.to_string().contains("first"));
+  }
 }
 
 fn plugin_remove_error_response(

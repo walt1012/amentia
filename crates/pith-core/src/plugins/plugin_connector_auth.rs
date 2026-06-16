@@ -187,6 +187,9 @@ pub(crate) fn handle_plugin_connector_clear_credential(
       CLEAR_STORE_REPAIR_HINT,
     );
   }
+  context
+    .plugin_state
+    .clear_connector_credential(&params.connector_id);
   if let Err(error) = context.delete_plugin_connector_credential(&params.connector_id) {
     return connector_error_response(
       request.id,
@@ -198,9 +201,6 @@ pub(crate) fn handle_plugin_connector_clear_credential(
       CLEAR_STORE_REPAIR_HINT,
     );
   }
-  context
-    .plugin_state
-    .clear_connector_credential(&params.connector_id);
 
   connector_success(context, request.id, &params.connector_id)
 }

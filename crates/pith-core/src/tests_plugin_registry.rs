@@ -1651,6 +1651,70 @@ fn plugin_connector_auth_lifecycle_updates_connector_registry() {
 }
 
 #[test]
+fn plugin_connector_clear_forgets_runtime_secret_when_metadata_delete_fails() {
+  let mut context = RuntimeContext::new_in_memory();
+  let storage_root = create_temp_workspace("connector-clear-failing-storage");
+  let database_path = storage_root.join("pith.db");
+  context
+    .persistence_state
+    .set_store_for_testing(RuntimeStore::new(
+      database_path.clone(),
+      storage_root.join("threads.json"),
+    ));
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["mcp_server:notion", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+
+  let authorize_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "notion-connector::notion",
+        "credentialSecret": "notion-local-token"
+      })),
+    ),
+  );
+  assert!(authorize_response.error.is_none());
+  assert!(context
+    .plugin_state
+    .connector_credential("notion-connector::notion")
+    .is_some());
+
+  fs::remove_file(&database_path).expect("remove credential database");
+  fs::create_dir_all(&database_path).expect("replace database with directory");
+
+  let clear_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_CLEAR_CREDENTIAL,
+      Some(json!({
+        "connectorId": "notion-connector::notion"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(&storage_root).expect("cleanup storage root");
+
+  let error = clear_response.error.expect("connector clear storage error");
+  assert_eq!(error.code, -32010);
+  let data = error.data.expect("connector clear storage error data");
+  assert_eq!(data["connectorStatus"], "credentialStoreError");
+  assert!(context
+    .plugin_state
+    .connector_credential("notion-connector::notion")
+    .is_none());
+}
+
+#[test]
 fn plugin_connector_authorize_returns_repair_metadata_when_disabled() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(

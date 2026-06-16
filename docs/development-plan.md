@@ -210,7 +210,9 @@ marketplace too early.
 - Make skill and MCP capability metadata progressively loaded and reviewable
   before adding broad catalogs or remote transports.
 - Prove connector import, local enablement, credential storage, revocation, and
-  removal before adding broad service catalogs.
+  removal before adding broad service catalogs; removal should attempt every
+  connector secret cleanup before reporting recoverable cleanup failures, and
+  credential clearing should forget runtime secrets after secure deletion.
 - Add a small skill-like instruction layer only if it is progressively loaded,
   bounded, user-reviewable, and stored locally.
 - Keep connector evidence generic in the timeline; service-specific detail must
