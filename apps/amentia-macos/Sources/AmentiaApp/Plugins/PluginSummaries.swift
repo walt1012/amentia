@@ -286,6 +286,61 @@ enum PluginStatusDisplay {
     }
   }
 
+  static func authTypeName(_ authType: String?) -> String {
+    let normalized = authType?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+      .replacingOccurrences(of: "-", with: "_")
+
+    switch normalized {
+    case "api_key", "apikey":
+      return "API key"
+    case "oauth2":
+      return "OAuth 2.0"
+    case "none":
+      return "no secret"
+    case let value? where !value.isEmpty:
+      return value.replacingOccurrences(of: "_", with: " ")
+    default:
+      return "local credential"
+    }
+  }
+
+  static func accessSummary(_ scopes: [String]) -> String? {
+    let labels = scopes
+      .map(scopeName)
+      .filter { !$0.isEmpty }
+
+    guard !labels.isEmpty else {
+      return nil
+    }
+
+    return labels.joined(separator: ", ")
+  }
+
+  static func accessSummary(_ rawScopes: String?) -> String? {
+    guard let rawScopes else {
+      return nil
+    }
+
+    let scopes = rawScopes
+      .split(separator: ",")
+      .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    return accessSummary(scopes)
+  }
+
+  static func credentialStoreName(_ store: String?) -> String {
+    switch store?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "none":
+      return "not saved"
+    case "local", "keychain":
+      return "stored locally"
+    default:
+      return "stored locally"
+    }
+  }
+
   static func executionSummary(_ execution: PluginCommandExecutionSummary?) -> String {
     guard let execution else {
       return "needs setup"
@@ -320,6 +375,25 @@ enum PluginStatusDisplay {
         .replacingOccurrences(of: "_", with: " ")
         .replacingOccurrences(of: "-", with: " ")
         .capitalized
+    }
+  }
+
+  private static func scopeName(_ scope: String) -> String {
+    switch scope.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "read_content":
+      return "read content"
+    case "insert_content":
+      return "create content"
+    case "write_content":
+      return "edit content"
+    case "read_user", "read_users":
+      return "read users"
+    case "pages":
+      return "pages"
+    default:
+      return scope
+        .replacingOccurrences(of: "_", with: " ")
+        .replacingOccurrences(of: "-", with: " ")
     }
   }
 }

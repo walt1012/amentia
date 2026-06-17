@@ -117,13 +117,13 @@ enum PluginCapabilityPresenter {
       parts.append(authRequired == "true" ? "authorization required" : "no authorization")
     }
     if let authType = cleanMetadataValue(capability.metadata["authType"]) {
-      parts.append("auth: \(displayAuthType(authType))")
+      parts.append("auth: \(PluginStatusDisplay.authTypeName(authType))")
     }
-    if let authScopes = cleanMetadataValue(capability.metadata["authScopes"]) {
-      parts.append("access: \(authScopes)")
+    if let access = PluginStatusDisplay.accessSummary(capability.metadata["authScopes"]) {
+      parts.append("access: \(access)")
     }
     if let credentialStore = cleanMetadataValue(capability.metadata["credentialStore"]) {
-      parts.append("stored: \(displayCredentialStore(credentialStore))")
+      parts.append("secret: \(PluginStatusDisplay.credentialStoreName(credentialStore))")
     }
     return parts.isEmpty ? nil : parts.joined(separator: " | ")
   }
@@ -174,28 +174,6 @@ enum PluginCapabilityPresenter {
       return "unsupported transport"
     default:
       return status
-    }
-  }
-
-  private static func displayAuthType(_ value: String) -> String {
-    switch value {
-    case "api_key":
-      return "API key"
-    case "oauth2":
-      return "OAuth 2.0"
-    default:
-      return value.replacingOccurrences(of: "_", with: " ")
-    }
-  }
-
-  private static func displayCredentialStore(_ value: String) -> String {
-    switch value {
-    case "local":
-      return "local only"
-    case "none":
-      return "not saved"
-    default:
-      return value.replacingOccurrences(of: "_", with: " ")
     }
   }
 
@@ -350,8 +328,8 @@ private extension PluginConnectorSummary {
     var parts = [
       "Connection: \(PluginStatusDisplay.authorizationStatus(authStatus, credentialPresent: credentialPresent))"
     ]
-    if !authScopes.isEmpty {
-      parts.append("access: \(authScopes.joined(separator: ", "))")
+    if let access = PluginStatusDisplay.accessSummary(authScopes) {
+      parts.append("access: \(access)")
     }
     if let credentialLabel {
       parts.append(credentialLabel)

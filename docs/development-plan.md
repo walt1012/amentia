@@ -246,6 +246,9 @@ Completed:
 - Plugin registry loading is supervised without serializing independent
   capability, action, connection, and check requests; default plugin surfaces
   stay bounded and reveal detail progressively.
+- Connector authorization and capability summaries translate service names,
+  access scopes, auth type, and local storage into user-readable language while
+  keeping manifest fields out of the default path.
 
 Next:
 

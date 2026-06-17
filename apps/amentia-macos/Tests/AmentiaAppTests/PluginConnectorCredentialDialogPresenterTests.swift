@@ -8,8 +8,8 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertTrue(PluginConnectorCredentialDialogPresenter.requiresLocalSecret(connector))
 
     let prompt = PluginConnectorCredentialDialogPresenter.credentialPrompt(connector)
-    XCTAssertTrue(prompt.contains("API key access for notion"))
-    XCTAssertTrue(prompt.contains("Scopes: read_content, insert_content."))
+    XCTAssertTrue(prompt.contains("API key access for Notion"))
+    XCTAssertTrue(prompt.contains("Access: read content, create content."))
     XCTAssertTrue(prompt.contains("A local token or API key is required"))
     XCTAssertTrue(prompt.contains("create an internal Notion integration"))
     XCTAssertTrue(prompt.contains("share every target parent page"))
@@ -22,6 +22,17 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertTrue(warning.contains("Notion internal integration token"))
     XCTAssertTrue(warning.contains("share the target parent page"))
     XCTAssertTrue(warning.contains("during approved runs"))
+  }
+
+  func testApiKeyAuthSpellingStillRequiresLocalSecret() {
+    let connector = notionConnector(authType: "apiKey")
+
+    XCTAssertTrue(PluginConnectorCredentialDialogPresenter.requiresLocalSecret(connector))
+    XCTAssertTrue(
+      PluginConnectorCredentialDialogPresenter
+        .credentialPrompt(connector)
+        .contains("API key access for Notion")
+    )
   }
 
   func testServiceGuideAddsNotionCommandInputHelpFromWorkflowService() {
@@ -146,7 +157,7 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     )
   }
 
-  private func notionConnector() -> PluginConnectorSummary {
+  private func notionConnector(authType: String = "api_key") -> PluginConnectorSummary {
     PluginConnectorSummary(
       id: "notion-connector::notion",
       displayName: "Notion",
@@ -158,7 +169,7 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
       permissions: ["network.outbound", "mcp.connect"],
       manifestPath: "/plugins/notion-connector/amentia-plugin.json",
       homepage: "https://www.notion.so",
-      authType: "api_key",
+      authType: authType,
       authRequired: true,
       authScopes: ["read_content", "insert_content"],
       credentialStore: "local",

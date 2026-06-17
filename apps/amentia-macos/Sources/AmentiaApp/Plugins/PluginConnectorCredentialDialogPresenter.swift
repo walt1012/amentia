@@ -67,15 +67,16 @@ enum PluginConnectorCredentialDialogPresenter {
   }
 
   static func credentialPrompt(_ connector: PluginConnectorSummary) -> String {
-    let authType = displayAuthType(connector.authType)
-    let scopes = connector.authScopes.isEmpty
-      ? "No declared scopes."
-      : "Scopes: \(connector.authScopes.joined(separator: ", "))."
-    let storage = connector.credentialStore == "none"
-      ? "Amentia will not save a secret."
-      : "Amentia stores the authorization locally."
-    var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
-      + "\(scopes) \(storage) "
+    let authType = PluginStatusDisplay.authTypeName(connector.authType)
+    let service = PluginStatusDisplay.serviceName(connector.service)
+    let access = PluginStatusDisplay.accessSummary(connector.authScopes)
+      .map { "Access: \($0)." }
+      ?? "No extra access declared."
+    let storage = storesSecret(connector)
+      ? "Amentia stores the authorization locally."
+      : "Amentia will not save a secret."
+    var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(service). "
+      + "\(access) \(storage) "
       + "Secrets are passed only to the local plugin runner for each approved run. "
     if requiresLocalSecret(connector) {
       prompt += "A local token or API key is required for this connection."
@@ -88,17 +89,11 @@ enum PluginConnectorCredentialDialogPresenter {
     return prompt
   }
 
-  private static func displayAuthType(_ authType: String?) -> String {
-    switch authType {
-    case "api_key":
-      return "API key"
-    case "oauth2":
-      return "OAuth 2.0"
-    case let value? where !value.isEmpty:
-      return value
-    default:
-      return "local credential"
-    }
+  private static func storesSecret(_ connector: PluginConnectorSummary) -> Bool {
+    let store = connector.credentialStore?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+    return store != "none"
   }
 
   private static func confirmsMarkerOnlyAuthorization(
@@ -144,7 +139,16 @@ enum PluginConnectorCredentialDialogPresenter {
   }
 
   static func requiresLocalSecret(_ connector: PluginConnectorSummary) -> Bool {
-    connector.authRequired && connector.authType == "api_key"
+    guard connector.authRequired else {
+      return false
+    }
+
+    let authType = connector.authType?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+      .replacingOccurrences(of: "-", with: "_")
+
+    return authType == "api_key" || authType == "apikey"
   }
 
   private static func labeledField(title: String, field: NSView) -> NSView {

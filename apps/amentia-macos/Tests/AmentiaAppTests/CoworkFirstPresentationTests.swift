@@ -629,10 +629,11 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(review.contains("Service: Notion"))
     XCTAssertTrue(review.contains("authorization required"))
     XCTAssertTrue(review.contains("auth: OAuth 2.0"))
-    XCTAssertTrue(review.contains("access: read_content, insert_content"))
-    XCTAssertTrue(review.contains("stored: local only"))
+    XCTAssertTrue(review.contains("access: read content, create content"))
+    XCTAssertTrue(review.contains("secret: stored locally"))
     XCTAssertFalse(visibleText.contains("connector:notion"))
     XCTAssertFalse(visibleText.contains("credentialStore"))
+    XCTAssertFalse(visibleText.contains("read_content"))
     XCTAssertFalse(visibleText.contains("https://www.notion.so"))
     XCTAssertFalse(visibleText.contains("/tmp/notion"))
   }
