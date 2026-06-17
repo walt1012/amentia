@@ -260,6 +260,8 @@ Completed:
   also cleans credential-backed ids so local connector secrets do not linger.
 - Clearing a connector authorization forgets runtime and durable credential
   state even when the local secret store reports a recoverable delete error.
+- Timeline connector receipts and evidence treat stale authorization markers or
+  missing local secrets as needing sign in instead of implying readiness.
 
 Next:
 

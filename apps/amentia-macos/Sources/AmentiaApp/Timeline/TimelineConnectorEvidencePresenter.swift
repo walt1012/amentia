@@ -131,6 +131,14 @@ enum TimelineConnectorEvidencePresenter {
   }
 
   private static func authorizationSummary(attributes: [String: String]) -> String {
+    if attributes["authStatus"] == "needsAuth"
+      || attributes["connectorAuthStatus"] == "needsAuth"
+      || attributes["credentialSecretPresent"] == "false"
+      || attributes["connectorCredentialSecretPresent"] == "false"
+    {
+      return "needs sign in"
+    }
+
     if attributes["credentialPresent"] == "true" {
       return "saved locally"
     }

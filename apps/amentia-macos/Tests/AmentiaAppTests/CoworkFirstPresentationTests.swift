@@ -868,6 +868,37 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("credentialBinding"))
   }
 
+  func testConnectionEvidenceDoesNotTreatStaleMarkerAsAuthorized() {
+    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+      "connectorId": "notion",
+      "connectorService": "notion",
+      "authStatus": "needsAuth",
+      "credentialPresent": "true",
+    ])
+
+    XCTAssertEqual(
+      lines.first,
+      "Connection: Notion. Authorization: needs sign in."
+    )
+    XCTAssertFalse(lines.joined(separator: "\n").contains("saved locally"))
+    XCTAssertFalse(lines.joined(separator: "\n").contains("authorized"))
+  }
+
+  func testConnectionEvidenceDoesNotTreatMissingSecretAsAuthorized() {
+    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+      "connectorId": "notion",
+      "connectorService": "notion",
+      "credentialPresent": "true",
+      "credentialSecretPresent": "false",
+    ])
+
+    XCTAssertEqual(
+      lines.first,
+      "Connection: Notion. Authorization: needs sign in."
+    )
+    XCTAssertFalse(lines.joined(separator: "\n").contains("saved locally"))
+  }
+
   func testConnectionAuthorizationReceiptUsesProductCopy() {
     let connector = runtimePluginConnector(
       authStatus: "ready",
@@ -883,6 +914,36 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(entry.body.contains("notion through"))
     XCTAssertFalse(entry.body.contains("keychain"))
     XCTAssertFalse(entry.body.contains("credentialStore"))
+  }
+
+  func testConnectionAuthorizationReceiptDoesNotTreatStaleMarkerAsAuthorized() {
+    let connector = runtimePluginConnector(
+      authStatus: "needsAuth",
+      credentialPresent: true,
+      credentialSecretPresent: false
+    )
+
+    let entry = TimelineEventPresenter.pluginConnectorAuthorized(connector)
+
+    XCTAssertTrue(entry.body.contains("Authorization: needs sign in."))
+    XCTAssertEqual(entry.attributes["authorizationSummary"], "needs sign in")
+    XCTAssertFalse(entry.body.contains("authorized without a secret"))
+    XCTAssertFalse(entry.body.contains("saved locally"))
+  }
+
+  func testConnectionAuthorizationReceiptDoesNotTreatMissingSecretAsAuthorized() {
+    let connector = runtimePluginConnector(
+      authStatus: "ready",
+      credentialPresent: true,
+      credentialSecretPresent: false
+    )
+
+    let entry = TimelineEventPresenter.pluginConnectorAuthorized(connector)
+
+    XCTAssertTrue(entry.body.contains("Authorization: needs sign in."))
+    XCTAssertEqual(entry.attributes["authorizationSummary"], "needs sign in")
+    XCTAssertEqual(entry.attributes["credentialSecretPresent"], "false")
+    XCTAssertFalse(entry.body.contains("authorized without a secret"))
   }
 
   func testAuthorizationStatusPrioritizesNeedsAuthOverStoredMarker() {

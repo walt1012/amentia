@@ -585,6 +585,7 @@ enum TimelineEventPresenter {
       "connectorService": connector.service,
       "authStatus": connector.authStatus,
       "credentialPresent": "\(connector.credentialPresent)",
+      "credentialSecretPresent": "\(connector.credentialSecretPresent)",
       "authorizationSummary": connectorAuthorizationSummary(connector),
     ]
 
@@ -613,11 +614,15 @@ enum TimelineEventPresenter {
   private static func connectorAuthorizationSummary(
     _ connector: RuntimeBridge.RuntimePluginConnector
   ) -> String {
+    if connector.authStatus == "needsAuth" {
+      return "needs sign in"
+    }
+
     if !connector.credentialPresent {
       return "not saved"
     }
 
-    return connector.credentialSecretPresent ? "saved locally" : "authorized without a secret"
+    return connector.credentialSecretPresent ? "saved locally" : "needs sign in"
   }
 
   private static func pluginCapabilitySummary(_ capabilities: [String]) -> String {
