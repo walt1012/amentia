@@ -287,7 +287,8 @@ fn connector_requires_secret(connector: &PluginConnectorEntry) -> bool {
   let Some(auth_type) = connector.auth_type.as_deref() else {
     return false;
   };
-  matches!(normalized_auth_type(auth_type).as_str(), "api_key" | "apikey")
+  let normalized = normalized_auth_type(auth_type);
+  normalized == "api_key" || normalized == "apikey"
 }
 
 fn normalized_auth_type(auth_type: &str) -> String {
@@ -299,9 +300,7 @@ fn normalized_auth_type(auth_type: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-  use amentia_plugin_host::PluginConnectorEntry;
-
-  use super::connector_requires_secret;
+  use super::*;
 
   #[test]
   fn api_key_spelling_variants_require_secret() {
