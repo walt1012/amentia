@@ -354,8 +354,10 @@ fn turn_start_executes_web_search_with_fixture_client() {
     "#,
   )
   .expect("write web search fixture");
-  let _fixture_enabled_guard =
-    EnvVarGuard::set("AMENTIA_ENABLE_WEB_SEARCH_FIXTURE", std::ffi::OsStr::new("1"));
+  let _fixture_enabled_guard = EnvVarGuard::set(
+    "AMENTIA_ENABLE_WEB_SEARCH_FIXTURE",
+    std::ffi::OsStr::new("1"),
+  );
   let _fixture_path_guard =
     EnvVarGuard::set("AMENTIA_WEB_SEARCH_FIXTURE_PATH", fixture_path.as_os_str());
   let mut context = RuntimeContext::new_in_memory();

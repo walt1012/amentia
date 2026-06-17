@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use amentia_model_runtime::GenerationCancellation;
-use amentia_plugin_host::{PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry};
+use amentia_plugin_host::{
+  PluginCommandEntry as HostPluginCommandEntry, PluginCommandExecutionEntry,
+};
 use amentia_protocol::WorkspaceSummary;
 
 use super::plugin_command_mcp_output::mcp_runner_output;

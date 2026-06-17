@@ -1,5 +1,5 @@
-use anyhow::Result;
 use amentia_protocol::ThreadUpdatedNotificationParams;
+use anyhow::Result;
 
 use crate::active_turns::{streaming_progress_label, update_streaming_item};
 use crate::approval_state::approvals_for_thread;

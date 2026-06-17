@@ -5,8 +5,8 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use anyhow::Result;
 use amentia_process::{configure_process_group, wait_for_child, ChildExitReason};
+use anyhow::Result;
 
 use crate::shell_output_artifacts::discard_shell_output_artifact_directory;
 
@@ -229,7 +229,10 @@ fn build_shell_command(
   process
 }
 
-fn apply_sandbox_environment(process: &mut Command, sandbox_policy: &amentia_sandbox::SandboxPolicy) {
+fn apply_sandbox_environment(
+  process: &mut Command,
+  sandbox_policy: &amentia_sandbox::SandboxPolicy,
+) {
   if let Some(temporary_root) = sandbox_policy.temporary_root() {
     process
       .env("TMPDIR", temporary_root)

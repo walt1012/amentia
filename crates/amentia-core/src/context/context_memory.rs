@@ -1,5 +1,5 @@
-use anyhow::Result;
 use amentia_memory::{MemoryEvent, MemoryNote};
+use anyhow::Result;
 
 use crate::runtime_context::RuntimeContext;
 use crate::runtime_memory::RuntimeMemoryNoteDraft;

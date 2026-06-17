@@ -1,7 +1,7 @@
-use anyhow::Result;
 use amentia_memory::MemoryNote;
 use amentia_protocol::WorkspaceSummary;
 use amentia_storage::RuntimeStore;
+use anyhow::Result;
 
 pub(super) fn save_memory_note(store: Option<&RuntimeStore>, note: &MemoryNote) -> Result<()> {
   let Some(store) = store else {

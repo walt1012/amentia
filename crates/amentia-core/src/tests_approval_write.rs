@@ -11,7 +11,10 @@ fn approval_respond_writes_file_after_approval() {
   enable_full_access_plugin(&mut context);
   let workspace = create_temp_workspace("approval-write");
   let store_root = create_temp_workspace("approval-write-store");
-  let store = RuntimeStore::new(store_root.join("amentia.db"), store_root.join("threads.json"));
+  let store = RuntimeStore::new(
+    store_root.join("amentia.db"),
+    store_root.join("threads.json"),
+  );
   context
     .persistence_state
     .set_store_for_testing(store.clone());
@@ -215,7 +218,10 @@ fn thread_revert_changes_refuses_user_modified_file() {
   enable_full_access_plugin(&mut context);
   let workspace = create_temp_workspace("approval-revert-conflict");
   let store_root = create_temp_workspace("approval-revert-conflict-store");
-  let store = RuntimeStore::new(store_root.join("amentia.db"), store_root.join("threads.json"));
+  let store = RuntimeStore::new(
+    store_root.join("amentia.db"),
+    store_root.join("threads.json"),
+  );
   context
     .persistence_state
     .set_store_for_testing(store.clone());

@@ -54,8 +54,10 @@ pub(super) fn readiness_summary(input: ReadinessSummaryInput<'_>) -> String {
       format!("Amentia is working on {active_execution_count} request(s).")
     }
     "ready" if !first_request_sent => "Amentia is ready for the first request.".to_string(),
-    _ => "Amentia is ready: model, project, tools, context, plugins, and connections are controlled."
-      .to_string(),
+    _ => {
+      "Amentia is ready: model, project, tools, context, plugins, and connections are controlled."
+        .to_string()
+    }
   }
 }
 

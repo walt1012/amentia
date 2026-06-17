@@ -1,5 +1,5 @@
-use anyhow::{Context, Result};
 use amentia_memory::MemoryNote;
+use anyhow::{Context, Result};
 use rusqlite::params;
 
 use crate::RuntimeStore;

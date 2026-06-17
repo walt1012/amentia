@@ -1,5 +1,5 @@
-use anyhow::{Context, Result};
 use amentia_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+use anyhow::{Context, Result};
 use rusqlite::params;
 
 use crate::legacy::import_legacy_threads_if_needed;

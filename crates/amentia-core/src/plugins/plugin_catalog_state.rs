@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::Result;
 use amentia_plugin_host::{discover_plugins_in_roots, PluginCatalogEntry};
+use anyhow::Result;
 
 pub(crate) fn load_plugin_catalog(plugin_roots: &[PathBuf]) -> Result<Vec<PluginCatalogEntry>> {
   if plugin_roots.is_empty() {

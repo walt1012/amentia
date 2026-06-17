@@ -528,8 +528,8 @@ mod tests {
 
   #[test]
   fn profile_allows_temporary_root_explicitly() {
-    let policy =
-      SandboxPolicy::workspace_read_write("/Users/example/work").with_temporary_root("/tmp/amentia");
+    let policy = SandboxPolicy::workspace_read_write("/Users/example/work")
+      .with_temporary_root("/tmp/amentia");
     let profile = macos_seatbelt_profile(&policy);
 
     assert!(profile.contains("(subpath \"/Users/example/work\")"));

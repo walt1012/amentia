@@ -374,7 +374,9 @@ mod tests {
     assert!(mcp_text_content_looks_like_amentia_output(
       r#"{"content":"Captured context."}"#
     ));
-    assert!(mcp_text_content_looks_like_amentia_output(r#"{"items":[]}"#));
+    assert!(mcp_text_content_looks_like_amentia_output(
+      r#"{"items":[]}"#
+    ));
     assert!(!mcp_text_content_looks_like_amentia_output(
       r#"{"content":{"pageId":"abc123"}}"#
     ));

@@ -2,11 +2,11 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-use anyhow::{bail, Result};
 use amentia_process::{
   configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
   wait_for_child, ChildExitReason,
 };
+use anyhow::{bail, Result};
 
 const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(10);
 const GIT_COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);

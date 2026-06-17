@@ -212,7 +212,10 @@ mod tests {
   #[test]
   fn web_search_source_attributes_include_search_result_snapshot() {
     let mut attributes = HashMap::new();
-    merge_web_search_source_attributes(&mut attributes, &[result("Amentia", "https://example.com")]);
+    merge_web_search_source_attributes(
+      &mut attributes,
+      &[result("Amentia", "https://example.com")],
+    );
 
     assert_eq!(
       attributes.get("sourceAttribution").map(String::as_str),

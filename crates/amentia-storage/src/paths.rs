@@ -30,11 +30,19 @@ pub(crate) fn default_runtime_state_path() -> Result<PathBuf> {
   }
 
   if let Ok(home_dir) = env::var("HOME") {
-    return Ok(PathBuf::from(home_dir).join(".amentia").join("threads.json"));
+    return Ok(
+      PathBuf::from(home_dir)
+        .join(".amentia")
+        .join("threads.json"),
+    );
   }
 
   if let Ok(home_dir) = env::var("USERPROFILE") {
-    return Ok(PathBuf::from(home_dir).join(".amentia").join("threads.json"));
+    return Ok(
+      PathBuf::from(home_dir)
+        .join(".amentia")
+        .join("threads.json"),
+    );
   }
 
   Ok(

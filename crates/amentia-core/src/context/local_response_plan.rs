@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use amentia_memory::MemoryNote;
-use amentia_model_runtime::{GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole};
+use amentia_model_runtime::{
+  GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole,
+};
 use amentia_protocol::{TimelineItem, WorkspaceSummary};
 
 use crate::context_compaction::{compact_generation_prompt, merge_generation_prompt_attributes};

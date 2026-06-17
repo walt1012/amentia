@@ -1,5 +1,5 @@
-use anyhow::Result;
 use amentia_plugin_host::{configured_plugin_install_root, configured_plugin_roots};
+use anyhow::Result;
 
 use crate::plugin_catalog_state::{apply_plugin_states, load_plugin_catalog};
 use crate::runtime_context::RuntimeContext;

@@ -6,11 +6,11 @@ use std::path::{Path, PathBuf};
 use std::process::{self, Command, Output, Stdio};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use anyhow::{bail, Context, Result};
 use amentia_process::{
   configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
   wait_for_child, ChildExitReason,
 };
+use anyhow::{bail, Context, Result};
 
 use crate::{GenerateRequest, GenerationCancellation, ModelPackManifest, ModelRole};
 

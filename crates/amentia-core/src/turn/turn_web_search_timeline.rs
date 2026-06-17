@@ -51,8 +51,9 @@ pub(super) fn web_search_unavailable_items(
     TimelineItem {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
-      content: "Amentia could not search the web because the built-in search client is unavailable."
-        .to_string(),
+      content:
+        "Amentia could not search the web because the built-in search client is unavailable."
+          .to_string(),
       attributes: None,
     },
   ]
@@ -73,7 +74,8 @@ pub(super) fn web_search_failed_items(
     TimelineItem {
       kind: "assistantMessage".to_string(),
       title: "Assistant".to_string(),
-      content: "Amentia could not search the web yet. Check network access and try again.".to_string(),
+      content: "Amentia could not search the web yet. Check network access and try again."
+        .to_string(),
       attributes: None,
     },
   ]

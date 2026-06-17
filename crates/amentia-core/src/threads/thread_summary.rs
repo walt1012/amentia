@@ -1,5 +1,5 @@
-use anyhow::Result;
 use amentia_protocol::{ApprovalRequest, WorkspaceSummary};
+use anyhow::Result;
 
 use crate::approval_state::approvals_for_thread;
 use crate::runtime_context::RuntimeContext;

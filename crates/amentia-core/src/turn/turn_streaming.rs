@@ -1,5 +1,5 @@
-use anyhow::Result;
 use amentia_protocol::{methods, JsonRpcNotification};
+use anyhow::Result;
 
 use crate::runtime_context::RuntimeContext;
 

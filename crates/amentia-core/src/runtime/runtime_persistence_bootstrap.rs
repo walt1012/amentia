@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
 use amentia_storage::RuntimeStore;
+use anyhow::Result;
 
 use super::runtime_persistence::RuntimePersistenceState;
 use super::runtime_persistence_records::{pending_approval, stored_thread};
@@ -73,7 +73,9 @@ mod tests {
 
   use amentia_memory::MemoryNote;
   use amentia_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
-  use amentia_storage::{StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord};
+  use amentia_storage::{
+    StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord,
+  };
 
   fn create_temp_directory(label: &str) -> std::path::PathBuf {
     let unique = SystemTime::now()

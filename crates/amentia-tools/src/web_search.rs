@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
 use amentia_process::{
   configure_process_group, join_bounded_pipe_reader, read_bounded_pipe_in_background,
   wait_for_child, ChildExitReason,
 };
+use anyhow::{bail, Context, Result};
 
 use crate::types::WebSearchResult;
 use crate::web_search_parser::parse_duckduckgo_lite_results;
