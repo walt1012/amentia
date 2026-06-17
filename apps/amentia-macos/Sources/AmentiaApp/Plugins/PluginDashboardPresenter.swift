@@ -173,8 +173,12 @@ enum PluginDashboardPresenter {
     }
 
     let readyCount = snapshot.connectors.filter { $0.status == "ready" }.count
-    let needsAuthCount = snapshot.connectors.filter { $0.authStatus == "needsAuth" }.count
-    let authorizedCount = snapshot.connectors.filter { $0.authStatus == "authorized" }.count
+    let needsAuthCount = snapshot.connectors.filter { connector in
+      connectorAuthorizationStatus(connector) == "needs sign in"
+    }.count
+    let authorizedCount = snapshot.connectors.filter { connector in
+      connectorAuthorizationStatus(connector) == "authorized locally"
+    }.count
     var parts = [
       "\(snapshot.connectors.count) connection\(snapshot.connectors.count == 1 ? "" : "s")"
     ]
@@ -301,7 +305,7 @@ enum PluginDashboardPresenter {
   private static func connectorDetail(_ connector: PluginConnectorSummary) -> String {
     var parts = [
       "\(connector.displayName): \(PluginStatusDisplay.connectionStatus(connector.status))",
-      "Authorization: \(PluginStatusDisplay.authorizationStatus(connector.authStatus, credentialPresent: connector.credentialPresent))",
+      "Authorization: \(connectorAuthorizationStatus(connector))",
       "Plugin: \(connector.pluginDisplayName)"
     ]
 
@@ -313,6 +317,17 @@ enum PluginDashboardPresenter {
     }
 
     return parts.joined(separator: " | ")
+  }
+
+  private static func connectorAuthorizationStatus(
+    _ connector: PluginConnectorSummary
+  ) -> String {
+    PluginStatusDisplay.authorizationStatus(
+      connector.authStatus,
+      authRequired: connector.authRequired,
+      credentialPresent: connector.credentialPresent,
+      credentialSecretPresent: connector.credentialSecretPresent
+    )
   }
 
   private static func commandDetail(
@@ -355,7 +370,7 @@ enum PluginDashboardPresenter {
         guard let connector = connectors.first(where: { $0.id == connectorID }) else {
           return PluginStatusDisplay.missingConnectionSummary(count: 1)
         }
-        return "\(connector.displayName): \(PluginStatusDisplay.authorizationStatus(connector.authStatus, credentialPresent: connector.credentialPresent))"
+        return "\(connector.displayName): \(connectorAuthorizationStatus(connector))"
       }
       .joined(separator: ", ")
   }

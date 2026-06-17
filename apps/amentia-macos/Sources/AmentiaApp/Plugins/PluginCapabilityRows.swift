@@ -283,7 +283,7 @@ struct PluginConnectorRow: View {
       .font(.caption2)
       .disabled(!canEnablePlugin)
     } else if connector.authRequired {
-      if connector.authStatus == "needsAuth" {
+      if connector.needsAuthorization {
         Button("Authorize") {
           onAuthorize()
         }
@@ -310,7 +310,7 @@ struct PluginConnectorRow: View {
       return nil
     }
 
-    if connector.authStatus == "needsAuth" {
+    if connector.needsAuthorization {
       return authorizeDisabledReason
     }
 
@@ -322,6 +322,10 @@ struct PluginConnectorRow: View {
   }
 
   private var statusColor: Color {
+    if connector.needsAuthorization {
+      return .orange
+    }
+
     switch connector.status {
     case "ready":
       return .green
@@ -334,9 +338,14 @@ struct PluginConnectorRow: View {
 }
 
 private extension PluginConnectorSummary {
+  var needsAuthorization: Bool {
+    authSummaryStatus == "needs sign in"
+  }
+
   var authSummary: String {
+    let authorization = authSummaryStatus
     var parts = [
-      "Connection: \(PluginStatusDisplay.authorizationStatus(authStatus, credentialPresent: credentialPresent))"
+      "Connection: \(authorization)"
     ]
     if let access = PluginStatusDisplay.accessSummary(authScopes) {
       parts.append("access: \(access)")
@@ -345,6 +354,15 @@ private extension PluginConnectorSummary {
       parts.append(credentialLabel)
     }
     return parts.joined(separator: " | ")
+  }
+
+  private var authSummaryStatus: String {
+    PluginStatusDisplay.authorizationStatus(
+      authStatus,
+      authRequired: authRequired,
+      credentialPresent: credentialPresent,
+      credentialSecretPresent: credentialSecretPresent
+    )
   }
 
   var workflowSummary: String {

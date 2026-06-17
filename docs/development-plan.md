@@ -262,6 +262,8 @@ Completed:
   state even when the local secret store reports a recoverable delete error.
 - Timeline connector receipts and evidence treat stale authorization markers or
   missing local secrets as needing sign in instead of implying readiness.
+- Connector dashboards, rows, action affordances, and planners share the same
+  fail-closed authorization state when a local secret is missing.
 
 Next:
 

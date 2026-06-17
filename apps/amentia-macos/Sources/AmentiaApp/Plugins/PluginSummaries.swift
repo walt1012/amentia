@@ -236,13 +236,27 @@ enum PluginStatusDisplay {
 
   static func authorizationStatus(
     _ status: String,
-    credentialPresent: Bool
+    authRequired: Bool,
+    credentialPresent: Bool,
+    credentialSecretPresent: Bool
   ) -> String {
+    if status == "disabled" {
+      return "disabled"
+    }
+
+    if !authRequired {
+      return "ready"
+    }
+
+    if !credentialPresent || !credentialSecretPresent {
+      return "needs sign in"
+    }
+
     switch status {
     case "authorized":
       return "authorized locally"
     case "ready":
-      return credentialPresent ? "authorized locally" : "ready"
+      return "authorized locally"
     case "needsAuth":
       return "needs sign in"
     case "disabled":

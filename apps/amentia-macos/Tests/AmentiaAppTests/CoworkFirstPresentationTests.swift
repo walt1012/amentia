@@ -570,6 +570,75 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(summary.contains("authorized"))
   }
 
+  func testPluginDashboardDoesNotCountMissingSecretsAsAuthorized() {
+    let snapshot = pluginDashboardSnapshot(
+      connectors: [
+        pluginConnectorSummary(
+          id: "notion::main",
+          displayName: "Notion",
+          status: "ready",
+          authStatus: "authorized",
+          credentialPresent: true,
+          credentialSecretPresent: false
+        )
+      ]
+    )
+
+    let summary = PluginDashboardPresenter.connectorCountSummary(snapshot)
+    let detail = PluginDashboardPresenter.connectorDetailSummary(snapshot)
+
+    XCTAssertEqual(summary, "1 connection | 1 ready | 1 need sign in")
+    XCTAssertTrue(detail.contains("Authorization: needs sign in"))
+    XCTAssertFalse(summary.contains("authorized"))
+    XCTAssertFalse(detail.contains("authorized locally"))
+  }
+
+  func testPluginActionPlannerAllowsReauthorizationWhenSecretIsMissing() {
+    let connector = pluginConnectorSummary(
+      id: "notion::main",
+      displayName: "Notion",
+      status: "ready",
+      authStatus: "authorized",
+      credentialPresent: true,
+      credentialSecretPresent: false
+    )
+    let snapshot = pluginActionSnapshot(connectors: [connector])
+
+    XCTAssertTrue(
+      PluginActionPlanner.canAuthorizeConnector(
+        connectorID: "notion::main",
+        snapshot: snapshot
+      )
+    )
+    XCTAssertNil(
+      PluginActionPlanner.connectorAuthorizeDisabledReason(
+        connectorID: "notion::main",
+        snapshot: snapshot
+      )
+    )
+  }
+
+  func testPluginActionPlannerFindsMissingSecretConnectorForAction() {
+    let connector = pluginConnectorSummary(
+      id: "notion::main",
+      displayName: "Notion",
+      status: "ready",
+      authStatus: "authorized",
+      credentialPresent: true,
+      credentialSecretPresent: false
+    )
+    let command = pluginCommandSummary(requiredConnectorIds: ["notion::main"])
+    let snapshot = pluginActionSnapshot(connectors: [connector], commands: [command])
+
+    XCTAssertEqual(
+      PluginActionPlanner.commandAuthorizationConnectorID(
+        commandID: command.id,
+        snapshot: snapshot
+      ),
+      "notion::main"
+    )
+  }
+
   func testPluginValidationFallbackAvoidsUnknownErrorCopy() {
     let snapshot = pluginDashboardSnapshot(
       plugins: [
@@ -948,12 +1017,49 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   func testAuthorizationStatusPrioritizesNeedsAuthOverStoredMarker() {
     XCTAssertEqual(
-      PluginStatusDisplay.authorizationStatus("needsAuth", credentialPresent: true),
+      PluginStatusDisplay.authorizationStatus(
+        "needsAuth",
+        authRequired: true,
+        credentialPresent: true,
+        credentialSecretPresent: false
+      ),
       "needs sign in"
     )
     XCTAssertEqual(
-      PluginStatusDisplay.authorizationStatus("authorized", credentialPresent: true),
+      PluginStatusDisplay.authorizationStatus(
+        "authorized",
+        authRequired: true,
+        credentialPresent: true,
+        credentialSecretPresent: true
+      ),
       "authorized locally"
+    )
+    XCTAssertEqual(
+      PluginStatusDisplay.authorizationStatus(
+        "authorized",
+        authRequired: true,
+        credentialPresent: true,
+        credentialSecretPresent: false
+      ),
+      "needs sign in"
+    )
+    XCTAssertEqual(
+      PluginStatusDisplay.authorizationStatus(
+        "ready",
+        authRequired: true,
+        credentialPresent: false,
+        credentialSecretPresent: false
+      ),
+      "needs sign in"
+    )
+    XCTAssertEqual(
+      PluginStatusDisplay.authorizationStatus(
+        "ready",
+        authRequired: false,
+        credentialPresent: false,
+        credentialSecretPresent: false
+      ),
+      "ready"
     )
   }
 
@@ -1130,6 +1236,22 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  private func pluginActionSnapshot(
+    connectors: [PluginConnectorSummary],
+    commands: [PluginCommandSummary] = []
+  ) -> PluginActionSnapshot {
+    PluginActionSnapshot(
+      runtimeState: .ready,
+      hasRuntimeThreadSelection: true,
+      selectedThreadID: "thread-1",
+      hasActiveOrPendingTurn: false,
+      hasLifecycleOperation: false,
+      plugins: [pluginSummary()],
+      connectors: connectors,
+      commands: commands
+    )
+  }
+
   private func pluginCapabilitySummary(id: String) -> PluginCapabilitySummary {
     PluginCapabilitySummary(
       id: id,
@@ -1177,7 +1299,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     displayName: String,
     status: String,
     authStatus: String,
-    credentialPresent: Bool
+    credentialPresent: Bool,
+    credentialSecretPresent: Bool? = nil
   ) -> PluginConnectorSummary {
     PluginConnectorSummary(
       id: id,
@@ -1197,7 +1320,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       workflows: [],
       authStatus: authStatus,
       credentialPresent: credentialPresent,
-      credentialSecretPresent: credentialPresent,
+      credentialSecretPresent: credentialSecretPresent ?? credentialPresent,
       credentialProvider: nil,
       credentialHandle: nil,
       credentialLabel: nil,

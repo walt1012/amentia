@@ -142,7 +142,7 @@ struct PluginCommandRow: View {
             }
             .font(.caption2)
             .disabled(!canEnablePlugin(connector.pluginID))
-          } else if connector.authStatus == "needsAuth" {
+          } else if connectorNeedsAuthorization(connector) {
             Button("Authorize") {
               onAuthorizeConnector(connector.id)
             }
@@ -204,10 +204,7 @@ struct PluginCommandRow: View {
 
   private func connectorLabel(_ connector: PluginConnectorSummary) -> String {
     let status = PluginStatusDisplay.connectionStatus(connector.status)
-    let authorization = PluginStatusDisplay.authorizationStatus(
-      connector.authStatus,
-      credentialPresent: connector.credentialPresent
-    )
+    let authorization = connectorAuthorizationStatus(connector)
     return "Connection: \(connector.displayName) | \(status) | \(authorization)"
   }
 
@@ -218,6 +215,10 @@ struct PluginCommandRow: View {
   }
 
   private func connectorColor(_ connector: PluginConnectorSummary) -> Color {
+    if connectorNeedsAuthorization(connector) {
+      return .orange
+    }
+
     switch connector.status {
     case "ready":
       return .secondary
@@ -226,6 +227,19 @@ struct PluginCommandRow: View {
     default:
       return .secondary
     }
+  }
+
+  private func connectorNeedsAuthorization(_ connector: PluginConnectorSummary) -> Bool {
+    connectorAuthorizationStatus(connector) == "needs sign in"
+  }
+
+  private func connectorAuthorizationStatus(_ connector: PluginConnectorSummary) -> String {
+    PluginStatusDisplay.authorizationStatus(
+      connector.authStatus,
+      authRequired: connector.authRequired,
+      credentialPresent: connector.credentialPresent,
+      credentialSecretPresent: connector.credentialSecretPresent
+    )
   }
 }
 

@@ -62,7 +62,7 @@ enum PluginActionPlanner {
     if !connector.authRequired {
       return "Connection does not require authorization."
     }
-    if connector.authStatus != "needsAuth" {
+    if !connectorNeedsAuthorization(connector) {
       return "Connection is already authorized."
     }
     if snapshot.hasActiveOrPendingTurn {
@@ -151,12 +151,23 @@ enum PluginActionPlanner {
 
       return connector.enabled
         && connector.authRequired
-        && connector.authStatus == "needsAuth"
+        && connectorNeedsAuthorization(connector)
     }
   }
 
   static func commandRunBlocker(commandID: String, snapshot: PluginActionSnapshot) -> String? {
     snapshot.commands.first(where: { $0.id == commandID })?.runBlocker
+  }
+
+  private static func connectorNeedsAuthorization(
+    _ connector: PluginConnectorSummary
+  ) -> Bool {
+    PluginStatusDisplay.authorizationStatus(
+      connector.authStatus,
+      authRequired: connector.authRequired,
+      credentialPresent: connector.credentialPresent,
+      credentialSecretPresent: connector.credentialSecretPresent
+    ) == "needs sign in"
   }
 
   static func canRunCommand(commandID: String, snapshot: PluginActionSnapshot) -> Bool {
