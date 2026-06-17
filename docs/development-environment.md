@@ -218,6 +218,11 @@ The local runtime resolves the model backend in this order:
 4. repo-local `third_party/llama.cpp/llama-cli`
 5. repo-local `tools/llama.cpp/llama-cli`
 
+The installed `.app` sets `PITH_REQUIRE_PACKAGED_LLAMACPP=1`, so it must use the
+packaged backend through `PITH_LLAMACPP_PATH` and must not be rescued by a
+user-installed `llama-cli`. Development and CI can still inject an explicit
+backend path.
+
 The default model pack path resolves in this order:
 
 1. `PITH_MODEL_PACK_MANIFEST`
@@ -237,7 +242,10 @@ The resolved model file path then checks:
 5. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
 6. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
 
-The repository tracks manifests, licensing notes, and small metadata only. Model weights are downloaded in app, verified, and stored in the suggested app data path; they must not be committed to git history. Environment variables remain development overrides, not the normal user setup path.
+The repository tracks manifests, licensing notes, and small metadata only. Model
+weights are downloaded in app, verified, and stored in the suggested app data
+path; they must not be committed to git history. Environment variables remain
+development overrides, not the normal user setup path.
 
 The macOS Local Model panel keeps a curated list of lightweight models, downloads
 files into `PITH_DATA_DIR/models`, verifies integrity, and activates one model at
@@ -250,7 +258,9 @@ checks report the selected model. Normal app installs set `PITH_DATA_DIR` to
 delete that user data; Settings > Storage can reveal data or Reset Pith without
 deleting workspace folders.
 
-If either path is missing, Pith reports the local model as unavailable and blocks agent work until a verified local model is selected. A development-only setup example is:
+If either path is missing, Pith reports the local model as unavailable and
+blocks agent work until a verified local model is selected. A development-only
+setup example is:
 
 ```bash
 export PITH_LLAMACPP_PATH=/absolute/path/to/llama-cli
@@ -281,4 +291,5 @@ The workflow uses:
 - `ubuntu-latest` for Rust checks
 - `macos-15-intel` for the native x86_64 app bundle package
 
-This is intentional because the product target is Intel macOS and GitHub retired the `macos-13` runner image in late 2025.
+This is intentional because the product target is Intel macOS and GitHub retired
+the `macos-13` runner image in late 2025.

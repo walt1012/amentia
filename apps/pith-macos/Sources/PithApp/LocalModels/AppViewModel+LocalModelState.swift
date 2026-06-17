@@ -64,6 +64,10 @@ extension AppViewModel {
     return localModels.first(where: { $0.id == modelID })
   }
 
+  func activeLocalModelID() -> String? {
+    activeLocalModel()?.id
+  }
+
   func localModelSetupGuidance() -> LocalModelSetupGuidance {
     LocalModelOperationPresenter.setupGuidance(localModelOperationSnapshot())
   }

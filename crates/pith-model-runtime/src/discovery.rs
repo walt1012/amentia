@@ -18,6 +18,10 @@ pub(crate) fn resolve_binary_path() -> Option<PathBuf> {
     return Some(PathBuf::from(path));
   }
 
+  if require_packaged_llama_backend() {
+    return None;
+  }
+
   default_binary_candidates()
     .into_iter()
     .find(|path| path.is_file())
@@ -216,6 +220,12 @@ fn read_manifest(path: &Path) -> Result<ModelPackManifest> {
     fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
   serde_json::from_str(&content)
     .with_context(|| format!("failed to parse model pack manifest {}", path.display()))
+}
+
+fn require_packaged_llama_backend() -> bool {
+  env::var("PITH_REQUIRE_PACKAGED_LLAMACPP")
+    .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+    .unwrap_or(false)
 }
 
 pub(crate) fn normalize_path(path: &Path) -> PathBuf {

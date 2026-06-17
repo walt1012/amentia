@@ -173,6 +173,7 @@ extension AppViewModel {
     }
     await refreshRuntimeReadiness()
     appendRuntimeLaunchAnnotations(bootstrap, currentWorkspace: currentWorkspace)
+    probePendingActivatedModelIfReady()
   }
 
   private func appendRuntimeLaunchAnnotations(

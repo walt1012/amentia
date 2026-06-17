@@ -191,6 +191,7 @@ extension AppViewModel {
           manifestPath: preparedActivation.manifestPath,
           modelPath: model.installPath
         )
+        localModelProbeCoordinator.schedulePostActivationCheck(modelID: model.id)
         selectedSetupModelID = model.id
         refreshLocalModelCatalog()
         applyLocalModelActivationPlan(
@@ -217,6 +218,7 @@ extension AppViewModel {
     }
 
     runtimeBridge.clearActiveLocalModel()
+    localModelProbeCoordinator.cancelPendingPostActivationCheck()
     refreshLocalModelCatalog()
     applyLocalModelActivationPlan(LocalModelActivationPlanner.resetPlan())
   }
@@ -243,6 +245,17 @@ extension AppViewModel {
         )
       }
     }
+  }
+
+  func probePendingActivatedModelIfReady() {
+    guard localModelProbeCoordinator.consumePostActivationCheck(
+      activeModelID: activeLocalModelID(),
+      canProbe: canProbeLocalModel()
+    ) != nil else {
+      return
+    }
+
+    probeLocalModel()
   }
 
   private func applyLocalModelProbePresentation(_ presentation: LocalModelProbePresentation) {

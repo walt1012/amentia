@@ -36,6 +36,7 @@ final class AppViewModel: ObservableObject {
   let pluginLifecycleOperations = PluginLifecycleOperationCoordinator()
   let modelDownloadCoordinator: LocalModelDownloadCoordinator
   let localModelDownloadRequestPlanCache = LocalModelDownloadRequestPlanCache()
+  let localModelProbeCoordinator = LocalModelProbeCoordinator()
 
   init(runtimeBridge: RuntimeBridge = RuntimeBridge()) {
     let launchState = AppLaunchState.make(runtimeBridge: runtimeBridge)

@@ -81,6 +81,10 @@ enum RuntimeBridgeLocalEnvironment {
       return
     }
 
+    if shouldRequirePackagedModelBackend() {
+      environment["PITH_REQUIRE_PACKAGED_LLAMACPP"] = "1"
+    }
+
     let manager = FileManager.default
     let modelsURL = resourceURL.appendingPathComponent("models", isDirectory: true)
     if manager.fileExists(atPath: modelsURL.path) {
@@ -101,6 +105,10 @@ enum RuntimeBridgeLocalEnvironment {
     }
   }
 
+  private static func shouldRequirePackagedModelBackend() -> Bool {
+    Bundle.main.bundleURL.pathExtension == "app"
+  }
+
   private static func activeLocalModelSelection() async -> RuntimeBridgeActiveLocalModelSelection? {
     let defaults = UserDefaults.standard
     guard let manifestPath = defaults.string(forKey: activeModelManifestPathKey),
@@ -115,9 +123,11 @@ enum RuntimeBridgeLocalEnvironment {
     guard manager.fileExists(atPath: manifestPath),
           manager.fileExists(atPath: modelPath)
     else {
+      let missingFileDetail =
+        "The saved active local model was reset because its setup file or model file no longer "
+        + "exists. Choose or download a model to continue."
       clearActiveLocalModel(
-        invalidationDetail:
-          "The saved active local model was reset because its setup file or model file no longer exists. Choose or download a model to continue."
+        invalidationDetail: missingFileDetail
       )
       return nil
     }
@@ -127,9 +137,11 @@ enum RuntimeBridgeLocalEnvironment {
       modelPath: modelPath,
       manifestPath: manifestPath
     ) else {
+      let verificationDetail =
+        "The saved active local model was reset because its setup file and model file no longer "
+        + "match Pith's verified catalog. Choose or download a model to continue."
       clearActiveLocalModel(
-        invalidationDetail:
-          "The saved active local model was reset because its setup file and model file no longer match Pith's verified catalog. Choose or download a model to continue."
+        invalidationDetail: verificationDetail
       )
       return nil
     }

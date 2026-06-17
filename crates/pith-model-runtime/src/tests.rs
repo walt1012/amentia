@@ -1,5 +1,5 @@
 use super::*;
-use crate::discovery::discovery_roots;
+use crate::discovery::{discovery_roots, resolve_binary_path};
 use crate::validation::sha256_hex;
 use std::env;
 use std::fs;
@@ -203,6 +203,29 @@ fn discovery_roots_include_configured_model_directories() {
   assert!(roots.contains(&PathBuf::from("C:/tmp/pith-pack-root")));
   assert!(roots.contains(&PathBuf::from("C:/tmp/pith-data")));
   assert!(roots.contains(&PathBuf::from("C:/tmp/pith-data").join("models")));
+}
+
+#[test]
+fn packaged_backend_requirement_disables_external_binary_fallbacks() {
+  let _environment = lock_environment();
+  let temp_root = unique_temp_directory("packaged-backend-requirement");
+  fs::create_dir_all(&temp_root).expect("temp root");
+  let explicit_backend = temp_root.join("llama-cli");
+  fs::write(&explicit_backend, "#!/bin/sh\n").expect("backend");
+
+  let previous_require = env::var("PITH_REQUIRE_PACKAGED_LLAMACPP").ok();
+  let previous_backend = env::var("PITH_LLAMACPP_PATH").ok();
+
+  env::set_var("PITH_REQUIRE_PACKAGED_LLAMACPP", "1");
+  env::remove_var("PITH_LLAMACPP_PATH");
+  assert_eq!(resolve_binary_path(), None);
+
+  env::set_var("PITH_LLAMACPP_PATH", &explicit_backend);
+  assert_eq!(resolve_binary_path(), Some(explicit_backend.clone()));
+
+  restore_env_var("PITH_REQUIRE_PACKAGED_LLAMACPP", previous_require);
+  restore_env_var("PITH_LLAMACPP_PATH", previous_backend);
+  remove_temp_directory(&temp_root);
 }
 
 #[test]
