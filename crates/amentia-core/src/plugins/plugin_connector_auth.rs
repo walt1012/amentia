@@ -313,7 +313,10 @@ mod tests {
   #[test]
   fn non_api_key_or_optional_connectors_do_not_require_secret() {
     assert!(!connector_requires_secret(&connector(Some("oauth2"), true)));
-    assert!(!connector_requires_secret(&connector(Some("api_key"), false)));
+    assert!(!connector_requires_secret(&connector(
+      Some("api_key"),
+      false
+    )));
     assert!(!connector_requires_secret(&connector(None, true)));
   }
 
