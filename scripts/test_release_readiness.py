@@ -9,9 +9,11 @@ from release_readiness import readiness_json
 from release_readiness import readiness_report
 from release_readiness import readiness_visibility_label
 from release_readiness import REQUIRED_RELEASE_INPUTS
+from release_identity import release_actions_run_url
+from release_identity import release_repository_url
 
 
-VALID_CI_URL = "https://github.com/walt1012/amentia/actions/runs/100"
+VALID_CI_URL = release_actions_run_url(100)
 VALID_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
@@ -254,7 +256,7 @@ def assert_tag_push_draft_release_does_not_claim_visible_release() -> None:
 
 
 def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
-  evidence = "https://github.com/walt1012/amentia/issues/1#manual-acceptance-receipt"
+  evidence = release_repository_url("issues/1#manual-acceptance-receipt")
   readiness = plan_readiness(
     tag="v0.1.0",
     source_commit=VALID_COMMIT,

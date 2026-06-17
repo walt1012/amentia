@@ -13,13 +13,14 @@ from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
 from release_evidence_contract import expected_evidence_names
 from release_evidence_contract import validate_release_evidence_set
+from release_identity import release_actions_run_url
 from release_text import install_guide as release_install_guide
 
 
 TAG = "v0.1.0"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
-WORKFLOW_RUN_URL = "https://github.com/walt1012/amentia/actions/runs/123456789"
+WORKFLOW_RUN_URL = release_actions_run_url(WORKFLOW_RUN_ID)
 
 
 def write_evidence_file(path: Path, mode: str = "dry-run") -> None:
@@ -49,7 +50,7 @@ def release_readiness_payload(mode: str = "dry-run") -> dict[str, object]:
     "status": "ready",
     "tag": TAG,
     "sourceCommit": SOURCE_COMMIT,
-    "successfulCiRunUrl": "https://github.com/walt1012/amentia/actions/runs/1",
+    "successfulCiRunUrl": release_actions_run_url(1),
     "workflowMode": workflow_mode,
     "signingMode": "ad-hoc",
     "requestedDraft": True,
@@ -95,7 +96,7 @@ def pre_dispatch_checklist() -> list[str]:
     ),
     (
       "Confirm the successful CI run matches the source commit: "
-      "https://github.com/walt1012/amentia/actions/runs/1."
+      f"{release_actions_run_url(1)}."
     ),
     "Use manual dry-run only when rehearsing release assets without mutating the draft release.",
     (
@@ -255,8 +256,8 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
     "tag": TAG,
     "title": f"Amentia {TAG}",
     "sourceCommit": SOURCE_COMMIT,
-    "successfulCiRunUrl": "https://github.com/walt1012/amentia/actions/runs/1",
-    "releaseWorkflowRunUrl": "https://github.com/walt1012/amentia/actions/runs/2",
+    "successfulCiRunUrl": release_actions_run_url(1),
+    "releaseWorkflowRunUrl": release_actions_run_url(2),
     "workflowMode": workflow_mode,
     "githubMutation": github_mutation,
     "signingMode": "ad-hoc",
@@ -1078,7 +1079,7 @@ def assert_rejects_cross_file_json_disagreement() -> None:
     paths = write_evidence_set(root, "publish-rehearsal")
     readiness_path = root / "release-readiness.json"
     stale = release_readiness_payload("publish-rehearsal")
-    stale["successfulCiRunUrl"] = "https://github.com/walt1012/amentia/actions/runs/99"
+    stale["successfulCiRunUrl"] = release_actions_run_url(99)
     readiness_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
     expect_failure(
       lambda: validate_release_evidence_set(

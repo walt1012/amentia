@@ -11,6 +11,7 @@ from pathlib import Path
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_artifacts import sha256_hex
+from release_identity import RELEASE_ACTIONS_RUN_URL_PREFIX
 from release_identity import validate_public_release_tag
 
 
@@ -50,7 +51,7 @@ def validate_manual_acceptance_evidence(data: dict[str, object], *, tag: str) ->
   require_equal(data, "tag", tag)
   require_string(data, "sourceCommit", length=40)
   require_git_sha(str(data["sourceCommit"]), "manual acceptance sourceCommit")
-  require_string(data, "releaseWorkflowRunUrl", prefix="https://github.com/walt1012/amentia/actions/runs/")
+  require_string(data, "releaseWorkflowRunUrl", prefix=RELEASE_ACTIONS_RUN_URL_PREFIX)
   require_equal(data, "dmgAssetName", release_installer_asset_names(tag)[0])
   require_string(data, "checksum", length=64)
   require_sha256(data, "checksum")
@@ -113,7 +114,7 @@ def manual_acceptance_template_from_asset_dir(
   workflow_run_url = require_manifest_string(
     verification,
     "workflowRunUrl",
-    prefix="https://github.com/walt1012/amentia/actions/runs/",
+    prefix=RELEASE_ACTIONS_RUN_URL_PREFIX,
   )
   checksum = require_dmg_artifact_checksum(manifest, dmg_name)
   require_sha256_hex(checksum, "release manifest DMG artifact sha256")

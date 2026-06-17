@@ -17,11 +17,12 @@ from manual_acceptance_contract import main as manual_acceptance_main
 from manual_acceptance_contract import validate_manual_acceptance_evidence
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
+from release_identity import release_actions_run_url
 
 
 TAG = "v1.2.3"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
-RUN_URL = "https://github.com/walt1012/amentia/actions/runs/123456"
+RUN_URL = release_actions_run_url(123456)
 DMG_BYTES = b"release dmg\n"
 CHECKSUM = hashlib.sha256(DMG_BYTES).hexdigest()
 

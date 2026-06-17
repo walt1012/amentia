@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from package_contract import RELEASE_SIGNING_MODES
+from release_identity import RELEASE_REPOSITORY_URL
 from release_identity import validate_public_release_tag
 from release_text import release_trust_note
 from release_text import validate_release_notes
@@ -123,7 +124,7 @@ def validate_manual_acceptance_evidence(value: str) -> None:
     raise ValueError(
       "Visible ad-hoc prereleases require the manual acceptance receipt as an HTTPS URL."
     )
-  if not normalized.startswith("https://github.com/walt1012/amentia/"):
+  if not normalized.startswith(f"{RELEASE_REPOSITORY_URL}/"):
     raise ValueError(
       "Visible ad-hoc prereleases require a repository-scoped manual acceptance receipt URL."
     )

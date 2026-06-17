@@ -20,10 +20,12 @@ from release_state import release_next_actions
 from release_state import release_state_summary
 from release_state import validate_manual_acceptance_gate
 from release_state import validate_release_title
+from release_identity import release_actions_run_url
+from release_identity import release_repository_url
 from release_text import release_notes
 
 
-ACCEPTANCE_RECEIPT = "https://github.com/walt1012/amentia/issues/1#manual-acceptance-receipt"
+ACCEPTANCE_RECEIPT = release_repository_url("issues/1#manual-acceptance-receipt")
 
 
 def assert_state(
@@ -103,7 +105,7 @@ def assert_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
     "TODO",
     "not recorded",
     "placeholder",
-    "https://github.com/walt1012/amentia/actions/runs/100",
+    release_actions_run_url(100),
     "https://example.com/manual-acceptance-receipt",
   ):
     try:
@@ -124,7 +126,7 @@ def assert_manual_acceptance_gate_allows_safe_modes() -> None:
   for signing_mode, dry_run, draft, confirmed, evidence in (
     ("ad-hoc", True, False, False, ""),
     ("ad-hoc", False, True, False, ""),
-    ("ad-hoc", False, False, True, "https://github.com/walt1012/amentia/issues/1#manual-acceptance-receipt"),
+    ("ad-hoc", False, False, True, ACCEPTANCE_RECEIPT),
     ("developer-id", False, False, False, ""),
   ):
     validate_manual_acceptance_gate(
@@ -266,8 +268,8 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     tag="v0.1.0",
     title="Amentia v0.1.0",
     source_commit="0123456789abcdef0123456789abcdef01234567",
-    ci_run_url="https://github.com/walt1012/amentia/actions/runs/100",
-    workflow_run_url="https://github.com/walt1012/amentia/actions/runs/101",
+    ci_run_url=release_actions_run_url(100),
+    workflow_run_url=release_actions_run_url(101),
     dry_run=True,
     signing_mode="ad-hoc",
     requested_draft=False,
@@ -289,8 +291,8 @@ def assert_release_summary_names_visibility_and_trust() -> None:
   for phrase in (
     "# Release Plan",
     "0123456789abcdef0123456789abcdef01234567",
-    "https://github.com/walt1012/amentia/actions/runs/100",
-    "https://github.com/walt1012/amentia/actions/runs/101",
+    release_actions_run_url(100),
+    release_actions_run_url(101),
     "Workflow mode: `dry-run`",
     "GitHub mutation: none; dry-run does not create or update a GitHub Release",
     "## Next Maintainer Actions",
@@ -320,8 +322,8 @@ def assert_release_plan_json_preserves_release_decision() -> None:
     tag="v0.1.0",
     title="Amentia v0.1.0",
     source_commit="0123456789abcdef0123456789abcdef01234567",
-    ci_run_url="https://github.com/walt1012/amentia/actions/runs/100",
-    workflow_run_url="https://github.com/walt1012/amentia/actions/runs/101",
+    ci_run_url=release_actions_run_url(100),
+    workflow_run_url=release_actions_run_url(101),
     dry_run=True,
     signing_mode="ad-hoc",
     requested_draft=False,
@@ -427,9 +429,9 @@ def assert_main_writes_release_summary() -> None:
         "--source-commit",
         "0123456789abcdef0123456789abcdef01234567",
         "--ci-run-url",
-        "https://github.com/walt1012/amentia/actions/runs/100",
+        release_actions_run_url(100),
         "--workflow-run-url",
-        "https://github.com/walt1012/amentia/actions/runs/101",
+        release_actions_run_url(101),
         "--dry-run",
         "true",
       ]
@@ -441,7 +443,7 @@ def assert_main_writes_release_summary() -> None:
     summary = summary_file.read_text(encoding="utf-8")
     if "Release visibility: `not published; dry-run only`" not in summary:
       raise AssertionError("release summary should record dry-run release visibility")
-    if "https://github.com/walt1012/amentia/actions/runs/100" not in summary:
+    if release_actions_run_url(100) not in summary:
       raise AssertionError("release summary should record the successful CI run")
     if "Workflow mode: `dry-run`" not in summary:
       raise AssertionError("release summary should record the workflow mode")

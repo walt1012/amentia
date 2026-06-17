@@ -61,9 +61,9 @@ receipts, actionable source/file evidence, session delete and revert safety,
 plugin recovery, Notion connector proof, memory capture, bounded local
 execution, and the x86_64 macOS DMG package path.
 
-The active work is Milestone 13: product quality and identity. Keep the app
-small, human, and usable from the installed package before expanding the
-connector platform.
+The active work is Milestone 14: connector and skill platform. Keep the app
+small, human, and usable from the installed package while proving safe local
+extension execution.
 
 Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
 

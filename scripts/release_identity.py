@@ -12,6 +12,20 @@ PRODUCT_VERSION_PATTERN = re.compile(
 PUBLIC_RELEASE_TAG_PATTERN = re.compile(
   r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
+RELEASE_REPOSITORY = "walt1012/amentia"
+RELEASE_REPOSITORY_URL = f"https://github.com/{RELEASE_REPOSITORY}"
+RELEASE_ACTIONS_RUN_URL_PREFIX = f"{RELEASE_REPOSITORY_URL}/actions/runs/"
+
+
+def release_actions_run_url(run_id: str | int) -> str:
+  return f"{RELEASE_ACTIONS_RUN_URL_PREFIX}{run_id}"
+
+
+def release_repository_url(path: str = "") -> str:
+  suffix = path.strip("/")
+  if not suffix:
+    return RELEASE_REPOSITORY_URL
+  return f"{RELEASE_REPOSITORY_URL}/{suffix}"
 
 
 def normalize_product_version(value: str) -> str:

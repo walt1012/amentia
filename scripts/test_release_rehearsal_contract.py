@@ -32,6 +32,7 @@ from release_artifacts import release_gatekeeper_guidance
 from release_artifacts import release_installer_asset_names
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
+from release_identity import release_actions_run_url
 from release_rehearsal_contract import summary_markdown
 from release_rehearsal_contract import acceptance_markdown
 from release_rehearsal_contract import write_acceptance
@@ -44,7 +45,7 @@ from smoke_launch_macos_app import write_packaged_smoke_receipt
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
-WORKFLOW_RUN_URL = "https://github.com/walt1012/amentia/actions/runs/123456789"
+WORKFLOW_RUN_URL = release_actions_run_url(WORKFLOW_RUN_ID)
 
 
 def package_manifest_data(tag: str, signing: str = "ad-hoc") -> dict:

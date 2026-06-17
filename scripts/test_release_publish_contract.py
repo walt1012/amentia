@@ -17,13 +17,14 @@ from release_publish_contract import RELEASE_REPOSITORY
 from release_publish_contract import release_asset_names
 from release_publish_contract import validate_existing_release_assets_before_upload
 from release_publish_contract import validate_published_release
+from release_identity import release_repository_url
 from release_state import expected_release_title
 from release_text import release_notes
 
 
 TAG = "v1.2.3"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
-ACCEPTANCE_RECEIPT = "https://github.com/walt1012/amentia/issues/1#manual-acceptance-receipt"
+ACCEPTANCE_RECEIPT = release_repository_url("issues/1#manual-acceptance-receipt")
 
 
 def release_payload(

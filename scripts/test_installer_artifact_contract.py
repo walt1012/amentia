@@ -12,12 +12,13 @@ from installer_artifact_contract import installer_asset_paths_from_directory
 from installer_artifact_contract import validate_installer_asset_set
 from release_artifacts import write_checksum_file
 from release_artifacts import write_release_manifest
+from release_identity import release_actions_run_url
 from release_text import install_guide as release_install_guide
 
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
-WORKFLOW_RUN_URL = "https://github.com/walt1012/amentia/actions/runs/123456789"
+WORKFLOW_RUN_URL = release_actions_run_url(WORKFLOW_RUN_ID)
 
 
 def write_bytes(path: Path, content: bytes = b"amentia installer asset\n") -> Path:

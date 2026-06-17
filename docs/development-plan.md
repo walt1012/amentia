@@ -118,8 +118,7 @@ Current constraints:
   release manifest.
 - Visible ad-hoc prereleases require an explicit manual acceptance receipt.
 - `Amentia` is the product, app, package, runtime, crate, environment variable,
-  and plugin manifest namespace. Repository URLs may still contain the original
-  GitHub repository slug until the remote repository is renamed.
+  plugin manifest, and GitHub repository namespace.
 
 ## M12: Public Release
 

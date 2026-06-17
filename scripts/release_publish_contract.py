@@ -11,15 +11,13 @@ from pathlib import Path
 from installer_artifact_contract import expected_installer_asset_names
 from installer_artifact_contract import validate_installer_asset_name
 from release_artifacts import validate_source_commit
+from release_identity import RELEASE_REPOSITORY
 from release_identity import validate_public_release_tag
 from package_contract import RELEASE_SIGNING_MODES
 from release_state import expected_release_title
 from release_state import parse_bool
 from release_state import validate_manual_acceptance_evidence as validate_manual_acceptance_receipt_url
 from release_text import validate_release_notes
-
-
-RELEASE_REPOSITORY = "walt1012/amentia"
 
 
 def validate_published_release(
