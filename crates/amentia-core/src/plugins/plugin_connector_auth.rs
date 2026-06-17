@@ -177,21 +177,11 @@ pub(crate) fn handle_plugin_connector_clear_credential(
       );
     }
   };
-  if let Err(error) = secure_credentials::delete_connector_secret(&params.connector_id) {
-    return connector_error_response(
-      request.id,
-      -32010,
-      &params.connector_id,
-      Some(&connector.plugin_id),
-      error.to_string(),
-      "credentialStoreError",
-      CLEAR_STORE_REPAIR_HINT,
-    );
-  }
-  context
-    .plugin_state
-    .clear_connector_credential(&params.connector_id);
-  if let Err(error) = context.delete_plugin_connector_credential(&params.connector_id) {
+  if let Some(error) = clear_connector_credential_state(
+    context,
+    &params.connector_id,
+    secure_credentials::delete_connector_secret,
+  ) {
     return connector_error_response(
       request.id,
       -32010,
@@ -278,4 +268,78 @@ fn normalized_credential_secret(secret: Option<&str>) -> Option<String> {
     .map(str::trim)
     .filter(|secret| !secret.is_empty())
     .map(str::to_string)
+}
+
+fn clear_connector_credential_state<F>(
+  context: &mut RuntimeContext,
+  connector_id: &str,
+  mut delete_secret: F,
+) -> Option<anyhow::Error>
+where
+  F: FnMut(&str) -> anyhow::Result<()>,
+{
+  let mut cleanup_error = delete_secret(connector_id).err();
+  context.plugin_state.clear_connector_credential(connector_id);
+  if let Err(error) = context.delete_plugin_connector_credential(connector_id) {
+    if cleanup_error.is_none() {
+      cleanup_error = Some(error);
+    }
+  }
+  cleanup_error
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::runtime_plugins::PluginConnectorCredentialState;
+
+  #[test]
+  fn clear_connector_credential_forgets_runtime_secret_when_secret_delete_fails() {
+    let mut context = RuntimeContext::new_in_memory();
+    let connector = connector();
+    context
+      .plugin_state
+      .set_connector_credential(PluginConnectorCredentialState {
+        connector_id: connector.connector_id.clone(),
+        plugin_id: connector.plugin_id.clone(),
+        credential_store: "local".to_string(),
+        credential_label: "Notion authorization marker".to_string(),
+        credential_secret: Some("notion-local-token".to_string()),
+        authorized_at: 1,
+        updated_at: 1,
+      });
+
+    let error = clear_connector_credential_state(
+      &mut context,
+      &connector.connector_id,
+      |_| Err(anyhow::anyhow!("local secret delete failed")),
+    )
+    .expect("connector clear error");
+
+    assert!(error.to_string().contains("local secret delete failed"));
+    assert!(context
+      .plugin_state
+      .connector_credential(&connector.connector_id)
+      .is_none());
+  }
+
+  fn connector() -> PluginConnectorEntry {
+    PluginConnectorEntry {
+      connector_id: "notion-connector::notion".to_string(),
+      display_name: "Notion".to_string(),
+      service: "notion".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      plugin_display_name: "Notion Connector".to_string(),
+      enabled: true,
+      status: "ready".to_string(),
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: "/tmp/notion/amentia-plugin.json".to_string(),
+      homepage: None,
+      auth_type: Some("api_key".to_string()),
+      auth_required: true,
+      auth_scopes: vec!["read_content".to_string()],
+      credential_store: Some("local".to_string()),
+      workflows: vec![],
+    }
+  }
 }

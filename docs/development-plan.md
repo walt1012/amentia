@@ -258,6 +258,8 @@ Completed:
   remains but the local secret store cannot restore the API key.
 - Plugin removal captures connector cleanup ids before deleting the bundle and
   also cleans credential-backed ids so local connector secrets do not linger.
+- Clearing a connector authorization forgets runtime and durable credential
+  state even when the local secret store reports a recoverable delete error.
 
 Next:
 
