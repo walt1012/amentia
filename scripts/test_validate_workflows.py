@@ -298,7 +298,7 @@ jobs:
           release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
           echo "AMENTIA_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
           gh run list --workflow CI --status success --json conclusion,headSha,url
-          echo "AMENTIA_RELEASE_CI_RUN_URL=https://github.com/walt1012/pith/actions/runs/100" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_CI_RUN_URL=https://github.com/walt1012/amentia/actions/runs/100" >> "$GITHUB_ENV"
       - name: Write release readiness report
         run: |
           python3 scripts/release_readiness.py \

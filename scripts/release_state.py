@@ -123,7 +123,7 @@ def validate_manual_acceptance_evidence(value: str) -> None:
     raise ValueError(
       "Visible ad-hoc prereleases require the manual acceptance receipt as an HTTPS URL."
     )
-  if not normalized.startswith("https://github.com/walt1012/pith/"):
+  if not normalized.startswith("https://github.com/walt1012/amentia/"):
     raise ValueError(
       "Visible ad-hoc prereleases require a repository-scoped manual acceptance receipt URL."
     )

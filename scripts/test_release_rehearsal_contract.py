@@ -44,7 +44,7 @@ from smoke_launch_macos_app import write_packaged_smoke_receipt
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
-WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
+WORKFLOW_RUN_URL = "https://github.com/walt1012/amentia/actions/runs/123456789"
 
 
 def package_manifest_data(tag: str, signing: str = "ad-hoc") -> dict:

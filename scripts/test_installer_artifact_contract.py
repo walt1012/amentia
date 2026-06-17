@@ -17,7 +17,7 @@ from release_text import install_guide as release_install_guide
 
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 WORKFLOW_RUN_ID = "123456789"
-WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
+WORKFLOW_RUN_URL = "https://github.com/walt1012/amentia/actions/runs/123456789"
 
 
 def write_bytes(path: Path, content: bytes = b"amentia installer asset\n") -> Path:

@@ -23,7 +23,7 @@ from release_text import release_notes
 
 TAG = "v1.2.3"
 SOURCE_COMMIT = "0123456789abcdef0123456789abcdef01234567"
-ACCEPTANCE_RECEIPT = "https://github.com/walt1012/pith/issues/1#manual-acceptance-receipt"
+ACCEPTANCE_RECEIPT = "https://github.com/walt1012/amentia/issues/1#manual-acceptance-receipt"
 
 
 def release_payload(
