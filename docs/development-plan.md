@@ -249,6 +249,9 @@ Completed:
 - Connector authorization and capability summaries translate service names,
   access scopes, auth type, and local storage into user-readable language while
   keeping manifest fields out of the default path.
+- Connector authorization receipts use product language, and runtime secret
+  enforcement accepts common API-key spelling variants from third-party
+  manifests.
 
 Next:
 

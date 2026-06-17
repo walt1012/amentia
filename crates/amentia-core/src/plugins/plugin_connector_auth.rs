@@ -280,5 +280,68 @@ fn normalized_credential_secret(secret: Option<&str>) -> Option<String> {
 }
 
 fn connector_requires_secret(connector: &PluginConnectorEntry) -> bool {
-  connector.auth_required && connector.auth_type.as_deref() == Some("api_key")
+  if !connector.auth_required {
+    return false;
+  }
+
+  matches!(
+    connector
+      .auth_type
+      .as_deref()
+      .map(normalized_auth_type)
+      .as_deref(),
+    Some("api_key" | "apikey")
+  )
+}
+
+fn normalized_auth_type(auth_type: &str) -> String {
+  auth_type
+    .trim()
+    .to_ascii_lowercase()
+    .replace('-', "_")
+    .replace(' ', "_")
+}
+
+#[cfg(test)]
+mod tests {
+  use amentia_plugin_host::PluginConnectorEntry;
+
+  use super::connector_requires_secret;
+
+  #[test]
+  fn api_key_spelling_variants_require_secret() {
+    for auth_type in ["api_key", "apiKey", "api-key", " API_KEY "] {
+      assert!(
+        connector_requires_secret(&connector(Some(auth_type), true)),
+        "{auth_type} should require a local secret"
+      );
+    }
+  }
+
+  #[test]
+  fn non_api_key_or_optional_connectors_do_not_require_secret() {
+    assert!(!connector_requires_secret(&connector(Some("oauth2"), true)));
+    assert!(!connector_requires_secret(&connector(Some("api_key"), false)));
+    assert!(!connector_requires_secret(&connector(None, true)));
+  }
+
+  fn connector(auth_type: Option<&str>, auth_required: bool) -> PluginConnectorEntry {
+    PluginConnectorEntry {
+      connector_id: "notion-connector::notion".to_string(),
+      display_name: "Notion".to_string(),
+      service: "notion".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      plugin_display_name: "Notion Connector".to_string(),
+      enabled: true,
+      status: "ready".to_string(),
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: "/tmp/notion/amentia-plugin.json".to_string(),
+      homepage: None,
+      auth_type: auth_type.map(str::to_string),
+      auth_required,
+      auth_scopes: vec![],
+      credential_store: Some("local".to_string()),
+      workflows: vec![],
+    }
+  }
 }

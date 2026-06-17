@@ -1791,6 +1791,84 @@ fn plugin_connector_authorize_rejects_missing_secret_for_api_key_connectors() {
 }
 
 #[test]
+fn plugin_connector_authorize_rejects_missing_secret_for_api_key_spelling_variants() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-connector-camel-api-key",
+    "api-key-tools",
+    "API Key Tools",
+  );
+  let plugin_manifest = source_root.join("amentia-plugin.json");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "api-key-tools",
+  "version": "0.1.0",
+  "displayName": "API Key Tools",
+  "description": "Connector plugin with camel-case auth type.",
+  "author": { "name": "Amentia" },
+  "capabilities": ["connector:notion"],
+  "permissions": ["network.outbound"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion"
+    }
+  ],
+  "authPolicy": {
+    "type": "apiKey",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "local"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write api key connector manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "api-key-tools".to_string(),
+      name: "api-key-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "API Key Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Connector plugin with camel-case auth type.".to_string(),
+      author_name: Some("Amentia".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["connector:notion".to_string()],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_CONNECTOR_AUTHORIZE,
+      Some(json!({
+        "connectorId": "api-key-tools::notion",
+        "credentialSecret": ""
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  let error = response.error.expect("connector auth secret error");
+  assert_eq!(error.code, -32058);
+  let data = error.data.expect("connector auth secret error data");
+  assert_eq!(data["connectorId"], "api-key-tools::notion");
+  assert_eq!(data["pluginId"], "api-key-tools");
+  assert_eq!(data["connectorStatus"], "missingCredentialSecret");
+}
+
+#[test]
 fn plugin_connector_authorize_returns_repair_metadata_when_storage_fails() {
   let mut context = RuntimeContext::new_in_memory();
   let storage_root = create_temp_workspace("connector-auth-failing-storage");

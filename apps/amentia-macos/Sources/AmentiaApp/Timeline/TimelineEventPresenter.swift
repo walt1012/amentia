@@ -438,10 +438,11 @@ enum TimelineEventPresenter {
   static func pluginConnectorAuthorized(
     _ connector: RuntimeBridge.RuntimePluginConnector
   ) -> TimelineEntry {
+    let service = PluginStatusDisplay.serviceName(connector.service)
     let body = [
-      "\(connector.displayName) is ready for \(connector.service) through "
+      "\(connector.displayName) is ready for \(service) through "
         + "\(connector.pluginDisplayName).",
-      "Authorization: \(connectorAuthorizationSummary(connector))",
+      "Authorization: \(connectorAuthorizationSummary(connector)).",
     ].joined(separator: "\n")
 
     return TimelineEntryFactory.system(
@@ -470,9 +471,15 @@ enum TimelineEventPresenter {
   static func pluginConnectorCredentialCleared(
     _ connector: RuntimeBridge.RuntimePluginConnector
   ) -> TimelineEntry {
+    let service = PluginStatusDisplay.serviceName(connector.service)
+    let body = [
+      "\(connector.displayName) authorization for \(service) was cleared from Amentia.",
+      "Any saved local secret is no longer available to plugin actions.",
+    ].joined(separator: "\n")
+
     TimelineEntryFactory.system(
       title: "Connection Credential Cleared",
-      body: "\(connector.displayName) credentials were cleared from local plugin state.",
+      body: body,
       attributes: pluginConnectorCredentialAttributes(connector)
     )
   }

@@ -849,6 +849,40 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("credentialBinding"))
   }
 
+  func testConnectionAuthorizationReceiptUsesProductCopy() {
+    let connector = runtimePluginConnector(
+      authStatus: "ready",
+      credentialPresent: true,
+      credentialSecretPresent: true
+    )
+
+    let entry = TimelineEventPresenter.pluginConnectorAuthorized(connector)
+
+    XCTAssertEqual(entry.title, "Connection Authorized")
+    XCTAssertTrue(entry.body.contains("Notion is ready for Notion through Notion Connector."))
+    XCTAssertTrue(entry.body.contains("Authorization: saved locally."))
+    XCTAssertFalse(entry.body.contains("notion through"))
+    XCTAssertFalse(entry.body.contains("keychain"))
+    XCTAssertFalse(entry.body.contains("credentialStore"))
+  }
+
+  func testConnectionClearReceiptExplainsLocalCleanup() {
+    let connector = runtimePluginConnector(
+      authStatus: "needsAuth",
+      credentialPresent: false,
+      credentialSecretPresent: false
+    )
+
+    let entry = TimelineEventPresenter.pluginConnectorCredentialCleared(connector)
+
+    XCTAssertEqual(entry.title, "Connection Credential Cleared")
+    XCTAssertTrue(entry.body.contains("Notion authorization for Notion was cleared"))
+    XCTAssertTrue(entry.body.contains("Any saved local secret is no longer available"))
+    XCTAssertFalse(entry.body.contains("local plugin state"))
+    XCTAssertFalse(entry.body.contains("keychain"))
+    XCTAssertFalse(entry.body.contains("credentialStore"))
+  }
+
   private func headerSnapshot(
     hasDraftMessage: Bool,
     isWaitingForFirstMessage: Bool = true,
@@ -1078,6 +1112,38 @@ final class CoworkFirstPresentationTests: XCTestCase {
       credentialLabel: nil,
       authorizedAt: nil,
       credentialUpdatedAt: nil
+    )
+  }
+
+  private func runtimePluginConnector(
+    authStatus: String,
+    credentialPresent: Bool,
+    credentialSecretPresent: Bool
+  ) -> RuntimeBridge.RuntimePluginConnector {
+    RuntimeBridge.RuntimePluginConnector(
+      connectorID: "notion-connector::notion",
+      displayName: "Notion",
+      service: "notion",
+      pluginID: "notion-connector",
+      pluginDisplayName: "Notion Connector",
+      enabled: true,
+      status: "ready",
+      permissions: ["network.outbound", "mcp.connect"],
+      manifestPath: "/plugins/notion-connector/amentia-plugin.json",
+      homepage: "https://www.notion.so",
+      authType: "api_key",
+      authRequired: true,
+      authScopes: ["read_content", "insert_content"],
+      credentialStore: "keychain",
+      workflows: [],
+      authStatus: authStatus,
+      credentialPresent: credentialPresent,
+      credentialSecretPresent: credentialSecretPresent,
+      credentialProvider: nil,
+      credentialHandle: nil,
+      credentialLabel: "Local Notion integration token",
+      authorizedAt: 1_700_000_000,
+      credentialUpdatedAt: 1_700_000_000
     )
   }
 
