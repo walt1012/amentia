@@ -100,10 +100,8 @@ pub(crate) fn handle_plugin_remove(
   )
 }
 
-fn connector_ids_by_plugin(
-  connectors: Vec<PluginConnectorEntry>,
-) -> HashMap<String, Vec<String>> {
-  let mut ids_by_plugin = HashMap::new();
+fn connector_ids_by_plugin(connectors: Vec<PluginConnectorEntry>) -> HashMap<String, Vec<String>> {
+  let mut ids_by_plugin: HashMap<String, Vec<String>> = HashMap::new();
   for connector in connectors {
     ids_by_plugin
       .entry(connector.plugin_id)
