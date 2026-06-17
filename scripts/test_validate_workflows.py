@@ -113,9 +113,13 @@ jobs:
         id: swift_app_binary_cache
         uses: actions/cache/restore@v5
         with:
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
       - name: Use cached Swift app executable
         run: cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
+      - name: Cache Swift build output
+        uses: actions/cache@v5
+        with:
+          key: swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
       - name: Upload Swift app executable
         uses: actions/upload-artifact@v7
         with:
@@ -123,6 +127,11 @@ jobs:
           retention-days: 1
   swift-tests:
     timeout-minutes: 25
+    steps:
+      - name: Cache Swift test output
+        uses: actions/cache@v5
+        with:
+          key: swift-test-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift', 'apps/amentia-macos/Tests/**/*.swift') }}
   macos-runtime:
     timeout-minutes: 30
     steps:
@@ -155,7 +164,11 @@ jobs:
         id: package_swift_cache
         uses: actions/cache@v5
         with:
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+      - name: Cache Swift package build output
+        uses: actions/cache@v5
+        with:
+          key: package-swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
       - name: Cache runtime executable
         id: package_runtime_cache
         uses: actions/cache@v5
@@ -771,6 +784,11 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "internal-AmentiaApp")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(root, ci=VALID_CI.replace("${{ github.repository }}-", ""))
+    assert_issue(issue_messages(root), "github.repository")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

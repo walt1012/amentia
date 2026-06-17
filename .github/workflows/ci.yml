@@ -349,7 +349,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
 
       - name: Use cached Swift app executable
         if: steps.swift_app_binary_cache.outputs.cache-hit == 'true'
@@ -364,9 +364,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/amentia-macos/.build
-          key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+          key: swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
           restore-keys: |
-            swift-build-${{ runner.os }}-${{ runner.arch }}-
+            swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build x86_64 Swift app executable
         if: steps.swift_app_binary_cache.outputs.cache-hit != 'true'
@@ -407,9 +407,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/amentia-macos/.build
-          key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift', 'apps/amentia-macos/Tests/**/*.swift') }}
+          key: swift-test-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift', 'apps/amentia-macos/Tests/**/*.swift') }}
           restore-keys: |
-            swift-test-${{ runner.os }}-${{ runner.arch }}-
+            swift-test-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Test x86_64 Swift app logic
         run: |
@@ -592,7 +592,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
 
       - name: Restore cached Swift app executable
         if: steps.package_swift_cache.outputs.cache-hit == 'true'
@@ -606,10 +606,10 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/amentia-macos/.build
-          key: package-swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
+          key: package-swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
           restore-keys: |
-            package-swift-build-${{ runner.os }}-${{ runner.arch }}-
-            swift-build-${{ runner.os }}-${{ runner.arch }}-
+            package-swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-
+            swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Cache runtime executable
         id: package_runtime_cache

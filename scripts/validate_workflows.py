@@ -190,13 +190,27 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
     for term in (
       'id: swift_app_binary_cache',
       'uses: actions/cache/restore@v5',
-      'key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'key: swift-app-bin-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'key: swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
       'Use cached Swift app executable',
     ):
       if term not in swift_app_block:
         issues.append(
           WorkflowIssue(CI_WORKFLOW, f"swift-app cached executable path is missing {term}")
         )
+
+  swift_tests_block = job_block(text, "swift-tests")
+  if (
+    swift_tests_block
+    and 'key: swift-test-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles'
+    not in swift_tests_block
+  ):
+    issues.append(
+      WorkflowIssue(
+        CI_WORKFLOW,
+        "swift-tests cache key must include github.repository to avoid stale module-cache paths after repository renames",
+      )
+    )
 
   macos_runtime_block = job_block(text, "macos-runtime")
   if macos_runtime_block:
@@ -271,7 +285,8 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
     required_package_terms = (
       'python3 scripts/package_contract.py',
       'id: package_swift_cache',
-      'key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'key: swift-app-bin-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
+      'key: package-swift-build-${{ github.repository }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
       'id: package_runtime_cache',
       'key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles',
       'Build missing package executables',
@@ -356,7 +371,6 @@ def validate_upload_retention(
         f"{label} must use retention-days: {expected_days}",
       )
     )
-
 
 def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   issues: list[WorkflowIssue] = []
