@@ -254,6 +254,8 @@ Completed:
   manifests.
 - Connector registries and command readiness fail closed when an authorization
   marker exists but a required local API key secret is unavailable.
+- Runtime smoke covers the restart path where persisted connector metadata
+  remains but the local secret store cannot restore the API key.
 
 Next:
 

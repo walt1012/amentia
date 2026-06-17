@@ -405,6 +405,10 @@ def assert_notion_connector_authorized(
   *,
   credential_secret_present: bool = True,
 ) -> None:
+  if not credential_secret_present:
+    assert_notion_connector_saved_marker_needs_secret(connector)
+    return
+
   assert connector["status"] == "ready"
   assert connector["authStatus"] == "authorized"
   assert connector["credentialPresent"] is True
@@ -413,6 +417,15 @@ def assert_notion_connector_authorized(
   assert connector["credentialHandle"] == NOTION_CONNECTOR_ID
   assert connector["credentialLabel"] == NOTION_CREDENTIAL_LABEL
   assert isinstance(connector["credentialUpdatedAt"], int)
+
+def assert_notion_connector_saved_marker_needs_secret(connector: dict) -> None:
+  assert connector["status"] == "needsAuth"
+  assert connector["authStatus"] == "needsAuth"
+  assert connector["credentialPresent"] is True
+  assert connector["credentialSecretPresent"] is False
+  assert connector["credentialProvider"] == LOCAL_CREDENTIAL_PROVIDER
+  assert connector["credentialHandle"] == NOTION_CONNECTOR_ID
+  assert connector["credentialLabel"] == NOTION_CREDENTIAL_LABEL
 
 def assert_notion_connector_cleared(connector: dict) -> None:
   assert connector["status"] == "needsAuth"

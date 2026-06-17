@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 
 use super::plugin_command_input_contract::PluginCommandInputContractError;
 use super::plugin_command_readiness::PluginCommandReadiness;
+use super::plugin_connector_execution_refs::PluginConnectorExecutionRefError;
 
 pub(crate) struct PluginCommandPreparationError {
   code: i32,
@@ -76,6 +77,27 @@ impl PluginCommandPreparationError {
         insert_connector_error_data(&mut data, declared_connector_ids(command));
         data
       }),
+    }
+  }
+
+  pub(super) fn from_connector_execution_refs(
+    command: &HostPluginCommandEntry,
+    error: PluginConnectorExecutionRefError,
+  ) -> Self {
+    let message = error.message;
+    let mut data = json!({
+      "pluginId": &command.plugin_id,
+      "commandId": &command.command_id,
+      "sourcePath": &command.source_path,
+      "runStatus": "needsConnectorAuth",
+      "runBlocker": message,
+      "runRepairHint": error.repair_hint,
+    });
+    insert_connector_error_data(&mut data, vec![error.connector_id]);
+    Self {
+      code: -32058,
+      message,
+      data: Some(data),
     }
   }
 

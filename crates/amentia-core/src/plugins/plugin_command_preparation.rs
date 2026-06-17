@@ -147,7 +147,7 @@ pub(crate) fn prepare_plugin_command_follow_up_snapshot(
     ));
   }
 
-  let connector_refs = build_command_connector_refs(&command, plugin_state);
+  let connector_refs = build_plugin_command_connector_refs(&command, plugin_state)?;
   let input = expand_connector_saved_artifact_input(workspace.as_ref(), input, &connector_refs);
   if let Err(error) = validate_plugin_command_input_contract(
     &command,
@@ -242,7 +242,7 @@ pub(crate) fn prepare_approved_plugin_command_snapshot(
     .map(str::trim)
     .filter(|input| !input.is_empty())
     .map(str::to_string);
-  let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  let connector_refs = build_plugin_command_connector_refs(&command, &context.plugin_state)?;
   let input = expand_connector_saved_artifact_input(workspace.as_ref(), input, &connector_refs);
   if let Err(error) = validate_plugin_command_input_contract(
     &command,
@@ -289,7 +289,7 @@ fn prepare_plugin_command_snapshot_for_execution(
     ));
   }
 
-  let connector_refs = build_command_connector_refs(&command, &context.plugin_state);
+  let connector_refs = build_plugin_command_connector_refs(&command, &context.plugin_state)?;
   let input = expand_connector_saved_artifact_input(workspace.as_ref(), input, &connector_refs);
   if let Err(error) = validate_plugin_command_input_contract(
     &command,
@@ -318,6 +318,14 @@ fn prepare_plugin_command_snapshot_for_execution(
       approval_id,
     },
   ))
+}
+
+fn build_plugin_command_connector_refs(
+  command: &HostPluginCommandEntry,
+  plugin_state: &RuntimePluginState,
+) -> std::result::Result<Vec<PluginConnectorExecutionRef>, PluginCommandPreparationError> {
+  build_command_connector_refs(command, plugin_state)
+    .map_err(|error| PluginCommandPreparationError::from_connector_execution_refs(command, error))
 }
 
 struct PluginCommandSnapshotDraft {
