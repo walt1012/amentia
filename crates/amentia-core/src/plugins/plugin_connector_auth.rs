@@ -279,7 +279,9 @@ where
   F: FnMut(&str) -> anyhow::Result<()>,
 {
   let mut cleanup_error = delete_secret(connector_id).err();
-  context.plugin_state.clear_connector_credential(connector_id);
+  context
+    .plugin_state
+    .clear_connector_credential(connector_id);
   if let Err(error) = context.delete_plugin_connector_credential(connector_id) {
     if cleanup_error.is_none() {
       cleanup_error = Some(error);
@@ -309,11 +311,9 @@ mod tests {
         updated_at: 1,
       });
 
-    let error = clear_connector_credential_state(
-      &mut context,
-      &connector.connector_id,
-      |_| Err(anyhow::anyhow!("local secret delete failed")),
-    )
+    let error = clear_connector_credential_state(&mut context, &connector.connector_id, |_| {
+      Err(anyhow::anyhow!("local secret delete failed"))
+    })
     .expect("connector clear error");
 
     assert!(error.to_string().contains("local secret delete failed"));
