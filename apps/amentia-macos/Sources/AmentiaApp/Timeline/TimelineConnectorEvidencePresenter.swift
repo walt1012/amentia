@@ -96,10 +96,10 @@ enum TimelineConnectorEvidencePresenter {
       lines.append("Target: \(target)")
     }
     if let proof = attributes["connectorWorkflowProof"] {
-      lines.append("Proof: \(proof)")
+      lines.append("Proof: \(readableProofKind(proof))")
     }
     if let recovery = attributes["connectorWorkflowRecovery"] {
-      lines.append("Recovery: \(recovery)")
+      lines.append("Recovery: \(readableRecovery(recovery))")
     }
   }
 
@@ -118,8 +118,8 @@ enum TimelineConnectorEvidencePresenter {
     let status = attributes["remoteWriteStatus"] ?? "unknown"
     let stage = attributes["remoteWriteStage"] ?? "unknown stage"
     let sent = attributes["remoteWrite"] ?? "unknown"
-    let targetService = attributes["targetService"] ?? "unknown service"
-    let targetTool = attributes["targetTool"] ?? "unknown tool"
+    let targetService = serviceName(attributes: attributes)
+    let targetTool = readableToolLabel(attributes["targetTool"])
     lines.append(
       "External action: \(readableStatus(status)). Sent: \(yesNo(sent)). "
         + "Stage: \(readableStage(stage)). Service: \(targetService) via \(targetTool)."
@@ -232,7 +232,7 @@ enum TimelineConnectorEvidencePresenter {
     to lines: inout [String]
   ) {
     if let failureReason = attributes["publishFailureReason"] {
-      lines.append("Publish issue: \(failureReason)")
+      lines.append("Publish issue: \(readableFailureReason(failureReason))")
     }
     if let retryCommandID = attributes["retryCommandId"] {
       lines.append("Retry step: \(readableCommandLabel(retryCommandID))")
@@ -375,21 +375,31 @@ enum TimelineConnectorEvidencePresenter {
       return "completed"
     case "notRequested", "notSent":
       return "not sent yet"
+    case "prepared":
+      return "prepared"
     case "inspected":
       return "ready for review"
+    case "retryNeeded":
+      return "needs retry"
     default:
-      return value
+      return readableTokenLabel(value)
     }
   }
 
   private static func readableStage(_ value: String) -> String {
     switch value {
+    case "draftPrepared":
+      return "draft prepared"
     case "inspectBeforeWrite":
       return "review before write"
+    case "blockedBeforeWrite":
+      return "blocked before external write"
+    case "failedBeforeProof":
+      return "finished without trusted proof"
     case "completed":
       return "completed"
     default:
-      return value
+      return readableTokenLabel(value)
     }
   }
 
@@ -399,11 +409,87 @@ enum TimelineConnectorEvidencePresenter {
     }
 
     switch value {
+    case "localDraft":
+      return "local draft"
+    case "inspection":
+      return "review completed"
+    case "notRequested":
+      return "not requested"
+    case "missing":
+      return "missing"
     case "messageApiResponse":
       return "message confirmation"
     default:
-      return value
+      return readableTokenLabel(value)
     }
+  }
+
+  private static func readableFailureReason(_ value: String) -> String {
+    switch value {
+    case "invalidParentPageId":
+      return "the parent page ID needs review"
+    case "missingParentPageId":
+      return "a parent page is required"
+    case "missingRemoteProof":
+      return "Amentia could not verify the external result"
+    default:
+      return readableTokenLabel(value)
+    }
+  }
+
+  private static func readableRecovery(_ value: String) -> String {
+    switch value {
+    case "retry":
+      return "retry available"
+    default:
+      return readableTokenLabel(value)
+    }
+  }
+
+  private static func readableToolLabel(_ value: String?) -> String {
+    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !value.isEmpty
+    else {
+      return "local connector"
+    }
+
+    return readableTokenLabel(value)
+  }
+
+  private static func readableTokenLabel(_ value: String) -> String {
+    let normalized = value
+      .replacingOccurrences(of: "::", with: " ")
+      .replacingOccurrences(of: ".", with: " ")
+      .replacingOccurrences(of: "_", with: " ")
+      .replacingOccurrences(of: "-", with: " ")
+    let spaced = normalized.reduce(into: "") { result, character in
+      if isUppercaseLetter(character),
+         let last = result.last,
+         isLowercaseLetter(last) || isNumber(last) {
+        result.append(" ")
+      }
+      result.append(character)
+    }
+    let words = spaced
+      .split(separator: " ")
+      .map { word in
+        let lowercased = word.lowercased()
+        return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
+      }
+
+    return words.isEmpty ? value : words.joined(separator: " ")
+  }
+
+  private static func isUppercaseLetter(_ character: Character) -> Bool {
+    character.unicodeScalars.allSatisfy { CharacterSet.uppercaseLetters.contains($0) }
+  }
+
+  private static func isLowercaseLetter(_ character: Character) -> Bool {
+    character.unicodeScalars.allSatisfy { CharacterSet.lowercaseLetters.contains($0) }
+  }
+
+  private static func isNumber(_ character: Character) -> Bool {
+    character.unicodeScalars.allSatisfy { CharacterSet.decimalDigits.contains($0) }
   }
 
   private static func yesNo(_ value: String) -> String {

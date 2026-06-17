@@ -232,6 +232,9 @@ Completed:
   ownership, and handoff forwarding are separately testable.
 - Remote-write proof and connector-workflow proof are generic timeline
   contracts, not Notion-specific code paths.
+- Connector timeline evidence keeps protocol fields as attributes while default
+  summaries translate stages, proofs, tools, retries, and failure reasons into
+  product language.
 - Connector credentials are stored as metadata in durable storage and secrets in
   the secure local store; clear/remove paths forget runtime secrets and attempt
   full connector cleanup before reporting recoverable failures.

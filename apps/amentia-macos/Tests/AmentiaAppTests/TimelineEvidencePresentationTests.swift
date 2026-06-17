@@ -634,6 +634,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     XCTAssertTrue(summary?.contains("External action: not sent yet") == true)
+    XCTAssertTrue(summary?.contains("Service: Notion via Notion Inspect Page Write") == true)
     XCTAssertTrue(summary?.contains("Approval before external write: yes") == true)
     XCTAssertTrue(summary?.contains("Source file: docs/handoff.md") == true)
     XCTAssertTrue(
@@ -643,7 +644,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       summary?.contains("Notion Create Page: ready for review in review before write.") == true
     )
     XCTAssertTrue(summary?.contains("Target: docs/handoff.md") == true)
-    XCTAssertTrue(summary?.contains("Proof: inspection") == true)
+    XCTAssertTrue(summary?.contains("Proof: review completed") == true)
     XCTAssertTrue(summary?.contains("Next step: Publish to Notion") == true)
     XCTAssertFalse(summary?.contains("Next step: Publish to Notion (") == true)
     XCTAssertTrue(
@@ -658,6 +659,9 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Retry input editable: yes") == true)
     XCTAssertTrue(summary?.contains("Retry hint: Add parentPageId before retrying.") == true)
     XCTAssertTrue(summary?.contains("Retry input: {\"parentPageId\":\"page\"}") == true)
+    XCTAssertFalse(summary?.contains("inspectBeforeWrite") == true)
+    XCTAssertFalse(summary?.contains("notionApiResponse") == true)
+    XCTAssertFalse(summary?.contains("notion.inspectPageWrite") == true)
   }
 
   func testInspectorSummarizesCompletedNotionProof() {
@@ -687,6 +691,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
 
     XCTAssertTrue(summary?.contains("External proof: completed (Notion confirmation)") == true)
+    XCTAssertTrue(summary?.contains("Service: Notion via Notion Create Page") == true)
     XCTAssertTrue(
       summary?.contains("Notion page: page-123 | https://www.notion.so/page-123") == true
     )
@@ -694,6 +699,53 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Title was shortened") == true)
     XCTAssertTrue(summary?.contains("Body was complete") == true)
     XCTAssertTrue(summary?.contains("Notion blocks: 4") == true)
+    XCTAssertFalse(summary?.contains("notionApiResponse") == true)
+    XCTAssertFalse(summary?.contains("notion.createPage") == true)
+  }
+
+  func testInspectorUsesReadableConnectorRecoveryCopy() {
+    let summary = TimelineInspectorPresenter.selectedEntryPluginSummary(
+      TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
+        id: "entry-1",
+        kind: .assistantMessage,
+        title: "Assistant",
+        body: "Could not verify the external write.",
+        attributes: [
+          "remoteWrite": "false",
+          "remoteWriteStage": "failedBeforeProof",
+          "remoteWriteStatus": "unconfirmed",
+          "remoteProofKind": "notionApiResponse",
+          "remoteProofStatus": "missing",
+          "publishFailureReason": "missingRemoteProof",
+          "retryCommandId": "notion-connector::notion.publish-page-draft",
+          "retryInputEditable": "false",
+          "retryInputHint": "Retry may create a duplicate if the first request completed.",
+          "connectorWorkflowName": "Notion Create Page",
+          "connectorWorkflowService": "notion",
+          "connectorWorkflowStage": "failedBeforeProof",
+          "connectorWorkflowStatus": "retryNeeded",
+          "connectorWorkflowProof": "missing",
+          "connectorWorkflowRecovery": "retry",
+          "targetService": "notion",
+          "targetTool": "notion.createPage",
+        ]
+      ))
+    )
+
+    XCTAssertTrue(
+      summary?.contains(
+        "Notion Create Page: needs retry in finished without trusted proof."
+      ) == true
+    )
+    XCTAssertTrue(summary?.contains("Proof: missing") == true)
+    XCTAssertTrue(summary?.contains("Recovery: retry available") == true)
+    XCTAssertTrue(
+      summary?.contains("Publish issue: Amentia could not verify the external result") == true
+    )
+    XCTAssertFalse(summary?.contains("failedBeforeProof") == true)
+    XCTAssertFalse(summary?.contains("retryNeeded") == true)
+    XCTAssertFalse(summary?.contains("missingRemoteProof") == true)
+    XCTAssertFalse(summary?.contains("notionApiResponse") == true)
   }
 
   func testExternalActionOpensSuccessfulNotionProofOnly() {
