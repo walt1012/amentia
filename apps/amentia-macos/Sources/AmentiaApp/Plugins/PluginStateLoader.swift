@@ -31,26 +31,25 @@ enum PluginStateLoader {
     guard !Task.isCancelled else {
       return emptyRefresh()
     }
-    let registryLoad = await load("capability registry") {
+    async let registryLoadTask = load("capability registry") {
       try await runtimeBridge.pluginCapabilityRegistry()
     }
-    guard !Task.isCancelled else {
-      return emptyRefresh()
-    }
-    let commandLoad = await load("command registry") {
+    async let commandLoadTask = load("command registry") {
       try await runtimeBridge.listPluginCommands()
     }
-    guard !Task.isCancelled else {
-      return emptyRefresh()
-    }
-    let connectorLoad = await load("connector registry") {
+    async let connectorLoadTask = load("connector registry") {
       try await runtimeBridge.listPluginConnectors()
     }
+    async let hookLoadTask = load("hook registry") {
+      try await runtimeBridge.listPluginHooks()
+    }
+
+    let registryLoad = await registryLoadTask
+    let commandLoad = await commandLoadTask
+    let connectorLoad = await connectorLoadTask
+    let hookLoad = await hookLoadTask
     guard !Task.isCancelled else {
       return emptyRefresh()
-    }
-    let hookLoad = await load("hook registry") {
-      try await runtimeBridge.listPluginHooks()
     }
     let runtimePlugins = pluginLoad.value
     let runtimeRegistry = registryLoad.value

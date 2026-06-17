@@ -13,6 +13,8 @@ struct PluginDashboardSnapshot {
 }
 
 enum PluginDashboardPresenter {
+  private static let previewLimit = 6
+
   static func pluginCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     if snapshot.plugins.isEmpty {
       return "No plugins yet."
@@ -162,7 +164,7 @@ enum PluginDashboardPresenter {
   }
 
   static func capabilityPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginCapabilitySummary] {
-    Array(snapshot.capabilities.prefix(6))
+    preview(snapshot.capabilities)
   }
 
   static func connectorCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -199,7 +201,7 @@ enum PluginDashboardPresenter {
   }
 
   static func connectorPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginConnectorSummary] {
-    Array(snapshot.connectors.prefix(6))
+    preview(snapshot.connectors)
   }
 
   static func commandCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -238,7 +240,7 @@ enum PluginDashboardPresenter {
   }
 
   static func commandPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginCommandSummary] {
-    snapshot.commands
+    preview(snapshot.commands)
   }
 
   static func commandConnectors(
@@ -271,7 +273,11 @@ enum PluginDashboardPresenter {
   }
 
   static func hookPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginHookSummary] {
-    snapshot.hooks
+    preview(snapshot.hooks)
+  }
+
+  private static func preview<Value>(_ values: [Value]) -> [Value] {
+    Array(values.prefix(previewLimit))
   }
 
   private static func readyPluginList(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {

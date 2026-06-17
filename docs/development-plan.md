@@ -240,11 +240,14 @@ Completed:
 - Capability metadata is reviewed through product copy for connections, skills,
   MCP servers, actions, and checks without exposing manifest paths or raw
   protocol keys in the default plugin manager.
+- Plugin registry loading is supervised without serializing independent
+  capability, action, connection, and check requests; default plugin surfaces
+  stay bounded and reveal detail progressively.
 
 Next:
 
-- Make capability metadata progressively loaded before adding broad catalogs or
-  remote transports.
+- Keep capability metadata progressively surfaced before adding broad catalogs
+  or remote transports.
 - Keep connector evidence generic in timeline data as more services are added;
   only service copy and service proof labels belong in narrow presenters.
 - Prove connector import, local enablement, credential use, revocation, removal,

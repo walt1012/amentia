@@ -499,6 +499,32 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(registry, "1 action | 1 connection | 1 skill | 1 MCP server")
   }
 
+  func testPluginDashboardPreviewsStayBounded() {
+    let snapshot = pluginDashboardSnapshot(
+      capabilities: (0..<8).map { pluginCapabilitySummary(id: "capability-\($0)") },
+      connectors: (0..<8).map {
+        pluginConnectorSummary(
+          id: "connection-\($0)",
+          displayName: "Connection \($0)",
+          status: "ready",
+          authStatus: "ready",
+          credentialPresent: false
+        )
+      },
+      commands: (0..<8).map {
+        pluginCommandSummary(id: "action-\($0)", requiredConnectorIds: [])
+      },
+      hooks: (0..<8).map { pluginHookSummary(id: "check-\($0)") }
+    )
+
+    XCTAssertEqual(PluginDashboardPresenter.capabilityPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPresenter.connectorPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPresenter.commandPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPresenter.hookPreview(snapshot).count, 6)
+    XCTAssertTrue(PluginDashboardPresenter.commandCountSummary(snapshot).contains("8 actions"))
+    XCTAssertTrue(PluginDashboardPresenter.hookCountSummary(snapshot).contains("8 checks"))
+  }
+
   func testPluginDashboardHidesRawConnectionIdentifiers() {
     let snapshot = pluginDashboardSnapshot(
       connectors: [
@@ -951,8 +977,10 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   private func pluginDashboardSnapshot(
     plugins: [PluginSummary]? = nil,
+    capabilities: [PluginCapabilitySummary] = [],
     connectors: [PluginConnectorSummary] = [],
-    commands: [PluginCommandSummary] = []
+    commands: [PluginCommandSummary] = [],
+    hooks: [PluginHookSummary] = []
   ) -> PluginDashboardSnapshot {
     PluginDashboardSnapshot(
       plugins: plugins ?? [pluginSummary()],
@@ -966,13 +994,26 @@ final class CoworkFirstPresentationTests: XCTestCase {
           "mcp_server": 1,
         ]
       ),
-      capabilities: [],
+      capabilities: capabilities,
       connectors: connectors,
       commands: commands,
-      hooks: [],
+      hooks: hooks,
       diagnostics: [],
       refreshRecoveryAttributes: [:],
       hasLifecycleOperation: false
+    )
+  }
+
+  private func pluginCapabilitySummary(id: String) -> PluginCapabilitySummary {
+    PluginCapabilitySummary(
+      id: id,
+      kind: "skill",
+      identifier: id,
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      permissions: [],
+      manifestPath: "/tmp/notion/amentia-plugin.json",
+      metadata: ["description": "Bounded local guidance."]
     )
   }
 
@@ -1039,9 +1080,12 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
-  private func pluginCommandSummary(requiredConnectorIds: [String]) -> PluginCommandSummary {
+  private func pluginCommandSummary(
+    id: String = "notion.publish",
+    requiredConnectorIds: [String]
+  ) -> PluginCommandSummary {
     PluginCommandSummary(
-      id: "notion.publish",
+      id: id,
       title: "Publish Note",
       description: "Publish a local note.",
       pluginID: "notion",
@@ -1058,6 +1102,23 @@ final class CoworkFirstPresentationTests: XCTestCase {
       requiredConnectorIds: requiredConnectorIds,
       approvalRequired: false,
       approvalReason: nil
+    )
+  }
+
+  private func pluginHookSummary(id: String) -> PluginHookSummary {
+    PluginHookSummary(
+      id: id,
+      title: "Review Output",
+      description: "Check plugin output before presenting it.",
+      event: "after_action",
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      permissions: [],
+      sourcePath: "/tmp/notion/amentia-plugin.json",
+      status: "ready",
+      runBlocker: nil,
+      runRepairHint: nil,
+      memorySummary: nil
     )
   }
 }
